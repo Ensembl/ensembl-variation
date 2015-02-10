@@ -37,7 +37,9 @@ ok($vfa && $vfa->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'))
 
 my $sa = $db->get_SliceAdaptor();
 
-my $slice = $sa->fetch_by_region('chromosome', '18');
+my $slice         = $sa->fetch_by_region('chromosome', '18');
+my $slice_somatic = $sa->fetch_by_region('chromosome','13');
+my $slice_phen    = $sa->fetch_by_region('chromosome','7');
 
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
@@ -46,31 +48,38 @@ my $vfs = $vfa->fetch_all_by_Slice($slice);
 #print "$n\n";
 #ok(@$vfs == 68 , "variationfeature count") ;
 
-my $vf = $vfa->fetch_by_dbID(33303674);
+my $vf_name = 'rs142276873';
+my $vf_id   = 33303674;
 
-ok($vf->start() == 23821095,                 "vf_id -> start");
-ok($vf->end()   == 23821095,                 "vf_id -> end") ;
-ok($vf->strand() == 1,                       "vf_id -> strand");
-ok($vf->allele_string() eq 'G/A',            "vf_id -> allele_string");
-ok($vf->variation()->name() eq 'rs142276873',"vf_id -> varname" );
-ok($vf->display_id() eq 'rs142276873',       "vf_id -> display id");
-ok($vf->map_weight() == 1,                   "vf_id -> map weight");
-ok($vf->slice()->name() eq $slice->name(),   "vf_id -> slice name");
-ok($vf->display() ==1,                       "vf_id -> display=1");
+# Somatic
+my $vf_somatic_name = 'COSM946275';
+
+
+my $vf = $vfa->fetch_by_dbID($vf_id);
+
+ok($vf->start() == 23821095,               "vf_id -> start");
+ok($vf->end()   == 23821095,               "vf_id -> end") ;
+ok($vf->strand() == 1,                     "vf_id -> strand");
+ok($vf->allele_string() eq 'G/A',          "vf_id -> allele_string");
+ok($vf->variation()->name() eq $vf_name,   "vf_id -> varname" );
+ok($vf->display_id() eq $vf_name,          "vf_id -> display id");
+ok($vf->map_weight() == 1,                 "vf_id -> map weight");
+ok($vf->slice()->name() eq $slice->name(), "vf_id -> slice name");
+ok($vf->display() ==1,                     "vf_id -> display=1");
 
 
 $vf = $vfs->[0];
 
-ok($vf->dbID() == 33303674,                  "var -> vf id");
-ok($vf->slice->name() eq $slice->name(),     "var -> slice name ");
-ok($vf->start == 23821095,                   "var -> start");
-ok($vf->end() == 23821095,                   "var -> end");
-ok($vf->strand() == 1,                       "var -> strand");
-ok($vf->allele_string() eq 'G/A',            "var -> allele string");
-ok($vf->variation()->name() eq 'rs142276873',"var -> name");
-ok($vf->display_id() eq 'rs142276873',       "var -> display id");
-ok($vf->map_weight() == 1,                   "var -> map weight");
-ok($vf->slice()->name() eq $slice->name(),   "var -> slice name");
+ok($vf->dbID() == $vf_id,                  "var -> vf id");
+ok($vf->slice->name() eq $slice->name(),   "var -> slice name ");
+ok($vf->start == 23821095,                 "var -> start");
+ok($vf->end() == 23821095,                 "var -> end");
+ok($vf->strand() == 1,                     "var -> strand");
+ok($vf->allele_string() eq 'G/A',          "var -> allele string");
+ok($vf->variation()->name() eq $vf_name,   "var -> name");
+ok($vf->display_id() eq $vf_name,          "var -> display id");
+ok($vf->map_weight() == 1,                 "var -> map weight");
+ok($vf->slice()->name() eq $slice->name(), "var -> slice name");
 ok(@{$vf->consequence_type()} == 2 , "var -> consequence type count"); 
 ok($vf->display_consequence() eq 'intron_variant', "var -> display consequence"); 
 ok($vf->consequence_type()->[0] eq 'NMD_transcript_variant', "var -> consequence type"); 
@@ -99,6 +108,88 @@ ok(@$vfs == 1,                                 "var -> vf count ");
 ok($vfs->[0]->display() eq '0',                "var -> display = 0");
 ok($vfs->[0]->variation_name() eq 'rs67521280',"var -> vf_name" );
 ok($vfs->[0]->dbID() eq 15275234 ,             "var -> vf_id" );
+
+
+# test fetch all
+print "\n# Test - fetch_all\n";
+my $vfs2 = $vfa->fetch_all();
+ok($vfs2->[0]->variation_name() eq 'rs2299222', "vf by all");
+
+# test fetch all somatic
+print "\n# Test - fetch_all_somatic\n";
+my $vfs3 = $vfa->fetch_all_somatic();
+ok($vfs3->[0]->variation_name() eq $vf_somatic_name, "vf by all somatic");
+
+
+## Slice ##
+
+my $constraint = "vf.seq_region_start>100";
+
+# test fetch all by Slice constraint with Variations
+print "\n# Test - fetch_all_by_Slice_constraint_with_Variations\n";
+my $vfs4 = $vfa->fetch_all_by_Slice_constraint_with_Variations($slice,$constraint);
+ok($vfs4->[0]->variation_name() eq $vf_name, "vf by slice constraint with variation");
+
+# test fetch all by Slice constraint with TranscriptVariations
+print "\n# Test - fetch_all_by_Slice_constraint_with_TranscriptVariations\n";
+my $vfs5 = $vfa->fetch_all_by_Slice_constraint_with_TranscriptVariations($slice,$constraint);
+ok($vfs5->[0]->variation_name() eq $vf_name, "vf by slice constraint with transcript variation");
+
+## Somatic
+# test fetch all somatic by Slice constraint with TranscriptVariations
+print "\n# Test - fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations\n";
+my $vfs6 = $vfa->fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations($slice_somatic,$constraint);
+ok($vfs6->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint with transcript variation");
+
+# test fetch all somatic by Slice constraint
+print "\n# Test - fetch_all_somatic_by_Slice_constraint\n";
+my $vfs7 = $vfa->fetch_all_somatic_by_Slice_constraint($slice_somatic,$constraint);
+ok($vfs7->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint");
+
+# test fetch all somatic by Slice
+print "\n# Test - fetch_all_somatic_by_Slice\n";
+my $vfs8 = $vfa->fetch_all_somatic_by_Slice_constraint($slice_somatic);
+ok($vfs8->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice");
+
+
+# test fetch all genotyped by Slice
+print "\n# Test - fetch_all_genotyped_by_Slice\n";
+my $vfs9 = $vfa->fetch_all_genotyped_by_Slice($slice);
+ok($vfs9->[0]->variation_name() eq $vf_name, "genotyped vf by slice");
+
+# test fetch all with phenotype by Slice
+print "\n# Test - fetch_all_with_phenotype_by_Slice\n";
+my $vfs9 = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen);
+ok($vfs9->[0]->variation_name() eq 'rs2299222', "vf with phenotype by slice");
+
+# test fetch all somatic with phenotype by Slice
+print "\n# Test - fetch_all_somatic_with_phenotype_by_Slice\n";
+my $vfs10 = $vfa->fetch_all_somatic_with_phenotype_by_Slice($slice_somatic);
+ok($vfs10->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype by slice");
+
+
+## store ##
+print "\n# Test - store\n";
+delete $vf->{$_} for qw(dbID seq_region_start variation_name);
+my $new_seq_region_start = 1000;
+my $new_var_name = 'test';
+$vf->start($new_seq_region_start);
+$vf->variation_name("$new_var_name");
+
+ok($vfa->store($vf), "store");
+
+my $vfs_store = $vfa->fetch_all_by_Slice_constraint($slice, "vf.seq_region_start=$new_seq_region_start AND vf.variation_name='$new_var_name'");
+ok($vfs_store && $vfs_store->[0]->seq_region_start == $new_seq_region_start && $vfs_store->[0]->variation_name eq $new_var_name, "fetch stored");
+
+
+## update
+print "\n# Test - update\n";
+my $upd_name = 'updated_test';
+my $upd_vf = $vfs_store->[0];
+$upd_vf->variation_name($upd_name);
+$vfa->update($upd_vf);
+my $vf_new = $vfa->fetch_all_by_Slice_constraint($slice, "vf.variation_name='$upd_name'");
+ok($vf_new && $vf_new->[0]->variation_name eq $upd_name, "fetch updated vf");
 
 
 done_testing();
