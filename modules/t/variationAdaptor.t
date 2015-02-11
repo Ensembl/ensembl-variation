@@ -121,8 +121,9 @@ ok(join(";", @{$failed_var->get_all_failed_descriptions()}) eq $fail_desc,   "al
 
 
 ## Iterators
-print "\n# Test - Iterators\n";
-my %var_list = ( 'rs117161559' => 25992950,
+print "\n## Test - Iterators ##\n";
+my %var_list = ( 'rs80359159'  => 20949482,
+                 'rs117161559' => 25992950,
                  'rs138574806' => 27085574,
                  'rs183577856' => 40763453
                );
@@ -130,19 +131,21 @@ my @var_dbIDs = values(%var_list);
 my @var_names = sort{ $var_list{$a} <=> $var_list{$b}} keys(%var_list);
 
 # test fetch Iterator by dbID list
-print "\n'# Test - fetch_Iterator_by_dbID_list\n";
+print "\n# Test - fetch_Iterator_by_dbID_list\n";
 my $it1 = $va->fetch_Iterator_by_dbID_list(\@var_dbIDs);
 ok($var_list{$it1->next()->name}, "iterator by id - 1");
 ok($var_list{$it1->next()->name}, "iterator by id - 2");
 ok($var_list{$it1->next()->name}, "iterator by id - 3");
+ok($var_list{$it1->next()->name}, "iterator by id - 4");
 
 # test fetch Iterator by VariationSet
-print "\n'# Test - fetch_Iterator_by_VariationSet\n";
+print "\n# Test - fetch_Iterator_by_VariationSet\n";
 my $vs  = $vsa->fetch_by_name('1000 Genomes - AFR');
 my $isv = $va->fetch_Iterator_by_VariationSet($vs);
-ok($isv->next()->name eq $var_names[0], "iterator by VariationSet - 1");
-ok($isv->next()->name eq $var_names[1], "iterator by VariationSet - 2");
-ok($isv->next()->name eq $var_names[2], "iterator by VariationSet - 3");
+ok($var_list{$isv->next()->name}, "iterator by VariationSet - 1");
+ok($var_list{$isv->next()->name}, "iterator by VariationSet - 2");
+ok($var_list{$isv->next()->name}, "iterator by VariationSet - 3");
+ok($var_list{$isv->next()->name}, "iterator by VariationSet - 4");
 
 
 # test fetch by stable_id
