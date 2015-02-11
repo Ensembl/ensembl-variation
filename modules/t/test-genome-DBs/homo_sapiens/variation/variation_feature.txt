@@ -55,7 +55,7 @@
 69175967	27517	124439685	124439685	1	63646324	A/G	rs1162	1		1	cluster,freq,doublehit,hapmap,1000Genome	intergenic_variant	4,5,8,15,16,19,20,21,22,23,24,25,26,27,28,33,34,35,36,40,41,42,43,44,47,48,51,52,56,57	0	0	\N	\N	\N	\N	\N	\N	1
 12945541	27513	32954018	32954018	1	11951520	G/A	rs56179254	1	\N	1	cluster,freq	missense_variant,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant	63	2	0	\N	\N	\N	1	367,368,372	1	
 23700396	27513	32953992	32953992	1	20949480	C/G	rs80359157	1	\N	1	\N	missense_variant,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant		2	0	\N	\N	\N	1	\N	1
-23700402	27513	32954009	32954009	1	20949482	C/G/T	rs80359159	1	\N	1	cluster	missense_variant,stop_gained,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant	9,64	2	0	\N	\N	\N	1	\N	pathogenic	1
+23700402	27513	32954009	32954009	1	20949482	C/G/T	rs80359159	1	\N	1	cluster	missense_variant,stop_gained,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant	20,64	2	0	\N	\N	\N	1	\N	pathogenic	1
 23700405	27513	32954015	32954015	1	20949483	G/C	rs80359161	1	\N	1	\N	missense_variant,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant		2	0	\N	\N	\N	1	\N	\N	1
 23700408	27513	32954019	32954019	1	20949484	C/T	rs80359162	1	\N	1	\N	missense_variant,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant		2	0	\N	\N	\N	1	\N	1
 23700414	27513	32954034	32954034	1	20949486	A/G	rs80359164	1	\N	1	\N	missense_variant,NMD_transcript_variant,downstream_gene_variant,upstream_gene_variant		2	0	\N	\N	\N	1	\N		1
