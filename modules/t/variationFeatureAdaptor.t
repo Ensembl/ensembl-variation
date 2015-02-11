@@ -32,14 +32,18 @@ $vdb->dnadb($db);
 
 my $vfa = $vdb->get_VariationFeatureAdaptor();
 my $va  = $vdb->get_VariationAdaptor();
+my $vsa = $vdb->get_VariationSetAdaptor();
+my $pa = $vdb->get_PopulationAdaptor();
+
 
 ok($vfa && $vfa->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'));
 
 my $sa = $db->get_SliceAdaptor();
 
-my $slice         = $sa->fetch_by_region('chromosome', '18');
-my $slice_somatic = $sa->fetch_by_region('chromosome','13');
 my $slice_phen    = $sa->fetch_by_region('chromosome','7');
+my $slice_set     = $sa->fetch_by_region('chromosome','17');
+my $slice_somatic = $sa->fetch_by_region('chromosome','13');
+my $slice         = $sa->fetch_by_region('chromosome','18');
 
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
@@ -135,37 +139,63 @@ print "\n# Test - fetch_all_by_Slice_constraint_with_TranscriptVariations\n";
 my $vfs5 = $vfa->fetch_all_by_Slice_constraint_with_TranscriptVariations($slice,$constraint);
 ok($vfs5->[0]->variation_name() eq $vf_name, "vf by slice constraint with transcript variation");
 
-## Somatic
-# test fetch all somatic by Slice constraint with TranscriptVariations
-print "\n# Test - fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations\n";
-my $vfs6 = $vfa->fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations($slice_somatic,$constraint);
-ok($vfs6->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint with transcript variation");
-
-# test fetch all somatic by Slice constraint
-print "\n# Test - fetch_all_somatic_by_Slice_constraint\n";
-my $vfs7 = $vfa->fetch_all_somatic_by_Slice_constraint($slice_somatic,$constraint);
-ok($vfs7->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint");
-
-# test fetch all somatic by Slice
-print "\n# Test - fetch_all_somatic_by_Slice\n";
-my $vfs8 = $vfa->fetch_all_somatic_by_Slice_constraint($slice_somatic);
-ok($vfs8->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice");
-
-
 # test fetch all genotyped by Slice
 print "\n# Test - fetch_all_genotyped_by_Slice\n";
-my $vfs9 = $vfa->fetch_all_genotyped_by_Slice($slice);
-ok($vfs9->[0]->variation_name() eq $vf_name, "genotyped vf by slice");
+my $vfs6 = $vfa->fetch_all_genotyped_by_Slice($slice);
+ok($vfs6->[0]->variation_name() eq $vf_name, "genotyped vf by slice");
 
 # test fetch all with phenotype by Slice
 print "\n# Test - fetch_all_with_phenotype_by_Slice\n";
-my $vfs9 = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen);
-ok($vfs9->[0]->variation_name() eq 'rs2299222', "vf with phenotype by slice");
+my $vfs7 = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen);
+ok($vfs7->[0]->variation_name() eq 'rs2299222', "vf with phenotype by slice");
+
+# test fetch all by Slice VariationSet
+print "\n# Test - fetch_all_by_Slice_VariationSet\n";
+my $vs = $vsa->fetch_by_name('1000 Genomes - All - common');
+my $vfs8 = $vfa->fetch_all_by_Slice_VariationSet($slice_set,$vs);
+ok($vfs8->[0]->variation_name() eq 'rs2255888', "vf by slice & variation set");
+
+# test fetch all by Slice Population
+print "\n# Test - fetch_all_by_Slice_Population\n";
+my $pop = $pa->fetch_by_name('SSMP:SSM');
+my $vfs9 = $vfa->fetch_all_by_Slice_Population($slice,$pop);
+ok($vfs9->[0]->variation_name() eq $vf_name, "vf by slice & population");
+
+
+## Slice Somatic ##
+
+# test fetch all somatic by Slice constraint
+print "\n# Test - fetch_all_somatic_by_Slice_constraint\n";
+my $vfs11 = $vfa->fetch_all_somatic_by_Slice_constraint($slice_somatic,$constraint);
+ok($vfs11->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint");
+
+# test fetch all somatic by Slice
+print "\n# Test - fetch_all_somatic_by_Slice\n";
+my $vfs12 = $vfa->fetch_all_somatic_by_Slice($slice_somatic);
+ok($vfs12->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice");
 
 # test fetch all somatic with phenotype by Slice
 print "\n# Test - fetch_all_somatic_with_phenotype_by_Slice\n";
-my $vfs10 = $vfa->fetch_all_somatic_with_phenotype_by_Slice($slice_somatic);
-ok($vfs10->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype by slice");
+my $vfs13 = $vfa->fetch_all_somatic_with_phenotype_by_Slice($slice_somatic);
+ok($vfs13->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype by slice");
+
+# test fetch all somatic by Slice constraint with TranscriptVariations
+print "\n# Test - fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations\n";
+my $vfs14 = $vfa->fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations($slice_somatic,$constraint);
+ok($vfs14->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice constraint with transcript variation");
+
+
+## Other ##
+
+# test fetch all with phenotype
+print "\n# Test - fetch_all_with_phenotype\n";
+my $vfs15 = $vfa->fetch_all_with_phenotype();
+ok($vfs15->[0]->variation_name() eq 'rs2299222', "vf with phenotype");
+
+# test fetch all somatic with phenotype
+print "\n# Test - fetch_all_somatic_with_phenotype\n";
+my $vfs16 = $vfa->fetch_all_somatic_with_phenotype();
+ok($vfs16->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype");
 
 
 ## store ##
