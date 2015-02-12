@@ -677,7 +677,7 @@ sub _three_prime_utr {
     
     my $tran = $self->transcript;
     
-    if(!defined($tran->{_variation_effect_feature_cache}->{three_prime_utr})) {
+    unless(exists($tran->{_variation_effect_feature_cache}->{three_prime_utr})) {
         
         # transfer to feature slice so we don't subseq whole chromosome
         my $transferred = $tran->transfer($tran->feature_Slice());
