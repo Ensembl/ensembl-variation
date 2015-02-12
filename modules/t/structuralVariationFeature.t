@@ -27,10 +27,11 @@ use_ok('Bio::EnsEMBL::Variation::StructuralVariationFeature');
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
-my $vdb  = $multi->get_DBAdaptor('variation');
+my $vdb = $multi->get_DBAdaptor('variation');
+my $cdb = $multi->get_DBAdaptor('core');
 
-my $svf_adaptor = $vdb->get_StructuralVariationFeatureAdaptor;
-
+my $svf_adaptor   = $vdb->get_StructuralVariationFeatureAdaptor;
+my $slice_adaptor = $cdb->get_SliceAdaptor;
 
 # test constructor
 
@@ -101,21 +102,85 @@ ok($svf->inner_end()   == $inner_end,   "svf -> inner_end");
 ok($svf->end()         == $outer_end,   "svf -> end") ;
 ok($svf->outer_end()   == $outer_end,   "svf -> outer_end");
 ok($svf->strand()      == 1,            "svf -> strand");
+ok($svf->bound_start() == $outer_start, "svf -> bound_start");
+ok($svf->bound_end()   == $outer_end,   "svf -> bound_end");
 ok($svf->variation_name() eq $var_name, "svf -> varname" );
-ok($svf->source_object->name() eq $source->name, "svf -> source" );
 ok($svf->study->name() eq $study->name, "svf -> study" );
 ok($svf->is_somatic() eq $is_somatic,   "svf -> is_somatic");
 ok($svf->class_SO_term() eq $SO_term,   "svf -> class");
+ok($svf->display_id() eq $var_name,     "svf -> display_id");
+# source
+ok($svf->source_object->name() eq $source_name,     'svf -> source' );
+ok($svf->source_name eq $source_name,               'svf -> source_name');
+ok($svf->source_description eq $source_description, 'svf -> source_description');
+ok($svf->source_version eq $source_version,         'svf -> source_version');
 
 
 # test getter/setters
-
 my $var_name2 = 'esv89107';
 my $v2 = Bio::EnsEMBL::Variation::StructuralVariation->new(-name   => $var_name2,
                                                            -source => $source);
 
-ok(test_getter_setter($svf, 'structural_variation', $v2));
-ok(test_getter_setter($svf, 'variation_name', $var_name2));
+ok(test_getter_setter($svf, 'structural_variation', $v2), "get/set structural variation");
+ok(test_getter_setter($svf, 'variation_name', $var_name2), "get/set name");
+
+
+## Other ##
+
+my $svf_id = 4509635;
+my $svf2 = $svf_adaptor->fetch_by_dbID($svf_id);
+
+# test get all VariationSets
+my $set = '1000 Genomes - High coverage - Trios';
+my $vss = $svf2->get_all_VariationSets();
+ok($vss->[0]->name eq $set, 'get_all_VariationSets');
+
+# test get nearest Gene
+my $gene_stable_id = 'ENSG00000254955';
+my $gene = $svf2->get_nearest_Gene();
+ok($gene->[0]->stable_id eq $gene_stable_id, 'get_nearest_Gene');
+
+# test get all TranscriptStructuralVariations
+my $tr_stable_id = 'ENST00000438775';
+my $tsvs = $svf2->get_all_TranscriptStructuralVariations();
+ok($tsvs->[0]->transcript->stable_id eq $tr_stable_id, 'get_all_TranscriptStructuralVariations');
+
+# test get all supporting evidence classes
+my $secs = $svf2->get_all_supporting_evidence_classes();
+ok($secs->[0] eq 'copy_number_loss', 'get_all_supporting_evidence_classes');
+
+# test source object
+my $sv_source = $svf2->source_object();
+ok($svf2->source_object($sv_source), 'source_object (using argument)');
+
+# test study object
+my $sv_study = $svf2->study();
+ok($svf2->study($sv_study), 'study object (using argument)');
+
+# test get reference sequence
+my $length = $svf2->seq_region_end - $svf2->seq_region_start + 1;
+my $ref_seq_length = length($svf2->get_reference_sequence());
+ok($ref_seq_length == $length, 'get_reference_sequence');
+
+# test transform
+my $svf3 = $svf_adaptor->fetch_by_dbID($svf_id);
+my $svf3_chr = $svf3->seq_region_name;
+my $svf3_end = $svf3->seq_region_end;
+my $contig = 'AC087763.10';
+my $svf3_contig = $svf3->transform('contig');
+ok($svf3_contig->seq_region_name eq $contig, 'transform to contig');
+
+# test transfer
+my $chr_start = 8790818;
+my $chr_end   = $svf3_end;
+my $slice = $slice_adaptor->fetch_by_region('chromosome', $svf3_chr);
+my $svf3_new = $svf3_contig->transfer($slice);
+ok($svf3_new->seq_region_name eq $svf3_chr && $svf3_new->seq_region_start == $chr_start && $svf3_new->seq_region_end == $chr_end, 'transfert from contig to chr');
+
+
+# DEPRECATED - source
+ok($svf2->source eq $source_name, "svf -> DEPRECATED 'source'");
+
 
 done_testing();
 
