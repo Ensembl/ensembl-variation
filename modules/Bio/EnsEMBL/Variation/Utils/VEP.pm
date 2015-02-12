@@ -288,39 +288,6 @@ our @VAR_CACHE_COLS = qw(
 
 our @PICK_ORDER = qw(canonical tsl biotype rank length);
 
-our %FILTER_SHORTCUTS = (
-    upstream => {
-        '5KB_upstream_variant' => 1,
-        '2KB_upstream_variant' => 1,
-    },
-    downstream => {
-        '5KB_downstream_variant'  => 1,
-        '2KB_downstream_variant'  => 1,
-        '500B_downstream_variant' => 1,
-    },
-    utr => {
-        '5_prime_UTR_variant' => 1,
-        '3_prime_UTR_variant' => 1,
-    },
-    splice => {
-        splice_donor_variant    => 1,
-        splice_acceptor_variant => 1,
-        splice_region_variant   => 1,
-    },
-    coding_change => {
-        stop_lost            => 1,
-        stop_gained          => 1,
-        missense_variant     => 1,
-        frameshift_variant   => 1,
-        inframe_insertion    => 1,
-        inframe_deletion     => 1,
-    },
-    regulatory => {
-        regulatory_region_variant => 1,
-        TF_binding_site_variant   => 1,
-    },
-);
-
 # parses a line of input, returns VF object(s)
 sub parse_line {
     my $config = shift;
@@ -406,15 +373,6 @@ sub detect_format {
         $data[3] =~ /(ins|dup|del)|([ACGTN-]+\/[ACGTN-]+)/i
     ) {
         return 'ensembl';
-    }
-    
-    # vep output: ID    1:142849179     -       -       -       -       INTERGENIC
-    elsif (
-        $data[0] =~ /\w+/ &&
-        $data[1] =~ /^\w+?\:\d+(\-\d+)*$/ &&
-        scalar @data == 14
-    ) {
-        return 'vep';
     }
     
     else {
@@ -895,40 +853,6 @@ sub parse_id {
     }
     
     return \@vfs;
-}
-
-# parse a line of VEP output
-sub parse_vep {
-    my $config = shift;
-    my $line = shift;
-    
-    my @data = split /\t/, $line;
-    
-    my ($chr, $start, $end) = split /\:|\-/, $data[1];
-    $end ||= $start;
-    
-    # might get allele string from ID
-    my $allele_string;
-    
-    if($data[0] =~ /^\w+\_\w+\_\w+$/) {
-        my @split = split /\_/, $data[0];
-        $allele_string = $split[-1] if $split[-1] =~ /[ACGTN-]+\/[ACGTN-]+/;
-    }
-    
-    $allele_string ||= 'N/'.($data[6] =~ /intergenic/ ? 'N' : $data[2]);
-    
-    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-        start          => $start,
-        end            => $end,
-        allele_string  => $allele_string,
-        strand         => 1,
-        map_weight     => 1,
-        adaptor        => $config->{vfa},
-        chr            => $chr,
-        variation_name => $data[0],
-    });
-    
-    return [$vf];
 }
 
 
@@ -1421,24 +1345,8 @@ sub vf_list_to_cons {
         while(my $vf = shift @$finished_vfs) {
             progress($config, $vf_counter++, $vf_count) unless $vf_count == 1;
             
-            my $filter_ok = 1;
-            
-            # filtered output
-            if(defined($config->{filter})) {
-                $filter_ok = filter_by_consequence($config, $vf);
-                $config->{stats}->{filter_count} += $filter_ok;
-            }
-            
-            # skip filtered lines
-            next unless $filter_ok;
-            
-            # original output
-            if(defined($config->{original})) {
-                push @return, \$vf->{_line};
-            }
-            
             # GVF output
-            elsif(defined($config->{gvf})) {
+            if(defined($config->{gvf})) {
                 $vf->source_object(Bio::EnsEMBL::Variation::Source->new_fast({name => "User"}));
                 
                 $config->{gvf_id} ||= 1;
@@ -1519,27 +1427,6 @@ sub vf_list_to_cons {
                 # add order
                 $tmp = "###ORDER### ".$vf->{_order}." ".$tmp if defined($vf->{_order});
                 
-                push @return, \$tmp;
-            }
-            
-            # no consequence output from vep input
-            elsif(defined($config->{no_consequences}) && $config->{format} eq 'vep') {
-                
-                my $line = [split /\s+/, $vf->{_line}];
-                
-                if($line->[13] eq '-') {
-                    $line->[13] = '';
-                }
-                
-                # get custom annotation
-                if(defined($config->{custom})) {
-                    my $custom_annotation = get_custom_annotation($config, $vf);
-                    foreach my $key(keys %{$custom_annotation}) {
-                        $line->[13] .= ($line->[13] ? ';' : '').$key.'='.$custom_annotation->{$key};
-                    }
-                }
-                
-                my $tmp = join "\t", @$line;
                 push @return, \$tmp;
             }
             
@@ -2815,86 +2702,6 @@ sub get_custom_annotation {
     
     return $annotation;
 }
-
-# decides whether to print a VF based on user defined consequences
-sub filter_by_consequence {
-    my $config = shift;
-    my $vf = shift;
-    my $filters = $config->{filter};
-    
-    # find it if we only have "no"s
-    my $only_nos = 0;
-    $only_nos = 1 if (sort {$a <=> $b} values %$filters)[-1] == 0;
-    
-    my ($yes, $no) = (0, 0);
-    
-    # get all consequences across all term types
-    my @types = ('SO', 'display');
-    
-    my @cons;
-    push @cons, @{$vf->consequence_type($_)} for @types;
-    
-    my $method_mod = $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') ? 'Structural' : '';
-    
-    # add regulatory consequences
-    if(defined($config->{regulatory})) {
-        foreach my $term_type(@types) {
-            my $term_method = $term_type.'_term';
-            
-            my $m1 = 'get_all_RegulatoryFeature'.$method_mod.'Variations';
-            my $m2 = 'get_all_RegulatoryFeature'.$method_mod.'VariationAlleles';
-            
-            for my $rfv (@{ $vf->$m1 }) {
-                for my $rfva(@{$rfv->$m2}) {
-                    push @cons, map {$_->$term_method} @{ $rfva->get_all_OverlapConsequences };
-                }
-            }
-            
-            $m1 = 'get_all_MotifFeature'.$method_mod.'Variations';
-            $m2 = 'get_all_MotifFeature'.$method_mod.'VariationAlleles';
-            
-            for my $mfv (@{ $vf->$m1 }) {
-                for my $mfva(@{$mfv->$m2}) {
-                    push @cons, map {$_->$term_method} @{ $mfva->get_all_OverlapConsequences };
-                }
-            }
-        }
-    }
-    
-    foreach my $con(grep {defined($_) && defined($filters->{$_})} @cons) {
-        if($filters->{$con} == 1) {
-            $yes = 1;
-        }
-        else {
-            $no = 1;
-        }
-    }
-    
-    # check special case, coding
-    if(defined($filters->{coding})) {
-        my $method = 'get_all_Transcript'.$method_mod.'Variations';
-        
-        if(grep {$_->affects_cds} @{$vf->$method}) {
-            if($filters->{coding} == 1) {
-                $yes = 1;
-            }
-            else {
-                $no = 1;
-            }
-        }
-    }
-    
-    my $ok = 0;
-    if($only_nos) {
-        $ok = 1 if !$no;
-    }
-    else {
-        $ok = 1 if $yes && !$no;
-    }
-    
-    return $ok;
-}
-
 
 # takes VFs created from input, fixes and checks various things
 sub validate_vf {
