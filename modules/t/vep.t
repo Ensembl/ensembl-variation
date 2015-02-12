@@ -105,7 +105,9 @@ $config = copy_config($base_config, {
   pubmed     => 1,
   uniprot    => 1,
   tsl        => 1,
-  format     => 'ensembl'
+  format     => 'ensembl',
+  allele_number => 1,
+  gencode_basic => 1,
 });
 
 $cons = get_all_consequences($config, [$vf]);
@@ -129,7 +131,8 @@ $exp = {
   'TREMBL' => 'C9JG87',
   'EA_MAF' => 'C:0.000116',
   'EXON' => '2/8',
-  'TSL' => '5'
+  'TSL' => '5',
+  'ALLELE_NUM' => '1',
 };
 
 is_deeply($exp, $cons->[0]->{Extra}, "get_all_consequences - everything 2");
@@ -145,6 +148,21 @@ $cons = get_all_consequences($config, [$vf]);
 
 ok((grep {$_->{Extra}->{BIOTYPE} && $_->{Extra}->{BIOTYPE} eq 'promoter_flanking_region'} @$cons), "regulatory - type");
 ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.022} @$cons), "regulatory - motif score");
+
+
+## input formats
+
+# ensembl SV
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25587759 25587769 DEL + del')};
+$cons = get_all_consequences($config, [$vf]);
+ok((grep {$_->{Consequence} =~ /feature_truncation/} @$cons), "ensembl format - SV del");
+
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25587759 25587769 DUP + del')};
+$cons = get_all_consequences($config, [$vf]);
+ok((grep {$_->{Consequence} =~ /feature_elongation/} @$cons), "ensembl format - SV dup");
+
 
 # vcf
 my $input = qq{21      25607440        rs61735760      C       T       .       .       .
@@ -164,20 +182,59 @@ my @lines = split("\n", $input);
 
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, $lines[0])};
-ok($vf && $vf->allele_string eq 'C/T', "parse_line vcf");
+ok($vf && $vf->allele_string eq 'C/T', "vcf format - parse_line");
 
 # SV input
 my @vfs = grep {validate_vf($config, $_)} map {@{parse_line($config, $_)}} @lines;
-ok(scalar @vfs == 12, "SVs pass validate_vf");
+ok(scalar @vfs == 12, "vcf format - SVs");
 
 $config->{pick_allele} = 1;
 $cons = get_all_consequences($config, \@vfs);
 
 my @sv_cons = grep {$_->{Uploaded_variation} eq 'sv_del'} @$cons;
-ok((grep {$_->{Consequence} =~ /feature_truncation/} @sv_cons), "SV del cons");
+ok((grep {$_->{Consequence} =~ /feature_truncation/} @sv_cons), "vcf format - SV del cons");
 
 @sv_cons = grep {$_->{Uploaded_variation} eq 'sv_dup'} @$cons;
-ok((grep {$_->{Consequence} =~ /feature_elongation/} @sv_cons), "SV dup cons");
+ok((grep {$_->{Consequence} =~ /feature_elongation/} @sv_cons), "vcf format - SV dup cons");
+
+# vcf multiple alleles
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25606454 test G C,T')};
+ok($vf && $vf->allele_string eq 'G/C/T', "vcf format - multiple alleles");
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && scalar @$cons == 6, "vcf format - multiple alleles cons");
+
+# vcf mixed allele types
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25606454 test G C,TT')};
+ok($vf && $vf->allele_string eq 'G/C/TT', "vcf format - mixed allele types");
+
+# vcf non variant
+$config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
+($vf) = @{parse_line($config, '21 25606454 test G .')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && ${$cons->[0]} =~ /21\s+25606454\s+test\s+G\s+./, "vcf format - non variant");
+
+# vcf individual data
+$config = copy_config($base_config, {
+  individual => ['all'],
+  ind_cols => {
+    'A' => 9,
+    'B' => 10,
+  }
+});
+($vf) = @{parse_line($config, qq{21 25587758 rs116645811 G A . . . GT 1|1 0|0})};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && (grep {$_->{Extra}->{IND} eq 'A'} @$cons) && !(grep {$_->{Extra}->{IND} eq 'B'} @$cons), "vcf format - individual data");
+
+# pileup
+$config = copy_config($base_config);
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, 'chr21 25606454 G C')};
+ok($vf && $vf->allele_string eq 'G/C', "pileup format - parse_line");
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && scalar @$cons == 3, "pileup format - consequences");
+
+# pileup indel
 
 
 # frequency filtering
@@ -222,6 +279,8 @@ $cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\
 ok($ex{test1} && !$ex{test2}, "check frequency 4");
 
 
+
+
 ## output formats
 
 # vcf
@@ -248,7 +307,8 @@ $config = copy_config($base_config, {
   json => 1,
   rest => 1,
   check_existing => 1, 
-  sift => 'b'
+  sift => 'b',
+  domains => 1
 });
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
@@ -258,9 +318,11 @@ ok($cons && $cons->[0]->{most_severe_consequence} eq 'missense_variant', "json o
 # solr xml
 $config = copy_config($base_config, {
   solr => 1,
-  fields => ['Consequence', 'SIFT'],
-  summary => 1,
-  sift => 'b'
+  fields => ['Consequence', 'SIFT', 'GMAF'],
+  pick_allele => 1,
+  sift => 'b',
+  check_existing => 1,
+  gmaf => 1,
 });
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
@@ -283,6 +345,13 @@ if(`which tabix` =~ /tabix/) {
         coords => 0
       },
       {
+        file   => "$Bin\/testdata/test.gff.gz",
+        name   => 'testgff',
+        type   => 'overlap',
+        format => 'gff',
+        coords => 0
+      },
+      {
         file   => "$Bin\/testdata/test.vcf.gz",
         name   => 'testvcf',
         type   => 'exact',
@@ -298,6 +367,8 @@ if(`which tabix` =~ /tabix/) {
   
   my %by_var = map {$_->{Uploaded_variation} => $_->{Extra}} @$cons;
   ok($by_var{rs116645811}->{testbed} eq 'bed1' && $by_var{rs1135638}->{testbed} eq 'bed2', "custom - bed");
+  
+  ok($by_var{rs116645811}->{testgff} eq 'gtf1', "custom - gff");
 
   ok(
     $by_var{rs116645811}->{testvcf} eq 'vcf1' &&
@@ -323,6 +394,7 @@ $config = copy_config($base_config, {
   
   database => 1,
   hgvs => 1,
+  lrg => 1,
   
   # core adaptors
   sa => $cdb->get_SliceAdaptor,
@@ -347,6 +419,7 @@ ok((grep {$_->{Extra}->{HGVSc} eq 'ENST00000522587.1:c.639G>C'} @$cons), "DB out
 delete $config->{format};
 ($vf) = @{parse_line($config, "rs2299222")};
 ok($vf && $vf->variation_name eq 'rs2299222', "parse_line ID");
+
 
 # build
 $config = copy_config($config, {
