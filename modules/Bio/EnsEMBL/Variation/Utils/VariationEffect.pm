@@ -642,20 +642,21 @@ sub _get_alleles {
 }
 
 sub stop_retained {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
 
     ## handle inframe insertion of a stop just before the stop (no ref peptide)
-    if( $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-        defined $bvfoa->transcript_variation->transcript->translation &&
-         $bvfoa->transcript_variation->translation_start() > 
-           $bvfoa->transcript_variation->transcript->translation->length()
-	){
-
-	return 1;
+    if(
+      $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
+      $bvfo->_peptide &&
+      $bvfo->translation_start() > length($bvfo->_peptide)
+    ) {
+      return 1;
     }
+    
     return 0 unless $ref_pep;
 
     return ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
@@ -825,7 +826,7 @@ sub stop_gained {
     
     return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     ## check for inframe insertion before stop 
-    return 0 if stop_retained($bvfoa);
+    return 0 if stop_retained(@_);
 
     my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
