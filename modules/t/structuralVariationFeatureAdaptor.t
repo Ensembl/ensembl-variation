@@ -39,10 +39,10 @@ my $vsa  = $vdb->get_VariationSetAdaptor();
 my $srca = $vdb->get_SourceAdaptor();
 
 my $dbID = 4509635;
-my $outer_start = 7803891;
-my $inner_start = 7805991;
-my $inner_end = 7823440;
-my $outer_end = 7825340;
+my $outer_start = 7823440;
+my $inner_start = 7823450;
+my $inner_end = 8819360;
+my $outer_end = 8819373;
 my $var_name = 'esv93078';
 my $source_name = 'DGVa';
 my $study_name  = 'estd59';
@@ -148,7 +148,7 @@ ok($svfs8->[0]->variation_name() eq $sv_names[0], "sv by slice and study");
 # test fetch all by Slice VariationSet
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";
 my $set = $vsa->fetch_by_name('1000 Genomes - High coverage - Trios');
-my @sv_sets = ('esv93078','esv89107');
+my @sv_sets = ('esv89107','esv93078');
 my $svfs8 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
 ok($svfs8->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
 ok($svfs8->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
