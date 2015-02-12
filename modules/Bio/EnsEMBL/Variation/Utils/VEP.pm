@@ -5320,7 +5320,7 @@ sub cache_custom_annotation {
                             chr    => $chr,
                             start  => $tmp_vf->{start},
                             end    => $tmp_vf->{end},
-                            name   => $tmp_vf->{variation_name},
+                            name   => $tmp_vf->{variation_name} || '.',
                         };
                         
                         foreach my $field(@{$custom->{fields}}) {
