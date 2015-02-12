@@ -43,13 +43,14 @@ my $url            = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
 my $type           = undef;
 my $somatic_status = 'mixed';
 my @data_types     = ('variation');
+my %source_list    = ( $name => 1, 'COSMIC' => 26 );
+my @source_IDs     = sort {$a <=> $b} values(%source_list);
 
 
 # test fetch by dbID
-
 my $source = $sa->fetch_by_dbID(1);
 
-
+ok($source, "source by dbID");
 ok($source->name() eq $name, "name");
 ok($source->version() == $version, "version");
 ok($source->description() eq $description, "$description");
@@ -58,6 +59,29 @@ ok(!$source->type(), "type");
 ok($source->somatic_status() eq $somatic_status, "somatic_status");
 ok($source->get_all_data_types()->[0] eq $data_types[0], "data_type");
 
+# test fetch by name
+my $source2 = $sa->fetch_by_name($name);
+ok($source2->name() eq $name, "source by name");
+
+# test fetch all by dbID list
+my $sources = $sa->fetch_all_by_dbID_list(\@source_IDs);
+ok($source_list{$sources->[0]->name}, 'source by dbID list - 1');
+ok($source_list{$sources->[1]->name}, 'source by dbID list - 2');
+
+# test get source version
+ok($sa->get_source_version($name) eq $version, "get_source_version");
+
+
+# store
+print "\n# Test - store\n";
+
+delete $source->{$_} for qw(dbID name);
+$source->name('test');
+
+ok($sa->store($source), "store");
+
+$source = $sa->fetch_by_name('test');
+ok($source && $source->name eq 'test', "fetch stored");
 
 done_testing();
 

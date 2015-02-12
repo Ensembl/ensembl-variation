@@ -60,5 +60,13 @@ ok(test_getter_setter($source, 'version', 141), "get/set version");
 ok(test_getter_setter($source, 'description', 'new description'), "get/set description");
 ok(test_getter_setter($source, 'url', 'http://www.ensembl.org'), "get/set url");
 
+my %versions = ($version => $version, '20152' => '2015.2', '201502' => '02/2015', '20150212' => '12/02/2015');
+my $count = 1;
+foreach my $v (keys(%versions)) {
+  $source->version($v);
+  ok($source->formatted_version() eq $versions{$v}, "formatted_version - $count");
+  $count++;
+}
+
 
 done_testing();
