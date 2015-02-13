@@ -847,7 +847,6 @@ sub _create_hgvs_tva{
     my $var_class  =  $vf->var_class();
 
 
-    $DB::single = 1;
     ##  only check insertions & deletions & don't move beyond transcript
     if( ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&  
         $slice_start != length($slice->seq()) &&
