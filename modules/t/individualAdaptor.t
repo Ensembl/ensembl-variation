@@ -79,33 +79,12 @@ my $children = $ia->fetch_all_by_parent_Individual($parent);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
 is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA19661");
 
-# fetch_individual_by_synonym 
-#my $synonyms = $ia->fetch_synonyms(12991);
-#$all = join(',', map {$_} @$synonyms);
-#is($all, 5, "Synonyms for Individual with dbID 12991"); 
-#my $synonym = '5';
-#$individual = $ia->fetch_individual_by_synonym($synonym);
-#$all = join(',', map {$_->name} @$individuals);
-#is($all, 'CEPH104.03', "Individuals for synonym 5");
+# synonyms 
+my $ind =  $ia->fetch_synonyms(101101);
+ok( $ia->fetch_synonyms(101101)->[0] eq "fred", "fetch synonym") ;
+my $individuals = $ia->fetch_individual_by_synonym("fred");
+ok($individuals->[0]->name eq "1000GENOMES:phase_1:HG00114", "fetch by synonym");
 
-# fetch_all_strains
-my $strains = $ia->fetch_all_strains();
-is(scalar @$strains, 0, "Number of strains");
-
-# fetch_all_strains_with_coverage:
-# 1000GENOMES:pilot_2_trio:NA12878,1000GENOMES:pilot_2_trio:NA12891,1000GENOMES:pilot_2_trio:NA12892,1000GENOMES:pilot_2_trio:NA19238,1000GENOMES:pilot_2_trio:NA19239,1000GENOMES:pilot_2_trio:NA19240,AK1,Anonymous Irish Male,Henry Louis Gates Jr,Henry Louis Gates Sr,Marjolein Kriek,Misha Angrist,Palaeo-Eskimo Saqqaq individual,Palaeo-Eskimo Saqqaq individual HC,Rosalynn Gill,SJK,Stephen Quake,VENTER,WATSON,YH
-#$strains = $ia->fetch_all_strains_with_coverage();
-#is(scalar @$strains, 20, "Number of strains with coverage");
-
-# get_default_strains: VENTER,WATSON
-#$strains = $ia->get_default_strains;
-#is(scalar @$strains, 2, "Number of default strains");
-
-# get_display_strains
-#$strains = $ia->get_display_strains;
-#is(scalar @$strains, 21, "Number of display strains");
-
-# get_reference_strain_name
 
 
 # store
@@ -116,5 +95,18 @@ ok($ia->store($individual), "store");
 
 ($individual) = @{$ia->fetch_all_by_name('test')};
 ok($individual && $individual->name eq 'test', "fetch stored");
+
+
+# strains
+
+my $strains = $ia->fetch_all_strains();
+is(scalar @$strains, 2, "Number of strains");
+
+ok($ia->get_default_strains()->[0]  eq "NA12891", "default_strains");
+
+ok( $ia->get_reference_strain_name() eq "NA18635", "reference strain");
+
+my $strains = $ia->get_display_strains;
+is(scalar @$strains, 2, "Number of display strains");
 
 done_testing();
