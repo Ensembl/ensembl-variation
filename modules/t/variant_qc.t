@@ -28,8 +28,8 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
-use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles check_variant_size check_for_ambiguous_alleles);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem strain_ambiguity_code unambiguity_code);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles check_variant_size check_for_ambiguous_alleles get_evidence_attribs get_pubmed_variations get_ss_variations summarise_evidence);
 
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC_conf');
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::InitVariantQC');
@@ -81,14 +81,35 @@ ok( check_variant_size(10,12,"AAA") eq 1,                "Utils::QCUtils variant
 ok( check_variant_size(10,10,"A")   eq 1,                "Utils::QCUtils variant size substitution");
 
 ok( check_for_ambiguous_alleles('M/R') eq 1,             "Utils::QCUtils check_for_ambiguous_alleles positive"); 
-ok( check_for_ambiguous_alleles('A/C') eq "",            "Utils::QCUtils check_for_ambiguous_alleles negative");
+ok( !defined check_for_ambiguous_alleles('A/C'),        "Utils::QCUtils check_for_ambiguous_alleles negative");
+
+ok(strain_ambiguity_code("A/G") eq "R", "strain ambig 1");
+ok(strain_ambiguity_code("-/G") eq "g", "strain ambig 2");
+ok(strain_ambiguity_code("A/-") eq "a", "strain ambig 3")
+ok(strain_ambiguity_code("-/-") eq "-", "strain ambig 3");
+ok(unambiguity_code("M") eq "AC", "unambig");
 
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
 
+
 ok(count_rows($vdb, "meta_coord") eq 6, "meta_coord count");
+
+my $attr = get_evidence_attribs($vdb); 
+
+ok($attr->{"Frequency"} eq  '368', "attrib extraction - single");  
+ok(scalar( keys %$attr) eq  '6', "attrib extraction - total");  
+
+my $cit = get_pubmed_variations($vdb, 26469700, 26469702); 
+
+ok($cit->{26469702} eq  '1', "citation extraction - single");  
+ok(scalar( keys %$cit) eq  '1', "citation extraction - total");  
+
+my $ev = get_ss_variations($vdb, 1748253,1748253);
+ok($ev->{1748253}->{'freq'}  ==1, "evidence summary 1");
+ok($ev->{1748253}->{'count'} ==17, "evidence summary 2");
 
 
 done_testing();

@@ -42,7 +42,7 @@ use base qw(Exporter);
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 
-our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by count_for_statement);
+our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by count_for_statement get_evidence_attribs get_pubmed_variations get_ss_variations summarise_evidence);
 
 
  
@@ -459,9 +459,11 @@ sub get_pubmed_variations{
  
     my %pubmed_variations;
 
-    my $pubmed_var_ext_sth  = $var_dbh->prepare(qq[ select variation_id from variation_citation ]);
+    my $pubmed_var_ext_sth  = $var_dbh->prepare(qq[ select variation_id 
+                                                    from variation_citation 
+                                                    where variation_id between ? and ?]);
 
-    $pubmed_var_ext_sth->execute();
+    $pubmed_var_ext_sth->execute( $first, $last);
     my $data = $pubmed_var_ext_sth->fetchall_arrayref();
  
     foreach my $l (@{$data}){
@@ -485,8 +487,8 @@ sub get_KG_variations{
   my %kg_variations;
 
   my $var_ext_sth  = $var_dbh->prepare(qq[ select variation.variation_id 
-                                           from variation, 1kg_rs_id 
-                                           where variation.snp_id =  1kg_rs_id.rs_id 
+                                           from variation, tmp_1kg_rsid 
+                                           where variation.snp_id =  tmp_1kg_rsid.rs_id 
                                            and variation.variation_id  between ? and ?
                                          ]);
   $var_ext_sth->execute($first, $last);
@@ -524,8 +526,8 @@ sub count_rows{
 
    return $total_rows->[0]->[0]; 
 
-}
 
+}
 sub count_group_by{
 
    my $var_dba     = shift;

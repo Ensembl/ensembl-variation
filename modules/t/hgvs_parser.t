@@ -284,6 +284,13 @@ my @test_input = (
            "ENST00000356839.4:c.2103_2104insTAGAAAT(p.=)",
            "In-frame insertion - no ref peptide - stop retained"
            ],  
+           ["6:g.6649978_6649980invAGG",
+           "CCT",
+          "ENST00000230568.3:c.405+68_405+70invAGG",
+          "CCT",
+           "",
+           "inversion, intronic "
+          ],
 );
 
 foreach my $line(@test_input){
