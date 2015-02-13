@@ -37,10 +37,10 @@ my $sv_adaptor = $vdb->get_StructuralVariationAdaptor;
 # test constructor
 
 ## need Source object 
-my $source_name           = 'DGVa';
-my $source_version        = 201310;
-my $source_description    = 'Database of Genomic Variants Archive';
-my $source_id             = 11;
+my $source_name        = 'DGVa';
+my $source_version     = 201310;
+my $source_description = 'Database of Genomic Variants Archive';
+my $source_id          = 11;
 
 my $source = Bio::EnsEMBL::Variation::Source->new
   (-dbID        => $source_id,
@@ -84,11 +84,7 @@ my $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
    -is_evidence           => 0,
    -is_somatic            => 0,
   );
-  
-#use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
-#print "SOv: ".$VARIATION_CLASSES{'copy_number_variant'}->{'SO_accession'}."\n";
 
-print "SOa: ".$sv->class_SO_accession()."\n";
 ok($sv->dbID() eq $dbID,                           "dbID");
 ok($sv->variation_name() eq $name,                 "name");
 ok($sv->display_id() eq $name,                     "display");
