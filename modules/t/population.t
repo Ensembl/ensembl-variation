@@ -15,17 +15,17 @@
 use strict;
 use warnings;
 
-BEGIN { $| = 1;
-	use Test::More;
-	plan tests => 10;
-}
-
-
+use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::Population;
 
-#use Bio::EnsEMBL::Test::MultiTestDB;
 
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+
+my $vdb = $multi->get_DBAdaptor('variation');
+
+my $pa = $vdb->get_PopulationAdaptor();
 
 # test constructor
 
@@ -58,18 +58,18 @@ my $pop = Bio::EnsEMBL::Variation::Population->new
    -size => $size,
    -sub_populations => $sub_pops);
 
-ok($pop->dbID() == $dbID);
-ok($pop->name() eq $name);
-ok($pop->description() eq $desc);
-ok($pop->size() == $size);
-ok($pop->get_all_sub_Populations()->[0]->name eq 'Green people');
+ok($pop->dbID() == $dbID,        'dbID');
+ok($pop->name() eq $name,        'name');
+ok($pop->description() eq $desc, 'description');
+ok($pop->size() == $size,        'size');
+ok($pop->get_all_sub_Populations()->[0]->name eq 'Green people', 'sub_pop');
 
 # test getter/setters
 
-ok(test_getter_setter($pop, 'dbID', 123));
-ok(test_getter_setter($pop, 'name', 'Saturn People'));
-ok(test_getter_setter($pop, 'description', 'People from Saturn' ));
-ok(test_getter_setter($pop, 'size', 10));
+ok(test_getter_setter($pop, 'dbID', 123), 'setter/getter dbID');
+ok(test_getter_setter($pop, 'name', 'Saturn People'), 'setter/getter name');
+ok(test_getter_setter($pop, 'description', 'People from Saturn' ), 'setter/getter description');
+ok(test_getter_setter($pop, 'size', 10), 'setter/getter size');
 
 
 
@@ -81,31 +81,34 @@ my $purple_pop = Bio::EnsEMBL::Variation::Population->new
 
 $blue_pop->add_sub_Population($purple_pop);
 
-ok($blue_pop->get_all_sub_Populations()->[0] == $purple_pop);
+ok($blue_pop->get_all_sub_Populations()->[0] == $purple_pop, 'add_sub_Population');
 
 
 # test get_all_super_Populations
-=head
 
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
-my $vdb = $multi->get_DBAdaptor('variation');
+my $super_pop = '1000GENOMES:phase_1_EUR';
+my $sub_pop   = '1000GENOMES:phase_1_FIN';
 
-my $pa = $vdb->get_PopulationAdaptor();
+# test get all super Populations
+my $pop1 = $pa->fetch_by_name($sub_pop);
+ok($pop1->get_all_super_Populations->[0]->name eq $super_pop, 'get_all_super_Populations');
 
-$pop = $pa->fetch_by_name('PACIFIC');
+# test get all sub Populations
+my $pop2 = $pa->fetch_by_name($super_pop);
+ok(scalar(@{$pop2->get_all_sub_Populations()}) == 5, 'get_all_sub_Populations');
 
-ok(@{$pop->get_all_sub_Populations()} == 25);
+# test get all synonyms
+my $pop3 = $pa->fetch_by_name('PERLEGEN:AFD_EUR_PANEL');
+my $synonyms = $pop3->get_all_synonyms();
+ok($synonyms->[0] == 1371, 'get_all_synonyms');
 
-$pop = $pop->get_all_sub_Populations->[0];
+# test display group priority
+ok($pop2->display_group_priority() == 1, 'display_group_priority');
 
-ok($pop->get_all_super_Populations()->[0]->name() eq 'PACIFIC');
+# test display group name
+ok($pop2->display_group_name() eq '1000 Genomes Project Phase 1', 'display_group_name');
 
-#test get_all_synonyms
 
-$purple_pop->adaptor($pa);
-my $synonyms = $purple_pop->get_all_synonyms();
+done_testing();
 
-ok($synonyms->[0] == 580);
-ok(@{$synonyms} == 1);
-=cut
