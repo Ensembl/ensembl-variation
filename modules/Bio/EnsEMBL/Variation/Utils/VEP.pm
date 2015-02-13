@@ -572,37 +572,21 @@ sub parse_vcf {
             if($is_indel) {
                 my @alts;
                 
-                if($alt =~ /D|I/) {
+                # find out if all the alts start with the same base
+                my %first_bases = map {substr($_, 0, 1) => 1} ($ref, split(/\,/, $alt));
+                
+                if(scalar keys %first_bases == 1) {
+                    $ref = substr($ref, 1) || '-';
+                    $start++;
+                
                     foreach my $alt_allele(split /\,/, $alt) {
-                        # deletion (VCF <4)
-                        if($alt_allele =~ /D/) {
-                            push @alts, '-';
-                        }
-                        
-                        elsif($alt_allele =~ /I/) {
-                            $alt_allele =~ s/^I//g;
-                            push @alts, $alt_allele;
-                        }
+                        $alt_allele = substr($alt_allele, 1);
+                        $alt_allele = '-' if $alt_allele eq '';
+                        push @alts, $alt_allele;
                     }
                 }
-                
                 else {
-                    # find out if all the alts start with the same base
-                    my %first_bases = map {substr($_, 0, 1) => 1} ($ref, split(/\,/, $alt));
-                    
-                    if(scalar keys %first_bases == 1) {
-                        $ref = substr($ref, 1) || '-';
-                        $start++;
-                    
-                        foreach my $alt_allele(split /\,/, $alt) {
-                            $alt_allele = substr($alt_allele, 1);
-                            $alt_allele = '-' if $alt_allele eq '';
-                            push @alts, $alt_allele;
-                        }
-                    }
-                    else {
-                        push @alts, split(/\,/, $alt);
-                    }
+                    push @alts, split(/\,/, $alt);
                 }
                 
                 $alt = join "/", @alts;
@@ -615,30 +599,9 @@ sub parse_vcf {
         }
         
         elsif($is_indel) {
-            # deletion (VCF <4)
-            if($alt =~ /D/) {
-                my $num_deleted = $alt;
-                $num_deleted =~ s/\D+//g;
-                $end += $num_deleted - 1;
-                $alt = "-";
-                
-                # get ref seq from slice
-                my $tmp_chr = $chr;
-                $tmp_chr =~ s/chr//ig;
-                my $slice = get_slice($config, $tmp_chr);
-                
-                $ref .= $slice ? $slice->sub_Slice($start + 1, $start + $num_deleted - 1)->seq : ("N" x ($num_deleted - 1)) unless length($ref) > 1 || $start == $end;
-            }
-            
-            # insertion (VCF <4)
-            elsif($alt =~ /I/) {
-                $ref = '-';
-                $alt =~ s/^I//g;
-                $start++;
-            }
             
             # insertion or deletion (VCF 4+)
-            elsif(substr($ref, 0, 1) eq substr($alt, 0, 1)) {
+            if(substr($ref, 0, 1) eq substr($alt, 0, 1)) {
                 
                 # chop off first base
                 $ref = substr($ref, 1) || '-';
