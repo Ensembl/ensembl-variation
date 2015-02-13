@@ -56,14 +56,26 @@ my $study = Bio::EnsEMBL::Variation::Study->new
 );
 
 ## need Individual object 
-my $ind_id          = 2105;
-my $ind_name        = 'NA18635';
-my $ind_gender      = 'Male';
+my $ind_id     = 2105;
+my $ind_name   = 'NA18635';
+my $ind_gender = 'Male';
 
 my $ind = Bio::EnsEMBL::Variation::Individual->new
   (-dbID        => $ind_id,
    -name        => $ind_name,
    -gender      => $ind_gender
+);
+
+## need strain (Individual object)
+
+my $strain_id     = 8675;
+my $strain_name   = 'NA19122';
+my $strain_gender = 'Male';
+
+my $strain = Bio::EnsEMBL::Variation::Individual->new
+  (-dbID        => $strain_id,
+   -name        => $strain_name,
+   -gender      => $strain_gender
 );
 
 ## need Supporting Structural Variantion object 
@@ -84,15 +96,28 @@ my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
   (-dbID                     => $dbID,
    -_structural_variation_id => $ssv->dbID,
    -individual               => $ind,
+   -strain                   => $strain,
    -study                    => $study,
    -adaptor                  => $svs_adaptor
   );
 
 ok($svs->dbID() eq $dbID,                                     'dbID');
 ok($svs->structural_variation->variation_name() eq $ssv_name, 'ssv name');
+# Individual
 ok($svs->individual->name() eq $ind_name,                     'individual name');
 ok($svs->individual->gender() eq $ind_gender,                 'individual gender ');
+# Strain
+ok($svs->strain->name() eq $strain_name,                      'strain name');
+ok($svs->strain->gender() eq $strain_gender,                  'strain gender ');
+# Study
 ok($svs->study->name() eq $study_name ,                       'study name' );
 
+# test structural variation object
+my $sv = $svs->structural_variation();
+ok($svs->structural_variation($sv), 'structural_variation object (using argument)');
+
+# test study object
+my $svs_study = $svs->study();
+ok($svs->study($svs_study), 'study object (using argument)');
 
 done_testing();
