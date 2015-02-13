@@ -164,7 +164,7 @@ sub fetch_all_by_StructuralVariationFeature_list {
     throw("VariationFeatures in list must have defined dbIDs");
   }
   
-  my $in_str = join ',', map {$_->{'structural_variation_id'}} @$svfs;
+  my $in_str = join ',', map {$_->{'_structural_variation_id'}} @$svfs;
 	
 	my $constraint = $self->_internal_exclude_failed_constraint("svs.structural_variation_id in (".$in_str.")");
 
