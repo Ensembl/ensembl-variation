@@ -100,13 +100,13 @@ ok($individual && $individual->name eq 'test', "fetch stored");
 # strains
 
 my $strains = $ia->fetch_all_strains();
-is(scalar @$strains, 2, "Number of strains");
+is(scalar @$strains, 3, "Number of strains");
 
 ok($ia->get_default_strains()->[0]  eq "NA12891", "default_strains");
 
 ok( $ia->get_reference_strain_name() eq "NA18635", "reference strain");
 
 my $strains = $ia->get_display_strains;
-is(scalar @$strains, 2, "Number of display strains");
+is(scalar @$strains, 3, "Number of display strains");
 
 done_testing();
