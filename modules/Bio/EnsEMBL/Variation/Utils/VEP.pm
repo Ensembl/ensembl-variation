@@ -300,13 +300,6 @@ sub parse_line {
         
         # HGVS and ID formats need DB
         die("ERROR: Can't use ".uc($config->{format})." format in offline mode") if $config->{format} =~ /id|hgvs/ && defined($config->{offline});
-        
-        # force certain options if format is VEP output
-        if($config->{format} eq 'vep') {
-            $config->{no_consequence} = 1;
-            delete $config->{regulatory};
-            debug("Forcing no consequence calculation") unless defined($config->{quiet});
-        }
     }
     
     # check that format is vcf when using --individual
