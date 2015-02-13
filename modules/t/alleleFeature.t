@@ -19,6 +19,7 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::Individual;
 
 use_ok('Bio::EnsEMBL::Variation::AlleleFeature');
@@ -26,21 +27,21 @@ use_ok('Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor');
 
 ## examples to be added to test-genome-DBs files
 
-=head
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdb = $multi->get_DBAdaptor('variation');
+my $cdb = $multi->get_DBAdaptor('core');
 
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->load_all("$Bin/test.ensembl.registry.72");
+my $sa = $cdb->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome','9',22124503,22126503);
 
-my $cdba = $reg->get_DBAdaptor('human', 'core');
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
+my $strain_name = '1000GENOMES:phase_1:NA06984';
 
-my $sa = $cdba->get_SliceAdaptor();
-my $slice = $sa->fetch_by_region('chromosome', '1', 1, 200_000);
-
-my $strain_name = 'VENTER';
 my $strain_slice = $slice->get_by_strain($strain_name);
+my $seq = $strain_slice->seq();
+is(substr($seq, 1, 1), "W", "apply_edit (via sequence)");
+
 my $afs = $strain_slice->get_all_AlleleFeatures_Slice();
-is(scalar @$afs, 37, 'Number of AlleleFeatures');
+is(scalar @$afs, 27, 'Number of AlleleFeatures');
 
 my $hash;
 foreach my $af ( @{$afs} ) {
@@ -62,9 +63,11 @@ foreach my $af ( @{$afs} ) {
     $hash->{$start . '-' . $end . '-' . $strand}->{'consequence_type'} = $consequence_type;
 }
 
-is($hash->{'29436-29436-1'}->{'allele_string'}, 'G|G', 'Test allele_string');
-is($hash->{'29436-29436-1'}->{'consequence_type'}, 'SARA', 'Test consequence_type');
-is($hash->{'126113-126113-1'}->{'variation_name'}, 'rs79114531', 'Test variation_name');
-is($hash->{'126113-126113-1'}->{'consequence_type'}, 'nc_transcript_variant, intron_variant, downstream_gene_variant, upstream_gene_variant', 'Test consequence_type');
-=cut
+is($hash->{'1411-1411-1'}->{'allele_string'}, 'C|T', 'Test allele_string');
+is($hash->{'1001-1001-1'}->{'consequence_type'}, 'downstream_gene_variant', 'Test consequence_type');
+is($hash->{'1083-1083-1'}->{'variation_name'}, 'rs73650063', 'Test variation_name');
+
+my $af = $afs->[0];
+is($af->display_consequence, 'downstream_gene_variant', "display_consequence");
+
 done_testing();
