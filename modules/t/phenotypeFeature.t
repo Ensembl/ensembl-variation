@@ -76,7 +76,8 @@ my $or          = 6;
 my $beta        = 2;
 my $allele_symbol = 't_1';
 my $allele_accession = 't_1.1';
-
+my $var_name = "rs12345";
+my $external_ref = "RV123";
 
 my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $desc);
 
@@ -100,6 +101,8 @@ my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       clinvar_clin_sig     => $clinsig,
       allele_symbol        => $allele_symbol,     
       allele_accession_id  => $allele_accession,
+      variation_names      => $var_name,
+      external_reference   => $external_ref 
     },
     );
 
@@ -122,10 +125,29 @@ ok($pf->source_version() eq $source_version,       "source version");
 ok($pf->study_name() eq $study_name,               "study name");
 ok($pf->study_url()  eq $study_url,                "study_url");
 ok($pf->study_description() eq $study_description, "study description");
+ok($pf->variation_names() eq $var_name,            "assoc var names");
 ok($pf->phenotype() eq $phenotype,             "phenotype object");
 ok($pf->phenotype()->description eq $desc,     "phenotype");
 ok($pf->object()->name()   eq 'rs142276873',   "variation name");
 
+
+##set var
+my $variation2 = Bio::EnsEMBL::Variation::Variation->new(-name   => 'rs1234',
+                                                        -source => $source);
+$pf->variation($variation2);
+ok($pf->variation()->name()   eq 'rs1234',   "updated variation name");
+
+## new source object 
+my $source_name2           = 'ClinVar';
+my $source_version2        = 138;
+
+
+my $source2 = Bio::EnsEMBL::Variation::Source->new
+  (-name           => $source_name2,
+   -version        => $source_version2,
+);
+$pf->source_object($source2);
+ok($pf->source_name() eq $source_name2,             "update source");
 
 
 done_testing();
