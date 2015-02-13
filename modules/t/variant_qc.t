@@ -85,8 +85,8 @@ ok( !defined check_for_ambiguous_alleles('A/C'),        "Utils::QCUtils check_fo
 
 ok(strain_ambiguity_code("A/G") eq "R", "strain ambig 1");
 ok(strain_ambiguity_code("-/G") eq "g", "strain ambig 2");
-ok(strain_ambiguity_code("A/-") eq "a", "strain ambig 3")
-ok(strain_ambiguity_code("-/-") eq "-", "strain ambig 3");
+ok(strain_ambiguity_code("A/-") eq "a", "strain ambig 3");
+ok(strain_ambiguity_code("-/-") eq "-", "strain ambig 4");
 ok(unambiguity_code("M") eq "AC", "unambig");
 
 
