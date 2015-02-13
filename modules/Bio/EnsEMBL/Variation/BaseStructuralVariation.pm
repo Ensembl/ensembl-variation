@@ -258,12 +258,12 @@ sub var_class {
   my $self = shift;
     
   unless ($self->{class_display_term}) {
-        my $display_term = $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
+    my $display_term = $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
 
-        warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
+    warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
 
-        $self->{class_display_term} = $display_term || $self->{class_SO_term};
-    }
+    $self->{class_display_term} = $display_term || $self->{class_SO_term};
+  }
 
   return $self->{class_display_term};
 }
@@ -729,8 +729,8 @@ sub summary_as_hash {
   my $self = shift;
   my %summary;
   $summary{'display_id'} = $self->display_id;
-  $summary{'study_name'} = $self->study_name;
-  $summary{'study_description'} = $self->study_description;
+  $summary{'study_name'} = $self->study->name;
+  $summary{'study_description'} = $self->study->description;
   $summary{'class'} = $self->var_class;
   return \%summary;
 

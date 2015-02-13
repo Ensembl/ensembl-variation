@@ -1451,7 +1451,7 @@ sub get_all_sources{
     my %sources;
     if ($self->adaptor()){
 	map {$sources{$_}++} @{$self->adaptor()->get_all_synonym_sources($self)};
-	$sources{$self->source}++;
+	$sources{$self->source_name}++;
 	@sources = keys %sources;
 	return \@sources;
     }
