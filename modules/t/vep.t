@@ -16,6 +16,7 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Exception;
 use Data::Dumper;
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);;
@@ -175,7 +176,7 @@ my $input = qq{21      25607440        rs61735760      C       T       .       .
 21      25592860        rs10576         T       C       .       .       .
 21      25592836        rs1135638       G       A       .       .       .
 21      25587758        rs116645811     G       A       .       .       .
-21      25587759        sv_del          .       <DEL>   .       .       SVTYPE=DEL;END=25587769
+21      25587759        sv_del          .       <DEL>   .       .       SVTYPE=DEL;END=25587769;CIPOS=5,5;CIEND=5,5
 21      25587759        sv_dup          .       <DUP>   .       .       SVTYPE=DUP;END=25587769};
 
 my @lines = split("\n", $input);
@@ -197,6 +198,16 @@ ok((grep {$_->{Consequence} =~ /feature_truncation/} @sv_cons), "vcf format - SV
 @sv_cons = grep {$_->{Uploaded_variation} eq 'sv_dup'} @$cons;
 ok((grep {$_->{Consequence} =~ /feature_elongation/} @sv_cons), "vcf format - SV dup cons");
 
+# vcf deletion
+$config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
+($vf) = @{parse_line($config, '21 25606454 test GC G')};
+ok($vf && $vf->allele_string eq 'C/-' && $vf->start == 25606455 && $vf->end == $vf->start, "vcf format - deletion");
+
+# vcf insertion
+$config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
+($vf) = @{parse_line($config, '21 25606454 test G GC')};
+ok($vf && $vf->allele_string eq '-/C' && $vf->start == 25606455 && $vf->end == 25606454, "vcf format - insertion");
+
 # vcf multiple alleles
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, '21 25606454 test G C,T')};
@@ -207,13 +218,20 @@ ok($cons && scalar @$cons == 6, "vcf format - multiple alleles cons");
 # vcf mixed allele types
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, '21 25606454 test G C,TT')};
-ok($vf && $vf->allele_string eq 'G/C/TT', "vcf format - mixed allele types");
+ok($vf && $vf->allele_string eq 'G/C/TT', "vcf format - mixed allele types 1");
+
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25606454 test G GC,GT')};
+ok($vf && $vf->allele_string eq '-/C/T', "vcf format - mixed allele types 2");
 
 # vcf non variant
 $config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
-($vf) = @{parse_line($config, '21 25606454 test G .')};
+($vf) = @{parse_line($config, '21 25606454 test G . . . CSQ=A')};
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /21\s+25606454\s+test\s+G\s+./, "vcf format - non variant");
+
+# check csq removed
+ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
 
 # vcf individual data
 $config = copy_config($base_config, {
@@ -227,6 +245,24 @@ $config = copy_config($base_config, {
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && (grep {$_->{Extra}->{IND} eq 'A'} @$cons) && !(grep {$_->{Extra}->{IND} eq 'B'} @$cons), "vcf format - individual data");
 
+# vcf process_ref_homs
+$config = copy_config($base_config, {
+  individual => ['all'],
+  ind_cols => {
+    'A' => 9,
+    'B' => 10,
+  },
+  process_ref_homs => 1,
+});
+@vfs = @{parse_line($config, qq{21 25587758 rs116645811 G A . . . GT 1|1 0|0})};
+ok(@vfs && $vfs[1]->{individual} eq 'B', "vcf format - individual data process ref homs");
+
+# vcf GP
+$config = copy_config($base_config, { gp => 1 });
+($vf) = @{parse_line($config, qq{1 1 test G C . . GP=21:25606454})};
+ok($vf && $vf->start == 25606454 && $vf->{chr} eq '21', "vcf format - gp");
+
+
 # pileup
 $config = copy_config($base_config);
 ($vf) = grep {validate_vf($config, $_)} @{parse_line($config, 'chr21 25606454 G C')};
@@ -235,6 +271,10 @@ $cons = get_all_consequences($config, [$vf]);
 ok($cons && scalar @$cons == 3, "pileup format - consequences");
 
 # pileup indel
+
+# invalid format
+$config = copy_config($base_config);
+dies_ok { parse_line($config, 'a b') } "invalid format";
 
 
 # frequency filtering
