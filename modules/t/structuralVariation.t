@@ -65,7 +65,8 @@ my $study = Bio::EnsEMBL::Variation::Study->new
 my $dbID = 3506221;
 my $name = 'esv93078';
 my $alias = 'alias_1';
-my $class_SO_term = 'copy_number_variant';
+my $class_SO_term = 'copy_number_variation';
+my $SO_accession  = 'SO:0001019';
 my $validation_status = 'high quality';
 my $clin_signs = ['benign','likely benign'];
 
@@ -83,16 +84,28 @@ my $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
    -is_evidence           => 0,
    -is_somatic            => 0,
   );
+  
+#use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
+#print "SOv: ".$VARIATION_CLASSES{'copy_number_variant'}->{'SO_accession'}."\n";
 
-ok($sv->dbID() eq $dbID,                       "dbID");
-ok($sv->variation_name() eq $name,             "name");
-ok($sv->alias() eq $alias,                     "alias");
-ok($sv->source_object->name() eq $source_name, "source");
-ok($sv->study->name() eq $study_name,          "study");
-ok($sv->class_SO_term() eq $class_SO_term,     "class SO term" );
-ok($sv->validation_status() eq 'high quality', "validation status");
-ok($sv->is_evidence() eq 0,                    "is_evidence");
-ok($sv->is_somatic() eq 0,                     "is_somatic");
+print "SOa: ".$sv->class_SO_accession()."\n";
+ok($sv->dbID() eq $dbID,                           "dbID");
+ok($sv->variation_name() eq $name,                 "name");
+ok($sv->display_id() eq $name,                     "display");
+ok($sv->alias() eq $alias,                         "alias");
+ok($sv->study->name() eq $study_name,              "study");
+ok($sv->class_SO_term() eq $class_SO_term,         "class SO term" );
+ok($sv->class_SO_accession() eq $SO_accession,     "class SO accesssion" );
+ok($sv->validation_status() eq $validation_status, "validation status");
+ok($sv->is_evidence() eq 0,                        "is_evidence");
+ok($sv->is_somatic() eq 0,                         "is_somatic");
+# source
+ok($sv->source_object->name() eq $source_name,     'sv -> source_object' );
+ok($sv->source_name eq $source_name,               'sv -> source_name');
+ok($sv->source_description eq $source_description, 'sv -> source_description');
+ok($sv->source_version eq $source_version,         'sv -> source_version');
+
+
 
 my $clin_sign = $sv->get_all_clinical_significance_states();
 ok($clin_sign->[0] eq 'benign' &&
@@ -118,6 +131,40 @@ ok($ssvs[0]->class_SO_term() eq 'copy_number_loss', "ssv SO term");
 my $ssv_cs = $ssvs[0]->get_all_clinical_significance_states();
 ok($ssv_cs->[0] eq $clin_sign->[0],                 "ssv clin sign");
 ok($ssvs[0]->alias eq 'alias_2',                    "ssv alias");
+
+
+
+my $sv2 = $sv_adaptor->fetch_by_name($name);
+
+
+# test source object
+my $sv_source = $sv2->source_object();
+ok($sv2->source_object($sv_source), 'source_object (using argument)');
+
+# test study object
+my $sv_study = $sv2->study();
+ok($sv2->study($sv_study), 'study object (using argument)');
+
+# test get all StructuralVariationFeatures
+my $svfs = $sv2->get_all_StructuralVariationFeatures();
+ok($svfs->[0]->seq_region_name eq '8' && $svfs->[0]->seq_region_start == 7823440, 'sv -> get_all_StructuralVariationFeatures');
+
+# test get all PhenotypeFeatures
+my $pfs = $sv2->get_all_PhenotypeFeatures();
+ok($pfs->[0]->phenotype->description eq 'ACHONDROPLASIA', 'sv -> get_all_PhenotypeFeatures');
+
+# test get all StructuralVariationSamples
+my $svss = $sv2->get_all_StructuralVariationSamples();
+ok($svss->[0]->individual->name eq 'NA12891', 'sv -> get_all_StructuralVariationSamples');
+
+
+ok($sv2->summary_as_hash->{'display_id'} eq $name, 'sv-> summary');
+
+
+## DEPRECATED ##
+ok($sv2->source eq $source_name,                                 "sv -> DEPRECATED 'source'");
+ok($sv2->clinical_significance eq join(',',@$clin_signs),        "sv -> DEPRECATED 'clinical_significance'");
+ok($sv2->get_all_validation_states()->[0] eq $validation_status, "sv -> DEPRECATED 'get_all_validation_states'");
 
 
 done_testing();

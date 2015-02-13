@@ -108,7 +108,7 @@ ok($count && $count == 3, "count_all_by_phenotype_id");
 
 # fetch_all
 $pfs = $pfa->fetch_all();
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 4 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 5 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
 
 # store
 my $pf = $pfs->[0];
