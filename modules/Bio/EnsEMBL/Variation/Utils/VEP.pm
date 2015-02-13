@@ -1653,7 +1653,7 @@ sub format_rest_output {
   my $hash = {
     id => $vf->{variation_name},
     seq_region_name => $vf->{chr},
-    start => $vf->{end},
+    start => $vf->{start},
     end => $vf->{end},
     strand => $vf->{strand},
     _order => $vf->{_order},
