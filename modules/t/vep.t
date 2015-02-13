@@ -177,7 +177,8 @@ my $input = qq{21      25607440        rs61735760      C       T       .       .
 21      25592836        rs1135638       G       A       .       .       .
 21      25587758        rs116645811     G       A       .       .       .
 21      25587759        sv_del          .       <DEL>   .       .       SVTYPE=DEL;END=25587769;CIPOS=5,5;CIEND=5,5
-21      25587759        sv_dup          .       <DUP>   .       .       SVTYPE=DUP;END=25587769};
+21      25587759        sv_dup          .       <DUP>   .       .       SVTYPE=DUP;END=25587769
+1 1 nochr G A . . .};
 
 my @lines = split("\n", $input);
 
@@ -187,7 +188,7 @@ ok($vf && $vf->allele_string eq 'C/T', "vcf format - parse_line");
 
 # SV input
 my @vfs = grep {validate_vf($config, $_)} map {@{parse_line($config, $_)}} @lines;
-ok(scalar @vfs == 12, "vcf format - SVs");
+ok(scalar @vfs == 13, "vcf format - SVs");
 
 $config->{pick_allele} = 1;
 $cons = get_all_consequences($config, \@vfs);
@@ -277,6 +278,42 @@ $config = copy_config($base_config);
 dies_ok { parse_line($config, 'a b') } "invalid format";
 
 
+## validate_vf
+$config = copy_config($base_config);
+# delete($config->{quiet});   # uncomment this to see warnings
+$vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+  chr => 1,
+  start => 123,
+  end => 123,
+  allele_string => 'A/C',
+});
+
+# invalid coord
+$vf->{start} = '1234a567';
+ok(!validate_vf($config, $vf), "validate_vf - invalid coord");
+
+# invalid allele string
+$vf->{start} = 123;
+$vf->{allele_string} = '9';
+ok(!validate_vf($config, $vf), "validate_vf - invalid allele_string");
+
+# allele looks like insertion
+$vf->{allele_string} = '-/A';
+ok(!validate_vf($config, $vf), "validate_vf - alleles look like insertion");
+
+# start > end + 1
+$vf->{allele_string} = 'A/C';
+$vf->{start} = 125;
+ok(!validate_vf($config, $vf), "validate_vf - start > end + 1");
+
+# alleles not compatible with coords
+# $vf->{allele_string} = 'AA/C';
+# $vf->{start} = 123;
+# ok(!validate_vf($config, $vf), "validate_vf - alleles not compatible with coords");
+
+
+## other options
+
 # frequency filtering
 $input = qq{21 25000248 25000248 C/G + test1
 21 25000264 25000264 A/G + test2};
@@ -318,7 +355,39 @@ $cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\
 %ex = map {$_->{Uploaded_variation} => 1} @$cons;
 ok($ex{test1} && !$ex{test2}, "check frequency 4");
 
+# summary
+$config = copy_config($base_config, { summary => 1 });
+($vf) = @{parse_line($config, '21 25587758 rs116645811 G A . . .')};
+$cons = get_all_consequences($config, [$vf]);
+my %got = map {$_ => 1} split(',', $cons->[0]->{Consequence});
+%ex = (
+  missense_variant => 1,
+  intron_variant => 1,
+  upstream_gene_variant => 1,
+);
+is_deeply(\%got, \%ex, "summary");
 
+# most severe
+$config = copy_config($base_config, { most_severe => 1 });
+($vf) = @{parse_line($config, '21 25587758 rs116645811 G A . . .')};
+$cons = get_all_consequences($config, [$vf]);
+%got = map {$_ => 1} split(',', $cons->[0]->{Consequence});
+%ex = (
+  missense_variant => 1,
+);
+is_deeply(\%got, \%ex, "most_severe");
+
+# flag pick
+$config = copy_config($base_config, { flag_pick => 1 });
+($vf) = @{parse_line($config, '21 25587758 rs116645811 G A . . .')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && (grep {$_->{Extra}->{PICK}} grep {$_->{Consequence} eq 'missense_variant'} @$cons), "flag pick");
+
+# flag pick allele
+$config = copy_config($base_config, { flag_pick_allele => 1 });
+($vf) = @{parse_line($config, '21 25587758 rs116645811 G A,C . . .')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && (grep {$_->{Extra}->{PICK}} @$cons) == 2, "flag pick allele");
 
 
 ## output formats
@@ -434,7 +503,6 @@ $config = copy_config($base_config, {
   
   database => 1,
   hgvs => 1,
-  lrg => 1,
   
   # core adaptors
   sa => $cdb->get_SliceAdaptor,
@@ -442,9 +510,10 @@ $config = copy_config($base_config, {
   ga => $cdb->get_GeneAdaptor,
   
   # var adaptors
-  va  => $vdb->get_VariationAdaptor,
-  vfa => $vdb->get_VariationFeatureAdaptor,
-  tva => $vdb->get_TranscriptVariationAdaptor,
+  va   => $vdb->get_VariationAdaptor,
+  vfa  => $vdb->get_VariationFeatureAdaptor,
+  tva  => $vdb->get_TranscriptVariationAdaptor,
+  svfa => $vdb->get_StructuralVariationFeatureAdaptor,
 });
 delete $config->{$_} for qw(cache dir);
 
@@ -459,6 +528,28 @@ ok((grep {$_->{Extra}->{HGVSc} eq 'ENST00000522587.1:c.639G>C'} @$cons), "DB out
 delete $config->{format};
 ($vf) = @{parse_line($config, "rs2299222")};
 ok($vf && $vf->variation_name eq 'rs2299222', "parse_line ID");
+
+# check ref
+delete $config->{format};
+$config->{check_ref} = 1;
+($vf) = @{parse_line($config, "2 46739212 46739212 C/G +")};
+$vf->{slice} = get_slice($config, $vf->{chr}, undef, 1);
+
+ok(validate_vf($config, $vf), "validate_vf - check ref pass");
+
+$vf->{allele_string} = 'T/G';
+ok(!validate_vf($config, $vf), "validate_vf - check ref fail");
+
+# check svs
+$config->{check_svs} = 1;
+($vf) = @{parse_line($config, "8 7803895 7803895 C/T +")};
+$vf->{slice} = get_slice($config, $vf->{chr}, undef, 1);
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && $cons->[0]->{Extra}->{SV} eq 'esv89107', "check svs");
+
+# map to LRG
+
+
 
 
 # build
@@ -477,7 +568,6 @@ $config = copy_config($config, {
   ],
 });
 
-print STDERR "# building cache for chr 22\n";
 build_full_cache($config);
 
 $config = copy_config($base_config, {
@@ -486,7 +576,7 @@ $config = copy_config($base_config, {
 });
 $config->{dir} =~ s/$Bin\/testdata\/vep-cache/$Bin\/testdata\/$$\_vep_cache/;
 
-($vf) = @{parse_line($config, "22 20876358 20876358 C/T +")};
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20876358 20876358 C/T +")};
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && scalar @$cons == 1 && $cons->[0]->{Feature} eq 'ENST00000420225', "build - basic test");
 
