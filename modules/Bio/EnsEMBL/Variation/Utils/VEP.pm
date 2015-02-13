@@ -461,7 +461,7 @@ sub parse_vcf {
         }
         
         unless(defined($chr) and defined($start)) {
-            warn "No GP flag found in INFO column" unless defined $config->{quiet};
+            warning_msg($config, "No GP flag found in INFO column on line ".$config->{line_number});
             return [];
         }
     }
@@ -515,7 +515,7 @@ sub parse_vcf {
             $type =~ s/\:.+//g;
             
             if($start >= $end && $type =~ /del/i) {
-                warn "WARNING: VCF line on line ".$config->{line_number}." looks incomplete, skipping:\n$line\n";
+                warning_msg($config, "WARNING: VCF line on line ".$config->{line_number}." looks incomplete, skipping:\n$line\n");
                 return [];
             }
             
@@ -787,7 +787,7 @@ sub parse_pileup {
                 });
             }
             elsif($allele ne "*"){
-                warn("WARNING: invalid pileup indel genotype: $line\n") unless defined $config->{quiet};
+                warning_msg($config, "WARNING: invalid pileup indel genotype: $line\n");
             }
         }
     }
@@ -810,7 +810,7 @@ sub parse_hgvs {
     }
     
     if(!defined($vf) || (defined $@ && length($@) > 1)) {
-        warn("WARNING: Unable to parse HGVS notation \'$line\'\n$@") unless defined $config->{quiet};
+        warning_msg($config, "WARNING: Unable to parse HGVS notation \'$line\'\n$@");
         return [];
     }
     
@@ -980,7 +980,7 @@ sub get_all_consequences {
         eval q{ use MIME::Base64; };
         
         if($@) {
-            debug("WARNING: Unable to load MIME::Base64, forking disabled") unless defined($config->{quiet});
+            warning_msg($config, "WARNING: Unable to load MIME::Base64, forking disabled");
             delete $config->{fork};
         }
     }
@@ -1042,7 +1042,7 @@ sub get_all_consequences {
                 my $pid = fork;
                 
                 if(!defined($pid)) {
-                  die("WARNING: Failed to fork -") unless defined($config->{quiet});
+                  die("ERROR: Failed to fork -") unless defined($config->{quiet});
                   last;
                 }
                 elsif($pid) {
@@ -2712,7 +2712,7 @@ sub validate_vf {
     
     # sanity checks
     unless($vf->{start} =~ /^\d+$/ && $vf->{end} =~ /^\d+$/) {
-      warn("WARNING: Start ".$vf->{start}." or end ".$vf->{end}." coordinate invalid on line ".$config->{line_number}."\n") unless defined $config->{quiet};
+      warning_msg($config, "WARNING: Start ".$vf->{start}." or end ".$vf->{end}." coordinate invalid on line ".$config->{line_number});
       return 0;
     }
     
@@ -2723,29 +2723,31 @@ sub validate_vf {
     $vf->{allele_string} =~ tr/[a-z]/[A-Z]/;
     
     unless($vf->{allele_string} =~ /([ACGT-]+\/*)+/) {
-      warn("WARNING: Invalid allele string ".$vf->{allele_string}." on line ".$config->{line_number}." or possible parsing error\n") unless defined $config->{quiet};
+      warning_msg($config, "WARNING: Invalid allele string ".$vf->{allele_string}." on line ".$config->{line_number}." or possible parsing error\n");
       return 0;
     }
     
     # insertion should have start = end + 1
     if($vf->{allele_string} =~ /^\-\// && $vf->{start} != $vf->{end} + 1) {
-        warn(
+        warning_msg(
+            $config,
             "WARNING: Alleles look like an insertion (".
             $vf->{allele_string}.
             ") but coordinates are not start = end + 1 (START=".
             $vf->{start}.", END=".$vf->{end}.
             ") on line ".$config->{line_number}."\n"
-        ) unless defined($config->{quiet});
+        );
         return 0;
     }
     
     # check start <= end + 1
     if($vf->{start} > $vf->{end} + 1) {
-        warn(
+        warning_msg(
+            $config,
             "WARNING: start > end+1 : (START=".$vf->{start}.
             ", END=".$vf->{end}.
             ") on line ".$config->{line_number}."\n"
-        ) unless defined($config->{quiet});
+        );
         return 0;
     }
     
@@ -2756,11 +2758,12 @@ sub validate_vf {
     $tmp_ref_allele =~ s/\-//g;
     
     #if(($vf->{end} - $vf->{start}) + 1 != length($tmp_ref_allele)) {
-    #    warn(
+    #    warning_msg(
+    #        $config,
     #        "WARNING: Length of reference allele (".$ref_allele.
     #        " length ".length($tmp_ref_allele).") does not match co-ordinates ".$vf->{start}."-".$vf->{end}.
     #        " on line ".$config->{line_number}
-    #    ) unless defined($config->{quiet});
+    #    );
     #    return 0;
     #}
     
@@ -2783,7 +2786,7 @@ sub validate_vf {
             my $slice_ref = $vf->{slice}->sub_Slice($vf->{start}, $vf->{end}, $vf->{strand});
             
             if(!defined($slice_ref)) {
-                warn "WARNING: Could not fetch sub-slice from ".$vf->{start}."\-".$vf->{end}."\(".$vf->{strand}."\) on line ".$config->{line_number} unless defined $config->{quiet};
+                warning_msg($config, "WARNING: Could not fetch sub-slice from ".$vf->{chr}.":".$vf->{start}."\-".$vf->{end}."\(".$vf->{strand}."\) on line ".$config->{line_number});
             }
             
             else {
@@ -2793,11 +2796,13 @@ sub validate_vf {
         }
         
         if(!$ok) {
-            warn
-                "WARNING: Specified reference allele $ref_allele ",
-                "does not match Ensembl reference allele",
-                ($slice_ref_allele ? " $slice_ref_allele" : ""),
-                " on line ".$config->{line_number} unless defined $config->{quiet};
+            warning_msg(
+                $config,
+                "WARNING: Specified reference allele $ref_allele ".
+                "does not match Ensembl reference allele".
+                ($slice_ref_allele ? " $slice_ref_allele" : "").
+                " on line ".$config->{line_number}
+            );
             return 0;
         }
     }
@@ -2812,11 +2817,12 @@ sub validate_svf {
     my $svf = shift;
     
     if($svf->{start} > $svf->{end} + 1) {
-        warn(
+        warning_msg(
+            $config,
             "WARNING: start > end+1 : (START=".$svf->{start}.
             ", END=".$svf->{end}.
             ") on line ".$config->{line_number}."\n"
-        ) unless defined($config->{quiet});
+        );
         return 0;
     }
     
@@ -3228,7 +3234,7 @@ sub fetch_transcripts {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
-                    debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
+                    warning_msg($config, "WARNING: Could not find cache for $chr\:$region");
                     next;
                 }
                 
@@ -3404,7 +3410,7 @@ sub fetch_regfeats {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
-                    debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
+                    warning_msg($config, "WARNING: Could not find cache for $chr\:$region");
                     next;
                 }
                 
@@ -3548,7 +3554,7 @@ sub check_existing_hash {
                         # load from DB if not found in cache
                         if(!defined($tmp_cache->{$chr})) {
                             unless(defined($config->{write_cache}) || defined($config->{database})) {
-                                debug("WARNING: Could not find variation cache for $chr\:$region") unless defined($config->{quiet});
+                                warning_msg($config, "WARNING: Could not find variation cache for $chr\:$region");
                                 next;
                             }
                             
@@ -6056,6 +6062,32 @@ sub debug {
     my $time = get_time;
     
     print $time." - ".$text.($text =~ /\n$/ ? "" : "\n");
+}
+
+# prints warning messages to STDERR or a log file
+sub warning_msg {
+  my $config = shift;
+  my $text = shift;
+  
+  $text = 'WARNING: '.$text unless $text =~ /^warn/i;
+  $text = $text."\n" unless $text =~ /\n$/;
+    
+  if(!defined($config->{warning_fh})) {
+    $config->{warning_fh} = FileHandle->new();
+    $config->{warning_file} ||= ($config->{output_file} || 'vep').'_warnings.txt';
+    my $file = $config->{warning_file};
+    $config->{warning_fh}->open(">".$file) or die("ERROR: Could not write to warnings file $file\n");
+  }
+  
+  $config->{warning_count}++;
+  
+  my $fh = $config->{warning_fh};
+  
+  print $fh $text;
+  
+  if(!defined($config->{quiet})) {
+    print STDERR $config->{no_progress} ? $text : "\n$text";
+  }
 }
 
 # finds out memory usage
