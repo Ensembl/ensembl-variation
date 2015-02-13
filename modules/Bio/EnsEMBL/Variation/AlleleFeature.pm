@@ -84,7 +84,6 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
-use Bio::EnsEMBL::Variation::ConsequenceType;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
