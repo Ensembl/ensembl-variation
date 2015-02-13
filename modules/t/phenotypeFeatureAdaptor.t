@@ -96,7 +96,7 @@ ok($count && $count == 1, "count_all_by_associated_gene");
 my $pa = $vdba->get_PhenotypeAdaptor();
 my $p  = $pa->fetch_by_dbID(1);
 $count = $pfa->count_all_by_Phenotype($p);
-ok($count && $count == 3, "count_all_by_Phenotype");
+ok($count && $count == 4, "count_all_by_Phenotype");
 
 # count_all_by_Gene
 $count = $pfa->count_all_by_Gene($g);
@@ -104,7 +104,7 @@ ok($count && $count == 1, "count_all_by_Gene");
 
 # count_all_by_phenotype_id
 $count = $pfa->count_all_by_phenotype_id(1);
-ok($count && $count == 3, "count_all_by_phenotype_id");
+ok($count && $count == 4, "count_all_by_phenotype_id");
 
 # fetch_all
 $pfs = $pfa->fetch_all();
