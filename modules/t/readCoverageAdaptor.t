@@ -19,57 +19,69 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Test::MultiTestDB;
+use Test::Exception;
 
 
 use_ok('Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor');
 use_ok('Bio::EnsEMBL::Variation::ReadCoverage');
 
-## examples to be added to test-genome-DBs files
-=head
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->load_all("$Bin/test.ensembl.registry.72");
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdb = $multi->get_DBAdaptor('variation');
+my $cdb = $multi->get_DBAdaptor('core');
 
-my $cdba = $reg->get_DBAdaptor('human', 'core');
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
+my $sa = $cdb->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome','9',22124500,22126505);
 
-my $rca = $vdba->get_ReadCoverageAdaptor();
-my $sa  = $cdba->get_SliceAdaptor();
-my $pa  = $vdba->get_PopulationAdaptor();
-my $ia = $vdba->get_IndividualAdaptor();
+my $ia = $vdb->get_IndividualAdaptor();
+my ($i) = @{$ia->fetch_all_by_name('1000GENOMES:phase_1:NA06984')};
 
-ok($rca && $rca->isa('Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor'));
+# get adaptor
+my $rca = $vdb->get_ReadCoverageAdaptor();
+ok($rca && $rca->isa('Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor'), "isa adaptor");
 
-# test get read coverage in a region for a certain population in in a certain level
-my $slice = $sa->fetch_by_region('chromosome', '1', 1, 200_000);
+# get coverage levels
+my $levels = $rca->get_coverage_levels;
+ok(ref($levels) eq 'ARRAY' && scalar @$levels == 2, "get_coverage_levels 1");
+ok((grep {$_ eq '1'} @$levels) && (grep {$_ eq '2'} @$levels), "get_coverage_levels 2");
 
-my $individuals = ['VENTER'];
+## fetch by slice
 
-foreach my $name (@{$individuals}){
-    my $individual = shift @{$ia->fetch_all_by_name($name)};
-    is($individual->name, 'VENTER', 'Test name');
-    my $coverage = $rca->fetch_all_by_Slice_Individual_depth($slice, $individual, 1);
-    is(scalar @$coverage, 28, 'Test coverage'); 
-    my $hash;
-    foreach (@$coverage) {
-        my $start = $_->start;
-        my $end = $_->end;
-        my $slice = $_->slice->name;
-        my $level = $_->level;
-        #print 'sample ', $_->sample, "\n";
-        my $individual = $_->individual->name;
-        $hash->{$start . '-' . $end}->{'slice'} = $slice;
-        $hash->{$start . '-' . $end}->{'individual'} = $individual;
-        $hash->{$start . '-' . $end}->{'level'} = $level;
+# no slice
+dies_ok { $rca->fetch_all_by_Slice_Individual_depth() } "fetch_all_by_Slice_Individual_depth - no slice";
 
-    }
-    is($hash->{'90292-91093'}->{'slice'}, 'chromosome:GRCh37:1:1:200000:1', 'Test slice');
-    is($hash->{'166096-176305'}->{'individual'}, 'VENTER', 'Test individual');
-}
-my @regions = @{$rca->fetch_all_regions_covered($slice, $individuals)};
-is(scalar @regions, 28, 'Number of regions');
+# wrong arg
+dies_ok { $rca->fetch_all_by_Slice_Individual_depth($i) } "fetch_all_by_Slice_Individual_depth - wrong arg 1";
+dies_ok { $rca->fetch_all_by_Slice_Individual_depth($slice, $slice) } "fetch_all_by_Slice_Individual_depth - wrong arg 2";
 
-#foreach my $rc (@{$rca->fetch_all_regions_covered($slice, $individuals)}) {
-#    print "range is ", $rc->[0], '-', $rc->[1], "\n";
-#}
-=cut
+
+# only slice
+my $cov = $rca->fetch_all_by_Slice_Individual_depth($slice);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Individual_depth - no args - count");
+ok($cov->[0]->isa('Bio::EnsEMBL::Variation::ReadCoverage'), "fetch_all_by_Slice_Individual_depth - no args - isa ReadCoverage");
+
+# slice and ind
+$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, $i);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Individual_depth - ind");
+
+# slice and level
+$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, 1);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1, "fetch_all_by_Slice_Individual_depth - level");
+
+# slice, ind, level
+$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, $i, 1);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1 && $cov->[0]->level == 1, "fetch_all_by_Slice_Individual_depth - ind, level");
+ok($cov->[0]->seq_region_start eq '22124503' && $cov->[0]->seq_region_end eq '22125503', "fetch_all_by_Slice_Individual_depth - coords");
+
+# fetch all regions covered
+my $ranges = $rca->fetch_all_regions_covered($slice, [$i->name]);
+my $exp = [
+  [
+    22124503,
+    22126503
+  ]
+];
+is_deeply($ranges, $exp, "fetch_all_regions_covered");
+
+
 done_testing();
