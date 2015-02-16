@@ -202,4 +202,17 @@ ok(@p_alleles == 2,                                           "get pop geno by p
 ok($p_pgtys[0]->population->name eq 'PERLEGEN:AFD_EUR_PANEL', "get pop geno by pop - name");
 ok($total_freq == 1,                                          "get pop geno by pop - total frequency");
 
+# derived allele
+my $da = $variation_p->derived_allele($pop);
+is($da, 'A', "derived allele");
+
+# derived allele freq
+my $df = $variation_p->derived_allele_frequency($pop);
+is($df, '0.0625', "derived allele frequency");
+
+# get all Genes
+my @genes = @{$variation_adaptor->fetch_by_name('tmp__')->get_all_Genes};
+ok(scalar @genes == 1, "get_all_Genes count");
+is($genes[0]->stable_id, 'ENSG00000236003', "get_all_Genes stable_id");
+
 done_testing();
