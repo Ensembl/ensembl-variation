@@ -120,18 +120,28 @@ sub get_content {
   my $section = shift;
   my $type    = shift;
   
-  my $line = `grep -m1 -n '<!-- Data $section - $type -->' $tmp_file`;
+  my $anchor = "<!-- Data $section - $type -->";
+  
+  my $line = `grep -m1 -n '$anchor' $tmp_file`;
+  die "Can't find the anchor '$anchor' in the file" if (!$line || $line eq '');
   $line =~ /^(\d+):/;
   my $line_number = $1;
-    
+  my $content;  
   if ($type eq 'start') {
-    return `head -n$line_number $tmp_file`;
+    $content = `head -n$line_number $tmp_file`;
+    if ($content !~ /$anchor(\n?)$/) {
+      $content = (split("$anchor", $content))[0].$anchor;
+    }
   }
   else {
     my $lines_count = (split(' ',`wc -l $tmp_file`))[0];
     $line_number = $lines_count - $line_number + 1;
-    return `tail -n$line_number $tmp_file`;
+    $content = `tail -n$line_number $tmp_file`;
+    if ($content !~ /^$anchor/) {
+      $content = $anchor.(split("$anchor", $content))[1];
+    } 
   }
+  return $content;
 }
 
 sub print_into_tmp_file {

@@ -78,7 +78,6 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
 ## SIFT and PolyPhen ##
 
-my $database = "";
 my @versions = ('sift_version', 'sift_protein_db_version', 'polyphen_version', 'polyphen_release');
 my %tool_versions;
 my %sift_species;
@@ -90,7 +89,7 @@ my $sql2 = qq{SELECT meta_key,meta_value FROM meta WHERE meta_key IN ('}.join("'
 my $sql3 = qq{SELECT meta_value FROM meta WHERE meta_key=?};
 
 foreach my $hostname (@hostnames) {
-  
+  my $database = "";
   my $sth = get_connection_and_query($database, $hostname, $sql);
   
   # loop over databases
@@ -98,11 +97,12 @@ foreach my $hostname (@hostnames) {
     next if ($dbname =~ /^master_schema/);
     next if ($dbname =~ /sample$/);
     
-    print $dbname;
+    print "$dbname\n";
+    $database = $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
     
-    if ($dbname eq lc($species)) {
+    if ($s_name eq lc($species)) {
       my $sth2 = get_connection_and_query($database, $hostname, $sql2);
       while (my ($key,$value) = $sth2->fetchrow_array) {
         $tool_versions{$key} = $value;
@@ -113,14 +113,14 @@ foreach my $hostname (@hostnames) {
     # SIFT
     my $sth_sift = get_connection_and_query($database, $hostname, $sql3, [$versions[0]]);
     if ($sth_sift->fetchrow_array) {
-      $sift_species{$dbname} = 1;
+      $sift_species{$s_name} = 1;
     }
     $sth_sift->finish();
     
     # PolyPhen
     my $sth_polyphen = get_connection_and_query($database, $hostname, $sql3, [$versions[2]]);
     if ($sth_polyphen->fetchrow_array) {
-      $polyphen_species{$dbname} = 1;
+      $polyphen_species{$s_name} = 1;
     }
     $sth_polyphen->finish();
   }
@@ -143,8 +143,8 @@ if ($tool_versions{$section}) {
   $content_before = get_content($section,'start');
   $content_after  = get_content($section,'end');
   my $sift_pr_version = $tool_versions{$section};
-  if ($sift_pr_version =~ /Release:/) {
-    $sift_pr_version =~ s/Release:/\(release /;
+  if ($sift_pr_version =~ /UniRef90/) {
+    $sift_pr_version =~ s/UniRef90/UniRef90 (release/;
     $sift_pr_version .= ')';
   }    
   $new_content = $sift_pr_version;
@@ -197,19 +197,28 @@ sub get_content {
   my $section = shift;
   my $type    = shift;
   
-  my $line = `grep -m1 -n '<!-- $section - $type -->' $tmp_file`;
-  die "Can't find the anchor '<!-- $section - $type -->' in the file" if (!$line || $line eq '');
+  my $anchor = "<!-- $section - $type -->";
+  
+  my $line = `grep -m1 -n '$anchor' $tmp_file`;
+  die "Can't find the anchor '$anchor' in the file" if (!$line || $line eq '');
   $line =~ /^(\d+):/;
   my $line_number = $1;
-    
+  my $content;  
   if ($type eq 'start') {
-    return `head -n$line_number $tmp_file`;
+    $content = `head -n$line_number $tmp_file`;
+    if ($content !~ /$anchor(\n?)$/) {
+      $content = (split("$anchor", $content))[0].$anchor;
+    }
   }
   else {
     my $lines_count = (split(' ',`wc -l $tmp_file`))[0];
     $line_number = $lines_count - $line_number + 1;
-    return `tail -n$line_number $tmp_file`;
+    $content = `tail -n$line_number $tmp_file`;
+    if ($content !~ /^$anchor/) {
+      $content = $anchor.(split("$anchor", $content))[1];
+    } 
   }
+  return $content;
 }
 
 sub print_list_of_species {
@@ -223,6 +232,8 @@ sub print_list_of_species {
   
   my $count_row = 1;
   foreach my $species (sort(keys(%$spe_list))) {
+    $species =~ s/_/ /g;
+    $species = ucfirst($species);
     if ($count_row == $max_row) {
       $html .= qq{  </ul>\n</div>$header};
       $count_row = 1;
