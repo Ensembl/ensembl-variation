@@ -51,7 +51,7 @@ $tests = [
 ];
 
 foreach my $test (@$tests) {
-    my $individuals = $ia->fetch_all_by_name($test->{name});
+    $individuals = $ia->fetch_all_by_name($test->{name});
     my $count = scalar @$individuals;
     is($count, $test->{count}, "Number of returned individuals for $test->{name}");
 }
@@ -82,7 +82,7 @@ is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA
 # synonyms 
 my $ind =  $ia->fetch_synonyms(101101);
 ok( $ia->fetch_synonyms(101101)->[0] eq "fred", "fetch synonym") ;
-my $individuals = $ia->fetch_individual_by_synonym("fred");
+$individuals = $ia->fetch_individual_by_synonym("fred");
 ok($individuals->[0]->name eq "1000GENOMES:phase_1:HG00114", "fetch by synonym");
 
 
@@ -106,7 +106,7 @@ ok($ia->get_default_strains()->[0]  eq "NA12891", "default_strains");
 
 ok( $ia->get_reference_strain_name() eq "NA18635", "reference strain");
 
-my $strains = $ia->get_display_strains;
+$strains = $ia->get_display_strains;
 is(scalar @$strains, 3, "Number of display strains");
 
 done_testing();
