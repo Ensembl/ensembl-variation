@@ -90,3 +90,5 @@
 50479416	27518	22126241	22126241	1	47382962	A/C	rs190203239	1	\N	1	1000Genome	intergenic_variant	19,22	2	0	C	0.000459137	1	1	\N	370	1
 43233569	27518	22126336	22126336	1	39982579	A/G	rs182796288	1	\N	1	1000Genome	intergenic_variant	19,20	2	0	G	0.000459137	1	1	\N	370	1
 69175968	27510	20876358	20876358	1	1	C/T	cache_test	1	\N	1	\N	intergenic_variant		2	0	T	0.005	10	\N	pathogenic	367	1
+69175969	27510	20876359	20876359	1	1	C/T/G	cache_test_allele_1	1	\N	1	\N	intergenic_variant		2	0	T	0.005	10	\N	benign	367	1
+69175970	27510	20876360	20876360	1	1	T/G	cache_test_allele_2	1	\N	1	\N	intergenic_variant	2	0	T	0.005	10	\N	benign	367	1

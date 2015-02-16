@@ -164,6 +164,11 @@ $config = copy_config($base_config);
 $cons = get_all_consequences($config, [$vf]);
 ok((grep {$_->{Consequence} =~ /feature_elongation/} @$cons), "ensembl format - SV dup");
 
+# intergenic SV
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '20 25587759 25587769 DEL + del')};
+$cons = get_all_consequences($config, [$vf]);
+ok((grep {$_->{Consequence} =~ /intergenic/} @$cons), "ensembl format - intergenic SV");
 
 # vcf
 my $input = qq{21      25607440        rs61735760      C       T       .       .       .
@@ -575,6 +580,7 @@ $config = copy_config($config, {
   dir         => "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly},
   strip       => 1,
   write_cache => 1,
+  symbol      => 1,
   freq_vcf    => [
     {
       pops => ['AFR','ASN'],
@@ -595,8 +601,16 @@ $config->{dir} =~ s/$Bin\/testdata\/vep-cache/$Bin\/testdata\/$$\_vep_cache/;
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && scalar @$cons == 1 && $cons->[0]->{Feature} eq 'ENST00000420225', "build - basic test");
 
-ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'T:0.05', "build - freqs from vcf");
+ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'T:0.05', "build - freqs from vcf 1");
 ok($cons->[0]->{Extra}->{CLIN_SIG} eq 'pathogenic', "build - clin_sig");
+
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20876359 20876359 C/G +")};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'T:0.05', "build - freqs from vcf 2");
+
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20876360 20876360 T/G +")};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons->[0]->{Extra}->{AFR_MAF} eq 'G:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'G:0.05', "build - freqs from vcf 3");
 
 # remove built cache
 remove_tree("$Bin\/testdata/$$\_vep_cache");
