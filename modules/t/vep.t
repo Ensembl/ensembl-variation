@@ -389,6 +389,21 @@ $config = copy_config($base_config, { flag_pick_allele => 1 });
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && (grep {$_->{Extra}->{PICK}} @$cons) == 2, "flag pick allele");
 
+# fork
+$input = qq{21      25607440        rs61735760      C       T       .       .       .
+21      25606638        rs3989369       A       G       .       .       .
+21      25606478        rs75377686      T       C       .       .       .
+21      25603925        rs7278284       C       T       .       .       .};
+@lines = split("\n", $input);
+$config = copy_config($base_config, { fork => 2, pick => 1, vcf => 1 });
+@vfs = grep {validate_vf($config, $_)} map {@{parse_line($config, $_)}} @lines;
+$exp = [qw(25607440 25606638 25606478 25603925)];
+
+$cons = get_all_consequences($config, \@vfs);
+ok($cons && scalar @$cons == 4, "fork");
+
+my $got = [map {(split(/\s+/, $$_))[1]} @$cons];
+is_deeply($got, $exp, "fork - order preserved");
 
 ## output formats
 
