@@ -31,8 +31,9 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdb = $multi->get_DBAdaptor('variation');
 my $cdb = $multi->get_DBAdaptor('core');
 
+my $chr = '9';
 my $sa = $cdb->get_SliceAdaptor();
-my $slice = $sa->fetch_by_region('chromosome','9',22124503,22126503);
+my $slice = $sa->fetch_by_region('chromosome',$chr,22124503,22126503);
 
 my $strain_name = '1000GENOMES:phase_1:NA06984';
 
@@ -43,8 +44,50 @@ is(substr($seq, 1, 1), "W", "apply_edit (via sequence)");
 my $afs = $strain_slice->get_all_AlleleFeatures_Slice();
 is(scalar @$afs, 27, 'Number of AlleleFeatures');
 
+my $v_name = 'rs1333047';
+my $cons   = 'downstream_gene_variant';
+
+
+my $af1 = $afs->[0];
+print "AF: ".$af1->ref_allele_string."\n";
+ok($af1->start == 2,                       'allele - start');
+ok($af1->end == 2,                         'allele - end');
+ok($af1->strand == 1,                      'allele - strand');
+ok($af1->slice->seq_region_name eq $chr,   'allele - slice');
+ok($af1->allele_string eq 'A|T',           'allele - allele_string');
+ok($af1->variation_name eq $v_name,        'allele - variation_name');
+ok($af1->variation->name eq $v_name,       'allele - variation');
+ok($af1->source eq 'dbSNP',                'allele - source');
+ok($af1->individual->name eq $strain_name, 'allele - individual');
+ok($af1->consequence_type->[0] eq $cons,   'allele - consequence_type');
+ok($af1->display_consequence eq $cons,     'allele - display_consequence');
+ok($af1->ref_allele_string eq 'N',         'allele - ref_allele_string');
+ok($af1->length == 1,                      'allele - length');
+ok($af1->length_diff == 0,                 'allele - length_diff');
+
+# test get all OverlapConsequences
+my $overlap_cons = $af1->get_all_OverlapConsequences();
+ok($overlap_cons->[0]->SO_term eq $cons,   'allele - get_all_OverlapConsequences');
+
+# test most severe OverlapConsequence
+my $msc = $af1->most_severe_OverlapConsequence();
+ok($msc->SO_term eq $cons, 'allele - most_severe_OverlapConsequence');
+
+# test get_all_TranscriptVariations (no data available in test db)
+my $tvs = $af1->get_all_TranscriptVariations;
+ok($tvs->[0]->transcript_stable_id eq 'ENST00000422420', 'allele - get_all_TranscriptVariations');
+
+# test variation feature
+my $vf = $af1->variation_feature;
+ok($vf->variation_name eq $v_name, 'allele - variation_feature');
+
+# test get all sources
+my $sources = $af1->get_all_sources();
+ok($sources->[0] eq 'dbSNP', 'allele - get_all_sources');
+
+
 my $hash;
-foreach my $af ( @{$afs} ) {
+foreach my $af (@$afs) {
     my $start = $af->start;
     my $end   = $af->end;
     my $strand = $af->strand;
@@ -55,7 +98,6 @@ foreach my $af ( @{$afs} ) {
     my $source = $af->source;
     my $individual = $af->individual->name;
     my $consequence_type = join(', ', @{$af->consequence_type});
-    my $tvs = $af->get_all_TranscriptVariations;
     my $vf = $af->variation_feature;
     $hash->{$start . '-' . $end . '-' . $strand}->{'allele_string'} = $allele_string;
     $hash->{$start . '-' . $end . '-' . $strand}->{'variation_name'} = $variation_name;
@@ -63,11 +105,10 @@ foreach my $af ( @{$afs} ) {
     $hash->{$start . '-' . $end . '-' . $strand}->{'consequence_type'} = $consequence_type;
 }
 
+print "\n";
 is($hash->{'1411-1411-1'}->{'allele_string'}, 'C|T', 'Test allele_string');
 is($hash->{'1001-1001-1'}->{'consequence_type'}, 'downstream_gene_variant', 'Test consequence_type');
 is($hash->{'1083-1083-1'}->{'variation_name'}, 'rs73650063', 'Test variation_name');
 
-my $af = $afs->[0];
-is($af->display_consequence, 'downstream_gene_variant', "display_consequence");
 
 done_testing();
