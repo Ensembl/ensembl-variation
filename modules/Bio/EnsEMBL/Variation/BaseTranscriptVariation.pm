@@ -50,7 +50,7 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds _intron_overlap);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
@@ -607,19 +607,7 @@ sub _intron_effects {
             # insertions between the edge of an exon and a donor or acceptor site
             # and between a donor or acceptor site and the intron
             
-            if ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start-1) or
-                 overlap($vf_start, $vf_end, $intron_start+2, $intron_start+7) or
-                 overlap($vf_start, $vf_end, $intron_end-7,   $intron_end-2  ) or
-                 overlap($vf_start, $vf_end, $intron_end+1,   $intron_end+3  ) or
-                 ($insertion && ( 
-                     $vf_start == $intron_start || 
-                     $vf_end == $intron_end ||
-                     $vf_start == $intron_start+2 ||
-                     $vf_end == $intron_end-2
-                    ) )) { 
-                   
-                $intron_effects->{splice_region} = 1;
-            }
+            $intron_effects->{splice_region} = _intron_overlap($vf_start, $vf_end, $intron_start, $intron_end, $insertion);
         }
         
         $self->{_intron_effects} = $intron_effects;       

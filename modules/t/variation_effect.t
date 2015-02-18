@@ -24,6 +24,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor ;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
@@ -31,6 +32,261 @@ BEGIN {
 }
 
 our $DEBUG = 0;
+
+## test inline C
+
+# test overlap
+# coords: f1_start, f1_end, f2_start, f2_end
+my @coords = (
+  {
+    expected => 1,
+    coords   => [  1,  1,  1,  1 ],
+  },
+  {
+    expected => 1,
+    coords   => [  1,  2,  1,  1 ],
+  },
+  {
+    expected => 1,
+    coords   => [  1,  1,  1,  2 ],
+  },
+  {
+    expected => 0,
+    coords   => [  1,  1,  2,  2 ],
+  },
+  {
+    expected => 0,
+    coords   => [  2,  2,  1,  1 ],
+  },
+  {
+    expected => 1,
+    coords   => [  1,  3,  2,  4 ],
+  },
+  {
+    expected => 1,
+    coords   => [  2,  4,  1,  3 ],
+  },
+  {
+    expected => 1,
+    coords   => [  1,  4,  2,  3 ],
+  },
+  {
+    expected => 1,
+    coords   => [  2,  3,  1,  4 ],
+  },
+  {
+    expected => 1,
+    coords   => [ -1,  4,  0,  3 ],
+  },
+);
+
+foreach my $c(@coords) {
+  my $p_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::overlap_perl(@{$c->{coords}}) || 0;
+  my $c_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::overlap(@{$c->{coords}}) || 0;
+  my $exp     = $c->{expected};
+  my $comment = $c->{comment} || "coords: ".join(", ", @{$c->{coords}});
+  
+  is($p_res, $exp, "perl overlap $comment");
+  is($c_res, $exp, "C    overlap $comment");
+}
+
+# test _intron_overlap
+# coords: vf_start, vf_end, intron_start, intron_end, bool insertion
+@coords = (
+
+  # 3,1 upstream
+  {
+    expected => 1,
+    coords   => [  7,  7, 10, 20, 0 ],
+    comment  => "just within 3,1 upstream"
+  },
+  {
+    expected => 1,
+    coords   => [  8,  8, 10, 20, 0 ],
+    comment  => "compeletely within 3,1 upstream"
+  },
+  {
+    expected => 1,
+    coords   => [  9, 10, 10, 20, 0 ],
+    comment  => "part 5' overlap 3,1 upstream"
+  },
+  {
+    expected => 1,
+    coords   => [  5,  7, 10, 20, 0 ],
+    comment  => "part 3' overlap 3,1 upstream"
+  },
+  {
+    expected => 0,
+    coords   => [  6,  6, 10, 20, 0 ],
+    comment  => "just 5' of 3,1 upstream"
+  },
+  {
+    expected => 0,
+    coords   => [ 10, 10, 10, 20, 0 ],
+    comment  => "just 3' of 3,1 upstream"
+  },
+  
+  # 1,3 downstream
+  {
+    expected => 1,
+    coords   => [ 33, 33, 10, 30, 0 ],
+    comment  => "just within 1,3 downstream"
+  },
+  {
+    expected => 1,
+    coords   => [ 32, 32, 10, 30, 0 ],
+    comment  => "compeletely within 1,3 downstream"
+  },
+  {
+    expected => 1,
+    coords   => [ 30, 31, 10, 30, 0 ],
+    comment  => "part 5' overlap 1,3 downstream"
+  },
+  {
+    expected => 1,
+    coords   => [ 33, 34, 10, 30, 0 ],
+    comment  => "part 3' overlap 1,3 downstream"
+  },
+  {
+    expected => 0,
+    coords   => [ 30, 30, 10, 30, 0 ],
+    comment  => "just 5' of 1,3 downstream"
+  },
+  {
+    expected => 0,
+    coords   => [ 34, 34, 10, 30, 0 ],
+    comment  => "just 3' of 1,3 downstream"
+  },
+
+  # 2,7 inside 3'
+  {
+    expected => 1,
+    coords   => [ 12, 12, 10, 30, 0 ],
+    comment  => "just within 2,7 inside 3'"
+  },
+  {
+    expected => 1,
+    coords   => [ 14, 16, 10, 30, 0 ],
+    comment  => "compeletely within 2,7 inside 3'"
+  },
+  {
+    expected => 1,
+    coords   => [ 12, 14, 10, 30, 0 ],
+    comment  => "part 5' overlap 2,7 inside 3'"
+  },
+  {
+    expected => 1,
+    coords   => [ 16, 19, 10, 30, 0 ],
+    comment  => "part 3' overlap 2,7 inside 3'"
+  },
+  {
+    expected => 0,
+    coords   => [ 11, 11, 10, 30, 0 ],
+    comment  => "just 5' of 2,7 inside 3'"
+  },
+  {
+    expected => 0,
+    coords   => [ 18, 18, 10, 30, 0 ],
+    comment  => "just 3' of 2,7 inside 3'"
+  },
+  
+  # 7,2 inside 5'
+  {
+    expected => 1,
+    coords   => [ 23, 23, 10, 30, 0 ],
+    comment  => "just within 7,2 inside 5'"
+  },
+  {
+    expected => 1,
+    coords   => [ 24, 26, 10, 30, 0 ],
+    comment  => "compeletely within 7,2 inside 5'"
+  },
+  {
+    expected => 1,
+    coords   => [ 22, 24, 10, 30, 0 ],
+    comment  => "part 5' overlap 7,2 inside 5'"
+  },
+  {
+    expected => 1,
+    coords   => [ 26, 29, 10, 30, 0 ],
+    comment  => "part 3' overlap 7,2 inside 5'"
+  },
+  {
+    expected => 0,
+    coords   => [ 22, 22, 10, 30, 0 ],
+    comment  => "just 5' of 7,2 inside 5'"
+  },
+  {
+    expected => 0,
+    coords   => [ 29, 29, 10, 30, 0 ],
+    comment  => "just 3' of 7,2 inside 5'"
+  },
+  
+  # insertion
+  {
+    expected => 1,
+    coords   => [ 10,  9, 10, 30, 1 ],
+    comment  => "insertion intron start"
+  },
+  {
+    expected => 1,
+    coords   => [ 12, 11, 10, 30, 1 ],
+    comment  => "insertion intron start + 2"
+  },
+  {
+    expected => 1,
+    coords   => [  9,  8, 10, 30, 1 ],
+    comment  => "insertion intron start 5'"
+  },
+  {
+    expected => 0,
+    coords   => [ 11, 10, 10, 30, 1 ],
+    comment  => "insertion between intron start, intron start + 2"
+  },
+  {
+    expected => 1,
+    coords   => [ 13, 12, 10, 30, 1 ],
+    comment  => "insertion intron start + 2 3'"
+  },
+  {
+    expected => 1,
+    coords   => [ 31, 30, 10, 30, 1 ],
+    comment  => "insertion intron end"
+  },
+  {
+    expected => 1,
+    coords   => [ 33, 32, 10, 30, 1 ],
+    comment  => "insertion intron end + 2"
+  },
+  {
+    expected => 0,
+    coords   => [ 30, 29, 10, 30, 1 ],
+    comment  => "insertion intron end 5'"
+  },
+  {
+    expected => 1,
+    coords   => [ 32, 31, 10, 30, 1 ],
+    comment  => "insertion between intron end, intron end + 2"
+  },
+  {
+    expected => 0,
+    coords   => [ 34, 33, 10, 30, 1 ],
+    comment  => "insertion intron end + 2 3'"
+  },
+);
+
+foreach my $c(@coords) {
+  my $p_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::_intron_overlap_perl(@{$c->{coords}}) || 0;
+  my $c_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::_intron_overlap(@{$c->{coords}}) || 0;
+  my $exp     = $c->{expected};
+  my $comment = $c->{comment} || " coords: ".join(", ", @{$c->{coords}});
+  
+  is($p_res, $exp, "perl intron_overlap $comment");
+  is($c_res, $exp, "C    intron_overlap $comment");
+}
+
+
+## TEST DB STUFF
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
@@ -1167,6 +1423,7 @@ for my $stable_id (keys %$transcript_tests) {
         $test_count++;
     }
 }
+
 
 done_testing();
 

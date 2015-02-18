@@ -1,1 +1,2 @@
 requires 'JSON';
+requires 'Inline';
