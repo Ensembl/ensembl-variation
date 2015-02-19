@@ -567,13 +567,6 @@ sub hgvs_transcript {
     my $self = shift;
     my $notation = shift;   
 
-    ## temp fix for e!78
-    if(defined $self->{hgvs_transcript}  && 
-      $self->{hgvs_transcript} =~/LRG\w+\.\d\:/){
-        my @d = split/\.|\:/, $self->{hgvs_transcript}, 3;
-        $self->{hgvs_transcript} = $d[0] . ":". $d[2];
-    }
-
     ##### set if string supplied
     $self->{hgvs_transcript} = $notation   if defined $notation;
     ##### return if held 
