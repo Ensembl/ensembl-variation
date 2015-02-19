@@ -160,6 +160,12 @@ ok($pgs->[0]->genotype_string eq 'C|C' && $pgs->[0]->count == 98, 'get all Popul
 # test get all sources
 ok($vf4->get_all_sources->[0] eq 'dbSNP', 'get_all_sources');
 
+# test get all RegulatoryFeatureVariations
+my $var5 = $va->fetch_by_name('rs187207343');
+my $vf5 = $var5->get_all_VariationFeatures()->[0];
+my $rfs = $vf5->get_all_RegulatoryFeatureVariations;
+ok($rfs->[0]->regulatory_feature_stable_id eq 'ENSR00000000637', 'get_all_RegulatoryFeatureVariations');
+
 
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
