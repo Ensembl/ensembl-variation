@@ -93,3 +93,4 @@
 69175969	27510	20876359	20876359	1	1	C/T/G	cache_test_allele_1	1	\N	1	\N	intergenic_variant		2	0	T	0.005	10	\N	benign	367	1
 69175970	27510	20876360	20876360	1	1	T/G	cache_test_allele_2	1	\N	1	\N	intergenic_variant	2	0	0	0.005	10	\N	0	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	367	0
 69175974	27504	185800	185800	1	63646327	G/A	rs2686912	1	\N	1	\N	non_coding_transcript_variant,intron_variant,regulatory_region_variant		2	0	\N	\N	\N	\N	\N	367	1
+69175975	27512	19494843	19494843	1	63646329	C/T	rs187207343	1	\N	1	1000Genome	upstream_gene_variant,regulatory_region_variant	19,21	2	0	T	0.000459137	1	\N	\N	370	1

@@ -1,2 +1,1 @@
-1	69175974	ENSR00000316840	Promoter Flanking Region	N/A	0	regulatory_region_variant
-2	69175974	ENSR00000316840	Promoter Flanking Region	N/G	0	regulatory_region_variant
+1	69175975	ENSR00000000637	Unclassified	C/T	0	regulatory_region_variant
