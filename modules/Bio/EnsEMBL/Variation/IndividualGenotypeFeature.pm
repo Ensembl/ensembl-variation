@@ -81,10 +81,8 @@ use vars qw(@ISA);
     see superclass constructor
   Arg [-SLICE] :
     see superclass constructor
-  Arg [-allele1] :
-    string - One of the two alleles defining this genotype
-  Arg [-allele2] :
-    string - One of the two alleles defining this genotype
+  Arg [-genotype] :
+    arrayref - arrayref of alleles making up this genotype (in haplotype order)
   Arg [-variation] :
     Bio::EnsEMBL::Variation::Variation - The variation associated with this
     genotype
@@ -113,7 +111,7 @@ sub new {
 	
 	my $self = $class->SUPER::new(@_);
 	
-	my ($adaptor, $allele1, $allele2, $var, $var_id, $ind) =
+	my ($adaptor, $genotype, $var, $var_id, $ind) =
 	rearrange([qw(adaptor genotype variation _variation_id individual)],@_);
 	
 	if(defined($var) && (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
@@ -125,8 +123,7 @@ sub new {
 	}
 	
 	$self->{'adaptor'} = $adaptor;
-	$self->{'allele1'} = $allele1;
-	$self->{'allele2'} = $allele2;
+	$self->{'genotype'} = $genotype;
 	$self->{'individual'} = $ind;
 	$self->{'variation'} = $var;
 	$self->{'_variation_id'} = $var_id;
