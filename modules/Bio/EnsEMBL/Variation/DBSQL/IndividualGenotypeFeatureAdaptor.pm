@@ -67,6 +67,7 @@ use warnings;
 use vars qw(@ISA);
 
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
