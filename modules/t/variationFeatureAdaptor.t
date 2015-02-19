@@ -47,11 +47,6 @@ my $slice         = $sa->fetch_by_region('chromosome','18');
 
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
-#print Dumper $vfs;
-#my $n = @$vfs;
-#print "$n\n";
-#ok(@$vfs == 68 , "variationfeature count") ;
-
 my $vf_name = 'rs142276873';
 my $vf_id   = 33303674;
 
@@ -72,7 +67,7 @@ ok($vf->slice()->name() eq $slice->name(), "vf_id -> slice name");
 ok($vf->display() ==1,                     "vf_id -> display=1");
 
 
-$vf = $vfs->[0];
+$vf = $vfs->[1];
 
 ok($vf->dbID() == $vf_id,                  "var -> vf id");
 ok($vf->slice->name() eq $slice->name(),   "var -> slice name ");
@@ -127,7 +122,7 @@ ok($vfs3->[0]->variation_name() eq $vf_somatic_name, "vf by all somatic");
 
 ## Slice ##
 
-my $constraint = "vf.seq_region_start>100";
+my $constraint = "vf.seq_region_start>20000000";
 
 # test fetch all by Slice constraint with Variations
 print "\n# Test - fetch_all_by_Slice_constraint_with_Variations\n";
