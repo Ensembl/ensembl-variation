@@ -435,7 +435,7 @@ ok($cons && ${$cons->[0]} =~ /missense_variant 0 mRNA ENST00000419219/, "gvf out
 $config = copy_config($base_config, {
   json => 1,
   rest => 1,
-  check_existing => 1, 
+  check_existing => 1,
   sift => 'b',
   domains => 1
 });
@@ -493,10 +493,10 @@ if(`which tabix` =~ /tabix/) {
   });
   @vfs = map {@{parse_line($config, $_)}} split("\n", $input);
   $cons = get_all_consequences($config, \@vfs);
-  
+
   my %by_var = map {$_->{Uploaded_variation} => $_->{Extra}} @$cons;
   ok($by_var{rs116645811}->{testbed} eq 'bed1' && $by_var{rs1135638}->{testbed} eq 'bed2', "custom - bed");
-  
+
   ok($by_var{rs116645811}->{testgff} eq 'gtf1', "custom - gff");
 
   ok(
@@ -517,6 +517,7 @@ else {
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdb = $multi->get_DBAdaptor('variation');
 my $cdb = $multi->get_DBAdaptor('core');
+my $rdb = $multi->get_DBAdaptor('funcgen');
 
 # make DB config
 $config = copy_config($base_config, {
@@ -525,15 +526,20 @@ $config = copy_config($base_config, {
   hgvs => 1,
   
   # core adaptors
-  sa => $cdb->get_SliceAdaptor,
-  ta => $cdb->get_TranscriptAdaptor,
-  ga => $cdb->get_GeneAdaptor,
+  sa  => $cdb->get_SliceAdaptor,
+  ta  => $cdb->get_TranscriptAdaptor,
+  ga  => $cdb->get_GeneAdaptor,
+  csa => $cdb->get_CoordSystemAdaptor,
   
   # var adaptors
   va   => $vdb->get_VariationAdaptor,
   vfa  => $vdb->get_VariationFeatureAdaptor,
   tva  => $vdb->get_TranscriptVariationAdaptor,
   svfa => $vdb->get_StructuralVariationFeatureAdaptor,
+  
+  # reg adaptors
+  RegulatoryFeature_adaptor => $rdb->get_RegulatoryFeatureAdaptor,
+  MotifFeature_adaptor      => $rdb->get_MotifFeatureAdaptor,
 });
 delete $config->{$_} for qw(cache dir);
 
@@ -569,18 +575,41 @@ ok($cons && $cons->[0]->{Extra}->{SV} eq 'esv89107', "check svs");
 
 # map to LRG
 
+# regulatory
+delete($config->{format});
+$config->{regulatory} = 1;
+($vf) = @{parse_line($config, "7 151409212 151409212 C/T +")};
+$vf->{slice} = get_slice($config, $vf->{chr}, undef, 1);
+$cons = get_all_consequences($config, [$vf]);
 
+my ($rf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'RegulatoryFeature'} @$cons;
+my ($mf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'MotifFeature'} @$cons;
 
+is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "db - regulatory biotype");
+is($rf_con->{Feature}, 'ENSR00000636355', "db - regulatory ID");
+is($mf_con->{Feature}, 'PB0043.1', "db - motif ID");
+is_deeply(
+  $mf_con->{Extra},
+  {
+    'STRAND' => -1,
+    'MOTIF_POS' => 16,
+    'MOTIF_NAME' => 'Jaspar_Matrix_Max:PB0043.1',
+    'HIGH_INF_POS' => 'N',
+    'MOTIF_SCORE_CHANGE' => '0.010'
+  },
+  "db - motif extra"
+);
 
 # build
 $config = copy_config($config, {
   reg         => 'Bio::EnsEMBL::Registry',
   build       => 22,
-  build_parts => 'tv',
+  build_parts => 'tvr',
   dir         => "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly},
   strip       => 1,
   write_cache => 1,
   symbol      => 1,
+  cell_type   => [1],
   freq_vcf    => [
     {
       pops => ['AFR','ASN'],
@@ -611,6 +640,27 @@ ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} 
 ($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20876360 20876360 T/G +")};
 $cons = get_all_consequences($config, [$vf]);
 ok($cons->[0]->{Extra}->{AFR_MAF} eq 'G:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'G:0.05', "build - freqs from vcf 3");
+
+$config->{regulatory} = 1;
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20001112 20001112 T/G +")};
+$cons = get_all_consequences($config, [$vf]);
+($rf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'RegulatoryFeature'} @$cons;
+($mf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'MotifFeature'} @$cons;
+
+is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "build - regulatory biotype");
+is($rf_con->{Feature}, 'ENSR00000672895', "build - regulatory ID");
+is($mf_con->{Feature}, 'MA0139.1', "build - motif ID");
+is_deeply(
+  $mf_con->{Extra},
+  {
+    'STRAND' => -1,
+    'MOTIF_POS' => 18,
+    'MOTIF_NAME' => 'Jaspar_Matrix_CTCF:MA0139.1',
+    'HIGH_INF_POS' => 'N',
+    'MOTIF_SCORE_CHANGE' => '0.000'
+  },
+  "build - motif extra"
+);
 
 # remove built cache
 remove_tree("$Bin\/testdata/$$\_vep_cache");
