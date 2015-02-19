@@ -309,7 +309,7 @@ CREATE TABLE `external_db` (
   `secondary_db_table` varchar(255) DEFAULT NULL,
   `description` text,
   PRIMARY KEY (`external_db_id`),
-  UNIQUE KEY `db_name_release_idx` (`db_name`,`db_release`)
+  UNIQUE KEY `db_name_release_idx` (`db_name`,`db_release`(50))
 ) ENGINE=MyISAM   AVG_ROW_LENGTH=80;
 
 CREATE TABLE `external_feature` (
@@ -440,8 +440,8 @@ CREATE TABLE `meta` (
   `meta_key` varchar(46) NOT NULL,
   `meta_value` varchar(950) NOT NULL,
   PRIMARY KEY (`meta_id`),
-  UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
-  KEY `species_value_idx` (`species_id`,`meta_value`)
+  UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`(50)),
+  KEY `species_value_idx` (`species_id`,`meta_value`(50))
 ) ENGINE=MyISAM  ;
 
 CREATE TABLE `meta_coord` (
@@ -706,7 +706,6 @@ CREATE TABLE `unmapped_object` (
   `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','Probe','ProbeSet','ProbeFeature') NOT NULL,
   `parent` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`unmapped_object_id`),
-  UNIQUE KEY `unique_unmapped_obj_idx` (`ensembl_id`,`ensembl_object_type`,`identifier`,`unmapped_reason_id`,`parent`,`external_db_id`),
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`),
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
