@@ -532,10 +532,11 @@ $config = copy_config($base_config, {
   csa => $cdb->get_CoordSystemAdaptor,
   
   # var adaptors
-  va   => $vdb->get_VariationAdaptor,
-  vfa  => $vdb->get_VariationFeatureAdaptor,
-  tva  => $vdb->get_TranscriptVariationAdaptor,
-  svfa => $vdb->get_StructuralVariationFeatureAdaptor,
+  va    => $vdb->get_VariationAdaptor,
+  vfa   => $vdb->get_VariationFeatureAdaptor,
+  tva   => $vdb->get_TranscriptVariationAdaptor,
+  svfa  => $vdb->get_StructuralVariationFeatureAdaptor,
+  pfpma => $vdb->get_ProteinFunctionPredictionMatrixAdaptor,
   
   # reg adaptors
   RegulatoryFeature_adaptor => $rdb->get_RegulatoryFeatureAdaptor,
