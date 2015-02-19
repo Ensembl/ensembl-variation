@@ -1,4 +1,14 @@
-607	19	16	19	RegulatoryFeatures:MultiCell	regulatory	MultiCell consensus RegulatoryFeatures	Reg.Feats MultiCell	0
-620	179033	83	14	Segmentation:K562	segmentation	K562 Segway_18 segmentation	K562 segmentation	0
-431	11	51	14	K562_H3K27me3_ENCODE_YALE_ccat_histone	annotated	NULL	H3K27me3 - K562 enriched sites	671
 994	19	16	17	RegulatoryFeatures:NHEK	regulatory	NHEK specific RegulatoryFeatures	Reg.Feats NHEK	\N
+995	19	16	14	RegulatoryFeatures:K562	regulatory	K562 specific RegulatoryFeatures	Reg.Feats K562	\N
+996	19	16	2	RegulatoryFeatures:GM06990	regulatory	GM06990 specific RegulatoryFeatures	Reg.Feats GM06990	\N
+997	19	16	19	RegulatoryFeatures:MultiCell	regulatory	Generic RegulatoryFeature focus regions	Reg.Feats MultiCell	\N
+998	19	16	5	RegulatoryFeatures:IMR90	regulatory	IMR90 specific RegulatoryFeatures	Reg.Feats IMR90	\N
+999	19	16	22	RegulatoryFeatures:HSMM	regulatory	HSMM specific RegulatoryFeatures	Reg.Feats HSMM	\N
+1000	19	16	7	RegulatoryFeatures:HepG2	regulatory	HepG2 specific RegulatoryFeatures	Reg.Feats HepG2	\N
+1001	19	16	21	RegulatoryFeatures:NH-A	regulatory	NH-A specific RegulatoryFeatures	Reg.Feats NH-A	\N
+1002	19	16	1	RegulatoryFeatures:HeLa-S3	regulatory	HeLa-S3 specific RegulatoryFeatures	Reg.Feats HeLa-S3	\N
+1003	19	16	4	RegulatoryFeatures:CD4	regulatory	CD4 specific RegulatoryFeatures	Reg.Feats CD4	\N
+1004	19	16	16	RegulatoryFeatures:HUVEC	regulatory	HUVEC specific RegulatoryFeatures	Reg.Feats HUVEC	\N
+1005	19	16	23	RegulatoryFeatures:HMEC	regulatory	HMEC specific RegulatoryFeatures	Reg.Feats HMEC	\N
+1006	19	16	18	RegulatoryFeatures:H1ESC	regulatory	H1ESC specific RegulatoryFeatures	Reg.Feats H1ESC	\N
+1007	19	16	15	RegulatoryFeatures:GM12878	regulatory	GM12878 specific RegulatoryFeatures	Reg.Feats GM12878	\N

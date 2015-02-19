@@ -1,7 +1,40 @@
-19	RegulatoryFeature	Regulatory Feature	16	Regulatory Feature	SO:0005836	regulatory_region
-179363	Promoter Flanking Region	Regulatory Feature	16	Predicted promoter flanking region	SO:0001952	promoter_flanking_region
-178980	USF1	Transcription Factor	70	USF1 Transcription Factor Binding	SO:0000235	TF_binding_site
-179460	Predicted heterochromatin	Segmentation State	83	Predicted heterochromatin	NULL	\N
-179033	SegmentationState	Segmentation State	83	Regulatory genome segment	NULL	NULL
-11	H3K27me3	Histone	0	Histone 3 Lysine 27 Tri-Methylation	SO:0001709	H3K27_trimethylation_site
+37	Promoter Associated	Regulatory Feature	\N	Promoter like regulatory feature	SO:0005836	regulatory_region
+39	Non-Gene Associated	Regulatory Feature	\N	Non-Gene associated regulatory feature	SO:0005836	regulatory_region
 40	Unclassified	Regulatory Feature	\N	Unclassified regulatory feature	SO:0005836	regulatory_region
+19	RegulatoryFeature	Regulatory Feature	\N	Regulatory Feature	SO:0005836	regulatory_region
+9	CTCF	Transcription Factor	\N	CCCTC-binding factor	SO:0000235	TF_binding_site
+178891	Cfos	Transcription Factor	\N	Cfos TF binding	SO:0000235	TF_binding_site
+178894	Max	Transcription Factor	\N	Max TF binding	SO:0000235	TF_binding_site
+178896	Gata1	Transcription Factor	\N	Gata1 TF binding	SO:0000235	TF_binding_site
+178898	Cmyc	Transcription Factor	\N	Cmyc TF binding	SO:0000235	TF_binding_site
+178899	Gabp	Transcription Factor	\N	Gabp TF binding	SO:0000235	TF_binding_site
+178900	Nrsf	Transcription Factor	\N	Nrsf TF binding	SO:0000235	TF_binding_site
+178901	Srf	Transcription Factor	\N	Srf TF binding	SO:0000235	TF_binding_site
+178906	Ap2alpha	Transcription Factor	\N	Ap2alpha Transcription Factor Binding	SO:0000235	TF_binding_site
+178907	Ap2gamma	Transcription Factor	\N	Ap2gamma Transcription Factor Binding	SO:0000235	TF_binding_site
+178915	BHLHE40	Transcription Factor	\N	BHLHE40 Transcription Factor Binding	SO:0000235	TF_binding_site
+178921	E2F1	Transcription Factor	\N	E2F1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178925	EBF	Transcription Factor	\N	EBF Transcription Factor Binding	SO:0000235	TF_binding_site
+178926	Egr1	Transcription Factor	\N	Egr1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178932	Gata2	Transcription Factor	\N	Gata2 Transcription Factor Binding	SO:0000235	TF_binding_site
+178941	HNF4A	Transcription Factor	\N	HNF4A Transcription Factor Binding	SO:0000235	TF_binding_site
+178944	IRF4	Transcription Factor	\N	IRF4 Transcription Factor Binding	SO:0000235	TF_binding_site
+178948	NFKB	Transcription Factor	\N	NFKB Transcription Factor Binding	SO:0000235	TF_binding_site
+178949	Nfya	Transcription Factor	\N	Nfya Transcription Factor Binding	SO:0000235	TF_binding_site
+178955	Pax5	Transcription Factor	\N	Pax5 Transcription Factor Binding	SO:0000235	TF_binding_site
+178958	POU2F2	Transcription Factor	\N	POU2F2 Transcription Factor Binding	SO:0000235	TF_binding_site
+178959	PU1	Transcription Factor	\N	PU1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178962	RXRA	Transcription Factor	\N	RXRA Transcription Factor Binding	SO:0000235	TF_binding_site
+178969	SP1	Transcription Factor	\N	SP1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178980	USF1	Transcription Factor	\N	USF1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178983	Yy1	Transcription Factor	\N	Yy1 Transcription Factor Binding	SO:0000235	TF_binding_site
+178990	PPARG::RXRA	Transcription Factor Complex	\N	PPARG::RXRA Binding	SO:0000235	TF_binding_site
+178991	RXRA::VDR	Transcription Factor Complex	\N	RXRA::VDR Binding	SO:0000235	TF_binding_site
+178992	AP1	Transcription Factor Complex	\N	AP1 Binding	SO:0000235	TF_binding_site
+178994	RNR1H2::RXRA	Transcription Factor Complex	\N	RNR1H2::VDR Binding	SO:0000235	TF_binding_site
+178996	Tal1::Gata1	Transcription Factor Complex	\N	Tal1::Gata1 Binding	SO:0000235	TF_binding_site
+178998	RXR::RAR_DR5	Transcription Factor Complex	\N	RXR::RAR_DR5 Binding	SO:0000235	TF_binding_site
+179000	mxl-1::mdl-1	Transcription Factor Complex	\N	mxl-1::mdl-1 Binding	SO:0000235	TF_binding_site
+179017	MEF2C	Transcription Factor	\N	MEF2C Transcription Factor Binding	SO:0000235	TF_binding_site
+179022	FOXA1	Transcription Factor	\N	FOXA1 Transcription Factor Binding	SO:0000235	TF_binding_site
+179023	FOXA2	Transcription Factor	\N	FOXA2 Transcription Factor Binding	SO:0000235	TF_binding_site
