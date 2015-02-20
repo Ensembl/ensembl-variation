@@ -32,6 +32,8 @@ my $va   = $vdb->get_VariationAdaptor();
 my $vfa  = $vdb->get_VariationFeatureAdaptor();
 my $rfva = $vdb->get_RegulatoryFeatureVariationAdaptor();
 
+my $sa = $cdb->get_SliceAdaptor();
+
 my $rfa = $fdb->get_RegulatoryFeatureAdaptor();
 
 my $rf = $rfa->fetch_by_stable_id('ENSR00000000637');
@@ -71,22 +73,52 @@ $rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
 ok(scalar @$rfvs == 1, 'count fetch_all_by_VariationFeatures');
 
 #$rfvs = $rfva->fetch_all_by_VariationFeatures_SO_terms([$vf], []);
-
 #my $count = $rfva->count_all_by_VariationFeatures_SO_terms([$vf]);
 
-=begin
-my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+$rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+  -regulatory_feature => $rf,
+  -variation_feature  => $vf,
+  -adaptor            => $rfva,
+  -disambiguate_single_nucleotide_alleles => 0,
+);
+my $consequence_types = join(',', sort @{$rfv->consequence_type});
+ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types for regulatory_feature_variation');
+
+my $slice = $sa->fetch_by_region('chromosome', '7');
+my $v = Bio::EnsEMBL::Variation::Variation->new(
+  -name => 'rs140471675',
+  -_source_id => 1,
+  -is_somatic => 0,
+);
+$va->store($v);
+$v = $va->fetch_by_name('rs140471675');
+$vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+  -start   => 151409224,
+  -end     => 151409224,
+  -strand  => 1,
+  -slice   => $slice,
+  -allele_string => 'G/A',
+  -variation_name => 'rs140471675',
+  -map_weight  => 1,
+  -_source_id => 1,
+  -is_somatic => 0,
+  -variation => $v,
+);
+$vfa->store($vf);
+
+$rf = $rfa->fetch_by_stable_id('ENSR00000636355');
+$rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
   -regulatory_feature => $rf,
   -variation_feature  => $vf,
   -adaptor            => $rfva,
   -disambiguate_single_nucleotide_alleles => 0,
 );
 
-my $consequence_types = join(',', sort @{$rfv->consequence_type});
+$consequence_types = join(',', sort @{$rfv->consequence_type});
 ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types for regulatory_feature_variation');
 
-#$rfva->store($rfv);
-=end
-=cut
+$rfva->store($rfv);
+$rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
+ok(scalar @$rfvs == 1, 'count fetch_all_by_VariationFeatures');
 
 done_testing();
