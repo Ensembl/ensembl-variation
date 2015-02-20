@@ -99,9 +99,23 @@ $populations = $pa->fetch_population_by_synonym(1372);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$populations);
 is($all, 'PERLEGEN:AFD_AFR_PANEL', "Fetch by synonym 1372");
 
+$populations = $pa->fetch_population_by_synonym(1372,'dbSNP');
+$all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$populations);
+is($all, 'PERLEGEN:AFD_AFR_PANEL', "Fetch by synonym 1372 - with source");
+
 # fetch_synonyms
 my $synonyms = $pa->fetch_synonyms(650);
 is(join(',', @$synonyms), 1372, "Fetch synonyms for dbID 650");
+
+my $synonyms2 = $pa->fetch_synonyms(650,'dbSNP');
+is(join(',', @$synonyms2), 1372, "Fetch synonyms for dbID 650 - with source");
+
+# test get_dbIDs_for_population_names
+my $pop_name = '1000GENOMES:phase_1_EUR';
+my $dbIDs = $pa->get_dbIDs_for_population_names([$pop_name]);
+my @pop_ids = map { $_ } grep {$dbIDs->{$_} eq $pop_name} keys(%$dbIDs);
+ok($pop_ids[0] == 101082, 'get_dbIDs_for_population_names');
+
 
 # fetch_tag_Population
 #my $v = $va->fetch_by_name('rs205621');
