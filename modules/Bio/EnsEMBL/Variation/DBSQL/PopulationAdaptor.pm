@@ -697,11 +697,11 @@ sub get_dbIDs_for_population_names {
     
     # Loop over the population names and query the db
     my %dbIDs;
-    foreach my $name (@{$population_names}) {
-        $sth->execute($name);
+    foreach my $pop_name (@{$population_names}) {
+        $sth->execute($pop_name);
         my ($id, $name);
         $sth->bind_columns(\$id,\$name);
-        $sth->execute();
+        $sth->fetch;
         $dbIDs{$id} = $name if (defined($id));
     }
     
