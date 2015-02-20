@@ -12,3 +12,39 @@
 1005	19	16	23	RegulatoryFeatures:HMEC	regulatory	HMEC specific RegulatoryFeatures	Reg.Feats HMEC	\N
 1006	19	16	18	RegulatoryFeatures:H1ESC	regulatory	H1ESC specific RegulatoryFeatures	Reg.Feats H1ESC	\N
 1007	19	16	15	RegulatoryFeatures:GM12878	regulatory	GM12878 specific RegulatoryFeatures	Reg.Feats GM12878	\N
+446	9	41	14	K562_CTCF_ENCODE_Broad_SWEmbl_R015_D150	annotated	\N	CTCF - K562 Enriched Sites	211
+424	178899	41	14	K562_Gabp_ENCODE_Hudsonalpha_SWEmbl_R015_D150	annotated	\N	Gabp - K562 Enriched Sites	208
+383	9	41	4	CD4_CTCF_BarskiZhao_PMID17512414_SWEmbl_R015_D150	annotated	\N	CTCF - CD4 Enriched Sites	182
+453	9	41	7	HepG2_CTCF_ENCODE_Uta_SWEmbl_R015_D150	annotated	\N	CTCF - HepG2 Enriched Sites	226
+454	9	41	15	GM12878_CTCF_ENCODE_Broad_SWEmbl_R015_D150	annotated	\N	CTCF - GM12878 Enriched Sites	227
+462	9	41	15	GM12878_CTCF_ENCODE_Uta_SWEmbl_R015_D150	annotated	\N	CTCF - GM12878 Enriched Sites	236
+466	9	41	1	HeLa-S3_CTCF_ENCODE_Uta_SWEmbl_R015_D150	annotated	\N	CTCF - HeLa-S3 Enriched Sites	240
+467	9	41	18	H1ESC_CTCF_ENCODE_Broad_SWEmbl_R015_D150	annotated	\N	CTCF - H1ESC Enriched Sites	241
+496	9	41	16	HUVEC_CTCF_ENCODE_Broad_SWEmbl_R015_D150	annotated	\N	CTCF - HUVEC Enriched Sites	270
+503	178891	41	1	HeLa-S3_Cfos_ENCODE_Yale_SWEmbl_R015_D150	annotated	\N	Cfos - HeLa-S3 Enriched Sites	277
+513	178894	41	1	HeLa-S3_Max_ENCODE_Yale_SWEmbl_R015_D150	annotated	\N	Max - HeLa-S3 Enriched Sites	287
+536	9	41	7	HepG2_CTCF_ENCODE_Uw_SWEmbl_R015_D150	annotated	\N	CTCF - HepG2 Enriched Sites	310
+538	9	41	2	GM06990_CTCF_ENCODE_Uw_SWEmbl_R015_D150	annotated	\N	CTCF - GM06990 Enriched Sites	311
+543	9	41	14	K562_CTCF_ENCODE_Uta_SWEmbl_R015_D150	annotated	\N	CTCF - K562 Enriched Sites	233
+561	9	47	1	HeLa-S3_CTCF_ENCODE_Uw_SWEMBL_R015	annotated	\N	CTCF - HeLa-S3 Enriched Sites	325
+568	9	47	16	HUVEC_CTCF_ENCODE_Uw_SWEMBL_R015	annotated	\N	CTCF - HUVEC Enriched Sites	332
+572	9	47	14	K562_CTCF_ENCODE_Uw_SWEMBL_R015	annotated	\N	CTCF - K562 Enriched Sites	336
+587	9	47	7	HepG2_CTCF_ENCODE_Broad_SWEMBL_R015	annotated	\N	CTCF - HepG2 Enriched Sites	351
+616	178980	47	14	K562_USF1_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	USF1 - K562 Enriched Sites	380
+625	178906	47	1	HeLa-S3_Ap2alpha_ENCODE_Yale_SWEMBL_R015	annotated	\N	Ap2alpha - HeLa-S3 Enriched Sites	389
+626	178907	47	1	HeLa-S3_Ap2gamma_ENCODE_Yale_SWEMBL_R015	annotated	\N	Ap2gamma - HeLa-S3 Enriched Sites	390
+646	9	47	16	HUVEC_CTCF_ENCODE_Uta_SWEMBL_R015	annotated	\N	CTCF - HUVEC Enriched Sites	410
+649	9	47	17	NHEK_CTCF_ENCODE_Uta_SWEMBL_R015	annotated	\N	CTCF - NHEK Enriched Sites	413
+700	178892	47	1	HeLa-S3_Cjun_ENCODE_Yale_SWEMBL_R015	annotated	\N	Cjun - HeLa-S3 Enriched Sites	453
+706	178892	47	16	HUVEC_Cjun_ENCODE_Yale_SWEMBL_R015	annotated	\N	Cjun - HUVEC Enriched Sites	459
+727	178959	47	15	GM12878_PU1_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	PU1 - GM12878 Enriched Sites	480
+735	178899	47	7	HepG2_Gabp_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	Gabp - HepG2 Enriched Sites	488
+801	9	47	23	HMEC_CTCF_ENCODE_Uw_SWEMBL_R015	annotated	\N	CTCF - HMEC Enriched Sites	503
+804	9	47	23	HMEC_CTCF_ENCODE_Broad_SWEMBL_R015	annotated	\N	CTCF - HMEC Enriched Sites	506
+812	9	47	22	HSMM_CTCF_ENCODE_Broad_SWEMBL_R015	annotated	\N	CTCF - HSMM Enriched Sites	514
+823	9	47	21	NH-A_CTCF_ENCODE_Broad_SWEMBL_R015	annotated	\N	CTCF - NH-A Enriched Sites	525
+860	9	47	18	H1ESC_CTCF_ENCODE_Uta_SWEMBL_R015	annotated	\N	CTCF - H1ESC Enriched Sites	562
+885	9	47	18	H1ESC_CTCF_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	CTCF - H1ESC Enriched Sites	587
+905	9	47	7	HepG2_CTCF_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	CTCF - HepG2 Enriched Sites	607
+910	178941	47	7	HepG2_HNF4A_ENCODE_Hudsonalpha_SWEMBL_R015	annotated	\N	HNF4A - HepG2 Enriched Sites	612
+950	9	47	15	GM12878_CTCF_ENCODE_Uw_SWEMBL_R015	annotated	\N	CTCF - GM12878 Enriched Sites	652

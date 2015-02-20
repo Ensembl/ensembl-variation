@@ -1,2 +1,4 @@
 16	0000-00-00 00:00:00	Regulatory_Build	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL
 49	2010-11-20 15:00:00	Jaspar	jaspar.genereg.net	JASPAR_2010	all_data/matrix_only/matrix_only.txt	\N	\N	\N	\N	\N	\N	\N	\N
+41	2010-03-25 13:02:05	SWEmbl_R015_D150	\N	\N	\N	SWEmbl	2008-08-03	SWEmbl	-f 150 -R 0.015 -d 150	SWEmbl	\N	\N	\N
+47	2010-08-13 00:00:00	SWEmbl_R015	\N	\N	3.3	SWEmbl	2008-08-03	SWEmbl	-f 150 -R 0.015	SWEmbl	\N	\N	\N

@@ -138,3 +138,8 @@
 2470	lrg		8	default_version	76_37	1004	1	1
 2471	supercontig	GRCh37	2	default_version	76_37	3	1	1
 2468	chromosome	GRCh37	1	default_version	76_37	2	1	1
+2466	clone		3	default_version	220_155158	4	1	1
+2467	contig		4	default_version,sequence_level	220_155158	1	1	1
+23	supercontig		2	default_version	220_155158	3	1	1
+2470	lrg		8	default_version	220_155158	1003	1	1
+2468	chromosome	GRCh37	1	default_version	220_155158	2	1	1
