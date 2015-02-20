@@ -47,8 +47,9 @@ my $slice         = $sa->fetch_by_region('chromosome','18');
 
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
-my $vf_name = 'rs142276873';
-my $vf_id   = 33303674;
+my $vf_name  = 'rs142276873';
+my $vf_id    = 33303674;
+
 
 # Somatic
 my $vf_somatic_name = 'COSM946275';
@@ -109,10 +110,12 @@ ok($vfs->[0]->variation_name() eq 'rs67521280',"var -> vf_name" );
 ok($vfs->[0]->dbID() eq 15275234 ,             "var -> vf_id" );
 
 
+my $vf2_name = 'rs2299222';
+
 # test fetch all
 print "\n# Test - fetch_all\n";
 my $vfs2 = $vfa->fetch_all();
-ok($vfs2->[0]->variation_name() eq 'rs2299222', "vf by all");
+ok($vfs2->[0]->variation_name() eq $vf2_name, "vf by all");
 
 # test fetch all somatic
 print "\n# Test - fetch_all_somatic\n";
@@ -139,10 +142,23 @@ print "\n# Test - fetch_all_genotyped_by_Slice\n";
 my $vfs6 = $vfa->fetch_all_genotyped_by_Slice($slice);
 ok($vfs6->[0]->variation_name() eq $vf_name, "genotyped vf by slice");
 
-# test fetch all with phenotype by Slice
+## test fetch all with phenotype by Slice ##
 print "\n# Test - fetch_all_with_phenotype_by_Slice\n";
 my $vfs7 = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen);
-ok($vfs7->[0]->variation_name() eq 'rs2299222', "vf with phenotype by slice");
+ok($vfs7->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice");
+
+# fetch_all_with_phenotype_by_Slice - using variation source
+my $vfs7a = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen,'dbSNP');
+ok($vfs7a->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice - using variation source");
+
+# fetch_all_with_phenotype_by_Slice - using phenotype source
+my $vfs7b = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen, undef, 'dbSNP');
+ok($vfs7b->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice - using phenotype source");
+
+# fetch_all_with_phenotype_by_Slice - using phenotype
+my $vfs7c = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen, undef, undef, 'ACHONDROPLASIA') ;
+ok($vfs7c->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice - using phenotype");
+
 
 # test fetch all by Slice VariationSet
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";
@@ -185,12 +201,42 @@ ok($vfs14->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice const
 # test fetch all with phenotype
 print "\n# Test - fetch_all_with_phenotype\n";
 my $vfs15 = $vfa->fetch_all_with_phenotype();
-ok($vfs15->[0]->variation_name() eq 'rs2299222', "vf with phenotype");
+ok($vfs15->[0]->variation_name() eq $vf2_name, "vf with phenotype");
+
+# fetch_all_with_phenotype - using variation source
+my $vfs15a = $vfa->fetch_all_with_phenotype('dbSNP');
+ok($vfs15a->[0]->variation_name() eq $vf2_name, "vf with phenotype - using variation source");
+
+# fetch_all_with_phenotype - using phenotype source
+my $vfs15b = $vfa->fetch_all_with_phenotype(undef, 'dbSNP');
+ok($vfs15b->[0]->variation_name() eq $vf2_name, "vf with phenotype - using phenotype source");
+
+# fetch_all_with_phenotype - using phenotype
+my $vfs15c = $vfa->fetch_all_with_phenotype(undef, undef, 'ACHONDROPLASIA') ;
+ok($vfs15c->[0]->variation_name() eq $vf2_name, "vf with phenotype - using phenotype");
+
 
 # test fetch all somatic with phenotype
 print "\n# Test - fetch_all_somatic_with_phenotype\n";
 my $vfs16 = $vfa->fetch_all_somatic_with_phenotype();
 ok($vfs16->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype");
+
+
+# test fetch Iterator
+print "\n# Test - fetch_Iterator\n";
+my $vfs17 = $vfa->fetch_Iterator();
+ok($vfs17->next()->variation_name eq $vf2_name, 'vf fetch_Iterator');
+
+
+# test list dbIDs
+print "\n# Test - list_dbIDs\n";
+my $dbIDs = $vfa->list_dbIDs();
+ok(scalar(@$dbIDs) > 0 && $dbIDs->[0] == 1, 'vf list_dbIDs');
+
+# test new fake
+print "\n# Test - new_fake\n";
+my $vfa_fake = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake('human');
+ok($vfa_fake && $vfa_fake->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'), 'fake vf adaptor - new_fake');
 
 
 ## store ##
