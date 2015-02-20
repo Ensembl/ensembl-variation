@@ -1,5 +1,10 @@
-gene	2	1195112
-exon	2	14862
-transcript	2	16122
-dna_align_feature	2	1189866
-protein_align_feature	2	1189863
+gene	2	363348
+exon	2	4849
+transcript	2	5460
+dna_align_feature	2	97028
+protein_align_feature	2	204164
+gene	4	46913
+exon	4	1741
+dna_align_feature	4	46889
+protein_align_feature	4	15863
+transcript	4	4041
