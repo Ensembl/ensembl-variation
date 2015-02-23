@@ -165,6 +165,18 @@ my $var5 = $va->fetch_by_name('rs187207343');
 my $vf5 = $var5->get_all_VariationFeatures()->[0];
 my $rfs = $vf5->get_all_RegulatoryFeatureVariations;
 ok($rfs->[0]->regulatory_feature_stable_id eq 'ENSR00000000637', 'get_all_RegulatoryFeatureVariations');
+my $regulatory_feature = $rfs->[0]->regulatory_feature;
+$rfs = $vf5->get_all_RegulatoryFeatureVariations([$regulatory_feature]);
+ok($rfs->[0]->regulatory_feature_stable_id eq 'ENSR00000000637', 'get_all_RegulatoryFeatureVariations, regulatory_feature');
+
+# test get all MotifFeatureVariations
+my $var6 = $va->fetch_by_name('rs182313188');
+my $vf6 = $var6->get_all_VariationFeatures()->[0];
+my $mfvs = $vf6->get_all_MotifFeatureVariations;
+ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVariations');
+my $motif_feature = $mfvs->[0]->motif_feature;
+$mfvs = $vf6->get_all_MotifFeatureVariations([$motif_feature]);
+ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVariations, motif_feature');
 
 
 #test deprecated methods
