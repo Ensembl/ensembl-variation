@@ -85,26 +85,35 @@ my $consequence_types = join(',', sort @{$rfv->consequence_type});
 ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types for regulatory_feature_variation');
 
 my $slice = $sa->fetch_by_region('chromosome', '7');
-my $v = Bio::EnsEMBL::Variation::Variation->new(
-  -name => 'rs140471675',
-  -_source_id => 1,
-  -is_somatic => 0,
-);
-$va->store($v);
-$v = $va->fetch_by_name('rs140471675');
-$vf = Bio::EnsEMBL::Variation::VariationFeature->new(
-  -start   => 151409224,
-  -end     => 151409224,
-  -strand  => 1,
-  -slice   => $slice,
-  -allele_string => 'G/A',
-  -variation_name => 'rs140471675',
-  -map_weight  => 1,
-  -_source_id => 1,
-  -is_somatic => 0,
-  -variation => $v,
-);
-$vfa->store($vf);
+my $v = $va->fetch_by_name('rs140471675');
+if (!$v) {
+  $v = Bio::EnsEMBL::Variation::Variation->new(
+    -name => 'rs140471675',
+    -_source_id => 1,
+    -is_somatic => 0,
+  );
+  $va->store($v);
+  $v = $va->fetch_by_name('rs140471675');
+}
+
+$vfs = $vfa->fetch_all_by_Variation($v);
+if (!scalar @$vfs) {
+  $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+    -start   => 151409224,
+    -end     => 151409224,
+    -strand  => 1,
+    -slice   => $slice,
+    -allele_string => 'G/A',
+    -variation_name => 'rs140471675',
+    -map_weight  => 1,
+    -_source_id => 1,
+    -is_somatic => 0,
+    -variation => $v,
+  );
+  $vfa->store($vf);
+} else {
+  $vf = $vfs->[0];
+}
 
 $rf = $rfa->fetch_by_stable_id('ENSR00000636355');
 $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
