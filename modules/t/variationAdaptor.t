@@ -156,7 +156,7 @@ ok($var2->name eq $var_name, "var by stable_id");
 # test fetch all by source
 print "\n# Test - fetch_all_by_source\n";
 my $var3 = $va->fetch_all_by_source('dbSNP');
-ok($var3->[0]->name eq 'rs12360064', "var by source");
+ok($var3->[0]->source_name eq 'dbSNP', "var by source");
 
 # test fetch all by dbID list
 print "\n# Test - fetch_all_by_dbID_list\n";
