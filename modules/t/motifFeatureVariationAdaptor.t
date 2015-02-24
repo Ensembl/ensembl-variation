@@ -18,8 +18,13 @@ use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Registry;
 
 our $verbose = 0;
+
+my $omulti = Bio::EnsEMBL::Test::MultiTestDB->new('multi');
+my $odb = $omulti->get_DBAdaptor('ontology');
+Bio::EnsEMBL::Registry->add_db($omulti, 'ontology', $odb);
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
@@ -80,7 +85,29 @@ my $feature_stable_id = $mfv->feature_stable_id;
 ok($feature_stable_id eq 'ENSR00000636355', 'Compare feature stable id');
 
 my $alt_MotifFeatureVariationAlleles = $mfv->get_all_alternate_MotifFeatureVariationAlleles;
-my $mfvs = $mfva->fetch_all_by_MotifFeatures([$motif_feature]);
 
+$feature_id = 769450;
+$motif_feature = $mfa->fetch_by_dbID($feature_id) or die "Failed to fetch MotifFeature for id: $feature_id";
+
+my $mfvs = $mfva->fetch_all_by_MotifFeatures([$motif_feature]);
+ok(scalar @$mfvs == 1, 'fetch_all_by_MotifFeatures');
+
+my $mfvs1 = $mfva->fetch_all_somatic_by_MotifFeatures([$motif_feature]);
+ok(scalar @$mfvs1 == 0, 'fetch_all_somatic_by_MotifFeatures');
+
+my $mfvs2 = $mfva->fetch_all_by_MotifFeatures_SO_terms([$motif_feature], ['sequence_variant']);
+ok(scalar @$mfvs2 == 0, 'fetch_all_by_MotifFeatures_SO_terms');
+
+my $mfvs3 = $mfva->fetch_all_somatic_by_MotifFeatures_SO_terms([$motif_feature], ['sequence_variant']);
+ok(scalar @$mfvs3 == 0, 'fetch_all_somatic_by_MotifFeatures_SO_terms');
+
+my $var4 = $va->fetch_by_name('rs372423729');
+my $vf4 = $vfa->fetch_all_by_Variation($var4)->[0];
+
+#my $mfvs4 = $mfva->fetch_all_by_VariationFeatures_SO_terms([$vf4], [$motif_feature], ['sequence_variant']);
+#ok(scalar @$mfvs4 == 0, 'fetch_all_by_VariationFeatures_SO_terms');
+
+#my $count = $mfva->count_all_by_VariationFeatures_SO_terms([$vf4], [$motif_feature], ['sequence_variant']);
+#ok($count == 0, 'count_all_by_VariationFeatures_SO_terms');
 
 done_testing();
