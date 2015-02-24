@@ -115,6 +115,7 @@ use vars qw(@ISA @EXPORT_OK);
     &end_progress
     @REG_FEAT_TYPES
     @OUTPUT_COLS
+    @VCF_COLS
     @EXTRA_HEADERS
     %COL_DESCS
     @VEP_WEB_CONFIG
@@ -139,7 +140,23 @@ our @OUTPUT_COLS = qw(
     Extra
 );
 
-
+our @VCF_COLS = (
+  'Allele',
+  'Consequence',
+  'IMPACT',
+  'SYMBOL',
+  'Gene',
+  'Feature_type',
+  'Feature',
+  'BIOTYPE',
+  'EXON',
+  'INTRON',
+  'HGVSc',
+  'HGVSp',
+  'cDNA_position',
+  'CDS_position',
+  'Protein_position',
+);
  
 # define headers that would normally go in the extra field
 # keyed on the config parameter used to turn it on
@@ -148,7 +165,7 @@ our @EXTRA_HEADERS = (
   # general
   { flag => 'individual',      cols => ['IND','ZYG'] },
   { flag => 'allele_number',   cols => ['ALLELE_NUM'] },
-  { flag => 'user',            cols => ['DISTANCE','STRAND'] },
+  { flag => 'user',            cols => ['IMPACT','DISTANCE','STRAND'] },
   { flag => 'flag_pick',       cols => ['PICK'] },
   { flag => 'flag_pick_allele',cols => ['PICK'] },
   
@@ -202,6 +219,7 @@ our %COL_DESCS = (
     'Amino_acids'        => 'Reference and variant amino acids',
     'Codons'             => 'Reference and variant codon sequence',
     'Existing_variation' => 'Identifier(s) of co-located known variants',
+    'IMPACT'             => 'Subjective impact classification',
     'CANONICAL'          => 'Indicates if transcript is canonical for this gene',
     'TSL'                => 'Transcript support level',
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
@@ -2340,6 +2358,9 @@ sub add_extra_fields {
     my $config = shift;
     my $line   = shift;
     my $bvfoa  = shift;
+    
+    # impact
+    $line->{Extra}->{IMPACT} = (sort {$a->rank <=> $b->rank} @{$bvfoa->get_all_OverlapConsequences})[0]->impact();
     
     # overlapping SVs
     if(defined $config->{check_svs} && defined $bvfoa->base_variation_feature->{overlapping_svs}) {
