@@ -13,7 +13,7 @@
     'test_collection' => {
       'core' => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
     },
-    'ontology' => {
+    'multi' => {
       'ontology' => 'Bio::EnsEMBL::DBSQL::OntologyDBAdaptor',
     },
     'mapping' => {
