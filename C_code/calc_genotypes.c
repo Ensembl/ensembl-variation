@@ -29,7 +29,7 @@
 #include <math.h>
 #include <inttypes.h>
 
-#define SIZE 250
+#define SIZE 500
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
 #define USER_ERROR 1
