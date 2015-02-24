@@ -19,8 +19,13 @@ use Test::More;
 use Data::Dumper;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Registry;
 our $verbose = 0;
 
+
+my $omulti = Bio::EnsEMBL::Test::MultiTestDB->new('multi');
+my $odb = $omulti->get_DBAdaptor('ontology');
+Bio::EnsEMBL::Registry->add_db($omulti, 'ontology', $odb);
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
@@ -125,6 +130,38 @@ ok(test_getter_setter($trvar, 'cdna_end', 12));
 
 ok(test_getter_setter($trvar, 'translation_start', 4));
 ok(test_getter_setter($trvar, 'translation_end', 10));
+
+
+my $tvs1 = $trv_ad->fetch_all_by_Transcripts_SO_terms([$transcript], ['sequence_variant']); 
+ok(scalar @$tvs1 == 0, 'fetch_all_by_Transcripts_SO_terms');
+
+my $tvs2 = $trv_ad->fetch_all_somatic_by_Transcripts_SO_terms([$transcript], ['sequence_variant']); 
+ok(scalar @$tvs2 == 0, 'fetch_all_somatic_by_Transcripts_SO_terms');
+
+my $tvs3 = $trv_ad->fetch_all_by_VariationFeatures_SO_terms([$new_vf], [$transcript], ['sequence_variant']); 
+ok(scalar @$tvs3 == 0, 'fetch_all_by_VariationFeatures_SO_terms');
+
+my $count4 = $trv_ad->count_all_by_VariationFeatures_SO_terms([$new_vf], [$transcript], ['sequence_variant']); 
+ok($count4 == 0, 'count_all_by_VariationFeatures_SO_terms');
+
+my $tvs5 = $trv_ad->fetch_all_somatic_by_Transcripts([$transcript]); 
+ok(scalar @$tvs5 == 0, 'fetch_all_somatic_by_Transcripts');
+
+my $translation_stable_id = $transcript->translation->stable_id;
+ok($translation_stable_id eq 'ENSP00000434898', 'translation stable_id');
+
+my $tvs6 = $trv_ad->fetch_all_by_translation_id($translation_stable_id);
+ok(scalar @$tvs6 == 9, 'fetch_all_by_translation_id');
+
+my $tvs7 = $trv_ad->fetch_all_somatic_by_translation_id($translation_stable_id);
+ok(scalar @$tvs7 == 0, 'fetch_all_somatic_by_translation_id');
+
+my $tvs8 = $trv_ad->fetch_all_by_translation_id_SO_terms($translation_stable_id, ['sequence_variant']);
+ok(scalar @$tvs8 == 0, 'fetch_all_by_translation_id_SO_terms');
+
+my $tvs9 = $trv_ad->fetch_all_somatic_by_translation_id_SO_terms($translation_stable_id, ['sequence_variant']);
+ok(scalar @$tvs9 == 0, 'fetch_all_somatic_by_translation_id_SO_terms');
+
 
 
 done_testing();
