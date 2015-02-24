@@ -69,7 +69,8 @@ ok($cons && scalar @$cons == 3, "get_all_consequences 1");
 my $exp = {
   'Consequence' => 'missense_variant',
   'Extra' => {
-    'STRAND' => -1
+    'STRAND' => -1,
+    'IMPACT' => 'MODERATE',
   },
   'Feature_type' => 'Transcript',
   'Uploaded_variation' => undef,
@@ -134,6 +135,7 @@ $exp = {
   'EXON' => '2/8',
   'TSL' => '5',
   'ALLELE_NUM' => '1',
+  'IMPACT' => 'MODERATE',
 };
 
 is_deeply($exp, $cons->[0]->{Extra}, "get_all_consequences - everything 2");
@@ -596,7 +598,8 @@ is_deeply(
     'MOTIF_POS' => 16,
     'MOTIF_NAME' => 'Jaspar_Matrix_Max:PB0043.1',
     'HIGH_INF_POS' => 'N',
-    'MOTIF_SCORE_CHANGE' => '0.010'
+    'MOTIF_SCORE_CHANGE' => '0.010',
+    'IMPACT' => 'MODIFIER',
   },
   "db - motif extra"
 );
@@ -658,7 +661,8 @@ is_deeply(
     'MOTIF_POS' => 18,
     'MOTIF_NAME' => 'Jaspar_Matrix_CTCF:MA0139.1',
     'HIGH_INF_POS' => 'N',
-    'MOTIF_SCORE_CHANGE' => '0.000'
+    'MOTIF_SCORE_CHANGE' => '0.000',
+    'IMPACT' => 'MODIFIER',
   },
   "build - motif extra"
 );
