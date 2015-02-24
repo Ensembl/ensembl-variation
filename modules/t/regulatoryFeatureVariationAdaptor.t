@@ -18,11 +18,14 @@ use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Registry;
 
 our $verbose = 0;
+my $omulti = Bio::EnsEMBL::Test::MultiTestDB->new('multi');
+my $odb = $omulti->get_DBAdaptor('ontology');
+Bio::EnsEMBL::Registry->add_db($omulti, 'ontology', $odb);
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
-
 my $vdb = $multi->get_DBAdaptor('variation');
 my $cdb = $multi->get_DBAdaptor('core');
 my $fdb = $multi->get_DBAdaptor('funcgen');
@@ -128,6 +131,17 @@ ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types f
 
 $rfva->store($rfv);
 $rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
-ok(scalar @$rfvs == 1, 'count fetch_all_by_VariationFeatures');
+ok(scalar @$rfvs == 1, 'fetch_all_by_VariationFeatures');
 
+my $var1 = $va->fetch_by_name('rs187207343');
+my $vf1 = $vfa->fetch_all_by_Variation($var1)->[0];
+my $rf1 = $rfa->fetch_by_stable_id('ENSR00000000637');
+my $rfvs1 = $rfva->fetch_all_by_VariationFeatures_SO_terms([$vf1], [$rf1], ['sequence_variant']);
+ok(scalar @$rfvs1 == 0, 'fetch_all_by_VariationFeatures_SO_terms');
+my $count = $rfva->count_all_by_VariationFeatures_SO_terms([$vf1], [$rf1], ['sequence_variant']);
+ok($count == 0, 'count_all_by_VariationFeatures_SO_terms');
+my $rfvs2 = $rfva->fetch_all_by_RegulatoryFeatures_SO_terms([$rf1], ['sequence_variant']);
+ok(scalar @$rfvs2 == 0, 'fetch_all_by_RegulatoryFeatures_SO_terms');
+my $rfvs3 = $rfva->fetch_all_somatic_by_RegulatoryFeatures_SO_terms([$rf1], ['sequence_variant']);
+ok(scalar @$rfvs3 == 0, 'fetch_all_somatic_by_RegulatoryFeatures_SO_terms');
 done_testing();
