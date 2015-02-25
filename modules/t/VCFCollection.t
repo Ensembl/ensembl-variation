@@ -14,7 +14,7 @@
 
 use strict;
 use warnings;
-use Data::Dumper;
+
 use Test::More;
 use Test::Exception;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -68,6 +68,7 @@ ok($inds->[0]->name eq 'i_prefix:HG00096', "get_all_Individuals first name is i_
 
 # get populations
 my $pops = $c->get_all_Populations();
+
 ok($pops && scalar @$pops == 4, "get_all_Populations count 4");
 ok($c->has_Population('p_prefix:pop1'), "has_Population p_prefix:pop1");
 
@@ -143,5 +144,10 @@ ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice is hash");
 ok(scalar keys %$ld_gts == 374, "_get_all_LD_genotypes_by_Slice has 374 position keys");
 ok($ld_gts->{45421006} && scalar keys %{$ld_gts->{45421006}} == 3, "_get_all_LD_genotypes_by_Slice pos 45421006 has 3 genotypes");
 ok($ld_gts->{45419542}->{HG00096} eq 'T|C', "_get_all_LD_genotypes_by_Slice pos 45419542 ind HG00096 has genotype T|C");
+
+
+ok($coll->assembly() eq "GRCh37", "assembly");
+ok($coll->source_name() eq "1000genomes", "source name");
+ok($coll->source_url() eq "http://www.1000genomes.org", "source URL");
 
 done_testing();

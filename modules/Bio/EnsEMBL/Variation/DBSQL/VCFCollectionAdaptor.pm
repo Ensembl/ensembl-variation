@@ -170,6 +170,30 @@ sub new {
         warn("WARNING: No assembly defined in collection ".$hash->{id}."\n");
       }
     }
+
+    ## create source object if source info available
+    my $source;
+    if( defined $hash->{source_name}){
+      $source = Bio::EnsEMBL::Variation::Source->new
+          (-name        => $hash->{source_name},
+           -version     => $hash->{source_version}, 
+           -url         => $hash->{source_url}
+        );
+    }
+
+    ## store population names if available
+    my $populations;
+    if( defined $hash->{populations}){
+      foreach my $pop_id (keys %{$hash->{populations}}){
+ 
+        my $pop = Bio::EnsEMBL::Variation::Population->new
+          (-name        => $hash->{populations}->{$pop_id},
+           -dbID        => $pop_id,
+        );
+        push @{$populations}, $pop;
+      }
+    }
+
     
     my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
@@ -179,6 +203,9 @@ sub new {
       -individual_prefix => $hash->{individual_prefix},
       -population_prefix => $hash->{population_prefix},
       -individual_populations => $hash->{individual_populations},
+      -populations =>  $populations ||undef ,
+      -assembly  => $hash->{assembly} || undef,
+      -source => $source || undef,
       -adaptor => $self,
     );
     

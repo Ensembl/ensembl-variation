@@ -118,19 +118,26 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $populations, $assembly, $source, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS POPULATIONS ASSEMBLY SOURCE ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
-  
+ 
+  if( defined  $source && !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw("Bio::EnsEMBL::Variation::Source argument expected");
+  }
+
   my %collection = (
     adaptor => $adaptor,
     id => $id,
     type => $type,
     individual_prefix => $ind_prefix,
     population_prefix => $pop_prefix,
+    populations => $populations,
     chromosomes => $chromosomes,
     filename_template => $filename_template,
+    assembly  => $assembly,
+    source => $source,
     _use_db => 1,
     _raw_populations => $ind_pops,
   );
@@ -387,11 +394,11 @@ sub get_all_Individuals {
 
 sub get_all_Populations {
   my $self = shift;
-  
-  if(!exists($self->{populations})) {
+
+  if(!exists($self->{populations}) || !defined $self->{populations}->[0] ) {
     my $hash = $self->_get_Population_Individual_hash;
-    
-    if(!exists($self->{populations}) && $self->use_db) {
+
+    if( $self->use_db) {
       my $pa = $self->adaptor->db->get_PopulationAdaptor;
       $self->{populations} = $pa->fetch_all_by_dbID_list([keys %$hash]);
     }
@@ -525,6 +532,41 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   return \@genotypes;
 }
 
+sub source {
+  my $self = shift;
+  
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  
+  return $self->{'source'};
+}
+
+sub source_name{
+  my $self = shift;
+  my $source = $self->{source};
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
+}
+
+sub source_url{
+  my $self = shift;
+  my $source = $self->{source};
+  return unless defined $source;
+
+  $source->url(@_) if(@_);
+  return $source->url;
+}
+
+sub assembly{
+  my $self = shift;
+  return $self->{assembly};
+}
 
 ## INTERNAL METHODS
 ###################
@@ -793,3 +835,5 @@ sub _get_all_population_names {
   
   return $self->{_population_names};
 }
+
+1;
