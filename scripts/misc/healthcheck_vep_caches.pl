@@ -156,7 +156,7 @@ foreach my $host(split /\,/, $config->{host}) {
     ok(defined($r), "\[$species\] regulation defined in info.txt") if $has_reg;
     
     # store var cols etc
-    if($v) {
+    if($has_var && $v) {
       $config->{current}->{variation_cols} = [split(",", (split("\t", $v))[-1])];
       $config->{current}->{vdb} = $config->{reg}->get_adaptor($sp, 'variation', 'variation')->db->dbc;
     }
