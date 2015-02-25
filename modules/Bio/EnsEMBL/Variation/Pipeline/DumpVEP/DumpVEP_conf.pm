@@ -65,7 +65,7 @@ sub default_options {
 
     # a directory to keep hive output files and your registry file, you should
     # create this if it doesn't exist
-    pipeline_dir            => '/lustre/scratch109/ensembl/'.$ENV{'USER'}.'/'.$self->o('pipeline_name'),
+    pipeline_dir            => '/lustre/scratch109/ensembl/'.$ENV{'USER'}.'/'.$self->o('pipeline_name').'/'.$self->o('ensembl_release'),
 
     # a directory where hive workers will dump STDOUT and STDERR for their jobs
     # if you use lots of workers this directory can get quite big, so it's
@@ -132,6 +132,7 @@ sub default_options {
         sift => 'b',
         polyphen => 'b',
         regulatory => 1,
+        lrg => 1,
         
         # assembly-specific stuff
         assembly_specific => {
