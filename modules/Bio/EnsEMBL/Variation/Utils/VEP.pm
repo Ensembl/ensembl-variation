@@ -4315,7 +4315,8 @@ sub prefetch_transcript_data {
         
         foreach my $a(@a) {
             next unless defined($config->{(split "_", $a)[0]});
-            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$a} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($a, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}))
+            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$a} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($a, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}));
+            delete $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$a}->{adaptor};
         }
     }
     
