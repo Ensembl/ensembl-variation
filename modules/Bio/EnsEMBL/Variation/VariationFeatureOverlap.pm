@@ -113,6 +113,14 @@ sub new {
             $args{'-base_variation_feature'} = delete $args{$arg};
         }
     }
+    my $self;
+    eval{
+      $self = $class->SUPER::new(%args);
+    };
+   if (defined $@){
+     # warn  "BaseVariationFeatureOverlap error\n" ;
+     return;
+    }
 
     my $self = $class->SUPER::new(%args);
 

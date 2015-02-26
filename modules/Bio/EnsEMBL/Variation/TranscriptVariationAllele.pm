@@ -606,7 +606,7 @@ sub hgvs_transcript {
     ## create new transcript variation object as position may be different
     $self->_create_hgvs_tva() unless exists $self->{hgvs_tva} ;
     ## return if a new transcript_variation_allele is not available - variation outside transcript
-    return undef unless defined  $self->{hgvs_tva} ;
+    return undef unless defined  $self->{hgvs_tva} && defined $self->{hgvs_tva}->transcript_variation;
 
     unless (defined  $self->{_slice_start} ){
 	print "Exiting hgvs_transcript: no slice start position for $var_name in trans" . $self->transcript_variation->transcript_stable_id() . "\n " if $DEBUG == 1 ;
@@ -744,7 +744,7 @@ sub hgvs_protein {
     $self->_create_hgvs_tva() unless exists $self->{hgvs_tva} ;
    
     ## return if a new transcript_variation_allele is not available - variation outside transcript
-    return undef unless defined  $self->{hgvs_tva} ;
+    return undef unless defined  $self->{hgvs_tva} &&  defined $self->{hgvs_tva}->transcript_variation ;
     
     my $hgvs_tva_tv = $self->{hgvs_tva}->transcript_variation;
     my $hgvs_tva_vf = $hgvs_tva_tv->variation_feature;
