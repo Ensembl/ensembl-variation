@@ -61,79 +61,18 @@ use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 our $UPSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
 our $DOWNSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
 
-eval {
-  require Inline; Inline->import (C => Config => BUILD_NOISY => 1);
-
-  require Inline; Inline->import (C =><<'EOC');
-
-  int overlap(int f1_start, int f1_end, int f2_start, int f2_end) {
-    return ( (f1_end >= f2_start) && (f1_start <= f2_end) );
+#
+# Interface with some of the module function XS reimplementation
+# 
+# If Bio::EnsEMBL::XS is installed, assign the function glob to
+# the XS counterpart, otherwise assign to the original function
+#
+BEGIN {
+  if (eval { require Bio::EnsEMBL::XS; 1 }) {
+    *overlap = \&Bio::EnsEMBL::XS::Variation::Utils::VariationEffect::overlap;
+  } else {
+    *overlap = \&overlap_perl;
   }
-
-  bool _intron_overlap(int vf_start, int vf_end, int intron_start, int intron_end, bool insertion) {
-    /*if (vf_end < intron_start-3) {
-     return overlap(vf_start, vf_end, intron_end-7,   intron_end-2);
-    }
-    if (vf_start > intron_end+3) {
-     return overlap(vf_start, vf_end, intron_start+2, intron_start+7);
-    }
-    // assert vf_end >= $intron_start-3 and vf_start >= $intron_end+3
-    // Can reduce cost by computing z = vf_start - intron_end and
-    // comparing to z.
-    if (vf_start > intron_start+7) {
-     return overlap(vf_start, vf_end, intron_end-7,   intron_end-2);
-    }
-
-    // assert vf_end >= $intron_start-3 and vf_start in [$intron_end+3..$intron_start+7]
-    if (vf_end < intron_end-7) {
-     return overlap(vf_start, vf_end, intron_start+2, intron_start+7);
-    }
-
-    return
-      (vf_start <= intron_start-1) ||
-      (vf_end   >= intron_start+2) ||
-      (vf_start <= intron_end-2) ||
-      (vf_end   >= intron_end+1) ||
-      (
-        insertion && (
-          vf_start == intron_start ||
-          vf_end == intron_end ||
-          vf_start == intron_start+2 ||
-          vf_end == intron_end-2
-        )
-      );*/
-
-    if(
-     	overlap(vf_start, vf_end, intron_start+2, intron_start+7) ||
-     	overlap(vf_start, vf_end, intron_end-7,   intron_end-2  ) ||
-      overlap(vf_start, vf_end, intron_start-3, intron_start-1) ||
-     	overlap(vf_start, vf_end, intron_end+1,   intron_end+3  ) ||
-     	(
-        insertion && (
-     	    vf_start == intron_start   ||
-     	    vf_end   == intron_end     ||
-     	    vf_start == intron_start+2 ||
-     	    vf_end   == intron_end-2
-        )
-      )
-    ) {
-      return 1;
-    }
-    else {
-      return 0;
-    }
-  }
-
-EOC
-};
-
-# If Inline is unavailable, overlap() simply calls
-# the sub overlap_perl() pure perl implementation.
-if($@) {
-  *overlap =\&overlap_perl;
-  *_intron_overlap =\&_intron_overlap_perl;
-  # *overlap =\&Bio::EnsEMBL::XS::Variation::Utils::VariationEffect::overlap;
-  # *overlap =\&overlap_Inline;
 }
 
 # these two methods are perl implementations of the above Inline C
@@ -143,7 +82,7 @@ sub overlap_perl {
     return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
 }
 
-sub _intron_overlap_perl {
+sub _intron_overlap {
   my ($vf_start, $vf_end, $intron_start, $intron_end, $insertion) = @_;
   
   if(
