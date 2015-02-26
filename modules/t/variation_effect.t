@@ -276,12 +276,12 @@ foreach my $c(@coords) {
 );
 
 foreach my $c(@coords) {
-  my $p_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::_intron_overlap_perl(@{$c->{coords}}) || 0;
+  # my $p_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::_intron_overlap_perl(@{$c->{coords}}) || 0;
   my $c_res   = Bio::EnsEMBL::Variation::Utils::VariationEffect::_intron_overlap(@{$c->{coords}}) || 0;
   my $exp     = $c->{expected};
   my $comment = $c->{comment} || " coords: ".join(", ", @{$c->{coords}});
   
-  is($p_res, $exp, "perl intron_overlap $comment");
+  # is($p_res, $exp, "perl intron_overlap $comment");
   is($c_res, $exp, "C    intron_overlap $comment");
 }
 
