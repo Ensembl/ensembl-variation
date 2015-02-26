@@ -361,15 +361,15 @@ sub get_species_list {
 	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
 
 	my @species;
+  my $dbc = $config->{dbc};
 
 	foreach my $current_db_name (@dbs) {
     
     # special case otherfeatures
     # check it has refseq transcripts
     if($current_db_name =~ /otherfeatures/) {
-    
-      # get assembly name
-      $sth = $config->{dbc}->prepare("select meta_value from ".$current_db_name.".meta where meta_key='assembly.default';");
+      
+      $sth = $dbc->prepare("SELECT version FROM ".$current_db_name.".coord_system ORDER BY rank LIMIT 1;");
       $sth->execute();
       my $assembly = $sth->fetchall_arrayref()->[0]->[0];
       die("ERROR: Could not get assembly name from meta table for $current_db_name\n") unless $assembly;
@@ -394,21 +394,37 @@ sub get_species_list {
     }
     
     else {
+      
       # get assembly and species names
-      $sth = $config->{dbc}->prepare("select species_id, meta_key, meta_value from ".$current_db_name.".meta where meta_key in ('assembly.default', 'species.production_name');");
+      $sth = $dbc->prepare("select species_id, meta_value from ".$current_db_name.".meta where meta_key = 'species.production_name';");
       $sth->execute();
       
-      my ($species_id, $key, $value, $by_species);
-      $sth->bind_columns(\$species_id, \$key, \$value);
+      my ($species_id, $value, $species_ids);
+      $sth->bind_columns(\$species_id, \$value);
       
-      $by_species->{$species_id}->{$key} = $value while $sth->fetch();
+      $species_ids->{$species_id} = $value while $sth->fetch();
       $sth->finish();
       
       my $count = 0;
       
-      foreach my $hash(values %$by_species) {
-        next unless $hash->{'assembly.default'} && $hash->{'species.production_name'};
-        push @species, { species => $hash->{'species.production_name'}, assembly => $hash->{'assembly.default'}};
+      foreach $species_id(keys %$species_ids) {
+        $sth = $dbc->prepare("SELECT version FROM ".$current_db_name.".coord_system WHERE species_id = ".$species_id." ORDER BY rank LIMIT 1;");
+        $sth->execute();
+        my $assembly;
+        $sth->bind_columns(\$assembly);
+        $sth->execute();
+        $sth->fetch();
+        
+        next unless $assembly;
+        
+        # copy server details
+        my %species_hash;
+        
+        $species_hash{species} = $species_ids->{$species_id};
+        $species_hash{assembly} = $assembly;
+        $sth->finish();
+
+        push @species, \%species_hash;
         $count++;
       }
       
