@@ -140,7 +140,7 @@ sub init_variation_set {
     my $config = shift;
     my $variation_set_name = $config->{set_name};
     if ($variation_set_name eq 'phenotype_associated') {
-        $variation_set_name = 'All phenotype-associated variants';
+        $variation_set_name = 'All phenotype/disease-associated variants';
     }
     my $vsa = $config->{variation_set_adaptor};
     my $variation_set = $vsa->fetch_by_name($variation_set_name);
@@ -240,7 +240,7 @@ sub dump_svs_data {
             $gvf_line->{end}    = $end;
             $gvf_line->{strand} = $svf->strand == 1 ? '+' : ($svf->strand == -1 ? '-' : '.');
             $gvf_line->{type}   = $svf->class_SO_term;
-            my $source          = $svf->source;
+            my $source          = $svf->source_name;
             $gvf_line->{source} = $source;
             $source .= '_' . $svf->structural_variation->source_version if defined $svf->structural_variation->source_version;
             $gvf_line->{attributes}->{Dbxref} = "$source:" . $svf->variation_name;
