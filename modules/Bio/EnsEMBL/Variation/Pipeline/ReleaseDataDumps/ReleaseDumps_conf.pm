@@ -46,6 +46,7 @@ sub default_options {
     # this - patches are welcome!
 
     return {
+        hive_auto_rebalance_semaphores => 1,
         hive_force_init      => 1,
         hive_use_param_stack => 0,
         hive_use_triggers    => 0,
@@ -64,7 +65,7 @@ sub default_options {
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
         gvf_validator      => '/nfs/users/nfs_a/at7/tools/gvf_validator',
-        so_file            => '/nfs/users/nfs_a/at7/obo/e76/so.obo',
+        so_file            => '/nfs/users/nfs_a/at7/obo/e79/so.obo',
 
         tmp_dir           => $self->o('tmp_dir'),
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
@@ -123,64 +124,7 @@ sub resource_classes {
 sub pipeline_analyses {
     my ($self) = @_;
     my @analyses;
-    if ($self->o('finish_dumps')) {
-        push @analyses, (
-            {   -logic_name => 'finish_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
-                -input_ids => [{},],
-            },
-        );
-    } elsif ($self->o('human_population_dumps')) {
-         push @analyses, (
-            {   -logic_name => 'init_population_gvf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitDumpPopulation',
-                -input_ids => [{},],
-                -parameters => {
-                    'file_type' => 'gvf',
-                    'prefetched_frequencies' => $self->o('prefetched_frequencies'),
-                },
-                -flow_into => {
-                    '2->A' => ['dump_population_gvf'],
-                    'A->1' => ['finish_dump_population_gvf']
-                 },
-            },
-            {   -logic_name => 'dump_population_gvf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::DumpPopulation',
-                -parameters => {
-                    'file_type' => 'gvf',
-                    'prefetched_frequencies' => $self->o('prefetched_frequencies'),
-                },
-            },
-            {   -logic_name => 'finish_dump_population_gvf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
-                -parameters => {
-                    'file_type' => 'gvf',
-                },
-                -flow_into => {
-                    1 => ['init_population_vcf'],
-                },
-            },
-            {   -logic_name => 'init_population_vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitDumpPopulation',
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
-                -flow_into => {
-                    '2->A' => ['dump_population_vcf'],
-                    'A->1' => ['finish_dump_population_vcf']
-                 },
-            },
-            {   -logic_name => 'dump_population_vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-            },
-            {   -logic_name => 'finish_dump_population_vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
-            },
-        );
-    } else {
+
         push @analyses, (
             {   -logic_name => 'pre_run_checks_gvf_dumps',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
@@ -374,7 +318,6 @@ sub pipeline_analyses {
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
             },
         );
-    }
     return \@analyses;
 }
 
