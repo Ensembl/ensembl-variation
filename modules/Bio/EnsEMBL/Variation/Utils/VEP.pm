@@ -6058,10 +6058,16 @@ sub warning_msg {
   $text = $text."\n" unless $text =~ /\n$/;
     
   if(!defined($config->{warning_fh})) {
-    $config->{warning_fh} = FileHandle->new();
-    $config->{warning_file} ||= ($config->{output_file} || 'vep').'_warnings.txt';
-    my $file = $config->{warning_file};
-    $config->{warning_fh}->open(">".$file) or die("ERROR: Could not write to warnings file $file\n");
+    if($config->{warning_file} && $config->{warning_file} =~ /^stderr$/i) {
+      $config->{warning_fh} = *STDERR;
+    }
+    
+    else {
+      $config->{warning_fh} = FileHandle->new();
+      $config->{warning_file} ||= ($config->{output_file} || 'vep').'_warnings.txt';
+      my $file = $config->{warning_file};
+      $config->{warning_fh}->open(">".$file) or die("ERROR: Could not write to warnings file $file\n");
+    }
   }
   
   $config->{warning_count}++;
