@@ -195,7 +195,7 @@ ok($vf && $vf->allele_string eq 'C/T', "vcf format - parse_line");
 
 # SV input
 my @vfs = grep {validate_vf($config, $_)} map {@{parse_line($config, $_)}} @lines;
-ok(scalar @vfs == 13, "vcf format - SVs");
+ok((grep {$_->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')} @vfs) == 2, "vcf format - SVs");
 
 $config->{pick_allele} = 1;
 $cons = get_all_consequences($config, \@vfs);
@@ -384,6 +384,18 @@ $cons = get_all_consequences($config, [$vf]);
 );
 is_deeply(\%got, \%ex, "most_severe");
 
+# most severe regulatory
+$config = copy_config($base_config, {
+  regulatory => 1,
+});
+($vf) = @{parse_line($config, '21 25487468 25487468 A/T +')};
+$cons = get_all_consequences($config, [$vf]);
+%got = map {$_ => 1} split(',', $cons->[0]->{Consequence});
+%ex = (
+  regulatory_region_variant => 1,
+);
+is_deeply(\%got, \%ex, "most_severe regulatory");
+
 # flag pick
 $config = copy_config($base_config, { flag_pick => 1 });
 ($vf) = @{parse_line($config, '21 25587758 rs116645811 G A . . .')};
@@ -544,7 +556,7 @@ $config = copy_config($base_config, {
   RegulatoryFeature_adaptor => $rdb->get_RegulatoryFeatureAdaptor,
   MotifFeature_adaptor      => $rdb->get_MotifFeatureAdaptor,
 });
-delete $config->{$_} for qw(cache dir);
+delete $config->{cache};
 
 # parse HGVS
 ($vf) = @{parse_line($config, "2:g.46739212C>G")};
@@ -569,12 +581,25 @@ ok(validate_vf($config, $vf), "validate_vf - check ref pass");
 $vf->{allele_string} = 'T/G';
 ok(!validate_vf($config, $vf), "validate_vf - check ref fail");
 
+delete $config->{check_ref};
+
 # check svs
 $config->{check_svs} = 1;
 ($vf) = @{parse_line($config, "8 7803895 7803895 C/T +")};
 $vf->{slice} = get_slice($config, $vf->{chr}, undef, 1);
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && $cons->[0]->{Extra}->{SV} eq 'esv89107', "check svs");
+
+# map from non-toplevel coord
+$config->{cache} = 1;
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "AC018682.4 1 1 C/G +")};
+ok($vf && $vf->{chr} eq '2' && $vf->{original_chr} eq 'AC018682.4', "non-toplevel transform");
+
+# failed map
+($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "mangledAC018682.4 1 1 C/G +")};
+ok(!$vf, "non-toplevel transform fail");
+delete $config->{cache};
+
 
 # map to LRG
 
@@ -609,7 +634,6 @@ $config = copy_config($config, {
   reg         => 'Bio::EnsEMBL::Registry',
   build       => 22,
   build_parts => 'tvr',
-  dir         => "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly},
   strip       => 1,
   write_cache => 1,
   symbol      => 1,
@@ -621,6 +645,8 @@ $config = copy_config($config, {
     },
   ],
 });
+
+$config->{dir} = "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly};
 
 build_full_cache($config);
 
