@@ -1876,16 +1876,47 @@ sub vf_to_consequences {
   $vf->get_IntergenicVariation(1);
   return \@return if defined($config->{no_intergenic}) && defined($vf->{intergenic_variation});
   
+  
+  # get all VFOAs
+  # need to be sensitive to whether --regulatory or --coding_only is switched on
+  my $vfos;
+  my $method = $allele_method.'VariationFeatureOverlapAlleles';
+  
+  # include regulatory stuff?
+  if(!defined $config->{coding_only} && defined $config->{regulatory}) {
+    $vfos = $vf->get_all_VariationFeatureOverlaps;
+  }
+  # otherwise just get transcript & intergenic ones
+  else {
+    @$vfos = grep {defined($_)} (
+      @{$vf->get_all_TranscriptVariations},
+      $vf->get_IntergenicVariation
+    );
+  }
+  
+  # grep out non-coding?
+  @$vfos = grep {$_->can('affects_cds') && $_->affects_cds} @$vfos if defined($config->{coding_only});
+  
+  # get alleles
+  my @vfoas = map {@{$_->$method}} @{$vfos};
+  
   # only most severe or summary?
+  # these options don't need any feature-specific columns
   if(defined($config->{most_severe}) || defined($config->{summary})) {
     
     my $line = init_line($config, $vf);
     
+    my $term_method = $config->{terms}.'_term';
+    
+    # summary is just all unique consequence terms
     if(defined($config->{summary})) {
-      $line->{Consequence} = join ",", @{$vf->consequence_type($config->{terms}) || $vf->consequence_type};
+      $line->{Consequence} = join ",", keys %{{map {$_ => 1} map {$_->$term_method || $_->SO_term} map {@{$_->get_all_OverlapConsequences}} @vfoas}};
     }
+    
+    # most severe is the consequence term with the lowest rank
     else {
-      $line->{Consequence} = $vf->display_consequence($config->{terms}) || $vf->display_consequence;
+      my $oc = (sort {$a->rank <=> $b->rank} map {@{$_->get_all_OverlapConsequences}} @vfoas)[0];
+      $line->{Consequence} = $oc->$term_method || $oc->SO_term;
     }
     
     $config->{stats}->{consequences}->{$_}++ for split(',', $line->{Consequence});
@@ -1895,26 +1926,6 @@ sub vf_to_consequences {
   
   # otherwise do normal consequence processing
   else {
-    my $vfos;
-    my $method = $allele_method.'VariationFeatureOverlapAlleles';
-    
-    # include regulatory stuff?
-    if(!defined $config->{coding_only} && defined $config->{regulatory}) {
-      $vfos = $vf->get_all_VariationFeatureOverlaps;
-    }
-    # otherwise just get transcript & intergenic ones
-    else {
-      @$vfos = grep {defined($_)} (
-        @{$vf->get_all_TranscriptVariations},
-        $vf->get_IntergenicVariation
-      );
-    }
-    
-    # grep out non-coding?
-    @$vfos = grep {$_->can('affects_cds') && $_->affects_cds} @$vfos if defined($config->{coding_only});
-    
-    # get alleles
-    my @vfoas = map {@{$_->$method}} @{$vfos};
     
     # pick worst?
     if(defined($config->{pick})) {
