@@ -75,7 +75,7 @@ foreach my $dir_name (qw/script_dir cache_dir/) {
 my $script_dir = $config->{script_dir};
 die "script_dir is missing file variant_effect_predictor.pl" unless (-f "$script_dir/variant_effect_predictor.pl");
 
-$config->{vep_input} ||= "$script_dir/test_vep_input.txt.gz";
+$config->{vep_input} ||= "$script_dir/t/testdata/test_vep_input.txt.gz";
 die "vep_input: ", $config->{vep_input}, " is not a file." unless (-f $config->{vep_input});
 
 $config->{cache_dir} ||= $ENV{HOME} . '/.vep';
