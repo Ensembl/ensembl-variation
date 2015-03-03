@@ -1346,7 +1346,7 @@ sub _fetch_attribs_by_dbID {
     my $attribs = {};
  
     my $sth = $self->dbc->prepare(qq{
-      SELECT at.code, a.value
+      SELECT at.value, a.value
       FROM variation_attrib a, attrib at
       WHERE a.attrib_id = at.attrib_id
       AND a.variation_id = ?
