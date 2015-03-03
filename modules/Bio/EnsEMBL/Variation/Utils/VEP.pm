@@ -2711,6 +2711,50 @@ sub validate_vf {
       return 0;
     }
     
+    # check chromosome exists
+    # transform if necessary
+    if(defined($config->{cache})) {
+      
+      my $valid_chrs = get_cache_chromosomes($config);
+      
+      if(!$valid_chrs->{$vf->{chr}}) {
+        
+        # slice adaptor required
+        if(defined($config->{sa})) {
+          $vf->{slice} ||= get_slice($config, $vf->{chr}, undef, 1);
+          
+          if($vf->{slice}) {
+            my $transformed = $vf->transform('toplevel');
+          
+            # copy to VF
+            if($transformed) {
+              $vf->{$_} = $transformed->{$_} for keys %$transformed;
+              $vf->{original_chr} = $vf->{chr};
+              $vf->{chr} = $vf->{slice}->seq_region_name;
+            }
+          
+            # could not transform
+            else {
+              warning_msg($config, "WARNING: Chromosome ".$vf->{chr}." not found in cache and could not transform to toplevel on line ".$config->{line_number});
+              return 0;
+            }
+          }
+          
+          # no slice
+          else {
+            warning_msg($config, "WARNING: Could not fetch slice for chromosome ".$vf->{chr}." on line ".$config->{line_number});
+            return 0;
+          }
+        }
+        
+        # offline, can't transform
+        else {
+          warning_msg($config, "WARNING: Chromosome ".$vf->{chr}." not found in cache on line ".$config->{line_number});
+          return 0;
+        }
+      }
+    }
+    
     # structural variation?
     return validate_svf($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature');
     
@@ -5707,6 +5751,24 @@ sub read_cache_info {
     close IN;
     
     return 1;
+}
+
+# gets list of chromosomes in cache as hashref
+sub get_cache_chromosomes {
+  my $config = shift;
+  
+  if(!exists($config->{cache_chromosomes})) {
+    my %chrs = ();
+    
+    if(opendir DIR, $config->{dir}) {
+      %chrs = map {$_ => 1} grep {!/^\./ && -d $config->{dir}.'/'.$_} readdir DIR;
+      closedir DIR;
+    }
+    
+    $config->{cache_chromosomes} = \%chrs;
+  }
+  
+  return $config->{cache_chromosomes};
 }
 
 # format coords for printing
