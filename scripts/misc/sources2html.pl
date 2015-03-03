@@ -721,7 +721,7 @@ sub create_menu {
           <td style="padding-top:4px;text-align:center">
             <span style="background-color:$lm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
-          <td style="padding-top:4px">greater than 1 million</td>
+          <td style="padding-top:4px">greater than 10 million</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
