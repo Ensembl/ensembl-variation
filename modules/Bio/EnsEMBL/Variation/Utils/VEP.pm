@@ -4219,7 +4219,8 @@ sub strip_transcript_cache {
             }
             
             delete $tr->{adaptor};
-            delete $tr->{slice}->{adaptor};
+            delete $tr->{slice}->{adaptor}; 
+            delete $tr->{translation}->{adaptor} if defined($tr->{translation});
         }
     }
 }
