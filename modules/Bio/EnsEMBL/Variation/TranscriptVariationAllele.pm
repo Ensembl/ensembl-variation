@@ -509,13 +509,17 @@ sub _protein_function_prediction {
     if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/ && defined $AA_LOOKUP->{$self->peptide}) {
         
         if (my $matrix = $self->transcript_variation->_protein_function_predictions($analysis)) {
+          
+            # temporary fix - check $matrix is not an empty hashref
+            if(ref($matrix) && ref($matrix) eq 'Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix') {
             
-            my ($prediction, $score) = $matrix->get_prediction(
-                $self->transcript_variation->translation_start,
-                $self->peptide,
-            );
+                my ($prediction, $score) = $matrix->get_prediction(
+                    $self->transcript_variation->translation_start,
+                    $self->peptide,
+                );
 
-            return wantarray ? ($prediction, $score) : $prediction;
+                return wantarray ? ($prediction, $score) : $prediction;
+            }
         }
     }
     
