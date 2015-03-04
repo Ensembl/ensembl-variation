@@ -571,6 +571,9 @@ sub hgvs_transcript {
     $self->{hgvs_transcript} = $notation   if defined $notation;
     ##### return if held 
     return $self->{hgvs_transcript}        if defined $self->{hgvs_transcript} ;
+    
+    ### don't attempt to recalculate if field is NULL from DB
+    return $self->{hgvs_transcript}        if exists $self->{hgvs_transcript} && defined($self->transcript_variation->dbID);
 
 
     ### don't try to handle odd characters
@@ -731,6 +734,9 @@ sub hgvs_protein {
     }
     ### return if set
     return $self->{hgvs_protein}       if defined $self->{hgvs_protein} ;
+    
+    ### don't attempt to recalculate if field is NULL from DB
+    return $self->{hgvs_protein}       if exists $self->{hgvs_protein} && defined($self->transcript_variation->dbID);
     
     ### don't try to handle odd characters
     return undef if $self->variation_feature_seq() =~ m/[^ACGT\-]/ig;
