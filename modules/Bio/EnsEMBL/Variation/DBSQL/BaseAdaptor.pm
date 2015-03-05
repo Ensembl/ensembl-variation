@@ -312,8 +312,9 @@ sub _variation_feature_set_number_for_consequences {
 sub _get_all_subsnp_handles_from_variation_ids {
 	my $self = shift;
 	my $list = shift;
-    
-    my $in_list = join ",", @$list;
+  
+  return {} unless scalar @$list;
+  my $in_list = join ",", @$list;
     
 	my $sth = $self->dbc->prepare(qq{
 		SELECT v.variation_id, sh.handle
