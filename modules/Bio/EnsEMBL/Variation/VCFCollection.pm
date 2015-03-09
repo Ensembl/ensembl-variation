@@ -836,4 +836,22 @@ sub _get_all_population_names {
   return $self->{_population_names};
 }
 
+
+=head2 vcf_collection_close
+
+  Example    : $collection->vcf_collection_close()
+  Description: Close the filehandle of the VCF collection
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub vcf_collection_close {
+  my $self = shift;
+  my $vcf  = $self->{current};
+  
+  $vcf->close() if ($vcf);
+}
+
 1;
