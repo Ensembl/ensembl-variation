@@ -149,5 +149,6 @@ ok($ld_gts->{45419542}->{HG00096} eq 'T|C', "_get_all_LD_genotypes_by_Slice pos 
 ok($coll->assembly() eq "GRCh37", "assembly");
 ok($coll->source_name() eq "1000genomes", "source name");
 ok($coll->source_url() eq "http://www.1000genomes.org", "source URL");
+ok($coll->vcf_collection_close, 'close VCF collection filehandle');
 
 done_testing();
