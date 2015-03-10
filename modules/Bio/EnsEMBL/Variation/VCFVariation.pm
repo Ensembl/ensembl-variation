@@ -162,7 +162,7 @@ sub get_all_Alleles {
       # check we have required fields before attempting
       if(
         $info && ref($info) eq 'HASH' &&
-        $info->{AN} && $ref && scalar @alts
+        $ref && scalar @alts
       ) {
         
         # find INFO keys that look like a frequency, e.g AMR_AF        
@@ -180,7 +180,7 @@ sub get_all_Alleles {
             
             push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
       				allele     => $alts[$i],
-      				count      => sprintf("%.0f", $af * $info->{AN}),
+      				count      => $info->{AN} ? sprintf("%.0f", $af * $info->{AN}) : undef,
       				frequency  => $af,
               population => $self->collection->_create_Population($pop_name),
       				variation  => $self,
@@ -193,7 +193,7 @@ sub get_all_Alleles {
           # add reference allele
           push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
     				allele     => $ref,
-    				count      => sprintf("%.0f", (1 - $total) * $info->{AN}),
+    				count      => $info->{AN} ? sprintf("%.0f", (1 - $total) * $info->{AN}) : undef,
     				frequency  => (1 - $total),
             population => $self->collection->_create_Population($pop_name),
     				variation  => $self,
