@@ -107,44 +107,98 @@ sub get_all_Alleles {
   my $self = shift;
   
   if(!exists($self->{alleles})) {
+  
+    my @alleles;
     
     # get genotypes as a hash keyed on individual dbID
     my %gt_hash = map {$_->individual->dbID() => $_} @{$self->get_all_IndividualGenotypes()};
     
-    # get pop/ind hash
-    # $hash->{$pop_dbID}->{$ind_dbID} => 1
-    my $pop_hash = $self->collection->_get_Population_Individual_hash();
+    ## fetch from genotypes
+    if(scalar keys %gt_hash) {
+      
+      # get pop/ind hash
+      # $hash->{$pop_dbID}->{$ind_dbID} => 1
+      my $pop_hash = $self->collection->_get_Population_Individual_hash();
     
-    my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
+      my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
     
-    my @alleles;
+      foreach my $pop_id(keys %$pop_hash) {
+      
+        # don't try and add data for a population we don't have
+        next unless $pops_by_dbID{$pop_id};
+      
+        # get counts
+        my %counts;
+        $counts{$_}++ for
+          map {@{$_->genotype}}
+          map {$gt_hash{$_}}
+          grep {$gt_hash{$_}}
+          keys %{$pop_hash->{$pop_id}};
+      
+        # get total
+        my $total = 0;
+        $total += $_ for values %counts;
+      
+        # don't want to divide by zero
+        if($total) {
+          push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
+    				allele     => $_,
+    				count      => $counts{$_},
+    				frequency  => $counts{$_} / $total,
+    				population => $pops_by_dbID{$pop_id},
+    				variation  => $self,
+          }) for keys %counts;
+        }
+      }
+    }
     
-    foreach my $pop_id(keys %$pop_hash) {
-      
-      # don't try and add data for a population we don't have
-      next unless $pops_by_dbID{$pop_id};
-      
-      # get counts
-      my %counts;
-      $counts{$_}++ for
-        map {@{$_->genotype}}
-        map {$gt_hash{$_}}
-        grep {$gt_hash{$_}}
-        keys %{$pop_hash->{$pop_id}};
-      
-      # get total
-      my $total = 0;
-      $total += $_ for values %counts;
-      
-      # don't want to divide by zero
-      if($total) {
-        push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
-  				allele     => $_,
-  				count      => $counts{$_},
-  				frequency  => $counts{$_} / $total,
-  				population => $pops_by_dbID{$pop_id},
-  				variation  => $self,
-        }) for keys %counts;
+    ## fetch from info field
+    else {
+      my $vcf_record = $self->vcf_record();
+      my $info = $vcf_record->get_info();
+      my @alts = @{$vcf_record->get_alternatives};
+      my $ref = $vcf_record->get_reference;
+    
+      # check we have required fields before attempting
+      if(
+        $info && ref($info) eq 'HASH' &&
+        $info->{AN} && $ref && scalar @alts
+      ) {
+        
+        # find INFO keys that look like a frequency, e.g AMR_AF        
+        foreach my $af_key(grep {/\_AF$/} keys %$info) {
+          
+          my $total = 0;
+          my $i = 0;
+          
+          my $pop_name = $af_key;
+          $pop_name =~ s/\_AF$//;
+          
+          # add an allele object for each frequency found
+          foreach my $af(split(',', $info->{$af_key})) {
+            throw("ERROR: ALT allele count mismatch") unless $alts[$i];
+            
+            push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
+      				allele     => $alts[$i],
+      				count      => sprintf("%.0f", $af * $info->{AN}),
+      				frequency  => $af,
+              population => $self->collection->_create_Population($pop_name),
+      				variation  => $self,
+            });
+            
+            $total += $af;
+            $i++;
+          }
+          
+          # add reference allele
+          push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
+    				allele     => $ref,
+    				count      => sprintf("%.0f", (1 - $total) * $info->{AN}),
+    				frequency  => (1 - $total),
+            population => $self->collection->_create_Population($pop_name),
+    				variation  => $self,
+          });
+        }
       }
     }
     

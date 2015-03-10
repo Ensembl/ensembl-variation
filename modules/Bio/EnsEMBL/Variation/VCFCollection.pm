@@ -1403,6 +1403,26 @@ sub _add_Populations_to_Samples {
   }
 }
 
+sub _create_Population {
+  my $self = shift;
+  my $name = shift;
+
+  my $prefix = $self->population_prefix;
+  
+  my ($existing) = grep {($_->{_raw_name} && $_->{_raw_name} eq $name) || $_->{name} eq $name} @{$self->{populations} || []};
+  return $existing if $existing;
+  
+  my $pop = Bio::EnsEMBL::Variation::Population->new_fast({
+    name => $prefix.$name,
+    dbID => --($self->{_population_id}),
+    _raw_name => $name,
+  });
+  
+  push @{$self->{populations}}, $pop;
+  
+  return $pop;
+}
+
 sub _get_all_population_names {
   my $self = shift;
   
