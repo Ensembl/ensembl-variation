@@ -618,6 +618,7 @@ sub get_all_VariationFeatures_by_Slice {
     
     foreach my $parsed_vf(@{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))}) {
       next unless $parsed_vf->isa('Bio::EnsEMBL::Variation::VariationFeature');
+      delete $parsed_vf->{_line};
       
       my $vcf_vf = Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature(
         -variation_feature => $parsed_vf,
