@@ -247,80 +247,85 @@ sub fetch_all_by_Variation {
 }
 
 sub _fetch_all_by_Variation_from_Genotypes {
-    my $self = shift;
-    my $variation = shift;
-    my $population = shift;
-    
-    # Make sure that we are passed a Variation object
-    assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
-    
-    # If we got a population argument, make sure that it is a Population object
-    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+  my $self = shift;
+  my $variation = shift;
+  my $population = shift;
+
+  # Make sure that we are passed a Variation object
+  assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+
+  # If we got a population argument, make sure that it is a Population object
+  assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
 	
-	# fetch all genotypes
-	my $genotypes = $variation->get_all_IndividualGenotypes();
+  # fetch all genotypes
+  my $genotypes = $variation->get_all_IndividualGenotypes();
 	
-	return [] unless scalar @$genotypes;
+  return [] unless scalar @$genotypes;
 	
-	# get populations for individuals
-	my (@pop_list, %pop_hash);
+  # copy individual ID to save time later
+  $_->{_individual_id} ||= $_->individual->dbID for @$genotypes;
+  
+  # get populations for individuals
+  my (@pop_list, %pop_hash);
 	
-	if(defined($population)) {
-		@pop_list = ($population);
-		map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
-	}
-	else {
-		my $pa = $self->db->get_PopulationAdaptor();
-		%pop_hash = %{$pa->_get_individual_population_hash([map {$_->individual->dbID} @$genotypes])};
-		return [] unless %pop_hash;
+  if(defined($population)) {
+    @pop_list = ($population);
+    map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
+  }
+  else {
+    my $pa = $self->db->get_PopulationAdaptor();
+    %pop_hash = %{$pa->_get_individual_population_hash([map {$_->{_individual_id}} @$genotypes])};
+    return [] unless %pop_hash;
 		
-		@pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
-	}
+    @pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
+  }
 	
-	return [] unless @pop_list and %pop_hash;
+  return [] unless @pop_list and %pop_hash;
 	
-	my %ss_list = map {$_->subsnp || '' => 1} @$genotypes;
+  # organise the genotypes by subsnp
+  my %by_ss = ();
+  push @{$by_ss{$_->subsnp || ''}}, $_ for @$genotypes;
+  
+  my @objs;
 	
-	my @objs;
+  foreach my $pop(@pop_list) {
 	
-	foreach my $pop(@pop_list) {
-	
-		next unless $pop->_freqs_from_gts;
+    next unless $pop->_freqs_from_gts;
+    my $pop_id = $pop->dbID;
 		
-		foreach my $ss(keys %ss_list) {
+    foreach my $ss(keys %by_ss) {
 			
-			my (%counts, $total, @freqs);
-			map {$counts{$_}++}
-				map {@{$_->{genotype}}}
-				grep {$pop_hash{$pop->dbID}{$_->individual->dbID}}
-				grep {$_->subsnp || '' eq $ss}
-				@$genotypes;
+      my (%counts, $total, @freqs);
+      map {$counts{$_}++}
+        map {@{$_->{genotype}}}
+        grep {$pop_hash{$pop_id}{$_->{_individual_id}}}
+        @{$by_ss{$ss}};
 			
-			next unless %counts;
+      next unless %counts;
 			
-			my @alleles = keys %counts;
-			$total += $_ for values %counts;
-			next unless $total;
+      my @alleles = keys %counts;
+      $total += $_ for values %counts;
+      next unless $total;
 			
-			@freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
+      @freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
 			
-			for my $i(0..$#alleles) {
-				push @objs, Bio::EnsEMBL::Variation::Allele->new_fast({
-					allele     => $alleles[$i],
-					count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
-					frequency  => @freqs ? $freqs[$i] : undef,
-					population => $pop,
-					variation  => $variation,
-					adaptor    => $self,
-					subsnp     => $ss eq '' ? undef : $ss,
-				});
+      for my $i(0..$#alleles) {
+        push @objs, Bio::EnsEMBL::Variation::Allele->new_fast({
+          allele     => $alleles[$i],
+          count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
+          frequency  => @freqs ? $freqs[$i] : undef,
+          population => $pop,
+          variation  => $variation,
+          adaptor    => $self,
+          subsnp     => $ss eq '' ? undef : $ss,
+        });
 				
-				weaken($objs[-1]->{'variation'});
-			}
-		}
-	}
+        weaken($objs[-1]->{'variation'});
+      }
+    }
+  }
 	
-	return \@objs;
+  return \@objs;
 }
 
 =head2 get_all_failed_descriptions
