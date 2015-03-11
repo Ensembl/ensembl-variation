@@ -54,7 +54,7 @@ sub default_options {
         backup_dir             => $self->o('pipeline_dir').'/'.$self->o('db_version'), # Should be updated!
         output_file_prefix     => $self->o('date').'_'.$self->o('species').'_',
         output_file_suffix     => '_dump_',
-        output_extension       => 'sql',
+        output_extension       => 'sql.gz',
         info_updates           => $self->o('species').'_info_updates.txt',
 
         output_dir             => $self->o('pipeline_dir').'/hive_output',
