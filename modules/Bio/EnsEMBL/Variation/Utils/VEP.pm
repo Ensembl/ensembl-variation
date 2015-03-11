@@ -178,6 +178,8 @@ our @EXTRA_HEADERS = (
   { flag => 'protein',         cols => ['ENSP'] },
   { flag => 'uniprot',         cols => ['SWISSPROT', 'TREMBL', 'UNIPARC'] },
   { flag => 'xref_refseq',     cols => ['RefSeq'] },
+  { flag => 'refseq',          cols => ['REFSEQ_MATCH'] },
+  { flag => 'merged',          cols => ['REFSEQ_MATCH'] },
   
   # non-synonymous predictions
   { flag => 'sift',            cols => ['SIFT'] },
@@ -264,6 +266,7 @@ our %COL_DESCS = (
     'STRAND'             => 'Strand of the feature (1/-1)',
     'PICK'               => 'Indicates if this consequence has been picked as the most severe',
     'SOMATIC'            => 'Somatic status of existing variant',
+    'REFSEQ_MATCH'       => 'RefSeq transcript match status',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -2465,6 +2468,10 @@ sub add_extra_fields_transcript {
       defined($config->{xref_refseq}) &&
       defined($tr->{_refseq}) &&
       $tr->{_refseq} ne '-';
+    
+    # refseq match info
+    my @rseq_attrs = grep {$_->code =~ /^rseq/} @{$tr->get_all_Attributes()};
+    $line->{Extra}->{REFSEQ_MATCH} = join(",", map {$_->code} @rseq_attrs) if scalar @rseq_attrs;
     
     # protein ID
     $line->{Extra}->{ENSP} = $tr->{_protein} if
