@@ -5236,7 +5236,7 @@ sub cache_custom_annotation {
                     # tabix can fetch multiple regions, so construct a string
                     my $region_string = join " ", map {$tmp_chr.':'.$_} @tmp_regions;
                     
-                    open CUSTOM, "tabix ".$custom->{file}." $region_string 2>&1 |"
+                    open CUSTOM, "tabix -f ".$custom->{file}." $region_string 2>&1 |"
                         or die "\nERROR: Could not open tabix pipe for ".$custom->{file}."\n";
                 }
                 
