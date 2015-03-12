@@ -80,7 +80,12 @@ my %pops = ('1000 Genomes'                   => { 'order'      => 1,
                                                   'species'  => 'Mus musculus',
                                                   'term'     => 'Mouse_Genomes_Project',
                                                   'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
-                                                }
+                                                },
+            'NextGen Project'                => { 'order'    => 5,
+                                                  'species'  => 'Ovis_aries',
+                                                  'term'     => 'NextGen Project',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },                                   
            );
            
 my $server_name = 'http://static.ensembl.org';
