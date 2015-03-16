@@ -121,11 +121,11 @@ sub get_all_failed_descriptions {
     unless (defined($self->{'failed_description'})) {
         
         # Check that this allele has an adaptor attached
-        unless (defined($self->adaptor())) {
-            throw('An adaptor must be attached to the ' . ref($self)  . ' object');
-        }
+        # unless () {
+        #     throw('An adaptor must be attached to the ' . ref($self)  . ' object');
+        # }
     
-        $self->{'failed_description'} = $self->adaptor->get_all_failed_descriptions($self);
+        $self->{'failed_description'} = defined($self->adaptor()) ? $self->adaptor->get_all_failed_descriptions($self) : [];
     }
     
     return $self->{'failed_description'};
