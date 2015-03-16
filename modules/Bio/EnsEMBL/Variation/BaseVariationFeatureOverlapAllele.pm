@@ -288,15 +288,20 @@ sub _pre_consequence_predicates {
       
       $bvf_preds->{sv} = $is_sv;
       
-      # most variants we see will be SNPs, so test this first
-      if(!$is_sv && $class_SO_term eq 'SNV') {
-        $bvf_preds->{snp} = 1;
+      # use SO term to determine class
+      if($is_sv) {
+        if($class_SO_term =~ /deletion/) {
+          $bvf_preds->{deletion} = 1;
+        }
+        elsif($class_SO_term =~ /insertion|duplication/) {
+          $bvf_preds->{insertion} = 1;
+        }
       }
-      elsif($class_SO_term =~ /deletion/) {
-        $bvf_preds->{deletion} = 1;
-      }
-      elsif($class_SO_term =~ /insertion|duplication/) {
-        $bvf_preds->{insertion} = 1;
+      
+      # otherwise for sequence variants, log the reference length here
+      # we'll use it later to determine class per-allele
+      else {
+        $bvf_preds->{ref_length} = ($bvf->{end} - $bvf->{start}) + 1;
       }
       
       $bvf->{pre_consequence_predicates} = $bvf_preds;
@@ -410,6 +415,24 @@ sub _pre_consequence_predicates {
     
     # copy from bvfo
     $preds->{$_} = $bvfo->{pre_consequence_predicates}->{$_} for keys %{$bvfo->{pre_consequence_predicates}};
+    
+    
+    ## allele-specific type for non-SVs
+    unless($preds->{sv}) {
+      my $vf_seq = $self->variation_feature_seq();
+      my $ref_length = $preds->{ref_length};
+    
+      # most variants we see will be SNPs, so test this first
+      if(length($vf_seq) == $ref_length) {
+        $preds->{snp} = 1;
+      }
+      elsif($ref_length >= 1 && $vf_seq eq '-') {
+        $preds->{deletion} = 1;
+      }
+      elsif($ref_length == 0) {
+        $preds->{insertion} = 1;
+      }
+    }
     
     # copy to self
     $self->{pre_consequence_predicates} = $preds;
