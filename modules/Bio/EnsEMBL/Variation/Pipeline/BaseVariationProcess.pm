@@ -33,7 +33,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
-
+use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Hive::AnalysisJob;
 
 use base qw(Bio::EnsEMBL::Hive::Process);
