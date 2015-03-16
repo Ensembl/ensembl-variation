@@ -133,4 +133,16 @@ sub minor_allele_frequency {
   return $_[0]->variation->minor_allele_frequency;
 }
 
+sub source_object {
+  return $_[0]->variation->source_object;
+}
+
+sub source_name {
+  return $_[0]->variation->source_name;
+}
+
+sub source_version {
+  return $_[0]->variation->source_version;
+}
+
 1;
