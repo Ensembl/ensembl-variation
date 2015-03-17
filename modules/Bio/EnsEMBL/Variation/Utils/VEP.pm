@@ -401,6 +401,8 @@ sub parse_ensembl {
     
     my ($chr, $start, $end, $allele_string, $strand, $var_name) = split /\s+/, $line;
     
+    $strand = 1 if !defined($strand);
+    
     my $vf;
     
     # sv?
