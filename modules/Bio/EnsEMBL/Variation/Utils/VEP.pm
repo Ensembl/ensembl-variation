@@ -2320,7 +2320,7 @@ sub mfva_to_line {
   # much we can do so don't return anything
   return undef unless defined $mf->binding_matrix;
   
-  my $matrix = $mf->binding_matrix->description.' '.$mf->display_label;
+  my $matrix = ($mf->binding_matrix->description ? $mf->binding_matrix->description.' ' : '').$mf->display_label;
   $matrix =~ s/\s+/\_/g;
   
   my $base_line = {
