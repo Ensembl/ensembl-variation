@@ -3282,7 +3282,7 @@ sub fetch_transcripts {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
-                    warning_msg($config, "WARNING: Could not find cache for $chr\:$region");
+                    warning_msg($config, "WARNING: Could not find cache for $chr\:$region; correct assembly used?");
                     next;
                 }
                 
