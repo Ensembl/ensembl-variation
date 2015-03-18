@@ -2182,4 +2182,27 @@ sub _get_ref_seq {
   return $seq;
 }
 
+
+=head2 location_string
+
+  Arg [1]    : none
+  Example    : print $vf->location_string(), "\n";
+  Description: Returns the location string "chr:start-end" for this VariationFeature
+  Returntype : string
+  Exceptions : none
+  Caller     : Web
+  Status     : Stable
+
+=cut
+
+sub location_string {
+  my $self = shift;
+  
+  if(!exists($self->{location_string})) {
+    $self->{location_string} = $self->seq_region_name.':'.$self->seq_region_start.'-'.$self->seq_region_end;
+  }
+  
+  return $self->{location_string};
+}
+
 1;
