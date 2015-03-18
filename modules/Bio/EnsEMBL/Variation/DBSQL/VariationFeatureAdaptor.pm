@@ -338,11 +338,20 @@ sub fetch_all_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
-
-    # Add the constraint for failed variations
-    $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
-
-    return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+    
+    my $use_vcf = $self->db->use_vcf();
+    my @vfs;
+    
+    if($use_vcf) { # && !$constraint) {
+      push @vfs,
+        map {@{$_->get_all_VariationFeatures_by_Slice($slice)}}
+        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+    }
+    if($use_vcf <= 1) {
+      push @vfs, @{$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)};
+    }
+        
+    return \@vfs;
 }
 
 sub fetch_all_by_Slice_constraint_with_Variations {
@@ -963,6 +972,95 @@ sub fetch_all_somatic_with_phenotype {
     return $self->_internal_fetch_all_with_phenotype($v_source, $p_source, $phenotype, $constraint);
 }
 
+<<<<<<< HEAD
+=======
+
+=head2 fetch_all_tagged_by_VariationFeature
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vfa->fetch_all_tagged_by_VariationFeature();
+  Description : Returns an arrayref of variation features that are tagged by this
+                variation feature, in the population $pop if specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub fetch_all_tagged_by_VariationFeature {
+    my ($self, $vf, $pop) = @_;
+    return $self->_tag_fetch($vf, $pop, 'tagged');
+}
+
+
+=head2 fetch_all_tags_by_VariationFeature
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vfa->fetch_all_tags_by_VariationFeature();
+  Description : Returns an arrayref of variation features that tag this
+                variation feature, in the population $pop if specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub fetch_all_tags_by_VariationFeature {
+    my ($self, $vf, $pop) = @_;
+    return $self->_tag_fetch($vf, $pop, 'tag');
+}
+
+
+=head2 fetch_all_tags_and_tagged_by_VariationFeature
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vfa->fetch_all_tags_and_tagged_by_VariationFeature();
+  Description : Returns an arrayref of variation features that either tag or are
+                tagged by this variation feature, in the population $pop if
+                specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub fetch_all_tags_and_tagged_by_VariationFeature {
+    my ($self, $vf, $pop) = @_;
+    my $return = $self->_tag_fetch($vf, $pop, 'tag');
+    push @$return, @{$self->_tag_fetch($vf, $pop, 'tagged')};
+    return $return;
+}
+
+sub _tag_fetch {
+    my ($self, $vf, $pop, $type) = @_;
+    
+    assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+    assert_ref($pop, 'Bio::EnsEMBL::Variation::Population') if defined $pop;
+    
+    return [] unless $vf->dbID;
+    
+    # set a flag to tell the query construction methods to include the tagged_variation_feature table
+    $self->{tag} = $type;
+    
+    # construct a constraint
+    my $opp_type = $type eq 'tag' ? 'tagged_' : '';
+    my $constraint = "tvf.".$opp_type."variation_feature_id = ".$vf->dbID;
+    $constraint .= ' AND tvf.population_id = '.$pop->dbID if defined $pop;
+    
+    # fetch features here so we can reset the tag flag
+    my $features = $self->generic_fetch($constraint);
+
+    delete $self->{tag};
+    
+    return $features;
+}
+
+
+
+>>>>>>> initial stupid VCF VF fetch
 =head2 fetch_all_by_Slice_SO_terms
 
   Arg [1]    : Bio::EnsEMBL::Slice
