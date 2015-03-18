@@ -323,6 +323,33 @@ sub fetch_all_by_Transcripts_with_constraint {
   return $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
 }
 
+sub _fetch_all_by_VariationFeatures_no_DB {
+  my ($self, $vfs, $features);
+  
+  # get features?
+  if(!@$features) {
+    1;
+  }
+  
+  my @return;
+  
+  foreach my $f(@$features) {
+    
+    foreach my $vf(@$vfs) {
+      my $vfo = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+        -variation_feature  => $vf,
+        -transcript         => $f,
+        -adaptor            => $self,
+      );
+      
+      $vf->add_TranscriptVariation($vfo);
+      push @return, $vfo;
+    }
+  }
+  
+  return \@return;
+}
+
 sub _objs_from_sth {
   my ($self, $sth) = @_;
 
