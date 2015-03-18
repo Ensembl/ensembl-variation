@@ -184,16 +184,34 @@ sub count_all_by_VariationFeatures_with_constraint {
 
 sub _func_all_by_VariationFeatures_with_constraint {
     my ($self, $vfs, $features, $constraint, $func) = @_;
-
-    my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
-
-    my @vfids = keys %vfs_by_id;
-
-    if (!scalar(@vfids)) {
-      return [];
+    
+    # split into those with dbID and those without
+    my (@with_id, @no_id);
+    foreach my $vf(@$vfs) {
+      if($vf->dbID) {
+        push @with_id, $vf;
+      }
+      else {
+        push @no_id, $vf;
+      }
     }
 
     my @alldata;
+    
+    # deal with those with no ID
+    if(scalar @no_id) {
+      my $method = $func.'_all_by_VariationFeatures_no_DB';
+      $data = $self->$method(\@no_id, $features, $constraint);
+      push @alldata, ref($data) eq 'ARRAY' ? @$data : $data;
+    }
+
+    my %vfs_by_id = map { $_->dbID => $_ } grep {$_->dbID} @with_id;
+
+    my @vfids = keys %vfs_by_id;
+
+    if(!scalar(@vfids)) {
+      return \@alldata;
+    }
 
     while (@vfids) {
   
@@ -239,7 +257,7 @@ sub fetch_all_by_VariationFeatures_with_constraint {
     my $allvfos = $self->_func_all_by_VariationFeatures_with_constraint(@_ , 'fetch');
    
 
-    my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
+    my %vfs_by_id = map { $_->dbID => $_ } grep {$_->dbID} @$vfs;
 
     # attach the VariationFeatures to the VariationFeatureOverlaps because we have them already
 
