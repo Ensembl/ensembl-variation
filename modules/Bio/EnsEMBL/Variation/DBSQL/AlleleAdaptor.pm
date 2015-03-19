@@ -75,6 +75,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 my $DEFAULT_ITERATOR_CACHE_SIZE = 1000;
 
+our $CACHE_SIZE = 5;
+
 
 sub store {
 	my ($self, $allele) = @_;
@@ -211,39 +213,69 @@ sub fetch_all_by_subsnp_id {
 =cut
 
 sub fetch_all_by_Variation {
-    my $self = shift;
-    my $variation = shift;
-    my $population = shift;
-    
-    # Make sure that we are passed a Variation object
-    assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
-    
-    # If we got a population argument, make sure that it is a Population object
-    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+  my $self = shift;
+  my $variation = shift;
+  my $population = shift;
+  
+  # Make sure that we are passed a Variation object
+  assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+  
+  # If we got a population argument, make sure that it is a Population object
+  assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+  
+  my $variation_id = $variation->dbID();
+  
+  my $cached;
+  my $return = [];
+
+  if(defined($self->{_cache})) {
+    foreach my $stored(@{$self->{_cache}}) {
+      my @keys = keys %{$stored};
+      $cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
+      last if defined($cached);
+    }
+  }
+
+  if(!defined($cached)) {
     
     # Add a constraint on the variation_id column and pass to generic fetch
-    my $variation_id = $variation->dbID();
     my $constraint = qq{ a.variation_id = $variation_id };
     
     # If required, add a constraint on the population id
     if (defined($population)) {
-        my $population_id = $population->dbID();
-        $constraint .= qq{ AND a.population_id = $population_id };
+      my $population_id = $population->dbID();
+      $constraint .= qq{ AND a.population_id = $population_id };
     }
     
     # Add the constraint for failed alleles
     $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
   
-    my $alleles = $self->generic_fetch($constraint);
+    $cached = $self->generic_fetch($constraint);
     
-    # If a population was specified, attach the population to the allele object
-    map {$_->population($population)} @{$alleles} if (defined($population));
+    # If a population was specified, attach the population to the object
+    map {$_->population($population)} @{$cached} if (defined($population));
 
     # add freqs from genotypes for human (1KG data)
-    push @$alleles, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
+    push @$cached, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
+		
+    # don't store if population specified
+    return $cached if defined($population);
+    
+    # add genotypes for this variant to the cache
+    push @{$self->{_cache}}, {$variation_id => $cached};
 	
-    # Return the alleles
-    return $alleles;
+    # shift off first element to keep cache within size limit
+    shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
+  }
+  
+  if(defined($population)) {
+    @$return = grep {$_->dbID eq $population->dbID} @{$cached};
+  }
+  else {
+    $return = $cached;
+  }
+	
+  return $return;
 }
 
 sub _fetch_all_by_Variation_from_Genotypes {
@@ -270,7 +302,8 @@ sub _fetch_all_by_Variation_from_Genotypes {
 	
   if(defined($population)) {
     @pop_list = ($population);
-    map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
+    my $pop_id = $population->dbID;
+    $pop_hash{$pop_id}{$_->dbID} = 1 for @{$population->get_all_Individuals};
   }
   else {
     my $pa = $self->db->get_PopulationAdaptor();
