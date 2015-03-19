@@ -237,8 +237,8 @@ sub fetch_all_by_Variation {
 		return [];
     }
 	
-	my $results;
-	
+	my $results = [];
+  
 	# check cache
 	# All ind gt objects for a variation are stored on the adaptor.
 	# They are stored in an array of limited size so that the memory usage
@@ -291,8 +291,11 @@ sub fetch_all_by_Variation {
 			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Individual or Bio::EnsEMBL::Variation::Population");
 		}
 	}
+  else {
+    $results = $cached;
+  }
 	
-	return $cached;
+	return $results;
 }
 
 sub fetch_all_by_Variation_dbID {
