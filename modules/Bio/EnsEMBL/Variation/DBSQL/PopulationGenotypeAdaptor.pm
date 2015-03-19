@@ -86,6 +86,8 @@ use Scalar::Util qw(weaken);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
+our $CACHE_SIZE = 5;
+
 
 
 
@@ -236,6 +238,7 @@ sub fetch_all_by_Population {
 =head2 fetch_all_by_Variation
 
   Arg [1]    : Bio::EnsEMBL::Variation $variation
+  Arg [2]    : Bio::EnsEMBL::Variation::Population (optional)
   Example    : my $var = $variation_adaptor->fetch_by_name( "rs1121" )
                $poptypes = $poptype_adaptor->fetch_all_by_Variation( $var )
   Description: Retrieves a list of population genotypes for the given Variation.
@@ -251,22 +254,64 @@ sub fetch_all_by_Population {
 sub fetch_all_by_Variation {
   my $self = shift;
   my $variation = shift;
+  my $population = shift;
   
-  if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
-	throw('Bio::EnsEMBL::Variation::Variation argument expected');
+  # Make sure that we are passed a Variation object
+  assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+  
+  # If we got a population argument, make sure that it is a Population object
+  assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+  
+  my $variation_id = $variation->dbID();
+  
+	my $cached;
+  my $return = [];
+
+  if(defined($self->{_cache})) {
+    foreach my $stored(@{$self->{_cache}}) {
+      my @keys = keys %{$stored};
+      $cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
+      last if defined($cached);
+    }
+  }
+
+  if(!defined($cached)) {
+    
+    # Add a constraint on the variation_id column and pass to generic fetch
+    my $constraint = qq{ pg.variation_id = $variation_id };
+    
+    # If required, add a constraint on the population id
+    if (defined($population)) {
+      my $population_id = $population->dbID();
+      $constraint .= qq{ AND pg.population_id = $population_id };
+    }
+  
+    $cached = $self->generic_fetch($constraint);
+    
+    # If a population was specified, attach the population to the object
+    map {$_->population($population)} @{$cached} if (defined($population));
+
+    # add freqs from genotypes for human (1KG data)
+    push @$cached, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
+		
+    # don't store if population specified
+    return $cached if defined($population);
+    
+    # add genotypes for this variant to the cache
+    push @{$self->{_cache}}, {$variation_id => $cached};
+	
+    # shift off first element to keep cache within size limit
+    shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
   }
   
-  if(!defined($variation->dbID())) {
-	warning("Cannot retrieve genotypes for variation without set dbID");
-	return [];
+  if(defined($population)) {
+		@$return = grep {$_->dbID eq $population->dbID} @{$cached};
   }
-  
-  my $pgs = $self->generic_fetch("pg.variation_id = " . $variation->dbID());
-  
-  # fetch pop GTs from ind GTs for human (1KG data)
-  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)};
-  
-  return $pgs;
+  else {
+    $return = $cached;
+  }
+	
+  return $return;
 }
 
 
@@ -286,61 +331,68 @@ sub _fetch_all_by_Variation_from_Genotypes {
   my $genotypes = $variation->get_all_IndividualGenotypes();
   
   return [] unless scalar @$genotypes;
+	
+  # copy individual ID to save time later
+  $_->{_individual_id} ||= $_->individual->dbID for @$genotypes;
   
   # get populations for individuals
   my (@pop_list, %pop_hash);
   
   if(defined($population)) {
-	@pop_list = ($population);
-	map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
+    @pop_list = ($population);
+    my $pop_id = $population->dbID;
+    $pop_hash{$pop_id}{$_->dbID} = 1 for @{$population->get_all_Individuals};
   }
   else {
-	my $pa = $self->db->get_PopulationAdaptor();
-	%pop_hash = %{$pa->_get_individual_population_hash([map {$_->individual->dbID} @$genotypes])};
-	return [] unless %pop_hash;
+    my $pa = $self->db->get_PopulationAdaptor();
+    %pop_hash = %{$pa->_get_individual_population_hash([map {$_->{_individual_id}} @$genotypes])};
+    return [] unless %pop_hash;
 	
-	@pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
+    @pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
   }
   
   return [] unless @pop_list and %pop_hash;
-  
-  my %ss_list = map {$_->subsnp || '' => 1} @$genotypes;
+
+	
+  # organise the genotypes by subsnp
+  my %by_ss = ();
+  push @{$by_ss{$_->subsnp || ''}}, $_ for @$genotypes;
   
   my @objs;
   
   foreach my $pop(@pop_list) {
 	
-	next unless $pop->_freqs_from_gts;
-	
-	foreach my $ss(keys %ss_list) {
-	  my (%counts, $total, @freqs);
-	  map {$counts{$_->genotype_string(1)}++}
-		grep {$pop_hash{$pop->dbID}{$_->individual->dbID}}
-		grep {$_->subsnp || '' eq $ss}
-		@$genotypes;
+    next unless $pop->_freqs_from_gts;
+    my $pop_id = $pop->dbID;
+		
+    foreach my $ss(keys %by_ss) {
+      my (%counts, $total, @freqs);
+      map {$counts{$_->genotype_string(1)}++}
+        grep {$pop_hash{$pop_id}{$_->{_individual_id}}}
+        @{$by_ss{$ss}};
 	  
-	  next unless %counts;
+      next unless %counts;
 	  
-	  my @alleles = keys %counts;
-	  $total += $_ for values %counts;
-	  next unless $total;
+      my @alleles = keys %counts;
+      $total += $_ for values %counts;
+      next unless $total;
 	  
-	  @freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
+      @freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
 	  
-	  for my $i(0..$#alleles) {
-		push @objs, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
-		  genotype   => [split /\|/, $alleles[$i]],
-		  count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
-		  frequency  => @freqs ? $freqs[$i] : undef,
-		  population => $pop,
-		  variation  => $variation,
-		  adaptor    => $self,
-		  subsnp     => $ss eq '' ? undef : $ss,
-		});
+      for my $i(0..$#alleles) {
+        push @objs, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
+          genotype   => [split /\|/, $alleles[$i]],
+          count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
+          frequency  => @freqs ? $freqs[$i] : undef,
+          population => $pop,
+          variation  => $variation,
+          adaptor    => $self,
+          subsnp     => $ss eq '' ? undef : $ss,
+        });
 
-                weaken($objs[-1]->{'variation'});
-	  }
-	}
+        weaken($objs[-1]->{'variation'});
+      }
+    }
   }
   
   return \@objs;
