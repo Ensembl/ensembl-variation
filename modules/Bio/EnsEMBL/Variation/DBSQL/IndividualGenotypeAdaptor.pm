@@ -224,18 +224,20 @@ sub store_uncompressed {
 
 
 sub fetch_all_by_Variation {
-    my $self = shift;
-    my $variation = shift;
-	my $sample = shift;
+  my $self = shift;
+  my $variation = shift;
+  my $sample = shift;
 
-    if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
-		throw('Bio::EnsEMBL::Variation::Variation argument expected');
-    }
+  if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
+    throw('Bio::EnsEMBL::Variation::Variation argument expected');
+  }
+  
+  my $variation_id = $variation->dbID;
 
-    if(!defined($variation->dbID())) {
-		warning("Cannot retrieve genotypes for variation without dbID");
-		return [];
-    }
+  if(!defined($variation_id)) {
+    warning("Cannot retrieve genotypes for variation without dbID");
+    return [];
+  }
 	
 	my $results = [];
   
@@ -249,7 +251,7 @@ sub fetch_all_by_Variation {
 	if(defined($self->{_cache})) {
 		foreach my $stored(@{$self->{_cache}}) {
 			my @keys = keys %{$stored};
-			$cached = $stored->{$keys[0]} if $keys[0] eq $variation->dbID;
+			$cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
 			last if defined($cached);
 		}
 	}
@@ -265,7 +267,7 @@ sub fetch_all_by_Variation {
         @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
     }
     if($use_vcf <= 1) {
-      push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation->dbID())};
+      push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation_id)};
     }
 		for(@$cached) {
 			$_->variation($variation);
@@ -273,7 +275,7 @@ sub fetch_all_by_Variation {
 		}
 		
 		# add genotypes for this variant to the cache
-		push @{$self->{_cache}}, {$variation->dbID => $cached};
+		push @{$self->{_cache}}, {$variation_id => $cached};
 		
 		# shift off first element to keep cache within size limit
 		shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
