@@ -161,6 +161,9 @@ sub store {
 	
 	$sth->finish;
 	$update_sth->finish;
+  
+  # reset cache
+  delete $self->{_cache} if $self->{_cache};
 	
 	return $rows_added;
 }
@@ -204,6 +207,9 @@ sub store_uncompressed {
 
 		$sth->finish;
 	}
+  
+  # reset cache
+  delete $self->{_cache} if $self->{_cache};
 	
 	return scalar @$gts;
 }

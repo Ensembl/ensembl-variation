@@ -105,6 +105,9 @@ sub store {
 		$allele->frequency,
 		$allele->count
 	);
+  
+  # reset cache
+  delete $self->{_cache} if $self->{_cache};
 	
 	$sth->finish;
 }
@@ -137,6 +140,9 @@ sub store_multiple {
 	});
 	
 	$sth->execute(@args);
+  
+  # reset cache
+  delete $self->{_cache} if $self->{_cache};
 	
 	$sth->finish;
 }
