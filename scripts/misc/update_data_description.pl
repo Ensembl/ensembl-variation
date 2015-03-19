@@ -35,7 +35,7 @@ use Getopt::Long;
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($version,$input_file,$output_file,$help,$host,$hlist,$user,$port,$species);
+my ($version,$input_file,$output_file,$help,$host,$hlist,$user,$port,$phost,$species);
 
 GetOptions(
   'v=i'         => \$version,
@@ -46,12 +46,14 @@ GetOptions(
   'hlist=s'     => \$hlist,
   'user=s'      => \$user,
   'port=i'      => \$port,
+  'phost=s'     => \$phost,
   'species|s=s' => \$species
 );
 
 usage("input and output files must be specified") unless ($input_file && $output_file);
 usage("Host and version must be specified") unless ($host && $version);
 usage("Hosts list, user must be specified") unless ($hlist && $user);
+usage("Previous host must be specified") unless ($phost);
 
 $species ||= 'Homo_sapiens';
 $port    ||= 3306;
@@ -67,7 +69,7 @@ my ($content_before, $new_content, $content_after);
 $section = 'sources';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -port $port`;
+`perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -port $port -phost $phost`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -175,6 +177,7 @@ sub usage {
     -species        Species name. 'Homo_sapiens' by default (optional)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -user           MySQL user name (Required)
     -port           MySQL port. 3306 by default (optional)
   } . "\n";
