@@ -144,9 +144,9 @@ my $html_header = q{
 <head>
   <title>Variation Sources</title>
   <script type="text/javascript">
-    $(window).on('load', function() {
+    window.onload = function() {
       $('.conhelp').helptip({'track': true});
-    });
+    };
   </script>
 </head>
 
