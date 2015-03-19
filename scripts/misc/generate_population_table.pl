@@ -82,8 +82,8 @@ my %pops = ('1000 Genomes'                   => { 'order'      => 1,
                                                   'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
                                                 },
             'NextGen Project'                => { 'order'    => 5,
-                                                  'species'  => 'Ovis_aries',
-                                                  'term'     => 'NextGen Project',
+                                                  'species'  => 'Ovis aries',
+                                                  'term'     => 'NextGen:%',
                                                   'url'      => 'http://projects.ensembl.org/nextgen/'
                                                 },                                   
            );
