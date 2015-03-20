@@ -347,6 +347,8 @@ sub get_all_Individuals {
     my $chr = $self->list_chromosomes->[0];
     my $vcf = $self->_get_vcf_by_chr($chr);
     
+    throw("ERROR: VCF file ".$self->_get_vcf_filename_by_chr($chr)." not found\n") unless $vcf;
+    
     my $prefix = $self->individual_prefix;
     my $ia = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
     
@@ -687,15 +689,27 @@ sub _get_vcf_by_chr {
       return unless grep {$chr eq $_} @$chrs;
     }
     
-    my $file = $self->filename_template;
+    my $file = $self->_get_vcf_filename_by_chr($chr);
     
-    $file =~ s/\#\#\#CHR\#\#\#/$chr/;
-    $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+    if($self->type eq 'local' && !-e $file) {
+      $self->{files}->{chr} = undef;
+    }    
     
-    $self->{files}->{$chr} = $obj;
+    else {
+      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+    
+      $self->{files}->{$chr} = $obj;
+    }
   }
   
   return $self->{files}->{$chr};
+}
+
+sub _get_vcf_filename_by_chr {
+  my ($self, $chr) = @_;
+  my $file = $self->filename_template;
+  $file =~ s/\#\#\#CHR\#\#\#/$chr/;
+  return $file;
 }
 
 sub _current {
