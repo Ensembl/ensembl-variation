@@ -646,7 +646,7 @@ $config = copy_config($config, {
   ],
 });
 
-$config->{dir} = "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly};
+$config->{dir} = "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{cache_version}."_".$config->{assembly};
 
 build_full_cache($config);
 
