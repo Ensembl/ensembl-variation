@@ -2364,8 +2364,10 @@ sub add_extra_fields {
     my $line   = shift;
     my $bvfoa  = shift;
     
+    my $ocs = $bvfoa->get_all_OverlapConsequences;
+    
     # impact
-    $line->{Extra}->{IMPACT} = (sort {$a->rank <=> $b->rank} @{$bvfoa->get_all_OverlapConsequences})[0]->impact();
+    $line->{Extra}->{IMPACT} = (sort {$a->rank <=> $b->rank} @$ocs)[0]->impact() if scalar @$ocs;
     
     # overlapping SVs
     if(defined $config->{check_svs} && defined $bvfoa->base_variation_feature->{overlapping_svs}) {
