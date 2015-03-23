@@ -724,33 +724,25 @@ sub _codon_table {
     return $codon_table;
 }
 
-sub _selenocysteine_positions {
+sub _seq_edits {
   my $self = shift;
   
   my $tr = $self->transcript;
   
-  unless(exists $tr->{_variation_effect_feature_cache}->{selenocysteines}) {
+  unless(exists $tr->{_variation_effect_feature_cache}->{seq_edits}) {
     
-    if(!$self->adaptor->{db}) {
-      $tr->{_variation_effect_feature_cache}->{selenocysteines} = [];
-    }
-    
-    else {
+    if($tr && ($self->adaptor->{db} || ($tr->adaptor && $tr->adaptor->{db}))) {
       my $tl = $tr->translation;
     
       if($tl) {
-        $tr->{_variation_effect_feature_cache}->{selenocysteines} = [
-          sort {$a <=> $b}
-          map {$_->{start}}
-          @{$tl->get_all_SeqEdits('_selenocysteine')}
-        ];
+        $tr->{_variation_effect_feature_cache}->{seq_edits} = $tl->get_all_SeqEdits();
       }
     }
+    
+    $tr->{_variation_effect_feature_cache}->{seq_edits} ||= [];
   }
   
-  $tr->{_variation_effect_feature_cache}->{selenocysteines} ||= [];
-  
-  return $tr->{_variation_effect_feature_cache}->{selenocysteines};
+  return $tr->{_variation_effect_feature_cache}->{seq_edits};
 }
 
 1;

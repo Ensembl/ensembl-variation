@@ -4386,13 +4386,9 @@ sub prefetch_transcript_data {
         }
     }
     
-    # selenocysteines
+    # translation seq Edits
     if(my $tl = $tr->translation) {
-      $tr->{_variation_effect_feature_cache}->{selenocysteines} = [
-        sort {$a <=> $b}
-        map {$_->{start}}
-        @{$tl->get_all_SeqEdits('_selenocysteine')}
-      ];
+      $tr->{_variation_effect_feature_cache}->{seq_edits} = $tl->get_all_SeqEdits();
     }
     
     # gene symbol
