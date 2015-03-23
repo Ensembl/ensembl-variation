@@ -297,6 +297,26 @@ sub feature_truncation {
     );
 }
 
+sub protein_altering_variant{
+
+    ## check in protein
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+    return 0 unless defined $ref_pep && defined $alt_pep;
+
+    ## don't assign if child term appropriate
+
+    return 0 if  length($alt_pep) eq length($ref_pep);       # synonymous_variant(@_);  missense_variant(@_);
+    return 0 if  $ref_pep =~/^\*|X/  || $alt_pep =~/^\*|X/;  # stop lost/ gained/ retained
+    return 0 if  $alt_pep =~/^\Q$ref_pep\E|\Q$ref_pep\E$/;   # inframe_insertion(@_);
+
+    return 0 if inframe_deletion(@_);  
+    return 0 if affects_start_codon(@_);
+    return 0 if frameshift(@_);
+
+    return 1;
+}
+
 #sub transcript_fusion {
 #    #my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 #    #my $bvf   = $bvfoa->base_variation_feature;
@@ -768,8 +788,8 @@ sub inframe_insertion {
 
         return 0 if affects_start_codon(@_);
         return 0 unless defined $ref_codon;
-
         return ( length($alt_codon) > length ($ref_codon) );
+
     }
     
     # structural variant
@@ -977,7 +997,7 @@ sub coding_unknown {
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
-        return (within_cds(@_) and ((not $bvfoa->peptide) or (not _get_peptide_alleles(@_)) or ($bvfoa->peptide =~ /X/)) and (not (frameshift(@_) or inframe_deletion(@_))));
+        return (within_cds(@_) and ((not $bvfoa->peptide) or (not _get_peptide_alleles(@_)) or ($bvfoa->peptide =~ /X/)) and (not (frameshift(@_) or inframe_deletion(@_) or (protein_altering_variant(@_)) )) );
     }
     
     # structural variant

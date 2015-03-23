@@ -896,6 +896,20 @@ our @OVERLAP_CONSEQUENCES = (
         label => 'Feature truncation',
         impact => 'MODIFIER',
     },
+    {
+        SO_accession => 'SO:0001818', 
+        SO_term => 'protein_altering_variant',
+        feature_SO_term => 'mRNA',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        rank => '12',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::protein_altering_variant',
+        description => 'A sequence_variant which is predicted to change the protein encoded in the coding sequence', 
+        label => 'protein altering variant',
+        impact => 'MODERATE',
+    },
+
 );
 
 our @FEATURE_TYPES = (

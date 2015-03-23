@@ -567,6 +567,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_start+3,
         end     => $cds_start+3,
         effects => [qw(missense_variant)],
+ },  {
+        alleles => 'CGGTGT',
+        start   => $cds_start+3,
+        end     => $cds_start+5,
+        effects => [qw(protein_altering_variant)],
     }, {
         alleles => 'CCC',
         start   => $cds_start+3,
