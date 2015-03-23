@@ -85,20 +85,26 @@ sub run {
       print REPORT "Backup file '$dump_file' for the table '$table' doesn't exist!\n" unless (-e $dump_file);
       print REPORT "Backup file '$dump_file' for the table '$table' is empty\n!" if (-e $dump_file && -z $dump_file);
       
-      my $res = `grep '$grep_start_table \`$table\`' $dump_file`;
-      if ($res =~ /$grep_start_table `$table`/) {
-        $count_create++;
+      if ($extension =~ /\.sql$/) {
+
+        my $res = `grep '$grep_start_table \`$table\`' $dump_file`;
+        if ($res =~ /$grep_start_table `$table`/) {
+          $count_create++;
        
-        # Check that the table has been fully dumped (i.e. the keys have been enabled)
-        my $res2 = `grep '$grep_end_table_1 \`$table\` $grep_end_table_2' $dump_file`;
-        if (!$res2 || $res2 !~ /$grep_end_table_1 \`$table\` $grep_end_table_2/) {
-          print REPORT "The table '$table' doesn't seem to have been dumped correctly\n";
+          # Check that the table has been fully dumped (i.e. the keys have been enabled)
+          my $res2 = `grep '$grep_end_table_1 \`$table\` $grep_end_table_2' $dump_file`;
+          if (!$res2 || $res2 !~ /$grep_end_table_1 \`$table\` $grep_end_table_2/) {
+            print REPORT "The table '$table' doesn't seem to have been dumped correctly\n";
+            $error = 1;
+          }
+        }
+        else {
+          print REPORT "The table '$table' is missing from the dump $dump_file\n";
           $error = 1;
         }
       }
       else {
-        print REPORT "The table '$table' is missing from the dump $dump_file\n";
-        $error = 1;
+        $count_create++;
       }
       push(@dumped_tables, $table);
     }

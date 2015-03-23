@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Variation::Pipeline::BackupDB::InitBackup;
 
 use strict;
 use warnings;
+use File::Path qw(make_path);
 
 use Bio::EnsEMBL::Hive::Utils ('go_figure_dbc');
 
@@ -32,7 +33,9 @@ sub write_output {
   die("An output file prefix (-output_file_prefix) needs to be specified!") unless (defined($output_file_prefix));
   die("An output file suffix (-output_file_suffix) needs to be specified!") unless (defined($output_file_suffix));
 
-  die("Backup directory '$backup_dir' doesn't exist!") unless (-d $backup_dir);
+  if (!-d $backup_dir) {
+    make_path "$backup_dir" or die "Failed to create directory: '$backup_dir";
+  }
 
   my $tmp_info_updates = "$backup_dir/tmp_$info_updates";
   
