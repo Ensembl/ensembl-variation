@@ -1347,6 +1347,37 @@ $transcript_tests->{$c_fs_t->stable_id}->{tests} = [
     }, 
 ];
 
+# a transcript with a selenocysteine edit
+my $sc_se_t = $ta->fetch_by_stable_id('ENST00000380903');
+
+$transcript_tests->{$sc_se_t->stable_id}->{transcript} = $sc_se_t;
+
+$transcript_tests->{$sc_se_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a selenocysteine seqEdit",
+        alleles => 'C',
+        start   => 50655788,
+        end     => 50655788,
+        effects => [qw(missense_variant)],
+    }, 
+];
+
+# a transcript with a misc amino acid edit
+my $aa_se_t = $ta->fetch_by_stable_id('ENST00000295641');
+
+$transcript_tests->{$aa_se_t->stable_id}->{transcript} = $aa_se_t;
+
+$transcript_tests->{$aa_se_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a misc amino acid seqEdit",
+        alleles => 'T',
+        start   => 220462640,
+        end     => 220462640,
+        effects => [qw(synonymous_variant)],
+    }, 
+];
+
+
 my $test_count = 1;
 
 my $def_strand  = 1;

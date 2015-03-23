@@ -671,6 +671,10 @@ ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} 
 $cons = get_all_consequences($config, [$vf]);
 ok($cons->[0]->{Extra}->{AFR_MAF} eq 'G:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'G:0.05', "build - freqs from vcf 3");
 
+($vf) = @{parse_line($config, "22 50655788 50655788 G/C +")};
+$cons = get_all_consequences(copy_config($config, {pick => 1}), [$vf]);
+ok($cons->[0]->{Amino_acids} eq 'U/S', "build - selenocysteine seqEdit applied");
+
 $config->{regulatory} = 1;
 ($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20001112 20001112 T/G +")};
 $cons = get_all_consequences($config, [$vf]);

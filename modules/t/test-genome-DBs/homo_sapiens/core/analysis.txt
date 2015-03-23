@@ -30,3 +30,4 @@
 8189	2009-05-13 13:23:17	pirsf	PIRSF	\N	/data/blastdb/Ensembl/interpro_scan/sf_hmm;/data/blastdb/Ensembl/interpro_scan/sf_hmm_sub	hmmpfam	\N	hmmpfam	-thresholds => /data/blastdb/Ensembl/interpro_scan/pirsf.dat, -options => -E 0.01	ProteinAnnotation/PIRSF	\N	PIRSF	domain
 8190	2009-05-20 12:21:05	rfamblast	Rfam	\N	/lustre/scratch1/ensembl/sw4/ncRNA/BLAST/high_copy.fasta	wublastn	\N	wublastn	lowcopy => /lustre/scratch1/ensembl/sw4/ncRNA/BLAST/low_copy.fasta	Bio::EnsEMBL::Analysis::RunnableDB::BlastRfam	\N	ensembl	gene
 8191	2007-09-07 12:01:22	est2genome_mouse	\N	28-Jan-09 (98)	\N	\N	\N	\N	ori_analysis => Est2genome_mouse_raw, mode => single	DepthFilter	\N	\N	\N
+8192	2010-02-14 10:41:03	seleno_genebuilder	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
