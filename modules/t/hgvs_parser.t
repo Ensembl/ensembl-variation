@@ -170,7 +170,14 @@ my @test_input = (
            "G",
            "ENSP00000281146.4:p.Ter200TrpextTer2",
            "substitution, stop lost"
-          ],        
+          ],    
+          ["4:g.130032948A>C",
+           "C",
+           "ENST00000281146.4:c.*2A>C",
+           "C",
+           "",
+           "substitution, after stop "
+          ],  
           ["1:g.154140413_154140415delTTA",
            "-", 
            "ENST00000368530.2:c.856_858delTAA",
