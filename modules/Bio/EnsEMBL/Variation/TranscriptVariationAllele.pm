@@ -1886,15 +1886,24 @@ sub _get_cDNA_position {
   
 
   # Start by correcting for the stop codon
-  if (defined($stop_codon) && $cdna_coord > $stop_codon) {
+  if (defined($stop_codon) ){
 
-    # Get the offset from the stop codon
-    $cdna_coord -= $stop_codon;
-    # Prepend a * to indicate the position is in the 3' UTR
-    $cdna_coord = '*' . $cdna_coord;
+      if($cdna_coord > $stop_codon) {
+         # Get the offset from the stop codon
+         $cdna_coord -= $stop_codon;
+         # Prepend a * to indicate the position is in the 3' UTR
+         $cdna_coord = '*' . $cdna_coord;
+      }
+      elsif ( $cdna_coord eq $stop_codon && defined $intron_offset) {
+         $intron_offset =~ s/\+//g;
+         $cdna_coord ='' ;
+      
+         # Prepend a * to indicate the position is in the 3' UTR
+         $cdna_coord = '*' . $cdna_coord;
+      }
   }
-  elsif (defined($start_codon)) {
-
+  if (defined($start_codon) && $cdna_coord  !~/\*/) {
+    
     # If the position is beyond the start codon, add 1 to get the correct offset
     $cdna_coord += ($cdna_coord >= $start_codon);
     # Subtract the position of the start codon
