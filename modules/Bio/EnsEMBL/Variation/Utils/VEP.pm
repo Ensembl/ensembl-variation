@@ -401,6 +401,12 @@ sub parse_ensembl {
     
     my ($chr, $start, $end, $allele_string, $strand, $var_name) = split /\s+/, $line;
     
+    # simple validity check
+    unless($chr && $start && $end && $allele_string) {
+      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
+      return [];
+    }
+    
     $strand = 1 if !defined($strand);
     
     my $vf;
@@ -454,10 +460,19 @@ sub parse_vcf {
     
     my @data = split /\s+/, $line;
     
+    # get relevant data
+    my ($chr, $start, $end, $ref, $alt) = ($data[0], $data[1], $data[1], $data[3], $data[4]);
+    
+    # simple validity check
+    unless($chr && $start && $end && $ref && $alt) {
+      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
+      return [];
+    }
+    
     # non-variant
     my $non_variant = 0;
     
-    if($data[4] eq '.') {
+    if($alt eq '.') {
         if(defined($config->{allow_non_variant})) {
             $non_variant = 1;
         }
@@ -465,9 +480,6 @@ sub parse_vcf {
             return [];
         }
     }
-    
-    # get relevant data
-    my ($chr, $start, $end, $ref, $alt) = ($data[0], $data[1], $data[1], $data[3], $data[4]);
     
     # some VCF files have a GRCh37 pos defined in GP flag in INFO column
     # if user has requested, we can use that as the position instead
@@ -717,6 +729,12 @@ sub parse_pileup {
     
     my @data = split /\s+/, $line;
     
+    # simple validity check
+    unless($data[0] && $data[1] && $data[2]) {
+      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
+      return [];
+    }
+    
     # pileup can produce more than one VF per line
     my @return;
     
@@ -786,6 +804,12 @@ sub parse_hgvs {
     my $config = shift;
     my $line = shift;
     
+    # simple validity check
+    unless($line) {
+      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
+      return [];
+    }
+    
     my $vf;
     
     # not all hgvs notations are supported yet, so we have to wrap it in an eval
@@ -818,6 +842,12 @@ sub parse_hgvs {
 sub parse_id {
     my $config = shift;
     my $line = shift;
+    
+    # simple validity check
+    unless($line) {
+      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
+      return [];
+    }
     
     my $v_obj = $config->{va}->fetch_by_name($line);
     
