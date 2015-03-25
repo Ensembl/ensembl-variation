@@ -51,18 +51,20 @@ sub fetch_input {
 
 sub run {
     my $self = shift;
-    if ($self->param('mode') eq 'remap_multi_map') {
+    my $mode = $self->param('mode');
+
+    if ($mode eq 'remap_multi_map') {
         $self->dump_multi_map_features();
-    } elsif ($self->param('mode') eq 'remap_alt_loci') {
-        #$self->dump_features_overlapping_alt_loci();
+    } elsif ($mode eq 'remap_alt_loci') {
+        $self->dump_features_overlapping_alt_loci();
         $self->generate_mapping_input();
-    } elsif($self->param('mode') eq 'remap_read_coverage') {
-        unless ($self->param('use_fasta_files')) {
+    } elsif($mode eq 'remap_read_coverage') {
+        if (!$self->param('use_fasta_files')) {
             $self->dump_read_coverage();
             $self->generate_remap_read_coverage_input();
         }
     } else {
-        unless ($self->param('use_fasta_files')) {
+        if (!$self->param('use_fasta_files')) {
             $self->dump_features();
             $self->generate_mapping_input();
         }
