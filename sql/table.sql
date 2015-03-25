@@ -204,7 +204,8 @@ create table variation_feature(
         'feature_elongation',
         'feature_truncation',
         'regulatory_region_variant',
-        'TF_binding_site_variant'
+        'TF_binding_site_variant',
+        'protein_altering_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET (
             '1','2','3','4','5','6','7','8',
@@ -1379,7 +1380,8 @@ CREATE TABLE transcript_variation (
                                             'regulatory_region_amplification',
                                             'regulatory_region_translocation',
                                             'feature_elongation',
-                                            'feature_truncation'
+                                            'feature_truncation',
+                                            'protein_altering_variant'
                                         ),
     cds_start                           int(11) unsigned,
     cds_end                             int(11) unsigned,
