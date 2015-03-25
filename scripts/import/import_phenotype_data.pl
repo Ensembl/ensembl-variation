@@ -108,7 +108,7 @@ my %SOURCES = (
 		type => "Gene",
 	},
   
-  "OMIMGENE" => {
+  "MIM disease" => {
     description => "Online Mendelian Inheritance in Man (OMIM) database",
     url => "http://www.omim.org/",
     type => "Gene",
@@ -316,7 +316,7 @@ elsif($source =~ /ddg2p/i) {
 }
 elsif($source =~ /mim.+dump/) {
 	$result = parse_mim_dump($infile);
-	$source_name = 'OMIMGENE';
+	$source_name = 'MIM disease';
 }
 elsif ($source =~ m/zfin/i) {
   $result = parse_zfin($infile, $core_db_adaptor);
@@ -1296,10 +1296,6 @@ sub parse_omim_gene {
     my $desc = $content[6];
     next if (!$desc || $desc eq '');
     $desc =~ s/^\s+//;
-    $desc =~ s/\\n$//;
-    $desc =~ s/\\n;/;/g;
-    $desc =~ s/;\\n/;/g;
-    $desc =~ s/\\n/ /g;
     $desc = (split(';', $desc))[0]; # Only keep the first term
 
     my $gene = $content[0];
