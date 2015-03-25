@@ -39,7 +39,7 @@ use base ('Bio::EnsEMBL::Hive::Process');
 sub fetch_input {
   my $self = shift;
 
-# initialise file names
+  # initialise file names
   my $params = {
     mapping_results_dir   => 'file_mappings',
     filtered_mappings_dir => 'file_filtered_mappings',
@@ -72,7 +72,7 @@ sub fetch_input {
     }
   }
 
-# get seq_region ids for new assembly
+  # get seq_region ids for new assembly
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($self->param('registry_file_newasm'));
   my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
@@ -176,7 +176,7 @@ sub report_failed_mappings {
   $self->param('pre_count_mapped', $count_mapped);
   $self->param('pre_count_unmapped', $count_unmapped);
 
-# get input id counts
+  # get input id counts
   my $count_input_ids = 0;
   my $fasta_file = $self->param('fasta_file');
   my $fh_fasta_file = FileHandle->new($fasta_file, 'r');
@@ -211,8 +211,8 @@ sub filter_mapping_results {
   while (<$fh_mappings>) {
     chomp;
     my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
-#query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
-#filter old chrom name
+    #query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
+    #filter old chrom name
 
     my $old_chrom_name;    
     if ($use_prior_info) {
@@ -265,8 +265,8 @@ sub filter_mapping_results {
 
     my @new_seq_infos = sort { $mappings->{$b} <=> $mappings->{$a} } keys(%$mappings);
 
-# check that the first one has score 1, then only select those with score 1
-# if the first has not score of one then select based on threshold
+    # check that the first one has score 1, then only select those with score 1
+    # if the first has not score of one then select based on threshold
     my $threshold = $algn_score_threshold;
     if ($mappings->{$new_seq_infos[0]} == 1.0) {
       $threshold = 1.0;
@@ -320,13 +320,13 @@ sub filter_mapping_results_dbsnp {
   my $mapped = {};
   while (<$fh_mappings>) {
     chomp;
-# old_seq_info is not in available
-#       1 19432 19432 1 480394.0-101-1-101-A/G:rs75513536       8       203M    1                       clipped nucleotides 0
-#       1 19432 19432 1 480394.1-101-1-101-A/G:rs75513536       8       203M    0.995073891625616       clipped nucleotides 0
+    # old_seq_info is not in available
+    #       1 19432 19432 1 480394.0-101-1-101-A/G:rs75513536       8       203M    1                       clipped nucleotides 0
+    #       1 19432 19432 1 480394.1-101-1-101-A/G:rs75513536       8       203M    0.995073891625616       clipped nucleotides 0
 
-#        1 18849 18849 -1        14086.1-110-1-497-G:C/G:rs708635        3       41S567M 0.932565789473684       clipped nucleotides 41
-#        1 19172 19172 -1        14567.1-200-1-200-T:C/T:rs806720        8       110M2I289M      0.992518703241895       clipped nucleotides 0
-#        1 19241 19241 -1        4257.1-257-1-250-G:A/G:rs380444 3       508M    0.998031496062992       clipped nucleotides 0
+    #        1 18849 18849 -1        14086.1-110-1-497-G:C/G:rs708635        3       41S567M 0.932565789473684       clipped nucleotides 41
+    #        1 19172 19172 -1        14567.1-200-1-200-T:C/T:rs806720        8       110M2I289M      0.992518703241895       clipped nucleotides 0
+    #        1 19241 19241 -1        4257.1-257-1-250-G:A/G:rs380444 3       508M    0.998031496062992       clipped nucleotides 0
     my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
 
     my ($chrom_name, $start, $end, $strand) = split(' ', $new_seq_info);
@@ -338,33 +338,32 @@ sub filter_mapping_results_dbsnp {
   }
   $fh_mappings->close();
 
-#content of $mapped could look like this:
-#3509 22 18401349 18401376 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
-#3509 22 18718507 18718506 1 3509.0-200-0-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 1
-#3509 22 18223193 18223220 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
-#3509 22 21344289 21344316 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
-#3509 22 18650965 18650992 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
+  #content of $mapped could look like this:
+  #3509 22 18401349 18401376 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
+  #3509 22 18718507 18718506 1 3509.0-200-0-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 1
+  #3509 22 18223193 18223220 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
+  #3509 22 21344289 21344316 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
+  #3509 22 18650965 18650992 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
 
-#27587 9 65226786 65226786 -1 27587.1-140-1-507-C/G:rs1838599 0.998456790123457
-#27587 9 65226786 65226786 -1 27587.0-140-1-507-C/G:rs1838599 1
+  #27587 9 65226786 65226786 -1 27587.1-140-1-507-C/G:rs1838599 0.998456790123457
+  #27587 9 65226786 65226786 -1 27587.0-140-1-507-C/G:rs1838599 1
 
-#27587 9 63022076 63022076 1 27587.1-140-1-507-C/G:rs1838599 0.970679012345679
-#27587 9 63022076 63022076 1 27587.0-140-1-507-C/G:rs1838599 0.972222222222222
+  #27587 9 63022076 63022076 1 27587.1-140-1-507-C/G:rs1838599 0.970679012345679
+  #27587 9 63022076 63022076 1 27587.0-140-1-507-C/G:rs1838599 0.972222222222222
 
-#27587 9 65795203 65795203 1 27587.1-140-1-507-C/G:rs1838599 0.976851851851852
-#27587 9 65795203 65795203 1 27587.0-140-1-507-C/G:rs1838599 0.978395061728395
+  #27587 9 65795203 65795203 1 27587.1-140-1-507-C/G:rs1838599 0.976851851851852
+  #27587 9 65795203 65795203 1 27587.0-140-1-507-C/G:rs1838599 0.978395061728395
 
-#27587 9 64741286 64741286 -1 27587.1-140-1-507-C/G:rs1838599 0.983024691358025
-#27587 9 64741286 64741286 -1 27587.0-140-1-507-C/G:rs1838599 0.984567901234568
+  #27587 9 64741286 64741286 -1 27587.1-140-1-507-C/G:rs1838599 0.983024691358025
+  #27587 9 64741286 64741286 -1 27587.0-140-1-507-C/G:rs1838599 0.984567901234568
 
-# if coords are the same, choose the one with better score --> consider allele string?
-
+  # if coords are the same, choose the one with better score --> consider allele string?
 
   foreach my $vf_id (keys %$mapped) {
     my $passed = {};
 
     foreach my $new_seq_info (keys %{$mapped->{$vf_id}}) {
-# query_name to score
+    # query_name to score
       my $query_name_to_score = $mapped->{$vf_id}->{$new_seq_info};
       my @scores = sort { $query_name_to_score->{$b} <=> $query_name_to_score->{$a} } keys(%$query_name_to_score);
       my $query_name = $scores[0];
@@ -377,7 +376,7 @@ sub filter_mapping_results_dbsnp {
 
     my $count_passed = scalar keys %$passed;
     if ($count_passed > 0) {
-# filter by score
+    # filter by score
       my $filtered = {};
       my @keys = sort {$passed->{$b} <=> $passed->{$a}} keys(%$passed);
       my $threshold = $algn_score_threshold;
@@ -389,7 +388,7 @@ sub filter_mapping_results_dbsnp {
         if ($score >= $threshold) {
           $filtered->{$result} = $score;
           my ($vf_id, $new_seq_info, $query_name) = split("\t", $result);
-# remove version for vf_id: 
+          # remove version for vf_id: 
           $query_name =~ s/\.\d+//g;
           my $line = $self->print_feature_line($query_name, $new_seq_info, $score);
           print $fh_filtered_mappings $line, "\n";
@@ -468,14 +467,14 @@ sub filter_mapping_results_alt_loci {
   while (<$fh_mappings>) {
     chomp;
     my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
-#        CHR_HSCHR1_1_CTG3 118061 118060 1       160136-150-0-150-11:5620652:5620651:1:-/ATTT:rs72401051:dbSNP:insertion 107     112H165M23H     0.503333333333333       clipped nucleotides 135
-#        CHR_HSCHR1_1_CTG3 118082 118082 1       160137-150-1-150-11:5620673:5620673:1:G/A:rs375926866:dbSNP:SNV 112     91H165M45H      0.501661129568106       clipped nucleotides 136
-#        CHR_HSCHR1_1_CTG3 118144 118144 1       160139-150-1-150-11:5620735:5620735:1:G/A:rs7952456:dbSNP:SNV   126     29H165M107H     0.501661129568106       clipped nucleotides 136
-#        CHR_HSCHR1_1_CTG3 118182 118182 1       175371-150-1-150-11:6171720:6171720:1:A/G:rs11040769:dbSNP:SNV  189     11H167M1D66M2I53M2H     0.81063122923588        clipped nucleotides 13
+    #        CHR_HSCHR1_1_CTG3 118061 118060 1       160136-150-0-150-11:5620652:5620651:1:-/ATTT:rs72401051:dbSNP:insertion 107     112H165M23H     0.503333333333333       clipped nucleotides 135
+    #        CHR_HSCHR1_1_CTG3 118082 118082 1       160137-150-1-150-11:5620673:5620673:1:G/A:rs375926866:dbSNP:SNV 112     91H165M45H      0.501661129568106       clipped nucleotides 136
+    #        CHR_HSCHR1_1_CTG3 118144 118144 1       160139-150-1-150-11:5620735:5620735:1:G/A:rs7952456:dbSNP:SNV   126     29H165M107H     0.501661129568106       clipped nucleotides 136
+    #        CHR_HSCHR1_1_CTG3 118182 118182 1       175371-150-1-150-11:6171720:6171720:1:A/G:rs11040769:dbSNP:SNV  189     11H167M1D66M2I53M2H     0.81063122923588        clipped nucleotides 13
 
-# query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
+    # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
 
-# filter old chrom name
+    # filter old chrom name
     my @query_name_components_fst_part = split('-', $query_name, 5);
     my @query_name_components_snd_part = split(':', $query_name_components_fst_part[4], 2);
     my $old_chrom_name = $query_name_components_snd_part[0];
@@ -487,10 +486,10 @@ sub filter_mapping_results_alt_loci {
       my $updated_start  = $alt_loci_start + $start - 1;
       my $updated_end    = $alt_loci_start + $end - 1;
       my $updated_seq_info = join(' ', $alt_loci_name, $updated_start, $updated_end, $strand);
-# check mappings:
+      # check mappings:
       if ($start < 150 || ($end > ($alt_loci_end - 150) ) ) {
         $mappings->{$query_name}->{$alt_loci_name}->{$updated_seq_info} = $relative_algn_score;
-#print STDERR "Edge mapping $_\n";
+      #print STDERR "Edge mapping $_\n";
       } else {
         if ($relative_algn_score >= $algn_score_threshold ) {
           $mappings->{$query_name}->{$alt_loci_name}->{$updated_seq_info} = $relative_algn_score;
@@ -527,8 +526,8 @@ sub filter_read_coverage_mapping_results {
   my $mapped = {};
   while (<$fh_mappings>) {
     chomp;
-#107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984   
-#query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
+    #107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984   
+    #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
     my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score) = split("\t", $_); 
 
     my ($id, $type) = split(':', $query_name);   
@@ -591,7 +590,7 @@ sub filter_read_coverage_mapping_results {
           }
         }
       } else {
-# compute best score over all seq_names
+        # compute best score over all seq_names
         my $seq_regions = {};
         foreach my $seq_name (keys %$filtered) {
           my $mappings = $filtered->{$seq_name};
@@ -656,7 +655,7 @@ sub filter_read_coverage_mapping_results {
       $stats_multi_map++;
     } elsif ($count_out > 5) {
       $stats_failed++;
-# $self->warning("Multi map $id count $count_out");
+    # $self->warning("Multi map $id count $count_out");
     } else {
       $stats_failed++;
     }
@@ -913,7 +912,5 @@ sub run_query {
   $sth->finish();
   return \@results;
 }
-
-
 
 1;
