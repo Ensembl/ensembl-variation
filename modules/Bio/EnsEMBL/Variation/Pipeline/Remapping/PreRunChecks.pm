@@ -35,7 +35,7 @@ use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 
-use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
 
 sub fetch_input {
@@ -101,25 +101,6 @@ sub run {
   1;
 }
 
-sub is_empty {
-  my $self = shift;
-  my $dir = shift;
-  opendir(my $dh, $dir) or die "Not a directory $dir";
-  my $count =  scalar(grep { $_ ne "." && $_ ne ".." } readdir($dh)) == 0;
-  closedir($dh);
-  return $count;
-}
-
-sub count_files {
-  my $self = shift;
-  my $dir = shift;
-  my $file_type = shift;
-  opendir(my $dh, $dir) or die "Not a directory $dir";
-  my $count = scalar(grep { $_ =~ m/\Q$file_type$/ } readdir($dh)) == 0;
-  closedir($dh);
-  return $count;
-}
-
 sub run_cmd {
   my $self = shift;
   my $cmd = shift;
@@ -133,6 +114,5 @@ sub write_output {
   my $self = shift;
   1;
 }
-
 
 1;
