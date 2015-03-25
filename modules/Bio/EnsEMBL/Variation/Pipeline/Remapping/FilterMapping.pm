@@ -84,15 +84,16 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
-  if ($self->param('mode') eq 'remap_multi_map') {
+  my $mode = $self->param('mode');
+  if ($mode eq 'remap_multi_map') {
     $self->report_failed_mappings();
     $self->filter_mapping_results_dbsnp();
     $self->join_feature_data();
-  } elsif ($self->param('mode') eq 'remap_alt_loci') {
+  } elsif ($mode eq 'remap_alt_loci') {
     $self->filter_mapping_results_alt_loci();
     $self->report_failed_mappings();
     $self->join_feature_data();
-  } elsif ($self->param('mode') eq 'remap_read_coverage') {
+  } elsif ($mode eq 'remap_read_coverage') {
     $self->report_failed_read_coverage_mappings();
     $self->filter_read_coverage_mapping_results();
     $self->join_read_coverage_data();
