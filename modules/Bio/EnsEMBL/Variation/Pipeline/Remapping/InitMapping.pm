@@ -35,7 +35,7 @@ use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path);
 
-use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
 sub fetch_input {
   my $self = shift;
@@ -64,16 +64,20 @@ sub run {
       $self->generate_remap_read_coverage_input();
     }
   } else {
-    if (!$self->param('use_fasta_files')) {
+    if ($self->param('use_fasta_files')) {
       $self->dump_features();
       $self->generate_mapping_input();
+    } else {
+      my $fasta_files_dir = $self->param('fasta_files_dir');
+      my $file_count = $self->count_files($fasta_files_dir, '.fa');
+      $self->param('file_count', $file_count);
     }
   }
 }
 
 sub write_output {
   my $self = shift;
-# initialise mapping jobs
+  # initialise mapping jobs
   my $fasta_files_dir = $self->param('fasta_files_dir');
   my $bam_files_dir   = $self->param('bam_files_dir');
   my @jobs = ();
@@ -90,12 +94,12 @@ sub write_output {
           my $bam_files_dir = "$bam_files_dir/$individual_dir/";
           push @jobs, {
             'file_number'   => $file_number,
-              'bam_files_dir' => $bam_files_dir,
-              'fasta_file'    => "$fasta_files_dir/$individual_dir/$file_number.fa",
-              'sam_file'      => "$bam_files_dir/$file_number.sam",
-              'bam_file'      => "$bam_files_dir/$file_number.bam",
-              'err_file'      => "$bam_files_dir/$file_number.err",
-              'out_file'      => "$bam_files_dir/$file_number.out",
+             'bam_files_dir' => $bam_files_dir,
+             'fasta_file'    => "$fasta_files_dir/$individual_dir/$file_number.fa",
+             'sam_file'      => "$bam_files_dir/$file_number.sam",
+             'bam_file'      => "$bam_files_dir/$file_number.bam",
+             'err_file'      => "$bam_files_dir/$file_number.err",
+             'out_file'      => "$bam_files_dir/$file_number.out",
           };
         }
       }
@@ -195,10 +199,10 @@ sub generate_mapping_input {
   my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
   $self->param('fasta_db', $fasta_db);
 
-# store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
+  # store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
   my $cdba = $self->param('cdba');
   my $sa = $cdba->get_SliceAdaptor;
-# don't include asm exceptions, fetch the full length of the Y chromosome
+  # don't include asm exceptions, fetch the full length of the Y chromosome
   my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
   my $seq_regions = {};
   foreach my $slice (@$slices) {
@@ -249,13 +253,13 @@ sub generate_mapping_input {
         }
         my ($flank_start, $upstream_flank_length, $downstream_flank_length, $flank_end, $variant_length) = @{$self->flank_coordinates($seq_region_name, $start, $end, $strand)};
 
-# variant surrounded by flank sequences
+        # variant surrounded by flank sequences
         my $query_sequence = $self->get_query_sequence($seq_region_name, $flank_start, $flank_end, $strand);
 
-# replace empty space with underscores <_>
+        # replace empty space with underscores <_>
         $allele_string =~ s/\s/_/g;
         $self->qc_alleles($query_sequence, $upstream_flank_length, $variant_length, $allele_string, $variation_name);
-#                $allele_string = $self->qc_alleles($config, $query_sequence, $upstream_flank_length, $variant_length, $allele_string, $variation_name);
+        # $allele_string = $self->qc_alleles($config, $query_sequence, $upstream_flank_length, $variant_length, $allele_string, $variation_name);
 
         my $name = "$seq_region_name:$start:$end:$strand:$variation_name";
         my $id = ">$feature_id-$upstream_flank_length-$variant_length-$downstream_flank_length-$name";
@@ -271,7 +275,7 @@ sub generate_mapping_input {
     $fh->close();
   }
 
-# store multi map
+  # store multi map
   my $fh_qc_multi_map = FileHandle->new("$pipeline_dir/multi_map.txt", 'w');
 
   foreach my $variation_name (keys %$variants_with_multi_map) {
@@ -318,7 +322,7 @@ sub flank_coordinates {
 
   $variant_length = $end - $start + 1;
 
-# if insertion
+  # if insertion
   if ($start > $end) {
     $variant_length = 0;
   }
@@ -356,10 +360,10 @@ sub qc_alleles {
 sub dump_multi_map_features {
   my $self = shift;
 
-# parse fasta files and store: rsname to fasta_file_number
-# Query_name in fasta_file >14086.1-110-1-497-G:C/G:rs708635
-# parse variation_features on ref_sequence: store variation_feature info in dump_feature/file_number
-# make a note if feature was stored
+  # parse fasta files and store: rsname to fasta_file_number
+  # Query_name in fasta_file >14086.1-110-1-497-G:C/G:rs708635
+  # parse variation_features on ref_sequence: store variation_feature info in dump_feature/file_number
+  # make a note if feature was stored
 
   my $fasta_files_dir = $self->param('fasta_files_dir');
   my $rs_id_to_file_number = {};
@@ -407,7 +411,7 @@ sub dump_multi_map_features {
       });
   $sth->execute();
 
-# QC that all necessary columns are there: e.g. seq_region_id, ...
+  # QC that all necessary columns are there: e.g. seq_region_id, ...
   my @column_names = ();
   while (my @name = $sth->fetchrow_array) {
     push @column_names, $name[0];
@@ -419,7 +423,7 @@ sub dump_multi_map_features {
   $sth->finish();
 
   my $sa = $cdba->get_SliceAdaptor;
-# don't include asm exceptions
+  # don't include asm exceptions
   my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
 
   my $seq_region_ids = {};
@@ -432,7 +436,7 @@ sub dump_multi_map_features {
 
   $sth = $dbh->prepare(qq{
       SELECT variation_name,map_weight,$column_names_concat FROM $feature_table WHERE seq_region_id = ?;
-      }, {mysql_use_result => 1});
+  }, {mysql_use_result => 1});
 
   my $vf_info_is_stored = {};
 
