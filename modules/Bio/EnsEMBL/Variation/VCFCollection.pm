@@ -69,7 +69,7 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Scalar qw(check_ref);
+use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 
@@ -450,6 +450,8 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $sample = shift;
+  
+  assert_ref($vf, 'Bio::EnsEMBL::VariationFeature');
   
   # seek to record for VariationFeature
   return [] unless $self->_seek_by_VariationFeature($vf);

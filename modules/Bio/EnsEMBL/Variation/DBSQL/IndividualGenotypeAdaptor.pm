@@ -270,7 +270,7 @@ sub fetch_all_by_Variation {
       my $vf = $variation->get_all_VariationFeatures->[0];
       @$cached =
         map {@{$_->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)}}
-        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
     }
     if($use_vcf <= 1) {
       push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation_id)};
