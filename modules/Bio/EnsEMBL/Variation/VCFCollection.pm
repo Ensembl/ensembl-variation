@@ -644,7 +644,7 @@ sub _create_IndividualGenotypeFeatures {
     
     # reverse complement alleles if VF is on -ve strand
     if(($vf->{strand} || $vf->seq_region_strand || 1) < 0) {
-      reverse_comp($$_) for @bits
+      reverse_comp(\$_) for @bits
     }
     
     # adjust alleles for non-SNVs
