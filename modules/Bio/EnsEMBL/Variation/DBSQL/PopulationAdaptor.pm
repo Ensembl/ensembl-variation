@@ -846,7 +846,7 @@ sub _tables {
 }
 
 sub _columns {
-    return qw(p.population_id p.name p.size p.description p.collection p.freqs_from_gts p.display dg.display_priority dg.display_name);
+    return qw(p.population_id p.name p.size p.description p.collection p.freqs_from_gts p.display dg.display_name dg.display_priority);
 }
 
 sub _left_join {

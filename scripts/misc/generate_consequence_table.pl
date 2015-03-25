@@ -54,30 +54,12 @@ if (!$output_file) {
   usage();
 }
 
-usage() if ($help);
+if (!$web_colour_file || !-e $web_colour_file) {
+  print "> Error! Please give a valid colour file name using the option '-colour_file'\n";
+  usage();
+}
 
-my %colour = (
-  'Essential splice site'  => 'coral',
-  'Stop gained'            => '#F00',
-  'Stop lost'              => '#F00', 
-  'Complex in/del'         => 'mediumspringgreen',
-  'Frameshift coding'      => 'hotpink', 
-  'Non synonymous coding'  => 'gold',
-  'Splice site'            => 'coral',
-  'Partial codon'          => 'magenta',
-  'Synonymous coding'      => '#76EE00',
-  'Coding unknown'         => '#458B00',
-  'Within mature miRNA'    => '#458B00',
-  '5prime UTR'             => '#7AC5CD',
-  '3prime UTR'             => '#7AC5CD',
-  'Intronic'               => '#02599C',
-  'NMD transcript'         => 'orangered',
-  'Within non coding gene' => 'limegreen',
-  'Upstream'               => '#A2B5CD',
-  'Downstream'             => '#A2B5CD',
-  'Regulatory region'      => '#4DFEB8',
-  'Intergenic'             => '#636363',
-);
+usage() if ($help);
 
 my $SO_BASE_LINK = 'http://www.sequenceontology.org/miso/current_release/term';
 
@@ -85,32 +67,20 @@ my $SO_BASE_LINK = 'http://www.sequenceontology.org/miso/current_release/term';
 my %cons_rows;
 my %consequences;
 my %consequences_rank;
-
-
-# If you want to use directly the colours from the web colours configuration file
-# instead of the almost-up-to-date-colour-hash above.
-# Usually, you can find the colour configuration file in:
-# ensembl-webcode/conf/ini-files/COLOUR.ini
-if (defined($web_colour_file)) {
-  %colour = get_colours_from_web();
-}
+my %colour = get_colours_from_web();
 
 
 for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
-    my $display_term = $cons_set->{display_term};
-    my $so_term      = $cons_set->{SO_term};
-    my $so_acc       = $cons_set->{SO_accession};
-    my $ens_label    = $cons_set->{label};
-    my $so_desc      = $cons_set->{description};
-    my $rank         = $cons_set->{rank};
-
-    $display_term = $ens_label if (!defined($display_term));
-    $display_term = display_term_for_web($display_term);
+    my $so_term  = $cons_set->{SO_term};
+    my $so_acc   = $cons_set->{SO_accession};
+    my $so_label = $cons_set->{label};
+    my $so_desc  = $cons_set->{description};
+    my $rank     = $cons_set->{rank};
 
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
-    my $row = "$so_term|$so_desc|$so_acc|$display_term";
+    my $row = "$so_term|$so_desc|$so_acc|$so_label";
 
     $cons_rows{$row} = $rank;  
 }
@@ -118,7 +88,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 my $cons_table = 
     qq{<table id="consequence_type_table" class="ss">\n  <tr>\n    <th style="width:5px;padding-left:0px;padding-right:0px;text-align:center">*</th>\n    <th>}.
-    (join qq{</th>\n    <th>}, 'SO term', 'SO description', 'SO accession', 'Old Ensembl term').
+    (join qq{</th>\n    <th>}, 'SO term', 'SO description', 'SO accession', 'Display term').
     qq{</th>\n  </tr>\n};
 
 my $bg = '';
@@ -183,16 +153,6 @@ sub get_colours_from_web {
   }
   close(F);
   return (scalar(keys(%webcolours))) ? %webcolours : %colour;
-}
-
-sub display_term_for_web {
-  my $term = shift;
-  $term = ucfirst(lc($term));
-  $term =~ s/_/ /g;
-  $term =~ s/Nmd /NMD /g;
-  $term =~ s/ utr/ UTR/g;
-  $term =~ s/rna/RNA/g;
-  return $term;
 }
 
 

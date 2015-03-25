@@ -1066,7 +1066,7 @@ CREATE TABLE structural_variation (
 	copy_number TINYINT(2) DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_id),
-  KEY name_idx (variation_name),
+  UNIQUE (variation_name),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id)
@@ -1805,12 +1805,10 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '79');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '80');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|change the column attrib_type_id by attrib_id in the variation_attrib table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_c.sql|Store more detailed Sift information');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_b.sql|create a unique key for the variation_name column in the table structural_variation');
 
 
 /**

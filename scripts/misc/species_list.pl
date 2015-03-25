@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$user,$port,$help);
+my ($e_version,$html_file,$hlist,$phost,$user,$port,$help);
 ## EG options
 my ($site, $etype);
 
@@ -46,6 +46,7 @@ GetOptions(
      'o=s'     => \$html_file,
      'help!'   => \$help,
      'hlist=s' => \$hlist,
+     'phost=s' => \$phost,
      'user=s'  => \$user,
      'port=i'  => \$port,
      'site=s'  => \$site,
@@ -85,6 +86,7 @@ my $pswd = "";
 my $db_type = 'variation';
 my $default_port = 3306;
 $port ||= $default_port;
+my $p_version = $e_version-1;
 
 my $html;
    
@@ -140,6 +142,20 @@ foreach my $hostname (@hostnames) {
     my $count_var = $sth2->fetchrow_array;
     $sth2->finish;
     $species_list{$s_name}{'count'} = round_count($count_var);
+
+
+    # Previous database
+    my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
+    my $sth3 = get_connection_and_query($database, $phost, $sql3);
+    my $p_dbname = $sth3->fetchrow_array;
+
+    if ($p_dbname) {
+      # Previous sources
+      my $sth4 = get_connection_and_query($p_dbname, $phost, $sql2);
+      my $count_p_var = $sth4->fetchrow_array;
+      $sth4->finish;
+      $species_list{$s_name}{'p_count'} = round_count_diff($count_var-$count_p_var);
+    }
   }
 }
 
@@ -155,9 +171,19 @@ my $th_border_left = qq{style="border-left:1px solid #DDD"};
 my $data_tables_header  = join("</th><th $th_border_left>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
 my $data_columns_header = join("</th><th $th_border_left>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
 
-my $html_content = qq{<table class="ss" style="width:auto"><tr class="ss_header"><th>Species</th><th $th_border_left>Sequence variant count</th>
-                      <th $th_border_left>$data_tables_header</th><th $th_border_left>$data_columns_header</th></tr>
-                     };
+my $html_content = qq{
+  <table class="ss" style="width:auto">
+    <tr class="ss_header">
+      <th>Species</th>
+      <th $th_border_left>Sequence variant count</th>
+      <th style="padding-left:0px">
+        <span class="_ht conhelp" title="Sequence variant count difference with the previous Ensembl release (v.$p_version)">
+          <small>(e!$e_version vs e!$p_version)</small>
+        </span>
+      </th>
+      <th $th_border_left>$data_tables_header</th>
+      <th $th_border_left>$data_columns_header</th>
+    </tr>};
 my $bg = '';
 
 foreach my $sp (sort keys(%species_list)) {
@@ -166,6 +192,7 @@ foreach my $sp (sort keys(%species_list)) {
   my $uc_sp = ucfirst($sp);      
   my $img_src = "/i/species/48/$uc_sp.png";
   my $var_count = $species_list{$sp}{'count'};
+  my $var_p_count = $species_list{$sp}{'p_count'};
   
   $html_content .= qq{
   <tr$bg style="vertical-align:middle">
@@ -183,7 +210,8 @@ foreach my $sp (sort keys(%species_list)) {
         <div style="clear:both"></div>
       </div>
     </td>
-    <td style="text-align:right">$var_count</td>\n};
+    <td style="text-align:right">$var_count</td>
+    <td style="text-align:right">$var_p_count</td>\n};
   
   # Tables
   foreach my $type (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)) {
@@ -288,6 +316,51 @@ sub round_count {
   return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
 }
 
+sub round_count_diff {
+  my $count = shift;
+  my $type = 'variants';
+
+  my ($count_label,$colour,$symbol,$label);
+
+  if ($count == 0) {
+    return '-';
+  }
+  elsif ($count > 0) {
+    $colour = '#090';
+    $symbol = '+';
+    $label  = 'more'
+  }
+  else {
+    $colour = '#900';
+    $symbol = '-';
+    $label  = 'less';
+  }
+  # From 1 to 9.9 million
+  if ($count =~ /^(\d)(\d)\d{5}$/) {
+    my $number = ($2!=0) ? "$1.$2" : $1;
+    $count = "$number million";
+    $count_label = "Over $count $label $type";
+  }
+  # From 10 million
+  elsif ($count =~ /^(\d+)\d{6}$/) {
+    my $number = $1;
+    $count = "$number million";
+    $count_label = "Over $count $label $type";
+  }
+  # From 1,000 to 999,999
+  elsif ($count =~ /^(\d+)\d{3}$/) {
+    $count = "$1,000";
+    $count_label = "Over $count $label $type";
+  }
+  # From 1 to 999
+  else {
+    $count =~ /(\d+)$/;
+    $count = $1;
+    $count_label = "$count $label $type";
+  }
+  return qq{<span style="color:$colour" title="$count_label"><small>($symbol$count)</small></span>};
+}
+
 
 
 # Get the list of species where the given tables are populated
@@ -371,8 +444,9 @@ sub usage {
     -o              An HTML output file name (Required)      
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -user           MySQL user name (Required)
-    -pass           MySQL password. 3306 by default (optional)
+    -port           MySQL port. 3306 by default (optional)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";

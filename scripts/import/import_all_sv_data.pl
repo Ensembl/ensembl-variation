@@ -1416,12 +1416,8 @@ sub decode_text {
 sub pre_processing {
 
   debug(localtime()." Prepare the structural variation tables by adding temporary keys and columns");
-  debug(localtime()."\t - Add temporary unique keys in $sv_table, $svf_table and $svs_table tables");
+  debug(localtime()."\t - Add temporary unique keys in $svf_table and $svs_table tables");
   
-  # Prepare the structural_variation table
-  if ($dbVar->do(qq{SHOW KEYS FROM $sv_table WHERE Key_name='name_key';}) < 1){
-    $dbVar->do(qq{ALTER TABLE $sv_table ADD CONSTRAINT UNIQUE KEY `name_key` (`variation_name`)});
-  }
   
   # Prepare the structural_variation_feature table
   if ($dbVar->do(qq{SHOW KEYS FROM $svf_table WHERE Key_name='name_coord_key';}) < 1){
@@ -1700,9 +1696,6 @@ sub cleanup {
   debug(localtime()."\t - Table individual: cleaned");
   
   # structural_variation table
-  
-  # Drop a unique constraint in structural_variation
-  $dbVar->do(qq{ALTER TABLE $sv_table DROP KEY name_key});
   
   my $sv_flag = 0;
   # Column tmp_class_name" in structural_variation

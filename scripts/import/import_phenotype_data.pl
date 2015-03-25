@@ -53,9 +53,9 @@ my %SOURCES = (
     type => "Variation",
   },
   
-  "NHGRI_GWAS_catalog" => {
-    description => "Variants associated with phenotype data from the NHGRI GWAS catalog",
-    url => "http://www.genome.gov/gwastudies/",
+  "NHGRI-EBI GWAS catalog" => {
+    description => "Variants associated with phenotype data from the NHGRI-EBI GWAS catalog",
+    url => "http://www.ebi.ac.uk/gwas/",
     set => "ph_nhgri",
     type => "Variation",
   },
@@ -245,7 +245,7 @@ if ($source =~ m/uniprot/i) {
 }
 elsif ($source =~ m/nhgri/i) {
   $result = parse_nhgri($infile);
-  $source_name = 'NHGRI_GWAS_catalog';
+  $source_name = 'NHGRI-EBI GWAS catalog';
 }
 elsif($source =~ /omim.*gene/i) {
   #die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
@@ -535,10 +535,10 @@ sub parse_nhgri {
     my $gene           = ($content[13] =~ /\?/) ? '' : $content[13];
     my $rs_risk_allele = ($content[20] =~ /\?/) ? '' : $content[20];
     my $rs_id          = $content[21];
-    my $risk_frequency = ($content[20] ne '') ? $content[26] : '';
-    my $pvalue         = ($content[27] ne '') ? $content[27] : '';
-    my $ratio          = $content[30];
-    my $ratio_info     = $content[31];
+    my $risk_frequency = ($content[20] ne '') ? $content[25] : '';
+    my $pvalue         = ($content[26] ne '') ? $content[26] : '';
+    my $ratio          = $content[28];
+    my $ratio_info     = $content[29];
 
     if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\?|\w+)\s*$/i) {
       $rs_risk_allele = $1;
@@ -804,7 +804,7 @@ sub parse_ega {
     $nhgri_check_sth->fetch();
     
     if (!defined($nhgri_study_id)) {
-      print "No NHGRI study found for the EGA $name | $pubmed !\n";
+      print "No NHGRI-EBI study found for the EGA $name | $pubmed !\n";
       next;
     }
     
@@ -2365,7 +2365,7 @@ sub usage {
       -cport     Core database port (Default: 3306)
       
     An input file must be specified. This file contains the data that will be imported, typically tab-delimited
-    and obtained from the UniProt or NHGRI GWAS catalog. If a new source is required, a method for parsing the
+    and obtained from the UniProt or NHGRI-EBI GWAS catalog. If a new source is required, a method for parsing the
     source format into a "standard" data structure can be added.
     
       -infile          Typically a tab-delimited file (Required)

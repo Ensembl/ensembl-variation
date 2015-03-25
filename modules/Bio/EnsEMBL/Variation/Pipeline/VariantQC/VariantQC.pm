@@ -467,7 +467,7 @@ sub export_data_adding_allele_string{
       next if defined $found_minor{$l->[2]} && $found_minor{$l->[2]} ==1;
       $found_minor{$l->[2]} =1; 
 
-      $potentially_no_minor{$l->[2]} = 1 if  $l->[18] ==0.5;
+      $potentially_no_minor{$l->[2]} = 1 if defined $l->[18] &&  $l->[18] ==0.5;
 
       $map_count{$l->[0]}++;
       my %save;
@@ -578,7 +578,7 @@ sub export_allele_data{
 	   
        }
 
-       push @{$save{$l->[0]}{allele_data}}, [$l->[2], $l->[3], $l->[4], $l->[5], $l->[6], $l->[7], $l->[8], $l->[9] , $l->[10] ];
+       push @{$save{$l->[0]}{allele_data}}, [$l->[2], $l->[3], $l->[4], $l->[5], $l->[6], $l->[7], $l->[8], $l->[9] ];
 
 
   }
@@ -777,7 +777,7 @@ sub write_variation{
     ## some variants are assigned 2 minor alleles
     next if defined $minor_allele{$v->[0]} ;
 
-    $potentially_no_minor{$v->[0]} = 1 if  $v->[7] ==0.5;
+    $potentially_no_minor{$v->[0]} = 1 if defined  $v->[7] && $v->[7] ==0.5;
      
     $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]} ; ## update non-flipped with 0
 
@@ -851,8 +851,8 @@ sub write_allele{
     
       $allele_new_ins_sth->execute(  $allele->[0], $var, $allele->[1], $code->{$allele->[2]}, $allele->[3], $allele->[4], $allele->[5], $allele->[6]) || die "ERROR inserting allele info\n";
 
-      push @{$allele_fails->{11}}, $allele->[0] if defined  $fail_exp->{ $allele->[1]}->{$allele->[4]};
-
+      push @{$allele_fails->{11}}, $allele->[0] if defined $allele->[4] &&
+         defined  $fail_exp->{ $allele->[1]}->{$allele->[4]};
 
     }
   }

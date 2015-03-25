@@ -139,10 +139,15 @@ my %data_type_example = (
 ##############
 ### Header ###
 ##############
-my $html_header = qq{
+my $html_header = q{
 <html>
 <head>
   <title>Variation Sources</title>
+  <script type="text/javascript">
+    window.onload = function() {
+      $('.conhelp').helptip({'track': true});
+    };
+  </script>
 </head>
 
 <body>
@@ -721,7 +726,7 @@ sub create_menu {
           <td style="padding-top:4px;text-align:center">
             <span style="background-color:$lm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
-          <td style="padding-top:4px">greater than 1 million</td>
+          <td style="padding-top:4px">greater than 10 million</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
@@ -847,7 +852,7 @@ sub table_header {
   my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
   my $header_col = qq{
     <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">
-       <span class="_ht ht" title="$alt_text">Other</span>
+       <span class="_ht conhelp" title="$alt_text">Other</span>
     </th>};
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';

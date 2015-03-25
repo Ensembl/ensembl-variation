@@ -1033,10 +1033,12 @@ sub dbSNP_annotations{
     ## This is no longer run - ClinVar export has more information
     #debug(localtime() . "\tStarting clin_sig");
     #$self->clin_sig;
-    debug(localtime() . "\tStarting MAF");
-    $self->minor_allele_freq;
-    debug(localtime() . "\tStarting suspect SNP");
-    $self->suspect_snps;   
+    if($self->{'dbm'}->dbCore()->species =~ /homo/i){
+      debug(localtime() . "\tStarting MAF");
+      $self->minor_allele_freq;
+      debug(localtime() . "\tStarting suspect SNP");
+      $self->suspect_snps;   
+    }
     debug(localtime() . "\tStarting named variants");
     $self->named_variants;
     debug(localtime() . "\tFinished variation table with dbSNP annotations");
@@ -1051,7 +1053,6 @@ sub subsnp_synonyms{
 
     my $self = shift;
     my $logh = $self->{'log'};
-    my $is_pg = 1 if $self->{source_engine} =~/pg|postgreSQL/i ;
 
    # create a temp table of subSNP info
     
@@ -1080,7 +1081,7 @@ sub subsnp_synonyms{
 	            subsnp_id ASC  
 	         };
     }
-   dumpSQL($self->{'dbSNP'},$stmt, $is_pg) ; 
+   dumpSQL($self->{'dbSNP'},$stmt,  $self->{source_engine} ) ; 
    create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null", "refsnp_id v* not_null", "substrand_reversed_flag i", "moltype", "allele_id i");
   
   print $logh Progress::location(); 
@@ -1264,7 +1265,7 @@ sub population_table {
 		  $self->{'dbSNP_share_db'}.PopClassCode
                };
     }
-  dumpSQL($self->{'dbSNP'},$stmt);
+  dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine} );
 
   load($self->{'dbVar'}, 'population', 'name', 'pop_class_id', 'description');
   $self->{'dbVar'}->do(qq{ALTER TABLE population ADD INDEX pop_class_id (pop_class_id)}); 
@@ -1304,7 +1305,7 @@ sub population_table {
 	      pc.pop_class_id ASC,
 	      pl.line_num ASC
             };	 #table size is small, so no need to change
-    dumpSQL($self->{'dbSNP'},$stmt);
+    dumpSQL($self->{'dbSNP'}, $stmt,  $self->{source_engine} );
 
     debug(localtime() . "\tLoading population data");
 
@@ -1857,6 +1858,7 @@ sub  update_allele_schema{
                           PRIMARY KEY (allele_id),
                           KEY subsnp_idx (subsnp_id),
                           KEY variation_idx (variation_id))
+                          engine=MyISAM
                         ]);  
 
   ## disable keys for quick loading
@@ -2058,7 +2060,7 @@ sub flanking_sequence_table {
 			     };
 		}
 		
-		dumpSQL($self->{'dbSNP'}, $stmt);
+		dumpSQL($self->{'dbSNP'}, $stmt,  $self->{source_engine} );
   
   
 		$self->{'dbVar'}->do(qq{CREATE TABLE tmp_seq_$type\_$partition (
@@ -2120,7 +2122,7 @@ sub flanking_sequence_table {
 		       sorting_id ASC  
 		    };
        }
-      dumpSQL($self->{'dbSNP'},$stmt);
+      dumpSQL($self->{'dbSNP'},$stmt,  $self->{source_engine} );
       
   
       $self->{'dbVar'}->do(qq{CREATE TABLE tmp_seq_$type (
@@ -2391,6 +2393,10 @@ sub parallelized_individual_genotypes {
 
  #Get the create statement for tmp_individual_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
   my $ind_gty_stmt = get_create_statement($genotype_table,$self->{'schema_file'});
+  ## set default db engine
+  $ind_gty_stmt =~ s/\;//;
+  $ind_gty_stmt .= " ENGINE = MyISAM ;" ;
+
  
   my $failure_recovery ;   ## set to allow re-running of individual export jobs after memory failure
 

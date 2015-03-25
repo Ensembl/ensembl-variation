@@ -74,7 +74,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(within_cds within_intron stop_lost affects_start_codon frameshift stop_retained);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within_intron stop_lost affects_start_codon frameshift stop_retained);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
@@ -242,21 +242,27 @@ sub peptide {
                 $pep .= $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
             }
             
-            # selenocysteines?
+            # apply any seq edits?
             if($self->{is_reference}) {
               my $tv = $self->transcript_variation;
-              my $cs_positions = $tv->_selenocysteine_positions;
+              my $seq_edits = $tv->_seq_edits;
               
-              if(scalar @$cs_positions) {
-                my $pep_pos = 0;
+              if(scalar @$seq_edits) {
                 
-                for my $tr_pos($tv->translation_start..$tv->translation_end) {
-                  if(grep {$tr_pos == $_} @$cs_positions) {
-                    substr($pep, $pep_pos, 1) = 'U';
-                  }
+                # get TV coords, switch if necessary
+                my ($tv_start, $tv_end) = ($tv->translation_start, $tv->translation_end);
+                ($tv_start, $tv_end) = ($tv_end, $tv_start) if $tv_start > $tv_end;
+                
+                # get all overlapping seqEdits
+                foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
+                  my ($se_start, $se_end, $alt) = ($se->start, $se->end, $se->alt_seq);
                   
-                  $pep_pos++;
-                  last if $pep_pos >= length($pep);
+                  # loop over each overlapping pos
+                  foreach my $tv_pos(grep {overlap($_, $_, $se_start, $se_end)} ($tv_start..$tv_end)) {
+                    
+                    # apply edit, adjusting for string position
+                    substr($pep, $tv_pos - $tv_start, 1) = substr($alt, $tv_pos - $se_start, 1);
+                  }
                 }
               }
             }

@@ -314,8 +314,9 @@ sub add_chip_info{
 
 
     ## set up default menus first
-    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#variation_feature_variation#dbsnp");
-    $meta_ins_sth->execute('\N', "web_config", "menu#dbSNP#dbsnp# ");
+    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#variation_feature_variation#variants");
+    $meta_ins_sth->execute('\N', "web_config", "source#dbSNP variants#variation_feature_variation_dbSNP#variants");
+    $meta_ins_sth->execute('\N', "web_config", "menu#Sequence variants#variants#");
     $meta_ins_sth->execute('\N', "web_config", "menu#Failed variants#failed#");
 
 

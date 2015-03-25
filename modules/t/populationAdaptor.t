@@ -52,6 +52,10 @@ is($population->name, 'CSHL-HAPMAP:HapMap-CEU', "Name for default LD population"
 $population = $pa->fetch_by_dbID(649);
 is($population->name, 'PERLEGEN:AFD_EUR_PANEL', "Fetch by dbID 649");
 
+$population = $pa->fetch_by_dbID(102186);
+is($population->display_group_name, '1000 Genomes Project Phase 1', "Display group name for dbID fetch");
+
+
 # fetch_all_by_dbID_list
 my $list = [101082, 101083];
 $populations = $pa->fetch_all_by_dbID_list($list);
@@ -65,6 +69,7 @@ my @individual_dbids = (101495, 101096);
 my $individual = $ia->fetch_by_dbID($individual_dbids[0]);
 $populations = $pa->fetch_all_by_Individual($individual);
 is(scalar @$populations, 3, "Number of populations for individual HG01625");
+is($populations->[0]->display_group_name, '1000 Genomes Project Phase 1', "Display group name for individual HG01625's population");
 
 # fetch_all_by_Individual_list
 my $individuals = [];
@@ -77,6 +82,7 @@ is(scalar @$populations, 6, "Number of populations for individuals HG01625 and H
 # fetch_by_name
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_IBS');
 is($population->name, '1000GENOMES:phase_1_IBS', "Fetch by name 1000GENOMES:phase_1_IBS");
+is($population->display_group_name, '1000 Genomes Project Phase 1', "Display group name for 1000GENOMES:phase_1_IBS");
 
 # fetch_all_by_name_search
 $populations = $pa->fetch_all_by_name_search('1000GENOMES');
