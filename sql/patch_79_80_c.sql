@@ -1,0 +1,96 @@
+
+# change the transcript_variation & variation_feature tables to add new consequence protein_altering_variant
+##################
+
+
+ALTER TABLE variation_feature MODIFY consequence_types SET (
+        'intergenic_variant',
+        'splice_acceptor_variant',
+        'splice_donor_variant',
+        'stop_lost',
+        'coding_sequence_variant',
+        'missense_variant',
+        'stop_gained',
+        'synonymous_variant',
+        'frameshift_variant',
+        'non_coding_transcript_variant',
+        'non_coding_transcript_exon_variant',
+        'mature_miRNA_variant',
+        'NMD_transcript_variant',
+        '5_prime_UTR_variant',
+        '3_prime_UTR_variant',
+        'incomplete_terminal_codon_variant',
+        'intron_variant',
+        'splice_region_variant',
+        'downstream_gene_variant',
+        'upstream_gene_variant',
+        'initiator_codon_variant',
+        'stop_retained_variant',
+        'inframe_insertion',
+        'inframe_deletion',
+        'transcript_ablation',
+        'transcript_fusion',
+        'transcript_amplification',
+        'transcript_translocation',
+        'TFBS_ablation',
+        'TFBS_fusion',
+        'TFBS_amplification',
+        'TFBS_translocation',
+        'regulatory_region_ablation',
+        'regulatory_region_fusion',
+        'regulatory_region_amplification',
+        'regulatory_region_translocation',
+        'feature_elongation',
+        'feature_truncation',
+        'regulatory_region_variant',
+        'TF_binding_site_variant',
+        'protein_altering_variant'
+    ) DEFAULT 'intergenic_variant' NOT NULL;
+
+
+
+ALTER TABLE transcript_variation MODIFY consequence_types SET (
+                                            'splice_acceptor_variant',
+                                            'splice_donor_variant',
+                                            'stop_lost',
+                                            'coding_sequence_variant',
+                                            'missense_variant',
+                                            'stop_gained',
+                                            'synonymous_variant',
+                                            'frameshift_variant',
+                                            'non_coding_transcript_variant',
+                                            'non_coding_transcript_exon_variant',
+                                            'mature_miRNA_variant',
+                                            'NMD_transcript_variant',
+                                            '5_prime_UTR_variant',
+                                            '3_prime_UTR_variant',
+                                            'incomplete_terminal_codon_variant',
+                                            'intron_variant',
+                                            'splice_region_variant',
+                                            'downstream_gene_variant',
+                                            'upstream_gene_variant',
+                                            'initiator_codon_variant',
+                                            'stop_retained_variant',
+                                            'inframe_insertion',
+                                            'inframe_deletion', 
+                                            'transcript_ablation',
+                                            'transcript_fusion',
+                                            'transcript_amplification',
+                                            'transcript_translocation',
+                                            'TFBS_ablation',
+                                            'TFBS_fusion',
+                                            'TFBS_amplification',
+                                            'TFBS_translocation',
+                                            'regulatory_region_ablation',
+                                            'regulatory_region_fusion',
+                                            'regulatory_region_amplification',
+                                            'regulatory_region_translocation',
+                                            'feature_elongation',
+                                            'feature_truncation',
+                                            'protein_altering_variant'
+                                        );
+
+
+# patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_b.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant');
+
