@@ -40,10 +40,13 @@ sub default_options {
         hive_force_init         => 1,
         hive_use_param_stack    => 0,
         hive_use_triggers       => 0,
+        hive_auto_rebalance_semaphores => 0,  # do not attempt to rebalance semaphores periodically by default
+        hive_no_init            => 0, # setting it to 1 will skip pipeline_create_commands (useful for topping up)
         hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
         hive_db_port            => 3306,
         hive_db_user            => 'ensadmin',
+        hive_db_host            => 'ens-variation',
         debug                   => 0,
         use_fasta_files         => 0,
         flank_seq_length        => 150,
