@@ -451,7 +451,7 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   my $vf = shift;
   my $sample = shift;
   
-  assert_ref($vf, 'Bio::EnsEMBL::VariationFeature');
+  assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
   # seek to record for VariationFeature
   return [] unless $self->_seek_by_VariationFeature($vf);
