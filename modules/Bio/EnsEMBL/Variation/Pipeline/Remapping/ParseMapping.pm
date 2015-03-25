@@ -55,7 +55,6 @@ sub run {
   }
 }
 
-
 sub parse_read_location {
   my $self = shift;
   my $sam                = $self->param('sam');
@@ -100,7 +99,6 @@ sub parse_read_location {
   $fh_failed_mappings->close();
 
 }
-
 
 sub parse_variation_location {
   my $self = shift;
@@ -151,7 +149,7 @@ sub parse_variation_location {
     } 
 
     my $vf;
-# old seq info
+    # old seq info
     my $old_seq_info = '';
     if ($compare_locations) {	
       eval {$vf = $vfa->fetch_by_dbID($vf_id);};
@@ -164,8 +162,8 @@ sub parse_variation_location {
       my $strand          = $vf->strand;
       $old_seq_info = join(" ", ($seq_region_name, $vf_start, $vf_end, $strand));
     }
-# new seq info	
-    my $new_seq_info    = join(" ", ($alignment->seq_id, $snp_t_start, $snp_t_end, $q_strand));
+    # new seq info	
+    my $new_seq_info = join(" ", ($alignment->seq_id, $snp_t_start, $snp_t_end, $q_strand));
 
     my $cigar                 = $alignment->cigar_str;
     my $edit_distance         = $alignment->aux_get("NM");
@@ -218,9 +216,9 @@ sub map_variant {
     $t_start = $t_start - $q_start + 1;
     $q_start = 1;	 
   } else {
-# warn
-#        next;
-# return
+    # warn
+    #        next;
+    # return
   }	
   my $snp_q_pos = $length_before_var;			
 
@@ -284,7 +282,7 @@ sub map_variant {
 sub test_all_variants_are_mapped {
   my $self = shift;
   my ($fasta_file, $map_weights) = @_;
-# test same number ids as in input fasta file
+  # test same number ids as in input fasta file
   my $input_ids = {};
   my $fh_fasta_file = FileHandle->new($fasta_file, 'r');
   while (<$fh_fasta_file>) {
@@ -352,7 +350,7 @@ sub count_number_of_ns_in_clipped_seq {
     } elsif ($operation eq 'I') {
       $pos_in_query_seq += $count;                    
     } elsif ($operation eq 'D') {
-# no change in position
+    # no change in position
     }
   }
   return $count_ns; 
@@ -363,7 +361,7 @@ sub get_query_sequences {
   my $alignments = shift;
   my $map_weights = shift;
   my $query_sequences;	
-# to save space BWA abbreviates sequences for query sequences that map multiple times:
+  # to save space BWA abbreviates sequences for query sequences that map multiple times:
   foreach my $alignment (@$alignments) {
     my $query_name = $alignment->query->name;
     if ($map_weights->{$query_name} > 1 ) {
@@ -385,7 +383,7 @@ sub write_output {
   $self->dataflow_output_id({
       'fh_mappings'        => $self->param('fh_mappings'),
       'fh_failed_mappings' => $self->param('fh_failed_mappings'),
-      }, 1);	
+  }, 1);	
 }
 
 1;
