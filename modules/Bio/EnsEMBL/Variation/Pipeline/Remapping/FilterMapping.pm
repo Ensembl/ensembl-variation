@@ -193,6 +193,7 @@ sub report_failed_mappings {
 }
 
 sub get_seq_region_names {
+  my $self = shift;
   my $coord = shift;
   my $cdba = $self->param('cdba');  
   my $seq_region_names = {};
@@ -204,6 +205,7 @@ sub get_seq_region_names {
 }
 
 sub get_old_chrom_name {
+  my $self = shift;
   my $query_name = shift;
   my @query_name_components_fst_part = split('-', $query_name, 5);
   my @query_name_components_snd_part = split(':', $query_name_components_fst_part[4], 2);
@@ -216,7 +218,7 @@ sub filter_mapping_results {
   my $algn_score_threshold = $self->param('algn_score_threshold');
   my $use_prior_info = $self->param('use_prior_for_filtering');
   my $map_to_chrom_only = $self->param('map_to_chrom_only');
-  my $chroms = get_seq_region_names('chromosome') if ($map_to_chrom_only);
+  my $chroms = $self->get_seq_region_names('chromosome') if ($map_to_chrom_only);
 
   my $file_mappings = $self->param('file_mappings');
   my $fh_mappings = FileHandle->new($file_mappings, 'r');
@@ -227,7 +229,7 @@ sub filter_mapping_results {
   my $multi_map_all = {};
   my $multi_map_same_chrom = {};
 
-  my ($stats_unique_map, $stats_multi_map, $stats_failed_poor_score, $stats_unique_map_after_filter, $stats_multi_map_after_filter, $stats_failed_after_filter);
+  my ($stats_unique_map, $stats_multi_map, $stats_failed_poor_score, $stats_unique_map_after_filter, $stats_multi_map_after_filter, $stats_failed_after_filter, $stats_failed_non_chrom);
 
   while (<$fh_mappings>) {
     chomp;
@@ -235,7 +237,7 @@ sub filter_mapping_results {
     #query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
     #filter old chrom name
 
-    my $old_chrom_name = get_old_chrom_name($query_name) if ($use_prior_info);    
+    my $old_chrom_name = $self->get_old_chrom_name($query_name) if ($use_prior_info);    
 
     my ($chrom_name, $start, $end, $strand) = split(' ', $new_seq_info);
     if ($map_weight > 1) {
@@ -262,8 +264,7 @@ sub filter_mapping_results {
   my $count_multi_map_all        = scalar keys %$multi_map_all;
   my $count_multi_map_same_chrom = scalar keys %$multi_map_same_chrom;
 
-  my $diff = $count_multi_map_all - $count_multi_map_same_chrom;
-  $stats_failed += $diff;
+  my $stats_failed_non_chrom = $count_multi_map_all - $count_multi_map_same_chrom;
 
   my $multi_map_working = ($use_prior_info) ? $multi_map_same_chrom : $multi_map_all;
   my $filtered_multi_map = {};
@@ -316,6 +317,7 @@ sub filter_mapping_results {
   $self->param('stats_multi_map_after_filter', $stats_multi_map_after_filter);
   $self->param('stats_failed_poor_score', $stats_failed_poor_score);
   $self->param('stats_failed_after_filter', $stats_failed_after_filter);
+  $self->param('stats_failed_non_chrom', $stats_failed_non_chrom);
 
   $fh_filtered_mappings->close();
 
@@ -694,7 +696,7 @@ sub write_statistics {
   my $file_statistics = $self->param('file_statistics');
   my $fh_statistics = FileHandle->new($file_statistics, 'w');
 
-  foreach my $stats (qw/count_input_ids pre_count_unmapped pre_count_mapped stats_failed stats_unique_map stats_multi_map stats_unique_map_after_filter stats_multi_map_after_filter stats_failed_poor_score stats_failed_after_filter/) {
+  foreach my $stats (qw/count_input_ids pre_count_unmapped pre_count_mapped stats_failed stats_unique_map stats_multi_map stats_unique_map_after_filter stats_multi_map_after_filter stats_failed_poor_score stats_failed_after_filter stats_failed_non_chrom/) {
     if ($self->param($stats)) {
       my $count = $self->param($stats);
       print $fh_statistics "$stats=$count\n";
