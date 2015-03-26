@@ -35,12 +35,7 @@ our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
 
 our $MAX_ATTRIB_CODE_LENGTH = 20;
 
-our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hce_chb
-                      1kg_hce_chd 1kg_hce_jpt 1kg_hce_lwk 1kg_hce_tsi 1kg_hce_yri 1kg_lc
-	                      1kg_lc_ceu 1kg_lc_chb_jpt 1kg_lc_yri 1kg_hq hapmap
-                      1kg 1kg_afr 1kg_amr 1kg_asn 1kg_eur 1kg_com 1kg_afr_com 1kg_amr_com 1kg_asn_com 1kg_eur_com
-                      ind_venter ind_watson ind_gill ind_ak1 ind_irish ind_angrist
-                      ind_gates_jr ind_gates_sr ind_kriek ind_quake ind_saqqaq ind_saqqaq_hc ind_sjk ind_yh
+our @short_names = qw(hapmap ind_venter ind_watson
                       fail_all fail_nonref fail_ambig fail_gt_fq fail_incons_map fail_mult_map
                       fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles fail_dbsnp_suspect
                       ph_hgmd_pub ph_nhgri ph_omim ph_variants ph_uniprot
