@@ -52,6 +52,7 @@ sub default_options {
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
         use_prior_for_filtering => 1,
+        map_to_chrom_only       => 1,
         entries_per_file        => 50000,
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage
         feature_table           => 'variation_feature',
@@ -103,6 +104,7 @@ sub pipeline_wide_parameters {
         individuals                  => $self->o('individuals'),
         algn_score_threshold         => $self->o('algn_score_threshold'),
         use_prior_for_filtering      => $self->o('use_prior_for_filtering'),
+        map_to_chrom_only            => $self->o('map_to_chrom_only'),
         entries_per_file             => $self->o('entries_per_file'),
         debug                        => $self->o('debug'),
     };
