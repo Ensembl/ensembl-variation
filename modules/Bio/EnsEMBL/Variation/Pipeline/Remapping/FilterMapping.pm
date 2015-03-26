@@ -197,6 +197,15 @@ sub filter_mapping_results {
 
   my $algn_score_threshold = $self->param('algn_score_threshold');
   my $use_prior_info = $self->param('use_prior_for_filtering');
+  my $map_to_chrom_only = $self->param('map_to_chrom_only');
+  my $chroms = {};
+  if ($map_to_chrom_only) {
+    my $cdba = $self->param('cdba');  
+    my $sa = $cdba->get_SliceAdaptor;
+    foreach my $slice (@{$sa->fetch_all('chromosome')}) {
+      $chroms->{$slice->seq_region_name} = 1;
+    } 
+  }
 
   my $file_mappings = $self->param('file_mappings');
   my $fh_mappings = FileHandle->new($file_mappings, 'r');
@@ -224,7 +233,13 @@ sub filter_mapping_results {
 
     my ($chrom_name, $start, $end, $strand) = split(' ', $new_seq_info);
     if ($map_weight > 1) {
-      $multi_map_all->{$query_name}->{$new_seq_info} = $relative_algn_score;
+      if ($map_to_chrom_only) {
+        if ($chroms->{$chrom_name}) {
+          $multi_map_all->{$query_name}->{$new_seq_info} = $relative_algn_score;
+        }
+      } else {
+        $multi_map_all->{$query_name}->{$new_seq_info} = $relative_algn_score;
+      }
       if ($use_prior_info) {
         if ($chrom_name eq $old_chrom_name) {
           $multi_map_same_chrom->{$query_name}->{$new_seq_info} = $relative_algn_score;
