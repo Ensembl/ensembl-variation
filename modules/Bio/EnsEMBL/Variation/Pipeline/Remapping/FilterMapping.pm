@@ -192,20 +192,25 @@ sub report_failed_mappings {
 
 }
 
+sub get_seq_region_names {
+  my $coord = shift;
+  my $cdba = $self->param('cdba');  
+  my $seq_region_names = {};
+  my $sa = $cdba->get_SliceAdaptor;
+  foreach my $slice (@{$sa->fetch_all($coord)}) {
+    $seq_region_names->{$slice->seq_region_name} = 1;
+  } 
+  return $seq_region_names; 
+}
+
+
 sub filter_mapping_results {
   my $self = shift;
 
   my $algn_score_threshold = $self->param('algn_score_threshold');
   my $use_prior_info = $self->param('use_prior_for_filtering');
   my $map_to_chrom_only = $self->param('map_to_chrom_only');
-  my $chroms = {};
-  if ($map_to_chrom_only) {
-    my $cdba = $self->param('cdba');  
-    my $sa = $cdba->get_SliceAdaptor;
-    foreach my $slice (@{$sa->fetch_all('chromosome')}) {
-      $chroms->{$slice->seq_region_name} = 1;
-    } 
-  }
+  my $chroms = get_seq_region_names('chromosome') if ($map_to_chrom_only);
 
   my $file_mappings = $self->param('file_mappings');
   my $fh_mappings = FileHandle->new($file_mappings, 'r');
