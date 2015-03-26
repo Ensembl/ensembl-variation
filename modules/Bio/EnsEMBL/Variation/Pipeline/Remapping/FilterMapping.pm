@@ -218,6 +218,7 @@ sub filter_mapping_results {
   my $algn_score_threshold = $self->param('algn_score_threshold');
   my $use_prior_info = $self->param('use_prior_for_filtering');
   my $map_to_chrom_only = $self->param('map_to_chrom_only');
+  my $max_map_weight = $self->param('max_map_weight');
   my $chroms = $self->get_seq_region_names('chromosome') if ($map_to_chrom_only);
 
   my $file_mappings = $self->param('file_mappings');
@@ -229,7 +230,7 @@ sub filter_mapping_results {
   my $multi_map_all = {};
   my $multi_map_same_chrom = {};
 
-  my ($stats_unique_map, $stats_multi_map, $stats_failed_poor_score, $stats_unique_map_after_filter, $stats_multi_map_after_filter, $stats_failed_after_filter, $stats_failed_non_chrom);
+  my ($stats_unique_map, $stats_multi_map, $stats_failed_poor_score, $stats_unique_map_after_filter, $stats_multi_map_after_filter, $stats_failed_after_filter, $stats_failed_non_chrom, $stats_exceeds_max_map_weight);
 
   while (<$fh_mappings>) {
     chomp;
@@ -301,15 +302,18 @@ sub filter_mapping_results {
   foreach my $query_name (keys %$filtered_multi_map) {
     my $mappings = $filtered_multi_map->{$query_name};
     my $count = scalar keys %$mappings;
-    if ($count == 1) {
-      $stats_unique_map_after_filter++;
+    if ($count >= $max_map_weight) {
+      $stats_exceeds_max_map_weight++;
     } else {
-      $stats_multi_map_after_filter++;
+      if ($count == 1) {
+        $stats_unique_map_after_filter++;
+      } else {
+        $stats_multi_map_after_filter++;
+      }
+      foreach my $line (keys %$mappings) {
+        print $fh_filtered_mappings $line, "\n";
+      }
     }
-    foreach my $line (keys %$mappings) {
-      print $fh_filtered_mappings $line, "\n";
-    }
-
   }
   $self->param('stats_unique_map', $stats_unique_map);
   $self->param('stats_unique_map_after_filter', $stats_unique_map_after_filter);
@@ -318,6 +322,7 @@ sub filter_mapping_results {
   $self->param('stats_failed_poor_score', $stats_failed_poor_score);
   $self->param('stats_failed_after_filter', $stats_failed_after_filter);
   $self->param('stats_failed_non_chrom', $stats_failed_non_chrom);
+  $self->param('stats_exceeds_max_map_weight', $stats_exceeds_max_map_weight);
 
   $fh_filtered_mappings->close();
 
@@ -696,7 +701,7 @@ sub write_statistics {
   my $file_statistics = $self->param('file_statistics');
   my $fh_statistics = FileHandle->new($file_statistics, 'w');
 
-  foreach my $stats (qw/count_input_ids pre_count_unmapped pre_count_mapped stats_failed stats_unique_map stats_multi_map stats_unique_map_after_filter stats_multi_map_after_filter stats_failed_poor_score stats_failed_after_filter stats_failed_non_chrom/) {
+  foreach my $stats (qw/count_input_ids pre_count_unmapped pre_count_mapped stats_failed stats_unique_map stats_multi_map stats_unique_map_after_filter stats_multi_map_after_filter stats_failed_poor_score stats_failed_after_filter stats_failed_non_chrom stats_exceeds_max_map_weight/) {
     if ($self->param($stats)) {
       my $count = $self->param($stats);
       print $fh_statistics "$stats=$count\n";
