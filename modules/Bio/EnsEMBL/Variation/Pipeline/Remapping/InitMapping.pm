@@ -228,6 +228,7 @@ sub generate_mapping_input {
   $self->param('qc_ref_seq', $fh_ref_seq);
 
   my $variants_with_multi_map = {};
+
   my $file_count = 0;
   opendir(DIR, $dump_features_dir) or die $!;
   while (my $file = readdir(DIR)) {
@@ -248,8 +249,11 @@ sub generate_mapping_input {
         my $map_weight      = $data->{map_weight};
         my $variation_name  = $data->{variation_name};
         if ($map_weight > 1) {
+          if ($variants_with_multi_map->{$variation_name}) {
+            $variants_with_multi_map->{$variation_name}++;
+            next;
+          }
           $variants_with_multi_map->{$variation_name}++;
-          next;
         }
         my ($flank_start, $upstream_flank_length, $downstream_flank_length, $flank_end, $variant_length) = @{$self->flank_coordinates($seq_region_name, $start, $end, $strand)};
 
