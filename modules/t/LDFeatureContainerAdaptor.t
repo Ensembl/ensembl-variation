@@ -56,7 +56,7 @@ $ldContainer = $ldfca->fetch_by_Slice($slice, $p1);
 my $ld_values;
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 15, "fetch_by_Slice - count LD values");
+is($ld_values, 15, "fetch_by_Slice - count LD values");
 
 # fetch_by_VariationFeature
 my $vfa = $vdb->get_VariationFeatureAdaptor();
@@ -65,7 +65,7 @@ my $vf = $vfa->fetch_by_dbID(1004336);
 $ldContainer = $ldfca->fetch_by_VariationFeature($vf, $p1);
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 5, "fetch_by_VariationFeature - count LD values");
+is($ld_values, 5, "fetch_by_VariationFeature - count LD values");
 
 ## VCF
 my $dir = $multi->curr_dir();
@@ -87,7 +87,7 @@ $ldContainer = $ldfca->fetch_by_Slice($slice, $p2);
 
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 14, "fetch_by_Slice - VCF only");
+is($ld_values, 14, "fetch_by_Slice - VCF only");
 
 # use VCF and DB
 $ldfca->db->use_vcf(1);
@@ -95,7 +95,7 @@ $ldContainer = $ldfca->fetch_by_Slice($slice);
 
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 44, "fetch_by_Slice - VCF and DB");
+is($ld_values, 72, "fetch_by_Slice - VCF and DB");
 
 
 done_testing();

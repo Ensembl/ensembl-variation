@@ -605,22 +605,23 @@ sub _limit_Individuals {
   my $self = shift;
   my $individuals = shift;
   my $sample = shift;
+  my $limited = $individuals;
   
   # limit by individual or population?
   if(defined($sample)) {
     if($sample->isa('Bio::EnsEMBL::Variation::Individual')) {
-      @$individuals = grep {$_->name eq $sample->name} @$individuals;
+      $limited = [grep {$_->name eq $sample->name} @$individuals];
     }
     elsif($sample->isa('Bio::EnsEMBL::Variation::Population')) {
       my %limit = map {$_->name => 1} @{$sample->get_all_Individuals};
-      @$individuals = grep {defined($limit{$_->name})} @$individuals;
+      $limited = [grep {defined($limit{$_->name})} @$individuals];
     }
     else {
       throw("Argument $sample is not a Bio::EnsEMBL::Variation::Individual or ::Popluation");
     }
   }
   
-  return $individuals;
+  return $limited;
 }
 
 sub _create_IndividualGenotypeFeatures {

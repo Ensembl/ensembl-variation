@@ -401,6 +401,9 @@ sub _fetch_by_Slice_VCF {
     # get Population->Individual hash; we need to trim and transpose this
     my $hash = $vc->_get_Population_Individual_hash();
     
+    # copy hash before deleting from it
+    $hash = { %$hash };
+    
     if(defined($population)) {
       delete $hash->{$_} for grep {$_ != $population->dbID} keys %$hash;
     }
