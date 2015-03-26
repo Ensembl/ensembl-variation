@@ -3377,12 +3377,12 @@ sub fetch_transcripts {
                       (
                         (
                           defined($config->{refseq}) &&
-                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                          ($tr->stable_id || '') !~ /^[A-Z]{2}\_\d+/
                         ) ||
                         (
                           defined($config->{merged}) &&
-                          $tr->{_source_cache} eq 'RefSeq' &&
-                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                          ($tr->{_source_cache} || '') eq 'RefSeq' &&
+                          ($tr->stable_id || '') !~ /^[A-Z]{2}\_\d+/
                         )
                       )
                     ) {
