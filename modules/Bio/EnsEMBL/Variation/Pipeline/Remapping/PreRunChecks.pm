@@ -57,7 +57,7 @@ sub run {
     }
     make_path($dir);
   } 
-  unless ($self->param('use_fasta_files')) {
+  if ($self->param('use_fasta_files')) {
     foreach my $folder (qw/dump_features_dir fasta_files_dir/) {
       my $dir = $self->param($folder);
       if (-d $dir) {
