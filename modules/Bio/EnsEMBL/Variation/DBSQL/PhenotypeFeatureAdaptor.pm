@@ -483,6 +483,31 @@ sub fetch_all_by_phenotype_id_source_name {
   
 }
 
+=head2 fetch_all_by_associated_gene_phenotype_description
+
+  Arg [1]    : string $gene_name
+  Arg [2]    : string $phenotype
+  Example    : $pf = $pf_adaptor->fetch_all_by_associated_gene_phenotype_description('HFE','Blood pressure');
+  Description: Retrieves the PhenotypeFeature objects via which are associated with the gene, for a given phenotype.
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if the gene_name and the phenotype arguments are not defined
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_associated_gene_phenotype_description {
+  my $self = shift;
+  my $gene_name = shift;
+  my $phenotype = shift;
+  
+  throw('gene_name argument expected') if(!defined($gene_name));
+  throw('phenotype argument expected') if(!defined($phenotype));
+  
+  my $constraint = "p.description='$phenotype'";
+  
+  return $self->fetch_all_by_associated_gene($gene_name,$constraint);
+}
 
 =head2 fetch_all_by_associated_gene
 
@@ -500,13 +525,14 @@ sub fetch_all_by_associated_gene {
 
   my $self = shift;
   my $gene_name  = shift;
+  my $constraint = shift;
 
   throw('gene_name argument expected') if(!defined($gene_name));
-  
+
   $self->_include_attrib(1);
 
-  my $extra_sql = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
-  
+  my $extra_sql  = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+     $extra_sql .= " and $constraint" if ($constraint);
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
   

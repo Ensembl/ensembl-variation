@@ -88,6 +88,10 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && (grep {$_->object_id eq 'rs22992
 $pfs = $pfa->fetch_all_by_associated_gene('YES1');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene");
 
+# fetch_all_by_associated_gene_phenotype_description
+$pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene_phenotype_description");
+
 # count_all_by_associated_gene
 my $count = $pfa->count_all_by_associated_gene('YES1');
 ok($count && $count == 1, "count_all_by_associated_gene");
