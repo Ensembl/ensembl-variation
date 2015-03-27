@@ -484,18 +484,18 @@ sub parse_uniprot {
         ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
         
         $mim_id &&= join(",MIM:",split(",",$mim_id));
-        $mim_id =~ s/\s+//g if (defined($mim_id));
-        
+        $mim_id =~ s/\s//g if (defined($mim_id));
+
         push(
           @phenotypes,
           {
-            "id"      => $rs_id,
+            "id"              => $rs_id,
             "associated_gene" => $gene,
-            "description"   => $description,
-            "name"      => $name,
+            "description"     => $description,
+            "name"            => $name,
             "variation_names" => $rs_id,
-            "study"       => $mim_id,
-            "study_type"    => 'GWAS'
+            "study"           => $mim_id,
+            "study_type"      => 'GWAS'
           }
         );
       }
@@ -638,8 +638,8 @@ sub parse_omim {
     
     #  Get one line for each variation_names
     foreach my $rs (@rs_list) {
-    
-       # Skip the risk allele if the variant is "0000"
+
+      # Skip the risk allele if the variant is "0000"
       my $data = {
         'id'      => $rs,
         'study'       => 'MIM:'.$study,
@@ -2005,6 +2005,10 @@ sub add_phenotypes {
     # get phenotype ID
     my $phenotype_id = get_phenotype_id($phenotype, $db_adaptor);
     
+    if ($phenotype->{"associated_gene"}) {
+      $phenotype->{"associated_gene"} =~ s/\s//g;
+    }
+
     # Check if this phenotype_feature already exists for this variation and source, in that case we probably want to skip it
     my $pf_id;
     $pf_check_sth->bind_param(1,$phenotype->{id},SQL_VARCHAR);
