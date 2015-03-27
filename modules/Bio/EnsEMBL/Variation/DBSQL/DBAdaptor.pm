@@ -65,7 +65,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
 our $DEFAULT_INCLUDE_FAILED_VARIATIONS = 0;
 our $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES = 0;
-our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 0;
+our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 
 sub get_available_adaptors{
     my %pairs = (
