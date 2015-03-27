@@ -2007,6 +2007,7 @@ sub add_phenotypes {
     
     if ($phenotype->{"associated_gene"}) {
       $phenotype->{"associated_gene"} =~ s/\s//g;
+      $phenotype->{"associated_gene"} =~ s/;/,/g;
     }
 
     # Check if this phenotype_feature already exists for this variation and source, in that case we probably want to skip it
