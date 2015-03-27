@@ -531,7 +531,7 @@ sub fetch_all_by_associated_gene {
 
   $self->_include_attrib(1);
 
-  my $extra_sql  = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+  my $extra_sql  = " at.code = 'associated_gene' and (pfa.value = '$gene_name' OR pfa.value like '%,$gene_name' OR pfa.value like '$gene_name,%' OR pfa.value like '%,$gene_name,%')";
      $extra_sql .= " and $constraint" if ($constraint);
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
