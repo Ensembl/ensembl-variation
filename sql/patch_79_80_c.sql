@@ -24,7 +24,7 @@ ALTER TABLE variation_feature MODIFY consequence_types SET (
         'splice_region_variant',
         'downstream_gene_variant',
         'upstream_gene_variant',
-        'initiator_codon_variant',
+        'start_lost',
         'stop_retained_variant',
         'inframe_insertion',
         'inframe_deletion',
@@ -69,7 +69,7 @@ ALTER TABLE transcript_variation MODIFY consequence_types SET (
                                             'splice_region_variant',
                                             'downstream_gene_variant',
                                             'upstream_gene_variant',
-                                            'initiator_codon_variant',
+                                            'start_lost',
                                             'stop_retained_variant',
                                             'inframe_insertion',
                                             'inframe_deletion', 
@@ -92,5 +92,5 @@ ALTER TABLE transcript_variation MODIFY consequence_types SET (
 
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_b.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_c.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant and change initiator_codon_variant to start_lost');
 
