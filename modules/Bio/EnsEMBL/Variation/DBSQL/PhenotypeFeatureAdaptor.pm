@@ -565,19 +565,19 @@ sub count_all_by_associated_gene {
   
   $self->_include_attrib(1);
 
-  my $extra_sql = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
-  
+  my $extra_sql  = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+     $extra_sql .= " and pf.type!='Gene'";
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
 
-  my $result = $self->generic_fetch($extra_sql);
+  my $result = $self->generic_count($extra_sql);
   
   $self->_include_attrib(0);
-  $result = [grep {$_->type ne 'Gene'} @$result];
-  return scalar @$result;
+
+  return $result;
 }
 
 sub count_all_by_Phenotype {
@@ -721,9 +721,7 @@ sub _tables {
 sub _left_join {
   my $self = shift;
   
-  my @lj = (
-    [ 'source', 'pf.source_id = s.source_id' ]
-  );
+  my @lj = ();
   
   push @lj, (
     [ 'phenotype_feature_attrib', 'pf.phenotype_feature_id = pfa.phenotype_feature_id' ],
@@ -736,7 +734,7 @@ sub _left_join {
 sub _default_where_clause {
   my $self = shift;
 
-  return 'pf.phenotype_id = p.phenotype_id';
+  return 'pf.phenotype_id = p.phenotype_id and pf.source_id = s.source_id';
 }
 
 sub _columns {
