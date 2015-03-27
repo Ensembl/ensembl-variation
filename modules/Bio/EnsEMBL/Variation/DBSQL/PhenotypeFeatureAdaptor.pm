@@ -722,8 +722,7 @@ sub _left_join {
   my $self = shift;
   
   my @lj = (
-    [ 'source', 'pf.source_id = s.source_id' ],
-    [ 'phenotype', 'pf.phenotype_id = p.phenotype_id' ]
+    [ 'source', 'pf.source_id = s.source_id' ]
   );
   
   push @lj, (
@@ -733,11 +732,11 @@ sub _left_join {
   
   return @lj;
 }
-## e!76 fix for non-supplied ClinVar phenotypes
+
 sub _default_where_clause {
   my $self = shift;
 
-  return 'pf.phenotype_id = p.phenotype_id and p.description is not null';
+  return 'pf.phenotype_id = p.phenotype_id';
 }
 
 sub _columns {
