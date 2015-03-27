@@ -100,6 +100,7 @@ use vars qw(@ISA @EXPORT_OK);
     &vf_to_consequences
     &validate_vf
     &read_cache_info
+    &get_version_data
     &load_dumped_variation_cache
     &load_dumped_transcript_cache
     &prefetch_transcript_data
@@ -5714,80 +5715,75 @@ sub build_full_cache {
 
 # write an info file that defines what is in the cache
 sub write_cache_info {
-    my $config = shift;
+  my $config = shift;
     
-    my $info_file = $config->{dir}.'/info.txt';
+  my $info_file = $config->{dir}.'/info.txt';
     
-    open OUT, ">>$info_file" or die "ERROR: Could not write to cache info file $info_file\n";
+  open OUT, ">>$info_file" or die "ERROR: Could not write to cache info file $info_file\n";
     
-    print OUT "# CACHE UPDATED ".get_time()."\n";
+  print OUT "# CACHE UPDATED ".get_time()."\n";
     
-    foreach my $param(qw(
-        species
-        assembly
-        host
-        port
-        user
-        build
-        regulatory
-        sift
-        polyphen
-    )) {
-        print OUT "$param\t".(defined $config->{$param} ? $config->{$param} : '-')."\n";
-    }
-    
-    # cell types
-    if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
-        my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
-        print OUT "cell_types\t".(join ",", map {$_->name} @{$cta->fetch_all});
-        print OUT "\n";
-    }
-    
-    # sift/polyphen versions
-    foreach my $tool(qw(sift polyphen)) {
-        if(defined($config->{$tool})) {
-            my $var_mca = $config->{reg}->get_adaptor($config->{species}, 'variation', 'metacontainer');
-            
-            if(defined($var_mca)) {
-                my $version = $var_mca->list_value_by_key($tool.'_version');
-                print OUT "$tool\_version\t".$version->[0]."\n" if defined($version) and scalar @$version;
-            }
-        }
-    }
-    
-    # variation columns
-    print OUT "variation_cols\t".(join ",", @{get_variation_columns($config)});
+  foreach my $param(qw(
+    species
+    assembly
+    host
+    port
+    user
+    build
+    regulatory
+    sift
+    polyphen
+  )) {
+    print OUT "$param\t".(defined $config->{$param} ? $config->{$param} : '-')."\n";
+  }
+  
+  # version data
+  my $version_data = get_version_data($config);
+  print OUT "source\_$_\t".$version_data->{$_}."\n" for keys %$version_data;
+   
+  # cell types
+  if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
+    my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
+    print OUT "cell_types\t".(join ",", map {$_->name} @{$cta->fetch_all});
     print OUT "\n";
+  }
     
-    close OUT;
+  # variation columns
+  print OUT "variation_cols\t".(join ",", @{get_variation_columns($config)});
+  print OUT "\n";
+    
+  close OUT;
 }
 
 # reads in cache info file
 sub read_cache_info {
-    my $config = shift;
+  my $config = shift;
     
-    my $info_file = $config->{dir}.'/info.txt';
+  my $info_file = $config->{dir}.'/info.txt';
     
-    open IN, $info_file or return 0;
+  open IN, $info_file or return 0;
     
-    while(<IN>) {
-        next if /^#/;
-        chomp;
-        my ($param, $value) = split /\t/;
-        
-        
-        if($param =~ /variation_col/) {
-            $config->{'cache_'.$param} = [split /\,/, $value];
-        }
-        else {
-            $config->{'cache_'.$param} = $value unless defined $value && $value eq '-';
-        }
-        
+  while(<IN>) {
+    next if /^#/;
+    chomp;
+    my ($param, $value) = split /\t/;
+    
+    if($param =~ s/^source_//) {
+      $config->{version_data}->{$param} = $value;
     }
+    elsif($param =~ /variation_col/) {
+      $config->{'cache_'.$param} = [split /\,/, $value];
+    }
+    else {
+      $config->{'cache_'.$param} = $value unless defined $value && $value eq '-';
+    } 
+  }
     
-    close IN;
+  close IN;
+  
+  $config->{version_data} ||= {};
     
-    return 1;
+  return 1;
 }
 
 # gets list of chromosomes in cache as hashref
@@ -5806,6 +5802,69 @@ sub get_cache_chromosomes {
   }
   
   return $config->{cache_chromosomes};
+}
+
+sub get_version_data {
+  my $config = shift;
+  
+  if(!exists($config->{version_data})) {
+    my %version_data = ();
+    
+    # sift/polyphen versions
+    my $var_mca = $config->{reg}->get_adaptor($config->{species}, 'variation', 'metacontainer');
+    
+    if($var_mca) {
+      foreach my $tool(qw(sift polyphen)) {
+        if(defined($config->{$tool})) {
+          my $version = $var_mca->list_value_by_key($tool.'_version');
+          $version_data{$tool} = $version->[0] if defined($version) and scalar @$version;
+        }
+      }
+    }
+    
+    # variation source versions
+    my $sa = $config->{reg}->get_adaptor($config->{species}, 'variation', 'source');
+    
+    if($sa) {
+      foreach my $source_name(qw(dbSNP COSMIC ClinVar ESP HGMD-PUBLIC)) {
+        my $version = $sa->get_source_version($source_name);
+        $version_data{$source_name} = $version if $version;
+      }
+    }
+    
+    # core source versions
+    my $core_mca = $config->{reg}->get_adaptor($config->{species}, 'core', 'metacontainer');
+    
+    if($core_mca) {
+      foreach my $meta_key(qw(assembly.name gencode.version genebuild.initial_release_date)) {
+        my $version = $core_mca->list_value_by_key($meta_key);
+        $version_data{$meta_key} = $version->[0] if defined($version) && scalar @$version;
+      }
+    }
+  
+    # funcgen versions
+    if(defined($config->{regulatory})) {
+      my $fg_mca = $config->{reg}->get_adaptor($config->{species}, 'funcgen', 'metacontainer');
+    
+      if($fg_mca) {
+        foreach my $meta_key(qw(regbuild.version)) {
+          my $version = $fg_mca->list_value_by_key($meta_key);
+          $version_data{$meta_key} = $version->[0] if defined($version) && scalar @$version;
+        }
+      }
+    }
+  
+    # remove extraneous meta gumpf
+    foreach my $key(keys %version_data) {
+      my $new_key = $key;
+      $new_key =~ s/\..+//;
+      $version_data{$new_key} = delete $version_data{$key};
+    }
+    
+    $config->{version_data} = \%version_data;
+  }
+  
+  return $config->{version_data};
 }
 
 # format coords for printing

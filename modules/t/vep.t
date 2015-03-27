@@ -32,6 +32,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(
   get_slice
   build_full_cache
   read_cache_info
+  get_version_data
   get_time
   debug
 );
@@ -50,6 +51,22 @@ close CONF;
 
 # read_cache_info
 ok(read_cache_info($base_config), "read_cache_info");
+
+# get version data
+my $vd = get_version_data($base_config);
+is_deeply($vd, {
+  'sift' => 'sift5.2.2',
+  'polyphen' => '2.2.2',
+  'COSMIC' => '71',
+  'ESP' => '20140509',
+  'gencode' => 'GENCODE',
+  'HGMD-PUBLIC' => '20142',
+  'genebuild' => '2014-07',
+  'regbuild' => '13.0',
+  'assembly' => 'GRCh38.p2',
+  'dbSNP' => '138',
+  'ClinVar' => '201410'
+}, "cache version data");
 
 # parse line
 my $config = copy_config($base_config);

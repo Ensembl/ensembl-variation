@@ -13,3 +13,14 @@ sift_version	sift5.0.2
 polyphen_version	2.2.2
 regulatory	1
 variation_cols	variation_name,failed,somatic,start,end,allele_string,strand,minor_allele,minor_allele_freq,clin_sig,pubmed,AFR,AMR,ASN,EUR,AA,EA
+source_sift	sift5.2.2
+source_polyphen	2.2.2
+source_COSMIC	71
+source_ESP	20140509
+source_gencode	GENCODE	22
+source_HGMD-PUBLIC	20142
+source_genebuild	2014-07
+source_regbuild	13.0
+source_ClinVar	201410
+source_dbSNP	138
+source_assembly	GRCh38.p2
