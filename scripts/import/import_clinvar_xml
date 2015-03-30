@@ -2,7 +2,7 @@
 
 =head1 LICENSE
 
-Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,6 +29,20 @@ limitations under the License.
 
 =cut
 
+=head2 import_clinvar_xml
+
+  - parse ClinVar XML and import data for dbSNP or dbVar variants
+  - add the short variant data if ClinVar is releasing ahead of dbSNP
+  - only import ClinVar records for structural variants already in ensembl
+  - use the positions of the features held in ensembl where possible
+
+  - attribs entered
+  - review_status    = Status
+  - external_id      = Acc
+  - clinvar_clin_sig = Desc
+  - risk_allele      = HGVS allele (dbSNP variants only)
+
+=cut
 
 use strict;
 use warnings;
@@ -44,23 +58,27 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-my ($data_file, $registry_file, $assembly);
+my ($data_file, $registry_file, $assembly, $structvar, $done_file);
 
 GetOptions ("data_file=s"  => \$data_file,
-	    "registry=s"   => \$registry_file,
-	    "assembly=s"   => \$assembly,
-    );
+            "registry=s"   => \$registry_file,
+            "assembly=s"   => \$assembly,
+            "structvar"    => \$structvar, 
+            "done_file"    => \$done_file, 
+            );
 
 usage() unless defined $data_file && defined $registry_file && defined $assembly;
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
+## only merging records by name, so include fails
 $dba->include_failed_variations(1);
- 
+
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
 my $allele_adaptor        = $reg->get_adaptor('homo_sapiens', 'variation', 'allele');
+my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
 my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
@@ -68,14 +86,23 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
 ## fetch ClinVar source object
-my $source   =   get_source($reg, "ClinVar");
+my $source   =   get_source("ClinVar");
+
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
- 
 
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
 
+## handle incomplete runs
+my %done;
+if (defined $done_file){
+  open my $donelist, $done_file ||die "Unable to open list of variants already entered : $!\n";
+  while(<$donelist>){
+    my $id = (split)[1];
+    $done{$id} = 1;
+  }
+}
 
 my @records;
 
@@ -117,9 +144,20 @@ while (my $set = $ref->get_record() ){
 	}
 
 	foreach my $measure(@measures){
+	    next unless(ref($measure) eq 'HASH');
+
+	    ### get dbSNP rs id  & OMIM id Xrefs, if available
+	    if(defined $measure->{XRef}){
+		foreach my $xref( @{$measure->{XRef}} ){
+		    
+		    next unless ref($xref) eq  'HASH';
+		    $record{$xref->{DB}} = $xref->{ID} ;
+		} 
+	    }
+
 
 	    ### get location(s)
-
+	    next unless defined $measure->{SequenceLocation};
 	    foreach my $loc(@{$measure->{SequenceLocation}}){
 
 		next unless ref($loc) eq  'HASH'; 
@@ -145,7 +183,8 @@ while (my $set = $ref->get_record() ){
 	    foreach my $attrib (@attrib_set){
 		
 		## Not all of them have a current top level genomic
-		next unless $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top/ ;
+		next unless (defined $attrib->{Attribute}->[1]->{Type} &&
+                             $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top/ );
 		
 		$record{hgvs_g} =  $attrib->{Attribute}->[1]->{Change} 
 		if $attrib->{Attribute}->[1]->{Type} eq "HGVS, genomic, top level";
@@ -156,19 +195,6 @@ while (my $set = $ref->get_record() ){
 
 
 	    }
-	   	   
-
-	    ### get dbSNP rs id  & OMIM id Xrefs, if available
-	    
-	    if(defined $measure->{XRef}){
-		
-		foreach my $xref( @{$measure->{XRef}} ){
-		    
-		    next unless ref($xref) eq  'HASH';
-		    $record{$xref->{DB}} = $xref->{ID} ;
-		} 
-	    }
-
 
 	}
 
@@ -198,46 +224,144 @@ while (my $set = $ref->get_record() ){
 		foreach my $name ( @names ){
 		    next unless  $name->{ElementValue}->[1]->{Type} eq "Preferred";
 		    $record{disease} =  $name->{ElementValue}->[0];
+
+
 		}
 	    }
 	}
-	
+        
 
-
-	if (defined $record{dbSNP} && $record{dbSNP} =~/\d+/ && $record{Chr}){
-	    # || defined $record{dbVar} ;
-	    import( \%record)
+        if (defined $structvar ){ 
+	    if( defined $record{dbVar} && $record{dbVar} =~/\d+/ ){
+               unless (defined $done{$record{Acc}} || defined $record{dbSNP}){
+#	       	warn "Importing SV :  $record{dbVar}\n";
+		import( \%record);
+               }
+	    }
 	}
-	else{
-	   my $message =  "Not importing var: ";
-	   $message .= " rs: $record{dbSNP} "        if defined $record{dbSNP} ;
-	   $message .= " on chr: $record{Chr} "      if defined $record{Chr} ;
-	   $message .= " with HGVS: $record{hgvs_g}" if defined $record{hgvs_g} ;
-	   $message .= " due to missing data ($record{Acc})\n";
-	   warn $message;
+        else{
+	    if( defined $record{dbSNP} && $record{dbSNP} =~/\d+/ && defined $record{Chr} ){
+		import( \%record);
+	    }
+	    else{
+		#  my $message =  "Not importing var: ";
+		#  $message .= " rs: $record{dbSNP} "        if defined $record{dbSNP} ;
+		#  $message .= " on chr: $record{Chr} "      if defined $record{Chr} ;
+		#  $message .= " with HGVS: $record{hgvs_g}" if defined $record{hgvs_g} ;
+		#  $message .= " due to missing data ($record{Acc})\n";
+		#  warn $message;
+	    }
 	}
     };
     if( $@ ne ''){
-	print "ERROR: $@\n$current\n\n";
-	die;
+	die "ERROR: $@\n$current\n\n";
     }
     
 }
-    
+=head2  import
+
+- check all required info present & update db with a single ClinVar
+ 
+=cut
 
 sub import{
 
     my $record = shift;
 
-    $record->{dbSNP}  = "rs" . $record->{dbSNP};     
-
-    ## look for existing or enter new variation object
-    my $var_ob = $variation_adaptor->fetch_by_name($record->{dbSNP});
-
-    if(!defined $var_ob && !defined $record->{hgvs_g}  ){
-	warn "Not entering new refSNP: $record->{dbSNP} as no HGVS available for alleles\n";
-	return undef;
+    my $feature_object;
+    my $type;
+    my $alt_allele; ## disease associated allele from HGVS
+    my $feat;       ## use stored *variation_features where possible
+    if(defined $record->{dbSNP}){
+	($feature_object,  $feat, $alt_allele) = get_variant($record);
+        $type = 'Variation';
     }
+    elsif(defined  $record->{dbVar}){
+	$type = 'StructuralVariation';
+	($feature_object, $feat) = get_structural_variant($record);
+    }
+    else{
+	return;
+    }
+    return undef unless defined $feature_object && defined $feature_object->dbID(); 
+
+
+    ## deal with non-specified phenos
+    $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
+    $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
+    $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
+
+
+    ## look for existing or enter new phenotype object
+    my $pheno = get_phenotype($record->{disease});
+
+  
+
+    my %attribs;
+    $attribs{review_status}    = $record->{Status};
+    $attribs{external_id}      = $record->{Acc};
+    $attribs{clinvar_clin_sig} = $record->{Desc};
+    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
+
+
+    foreach my $feature (@{$feat}){
+	print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n";
+
+    my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+	-slice          => $feature->slice(),
+	-start          => $feature->seq_region_start(),
+	-strand         => $feature->seq_region_strand(),
+	-end            => $feature->seq_region_end(),
+	-phenotype      => $pheno,
+	-is_significant => 1,
+	-type           => $type,
+	-object         => $feature_object,
+	-source_object  => $source,
+	-attribs        => \%attribs
+	);
+        $pheno_feat_adaptor->store($phenofeat);
+
+    }
+}
+
+=head2 get_phenotype
+
+ - retrieve existing or enter new phenotype object
+
+=cut
+sub get_phenotype{
+
+    my $desc = shift;
+
+    $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
+    $desc =~s /\'//g;            ## remove '
+
+    
+    my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
+
+    unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
+
+        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc);
+        $phenotype_adaptor->store($pheno);
+    }
+
+    return $pheno;
+}
+
+
+
+=head2 get_variant 
+
+  - look up or enter variation
+  - returns variation & variation_feature objects & associated allele (from HGVS)
+
+=cut
+sub get_variant{
+
+    my $record = shift;
+    my $slice  = shift;
+
+    $record->{dbSNP}  = "rs" . $record->{dbSNP};     
 
 
     ## need alleles to input for standard variation & for risk allele
@@ -251,72 +375,38 @@ sub import{
     warn "Problem finding allele for $record->{dbSNP}\n" unless $@ eq '';
 
 
-    ## get slice for variation & phenotype feature
-    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $record->{Chr} );
+    ## look for existing variation object to return
+    my $var_ob = $variation_adaptor->fetch_by_name($record->{dbSNP});
 
-    $var_ob = enter_var($record, $slice, $ref_allele, $alt_allele)
-	unless defined $var_ob ;   
-
-    return undef unless defined $var_ob; ## allele finding failures exit here
-
-    ## deal with non-specified phenos
-    $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
-    $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
-
-    ## look for existing or enter new phenotype object
-    my $pheno = get_phenotype($record->{disease});
-
-    my $type = 'Variation';
-
-    my %attribs;
-    $attribs{review_status}    = $record->{Status};
-    $attribs{external_id}      = $record->{Acc};
-    $attribs{clinvar_clin_sig} = $record->{Desc};
-    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
-   
-    my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
-	-slice          => $slice,
-	-start          => $record->{start},
-	-strand         => $record->{strand},
-	-end            => $record->{end},
-	-phenotype      => $pheno,
-	-is_significant => 1,
-	-type           => $type,
-	-object         => $var_ob,
-	-source_object  => $source,
-	-attribs        => \%attribs
-	);
-        $pheno_feat_adaptor->store($phenofeat);
-
-
-}
-
-
-
-### retrieve or enter phenotype object
-sub get_phenotype{
-
-    my $desc = shift;
-
-    $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
-    $desc =~s /\'//g;            ## remove '
-
-    
-    my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
-
-    unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
-        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc);
-        $phenotype_adaptor->store($pheno);
+    if (defined $var_ob){
+	my @features = $var_ob->get_all_VariationFeatures();
+	return ($var_ob, @features , $alt_allele);
     }
-    return $pheno;
+
+
+    ### else have to enter variation & associated records
+
+    print "No record found for $record->{dbSNP}\n";
+    if(!defined $var_ob && !defined $record->{hgvs_g}  ){
+	warn "Not entering new refSNP: $record->{dbSNP} as no HGVS available for alleles\n";
+	return undef;
+    }
+
+    ## enter new records
+    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele);
+    return ($new_var_ob,  $var_feat, $alt_allele) ; 
 }
 
+=head2 enter_var
 
-### enter variation and associated info
+  - ClinVar releases more frequently than dbSNP so may have new data
+  - enter variation, alleles and variation_feature
+  - returns variation & variation_feature objects
+
+=cut
 sub enter_var{
 
     my $data       = shift;
-    my $slice      = shift;
     my $ref_allele = shift;
     my $alt_allele = shift;
 
@@ -348,7 +438,10 @@ sub enter_var{
 
 
     my $allele_str = $ref_allele ."/". $alt_allele;
-    
+
+    ## get slice for new variationfeature
+    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr} );
+
     my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
         (-start           => $data->{start},
          -end             => $data->{end},
@@ -364,20 +457,47 @@ sub enter_var{
         );
     $var_feat_adaptor->store($vf);
     
-    
-    return $var;
+    my @vf; #return vf to attach pheno feat to 
+    push @vf, $vf;
+    return ($var, \@vf);
 }
+
+
+
+=head2 get_structural_variant
+
+  - get structural variant record to use in phenotype feature
+  - new data is not entered
+  - returns variation & variation_feature objects
+
+=cut
+sub get_structural_variant{
+
+    my $record = shift;
+
+    ## look for existing structural variation object
+    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{dbVar});
+
+    unless (defined $struct_var_ob && ref($struct_var_ob) eq 'Bio::EnsEMBL::Variation::StructuralVariation' ){
+
+	print "Not entering SV: $record->{dbVar} as not in db \n";
+	return undef;
+    }
+    my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
+
+    return ($struct_var_ob, @features );
+}
+
 
 sub get_source{
 
-    my $reg  = shift;
     my $desc = shift;
 
     my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
     my $source = $source_adaptor->fetch_by_name( $desc );
 
-    die "Source information not held for $desc\n"  unless defined $source;
+    die "Source information not held for $desc\n" unless defined $source ;
 
     return $source;
 }
@@ -385,6 +505,9 @@ sub get_source{
 
 sub usage{
 
-    die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]\n\n";
+    die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]
+
+\t\toptions: -structvar  (only import ClinVar statuses for structural variations)
+\n\n";
 
 }
