@@ -921,7 +921,7 @@ sub parse_animal_qtl {
       print STDERR "WARNING: Could not find seq_region_id for chromosome name $data[0]\n";
       next;
     }
-    
+
     # parse "extra" GFF fields
     my $extra = {};
     
@@ -932,6 +932,11 @@ sub parse_animal_qtl {
       $extra->{$key} = $value;
     }
     
+    if ($data[4] !~ /^\d+$/) {
+      print STDERR "WARNING: Could not find a numeric seq_region_end for the QTL ".$extra->{QTL_ID}."\n";
+      next;
+    }
+
     # create phenotype hash
     my $phenotype = {
       'id' => $extra->{QTL_ID},
