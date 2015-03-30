@@ -1720,7 +1720,7 @@ sub numberify {
         numberify($ref->{$k});
       }
       else {
-        $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $ref->{$k} =~ /^\-?[\d\.]+$/ && $k ne 'seq_region_name' && $k ne 'id';
+        $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $k ne 'seq_region_name' && $k ne 'id' && $ref->{$k} =~ /^\-?\d+\.?\d*$/;
       }
     }
   }
@@ -1730,7 +1730,7 @@ sub numberify {
         numberify($ref->[$i]);
       }
       else {
-        $ref->[$i] = $ref->[$i] + 0 if defined($ref->[$i]) && $ref->[$i] =~ /^\-?[\d\.]+$/;
+        $ref->[$i] = $ref->[$i] + 0 if defined($ref->[$i]) && $ref->[$i] =~ /^\-?\d+\.?\d*$/;
       }
     }
   }
