@@ -169,6 +169,7 @@ our @EXTRA_HEADERS = (
   { flag => 'user',            cols => ['IMPACT','DISTANCE','STRAND'] },
   { flag => 'flag_pick',       cols => ['PICK'] },
   { flag => 'flag_pick_allele',cols => ['PICK'] },
+  { flag => 'variant_class',   cols => ['VARIANT_CLASS']},
   
   # gene-related
   { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
@@ -268,6 +269,7 @@ our %COL_DESCS = (
     'PICK'               => 'Indicates if this consequence has been picked as the most severe',
     'SOMATIC'            => 'Somatic status of existing variant',
     'REFSEQ_MATCH'       => 'RefSeq transcript match status',
+    'VARIANT_CLASS'      => 'SO variant class',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -1535,7 +1537,7 @@ sub format_rest_output {
     Uploaded_variation
     Existing_variation
     GMAF AFR_MAF AMR_MAF ASN_MAF EUR_MAF AA_MAF EA_MAF
-    PUBMED CLIN_SIG SOMATIC
+    PUBMED CLIN_SIG SOMATIC VARIANT_CLASS
   );
   
   # define some fields to rename
@@ -1564,6 +1566,9 @@ sub format_rest_output {
   
   # add original input for use by POST endpoints
   $hash->{input} = $vf->{_line} if defined($vf->{_line});
+  
+  # add variant class
+  $hash->{variant_class} = $vf->class_SO_term if defined($config->{variant_class});
   
   if(defined($vf->{allele_string})) {
     $hash->{allele_string} = $vf->{allele_string};
@@ -2581,6 +2586,9 @@ sub init_line {
         $line->{Extra}->{ZYG} = (scalar keys %unique > 1 ? 'HET' : 'HOM').(defined($vf->{hom_ref}) ? 'REF' : '');
       }
     }
+    
+    # variant class
+    $line->{Extra}->{VARIANT_CLASS} = $vf->class_SO_term() if defined($config->{variant_class});
     
     # frequencies?
     $line->{Extra}->{FREQS} = join ",", @{$vf->{freqs}} if defined($vf->{freqs});
