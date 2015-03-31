@@ -3308,6 +3308,7 @@ sub fetch_transcripts {
             
             ## hack to copy HGNC IDs
             my %hgnc_ids = ();
+            my %refseq_stuff = ();
             
             # add loaded transcripts to main cache
             if(defined($tmp_cache->{$chr})) {
@@ -3363,14 +3364,23 @@ sub fetch_transcripts {
                     ## hack to copy HGNC IDs
                     $hgnc_ids{$tr->{_gene_symbol}} = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
                     
+                    ## hack to copy RefSeq gene stuff
+                    if(defined($config->{refseq}) || defined($config->{merged})) {
+                      $refseq_stuff{$tr->{_gene}->stable_id}->{$_} ||= $tr->{$_} for qw(_gene_symbol _gene_symbol_source _gene_hgnc_id);
+                    }
+                    
                     $seen_trs{$dbID} = 1;
                     
                     push @{$tr_cache->{$chr}}, $tr;
                 }
                 
-                ## hack to copy HGNC IDs
-                for(@{$tr_cache->{$chr}}) {
-                  $_->{_gene_hgnc_id} = $hgnc_ids{$_->{_gene_symbol}} if defined($_->{_gene_symbol}) && defined($hgnc_ids{$_->{_gene_symbol}});
+                ## hack to copy HGNC IDs and RefSeq stuff
+                foreach my $tr(@{$tr_cache->{$chr}}) {
+                  $tr->{_gene_hgnc_id} = $hgnc_ids{$tr->{_gene_symbol}} if defined($tr->{_gene_symbol}) && defined($hgnc_ids{$tr->{_gene_symbol}});
+
+                  if(defined($config->{refseq}) || defined($config->{merged})) {
+                    $tr->{$_} ||= $refseq_stuff{$tr->{_gene}->stable_id}->{$_} for qw(_gene_symbol _gene_symbol_source _gene_hgnc_id);
+                  }
                 }
             }
             
