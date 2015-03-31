@@ -185,7 +185,7 @@ create table variation_feature(
         'splice_region_variant',
         'downstream_gene_variant',
         'upstream_gene_variant',
-        'initiator_codon_variant',
+        'start_lost',
         'stop_retained_variant',
         'inframe_insertion',
         'inframe_deletion',
@@ -1363,7 +1363,7 @@ CREATE TABLE transcript_variation (
                                             'splice_region_variant',
                                             'downstream_gene_variant',
                                             'upstream_gene_variant',
-                                            'initiator_codon_variant',
+                                            'start_lost',
                                             'stop_retained_variant',
                                             'inframe_insertion',
                                             'inframe_deletion',
@@ -1810,7 +1810,9 @@ CREATE TABLE meta (
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '80');
 
 # Patch IDs for new release
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_b.sql|create a unique key for the variation_name column in the table structural_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_c.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant and change initiator_codon_variant to start_lost');
 
 
 /**
