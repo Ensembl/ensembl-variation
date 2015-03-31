@@ -551,17 +551,17 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'G',
         start   => $cds_start,
         end     => $cds_start,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => 'G',
         start   => $cds_start+1,
         end     => $cds_start+1,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => 'C',
         start   => $cds_start+2,
         end     => $cds_start+2,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     },  {
         alleles => 'C',
         start   => $cds_start+3,
@@ -581,12 +581,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'CCC',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => 'AGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw( initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => '-',
         start   => $cds_start+3,
@@ -987,19 +987,19 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end,
         end     => $cds_end,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => 'G',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 1,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => 'C',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 2,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     },  {
         alleles => 'G',
         strand  => -1,
@@ -1023,7 +1023,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(initiator_codon_variant)],
+        effects => [qw(start_lost)],
     }, {
         alleles => '-',
         strand  => -1,
