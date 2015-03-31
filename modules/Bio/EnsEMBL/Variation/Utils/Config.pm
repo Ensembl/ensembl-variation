@@ -48,6 +48,7 @@ our @short_names = qw(hapmap ind_venter ind_watson
                       ExomeChip ImmunoChip HumanOmniExpress ClinVar MGP HumanCoreExome
                       1kg_3 1kg_3_afr 1kg_3_amr 1kg_3_eas 1kg_3_sas 1kg_3_eur 1kg_3_com 
                       1kg_3_afr_com 1kg_3_amr_com 1kg_3_eas_com 1kg_3_sas_com 1kg_3_eur_com
+                      LSDB dbPEX HbVar Infevers KAT6BDB LMDD OIVD PAHdb
                      );
 
 our @dbsnp_clinical_significance_types = qw(
@@ -494,8 +495,8 @@ our @OVERLAP_CONSEQUENCES = (
         }
     },
     {
-        SO_accession => 'SO:0001582',
-        SO_term => 'initiator_codon_variant',
+        SO_accession => 'SO:0002012',
+        SO_term => 'start_lost',
         display_term => 'NON_SYNONYMOUS_CODING',
         feature_SO_term => 'mRNA',
         feature_class => 'Bio::EnsEMBL::Transcript',
@@ -503,8 +504,8 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '7',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
-        description => 'A codon variant that changes at least one base of the first codon of a transcript',
-        label => 'Initiator codon variant',
+        description => 'A codon variant that changes at least one base of the canonical start codon',
+        label => 'Start lost',
         impact => 'LOW',
         include => {
           coding => 1,
