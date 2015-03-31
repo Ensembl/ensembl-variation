@@ -335,6 +335,8 @@ sub round_count_diff {
     $symbol = '-';
     $label  = 'less';
   }
+  $count = abs($count);
+
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
