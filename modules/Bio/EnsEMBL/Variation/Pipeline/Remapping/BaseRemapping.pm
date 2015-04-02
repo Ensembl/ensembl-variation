@@ -33,6 +33,18 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
+sub read_line {
+  my $self = shift;
+  my $line = shift;
+  my @key_values = split("\t", $line);
+  my $mapping = {};
+  foreach my $key_value (@key_values) {
+    my ($table_name, $value) = split('=', $key_value, 2);
+    $mapping->{$table_name} = $value;
+  }
+  return $mapping;
+}
+
 sub count_files {
     my $self = shift;
     my $dir = shift;
