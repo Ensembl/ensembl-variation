@@ -18,21 +18,50 @@
 
 =head1 CONTACT
 
-  Please email comments or questions to the public Ensembl
-  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+Please email comments or questions to the public Ensembl
+developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk.org>.
+Questions may also be sent to the Ensembl help desk at
+<helpdesk.org>.
 
 =cut
 package Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishFilterMapping;
 
 use strict;
+use warnings;
+use FileHandle;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
+}
+
+sub run {
+  my $self = shift;
+
+  my $working_dir = $self->param('pipeline_dir');
+  my $statistics_dir = "$working_dir/statistics";
+  my $overall_counts = {};
+  opendir(DIR, $statistics_dir) or die $!;
+  while (my $file = readdir(DIR)) {
+    if ($file =~ m/\.txt$/) {
+      my $fh = FileHandle->new("$statistics_dir/$file", 'r');
+      while (<$fh>) {
+        chomp;
+        my ($stats, $count) = split/=/;
+        $overall_counts->{$stats} += $count;
+      }
+      $fh->close();
+    }
+  }
+  closedir(DIR); 
+
+  my $fh = FileHandle->new("$working_dir/overall_counts.txt", 'w');
+  while (my ($stats, $counts) = each %$overall_counts) {
+    print $fh "$stats=$counts\n";
+  }
+  $fh->close();
 }
 
 
