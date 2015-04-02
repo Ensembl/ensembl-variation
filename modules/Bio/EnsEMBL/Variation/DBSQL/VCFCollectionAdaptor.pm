@@ -130,6 +130,13 @@ sub new {
   # try and get config file from global variable or ENV
   $config_file ||= $CONFIG_FILE || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
   
+  # try and find default config file in API dir
+  if(!defined($config_file)) {
+    my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/VCFCollectionAdaptor.pm';
+    $config_file  = $INC{$mod_path};
+    $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
+  }
+  
   throw("ERROR: No config file defined") unless defined($config_file);
   throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
   
