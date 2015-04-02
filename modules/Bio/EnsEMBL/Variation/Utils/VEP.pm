@@ -2281,7 +2281,8 @@ sub tva_to_line {
       if($pred) {
         
         if ($want_pred) {
-          $pred =~ s/\s+/\_/;
+          $pred =~ s/\s+/\_/g;
+          $pred =~ s/\_\-\_/\_/g;
           $line->{Extra}->{$tool} = $pred;
         }
           
