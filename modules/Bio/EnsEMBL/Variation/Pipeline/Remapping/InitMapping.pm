@@ -200,23 +200,7 @@ sub generate_mapping_input {
   $self->param('fasta_db', $fasta_db);
 
   # store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
-  my $cdba = $self->param('cdba');
-  my $sa = $cdba->get_SliceAdaptor;
-  # don't include asm exceptions, fetch the full length of the Y chromosome
-  my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
-  my $seq_regions = {};
-  foreach my $slice (@$slices) {
-    my $end             = $slice->end;
-    my $seq_region_name = $slice->seq_region_name;
-    if ($end > $seq_regions->{$seq_region_name}->{end}) {
-      $seq_regions->{$seq_region_name}->{end} = $end;
-    }
-  }
-  foreach my $seq_region_name (keys %$seq_regions) {
-    my $end = $seq_regions->{$seq_region_name}->{end};
-  }
-
-  $self->param('seq_regions', $seq_regions);
+  my $seq_regions = $self->seq_seq_region_boundaries;
 
   my $dump_features_dir = $self->param('dump_features_dir');
   my $fasta_files_dir   = $self->param('fasta_files_dir');
@@ -825,6 +809,24 @@ sub get_individual_ids {
   }
   $sth->finish();
   return \@ids;
+}
+
+sub set_seq_region_boundaries {
+  my $self = shift;
+  my $cdba = $self->param('cdba');
+  my $sa = $cdba->get_SliceAdaptor;
+  # don't include asm exceptions, fetch the full length of the Y chromosome
+  my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+  my $seq_regions = {};
+  foreach my $slice (@$slices) {
+    my $end             = $slice->end;
+    my $seq_region_name = $slice->seq_region_name;
+    if ($end > $seq_regions->{$seq_region_name}->{end}) {
+      $seq_regions->{$seq_region_name}->{end} = $end;
+    }
+  }
+  $self->param('seq_regions', $seq_regions);
+  return $seq_regions;
 }
 
 sub get_column_names {
