@@ -64,7 +64,7 @@ sub run {
       $self->generate_remap_read_coverage_input();
     }
   } else {
-    if ($self->param('use_fasta_files')) {
+    if (!$self->param('use_fasta_files')) {
       $self->dump_features();
       $self->generate_mapping_input();
     } else {
@@ -200,7 +200,7 @@ sub generate_mapping_input {
   $self->param('fasta_db', $fasta_db);
 
   # store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
-  my $seq_regions = $self->seq_seq_region_boundaries;
+  my $seq_regions = $self->set_seq_region_boundaries;
 
   my $dump_features_dir = $self->param('dump_features_dir');
   my $fasta_files_dir   = $self->param('fasta_files_dir');
@@ -237,7 +237,6 @@ sub generate_mapping_input {
             $variants_with_multi_map->{$variation_name}++;
             next;
           }
-          $variants_with_multi_map->{$variation_name}++;
         }
         my ($flank_start, $upstream_flank_length, $downstream_flank_length, $flank_end, $variant_length) = @{$self->flank_coordinates($seq_region_name, $start, $end, $strand)};
 
