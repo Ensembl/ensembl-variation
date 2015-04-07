@@ -799,18 +799,6 @@ sub dump_features {
   $self->param('file_count', $file_count);
 }
 
-sub read_line {
-  my $self = shift;
-  my $line = shift;
-  my @key_values = split("\t", $line);
-  my $mapping = {};
-  foreach my $key_value (@key_values) {
-    my ($table_name, $value) = split('=', $key_value, 2);
-    $mapping->{$table_name} = $value;
-  }
-  return $mapping;
-}
-
 sub get_individual_ids {
   my $self = shift;
   my $individual_name = shift;
@@ -828,7 +816,6 @@ sub get_individual_ids {
     $column = 'individual_id';
     $table = 'individual';
   }
-
   my $sth = $dbh->prepare(qq{SELECT $column FROM $table where name='$individual_name';});
 
   my @ids = ();
@@ -837,10 +824,7 @@ sub get_individual_ids {
     push @ids, $row->[0];
   }
   $sth->finish();
-
-
   return \@ids;
-
 }
 
 sub get_column_names {
