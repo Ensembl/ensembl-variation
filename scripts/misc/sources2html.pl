@@ -122,7 +122,9 @@ my %data_type_example = (
                             },
   'phenotype_feature'    => {
                              'sql'       => qq{SELECT object_id, type, phenotype_id FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
-                             'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},  
+                             'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},
+                             'types'     => qq{SELECT source_id, GROUP_CONCAT(DISTINCT type ORDER BY type ASC SEPARATOR ', ')
+                                               FROM phenotype_feature WHERE type!="SupportingStructuralVariation" GROUP BY source_id},
                              'Variation'           => 'Variation/Phenotype?v=',
                              'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
                              'Gene'                => 'Gene/Phenotype?g=',
@@ -168,6 +170,7 @@ my $html_title = qq{
 ##############
 my $html_footer = qq{
   </div>
+</div>
 </body>
 </html>};
 
@@ -348,10 +351,13 @@ sub source_table {
   
   
   my $counts_species = get_species_count(\%data_type_example, $s_name, $db_name, $hostname);
+  my $phe_types      = get_phenotype_types(\%data_type_example, $s_name, $db_name, $hostname);
+
   my $type_style  = qq{style="float:left;width:65px;text-align:left"};
   my $count_style = qq{style="float:left;width:60px;text-align:right;margin:0px 5px"};
   my $eg_style    = qq{style="float:left;width:20px;text-align:center"};
   my $spaces      = "          ";
+  my $phe_title   = "Provides phenotype association data";
   
   ########## Sources ##########    
   
@@ -402,7 +408,6 @@ sub source_table {
     my $is_somatic = ($s_status eq 'somatic') ? 1 : undef;
     
     # Phenotype
-    my $phe_title = "Provides phenotype data";
     my $s_phenotype = '';
     
     # Data types
@@ -418,8 +423,9 @@ sub source_table {
       $data_type_label =~ s/_/ /g;
 
       if ($dt eq 'phenotype_feature') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span></div>};
-        $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
+        my $dt_phe_title = ($phe_types->{$dt}{$source_id}) ? "Provides ".$phe_types->{$dt}{$source_id}." phenotype association data" : $phe_title;
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$dt_phe_title">Phenotype</span></div>};
+        $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$dt_phe_title" title="$dt_phe_title" />};
       }
       elsif ($dt eq 'study') {
         $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="Data are grouped by study/publication">$data_type_label</span></div>};
@@ -921,6 +927,29 @@ sub get_species_count {
   return \%count_by_type;
 }
 
+sub get_phenotype_types {
+  my $data_types = shift;
+  my $species    = shift;
+  my $database   = shift;
+  my $hostname   = shift;
+  my $type       = 'phenotype_feature';
+
+  my %phe_types;
+
+  my $sql = $data_types->{$type}{'types'};
+
+  my $sth = get_connection_and_query($database, $hostname, $sql);
+
+  if ($sth) {
+    while (my ($source_id,$types) = $sth->fetchrow_array) {
+      $types =~ s/StructuralVariation/Structural Variation/;
+      $phe_types{$type}{$source_id} = $types;
+    }
+    $sth->finish();
+  }
+  return \%phe_types;
+}
+
 sub get_species_set_count {
   my $param     = shift;
   my $species   = shift;
@@ -935,7 +964,7 @@ sub get_species_set_count {
   my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
 
   if ($sth) {
-    my @result  = $sth->fetchrow_array;
+    my @result = $sth->fetchrow_array;
     return get_count($result[0]);
   }
   return '-'; 
