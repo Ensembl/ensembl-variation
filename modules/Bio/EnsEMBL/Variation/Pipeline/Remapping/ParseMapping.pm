@@ -76,7 +76,8 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
-  if ($self->param('mode') eq 'remap_read_coverage') {
+  my $mode = $self->param('mode');
+  if ($mode eq 'remap_read_coverage' || $mode eq 'remap_svf') {
     $self->parse_read_location();
   } else {
     $self->parse_variation_location();
