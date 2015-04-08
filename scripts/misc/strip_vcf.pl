@@ -24,7 +24,7 @@ if($config->{help}) {
   exit(0);
 }
 
-$config->{$_} = [split(/\,/, ($config->{$_} || ''))] for qw(include_headers delete_fields);
+$config->{$_} = [split(/\,/, ($config->{$_} || ''))] for qw(keep_headers delete_fields);
 
 ## input
 my $in = *STDIN;
@@ -82,7 +82,7 @@ while(<$in>) {
     }
     
     if(scalar @{$config->{keep_headers}} && $config->{keep_headers}->[0] eq 'ALL') {
-      print;
+      print $out $_;
       next;
     }
     
