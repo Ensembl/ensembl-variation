@@ -2,8 +2,12 @@
 # change the transcript_variation & variation_feature tables to add new consequence protein_altering_variant
 ##################
 
+## VARIATION_FEATURE
+# create tmp table
+CREATE TABLE tmp_vf LIKE variation_feature;
 
-ALTER TABLE variation_feature MODIFY consequence_types SET (
+# alter its consequence type field
+ALTER TABLE tmp_vf CHANGE consequence_types consequence_types SET (
         'intergenic_variant',
         'splice_acceptor_variant',
         'splice_donor_variant',
@@ -47,9 +51,22 @@ ALTER TABLE variation_feature MODIFY consequence_types SET (
         'protein_altering_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL;
 
+# insert into tmp table, replacing old terms with new as we go
+INSERT INTO tmp_vf SELECT variation_feature_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_id, allele_string, variation_name, map_weight, flags, source_id, validation_status,
+    REPLACE(consequence_types, 'initiator_codon_variant', 'start_lost'),
+variation_set_id, class_attrib_id, somatic, minor_allele, minor_allele_freq, minor_allele_count, alignment_quality, evidence_attribs, clinical_significance, display
+FROM variation_feature;
+
+DROP TABLE variation_feature;
+RENAME TABLE tmp_vf TO variation_feature;
 
 
-ALTER TABLE transcript_variation MODIFY consequence_types SET (
+## TRANSCRIPT VARIATION
+# create tmp table
+CREATE TABLE tmp_tv LIKE transcript_variation;
+
+# alter its consequence type field
+ALTER TABLE tmp_tv CHANGE consequence_types consequence_types SET (
                                             'splice_acceptor_variant',
                                             'splice_donor_variant',
                                             'stop_lost',
@@ -89,6 +106,15 @@ ALTER TABLE transcript_variation MODIFY consequence_types SET (
                                             'feature_truncation',
                                             'protein_altering_variant'
                                         );
+
+# insert into tmp table, replacing old terms with new as we go
+INSERT INTO tmp_tv SELECT transcript_variation_id, variation_feature_id, feature_stable_id, allele_string, somatic,
+    REPLACE(consequence_types, 'initiator_codon_variant', 'start_lost'),
+cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript, codon_allele_string, pep_allele_string, hgvs_genomic, hgvs_transcript, hgvs_protein, polyphen_prediction, polyphen_score, sift_prediction, sift_score, display
+FROM transcript_variation;
+
+DROP TABLE transcript_variation;
+RENAME TABLE tmp_tv TO transcript_variation;
 
 
 # patch identifier
