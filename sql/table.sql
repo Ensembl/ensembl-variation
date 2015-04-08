@@ -1887,7 +1887,7 @@ CREATE TABLE strain_gtype_poly (
 @column description     Longer description of this type
 
 @example See below the command to display a subset of the attrib_type entries:
-         @sql SELECT * FROM attrib_type LIMIT 10;
+         @sql SELECT * FROM attrib_type WHERE attrib_type_id > 468 LIMIT 10;
 
 @see    attrib
 @see    attrib_set
@@ -1914,7 +1914,7 @@ CREATE TABLE attrib_type (
 @column value           The value of this attribute
 
 @example See below the query to display a subset of the attrib entries:
-         @sql SELECT * FROM attrib WHERE attrib_type_id IN (1,2,3) ORDER BY attrib_id LIMIT 21;
+         @sql SELECT * FROM attrib WHERE attrib_type_id IN (469,470,471) ORDER BY attrib_id LIMIT 21;
 
 @see    attrib_type
 @see    attrib_set
