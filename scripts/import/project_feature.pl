@@ -256,9 +256,9 @@ sub dump_features {
 
   my $slices;
   if ($config->{include_asm_exceptions}) {
-    $slices = $sa_old->fetch_all('toplevel', undef, 1); 
+    $slices = $sa_old->fetch_all('chromosome', undef, 1); 
   } else {
-    $slices = $sa_old->fetch_all('toplevel', undef, 0); 
+    $slices = $sa_old->fetch_all('chromosome', undef, 0); 
   }
 
   $sth = $dbh->prepare(qq{
