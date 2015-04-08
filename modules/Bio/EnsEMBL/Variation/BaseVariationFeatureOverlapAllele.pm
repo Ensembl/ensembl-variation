@@ -426,10 +426,10 @@ sub _pre_consequence_predicates {
       if(length($vf_seq) == $ref_length) {
         $preds->{snp} = 1;
       }
-      elsif($ref_length >= 1 && $vf_seq eq '-') {
+      elsif( $ref_length > length($vf_seq) ) {
         $preds->{deletion} = 1;
       }
-      elsif($ref_length == 0) {
+      elsif( $ref_length < length($vf_seq) ) {
         $preds->{insertion} = 1;
       }
     }
