@@ -58,18 +58,21 @@ sub run {
   } elsif ($mode eq 'remap_alt_loci') {
     $self->dump_features_overlapping_alt_loci();
     $self->generate_mapping_input();
-  } elsif($mode eq 'remap_read_coverage') {
+  } elsif ($mode eq 'remap_read_coverage') {
     if (!$self->param('use_fasta_files')) {
       $self->dump_read_coverage();
       $self->generate_remap_read_coverage_input();
     }
+  } elsif ($mode eq 'remap_svf') {
+    $self->dump_features();
+    $self->generate_svf_mapping_input();
   } else {
     if (!$self->param('use_fasta_files')) {
       $self->dump_features();
       $self->generate_mapping_input();
     } else {
       my $fasta_files_dir = $self->param('fasta_files_dir');
-      my $file_count = $self->count_files($fasta_files_dir, '.fa');
+      my $file_count = $self->count_files($fasta_files_dir, 'fa');
       $self->param('file_count', $file_count);
     }
   }
@@ -272,6 +275,52 @@ sub generate_mapping_input {
   $fh_qc_multi_map->close();
   $self->param('file_count', $file_count);
 
+}
+
+sub generate_svf_mapping_input {
+  my $self = shift;
+
+  my $old_assembly_fasta_file_dir = $self->param('old_assembly_fasta_file_dir');
+  my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
+  $self->param('fasta_db', $fasta_db);
+
+  # store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
+  my $seq_regions = $self->set_seq_region_boundaries;
+
+  my $dump_features_dir = $self->param('dump_features_dir');
+  my $fasta_files_dir   = $self->param('fasta_files_dir');
+  my $pipeline_dir      = $self->param('pipeline_dir');
+
+  my $file_count = 0;
+  opendir(DIR, $dump_features_dir) or die $!;
+  while (my $file = readdir(DIR)) {
+    if ($file =~ /^(.+)\.txt$/) {
+      my $file_number = $1;
+      $file_count++;
+      my $fh = FileHandle->new("$dump_features_dir/$file", 'r');
+      my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$file_number.fa", 'w');
+      while (<$fh>) {
+        chomp;
+        my $data = $self->read_line($_);
+        my $seq_region_name = $data->{seq_region_name},
+        my $feature_id      = $data->{structural_variation_feature_id};
+        my $strand          = $data->{seq_region_strand};
+        my $variation_name  = $data->{variation_name};
+
+        foreach my $coord_name (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
+          my $coord = $data->{$coord_name};
+          if ($coord ne '\N') {
+            my $query_sequence = $self->get_query_sequence($seq_region_name, $coord, $coord + 100, $strand);
+            my $id = ">$feature_id-$coord_name";
+            print $fh_fasta_file "$id\n$query_sequence\n";
+          }
+        }
+      } # end while (read feature file for seq_region)
+      $fh->close();
+      $fh_fasta_file->close();
+    }
+  }
+  $self->param('file_count', $file_count);
 }
 
 sub flank_coordinates {
