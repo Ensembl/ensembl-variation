@@ -50,7 +50,7 @@ sub count_files {
     my $dir = shift;
     my $file_type = shift;
     opendir(my $dh, $dir) or die "Not a directory $dir";
-    my $count = scalar(grep { $_ =~ m/\Q$file_type$/ } readdir($dh)) == 0;
+    my $count = scalar(grep { $_ =~ m/$file_type$/ } readdir($dh));
     closedir($dh);
     return $count;
 }
