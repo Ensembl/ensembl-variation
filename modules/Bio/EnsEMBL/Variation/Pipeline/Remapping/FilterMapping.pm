@@ -97,6 +97,9 @@ sub run {
     $self->report_failed_read_coverage_mappings();
     $self->filter_read_coverage_mapping_results();
     $self->join_read_coverage_data();
+  } elsif ($mode eq 'remap_svf') {
+    $self->filter_svf_mapping_results();
+    $self->join_svf_data();
   } else {
     $self->report_failed_mappings();
     $self->filter_mapping_results();
@@ -537,6 +540,49 @@ sub filter_mapping_results_alt_loci {
   $self->param('stats_multi_map', $stats_multi_map);
   $self->param('stats_failed', $stats_failed);
 }
+
+sub filter_svf_mapping_results {
+  my $self = shift;
+  my $algn_score_threshold = $self->param('algn_score_threshold');
+
+  my $file_mappings = $self->param('file_mappings');
+  my $fh_mappings = FileHandle->new($file_mappings, 'r');
+
+  my ($stats_failed, $stats_unique_map, $stats_multi_map);
+
+  my $mapped = {};
+  while (<$fh_mappings>) {
+    chomp;
+
+    #feature_id-coord, coord: outer_start seq_region_start inner_start inner_end seq_region_end outer_end
+
+    #107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984   
+    #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
+    my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score) = split("\t", $_); 
+
+    my ($id, $coord) = split('-', $query_name);   
+
+    $mapped->{$id}->{$coord}->{$new_seq_name}->{"$new_start:$new_end:$new_strand"} = $algn_score;
+  }
+  $fh_mappings->close();
+
+  my $file_filtered_mappings = $self->param('file_filtered_mappings');
+  my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
+
+  foreach my $id (keys %$mapped) {
+    foreach my $coord (keys %{$mapped->{$id}}) {
+      foreach my $seq_name (keys %{$mapped->{$id}->{$coord}}) {
+        foreach my $coords (keys %{$mapped->{$id}->{$coord}->{$seq_name}}) {
+          my $algn_score = $mapped->{$id}->{$coord}->{$seq_name}->{$coords};
+          print $fh_filtered_mappings join("\t", $id, $coord, $seq_name, $coords, $algn_score), "\n";
+        }
+      }
+    }
+  }
+
+  $fh_filtered_mappings->close();
+}
+
 sub filter_read_coverage_mapping_results {
   my $self = shift;
   my $algn_score_threshold = $self->param('algn_score_threshold');
