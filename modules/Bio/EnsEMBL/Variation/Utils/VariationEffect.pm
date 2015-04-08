@@ -788,7 +788,10 @@ sub inframe_insertion {
 
         return 0 if affects_start_codon(@_);
         return 0 unless defined $ref_codon;
-        return ( length($alt_codon) > length ($ref_codon) );
+        return 0 unless ( length($alt_codon) > length ($ref_codon) );
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
     }
     
