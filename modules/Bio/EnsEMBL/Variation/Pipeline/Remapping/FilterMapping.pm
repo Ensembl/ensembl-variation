@@ -268,7 +268,7 @@ sub filter_mapping_results {
   my $count_multi_map_all        = scalar keys %$multi_map_all;
   my $count_multi_map_same_chrom = scalar keys %$multi_map_same_chrom;
 
-  my $stats_failed_non_chrom = $count_multi_map_all - $count_multi_map_same_chrom;
+  $stats_failed_non_chrom = $count_multi_map_all - $count_multi_map_same_chrom;
 
   my $multi_map_working = ($use_prior_info) ? $multi_map_same_chrom : $multi_map_all;
   my $filtered_multi_map = {};
