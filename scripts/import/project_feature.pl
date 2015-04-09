@@ -340,10 +340,11 @@ sub project_features_in_seq_region {
     my $data = read_line($_);
 
     if ($feature_type eq 'vf') {
+      my $map_weight = $data->{map_weight};
+      next if ($map_weight > 1);
       my $start  = $data->{seq_region_start};
       my $end    = $data->{seq_region_end};
       my $strand = $data->{seq_region_strand};    
-
       my $is_insertion = 0;
       if ($start > $end) {
         $is_insertion = 1;
