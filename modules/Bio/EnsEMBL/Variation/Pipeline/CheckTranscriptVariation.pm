@@ -73,6 +73,7 @@ sub get_new_results{
     my $tot_synonymous_st = qq[ select count(*) from transcript_variation where consequence_types like '%synonymous_variant%' ];
     my $missing_hgvs_st   = qq[ select count(*) from transcript_variation where consequence_types like '%missense_var%' and hgvs_protein is null];
     my $missing_pep_st    = qq[ select count(*) from transcript_variation where consequence_types like '%missense_var%' and pep_allele_string is null];
+    my $missing_con_st    = qq[ select count(*) from transcript_variation where consequence_types=''];
 
     
     ## counts on protein impact only relevant to some species
@@ -110,6 +111,7 @@ sub get_new_results{
 
     $new{missing_hgvs_protein}     = count_results($dbc, $missing_hgvs_st);
     $new{missing_peptide_alleles}  = count_results($dbc, $missing_pep_st);
+    $new{missing_consequences}     = count_results($dbc, $missing_con_st); 
 
     
 
@@ -179,6 +181,7 @@ sub report_results{
 
     $text_out.=  "\n\n$new->{missing_hgvs_protein} missense variants don't have HGVS annotation\n";
     $text_out.=  "$new->{missing_peptide_alleles} missense variants don't have peptide allele strings\n";
+    $text_out.=  "$new->{missing_consequences} variants don't have consequences\n";
 
     print $report $text_out;
 
