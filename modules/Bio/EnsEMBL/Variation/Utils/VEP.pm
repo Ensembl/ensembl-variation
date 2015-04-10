@@ -3354,6 +3354,9 @@ sub fetch_transcripts {
             if(defined($tmp_cache->{$chr})) {
                 while(my $tr = shift @{$tmp_cache->{$chr}}) {
                     
+                    # there are some transcripts in the otherfeatures DB with no stable ID!
+                    next unless $tr->stable_id;
+                    
                     # track already added transcripts by dbID
                     my $dbID = $tr->dbID;
                     if($seen_trs{$dbID}) {
@@ -4212,6 +4215,9 @@ sub cache_transcripts {
                     my @trs;
                     
                     foreach my $tr(@{$gene->get_all_Transcripts}) {
+                        # there are some transcripts in the otherfeatures DB with no stable ID!!!
+                        next unless $tr->stable_id;
+                      
                         $tr->{_gene_stable_id} = $gene_stable_id;
                         $tr->{_gene} = $gene;
                         
