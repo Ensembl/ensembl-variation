@@ -319,17 +319,17 @@ sub source_table {
   my $html = qq{<!-- $species -->};
   if ($is_new) {
     $html .= qq{
-    <div id="$s_name_id" style="padding-left:0px;padding-bottom:1px">
+    <div style="padding-left:0px;padding-bottom:1px">
       <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
-      <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
   }
   else {
     $html .= qq{
-    <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
+    <div style="padding-left:0px;padding-bottom:3px">
       <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
-      <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2>
     </div>
     };
   }
