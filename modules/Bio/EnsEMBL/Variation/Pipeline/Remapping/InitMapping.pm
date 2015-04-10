@@ -66,6 +66,9 @@ sub run {
   } elsif ($mode eq 'remap_svf') {
     $self->dump_features();
     $self->generate_svf_mapping_input();
+  } elsif ($mode eq 'remap_post_projection') {
+    $self->dump_features();
+    $self->generate_mapping_input();
   } else {
     if (!$self->param('use_fasta_files')) {
       $self->dump_features();
@@ -762,9 +765,9 @@ sub dump_features {
   my $cdba = $self->param('cdba');
   my $vdba = $self->param('vdba');
 
-  my $dbname = $vdba->dbc->dbname();
   my $feature_table = $self->param('feature_table');
 
+  my $dbname = $vdba->dbc->dbname();
   my $dbh = $vdba->dbc->db_handle;
   my $sth = $dbh->prepare(qq{
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
@@ -797,35 +800,47 @@ sub dump_features {
     $seq_region_ids->{$seq_region_id} = $seq_region_name;
   }
 
-  $sth = $dbh->prepare(qq{
-      SELECT $column_names_concat FROM $feature_table WHERE seq_region_id = ?;
-      }, {mysql_use_result => 1});
-
   my $file_count = 1;
   my $entries_per_file = $self->param('entries_per_file');
   my $count_entries = 0;
   my $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
 
-  foreach my $seq_region_id (keys %$seq_region_ids) {
-    my $seq_region_name = $seq_region_ids->{$seq_region_id};
-    $sth->execute($seq_region_id);
-    while (my $row = $sth->fetchrow_arrayref) {
-      my @values = map { defined $_ ? $_ : '\N' } @$row;
-      my @pairs = ();
-      for my $i (0..$#column_names) {
-        push @pairs, "$column_names[$i]=$values[$i]";
-      }
-      push @pairs, "seq_region_name=$seq_region_name";
-      if ($count_entries >= $entries_per_file) {
-        $fh->close();
-        $file_count++;
-        $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
-        $count_entries = 0;
-      }
-      $count_entries++;
-      print $fh join("\t", @pairs), "\n";
+  my $post_projection = $self->param('mode');
+  my @tables = ('feature_table', 'feature_table_failed_projection');
+
+  foreach my $table (@tables) {
+    my $feature_table = $self->param($table); 
+    if ($mode eq 'remap_failed_projection' && $table eq 'feature_table') {
+      $sth = $dbh->prepare(qq{
+        SELECT $column_names_concat FROM $table WHERE seq_region_id = ? AND map_weight > 1;
+      }, {mysql_use_result => 1});
+    } else {
+      $sth = $dbh->prepare(qq{
+        SELECT $column_names_concat FROM $table WHERE seq_region_id = ?;
+      }, {mysql_use_result => 1});
     }
-    $sth->finish();
+    foreach my $seq_region_id (keys %$seq_region_ids) {
+      my $seq_region_name = $seq_region_ids->{$seq_region_id};
+      $sth->execute($seq_region_id);
+
+      while (my $row = $sth->fetchrow_arrayref) {
+        my @values = map { defined $_ ? $_ : '\N' } @$row;
+        my @pairs = ();
+        for my $i (0..$#column_names) {
+          push @pairs, "$column_names[$i]=$values[$i]";
+        }
+        push @pairs, "seq_region_name=$seq_region_name";
+        if ($count_entries >= $entries_per_file) {
+          $fh->close();
+          $file_count++;
+          $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
+          $count_entries = 0;
+        }
+        $count_entries++;
+        print $fh join("\t", @pairs), "\n";
+      }
+      $sth->finish();
+    }
   }
   $fh->close();
   $self->param('file_count', $file_count);
