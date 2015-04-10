@@ -633,7 +633,7 @@ sub hgvs_transcript {
     if( $self->{hgvs_tva}->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
 	$self->{hgvs_tva}->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
 	){    
-	reverse_comp(\$variation_feature_sequence);
+	reverse_comp(\$variation_feature_sequence) if defined $variation_feature_sequence; ## deletion with undef allele?;
     }
 
         
@@ -654,22 +654,6 @@ sub hgvs_transcript {
     return undef;
     } 
     print "Got type: " . $hgvs_notation->{'type'} ." $hgvs_notation->{'ref'} -> $hgvs_notation->{'alt'}\n" if $DEBUG ==1;
- 
-    ## compare calculated reference base to input reference base to flag incorrect input
-    if($DEBUG ==1 ){
-	my $ref_al_for_checking  = $self->{hgvs_tva}->transcript_variation->get_reference_TranscriptVariationAllele->variation_feature_seq();
-	if( $self->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
-	    $self->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
-	    ){    
-	    reverse_comp(\$ref_al_for_checking);
-	}
-	$ref_al_for_checking =~ s/-//;
-	if( $hgvs_notation->{ref} ne $ref_al_for_checking &&
-            $hgvs_notation->{type} ne 'dup' &&
-            $hgvs_notation->{type} ne 'inv' ){
-	}
-    }
-
 
     ### create reference name - transcript name & seq version
     my $stable_id = $self->transcript_variation->transcript_stable_id();    
@@ -1004,23 +988,18 @@ sub _get_hgvs_protein_format{
     $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
 
     ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
-    if(stop_lost($self)){  ### if deletion of stop add extRer and number of new aa to alt
+    if(stop_lost($self)){  ### if deletion of stop add extTer and number of new aa to alt
+
         $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
-        if($hgvs_notation->{type} eq "del"){
-            my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1, "del");
-            if(defined  $aa_til_stop){
-                $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
-            }            
-        }
-        elsif($hgvs_notation->{type} eq ">"){
-	    print "stop loss check req for substitution\n" if $DEBUG ==1;
-            my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1, "subs");
-            if(defined  $aa_til_stop){  
-              $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
-            }
-            else{
-                $hgvs_notation->{alt} .=  "extTer?" ;
-            }
+
+        if($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" ){
+	    print "stop loss check req for $hgvs_notation->{type}\n" if $DEBUG ==1;
+
+            my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1 );
+            ### use ? to show new stop not predicted
+            $aa_til_stop = "?" unless defined $aa_til_stop ;
+
+            $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
 
         }
         else{
@@ -1085,21 +1064,20 @@ sub _get_hgvs_protein_format{
     }     
     
     elsif($hgvs_notation->{type} eq "fs"){
+
        if(defined $hgvs_notation->{alt} && $hgvs_notation->{alt} eq "Ter"){ ## stop gained
+           ## describe as substitution if stop occurs immediately
            $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} ;
 
        }
-       else{ ## not immediate stop - count aa until next
-
+       else{ 
+          ## not immediate stop - count aa until next stop
           my $aa_til_stop =  $self->_stop_loss_extra_AA( $hgvs_notation->{start}-1, "fs");
-          if($aa_til_stop ){
-              ### use long form if new stop found 
-             $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fsTer$aa_til_stop"  ;
-          }    
-          else{
-             ### new - ? to show new stop not predicted
-              $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . $hgvs_notation->{alt} . "fsTer?";
-           }      
+
+          ### use ? to show new stop not predicted
+          $aa_til_stop = "?" unless defined $aa_til_stop; 
+
+          $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start} . $hgvs_notation->{alt} ."fsTer$aa_til_stop";     
        }
     }
 
@@ -1563,7 +1541,7 @@ sub _stop_loss_extra_AA{
   if ($alt_trans->seq() =~ m/\*/) {
     if($DEBUG==1){print "Got $+[0] aa before stop, var event at $ref_var_pos \n";}
   
-    if($test eq "fs" ){
+    if(defined $test && $test eq "fs" ){
       ### frame shift - count from first AA effected by variant to stop
       $extra_aa = $+[0] - $ref_var_pos;
       if($DEBUG==1){ print "Stop change ($test): found $extra_aa amino acids before fs stop [ $+[0] - peptide ref_start: $ref_var_pos )]\n";}
