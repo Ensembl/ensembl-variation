@@ -627,7 +627,7 @@ sub hgvs_transcript {
     if( $self->{hgvs_tva}->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
 	$self->{hgvs_tva}->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
 	){    
-	reverse_comp(\$variation_feature_sequence);
+	reverse_comp(\$variation_feature_sequence) if defined $variation_feature_sequence; ## deletion with undef allele?
     }
 
         
