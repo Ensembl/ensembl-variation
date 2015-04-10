@@ -212,13 +212,15 @@ sub parse_variation_location {
     my $mapping_info = join("\t", (
           $query_name, $map_weight, $cigar, $relative_alignment_score, "clipped nucleotides $clipped_nucleotides"));
     my $mapping_result = join("\t", ($old_seq_info, $new_seq_info, $mapping_info));
-    if ($relative_alignment_score > 0.5) {
+    if ($relative_alignment_score > 0.5) { # should be 0.5
       unless ($flag_suspicious || $indel_colocation) {
         print $fh_mappings $mapping_result, "\n";
       } else {
         my $pre = $indel_colocation ? "INDEL\t" : "SUSPICIOUS\t";
         print $fh_failed_mappings $pre, $mapping_result, "\n";
       }
+    } else {
+      print $fh_failed_mappings "LOW_ALGN_SCORE\t", $mapping_result, "\n";
     }
   }
 
