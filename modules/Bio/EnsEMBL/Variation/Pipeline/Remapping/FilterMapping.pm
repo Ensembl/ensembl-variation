@@ -171,7 +171,7 @@ sub report_failed_mappings {
     $mapped->{$query_name} = 1;
   }
   $fh_mappings->close();
-
+  
   my $fh_failed_mappings = FileHandle->new($file_failed_mappings, 'r');
   while (<$fh_failed_mappings>) {
     chomp;
@@ -181,6 +181,13 @@ sub report_failed_mappings {
     }
   }
   $fh_failed_mappings->close();
+
+  my $file_failed_filtered_mappings = $self->param('file_failed_filtered_mappings');
+  my $fh_failed_filtered_mappings = FileHandle->new($file_failed_filtered_mappings, 'w');
+  foreach my $query_name (keys %$unmapped) {
+    print $fh_failed_filtered_mappings "$query_name\t$NO_MAPPING\n";
+  }
+  $fh_failed_filtered_mappings->close();
 
   my $count_mapped = scalar keys %$mapped;
   my $count_unmapped = scalar keys %$unmapped;
