@@ -36,6 +36,11 @@ use Bio::EnsEMBL::Registry;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
+
+# failure_reasons
+my $NO_MAPPING = 'no mapping';
+my $TOO_MANY_MAPPINGS = 'map weight > 5';
+
 sub fetch_input {
   my $self = shift;
 
@@ -59,9 +64,13 @@ sub fetch_input {
     if ($param =~ /mapping_results_dir/) {
       my $file_mappings = "$dir/mappings_$file_number.txt";
       my $file_failed_mappings = "$dir/failed_mapping_$file_number.txt";
-
       $self->param('file_mappings', $file_mappings);
       $self->param('file_failed_mappings', $file_failed_mappings);
+    } elsif ($param =~ /filtered_mappings_dir/) {
+      my $file_filtered_mappings = "$dir/$file_number.txt";
+      my $file_failed_filtered_mappings = "$dir/failed_mappings_$file_number.txt";
+      $self->param('file_filtered_mappings', $file_filtered_mappings);
+      $self->param('file_failed_filtered_mappings', $file_failed_filtered_mappings);
     } elsif ($param =~ /fasta_files_dir/) {
       my $fasta_file = "$dir/$file_number.fa";
       $self->param('fasta_file', $fasta_file);
@@ -147,7 +156,6 @@ sub report_failed_read_coverage_mappings {
   $self->param('count_input_ids', $count_input_ids);
 
 }
-
 
 sub report_failed_mappings {
   my $self = shift;
