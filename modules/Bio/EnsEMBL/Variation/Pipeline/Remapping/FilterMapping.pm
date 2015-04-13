@@ -745,7 +745,6 @@ sub filter_read_coverage_mapping_results {
       $stats_multi_map++;
     } elsif ($count_out > 5) {
       $stats_failed++;
-    # $self->warning("Multi map $id count $count_out");
     } else {
       $stats_failed++;
     }
