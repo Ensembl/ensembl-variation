@@ -311,6 +311,7 @@ sub generate_svf_mapping_input {
       my $file_number = $1;
       $file_count++;
       my $fh = FileHandle->new("$dump_features_dir/$file", 'r');
+      my $fh_lookup = FileHandle->new("$dump_features_dir/lookup_$file_number.txt", 'w');
       my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$file_number.fa", 'w');
       while (<$fh>) {
         chomp;
@@ -319,17 +320,20 @@ sub generate_svf_mapping_input {
         my $feature_id      = $data->{structural_variation_feature_id};
         my $strand          = $data->{seq_region_strand};
         my $variation_name  = $data->{variation_name};
-
+        my @all_coords = ();
         foreach my $coord_name (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
           my $coord = $data->{$coord_name};
           if ($coord ne '\N') {
+            push @all_coords, "$coord_name=$coord";
             my $query_sequence = $self->get_query_sequence($seq_region_name, $coord, $coord + 100, $strand);
             my $id = ">$feature_id-$coord_name";
             print $fh_fasta_file "$id\n$query_sequence\n";
           }
         }
+        print $fh_lookup $feature_id, "\t", join(";", @all_coords), "\n";
       } # end while (read feature file for seq_region)
       $fh->close();
+      $fh_lookup->close();
       $fh_fasta_file->close();
     }
   }
