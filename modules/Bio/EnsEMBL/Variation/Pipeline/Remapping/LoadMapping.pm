@@ -55,7 +55,6 @@ sub write_output {
   my $self = shift;
 }
 
-
 sub load_read_coverage {
   my $self = shift;
 
