@@ -40,6 +40,7 @@ use base ('Bio::EnsEMBL::Hive::Process');
 # failure_reasons
 my $NO_MAPPING = 'no mapping';
 my $TOO_MANY_MAPPINGS = 'map weight > 5';
+my $POOR_SCORE = 'does not pass alignment score';
 
 sub fetch_input {
   my $self = shift;
@@ -245,6 +246,10 @@ sub filter_mapping_results {
   my $file_filtered_mappings = $self->param('file_filtered_mappings');
   my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
 
+  my $file_failed_filtered_mappings = $self->param('file_failed_filtered_mappings');
+
+  open FH_FAILED, ">>$file_failed_filtered_mappings" or die $!;
+
   my $multi_map_all = {};
   my $multi_map_same_chrom = {};
 
@@ -275,6 +280,7 @@ sub filter_mapping_results {
         $stats_unique_map++;
       } else {
         $stats_failed_poor_score++;
+        print FH_FAILED "$query_name\t$POOR_SCORE\n";
       }
     }
   }
@@ -322,6 +328,7 @@ sub filter_mapping_results {
     my $count = scalar keys %$mappings;
     if ($count >= $max_map_weight) {
       $stats_exceeds_max_map_weight++;
+      print FH_FAILED "$query_name\t$TOO_MANY_MAPPINGS\n";
     } else {
       if ($count == 1) {
         $stats_unique_map_after_filter++;
@@ -343,7 +350,7 @@ sub filter_mapping_results {
   $self->param('stats_exceeds_max_map_weight', $stats_exceeds_max_map_weight);
 
   $fh_filtered_mappings->close();
-
+  close FH_FAILED;
 }
 
 sub filter_mapping_results_dbsnp {
