@@ -58,6 +58,7 @@ sub default_options {
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage
         feature_table           => 'variation_feature',
         feature_table_failed_projection => 'variation_feature_failed',
+        feature_table_projection => 'variation_feature_projection',
         individuals             => '',
         pipeline_dir            => $self->o('pipeline_dir'),
         bam_files               => $self->o('pipeline_dir') . '/bam_files',
@@ -103,6 +104,7 @@ sub pipeline_wide_parameters {
         flank_seq_length             => $self->o('flank_seq_length'),	
         use_fasta_files              => $self->o('use_fasta_files'),
         feature_table                => $self->o('feature_table'),
+        feature_table_failed_projection => $self->o('feature_table_failed_projection'),
         individuals                  => $self->o('individuals'),
         algn_score_threshold         => $self->o('algn_score_threshold'),
         max_map_weight               => $self->o('max_map_weight'),
