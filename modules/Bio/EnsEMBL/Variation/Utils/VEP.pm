@@ -862,6 +862,7 @@ sub parse_id {
       delete $_->{overlap_consequences};
       $_->{chr} = $_->seq_region_name;
       $config->{slice_cache}->{$_->{chr}} = $_->slice;
+      $_->{variation_name} = $line;
     }
     
     return \@vfs;
