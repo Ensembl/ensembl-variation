@@ -218,7 +218,8 @@ sub generate_mapping_input {
   $self->param('qc_ref_seq', $fh_ref_seq);
 
   my $variants_with_multi_map = {};
-
+  my $mode = $self->param('mode');
+  my $dump_multi_map = ($mode eq 'remap_post_projection') ? 1 : 0;
   my $file_count = 0;
   opendir(DIR, $dump_features_dir) or die $!;
   while (my $file = readdir(DIR)) {
@@ -239,9 +240,18 @@ sub generate_mapping_input {
         my $map_weight      = $data->{map_weight};
         my $variation_name  = $data->{variation_name};
         if ($map_weight > 1) {
-          if ($variants_with_multi_map->{$variation_name}) {
-            $variants_with_multi_map->{$variation_name}++;
-            next;
+          if ($dump_multi_map) {
+            if ($variants_with_multi_map->{$variation_name}) {
+              $variants_with_multi_map->{$variation_name}++;
+              next;
+            } else {
+              $variants_with_multi_map->{$variation_name}++;
+            }
+          } else {
+            if ($variants_with_multi_map->{$variation_name}) {
+              $variants_with_multi_map->{$variation_name}++;
+              next;
+            }
           }
         }
         my ($flank_start, $upstream_flank_length, $downstream_flank_length, $flank_end, $variant_length) = @{$self->flank_coordinates($seq_region_name, $start, $end, $strand)};
@@ -805,24 +815,23 @@ sub dump_features {
   my $count_entries = 0;
   my $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
 
-  my $post_projection = $self->param('mode');
+  my $mode = $self->param('mode');
   my @tables = ('feature_table', 'feature_table_failed_projection');
 
   foreach my $table (@tables) {
     my $feature_table = $self->param($table); 
-    if ($mode eq 'remap_failed_projection' && $table eq 'feature_table') {
+    if (($mode eq 'remap_post_projection') && ($table eq 'feature_table')) {
       $sth = $dbh->prepare(qq{
-        SELECT $column_names_concat FROM $table WHERE seq_region_id = ? AND map_weight > 1;
+        SELECT $column_names_concat FROM $feature_table WHERE seq_region_id = ? AND map_weight > 1;
       }, {mysql_use_result => 1});
     } else {
       $sth = $dbh->prepare(qq{
-        SELECT $column_names_concat FROM $table WHERE seq_region_id = ?;
+        SELECT $column_names_concat FROM $feature_table WHERE seq_region_id = ?;
       }, {mysql_use_result => 1});
     }
     foreach my $seq_region_id (keys %$seq_region_ids) {
       my $seq_region_name = $seq_region_ids->{$seq_region_id};
-      $sth->execute($seq_region_id);
-
+      $sth->execute($seq_region_id) or die $sth->errstr;
       while (my $row = $sth->fetchrow_arrayref) {
         my @values = map { defined $_ ? $_ : '\N' } @$row;
         my @pairs = ();
