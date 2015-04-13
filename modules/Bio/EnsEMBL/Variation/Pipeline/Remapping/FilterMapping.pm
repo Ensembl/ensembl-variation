@@ -145,8 +145,16 @@ sub report_failed_read_coverage_mappings {
   $self->param('pre_count_mapped', $count_mapped);
   $self->param('pre_count_unmapped', $count_unmapped);
   my $count_input_ids = 0;
+  my $fasta_file = $self->param('fasta_file');
+  my $fh_fasta_file = FileHandle->new($fasta_file, 'r');
+  while (<$fh_fasta_file>) {
+    chomp;
+    if (/^>/) {
+      $count_input_ids++;
+    }
+  }
+  $fh_fasta_file->close();
   $self->param('count_input_ids', $count_input_ids);
-
 }
 
 sub report_failed_mappings {
