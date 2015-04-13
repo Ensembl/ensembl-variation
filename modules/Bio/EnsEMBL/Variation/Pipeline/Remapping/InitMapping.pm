@@ -527,7 +527,7 @@ sub dump_read_coverage {
   my $dbname = $vdba->dbc->dbname();
   my $dbh = $vdba->dbc->db_handle;
 
-# get individiual_ids in old read coverage table
+  # get individiual_ids in old read coverage table
   my $individual_id = 'sample_id';
   my $individual_table = 'sample';
   my $table_names = get_table_names($dbh, $dbname);
@@ -538,10 +538,9 @@ sub dump_read_coverage {
       $individual_id = 'individual_id';
       $individual_table = 'individual';
     }
-# get strain names and number of reads
+  # get strain names and number of reads
     my $query = qq{
-      SELECT distinct $individual_id
-        FROM read_coverage
+      SELECT distinct $individual_id FROM read_coverage
     };
     $rc_individual_ids = run_query($dbh, $query);
   }
@@ -550,20 +549,29 @@ sub dump_read_coverage {
     $rc_individual_ids_hash->{$id} = 1;
   }
 
-  my @individual_names = split(',', $self->param('individuals'));
-
   my $name_to_id = {};
-  foreach my $name (@individual_names) {
-    my $ids = $self->get_individual_ids($name);
-    my $count = 0;
-    foreach my $id (@$ids) {
-      if ($rc_individual_ids_hash->{$id}) {
-        $name_to_id->{$name} = $id;
-        $count++;
-      } 
+
+  my @individual_names = split(',', $self->param('individuals'));
+  if (scalar @individual_names > 0) {
+    foreach my $name (@individual_names) {
+      my $ids = $self->get_individual_ids($name);
+      my $count = 0;
+      foreach my $id (@$ids) {
+        if ($rc_individual_ids_hash->{$id}) {
+          $name_to_id->{$name} = $id;
+          $count++;
+        } 
+      }
+      die "Too many individual ids in table for $name" unless ($count == 1);
+    } 
+  } else {
+    foreach my $id (keys %$rc_individual_ids_hash) {
+      my $name = $self->get_individual_name($id);
+      $name_to_id->{$name} = $id;
+      push @individual_names, $name;
     }
-    die "Too many individual ids in table for $name" unless ($count == 1);
-  } 
+  }
+
   $individual_id = 'sample_id';
   $individual_table = 'sample';
   $table_names = get_table_names($dbh, $dbname);
@@ -881,6 +889,34 @@ sub get_individual_ids {
   }
   $sth->finish();
   return \@ids;
+}
+
+sub get_individual_name {
+  my $self = shift;
+  my $individual_id = shift;
+  $self->warning($individual_id);
+  my $vdba = $self->param('vdba');
+
+  my $dbname = $vdba->dbc->dbname();
+  my $dbh = $vdba->dbc->db_handle();
+
+  my $column = 'sample_id';
+  my $table = 'sample';
+
+  my $column_names = get_column_names($dbh, $dbname, 'individual');
+  if (grep /individual_id/, @$column_names) {
+    $column = 'individual_id';
+    $table = 'individual';
+  }
+  my $sth = $dbh->prepare(qq{SELECT name FROM $table where $column=$individual_id;});
+
+  my @names = ();
+  $sth->execute();
+  while (my $row = $sth->fetchrow_arrayref) {
+    push @names, $row->[0];
+  }
+  $sth->finish();
+  return $names[0];
 }
 
 sub set_seq_region_boundaries {
