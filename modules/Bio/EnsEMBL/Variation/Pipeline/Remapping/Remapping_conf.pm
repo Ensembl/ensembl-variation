@@ -209,7 +209,7 @@ sub pipeline_analyses {
         },
     );
     if ($self->o('run_variant_qc')) {
-      push @analysis, (
+      push @analyses, (
         {
             -logic_name => 'load_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
