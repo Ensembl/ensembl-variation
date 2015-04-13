@@ -858,7 +858,7 @@ sub join_feature_data {
   }
   $fh_init_feature->close();
 
-# get new seq_region_ids
+  # get new seq_region_ids
   my $seq_region_ids = {};
   my $cdba = $self->param('cdba');
   my $sa = $cdba->get_SliceAdaptor;
@@ -866,7 +866,7 @@ sub join_feature_data {
   foreach my $slice (@$slices) {
     $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
   }
-# new map_weights
+  # new map_weights
   my $file_filtered_mappings = $self->param('file_filtered_mappings');
   my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
   my $map_weights = {};
@@ -877,7 +877,7 @@ sub join_feature_data {
   }
   $fh_mappings->close();
 
-# join feature data with mapping data:
+  # join feature data with mapping data:
 
   my $file_load_features = $self->param('file_load_features');
   my $fh_load_features = FileHandle->new($file_load_features, 'w');   
@@ -888,14 +888,14 @@ sub join_feature_data {
     my ($query_name, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
 
     if ($self->param('mode') eq 'remap_multi_map') {
-# query_name: 44919.0-200-1-200-C:C/G:rs2455513
+      # query_name: 44919.0-200-1-200-C:C/G:rs2455513
       my @query_name_components = split(':', $query_name);
       $variation_name = pop @query_name_components; 
       $variation_feature_id = shift @query_name_components;
 #            my $vf_id_info = shift @query_name_components; 
 #            ($variation_feature_id, $version) = split('\.', $vf_id_info);
     } else {
-# query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
+    # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
       my @query_name_components = split('-', $query_name, 2);
       $variation_feature_id = $query_name_components[0];
     }
@@ -943,7 +943,6 @@ sub print_feature_line {
   my $line =  join("\t", ($query_name, $seq_name, $start, $end, $strand, $score));
   return $line;
 }
-
 
 # returns the row that will be loaded into the new variation_feature_table
 # change variation_feature_id to old_variation_feature_id
