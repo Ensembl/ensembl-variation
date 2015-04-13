@@ -68,7 +68,7 @@ sub default_options {
         load_features           => $self->o('pipeline_dir') . '/load_features',
         mapping_results         => $self->o('pipeline_dir') . '/mapping_results', 
         statistics              => $self->o('pipeline_dir') . '/statistics',   
-        
+        dump_mapped_features    => $self->o('pipeline_dir') . '/dump_mapped_features',       
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
@@ -88,6 +88,7 @@ sub pipeline_wide_parameters {
         registry_file                => $self->o('registry_file'),
         registry_file_newasm         => $self->o('registry_file_newasm'),
         dump_features_dir            => $self->o('dump_features'),
+        dump_mapped_features_dir     => $self->o('dump_mapped_features'),
         filtered_mappings_dir        => $self->o('filtered_mappings'),
         load_features_dir            => $self->o('load_features'),
         statistics_dir               => $self->o('statistics'),
