@@ -55,7 +55,7 @@ sub default_options {
         use_prior_for_filtering => 1,
         map_to_chrom_only       => 1,
         entries_per_file        => 50000,
-        mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage
+        mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection
         feature_table           => 'variation_feature',
         feature_table_failed_projection => 'variation_feature_failed',
         feature_table_projection => 'variation_feature_projection',
