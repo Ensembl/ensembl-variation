@@ -48,7 +48,7 @@ sub default_options {
         hive_db_user            => 'ensadmin',
         hive_db_host            => 'ens-variation',
         debug                   => 0,
-        run_variant_qc          => 1,
+        run_variant_qc          => 0,
         use_fasta_files         => 0,
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
