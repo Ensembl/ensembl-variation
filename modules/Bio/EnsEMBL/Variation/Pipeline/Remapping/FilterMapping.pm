@@ -140,15 +140,6 @@ sub report_failed_read_coverage_mappings {
   }
   $fh_mappings->close();
 
-#my $fh_failed_mappings = FileHandle->new($file_failed_mappings, 'r');
-#while (<$fh_failed_mappings>) {
-#    chomp;
-#    my ($indel, $old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
-#    unless ($mapped->{$query_name}) {
-#        $unmapped->{$query_name} = 1;
-#    }
-#}
-#$fh_failed_mappings->close();
   $count_mapped = scalar keys %$mapped;
 
   $self->param('pre_count_mapped', $count_mapped);
