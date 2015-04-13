@@ -48,6 +48,7 @@ sub default_options {
         hive_db_user            => 'ensadmin',
         hive_db_host            => 'ens-variation',
         debug                   => 0,
+        run_variant_qc          => 1,
         use_fasta_files         => 0,
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
@@ -206,11 +207,27 @@ sub pipeline_analyses {
             },
 
         },
+    );
+    if ($self->o('run_variant_qc')) {
+      push @analysis, (
         {
             -logic_name => 'load_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+            -flow_into => {
+                1 => ['variant_qc'],
+            },
         },
-    );
+        {
+            -logic_name => 'variant_qc',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitVariantQC',
+        },
+      );
+    } else {
+      push @analyses, ({
+            -logic_name => 'load_mapping',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+      },);
+    }
     return \@analyses;
 }
 
