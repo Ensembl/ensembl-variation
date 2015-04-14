@@ -99,7 +99,7 @@ sub run {
   # Variation maps to more than one genomic location
   my $failed_description_id = 19;
   $dbh->do(qq{DELETE FROM failed_variation WHERE failed_description_id=$failed_description_id;});
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT distinct variation_id, $failed_description_id from $feature_table WHERE map_weight > 1;});
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT distinct variation_id, $failed_description_id from $feature_table WHERE map_weight > 1;});
 
   # update failed_variants no mapping  
   # Variation can not be re-mapped to the current assembly
@@ -125,22 +125,22 @@ sub run {
   }
   closedir(DIR);
   my $variation_names_concat = join(',', keys %$unmapped_variations);
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT variation_id, $failed_description_id FROM variation WHERE name IN ($variation_names_concat);});
 
   # update display column in variation and variation_feature tables
 
   # evidence_attribs: 371 = Cited
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT variation_id, $failed_description_id FROM variation WHERE name IN ($variation_names_concat);});
 
   # reset display column, set all values to 1
   $dbh->do(qq{UPDATE variation SET display=1 WHERE display=0;});
-  $dbh->do(qq{UPDATE variation_feature SET display=1 WHERE display=0;});
+  $dbh->do(qq{UPDATE $feature_table SET display=1 WHERE display=0;});
   # set display to 0 for failed_variations
   $dbh->do(qq{UPDATE variation v, failed_variation fv SET v.display=0 WHERE fv.variation_id=v.variation_id;});
-  $dbh->do(qq{UPDATE variation_feature vf, failed_variation fv SET vf.display=0 WHERE fv.variation_id=vf.variation_id;});
+  $dbh->do(qq{UPDATE $feature_table rt, failed_variation fv SET rt.display=0 WHERE fv.variation_id=rt.variation_id;});
   # set display to 1 if variation is cited 
-  $dbh->do(qq{UPDATE variation SET display=1 WHERE variation_id IN (SELECT variation_id FROM variation WHERE evidence_attribs LIKE '%371%');});
-  $dbh->do(qq{UPDATE variation_feature SET display=1 WHERE variation_id IN (SELECT variation_id FROM variation WHERE evidence_attribs LIKE '%371%');});
+  $dbh->do(qq{UPDATE variation SET display=1 WHERE evidence_attribs LIKE '%371%';});
+  $dbh->do(qq{UPDATE $feature_table rt, variation v SET rt.display=1 WHERE v.variation_id = rt.variation_id AND v.evidence_attribs LIKE '%371%';});
    
 }
 
