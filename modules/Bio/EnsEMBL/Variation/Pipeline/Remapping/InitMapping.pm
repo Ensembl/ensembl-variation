@@ -167,13 +167,16 @@ sub generate_remap_read_coverage_input {
           unless ($seq_region_name =~ /^\d+$|^X$|^Y$|^MT$/) {
             print $fh_report_non_ref_entries $_, "\n";
           }
+          if ($start > $end) {
+            $self->warning("End smaller than start for $seq_region_name:$start-$end");
+            ($start, $end) = ($end, $start);
+          }
+
           if (($end - $start + 1 ) > 1000) {
             my $upstream_query_sequence   = $self->get_query_sequence($seq_region_name, $start, $start + 500, $strand);
             print $fh_fasta_file ">$entry:upstream\n$upstream_query_sequence\n";
             my $downstream_query_sequence = $self->get_query_sequence($seq_region_name, $end - 500, $end, $strand);
             print $fh_fasta_file ">$entry:downstream\n$downstream_query_sequence\n";
-          } elsif ($end < $start) {
-            $self->warning("End smaller than start for $seq_region_name:$start-$end");
           } elsif (($end - $start) < 100) {
             my $upstream_query_sequence = $self->get_query_sequence($seq_region_name, $start - 100, $start - 1, $strand);
             my $read_sequence = $self->get_query_sequence($seq_region_name, $start, $end, $strand);
