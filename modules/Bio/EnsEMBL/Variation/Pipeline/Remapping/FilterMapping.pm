@@ -808,11 +808,21 @@ sub join_read_coverage_data {
   my $ia = $vdba->get_IndividualAdaptor;
 
   my $individuals_newasm = $ia->fetch_all_by_name($individual_name_oldasm);
+#  my $individual_newasm = $individuals_newasm->[0];    
+#  my $new_individual_id = $individual_newasm->dbID();
+  my $individual_newasm;
+  my $new_individual_id;
+
   if ((scalar @$individuals_newasm) > 1) {
-    die "More than one name for $individual_name_oldasm in new database";
+    $individual_newasm = $ia->fetch_by_dbID($old_individual_id); 
+    if ($individual_newasm->name eq $individual_name_oldasm) {
+      $new_individual_id = $old_individual_id;
+    } else {
+      die "More than one name for $individual_name_oldasm in new database";
+    }
   }
-  my $individual_newasm = $individuals_newasm->[0];    
-  my $new_individual_id = $individual_newasm->dbID();
+  $individual_newasm = $individuals_newasm->[0];    
+  $new_individual_id = $individual_newasm->dbID();
 
 # join feature data with mapping data:
   my $file_load_features = $self->param('file_load_features');
@@ -825,6 +835,10 @@ sub join_read_coverage_data {
     my ($entry, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
     my $seq_region_id = $seq_region_ids->{$seq_name};
     $data = $read_coverage_data->{$entry};     
+    if ($start > $end) {
+      $self->warning("Swap start end for $start $end");
+      ($start, $end) = ($end, $start);
+    }
     $data->{seq_region_id} = $seq_region_id;
     $data->{seq_region_start} = $start;
     $data->{seq_region_end} = $end;
