@@ -38,7 +38,7 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 sub fetch_input {
   my $self = shift;
   my $registry = 'Bio::EnsEMBL::Registry';
-  $registry->load_all($self->param('registry_file'));  
+  $registry->load_all($self->param('registry_file_newasm'));  
   my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
   $self->param('vdba', $vdba);
 }
@@ -141,7 +141,8 @@ sub run {
   # set display to 1 if variation is cited 
   $dbh->do(qq{UPDATE variation SET display=1 WHERE evidence_attribs LIKE '%371%';});
   $dbh->do(qq{UPDATE $feature_table rt, variation v SET rt.display=1 WHERE v.variation_id = rt.variation_id AND v.evidence_attribs LIKE '%371%';});
-   
+#ALTER TABLE variation_feature DROP COLUMN variation_feature_id_old 
+#alter table variation_feature order by seq_region_id,seq_region_start,seq_region_end  
 }
 
 =begin
