@@ -106,7 +106,7 @@ sub pipeline_wide_parameters {
         flank_seq_length             => $self->o('flank_seq_length'),	
         use_fasta_files              => $self->o('use_fasta_files'),
         feature_table                => $self->o('feature_table'),
-        feature_table_projection     => $self->o('feature_table_projection');
+        feature_table_projection     => $self->o('feature_table_projection'),
         feature_table_failed_projection => $self->o('feature_table_failed_projection'),
         individuals                  => $self->o('individuals'),
         algn_score_threshold         => $self->o('algn_score_threshold'),
@@ -224,10 +224,13 @@ sub pipeline_analyses {
         },
       );
     } else {
-      push @analyses, ({
+      push @analyses, (
+        {
+  
             -logic_name => 'load_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
-      },);
+        },
+      );
     }
     return \@analyses;
 }
