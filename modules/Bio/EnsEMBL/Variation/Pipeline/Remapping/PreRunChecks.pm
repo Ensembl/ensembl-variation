@@ -50,7 +50,7 @@ sub run {
   my $pipeline_dir = $self->param('pipeline_dir');
   die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
-  foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir dump_mapped_features/) {
+  foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir dump_mapped_features_dir/) {
     my $dir = $self->param($folder);
     if (-d $dir) {
       remove_tree($dir);
