@@ -54,7 +54,7 @@ sub run {
   
   my $file_count = 1;
   my $entries_per_file = $self->param('entries_per_file'); 
-  my $count_entries = 0
+  my $count_entries = 0;
   my $fh = FileHandle->new("$dump_mapped_features_dir/$file_count.txt", 'w');
 
   my @column_names = qw/variation_feature_id variation_id seq_region_id seq_region_start seq_region_end seq_region_strand allele_string map_weight/;
@@ -73,7 +73,7 @@ sub run {
     my @values = map { defined $_ ? $_ : '\N'} @$row;
     my @pairs = ();
     for my $i (0..$#column_names) {
-      push @pairs, "$column_names[$i]=$values[$]";
+      push @pairs, "$column_names[$i]=$values[$i]";
     } 
     if ($count_entries >= $entries_per_file) {
       $fh->close();
@@ -91,21 +91,20 @@ sub run {
 
   # create backup of failed_variation table
   my $failed_variation_table_BU = 'failed_variation_pre_remapping';
-  $dbc->do(qq{ DROP TABLE IF EXISTS $failed_variation_table_BU});
-  $dbc->do(qq{ CREATE TABLE $failed_variation_table_BU like failed_variation;});
-  $dbc->do(qq{ INSERT INTO $failed_variation_table_BU select * FROM failed_variation;});
+  $dbh->do(qq{ DROP TABLE IF EXISTS $failed_variation_table_BU});
+  $dbh->do(qq{ CREATE TABLE $failed_variation_table_BU like failed_variation;});
+  $dbh->do(qq{ INSERT INTO $failed_variation_table_BU select * FROM failed_variation;});
 
   # update failed_variants map_weight > 1 
   # Variation maps to more than one genomic location
   my $failed_description_id = 19;
   $dbh->do(qq{DELETE FROM failed_variation WHERE failed_description_id=$failed_description_id;});
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed) SELECT distinct variation_id, $failed_description_id from $feature_table WHERE map_weight > 1;});
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT distinct variation_id, $failed_description_id from $feature_table WHERE map_weight > 1;});
 
   # update failed_variants no mapping  
   # Variation can not be re-mapped to the current assembly
-  $failed_description = 17; 
+  $failed_description_id = 17; 
   $dbh->do(qq{DELETE FROM failed_variation WHERE failed_description_id=$failed_description_id;});
-
   my $unmapped_variations = {};
   my $filtered_mapping_dir = $self->param('filtered_mappings_dir'); 
   opendir(DIR, $filtered_mapping_dir) or die $!;
@@ -117,20 +116,21 @@ sub run {
         my ($query_name, $type) = split /\t/;
         # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
         my @query_name_components = split('-', $query_name, 2);
-        my $variation_name = split(':', $query_name_components)[5];
+        my $snd_part = $query_name_components[1];
+        my $variation_name = (split(':', $snd_part))[5];
         $unmapped_variations->{"'$variation_name'"} = 1;
       }
       $fh->close();
     }
   }
   closedir(DIR);
-  my $variarion_names_concat = join(',', keys %$unmapped_variations);
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
+  my $variation_names_concat = join(',', keys %$unmapped_variations);
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
 
   # update display column in variation and variation_feature tables
 
   # evidence_attribs: 371 = Cited
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
+  $dbh->do(qq{INSERT INTO failed_variation(variation_id, $failed_description_id) SELECT variation_id FROM variation WHERE name IN ($variation_names_concat);});
 
   # reset display column, set all values to 1
   $dbh->do(qq{UPDATE variation SET display=1 WHERE display=0;});
@@ -144,9 +144,9 @@ sub run {
    
 }
 
+=begin
 sub write_output {
   my $self = shift;
-=begin
   my @jobs = ();
   my $file_count = $self->param('file_count');
   my $i = 1;
@@ -157,8 +157,9 @@ sub write_output {
     $i++;
   } 
   $self->dataflow_output_id(\@jobs, 2)
+}
 =end
 =cut
-}
+
 
 1;
