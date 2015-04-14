@@ -1922,7 +1922,7 @@ CREATE TABLE attrib_type (
 */
 CREATE TABLE attrib (
 
-    attrib_id           INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    attrib_id           INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
     attrib_type_id      SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
     value               TEXT NOT NULL,
 
