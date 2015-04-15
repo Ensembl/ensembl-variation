@@ -75,7 +75,7 @@ create table variation (
   minor_allele_freq float DEFAULT NULL,
   minor_allele_count int(10) unsigned DEFAULT NULL,
   clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective'),
-  evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,
+  evidence_attribs   SET('367','368','369','370','371','372','418') DEFAULT NULL,
   display int(1) DEFAULT 1,
 
 	primary key( variation_id ),
@@ -223,7 +223,7 @@ create table variation_feature(
     minor_allele_freq float DEFAULT NULL,
     minor_allele_count int(10) unsigned DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
-    evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,    
+    evidence_attribs   SET('367','368','369','370','371','372','418') DEFAULT NULL,    
     clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
     display int(1) DEFAULT 1,
 
