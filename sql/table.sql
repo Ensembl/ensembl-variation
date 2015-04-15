@@ -1747,6 +1747,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_c.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant and change initiator_codon_variant to start_lost');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_d.sql|Reduce consequence_terms to the set of relevant SO_terms in motif_feature_variation and regulatory_feature_variation tables');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_e.sql|update the attrib tables by changing the default values');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_f.sql|add Phenotype or Disease evidence_attribs');
 
 
 /**
