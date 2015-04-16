@@ -328,7 +328,7 @@ sub generate_svf_mapping_input {
           my $coord = $data->{$coord_name};
           if ($coord ne '\N') {
             push @all_coords, "$coord_name=$coord";
-            my $query_sequence = $self->get_query_sequence($seq_region_name, $coord, $coord + 100, $strand);
+            my $query_sequence = $self->get_query_sequence($seq_region_name, $coord, $coord + 200, $strand);
             my $id = ">$feature_id-$coord_name";
             print $fh_fasta_file "$id\n$query_sequence\n";
           }
@@ -831,7 +831,10 @@ sub dump_features {
   my $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
 
   my $mode = $self->param('mode');
-  my @tables = ('feature_table', 'feature_table_failed_projection');
+  my @tables = ('feature_table');
+  if ($self->param('feature_table_failed_projection')) {
+    push @tables, 'feature_table_failed_projection'
+  }
 
   foreach my $table (@tables) {
     my $feature_table = $self->param($table); 
