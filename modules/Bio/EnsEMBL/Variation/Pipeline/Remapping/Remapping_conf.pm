@@ -58,8 +58,8 @@ sub default_options {
         entries_per_file        => 50000,
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection, remap_svf_post_projection, remap_svf
         feature_table           => 'variation_feature',
-        feature_table_failed_projection => 'variation_feature_failed',
-        feature_table_projection => 'variation_feature_projection',
+        feature_table_failed_projection => 0, #'variation_feature_failed'
+        feature_table_projection => 0, #'variation_feature_projection',
         individuals             => '',
         pipeline_dir            => $self->o('pipeline_dir'),
         bam_files               => $self->o('pipeline_dir') . '/bam_files',
@@ -226,7 +226,6 @@ sub pipeline_analyses {
     } else {
       push @analyses, (
         {
-  
             -logic_name => 'load_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
         },
