@@ -97,7 +97,7 @@ sub default_options {
         debug => 0,
 
         only_update_vf => 0,
-        update_vf => 1,
+        update_vf => 0,
         only_motif_feature => 0,
         only_regulatory_feature => 0,
 
@@ -119,7 +119,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name'),
+            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name') . '_' . $self->o('species'),
             -driver => 'mysql',
         },
     };
