@@ -163,12 +163,11 @@ $config = copy_config($base_config, {
   cell_type  => ['HUVEC'],
   biotype    => 1,
 });
-($vf) = @{parse_line($config, '21 25487468 25487468 A/T +')};
+($vf) = @{parse_line($config, '21 25562380 25562380 G/T +')};
 $cons = get_all_consequences($config, [$vf]);
 
-ok((grep {$_->{Extra}->{BIOTYPE} && $_->{Extra}->{BIOTYPE} eq 'promoter_flanking_region'} @$cons), "regulatory - type");
-ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.022} @$cons), "regulatory - motif score");
-
+ok((grep {$_->{Extra}->{BIOTYPE} && $_->{Extra}->{BIOTYPE} eq 'promoter'} @$cons), "regulatory - type");
+ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.017} @$cons), "regulatory - motif score");
 
 ## input formats
 
