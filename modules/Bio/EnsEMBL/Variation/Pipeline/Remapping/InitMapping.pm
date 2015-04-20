@@ -324,6 +324,7 @@ sub generate_svf_mapping_input {
         my $strand          = $data->{seq_region_strand};
         my $variation_name  = $data->{variation_name};
         my @all_coords = ();
+        push @all_coords, "seq_region_name=$seq_region_name";
         foreach my $coord_name (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
           my $coord = $data->{$coord_name};
           if ($coord ne '\N') {
