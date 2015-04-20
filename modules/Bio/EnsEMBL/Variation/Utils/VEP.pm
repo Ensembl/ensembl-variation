@@ -1324,6 +1324,11 @@ sub vf_list_to_cons {
     # get overlapping SVs
     &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
     
+    # split variants with complex allele strings
+    my $before_split = scalar @$new_listref;
+    $new_listref = split_variants($config, $new_listref);
+    my $rejoin_required = scalar @$new_listref == $before_split ? 0 : 1;
+    
     # remake hash without non-variants
     %vf_hash = ();
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$new_listref;
@@ -1359,6 +1364,9 @@ sub vf_list_to_cons {
             # need to re-sort
             @$finished_vfs = sort {$a->{start} <=> $b->{start} || $a->{end} <=> $b->{end}} @$finished_vfs;
         }
+        
+        # rejoin required?
+        $finished_vfs = rejoin_variants($config, $finished_vfs) if $rejoin_required; 
         
         debug("Calculating consequences") unless defined($config->{quiet});
         
@@ -1524,6 +1532,165 @@ sub vf_list_to_cons {
     }
     
     return \@return;
+}
+
+sub split_variants {
+  my ($config, $listref) = @_;  
+  
+  # split and link multi-allele VFs
+  my @split_list;
+  
+  foreach my $original_vf(@$listref)  {
+    if($original_vf->{allele_string} =~ /.+\/.+\/.+/) {
+      
+      my @alleles = split('/', $original_vf->{allele_string});
+      my $original_ref = shift @alleles;
+      my $first;
+      
+      my @tmp;
+      my $changed = 0;
+      
+      foreach my $alt(@alleles) {
+        
+        my $ref   = $original_ref;
+        my $start = $original_vf->{start};
+        my $end   = $original_vf->{end};
+        
+        # trim from left
+        while($ref && $alt && substr($ref, 0, 1) eq substr($alt, 0, 1)) {
+          $ref = substr($ref, 1);
+          $alt = substr($alt, 1);
+          $start++;
+          $changed = 1;
+        }
+        
+        # trim from right
+        while($ref && $alt && substr($ref, -1, 1) eq substr($alt, -1, 1)) {
+          $ref = substr($ref, 0, length($ref) - 1);
+          $alt = substr($alt, 0, length($alt) - 1);
+          $end--;
+          $changed = 1;
+        }
+        
+        $ref ||= '-';
+        $alt ||= '-';
+        
+        # create a copy
+        my $new_vf;
+        %$new_vf = %{$original_vf};
+        bless $new_vf, ref($original_vf);
+        
+        # give it a new allele string and coords
+        $new_vf->{allele_string} = $ref.'/'.$alt;
+        $new_vf->{start} = $start;
+        $new_vf->{end} = $end;
+        
+        $new_vf->{variation_name} = 'merge_'.$alt;
+        
+        # not the first one ($first already exists)
+        if($first) {
+          $new_vf->{merge_with} = $first;
+        }
+        
+        # this is the first one
+        else {
+          $first = $new_vf;
+        
+          $new_vf->{variation_name} = 'first_'.$alt;
+          
+          # store the original allele string and coords
+          $first->{original_allele_string} = $original_vf->{allele_string};
+          $first->{original_start}         = $original_vf->{start};
+          $first->{original_end}           = $original_vf->{end};
+        }
+        
+        push @tmp, $new_vf;
+      }
+      
+      if($changed) {
+        push @split_list, @tmp;
+      }
+      else {
+        push @split_list, $original_vf;
+      }
+    }
+    else {
+      push @split_list, $original_vf;
+    }
+  }
+  
+  return \@split_list;
+}
+
+sub rejoin_variants {
+  my ($config, $listref) = @_;
+  
+  my @joined_list = ();
+  
+  # backup stats here as methods below will increment stats counts
+  my %stats_backup = %{$config->{stats} || {}};
+  
+  foreach my $vf(@$listref) {
+    
+    # reset original one
+    if(defined($vf->{original_allele_string})) {
+      
+      $DB::single = 1;
+      
+      # do consequence stuff
+      vf_to_consequences($config, $vf);
+      
+      $vf->{allele_string} = $vf->{original_allele_string};
+      $vf->{start}         = $vf->{original_start};
+      $vf->{end}           = $vf->{original_end};
+      
+      push @joined_list, $vf;
+    }
+    
+    # this one needs to be merged in
+    elsif(defined($vf->{merge_with})) {
+      my $original = $vf->{merge_with};
+      
+      # do consequence stuff
+      vf_to_consequences($config, $vf);
+      
+      # now we have to copy the [Feature]Variation objects
+      # we can't simply copy the alleles as the coords will be different
+      # better to make new keys
+      # we also have to set the VF pointer to the original
+      
+      # do transcript variations
+      foreach my $key(keys %{$vf->{transcript_variations} || {}}) {
+        my $val = $vf->{transcript_variations}->{$key};
+        $val->base_variation_feature($original);
+        $original->{transcript_variations}->{'merged_'.$key} = $val;
+      }
+      
+      # do regulatory variations
+      if($vf->{regulation_variations} && ref($vf->{regulation_variations}) eq 'HASH') {
+        $DB::single = 1;
+        
+        foreach my $type(@REG_FEAT_TYPES) {
+          foreach my $key(keys %{$vf->{regulation_variations}->{$type} || {}}) {
+            my $val = $vf->{transcript_variations}->{$type}->{$key};
+            $val->base_variation_feature($original);
+            $original->{regulation_variations}->{$type}->{'merged_'.$key} = $val;
+          }
+        }
+      }
+      
+      # reset these keys, they can be recalculated
+      delete $original->{$_} for qw(overlap_consequences _most_severe_consequence intergenic_variation);
+    }
+    
+    # normal
+    else {
+      push @joined_list, $vf;
+    }
+  }
+  
+  $config->{stats} = \%stats_backup if $config->{stats};
+  return \@joined_list;
 }
 
 sub natural_sort {
@@ -1756,7 +1923,7 @@ sub vf_to_consequences {
   # this will stop the API trying to go off and fill it again
   if(defined $config->{whole_genome}) {
     $vf->{transcript_variations} ||= {};
-    $vf->{regulation_variations}->{$_} ||= [] for (@REG_FEAT_TYPES, 'ExternalFeature');
+    $vf->{regulation_variations}->{$_} ||= {} for (@REG_FEAT_TYPES, 'ExternalFeature');
   }
   
   
@@ -2272,6 +2439,8 @@ sub tva_to_line {
   
   foreach my $tool (qw(SIFT PolyPhen)) {
     my $lc_tool = lc($tool);
+    
+    $DB::single = 1;
     
     if (my $opt = $config->{$lc_tool}) {
       my $want_pred  = $opt =~ /^p/i;
@@ -4234,6 +4403,11 @@ sub cache_transcripts {
                     foreach my $tr(@{$gene->get_all_Transcripts}) {
                         # there are some transcripts in the otherfeatures DB with no stable ID!!!
                         next unless $tr->stable_id;
+                        
+                        # in human and mouse otherfeatures DB, there may be duplicate genes
+                        # skip those from analysis refseq_human_import and refseq_mouse_import
+                        # $DB::single = 1;
+                        # next if defined($config->{refseq}) && $tr->analysis && $tr->analysis->logic_name =~ /^refseq_[a-z]+_import$/;
                       
                         $tr->{_gene_stable_id} = $gene_stable_id;
                         $tr->{_gene} = $gene;
