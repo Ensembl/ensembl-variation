@@ -143,3 +143,13 @@
 23	supercontig		2	default_version	220_155158	3	1	1
 2470	lrg		8	default_version	220_155158	1003	1	1
 2468	chromosome	GRCh37	1	default_version	220_155158	2	1	1
+2466	clone		3	default_version	420_122215	4	1	1
+2467	contig		4	default_version,sequence_level	420_122215	1	1	1
+23	supercontig		2	default_version	420_122215	3	1	1
+2470	lrg		8	default_version	420_122215	1003	1	1
+2468	chromosome	GRCh37	1	default_version	420_122215	2	1	1
+2466	clone		3	default_version	420_125215	4	1	1
+2467	contig		4	default_version,sequence_level	420_125215	1	1	1
+23	supercontig		2	default_version	420_125215	3	1	1
+2470	lrg		8	default_version	420_125215	1003	1	1
+2468	chromosome	GRCh37	1	default_version	420_125215	2	1	1

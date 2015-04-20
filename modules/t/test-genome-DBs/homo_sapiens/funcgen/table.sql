@@ -111,7 +111,7 @@ CREATE TABLE `array` (
   PRIMARY KEY (`array_id`),
   UNIQUE KEY `vendor_name_idx` (`vendor`,`name`),
   UNIQUE KEY `class_name_idx` (`class`,`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `array_chip` (
   `array_chip_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -120,7 +120,7 @@ CREATE TABLE `array_chip` (
   `name` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`array_chip_id`),
   UNIQUE KEY `array_design_idx` (`array_id`,`design_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `associated_feature_type` (
   `table_id` int(10) unsigned NOT NULL,
@@ -168,8 +168,8 @@ CREATE TABLE `binding_matrix` (
   `analysis_id` smallint(5) unsigned NOT NULL,
   `threshold` double DEFAULT NULL,
   PRIMARY KEY (`binding_matrix_id`),
-  KEY `feature_type_idx` (`feature_type_id`),
-  KEY `name_analysis_idx` (`name`,`analysis_id`)
+  UNIQUE KEY `name_analysis_idx` (`name`,`analysis_id`),
+  KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM  ;
 
 CREATE TABLE `cell_type` (
@@ -246,7 +246,8 @@ CREATE TABLE `dbfile_registry` (
   `table_id` int(10) unsigned NOT NULL,
   `table_name` varchar(32) NOT NULL,
   `path` varchar(255) NOT NULL,
-  PRIMARY KEY (`table_id`,`table_name`)
+  PRIMARY KEY (`table_id`,`table_name`),
+  UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`,`path`)
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `experiment` (
@@ -267,7 +268,7 @@ CREATE TABLE `experiment` (
   KEY `experimental_group_idx` (`experimental_group_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `cell_type_idx` (`cell_type_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `experimental_chip` (
   `experimental_chip_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -294,7 +295,7 @@ CREATE TABLE `experimental_group` (
   `is_project` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`experimental_group_id`),
   UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `external_db` (
   `external_db_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
@@ -310,7 +311,7 @@ CREATE TABLE `external_db` (
   `description` text,
   PRIMARY KEY (`external_db_id`),
   UNIQUE KEY `db_name_release_idx` (`db_name`,`db_release`(50))
-) ENGINE=MyISAM   AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM  AVG_ROW_LENGTH=80;
 
 CREATE TABLE `external_feature` (
   `external_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -327,7 +328,7 @@ CREATE TABLE `external_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM   MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM  MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 CREATE TABLE `external_synonym` (
   `xref_id` int(10) unsigned NOT NULL,
@@ -394,7 +395,7 @@ CREATE TABLE `input_set` (
   KEY `experiment_idx` (`experiment_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `cell_type_idx` (`cell_type_id`)
-) ENGINE=MyISAM  MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
+) ENGINE=MyISAM   MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 CREATE TABLE `input_set_input_subset` (
   `input_set_id` int(10) unsigned NOT NULL,
@@ -426,7 +427,7 @@ CREATE TABLE `lineage` (
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `efo_idx` (`efo_id`),
   KEY `parent_linage_idx` (`parent_lineage_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `mage_xml` (
   `mage_xml_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -477,7 +478,7 @@ CREATE TABLE `mirna_target_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `motif_feature` (
   `motif_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -506,7 +507,7 @@ CREATE TABLE `object_xref` (
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `ensembl_idx` (`ensembl_object_type`,`ensembl_id`)
-) ENGINE=MyISAM   MAX_ROWS=100000000 AVG_ROW_LENGTH=40;
+) ENGINE=MyISAM  MAX_ROWS=100000000 AVG_ROW_LENGTH=40;
 
 CREATE TABLE `ontology_xref` (
   `object_xref_id` int(10) unsigned NOT NULL DEFAULT '0',
@@ -529,7 +530,7 @@ CREATE TABLE `probe` (
   KEY `probe_set_idx` (`probe_set_id`),
   KEY `array_chip_idx` (`array_chip_id`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `probe_feature` (
   `probe_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -544,7 +545,7 @@ CREATE TABLE `probe_feature` (
   PRIMARY KEY (`probe_feature_id`),
   KEY `probe_idx` (`probe_id`),
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `probe_set` (
   `probe_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -553,7 +554,7 @@ CREATE TABLE `probe_set` (
   `family` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`probe_set_id`),
   KEY `name` (`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `regbuild_string` (
   `regbuild_string_id` int(10) NOT NULL AUTO_INCREMENT,
@@ -562,7 +563,7 @@ CREATE TABLE `regbuild_string` (
   `string` text NOT NULL,
   PRIMARY KEY (`regbuild_string_id`),
   UNIQUE KEY `name_species_idx` (`species_id`,`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL,
@@ -581,7 +582,7 @@ CREATE TABLE `regulatory_feature` (
   `display_label` varchar(80) DEFAULT NULL,
   `feature_type_id` int(10) unsigned DEFAULT NULL,
   `feature_set_id` int(10) unsigned DEFAULT NULL,
-  `stable_id` mediumint(8) unsigned DEFAULT NULL,
+  `stable_id` varchar(128) DEFAULT NULL,
   `binary_string` varchar(500) DEFAULT NULL,
   `projected` tinyint(1) DEFAULT '0',
   `bound_start_length` mediumint(3) unsigned NOT NULL,
@@ -634,7 +635,7 @@ CREATE TABLE `result_set` (
   KEY `analysis_idx` (`analysis_id`),
   KEY `feature_class_idx` (`feature_class`),
   KEY `experiment_idx` (`experiment_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `result_set_input` (
   `result_set_input_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -643,7 +644,7 @@ CREATE TABLE `result_set_input` (
   `table_name` enum('experimental_chip','channel','input_set','input_subset') DEFAULT NULL,
   PRIMARY KEY (`result_set_input_id`,`result_set_id`),
   UNIQUE KEY `rset_table_idname_idx` (`result_set_id`,`table_id`,`table_name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `segmentation_feature` (
   `segmentation_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -658,7 +659,7 @@ CREATE TABLE `segmentation_feature` (
   PRIMARY KEY (`segmentation_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`,`seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`)
-) ENGINE=MyISAM   MAX_ROWS=100000000;
+) ENGINE=MyISAM  MAX_ROWS=100000000;
 
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -683,7 +684,7 @@ CREATE TABLE `status_name` (
   `name` varchar(60) DEFAULT NULL,
   PRIMARY KEY (`status_name_id`),
   UNIQUE KEY `status_name_idx` (`name`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `supporting_set` (
   `data_set_id` int(10) unsigned NOT NULL,
@@ -709,14 +710,14 @@ CREATE TABLE `unmapped_object` (
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`),
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `unmapped_reason` (
   `unmapped_reason_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `summary_description` varchar(255) DEFAULT NULL,
   `full_description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`unmapped_reason_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `xref` (
   `xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -731,5 +732,5 @@ CREATE TABLE `xref` (
   UNIQUE KEY `id_index` (`dbprimary_acc`,`external_db_id`,`info_type`,`info_text`,`version`),
   KEY `display_index` (`display_label`),
   KEY `info_type_idx` (`info_type`)
-) ENGINE=MyISAM   AVG_ROW_LENGTH=100;
+) ENGINE=MyISAM  AVG_ROW_LENGTH=100;
 

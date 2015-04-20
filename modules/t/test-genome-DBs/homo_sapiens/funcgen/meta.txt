@@ -1,4 +1,4 @@
-534	\N	schema_version	78
+534	\N	schema_version	80
 38	1	regbuild.version	12.1
 80	\N	patch	patch_50_51_b.sql|multispecies
 83	\N	patch	patch_50_51_c.sql|associated_feature_type
@@ -144,3 +144,8 @@
 580	\N	patch	patch_76_77_d.sql|Fix errornous feature_type_id in mirna_target_feature
 581	\N	patch	patch_77_78_a.sql|schema_version
 582	\N	patch	patch_77_78_b.sql|Change unmapped_reason_id from smallint to int
+583	\N	patch	patch_78_79_a.sql|schema_version
+584	\N	patch	patch_78_79_b.sql|binding_matrix unique key
+585	\N	patch	patch_79_80_a.sql|schema_version
+586	\N	patch	patch_79_80_b.sql|dbfile_registry_unique_key
+587	\N	patch	patch_79_80_c.sql|stable_id_changed_to_varchar

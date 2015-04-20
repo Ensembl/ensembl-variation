@@ -11,14 +11,14 @@ CREATE TABLE `allele` (
   KEY `variation_idx` (`variation_id`),
   KEY `subsnp_idx` (`subsnp_id`),
   KEY `population_idx` (`population_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `allele_code` (
   `allele_code_id` int(11) NOT NULL AUTO_INCREMENT,
   `allele` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`allele_code_id`),
   UNIQUE KEY `allele_idx` (`allele`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `associate_study` (
   `study1_id` int(10) unsigned NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE `display_group` (
   PRIMARY KEY (`display_group_id`),
   UNIQUE KEY `display_name` (`display_name`),
   UNIQUE KEY `display_priority` (`display_priority`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `failed_allele` (
   `failed_allele_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -103,7 +103,7 @@ CREATE TABLE `failed_description` (
   `failed_description_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `description` text NOT NULL,
   PRIMARY KEY (`failed_description_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `failed_structural_variation` (
   `failed_structural_variation_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -111,7 +111,7 @@ CREATE TABLE `failed_structural_variation` (
   `failed_description_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`failed_structural_variation_id`),
   UNIQUE KEY `structural_variation_idx` (`structural_variation_id`,`failed_description_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `failed_variation` (
   `failed_variation_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -119,7 +119,7 @@ CREATE TABLE `failed_variation` (
   `failed_description_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`failed_variation_id`),
   UNIQUE KEY `variation_idx` (`variation_id`,`failed_description_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `genotype_code` (
   `genotype_code_id` int(11) unsigned NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE `individual` (
   `has_coverage` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `variation_set_id` set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
   PRIMARY KEY (`individual_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `individual_genotype_multiple_bp` (
   `variation_id` int(10) unsigned NOT NULL,
@@ -170,14 +170,14 @@ CREATE TABLE `individual_synonym` (
   PRIMARY KEY (`synonym_id`),
   KEY `individual_idx` (`individual_id`),
   KEY `name` (`name`,`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `individual_type` (
   `individual_type_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
   PRIMARY KEY (`individual_type_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `meta` (
   `meta_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -187,7 +187,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -203,7 +203,7 @@ CREATE TABLE `motif_feature_variation` (
   `motif_feature_id` int(11) unsigned NOT NULL,
   `allele_string` text,
   `somatic` tinyint(1) NOT NULL DEFAULT '0',
-  `consequence_types` set('splice_acceptor_variant','splice_donor_variant','stop_lost','coding_sequence_variant','missense_variant','stop_gained','synonymous_variant','frameshift_variant','non_coding_transcript_variant','non_coding_transcript_exon_variant','mature_miRNA_variant','NMD_transcript_variant','5_prime_UTR_variant','3_prime_UTR_variant','incomplete_terminal_codon_variant','intron_variant','splice_region_variant','downstream_gene_variant','upstream_gene_variant','initiator_codon_variant','stop_retained_variant','inframe_insertion','inframe_deletion','transcript_ablation','transcript_fusion','transcript_amplification','transcript_translocation','TF_binding_site_variant','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation','regulatory_region_variant','regulatory_region_ablation','regulatory_region_fusion','regulatory_region_amplification','regulatory_region_translocation','feature_elongation','feature_truncation') DEFAULT NULL,
+  `consequence_types` set('TF_binding_site_variant','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation') DEFAULT NULL,
   `motif_name` text,
   `motif_start` int(11) unsigned DEFAULT NULL,
   `motif_end` int(11) unsigned DEFAULT NULL,
@@ -213,7 +213,7 @@ CREATE TABLE `motif_feature_variation` (
   KEY `variation_feature_idx` (`variation_feature_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `somatic_feature_idx` (`feature_stable_id`,`somatic`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `phenotype` (
   `phenotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -224,7 +224,7 @@ CREATE TABLE `phenotype` (
   UNIQUE KEY `desc_idx` (`description`),
   KEY `stable_idx` (`stable_id`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `phenotype_feature` (
   `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -244,7 +244,7 @@ CREATE TABLE `phenotype_feature` (
   KEY `type_idx` (`type`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `phenotype_feature_attrib` (
   `phenotype_feature_id` int(11) unsigned NOT NULL,
@@ -264,7 +264,7 @@ CREATE TABLE `population` (
   `display` enum('LD','MARTDISPLAYABLE','UNDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
   `display_group_id` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`population_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `population_genotype` (
   `population_genotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -278,7 +278,7 @@ CREATE TABLE `population_genotype` (
   KEY `population_idx` (`population_id`),
   KEY `variation_idx` (`variation_id`),
   KEY `subsnp_idx` (`subsnp_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `population_structure` (
   `super_population_id` int(10) unsigned NOT NULL,
@@ -295,7 +295,7 @@ CREATE TABLE `population_synonym` (
   PRIMARY KEY (`synonym_id`),
   KEY `population_idx` (`population_id`),
   KEY `name` (`name`,`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `protein_function_predictions` (
   `translation_md5_id` int(11) unsigned NOT NULL,
@@ -324,7 +324,7 @@ CREATE TABLE `publication` (
   PRIMARY KEY (`publication_id`),
   KEY `pmid_idx` (`pmid`),
   KEY `doi_idx` (`doi`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `read_coverage` (
   `seq_region_id` int(10) unsigned NOT NULL,
@@ -342,12 +342,12 @@ CREATE TABLE `regulatory_feature_variation` (
   `feature_type` text,
   `allele_string` text,
   `somatic` tinyint(1) NOT NULL DEFAULT '0',
-  `consequence_types` set('splice_acceptor_variant','splice_donor_variant','stop_lost','coding_sequence_variant','missense_variant','stop_gained','synonymous_variant','frameshift_variant','non_coding_transcript_variant','non_coding_transcript_exon_variant','mature_miRNA_variant','NMD_transcript_variant','5_prime_UTR_variant','3_prime_UTR_variant','incomplete_terminal_codon_variant','intron_variant','splice_region_variant','downstream_gene_variant','upstream_gene_variant','initiator_codon_variant','stop_retained_variant','inframe_insertion','inframe_deletion','transcript_ablation','transcript_fusion','transcript_amplification','transcript_translocation','TF_binding_site_variant','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation','regulatory_region_variant','regulatory_region_ablation','regulatory_region_fusion','regulatory_region_amplification','regulatory_region_translocation','feature_elongation','feature_truncation') DEFAULT NULL,
+  `consequence_types` set('regulatory_region_variant','regulatory_region_ablation','regulatory_region_fusion','regulatory_region_amplification','regulatory_region_translocation') DEFAULT NULL,
   PRIMARY KEY (`regulatory_feature_variation_id`),
   KEY `variation_feature_idx` (`variation_feature_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `somatic_feature_idx` (`feature_stable_id`,`somatic`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL,
@@ -368,7 +368,7 @@ CREATE TABLE `source` (
   `somatic_status` enum('germline','somatic','mixed') DEFAULT 'germline',
   `data_types` set('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
   PRIMARY KEY (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `strain_gtype_poly` (
   `variation_id` int(10) unsigned NOT NULL,
@@ -390,10 +390,11 @@ CREATE TABLE `structural_variation` (
   `copy_number` tinyint(2) DEFAULT NULL,
   PRIMARY KEY (`structural_variation_id`),
   UNIQUE KEY `variation_name` (`variation_name`),
+  UNIQUE KEY `variation_name_2` (`variation_name`),
   KEY `source_idx` (`source_id`),
   KEY `study_idx` (`study_id`),
   KEY `attrib_idx` (`class_attrib_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `structural_variation_association` (
   `structural_variation_id` int(10) unsigned NOT NULL,
@@ -431,7 +432,7 @@ CREATE TABLE `structural_variation_feature` (
   KEY `study_idx` (`study_id`),
   KEY `attrib_idx` (`class_attrib_id`),
   KEY `variation_set_idx` (`variation_set_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `structural_variation_sample` (
   `structural_variation_sample_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -442,7 +443,7 @@ CREATE TABLE `structural_variation_sample` (
   KEY `structural_variation_idx` (`structural_variation_id`),
   KEY `individual_idx` (`individual_id`),
   KEY `strain_idx` (`strain_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `study` (
   `study_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -454,14 +455,14 @@ CREATE TABLE `study` (
   `study_type` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`study_id`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `submitter_handle` (
   `handle_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `handle` varchar(25) DEFAULT NULL,
   PRIMARY KEY (`handle_id`),
   UNIQUE KEY `handle` (`handle`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `subsnp_handle` (
   `subsnp_id` int(11) unsigned NOT NULL,
@@ -524,14 +525,14 @@ CREATE TABLE `transcript_variation` (
   KEY `variation_feature_idx` (`variation_feature_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `somatic_feature_idx` (`feature_stable_id`,`somatic`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `translation_md5` (
   `translation_md5_id` int(11) NOT NULL AUTO_INCREMENT,
   `translation_md5` char(32) NOT NULL,
   PRIMARY KEY (`translation_md5_id`),
   UNIQUE KEY `md5_idx` (`translation_md5`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `variation` (
   `variation_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -546,12 +547,12 @@ CREATE TABLE `variation` (
   `minor_allele_freq` float DEFAULT NULL,
   `minor_allele_count` int(10) unsigned DEFAULT NULL,
   `clinical_significance` set('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
-  `evidence_attribs` set('367','368','369','370','371','372') DEFAULT NULL,
+  `evidence_attribs` set('367','368','369','370','371','372','418') DEFAULT NULL,
   `display` int(1) DEFAULT '1',
   PRIMARY KEY (`variation_id`),
   UNIQUE KEY `name` (`name`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `variation_attrib` (
   `variation_id` int(11) unsigned NOT NULL,
@@ -589,7 +590,7 @@ CREATE TABLE `variation_feature` (
   `minor_allele_count` int(10) unsigned DEFAULT NULL,
   `alignment_quality` double DEFAULT NULL,
   `clinical_significance` set('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
-  `evidence_attribs` set('367','368','369','370','371','372') DEFAULT NULL,
+  `evidence_attribs` set('367','368','369','370','371','372','418') DEFAULT NULL,
   `display` int(1) DEFAULT '1',
   PRIMARY KEY (`variation_feature_id`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
@@ -597,7 +598,7 @@ CREATE TABLE `variation_feature` (
   KEY `variation_set_idx` (`variation_set_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `variation_genename` (
   `variation_id` int(10) unsigned NOT NULL,
@@ -618,7 +619,7 @@ CREATE TABLE `variation_set` (
   `short_name_attrib_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`variation_set_id`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `variation_set_structural_variation` (
   `structural_variation_id` int(10) unsigned NOT NULL,
@@ -652,5 +653,5 @@ CREATE TABLE `variation_synonym` (
   KEY `variation_idx` (`variation_id`),
   KEY `subsnp_idx` (`subsnp_id`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
