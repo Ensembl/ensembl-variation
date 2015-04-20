@@ -852,6 +852,11 @@ sub parse_id {
       return [];
     }
     
+    # tell adaptor to fetch failed variants
+    # but store state to restore afterwards
+    my $prev = $config->{va}->db->include_failed_variations;
+    $config->{va}->db->include_failed_variations(1);
+        
     my $v_obj = $config->{va}->fetch_by_name($line);
     
     return [] unless defined $v_obj;
@@ -864,6 +869,9 @@ sub parse_id {
       $config->{slice_cache}->{$_->{chr}} = $_->slice;
       $_->{variation_name} = $line;
     }
+    
+    # restore state
+    $config->{va}->db->include_failed_variations($prev);
     
     return \@vfs;
 }
