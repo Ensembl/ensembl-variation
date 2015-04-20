@@ -102,6 +102,9 @@ sub parse_read_location {
     my $seq_region_name = $alignment->seq_id;
     my $t_start = $alignment->start;
     my $t_end   = $alignment->end;
+    my $q_start = $alignment->query->start;
+    my $q_end   = $alignment->query->end;
+
     my $t_strand = $alignment->strand;
     my $diff = $t_end - $t_start + 1;
     my $map_weight = $map_weights->{$query_name};		
@@ -116,12 +119,41 @@ sub parse_read_location {
       $t_end = $t_start + $read_length - 1;
       $query_name = "$id:$type";
     }
+    my @cigar_string = @{$alignment->cigar_array};
 
+    my $clipped_nucleotides = 0;
+    foreach my $sub_string (@cigar_string) {
+      my $operation = $sub_string->[0];
+      my $count     = $sub_string->[1];
+      if ($operation eq 'H' || $operation eq 'S') {
+        $clipped_nucleotides += $count;
+      }	
+    }
+
+    my $cigar_string = $alignment->cigar_str;
     my $edit_distance         = $alignment->aux_get("NM");
     my $alignment_score_count = $alignment->aux_get("AS"); 
-    my $score = $alignment_score_count/$diff;
 
-    print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $t_strand, $map_weight, $score), "\n";
+    my $query_seq = $alignment->query->dna; 	
+    if ($query_sequences->{$query_name}) {
+      $query_seq = $query_sequences->{$query_name};
+    }
+
+    my $length_query_seq      = length($query_seq);
+#    my $count_ns              = $self->count_number_of_ns_in_clipped_seq($alignment, $query_seq);
+
+    my $relative_alignment_score = 0;
+    if ($length_query_seq == 0) {
+      print $fh_failed_mappings join("\t", 'NO_MAPPING', $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, 0, $diff, $cigar_string), "\n";
+    } else {
+      $relative_alignment_score = ($length_query_seq - ($clipped_nucleotides + $edit_distance)) / $length_query_seq;	
+    }
+    #my $score = $alignment_score_count/$diff;
+    if ($relative_alignment_score > 0.8) {
+      print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, $relative_alignment_score, $cigar_string), "\n";
+    } else {
+      print $fh_failed_mappings join("\t", 'LOW_SCORE', $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, $relative_alignment_score, $diff, $cigar_string), "\n";
+    }
 
   }
   $fh_mappings->close();
