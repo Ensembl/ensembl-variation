@@ -819,6 +819,11 @@ sub parse_id {
     my $config = shift;
     my $line = shift;
     
+    # tell adaptor to fetch failed variants
+    # but store state to restore afterwards
+    my $prev = $config->{va}->db->include_failed_variations;
+    $config->{va}->db->include_failed_variations(1);
+        
     my $v_obj = $config->{va}->fetch_by_name($line);
     
     return [] unless defined $v_obj;
@@ -829,7 +834,11 @@ sub parse_id {
       delete $_->{overlap_consequences};
       $_->{chr} = $_->seq_region_name;
       $config->{slice_cache}->{$_->{chr}} = $_->slice;
+      $_->{variation_name} = $line;
     }
+    
+    # restore state
+    $config->{va}->db->include_failed_variations($prev);
     
     return \@vfs;
 }
