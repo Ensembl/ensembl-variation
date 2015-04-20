@@ -81,7 +81,7 @@ sub main {
   });
   $dbh->do(qq{
     UPDATE variation_feature vf, variation_ids_new_phenotype_evdn e
-    SET v.evidence_attribs = CONCAT_WS(',', v.evidence_attribs, '$phenotype_attrib_id')
+    SET vf.evidence_attribs = CONCAT_WS(',', vf.evidence_attribs, '$phenotype_attrib_id')
     WHERE e.variation_id = vf.variation_id;
   });
 
@@ -93,7 +93,7 @@ sub main {
   });
   $dbh->do(qq{
     UPDATE variation_feature vf, variation_ids_new_phenotype_evdn e
-    SET v.evidence_attribs = CONCAT_WS(',', v.evidence_attribs, '$phenotype_attrib_id')
+    SET vf.evidence_attribs = CONCAT_WS(',', vf.evidence_attribs, '$phenotype_attrib_id')
     WHERE e.variation_id = vf.variation_id;
   });
 }
