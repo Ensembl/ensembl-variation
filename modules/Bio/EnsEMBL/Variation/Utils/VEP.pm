@@ -337,6 +337,8 @@ sub parse_line {
     
     my $vfs = &$method_ref($config, $line);
     
+    $vfs = minimise_alleles($config, $vfs) if defined($config->{minimal});
+    
     $vfs = add_lrg_mappings($config, $vfs) if defined($config->{lrg});
     
     $_->{_line} = $line for @$vfs;
@@ -994,6 +996,70 @@ sub add_lrg_mappings {
     return \@new_vfs;
 }
 
+sub minimise_alleles {
+  my $config = shift;
+  my $vfs = shift;
+  
+  my @new_vfs;
+  
+  foreach my $vf(@$vfs) {
+    
+    # skip VFs with more than one alt
+    # they get taken care of later by split_variants/rejoin_variants
+    if(!$vf->{allele_string} || $vf->{allele_string} =~ /.+\/.+\/.+/ || $vf->{allele_string} !~ /.+\/.+/) {
+      push @new_vfs, $vf;
+    }
+    
+    else {
+      my @alleles = split('/', $vf->{allele_string});
+      my $ref = shift @alleles;
+      my $changed = 0;
+      
+      foreach my $alt(@alleles) {
+        
+        my $start = $vf->{start};
+        my $end   = $vf->{end};
+        
+        # trim from left
+        while($ref && $alt && substr($ref, 0, 1) eq substr($alt, 0, 1)) {
+          $ref = substr($ref, 1);
+          $alt = substr($alt, 1);
+          $start++;
+          $changed = 1;
+        }
+        
+        # trim from right
+        while($ref && $alt && substr($ref, -1, 1) eq substr($alt, -1, 1)) {
+          $ref = substr($ref, 0, length($ref) - 1);
+          $alt = substr($alt, 0, length($alt) - 1);
+          $end--;
+          $changed = 1;
+        }
+        
+        $ref ||= '-';
+        $alt ||= '-';
+        
+        # create a copy
+        my $new_vf;
+        %$new_vf = %{$vf};
+        bless $new_vf, ref($vf);
+        
+        # give it a new allele string and coords
+        $new_vf->{allele_string}          = $ref.'/'.$alt;
+        $new_vf->{start}                  = $start;
+        $new_vf->{end}                    = $end;
+        $new_vf->{original_allele_string} = $vf->{allele_string};
+        $new_vf->{original_start}         = $vf->{start};
+        $new_vf->{original_end}           = $vf->{end};
+        
+        push @new_vfs, $new_vf;
+      }
+    }
+  }
+  
+  return \@new_vfs;
+}
+
 
 # wrapper for whole_genome_fetch and vf_to_consequences
 # takes config and a listref of VFs, returns listref of line hashes for printing
@@ -1324,10 +1390,14 @@ sub vf_list_to_cons {
     # get overlapping SVs
     &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
     
-    # split variants with complex allele strings
-    my $before_split = scalar @$new_listref;
-    $new_listref = split_variants($config, $new_listref);
-    my $rejoin_required = scalar @$new_listref == $before_split ? 0 : 1;
+    # split variants with complex allele strings to get minimal reps
+    my $rejoin_required = 0;
+    
+    if(defined($config->{minimal})) {
+      my $before_split = scalar @$new_listref;
+      $new_listref = split_variants($config, $new_listref);
+      $rejoin_required = scalar @$new_listref == $before_split ? 0 : 1;
+    }
     
     # remake hash without non-variants
     %vf_hash = ();
