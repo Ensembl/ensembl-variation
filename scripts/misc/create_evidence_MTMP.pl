@@ -34,7 +34,7 @@ foreach my $db_name (@{$databases}){
     
     $dbh->do(qq[create table MTMP_evidence (
               variation_id int(10) , 
-              evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'), 
+              evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP','Phenotype_or_Disease'), 
               primary key( variation_id ) ) ])||die;
 
     
