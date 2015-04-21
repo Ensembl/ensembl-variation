@@ -254,6 +254,24 @@ $config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /21\s+25606454\s+test\s+G\s+./, "vcf format - non variant");
 
+# use minimal to reduce allele strings
+($vf) = @{parse_line($config, '21 25606454 test GA GT')};
+is($vf->allele_string, 'GA/GT', "minimal - dont use");
+
+$config = copy_config($base_config, {minimal => 1});
+($vf) = @{parse_line($config, '21 25606454 test GA GT')};
+is($vf->allele_string, 'A/T', "minimal - use");
+is($vf->start, 25606455, "minimal - start coord adjusted");
+is($vf->end, 25606455, "minimal - end coord adjusted");
+
+($vf) = @{parse_line($config, '21 25606454 test GAC GTC')};
+is($vf->allele_string, 'A/T', "minimal - trim both ends");
+
+($vf) = @{parse_line($config, '21 25741665 test CAGAAGAAAG TAGAAGAAAG,C')};
+my %by_allele = map {$_->{Allele} => $_} grep {$_->{Feature} eq 'ENST00000400075'} @{get_all_consequences($config, [$vf])};
+is($by_allele{'T'}->{Consequence}, 'missense_variant', "minimal - complex (SNP)");
+is($by_allele{'-'}->{Consequence}, 'inframe_deletion,splice_region_variant', "minimal - complex (del)");
+
 # check csq removed
 ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
 

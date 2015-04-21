@@ -1654,8 +1654,9 @@ sub split_variants {
         $new_vf->{allele_string} = $ref.'/'.$alt;
         $new_vf->{start} = $start;
         $new_vf->{end} = $end;
+        $new_vf->{alt_allele} = $alt;
         
-        $new_vf->{variation_name} = 'merge_'.$alt;
+        # $new_vf->{variation_name} = 'merge_'.$alt;
         
         # not the first one ($first already exists)
         if($first) {
@@ -1666,7 +1667,7 @@ sub split_variants {
         else {
           $first = $new_vf;
         
-          $new_vf->{variation_name} = 'first_'.$alt;
+          # $new_vf->{variation_name} = 'first_'.$alt;
           
           # store the original allele string and coords
           $first->{original_allele_string} = $original_vf->{allele_string};
@@ -1705,8 +1706,6 @@ sub rejoin_variants {
     # reset original one
     if(defined($vf->{original_allele_string})) {
       
-      $DB::single = 1;
-      
       # do consequence stuff
       vf_to_consequences($config, $vf);
       
@@ -1729,24 +1728,26 @@ sub rejoin_variants {
       # better to make new keys
       # we also have to set the VF pointer to the original
       
-      # do transcript variations
+      # copy transcript variations
       foreach my $key(keys %{$vf->{transcript_variations} || {}}) {
         my $val = $vf->{transcript_variations}->{$key};
         $val->base_variation_feature($original);
-        $original->{transcript_variations}->{'merged_'.$key} = $val;
+        
+        # rename the key they're stored under
+        $original->{transcript_variations}->{$vf->{alt_allele}.'_'.$key} = $val;
       }
       
-      # do regulatory variations
-      if($vf->{regulation_variations} && ref($vf->{regulation_variations}) eq 'HASH') {
-        $DB::single = 1;
-        
-        foreach my $type(@REG_FEAT_TYPES) {
-          foreach my $key(keys %{$vf->{regulation_variations}->{$type} || {}}) {
-            my $val = $vf->{transcript_variations}->{$type}->{$key};
-            $val->base_variation_feature($original);
-            $original->{regulation_variations}->{$type}->{'merged_'.$key} = $val;
-          }
+      # copy regulatory variations
+      if($vf->{regulation_variations} && ref($vf->{regulation_variations}) eq 'HASH') {        
+        foreach my $type(grep {exists($vf->{regulation_variations}->{$_})} @REG_FEAT_TYPES) {
+          push @{$original->{regulation_variations}->{$type}}, @{$vf->{regulation_variations}->{$type}};
         }
+      }
+      
+      # allele numbers
+      if($vf->{_allele_nums} && $original->{_allele_nums}) {
+        my $max = (sort {$a <=> $b} values $original->{_allele_nums})[-1];
+        $original->{_allele_nums}->{$_} = $vf->{_allele_nums}->{$_} + $max for grep {$vf->{_allele_nums}->{$_} > 0} keys %{$vf->{_allele_nums}};
       }
       
       # reset these keys, they can be recalculated
@@ -1993,7 +1994,7 @@ sub vf_to_consequences {
   # this will stop the API trying to go off and fill it again
   if(defined $config->{whole_genome}) {
     $vf->{transcript_variations} ||= {};
-    $vf->{regulation_variations}->{$_} ||= {} for (@REG_FEAT_TYPES, 'ExternalFeature');
+    $vf->{regulation_variations}->{$_} ||= [] for (@REG_FEAT_TYPES, 'ExternalFeature');
   }
   
   
@@ -2010,7 +2011,7 @@ sub vf_to_consequences {
   # get allele nums
   if(defined($config->{allele_number})) {
     my @alleles = split /\//, $vf->allele_string || '';
-    %{$vf->{_allele_nums}} = map {$alleles[$_] => $_} (0..$#alleles);
+    $vf->{_allele_nums} ||= {map {$alleles[$_] => $_} (0..$#alleles)};
   }
   
   # method name stub for getting *VariationAlleles
