@@ -119,6 +119,11 @@ sub parse_read_location {
       $t_end = $t_start + $read_length - 1;
       $query_name = "$id:$type";
     }
+    unless ($seq_region_name && $t_start && $t_end){
+      print $fh_failed_mappings join("\t", 'NO_MAPPING'), "\n";
+      next;
+    } 
+
     my @cigar_string = @{$alignment->cigar_array};
 
     my $clipped_nucleotides = 0;
@@ -140,17 +145,16 @@ sub parse_read_location {
     }
 
     my $length_query_seq      = length($query_seq);
-#    my $count_ns              = $self->count_number_of_ns_in_clipped_seq($alignment, $query_seq);
 
     my $relative_alignment_score = 0;
     if ($length_query_seq == 0) {
       print $fh_failed_mappings join("\t", 'NO_MAPPING', $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, 0, $diff, $cigar_string), "\n";
+      next;
     } else {
       $relative_alignment_score = ($length_query_seq - ($clipped_nucleotides + $edit_distance)) / $length_query_seq;	
     }
-    #my $score = $alignment_score_count/$diff;
     if ($relative_alignment_score > 0.8) {
-      print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, $relative_alignment_score, $cigar_string), "\n";
+      print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $t_strand, $map_weight, $relative_alignment_score, $cigar_string), "\n";
     } else {
       print $fh_failed_mappings join("\t", 'LOW_SCORE', $query_name, $seq_region_name, $t_start, $t_end, $q_start, $q_end, $t_strand, $map_weight, $relative_alignment_score, $diff, $cigar_string), "\n";
     }
