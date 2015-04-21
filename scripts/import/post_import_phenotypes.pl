@@ -69,11 +69,11 @@ sub main {
       WHERE e.variation_id = vf.variation_id;
     });
   }
-
   # collect all variations with phenotype associations and update evidence_attribs
   $dbh->do(qq{ DROP TABLE IF EXISTS variation_ids_new_phenotype_evdn});
   $dbh->do(qq{ CREATE TABLE `variation_ids_new_phenotype_evdn` (`variation_id` int(10) unsigned NOT NULL, PRIMARY KEY (`variation_id`))});
   $dbh->do(qq{ INSERT INTO variation_ids_new_phenotype_evdn SELECT distinct v.variation_id FROM variation v, phenotype_feature pf WHERE pf.type = 'Variation' AND pf.object_id = v.name; }) ;
+
   $dbh->do(qq{
     UPDATE variation v, variation_ids_new_phenotype_evdn e
     SET v.evidence_attribs = CONCAT_WS(',', v.evidence_attribs, '$phenotype_attrib_id')
@@ -93,7 +93,7 @@ sub main {
   });
   $dbh->do(qq{
     UPDATE variation_feature vf, variation_ids_new_phenotype_evdn e
-    SET vf.evidence_attribs = CONCAT_WS(',', vf.evidence_attribs, '$phenotype_attrib_id')
+    SET vf.display = 1
     WHERE e.variation_id = vf.variation_id;
   });
 }
