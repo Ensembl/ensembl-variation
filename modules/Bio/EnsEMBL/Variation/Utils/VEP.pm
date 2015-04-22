@@ -199,7 +199,7 @@ our @EXTRA_HEADERS = (
   { flag => 'check_frequency', cols => ['FREQS'] },
   
   # misc variation stuff
-  { flag => 'check_existing',  cols => ['CLIN_SIG','SOMATIC'] },
+  { flag => 'check_existing',  cols => ['CLIN_SIG','SOMATIC','PHENO'] },
   { flag => 'pubmed',          cols => ['PUBMED'] },
   { flag => 'check_svs',       cols => ['SV'] },
   
@@ -270,6 +270,7 @@ our %COL_DESCS = (
     'SOMATIC'            => 'Somatic status of existing variant',
     'REFSEQ_MATCH'       => 'RefSeq transcript match status',
     'VARIANT_CLASS'      => 'SO variant class',
+    'PHENO'              => 'Indicates if existing variant is associated with a phenotype, disease or trait',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -308,6 +309,7 @@ our @VAR_CACHE_COLS = qw(
     minor_allele
     minor_allele_freq
     clin_sig
+    phenotype_or_disease
 );
 
 our @PICK_ORDER = qw(canonical tsl biotype rank length);
@@ -2668,6 +2670,10 @@ sub init_line {
         # somatic?
         my @somatic = map {$_->{somatic}} @{$vf->{existing}};
         $line->{Extra}->{SOMATIC} = join(",", @somatic) if grep {$_ > 0} @somatic;
+        
+        # phenotype or disease
+        my @p_or_d = map {$_->{phenotype_or_disease}} @{$vf->{existing}};
+        $line->{Extra}->{PHENO} = join(",", @p_or_d) if grep {$_ > 0} @p_or_d;
     }
     
     # copy entries from base_line
@@ -4800,6 +4806,7 @@ sub dump_variation_cache {
         $v->{minor_allele} || '',
         defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]+$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
         $v->{clin_sig} || '',
+        $v->{phenotype_or_disease} == 0 ? '' : $v->{phenotype_or_disease},
       );
             
       if(have_pubmed($config) && defined($config->{pubmed})) {
@@ -4868,8 +4875,7 @@ sub parse_variation {
   
   my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
   
-  $v{failed}  ||= 0;
-  $v{somatic} ||= 0;
+  $v{$_} ||= 0 for qw(failed somatic phenotype_or_disease);
   $v{end}     ||= $v{start};
   $v{strand}  ||= 1;
   
@@ -5562,6 +5568,12 @@ sub build_full_cache {
   # open build status file
   mkpath($config->{dir}) if !-d $config->{dir};
   open DONE, '>> '.$config->{dir}.'/.build' or die("ERROR: Unable to open build status file\n");
+  
+  # given build range?
+  my ($range_from, $range_to) = (0, 1e12);
+  if($config->{build_range}) {
+    ($range_from, $range_to) = split /\D/, $config->{build_range};
+  }
     
   foreach my $slice(@slices) {
     my $chr = $slice->seq_region_name;
@@ -5594,7 +5606,13 @@ sub build_full_cache {
     $config->{slice_cache}->{$chr} = $slice;
         
     while($start < $slice->end) {
-            
+      
+      if($end < $range_from || $start > $range_to) {
+        $start += $config->{cache_region_size};
+        $end += $config->{cache_region_size};
+        next;
+      }
+      
       progress($config, $counter++, $region_count);
             
       # store quiet status
@@ -6055,8 +6073,10 @@ sub get_variations_in_region {
         
         my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
         
+        my $phenotype_attrib_id = phenotype_attrib_id($config) || 0;
+        
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.somatic, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols, REPLACE(vf.clinical_significance, " ", "_")
+            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.somatic, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols, REPLACE(vf.clinical_significance, " ", "_"), IF(FIND_IN_SET(?, evidence_attribs) > 0, 1, 0)
             FROM variation_feature vf
             LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
             WHERE vf.seq_region_id = ?
@@ -6064,7 +6084,7 @@ sub get_variations_in_region {
             AND vf.seq_region_start <= ?
         });
         
-        $sth->execute($sr_cache->{$chr}, $start, $end);
+        $sth->execute($phenotype_attrib_id, $sr_cache->{$chr}, $start, $end);
         
         my %v;
         $v{$_} = undef for @VAR_CACHE_COLS;
@@ -6183,6 +6203,26 @@ sub get_pubmed {
   $sth->finish();
     
   return \%pm;
+}
+
+sub phenotype_attrib_id {
+  my $config = shift;
+  
+  if(!exists($config->{phenotype_attrib_id})) {
+    my $sth = $config->{vfa}->db->dbc->prepare(qq{
+      SELECT attrib_id FROM attrib WHERE value = 'Phenotype_or_Disease';
+    });
+    
+    my $a;
+    $sth->execute();
+    $sth->bind_columns(\$a);
+    $sth->fetch();
+    $sth->finish();
+    
+    $config->{phenotype_attrib_id} = $a;
+  }
+  
+  return $config->{phenotype_attrib_id};
 }
 
 sub merge_hashes {
