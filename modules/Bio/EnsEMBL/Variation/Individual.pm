@@ -330,6 +330,8 @@ sub get_all_Populations {
             my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
             $self->{populations} = $pop_adaptor->fetch_all_by_Individual($self);
         }
+        
+        $self->{populations} ||= [];
     }
     return $self->{populations};
 }
