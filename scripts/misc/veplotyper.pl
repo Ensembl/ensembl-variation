@@ -109,7 +109,7 @@ sub configure {
   debug($config, 'Starting');
   
   # defaults
-  $config->{rest}              ||= 'http://grch37.rest.ensembl.org';
+  $config->{rest}              ||= 'http://rest.ensembl.org';
   $config->{vcf_file}          ||= 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/ALL.chr###CHR###.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz';
   $config->{cache_region_size} ||= 1000000;
   $config->{chunk_size}        ||= 50000;
@@ -163,7 +163,7 @@ sub configure {
     )
   );
   
-  die("ERROR: cache directory ".$config->{dir}." not found\n") unless -d $config->{dir};
+  # die("ERROR: cache directory ".$config->{dir}." not found\n") unless -d $config->{dir};
   
   # check tabix
   die "ERROR: tabix does not seem to be in your path\n" unless `which tabix 2>&1` =~ /tabix$/;
@@ -173,21 +173,23 @@ sub configure {
   # check VCF
   my $vcf_file = $config->{vcf_file};
   
-  # check for ###CHR###
-  $vcf_file =~ s/###CHR###/1/;
+  if($vcf_file) {
+    # check for ###CHR###
+    $vcf_file =~ s/###CHR###/1/;
   
-  # remote
-  if($vcf_file =~ /tp\:\/\//) {
+    # remote
+    if($vcf_file =~ /tp\:\/\//) {
     
-    my $remote_test = `tabix -f $vcf_file 1:1-1 2>&1`;
-    if($remote_test =~ /fail/) {
-      die "$remote_test\nERROR: Could not find file or index file for remote annotation file $vcf_file\n";
+      my $remote_test = `tabix -f $vcf_file 1:1-1 2>&1`;
+      if($remote_test =~ /fail/) {
+        die "$remote_test\nERROR: Could not find file or index file for remote annotation file $vcf_file\n";
+      }
     }
-  }
-  # local
-  else {
-    die "ERROR: Custom annotation file $vcf_file not found\n" unless -e $vcf_file;
-    die "ERROR: Tabix index file $vcf_file\.tbi not found - perhaps you need to create it first?\n" unless -e $vcf_file.'.tbi';
+    # local
+    else {
+      die "ERROR: Custom annotation file $vcf_file not found\n" unless -e $vcf_file;
+      die "ERROR: Tabix index file $vcf_file\.tbi not found - perhaps you need to create it first?\n" unless -e $vcf_file.'.tbi';
+    }
   }
   
   # output file
@@ -379,7 +381,9 @@ sub fetch_genotypes_collection {
     }
   }
   
-  my @gts = map {@{$_->get_all_IndividualGenotypeFeatures_by_Slice($slice)}} @{$ca->fetch_all};
+  $DB::single = 1;
+  
+  my @gts = map {@{$_->get_all_IndividualGenotypeFeatures_by_Slice($slice, undef, 1)}} @{$ca->fetch_all};
   my @return;
   
   # filter out ref homozygotes
