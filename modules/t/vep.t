@@ -656,11 +656,14 @@ $config = copy_config($config, {
   cell_type   => [1],
   freq_vcf    => [
     {
-      pops => ['AFR','ASN'],
+      pops => ['AFR','AMR'],
       file => "$Bin\/testdata/freqs.vcf.gz",
     },
   ],
 });
+
+# this needs resetting as it might be updated in a newer version
+delete $config->{cache_variation_cols};
 
 $config->{dir} = "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{cache_version}."_".$config->{assembly};
 
@@ -671,6 +674,8 @@ $config = copy_config($base_config, {
   maf_1kg        => 1,
 });
 $config->{dir} =~ s/$Bin\/testdata\/vep-cache/$Bin\/testdata\/$$\_vep_cache/;
+
+ok(read_cache_info($config), "read built cache info");
 
 ($vf) = grep {validate_vf($config, $_)} @{parse_line($config, "22 20876358 20876358 C/T +")};
 $cons = get_all_consequences($config, [$vf]);
