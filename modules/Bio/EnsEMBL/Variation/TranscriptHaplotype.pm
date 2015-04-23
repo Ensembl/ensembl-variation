@@ -61,6 +61,7 @@ sub new {
     seq => $seq,
     has_indel => $indel,
     hex => $hex,
+    other_hexes => {},
     _container => $container
   };
   
@@ -102,7 +103,7 @@ sub hex {
 sub other_hexes {
   my $self = shift;
   $self->{other_hexes} = shift if @_;
-  return $self->{other_hexes};
+  return [keys %{$self->{other_hexes}}];
 }
 
 sub transcript {
