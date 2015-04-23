@@ -312,7 +312,7 @@ our @VAR_CACHE_COLS = qw(
     phenotype_or_disease
 );
 
-our @PICK_ORDER = qw(canonical tsl biotype rank length);
+our @PICK_ORDER = qw(canonical tsl biotype ccds rank length);
 
 # parses a line of input, returns VF object(s)
 sub parse_line {
@@ -1914,6 +1914,7 @@ sub pick_worst_vfoa {
       # these will only be used by transcript types, default to 1 for others
       # to avoid writing an else clause below
       canonical => 1,
+      ccds => 1,
       length => 0,
       biotype => 1,
       tsl => 100,
@@ -1925,6 +1926,7 @@ sub pick_worst_vfoa {
       # 0 is "best"
       $info->{canonical} = $tr->is_canonical ? 0 : 1;
       $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
+      $info->{ccds} = $tr->{_ccds} && $tr->{_ccds} ne '-' ? 0 : 1;
       
       # "invert" length so longer is best
       $info->{length} = 0 - $tr->length();
