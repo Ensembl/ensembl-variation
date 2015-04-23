@@ -374,12 +374,20 @@ sub _mutate_sequences {
   my $tr = $self->transcript;
   my $mappings = $self->_get_mappings;
   
-  my $codon_table = $tr->{_variation_effect_feature_cache}->{codon_table} || $tr->slice->get_all_Attributes('codon_table')->[0]->value;
+  my $codon_table;
+  
+  if($tr->{_variation_effect_feature_cache} && $tr->{_variation_effect_feature_cache}->{codon_table}) {
+    $codon_table = $tr->{_variation_effect_feature_cache}->{codon_table};
+  }
+  else {
+    my $attrib = $tr->slice->get_all_Attributes('codon_table')->[0];
+    $codon_table = $attrib ? $attrib->value : 1;
+  }
   
   my $return = {};
   
   for my $hap(0,1) {
-    my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq};
+    my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
     my $ref_seq = $seq;
     
     # flag if indel observed, we need to align seqs later
@@ -476,7 +484,7 @@ sub _get_missense_predictions {
     }
     
     foreach my $tva(map {@{$_->get_all_alternate_TranscriptVariationAlleles}} @tvs) {
-      next unless grep {$_->SO_term eq 'missense_variant'} @{$tva->get_all_OverlapConsequences};
+      next unless grep {defined($_) && $_->SO_term eq 'missense_variant'} @{$tva->get_all_OverlapConsequences};
       #next unless $tva->pep_allele_string;
       my $mut = $tva->transcript_variation->translation_start.$tva->pep_allele_string;
       $mut =~ s/\//\>/;
