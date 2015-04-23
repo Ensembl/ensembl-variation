@@ -652,8 +652,8 @@ sub create_menu {
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #BBB;border-right:1px dotted #BBB;border-bottom:1px dotted #BBB">
-    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:5px">
+  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #336;border-right:1px dotted #336;border-bottom:1px dotted #336">
+    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;margin-bottom:5px">
       <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
       Species list
     </div>
@@ -686,9 +686,9 @@ sub create_menu {
     <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
   </div>
   <br />
-  <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #BBB;border-right:1px dotted #BBB;border-bottom:1px dotted #BBB">
+  <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #336;border-right:1px dotted #336;border-bottom:1px dotted #336">
     <!-- Legend header -->
-    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:2px">
+    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;margin-bottom:2px">
       <div style="float:left">
         <img src="/i/16/info.png" style="vertical-align:top" />
         Icons legend
@@ -729,7 +729,7 @@ sub create_menu {
     </table>
     
     <!-- Variant and structural variant count colour legend -->
-    <div style="border-top:1px dotted #BBB;margin-top:2px;padding:4px 0px 0px">
+    <div style="border-top:1px dotted #336;margin-top:2px;padding:4px 0px 0px">
       <span style="padding-left:4px;font-weight:bold">Data types - variants count:</span>
       <table>
         <tr>
@@ -859,7 +859,7 @@ sub table_header {
   my $type = shift;
   my $flag = shift;
 
-  my $border_color = qq{style="border-color:#EEE"};
+  my $border_color = qq{style="border-color:#336"};
 
   my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
   my $header_col = qq{
