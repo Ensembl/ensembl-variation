@@ -137,7 +137,7 @@ my $html_title = qq{
 
     <h2>List of sources providing phenotype/disease/trait associations for each species - $ecaption $e_version</h2>
 
-    <div style="margin-bottom:15px">
+    <div style="margin-bottom:20px">
       <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
     </div>
 };
