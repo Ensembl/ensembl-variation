@@ -161,7 +161,11 @@ my $html_title = qq{
   <div style="float:left;width:75%">
     <h1 style="margin-top:15px">Ensembl Variation - Sources Documentation</h1>
 
-    <h2>List of Variation sources for each species - $ecaption $e_version</h2>  
+    <h2>List of Variation sources for each species - $ecaption $e_version</h2>
+
+    <div style="margin-bottom:20px">
+      <a href="sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
+    </div>
 };
 
 
@@ -854,21 +858,23 @@ sub table_header {
   my $name = shift;
   my $type = shift;
   my $flag = shift;
-  
+
+  my $border_color = qq{style="border-color:#EEE"};
+
   my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
   my $header_col = qq{
     <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">
-       <span class="_ht conhelp" title="$alt_text">Other</span>
+       <span class="_ht conhelp" $border_color title="$alt_text">Other</span>
     </th>};
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
-  
+
   my $data_type_header = qq{
      <th style="width:155px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">Data type(s)
        <div>
-         <div style="float:left;width:65px;text-align:center"><small>Type</small></div>
-         <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" title="Variants count"><small>Count</small></span></div>
-         <div style="float:left;width:20px;text-align:center"><span class="_ht conhelp" title="Example"><small>e.g.</small></span></div>
+         <div style="float:left;width:65px;text-align:center"><span class="_ht conhelp" $border_color title="Data type"><small>Type</small></div>
+         <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" $border_color title="Variants count"><small>Count</small></span></div>
+         <div style="float:left;width:20px;text-align:center"><span class="_ht conhelp" $border_color title="Example"><small>e.g.</small></span></div>
          <div style="clear:both"></div>
        </div>
      </th>
