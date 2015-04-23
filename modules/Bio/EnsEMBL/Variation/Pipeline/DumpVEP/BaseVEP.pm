@@ -81,4 +81,11 @@ sub tar {
   return;
 }
 
+sub run_cmd {
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>= 8;
+    die "system($cmd) failed: $return_value";
+  }
+}
 1;
