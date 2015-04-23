@@ -57,8 +57,8 @@ sub default_options {
     
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
     # this pipeline requires you have ensembl-variation and ensembl-tools in this dir as
-    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/Git',
-    hive_root_dir           => $ENV{'HOME'} . '/Git/ensembl-hive', 
+    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
+    hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive', 
     
     # a name for your pipeline (will also be used in the name of the hive database)    
     pipeline_name           => 'dump_vep',
@@ -196,6 +196,7 @@ sub default_options {
     },
     
     debug => 0,
+    qc => 1,
   };
 }
 
@@ -271,14 +272,35 @@ sub pipeline_analyses {
       -hive_capacity => 10,
     }
   );
-  
-  push @analyses, {
-    -logic_name => 'finish_dump',
-    -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
-    -parameters => { @common_params },
-    -wait_for   => ['convert_vep'],
-  } unless $self->o('debug');
 
+  if (!$self->o('debug')) {  
+    push @analyses, (
+      {
+        -logic_name => 'finish_dump',
+        -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
+        -parameters => { @common_params },
+        -wait_for   => ['convert_vep'],
+        -flow_into => ['distribute_dumps']
+      },
+      {
+        -logic_name => 'distribute_dumps',
+        -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DistributeDumps',
+        -parameters => { @common_params },
+        -flow_into   => $self->o('qc') ? ['qc_dumps'] : [],
+      },
+    );
+    if ($self->o('qc')) {
+      push @analyses, 
+        {
+          -logic_name => 'qc_dumps',
+          -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::QC',
+          -parameters => { 
+            ensembl_cvs_root_dir => $self->o('ensembl_cvs_root_dir'),
+            @common_params 
+          },
+        };
+    }
+  }
   return \@analyses;
 }
 
