@@ -474,9 +474,11 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   Arg[1]     : Bio::EnsEMBL::Slice $slice
   Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population OR
                Bio::EnsEMBL::Variation::Individual
+  Arg[3]     : (optional) $non_ref_only
   Example    : my $gts = $collection->get_all_IndividualGenotypeFeatures_by_Slice($slice)
   Description: Get all IndividualGenotypeFeatures for a given
-               genomic region represented by a slice
+               genomic region represented by a slice. Set $non_ref_only to a true
+               value to skip homozygous reference genotypes.
   Returntype : arrayref of Bio::EnsEMBL::Variation::IndividualGenotypeFeature
   Exceptions : none
   Caller     : general
@@ -488,6 +490,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $sample = shift;
+  my $non_ref_only = shift;
   
   return [] unless $self->_seek_by_Slice($slice);
   
@@ -527,7 +530,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
     }
     
     if($vf) {
-      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes(\@individual_names), $vf)};
+      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes(\@individual_names, $non_ref_only), $vf)};
     }
     
     $vcf->next();
