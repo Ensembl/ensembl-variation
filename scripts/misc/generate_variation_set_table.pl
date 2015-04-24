@@ -103,7 +103,7 @@ $html .= "<h4>Variation sets common to all species</h4>\n";
 $html .= "<table id=\"variation_set_table\" class=\"ss\">\n";
 $html .= "$table_header\n";
 
-foreach my $com_set_name (sort(keys(%$com_sets))) {
+foreach my $com_set_name (sort {lc $sets->{$a}->name cmp lc $sets->{$b}->name} keys(%$com_sets)) {
   $html .= print_set($com_sets->{$com_set_name},\$com_rowcount);
 }
 $html .= "</table>\n";
@@ -114,7 +114,7 @@ $html .= "<br />\n<h4>Variation sets specific to Human</h4>\n";
 $html .= "<table id=\"human_variation_set_table\" class=\"ss\">\n";
 $html .= $table_header;
 
-foreach my $set_name (sort(keys(%$sets))) {
+foreach my $set_name (sort {lc $sets->{$a}->name cmp lc $sets->{$b}->name } keys(%$sets)) {
   $html .= print_set($sets->{$set_name},\$rowcount);
 }
 $html .= "</table>\n";
@@ -141,14 +141,18 @@ sub print_set {
   # Put a bullet next to subsets (will only be correct for one level of nesting - needs to be modified if we're having multiple levels in the future)
   my $bullet_open = "";
   my $bullet_close = "";
+  my $label = $set->name();
   if ($indent > 0) {
     $bullet_open = "<ul style=\"margin:0px\"><li style=\"margin:0px\">";
     $bullet_close = "</li></ul>";
   }
+  else {
+    $label = "<b>$label</b>";
+  }
   
   # Print the set attributes
   $html_set .= "  <tr$rowclass>\n";
-  $html_set .= "    <td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
+  $html_set .= "    <td>$bullet_open$label$bullet_close</td>\n";
   $html_set .= "    <td>" . $set->short_name() . "</td>\n";
   $html_set .= "    <td>" . $set->description() . "</td>\n";
   $html_set .= "  </tr>\n";
@@ -158,10 +162,10 @@ sub print_set {
   
   # Call the print subroutine for each of the subsets with an increased indentation
   my $ssets;
-  foreach my $sub_vs (@{$subsets}) {
+  foreach my $sub_vs ( sort {$a->name cmp $b->name} @{$subsets}) {
     $ssets->{$sub_vs->name} = $sub_vs;
   }
-  foreach my $sset_name (sort(keys(%$ssets))) {
+  foreach my $sset_name (sort {$a cmp $b} keys(%$ssets)) {
     $html_set .= print_set($ssets->{$sset_name},$rowcount,$indent+1);
   }
   return $html_set;

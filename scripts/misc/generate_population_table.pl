@@ -59,14 +59,14 @@ usage() if ($help);
 ## Settings ##
 my %pops = ('1000 Genomes'                   => { 'order'      => 1,
                                                   'species'    => 'Homo sapiens',
-                                                  'term'       => '1000GENOMES:phase_%',
+                                                  'term'       => '1000GENOMES:phase_3%',
                                                   'constraint' => 'size is not null',
                                                   'url'        => 'http://www.1000genomes.org',
                                                   'evidence'   => '1000Genomes'
                                                 },
             'HapMap'                         => { 'order'    => 2,
                                                   'species'  => 'Homo sapiens',
-                                                  'term'     => 'CSHL-HAPMAP:%',
+                                                  'term'     => 'CSHL-HAPMAP:HAPMAP%',
                                                   'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
                                                   'evidence' => 'HapMap'
                                                 },
@@ -78,14 +78,19 @@ my %pops = ('1000 Genomes'                   => { 'order'      => 1,
                                                 },
             'Mouse Genomes Project (MGP)'    => { 'order'    => 4,
                                                   'species'  => 'Mus musculus',
-                                                  'term'     => 'Mouse_Genomes_Project',
+                                                  'term'     => 'Mouse Genomes Project',
                                                   'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
                                                 },
-            'NextGen Project'                => { 'order'    => 5,
+            'NextGen Project - Sheep'        => { 'order'    => 5,
                                                   'species'  => 'Ovis aries',
                                                   'term'     => 'NextGen:%',
                                                   'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },                                   
+                                                },
+            'NextGen Project - Cow'          => { 'order'    => 6,
+                                                  'species'  => 'Bos taurus',
+                                                  'term'     => 'NextGen:%',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
            );
            
 my $server_name = 'http://static.ensembl.org';
@@ -182,8 +187,9 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my %sub_pops;
   while(my @data = $sth->fetchrow_array) {
   
-    my ($pop_name,$pop_suffix) = split(":", $data[1]);
-    $pop_name .=  ":<b>$pop_suffix</b>" if ($pop_suffix);
+    my @composed_name = split(':', $data[1]);
+       $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
+    my $pop_name = join(':',@composed_name);
     $data[2] = '-' if (!$data[2]);
     my $desc = parse_desc($data[3]);
     my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0], $dbname, $host);
@@ -205,12 +211,18 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
 
   foreach my $pop (@$pop_list) {
+
+    my $new_bg = $bg;
+    if ($pop_tree{$pop}) {
+      $new_bg = ($pop =~ /all$/i) ? ' class="supergroup"' : ' class="subgroup"';
+    }
     my $p_name = $pop_data{$pop}{'label'};
-       $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>} if ($sub_pops{$pop});
+       $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>} if (!$pop_tree{$pop} && %pop_tree);
     my $desc   = $pop_data{$pop}{'desc'};
     my $size   = $pop_data{$pop}{'size'};
 
-    $html_pop .= qq{  <tr$bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
+
+    $html_pop .= qq{  <tr$new_bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
 
     $bg = set_bg($bg);
   }
@@ -278,7 +290,7 @@ sub add_population_to_list {
   my $pop_id   = shift;
   my $pop_list = shift;
 
-  foreach my $sub_pop_id (keys(%{$pop_tree->{$pop_id}})) {
+  foreach my $sub_pop_id (sort {$a cmp $b} keys(%{$pop_tree->{$pop_id}})) {
     push (@$pop_list, $sub_pop_id);
     if ($pop_tree->{$sub_pop_id}) {
       $pop_list = add_population_to_list($pop_tree,$sub_pop_id,$pop_list);
