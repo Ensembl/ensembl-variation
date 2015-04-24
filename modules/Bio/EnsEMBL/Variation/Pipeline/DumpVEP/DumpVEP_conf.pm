@@ -240,6 +240,7 @@ sub pipeline_analyses {
       -meadow_type   => 'LOCAL',
       -hive_capacity => 1,
       -flow_into     => {
+        '1' => $self->o('debug') ? [] : ['distribute_dumps'],
         '2' => $self->o('debug') ? ['dump_vep'] : ['dump_vep', 'finish_dump'],
         '3' => ['merge_vep'],
         '4' => ['convert_vep'],
@@ -280,12 +281,12 @@ sub pipeline_analyses {
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
         -parameters => { @common_params },
         -wait_for   => ['convert_vep'],
-        -flow_into => ['distribute_dumps']
       },
       {
         -logic_name => 'distribute_dumps',
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DistributeDumps',
         -parameters => { @common_params },
+        -wait_for   => ['finish_dump'],
         -flow_into   => $self->o('qc') ? ['qc_dumps'] : [],
       },
     );
@@ -294,13 +295,10 @@ sub pipeline_analyses {
         {
           -logic_name => 'qc_dumps',
           -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::QC',
-          -parameters => { 
-            ensembl_cvs_root_dir => $self->o('ensembl_cvs_root_dir'),
-            @common_params 
-          },
+          -parameters => {  @common_params },
         };
     }
-  }
+  } # end if not debug
   return \@analyses;
 }
 
