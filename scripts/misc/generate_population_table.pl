@@ -161,20 +161,19 @@ foreach my $hostname (@hostnames) {
 my $html_pop = '';
 
 foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pops)) {
-
+  
+  my $html_current_pop = '';
   my $term = $pops{$project}{'term'};
   my $spe  = $pops{$project}{'species'};
   my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
   my $project_word = ($project =~ /project/i) ? '' : ' Project';
   my $url = $pops{$project}{'url'};
   my $evidence = $pops{$project}{'evidence'};
-  
-  $html_pop .= qq{<ul style="padding-left:1em;margin-left:2px"><li><h3>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> (<i>$spe</i>)</h3></li></ul>\n};
 
   my $project_id = $project;
   $project_id =~ s/ /_/g;
   $project_id = lc $project_id;
-  $html_pop .= qq{<table id="$project_id" class="ss" style="margin-bottom:4px">\n  $pop_table_header\n};
+  $html_current_pop .= qq{<table id="$project_id" class="ss" style="margin-bottom:4px">\n  $pop_table_header\n};
 
   my $dbname = $species_host{$spe}{'dbname'};
   my $host   = $species_host{$spe}{'host'};
@@ -222,12 +221,20 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
     my $size   = $pop_data{$pop}{'size'};
 
 
-    $html_pop .= qq{  <tr$new_bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
+    $html_current_pop .= qq{  <tr$new_bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
 
     $bg = set_bg($bg);
   }
 
-  $html_pop .= "</table>\n";
+  $html_current_pop .= "</table>\n";
+
+  my $plural = (scalar(@$pop_list) > 1) ? 's' : '';
+  $html_pop .= qq{
+  <ul style="padding-left:1em;margin-left:2px">
+    <li><h3>Population$plural from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> (<i>$spe</i>)</h3></li>
+  </ul>
+  $html_current_pop\n};
+
 
   # Evidence status
   if ($pops{$project}{'evidence'}) {
