@@ -79,8 +79,8 @@ my $default_colour = '#000000';
 
 my %type = (
   '1' => 'Variation',
-  '2' => 'Structural variation', 
-  '3' => 'Variation<br />Structural variation',
+  '2' => '<span class="_ht conhelp" title="Structural variation">SV</span>',
+  '3' => 'Variation</li><li style="margin:4px 0px 0px"><span class="_ht conhelp" title="Structural variation">SV</span>',
   '4' => 'CNV probe',
 );
 
@@ -207,12 +207,16 @@ sub print_line {
   
   $html .= qq{
   <tr$bg>
-    <td$rowspan style="padding:0px;margin:0px$class_col$border"></td>
-    <td$rowspan>$so_term</td>
+    <td$rowspan style="padding:0px;margin:0px;$class_col$border"></td>
+    <td$rowspan style="font-weight:bold">$so_term</td>
     <td$rowspan>$so_desc</td>
     <td$rowspan><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
     <td>$e_class</td>
-    <td$rowspan>$t_name</td>
+    <td$rowspan>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">$t_name</li>
+      </ul>
+    </td>
   </tr>};
   
   if ($so_term ne 'probe') {
