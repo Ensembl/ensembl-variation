@@ -76,20 +76,27 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
     my $so_acc   = $cons_set->{SO_accession};
     my $so_label = $cons_set->{label};
     my $so_desc  = $cons_set->{description};
+    my $impact   = $cons_set->{impact};
     my $rank     = $cons_set->{rank};
 
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
-    my $row = "$so_term|$so_desc|$so_acc|$so_label";
+    my $row = "$so_term|$so_desc|$so_acc|$so_label|$impact";
 
     $cons_rows{$row} = $rank;  
 }
 
 
-my $cons_table = 
-    qq{<table id="consequence_type_table" class="ss">\n  <tr>\n    <th style="width:5px;padding-left:0px;padding-right:0px;text-align:center">*</th>\n    <th>}.
-    (join qq{</th>\n    <th>}, 'SO term', 'SO description', 'SO accession', 'Display term').
-    qq{</th>\n  </tr>\n};
+my $cons_table = qq{
+<table id="consequence_type_table" class="ss">
+  <tr>
+    <th style="width:5px;padding-left:0px;padding-right:0px;text-align:center">*</th>
+    <th>SO term</th>
+    <th>SO description</th>
+    <th>SO accession</th>
+    <th>Display term</th>
+    <th><span class="_ht conhelp" title="Classification of the level of severity of the consequence type">IMPACT</span></th>
+  </tr>\n};
 
 my $bg = '';
 my $border_top = ';border-top:1px solid #FFF';
@@ -106,7 +113,9 @@ for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} keys(%cons_rows)) {
   
   my $cons_line = ($not_first == 0) ? '' : qq{  </tr>\n};
   $cons_line .= qq{  <tr$bg id="$SO_term">\n};
+  # Consequence colour
   $cons_line .= (defined($c)) ? qq{    <td style="padding:0px;margin:0px;background-color:$c$border"></td>} : qq{    <td></td>};
+  # Consequence data
   $cons_line .= qq{    <td>$row</td>\n};
   $not_first = 1;
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
