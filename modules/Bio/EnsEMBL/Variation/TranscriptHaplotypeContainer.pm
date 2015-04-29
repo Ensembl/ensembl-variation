@@ -71,7 +71,7 @@ sub new {
   
   my $self = {
     _transcript => $transcript,
-    _individual_genotype_features => $gts,
+    _individual_genotype_features => $gts || [],
     _db => $db,
     transcript_id => $transcript->stable_id,
   };
@@ -100,9 +100,10 @@ sub _variation_features {
   if($vfs) {
     $self->{_variation_features} = $vfs;
   }
-  else {
+  elsif(!exists($self->{_variation_features})) {
     $self->{_variation_features} = [map {$_->variation_feature} @{$self->get_all_IndividualGenotypeFeatures}];
   }
+  
   return $self->{_variation_features};
 }
 
@@ -261,7 +262,7 @@ sub _init {
   my $mappings = $self->_get_mappings;
   
   # remove any variation features that didn't get a mapping
-  my @new_vars = grep {defined($mappings->{$_->{start}.'-'.$_->{end}})} @$vfs;
+  my @new_vars = grep {$_->{_cds_mapping}} @$vfs;
   $self->_variation_features(\@new_vars);
   
   # group vfs by individual
@@ -324,44 +325,31 @@ sub _init {
 }
 
 ## Uses a transcript's mapper to get genomic->CDS coord mappings for each
-## VariationFeaturem, with the results keyed on $vf->{start} rather than
+## VariationFeature, with the results keyed on $vf->{start} rather than
 ## $vf->seq_region_start as this saves some time otherwise spent diving into
 ## core code
 sub _get_mappings {
   my $self = shift;
   
-  if(!exists($self->{_mappings})) {
-    my $tr = $self->transcript();
-    
-    # get unique coords
-    my %coords = map {$_->{start}.'-'.$_->{end} => $_} @{$self->_variation_features};
-    
-    # get transcript mapper
-    my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
-    
-    my %mappings;
-    
-    foreach my $coord(keys %coords) {
-      my $vf = $coords{$coord};
-      my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : split '-', $coord;
-      
-      my @mapped = $mapper->genomic2cds($s, $e, $tr->strand);
-      
-      # clean mapping
-      if(scalar @mapped == 1 && !$mapped[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-        $mappings{$coord} = $mapped[0];
-      }
-      
-      # complex mapping, we can't deal with this ATM
-      elsif(scalar @mapped > 1) {
-        warn "WARNING: genomic coord $coord possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
-      }
-    }
-    
-    $self->{_mappings} = \%mappings;
-  }
+  my $tr = $self->transcript();
+  my $tr_strand = $tr->strand;
+  my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
   
-  return $self->{_mappings};
+  foreach my $vf(@{$self->_variation_features}) {
+    next if $vf->{_cds_mapping};
+    
+    my @mapped = $mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tr_strand);
+
+    # clean mapping
+    if(scalar @mapped == 1 && !$mapped[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+      $vf->{_cds_mapping} = $mapped[0];
+    }
+
+    # complex mapping, we can't deal with this ATM
+    elsif(scalar @mapped > 1) {
+      warn "WARNING: genomic coord ".$vf->seq_region_start."-".$vf->seq_region_end." possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
+    }
+  }
 }
 
 ## Applies a set of IndividualGenotypeFeatures to the transcript sequence
@@ -371,62 +359,90 @@ sub _mutate_sequences {
   my $self = shift;
   my $gts = shift;
   
-  my $tr = $self->transcript;
-  my $mappings = $self->_get_mappings;
+  my $fingerprint = $self->_fingerprint_gts($gts);
   
-  my $codon_table;
+  if(!exists($self->{_mutated_by_fingerprint}) || !exists($self->{_mutated_by_fingerprint}->{$fingerprint})) {
   
-  if($tr->{_variation_effect_feature_cache} && $tr->{_variation_effect_feature_cache}->{codon_table}) {
-    $codon_table = $tr->{_variation_effect_feature_cache}->{codon_table};
-  }
-  else {
-    my $attrib = $tr->slice->get_all_Attributes('codon_table')->[0];
-    $codon_table = $attrib ? $attrib->value : 1;
-  }
+    my $tr = $self->transcript;
+    my $tr_strand = $tr->strand;
   
-  my $return = {};
+    my $codon_table;
   
-  for my $hap(0,1) {
-    my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
-    my $ref_seq = $seq;
-    
-    # flag if indel observed, we need to align seqs later
-    my $indel = 0;
-    
-    # iterate through in reverse order
-    foreach my $gt(reverse @$gts) {
-      my $vf = $gt->variation_feature;
-      my ($s, $e) = ($vf->{start}, $vf->{end});
-      
-      my $mapping = $mappings->{$s.'-'.$e};
-      next unless $mapping;
-      
-      my $genotype = $gt->genotype->[$hap];
-      
-      # remove del characters
-      $genotype =~ s/\-//g;
-      
-      # reverse complement sequence?
-      reverse_comp(\$genotype) if $tr->strand ne $vf->strand;
-      
-      my $replace_len = ($mapping->end - $mapping->start) + 1;
-      $indel = 1 if length($genotype) != $replace_len;
-      
-      substr($seq, $mapping->start - 1, $replace_len, $genotype);
+    if($tr->{_variation_effect_feature_cache} && $tr->{_variation_effect_feature_cache}->{codon_table}) {
+      $codon_table = $tr->{_variation_effect_feature_cache}->{codon_table};
     }
+    else {
+      my $attrib = $tr->slice->get_all_Attributes('codon_table')->[0];
+      $codon_table = $attrib ? $attrib->value : 1;
+    }
+  
+    my $mutated = {};
+  
+    for my $hap(0,1) {
+      my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
+      my $ref_seq = $seq;
     
-    # now translate
-    my $protein = $self->_get_translation($seq, $codon_table);
+      # flag if indel observed, we need to align seqs later
+      my $indel = 0;
     
-    # remove anything beyond a stop
-    #$protein =~ s/\*.+/\*/;
+      # iterate through in reverse order
+      foreach my $gt(reverse @$gts) {
+        my $vf = $gt->variation_feature;
+        my ($s, $e) = ($vf->{start}, $vf->{end});
+      
+        my $mapping = $vf->{_cds_mapping};
+        next unless $mapping;
+      
+        my $genotype = $gt->genotype->[$hap];
+      
+        # remove del characters
+        $genotype =~ s/\-//g;
+      
+        # reverse complement sequence?
+        reverse_comp(\$genotype) if $tr_strand ne $vf->strand;
+      
+        my $replace_len = ($mapping->end - $mapping->start) + 1;
+        $indel = 1 if length($genotype) != $replace_len;
+      
+        substr($seq, $mapping->start - 1, $replace_len, $genotype);
+      }
     
-    push @{$return->{cds}}, $seq;
-    push @{$return->{protein}}, $protein;
-    push @{$return->{indel}}, $indel;
+      # now translate
+      my $protein = $self->_get_translation($seq, $codon_table);
+    
+      # remove anything beyond a stop
+      #$protein =~ s/\*.+/\*/;
+    
+      push @{$mutated->{cds}}, $seq;
+      push @{$mutated->{protein}}, $protein;
+      push @{$mutated->{indel}}, $indel;
+    }
+  
+    $self->{_mutated_by_fingerprint}->{$fingerprint} = $mutated;
   }
   
-  return $return;
+  return $self->{_mutated_by_fingerprint}->{$fingerprint};
+}
+
+## gets an md5 hex for an individuals VFs/genotypes combination
+## this means we don't have to run _mutate_sequences more than
+## once for essentially the same sequence
+sub _fingerprint_gts {
+  my $self = shift;
+  my $gts = shift;
+  
+  my @raw;
+  
+  foreach my $gt(@$gts) {
+    my $s = $gt->genotype_string;
+    my $vf = $gt->variation_feature;
+    
+    my $v = $vf->dbID || $vf->{start}.'-'.$vf->{end};
+    
+    push @raw, sprintf('%s:%s', $v, $s);
+  }
+  
+  return md5_hex(join('_', @raw));
 }
 
 ## Gets a translation - these are cached on $self by a hex of the seq to avoid
@@ -565,6 +581,58 @@ sub _get_unique_VariationFeatures_with_consequences {
   }
   
   return [sort {$a->{start} <=> $b->{start}} values %unique_vfs];
+}
+
+# map raw diff strings to variation features
+# NB not all diffs will have a single VF if there are compound effects
+# resolved to a single raw diff by the sequence alignment
+sub _get_raw_diff_to_VariationFeature_hash {
+  my $self = shift;
+  
+  if(!exists($self->{_raw_to_vf})) {
+    my $vfs = $self->_variation_features;
+  
+    my $tr_strand = $self->transcript->strand;
+  
+    my %raw_to_vf = ();
+  
+    foreach my $vf(@$vfs) {
+      if(my $mapping = $vf->{_cds_mapping}) {
+        my $vf_strand = $vf->strand;
+        
+        my @alleles = split('/', $vf->allele_string);
+        my $ref = shift @alleles;
+      
+        reverse_comp(\$ref) if $tr_strand ne $vf_strand;
+      
+        foreach my $alt(@alleles) {
+        
+          # insertion
+          if($ref eq '-') {
+            reverse_comp(\$alt) if $tr_strand ne $vf_strand;
+          
+            $raw_to_vf{$mapping->start.'ins'.$alt} = $vf;
+          }
+        
+          # deletion
+          elsif($alt eq '-') {
+            $raw_to_vf{$mapping->start.'del'.$ref} = $vf;
+          }
+        
+          # sub
+          else {
+            reverse_comp(\$alt) if $tr_strand ne $vf_strand;            
+          
+            $raw_to_vf{$mapping->start.$ref.'>'.$alt} = $vf;
+          }
+        }
+      }
+    }
+  
+    $self->{_raw_to_vf} = \%raw_to_vf;
+  }
+  
+  return $self->{_raw_to_vf};
 }
 
 ## Convert this object to a hash that can be written as JSON.
