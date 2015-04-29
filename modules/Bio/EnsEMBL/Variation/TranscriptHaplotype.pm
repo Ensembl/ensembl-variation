@@ -196,59 +196,97 @@ sub _get_raw_diffs {
       
       # if there was a stop introduced, then $al2 will be shorter
       # pad it out with '-' to make seqs same length
-      $al2 .= '-' x (length($al1) - length($al2));  
+      $al2 .= '-' x (length($al1) - length($al2));
       
-      for(my $i=0; $i<length($al1); $i++) {
-        my $len = 1;
+      ## this code finds diffs between the sequences
+      ## copied verbatim from http://www.perlmonks.org/?node_id=882593
+      ## can probably be XS'd in future, see http://www.perlmonks.org/?node_id=882590
+      my ($m, @pos, $c1, @p1, $c2, @p2);
+      $m  = $s1 ^ $s2;
+      push @pos, pos( $m ) while $m =~ m{(?=([^\x00]))}g;
+      $m  =~ tr{[\x01-\xfe]}{\xff};
+      $c1 = $s1 & $m;
+      @p1 = $c1 =~ m{([^\x00])}g;
+      $c2 = $s2 & $m;
+      @p2 = $c2 =~ m{([^\x00])}g;
+      
+      ## this bit then joins together consecutive mismatches
+      ## but only if they are the same "type"
+      ## i.e. join consecutive - or [ACGT] characters, but
+      ## don't join - to A
+      ## hopefully this doesn't make it too slow after the efforts above
+      my ($p, $pp, $a1, $a2);
+      for my $i(0..$#pos) {
+        $p = $pos[$i];
         
-        my $a1 = substr($al1, $i, $len);
-        my $a2 = substr($al2, $i, $len);
-        
-        # try to extend if indel
-        while(($a1 =~ /^\-+$/ || $a2 =~ /^\-+$/) && $i + $len <= length($al1)) {
-          $len++;
+        # only check join if this isn't the first pos
+        if(defined($pp)) {
           
-          $a1 = substr($al1, $i, $len);
-          $a2 = substr($al2, $i, $len);
-        }
-        
-        # wind it back one if we extended as we will have gone one pos further
-        if($len > 1) {
-          $len--;
-          $a1 = substr($al1, $i, $len);
-          $a2 = substr($al2, $i, $len);
-        }
-        
-        if($a1 ne $a2) {
-          
-          # insertion
-          if($a1 =~ /\-/) {
-            $a2 = '{'.length($a2).'}' if length($a2) > 3;
-            
-            push @diffs, ($i + 1)."ins".$a2;
+          # check positions are consecutive
+          # and consecutive alleles on each string are of same type
+          if(
+            ($pp == $p - 1) &&
+            (($p1[$i] eq '-') == ($p1[$i-1] eq '-')) &&
+            (($p2[$i] eq '-') == ($p2[$i-1] eq '-'))
+          ) {
+            # extend a1 and a2
+            $a1 .= $p1[$i];
+            $a2 .= $p2[$i];
           }
           
-          # deletion
-          elsif($a2 =~ /\-/) {
-            $a1 = '{'.length($a1).'}' if length($a1) > 3;
-            
-            push @diffs, ($i + 1)."del".$a1;
-          }
-          
-          # substitution
+          # if not, create a new diff
           else {
-            push @diffs, ($i + 1)."$a1\>$a2";
+            push @diffs, $self->_create_diff($a1, $a2, $pp);
+            
+            # re-initiate a1 and a2
+            $a1 = $p1[$i];
+            $a2 = $p2[$i];
           }
         }
         
-        $i += $len - 1;
+        # initiate a1 and a2
+        else {
+          $a1 = $p1[$i];
+          $a2 = $p2[$i];
+        }
+        
+        # record previous position
+        $pp = $p;
       }
+      
+      # there will be a diff left over
+      push @diffs, $self->_create_diff($a1, $a2, $pp);
     }
     
     $self->{_raw_diffs} = \@diffs;
   }
   
   return $self->{_raw_diffs};
+}
+
+sub _create_diff {
+  my ($self, $a1, $a2, $pp) = @_;
+  
+  my $pos = ($pp - length($a1)) + 2;
+  
+  # insertion
+  if($a1 =~ /\-/) {
+    $a2 = '{'.length($a2).'}' if length($a2) > 3;
+
+    return $pos."ins".$a2;
+  }
+
+  # deletion
+  elsif($a2 =~ /\-/) {
+    $a1 = '{'.length($a1).'}' if length($a1) > 3;
+
+    return $pos."del".$a1;
+  }
+
+  # substitution
+  else {
+    return $pos."$a1\>$a2";
+  }
 }
 
 ## Convert this object to a hash that can be written as JSON.
