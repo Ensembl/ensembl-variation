@@ -70,10 +70,36 @@ sub get_all_diffs {
   my $self = shift;
   
   if(!defined($self->{diffs})) {
-    @{$self->{diffs}} = map {{'diff' => $_}} @{$self->_get_raw_diffs()};
+    my @diffs = ();
+    
+    my $raw_to_vf = $self->container->_get_raw_diff_to_VariationFeature_hash();
+    
+    foreach my $raw(@{$self->_get_raw_diffs()}) {
+      my $diff = {
+        'diff' => $raw, 
+      };
+      
+      $diff->{variation_feature} = $raw_to_vf->{$raw} if $raw_to_vf->{$raw};
+      
+      push @diffs, $diff;
+    }
+    
+    $self->{diffs} = \@diffs;
   }
   
   return $self->{diffs};
+}
+
+sub TO_JSON {
+  my $self = shift;
+  
+  # make a hash copy of self
+  my %copy = %{$self};
+  
+  # change VF links to VF name
+  $_->{variation_feature} = $_->{variation_feature}->variation_name for grep {$_->{variation_feature}} @{$self->{diffs}};
+  
+  return \%copy;
 }
 
 1;
