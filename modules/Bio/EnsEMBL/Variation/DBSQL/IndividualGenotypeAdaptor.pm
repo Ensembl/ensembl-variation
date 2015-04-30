@@ -38,7 +38,22 @@ Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
 
 =head1 SYNOPSIS
 
-Adaptor for IndividualGenotype objects.
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
+
+  my $sa = $registry->get_adaptor('human', 'core', 'slice');
+  my $igta = $registry->get_adaptor('human', 'variation', 'individualgenotype');
+
+  # Fetch region for which we want to get all individual genotypes
+  my $slice = $sa->fetch_by_region('chromosome', '3', 52_786_960, 52_786_970);
+  my $individual_genotypes = $igta->fetch_all_by_Slice($slice);
+
+  foreach my $igt (@$individual_genotypes) {
+    my $variation_name = $igt->variation()->name;
+    my $genotype = $igt->genotype_string;
+    my $individual_name = $igt->individual()->name;
+    print "$variation_name\t$genotype\t$individual_name\n";
+  }
 
 =head1 DESCRIPTION
 
