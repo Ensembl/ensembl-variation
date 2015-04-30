@@ -170,6 +170,7 @@ our @EXTRA_HEADERS = (
   { flag => 'flag_pick',       cols => ['PICK'] },
   { flag => 'flag_pick_allele',cols => ['PICK'] },
   { flag => 'variant_class',   cols => ['VARIANT_CLASS']},
+  { flag => 'minimal',         cols => ['MINIMISED']},
   
   # gene-related
   { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
@@ -271,6 +272,7 @@ our %COL_DESCS = (
     'REFSEQ_MATCH'       => 'RefSeq transcript match status',
     'VARIANT_CLASS'      => 'SO variant class',
     'PHENO'              => 'Indicates if existing variant is associated with a phenotype, disease or trait',
+    'MINIMISED'          => 'Alleles in this variant have been converted to minimal representation before consequence calculation',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -1051,6 +1053,7 @@ sub minimise_alleles {
         $new_vf->{original_allele_string} = $vf->{allele_string};
         $new_vf->{original_start}         = $vf->{start};
         $new_vf->{original_end}           = $vf->{end};
+        $new_vf->{minimised}              = 1;
         
         push @new_vfs, $new_vf;
       }
@@ -1673,6 +1676,7 @@ sub split_variants {
           $first->{original_allele_string} = $original_vf->{allele_string};
           $first->{original_start}         = $original_vf->{start};
           $first->{original_end}           = $original_vf->{end};
+          $first->{minimised}              = 1
         }
         
         push @tmp, $new_vf;
@@ -2846,6 +2850,9 @@ sub init_line {
     
     # frequencies?
     $line->{Extra}->{FREQS} = join ",", @{$vf->{freqs}} if defined($vf->{freqs});
+    
+    # minimised?
+    $line->{Extra}->{MINIMISED} = 1 if $vf->{minimised};
     
     # gmaf?
     if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
