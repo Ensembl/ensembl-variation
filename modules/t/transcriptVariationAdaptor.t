@@ -20,6 +20,7 @@ use Data::Dumper;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Variation::Source;
 our $verbose = 0;
 
 
@@ -73,8 +74,6 @@ my $tvas = $trv->get_all_alternate_TranscriptVariationAlleles();
 ok( $tvas->[0]->sift_prediction eq 'deleterious',            "sift prediction");
 
 
-
-
 # test fetch_all_by_VariationFeatures
 my $slice = $s_ad->fetch_by_region('chromosome',13,32953990,32954050);
 my $vf = $vf_ad->fetch_all_by_Slice($slice);
@@ -113,7 +112,6 @@ ok($trvar->cdna_end() == $cdna_end,             "constructor - cdna_end");
 ok($trvar->translation_start() == $tl_start,    "constructor - translation start");
 ok($trvar->translation_end() == $tl_end,        "constructor - translation end");
 ok($trvar->consequence_type()->[0] eq $consequence_type, "constructor - consequence_type");
-
 
 
 # test getter/setters
@@ -161,6 +159,94 @@ ok(scalar @$tvs8 == 0, 'fetch_all_by_translation_id_SO_terms');
 
 my $tvs9 = $trv_ad->fetch_all_somatic_by_translation_id_SO_terms($translation_stable_id, ['sequence_variant']);
 ok(scalar @$tvs9 == 0, 'fetch_all_somatic_by_translation_id_SO_terms');
+
+
+
+
+#### check HGVS shifting
+
+my $source_name           = 'dbSNP';
+my $source_version        = 138;
+my $source_description    = 'Variants (including SNPs and indels) imported from dbSNP (mapped to GRCh38)';
+
+my $source = Bio::EnsEMBL::Variation::Source->new
+  (-name           => $source_name,
+   -version        => $source_version,
+   -description    => $source_description
+);
+
+## need a variation object 
+my $v = Bio::EnsEMBL::Variation::Variation->new(-dbID => 12345,
+                                                -name => 'rs2421',
+                                                -source => $source);
+
+my $chr   = 13;
+my $start = 51519667;
+my $end   = 51519668;
+my $strand = 1;
+my $vname = $v->name();
+my $map_weight = 1;
+my $allele_str = '-/G';
+my $is_somatic = 0;
+
+
+my $sl = $s_ad->fetch_by_region('chromosome',$chr);
+my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+  (-seq_region_name => $chr,
+   -start => $end,
+   -end   => $start,
+   -slice => $sl,
+   -strand => $strand,
+   -variation_name => $vname,
+   -allele_string => $allele_str,
+   -variation => $v,
+   -source => $source,
+   -is_somatic => $is_somatic,
+   -adaptor     => $vf_ad
+);
+
+my $trans_name = 'ENST00000336617';
+my $trans      = $tr_ad->fetch_by_stable_id( $trans_name);   
+
+## test default - shifted
+my $trans_vars = $vf->get_all_TranscriptVariations( [ $trans ] );
+
+foreach my $trans_var (@{$trans_vars}){
+
+  next unless $trans_var->transcript->stable_id() eq $trans_name;
+  my $tvas_ts = $trans_var->get_all_alternate_TranscriptVariationAlleles();
+ 
+  ok($tvas_ts->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616+1dupG', 'HGVS for shifted location');
+  ok(scalar $tvas_ts->[0]->hgvs_offset() == 2, 'shifted offset');
+}
+
+## test non - shifted
+$vf_ad->db->shift_hgvs_variants_3prime(0) ;
+my $vf2 = Bio::EnsEMBL::Variation::VariationFeature->new
+  (-seq_region_name => $chr,
+   -start => $end,
+   -end   => $start,
+   -slice => $sl,
+   -strand => $strand,
+   -variation_name => $vname,
+   -allele_string => $allele_str,
+   -variation => $v,
+   -source => $source,
+   -is_somatic => $is_somatic,
+   -adaptor     => $vf_ad
+);
+
+my $trans_vars_ns = $vf2->get_all_TranscriptVariations( [$trans] );
+
+foreach my $trans_varns (@{$trans_vars_ns}){
+
+  next unless $trans_varns->transcript->stable_id() eq $trans_name;
+  my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles(); 
+
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location' );
+  ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset');
+}
+
 
 
 
