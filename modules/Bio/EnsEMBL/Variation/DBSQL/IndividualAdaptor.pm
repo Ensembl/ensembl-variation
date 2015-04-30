@@ -108,25 +108,25 @@ sub store {
 	# add entry to individual table
 	my $sth = $dbh->prepare(q{
 		INSERT INTO individual (
-			name,
-            description,
-            gender,
-			father_individual_id,
-			mother_individual_id,
-			individual_type_id,
-            display,
-            has_coverage
+      name,
+      description,
+      gender,
+      father_individual_id,
+      mother_individual_id,
+      individual_type_id,
+      display,
+      has_coverage
 		) VALUES (?,?,?,?,?,?,?,?)
 	});
 	$sth->execute(
 		$individual->name,
-        $individual->description,
-        $individual->gender || 'Unknown',
+    $individual->description,
+    $individual->gender || 'Unknown',
 		$individual->father_Individual ? $individual->father_Individual->dbID : undef,
 		$individual->mother_Individual ? $individual->mother_Individual->dbID : undef,
 		$individual_type_id,
-        $individual->display,
-        $individual->has_coverage
+    $individual->display,
+    $individual->has_coverage
 	);
 	$sth->finish;
 	my $dbID = $dbh->last_insert_id(undef, undef, 'individual', 'individual_id');
