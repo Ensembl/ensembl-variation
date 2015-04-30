@@ -38,34 +38,34 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
 
 =head1 SYNOPSIS
-  $reg = 'Bio::EnsEMBL::Registry';
-  
-  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
-  $vfa = $reg->get_adaptor("human","variation","variationfeature");
-  $sa = $reg->get_adaptor("human","core","slice");
-  $va = $reg->get_adaptor("human","variation","variation");
+
+  $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
+
+  my $vfa = $registry->get_adaptor('human', 'variation', 'variationfeature');
+  my $sa = $registry->get_adaptor('human', 'core', 'slice');
+  my $va = $registry->get_adaptor('human', 'variation', 'variation');
 
   # Get a VariationFeature by its internal identifier
-  $vf = $va->fetch_by_dbID(145);
+  my $vf = $va->fetch_by_dbID(145);
 
-  # Include the variations that have been flagged as failed in the fetch
+  # Include the variations that have been flagged as failed
   $vfa->db->include_failed_variations(1);
-  
-  # get all VariationFeatures in a region
-  $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
-  foreach $vf (@{$vfa->fetch_all_by_Slice($slice)}) {
+
+  # Get all VariationFeatures in a region
+  my $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
+  foreach my $vf ( @{ $vfa->fetch_all_by_Slice($slice) } ) {
     print $vf->start(), '-', $vf->end(), ' ', $vf->allele_string(), "\n";
   }
 
-  # fetch all genome hits for a particular variation
-  $v = $va->fetch_by_nam('rs56');
+  # Fetch all genome hits for a particular variation
+  my $v = $va->fetch_by_name('rs56');
 
-  foreach $vf (@{$vfa->fetch_all_by_Variation($v)}) {
+  foreach my $vf ( @{ $vfa->fetch_all_by_Variation($v) } ) {
     print $vf->seq_region_name(), $vf->seq_region_start(), '-',
-          $vf->seq_region_end(),"\n";
+          $vf->seq_region_end(), "\n";
   }
-
+  
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for VariationFeature objects.
