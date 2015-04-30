@@ -85,36 +85,36 @@ use DBI qw(:sql_types);
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 sub store {
-	my ($self, $pop) = @_;
-	
-	my $dbh = $self->dbc->db_handle;
-    
-    my $sth = $dbh->prepare(q{
-        INSERT INTO population (
-            name,
-			size,
-			description,
-            collection,
-			freqs_from_gts,
-            display
-        ) VALUES (?,?,?,?,?,?)
-    });
-	
-	$sth->execute(
-		$pop->name,
-		$pop->size,
-		$pop->description,
-        $pop->collection || 0,
-		$pop->_freqs_from_gts || 0,
-        $pop->display,
-	);
-	$sth->finish;
-	
-	# get the population_id inserted
-	my $dbID = $dbh->last_insert_id(undef, undef, 'population', 'population_id');
-	
-	$pop->{dbID}    = $dbID;
-	$pop->{adaptor} = $self;
+  my ($self, $pop) = @_;
+
+  my $dbh = $self->dbc->db_handle;
+
+  my $sth = $dbh->prepare(q{
+    INSERT INTO population (
+      name,
+      size,
+      description,
+      collection,
+      freqs_from_gts,
+      display
+    ) VALUES (?,?,?,?,?,?)
+  });
+
+  $sth->execute(
+    $pop->name,
+    $pop->size,
+    $pop->description,
+    $pop->collection || 0,
+    $pop->_freqs_from_gts || 0,
+    $pop->display,
+  );
+  $sth->finish;
+
+  # get the population_id inserted
+  my $dbID = $dbh->last_insert_id(undef, undef, 'population', 'population_id');
+
+  $pop->{dbID}    = $dbID;
+  $pop->{adaptor} = $self;
 	
 }
 
@@ -132,35 +132,34 @@ sub store {
 =cut
 
 sub fetch_population_by_synonym {
-    my $self = shift;
-    my $synonym_name = shift;
-    my $source = shift;
-    my ($populations, $population_ids, $population_id);
-    my $sql;
-    if (defined $source){
-	    $sql = qq{
-            SELECT ps.population_id 
-            FROM population_synonym ps, source s
-            WHERE ps.name = ? and ps.source_id = s.source_id AND s.name = "$source"};
-    }
-    else{
-	    $sql = qq{
-            SELECT population_id 
-            FROM population_synonym WHERE name = ?};
-    }
-    my $sth = $self->prepare($sql);
-    $sth->bind_param(1, $synonym_name, SQL_VARCHAR);
-    $sth->execute();    
-    $sth->bind_columns(\$population_id);
-    while ($sth->fetch()){
-	    push @{$population_ids}, $population_id;
-    }
+  my $self = shift;
+  my $synonym_name = shift;
+  my $source = shift;
+  my ($populations, $population_ids, $population_id);
+  my $sql;
+  if (defined $source) {
+    $sql = qq{
+      SELECT ps.population_id 
+      FROM population_synonym ps, source s
+      WHERE ps.name = ? and ps.source_id = s.source_id AND s.name = "$source"
+    };
+  }
+  else {
+    $sql = qq{SELECT population_id FROM population_synonym WHERE name = ?};
+  }
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1, $synonym_name, SQL_VARCHAR);
+  $sth->execute();    
+  $sth->bind_columns(\$population_id);
+  while ($sth->fetch()) {
+    push @{$population_ids}, $population_id;
+  }
 
-    foreach my $population_id (@{$population_ids}){
-	    my $population = $self->fetch_by_dbID($population_id);
-	    push @{$populations}, $population;
-    }
-    return $populations;
+  foreach my $population_id (@{$population_ids}) {
+    my $population = $self->fetch_by_dbID($population_id);
+    push @{$populations}, $population;
+  }
+  return $populations;
 }
 
 =head2 fetch_synonyms
@@ -178,26 +177,26 @@ sub fetch_population_by_synonym {
 =cut
 
 sub fetch_synonyms {
-    my $self = shift;
-    my $dbID = shift;
-    my $source = shift;
-    my $synonym;
-    my $synonyms;
+  my $self = shift;
+  my $dbID = shift;
+  my $source = shift;
+  my $synonym;
+  my $synonyms;
 
-    my $sql;
-    if (defined $source){
-        $sql = qq{SELECT ps.name FROM population_synonym ps, source s WHERE ps.population_id = ? AND ps.source_id = s.source_id AND s.name = "$source"}
-    } else{
-        $sql = qq{SELECT name FROM population_synonym WHERE population_id = ?};
-    }
-    my $sth = $self->prepare($sql);
-    $sth->bind_param(1,$dbID,SQL_INTEGER);
-    $sth->execute();
-    $sth->bind_columns(\$synonym);
-    while ($sth->fetch){
-	    push @{$synonyms}, $synonym;
-    }
-    return $synonyms;
+  my $sql;
+  if (defined $source) {
+    $sql = qq{SELECT ps.name FROM population_synonym ps, source s WHERE ps.population_id = ? AND ps.source_id = s.source_id AND s.name = "$source"};
+  } else {
+    $sql = qq{SELECT name FROM population_synonym WHERE population_id = ?};
+  }
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
+  $sth->bind_columns(\$synonym);
+  while ($sth->fetch) {
+    push @{$synonyms}, $synonym;
+  }
+  return $synonyms;
 }
 
 =head2 fetch_by_name
@@ -213,22 +212,23 @@ sub fetch_synonyms {
 =cut
 
 sub fetch_by_name {
-    my $self = shift;
-    my $name = shift;
+  my $self = shift;
+  my $name = shift;
 
-    throw('Name argument expected.') if (!defined($name));
+  throw('Name argument expected.') if (!defined($name));
 
-    my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
-        WHERE  p.name = ?;});
+  my $sth = $self->prepare(q{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
+    WHERE  p.name = ?;
+  });
 
-    $sth->bind_param(1,$name,SQL_VARCHAR);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return undef if (!@$populations);
-    return $populations->[0];
+  $sth->bind_param(1, $name, SQL_VARCHAR);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return undef if (!@$populations);
+  return $populations->[0];
 }
 
 =head2 fetch_all_by_dbID_list
@@ -245,24 +245,25 @@ sub fetch_by_name {
 =cut
 
 sub fetch_all_by_dbID_list {
-    my $self = shift;
-    my $list = shift;
+  my $self = shift;
+  my $list = shift;
 
-    if (!defined($list) || ref($list) ne 'ARRAY') {
-        throw("list reference argument is required");
-    }
-  
-    return [] unless scalar @$list >= 1;
-    my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
-    my $sth = $self->prepare(qq{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM population p left outer join display_group dg on dg.display_group_id = p.display_group_id
-        WHERE  p.population_id $id_str;});
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return undef if(!@$populations);
-    return $populations;
+  if (!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  } 
+
+  return [] unless scalar @$list >= 1;
+  my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
+  my $sth = $self->prepare(qq{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM population p left outer join display_group dg on dg.display_group_id = p.display_group_id
+    WHERE  p.population_id $id_str;
+  });
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return undef if(!@$populations);
+  return $populations;
 }
 
 =head2 fetch_all_by_name_search
@@ -279,15 +280,16 @@ sub fetch_all_by_dbID_list {
 =cut
 
 sub fetch_all_by_name_search {
-    my $self = shift;
-    my $name = shift;
+  my $self = shift;
+  my $name = shift;
 
-    throw('Name argument expected.') if(!defined($name));
+  throw('Name argument expected.') if(!defined($name));
 
-    my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
-        WHERE  p.name like concat('%', ?, '%')});
+  my $sth = $self->prepare(q{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
+    WHERE  p.name like concat('%', ?, '%');
+  });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->execute();
@@ -312,30 +314,31 @@ sub fetch_all_by_name_search {
 =cut
 
 sub fetch_all_by_super_Population {
-    my $self = shift;
-    my $pop  = shift;
+  my $self = shift;
+  my $pop  = shift;
 
-    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-        throw('Bio::EnsEMBL::Variation::Population argument expected');
-    }
+  if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw('Bio::EnsEMBL::Variation::Population argument expected');
+  }
 
-    if (!$pop->dbID()) {
-        warning("Cannot retrieve sub populations for population without dbID");
-        return [];
-    }
+  if (!$pop->dbID()) {
+    warning("Cannot retrieve sub populations for population without dbID");
+    return [];
+  }
 
-    my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM population_structure ps,  population p
-        LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
-        WHERE  p.population_id = ps.sub_population_id
-        AND    ps.super_population_id = ?});
+  my $sth = $self->prepare(q{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM population_structure ps,  population p
+    LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
+    WHERE  p.population_id = ps.sub_population_id
+    AND    ps.super_population_id = ?;
+  });
 
-    $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $populations;
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
 }
 
 
@@ -354,30 +357,31 @@ sub fetch_all_by_super_Population {
 =cut
 
 sub fetch_all_by_sub_Population {
-    my $self = shift;
-    my $pop  = shift;
+  my $self = shift;
+  my $pop  = shift;
 
-    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-        throw('Bio::EnsEMBL::Variation::Population argument expected');
-    }
+  if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw('Bio::EnsEMBL::Variation::Population argument expected');
+  }
 
-    if (!$pop->dbID()) {
-        warning("Cannot retrieve super populations for population without dbID");
-        return [];
-    }
+  if (!$pop->dbID()) {
+    warning("Cannot retrieve super populations for population without dbID");
+    return [];
+  }
 
-    my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM   population_structure ps, population p
-        LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-        WHERE  p.population_id = ps.super_population_id
-        AND    ps.sub_population_id = ?});
+  my $sth = $self->prepare(q{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM   population_structure ps, population p
+    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
+    WHERE  p.population_id = ps.super_population_id
+    AND    ps.sub_population_id = ?;
+  });
 
-    $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $populations;
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
 }
 
 
@@ -394,21 +398,21 @@ sub fetch_all_by_sub_Population {
 =cut
 
 sub fetch_default_LDPopulation {
-    my $self = shift;
-    my $population_id;
-    
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
-    $sth->bind_param(1,'pairwise_ld.default_population',SQL_VARCHAR);
-    $sth->execute();
-    $sth->bind_columns(\$population_id);
-    $sth->fetch();
-    $sth->finish;
+  my $self = shift;
+  my $population_id;
 
-    if (defined $population_id) {
-        return $self->fetch_by_dbID($population_id);
-    } else{
-	    return undef;
-    }
+  my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
+  $sth->bind_param(1,'pairwise_ld.default_population',SQL_VARCHAR);
+  $sth->execute();
+  $sth->bind_columns(\$population_id);
+  $sth->fetch();
+  $sth->finish;
+
+  if (defined $population_id) {
+    return $self->fetch_by_dbID($population_id);
+  } else {
+    return undef;
+  }
 }
 
 
@@ -423,15 +427,15 @@ sub fetch_default_LDPopulation {
 
 =cut
 
-sub fetch_all_LD_Populations{
+sub fetch_all_LD_Populations {
   my $self = shift;
   my $use_vcf = $self->db->use_vcf;
   
-  if($use_vcf) {
+  if ($use_vcf) {
     my @vcf_pops = map {@{$_->get_all_Populations}} @{$self->db->get_VCFCollectionAdaptor->fetch_all};
     
     # value of >1 means use only VCF pops
-    if($use_vcf > 1) {
+    if ($use_vcf > 1) {
       return \@vcf_pops;
     }
     
@@ -469,8 +473,8 @@ sub _fetch_all_db_LD_Populations {
 =cut
 
 sub fetch_all_HapMap_Populations {
-    my $self = shift;
-	return $self->generic_fetch(qq{ p.name like 'cshl-hapmap%' });
+  my $self = shift;
+  return $self->generic_fetch(qq{ p.name like 'cshl-hapmap%' });
 }
 
 
@@ -486,8 +490,8 @@ sub fetch_all_HapMap_Populations {
 =cut
 
 sub fetch_all_1KG_Populations{
-    my $self = shift;
-	return $self->generic_fetch(qq{ p.name like '1000GENOMES%' });
+  my $self = shift;
+  return $self->generic_fetch(qq{ p.name like '1000GENOMES%' });
 }
 
 
@@ -508,29 +512,30 @@ sub fetch_all_1KG_Populations{
 =cut
 
 sub fetch_all_by_Individual {
-    my $self = shift;
-    my $ind = shift;
+  my $self = shift;
+  my $ind = shift;
 
-    if (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual')) {
-	    throw("Bio::EnsEMBL::Variation::Individual arg expected");
-    }
-    
-    if (!$ind->dbID()) {
-	    warning("Individual does not have dbID, cannot retrieve Individuals");
-	    return [];
-    } 
+  if (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual')) {
+    throw("Bio::EnsEMBL::Variation::Individual arg expected");
+  }
 
-    my $sth = $self->prepare(qq{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-        FROM individual_population ip, population p
-        LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
-        WHERE p.population_id = ip.population_id
-        AND ip.individual_id = ?});
-    $sth->bind_param(1,$ind->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $populations;
+  if (!$ind->dbID()) {
+    warning("Individual does not have dbID, cannot retrieve Individuals");
+    return [];
+  } 
+
+  my $sth = $self->prepare(qq{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM individual_population ip, population p
+    LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
+    WHERE p.population_id = ip.population_id
+    AND ip.individual_id = ?;
+  });
+  $sth->bind_param(1,$ind->dbID,SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
 }
 
 
@@ -566,8 +571,8 @@ sub fetch_all_by_Individual_list {
 	
 	my $sth = $self->prepare(qq{
 		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-                FROM individual_population ip, population p
-                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
+    FROM individual_population ip, population p
+    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
 		WHERE p.population_id = ip.population_id
 		AND ip.individual_id $id_str
 	});
@@ -595,31 +600,31 @@ sub fetch_all_by_Individual_list {
 
 =cut
 
-sub fetch_tagged_Population{
-    my $self = shift;
-    my $variation_feature = shift;
+sub fetch_tagged_Population {
+  my $self = shift;
+  my $variation_feature = shift;
 
-    if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-	    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
-    }
-    
-    if (!$variation_feature->dbID()) {
-	    warning("Variation feature does not have dbID, cannot retrieve tagged populations");
-	    return [];
-    } 
+  if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
+  }
 
-    my $sth = $self->prepare(qq{
-		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-                FROM tagged_variation_feature tvf, population p
-                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-		WHERE p.population_id = tvf.population_id
-		AND   tvf.tagged_variation_feature_id = ?
-	});
-    $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $populations;
+  if (!$variation_feature->dbID()) {
+    warning("Variation feature does not have dbID, cannot retrieve tagged populations");
+    return [];
+  } 
+
+  my $sth = $self->prepare(qq{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM tagged_variation_feature tvf, population p
+    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
+    WHERE p.population_id = tvf.population_id
+    AND   tvf.tagged_variation_feature_id = ?
+  });
+  $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
 }
 
 =head2 fetch_tag_Population
@@ -640,30 +645,30 @@ sub fetch_tagged_Population{
 =cut
 
 sub fetch_tag_Population {
-    my $self = shift;
-    my $variation_feature = shift;
+  my $self = shift;
+  my $variation_feature = shift;
 
-    if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-	    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
-    }
-    
-    if (!$variation_feature->dbID()) {
-	    warning("Variation feature does not have dbID, cannot retrieve tag populations");
-	    return [];
-    } 
+  if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
+  }
 
-    my $sth = $self->prepare(qq{
-		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-                FROM tagged_variation_feature tvf, population p 
-                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-		WHERE p.population_id = tvf.population_id
-		AND   tvf.variation_feature_id = ?
-	});
-    $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $populations = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $populations;
+  if (!$variation_feature->dbID()) {
+    warning("Variation feature does not have dbID, cannot retrieve tag populations");
+    return [];
+  } 
+
+  my $sth = $self->prepare(qq{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM tagged_variation_feature tvf, population p 
+    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
+    WHERE p.population_id = tvf.population_id
+    AND   tvf.variation_feature_id = ?
+  });
+  $sth->bind_param(1, $variation_feature->dbID, SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
 }
 
 =head2 get_dbIDs_for_population_names
@@ -680,32 +685,32 @@ sub fetch_tag_Population {
 =cut
 
 sub get_dbIDs_for_population_names {
-    my $self = shift;
-    my $population_names = shift;
+  my $self = shift;
+  my $population_names = shift;
 
-    # Wrap the argument into an arrayref
-    $population_names = wrap_array($population_names);
-    
-    # Define a statement handle for the lookup query
-    my $stmt = qq{
-        SELECT population_id, name
-        FROM population
-        WHERE name = ?
-        LIMIT 1
-    };
-    my $sth = $self->prepare($stmt);
-    
-    # Loop over the population names and query the db
-    my %dbIDs;
-    foreach my $pop_name (@{$population_names}) {
-        $sth->execute($pop_name);
-        my ($id, $name);
-        $sth->bind_columns(\$id,\$name);
-        $sth->fetch;
-        $dbIDs{$id} = $name if (defined($id));
-    }
-    
-    return \%dbIDs;
+  # Wrap the argument into an arrayref
+  $population_names = wrap_array($population_names);
+
+  # Define a statement handle for the lookup query
+  my $stmt = qq{
+    SELECT population_id, name
+    FROM population
+    WHERE name = ?
+    LIMIT 1
+  };
+  my $sth = $self->prepare($stmt);
+
+  # Loop over the population names and query the db
+  my %dbIDs;
+  foreach my $pop_name (@{$population_names}) {
+    $sth->execute($pop_name);
+    my ($id, $name);
+    $sth->bind_columns(\$id,\$name);
+    $sth->fetch;
+    $dbIDs{$id} = $name if (defined($id));
+  }
+
+  return \%dbIDs;
 }
 
 =head2 get_sample_id_for_population_names
@@ -721,8 +726,8 @@ sub get_dbIDs_for_population_names {
 =cut
 
 sub get_sample_id_for_population_names {
-    my $self = shift;
-    warn('The use of this method is deprecated. Use get_dbIDs_for_population_names instead.');
+  my $self = shift;
+  warn('The use of this method is deprecated. Use get_dbIDs_for_population_names instead.');
 }
 
 sub _get_individual_population_hash {
@@ -748,7 +753,7 @@ sub _get_individual_population_hash {
 		}
 		
 		my $id_str;
-		if(@ids > 1)  {
+		if(@ids > 1) {
 			$id_str = " IN (" . join(',', @ids). ")";
 		} else {
 			$id_str = " = ".$ids[0];
@@ -835,14 +840,13 @@ sub _objs_from_sth {
         -DISPLAY => $display,
         -DISPLAY_GROUP_NAME => $display_name,
         -DISPLAY_GROUP_PRIORITY => $display_priority,
-);
-    }
-    return \@pops;
+    );
+  }
+  return \@pops;
 }
 
 sub _tables {
-    return (['population','p'],
-            ['display_group', 'dg']);
+  return (['population','p'], ['display_group', 'dg']);
 }
 
 sub _columns {
@@ -850,19 +854,17 @@ sub _columns {
 }
 
 sub _left_join {
-    my $self = shift;
-    
-    my @left_join = (
-        ['display_group dg', 'p.display_group_id = dg.display_group_id'],
-    );       
- 
-    return @left_join;
+  my $self = shift;
+
+  my @left_join = (
+    ['display_group dg', 'p.display_group_id = dg.display_group_id'],
+  );       
+
+  return @left_join;
 }
 
-
-
 sub _default_where_clause {
-    return '';
+  return '';
 }
 
 1;
