@@ -37,29 +37,21 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor
 
 =head1 SYNOPSIS
-  $reg = 'Bio::EnsEMBL::Registry';
-  
-  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
-  $pga = $reg->get_adaptor("human","variation","populationgenotype");  
-  $pa = $reg->get_adaptor("human","variation","population");
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
+
+  my $pga = $registry->get_adaptor('human', 'variation', 'populationgenotype');
+  my $va = $registry->get_adaptor('human', 'variation', 'variation');
 
   # Get a PopulationGenotype by its internal identifier
-  $pgtype = $ia->fetch_by_dbID(145);
+  my $pgtype = $pga->fetch_by_dbID(145);
+  print join(' ', $pgtype->population()->name(), $pgtype->allele1(), $pgtype->allele2(), $pgtype->frequency()), "\n";
 
-  print $pgtype->population->name(), " ",
-        $pgtype->allele1(), ' ', $pgtype->allele2(), ' ', $pgtype->frequency();
-
-  # Get all population genotypes for an population
-  $pop = $pa->fetch_by_dbID(1219);
-
-  foreach $pgtype (@{$pga->fetch_all_by_Population($pop)}) {
-    print $pgtype->variation()->name(),  ' ',
-          $pgtype->frequency();
-          $pgtype->allele1(), '/', $pgtype->allele2(), "\n";
+  # Get all PopulationGenotypes for a Variation
+  my $variation = $va->fetch_by_name('rs1121');
+  foreach $pgtype (@{ $pga->fetch_all_by_Variation($variation) }) {
+    print join(' ', $pgtype->population()->name(), $pgtype->allele1(), $pgtype->allele2(), $pgtype->frequency()), "\n";
   }
-
-
 
 =head1 DESCRIPTION
 
