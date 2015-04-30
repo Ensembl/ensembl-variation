@@ -149,9 +149,9 @@ sub new {
 
 sub population {
   my $self = shift;
-  if(@_) {
+  if (@_) {
     my $pop = shift;
-    if(defined($pop) &&
+    if (defined($pop) &&
        (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population'))) {
       throw('Bio::EnsEMBL::Variation::Population argument expected');
     }
@@ -159,8 +159,6 @@ sub population {
   }
   return $self->{'population'};
 }
-
-
 
 
 =head2 frequency
@@ -177,9 +175,9 @@ sub population {
 
 =cut
 
-sub frequency{
+sub frequency {
   my $self = shift;
-  return $self->{'frequency'} = shift if(@_);
+  return $self->{'frequency'} = shift if (@_);
   return $self->{'frequency'};
 }
 
@@ -197,9 +195,9 @@ sub frequency{
 
 =cut
 
-sub count{
+sub count {
   my $self = shift;
-  return $self->{'count'} = shift if(@_);
+  return $self->{'count'} = shift if (@_);
   return $self->{'count'};
 }
 
