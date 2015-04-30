@@ -869,13 +869,13 @@ sub main {
 							$genotypes->{$sample_id}->{genotypes} .=
 								escape($blob).
 								escape(pack("w", $data->{variation}->dbID || 0)).
-								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
+								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
 						}
 						else{
 							#first genotype starts in the region_start, not necessary the number
 							$genotypes->{$sample_id}->{genotypes} =
 								escape(pack("w", $data->{variation}->dbID || 0)).
-								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
+								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
 						}
 						
 						$genotypes->{$sample_id}->{region_end} = $vf->{start};
