@@ -924,12 +924,31 @@ sub _create_hgvs_tva{
 
     $self->_make_hgvs_tva($ref_allele,  $alt_allele, $offset);
 
+    ## save this to be able to report when HGVS is shifted 
+    $self->{_hgvs_offset} = $offset;
+
     ## add cache of seq/ pos required by c, n and p 
     $self->{_slice_start} = $slice_start;
     $self->{_slice_end}   = $slice_end;
     $self->{_slice}       = $slice;
 
 }
+
+=head2 hgvs_offset
+
+  Description: Return the number of bases the variant was shifted 3'
+               to defined the HGVS annotation 
+  Returntype : int or undef if HGVS has not been calculated or shift not applied
+  Exceptions : none
+  Status     : At risk
+
+=cut
+sub hgvs_offset{
+
+    my $self = shift;
+    return $self->{_hgvs_offset};
+}
+
 
 sub _make_hgvs_tva{
 
