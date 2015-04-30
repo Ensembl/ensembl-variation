@@ -108,7 +108,7 @@ sub store {
 	
 	my $rows_added = 0;
 	
-	foreach my $combo_id(keys %by_var) {
+	foreach my $combo_id (keys %by_var) {
 		my $genotype_string = '';
 		
 		my ($var_id, $subsnp_id) = split /\_/, $combo_id;
@@ -122,7 +122,7 @@ sub store {
 			} @{$self->fetch_all_by_Variation($var_objs{$var_id})} : ());
 		
 		# update if existing
-		if(@existing_gts) {
+		if (@existing_gts) {
 			
 			# refresh unique_gts
 			%unique_gts = map {$_->genotype_string().'|'.(defined($_->phased) ? $_->phased : 'NULL') => 1} (@existing_gts, @$gts);
@@ -254,7 +254,7 @@ sub fetch_all_by_Variation {
 	# variations sequentially.
 	my $cached;
 	
-	if(defined($self->{_cache})) {
+	if (defined($self->{_cache})) {
 		foreach my $stored(@{$self->{_cache}}) {
 			my @keys = keys %{$stored};
 			$cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
@@ -262,20 +262,20 @@ sub fetch_all_by_Variation {
 		}
 	}
 
-	if(!defined($cached)) {
+	if (!defined($cached)) {
     
     my $use_vcf = $self->db->use_vcf();
     
-    if($use_vcf) {
+    if ($use_vcf) {
       my $vf = $variation->get_all_VariationFeatures->[0];
       @$cached =
         map {@{$_->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)}}
         @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
     }
-    if($use_vcf <= 1) {
+    if ($use_vcf <= 1) {
       push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation_id)};
     }
-		for(@$cached) {
+		for (@$cached) {
 			$_->variation($variation);
 			weaken($_->{'variation'});
 		}
@@ -288,10 +288,10 @@ sub fetch_all_by_Variation {
 	}
 	
 	if (defined $sample && defined $sample->dbID){
-		if($sample->isa('Bio::EnsEMBL::Variation::Individual')) {
+		if ($sample->isa('Bio::EnsEMBL::Variation::Individual')) {
 			@$results = grep {$_->individual->dbID == $sample->dbID} @{$cached};
 		}
-		elsif($sample->isa('Bio::EnsEMBL::Variation::Population')) {
+		elsif ($sample->isa('Bio::EnsEMBL::Variation::Population')) {
 			my %include = map {$_->dbID => 1} @{$sample->get_all_Individuals};			
 			@$results = grep {$include{$_->individual->dbID}} @{$cached};
 		}
@@ -320,20 +320,19 @@ sub fetch_all_by_Slice {
 	return $cga->fetch_all_by_Slice(@_);
 }
 
-sub _tables{
-    my $self = shift;
-
-	return (['compressed_genotype_var','g'],['failed_variation','fv']);
+sub _tables {
+  my $self = shift;
+  return (['compressed_genotype_var','g'],['failed_variation','fv']);
 }
 
 #Add a left join to the failed_variation table
 sub _left_join { return ([ 'failed_variation', 'fv.variation_id = g.variation_id']); }
 
-sub _columns{
-    return qw(g.variation_id g.subsnp_id g.genotypes);
+sub _columns {
+  return qw(g.variation_id g.subsnp_id g.genotypes);
 }
 
-sub _objs_from_sth{
+sub _objs_from_sth {
 	my $self = shift;
 	my $sth = shift;
 	
@@ -343,18 +342,18 @@ sub _objs_from_sth{
 	
 	my (%individual_hash, %gt_code_hash, @results);
 	my %done;
-	while($sth->fetch) {
+	while ($sth->fetch) {
 		my @genotypes = unpack("(ww)*", $genotypes);
 		
-		while(@genotypes) {
+		while (@genotypes) {
 			my $individual_id = shift @genotypes;
 			my $gt_code = shift @genotypes;
 
-                        ## temp fix for duplicated 1KG data   
-                        my $ss = $subsnp_id;
-                        $ss = 0 unless defined $ss  ;
-                        next if $done{$individual_id}{$gt_code}{$ss};
-                        $done{$individual_id}{$gt_code}{$ss} = 1;
+      ## temp fix for duplicated 1KG data   
+      my $ss = $subsnp_id;
+      $ss = 0 unless defined $ss  ;
+      next if $done{$individual_id}{$gt_code}{$ss};
+      $done{$individual_id}{$gt_code}{$ss} = 1;
 			
 			my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 				_variation_id => $variation_id,
