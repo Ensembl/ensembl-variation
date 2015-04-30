@@ -720,12 +720,7 @@ sub hgvs_protein {
     ### set if string supplied
     $self->{hgvs_protein} = $notation  if defined $notation;
     
-   ## temp fix for e!78
-   if(defined $self->{hgvs_protein}  && 
-      $self->{hgvs_protein} =~/LRG\w+\.\d+\:/){
-        my @d = split/\.|\:/, $self->{hgvs_protein}, 3;
-        $self->{hgvs_protein} =  $d[0] . ":". $d[2];
-    }
+
     ### return if set
     return $self->{hgvs_protein}       if defined $self->{hgvs_protein} ;
     
