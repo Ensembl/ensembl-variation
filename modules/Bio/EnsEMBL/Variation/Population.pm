@@ -117,23 +117,24 @@ our @ISA = ('Bio::EnsEMBL::Storable');
 
 sub new {
   my $caller = shift;
-
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops, $display, $collection, $display_name, $display_priority) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS', 'SUB_POPULATIONS', 'DISPLAY', 'COLLECTION','DISPLAY_GROUP_NAME','DISPLAY_GROUP_PRIORITY'], @_);
+  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops, $display, $collection, $display_name, $display_priority) = rearrange([
+    'DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS', 'SUB_POPULATIONS', 'DISPLAY', 'COLLECTION','DISPLAY_GROUP_NAME','DISPLAY_GROUP_PRIORITY'], @_);
 
-  return bless {'dbID'        => $dbID,
-                'adaptor'     => $adaptor,
-                'name'        => $name,
-                'description' => $desc,
-                'size'        => $size,
-                'freqs'       => $freqs,
-                'sub_populations' => $sub_pops,
-                'display' => $display,
-                "display_group_name" => $display_name,
-                "display_group_priority" => $display_priority,
-                'collection' => $collection,}, $class;
+  return bless {
+    'dbID'                   => $dbID,
+    'adaptor'                => $adaptor,
+    'name'                   => $name,
+    'description'            => $desc,
+    'size'                   => $size,
+    'freqs'                  => $freqs,
+    'sub_populations'        => $sub_pops,
+    'display'                => $display,
+    'display_group_name'     => $display_name,
+    'display_group_priority' => $display_priority,
+    'collection'             => $collection,
+  }, $class;
 }
 
 sub new_fast {
@@ -212,17 +213,18 @@ sub size {
 =cut
 
 sub collection {
-    my $self = shift;
-    return $self->{'collection'} = shift if (@_);
-    return $self->{'collection'};
+  my $self = shift;
+  return $self->{'collection'} = shift if (@_);
+  return $self->{'collection'};
 }
 
 
 sub display {
-    my $self = shift;
-    return $self->{'display'} = shift if (@_);
-    return $self->{'display'};
+  my $self = shift;
+  return $self->{'display'} = shift if (@_);
+  return $self->{'display'};
 }
+
 =head2 get_all_sub_Populations
 
   Arg [1]    : none
@@ -239,13 +241,13 @@ sub display {
 =cut
 
 sub get_all_sub_Populations {
-    my $self = shift;
+  my $self = shift;
 
-    if (!defined($self->{'sub_populations'}) && $self->{'adaptor'}) {
-        # lazy-load from database
-        $self->{'sub_populations'} = $self->{'adaptor'}->fetch_all_by_super_Population($self);
-    }
-    return $self->{'sub_populations'} || [];
+  if (!defined($self->{'sub_populations'}) && $self->{'adaptor'}) {
+    # lazy-load from database
+    $self->{'sub_populations'} = $self->{'adaptor'}->fetch_all_by_super_Population($self);
+  }
+  return $self->{'sub_populations'} || [];
 }
 
 
@@ -268,10 +270,10 @@ sub get_all_sub_Populations {
 =cut
 
 sub get_all_super_Populations {
-    my $self = shift;
-    return [] if (!$self->{'adaptor'});
-    # load from database - do not cache to avoid circular references (mem leak)!
-    return $self->{'adaptor'}->fetch_all_by_sub_Population($self);
+  my $self = shift;
+  return [] if (!$self->{'adaptor'});
+  # load from database - do not cache to avoid circular references (mem leak)!
+  return $self->{'adaptor'}->fetch_all_by_sub_Population($self);
 }
 
 
@@ -289,21 +291,21 @@ sub get_all_super_Populations {
 =cut
 
 sub add_sub_Population {
-    my $self = shift;
-    my $pop = shift;
+  my $self = shift;
+  my $pop = shift;
 
-    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-        throw('Bio::EnsEMBL::Variation::Population argument expected.');
-    }
+  if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw('Bio::EnsEMBL::Variation::Population argument expected.');
+  }
 
-    if ($pop == $self) {
-        throw("Cannot add self as sub population.");
-    }
+  if ($pop == $self) {
+    throw("Cannot add self as sub population.");
+  }
 
-    $self->{'sub_populations'} ||= [];
-    push @{$self->{'sub_populations'}}, $pop;
+  $self->{'sub_populations'} ||= [];
+  push @{$self->{'sub_populations'}}, $pop;
 
-    return $pop;
+  return $pop;
 }
 
 =head2 get_all_synonyms
@@ -373,9 +375,9 @@ sub _freqs_from_gts {
 =cut
 
 sub display_group_priority{
-    my $self = shift;
-    $self->{display_group_priority} = shift @_ if @_;
-    return $self->{display_group_priority};
+  my $self = shift;
+  $self->{display_group_priority} = shift @_ if @_;
+  return $self->{display_group_priority};
 }
 
 =head2 display_group_name
@@ -392,9 +394,9 @@ sub display_group_priority{
 
 =cut
 sub display_group_name{
-    my $self = shift;
-    $self->{display_group_name} = shift @_ if @_;
-    return $self->{display_group_name};
+  my $self = shift;
+  $self->{display_group_name} = shift @_ if @_;
+  return $self->{display_group_name};
 }
 
 
