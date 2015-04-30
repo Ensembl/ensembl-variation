@@ -205,12 +205,12 @@ sub description {
 =cut
 
 sub type_individual {
-    my $self = shift;
-    if (@_){
-	    my $type = shift;
-	    return $self->{'type_individual'} = $type;
-    }
-    return $self->{'type_individual'};
+  my $self = shift;
+  if (@_) {
+    my $type = shift;
+    return $self->{'type_individual'} = $type;
+  }
+  return $self->{'type_individual'};
 }
 
 =head2 type_description
@@ -226,12 +226,12 @@ sub type_individual {
 =cut
 
 sub type_description {
-    my $self = shift;
-    if (@_){
-	    my $new_desc = shift;
-	    return $self->{'type_description'} = $new_desc;
-    }
-    return $self->{'type_description'};
+  my $self = shift;
+  if (@_) {
+    my $new_desc = shift;
+    return $self->{'type_description'} = $new_desc;
+  }
+  return $self->{'type_description'};
 }
 
 =head2 gender
@@ -247,15 +247,15 @@ sub type_description {
 =cut
 
 sub gender {
-    my $self = shift;
-    if(@_) {
-        my $gender = ucfirst(lc(shift));
-        unless (grep $_ eq $gender, ('Male', 'Female', 'Unknown')) {
-            throw('Gender must be one of "Male","Female","Unknown"');
-        }
-        $self->{'gender'} = $gender;
+  my $self = shift;
+  if (@_) {
+    my $gender = ucfirst(lc(shift));
+    unless (grep $_ eq $gender, ('Male', 'Female', 'Unknown')) {
+      throw('Gender must be one of "Male", "Female", "Unknown"');
     }
-    return $self->{'gender'};
+    $self->{'gender'} = $gender;
+  }
+  return $self->{'gender'};
 }
 
 =head2 display
@@ -272,16 +272,16 @@ sub gender {
 =cut
 
 sub display {
-    my $self = shift;
-    if (@_) {
-        my $display = shift;
-        $display = uc($display);
-        unless (grep $_ eq $display, ('UNDISPLAYABLE', 'REFERENCE', 'DISPLAYABLE', 'DEFAULT')) {
-            throw('Display flag must be one of "REFERENCE", "DEFAULT", "DISPLAYABLE", "UNDISPLAYABLE"');
-        }
-        $self->{'display'} = $display;
+  my $self = shift;
+  if (@_) {
+    my $display = shift;
+    $display = uc($display);
+    unless (grep $_ eq $display, ('UNDISPLAYABLE', 'REFERENCE', 'DISPLAYABLE', 'DEFAULT')) {
+      throw('Display flag must be one of "REFERENCE", "DEFAULT", "DISPLAYABLE", "UNDISPLAYABLE"');
     }
-    return $self->{'display'};
+    $self->{'display'} = $display;
+  }
+  return $self->{'display'};
 }
 
 =head2 has_coverage
@@ -321,17 +321,17 @@ sub has_coverage {
 =cut
 
 sub get_all_Populations {
-    my $self = shift;
-  
-    if (!defined($self->{populations})) {
-        if (defined ($self->{'adaptor'})) {
-            my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
-            $self->{populations} = $pop_adaptor->fetch_all_by_Individual($self);
-        }
-        
-        $self->{populations} ||= [];
+  my $self = shift;
+
+  if (!defined($self->{populations})) {
+    if (defined ($self->{'adaptor'})) {
+      my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
+      $self->{populations} = $pop_adaptor->fetch_all_by_Individual($self);
     }
-    return $self->{populations};
+
+    $self->{populations} ||= [];
+  }
+  return $self->{populations};
 }
 
 
@@ -352,24 +352,24 @@ sub get_all_Populations {
 =cut
 
 sub father_Individual {
-    my $self = shift;
+  my $self = shift;
 
-    if (@_) {
-        my $ind = shift;
-        if (defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
-            throw('Bio::EnsEMBL::Variation::Individual arg expected');
-        }
-        if ($ind->gender() eq 'Female') {
-            throw("Father individual may not have gender of Female");
-        }
-        return $self->{'father_individual'} = $ind;
+  if (@_) {
+    my $ind = shift;
+    if (defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
+      throw('Bio::EnsEMBL::Variation::Individual arg expected');
     }
+    if ($ind->gender() eq 'Female') {
+      throw("Father individual may not have gender of Female");
+    }
+    return $self->{'father_individual'} = $ind;
+  }
 
-    # lazy-load father if we can
-    if (!defined($self->{'father_individual'}) && $self->adaptor() && defined($self->{'_father_individual_id'})) {
-        $self->{'father_individual'} = $self->adaptor->fetch_by_dbID($self->{'_father_individual_id'});
-    }
-    return $self->{'father_individual'};
+  # lazy-load father if we can
+  if (!defined($self->{'father_individual'}) && $self->adaptor() && defined($self->{'_father_individual_id'})) {
+    $self->{'father_individual'} = $self->adaptor->fetch_by_dbID($self->{'_father_individual_id'});
+  }
+  return $self->{'father_individual'};
 }
 
 
@@ -390,25 +390,25 @@ sub father_Individual {
 =cut
 
 sub mother_Individual {
-    my $self = shift;
+  my $self = shift;
 
-    if (@_) {
-        my $ind = shift;
-        if(defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
-            throw('Bio::EnsEMBL::Variation::Individual arg expected');
-        }
-        if ($ind->gender() eq 'Male') {
-            throw("Mother individual may not have gender of Male");
-        }
-        return $self->{'mother_individual'} = $ind;
+  if (@_) {
+    my $ind = shift;
+    if (defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
+      throw('Bio::EnsEMBL::Variation::Individual arg expected');
     }
-
-    # lazy-load mother if we can
-    if (!defined($self->{'mother_individual'}) && $self->adaptor() && defined($self->{'_mother_individual_id'})) {
-        $self->{'mother_individual'} = $self->adaptor->fetch_by_dbID($self->{'_mother_individual_id'});
+    if ($ind->gender() eq 'Male') {
+      throw("Mother individual may not have gender of Male");
     }
+    return $self->{'mother_individual'} = $ind;
+  }
 
-    return $self->{'mother_individual'};
+  # lazy-load mother if we can
+  if (!defined($self->{'mother_individual'}) && $self->adaptor() && defined($self->{'_mother_individual_id'})) {
+    $self->{'mother_individual'} = $self->adaptor->fetch_by_dbID($self->{'_mother_individual_id'});
+  }
+
+  return $self->{'mother_individual'};
 }
 
 
@@ -431,12 +431,12 @@ sub mother_Individual {
 =cut
 
 sub get_all_child_Individuals {
-    my $self = shift;
+  my $self = shift;
 
-    if (!$self->adaptor()) {
-        warning("Cannot retrieve child individuals without attached adaptor.");
-    }
-    return $self->adaptor()->fetch_all_by_parent_Individual($self);
+  if (!$self->adaptor()) {
+    warning("Cannot retrieve child individuals without attached adaptor.");
+  }
+  return $self->adaptor()->fetch_all_by_parent_Individual($self);
 }
 
 1;
