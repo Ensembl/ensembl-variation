@@ -127,6 +127,7 @@ $config = copy_config($base_config, {
   format     => 'ensembl',
   allele_number => 1,
   gencode_basic => 1,
+  variant_class => 1,
 });
 
 $cons = get_all_consequences($config, [$vf]);
@@ -153,6 +154,7 @@ $exp = {
   'TSL' => '5',
   'ALLELE_NUM' => '1',
   'IMPACT' => 'MODERATE',
+  'VARIANT_CLASS' => 'SNV',
 };
 
 is_deeply($exp, $cons->[0]->{Extra}, "get_all_consequences - everything 2");
@@ -271,6 +273,7 @@ is($vf->allele_string, 'A/T', "minimal - trim both ends");
 my %by_allele = map {$_->{Allele} => $_} grep {$_->{Feature} eq 'ENST00000400075'} @{get_all_consequences($config, [$vf])};
 is($by_allele{'T'}->{Consequence}, 'missense_variant', "minimal - complex (SNP)");
 is($by_allele{'-'}->{Consequence}, 'inframe_deletion,splice_region_variant', "minimal - complex (del)");
+is($by_allele{'-'}->{Extra}->{MINIMISED}, 1, "minimal - extra flag");
 
 # check csq removed
 ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
