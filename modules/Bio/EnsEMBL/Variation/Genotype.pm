@@ -194,15 +194,15 @@ sub variation {
 
 =cut
 
-sub subsnp{
+sub subsnp {
   my $self = shift;
-  if(@_) {
+  if (@_) {
     $self->{'subsnp'} = shift;
   }
   
   my $ssid = $self->{'subsnp'};
-  if(defined($ssid)) {
-	$ssid = 'ss'.$ssid unless $ssid =~ /^ss/;
+  if (defined($ssid)) {
+	  $ssid = 'ss'. $ssid unless $ssid =~ /^ss/;
   }
   
   return $ssid;
@@ -221,22 +221,20 @@ sub subsnp{
 
 =cut
 
-sub subsnp_handle{
+sub subsnp_handle {
   my $self = shift;
   my $handle = shift;
-  
+
   # if changing handle
-  if(defined($handle)) {
+  if (defined($handle)) {
     $self->{'subsnp_handle'} = $handle;
   }
   elsif (!defined($self->{'subsnp_handle'})) {
-  
     # Check that this allele has an adaptor attached
-    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
-    
+    assert_ref($self->adaptor(), 'Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
     $self->{'subsnp_handle'} = $self->adaptor->get_subsnp_handle($self);
   }
-  
+
   return $self->{'subsnp_handle'};
 }
 
@@ -277,11 +275,10 @@ sub AUTOLOAD {
   my $method = $AUTOLOAD;
   $method =~ s/.*:://;
   
-  if($method =~ /(allele)\_?(\d+)/) {
+  if ($method =~ /(allele)\_?(\d+)/) {
     $method = $1;
     unshift @_, $2;
   }
-  
   else {
     return;
   }
