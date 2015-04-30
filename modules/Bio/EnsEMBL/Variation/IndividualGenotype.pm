@@ -39,9 +39,9 @@ of a single individual at a single position
 
 =head1 SYNOPSIS
 
-    print $genotype->variation()->name(), "\n";
-    print $genotype->allele1(), '/', $genotype->allele2(), "\n";
-    print $genotype->individual()->name(), "\n";
+  print $genotype->variation()->name(), "\n";
+  print $genotype->allele1(), '/', $genotype->allele2(), "\n";
+  print $genotype->individual()->name(), "\n";
 
 =head1 DESCRIPTION
 
@@ -99,33 +99,31 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-    my $caller = shift;
-    my $class = ref($caller) || $caller;
+  my $caller = shift;
+  my $class = ref($caller) || $caller;
 
-	my $self = $class->SUPER::new(@_);
-	
-	my ($adaptor, $genotype, $var, $varid, $ssid, $ind, $phased) =
-	  rearrange([qw(adaptor genotype variation _variation_id subsnp individual phased)],@_);
-	
-	if(defined($var) &&
-	   (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
-	  throw("Bio::EnsEMBL::Variation::Variation argument expected");
-	}
-	
-	if(defined($ind) &&
-	   (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
-	  throw("Bio::EnsEMBL::Variation::Individual argument expected");
-	}
+  my $self = $class->SUPER::new(@_);
 
-	$self->{'adaptor'}       = $adaptor;
-	$self->{'genotype'}      = $genotype;
-	$self->{'individual'}    = $ind;
-	$self->{'variation'}     = $var;
-	$self->{'subsnp'}        = $ssid;
+  my ($adaptor, $genotype, $var, $varid, $ssid, $ind, $phased) =
+    rearrange([qw(adaptor genotype variation _variation_id subsnp individual phased)],@_);
+
+  if(defined($var) && (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
+    throw("Bio::EnsEMBL::Variation::Variation argument expected");
+  }
+
+  if(defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
+    throw("Bio::EnsEMBL::Variation::Individual argument expected");
+  }
+
+  $self->{'adaptor'}       = $adaptor;
+  $self->{'genotype'}      = $genotype;
+  $self->{'individual'}    = $ind;
+  $self->{'variation'}     = $var;
+  $self->{'subsnp'}        = $ssid;
   $self->{'phased'}        = $phased;
-	$self->{'_variation_id'} = $varid unless defined $var;
-	
-	return $self;
+  $self->{'_variation_id'} = $varid unless defined $var;
+
+  return $self;
 }
 
 
