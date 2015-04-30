@@ -379,6 +379,7 @@ sub _objs_from_sth{
 	foreach my $gtc(@$gtcs) {
 		foreach my $igty(@{$gt_code_hash{$gtc->dbID}}) {
 			$igty->{genotype} = $gtc->genotype;
+                        $igty->{phased}   = $gtc->phased;
 		}
 	}
 	
