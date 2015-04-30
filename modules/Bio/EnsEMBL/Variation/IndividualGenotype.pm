@@ -146,26 +146,25 @@ sub individual {
   my $self = shift;
   if(@_) {
     my $ind = shift;
-    if(defined($ind) &&
-       (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
+    if(defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
       throw('Bio::EnsEMBL::Variation::Individual argument expected');
     }
     return $self->{'individual'} = $ind;
   }
-  
+
   if(!defined($self->{individual}) && defined($self->{sample_id})) {
-	my $ia = $self->adaptor->db->get_IndividualAdaptor;
-	
-	if(defined($ia)) {
-		my $i = $ia->fetch_by_dbID($self->{sample_id});
-		
-		if(defined($i)) {
-			$self->{individual} = $i;
-			delete $self->{sample_id};
-		}
-	}
+    my $ia = $self->adaptor->db->get_IndividualAdaptor;
+
+    if(defined($ia)) {
+      my $i = $ia->fetch_by_dbID($self->{sample_id});
+
+      if(defined($i)) {
+        $self->{individual} = $i;
+        delete $self->{sample_id};
+      }
+    }
   }
-  
+
   return $self->{'individual'};
 }
 
