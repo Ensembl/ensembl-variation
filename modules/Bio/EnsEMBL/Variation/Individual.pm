@@ -111,41 +111,39 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $desc, $display_flag, $has_coverage, $gender, $father, $mother, $type_name, $type_desc,
-      $father_id, $mother_id) =
-    rearrange([qw(dbID adaptor name description display has_coverage gender
-                  father_individual mother_individual type_individual type_description
-                  father_individual_id mother_individual_id)], @_);
+  $father_id, $mother_id) = rearrange([qw(dbID adaptor name description display has_coverage gender
+  father_individual mother_individual type_individual type_description father_individual_id mother_individual_id)], @_);
 
-    if (defined($gender)) {
-        $gender = ucfirst(lc($gender));
-        unless (grep $_ eq $gender, ('Male', 'Female', 'Unknown')) {
-            throw('Gender must be one of "Male","Female","Unknown"');
-        }
+  if (defined($gender)) {
+    $gender = ucfirst(lc($gender));
+    unless (grep $_ eq $gender, ('Male', 'Female', 'Unknown')) {
+      throw('Gender must be one of "Male","Female","Unknown"');
     }
+  }
 
-    if (defined($type_name)){
-        $type_name = ucfirst(lc($type_name));
-        unless (grep $_ eq $type_name, ('Fully_inbred', 'Partly_inbred', 'Outbred', 'Mutant')) {
-            throw('Type of individual must of one of: "fully_inbred", "partly_inbred", "outbred", "mutant"');
-        }
+  if (defined($type_name)){
+    $type_name = ucfirst(lc($type_name));
+    unless (grep $_ eq $type_name, ('Fully_inbred', 'Partly_inbred', 'Outbred', 'Mutant')) {
+      throw('Type of individual must of one of: "fully_inbred", "partly_inbred", "outbred", "mutant"');
     }
-    
-    $display_flag ||= 'UNDISPLAYABLE'; 
- 
+  }
+
+  $display_flag ||= 'UNDISPLAYABLE'; 
+
   return bless {
-	'dbID'    => $dbID,
-	'adaptor' => $adaptor,
-	'name'    => $name,
-	'description' => $desc,
-	'display' => $display_flag,
-  'has_coverage' => $has_coverage,
-	'gender'  => $gender,
-	'father_individual' => $father,
-	'mother_individual' => $mother,
-	'type_individual' => $type_name,
-	'type_description' => $type_desc,
-	'_mother_individual_id' => $mother_id,
-	'_father_individual_id' => $father_id,
+    'dbID'    => $dbID,
+    'adaptor' => $adaptor,
+    'name'    => $name,
+    'description' => $desc,
+    'display' => $display_flag,
+    'has_coverage' => $has_coverage,
+    'gender'  => $gender,
+    'father_individual' => $father,
+    'mother_individual' => $mother,
+    'type_individual' => $type_name,
+    'type_description' => $type_desc,
+    '_mother_individual_id' => $mother_id,
+    '_father_individual_id' => $father_id,
   }, $class;
 }
 
