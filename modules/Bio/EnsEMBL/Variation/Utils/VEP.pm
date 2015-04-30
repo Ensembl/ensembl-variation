@@ -191,7 +191,7 @@ our @EXTRA_HEADERS = (
   # transcript/protein stuff
   { flag => 'numbers',         cols => ['EXON','INTRON'] },
   { flag => 'domains',         cols => ['DOMAINS'] },
-  { flag => 'hgvs',            cols => ['HGVSc','HGVSp'] },
+  { flag => 'hgvs',            cols => ['HGVSc','HGVSp','HGVS_OFFSET'] },
   
   # frequency stuff
   { flag => 'gmaf',            cols => ['GMAF'] },
@@ -273,6 +273,7 @@ our %COL_DESCS = (
     'VARIANT_CLASS'      => 'SO variant class',
     'PHENO'              => 'Indicates if existing variant is associated with a phenotype, disease or trait',
     'MINIMISED'          => 'Alleles in this variant have been converted to minimal representation before consequence calculation',
+    'HGVS_OFFSET'        => 'Indicates by how many bases the HGVS notations for this variant have been shifted',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -2504,12 +2505,15 @@ sub tva_to_line {
   if(defined $config->{hgvs}) {
     my $hgvs_t = $tva->hgvs_transcript;
     my $hgvs_p = $tva->hgvs_protein;
+    my $offset = $tva->hgvs_offset;
     
     # URI encode "="
     $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !defined($config->{no_escape});
     
     $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
     $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
+    
+    $line->{Extra}->{HGVS_OFFSET} = $offset if $offset;
   }
   
   foreach my $tool (qw(SIFT PolyPhen)) {
