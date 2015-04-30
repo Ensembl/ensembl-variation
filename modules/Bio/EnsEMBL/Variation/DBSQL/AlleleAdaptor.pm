@@ -37,13 +37,21 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor
 
 =head1 SYNOPSIS
-  $reg = 'Bio::EnsEMBL::Registry';
-  
-  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
-  $va = $reg->get_adaptor("human","variation","allele");
 
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
 
+  my $aa = $registry->get_adaptor('human', 'variation', 'allele');
+  my $va = $registry->get_adaptor('human', 'variation', 'variation');
+
+  my $variation = $va->fetch_by_name('rs678');
+  my $alleles = $aa->fetch_all_by_Variation($variation);
+  foreach my $allele (@$alleles) {
+    my $allele_string = $allele->allele();
+    my $population_name = ($allele->population()) ? $allele->population()->name : 'population is NA';
+    my $frequency = ($allele->frequency()) ? $allele->frequency : 'frequency is NA';
+    print join(' ', $allele_string, $population_name, $frequency), "\n";
+  }
 
 =head1 DESCRIPTION
 
