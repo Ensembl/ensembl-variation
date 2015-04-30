@@ -180,64 +180,86 @@ sub in_informative_position {
 
 sub motif_score_delta {
 
-    my $self    = shift;
-    my $linear  = shift;
+  my $self    = shift;
+  my $linear  = shift;
     
-    unless ($self->{motif_score_delta}) {
+  unless (exists($self->{motif_score_delta})) {
 
-        my $vf = $self->motif_feature_variation->variation_feature;
-        my $mf = $self->motif_feature;
+    my $vf = $self->motif_feature_variation->variation_feature;
+    my $mf = $self->motif_feature;
 
-        my $allele_seq      = $self->feature_seq;
-        my $ref_allele_seq  = $self->motif_feature_variation->get_reference_MotifFeatureVariationAllele->feature_seq;
+    my $allele_seq      = $self->feature_seq;
+    my $ref_allele_seq  = $self->motif_feature_variation->get_reference_MotifFeatureVariationAllele->feature_seq;
 
-        if ($allele_seq eq '-' || 
-            $ref_allele_seq eq '-' || 
-            length($allele_seq) != length($ref_allele_seq)) {
-            # we can't call a score because the sequence will change length
-            return undef;
-        }
-
-        my ($mf_start, $mf_end) = ($self->motif_start, $self->motif_end);
-
-        return undef unless defined $mf_start && defined $mf_end;
-
-        my $mf_seq = $self->motif_feature_variation->_motif_feature_seq;
-        my $mf_seq_length = length($mf_seq);
-        
-        # trim allele_seq
-        if($mf_start < 1) {
-            $allele_seq = substr($allele_seq, 1 - $mf_start);
-            $mf_start = 1;
-        }
-        
-        if($mf_end > $mf_seq_length) {
-            $allele_seq = substr($allele_seq, 0, $mf_seq_length - $mf_start + 1);
-            $mf_end = $mf_seq_length;
-        }
-
-        my $var_len = length($allele_seq);
-
-        return undef if $var_len > $mf->length;
-
-        my $matrix = $mf->binding_matrix;
-
-        # get the binding affinity of the reference sequence
-        my $ref_affinity = $matrix->relative_affinity($mf_seq, $linear);
-
-        # splice in the variant sequence (0-based)
-        substr($mf_seq, $mf_start - 1, $var_len) = $allele_seq;
-        
-        # check length hasn't changed
-        return undef if length($mf_seq) != $mf_seq_length;
-
-        # and get the affinity of the variant sequence
-        my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
-
-        $self->{motif_score_delta} = ($var_affinity - $ref_affinity);
+    if(
+      $allele_seq eq '-' || 
+      $ref_allele_seq eq '-' || 
+      length($allele_seq) != length($ref_allele_seq)
+    ) {
+      # we can't call a score because the sequence will change length
+      $self->{motif_score_delta} = undef;
+      return undef;
     }
 
-    return $self->{motif_score_delta};
+    my ($mf_start, $mf_end) = ($self->motif_start, $self->motif_end);
+        
+    unless(defined $mf_start && defined $mf_end) {
+      $self->{motif_score_delta} = undef;
+      return undef;
+    }
+
+    my $mf_seq = $self->motif_feature_variation->_motif_feature_seq;
+    my $mf_seq_length = length($mf_seq);
+        
+    # trim allele_seq
+    if($mf_start < 1) {
+      $allele_seq = substr($allele_seq, 1 - $mf_start);
+      $mf_start = 1;
+    }
+        
+    if($mf_end > $mf_seq_length) {
+      $allele_seq = substr($allele_seq, 0, $mf_seq_length - $mf_start + 1);
+      $mf_end = $mf_seq_length;
+    }
+
+    my $var_len = length($allele_seq);
+        
+    if($var_len > $mf->length) {
+      $self->{motif_score_delta} = undef;
+      return undef;
+    }
+
+    my $matrix = $mf->binding_matrix;
+
+    # get the binding affinity of the reference sequence
+    my $ref_affinity = $matrix->relative_affinity($mf_seq, $linear);
+        
+    unless(defined($ref_affinity)) {
+      $self->{motif_score_delta} = undef;
+      return undef;
+    }
+
+    # splice in the variant sequence (0-based)
+    substr($mf_seq, $mf_start - 1, $var_len) = $allele_seq;
+        
+    # check length hasn't changed
+    if(length($mf_seq) != $mf_seq_length) {
+      $self->{motif_score_delta} = undef;
+      return undef;
+    }
+
+    # and get the affinity of the variant sequence
+    my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
+        
+    unless(defined($var_affinity)) {
+      $self->{motif_score_delta} = undef;
+      return undef;
+    }
+
+    $self->{motif_score_delta} = ($var_affinity - $ref_affinity);
+  }
+
+  return $self->{motif_score_delta};
 }
 
 1;
