@@ -37,32 +37,30 @@ limitations under the License.
 Bio::EnsEMBL::DBSQL::IndividualAdaptor
 
 =head1 SYNOPSIS
-  $reg = 'Bio::EnsEMBL::Registry';
-  
-  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
-  $ia = $reg->get_adaptor("human","variation","individual");
-  $pa = $reg->get_adaptor("human","variation","population");
 
-  # Get an individual by its internal identifier
-  my $ind = $ia->fetch_by_dbID(52);
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
 
-  # Get all individuals with a particular name
-  foreach my $ind (@{$ia->fetch_all_by_name('PKH053(M)')}) {
-    print "Individual ", $ind->name(), "\n";
+  my $ia = $registry->get_adaptor('human', 'variation', 'individual');
+  my $pa = $registry->get_adaptor('human', 'variation', 'population');
+
+  # Get all Individuals with a particular name
+  foreach my $individual (@{ $ia->fetch_all_by_name('CEPH1362.01') }) {
+    print $individual->name(), "\n";
   }
 
-  # get all individuals from a population
-  my $pop = $pa->fetch_by_name('PACIFIC');
-  foreach my $ind (@{$ia->fetch_all_by_Population($pop)}) {
-    print $ind->name(), "\n";
+  # get all Individuals from a Population
+  my $population = $pa->fetch_by_name('THOWARDEMORY:Coriell');
+  foreach my $individual (@{ $ia->fetch_all_by_Population($population) }) {
+    print $individual->name(), "\n";
   }
 
-  # get all children of an individual
-  foreach my $child (@{$ia->fetch_all_by_parent($ind)}) {
-    print $child->name(), " is a child of ", $ind->name(), "\n";
+  # get all children of an Individual
+  my $individuals = $ia->fetch_all_by_name('CEPH1362.01');
+  my $individual  = $individuals->[0];
+  foreach my $child (@{ $ia->fetch_all_by_parent_Individual($individual) }) {
+    print $child->name(), " is a child of ", $individual->name(), "\n";
   }
-
 
 =head1 DESCRIPTION
 
