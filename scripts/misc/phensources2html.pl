@@ -293,11 +293,11 @@ sub source_phen_table {
     $html .= qq{
     <div style="padding-bottom:1px">
       <div style="float:left;padding-left:0px">
-        <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
+        <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
         <h2 id="$s_name_id" style="display:inline;color:#22949b">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
       </div>
       <div style="float:right;margin:25px 10px 0px 0px">
-        <a rel="external" href="/$s_name/Phenotype/All" title="$species Ensembl Phenotypes" style="vertical-align:middle"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
+        <a href="/$s_name/Phenotype/All" title="$species Ensembl Phenotypes" style="vertical-align:middle" target="_blank"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
         <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht conhelp" title="$count_phen phenotype(s)/disease(s)/trait(s) available for $species">$count_phen</span></span>
       </div>
       <div style="clear:both"></div>
