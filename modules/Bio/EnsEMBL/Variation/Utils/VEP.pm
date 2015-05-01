@@ -1791,7 +1791,7 @@ sub format_rest_output {
     Uploaded_variation
     Existing_variation
     GMAF AFR_MAF AMR_MAF ASN_MAF EUR_MAF AA_MAF EA_MAF
-    PUBMED CLIN_SIG SOMATIC VARIANT_CLASS
+    PUBMED CLIN_SIG SOMATIC VARIANT_CLASS PHENO
   );
   
   # define some fields to rename
@@ -1853,7 +1853,7 @@ sub format_rest_output {
       
       # remove empty
       foreach my $key(keys %$ex) {
-        delete $ex->{$key} if !defined($ex->{$key});
+        delete $ex->{$key} if !defined($ex->{$key}) || $ex->{$key} eq '' || ($key !~ /maf/ && $ex->{$key} eq 0);
       }
       
       # fix comma-separated lists into arrays
@@ -2922,11 +2922,11 @@ sub init_line {
         
         # somatic?
         my @somatic = map {$_->{somatic}} @{$vf->{existing}};
-        $line->{Extra}->{SOMATIC} = join(",", @somatic) if grep {$_ > 0} @somatic;
+        $line->{Extra}->{SOMATIC} = join(",", @somatic) if grep {defined($_) && $_ > 0} @somatic;
         
         # phenotype or disease
         my @p_or_d = map {$_->{phenotype_or_disease}} @{$vf->{existing}};
-        $line->{Extra}->{PHENO} = join(",", @p_or_d) if grep {$_ > 0} @p_or_d;
+        $line->{Extra}->{PHENO} = join(",", @p_or_d) if grep {defined($_) && $_ > 0} @p_or_d;
     }
     
     # copy entries from base_line
@@ -5111,7 +5111,7 @@ sub load_dumped_variation_cache {
     while(<DUMP>) {
       chomp;
       my $v = parse_variation($config, $_);
-      push @{$v_cache->{$chr}->{$v->{start}}}, $v;
+      push @{$v_cache->{$chr}->{$v->{start}}}, $v if $v && $v->{start};
     }
     
     close DUMP;
