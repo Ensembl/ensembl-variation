@@ -32,42 +32,42 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
 
 =head1 SYNOPSIS
-    my $reg = 'Bio::EnsEMBL::Registry';
-  
-    $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
-    my $tva = $reg->get_adaptor('human','variation','TranscriptVariation');
-  
-    my $ta = $reg->get_adaptor('human','core','Transcript');
-    my $va = $reg->get_adaptor('human','variation','Variation');
-    my $vfa = $reg->get_adaptor('human','variation','VariationFeature');
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
 
-    # fetch all TranscriptVariations related to a Transcript
-    my $tran = $ta->fetch_by_stable_id('ENST00000380152');
+  my $ta  = $registry->get_adaptor('human', 'core', 'Transcript');
+  my $tva = $registry->get_adaptor('human', 'variation', 'TranscriptVariation');
+  my $va  = $registry->get_adaptor('human', 'variation', 'Variation');
+  my $vfa = $registry->get_adaptor('human', 'variation', 'VariationFeature');
 
-    for my $tv (@{ $tva->fetch_all_by_Transcripts([$tran]) }) {
-        print $tv->consequence_type, "\n";
-        print $tv->cdna_start, '-', $tv->cdna_end, "\n";
+  # fetch all TranscriptVariations related to a Transcript
+  my $transcript = $ta->fetch_by_stable_id('ENST00000380152');
+  for my $tv (@{ $tva->fetch_all_by_Transcripts([$transcript]) }) {
+    print $tv->display_consequence, "\n";
+  }
+
+  # fetch all TranscriptVariations related to a VariationFeature
+  my $vf = $vfa->fetch_all_by_Variation($va->fetch_by_name('rs669'))->[0];
+  for my $tv (@{ $tva->fetch_all_by_VariationFeatures([$vf]) }) {
+    print $tv->display_consequence, "\n";
+  }
+
+  # fetch all TranscriptVariations related to a Translation
+  for my $tv (@{ $tva->fetch_all_by_translation_id('ENSP00000447797') }) {
+    foreach my $allele (keys %{$tv->hgvs_protein}) {
+      my $hgvs_notation = $tv->hgvs_protein->{$allele} || 'hgvs notation is NA';
+      print "$allele $hgvs_notation\n";
     }
-    
-    # fetch all TranscriptVariations related to a VariationFeature
-    my $vf = $vfa->fetch_all_by_Variation($va->fetch_by_name('rs669'))->[0];
+  }
 
-    for my $tv (@{ $tva->fetch_all_by_VariationFeatures([$vf]) }) {
-        print $tv->transcript->stable_id, "\n";
-        print $tv->translation_start, '-', $tv->translation_end, "\n";
+  # fetch all TranscriptVariations related to a Translation with given SO terms
+  for my $tv (@{ $tva->fetch_all_by_translation_id_SO_terms('ENSP00000447797', ['missense_variant']) }) {
+    foreach my $allele (keys %{$tv->hgvs_protein}) {
+      my $hgvs_notation = $tv->hgvs_protein->{$allele} || 'hgvs notation is NA';
+      print "$allele $hgvs_notation\n";
     }
+  }
 
-    # fetch all TranscriptVariations related to a Translation
-    for my $tv (@( $tva->fetch_all_by_translation_id('ENSP00000447797'))) {
-        print $tv->hgvs_protein, "\n";
-    }
-
-    # fetch all TranscriptVariations related to a Translation with given SO terms
-    for my $tv (@( $tva->fetch_all_by_translation_id_SO_terms('ENSP00000447797', ['missense_variant']))) {
-        print $tv->hgvs_protein, "\n";
-    }
-    
 =head1 DESCRIPTION
 
 This adaptor allows you to fetch TranscriptVariation objects either by the Transcripts
