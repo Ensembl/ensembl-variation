@@ -199,7 +199,7 @@ foreach my $sp (sort keys(%species_list)) {
     <td>
       <div>
         <div style="float:left;vertical-align:middle;margin-right:4px">
-          <a rel="external" href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle">
+          <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
             <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:32px;height:32px" />
           </a>
         </div>
