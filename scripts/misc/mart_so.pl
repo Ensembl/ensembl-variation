@@ -56,6 +56,8 @@ my %term_list = ();
 
 foreach my $con(values %OVERLAP_CONSEQUENCES) {
 	my $obj = $oa->fetch_by_accession($con->SO_accession);
+  
+  die("ERROR: Failed to fetch DB object for ".$con->SO_term." (".$con->SO_accession.")\n");
 	
 	get_parents($obj, \%term_list);
 }
