@@ -5106,7 +5106,8 @@ sub load_dumped_variation_cache {
     
     open DUMP, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
     
-    my $v_cache;
+    # initialise so empty files don't spit warnings
+    my $v_cache = { $chr => {} };
     
     while(<DUMP>) {
       chomp;
