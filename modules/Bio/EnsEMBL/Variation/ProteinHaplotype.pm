@@ -69,14 +69,30 @@ sub get_all_CDSHaplotypes {
 sub get_all_diffs {
   my $self = shift;
   
-  if(!defined($self->{diffs})) {
-    my $missense_preds = $self->container->_get_missense_predictions;
+  if(!defined($self->{diffs})) {    
+    my $matrices = $self->container->_get_prediction_matrices;
     
     my @diffs;
     
     foreach my $raw_diff(@{$self->_get_raw_diffs}) {
-      my $diff = $missense_preds->{$raw_diff} || {};
-      $diff->{diff} = $raw_diff;
+      
+      my $diff = { diff => $raw_diff };
+      
+      # extract change from raw diff
+      if($raw_diff =~ /^(\d+)[A-Z]\>([A-Z])$/) {
+        my $pos = $1;
+        my $aa  = $2;
+        
+        # get sift/polyphen predictions from cached matrices
+        foreach my $tool(qw(sift polyphen)) {
+          if(my $matrix = $matrices->{$tool}) {
+            my ($pred, $score) = $matrix->get_prediction($pos, $aa);
+            
+            $diff->{$tool.'_score'}       = $score if defined($score);
+            $diff->{$tool.'_prediction'}  = $pred if defined($pred);
+          }
+        }
+      }
       
       push @diffs, $diff;
     }
