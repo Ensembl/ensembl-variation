@@ -461,68 +461,38 @@ sub _get_translation {
   return $self->{_translations}->{$hex};
 }
 
-## Get e.g. SIFT and PolyPhen predictions for all mutations observed
-## They are then cached and can be used to annotate the diffs retrieved from
-## each individual haplotype
-sub _get_missense_predictions {
+## cache ProteinFunctionPredictionMatrices
+## used by ProteinHaplotypes to get SIFT/PolyPhen scores for diffs
+sub _get_prediction_matrices {
   my $self = shift;
   
-  if(!exists($self->{_missense_predictions})) {
+  if(!exists($self->{_prediction_matrices})) {
+    my $matrices = {};
     
-    # get SIFT and PolyPhen scores by mutation
-    my $missense_preds = {};
+    my $tr = $self->transcript;
     
-    # declare $vfs here otherwise it goes out of scope and the VariationFeature
-    # objects can disappear, weird side effect of weaken()?
-    my $vfs = $self->_variation_features;
-    my @tvs;
-    my $tr = $self->transcript();
-    
-    # fetch from database?
-    if($vfs->[0]->{dbID}) {
+    # retrive from DB
+    if(my $db = $self->db) {
+      my $pfpma = $db->get_ProteinFunctionPredictionMatrixAdaptor();
+      my $tr_md5 = md5_hex($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq);
       
-      $vfs = $self->_variation_features;
-      
-      # get a TranscriptVariationAdaptor via the VariationFeature's adaptor
-      my $tva = $vfs->[0]->adaptor->db->get_TranscriptVariationAdaptor();
-      
-      # its faster to fetch them all in one go as this only hits the DB once
-      @tvs = @{$tva->fetch_all_by_VariationFeatures($vfs, [$tr])};
-    }
-    
-    # otherwise fetch from cache on object
-    else {
-      
-      # get VF consequences
-      $vfs = $self->_get_unique_VariationFeatures_with_consequences;
-      
-      @tvs = map {@{$_->get_all_TranscriptVariations([$tr])}} @$vfs;
-    }
-    
-    foreach my $tva(map {@{$_->get_all_alternate_TranscriptVariationAlleles}} @tvs) {
-      next unless grep {defined($_) && $_->SO_term eq 'missense_variant'} @{$tva->get_all_OverlapConsequences};
-      #next unless $tva->pep_allele_string;
-      my $mut = $tva->transcript_variation->translation_start.$tva->pep_allele_string;
-      $mut =~ s/\//\>/;
-      
-      $missense_preds->{$mut} ||= {
-        sift_prediction => $tva->sift_prediction,
-        sift_score => $tva->sift_score,
-        polyphen_prediction => $tva->polyphen_prediction,
-        polyphen_score => $tva->polyphen_score,
-        #consequences => [map {$_->SO_term} @{$tva->get_all_OverlapConsequences}],
-      };
-      
-      foreach my $key(keys %{$missense_preds->{$mut}}) {
-        delete $missense_preds->{$mut}->{$key} unless defined $missense_preds->{$mut}->{$key};
-        $missense_preds->{$mut}->{$key} =~ s/ /\_/ if ref($missense_preds->{$mut}->{$key}) eq 'SCALAR';
+      foreach my $tool(qw(sift polyphen)) {
+        my $method = sprintf('fetch_%s_predictions_by_translation_md5', $tool);
+        
+        $matrices->{$tool} = $pfpma->$method($tr_md5);
       }
     }
     
-    $self->{_missense_predictions} = $missense_preds;
+    # or can retrieve from cache if transcript has come from VEP cache
+    elsif($matrices = $tr->{_variation_effect_feature_cache}->{protein_function_predictions}) {
+      $matrices->{polyphen} = $matrices->{polyphen_humvar} if $matrices->{polyphen_humvar};
+      delete $matrices->{polyphen_humdiv} if $matrices->{polyphen_humdiv};
+    }
+    
+    $self->{_prediction_matrices} = $matrices;
   }
   
-  return $self->{_missense_predictions};
+  return $self->{_prediction_matrices};
 }
 
 ## Generates TranscriptVariation objects representing consequences.
