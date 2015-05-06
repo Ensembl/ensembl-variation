@@ -7,15 +7,15 @@
 8166	2007-08-28 17:47:37	smart	Smart	\N	/data/blastdb/Ensembl/interpro_scan/smart.HMMs	hmmpfam	\N	hmmpfam	-E 0.01	ProteinAnnotation/Hmmpfam	\N	Smart	domain
 8167	2006-07-13 15:53:10	pfscan	Prosite_profiles	\N	/data/blastdb/Ensembl/interpro_scan_old/prosite.profiles	pfscan	\N	pfscan		ProteinAnnotation/PrositeProfile	\N	Profile	domain
 8168	2006-07-13 15:53:10	prints	Prints	\N	/data/blastdb/Ensembl/interpro_scan/prints.pval	FingerPRINTScan	\N	FingerPRINTScan		ProteinAnnotation/Prints	\N	Prints	domain
-8169	0000-00-00 00:00:00	human_cdna	\N	\N	\N	exonerate	0.9.0	/usr/local/ensembl/bin/exonerate-0.9.0	\N	Exonerate2Genes	\N	Exonerate	similarity
-8170	2009-03-11 17:25:55	human_protein	\N	\N	\N	\N	\N	\N	\N	BestTargetted	\N	\N	\N
-8171	2009-04-22 16:40:10	ccds	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
-8172	2009-05-14 15:43:42	ensembl_havana_gene	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
-8173	2009-05-14 15:43:42	ensembl_havana_transcript	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
-8174	2007-09-07 12:01:22	vertrna_havana	\N	02-Jun-10 (103)	\N	\N	\N	\N	ori_analysis => vertrna_raw, mode => single, no_filter => 9606	ClusterDepthFilter	\N	vertebrate_mRNA	similarity
-8175	2007-09-07 12:01:22	uniprot_sw	\N	14.7	\N	\N	\N	\N	percentid_cutoff => 40, ori_analysis => Uniprot_raw, hit_db => Swissprot, mode => single	DepthFilter	\N	\N	\N
-8176	2007-09-07 12:01:22	est2genome_human	\N	28-Jan-09 (98)	\N	\N	\N	\N	ori_analysis => Est2genome_human_raw, mode => single	DepthFilter	\N	\N	\N
-8177	2009-05-14 15:43:42	havana	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8169	2009-05-14 15:43:42	havana	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8170	2007-09-07 12:01:22	est2genome_human	\N	28-Jan-09 (98)	\N	\N	\N	\N	ori_analysis => Est2genome_human_raw, mode => single	DepthFilter	\N	\N	\N
+8171	2007-09-07 12:01:22	vertrna_havana	\N	02-Jun-10 (103)	\N	\N	\N	\N	ori_analysis => vertrna_raw, mode => single, no_filter => 9606	ClusterDepthFilter	\N	vertebrate_mRNA	similarity
+8172	2007-09-07 12:01:22	uniprot_sw	\N	14.7	\N	\N	\N	\N	percentid_cutoff => 40, ori_analysis => Uniprot_raw, hit_db => Swissprot, mode => single	DepthFilter	\N	\N	\N
+8173	0000-00-00 00:00:00	human_cdna	\N	\N	\N	exonerate	0.9.0	/usr/local/ensembl/bin/exonerate-0.9.0	\N	Exonerate2Genes	\N	Exonerate	similarity
+8174	2009-03-11 17:25:55	human_protein	\N	\N	\N	\N	\N	\N	\N	BestTargetted	\N	\N	\N
+8175	2009-04-22 16:40:10	ccds	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8176	2009-05-14 15:43:42	ensembl_havana_gene	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8177	2009-05-14 15:43:42	ensembl_havana_transcript	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 8178	2006-07-13 15:53:10	ncoils	coiled_coil	\N	/usr/local/ensembl/data/coils	ncoils	\N	ncoils		ProteinAnnotation/Coil	\N	ncoils	annotation
 8179	2006-07-13 15:53:10	tmhmm	transmembrane	\N	\N	decodeanhmm	\N	decodeanhmm	-modelfile => /usr/local/ensembl/lib/TMHMM2.0.model, -optionsfile => /usr/local/ensembl/lib/TMHMM2.0.options	ProteinAnnotation/Tmhmm	\N	Tmhmm	annotation
 8180	2006-07-13 15:53:10	scanprosite	Prosite_patterns	\N	/data/blastdb/Ensembl/interpro_scan/prosite.patterns	\N	\N	\N	-confirm => /data/blastdb/Ensembl/interpro_scan/confirm.patterns	ProteinAnnotation/PrositePattern	\N	Prosite_pattern	domain

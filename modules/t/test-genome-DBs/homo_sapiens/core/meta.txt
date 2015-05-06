@@ -1,5 +1,5 @@
 885	1	xref.timestamp	2010-12-02 16:01:38
-1	\N	schema_version	80
+1	\N	schema_version	77
 2	\N	patch	patch_52_53_a.sql|schema_version
 3	\N	patch	patch_52_53_b.sql|external_db_type_enum
 4	\N	patch	patch_52_53_c.sql|identity_xref_rename
@@ -179,12 +179,3 @@
 979	\N	patch	patch_75_76_b.sql|allow_null_karyotype
 980	\N	patch	patch_75_76_c.sql|remove_alternative_splicing
 981	\N	patch	patch_76_77_a.sql|schema_version
-982	\N	patch	patch_77_78_a.sql|schema_version
-983	\N	patch	patch_77_78_b.sql|source_column_increase
-984	\N	patch	patch_77_78_c.sql|Change unmapped_reason_id from smallint to int
-985	\N	patch	patch_78_79_a.sql|schema_version
-986	\N	patch	patch_78_79_b.sql|bamcov support
-987	\N	patch	patch_79_80_a.sql|schema_version
-988	\N	patch	patch_79_80_b.sql|xref_dbprimary_acc_longer
-989	\N	patch	patch_79_80_c.sql|seq_region_synonym_longer
-990	\N	patch	patch_79_80_d.sql|genome_statistics_value_longer
