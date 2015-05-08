@@ -57,8 +57,11 @@ sub validate_gvf {
   my $out = "$working_dir/Validate\_$file_name.out";
 
   my $file = "$working_dir/$file_name.gvf";
-  my $cmd = "perl $gvf_validator --so_file $so_file $file";
+  my $file_for_validation = "$working_dir/$file_name\_validate.gvf";
+  $self->run_cmd("head -250000 $file > $file_for_validation");
+  my $cmd = "perl $gvf_validator --so_file $so_file $file_for_validation";
   $self->run_cmd("$cmd 1>$out 2>$err");	
+  $self->run_cmd("rm $file_for_validation");
 
 }
 
