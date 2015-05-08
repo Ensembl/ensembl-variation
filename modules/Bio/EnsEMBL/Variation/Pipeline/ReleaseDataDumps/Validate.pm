@@ -6,7 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,11 @@ limitations under the License.
 
 =head1 CONTACT
 
- Please email comments or questions to the public Ensembl
- developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+Please email comments or questions to the public Ensembl
+developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
- Questions may also be sent to the Ensembl help desk at
- <http://www.ensembl.org/Help/Contact>.
+Questions may also be sent to the Ensembl help desk at
+<http://www.ensembl.org/Help/Contact>.
 
 =cut
 package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate;
@@ -34,58 +34,58 @@ use File::Basename;
 sub fetch_input {}
 
 sub run {
-	my $self = shift;
-    my $file_type = $self->param('file_type');
-    if ($file_type eq 'gvf') {
-        $self->validate_gvf();
-    } elsif ($file_type eq 'vcf') {
-        $self->validate_vcf();
-    } else {
-        die "File type ($file_type) not correct. It should be gvf of vcf";
-    }
+  my $self = shift;
+  my $file_type = $self->param('file_type');
+  if ($file_type eq 'gvf') {
+    $self->validate_gvf();
+  } elsif ($file_type eq 'vcf') {
+    $self->validate_vcf();
+  } else {
+    die "File type ($file_type) not correct. It should be gvf of vcf";
+  }
 }
 
 sub validate_gvf {
-    my $self = shift;
-	my $gvf_validator = $self->param('gvf_validator');
-	my $so_file       = $self->param('so_file');
+  my $self = shift;
+  my $gvf_validator = $self->param('gvf_validator');
+  my $so_file       = $self->param('so_file');
 
-	my $working_dir   = $self->param('working_dir');
-	my $file_name     = $self->param('file_name');	
-	
-	my $err = "$working_dir/Validate\_$file_name.err";
-	my $out = "$working_dir/Validate\_$file_name.out";
+  my $working_dir   = $self->param('working_dir');
+  my $file_name     = $self->param('file_name');	
 
-	my $file = "$working_dir/$file_name.gvf";
-	my $cmd = "perl $gvf_validator --so_file $so_file $file";
-	$self->run_cmd("$cmd 1>$out 2>$err");	
+  my $err = "$working_dir/Validate\_$file_name.err";
+  my $out = "$working_dir/Validate\_$file_name.out";
+
+  my $file = "$working_dir/$file_name.gvf";
+  my $cmd = "perl $gvf_validator --so_file $so_file $file";
+  $self->run_cmd("$cmd 1>$out 2>$err");	
 
 }
 
 sub validate_vcf {
-    my $self = shift;
-    my $vcf_file = $self->param('vcf_file');
-    $vcf_file =~ s/--vcf_file //;
-    my ($file_name, $working_dir, $suffix) = fileparse($vcf_file, qr/\.[^.]*/);
+  my $self = shift;
+  my $vcf_file = $self->param('vcf_file');
+  $vcf_file =~ s/--vcf_file //;
+  my ($file_name, $working_dir, $suffix) = fileparse($vcf_file, qr/\.[^.]*/);
 
-    my $err = "$working_dir/Validate\_vcf\_$file_name.err";
-    my $out = "$working_dir/Validate\_vcf\_$file_name.out";
+  my $err = "$working_dir/Validate\_vcf\_$file_name.err";
+  my $out = "$working_dir/Validate\_vcf\_$file_name.out";
 
-    # sort and bgzip
-    my $cmd = "vcf-sort < $vcf_file | bgzip > $vcf_file.gz";
-    $self->run_cmd($cmd);
-    # validate
-    $cmd = "vcf-validator $vcf_file.gz";
-    $self->run_cmd("$cmd 1>$out 2>$err");
+  # sort and bgzip
+  my $cmd = "vcf-sort < $vcf_file | bgzip > $vcf_file.gz";
+  $self->run_cmd($cmd);
+  # validate
+  $cmd = "vcf-validator $vcf_file.gz";
+  $self->run_cmd("$cmd 1>$out 2>$err");
 }
 
 sub run_cmd {
-	my $self = shift;
-	my $cmd = shift;
-	if (my $return_value = system($cmd)) {
-		$return_value >>=8;
-		die "system($cmd) failed: $return_value";
-	}
+  my $self = shift;
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>=8;
+    die "system($cmd) failed: $return_value";
+  }
 }
 
 
