@@ -93,6 +93,7 @@ our %TYPES = (
   Arg [-INDIVIDUAL_PREFIX]:      string
   Arg [-POPULATION_PREFIX]:      string
   Arg [-INDIVIDUAL_POPULATIONS]: hashref - { 'ind1': ['pop1','pop2'] }
+  Arg [-STRICT_NAME_MATCH]:      boolean
   Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
 
   Example    : my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
@@ -118,7 +119,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $populations, $assembly, $source, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS POPULATIONS ASSEMBLY SOURCE ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -138,6 +139,7 @@ sub new {
     filename_template => $filename_template,
     assembly  => $assembly,
     source => $source,
+    strict_name_match => defined($strict) ? $strict : 0,
     _use_db => 1,
     _raw_populations => $ind_pops,
   );
@@ -213,6 +215,29 @@ sub type {
   }
   
   return $self->{type};
+}
+
+
+=head2 strict_name_match
+
+  Arg [1]    : bool $strict (optional)
+               The new value to set the attribute to
+  Example    : my $strict = $collection->strict_name_match()
+  Description: Getter/Setter for the strict_name_match parameter. If set
+               to a true value, genotypes are returned against a
+               VariationFeature only if one of the names in the VCF ID field
+               matches $vf->variation_name
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub strict_name_match {
+  my $self = shift;
+  $self->{strict_name_match} = shift if @_;
+  return $self->{strict_name_match};
 }
 
 
@@ -761,15 +786,19 @@ sub _seek_by_VariationFeature {
   
   # compare IDs
   my $count = 0;
+  my $strict = $self->strict_name_match;
+  my @names = ($vf->variation_name, @{$vf->variation->get_all_synonyms});
   
-  while($count++ < 10 && $vcf->next()) {
+  RECORD: while($count++ < 10 && $vcf->next()) {
     last if !$vcf->{record};
     
     # if it has an ID, we can use that
-    last if(grep {$vf->variation_name eq $_ || $vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
+    foreach my $id(@{$vcf->get_IDs}) {
+      last RECORD if grep {$_ eq $id || $_ eq 'ss'.$id} @names;
+    }
     
     # otherwise compare coords
-    last if $vcf->get_start == $vf->seq_region_start;
+    last if !$strict && $vcf->get_start == $vf->seq_region_start;
     
     # if we've gone too far, quit out
     return 0 if $vcf->get_start > $vf->seq_region_start + 1;

@@ -210,9 +210,10 @@ sub new {
       -individual_prefix => $hash->{individual_prefix},
       -population_prefix => $hash->{population_prefix},
       -individual_populations => $hash->{individual_populations},
-      -populations =>  $populations ||undef ,
+      -populations =>  $populations || undef ,
       -assembly  => $hash->{assembly} || undef,
       -source => $source || undef,
+      -strict_name_match => $hash->{strict_name_match},
       -adaptor => $self,
     );
     
