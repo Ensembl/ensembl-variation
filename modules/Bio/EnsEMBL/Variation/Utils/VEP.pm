@@ -1751,7 +1751,7 @@ sub rejoin_variants {
       
       # allele numbers
       if($vf->{_allele_nums} && $original->{_allele_nums}) {
-        my $max = (sort {$a <=> $b} values $original->{_allele_nums})[-1];
+        my $max = (sort {$a <=> $b} values %{$original->{_allele_nums}})[-1];
         $original->{_allele_nums}->{$_} = $vf->{_allele_nums}->{$_} + $max for grep {$vf->{_allele_nums}->{$_} > 0} keys %{$vf->{_allele_nums}};
       }
       
