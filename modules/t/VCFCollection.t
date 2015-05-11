@@ -50,6 +50,7 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
 
 ok($c->id() eq 'test', "id");
 ok($c->type() eq 'local', "type");
+ok($c->strict_name_match() eq 0, "strict_name_match");
 ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test.vcf.gz', "filename_template");
 ok($c->individual_prefix() eq "i_prefix:", "individual_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
