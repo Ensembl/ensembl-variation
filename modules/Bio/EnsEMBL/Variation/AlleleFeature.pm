@@ -34,7 +34,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in an individual or strain.
+Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a sample or strain.
 
 =head1 SYNOPSIS
 
@@ -64,7 +64,7 @@ Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in an 
 
 =head1 DESCRIPTION
 
-This is a class representing the genomic position of a allele in an individual
+This is a class representing the genomic position of a allele in a sample
 from the ensembl-variation database.  The actual variation information is
 represented by an associated Bio::EnsEMBL::Variation::Variation object. Some
 of the information has been denormalized and is available on the feature for
@@ -119,10 +119,10 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     identifier. This may be provided instead of a variation object so that
     the variation may be lazy-loaded from the database on demand.
     
-  Arg [-INDIVIDUAL_ID] :
-    int - the internal id of the individual object associated with this
+  Arg [-SAMPLE_ID] :
+    int - the internal id of the sample object associated with this
     identifier. This may be provided instead of the object so that
-    the individual may be lazy-loaded from the database on demand.
+    the sample may be lazy-loaded from the database on demand.
 
   Arg [-ALLELE_STRING] :
     string - the allele for this AlleleFeature object.
@@ -137,10 +137,10 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -strand  => 1,
         -slice   => $slice,
         -allele_string => 'A',
-		-consequence_type => 'NON_SYNONYMOUS_CODING',
+        -consequence_type => 'NON_SYNONYMOUS_CODING',
         -variation_name => 'rs635421',
-	    -source => 'Celera',
-	    -individual_id  => $individual_id,
+        -source => 'Celera',
+        -sample_id  => $sample_id,
         -variation => $v);
 
   Description: Constructor. Instantiates a new AlleleFeature object.
@@ -156,16 +156,16 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $overlap_consequences, $var_name, $variation, $variation_id, $individual_id, $source) =
+  my ($allele, $overlap_consequences, $var_name, $variation, $variation_id, $sample_id, $source) =
     rearrange([qw(ALLELE_STRING OVERLAP_CONSEQUENCES VARIATION_NAME 
-                  VARIATION VARIATION_ID INDIVIDUAL_ID SOURCE)], @_);
+                  VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
 
   $self->{'allele_string'}          = $allele;
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'variation_name'}         = $var_name;
   $self->{'variation'}              = $variation;
   $self->{'_variation_id'}          = $variation_id;
-  $self->{'_individual_id'}         = $individual_id;
+  $self->{'_sample_id'}             = $sample_id;
   $self->{'source'}                 = $source;
 
   return $self;
@@ -446,41 +446,41 @@ sub variation_feature {
   return $self->{'variation_feature'};
 }
 
-=head2 individual
+=head2 sample
 
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Individual $individual
-  Example    : $p = $af->individual();
-  Description: Getter/Setter for the individual associated with this feature.
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Sample $sample
+  Example    : $sample = $af->sample();
+  Description: Getter/Setter for the sample associated with this feature.
                If not set, and this AlleleFeature has an associated adaptor
-               an attempt will be made to lazy-load the individual from the
+               an attempt will be made to lazy-load the sample from the
                database.
-  Returntype : Bio::EnsEMBL::Variation::Individual
+  Returntype : Bio::EnsEMBL::Variation::Sample
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub individual {
+sub sample {
   my $self = shift;
 
-  if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
-      throw("Bio::EnsEMBL::Variation::Individual argument expected");
-    }
-    $self->{'individual'} = shift;
+  if (@_) {
+    if (!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Sample')) {
+      throw("Bio::EnsEMBL::Variation::Sample argument expected");
+    } 
+    $self->{'sample'} = shift;
   }
-  elsif(!defined($self->{'individual'}) && $self->{'adaptor'} &&
-        defined($self->{'_individual_id'})) {
+  elsif (!defined($self->{'sample'}) && $self->{'adaptor'} &&
+    defined($self->{'_sample_id'})) {
     # lazy-load from database on demand
-    my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
-    $self->{'individual'} = $ia->fetch_by_dbID($self->{'_individual_id'});
-    if (!defined $self->{'individual'}){
-	warning("AlleleFeature attached to Strain, not Individual");
+    my $sa = $self->{'adaptor'}->db()->get_SampleAdaptor();
+    $self->{'sample'} = $sa->fetch_by_dbID($self->{'_sample_id'});
+    if (!defined $self->{'sample'}){
+      warning("AlleleFeature attached to Strain, not Sample");
     }
   }
 
-  return $self->{'individual'};
+  return $self->{'sample'};
 }
 
 
