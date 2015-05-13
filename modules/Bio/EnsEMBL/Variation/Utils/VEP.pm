@@ -6127,8 +6127,22 @@ sub get_version_data {
     if($var_mca) {
       foreach my $tool(qw(sift polyphen)) {
         if(defined($config->{$tool})) {
-          my $version = $var_mca->list_value_by_key($tool.'_version');
-          $version_data{$tool} = $version->[0] if defined($version) and scalar @$version;
+          
+          my $sth = $var_mca->db->dbc->prepare(qq{
+            SELECT meta_value
+            FROM meta
+            WHERE meta_key = ?
+          });
+          $sth->execute($tool.'_version');
+          
+          my $version;
+          $sth->bind_columns(\$version);
+          $sth->fetch();
+          $sth->finish();
+          $version_data{$tool} = $version if defined($version);
+          
+          # my $version = $var_mca->list_value_by_key($tool.'_version');
+          # $version_data{$tool} = $version->[0] if defined($version) and scalar @$version;
         }
       }
     }
