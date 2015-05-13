@@ -45,7 +45,7 @@ Bio::EnsEMBL::Variation::ReadCoverage - A coverage reagion for a read.
         -end     => 200,
         -slice   => $slice,
         -level   => 1.
-        -individual  => $individual);
+        -sample  => $sample);
 
     $rc = $rc->transform('supercontig');
 
@@ -91,8 +91,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     int - the number of times the region represented by start and end has been seen
 
   Arg [-SAMPLE] :
-    Bio::EnsEMBL::Variation::Individual - the individual
-                     in which the allele was recorded
+    Bio::EnsEMBL::Variation::Sample - the sample in which the allele was recorded
     
   Example    :
     $rc = Bio::EnsEMBL::Variation::ReadCoverage->new
@@ -100,7 +99,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -end     => 100,
         -slice   => $slice,
         -level  => 1,
-        -individual => $individual);
+        -sample => $sample);
 
   Description: Constructor. Instantiates a new ReadCoverage object.
   Returntype : Bio::EnsEMBL::Variation::ReadCoverage
@@ -115,11 +114,11 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($level, $individual) =
-    rearrange([qw(LEVEL INDIVIDUAL)], @_);
+  my ($level, $sample) =
+    rearrange([qw(LEVEL SAMPLE)], @_);
 
   $self->{'level'}    = $level;
-  $self->{'individual'}   = $individual;
+  $self->{'sample'}   = $sample;
 
   return $self;
 }
@@ -146,49 +145,30 @@ sub level{
 }
 
 
-=head2 individual
+=head2 sample
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Individual $newval (optional)
-               The new value to set the individual attribute to
-  Example    : $individual = $rc->individual();
-  Description: Getter/Setter for the individual attribute
-  Returntype : Bio::EnsEMBL::Variation::Individual
+  Arg [1]    : Bio::EnsEMBL::Variation::Sample $sample (optional)
+               The new value to set the sample attribute to
+  Example    : $sample = $rc->sample();
+  Description: Getter/Setter for the sample attribute
+  Returntype : Bio::EnsEMBL::Variation::Sample
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub individual {
+sub sample {
   my $self = shift;
-  my $individual = shift;
-  if($individual) {
-    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
-      throw('Bio::EnsEMBL::Variation::Individual argument expected.');
+  my $sample = shift;
+  if ($sample) {
+    if(!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+      throw('Bio::EnsEMBL::Variation::Sample argument expected.');
     }
-    $self->{'individual'} = $individual;
+    $self->{'sample'} = $sample;
   }
 
-  return $self->{'individual'};
-}
-
-=head2 sample
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Individual $newval (optional)
-               The new value to set the sample attribute to
-  Example    : $individual = $rc->sample();
-  Description: Getter/Setter for the individual attribute
-  Returntype : Bio::EnsEMBL::Variation::Individual
-  Exceptions : throw on incorrect argument
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub sample{
-    my $self = shift;
-    warn('The use of this method is deprecated. Use individual() instead');
-    return undef;
+  return $self->{'sample'};
 }
 
 1;
