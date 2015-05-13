@@ -40,14 +40,14 @@ Bio::EnsEMBL::Variation::StructuralVariationSample - Samples for a structural va
   
   # A study object
   $study = $study_adaptor->fetch_by_name('estd199');
-  $individual = $individual_adaptor->fetch_by_name('NA18517');
+  $sample = $sample_adaptor->fetch_by_name('NA18517');
 
   $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
-        (-individual => $individual,
+        (-sample => $sample,
          -study => $study);
   ...
   
-  $svs->structural_variation->variation_name(),":", $svs->individual->name();      
+  $svs->structural_variation->variation_name(),":", $svs->sample->name();      
 
 =head1 DESCRIPTION
 
@@ -84,6 +84,9 @@ use vars qw(@ISA);
   
   Arg [-INDIVIDUAL] :
     object ref - the individual object associated with the structural variant.
+
+  Arg [-SAMPLE] :
+    object ref - the sample object associated with the structural variant.
   
   Arg [-STRAIN] :
     object ref - the individual object (used as a strain) associated with the structural variant.
@@ -100,9 +103,9 @@ use vars qw(@ISA);
     $study = $study_adaptor->fetch_by_name('nstd37');
 
     $sva = Bio::EnsEMBL::Variation::StructuralVariationSample->new
-          (-individual => $individual,
-           -strain     => $strain,
-           -study      => $study);
+          (-sample => $sample,
+           -strain => $strain,
+           -study  => $study);
 
   Description: Constructor. Instantiates a new StructuralVariationSample object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationSample
@@ -123,7 +126,7 @@ sub new {
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
   $self->{'_structural_variation_id'} = $structural_variation_id;
-  $self->{'individual'}               = $individual;
+  $self->{'sample'}                   = $sample;
   $self->{'strain'}                   = $strain;
   $self->{'_study_id'}                = $study_id;
   $self->{'study'}                    = $study;
@@ -233,6 +236,23 @@ sub individual {
   return $self->{'individual'};
 }
 
+=head2 sample
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Sample (optional)
+  Example    : $individual = $svs->sample()
+  Description: Getter/Setter for the sample object
+  Returntype : Bio::EnsEMBL::Variation::Sample
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub sample {
+  my $self = shift;
+  return $self->{'sample'} = shift if (@_);
+  return $self->{'sample'};
+}
 
 =head2 strain
 
