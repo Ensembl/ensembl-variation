@@ -1386,7 +1386,7 @@ sub get_all_LD_Populations{
 	my $sth = $self->adaptor->dbc->prepare(qq{
 	  SELECT ip.population_id, c.seq_region_start, c.genotypes
 	  FROM compressed_genotype_region c, sample_population sp
-	  WHERE c.individual_id = sp.sample_id
+	  WHERE c.sample_id = sp.sample_id
 	  AND c.seq_region_id = ?
 	  AND c.seq_region_start < ?
 	  AND c.seq_region_end > ?
@@ -1419,7 +1419,7 @@ sub get_all_LD_Populations{
 	  
 	  while(my( $var_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
 		if($gt_start == $this_vf_start) {
-		  $have_genotypes{$individual_id} = 1;
+		  $have_genotypes{$sample_id} = 1;
 		  last;
 		}
 		$gt_start += $gap + 1 if defined $gap;
