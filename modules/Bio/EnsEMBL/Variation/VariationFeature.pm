@@ -1385,8 +1385,8 @@ sub get_all_LD_Populations{
 	
 	my $sth = $self->adaptor->dbc->prepare(qq{
 	  SELECT ip.population_id, c.seq_region_start, c.genotypes
-	  FROM compressed_genotype_region c, individual_population ip
-	  WHERE c.individual_id = ip.individual_id
+	  FROM compressed_genotype_region c, sample_population sp
+	  WHERE c.individual_id = sp.sample_id
 	  AND c.seq_region_id = ?
 	  AND c.seq_region_start < ?
 	  AND c.seq_region_end > ?
@@ -1400,17 +1400,17 @@ sub get_all_LD_Populations{
 	
 	$sth->execute;
 	
-	my ($individual_id, $seq_region_start, $genotypes);
-	$sth->bind_columns(\$individual_id, \$seq_region_start, \$genotypes);
+	my ($sample_id, $seq_region_start, $genotypes);
+	$sth->bind_columns(\$sample_id, \$seq_region_start, \$genotypes);
 	
 	my %have_genotypes = ();
 	
 	while($sth->fetch()) {
 	  
-	  next if $have_genotypes{$individual_id};
+	  next if $have_genotypes{$sample_id};
 	  
 	  if($seq_region_start == $this_vf_start) {
-		$have_genotypes{$individual_id} = 1;
+		$have_genotypes{$sample_id} = 1;
 		next;
 	  }
 	  
