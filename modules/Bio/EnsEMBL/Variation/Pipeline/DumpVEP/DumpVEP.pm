@@ -41,17 +41,42 @@ sub param_defaults {
   };
 }
 
+
 sub run {
   my $self = shift;
-  
+
   # basic params
-  my $debug    = $self->param('debug');
-  my $species  = $self->required_param('species');
-  my $assembly = $self->required_param('assembly');
-  my $version  = $self->required_param('ensembl_release');
-  my $refseq   = $self->required_param('species_refseq') ? '--refseq' : '';
-  my $dir      = $self->required_param('pipeline_dir');
-  
+  my $eg      = $self->param('eg');
+  my $debug   = $self->param('debug');
+  my $species = $self->required_param('species');
+  my $refseq  = $self->required_param('species_refseq') ? '--refseq' : '';
+  my $dir     = $self->required_param('pipeline_dir');
+
+  my ($assembly, $version);
+  my ($host, $port, $user, $pass);
+
+  if($eg){
+     my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
+
+     $assembly = $meta_container->single_value_by_key('assembly.default');
+     $version  = $meta_container->schema_version();
+     $host     = $meta_container->dbc->host();
+     $port     = $meta_container->dbc->port();
+     $user     = $meta_container->dbc->username();
+     $pass     = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
+     
+     $self->param('assembly', $assembly);
+     $self->param('ensembl_release', $version);
+  }
+  else {
+     $assembly = $self->required_param('assembly');
+     $version  = $self->required_param('ensembl_release');
+     $host = $self->required_param('host');
+     $port = $self->required_param('port');
+     $user = $self->required_param('user');
+     $pass = $self->required_param('pass') ? '--pass '.$self->required_param('pass') : '';
+  }
+
   # species-specific
   my $species_flags = $self->param('species_flags');
   
@@ -80,13 +105,7 @@ sub run {
     
     $species_flags_cmd .= join(' ', map {$flags->{$_} eq '1' ? '--'.$_ : '--'.$_.' '.$flags->{$_}} keys %$flags);
   }
-  
-  # db params
-  my $host = $self->required_param('host');
-  my $port = $self->required_param('port');
-  my $user = $self->required_param('user');
-  my $pass = $self->required_param('pass') ? '--pass '.$self->required_param('pass') : '';
-  
+
   # cmnd line
   my $perl    = $self->required_param('perl_command');
   my $vep_dir = $self->required_param('ensembl_cvs_root_dir').'/ensembl-tools/scripts/variant_effect_predictor';
