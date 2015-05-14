@@ -753,14 +753,20 @@ sub main {
 			
 			# sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
 			if($data->{ID} =~ /\;/) {
-				if($data->{ID} =~ /rs/) {
-					$data->{ID} = (sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} split /\;/, $data->{ID})[0];
-				}
-        elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
+        my @ids = split(';', $data->{ID});
+        my @rs_ids = sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} grep {/^rs/} @ids;
+        my @other_ids = grep {!/^rs/} @ids;
+        
+        my $primary_id = @rs_ids ? shift @rs_ids : shift @other_ids;
+        @ids = (@rs_ids, @other_ids);
+        
+        if(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
           $data->{ID} = 'ss'.$data->{SS_ID};
+          $data->{synonyms} = grep {$_ ne $data->{SS_ID}} @ids;
         }
 				else {
-					$data->{ID} = (split /\;/, $data->{ID})[0];
+          $data->{ID} = $primary_id;
+          $data->{synonyms} = \@ids if scalar @ids;
 				}
 			}
       elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
@@ -788,6 +794,9 @@ sub main {
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
+
+      # add synonyms
+      variation_synonym($config, $data) if $config->{tables}->{variation_synonym} && $data->{synonyms};
 			
 			# attach variation to genotypes
 			$_->{variation} = $data->{variation} for @{$data->{genotypes}};
@@ -1928,6 +1937,41 @@ sub variation {
 }
 
 
+sub variation_synonym {
+  my $config = shift;
+  my $data = shift;
+	
+	my $dbVar = $config->{dbVar};
+  my $var_id = $data->{variation}->dbID;
+  return unless $var_id;
+  
+	my $sth = $dbVar->prepare(qq{
+		INSERT IGNORE INTO variation_synonym(
+			variation_id,
+			source_id,
+			name
+		)
+		VALUES(?, ?, ?)
+	});
+  
+  foreach my $synonym(@{$data->{synonyms}}) {
+	
+  	if(defined($config->{test})) {
+      debug($config, "(TEST) Adding ", $synonym, " to variation_synonym as synonym for ", $data->{variation}->dbID);
+    }
+    else {
+      $sth->execute(
+    		$data->{variation}->dbID,
+    		$config->{source_id},
+    		$synonym
+    	);
+    }
+		
+		$config->{rows_added}->{variation_synonym}++;
+  }
+  
+	$sth->finish;
+}
 
 # gets variation feature object
 sub variation_feature {
