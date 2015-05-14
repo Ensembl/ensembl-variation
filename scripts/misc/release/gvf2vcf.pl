@@ -130,6 +130,7 @@ sub init_data {
         'E_1000G' => '1000Genomes',
         'E_Cited' => 'Cited',
         'E_ESP' => 'ESP',
+        'E_Phenotype_or_Disease' => 'Phenotype_or_Disease', 
     };
     $config->{evidence_value_to_abbr} = {
         'Multiple_observations' => 'E_Multiple_observations',
@@ -138,6 +139,7 @@ sub init_data {
         '1000Genomes' => 'E_1000G',
         'Cited' => 'E_Cited',
         'ESP' => 'E_ESP',
+        'Phenotype_or_Disease' => 'E_Phenotype_or_Disease',
     };
     $config->{clin_significance_to_abbr} = {
         'uncertain significance' => 'CLIN_uncertain_significance',
@@ -182,6 +184,7 @@ sub init_data {
         'insertion' => 'INS',
         'mobile_element_insertion' => 'MEI',
         'novel_sequence_insertion' => 'NSI',
+        'indel' => 'INDEL',
     };
 }
 
@@ -576,6 +579,7 @@ sub print_header {
             '##ALT=<ID=INV,Description="inversion">',
             '##ALT=<ID=MEI,Description="mobile_element_insertion">',
             '##ALT=<ID=NSI,Description="novel_sequence_insertion">',
+            '##ALT=<ID=INDEL,Description="indel">',
         )), "\n";
     }
 
