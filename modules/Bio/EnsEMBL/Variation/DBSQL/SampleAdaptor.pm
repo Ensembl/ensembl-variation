@@ -172,11 +172,11 @@ sub fetch_by_synonym {
 
 =head2 fetch_synonyms
 
-    Arg [1]              : $individual_id
+    Arg [1]              : $sample_id
     Arg [2] (optional)   : $source
-    Example              : my $dbSNP_synonyms = $ind_adaptor->fetch_synonyms($individual_id,$dbSNP);
-                           my $all_synonyms = $ind_adaptor->fetch_synonyms($individual_id);
-    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the individual_id
+    Example              : my $dbSNP_synonyms = $sample_adaptor->fetch_synonyms($sample_id, $dbSNP);
+                           my $all_synonyms = $sample_adaptor->fetch_synonyms($sample_id);
+    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the sample_id
     Returntype : listref of strings
     Exceptions : none
     Caller     : general
@@ -193,9 +193,9 @@ sub fetch_synonyms {
 
   my $sql;
   if (defined $source){
-    $sql = qq{SELECT is.name FROM sample_synonym syn, source s WHERE syn.sample_id = ? AND syn.source_id = s.source_id AND s.name = "$source"}
+    $sql = qq{SELECT syn.name FROM sample_synonym syn, source s WHERE syn.sample_id = ? AND syn.source_id = s.source_id AND s.name = "$source"}
   } else{
-    $sql = qq{SELECT name FROM individual_synonym WHERE individual_id = ?};
+    $sql = qq{SELECT name FROM sample_synonym WHERE sample_id = ?};
   }
   my $sth = $self->prepare($sql);
   $sth->bind_param(1, $dbID, SQL_INTEGER);
@@ -229,7 +229,7 @@ sub fetch_all_by_name {
   defined($name) || throw("Name argument expected.");
 
   my $sth = $self->prepare(q{
-    SELECT sample_id, individual_id, name, description,  display, has_coverage
+    SELECT sample_id, individual_id, name, description, study_id, display, has_coverage
     FROM   sample
     WHERE  name = ?;});
 
@@ -297,7 +297,7 @@ sub fetch_all_by_Population {
   }
 
   my $sth = $self->prepare(q{
-    SELECT s.sample_id, s.individual_id, s.name, s.description, s.gender, s.display, s.has_coverage 
+    SELECT s.sample_id, s.individual_id, s.name, s.description, s.study_id, s.display, s.has_coverage 
     FROM   sample s, sample_population sp
     WHERE  s.sample_id = sp.individual_id
     AND    sp.population_id = ?});
@@ -337,8 +337,8 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag, $has_coverage);
-  $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag, \$has_coverage);
+  my ($dbID, $individual_id, $name, $desc, $study_id, $display_flag, $has_coverage);
+  $sth->bind_columns(\$dbID, \$individual_id, \$name, \$desc, \$study_id, \$display_flag, \$has_coverage);
 
   my %seen;
   my @samples;
@@ -349,10 +349,11 @@ sub _objs_from_sth {
       -dbID          => $dbID,
       -adaptor       => $self,
       -individual_id => $individual_id,
+      -name          => $name,
       -description   => $desc,
+      -study_id      => $study_id,
       -display       => $display_flag,
       -has_coverage  => $has_coverage,
-      -name          => $name,
     );
 
     $seen{$dbID} = $sample;
@@ -367,7 +368,7 @@ sub _tables {
 }
 
 sub _columns {
-  return qw(s.individual_id s.name s.description s.display s.has_coverage);
+  return qw(s.sample_id s.individual_id s.name s.description s.study_id s.display s.has_coverage);
 }
 
 sub _default_where_clause {
