@@ -45,10 +45,6 @@ Bio::EnsEMBL::DBSQL::SampleAdaptor
   my $sa = $registry->get_adaptor('human', 'variation', 'sample');
   my $pa = $registry->get_adaptor('human', 'variation', 'population');
 
-  # Get all Samples with a particular name
-  foreach my $sample (@{ $sa->fetch_all_by_name('CEPH1362.01') }) {
-    print $sample->name(), "\n";
-  }
 
 =head1 DESCRIPTION
 
@@ -95,6 +91,7 @@ sub store {
       individual_id,
       name,
       description,
+      study_id,
       display,
       has_coverage
 		) VALUES (?,?,?,?,?,?,?,?)
@@ -103,6 +100,7 @@ sub store {
     $sample->individual->dbID,
 		$sample->name,
     $sample->description,
+    ($sample->study) : $sample->study->dbID ? undef,
     $sample->display,
     $sample->has_coverage
 	);
@@ -150,13 +148,12 @@ sub fetch_by_synonym {
   my ($samples, $sample_ids, $sample_id);
   my $sql;
   if (defined $source) {
-    $sql = qq{ SELECT is.individual_id 
+    $sql = qq{ SELECT syn.sample_id 
                FROM sample_synonym syn, source s
                WHERE syn.name = ? and syn.source_id = s.source_id AND s.name = "$source"};
   }
   else {
-    $sql = qq{ SELECT sample_id 
-               FROM sample_synonym WHERE name = ?};
+    $sql = qq{ SELECT sample_id FROM sample_synonym WHERE name = ?};
   }
   my $sth = $self->prepare($sql);
   $sth->bind_param(1, $synonym_name, SQL_VARCHAR);
@@ -167,10 +164,10 @@ sub fetch_by_synonym {
   }
 
   foreach my $sample_id (@{$sample_ids}) {
-    my $individual = $self->fetch_by_dbID($individual_id);
-    push @{$individuals}, $individual;
+    my $sample = $self->fetch_by_dbID($sample_id);
+    push @{$samples}, $sample;
   }
-  return $individuals;
+  return $samples;
 }
 
 =head2 fetch_synonyms
@@ -188,37 +185,37 @@ sub fetch_by_synonym {
 =cut
 
 sub fetch_synonyms {
-    my $self = shift;
-    my $dbID = shift;
-    my $source = shift;
-    my $synonym;
-    my $synonyms;
+  my $self = shift;
+  my $dbID = shift;
+  my $source = shift;
+  my $synonym;
+  my $synonyms;
 
-    my $sql;
-    if (defined $source){
-	    $sql = qq{SELECT is.name FROM individual_synonym is, source s WHERE is.individual_id = ? AND is.source_id = s.source_id AND s.name = "$source"}
-    } else{
-	    $sql = qq{SELECT name FROM individual_synonym WHERE individual_id = ?};
-    }
-    my $sth = $self->prepare($sql);
-    $sth->bind_param(1,$dbID,SQL_INTEGER);
-    $sth->execute();
-    $sth->bind_columns(\$synonym);
-    while ($sth->fetch){
-	    push @{$synonyms}, $synonym;
-    }
-    return $synonyms;
+  my $sql;
+  if (defined $source){
+    $sql = qq{SELECT is.name FROM sample_synonym syn, source s WHERE syn.sample_id = ? AND syn.source_id = s.source_id AND s.name = "$source"}
+  } else{
+    $sql = qq{SELECT name FROM individual_synonym WHERE individual_id = ?};
+  }
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1, $dbID, SQL_INTEGER);
+  $sth->execute();
+  $sth->bind_columns(\$synonym);
+  while ($sth->fetch){
+    push @{$synonyms}, $synonym;
+  }
+  return $synonyms;
 }
 
 =head2 fetch_all_by_name
 
   Arg [1]    : string $name 
-               The name of the individuals to retrieve.
-  Example    : my @inds = @{$ind_adaptor->fetch_all_by_name('CEPH1332.05')};
-  Description: Retrieves all individuals with a specified name.  Individual
+               The name of the samples to retrieve.
+  Example    : my @samples = @{$sample_adaptor->fetch_all_by_name('CEPH1332.05')};
+  Description: Retrieves all samples with a specified name. Sample
                names may be non-unique which is why this method returns a
                reference to a list.
-  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
+  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
   Exceptions : throw if no argument passed
   Caller     : general
   Status     : Stable
@@ -232,24 +229,23 @@ sub fetch_all_by_name {
   defined($name) || throw("Name argument expected.");
 
   my $sth = $self->prepare(q{
-    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage
-    FROM   individual i, individual_type it
-    WHERE  i.name = ?
-    AND    it.individual_type_id = i.individual_type_id;});
+    SELECT sample_id, individual_id, name, description,  display, has_coverage
+    FROM   sample
+    WHERE  name = ?;});
 
   $sth->bind_param(1, $name, SQL_VARCHAR);
   $sth->execute();
-  my $individuals =  $self->_objs_from_sth($sth);
+  my $samples =  $self->_objs_from_sth($sth);
   $sth->finish();
-  return $individuals;
+  return $samples;
 }
 
 =head2 fetch_all_by_name_list
 
-  Arg [1]    : listref of individual names
-  Example    : $inds = $ind_adaptor->fetch_all_by_name_list(["NA12347", "NA12348"]);
-  Description: Retrieves a listref of individual objects via a list of names
-  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
+  Arg [1]    : listref of samples names
+  Example    : $samples = $sample_adaptor->fetch_all_by_name_list(["NA12347", "NA12348"]);
+  Description: Retrieves a listref of Sample objects via a list of names
+  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
   Exceptions : throw if list argument is not defined
   Caller     : general
   Status     : Stable
@@ -266,20 +262,20 @@ sub fetch_all_by_name_list {
   
   return [] unless scalar @$list >= 1;
   
-  my $id_str = (@$list > 1)  ? " IN (".join(',', map {'"'.$_.'"'} @$list).")"   :   ' = \''.$list->[0].'\'';
+  my $id_str = (@$list > 1)  ? " IN (". join(',', map {'"'.$_.'"'} @$list).")" : ' = \''.$list->[0].'\'';
   
-  return $self->generic_fetch("i.name ".$id_str);
+  return $self->generic_fetch("name" . $id_str);
 }
 
 =head2 fetch_all_by_Population
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Population $pop
-  Example    : my $pop = $pop_adaptor->fetch_by_name('PACIFIC');
-               foreach my $ind (@{$ind_adaptor->fetch_all_by_Population($pop)}) {
-                 print $ind->name(), "\n";
+  Arg [1]    : Bio::EnsEMBL::Variation::Population $population
+  Example    : my $population = $population_adaptor->fetch_by_name('PACIFIC');
+               foreach my $sample (@{$sample_adaptor->fetch_all_by_Population($population)}) {
+                 print $sample->name(), "\n";
                }
-  Description: Retrieves all individuals from a specified population 
-  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
+  Description: Retrieves all samples from a specified population 
+  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
   Exceptions : throw if incorrect argument is passed
                warning if provided Population does not have an dbID
   Caller     : general
@@ -288,29 +284,29 @@ sub fetch_all_by_name_list {
 =cut
 
 sub fetch_all_by_Population {
-    my $self = shift;
-    my $pop = shift;
+  my $self = shift;
+  my $pop = shift;
 
-    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-        throw("Bio::EnsEMBL::Variation::Population arg expected");
-    }
+  if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw("Bio::EnsEMBL::Variation::Population arg expected");
+  }
 
-    if (!$pop->dbID()) {
-        warning("Population does not have dbID, cannot retrieve Samples");
-        return [];
-    }
+  if (!$pop->dbID()) {
+    warning("Population does not have dbID, cannot retrieve Samples");
+    return [];
+  }
 
-    my $sth = $self->prepare(q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
-        FROM   sample s, sample_population sp
-        WHERE  s.sample_id = sp.individual_id
-        AND    sp.population_id = ?});
+  my $sth = $self->prepare(q{
+    SELECT s.sample_id, s.individual_id, s.name, s.description, s.gender, s.display, s.has_coverage 
+    FROM   sample s, sample_population sp
+    WHERE  s.sample_id = sp.individual_id
+    AND    sp.population_id = ?});
 
-    $sth->bind_param(1, $pop->dbID, SQL_INTEGER);
-    $sth->execute();
-    my $samples = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $samples;
+  $sth->bind_param(1, $pop->dbID, SQL_INTEGER);
+  $sth->execute();
+  my $samples = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $samples;
 }
 
 sub _get_name_by_dbID {
@@ -319,10 +315,10 @@ sub _get_name_by_dbID {
   
   my $sth = $self->dbc->prepare(qq{
     SELECT name
-    FROM individual
-    WHERE individual_id = ?
+    FROM sample
+    WHERE sample_id = ?
   });
-  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->bind_param(1, $dbID, SQL_INTEGER);
   $sth->execute();
   
   my $name;
@@ -331,11 +327,6 @@ sub _get_name_by_dbID {
   $sth->finish;
   
   return $name;
-}
-
-sub _get_sample_name_by_dbID {
-    my $self = shift;
-    warn('The use od this method is deprecated. Use _get_name_by_dbID instead.')
 }
 
 #
@@ -372,15 +363,15 @@ sub _objs_from_sth {
 }
 
 sub _tables {
-    return (['individual','i'],
-		['individual_type','it'])}
+  return (['sample', 's']);
+}
 
 sub _columns {
-    return qw(i.individual_id i.name i.description i.gender i.father_individual_id i.mother_individual_id it.name it.description i.display i.has_coverage);
+  return qw(s.individual_id s.name s.description s.display s.has_coverage);
 }
 
 sub _default_where_clause {
-    return 'i.individual_type_id = it.individual_type_id';
+  return '';
 }
 
 1;
