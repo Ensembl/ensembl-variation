@@ -82,6 +82,7 @@ sub tar {
 }
 
 sub run_cmd {
+  my $self = shift;
   my $cmd = shift;
   if (my $return_value = system($cmd)) {
     $return_value >>= 8;
