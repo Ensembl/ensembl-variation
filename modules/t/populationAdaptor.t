@@ -29,6 +29,7 @@ my $vdba = $multi->get_DBAdaptor('variation');
 
 my $pa = $vdba->get_PopulationAdaptor;
 my $ia = $vdba->get_IndividualAdaptor;
+my $sa = $vdba->get_SampleAdaptor;
 
 my ($populations, $population, $all);
 
@@ -62,22 +63,24 @@ $populations = $pa->fetch_all_by_dbID_list($list);
 $all = join(',', map{$_->name} sort {$a->name cmp $b->name} @$populations);
 is($all, '1000GENOMES:phase_1_AFR,1000GENOMES:phase_1_EUR', "Fetch by list");
 
-# fetch_all_by_Individual
+# fetch_all_by_Sample
 # 1000GENOMES:phase_1:HG01625 101495 -> 1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_EUR,1000GENOMES:phase_1_IBS
 
-my @individual_dbids = (101495, 101096);
-my $individual = $ia->fetch_by_dbID($individual_dbids[0]);
-$populations = $pa->fetch_all_by_Individual($individual);
-is(scalar @$populations, 3, "Number of populations for individual HG01625");
-is($populations->[0]->display_group_name, '1000 Genomes Project Phase 1', "Display group name for individual HG01625's population");
+my @sample_ids = (101495, 101096);
+my $sample = $sa->fetch_by_dbID($sample_dbids[0]);
 
-# fetch_all_by_Individual_list
-my $individuals = [];
-foreach my $dbid (@individual_dbids) {
-   push @$individuals, $ia->fetch_by_dbID($dbid); 
+$populations = $pa->fetch_all_by_Sample($sample);
+
+is(scalar @$populations, 3, "Number of populations for sample HG01625");
+is($populations->[0]->display_group_name, '1000 Genomes Project Phase 1', "Display group name for sample HG01625's population");
+
+# fetch_all_by_Sample_list
+my $samples = [];
+foreach my $dbid (@sample_dbids) {
+   push @$samples, $sa->fetch_by_dbID($dbid); 
 }
-$populations = $pa->fetch_all_by_Individual_list($individuals);
-is(scalar @$populations, 6, "Number of populations for individuals HG01625 and HG00109");
+$populations = $pa->fetch_all_by_Individual_list($ssamples);
+is(scalar @$populations, 6, "Number of populations for ssamples HG01625 and HG00109");
 
 # fetch_by_name
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_IBS');
