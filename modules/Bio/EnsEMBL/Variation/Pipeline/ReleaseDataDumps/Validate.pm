@@ -73,18 +73,18 @@ sub validate_vcf {
 
   my $err = "$working_dir/Validate\_vcf\_$file_name.err";
   my $out = "$working_dir/Validate\_vcf\_$file_name.out";
-  
-  # create short version of file for validation   
+
+# create short version of file for validation   
   my $file_for_validation = "$working_dir/$file_name\_validate.vcf";
   $self->run_cmd("head -250000 $vcf_file > $file_for_validation");
-  
-  # sort and bgzip
+
+# sort and bgzip
   my $cmd = "vcf-sort < $vcf_file | bgzip > $vcf_file.gz";
   $self->run_cmd($cmd);
   $cmd = "vcf-sort < $file_for_validation | bgzip > $file_for_validation.gz";
   $self->run_cmd($cmd);
 
-  # validate
+# validate
   $cmd = "vcf-validator $file_for_validation.gz";
   $self->run_cmd("$cmd 1>$out 2>$err");
 
