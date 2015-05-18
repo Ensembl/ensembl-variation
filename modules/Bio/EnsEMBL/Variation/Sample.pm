@@ -44,10 +44,11 @@ sub new {
     $dbID,
     $adaptor,
     $individual_id,
+    $name,
     $desc,
     $study_id,
     $display_flag,
-    $has_coverage) = rearrange([qw(dbID adaptor individual_id description study_id display has_coverage)], @_);
+    $has_coverage) = rearrange([qw(dbID adaptor individual_id name description study_id display has_coverage)], @_);
 
   $display_flag ||= 'UNDISPLAYABLE'; 
 
@@ -55,6 +56,7 @@ sub new {
     'dbID'    => $dbID,
     'adaptor' => $adaptor,
     'individual_id' => $individual_id,
+    'name' => $name,
     'description' => $desc,
     'study_id' => $study_id,
     'display' => $display_flag,
