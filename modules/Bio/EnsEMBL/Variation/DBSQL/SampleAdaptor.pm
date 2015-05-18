@@ -107,7 +107,7 @@ sub store {
     $individual_id,
 		$sample->name,
     $sample->description,
-    ($sample->study) : $sample->study->dbID ? undef,
+    $sample->study ? $sample->study->dbID : undef,
     $sample->display,
     $sample->has_coverage
 	);
