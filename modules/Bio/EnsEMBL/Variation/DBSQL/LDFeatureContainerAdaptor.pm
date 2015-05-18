@@ -174,10 +174,10 @@ sub fetch_by_Slice {
   }
 
   $sth = $self->prepare(qq{
-    SELECT c.individual_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_id
-    FROM compressed_genotype_region c, individual_population ip
-    WHERE  ip.individual_id = c.individual_id
-    AND   ip.population_id $in_str
+    SELECT c.sample_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, c.genotypes, sp.population_id
+    FROM compressed_genotype_region c, sample_population sp
+    WHERE  sp.sample_id = c.sample_id
+    AND   sp.population_id $in_str
     AND   c.seq_region_id = ?
     AND   c.seq_region_start >= ? and c.seq_region_start <= ?
     AND   c.seq_region_end >= ?
@@ -265,8 +265,8 @@ sub get_populations_hash_by_Slice {
   my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
   
   my %results;
-  my $pop_threshold = 20;	# number of individuals required
-  my $gen_threshold = 3;	# number of genotypes per individual required
+  my $pop_threshold = 20;	# number of samples required
+  my $gen_threshold = 3;	# number of genotypes per sample required
 
   # just get the population list if it's really too long
   if($slice->length > 10000000) {
@@ -281,11 +281,12 @@ sub get_populations_hash_by_Slice {
   elsif($slice->length > 5000000) {
 	
     my $sth = $self->prepare(qq{
-      SELECT distinct(c.individual_id), p.name
-      FROM compressed_genotype_region c, individual_population ip, population p, individual i
-      WHERE c.individual_id = ip.individual_id
-      AND ip.population_id = p.population_id
-      AND c.individual_id = i.individual_id
+      SELECT distinct(c.sample_id), p.name
+      FROM compressed_genotype_region c, sample_population ip, population p, sample s, individual i
+      WHERE c.sample_id = sp.sample_id
+      AND sp.population_id = p.population_id
+      AND c.sample_id = s.sample_id
+      AND s.individual_id = i.individual_id
       AND c.seq_region_id = ?
       AND c.seq_region_start <= ?
       AND c.seq_region_end >= ?
@@ -298,23 +299,24 @@ sub get_populations_hash_by_Slice {
     my %counts = ();
 	
     while(my $row = $sth->fetchrow_arrayref()) {
-      my ($ind_id, $pop_id, $pop_name) = @$row;
+      my ($sample_id, $pop_id, $pop_name) = @$row;
       $results{$pop_id} = $pop_name;
       $counts{$pop_id}++;
     }
 	
-    #Delete the populations that doesn't have enough individuals
+    #Delete the populations that don't have enough samples
     delete @results{ grep {$counts{$_} <= $pop_threshold} keys(%counts)};
   }
   
   else {
 
     my $sth = $self->prepare(qq{
-      SELECT p.population_id, p.name, c.individual_id, c.seq_region_start, c.seq_region_end, c.genotypes 
-      FROM compressed_genotype_region c, individual_population ip, population p, individual i
-      WHERE c.individual_id = ip.individual_id
-      AND ip.population_id = p.population_id
-      AND c.individual_id = i.individual_id
+      SELECT p.population_id, p.name, c.sample_id, c.seq_region_start, c.seq_region_end, c.genotypes 
+      FROM compressed_genotype_region c, sample_population ip, population p, sample s, individual i
+      WHERE c.sample_id = sp.sample_id
+      AND sp.population_id = p.population_id
+      AND c.sample_id = s.sample_id
+      AND s.individual_id = i.individual_id
       AND c.seq_region_id = ?
       AND c.seq_region_start <= ?
       AND c.seq_region_end >= ?
@@ -329,11 +331,11 @@ sub get_populations_hash_by_Slice {
     my $row_count = 0;
 	
     while(my $row = $sth->fetchrow_arrayref()) {
-      my ($population_id, $population_name, $individual_id, $start, $end, $genotypes) = @$row;
+      my ($population_id, $population_name, $sample_id, $start, $end, $genotypes) = @$row;
 	  
       $row_count++;
 	  
-      next if $enough{$individual_id};
+      next if $enough{$sample_id};
 	  
       $results{$population_id} = $population_name;
       $sample_pop{$population_id} = $population_name;
@@ -346,7 +348,7 @@ sub get_populations_hash_by_Slice {
 		
         while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
           if(($snp_start >= $slice_start) && ($snp_start <= $slice_end)) {		
-            $counts{$individual_id}++;
+            $counts{$sample_id}++;
           }
 		  
           $snp_start += $gap + 1 if defined $gap;
@@ -356,11 +358,11 @@ sub get_populations_hash_by_Slice {
 	  
       # if the row is fully within the slice
       else {
-        $counts{$individual_id} += (((length($genotypes) - 2) / 4) + 1);
+        $counts{$sample_id} += (((length($genotypes) - 2) / 4) + 1);
       }
 	  
-      $enough{$individual_id} = 1 if $counts{$individual_id} >= $gen_threshold;
-      $counts_pop{$population_id}++ if $counts{$individual_id} >= $gen_threshold;
+      $enough{$sample_id} = 1 if $counts{$sample_id} >= $gen_threshold;
+      $counts_pop{$population_id}++ if $counts{$sample_id} >= $gen_threshold;
     }
 	
     delete @results{grep {$counts_pop{$_} <= $pop_threshold} keys %counts_pop};
@@ -379,7 +381,7 @@ sub _fetch_by_Slice_VCF {
   # fetch genotypes
   my $genotypes = {};
     
-  # create hash giving populations for each individual
+  # create hash giving populations for each sample
   my %pops;
   
   foreach my $vc(@{$vca->fetch_all}) {
@@ -408,8 +410,8 @@ sub _fetch_by_Slice_VCF {
       delete $hash->{$_} for grep {$_ != $population->dbID} keys %$hash;
     }
     
-    # get all individuals
-    my %ind_dbID_name = map {$_->dbID => ($_->{_raw_name} || $_->name)} @{$vc->get_all_Individuals()};
+    # get all samples
+    my %sample_dbID_name = map {$_->dbID => ($_->{_raw_name} || $_->name)} @{$vc->get_all_Samples()};
     
     # populate transposed hash
     foreach my $pop_id(keys %$hash) {
@@ -445,36 +447,38 @@ sub _merge_containers {
 }
 
 
-#for a given population, gets all individuals that are children (have father or mother)
+#for a given population, gets all samples that are children (have father or mother)
 sub _get_siblings {
   my $self = shift;
   my $population_id = shift;
   my $siblings = shift;
 
-  my $sth_individual = $self->db->dbc->prepare(qq{SELECT i.individual_id
-    FROM individual i, individual_population ip
-    WHERE ip.individual_id = i.individual_id
-    AND ip.population_id = ? 
+  my $sth_sample = $self->db->dbc->prepare(qq{
+    SELECT s.sample_id
+    FROM sample s, individual i, sample_population sp
+    WHERE sp.sample_id = s.sample_id
+    AND s.individual_id = i.individual_id
+    AND sp.population_id = ? 
     AND i.father_individual_id IS NOT NULL
     AND i.mother_individual_id IS NOT NULL
   });
   
-  my ($individual_id);
-  $sth_individual->execute($population_id);
-  $sth_individual->bind_columns(\$individual_id);
+  my ($sample_id);
+  $sth_sample->execute($population_id);
+  $sth_sample->bind_columns(\$sample_id);
   
-  while ($sth_individual->fetch){
-    # store population and individual since some individuals are shared between populations
-    $siblings->{$population_id.'-'.$individual_id}++;
+  while ($sth_sample->fetch){
+    # store population and sample since some samples are shared between populations
+    $siblings->{$population_id.'-'.$sample_id}++;
   }
 }
 
 #reads one line from the compress_genotypes table, uncompress the data, and writes it to the different hashes: one containing the number of bases for the variation and the other with the actual genotype information we need to print in the file
 sub _store_genotype{
   my $self = shift;
-  my $individual_information = shift;
+  my $sample_information = shift;
   my $alleles_variation = shift;
-  my $individual_id = shift;
+  my $sample_id = shift;
   my $seq_region_start = shift;
   my $genotype = shift;
   my $population_id = shift;
@@ -497,8 +501,8 @@ sub _store_genotype{
       $alleles_variation->{$snp_start}->{$population_id}->{$gt->[0]}++;
       $alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++;
 			
-      $individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
-      $individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
+      $sample_information->{$population_id}->{$snp_start}->{$sample_id}->{allele_1} = $gt->[0];
+      $sample_information->{$population_id}->{$snp_start}->{$sample_id}->{allele_2} = $gt->[1];
     }
 		
     $snp_start += $gap + 1  if defined $gap;
@@ -530,25 +534,25 @@ sub _genotype_from_code {
 sub _convert_genotype{
   my $self = shift;
   my $alleles_variation = shift; #reference to the hash containing the alleles for the variation present in the genotypes
-  my $individual_information = shift; #reference to a hash containing the values to be written to the file
+  my $sample_information = shift; #reference to a hash containing the values to be written to the file
   my @alleles_ordered; #the array will contain the alleles ordered by apparitions in the genotypes (only 2 values possible)
     
   @alleles_ordered = sort({$alleles_variation->{$b} <=> $alleles_variation->{$a}} keys %{$alleles_variation});
     
   #let's convert the allele_1 allele_2 to a genotype in the AA, Aa or aa format, where A corresponds to the major allele and a to the minor
-  foreach my $individual_id (keys %{$individual_information}){
+  foreach my $sample_id (keys %{$sample_information}){
     #if both alleles are different, this is the Aa genotype
-    if ($individual_information->{$individual_id}{allele_1} ne $individual_information->{$individual_id}{allele_2}){
-      $individual_information->{$individual_id}{genotype} = 'Aa';
+    if ($sample_information->{$sample_id}{allele_1} ne $sample_information->{$sample_id}{allele_2}){
+      $sample_information->{$sample_id}{genotype} = 'Aa';
     }
     #when they are the same, must find out which is the major
     else{	    
-      if ($alleles_ordered[0] eq $individual_information->{$individual_id}{allele_1}){
+      if ($alleles_ordered[0] eq $sample_information->{$sample_id}{allele_1}){
         #it is the major allele
-        $individual_information->{$individual_id}{genotype} = 'AA';
+        $sample_information->{$sample_id}{genotype} = 'AA';
       }
       else{
-        $individual_information->{$individual_id}{genotype} = 'aa';
+        $sample_information->{$sample_id}{genotype} = 'aa';
       }
 	    
     }
@@ -588,23 +592,23 @@ sub _objs_from_sth {
   
   my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
   #, the genotypes for that variation will be discarded
-  my %individual_information = (); #to store the relation of snps->individuals
+  my %sample_information = (); #to store the relation of snps->samples
 
-  my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
+  my ($sample_id, $seq_region_id, $seq_region_start, $seq_region_end, $genotypes, $population_id);
   my $previous_seq_region_id = 0;
   
-  $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
+  $sth->bind_columns(\$sample_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
   while($sth->fetch()) {
     #only print genotypes without parents genotyped
-    if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
-      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
+    if (!exists $siblings->{$population_id . '-' . $sample_id}){ #necessary to use the population_id
+      $self->_store_genotype(\%sample_information, \%alleles_variation, $sample_id, $seq_region_start, $genotypes, $population_id, $slice);
       $previous_seq_region_id = $seq_region_id;
     }
   }
   
   $sth->finish();
   
-  return $self->_ld_calc(\%alleles_variation, \%individual_information, $slice);
+  return $self->_ld_calc(\%alleles_variation, \%sample_information, $slice);
 }
 
 sub _objs_from_sth_vcf {
@@ -613,42 +617,42 @@ sub _objs_from_sth_vcf {
   my $slice = shift;
   my $pops = shift;
   
-  my (%alleles_variation, %individual_information);
+  my (%alleles_variation, %sample_information);
   
-  # create an artificial numerical ID for individuals
-  my $current_ind_id = 1;
-  my %ind_ids;
+  # create an artificial numerical ID for samples
+  my $current_sample_id = 1;
+  my %sample_ids;
   
   foreach my $snp_start(keys %$gts) {
-    foreach my $ind(keys %{$gts->{$snp_start}}) {
-      next unless $gts->{$snp_start}->{$ind};
+    foreach my $sample(keys %{$gts->{$snp_start}}) {
+      next unless $gts->{$snp_start}->{$sample};
       
-      my @gt = split(/\||\//, $gts->{$snp_start}->{$ind});
+      my @gt = split(/\||\//, $gts->{$snp_start}->{$sample});
       next unless grep {defined($_)} @gt;
       
-      # get individual ID
-      if(!exists($ind_ids{$ind})) {
-        $ind_ids{$ind} = $current_ind_id++;
+      # get sample ID
+      if(!exists($sample_ids{$sample})) {
+        $sample_ids{$sample} = $current_sample_id++;
       }
-      my $ind_id = $ind_ids{$ind};
+      my $sample_id = $sample_ids{$sample};
       
-      foreach my $pop_id(keys %{$pops->{$ind}}) {
+      foreach my $pop_id(keys %{$pops->{$sample}}) {
         $alleles_variation{$snp_start}->{$pop_id}->{$gt[0]}++;
         $alleles_variation{$snp_start}->{$pop_id}->{$gt[1]}++;
     
-        $individual_information{$pop_id}->{$snp_start}->{$ind_id}->{allele_1} = $gt[0];
-        $individual_information{$pop_id}->{$snp_start}->{$ind_id}->{allele_2} = $gt[1];
+        $sample_information{$pop_id}->{$snp_start}->{$sample_id}->{allele_1} = $gt[0];
+        $sample_information{$pop_id}->{$snp_start}->{$sample_id}->{allele_2} = $gt[1];
       }
     }
   }
   
-  return $self->_ld_calc(\%alleles_variation, \%individual_information, $slice);
+  return $self->_ld_calc(\%alleles_variation, \%sample_information, $slice);
 }
 
 sub _ld_calc {
   my $self = shift;
   my $alleles_variation = shift;
-  my $individual_information = shift;
+  my $sample_information = shift;
   my $slice = shift;
   
   #create a hash that maps the position->vf_id
@@ -698,11 +702,11 @@ sub _ld_calc {
 	  
       #if the variation has 2 alleles, print all the genotypes to the file
       if (keys %{$alleles_variation->{$snp_start}{$population}} == 2){
-        $self->_convert_genotype($alleles_variation->{$snp_start}{$population},$individual_information->{$population}{$snp_start});
-        foreach my $individual_id (keys %{$individual_information->{$population}{$snp_start}}){
+        $self->_convert_genotype($alleles_variation->{$snp_start}{$population},$sample_information->{$population}{$snp_start});
+        foreach my $sample_id (keys %{$sample_information->{$population}{$snp_start}}){
           print $fh join("\t",$previous_seq_region_id,$snp_start, $snp_start,
-          $population, $individual_id,
-          $individual_information->{$population}{$snp_start}{$individual_id}{genotype})."\n" || warn $!;
+          $population, $sample_id,
+          $sample_information->{$population}{$snp_start}{$sample_id}{genotype})."\n" || warn $!;
         }
       }
     }
