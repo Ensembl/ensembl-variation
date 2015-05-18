@@ -28,14 +28,14 @@ my $cdba = $multi->get_DBAdaptor('core');
 
 my $va   = $vdba->get_VariationAdaptor();
 my $sgfa = $vdba->get_SampleGenotypeFeatureAdaptor();
-my $sa = $vdba->get_SampleAdaptor();
+my $sample_adpt = $vdba->get_SampleAdaptor();
 my $pa = $vdba->get_PopulationAdaptor();
 my $sa   = $cdba->get_SliceAdaptor();
 
 ok($sgfa && $sgfa->isa('Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeFeatureAdaptor'), 'isa SampleGenotypeFeatureAdaptor');
 
 my $sample_name = '1000GENOMES:phase_1:NA07048';
-my $sample = $sa->fetch_all_by_name($sample_name)->[0];
+my $sample = $sample_adpt->fetch_all_by_name($sample_name)->[0];
 
 my $pop_name = '1000GENOMES:phase_1_CEU';
 my $pop = $pa->fetch_by_name($pop_name);
@@ -53,7 +53,7 @@ my $sgfs2 = $sgfa->fetch_all_by_Slice($slice, $sample);
 ok($sgfs2->[0]->variation->name eq $var_name, 'fetch_all_by_Slice - with sample');
 
 # fetch_all_by_Slice with Population
-my $sgfs3 = $igfa->fetch_all_by_Slice($slice, $pop);
+my $sgfs3 = $sgfa->fetch_all_by_Slice($slice, $pop);
 my @sgf_sample = grep {$_->sample->name eq $sample_name} @$sgfs3;
 ok($sgf_sample[0]->sample->name eq $sample_name, 'fetch_all_by_Slice - with population');
 
