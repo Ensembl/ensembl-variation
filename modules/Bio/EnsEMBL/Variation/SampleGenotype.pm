@@ -162,7 +162,6 @@ sub sample {
       }
     }
   }
-
   return $self->{'sample'};
 }
 
