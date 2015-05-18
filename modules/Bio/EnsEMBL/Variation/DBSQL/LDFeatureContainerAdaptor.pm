@@ -415,7 +415,7 @@ sub _fetch_by_Slice_VCF {
     
     # populate transposed hash
     foreach my $pop_id(keys %$hash) {
-      $pops{$ind_dbID_name{$_}}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
+      $pops{$sample_dbID_name{$_}}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
     }
   }
   
