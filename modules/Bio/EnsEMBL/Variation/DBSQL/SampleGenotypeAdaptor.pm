@@ -388,7 +388,7 @@ sub _objs_from_sth {
 	
 	# fetch samples
 	my $sa = $self->db()->get_SampleAdaptor();
-	my $sample = $sa->fetch_all_by_dbID_list([keys %sample_hash]);
+	my $samples = $sa->fetch_all_by_dbID_list([keys %sample_hash]);
 	
 	foreach my $s (@$samples) {
 		foreach my $sgty (@{$sample_hash{$s->dbID()}}) {
