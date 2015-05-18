@@ -357,8 +357,8 @@ sub _objs_from_sth {
 	
 	# get all sample in one query (faster)
 	# and add to already created genotypes	
-	my $sa = $self->db()->get_SampleAdaptor();
-	my $samples = $sa->fetch_all_by_dbID_list([keys %sample_hash]);
+	my $sample_adpt = $self->db()->get_SampleAdaptor();
+	my $samples = $sample_adpt->fetch_all_by_dbID_list([keys %sample_hash]);
 	
 	foreach my $s (@$samples) {
 		foreach my $sgty (@{$sample_hash{$s->dbID()}}) {
