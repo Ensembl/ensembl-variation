@@ -312,7 +312,7 @@ sub get_populations_hash_by_Slice {
 
     my $sth = $self->prepare(qq{
       SELECT p.population_id, p.name, c.sample_id, c.seq_region_start, c.seq_region_end, c.genotypes 
-      FROM compressed_genotype_region c, sample_population ip, population p, sample s, individual i
+      FROM compressed_genotype_region c, sample_population sp, population p, sample s, individual i
       WHERE c.sample_id = sp.sample_id
       AND sp.population_id = p.population_id
       AND c.sample_id = s.sample_id
