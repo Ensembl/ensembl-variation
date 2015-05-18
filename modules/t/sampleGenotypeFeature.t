@@ -83,7 +83,7 @@ my $sample_gt_feature2 = Bio::EnsEMBL::Variation::SampleGenotypeFeature->new_fas
 	'strand' => 1,
 	'slice' => $slice,
 	'genotype' => \@genotype,
-	'adaptor' => $igfa,
+	'adaptor' => $sgfa,
 	'sample' => $sample,
 	'_variation_id' => $var_id
 });
