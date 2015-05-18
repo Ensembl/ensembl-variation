@@ -306,7 +306,7 @@ sub fetch_all_by_Population {
   my $sth = $self->prepare(q{
     SELECT s.sample_id, s.individual_id, s.name, s.description, s.study_id, s.display, s.has_coverage 
     FROM   sample s, sample_population sp
-    WHERE  s.sample_id = sp.individual_id
+    WHERE  s.sample_id = sp.sample_id
     AND    sp.population_id = ?});
 
   $sth->bind_param(1, $pop->dbID, SQL_INTEGER);
@@ -376,10 +376,6 @@ sub _tables {
 
 sub _columns {
   return qw(s.sample_id s.individual_id s.name s.description s.study_id s.display s.has_coverage);
-}
-
-sub _default_where_clause {
-  return '';
 }
 
 1;
