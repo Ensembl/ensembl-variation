@@ -49,7 +49,7 @@
 57	\N	patch	patch_77_78_c.sql|Drop the table study_variation
 58	\N	patch	patch_77_78_d.sql|Extend the index type_val_idx in the table attrib
 59	\N	patch	patch_77_78_e.sql|add indexes on father_ and mother_individual_id and population name
-2	\N	schema_version	80
+2	\N	schema_version	81
 60	\N	patch	patch_78_79_a.sql|schema version
 61	\N	patch	patch_78_79_b.sql|change the column attrib_type_id by attrib_id in the variation_attrib table
 62	\N	patch	patch_78_79_c.sql|Store more detailed Sift information
@@ -59,3 +59,6 @@
 66	\N	patch	patch_79_80_d.sql|Reduce consequence_terms to the set of relevant SO_terms in motif_feature_variation and regulatory_feature_variation tables
 67	\N	patch	patch_79_80_e.sql|update the attrib tables by changing the default values
 68	\N	patch	patch_79_80_f.sql|add Phenotype or Disease evidence_attribs
+69	\N	patch	patch_80_81_a.sql|schema version
+70	\N	patch	patch_80_81_b.sql|Create new sample table and update individual table. Copy individual data into new sample table.
+71	\N	patch	patch_80_81_c.sql|Update table, column and index names from individual to sample.
