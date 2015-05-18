@@ -112,7 +112,7 @@ sub store {
       father_individual_id,
       mother_individual_id,
       individual_type_id,
-		) VALUES (?,?,?,?,?,?,?,?)
+		) VALUES (?,?,?,?,?,?)
 	});
 	$sth->execute(
 		$individual->name,
@@ -561,8 +561,8 @@ sub _objs_from_sth {
     my $self = shift;
     my $sth = shift;
     
-    my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag, $has_coverage);
-    $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag, \$has_coverage);
+    my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc);
+    $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc);
 
     my %seen;
     my %wanted_fathers;
