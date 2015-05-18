@@ -59,10 +59,10 @@ several means using this module.
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor;
+package Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Variation::Individual;
+use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use DBI qw(:sql_types);
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
@@ -72,8 +72,14 @@ sub store {
 	
 	my $dbh = $self->dbc->db_handle;
 
-  my $individiual  = $sample->individual;
-  if (!$individual) {
+  my ($individual, $individual_id); 
+  $individual = $sample->individual;
+  if ($individual) {
+    $individual_id = $individual->dbID;   
+  } else {
+    $individual_id = $sample->{individual_id};
+  }
+  if (!$individual_id) {
     my $ia = $self->adaptor->db->get_IndividualAdaptor;
     $individual = Bio::EnsEMBL::Variation::Individual->new(
       name            => $sample->name,
@@ -81,7 +87,8 @@ sub store {
       type_individual => 'outbred',
     );
     
-    $individual->store($individual); 
+    $individual = $individual->store($individual); 
+    $individual_id = $individual->dbID();
     $sample->individual($individual);
   } 
 	
@@ -97,7 +104,7 @@ sub store {
 		) VALUES (?,?,?,?,?,?,?,?)
 	});
 	$sth->execute(
-    $sample->individual->dbID,
+    $individual_id,
 		$sample->name,
     $sample->description,
     ($sample->study) : $sample->study->dbID ? undef,
