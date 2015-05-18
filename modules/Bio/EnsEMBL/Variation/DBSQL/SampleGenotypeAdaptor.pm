@@ -28,13 +28,13 @@ limitations under the License.
 =cut
 
 #
-# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeAdaptor
 #
 #
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
+Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeAdaptor
 
 =head1 SYNOPSIS
 
