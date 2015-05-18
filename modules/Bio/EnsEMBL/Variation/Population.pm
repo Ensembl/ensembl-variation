@@ -354,6 +354,24 @@ sub get_all_Individuals {
   return (defined $ia ? $ia->fetch_all_by_Population($self) : []);
 }
 
+=head2 get_all_Samples
+
+  Arg [1]    : none
+  Example    : @samples = @{$p->get_all_Samples()};
+  Description: Retrieves all Samples belonging to this Population.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Sample objects
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_Samples {
+  my $self = shift;
+  my $sa = $self->adaptor->db->get_SampleAdaptor;
+  return (defined $sa ? $sa->fetch_all_by_Population($self) : []);
+}
+
 sub _freqs_from_gts {
   my $self = shift;
   $self->{freqs} = shift @_ if @_;
