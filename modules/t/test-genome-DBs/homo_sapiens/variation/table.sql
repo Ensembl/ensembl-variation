@@ -51,14 +51,14 @@ CREATE TABLE `attrib_type` (
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `compressed_genotype_region` (
-  `individual_id` int(10) unsigned NOT NULL,
+  `sample_id` int(10) unsigned NOT NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(11) NOT NULL,
   `seq_region_end` int(11) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
   `genotypes` blob,
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
-  KEY `individual_idx` (`individual_id`)
+  KEY `sample_idx` (`sample_id`)
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `compressed_genotype_var` (
@@ -138,29 +138,10 @@ CREATE TABLE `individual` (
   `father_individual_id` int(10) unsigned DEFAULT NULL,
   `mother_individual_id` int(10) unsigned DEFAULT NULL,
   `individual_type_id` int(10) unsigned NOT NULL DEFAULT '0',
-  `display` enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD','MARTDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
-  `has_coverage` tinyint(1) unsigned NOT NULL DEFAULT '0',
-  `variation_set_id` set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
-  PRIMARY KEY (`individual_id`)
-) ENGINE=MyISAM  ;
-
-CREATE TABLE `individual_genotype_multiple_bp` (
-  `variation_id` int(10) unsigned NOT NULL,
-  `subsnp_id` int(15) unsigned DEFAULT NULL,
-  `allele_1` varchar(25000) DEFAULT NULL,
-  `allele_2` varchar(25000) DEFAULT NULL,
-  `individual_id` int(10) unsigned DEFAULT NULL,
-  KEY `variation_idx` (`variation_id`),
-  KEY `subsnp_idx` (`subsnp_id`),
-  KEY `individual_idx` (`individual_id`)
-) ENGINE=MyISAM ;
-
-CREATE TABLE `individual_population` (
-  `individual_id` int(10) unsigned NOT NULL,
-  `population_id` int(10) unsigned NOT NULL,
-  KEY `individual_idx` (`individual_id`),
-  KEY `population_idx` (`population_id`)
-) ENGINE=MyISAM ;
+  PRIMARY KEY (`individual_id`),
+  KEY `father_individual_idx` (`father_individual_id`),
+  KEY `mother_individual_idx` (`mother_individual_id`)
+) ENGINE=InnoDB  ;
 
 CREATE TABLE `individual_synonym` (
   `synonym_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -331,7 +312,7 @@ CREATE TABLE `read_coverage` (
   `seq_region_start` int(11) NOT NULL,
   `seq_region_end` int(11) NOT NULL,
   `level` tinyint(4) NOT NULL,
-  `individual_id` int(10) unsigned NOT NULL,
+  `sample_id` int(10) unsigned NOT NULL,
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM ;
 
@@ -348,6 +329,37 @@ CREATE TABLE `regulatory_feature_variation` (
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `somatic_feature_idx` (`feature_stable_id`,`somatic`)
 ) ENGINE=MyISAM  ;
+
+CREATE TABLE `sample` (
+  `sample_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `individual_id` int(10) unsigned NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `description` text,
+  `study_id` int(10) unsigned DEFAULT NULL,
+  `display` enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD','MARTDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
+  `has_coverage` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `variation_set_id` set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
+  PRIMARY KEY (`sample_id`),
+  KEY `individual_idx` (`individual_id`)
+) ENGINE=InnoDB  ;
+
+CREATE TABLE `sample_genotype_multiple_bp` (
+  `variation_id` int(10) unsigned NOT NULL,
+  `subsnp_id` int(15) unsigned DEFAULT NULL,
+  `allele_1` varchar(25000) DEFAULT NULL,
+  `allele_2` varchar(25000) DEFAULT NULL,
+  `sample_id` int(10) unsigned DEFAULT NULL,
+  KEY `variation_idx` (`variation_id`),
+  KEY `subsnp_idx` (`subsnp_id`),
+  KEY `sample_idx` (`sample_id`)
+) ENGINE=MyISAM ;
+
+CREATE TABLE `sample_population` (
+  `sample_id` int(10) unsigned NOT NULL,
+  `population_id` int(10) unsigned NOT NULL,
+  KEY `population_idx` (`population_id`),
+  KEY `sample_idx` (`sample_id`)
+) ENGINE=MyISAM ;
 
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL,
@@ -437,12 +449,12 @@ CREATE TABLE `structural_variation_feature` (
 CREATE TABLE `structural_variation_sample` (
   `structural_variation_sample_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `structural_variation_id` int(10) unsigned NOT NULL,
-  `individual_id` int(10) unsigned DEFAULT NULL,
+  `sample_id` int(10) unsigned DEFAULT NULL,
   `strain_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`structural_variation_sample_id`),
   KEY `structural_variation_idx` (`structural_variation_id`),
-  KEY `individual_idx` (`individual_id`),
-  KEY `strain_idx` (`strain_id`)
+  KEY `strain_idx` (`strain_id`),
+  KEY `sample_idx` (`sample_id`)
 ) ENGINE=MyISAM  ;
 
 CREATE TABLE `study` (
