@@ -111,7 +111,7 @@ sub new {
 	
 	my $self = $class->SUPER::new(@_);
 	
-	my ($adaptor, $genotype, $var, $var_id, $ind) =
+	my ($adaptor, $genotype, $var, $var_id, $sample) =
 	rearrange([qw(adaptor genotype variation _variation_id sample)],@_);
 	
 	if(defined($var) && (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
