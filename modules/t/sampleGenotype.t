@@ -30,7 +30,7 @@ my $ind = Bio::EnsEMBL::Variation::Individual->new(
   -description => 'This is a test individual',
   -gender => 'Male');
 
-my $sample = Bio::EnsEMBL::Variarion::Sample->new(
+my $sample = Bio::EnsEMBL::Variation::Sample->new(
   -name => 'test sample',
   -individual => $ind,
 );
@@ -86,7 +86,7 @@ my $var2 = Bio::EnsEMBL::Variation::Variation->new(
   -source => 'dbSNP'
 );
 
-ok(test_getter_setter($sample_gtype, 'individual', $sample2), "get/set sample");
+ok(test_getter_setter($sample_gtype, 'sample', $sample2), "get/set sample");
 ok(test_getter_setter($sample_gtype, 'variation', $var2),  "get/set variation");
 
 
