@@ -252,73 +252,72 @@ sub fetch_all_by_Variation {
   if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
     throw('Bio::EnsEMBL::Variation::Variation argument expected');
   }
-  
+
   my $variation_id = $variation->dbID;
 
   if(!defined($variation_id)) {
     warning("Cannot retrieve genotypes for variation without dbID");
     return [];
   }
-	
-	my $results = [];
-  
-	# check cache
-	# All sample GT objects for a variation are stored on the adaptor.
-	# They are stored in an array of limited size so that the memory usage
-	# doesn't go out of control for when the API requests genotypes for many
-	# variations sequentially.
-	my $cached;
-	
-	if (defined($self->{_cache})) {
-		foreach my $stored(@{$self->{_cache}}) {
-			my @keys = keys %{$stored};
-			$cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
-			last if defined($cached);
-		}
-	}
 
-	if (!defined($cached)) {
-    
+  my $results = [];
+
+  # check cache
+  # All sample GT objects for a variation are stored on the adaptor.
+  # They are stored in an array of limited size so that the memory usage
+  # doesn't go out of control for when the API requests genotypes for many
+  # variations sequentially.
+  my $cached;
+
+  if (defined($self->{_cache})) {
+    foreach my $stored(@{$self->{_cache}}) {
+      my @keys = keys %{$stored};
+      $cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
+      last if defined($cached);
+    }
+  }
+
+  if (!defined($cached)) {
+
     my $use_vcf = $self->db->use_vcf();
-    
+
     if ($use_vcf) {
       my $vf = $variation->get_all_VariationFeatures->[0];
-      @$cached =
-        map {@{$_->get_all_SampleGenotypeFeatures_by_VariationFeature($vf)}}
-        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
+      @$cached = map {@{$_->get_all_SampleGenotypeFeatures_by_VariationFeature($vf)}}
+                  @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
     }
     if ($use_vcf <= 1) {
       push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation_id)};
     }
-		for (@$cached) {
-			$_->variation($variation);
-			weaken($_->{'variation'});
-		}
-		
-		# add genotypes for this variant to the cache
-		push @{$self->{_cache}}, {$variation_id => $cached};
-		
-		# shift off first element to keep cache within size limit
-		shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
-	}
-	
-	if (defined $sample && defined $sample->dbID){
-		if ($sample->isa('Bio::EnsEMBL::Variation::Sample')) {
-			@$results = grep {$_->sample->dbID == $sample->dbID} @{$cached};
-		}
-		elsif ($sample->isa('Bio::EnsEMBL::Variation::Population')) {
-			my %include = map {$_->dbID => 1} @{$sample->get_all_Samples};			
-			@$results = grep {$include{$_->sample->dbID}} @{$cached};
-		}
-		else {
-			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Sample or Bio::EnsEMBL::Variation::Population");
-		}
-	}
+    for (@$cached) {
+      $_->variation($variation);
+      weaken($_->{'variation'});
+    }
+
+    # add genotypes for this variant to the cache
+    push @{$self->{_cache}}, {$variation_id => $cached};
+
+    # shift off first element to keep cache within size limit
+    shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
+  }
+
+  if (defined $sample && defined $sample->dbID){
+    if ($sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+      @$results = grep {$_->sample->dbID == $sample->dbID} @{$cached};
+    }
+    elsif ($sample->isa('Bio::EnsEMBL::Variation::Population')) {
+      my %include = map {$_->dbID => 1} @{$sample->get_all_Samples};			
+      @$results = grep {$include{$_->sample->dbID}} @{$cached};
+    }
+    else {
+      throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Sample or Bio::EnsEMBL::Variation::Population");
+    }
+  }
   else {
     $results = $cached;
   }
-	
-	return $results;
+
+  return $results;
 }
 
 sub fetch_all_by_Variation_dbID {
