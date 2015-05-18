@@ -63,6 +63,12 @@ sub new {
 }
 
 
+sub name {
+  my $self = shift;
+  return $self->{'name'} = shift if (@_);
+  return $self->{'name'};
+}
+
 sub description {
   my ($self, $description) = @_;
   $self->{description} = $description if defined $description;
@@ -93,20 +99,6 @@ sub has_coverage {
 
 sub individual {
   my $self = shift;
-  # set
-  if (@_) {
-    if (!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
-      throw("Bio::EnsEMBL::Variation::Source argument expected");
-    }
-    $self->{'individual'} = shift;
-  }
-  # get
-  else (!defined($self->{'individual'}) && $self->adaptor() && defined($self->{'individual_id'})) {
-    # lazy-load from database on demand
-    my $ia = $self->adaptor->db()->get_IndividualAdaptor();
-    $self->{'individual'} = $ia->fetch_by_dbID($self->{'individual_id'});
-  }
-  return $self->{'individual'};
 }
 
 sub get_all_Populations {
