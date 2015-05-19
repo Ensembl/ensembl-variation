@@ -25,12 +25,9 @@ my $vdb = $multi->get_DBAdaptor('variation');
 
 my $ind_adaptor = $vdb->get_IndividualAdaptor;
 
-
 my $name        = 'ind name';
 my $description = 'african';
 my $gender      = 'Male';
-my $display     = "DEFAULT";
-my $new_display = "DISPLAYABLE";
 my $type        = "Outbred";
 
 my $mother  = Bio::EnsEMBL::Variation::Individual->new(
@@ -60,7 +57,6 @@ my $ind = Bio::EnsEMBL::Variation::Individual->new(
     -gender => $gender,
     -father_individual => $father,
     -mother_individual => $mother,
-    -display => $display,
     -type_individual => $type
     );
 
@@ -69,11 +65,7 @@ ok($ind->description() eq $description, "description");
 ok($ind->gender() eq $gender, "gender" );
 ok($ind->father_Individual() == $father, "father");
 ok($ind->mother_Individual() == $mother, "mother" );
-ok($ind->display() eq $display,  "display");
-ok($ind->display($new_display) eq $new_display,  "display updated (with argument)"); 
 ok($ind->type_individual() eq $type,  "type"); 
-ok($ind->has_coverage() == 0,  "default coverage");
- 
 
 my $new_gender  = 'Female';
 $ind->gender($new_gender);
@@ -87,15 +79,11 @@ my $new_type_desc  = 'New_type_desc';
 $ind->type_description($new_type_desc);
 ok($ind->type_description() eq $new_type_desc,  "type_description update");
 
-$ind->has_coverage(1);
-ok($ind->has_coverage() == 1,  "coverage update"); 
-
 $ind->father_Individual($father2);
 ok($ind->father_Individual() == $father2, "father update");
 
 $ind->mother_Individual($mother2);
 ok($ind->mother_Individual() == $mother2, "mother update " );
-
 
 my $ind2 = Bio::EnsEMBL::Variation::Individual->new(
     -adaptor => $ind_adaptor,

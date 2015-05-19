@@ -26,11 +26,11 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
 my $pa = $vdba->get_PopulationAdaptor;
-my $ia = $vdba->get_IndividualAdaptor;
+my $sa = $vdba->get_SampleAdaptor;
 
-my ($tests, $individuals, $individual, $all);
+my ($tests, $samples, $sample, $all);
 
-# Test IndividualAdaptor
+# Test SampleAdaptor
 # fetch_all_by_Population 
 $tests = [
     { population => '1000GENOMES:phase_1_AFR', size => 246,},
@@ -39,9 +39,9 @@ $tests = [
 
 foreach my $test (@$tests) {
     my $population = $pa->fetch_by_name($test->{population});
-    my $individuals = $ia->fetch_all_by_Population($population);
-    my $size = scalar @$individuals;
-    is($size, $test->{size}, "Individual count for $test->{population}");
+    my $samples = $sa->fetch_all_by_Population($population);
+    my $size = scalar @$samples;
+    is($size, $test->{size}, "Sample count for $test->{population}");
 }
 
 # fetch_all_by_name
@@ -51,62 +51,41 @@ $tests = [
 ];
 
 foreach my $test (@$tests) {
-    $individuals = $ia->fetch_all_by_name($test->{name});
-    my $count = scalar @$individuals;
-    is($count, $test->{count}, "Number of returned individuals for $test->{name}");
+    $samples = $sa->fetch_all_by_name($test->{name});
+    my $count = scalar @$samples;
+    is($count, $test->{count}, "Number of returned samples for $test->{name}");
 }
 
 # fetch_by_dbID
-$individual = $ia->fetch_by_dbID(8675);
-is($individual->name, 'NA19122', 'Fetch by dbID 8675');
+$sample = $sa->fetch_by_dbID(8675);
+is($sample->name, 'NA19122', 'Fetch by dbID 8675');
 
 # fetch_all_by_dbID_list -- needed by web team..
 my $list = [101106];
-$individuals = $ia->fetch_all_by_dbID_list($list);
-foreach my $individual (@$individuals) {
-    is($individual->name, '1000GENOMES:phase_1:HG00120', "Fetch by dbID list [101106]");
+$samples = $sa->fetch_all_by_dbID_list($list);
+foreach my $sample (@$samples) {
+    is($sample->name, '1000GENOMES:phase_1:HG00120', "Fetch by dbID list [101106]");
 }
 
-# fetch_all_by_parent_Individual
-my $parent = $ia->fetch_by_dbID(101961);
-is($parent->name, '1000GENOMES:phase_1:NA19661', "Parent name is 1000GENOMES:phase_1:NA19661");
-
-my $populations = $parent->get_all_Populations();
-$all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$populations);
-is($all,'1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_AMR,1000GENOMES:phase_1_MXL', "Populations membership for 1000GENOMES:phase_1:NA19661");
-
-my $children = $ia->fetch_all_by_parent_Individual($parent);
-$all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
-is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA19661");
-
-# synonyms 
-my $ind =  $ia->fetch_synonyms(101101);
-ok( $ia->fetch_synonyms(101101)->[0] eq "fred", "fetch synonym") ;
-$individuals = $ia->fetch_individual_by_synonym("fred");
-ok($individuals->[0]->name eq "1000GENOMES:phase_1:HG00114", "fetch by synonym");
-
-
-
 # store
-$individual = $ia->fetch_by_dbID(8675);
-delete $individual->{$_} for qw(dbID name adaptor);
-$individual->name('test');
-ok($ia->store($individual), "store");
+$sample = $sa->fetch_by_dbID(8675);
+delete $sample->{$_} for qw(dbID name adaptor);
+$sample->name('test');
+ok($sa->store($sample), "store");
 
-($individual) = @{$ia->fetch_all_by_name('test')};
-ok($individual && $individual->name eq 'test', "fetch stored");
-
+($sample) = @{$sa->fetch_all_by_name('test')};
+ok($sample && $sample->name eq 'test', "fetch stored");
 
 # strains
 
-my $strains = $ia->fetch_all_strains();
+my $strains = $sa->fetch_all_strains();
 is(scalar @$strains, 3, "Number of strains");
 
-ok($ia->get_default_strains()->[0]  eq "NA12891", "default_strains");
+ok($sa->get_default_strains()->[0]  eq "NA12891", "default_strains");
 
-ok( $ia->get_reference_strain_name() eq "NA18635", "reference strain");
+ok($sa->get_reference_strain_name() eq "NA18635", "reference strain");
 
-$strains = $ia->get_display_strains;
+$strains = $sa->get_display_strains;
 is(scalar @$strains, 3, "Number of display strains");
 
 done_testing();

@@ -38,9 +38,9 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
   -type                   => 'local',
   -filename_template      => $dir.'/test-genome-DBs/homo_sapiens/variation/test.vcf.gz',
   -chromosomes            => [1,2,3],
-  -sample_prefix      => "s_prefix:",
+  -sample_prefix          => "s_prefix:",
   -population_prefix      => "p_prefix:",
-  -sample_populations => {
+  -sample_populations     => {
     'HG00096' => ['pop1','pop2'],
     'HG00097' => ['pop3'],
     'HG00099' => ['pop4']
@@ -112,9 +112,9 @@ $coll->filename_template($temp);
 ok($coll->filename_template =~ /^$dir/, "update filename_template");
 
 # get samples
-$inds = $coll->get_all_Samples();
-ok($inds && scalar @$inds == 3, "get_all_Samples count 3");
-ok($inds->[0]->name eq '1000GENOMES:phase_1:HG00096', "get_all_Samples first name is 1000GENOMES:phase_1:HG00096");
+$samples = $coll->get_all_Samples();
+ok($samples && scalar @$samples == 3, "get_all_Samples count 3");
+ok($samples->[0]->name eq '1000GENOMES:phase_1:HG00096', "get_all_Samples first name is 1000GENOMES:phase_1:HG00096");
 
 # get populations
 $pops = $coll->get_all_Populations();

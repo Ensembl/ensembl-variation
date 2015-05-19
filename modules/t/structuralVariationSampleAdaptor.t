@@ -33,6 +33,7 @@ my $ina  = $vdb->get_IndividualAdaptor();
 
 ok($svsa && $svsa->isa('Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor'), "isa sv sample adaptor");
 
+my $sample_name   = 'NA18635'; 
 my $ind_name   = 'NA18635'; 
 my $ind_gender = 'Male';
 my $ssv_name   = 'essv4067';
@@ -44,8 +45,8 @@ print "# Test by sv sample id\n";
 
 my $svs = $svsa->fetch_by_dbID(6107305);
 
-ok($svs->individual->name() eq $ind_name,                      'individual name by sv sample id');
-ok($svs->individual->gender() eq $ind_gender,                  'individual gender by sv sample id');
+ok($svs->sample->name() eq $ind_name,                      'individual name by sv sample id');
+ok($svs->sample->individual->gender() eq $ind_gender,                  'individual gender by sv sample id');
 ok($svs->structural_variation->variation_name() eq $ssv_name , 'sv name by sv sample id' );
 ok($svs->study->name() eq $study_name ,                        'study name by sv sample id' );
 
@@ -57,24 +58,24 @@ print "\n# Test using supporting structural variation object #\n";
 my $ssv = $ssva->fetch_by_name($ssv_name);
 $svs = ($svsa->fetch_all_by_StructuralVariation($ssv))->[0];
 
-ok($svs->individual->name() eq $ind_name,                      'individual name by sv sample id');
-ok($svs->individual->gender() eq $ind_gender,                  'individual gender by sv sample id');
+ok($svs->sample->individual->name() eq $sample_name,                   'individual name by sv sample id');
+ok($svs->sample->individual->gender() eq $ind_gender,                  'individual gender by sv sample id');
 ok($svs->structural_variation->variation_name() eq $ssv_name , 'sv name by sv sample id' );
 ok($svs->study->name() eq $study_name ,                        'study name by sv sample id' );
 
 # fetch all by StructuralVariation list
 my $svs2 = $svsa->fetch_all_by_StructuralVariation_list([$ssv]);
-ok($svs2->[0]->individual->name() eq $ind_name, 'sv sample - fetch_all_by_StructuralVariation_list');
+ok($svs2->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_StructuralVariation_list');
 
 # fetch all by StructuralVariationFeature list
 my $svfs = $svfa->fetch_all_by_StructuralVariation($ssv);
 my $svs3 = $svsa->fetch_all_by_StructuralVariationFeature_list($svfs);
-ok($svs3->[0]->individual->name() eq $ind_name, 'sv sample - fetch_all_by_StructuralVariationFeature_list');
+ok($svs3->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_StructuralVariationFeature_list');
 
 # fetch all by Study
 my $study4 = $sta->fetch_by_name($study_name);
 my $svs4 = $svsa->fetch_all_by_Study($study4);
-ok($svs4->[0]->individual->name() eq $ind_name, 'sv sample - fetch_all_by_Study');
+ok($svs4->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_Study');
 
 # fetch all by Individual
 my $ind5 = $ina->fetch_all_by_name($ind_name);

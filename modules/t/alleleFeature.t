@@ -20,7 +20,7 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::MultiTestDB;
-use Bio::EnsEMBL::Variation::Individual;
+use Bio::EnsEMBL::Variation::Sample;
 
 use_ok('Bio::EnsEMBL::Variation::AlleleFeature');
 use_ok('Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor');
@@ -58,7 +58,7 @@ ok($af1->allele_string eq 'A|T',           'allele - allele_string');
 ok($af1->variation_name eq $v_name,        'allele - variation_name');
 ok($af1->variation->name eq $v_name,       'allele - variation');
 ok($af1->source eq 'dbSNP',                'allele - source');
-ok($af1->individual->name eq $strain_name, 'allele - individual');
+ok($af1->sample->name eq $strain_name,     'allele - sample');
 ok($af1->consequence_type->[0] eq $cons,   'allele - consequence_type');
 ok($af1->display_consequence eq $cons,     'allele - display_consequence');
 ok($af1->ref_allele_string eq 'N',         'allele - ref_allele_string');
@@ -96,12 +96,12 @@ foreach my $af (@$afs) {
     my $variation_name = $af->variation_name;
     my $variation = $af->variation;
     my $source = $af->source;
-    my $individual = $af->individual->name;
+    my $sample = $af->sample->name;
     my $consequence_type = join(', ', @{$af->consequence_type});
     my $vf = $af->variation_feature;
     $hash->{$start . '-' . $end . '-' . $strand}->{'allele_string'} = $allele_string;
     $hash->{$start . '-' . $end . '-' . $strand}->{'variation_name'} = $variation_name;
-    $hash->{$start . '-' . $end . '-' . $strand}->{'individual'} = $individual;
+    $hash->{$start . '-' . $end . '-' . $strand}->{'sample'} = $sample;
     $hash->{$start . '-' . $end . '-' . $strand}->{'consequence_type'} = $consequence_type;
 }
 
