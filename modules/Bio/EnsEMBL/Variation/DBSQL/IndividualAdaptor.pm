@@ -126,24 +126,6 @@ sub store {
 	my $dbID = $dbh->last_insert_id(undef, undef, 'individual', 'individual_id');
 	$individual->{dbID}    = $dbID;
 	$individual->{adaptor} = $self;
-
-	# store individual/population relationships
-	$sth = $dbh->prepare(q{
-		INSERT INTO individual_population (
-			individual_id,
-			population_id
-		) VALUES (?,?)
-	});
-	
-	foreach my $population (@{$individual->{populations}}) {
-		next unless defined($population->dbID);
-		$sth->execute(
-			$individual->dbID,
-			$population->dbID
-		);
-	}
-	
-	$sth->finish;
 }
 
 =head2 fetch_individual_by_synonym
@@ -320,10 +302,11 @@ sub fetch_all_by_Population {
 
     my $sth = $self->prepare(q{
         SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description 
-        FROM   individual i, individual_population ip, individual_type it
-        WHERE  i.individual_id = ip.individual_id
+        FROM   individual i, individual_type it, sample s, sample_population sp
+        WHERE  sp.sample_id = s.sample_id
+        AND    s.individual_id = i.individual_id   
         AND    i.individual_type_id = it.individual_type_id
-        AND    ip.population_id = ?});
+        AND    sp.population_id = ?});
 
     $sth->bind_param(1, $pop->dbID,SQL_INTEGER);
     $sth->execute();
