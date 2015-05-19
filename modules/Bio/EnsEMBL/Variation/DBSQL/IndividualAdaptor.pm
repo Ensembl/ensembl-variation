@@ -250,7 +250,7 @@ sub fetch_all_by_name {
   defined($name) || throw("Name argument expected.");
 
   my $sth = $self->prepare(q{
-    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage
+    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description
     FROM   individual i, individual_type it
     WHERE  i.name = ?
     AND    it.individual_type_id = i.individual_type_id;});
@@ -319,7 +319,7 @@ sub fetch_all_by_Population {
     }
 
     my $sth = $self->prepare(q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description 
         FROM   individual i, individual_population ip, individual_type it
         WHERE  i.individual_id = ip.individual_id
         AND    i.individual_type_id = it.individual_type_id
@@ -365,12 +365,12 @@ sub fetch_all_by_parent_Individual {
     my $gender = $parent->gender() || '';
 
     my $father_sql = q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description 
         FROM   individual i, individual_type it
         WHERE  i.father_individual_id = ?
         AND    i.individual_type_id = it.individual_type_id;};
     my $mother_sql = q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description
         FROM   individual i, individual_type it
         WHERE  i.mother_individual_id = ?
         AND    i.individual_type_id = it.individual_type_id;};
@@ -406,125 +406,6 @@ sub fetch_all_by_parent_Individual {
         return $individuals;
     }
     return [];
-}
-
-=head2 fetch_all_strains
-
-    Args       : none
-    Example    : my $strains = $ind_adaptor->fetch_all_strains();
-    Description: Retrieves Individuals that should be considered as strain (fully inbred) in the specie.
-    Returntype : listref of Bio::EnsEMBL::Variation::Individual objetcs
-    Exceptions : none
-    Caller     : Bio:EnsEMBL:Variation::Individual
-    Status     : At Risk
-
-=cut
-
-sub fetch_all_strains {
-    my $self = shift;
-    return $self->generic_fetch("i.display in ('REFERENCE','DEFAULT','DISPLAYABLE')");
-}
-
-=head2 get_display_strains
-
-    Args       : none
-    Example    : my $strains = $ind_adaptor->get_display_strains();
-    Description: Retrieves strain_names that are going to be displayed in the web (reference + default + others)
-    Returntype : list of strings
-    Exceptions : none
-    Caller     : web
-    Status     : At Risk
-
-=cut
-
-sub get_display_strains {
-    my $self = shift;
-    my @strain_names;
-    my $name;
-    #first, get the reference strain
-    $name = $self->get_reference_strain_name();
-    push @strain_names, $name;
-    #then, get the default ones
-    my $default_strains = $self->get_default_strains();
-    push @strain_names, @{$default_strains};
-    #and finally, get the others
-    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
-    $sth->bind_param(1, 'DISPLAYABLE');
-    $sth->execute;
-    $sth->bind_columns(\$name);
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
-#    $sth->bind_param(1,'individual.display_strain',SQL_VARCHAR);
-#    $sth->execute();
-#    $sth->bind_columns(\$name);
-    while ($sth->fetch()){
-	    push @strain_names, $name;
-    }
-    $sth->finish;
-    return \@strain_names;
-}
-
-=head2 get_default_strains
-
-    Args       : none
-    Example    : my $strains = $ind_adaptor->get_default_strains();
-    Description: Retrieves strain_names that are defined as default in the database(mainly, for web purposes)
-    Returntype : list of strings
-    Exceptions : none
-    Caller     : web
-    Status     : At Risk
-
-=cut
-
-sub get_default_strains {
-    my $self = shift;
-    my @strain_names;
-    my $name;
-    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
-    $sth->bind_param(1, 'DEFAULT');
-    $sth->execute;
-    $sth->bind_columns(\$name);
-    
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
-#    $sth->bind_param(1,'individual.default_strain',SQL_VARCHAR);
-#    $sth->execute();
-#    $sth->bind_columns(\$name);
-    while ($sth->fetch()){
-        push @strain_names, $name;
-    }
-    $sth->finish;
-    return \@strain_names;
-}
-
-
-=head2 get_reference_strain_name
-
-    Args       : none
-    Example    : my $reference_strain = $ind_adaptor->get_reference_strain_name();
-    Description: Retrieves the reference strain_name that is defined as default in the database(mainly, for web purposes)
-    Returntype : string
-    Exceptions : none
-    Caller     : web
-    Status     : At Risk
-
-=cut
-
-sub get_reference_strain_name {
-    my $self = shift;
-    my $name;
-    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
-    $sth->bind_param(1, 'REFERENCE');
-    $sth->execute;
-    $sth->bind_columns(\$name);
-    $sth->fetch();
-    $sth->finish;
-    return $name;
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
-#    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
-#    $sth->execute();
-#    $sth->bind_columns(\$name);
-#    $sth->fetch();
-#    $sth->finish;
-#    return $name;
 }
 
 sub _get_name_by_dbID {
