@@ -598,7 +598,7 @@ sub source{
        $reference_allele = $self->seq;
    }
    else{
-       #we have a Strain or IndividualSlice, get the reference sequence from the method
+       #we have a Strain or SampleSlice, get the reference sequence from the method
        $reference_allele = $self->slice->ref_subseq($self->start,$self->end,$self->strand) || '-';
    }
 
