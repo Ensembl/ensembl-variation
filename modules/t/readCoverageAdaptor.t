@@ -33,8 +33,8 @@ my $cdb = $multi->get_DBAdaptor('core');
 my $sa = $cdb->get_SliceAdaptor();
 my $slice = $sa->fetch_by_region('chromosome','9',22124500,22126505);
 
-my $ia = $vdb->get_IndividualAdaptor();
-my ($i) = @{$ia->fetch_all_by_name('1000GENOMES:phase_1:NA06984')};
+my $sample_adapt = $vdb->get_SampleAdaptor();
+my ($sample) = @{$sample_adapt->fetch_all_by_name('1000GENOMES:phase_1:NA06984')};
 
 # get adaptor
 my $rca = $vdb->get_ReadCoverageAdaptor();
@@ -48,30 +48,30 @@ ok((grep {$_ eq '1'} @$levels) && (grep {$_ eq '2'} @$levels), "get_coverage_lev
 ## fetch by slice
 
 # no slice
-dies_ok { $rca->fetch_all_by_Slice_Individual_depth() } "fetch_all_by_Slice_Individual_depth - no slice";
+dies_ok { $rca->fetch_all_by_Slice_Sample_depth() } "fetch_all_by_Slice_Sample_depth - no slice";
 
 # wrong arg
-dies_ok { $rca->fetch_all_by_Slice_Individual_depth($i) } "fetch_all_by_Slice_Individual_depth - wrong arg 1";
-dies_ok { $rca->fetch_all_by_Slice_Individual_depth($slice, $slice) } "fetch_all_by_Slice_Individual_depth - wrong arg 2";
+dies_ok { $rca->fetch_all_by_Slice_Sample_depth($sample) } "fetch_all_by_Slice_Sample_depth - wrong arg 1";
+dies_ok { $rca->fetch_all_by_Slice_Sample_depth($slice, $slice) } "fetch_all_by_Slice_Sample_depth - wrong arg 2";
 
 
 # only slice
-my $cov = $rca->fetch_all_by_Slice_Individual_depth($slice);
-ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Individual_depth - no args - count");
-ok($cov->[0]->isa('Bio::EnsEMBL::Variation::ReadCoverage'), "fetch_all_by_Slice_Individual_depth - no args - isa ReadCoverage");
+my $cov = $rca->fetch_all_by_Slice_Sample_depth($slice);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Sample_depth - no args - count");
+ok($cov->[0]->isa('Bio::EnsEMBL::Variation::ReadCoverage'), "fetch_all_by_Slice_Sample_depth - no args - isa ReadCoverage");
 
-# slice and ind
-$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, $i);
-ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Individual_depth - ind");
+# slice and sample
+$cov = $rca->fetch_all_by_Slice_Sample_depth($slice, $sample);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 2, "fetch_all_by_Slice_Sample_depth - sample");
 
 # slice and level
-$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, 1);
-ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1, "fetch_all_by_Slice_Individual_depth - level");
+$cov = $rca->fetch_all_by_Slice_Sample_depth($slice, 1);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1, "fetch_all_by_Slice_Sample_depth - level");
 
-# slice, ind, level
-$cov = $rca->fetch_all_by_Slice_Individual_depth($slice, $i, 1);
-ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1 && $cov->[0]->level == 1, "fetch_all_by_Slice_Individual_depth - ind, level");
-ok($cov->[0]->seq_region_start eq '22124503' && $cov->[0]->seq_region_end eq '22125503', "fetch_all_by_Slice_Individual_depth - coords");
+# slice, sample, level
+$cov = $rca->fetch_all_by_Slice_Sample_depth($slice, $i, 1);
+ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1 && $cov->[0]->level == 1, "fetch_all_by_Slice_Sample_depth - sample, level");
+ok($cov->[0]->seq_region_start eq '22124503' && $cov->[0]->seq_region_end eq '22125503', "fetch_all_by_Slice_Sample_depth - coords");
 
 # fetch all regions covered
 my $ranges = $rca->fetch_all_regions_covered($slice, [$i->name]);
