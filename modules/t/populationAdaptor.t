@@ -67,7 +67,7 @@ is($all, '1000GENOMES:phase_1_AFR,1000GENOMES:phase_1_EUR', "Fetch by list");
 # 1000GENOMES:phase_1:HG01625 101495 -> 1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_EUR,1000GENOMES:phase_1_IBS
 
 my @sample_ids = (101495, 101096);
-my $sample = $sa->fetch_by_dbID($sample_dbids[0]);
+my $sample = $sa->fetch_by_dbID($sample_ids[0]);
 
 $populations = $pa->fetch_all_by_Sample($sample);
 
@@ -76,10 +76,10 @@ is($populations->[0]->display_group_name, '1000 Genomes Project Phase 1', "Displ
 
 # fetch_all_by_Sample_list
 my $samples = [];
-foreach my $dbid (@sample_dbids) {
+foreach my $dbid (@sample_ids) {
    push @$samples, $sa->fetch_by_dbID($dbid); 
 }
-$populations = $pa->fetch_all_by_Individual_list($ssamples);
+$populations = $pa->fetch_all_by_Sample_list($samples);
 is(scalar @$populations, 6, "Number of populations for ssamples HG01625 and HG00109");
 
 # fetch_by_name
