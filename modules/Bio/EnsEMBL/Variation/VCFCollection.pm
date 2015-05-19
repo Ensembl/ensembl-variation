@@ -423,7 +423,7 @@ sub get_all_Populations {
   my $self = shift;
 
   if(!exists($self->{populations}) || !defined $self->{populations}->[0] ) {
-    my $hash = $self->_get_Population_Individual_hash;
+    my $hash = $self->_get_Population_Sample_hash;
 
     if( $self->use_db) {
       my $pa = $self->adaptor->db->get_PopulationAdaptor;
@@ -807,7 +807,7 @@ sub _seek_by_VariationFeature {
   return defined($vcf->{record});
 }
 
-sub _get_Population_Individual_hash {
+sub _get_Population_Sample_hash {
   my $self = shift;
   
   if(!exists($self->{_population_hash})) {
@@ -819,8 +819,8 @@ sub _get_Population_Individual_hash {
       my $pa;
       my $prefix = $self->population_prefix;
       
-      foreach my $ind(@{$self->get_all_Individuals}) {
-        foreach my $pop(@{$self->{_raw_populations}->{$ind->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
+      foreach my $sample(@{$self->get_all_Samples}) {
+        foreach my $pop(@{$self->{_raw_populations}->{$sample->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
           
           # try and fetch from DB
           if(!defined($pops->{$pop})) {
@@ -836,8 +836,8 @@ sub _get_Population_Individual_hash {
             _raw_name => $pop,
           });
           
-          $hash->{$pops->{$pop}->dbID}->{$ind->dbID} = 1;
-          push @{$ind->{populations}}, $pops->{$pop};
+          $hash->{$pops->{$pop}->dbID}->{$sample->dbID} = 1;
+          push @{$sample->{populations}}, $pops->{$pop};
         }
         
         $self->{populations} = [values %$pops];
@@ -846,12 +846,12 @@ sub _get_Population_Individual_hash {
     
     # otherwise we'll have to fetch from the individuals
     else {
-      my $inds = $self->get_all_Individuals();
+      my $samples = $self->get_all_Samples();
       
       my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$inds;
       
       my $pa = $self->adaptor->db->get_PopulationAdaptor();
-      $hash = $pa->_get_individual_population_hash(\@dbIDs);
+      $hash = $pa->_get_sample_population_hash(\@dbIDs);
     }
 
     $self->{_population_hash} = $hash;
