@@ -45,11 +45,11 @@ Bio::EnsEMBL::DBSQL::VCFCollection
   # iterate over collections
   foreach my $c(@{$vca->fetch_all})
 
-    # get individuals
-    my $individuals = $c->get_all_Individuals;
+    # get samples
+    my $samples = $c->get_all_Samples;
 
     # get genotypes for a VariationFeature
-    my $gts = $c->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+    my $gts = $c->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
   }
 
 =head1 DESCRIPTION
@@ -74,8 +74,8 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
-use Bio::EnsEMBL::Variation::IndividualGenotype;
-use Bio::EnsEMBL::Variation::Individual;
+use Bio::EnsEMBL::Variation::SampleGenotype;
+use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Population;
 
 our %TYPES = (
@@ -90,21 +90,21 @@ our %TYPES = (
   Arg [-TYPE]:                   string - "local" or "remote"
   Arg [-FILENAME_TEMPLATE]:      string
   Arg [-CHROMOSOMES]:            arrayref of strings
-  Arg [-INDIVIDUAL_PREFIX]:      string
+  Arg [-SAMPLE_PREFIX]:          string
   Arg [-POPULATION_PREFIX]:      string
-  Arg [-INDIVIDUAL_POPULATIONS]: hashref - { 'ind1': ['pop1','pop2'] }
+  Arg [-SAMPLE_POPULATIONS]:     hashref - { 'sample1': ['pop1','pop2'] }
   Arg [-STRICT_NAME_MATCH]:      boolean
   Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
 
   Example    : my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
-                 -id                      => 'test',
-                 -type                    => 'local',
-                  -filename_template      => '/path/to/vcfs/test_###CHR###.vcf.gz',
-                  -chromosomes            => [1, 2, 3],
-                  -individual_populations => {
-                    'ind1': ['pop1','pop2'],
-                    'ind2': ['pop3']
-                  }
+                -id                 => 'test',
+                -type               => 'local',
+                -filename_template  => '/path/to/vcfs/test_###CHR###.vcf.gz',
+                -chromosomes        => [1, 2, 3],
+                -sample_populations => {
+                    'sample1': ['pop1','pop2'],
+                    'sample2': ['pop3']
+                 }
                );
 
   Description: Constructor.  Instantiates a new VCFCollection object.
@@ -119,7 +119,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -132,7 +132,7 @@ sub new {
     adaptor => $adaptor,
     id => $id,
     type => $type,
-    individual_prefix => $ind_prefix,
+    sample_prefix => $sample_prefix,
     population_prefix => $pop_prefix,
     populations => $populations,
     chromosomes => $chromosomes,
@@ -141,7 +141,7 @@ sub new {
     source => $source,
     strict_name_match => defined($strict) ? $strict : 0,
     _use_db => 1,
-    _raw_populations => $ind_pops,
+    _raw_populations => $sample_pops,
   );
   
   bless(\%collection, $class);
@@ -241,14 +241,14 @@ sub strict_name_match {
 }
 
 
-=head2 individual_prefix
+=head2 sample_prefix
 
-  Arg [1]    : string $individual_prefix (optional)
-               The new value to set the individual_prefix attribute to
-  Example    : my $individual_prefix = $collection->individual_prefix()
-  Description: Getter/Setter for the individual_prefix of this collection.
-               This property can be useful to align individual names from
-               the VCF header with entries in the individual database table.
+  Arg [1]    : string $sample_prefix (optional)
+               The new value to set the sample_prefix attribute to
+  Example    : my $sample_prefix = $collection->sample_prefix()
+  Description: Getter/Setter for the sample_prefix of this collection.
+               This property can be useful to align sample names from
+               the VCF header with entries in the sample database table.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -256,10 +256,10 @@ sub strict_name_match {
 
 =cut
 
-sub individual_prefix {
+sub sample_prefix {
   my $self = shift;
-  $self->{individual_prefix} = shift if @_;
-  return $self->{individual_prefix} || '';
+  $self->{sample_prefix} = shift if @_;
+  return $self->{sample_prefix} || '';
 }
 
 
@@ -332,11 +332,11 @@ sub list_chromosomes {
   Example    : my $use_db = $collection->use_db()
   Description: Getter/Setter for the use_db attribute of this collection.
                If set to 1 (default), the API will attempt to retrieve
-               Individual and Population objects from the database, using
-               individual_prefix and population_prefix as appropriate.
-               If set to 0, the API will create "fake" Individual and
+               Sample and Population objects from the database, using
+               sample_prefix and population_prefix as appropriate.
+               If set to 0, the API will create "fake" Sample and
                Population objects. Fake objects will also be created if
-               the DB fetch fails for an individual.
+               the DB fetch fails for a sample.
   Returntype : int
   Exceptions : none
   Caller     : general
@@ -387,7 +387,7 @@ sub get_all_Samples {
     foreach my $sample_name(@$sample_names) {
       
       # either use the DB one or create one
-      my $ind = $ind_objs{$prefix.$sample_name} ||
+      my $sample = $sample_objs{$prefix.$sample_name} ||
         Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
           adaptor         => $sample_adapt,
@@ -408,7 +408,7 @@ sub get_all_Samples {
 =head2 get_all_Populations
 
   Example    : my $pops = $collection->get_all_Populations()
-  Description: Get all population objects for the individuals in this
+  Description: Get all population objects for the samples in this
                collection.
   Returntype : arrayref of Bio::EnsEMBL::Variation::Population
   Exceptions : none
@@ -454,22 +454,22 @@ sub has_Population {
 }
 
 
-=head2 get_all_IndividualGenotypeFeatures_by_VariationFeature
+=head2 get_all_SampleGenotypeFeatures_by_VariationFeature
 
   Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
   Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population OR
-               Bio::EnsEMBL::Variation::Individual
-  Example    : my $gts = $collection->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)
-  Description: Get all IndividualGenotypeFeatures for a given
+               Bio::EnsEMBL::Variation::Sample
+  Example    : my $gts = $collection->get_all_SampleGenotypeFeatures_by_VariationFeature($vf)
+  Description: Get all SampleGenotypeFeatures for a given
                VariationFeature object
-  Returntype : arrayref of Bio::EnsEMBL::Variation::IndividualGenotypeFeature
+  Returntype : arrayref of Bio::EnsEMBL::Variation::SampleGenotypeFeature
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
+sub get_all_SampleGenotypeFeatures_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $sample = shift;
@@ -481,35 +481,35 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   
   my $vcf = $self->_current();
   
-  my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
-  my @individual_names = map {$_->{_raw_name}} @$individuals;
+  my $samples = $self->_limit_Sample($self->get_all_Samples, $sample);
+  my @sample_names = map {$_->{_raw_name}} @$samples;
   
-  return $self->_create_IndividualGenotypeFeatures(
-    $individuals,
-    $vcf->get_individuals_genotypes(\@individual_names),
+  return $self->_create_SampleGenotypeFeatures(
+    $samples,
+    $vcf->get_samples_genotypes(\@sample_names),
     $vf
   );
 }
 
 
-=head2 get_all_IndividualGenotypeFeatures_by_Slice
+=head2 get_all_SampleGenotypeFeatures_by_Slice
 
   Arg[1]     : Bio::EnsEMBL::Slice $slice
   Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population OR
-               Bio::EnsEMBL::Variation::Individual
+               Bio::EnsEMBL::Variation::Sample
   Arg[3]     : (optional) $non_ref_only
-  Example    : my $gts = $collection->get_all_IndividualGenotypeFeatures_by_Slice($slice)
-  Description: Get all IndividualGenotypeFeatures for a given
+  Example    : my $gts = $collection->get_all_SampleGenotypeFeatures_by_Slice($slice)
+  Description: Get all SampleGenotypeFeatures for a given
                genomic region represented by a slice. Set $non_ref_only to a true
                value to skip homozygous reference genotypes.
-  Returntype : arrayref of Bio::EnsEMBL::Variation::IndividualGenotypeFeature
+  Returntype : arrayref of Bio::EnsEMBL::Variation::SampleGenotypeFeature
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub get_all_IndividualGenotypeFeatures_by_Slice {
+sub get_all_SampleGenotypeFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $sample = shift;
@@ -530,10 +530,10 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   }
   
   my @genotypes;
-  my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
-  my @individual_names = map {$_->{_raw_name}} @$individuals;
+  my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
+  my @sample_names = map {$_->{_raw_name}} @$samples;
   
-  return [] unless scalar @$individuals;
+  return [] unless scalar @$samples;
   
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
     my $start = $vcf->get_raw_start;
@@ -553,7 +553,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
     }
     
     if($vf) {
-      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes(\@individual_names, $non_ref_only), $vf)};
+      push @genotypes, @{$self->_create_SampleGenotypeFeatures($samples, $vcf->get_samples_genotypes(\@sample_names, $non_ref_only), $vf)};
     }
     
     $vcf->next();
@@ -603,7 +603,7 @@ sub assembly{
 
 # This method is called in LDFeatureContainerAdaptor::_fetch_by_Slice_VCF.
 # It bypasses a lot of the object-creation overhead of
-# get_all_IndividualGenotypeFeatures_by_Slice so should return quite a bit faster
+# get_all_SampleGenotypeFeatures_by_Slice so should return quite a bit faster
 sub _get_all_LD_genotypes_by_Slice {
   my $self = shift;
   my $slice = shift;
@@ -614,45 +614,45 @@ sub _get_all_LD_genotypes_by_Slice {
   my $vcf = $self->_current();
   
   my @genotypes;
-  my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
-  my @individual_names = map {$_->{_raw_name}} @$individuals;
+  my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
+  my @sample_names = map {$_->{_raw_name}} @$samples;
   
   my %gts;
   
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
-    $gts{$vcf->get_raw_start} = $vcf->get_individuals_genotypes(\@individual_names);
+    $gts{$vcf->get_raw_start} = $vcf->get_samples_genotypes(\@sample_names);
     $vcf->next();
   }
   
   return \%gts;
 }
 
-sub _limit_Individuals {
+sub _limit_Samples {
   my $self = shift;
-  my $individuals = shift;
+  my $samples = shift;
   my $sample = shift;
-  my $limited = $individuals;
+  my $limited = $samples;
   
-  # limit by individual or population?
+  # limit by sample or population?
   if(defined($sample)) {
-    if($sample->isa('Bio::EnsEMBL::Variation::Individual')) {
-      $limited = [grep {$_->name eq $sample->name} @$individuals];
+    if($sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+      $limited = [grep {$_->name eq $sample->name} @$samples];
     }
     elsif($sample->isa('Bio::EnsEMBL::Variation::Population')) {
-      my %limit = map {$_->name => 1} @{$sample->get_all_Individuals};
-      $limited = [grep {defined($limit{$_->name})} @$individuals];
+      my %limit = map {$_->name => 1} @{$sample->get_all_Samples};
+      $limited = [grep {defined($limit{$_->name})} @$samples];
     }
     else {
-      throw("Argument $sample is not a Bio::EnsEMBL::Variation::Individual or ::Popluation");
+      throw("Argument $sample is not a Bio::EnsEMBL::Variation::Sample or ::Popluation");
     }
   }
   
   return $limited;
 }
 
-sub _create_IndividualGenotypeFeatures {
+sub _create_SampleGenotypeFeatures {
   my $self = shift;
-  my $individuals = shift;
+  my $samples = shift;
   my $raw_gts = shift;
   my $vf = shift;
   
@@ -661,12 +661,12 @@ sub _create_IndividualGenotypeFeatures {
   
   my @genotypes;
   
-  $self->{_gta} ||= $self->use_db ? $self->adaptor->db->get_IndividualGenotypeFeatureAdaptor : undef;
+  $self->{_gta} ||= $self->use_db ? $self->adaptor->db->get_SampleGenotypeFeatureAdaptor : undef;
   
-  foreach my $ind(@$individuals) {
-    next unless defined($raw_gts->{$ind->{_raw_name}});
+  foreach my $sample(@$samples) {
+    next unless defined($raw_gts->{$sample->{_raw_name}});
     
-    my $raw_gt = $raw_gts->{$ind->{_raw_name}};
+    my $raw_gt = $raw_gts->{$sample->{_raw_name}};
     my $phased = ($raw_gt =~ /\|/ ? 1 : 0);
     
     my @bits = split(/\||\/|\\/, $raw_gt);
@@ -689,10 +689,10 @@ sub _create_IndividualGenotypeFeatures {
     }
     
     # create genotype objects
-    push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
+    push @genotypes, Bio::EnsEMBL::Variation::SampleGenotypeFeature->new_fast({
       _variation_id     => $vf->{_variation_id},
       variation_feature => $vf,
-      individual        => $ind,
+      sample            => $sample,
       genotype          => \@bits,
       phased            => $phased,
       adaptor           => $self->{_gta},
@@ -842,7 +842,7 @@ sub _get_Population_Sample_hash {
       }
     }
     
-    # otherwise we'll have to fetch from the individuals
+    # otherwise we'll have to fetch from the samples
     else {
       my $samples = $self->get_all_Samples();
       
