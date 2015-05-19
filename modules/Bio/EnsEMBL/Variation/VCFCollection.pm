@@ -351,59 +351,57 @@ sub use_db {
 }
 
 
-=head2 get_all_Individuals
+=head2 get_all_Samples
 
-  Example    : my $inds = $collection->get_all_Individuals()
-  Description: Get all individual objects that will have genotypes in
+  Example    : my $samples = $collection->get_all_Samples()
+  Description: Get all sample objects that will have genotypes in
                this collection.
-  Returntype : arrayref of Bio::EnsEMBL::Variation::Individual
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Sample
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub get_all_Individuals {
+sub get_all_Samples {
   my $self = shift;
   
-  if(!defined($self->{individuals})) {
+  if(!defined($self->{samples})) {
     
-    # we should only need to get individuals from one chromosome's VCF
+    # we should only need to get samples from one chromosome's VCF
     my $chr = $self->list_chromosomes->[0];
     my $vcf = $self->_get_vcf_by_chr($chr);
     
     throw("ERROR: VCF file ".$self->_get_vcf_filename_by_chr($chr)." not found\n") unless $vcf;
     
-    my $prefix = $self->individual_prefix;
-    my $ia = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
+    my $prefix = $self->sample_prefix;
+    my $sample_adpt = $self->use_db ? $self->adaptor->db->get_SampleAdaptor() : undef;
     
-    my $ind_names = $vcf->get_individuals();
+    my $sample_names = $vcf->get_samples();
     
     # do a fetch_all_by_name_list
-    my %ind_objs;
-    %ind_objs = map {$_->name() => $_} @{$ia->fetch_all_by_name_list([map {$prefix.$_} @$ind_names])} if $self->use_db;
+    my %sample_objs;
+    %sample_objs = map {$_->name() => $_} @{$sample_adpt->fetch_all_by_name_list([map {$prefix.$_} @$sample_names])} if $self->use_db;
     
     # some may not be in DB
-    foreach my $ind_name(@$ind_names) {
+    foreach my $sample_name(@$sample_names) {
       
       # either use the DB one or create one
-      my $ind = $ind_objs{$prefix.$ind_name} ||
-        Bio::EnsEMBL::Variation::Individual->new_fast({
-          name            => $prefix.$ind_name,
-          adaptor         => $ia,
-          type_individual => 'outbred',
-          display         => 'UNDISPLAYABLE',
-          dbID            => --($self->{_individual_id}),
+      my $ind = $ind_objs{$prefix.$sample_name} ||
+        Bio::EnsEMBL::Variation::Sample->new_fast({
+          name            => $prefix.$sample_name,
+          adaptor         => $sample_adapt,
+          dbID            => --($self->{_sample_id}),
         });
       
       # store the raw name to easily match to data returned from other methods
-      $ind->{_raw_name} = $ind_name;
+      $sample->{_raw_name} = $sample_name;
       
-      push @{$self->{individuals}}, $ind;
+      push @{$self->{samples}}, $sample;
     }
   }
   
-  return $self->{individuals};
+  return $self->{samples};
 }
 
 
