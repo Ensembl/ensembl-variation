@@ -111,7 +111,7 @@ sub store {
       gender,
       father_individual_id,
       mother_individual_id,
-      individual_type_id,
+      individual_type_id
 		) VALUES (?,?,?,?,?,?)
 	});
 	$sth->execute(
