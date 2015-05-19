@@ -526,7 +526,7 @@ sub fetch_all_by_Individual {
 
   my $sth = $self->prepare(qq{
     SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-    FROM population p, sample_population sp, sample s
+    FROM sample_population sp, sample s, population p
     LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
     WHERE p.population_id = sp.population_id
     AND sp.sample_id = s.sample_id
