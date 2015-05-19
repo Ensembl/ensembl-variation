@@ -38,9 +38,9 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
   -type                   => 'local',
   -filename_template      => $dir.'/test-genome-DBs/homo_sapiens/variation/test.vcf.gz',
   -chromosomes            => [1,2,3],
-  -individual_prefix      => "i_prefix:",
+  -sample_prefix      => "s_prefix:",
   -population_prefix      => "p_prefix:",
-  -individual_populations => {
+  -sample_populations => {
     'HG00096' => ['pop1','pop2'],
     'HG00097' => ['pop3'],
     'HG00099' => ['pop4']
@@ -52,7 +52,7 @@ ok($c->id() eq 'test', "id");
 ok($c->type() eq 'local', "type");
 ok($c->strict_name_match() eq 0, "strict_name_match");
 ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test.vcf.gz', "filename_template");
-ok($c->individual_prefix() eq "i_prefix:", "individual_prefix");
+ok($c->sample_prefix() eq "s_prefix:", "sample_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
 
 # tell it not to use the DB
@@ -62,10 +62,10 @@ ok(!$c->use_db(0), "use_db");
 my $chrs = $c->list_chromosomes();
 ok($chrs && scalar @$chrs == 3 && $chrs->[0] eq '1', "list_chromosomes");
 
-# get individuals
-my $inds = $c->get_all_Individuals();
-ok($inds && scalar @$inds == 3, "get_all_Individuals count 3");
-ok($inds->[0]->name eq 'i_prefix:HG00096', "get_all_Individuals first name is i_prefix:phase_1:HG00096");
+# get samples
+my $samples = $c->get_all_Samples();
+ok($samples && scalar @$samples == 3, "get_all_Samples count 3");
+ok($samples->[0]->name eq 's_prefix:HG00096', "get_all_Samples first name is s_prefix:phase_1:HG00096");
 
 # get populations
 my $pops = $c->get_all_Populations();
@@ -76,7 +76,7 @@ ok($c->has_Population('p_prefix:pop1'), "has_Population p_prefix:pop1");
 # test getter/setters
 ok(test_getter_setter($c, 'id', 'new_id'), "get/set id");
 ok(test_getter_setter($c, 'filename_template', 'new_filename_template'), "get/set filename_template");
-ok(test_getter_setter($c, 'individual_prefix', 'new_individual_prefix'), "get/set individual_prefix");
+ok(test_getter_setter($c, 'sample_prefix', 'new_sample_prefix'), "get/set sample_prefix");
 ok(test_getter_setter($c, 'population_prefix', 'new_population_prefix'), "get/set population_prefix");
 
 # test invalid value for type
@@ -111,10 +111,10 @@ $temp =~ s/###t\-root###/$dir/;
 $coll->filename_template($temp);
 ok($coll->filename_template =~ /^$dir/, "update filename_template");
 
-# get individuals
-$inds = $coll->get_all_Individuals();
-ok($inds && scalar @$inds == 3, "get_all_Individuals count 3");
-ok($inds->[0]->name eq '1000GENOMES:phase_1:HG00096', "get_all_Individuals first name is 1000GENOMES:phase_1:HG00096");
+# get samples
+$inds = $coll->get_all_Samples();
+ok($inds && scalar @$inds == 3, "get_all_Samples count 3");
+ok($inds->[0]->name eq '1000GENOMES:phase_1:HG00096', "get_all_Samples first name is 1000GENOMES:phase_1:HG00096");
 
 # get populations
 $pops = $coll->get_all_Populations();
@@ -127,17 +127,17 @@ ok($v && $v->isa('Bio::EnsEMBL::Variation::Variation'), "get variation rs7569578
 my ($vf) = @{$v->get_all_VariationFeatures};
 ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature");
 
-my $gts = $coll->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
-ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_VariationFeature count 3");
-ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_VariationFeature first genotype T|T");
+my $gts = $coll->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
+ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_VariationFeature count 3");
+ok($gts->[0]->genotype_string eq 'T|T', "get_all_SampleGenotypeFeatures_by_VariationFeature first genotype T|T");
 
 # fetch genotypes by slice
 my $slice = $sa->fetch_by_region('chromosome', 2, 45401130, 45421130);
 ok($slice && $slice->isa('Bio::EnsEMBL::Slice'), "get slice");
 
-$gts = $coll->get_all_IndividualGenotypeFeatures_by_Slice($slice);
-ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_Slice count 3");
-ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_Slice first genotype T|T");
+$gts = $coll->get_all_SampleGenotypeFeatures_by_Slice($slice);
+ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_Slice count 3");
+ok($gts->[0]->genotype_string eq 'T|T', "get_all_SampleGenotypeFeatures_by_Slice first genotype T|T");
 
 # fetch LD genotypes by slice
 my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
