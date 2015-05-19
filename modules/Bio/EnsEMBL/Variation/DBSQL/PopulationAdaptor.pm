@@ -526,10 +526,10 @@ sub fetch_all_by_Individual {
 
   my $sth = $self->prepare(qq{
     SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-    FROM sample_population sp, population p
+    FROM population p, sample_population sp
     LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
     WHERE p.population_id = sp.population_id
-    AND sp.sample_id = ?;
+    AND sp.individual_id = ?;
   });
   $sth->bind_param(1,$ind->dbID,SQL_INTEGER);
   $sth->execute();
@@ -538,6 +538,48 @@ sub fetch_all_by_Individual {
   return $populations;
 }
 
+=head2 fetch_all_by_Sample
+
+  Arg [1]     : Bio::EnsEMBL::Variation::Sample $sample
+  Example     : my $ind = $ind_adaptor->fetch_by_name('NA12004');
+                foreach my $pop (@{$pop_adaptor->fetch_all_by_Sample($sample)}){
+                  print $pop->name, "\n";
+                }
+  Description : Retrieves all populations from a specified sample
+  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided sample does not have a dbID
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub fetch_all_by_Sample {
+  my $self = shift;
+  my $sample = shift;
+
+  if (!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+    throw("Bio::EnsEMBL::Variation::Sample arg expected");
+  }
+
+  if (!$sample->dbID()) {
+    warning("Sample does not have dbID, cannot retrieve Populations");
+    return [];
+  } 
+
+  my $sth = $self->prepare(qq{
+    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM sample_population sp, population p
+    LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
+    WHERE p.population_id = sp.population_id
+    AND sp.sample_id = ?;
+  });
+  $sth->bind_param(1, $sample->dbID, SQL_INTEGER);
+  $sth->execute();
+  my $populations = $self->_objs_from_sth($sth);
+  $sth->finish();
+  return $populations;
+}
 
 =head2 fetch_all_by_Individual_list
 
@@ -571,10 +613,10 @@ sub fetch_all_by_Individual_list {
 	
 	my $sth = $self->prepare(qq{
 		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-    FROM individual_population ip, population p
+    FROM sample_population sp, population p
     LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-		WHERE p.population_id = ip.population_id
-		AND ip.individual_id $id_str
+		WHERE p.population_id = sp.population_id
+		AND sp.individual_id $id_str
 	});
 	$sth->execute();
 	my $populations = $self->_objs_from_sth($sth);
@@ -582,6 +624,48 @@ sub fetch_all_by_Individual_list {
 	return $populations;
 }
 
+=head2 fetch_all_by_Sample_list
+
+  Arg [1]     : listref of of Bio::EnsEMBL::Variation::Sample objects
+  Example     : foreach my $pop (@{$pop_adaptor->fetch_all_by_Sample_list($samples)}){
+                  print $pop->name,"\n";
+                }
+  Description : Retrieves all populations from a list of samples 
+  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided samples do not have a dbIDs
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub fetch_all_by_Sample_list {
+	my $self = shift;
+	my $list = shift;
+	
+	if (!ref($list) || !$list->[0]->isa('Bio::EnsEMBL::Variation::Sample')) {
+		throw("Listref of Bio::EnsEMBL::Variation::Sample arg expected");
+	}
+	
+	if (!$list->[0]->dbID()) {
+		warning("First Sample does not have a dbID, cannot retrieve Populations");
+		return [];
+	}
+	
+	my $id_str = " IN (" . join(',', map {$_->dbID} @$list). ")";	
+	
+	my $sth = $self->prepare(qq{
+		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+    FROM sample_population sp, population p
+    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
+		WHERE p.population_id = sp.population_id
+		AND sp.sample_id $id_str
+	});
+	$sth->execute();
+	my $populations = $self->_objs_from_sth($sth);
+	$sth->finish();
+	return $populations;
+}
 
 =head2 fetch_tagged_Population
 
