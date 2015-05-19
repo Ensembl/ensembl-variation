@@ -343,7 +343,7 @@ sub _fetch_all_by_Variation_from_Genotypes {
   }
   else {
     my $pa = $self->db->get_PopulationAdaptor();
-    %pop_hash = %{$pa->_get_individual_population_hash([map {$_->{_individual_id}} @$genotypes])};
+    %pop_hash = %{$pa->_get_sample_population_hash([map {$_->{_individual_id}} @$genotypes])};
     return [] unless %pop_hash;
 	
     @pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
