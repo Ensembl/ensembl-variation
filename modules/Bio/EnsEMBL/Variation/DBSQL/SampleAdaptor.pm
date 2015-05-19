@@ -336,6 +336,107 @@ sub _get_name_by_dbID {
   return $name;
 }
 
+=head2 fetch_all_strains
+    Args       : none
+    Example    : my $strains = $sample_adaptor->fetch_all_strains();
+    Description: Retrieves Samples that should be considered as strain (fully inbred).
+    Returntype : listref of Bio::EnsEMBL::Variation::Sample objetcs
+    Exceptions : none
+    Caller     : Bio:EnsEMBL:Variation::Sample
+    Status     : At Risk
+=cut
+
+sub fetch_all_strains {
+    my $self = shift;
+    return $self->generic_fetch("s.display in ('REFERENCE','DEFAULT','DISPLAYABLE')");
+}
+
+
+=head2 get_display_strains
+
+    Args       : none
+    Example    : my $strains = $sample_adaptor->get_display_strains();
+    Description: Retrieves strain_names that are going to be displayed in the web (reference + default + others)
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : web
+    Status     : At Risk
+
+=cut
+
+sub get_display_strains {
+    my $self = shift;
+    my @strain_names;
+    my $name;
+    #first, get the reference strain
+    $name = $self->get_reference_strain_name();
+    push @strain_names, $name;
+    #then, get the default ones
+    my $default_strains = $self->get_default_strains();
+    push @strain_names, @{$default_strains};
+    #and finally, get the others
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    $sth->bind_param(1, 'DISPLAYABLE');
+    $sth->execute;
+    $sth->bind_columns(\$name);
+    while ($sth->fetch()){
+      push @strain_names, $name;
+    }
+    $sth->finish;
+    return \@strain_names;
+}
+
+=head2 get_default_strains
+
+    Args       : none
+    Example    : my $strains = $sample_adaptor->get_default_strains();
+    Description: Retrieves strain_names that are defined as default in the database(mainly, for web purposes)
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : web
+    Status     : At Risk
+
+=cut
+
+sub get_default_strains {
+    my $self = shift;
+    my @strain_names;
+    my $name;
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    $sth->bind_param(1, 'DEFAULT');
+    $sth->execute;
+    $sth->bind_columns(\$name);
+    while ($sth->fetch()){
+        push @strain_names, $name;
+    }
+    $sth->finish;
+    return \@strain_names;
+}
+
+=head2 get_reference_strain_name
+
+    Args       : none
+    Example    : my $reference_strain = $sample_adaptor->get_reference_strain_name();
+    Description: Retrieves the reference strain_name that is defined as default in the database(mainly, for web purposes)
+    Returntype : string
+    Exceptions : none
+    Caller     : web
+    Status     : At Risk
+
+=cut
+
+sub get_reference_strain_name {
+    my $self = shift;
+    my $name;
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    $sth->bind_param(1, 'REFERENCE');
+    $sth->execute;
+    $sth->bind_columns(\$name);
+    $sth->fetch();
+    $sth->finish;
+    return $name;
+}
+
 #
 # private method, constructs Samples from an executed statement handle
 # ordering of columns must be consistant
