@@ -81,9 +81,6 @@ use vars qw(@ISA);
   Arg [-ADAPTOR] :
     Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor
     Adaptor which provides database connectivity for this StructuralVariationSample object
-  
-  Arg [-INDIVIDUAL] :
-    object ref - the individual object associated with the structural variant.
 
   Arg [-SAMPLE] :
     object ref - the sample object associated with the structural variant.
@@ -120,8 +117,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$structural_variation_id,$individual,$strain,$study_id, $study) =
-    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID INDIVIDUAL STRAIN _STUDY_ID STUDY)],@_); 
+  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain,$study_id, $study) =
+    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE STRAIN _STUDY_ID STUDY)],@_); 
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
