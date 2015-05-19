@@ -814,7 +814,7 @@ sub get_sample_id_for_population_names {
   warn('The use of this method is deprecated. Use get_dbIDs_for_population_names instead.');
 }
 
-sub _get_individual_population_hash {
+sub _get_sample_population_hash {
 	my $self = shift;
 	my $id_list_ref = shift;
 
@@ -844,16 +844,16 @@ sub _get_individual_population_hash {
 		}
 		
 		my $sth = $self->prepare(qq/
-			SELECT individual_id, population_id
-			FROM individual_population
-			WHERE individual_id $id_str
+			SELECT sample_id, population_id
+			FROM sample_population
+			WHERE sample_id $id_str
 		/);
 		
 		$sth->execute();
 		
-		my ($ind, $pop);
-		$sth->bind_columns(\$ind, \$pop);
-		$ip_hash{$pop}{$ind} = 1 while $sth->fetch;
+		my ($sample, $pop);
+		$sth->bind_columns(\$sample, \$pop);
+		$ip_hash{$pop}{$sample} = 1 while $sth->fetch;
 		$sth->finish();
 	}
 	
