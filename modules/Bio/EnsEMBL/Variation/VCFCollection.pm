@@ -390,7 +390,7 @@ sub get_all_Samples {
       my $sample = $sample_objs{$prefix.$sample_name} ||
         Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
-          adaptor         => $sample_adapt,
+          adaptor         => $sample_adpt,
           dbID            => --($self->{_sample_id}),
         });
       
