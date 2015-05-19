@@ -69,12 +69,12 @@ $cov = $rca->fetch_all_by_Slice_Sample_depth($slice, 1);
 ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1, "fetch_all_by_Slice_Sample_depth - level");
 
 # slice, sample, level
-$cov = $rca->fetch_all_by_Slice_Sample_depth($slice, $i, 1);
+$cov = $rca->fetch_all_by_Slice_Sample_depth($slice, $sample, 1);
 ok($cov && ref($cov) eq 'ARRAY' && scalar @$cov == 1 && $cov->[0]->level == 1, "fetch_all_by_Slice_Sample_depth - sample, level");
 ok($cov->[0]->seq_region_start eq '22124503' && $cov->[0]->seq_region_end eq '22125503', "fetch_all_by_Slice_Sample_depth - coords");
 
 # fetch all regions covered
-my $ranges = $rca->fetch_all_regions_covered($slice, [$i->name]);
+my $ranges = $rca->fetch_all_regions_covered($slice, [$sample->name]);
 my $exp = [
   [
     22124503,
