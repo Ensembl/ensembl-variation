@@ -47,9 +47,10 @@ sub new {
     $individual_id,
     $name,
     $desc,
+    $study,
     $study_id,
     $display_flag,
-    $has_coverage) = rearrange([qw(dbID adaptor individual individual_id name description study_id display has_coverage)], @_);
+    $has_coverage) = rearrange([qw(dbID adaptor individual individual_id name description study study_id display has_coverage)], @_);
 
   $display_flag ||= 'UNDISPLAYABLE'; 
 
@@ -60,6 +61,7 @@ sub new {
     'individual_id' => $individual_id,
     'name' => $name,
     'description' => $desc,
+    'study' => $study,
     'study_id' => $study_id,
     'display' => $display_flag,
     'has_coverage' => $has_coverage,
@@ -121,6 +123,23 @@ sub individual {
   }
 
   return $self->{'individual'};
+}
+
+sub study {
+  my $self = shift;
+  if (@_) {
+    if (!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Study')) {
+      throw("Bio::EnsEMBL::Variation::Study argument expected");
+    }
+    $self->{'study'} = shift;
+  }
+  elsif (!defined($self->{'study'}) && $self->adaptor() && defined($self->{'study_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_StudyAdaptor();
+    $self->{'study'} = $sa->fetch_by_dbID($self->{'study_id'});
+  }
+
+  return $self->{'study'};
 }
 
 sub get_all_Populations {
