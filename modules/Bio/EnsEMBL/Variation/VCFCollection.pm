@@ -385,7 +385,6 @@ sub get_all_Samples {
     
     # some may not be in DB
     foreach my $sample_name(@$sample_names) {
-      
       # either use the DB one or create one
       my $sample = $sample_objs{$prefix.$sample_name} ||
         Bio::EnsEMBL::Variation::Sample->new_fast({
@@ -481,7 +480,7 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
   
   my $vcf = $self->_current();
   
-  my $samples = $self->_limit_Sample($self->get_all_Samples, $sample);
+  my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
   my @sample_names = map {$_->{_raw_name}} @$samples;
   
   return $self->_create_SampleGenotypeFeatures(
