@@ -25,6 +25,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Source;
 use Bio::EnsEMBL::Variation::Study;
+use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 use Bio::EnsEMBL::Variation::StructuralVariationSample;
@@ -66,16 +67,15 @@ my $ind = Bio::EnsEMBL::Variation::Individual->new
    -gender      => $ind_gender
 );
 
-## need strain (Individual object)
+## need strain (Sample object)
 
 my $strain_id     = 8675;
 my $strain_name   = 'NA19122';
-my $strain_gender = 'Male';
 
-my $strain = Bio::EnsEMBL::Variation::Individual->new
-  (-dbID        => $strain_id,
-   -name        => $strain_name,
-   -gender      => $strain_gender
+my $strain = Bio::EnsEMBL::Variation::Sample->new
+  (-dbID => $strain_id,
+   -name => $strain_name,
+   -individual => $ind
 );
 
 ## need Supporting Structural Variantion object 
@@ -89,13 +89,11 @@ my $ssv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
    -source => $source
 );
 
-
 my $dbID = 6107305;
 
 my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
   (-dbID                     => $dbID,
    -_structural_variation_id => $ssv->dbID,
-   -individual               => $ind,
    -strain                   => $strain,
    -study                    => $study,
    -adaptor                  => $svs_adaptor
@@ -104,11 +102,10 @@ my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
 ok($svs->dbID() eq $dbID,                                     'dbID');
 ok($svs->structural_variation->variation_name() eq $ssv_name, 'ssv name');
 # Individual
-ok($svs->individual->name() eq $ind_name,                     'individual name');
-ok($svs->individual->gender() eq $ind_gender,                 'individual gender ');
+ok($svs->strain->individual->name() eq $ind_name,                     'individual name');
+ok($svs->strain->individual->gender() eq $ind_gender,                 'individual gender ');
 # Strain
 ok($svs->strain->name() eq $strain_name,                      'strain name');
-ok($svs->strain->gender() eq $strain_gender,                  'strain gender ');
 # Study
 ok($svs->study->name() eq $study_name ,                       'study name' );
 
