@@ -400,8 +400,8 @@ sub _fetch_by_Slice_VCF {
       $genotypes->{$p}->{$_} = $vc_genotypes->{$p}->{$_} for keys %{$vc_genotypes->{$p}};
     }
     
-    # get Population->Individual hash; we need to trim and transpose this
-    my $hash = $vc->_get_Population_Individual_hash();
+    # get Population->Sample hash; we need to trim and transpose this
+    my $hash = $vc->_get_Population_Sample_hash();
     
     # copy hash before deleting from it
     $hash = { %$hash };
