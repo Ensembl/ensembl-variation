@@ -101,7 +101,7 @@ sub store {
       study_id,
       display,
       has_coverage
-		) VALUES (?,?,?,?,?,?,?,?)
+		) VALUES (?,?,?,?,?,?)
 	});
 	$sth->execute(
     $individual_id,
