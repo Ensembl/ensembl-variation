@@ -151,7 +151,7 @@ ok($pfs->[0]->phenotype->description eq 'ACHONDROPLASIA', 'sv -> get_all_Phenoty
 
 # test get all StructuralVariationSamples
 my $svss = $sv2->get_all_StructuralVariationSamples();
-ok($svss->[0]->individual->name eq 'NA12891', 'sv -> get_all_StructuralVariationSamples');
+ok($svss->[0]->sample->name eq 'NA12891', 'sv -> get_all_StructuralVariationSamples');
 
 
 ok($sv2->summary_as_hash->{'display_id'} eq $name, 'sv-> summary');
