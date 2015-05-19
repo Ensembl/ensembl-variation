@@ -7,7 +7,7 @@
       "type": "local",
       "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/test.vcf.gz",
       "chromosomes": [ "2" ],
-      "individual_prefix": "1000GENOMES:phase_1:",
+      "sample_prefix": "1000GENOMES:phase_1:",
       "source_name": "1000genomes",
       "source_version": "20141202",
       "source_url": "http://www.1000genomes.org"
