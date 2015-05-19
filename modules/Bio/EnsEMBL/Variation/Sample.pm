@@ -43,18 +43,20 @@ sub new {
   my (
     $dbID,
     $adaptor,
+    $individual,
     $individual_id,
     $name,
     $desc,
     $study_id,
     $display_flag,
-    $has_coverage) = rearrange([qw(dbID adaptor individual_id name description study_id display has_coverage)], @_);
+    $has_coverage) = rearrange([qw(dbID adaptor individual individual_id name description study_id display has_coverage)], @_);
 
   $display_flag ||= 'UNDISPLAYABLE'; 
 
   return bless {
     'dbID'    => $dbID,
     'adaptor' => $adaptor,
+    'individual' => $individual,
     'individual_id' => $individual_id,
     'name' => $name,
     'description' => $desc,
@@ -64,6 +66,11 @@ sub new {
   }, $class;
 }
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
 
 sub name {
   my $self = shift;
@@ -101,6 +108,19 @@ sub has_coverage {
 
 sub individual {
   my $self = shift;
+  if (@_) {
+    if (!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw("Bio::EnsEMBL::Variation::Individual argument expected");
+    }
+    $self->{'individual'} = shift;
+  }
+  elsif (!defined($self->{'individual'}) && $self->adaptor() && defined($self->{'individual_id'})) {
+    # lazy-load from database on demand
+    my $ia = $self->adaptor->db()->get_IndividualAdaptor();
+    $self->{'individual'} = $ia->fetch_by_dbID($self->{'individual_id'});
+  }
+
+  return $self->{'individual'};
 }
 
 sub get_all_Populations {
