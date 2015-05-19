@@ -82,8 +82,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 =head2 fetch_all_by_Slice
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
-   Arg[1]      : (optional) Bio::EnsEMBL::Variation::Individual $individual
-   Example     : my $vf = $vfa->fetch_all_by_Slice($slice,$individual);   
+   Arg[1]      : (optional) Bio::EnsEMBL::Variation::Sample $sample
+   Example     : my $vf = $vfa->fetch_all_by_Slice($slice, $sample);   
    Description : Gets all the VariationFeatures in a certain Slice for a given
                  Individual (optional). Individual must be a designated strain.
    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
@@ -96,25 +96,25 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 sub fetch_all_by_Slice{
   my $self = shift;
   my $slice = shift; 
-  my $individual = shift;
+  my $sample = shift;
   
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
   }
   
-  if (defined $individual){
-    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
+  if (defined $sample){
+    if(!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
       throw('Bio::EnsEMBL::Variation::Individual arg expected');
     }
-    if(!defined($individual->dbID())) {
+    if(!defined($sample->dbID())) {
       throw("Individual arg must have defined dbID");
     }
   }
   
   %{$self->{'_slice_feature_cache'}} = (); #clean the cache to avoid caching problems
   
-  my $genotype_adaptor = $self->db->get_IndividualGenotypeFeatureAdaptor; #get genotype adaptor
-  my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice, $individual); #and get all genotype data 
+  my $genotype_adaptor = $self->db->get_SampleGenotypeFeatureAdaptor; #get genotype adaptor
+  my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice, $sample); #and get all genotype data 
   my $afs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $self->db->_exclude_failed_variations_constraint('vf')); #get all AlleleFeatures within the Slice
   my @new_afs = ();
   
@@ -144,8 +144,8 @@ sub fetch_all_by_Slice{
       # add the genotype
       $new_af->allele_string($gt->ambiguity_code);
       
-      # add the individual
-      $new_af->individual($gt->individual);
+      # add the sample
+      $new_af->sample($gt->sample);
       
       push @new_afs, $new_af;
     }
