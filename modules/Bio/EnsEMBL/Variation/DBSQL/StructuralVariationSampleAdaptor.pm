@@ -201,7 +201,6 @@ sub fetch_all_by_Study {
 	return $self->generic_fetch($constraint);
 }
 
-
 =head2 fetch_all_by_Individual
 
   Arg [1]    : Bio::EnsEMBL:Variation::Individual $individual
@@ -222,7 +221,7 @@ sub fetch_all_by_Individual {
     throw('Bio::EnsEMBL::Variation::Individual arg expected');
   }
  	
-	my $constraint = $self->_internal_exclude_failed_constraint('i1.individual_id = '.$individual->dbID());
+	my $constraint = $self->_internal_exclude_failed_constraint('s1.individual_id = '.$individual->dbID());
  
 	return $self->generic_fetch($constraint);
 }
@@ -249,7 +248,7 @@ sub fetch_all_by_strain {
     throw('Bio::EnsEMBL::Variation::Individual arg expected');
   }
  	
-	my $constraint = $self->_internal_exclude_failed_constraint('i2.individual_id = '.$strain->dbID());
+	my $constraint = $self->_internal_exclude_failed_constraint('s2.individual_id = '.$strain->dbID());
  
 	return $self->generic_fetch($constraint);
 }
@@ -260,8 +259,8 @@ sub _tables {
   my $self = shift;
   my @tables = ([ 'structural_variation_sample', 'svs'],
 								[ 'structural_variation', 'sv'],
-								[ 'individual', 'i1'],
-								[ 'individual', 'i2']
+								[ 'sample', 's1'],
+								[ 'sample', 's2']
 							 ); 
 							 
 	# If we are excluding failed_structural_variations, add that table
@@ -273,8 +272,8 @@ sub _tables {
 # Add a left join to the failed_variation table
 sub _left_join {
   my $self = shift;
-  my @tables = ([ 'individual i1', 'i1.individual_id = svs.individual_id'],
-								[ 'individual i2', 'i2.individual_id = svs.strain_id']
+  my @tables = ([ 'sample s1', 's1.sample_id = svs.sample_id'],
+								[ 'sample s2', 's2.sample_id = svs.strain_id']
 							 );
 	
 	# If we are excluding failed_structural_variations, add that table
@@ -291,7 +290,7 @@ sub _default_where_clause {
 
 sub _columns {
   return qw( svs.structural_variation_sample_id svs.structural_variation_id 
-             sv.study_id i1.individual_id i2.individual_id
+             sv.study_id s1.sample_id s2.sample_id
            );
 }
 
@@ -300,20 +299,20 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
 
   my @svas;
-  my ($structural_variation_sample_id,$svar_id,$study_id,$individual_id,$strain_id,$study,$individual,$strain);
-  $sth->bind_columns(\$structural_variation_sample_id,\$svar_id,\$study_id,\$individual_id,\$strain_id);
+  my ($structural_variation_sample_id,$svar_id,$study_id,$sample_id,$strain_id,$study,$sample,$strain);
+  $sth->bind_columns(\$structural_variation_sample_id,\$svar_id,\$study_id,\$sample_id,\$strain_id);
 										 
-	my $inda = $self->db()->get_IndividualAdaptor();
+	my $sample_adapt = $self->db()->get_SampleAdaptor();
 	
   while($sth->fetch()) {
     
-		$individual = $inda->fetch_by_dbID($individual_id) if (defined($individual_id));
-		$strain     = $inda->fetch_by_dbID($strain_id) if (defined($strain_id)); 
+		$sample = $sample_adapt->fetch_by_dbID($sample_id) if (defined($sample_id));
+		$strain = $sample_adapt->fetch_by_dbID($strain_id) if (defined($strain_id)); 
 		
 		push @svas, Bio::EnsEMBL::Variation::StructuralVariationSample->new(
       -dbID                     => $structural_variation_sample_id,
       -_STRUCTURAL_VARIATION_ID => $svar_id,
-      -INDIVIDUAL               => $individual,
+      -SAMPLE                   => $sample,
       -STRAIN                   => $strain,
       -ADAPTOR                  => $self,
       -_STUDY_ID                => $study_id,
