@@ -55,11 +55,11 @@ Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
   # iterate over collections
   foreach my $c(@{$vca->fetch_all})
 
-    # get individuals
-    my $individuals = $c->get_all_Individuals;
+    # get samples
+    my $samples = $c->get_all_Samples;
 
     # get genotypes for this VariationFeature
-    my $gts = $c->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+    my $gts = $c->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
   }
 
   ## implicit use
@@ -207,9 +207,9 @@ sub new {
       -type => $hash->{type},
       -filename_template => $hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
-      -individual_prefix => $hash->{individual_prefix},
+      -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
-      -individual_populations => $hash->{individual_populations},
+      -sample_populations => $hash->{sample_populations},
       -populations =>  $populations || undef ,
       -assembly  => $hash->{assembly} || undef,
       -source => $source || undef,
