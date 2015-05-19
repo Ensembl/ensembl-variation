@@ -820,7 +820,7 @@ sub _get_Population_Sample_hash {
       my $prefix = $self->population_prefix;
       
       foreach my $sample(@{$self->get_all_Samples}) {
-        foreach my $pop(@{$self->{_raw_populations}->{$sample->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
+        foreach my $pop(@{$self->{_raw_populations}->{$sample->name} || $self->{_raw_populations}->{$sample->{_raw_name}} || []}) {
           
           # try and fetch from DB
           if(!defined($pops->{$pop})) {
@@ -848,7 +848,7 @@ sub _get_Population_Sample_hash {
     else {
       my $samples = $self->get_all_Samples();
       
-      my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$inds;
+      my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$samples;
       
       my $pa = $self->adaptor->db->get_PopulationAdaptor();
       $hash = $pa->_get_sample_population_hash(\@dbIDs);
