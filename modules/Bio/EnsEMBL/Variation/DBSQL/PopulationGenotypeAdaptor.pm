@@ -326,7 +326,7 @@ sub _fetch_all_by_Variation_from_Genotypes {
   assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
   
   # fetch all genotypes
-  my $genotypes = $variation->get_all_IndividualGenotypes();
+  my $genotypes = $variation->get_all_SampleGenotypes();
   
   return [] unless scalar @$genotypes;
 	
