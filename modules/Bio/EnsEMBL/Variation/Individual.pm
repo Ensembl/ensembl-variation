@@ -90,13 +90,14 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Arg [-TYPE_INDIVIDUAL]     : string - name for the type of the individual (fully or partly inbred, outbred or mutant)
   Arg [-TYPE_DESCRIPTION]    : string - description of the type of individual
   Example                    : $individual = Bio::EnsEMBL::Variation::Individual->new(
-                                                -name => 'WI530.07',
-                                                -description => 'african',
-                                                -gender => 'Male',
-                                                -father_individual => $father_ind,
-                                                -mother_individual => $mother_ind,
-		                                        -type_individual => 'outbred',
-		                                        -type_description => 'a single organism which breeds freely');
+                                              -name => 'WI530.07',
+                                              -description => 'african',
+                                              -gender => 'Male',
+                                              -father_individual => $father_ind,
+                                              -mother_individual => $mother_ind,
+                                              -type_individual => 'outbred',
+                                              -type_description => 'a single organism which breeds freely'
+                                             );
   Description                 : Constructor Instantiates an Individual object.
   Returntype                  : Bio::EnsEMBL::Variation::Individual
   Exceptions                  : Throw if gender arg is provided but not valid.
@@ -306,7 +307,6 @@ sub has_coverage {
   return $self->{'has_coverage'} || 0;
 }
 
-
 =head2 get_all_Populations
 
    Args        : none
@@ -333,7 +333,6 @@ sub get_all_Populations {
   }
   return $self->{populations};
 }
-
 
 =head2 father_Individual
 
@@ -372,7 +371,6 @@ sub father_Individual {
   return $self->{'father_individual'};
 }
 
-
 =head2 mother_Individual
 
   Arg [1]    : Bio::EnsEMBL::Variation::Individual $mother_individual (optional) 
@@ -410,8 +408,6 @@ sub mother_Individual {
 
   return $self->{'mother_individual'};
 }
-
-
 
 =head2 get_all_child_Individuals
 
