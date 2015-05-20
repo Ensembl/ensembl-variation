@@ -22,7 +22,25 @@ limitations under the License.
 =head1 NAME
 Bio::EnsEMBL::Variation::Sample
 =head1 SYNOPSIS
+
+  my $study_1000G = Bio::EnsEMBL::Variation::Study->new(
+    -name => '1000G phase 3',
+    -description => 'Whole-genome sequencing',
+  );
+
+  my $individual = Bio::EnsEMBL::Variation::Individual(
+    -name => 'NA18967',
+  );
+  $individual = $individual_adaptor->store($individual);
+
+  my $sample_1000G = Bio::EnsEMBL::Variation::Sample->new(
+    -individual => $individual,
+    -study => $study,
+  );
+
 =head1 DESCRIPTION
+This is a class representing a single Sample. A Sample belongs to one Individual. A
+Sample may be part of one population or several. 
 =cut
 
 package Bio::EnsEMBL::Variation::Sample;
@@ -36,6 +54,36 @@ use Bio::EnsEMBL::Storable;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
+=head2 new
+  Arg [-dbID]                : int - unique internal identifier
+  Arg [-ADAPTOR]             : Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor
+  Arg [-INDIVIDUAL]          : Bio::EnsEMBL::Variation::Individual 
+                               - Individual to which this sample belongs to
+  Arg [-INDIVIDUAL_ID]       : int - set the internal id for the individual object.
+                               Individual object can be retrieved on demand.
+  Arg [-NAME]                : string - name of this sample
+  Arg [-DESCRIPTION]         : string description - description of this sample
+  Arg [-STUDY]               : Bio::EnsEMBL::Variation::Study
+                               - study object storing additional information e.g.
+                                 on the study in which genotypes for this sample
+                                 have been computed
+  Arg [-STUDY_ID]            : int - set the internal id for the study object,
+
+  Example                    : $sample = Bio::EnsEMBL::Variation::Sample->new(
+                                          -name => 'WI530.07',
+                                          -description => 'african',
+                                          -gender => 'Male',
+                                          -father_individual => $father_ind,
+                                          -mother_individual => $mother_ind,
+                                          -type_individual => 'outbred',
+                                          -type_description => 'a single organism which breeds freely'
+                                         );
+  Description                 : Constructor instantiates a Sample object.
+  Returntype                  : Bio::EnsEMBL::Variation::Sample
+  Exceptions                  : Throw if 
+  Caller                      : general
+  Status                      : Stable
+=cut
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -74,17 +122,50 @@ sub new_fast {
   return bless $hashref, $class;
 }
 
+=head2 name
+  Arg [1]    : String $name (optional)
+               The new value to set the name attribute to
+  Example    : $name = $sample->name()
+  Description: Getter/Setter for the name attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
+
 sub name {
   my $self = shift;
   return $self->{'name'} = shift if (@_);
   return $self->{'name'};
 }
 
+=head2 description
+  Arg [1]    : String $description (optional)
+               The new value to set the description attribute to
+  Example    : $description = $individual->description()
+  Description: Getter/Setter for the description attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
+
 sub description {
   my ($self, $description) = @_;
   $self->{description} = $description if defined $description;
   return $self->{'description'};
 }
+
+=head2 display
+  Arg [1]    : String $display (optional)
+  Example    : $display = $display->display()
+  Description: Getter/Setter for the display attribute which can be one of UNDISPLAYABLE,
+               REFERENCE, DISPLAYABLE or DEFAULT.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
 
 sub display {
   my $self = shift;
@@ -99,6 +180,17 @@ sub display {
   return $self->{'display'};
 }
 
+=head2 has_coverage
+  Arg [1]     : int $has_coverage (optional)
+  Example     : $has_coverage = $sample->has_coverage();
+  Description : Getter/Setter for the flag indicating if this sample has
+                read coverage data available
+  Returntype  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+=cut
+
 sub has_coverage {
   my $self = shift;
   if (@_){
@@ -107,6 +199,20 @@ sub has_coverage {
   }
   return $self->{'has_coverage'} || 0;
 }
+
+=head2 individual
+  Arg [1]    : Bio::EnsEMBL::Variation::Individual (optional)
+               The new value to set the individual attribute to
+  Example    : $individual = $sample->individual()
+  Description: Getter/Setter for Individual object. If this
+               has not been set manually and this Sample has an attached
+               adaptor, an attempt will be made to lazy-load it from the
+               database using the individual_id.
+  Returntype : Bio::EnsEMBL::Variation::Individual
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+=cut
 
 sub individual {
   my $self = shift;
@@ -125,6 +231,20 @@ sub individual {
   return $self->{'individual'};
 }
 
+=head2 study
+  Arg [1]    : Bio::EnsEMBL::Variation::Study (optional)
+               The new value to set the study attribute to
+  Example    : $study = $sample->study()
+  Description: Getter/Setter for Study object. If this
+               has not been set manually and this Sample has an attached
+               adaptor, an attempt will be made to lazy-load it from the
+               database using the study_id if set.
+  Returntype : Bio::EnsEMBL::Variation::Study
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+=cut
+
 sub study {
   my $self = shift;
   if (@_) {
@@ -141,6 +261,17 @@ sub study {
 
   return $self->{'study'};
 }
+
+=head2 get_all_Populations
+   Args        : none
+   Example     : $populations = $sample->get_all_Populations();
+   Description : Get all populations for this sample. Returns
+                 empty list if there are none.
+   ReturnType  : listref of Bio::EnsEMBL::Population objetcs
+   Exceptions  : none
+   Caller      : general
+   Status      : Stable
+=cut
 
 sub get_all_Populations {
   my $self = shift;
