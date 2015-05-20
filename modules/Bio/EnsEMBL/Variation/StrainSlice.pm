@@ -394,152 +394,151 @@ sub _add_coverage_information{
 
 =head2 get_AlleleFeature
 
-Arg[1]      : Bio::EnsEMBL::Variation::VariationFeature $vf
-Example     : my $af = $strainSlice->get_AlleleFeature($vf);
-Description : Returns the AlleleFeature object associated with the VariationFeature (if any)
+  Arg[1]      : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Example     : my $af = $strainSlice->get_AlleleFeature($vf);
+  Description : Returns the AlleleFeature object associated with the VariationFeature (if any)
   ReturnType  : Bio::EnsEMBL::Variation::AlleleFeature
   Exceptions  : none
   Caller      : general
 
-  =cut
+=cut
 
-  sub get_AlleleFeature{
-    my $self = shift;
-    my $vf = shift;
-
-    my $af;
-#look at the hash containing the relation vf_id->alleleFeature, if present, return object, otherwise, undef
-    $af = $self->{'_vf_ids'}->{$vf->dbID} if (defined $self->{'_vf_ids'}->{$vf->dbID});
-    return $af;
-  }
+sub get_AlleleFeature{
+  my $self = shift;
+  my $vf = shift;
+  my $af;
+  #look at the hash containing the relation vf_id->alleleFeature, if present, return object, otherwise, undef
+  $af = $self->{'_vf_ids'}->{$vf->dbID} if (defined $self->{'_vf_ids'}->{$vf->dbID});
+  return $af;
+}
 
 
 =head2 get_all_AlleleFeatures_Slice
 
   Arg[1]      : int $with_coverage (optional)
-Example     : my $af = $strainSlice->get_all_AlleleFeatures_Slice()
+  Example     : my $af = $strainSlice->get_all_AlleleFeatures_Slice()
   Description : Gets all AlleleFeatures between the StrainSlice object and the Slice is defined.
-  If argument $with_coverage set to 1, returns only AF if they have coverage information
+                If argument $with_coverage set to 1, returns only AF if they have coverage information
   ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
   Exceptions  : none
   Caller      : general
 
-  =cut
+=cut
 
-  sub get_all_AlleleFeatures_Slice{
-    my $self = shift;
-    my $with_coverage = shift;
+sub get_all_AlleleFeatures_Slice{
+  my $self = shift;
+  my $with_coverage = shift;
 
-    my $variation_db = $self->adaptor->db->get_db_adaptor('variation');
+  my $variation_db = $self->adaptor->db->get_db_adaptor('variation');
 
-    unless($variation_db) {
-      warning("Variation database must be attached to core database to " .
-          "retrieve variation information" );
-      return '';
-    }
-    my $sampleAdaptor = $variation_db->get_SampleAdaptor();
-    my $ref_name =  $sampleAdaptor->get_reference_strain_name;
-    return [] if ($self->strain_name eq $ref_name);
-    $with_coverage ||= 0; #by default, get all AlleleFeatures
-      if ($with_coverage == 1){
-        my $new_allele_features = $self->_filter_af_by_coverage($self->{'alleleFeatures'});
-        return $new_allele_features || [];
-      }
-
-    return $self->{'alleleFeatures'} || [];
+  unless($variation_db) {
+  warning("Variation database must be attached to core database to " .
+      "retrieve variation information" );
+  return '';
   }
+  my $sampleAdaptor = $variation_db->get_SampleAdaptor();
+  my $ref_name =  $sampleAdaptor->get_reference_strain_name;
+  return [] if ($self->strain_name eq $ref_name);
+  $with_coverage ||= 0; #by default, get all AlleleFeatures
+  if ($with_coverage == 1){
+    my $new_allele_features = $self->_filter_af_by_coverage($self->{'alleleFeatures'});
+    return $new_allele_features || [];
+  }
+
+  return $self->{'alleleFeatures'} || [];
+}
 
 =head2 get_all_differences_StrainSlice
 
   Arg[1]      : Bio::EnsEMBL::StrainSlice $ss
-Example     : my $differences = $strainSlice->get_all_differences_StrainSlice($ss)
+  Example     : my $differences = $strainSlice->get_all_differences_StrainSlice($ss)
   Description : Gets differences between 2 StrainSlice objects
   ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
   Exceptions  : thrown on bad argument
   Caller      : general
 
-  =cut
+=cut
 
-  sub get_all_differences_StrainSlice{
-    my $self = shift;
-    my $strainSlice = shift;
+sub get_all_differences_StrainSlice{
+  my $self = shift;
+  my $strainSlice = shift;
 
-    if (!ref($strainSlice) || !$strainSlice->isa('Bio::EnsEMBL::StrainSlice')){
-      throw('Bio::EnsEMBL::StrainSlice arg expected');
-    }
-    if ( @{$self->{'alleleFeatures'}} == 0 && @{$strainSlice->{'alleleFeatures'}} == 0){
-      return undef; #there are no differences in any of the Strains
+  if (!ref($strainSlice) || !$strainSlice->isa('Bio::EnsEMBL::StrainSlice')){
+    throw('Bio::EnsEMBL::StrainSlice arg expected');
+  }
+  if ( @{$self->{'alleleFeatures'}} == 0 && @{$strainSlice->{'alleleFeatures'}} == 0){
+    return undef; #there are no differences in any of the Strains
 
-    }
-    my $differences; #differences between strains
-      if (@{$strainSlice->{'alleleFeatures'}} == 0){
-#need to create a copy of VariationFeature
-        foreach my $difference (@{$self->{'alleleFeatures'}}){
-          my %vf = %$difference;
-          push @{$differences},bless \%vf,ref($difference);
-        }
+  }
+  my $differences; #differences between strains
+    if (@{$strainSlice->{'alleleFeatures'}} == 0){
+    #need to create a copy of VariationFeature
+      foreach my $difference (@{$self->{'alleleFeatures'}}){
+        my %vf = %$difference;
+        push @{$differences},bless \%vf,ref($difference);
       }
-    elsif (@{$self->{'alleleFeatures'}} == 0){
-#need to create a copy of VariationFeature, but changing the allele by the allele in the reference
+    }
+  elsif (@{$self->{'alleleFeatures'}} == 0){
+  #need to create a copy of VariationFeature, but changing the allele by the allele in the reference
+    foreach my $difference (@{$strainSlice->{'alleleFeatures'}}){
+      push @{$differences}, $strainSlice->_convert_difference($difference);
+    }
+  }
+    else{
+    #both strains have differences
+    #create a hash with the differences in the self strain slice
+      my %variation_features_self = map {$_->start => $_} @{$self->{'alleleFeatures'}};
       foreach my $difference (@{$strainSlice->{'alleleFeatures'}}){
-        push @{$differences}, $strainSlice->_convert_difference($difference);
-      }
-    }
-      else{
-#both strains have differences
-#create a hash with the differences in the self strain slice
-        my %variation_features_self = map {$_->start => $_} @{$self->{'alleleFeatures'}};
-        foreach my $difference (@{$strainSlice->{'alleleFeatures'}}){
-#there is no difference in the other strain slice, convert the allele
-          if (!defined $variation_features_self{$difference->start}){
-            push @{$differences},$strainSlice->_convert_difference($difference);
-          }		
-          else{
-#if it is defined and have the same allele, delete from the hash
-            if ($variation_features_self{$difference->start}->allele_string eq $difference->allele_string){
-              delete $variation_features_self{$difference->start};
-            }
-          }
-        }	
-#and copy the differences that in the self
-        foreach my $difference (values %variation_features_self){
-          my %vf = %$difference;
-          push @{$differences},bless \%vf,ref($difference);
-        }
-
-      }
-#need to map differences to the self 
-    my $mapper = $self->mapper(); #now that we have the differences, map them in the StrainSlice
-#    print Dumper($mapper);
-      my @results;
-    foreach my $difference (@{$differences}){	
-      @results = $mapper->map_coordinates('Slice',$difference->start,$difference->end,$difference->strand,'Slice');
-#we can have 3 possibilities:
-#the difference is an insertion and when mapping returns the boundaries of the insertion in the StrainSlice
-      if (@results == 2){
-#the first position in the result is the beginning of the insertion
-        if($results[0]->start < $results[1]->start){
-          $difference->start($results[0]->end+1);
-          $difference->end($results[1]->start-1);
-        }
+      #there is no difference in the other strain slice, convert the allele
+        if (!defined $variation_features_self{$difference->start}){
+          push @{$differences},$strainSlice->_convert_difference($difference);
+        }		
         else{
-          $difference->start($results[1]->end+1);
-          $difference->end($results[0]->start-1);
+        #if it is defined and have the same allele, delete from the hash
+          if ($variation_features_self{$difference->start}->allele_string eq $difference->allele_string){
+            delete $variation_features_self{$difference->start};
+          }
         }
-        $difference->strand($results[0]->strand);
+      }	
+      #and copy the differences that in the self
+      foreach my $difference (values %variation_features_self){
+        my %vf = %$difference;
+        push @{$differences},bless \%vf,ref($difference);
+      }
+
+    }
+  #need to map differences to the self 
+  my $mapper = $self->mapper(); #now that we have the differences, map them in the StrainSlice
+  #    print Dumper($mapper);
+    my @results;
+  foreach my $difference (@{$differences}){	
+    @results = $mapper->map_coordinates('Slice',$difference->start,$difference->end,$difference->strand,'Slice');
+  #we can have 3 possibilities:
+  #the difference is an insertion and when mapping returns the boundaries of the insertion in the StrainSlice
+    if (@results == 2){
+  #the first position in the result is the beginning of the insertion
+      if($results[0]->start < $results[1]->start){
+        $difference->start($results[0]->end+1);
+        $difference->end($results[1]->start-1);
       }
       else{
+        $difference->start($results[1]->end+1);
+        $difference->end($results[0]->start-1);
+      }
+      $difference->strand($results[0]->strand);
+    }
+    else{
 #it can be either a SNP or a deletion, and we have the coordinates in the result, etither a Bio::EnsEMBL::Mapper::Coordinate
 # or a Bio::EnsEMBL::Mapper::IndelCoordinate
 #	    print "Difference: ",$difference->start, "-", $difference->end,"strand ",$difference->strand,"\n";
-        $difference->start($results[0]->start);
-        $difference->end($results[0]->end);
-        $difference->strand($results[0]->strand);
-      }
+      $difference->start($results[0]->start);
+      $difference->end($results[0]->end);
+      $difference->strand($results[0]->strand);
     }
-
-    return $differences;
   }
+
+  return $differences;
+}
 
 #for a given VariationFeatures, converts the allele into the reference allele and returns a new list with
 #the converted VariationFeatures
@@ -796,14 +795,14 @@ Arg[1]     : int $with_coverage (optional)
   Exceptions : none
   Caller     : contigview, snpview
 
-  =cut
+=cut
 
-  sub get_all_VariationFeatures {
-    my $self = shift;
-    my $with_coverage = shift;
-    $with_coverage ||= 0;
-    return $self->get_all_AlleleFeatures_Slice($with_coverage);
-  }
+sub get_all_VariationFeatures {
+  my $self = shift;
+  my $with_coverage = shift;
+  $with_coverage ||= 0;
+  return $self->get_all_AlleleFeatures_Slice($with_coverage);
+}
 
 =head2 get_original_seq_region_position
 
