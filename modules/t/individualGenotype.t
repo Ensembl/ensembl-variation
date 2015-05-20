@@ -23,6 +23,28 @@ use Bio::EnsEMBL::Variation::IndividualGenotype;
 use Bio::EnsEMBL::Variation::Variation;
 our $verbose = 0;
 
+my $ind = Bio::EnsEMBL::Variation::Individual->new(
+  -name => 'test individual',
+  -description => 'This is a test individual',
+  -gender => 'Male'
+);
 
+my $var = Bio::EnsEMBL::Variation::Variation->new(
+  -name => 'rs123',
+  -synonyms => {'dbSNP' => ['ss12', 'ss144']},
+  -source => 'dbSNP'
+);
+
+my $genotype = ['A','C'];
+my $subsnp   ='ss12';
+
+my $ind_gtype = Bio::EnsEMBL::Variation::IndividualGenotype->new(
+  -genotype => $genotype,
+  -variation => $var,
+  -individual => $ind,
+  -subsnp     => $subsnp  
+);
+
+ok($ind_gtype->individual()->name() eq $ind->name(), "ind name");
 
 done_testing();
