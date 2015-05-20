@@ -330,20 +330,20 @@ sub _fetch_all_by_Variation_from_Genotypes {
   
   return [] unless scalar @$genotypes;
 	
-  # copy individual ID to save time later
-  $_->{_individual_id} ||= $_->individual->dbID for @$genotypes;
+  # copy sample ID to save time later
+  $_->{_sample_id} ||= $_->sample->dbID for @$genotypes;
   
-  # get populations for individuals
+  # get populations for samples
   my (@pop_list, %pop_hash);
   
   if(defined($population)) {
     @pop_list = ($population);
     my $pop_id = $population->dbID;
-    $pop_hash{$pop_id}{$_->dbID} = 1 for @{$population->get_all_Individuals};
+    $pop_hash{$pop_id}{$_->dbID} = 1 for @{$population->get_all_Samples};
   }
   else {
     my $pa = $self->db->get_PopulationAdaptor();
-    %pop_hash = %{$pa->_get_sample_population_hash([map {$_->{_individual_id}} @$genotypes])};
+    %pop_hash = %{$pa->_get_sample_population_hash([map {$_->{_sample_id}} @$genotypes])};
     return [] unless %pop_hash;
 	
     @pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
@@ -366,7 +366,7 @@ sub _fetch_all_by_Variation_from_Genotypes {
     foreach my $ss(keys %by_ss) {
       my (%counts, $total, @freqs);
       map {$counts{$_->genotype_string(1)}++}
-        grep {$pop_hash{$pop_id}{$_->{_individual_id}}}
+        grep {$pop_hash{$pop_id}{$_->{_sample_id}}}
         @{$by_ss{$ss}};
 	  
       next unless %counts;
