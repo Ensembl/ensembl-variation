@@ -991,27 +991,27 @@ sub three_prime_flanking_seq{
 }
 
 
-=head2 get_all_IndividualGenotypes
+=head2 get_all_SampleGenotypes
 
   Args       : none
-  Example    : $ind_genotypes = $var->get_all_IndividualGenotypes()
-  Description: Getter for IndividualGenotypes for this Variation, returns empty list if 
+  Example    : $sample_genotypes = $var->get_all_SampleGenotypes()
+  Description: Getter for SampleGenotypes for this Variation, returns empty list if 
                there are none 
-  Returntype : Listref of IndividualGenotypes
+  Returntype : Listref of SampleGenotypes
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub get_all_IndividualGenotypes {
+sub get_all_SampleGenotypes {
   my $self = shift;
   my $individual = shift;
   
   if (defined ($self->{'adaptor'})){
-    my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
+    my $sgtya = $self->{'adaptor'}->db()->get_SampleGenotypeAdaptor();
     
-    return $igtya->fetch_all_by_Variation($self, $individual);
+    return $sgtya->fetch_all_by_Variation($self, $individual);
   }
   
   return [];
