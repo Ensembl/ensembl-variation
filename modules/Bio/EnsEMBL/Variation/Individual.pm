@@ -68,8 +68,9 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Individual;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Storable;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
@@ -433,6 +434,26 @@ sub get_all_child_Individuals {
     warning("Cannot retrieve child individuals without attached adaptor.");
   }
   return $self->adaptor()->fetch_all_by_parent_Individual($self);
+}
+
+=head2 display
+  Description: DEPRECATED. Use Bio::EnsEMBL::Variation::Sample::display instead
+=cut
+
+sub display {
+  my $self = shift;
+  deprecate("Please use Bio::EnsEMBL::Variation::Sample::display.\n");
+  return '';
+}
+
+=head2 has_coverage
+  Description: DEPRECATED. Use Bio::EnsEMBL::Variation::Sample::has_coverage instead
+=cut
+
+sub has_coverage {
+  my $self = shift;
+  deprecate("Please use Bio::EnsEMBL::Variation::Sample::has_coverage.\n");
+  return '';
 }
 
 1;
