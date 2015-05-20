@@ -92,7 +92,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated. Use Bio::EnsEMBL::Variation::SampleGenotype::new.
 
 =cut
 
@@ -135,7 +135,7 @@ sub new {
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated. Use Bio::EnsEMBL::Variation::SampleGenotype::sample.
 
 =cut
 
