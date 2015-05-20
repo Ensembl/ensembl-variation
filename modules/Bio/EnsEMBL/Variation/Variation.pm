@@ -1017,33 +1017,6 @@ sub get_all_SampleGenotypes {
   return [];
 }
 
-=head2 get_all_SampleGenotypes
-
-  Args       : none
-  Example    : $sample_genotypes = $var->get_all_SampleGenotypes()
-  Description: Getter for SampleGenotypes for this Variation, returns empty list if 
-               there are none 
-  Returntype : Listref of SampleGenotypes
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub get_all_SampleGenotypes {
-  my $self = shift;
-  my $sample = shift;
-  
-  if (defined ($self->{'adaptor'})) {
-    my $sgtya = $self->{'adaptor'}->db()->get_SampleGenotypeAdaptor();
-    
-    return $sgtya->fetch_all_by_Variation($self, $sample);
-  }
-  
-  return [];
-}
-
-
 =head2 get_all_PopulationGenotypes
 
   Arg [1]    : Bio::EnsEMBL::Variation::Population $pop (optional)
