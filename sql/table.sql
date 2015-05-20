@@ -662,7 +662,6 @@ create table population_structure (
   key sub_population_idx (sub_population_id)
 );
 
-
 /**
 @table individual
 
@@ -676,14 +675,11 @@ create table population_structure (
 @column father_individual_id    Self referential ID, the father of this individual if known.
 @column mother_individual_id    Self referential ID, the mother of this individual if known.
 @column individual_type_id      Foreign key references to the @link individual_type table.
-@column display                 Information used by the website: individuals with little information are filtered from some web displays.
-@column has_coverage            Indicate if the individual has coverage data populated in the read coverage table
-@column variation_set_id        Indicates the variation sets for which an individual has genotypes
 
 @see individual_synonym
 @see individual_type
-@see individual_population
-@see individual_genotype_multiple_bp
+@see sample_population
+@see sample_genotype_multiple_bp
 */
 
 create table individual(
@@ -694,11 +690,6 @@ create table individual(
   father_individual_id int(10) unsigned,
   mother_individual_id int(10) unsigned,
   individual_type_id int(10) unsigned NOT NULL DEFAULT 0,
-  display enum('REFERENCE', 'DEFAULT', 'DISPLAYABLE', 'UNDISPLAYABLE', 'LD', 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
-  has_coverage tinyint(1) unsigned NOT NULL DEFAULT 0,
-  variation_set_id  set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64'),
-
-
   primary key(individual_id),
   key father_individual_idx (father_individual_id),
   key mother_individual_idx (mother_individual_id)
@@ -734,27 +725,60 @@ INSERT INTO individual_type (name,description) VALUES ('partly_inbred','single o
 INSERT INTO individual_type (name,description) VALUES ('outbred','a single organism which breeds freely');
 INSERT INTO individual_type (name,description) VALUES ('mutant','a single or multiple organisms with the same genome sequence that have a natural or experimentally induced mutation');
 
-
-
-
 /**
-@table individual_population
+@table sample
 
 @colour #FF8500
-@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. individuals may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
+@desc Stores information about a sample. A sample belongs to an individual. An individual can have multiple samples. A sample can belong only to one individual. A sample can be associated
+with a study. 
 
-@column individual_id	Foreign key references to the @link individual table.
-@column population_id	Foreign key references to the @link population table.
+@column sample_id               Primary key, internal identifier.
+@individual_id                  Foreign key references to the @link individual table.
+@column name                    Name of the sample.
+@column description             Description of the sample.
+@study_id                       Foreign key references to the @link study table. 
+@column display                 Information used by the website: samples with little information are filtered from some web displays.
+@column has_coverage            Indicate if the sample has coverage data populated in the read coverage table
+@column variation_set_id        Indicates the variation sets for which a sample has genotypes
 
 @see individual
+@see study
+*/
+
+CREATE TABLE sample(
+  sample_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  individual_id int(10) unsigned NOT NULL,
+  name varchar(255) DEFAULT NULL,
+  description text,
+  study_id int(10) unsigned DEFAULT NULL,
+  display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD','MARTDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
+  has_coverage tinyint(1) unsigned NOT NULL DEFAULT '0',
+  variation_set_id set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
+  PRIMARY KEY (sample_id),
+  KEY individual_idx (individual_id)
+);
+
+
+
+  
+/**
+@table sample_population
+
+@colour #FF8500
+@desc This table resolves the many-to-many relationship between the sample and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of sample and population identifiers.
+
+@column sample_id	Foreign key references to the @link sample table.
+@column population_id	Foreign key references to the @link population table.
+
+@see sample
 @see population
 */
 
-create table individual_population (
-  individual_id int(10) unsigned not null,
+create table sample_population (
+  sample_id int(10) unsigned not null,
   population_id int(10) unsigned not null,
 
-  key individual_idx(individual_id),
+  key sample_idx(sample_id),
   key population_idx(population_id)
 
 );
@@ -836,7 +860,7 @@ CREATE TABLE display_group(
 
 /**
 @header  Genotype tables
-@desc    These tables define the genotype data at the individual and population levels.
+@desc    These tables define the genotype data at the sample and population levels.
 @colour  #FF8500
 */
 
@@ -879,7 +903,7 @@ CREATE TABLE population_genotype (
 
 
 /**
-@table tmp_individual_genotype_single_bp
+@table tmp_sample_genotype_single_bp
 
 @colour #FF8500
 @desc This table is only needed to create master schema when run healthcheck system. Needed for other species, but human, so keep it.
@@ -888,19 +912,19 @@ CREATE TABLE population_genotype (
 @column subsnp_id        Foreign key references to the @link subsnp_handle table.
 @column allele_1         One of the alleles of the genotype, e.g. "TAG".
 @column allele_2         The other allele of the genotype.
-@column individual_id    Foreign key references to the @link individual table.
+@column sample_id        Foreign key references to the @link individual table.
 
-@see individual
+@see sample
 @see variation
 @see subsnp_handle
 */
 
-CREATE TABLE tmp_individual_genotype_single_bp (
+CREATE TABLE tmp_sample_genotype_single_bp (
 	variation_id int(10) not null,
 	subsnp_id int(15) unsigned,   
 	allele_1 char(1),
 	allele_2 char(1),
-	individual_id int,
+	sample_id int,
 
 	key variation_idx(variation_id),
     key subsnp_idx(subsnp_id),
@@ -909,7 +933,7 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 
 
 /**
-@table individual_genotype_multiple_bp
+@table sample_genotype_multiple_bp
 
 @colour #FF8500
 @desc This table holds uncompressed genotypes for given variations.
@@ -918,23 +942,23 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 @column subsnp_id        Foreign key references to the @link subsnp_handle table.
 @column allele_1         One of the alleles of the genotype, e.g. "TAG".
 @column allele_2         The other allele of the genotype.
-@column individual_id    Foreign key references to the @link individual table.
+@column sample_id        Foreign key references to the @link sample table.
 
-@see individual
+@see sample
 @see variation
 @see subsnp_handle
 */
 
-create table individual_genotype_multiple_bp (
+create table sample_genotype_multiple_bp (
   variation_id int(10) unsigned not null,
   subsnp_id int(15) unsigned,	
   allele_1 varchar(25000),
   allele_2 varchar(25000),
-  individual_id int(10) unsigned,
+  sample_id int(10) unsigned,
 
   key variation_idx(variation_id),
   key subsnp_idx(subsnp_id),
-  key individual_idx(individual_id)
+  key sample_idx(sample_id)
 );
 
 
@@ -942,23 +966,23 @@ create table individual_genotype_multiple_bp (
 @table compressed_genotype_region
 
 @colour #FF8500
-@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code when retrieving strain slices and LD data. Only data from resequenced and individuals used for LD calculations are included in this table
+@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code when retrieving strain slices and LD data. Only data from resequenced samples are used for LD calculations are included in this table
 
-@column individual_id        Foreign key references to the @link individual table.
+@column sample_id            Foreign key references to the @link sample table.
 @column seq_region_id        Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
 @column seq_region_start     The start position of the variation on the @link seq_region.
 @column seq_region_end       The end position of the variation on the @link seq_region.
 @column seq_region_strand    The orientation of the variation on the @link seq_region.
 @column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a  <span style="color:#D00">distance</span> in base pairs from the previous genotype; a <span style="color:#090">variation dbID</span>; a <span style="color:#00D">genotype_code_id</span> identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br /><b><span style="color:#D00">0</span>, <span style="color:#090">1</span>,  <span style="color:#00D">1</span>, <span style="color:#D00">20</span>, <span style="color:#090">2</span>, <span style="color:#00D">5</span>, <span style="color:#D00">35</span>, <span style="color:#090">3</span>, <span style="color:#00D">3</span>, ...</b><br />The first genotype ("<span style="color:#D00">0</span>,<span style="color:#090">1</span>,<span style="color:#00D">1</span>") has a position of 1000 + <span style="color:#D00">0</span> = 1000, and corresponds to the variation with the internal identifier <span style="color:#090">1</span> and genotype_code_id corresponding to the genotype A|G (internal ID <span style="color:#00D">1</span>).<br />The second genotype ("<span style="color:#D00">20</span>,<span style="color:#090">2</span>,<span style="color:#00D">5</span>") has a position of 1000 + <span style="color:#D00">20</span> = 1020, internal variation_id <span style="color:#090">2</span> and genotype_code_id corresponding to the genotype C|C ( internal ID <span style="color:#00D">5</span>).<br />The third genotype similarly has a position of 1055, and so on.
 
-@see individual
+@see sample
 @see seq_region
 @see variation
 @see genotype_code
 */
 
 CREATE TABLE compressed_genotype_region (
-  individual_id int(10) unsigned NOT NULL,
+  sample_id int(10) unsigned NOT NULL,
   seq_region_id int(10) unsigned NOT NULL,
   seq_region_start int(11) NOT NULL,
   seq_region_end int(11) NOT NULL,
@@ -977,9 +1001,9 @@ CREATE TABLE compressed_genotype_region (
 
 @column variation_id	Foreign key references to the @link variation table.
 @column subsnp_id		  Foreign key references to the @link subsnp_handle table.
-@column genotypes     Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal individual_id corresponding to an individual; a genotype_code_id identifier.
+@column genotypes     Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal sample_id corresponding to a sample; a genotype_code_id identifier.
 
-@see individual
+@see sample
 @see variation
 @see genotype_code
 */
@@ -998,15 +1022,15 @@ CREATE TABLE compressed_genotype_var (
 @table read_coverage
 
 @colour #FF8500
-@desc This table stores the read coverage in the resequencing of individuals. Each row contains an individual ID, chromosomal coordinates and a read coverage level.
+@desc This table stores the read coverage of resequenced samples. Each row contains sample ID, chromosomal coordinates and a read coverage level.
 
 @column seq_region_id       Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
 @column seq_region_start    The start position of the variation on the @link seq_region.
 @column seq_region_end      The end position of the variation on the @link seq_region.
 @column level               Minimum number of reads.
-@column individual_id       Foreign key references to the @link individual table.
+@column sample_id           Foreign key references to the @link individual table.
 
-@see individual
+@see sample
 @see seq_region
 */
 
@@ -1015,7 +1039,7 @@ CREATE TABLE read_coverage (
   seq_region_start int not null,
   seq_region_end int not null,
   level tinyint not null,
-  individual_id int(10) unsigned not null,
+  sample_id int(10) unsigned not null,
   
   key seq_region_idx(seq_region_id,seq_region_start)   
 );
@@ -1177,31 +1201,28 @@ create table structural_variation_feature (
 @table structural_variation_sample
 
 @colour #01D4F7
-@desc This table stores individual and strain information for structural variants and their supporting evidences.
+@desc This table stores sample and strain information for structural variants and their supporting evidences.
 
 @column structural_variation_sample_id  Primary key, internal identifier.
 @column structural_variation_id         Foreign key references to the @link structural_variation table.
-@column individual_id		                Foreign key references to the @link individual table. Defines the individual or sample name.
+@column sample_id		                    Foreign key references to the @link individual table. Defines the individual or sample name.
 @column strain_id		                    Foreign key references to the @link individual table. Defines the strain name.
 
 @see structural_variation
-@see individual
+@see sample
 */
 
 CREATE TABLE structural_variation_sample (
 	structural_variation_sample_id int(10) unsigned NOT NULL auto_increment,
 	structural_variation_id int(10) unsigned NOT NULL,
-	individual_id int(10) unsigned DEFAULT NULL,
+	sample_id int(10) unsigned DEFAULT NULL,
 	strain_id int(10) unsigned DEFAULT NULL,
 	
 	primary key (structural_variation_sample_id),
 	key structural_variation_idx(structural_variation_id),
-	key individual_idx(individual_id),
+	key sample_idx(sample_id),
 	key strain_idx(strain_id)
 );
-
-
-
 
 /**
 @header  Variation set tables
@@ -1742,12 +1763,9 @@ CREATE TABLE meta (
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '80');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_b.sql|create a unique key for the variation_name column in the table structural_variation');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_c.sql|change the column consequence_types in transcript_variation and variation_feature to add protein_altering_variant and change initiator_codon_variant to start_lost');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_d.sql|Reduce consequence_terms to the set of relevant SO_terms in motif_feature_variation and regulatory_feature_variation tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_e.sql|update the attrib tables by changing the default values');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_79_80_f.sql|add Phenotype or Disease evidence_attribs');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_b.sql|Create new sample table and update individual table. Copy individual data into new sample table.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
 
 
 /**
