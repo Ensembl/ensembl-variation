@@ -66,8 +66,6 @@ use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::Variation::Genotype);
 
-
-
 =head2 new
 
   Arg [-adaptor] :
@@ -99,7 +97,7 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-  my $caller = shift;
+ my $caller = shift;
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
@@ -123,6 +121,8 @@ sub new {
   $self->{'phased'}        = $phased;
   $self->{'_variation_id'} = $varid unless defined $var;
 
+  deprecate("Please use Bio::EnsEMBL::Variation::SampleGenotype::new.\n");
+
   return $self;
 }
 
@@ -139,8 +139,8 @@ sub new {
 
 =cut
 
-
 sub individual {
+
   my $self = shift;
   if(@_) {
     my $ind = shift;
@@ -162,6 +162,7 @@ sub individual {
       }
     }
   }
+  deprecate("Please use Bio::EnsEMBL::Variation::SampleGenotype::sample.\n");
 
   return $self->{'individual'};
 }
