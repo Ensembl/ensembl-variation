@@ -27,4 +27,43 @@ our $verbose = 0;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
+my $vdb = $multi->get_DBAdaptor('variation');
+my $cdb = $multi->get_DBAdaptor('core');
+
+
+my $igfa = $vdb->get_IndividualGenotypeFeatureAdaptor();
+
+# test constructor
+my $ind = Bio::EnsEMBL::Variation::Individual->new(
+  -name => 'test individual',
+  -description => 'This is a test individual',
+  -gender => 'Male');
+
+my $var_id = 1748253;
+my $var = Bio::EnsEMBL::Variation::Variation->new(
+  -dbID => $var_id,
+  -name => 'rs2299222',
+  -source => 'dbSNP');
+
+
+##need a slice
+my $pos = 86442404;
+my $sa = $cdb->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome', '7', $pos, $pos, 1);
+
+
+my $allele1  = 'C';
+my $allele2  = 'A';
+my @genotype = ($allele1,$allele2);
+
+my $ind_gt_feature = Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new(
+  -genotype      => \@genotype,
+  -variation     => $var,
+  -_variation_id => $var_id,
+  -individual    => $ind,
+  -slice         => $slice
+);
+
+ok($ind_gt_feature->allele1() eq $allele1, "new - allele 1");
+
 done_testing();
