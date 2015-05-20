@@ -127,6 +127,8 @@ sub new {
 	$self->{'individual'} = $ind;
 	$self->{'variation'} = $var;
 	$self->{'_variation_id'} = $var_id;
+  
+  deprecate("Please use Bio::EnsEMBL::Variation::SampleGenotypeFeature::new.\n");
 	
 	return $self;
 }
