@@ -165,20 +165,19 @@ $v->add_validation_state('freq');
 ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter', "valiation states 2");
 
 
-
-#test get_all_IndividualGenotypes
+#test get_all_SampleGenotypes
 
 my $variation = $variation_adaptor->fetch_by_dbID(1748253);
 
-my $igty = $variation->get_all_IndividualGenotypes();
-my @igtys = sort {$a->individual->dbID() <=> $b->individual->dbID()}
-            @{$variation->get_all_IndividualGenotypes()};
+my $sgty = $variation->get_all_SampleGenotypes();
+my @sgtys = sort {$a->sample->dbID() <=> $b->sample->dbID()}
+            @{$variation->get_all_SampleGenotypes()};
 
-ok(@igtys == 2,                                   "ind geno to count" );
-ok($igtys[0]->variation()->name() eq 'rs2299222', "ind geno to var name");
-ok($igtys[0]->allele1() eq 'T',                   "ind geno to allele1");
-ok($igtys[0]->allele2() eq 'T',                   "ind geno to allele2");
-ok($igtys[0]->individual()->name() eq 'NA12891',  "ind geno to dna name");
+ok(@sgtys == 2,                                   "sample geno to count" );
+ok($sgtys[0]->variation()->name() eq 'rs2299222', "sample geno to var name");
+ok($sgtys[0]->allele1() eq 'T',                   "sample geno to allele1");
+ok($sgtys[0]->allele2() eq 'T',                   "sample geno to allele2");
+ok($sgtys[0]->sample()->name() eq 'NA12891',  "sample geno to dna name");
 
 
 
