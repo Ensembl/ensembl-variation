@@ -64,7 +64,9 @@ sub run {
      $port     = $meta_container->dbc->port();
      $user     = $meta_container->dbc->username();
      $pass     = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
-     
+    
+     $meta_container->dbc()->disconnect_if_idle();
+ 
      $self->param('assembly', $assembly);
      $self->param('ensembl_release', $version);
   }
