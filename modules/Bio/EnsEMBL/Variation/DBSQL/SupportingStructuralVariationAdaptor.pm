@@ -171,7 +171,7 @@ sub fetch_all_by_StructuralVariation {
   }
   
   # Special case for one human study where SV can be a supporting evidence of an other SV
-  my $constraint;
+  my $constraint = '';
   
   # Add the constraint for failed structural variant
   if (!$self->db->include_failed_variations()) {
