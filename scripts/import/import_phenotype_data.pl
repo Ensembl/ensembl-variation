@@ -282,11 +282,18 @@ elsif($source =~ /animal.*qtl.*/i) {
   $result = parse_animal_qtl($infile, $db_adaptor);
   $source_name = 'Animal_QTLdb';
 }
-elsif($source =~ /rgd/i) {
+elsif($source =~ /rgd_qtl/i) {
   die("ERROR: Assembly version not specified - use --assembly [version]") unless defined($assembly);
   
-  $result = parse_rgd($infile, $assembly, $db_adaptor);
+  $result = parse_rgd_qtl($infile, $assembly, $db_adaptor);
   $source_name = 'RGD';
+}
+elsif($source =~ /rgd_gene/i) {
+  die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
+
+  $result = parse_rgd_gene($infile, $db_adaptor);
+  $source_name = 'RGD';
+  $SOURCES{$source_name}->{type} = 'Gene'; # By default it is set to 'QTL'
 }
 elsif($source =~ /giant/i) {
   die("ERROR: p-value threshold not specified - use --threshold [p-value]") unless defined($threshold);
@@ -962,7 +969,7 @@ sub parse_animal_qtl {
   return \%result;
 }
 
-sub parse_rgd {
+sub parse_rgd_qtl {
   my $infile = shift;
   my $assembly = shift;
   my $db_adaptor = shift;
@@ -1039,6 +1046,97 @@ sub parse_rgd {
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
 }
+
+sub parse_rgd_gene {
+  my $infile = shift;
+  my $db_adaptor = shift;
+
+  # get seq_region_ids
+  my $seq_region_ids = get_seq_region_ids($db_adaptor);
+
+  my @phenotypes;
+
+  my $gene_adaptor = $core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor") unless defined($gene_adaptor);
+
+  # Open the input file for reading
+	if($infile =~ /gz$/) {
+		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+	}
+	else {
+		open(IN,'<',$infile) or die ("Could not open $infile for reading");
+	}
+
+  my %rgd_coords;
+
+  my (%headers, $line_num);
+
+  # Read through the file and parse out the desired fields
+  while (<IN>) {
+    chomp;
+    $line_num++;
+
+    next if /^(\#|\s)/ || !$_;
+
+    my @data_line = split /\t/, $_;
+
+    # header
+    if(/^RGD_ID/) {
+      $headers{$data_line[$_]} = $_ for 0..$#data_line;
+    }
+    else {
+      die "ERROR: Couldn't find header data\n" unless %headers;
+
+      my %data;
+      $data{$_} = $data_line[$headers{$_}] for keys %headers;
+
+      next unless ($data{'OBJECT_TYPE'} =~ /gene/i);
+
+      my $symbol = $data{'OBJECT_SYMBOL'};
+
+      if (!$rgd_coords{$symbol}) {
+
+        my $gene = $gene_adaptor->fetch_by_display_label($symbol);
+
+        if (!$gene) {
+          my $genes = $gene_adaptor->fetch_all_by_external_name($symbol,'RGD');
+          $gene = $genes->[0] if (scalar(@$genes) > 0);
+        }
+
+        if (!$gene) {
+          print STDERR "Symbol '$symbol' not found in the Core database\n";
+          next;
+        }
+
+        $rgd_coords{$symbol} = { 'gene'   => $gene->stable_id,
+                                 'chr'    => $gene->slice->seq_region_name,
+                                 'start'  => $gene->start,
+                                 'end'    => $gene->end,
+                                 'strand' => $gene->strand
+                               };
+      }
+
+      my $phenotype = {
+        id => $rgd_coords{$symbol}{'gene'},
+        description => $data{'TERM_NAME'},
+        seq_region_id => $seq_region_ids->{$rgd_coords{$symbol}{'chr'}},
+        seq_region_start => $rgd_coords{$symbol}{'start'},
+        seq_region_end => $rgd_coords{$symbol}{'end'},
+        seq_region_strand => $rgd_coords{$symbol}{'strand'},
+      };
+
+      if ($data{'REFERENCES'} =~ /^(RGD\:\d+)\|/) {
+        $phenotype->{external_id} = $1;
+      }
+
+      push @phenotypes, $phenotype;
+    }
+  }
+
+  my %result = ('phenotypes' => \@phenotypes);
+  return \%result;
+}
+
 
 sub parse_giant {
   my $infile = shift;
