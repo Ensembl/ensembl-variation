@@ -2183,7 +2183,7 @@ sub get_phenotype_id {
 
   # Clean up
   $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
-  $description =~ s/\n/ /g; # Remove 'new line' characters
+  $description =~ s/\n//g; # Remove 'new line' characters
   
   die "ERROR: No description found for phenotype\n" if(!defined($description));
 
