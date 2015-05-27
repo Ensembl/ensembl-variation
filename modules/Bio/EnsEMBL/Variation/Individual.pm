@@ -112,8 +112,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $display_flag, $has_coverage, $gender, $father, $mother, $type_name, $type_desc,
-  $father_id, $mother_id) = rearrange([qw(dbID adaptor name description display has_coverage gender
+  my ($dbID, $adaptor, $name, $desc, $gender, $father, $mother, $type_name, $type_desc,
+  $father_id, $mother_id) = rearrange([qw(dbID adaptor name description gender
   father_individual mother_individual type_individual type_description father_individual_id mother_individual_id)], @_);
 
   if (defined($gender)) {
@@ -130,15 +130,11 @@ sub new {
     }
   }
 
-  $display_flag ||= 'UNDISPLAYABLE'; 
-
   return bless {
     'dbID'    => $dbID,
     'adaptor' => $adaptor,
     'name'    => $name,
     'description' => $desc,
-    'display' => $display_flag,
-    'has_coverage' => $has_coverage,
     'gender'  => $gender,
     'father_individual' => $father,
     'mother_individual' => $mother,
@@ -258,54 +254,6 @@ sub gender {
     $self->{'gender'} = $gender;
   }
   return $self->{'gender'};
-}
-
-=head2 display
-
-  Arg [1]    : String $display (optional)
-  Example    : $display = $individual->display()
-  Description: Getter/Setter for the display attribute which can be one of UNDISPLAYABLE,
-               REFERENCE, DISPLAYABLE or DEFAULT.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub display {
-  my $self = shift;
-  if (@_) {
-    my $display = shift;
-    $display = uc($display);
-    unless (grep $_ eq $display, ('UNDISPLAYABLE', 'REFERENCE', 'DISPLAYABLE', 'DEFAULT')) {
-      throw('Display flag must be one of "REFERENCE", "DEFAULT", "DISPLAYABLE", "UNDISPLAYABLE"');
-    }
-    $self->{'display'} = $display;
-  }
-  return $self->{'display'};
-}
-
-=head2 has_coverage
-
-  Arg [1]     : int $has_coverage (optional)
-  Example     : $has_coverage = $ind->has_coverage();
-  Description : Getter/Setter for the flag indicating if this individual has
-                read coverage data available
-  Returntype  : int
-  Exceptions  : none
-  Caller      : general
-  Status      : At Risk
-
-=cut
-
-sub has_coverage {
-  my $self = shift;
-  if (@_){
-    my $new = shift;
-    return $self->{'has_coverage'} = $new;
-  }
-  return $self->{'has_coverage'} || 0;
 }
 
 =head2 get_all_Populations
