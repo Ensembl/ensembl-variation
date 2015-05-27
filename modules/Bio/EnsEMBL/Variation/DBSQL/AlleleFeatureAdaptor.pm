@@ -104,7 +104,7 @@ sub fetch_all_by_Slice{
   
   if (defined $sample){
     if(!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
-      throw('Bio::EnsEMBL::Variation::Individual arg expected');
+      throw('Bio::EnsEMBL::Variation::Sample arg expected');
     }
     if(!defined($sample->dbID())) {
       throw("Individual arg must have defined dbID");
