@@ -484,12 +484,6 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (110, 2, 'bi
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (109, 1, 'SO:0000409');
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (44, 110);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (44, 109);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (43, 108);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (43, 107);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (44, 110);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (44, 109);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (43, 108);
-INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (43, 107);
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (255, 2, 'sequence_feature');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (256, 1, 'SO:0000110');
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (60, 255);
