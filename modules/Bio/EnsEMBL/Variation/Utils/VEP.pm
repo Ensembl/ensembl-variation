@@ -3725,7 +3725,7 @@ sub fetch_regfeats {
     
     my ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates, $count_trimmed) = (0, 0, 0, 0, 0);
     
-    my %seen_rfs;
+    my $seen_rfs = {};
     
     $count_from_mem = 0;
     my $region_count = 0;
@@ -3837,11 +3837,12 @@ sub fetch_regfeats {
                         
                         # track already added reg_feats by dbID
                         my $dbID = $rf->{dbID};
-                        if($seen_rfs{$dbID}) {
+                        
+                        if($seen_rfs->{$type}->{$dbID}) {
                             $count_duplicates++;
                             next;
                         }
-                        $seen_rfs{$dbID} = 1;
+                        $seen_rfs->{$type}->{$dbID} = 1;
                         
                         push @{$rf_cache->{$chr}->{$type}}, $rf;
                     }
