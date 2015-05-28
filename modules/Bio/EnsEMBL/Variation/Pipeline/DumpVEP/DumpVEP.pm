@@ -30,6 +30,7 @@ package Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DumpVEP;
 
 use strict;
 use warnings;
+use File::Path qw(make_path);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::DumpVEP::BaseVEP);
 
@@ -57,6 +58,12 @@ sub run {
 
   if($eg){
      my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
+
+     if($meta_container->is_multispecies()==1){
+        my $collection_db=$1 if($meta_container->dbc->dbname()=~/(.+)\_core/);
+        $dir = $dir."/".$collection_db;
+        make_path($dir);
+     }
 
      $assembly = $meta_container->single_value_by_key('assembly.default');
      $version  = $meta_container->schema_version();

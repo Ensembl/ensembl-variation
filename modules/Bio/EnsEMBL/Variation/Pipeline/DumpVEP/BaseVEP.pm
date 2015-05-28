@@ -37,7 +37,8 @@ sub tar {
   my $self = shift;
   my $type = shift;
   my $mod  = shift;
-  
+
+  my $eg       = $self->param('eg'); 
   my $debug    = $self->param('debug');
   my $species  = $self->required_param('species');
   my $assembly = $self->required_param('assembly');
@@ -63,6 +64,15 @@ sub tar {
   }
   
   # check dir exists
+  if($eg){
+     my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
+
+     if($meta_container->is_multispecies()==1){
+        my $collection_db=$1 if($meta_container->dbc->dbname()=~/(.+)\_core/);
+        $dir = $dir."/".$collection_db;
+     }
+  }
+
   my $root_dir = $dir;
   my $sub_dir  = $species."/".$version."_".$assembly;
   
