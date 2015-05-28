@@ -39,6 +39,10 @@ sub param_defaults {
     'species_refseq' => 0,
     'species_flags'  => {},
     'overwrite'      => 0,
+    'sift'           => 0,
+    'polyphen'       => 0,
+    'regulatory'     => 0,
+    'eg'             => 0,
   };
 }
 
@@ -88,6 +92,9 @@ sub run {
 
   # species-specific
   my $species_flags = $self->param('species_flags');
+  
+  # copy in sift, polyphen, regulatory
+  $species_flags->{$species}->{$_} = $self->param($_) for grep {$self->param($_)} qw(sift polyphen regulatory);
   
   my $species_flags_cmd = $refseq.' ';
   if(my $flags = $species_flags->{$species}) {
@@ -188,9 +195,9 @@ sub run {
     while(<CMD>) { print REPORT; }
     close CMD;
     close REPORT;
-  }
   
-  $self->tar($self->param('species_refseq') ? 'refseq' : '');
+    $self->tar($self->param('species_refseq') ? 'refseq' : '');
+  }
   
   return;
 }

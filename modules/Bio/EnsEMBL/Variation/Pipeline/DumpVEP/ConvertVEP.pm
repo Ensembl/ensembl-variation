@@ -99,9 +99,9 @@ sub convert {
     close CMD;
   
     die "ERROR: Encountered an error running convert script\n".join("", @buffer)."\n" unless $finished;
+    
+    $self->tar($type, $mod);
   }
-  
-  $self->tar($type, $mod);
   
   return;
 }

@@ -82,9 +82,9 @@ sub run {
     close CMD;
   
     die "ERROR: Encountered an error running merge script\n".join("", @buffer)."\n" unless $finished;
-  }
   
-  $self->tar('merged');
+    $self->tar('merged');
+  }
   
   return;
 }

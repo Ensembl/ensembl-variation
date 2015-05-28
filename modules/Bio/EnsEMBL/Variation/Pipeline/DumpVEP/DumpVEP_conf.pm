@@ -129,9 +129,6 @@ sub default_options {
       
       # human has SIFT, PolyPhen, regulatory data and a file containing SNP frequencies
       homo_sapiens => {
-        sift => 'b',
-        polyphen => 'b',
-        regulatory => 1,
         lrg => 1,
         
         # assembly-specific stuff
@@ -150,21 +147,6 @@ sub default_options {
           },
         }
       },
-      
-      # mouse has SIFT and regulatory data
-      mus_musculus => {
-        regulatory => 1,
-        sift => 'b',
-      },
-      
-      # these species just have SIFT
-      bos_taurus        => { sift => 'b', },
-      canis_familiaris  => { sift => 'b', },
-      danio_rerio       => { sift => 'b', },
-      equus_caballus    => { sift => 'b', },
-      gallus_gallus     => { sift => 'b', },
-      rattus_norvegicus => { sift => 'b', },
-      sus_scrofa        => { sift => 'b', },
     },
 
     # configuration for the various resource options used in the pipeline
