@@ -733,10 +733,10 @@ INSERT INTO individual_type (name,description) VALUES ('mutant','a single or mul
 with a study. 
 
 @column sample_id               Primary key, internal identifier.
-@individual_id                  Foreign key references to the @link individual table.
+@column individual_id           Foreign key references to the @link individual table.
 @column name                    Name of the sample.
 @column description             Description of the sample.
-@study_id                       Foreign key references to the @link study table. 
+@column study_id                Foreign key references to the @link study table.
 @column display                 Information used by the website: samples with little information are filtered from some web displays.
 @column has_coverage            Indicate if the sample has coverage data populated in the read coverage table
 @column variation_set_id        Indicates the variation sets for which a sample has genotypes
