@@ -48,7 +48,6 @@ GetOptions(
 	'pattern=s',
 ) or die "ERROR: Could not parse command line options\n";
 
-
 # check options
 for(qw(host user port password tmpdir tmpfile)) {
 	die("ERROR: $_ not defined, use --$_\n") unless defined $config->{$_};
@@ -57,7 +56,7 @@ for(qw(host user port password tmpdir tmpfile)) {
 my @db_list;
 
 if(!defined($config->{db})) {
-	@db_list = @{get_species_list($config, $config->{host})};
+	@db_list = @{get_species_list($config)};
 }
 else {
 	push @db_list, $config->{db};
@@ -73,7 +72,10 @@ if (lc($config->{table}) eq 'all') {
 my @exclude;
 
 my $table_input = $config->{table};
+
 for my $source_table (split(/\s+/, $table_input)) {
+  my $filtered_db_list = filter_db_list($config, \@db_list, $source_table);    
+
     if ($source_table eq 'transcript_variation') {
         @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
     }
@@ -92,10 +94,8 @@ for my $source_table (split(/\s+/, $table_input)) {
     $ImportUtils::TMP_DIR = $TMP_DIR;
     $ImportUtils::TMP_FILE = $TMP_FILE;
 
-
-    foreach my $db(@db_list) {
+    foreach my $db (@$filtered_db_list) {
         print "\nProcessing database $db\n";
-        
         my $dbc = DBI->connect(
             sprintf(
                 "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
@@ -199,16 +199,14 @@ for my $source_table (split(/\s+/, $table_input)) {
 
 print "All done!\n";
 
-
 sub get_species_list {
 	my $config = shift;
-	my $host   = shift;
 	
 	# connect to DB
 	my $dbc = DBI->connect(
 		sprintf(
 			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
-			$host,
+			$config->{host},
 			$config->{port}
 		), $config->{user}, $config->{password}
 	);
@@ -239,3 +237,32 @@ sub get_species_list {
 	
 	return \@dbs;
 }
+
+sub filter_db_list {
+  my $config = shift;
+  my $db_list = shift;
+  my $table = shift;
+  my @filtered_db_list = ();
+  
+  foreach my $db (@$db_list) {
+    my $dbc = DBI->connect(
+      sprintf("DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
+      $config->{host},
+      $config->{port},
+      $db
+    ), $config->{user}, $config->{password});
+    my $sth = $dbc->prepare(qq{SELECT * FROM $table LIMIT 1;});
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+      my $count = $row[0];
+      if ($count > 0) {
+        push @filtered_db_list, $db;    
+      }
+    }
+    $sth->finish();
+  }
+  return \@filtered_db_list;
+}
+
+
+
