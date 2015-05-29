@@ -216,7 +216,7 @@ sub get_variant_example {
 
 sub add_table_header {
   my $labels = shift;
-  my $icon_column = qq{<th><span class="_ht conhelp" title="Icons designed by Ensembl">Icon</span></th>};
+  my $icon_column = qq{<th><span class="_ht ht" title="Icons designed by Ensembl">Icon</span></th>};
 
   my $eg_columns;
   foreach my $label (@$labels) {

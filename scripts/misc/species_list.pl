@@ -177,7 +177,7 @@ my $html_content = qq{
       <th>Species</th>
       <th $th_border_left>Sequence variant count</th>
       <th style="padding-left:0px">
-        <span class="_ht conhelp" title="Sequence variant count difference with the previous Ensembl release (v.$p_version)">
+        <span class="_ht ht" title="Sequence variant count difference with the previous Ensembl release (v.$p_version)">
           <small>(e!$e_version vs e!$p_version)</small>
         </span>
       </th>

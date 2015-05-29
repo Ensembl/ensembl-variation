@@ -79,8 +79,8 @@ my $default_colour = '#000000';
 
 my %type = (
   '1' => 'Variation',
-  '2' => '<span class="_ht conhelp" title="Structural variation">SV</span>',
-  '3' => 'Variation</li><li style="margin:4px 0px 0px"><span class="_ht conhelp" title="Structural variation">SV</span>',
+  '2' => '<span class="_ht ht" title="Structural variation">SV</span>',
+  '3' => 'Variation</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variation">SV</span>',
   '4' => 'CNV probe',
 );
 

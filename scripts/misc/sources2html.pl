@@ -147,7 +147,7 @@ my $html_header = q{
   <title>Variation Sources</title>
   <script type="text/javascript">
     window.onload = function() {
-      $('.conhelp').helptip({'track': true});
+      $('.ht').helptip({'track': true});
     };
   </script>
 </head>
@@ -324,7 +324,7 @@ sub source_table {
   if ($is_new) {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
+      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F;box-shadow: 2px 2px 2px #888" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
@@ -332,7 +332,7 @@ sub source_table {
   else {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle;box-shadow: 2px 2px 2px #888" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2>
     </div>
     };
@@ -428,17 +428,17 @@ sub source_table {
 
       if ($dt eq 'phenotype_feature') {
         my $dt_phe_title = ($phe_types->{$dt}{$source_id}) ? "Provides ".$phe_types->{$dt}{$source_id}." phenotype association data" : $phe_title;
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$dt_phe_title">Phenotype</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$dt_phe_title">Phenotype</span></div>};
         $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$dt_phe_title" title="$dt_phe_title" />};
       }
       elsif ($dt eq 'study') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="Data are grouped by study/publication">$data_type_label</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="Data are grouped by study/publication">$data_type_label</span></div>};
       }
       elsif ($dt eq 'variation_synonym') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
       }
       elsif ($dt eq 'structural_variation') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$data_type_label">SV</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$data_type_label">SV</span></div>};
       }
       else {
         $data_type_string .= qq{\n$spaces  <div $type_style>$data_type_label</div>};
@@ -462,7 +462,7 @@ sub source_table {
     
     # Variation source (i.e. chip data) having data in variation set as well
     if ($source_var_set_id) { # Also in variation set 
-      $data_type_string .= qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+      $data_type_string .= qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
       # Count
       my $count = get_species_set_count($source_var_set_id, $s_name, $db_name, $hostname);
@@ -550,7 +550,7 @@ sub source_table {
     
     # Data types
     my @data_types = split(",", $s_data_types);
-    my $data_type_string = qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+    my $data_type_string = qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
     # Count
     my $count = get_species_set_count($set_id, $s_name, $db_name, $hostname);
@@ -864,7 +864,7 @@ sub table_header {
   my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
   my $header_col = qq{
     <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">
-       <span class="_ht conhelp" $border_color title="$alt_text">Other</span>
+       <span class="_ht ht" $border_color title="$alt_text">Other</span>
     </th>};
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
@@ -872,9 +872,9 @@ sub table_header {
   my $data_type_header = qq{
      <th style="width:155px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">Data type(s)
        <div>
-         <div style="float:left;width:65px;text-align:center"><span class="_ht conhelp" $border_color title="Data type"><small>Type</small></div>
-         <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" $border_color title="Variants count"><small>Count</small></span></div>
-         <div style="float:left;width:20px;text-align:center"><span class="_ht conhelp" $border_color title="Example"><small>e.g.</small></span></div>
+         <div style="float:left;width:65px;text-align:center"><span class="_ht ht" $border_color title="Data type"><small>Type</small></div>
+         <div style="float:left;width:70px;text-align:center"><span class="_ht ht" $border_color title="Variants count"><small>Count</small></span></div>
+         <div style="float:left;width:20px;text-align:center"><span class="_ht ht" $border_color title="Example"><small>e.g.</small></span></div>
          <div style="clear:both"></div>
        </div>
      </th>

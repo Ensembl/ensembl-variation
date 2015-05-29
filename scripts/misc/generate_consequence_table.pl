@@ -95,14 +95,14 @@ my $cons_table = qq{
     <th>SO description</th>
     <th>SO accession</th>
     <th>Display term</th>
-    <th><span class="_ht conhelp" title="Classification of the level of severity of the consequence type">IMPACT</span></th>
+    <th><span class="_ht ht" title="Classification of the level of severity of the consequence type">IMPACT</span></th>
   </tr>\n};
 
 my $bg = '';
 my $border_top = ';border-top:1px solid #FFF';
 my $not_first = 0;
 
-for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} keys(%cons_rows)) {
+for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b} || $a cmp $b} keys(%cons_rows)) {
   my $SO_term = (split(/\|/, $row))[0];
   $row =~ s/\|/<\/td>\n    <td>/g;
     

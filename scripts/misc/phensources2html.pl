@@ -121,7 +121,7 @@ my $html_header = q{
   <title>Phenotype Sources</title>
   <script type="text/javascript">
     window.onload = function() {
-      $('.conhelp').helptip({'track': true});
+      $('.ht').helptip({'track': true});
     };
   </script>
 </head>
@@ -292,13 +292,12 @@ sub source_phen_table {
   if ($is_new) {
     $html .= qq{
     <div style="padding-bottom:1px">
-      <div style="float:left;padding-left:0px">
-        <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
-        <h2 id="$s_name_id" style="display:inline;color:#22949b">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+      <div style="float:left">
+        <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:0px;padding-right:0px;vertical-align:middle;background-color:#00F;box-shadow: 2px 2px 2px #888" /></a><h2 id="$s_name_id" style="display:inline;vertical-align:middle;margin-left:5px;padding:8px;background-color:#F0F0F0;color:#22949b">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
       </div>
       <div style="float:right;margin:25px 10px 0px 0px">
         <a href="/$s_name/Phenotype/All" title="$species Ensembl Phenotypes" style="vertical-align:middle" target="_blank"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
-        <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht conhelp" title="$count_phen phenotype(s)/disease(s)/trait(s) available for $species">$count_phen</span></span>
+        <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht ht" title="$count_phen phenotype(s)/disease(s)/trait(s) available for $species">$count_phen</span></span>
       </div>
       <div style="clear:both"></div>
     </div>
@@ -307,13 +306,12 @@ sub source_phen_table {
   else {
     $html .= qq{
     <div style="padding-bottom:3px">
-      <div style="float:left;padding-left:0px">
-        <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle;border-color:#22949b" /></a>
-        <h2 id="$s_name_id" style="display:inline;color:#22949b">$species</h2>
+      <div style="float:left">
+        <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:0px;padding-right:0px;vertical-align:middle;border-color:#22949b;box-shadow: 2px 2px 2px #888" /></a><h2 id="$s_name_id" style="display:inline;vertical-align:middle;margin-left:5px;padding:8px;background-color:#F0F0F0;color:#22949b">$species</h2>
       </div>
       <div style="float:right;margin:25px 10px 0px 0px">
         <a rel="external" href="/$s_name/Phenotype/All" title="$species Ensembl Phenotypes" style="vertical-align:middle"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
-        <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht conhelp" title="$count_phen phenotype(s) available for $species">$count_phen</span></span>
+        <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht ht" title="$count_phen phenotype(s) available for $species">$count_phen</span></span>
       </div>
       <div style="clear:both"></div>
     </div>
@@ -378,7 +376,7 @@ sub source_phen_table {
     foreach my $type (keys %{$counts_species->{$source_id}}) {
       my $type_label = ($type =~ /structural\s?variation/i) ? 'SV' : $type;
       my $dt_phe_title = "Provides $type phenotype association data";
-      $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$dt_phe_title">$type_label</span></div>};
+      $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$dt_phe_title">$type_label</span></div>};
  
       # Count
       my $count = $counts_species->{$source_id}{$type};
@@ -642,9 +640,9 @@ sub table_header {
   my $data_type_header = qq{
      <th style="width:155px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">Phenotype/Disease/Trait
        <div>
-         <div style="float:left;width:55px;text-align:center"><span class="_ht conhelp" $border_color title="Feature type association"><small>Type</small></span></div>
-         <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" $border_color title="Phenotype associations count"><small>Count</small></span></div>
-         <div style="float:left;width:20px;text-align:center"><span class="_ht conhelp" $border_color title="Example"><small>e.g.</small></span></div>
+         <div style="float:left;width:55px;text-align:center"><span class="_ht ht" $border_color title="Feature type association"><small>Type</small></span></div>
+         <div style="float:left;width:70px;text-align:center"><span class="_ht ht" $border_color title="Phenotype associations count"><small>Count</small></span></div>
+         <div style="float:left;width:20px;text-align:center"><span class="_ht ht" $border_color title="Example"><small>e.g.</small></span></div>
          <div style="clear:both"></div>
        </div>
      </th>
