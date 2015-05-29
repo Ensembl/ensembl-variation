@@ -1495,7 +1495,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
                                           'TFBS_amplification',
                                           'TFBS_translocation'
                                         ),
-    motif_name                          text,
+    motif_name                          varchar(60) DEFAULT NUL,
     motif_start                         int(11) unsigned,
     motif_end                           int(11) unsigned,
     motif_score_delta                   float DEFAULT NULL,
