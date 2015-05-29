@@ -1766,7 +1766,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_b.sql|Create new sample table and update individual table. Copy individual data into new sample table.');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_d.sql|Update type of motif_name to varchar.');
 
 /**
 @header  Failed tables
