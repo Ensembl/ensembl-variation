@@ -20,7 +20,7 @@ DROP INDEX `individual_idx` ON structural_variation_sample;
 CREATE INDEX sample_idx ON structural_variation_sample (sample_id);
 
 ALTER TABLE read_coverage CHANGE individual_id sample_id int(10) unsigned NOT NULL;
-
+CREATE INDEX sample_idx ON read_coverage (sample_id);
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
 

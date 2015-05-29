@@ -54,7 +54,7 @@ SET storage_engine=MYISAM;
 @see failed_variation
 @see variation_feature
 @see allele
-@see individual_genotype_multiple_bp
+@see sample_genotype_multiple_bp
 @see compressed_genotype_var
 @see attrib
 */
@@ -280,7 +280,7 @@ create table variation_synonym (
 @column allele_code_id 		   Foreign key reference to @link allele_code table.
 @column population_id		   Foreign key references to the @link population table.
 @column frequency		   Frequency of this allele in the population.
-@column count			   Number of individuals in the population where this allele is found.
+@column count			   Number of individuals/samples in the population where this allele is found.
 @column frequency_submitter_handle dbSNP handle for submitter of frequency data [may be different to submitter of observed variant]
 
 @see variation
@@ -598,7 +598,7 @@ CREATE TABLE tagged_variation_feature (
 
 /**
 @header  Sample tables
-@desc    These tables define the individual and population information.
+@desc    These tables define the sample, individual and population information.
 @colour  #FF8500
 */
 
@@ -613,13 +613,13 @@ CREATE TABLE tagged_variation_feature (
 @column name              Name of the population.
 @column size              Size of the population.
 @column description       Description of the population.
-@column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals with respect to some other criteria (1).
-@column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
+@column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals/samples with respect to some other criteria (1).
+@column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual/sample genotypes (1).
 @column display           Information used by BioMart.
 @column display_group_id  Used to group population for display on the Population Genetics page
 
 @see population_synonym
-@see individual_population
+@see sample_population
 @see population_structure
 @see population_genotype
 @see allele
@@ -743,6 +743,7 @@ with a study.
 
 @see individual
 @see study
+@see variation_set
 */
 
 CREATE TABLE sample(
@@ -878,7 +879,7 @@ CREATE TABLE display_group(
 @column genotype_code_id          Foreign key reference to the @link genotype_code table.
 @column frequency                 Frequency of the genotype in the population.
 @column population_id             Foreign key references to the @link population table.
-@column count                     Number of individuals who have this genotype, in this population.
+@column count                     Number of individuals/samples who have this genotype, in this population.
 
 @see population
 @see variation
@@ -913,7 +914,7 @@ CREATE TABLE population_genotype (
 @column subsnp_id        Foreign key references to the @link subsnp_handle table.
 @column allele_1         One of the alleles of the genotype, e.g. "TAG".
 @column allele_2         The other allele of the genotype.
-@column sample_id        Foreign key references to the @link individual table.
+@column sample_id        Foreign key references to the @link sample table.
 
 @see sample
 @see variation
@@ -929,7 +930,7 @@ CREATE TABLE tmp_sample_genotype_single_bp (
 
 	key variation_idx(variation_id),
     key subsnp_idx(subsnp_id),
-    key individual_idx(individual_id)
+    key sample_idx(sample_id)
 ) MAX_ROWS = 100000000;
 
 
@@ -974,7 +975,7 @@ create table sample_genotype_multiple_bp (
 @column seq_region_start     The start position of the variation on the @link seq_region.
 @column seq_region_end       The end position of the variation on the @link seq_region.
 @column seq_region_strand    The orientation of the variation on the @link seq_region.
-@column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a  <span style="color:#D00">distance</span> in base pairs from the previous genotype; a <span style="color:#090">variation dbID</span>; a <span style="color:#00D">genotype_code_id</span> identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br /><b><span style="color:#D00">0</span>, <span style="color:#090">1</span>,  <span style="color:#00D">1</span>, <span style="color:#D00">20</span>, <span style="color:#090">2</span>, <span style="color:#00D">5</span>, <span style="color:#D00">35</span>, <span style="color:#090">3</span>, <span style="color:#00D">3</span>, ...</b><br />The first genotype ("<span style="color:#D00">0</span>,<span style="color:#090">1</span>,<span style="color:#00D">1</span>") has a position of 1000 + <span style="color:#D00">0</span> = 1000, and corresponds to the variation with the internal identifier <span style="color:#090">1</span> and genotype_code_id corresponding to the genotype A|G (internal ID <span style="color:#00D">1</span>).<br />The second genotype ("<span style="color:#D00">20</span>,<span style="color:#090">2</span>,<span style="color:#00D">5</span>") has a position of 1000 + <span style="color:#D00">20</span> = 1020, internal variation_id <span style="color:#090">2</span> and genotype_code_id corresponding to the genotype C|C ( internal ID <span style="color:#00D">5</span>).<br />The third genotype similarly has a position of 1055, and so on.
+@column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual/sample in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a  <span style="color:#D00">distance</span> in base pairs from the previous genotype; a <span style="color:#090">variation dbID</span>; a <span style="color:#00D">genotype_code_id</span> identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br /><b><span style="color:#D00">0</span>, <span style="color:#090">1</span>,  <span style="color:#00D">1</span>, <span style="color:#D00">20</span>, <span style="color:#090">2</span>, <span style="color:#00D">5</span>, <span style="color:#D00">35</span>, <span style="color:#090">3</span>, <span style="color:#00D">3</span>, ...</b><br />The first genotype ("<span style="color:#D00">0</span>,<span style="color:#090">1</span>,<span style="color:#00D">1</span>") has a position of 1000 + <span style="color:#D00">0</span> = 1000, and corresponds to the variation with the internal identifier <span style="color:#090">1</span> and genotype_code_id corresponding to the genotype A|G (internal ID <span style="color:#00D">1</span>).<br />The second genotype ("<span style="color:#D00">20</span>,<span style="color:#090">2</span>,<span style="color:#00D">5</span>") has a position of 1000 + <span style="color:#D00">20</span> = 1020, internal variation_id <span style="color:#090">2</span> and genotype_code_id corresponding to the genotype C|C ( internal ID <span style="color:#00D">5</span>).<br />The third genotype similarly has a position of 1055, and so on.
 
 @see sample
 @see seq_region
@@ -991,7 +992,7 @@ CREATE TABLE compressed_genotype_region (
   genotypes blob,
   
   KEY pos_idx (seq_region_id,seq_region_start),
-  KEY individual_idx (individual_id)
+  KEY sample_idx (sample_id)
 );
 
 /**
@@ -1029,7 +1030,7 @@ CREATE TABLE compressed_genotype_var (
 @column seq_region_start    The start position of the variation on the @link seq_region.
 @column seq_region_end      The end position of the variation on the @link seq_region.
 @column level               Minimum number of reads.
-@column sample_id           Foreign key references to the @link individual table.
+@column sample_id           Foreign key references to the @link sample table.
 
 @see sample
 @see seq_region
@@ -1041,8 +1042,8 @@ CREATE TABLE read_coverage (
   seq_region_end int not null,
   level tinyint not null,
   sample_id int(10) unsigned not null,
-  
-  key seq_region_idx(seq_region_id,seq_region_start)   
+  KEY seq_region_idx(seq_region_id,seq_region_start),
+  KEY sample_idx (sample_id)
 );
 
 
@@ -1206,11 +1207,12 @@ create table structural_variation_feature (
 
 @column structural_variation_sample_id  Primary key, internal identifier.
 @column structural_variation_id         Foreign key references to the @link structural_variation table.
-@column sample_id		                    Foreign key references to the @link individual table. Defines the individual or sample name.
+@column sample_id		                    Foreign key references to the @link sample table. Defines the individual or sample name.
 @column strain_id		                    Foreign key references to the @link individual table. Defines the strain name.
 
 @see structural_variation
 @see sample
+@see individudal
 */
 
 CREATE TABLE structural_variation_sample (
@@ -2049,7 +2051,7 @@ CREATE TABLE protein_function_predictions_attrib (
 );
 
 /**
-@legend #FF8500 Tables containing individual, population and genotype data
+@legend #FF8500 Tables containing sample, individual, population and genotype data
 @legend #01D4F7	Tables containing structural variation data
 @legend #FFD700	Tables containing sets of variations
 @legend #7CFC00	Tables containing source and study data
