@@ -525,32 +525,37 @@ sub get_all_TranscriptVariations {
 =cut
 
 sub get_all_RegulatoryFeatureVariations {
-    my ($self, $regulatory_features) = @_;
+  my ($self, $regulatory_features) = @_;
 
-    if ($regulatory_features) {
-        assert_ref($regulatory_features, 'ARRAY');
-        map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::RegulatoryFeature') } @$regulatory_features;
-    }
-
-    if ($self->dbID && not defined $self->{regulatory_feature_variations}) {
-        # This VariationFeature is from the database, so we can just fetch the
-        # RegulatoryFeatureVariations from the database as well
-        if (my $db = $self->adaptor->db) {
-            my $rfva = $db->get_RegulatoryFeatureVariationAdaptor;
-            my $rfvs = $rfva->fetch_all_by_VariationFeatures([$self]);
-            map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
-        }
-    } else {
-        # This VariationFeature is not in the database, so we have to build the
-        # RegulatoryFeatureVariations ourselves
-        my $rfvs = $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
+  if ($regulatory_features) {
+    assert_ref($regulatory_features, 'ARRAY');
+    map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::RegulatoryFeature') } @$regulatory_features;
+  }
+  
+  if(!exists($self->{regulatory_feature_variations})) {
+    if ($self->dbID) {
+      # This VariationFeature is from the database, so we can just fetch the
+      # RegulatoryFeatureVariations from the database as well
+      if (my $db = $self->adaptor->db) {
+        my $rfva = $db->get_RegulatoryFeatureVariationAdaptor;
+        my $rfvs = $rfva->fetch_all_by_VariationFeatures([$self]);
         map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
+      }
     }
-    if ($regulatory_features) {
-        return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
-    } else {
-        return [ values %{ $self->{regulatory_feature_variations}}];
+    else {
+      # This VariationFeature is not in the database, so we have to build the
+      # RegulatoryFeatureVariations ourselves
+      $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
     }
+    
+    $self->{regulatory_feature_variations} ||= {};
+  }
+  
+  if ($regulatory_features) {
+    return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
+  } else {
+    return [ values %{ $self->{regulatory_feature_variations}}];
+  }
 }
 
 =head2 get_all_MotifFeatureVariations
@@ -563,27 +568,33 @@ sub get_all_RegulatoryFeatureVariations {
 =cut
 
 sub get_all_MotifFeatureVariations {
-    my ($self, $motif_features) = @_;
+  my ($self, $motif_features) = @_;
 
-    if ($motif_features) {
-        assert_ref($motif_features, 'ARRAY');
-        map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::MotifFeature')} @$motif_features;
-    }
-    if ($self->dbID && not defined $self->{motif_feature_variations}) {
-        if (my $db = $self->adaptor->db) {
-            my $mfva = $db->get_MotifFeatureVariationAdaptor;
-            my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
-            map {$self->add_MotifFeatureVariation($_)} @$mfvs;
-        }
-    } else {
-        my $mfvs = $self->_get_all_RegulationVariations('MotifFeature', @_);
+  if ($motif_features) {
+    assert_ref($motif_features, 'ARRAY');
+    map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::MotifFeature')} @$motif_features;
+  }
+  
+  if(!exists($self->{motif_feature_variations})) {
+    if($self->dbID) {
+      if (my $db = $self->adaptor->db) {
+        my $mfva = $db->get_MotifFeatureVariationAdaptor;
+        my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
         map {$self->add_MotifFeatureVariation($_)} @$mfvs;
-    } 
-    if ($motif_features) {
-        return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
-    } else {
-        return [ values %{ $self->{motif_feature_variations}}];
+      }
     }
+    else {
+      $self->_get_all_RegulationVariations('MotifFeature', @_);
+    }
+    
+    $self->{motif_feature_variations} ||= {};
+  }
+  
+  if ($motif_features) {
+    return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
+  } else {
+    return [ values %{ $self->{motif_feature_variations}}];
+  }
 }
 
 =head2 get_all_ExternalFeatureVariations
@@ -601,55 +612,57 @@ sub get_all_ExternalFeatureVariations {
 }
 
 sub _get_all_RegulationVariations {
-    my ($self, $type) = @_;
+  my ($self, $type) = @_;
 
-    unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
-        throw("Invalid Ensembl Regulation type '$type'");
-    }
+  unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
+    throw("Invalid Ensembl Regulation type '$type'");
+  }
+  
+  my $lc_type = lc($type).'_variations';
+  $lc_type =~ s/Feature/_feature/;
 
-    unless ($self->{regulation_variations}->{$type}) {
+  unless(exists($self->{$lc_type})) {
     
-        my $fg_adaptor;
+    my $fg_adaptor;
 
-        if (my $adap = $self->adaptor) {
-            if(my $db = $adap->db) {
-                $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
-                    -species  => $adap->db->species, 
-                    -type     => $type,
-                );			
-            }
+    if (my $adap = $self->adaptor) {
+      if(my $db = $adap->db) {
+        $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+        -species  => $adap->db->species, 
+        -type     => $type,
+        );			
+      }
             
-            unless ($fg_adaptor) {
-                warning("Failed to get adaptor for $type");
-                return [];
-            }
-        }
-        else {
-            warning('Cannot get variation features without attached adaptor');
-            return [];
-        }
-
-        my $slice = $self->feature_Slice;
-                
-        my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
-        my $get_adaptor = 'get_'.$type.'VariationAdaptor';
-
-		eval {
-		  $self->{regulation_variations}->{$type} = [ 
-			  map {  
-				  $constructor->new(
-					  -variation_feature  => $self,
-					  -feature            => $_,
-                      -adaptor            => ($self->adaptor->db ? $self->adaptor->db->$get_adaptor : undef),
-				  );
-			  } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
-		  ];
-		};
-		
-		$self->{regulation_variations}->{$type} ||= [];
+      unless ($fg_adaptor) {
+        warning("Failed to get adaptor for $type");
+        return [];
+      }
+    }
+    else {
+      warning('Cannot get variation features without attached adaptor');
+      return [];
     }
 
-    return $self->{regulation_variations}->{$type};
+    my $slice = $self->feature_Slice;
+                
+    my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+    my $get_adaptor = 'get_'.$type.'VariationAdaptor';
+    my $add_method  = 'add_'.$type.'Variation';
+
+    eval {
+      $self->$add_method(
+        $constructor->new(
+          -variation_feature  => $self,
+          -feature            => $_->transfer($self->slice),
+          -adaptor            => ($self->adaptor->db ? $self->adaptor->db->$get_adaptor : undef),
+        )
+      ) for @{ $fg_adaptor->fetch_all_by_Slice($slice) };
+    };
+		
+    $self->{$lc_type} ||= {};
+  }
+
+  return [values %{$self->{$lc_type}}];
 }
 
 sub get_IntergenicVariation {
@@ -689,7 +702,7 @@ sub get_all_VariationFeatureOverlaps {
         @{ $self->get_all_TranscriptVariations },
         @{ $self->get_all_RegulatoryFeatureVariations },
         @{ $self->get_all_MotifFeatureVariations },
-        @{ $self->get_all_ExternalFeatureVariations },
+        # @{ $self->get_all_ExternalFeatureVariations },
     ];
 
     if (my $iv = $self->get_IntergenicVariation) {
