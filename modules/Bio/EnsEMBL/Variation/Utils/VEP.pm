@@ -1733,19 +1733,14 @@ sub rejoin_variants {
       # better to make new keys
       # we also have to set the VF pointer to the original
       
-      # copy transcript variations
-      foreach my $key(keys %{$vf->{transcript_variations} || {}}) {
-        my $val = $vf->{transcript_variations}->{$key};
-        $val->base_variation_feature($original);
+      # copy transcript variations etc
+      foreach my $type(map {$_.'_variations'} ('transcript', map {lc_rf_type($_)} @REG_FEAT_TYPES)) {
+        foreach my $key(keys %{$vf->{$type} || {}}) {
+          my $val = $vf->{$type}->{$key};
+          $val->base_variation_feature($original);
         
-        # rename the key they're stored under
-        $original->{transcript_variations}->{$vf->{alt_allele}.'_'.$key} = $val;
-      }
-      
-      # copy regulatory variations
-      if($vf->{regulation_variations} && ref($vf->{regulation_variations}) eq 'HASH') {        
-        foreach my $type(grep {exists($vf->{regulation_variations}->{$_})} @REG_FEAT_TYPES) {
-          push @{$original->{regulation_variations}->{$type}}, @{$vf->{regulation_variations}->{$type}};
+          # rename the key they're stored under
+          $original->{$type}->{$vf->{alt_allele}.'_'.$key} = $val;
         }
       }
       
@@ -1998,10 +1993,8 @@ sub vf_to_consequences {
   # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
   # this will stop the API trying to go off and fill it again
   if(defined $config->{whole_genome}) {
-    $vf->{transcript_variations} ||= {};
-    $vf->{regulation_variations}->{$_} ||= [] for (@REG_FEAT_TYPES, 'ExternalFeature');
+    $vf->{$_} ||= {} for map {$_.'_variations'} ('transcript', map {lc_rf_type($_)} @REG_FEAT_TYPES);
   }
-  
   
   # pos stats
   $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
@@ -2518,8 +2511,6 @@ sub tva_to_line {
   
   foreach my $tool (qw(SIFT PolyPhen)) {
     my $lc_tool = lc($tool);
-    
-    $DB::single = 1;
     
     if (my $opt = $config->{$lc_tool}) {
       my $want_pred  = $opt =~ /^p/i;
@@ -3260,7 +3251,7 @@ sub whole_genome_fetch {
             
             if(defined($config->{regulatory})) {
                 foreach my $type(@REG_FEAT_TYPES) {
-                    $_->{regulation_variations}->{$type} ||= [] for @{$vf_hash->{$chr}{$chunk}{$pos}};
+                    $_->{lc_rf_type($type).'_variations'} ||= {} for @{$vf_hash->{$chr}{$chunk}{$pos}};
                 }
             }
             
@@ -3414,53 +3405,56 @@ sub whole_genome_fetch_transcript {
 }
 
 sub whole_genome_fetch_reg {
-    my $config = shift;
-    my $vf_hash = shift;
-    my $chr = shift;
+  my $config = shift;
+  my $vf_hash = shift;
+  my $chr = shift;
     
-    my $rf_cache = $config->{rf_cache};
+  my $rf_cache = $config->{rf_cache};
     
-    foreach my $type(keys %{$rf_cache->{$chr}}) {
-        debug("Analyzing ".$type."s") unless defined($config->{quiet});
+  foreach my $type(keys %{$rf_cache->{$chr}}) {
+    debug("Analyzing ".$type."s") unless defined($config->{quiet});
         
-        my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+    my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+    my $add_method  = 'add_'.$type.'Variation';
         
-        my $rf_counter = 0;
-        my $rf_count = scalar @{$rf_cache->{$chr}->{$type}};
+    my $rf_counter = 0;
+    my $rf_count = scalar @{$rf_cache->{$chr}->{$type}};
         
-        while($rf_counter < $rf_count) {
+    while($rf_counter < $rf_count) {
             
-            progress($config, $rf_counter, $rf_count);
+      progress($config, $rf_counter, $rf_count);
             
-            my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
+      my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
             
-            # do each overlapping VF
-            my $s = $rf->{start};
-            my $e = $rf->{end};
+      # do each overlapping VF
+      my $s = $rf->{start};
+      my $e = $rf->{end};
             
-            # get the chunks this transcript overlaps
-            my %chunks;
-            $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
-            map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
+      # get the chunks this transcript overlaps
+      my %chunks;
+      $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
+      map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
             
-            foreach my $chunk(keys %chunks) {
-                foreach my $vf(
-                    grep {$_->{start} <= $e && $_->{end} >= $s}
-                    map {@{$vf_hash->{$chr}{$chunk}{$_}}}
-                    keys %{$vf_hash->{$chr}{$chunk}}
-                ) {
-                    push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
-                        -variation_feature  => $vf,
-                        -feature            => $rf,
-                        -no_ref_check       => 1,
-                        -no_transfer        => 1
-                    );
-                }
-            }
+      foreach my $chunk(keys %chunks) {
+        foreach my $vf(
+          grep {$_->{start} <= $e && $_->{end} >= $s}
+          map {@{$vf_hash->{$chr}{$chunk}{$_}}}
+          keys %{$vf_hash->{$chr}{$chunk}}
+        ) {
+          $vf->$add_method(
+            $constructor->new(
+              -variation_feature  => $vf,
+              -feature            => $rf,
+              -no_ref_check       => 1,
+              -no_transfer        => 1
+            )
+          );
         }
-        
-        end_progress($config);
+      }
     }
+        
+    end_progress($config);
+  }
 }
 
 sub whole_genome_fetch_sv {
@@ -6483,6 +6477,13 @@ sub phenotype_attrib_id {
   }
   
   return $config->{phenotype_attrib_id};
+}
+
+sub lc_rf_type {
+  my $type = shift;
+  my $return = $type;
+  $return =~ s/Feature/_feature/;
+  return lc($return);
 }
 
 sub merge_hashes {
