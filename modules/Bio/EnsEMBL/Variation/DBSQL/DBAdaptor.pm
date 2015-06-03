@@ -342,13 +342,25 @@ sub shift_hgvs_variants_3prime{
 sub use_vcf {
   my $self = shift;
   
+  my ($new_use, $vcf_config_file) = @_;
+  
   # default to 0
   $self->{use_vcf} = 0 if !exists($self->{use_vcf});
   
   # allow user to switch
-  $self->{use_vcf} = shift if @_;
+  $self->{use_vcf} = $new_use if defined($new_use);
+  
+  $self->vcf_config_file($vcf_config_file) if defined($vcf_config_file);
   
   return $self->{use_vcf}
+}
+
+sub vcf_config_file {
+  my $self = shift;
+  
+  $self->{vcf_config_file} = shift if @_;
+  
+  return $self->{vcf_config_file};
 }
 
 1;

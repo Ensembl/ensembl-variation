@@ -128,7 +128,7 @@ sub new {
   my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
   
   # try and get config file from global variable or ENV
-  $config_file ||= $CONFIG_FILE || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
+  $config_file ||= $CONFIG_FILE || ($self->db ? $self->db->vcf_config_file : undef) || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
   
   # try and find default config file in API dir
   if(!defined($config_file)) {
@@ -205,7 +205,7 @@ sub new {
     my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
       -type => $hash->{type},
-      -filename_template => $hash->{filename_template},
+      -filename_template => ($ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR} ? $ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}.'/' : '').$hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
@@ -216,6 +216,11 @@ sub new {
       -strict_name_match => $hash->{strict_name_match},
       -adaptor => $self,
     );
+    
+    use Data::Dumper;
+    $Data::Dumper::Maxdepth = 2;
+    $Data::Dumper::Indent = 1;
+    print STDERR Dumper \%ENV;
     
     $self->{collections}->{$collection->id} = $collection;
     push @{$self->{order}}, $collection->id;
