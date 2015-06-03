@@ -43,7 +43,7 @@ die "ERROR: You are not logged in as user mysqlens\n" unless $ENV{USER} eq 'mysq
 #die "ERROR: You must run this script on the database server machine on which the MTMP table database resides\n" unless $ENV{HOST} eq 'ens-variation2';
 
 # parse tables
-$config->{tables} ||= 'MTMP_population_genotype,subsnp_map,tmp_individual_genotype_single_bp';
+$config->{tables} ||= 'MTMP_population_genotype,subsnp_map,tmp_sample_genotype_single_bp';
 my %t = map {$_ => 1} split /\,/, $config->{tables};
 $config->{tables} = \%t;
 
@@ -66,6 +66,7 @@ my @file_list = readdir DIR;
 my $hash = {};
 
 foreach my $host(qw(ens-staging ens-staging2)) {
+
 	my @list = @{get_species_list($config, $host)};
 	
 	foreach my $db(@list) {
@@ -106,7 +107,7 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 		$sth->finish;
 		
 		$sth = $dbc->prepare(qq{
-			SHOW TABLES LIKE '%tmp_individual_genotype_single_bp%'
+			SHOW TABLES LIKE '%tmp_sample_genotype_single_bp%'
 		});
 		$sth->execute();
 		
@@ -128,7 +129,7 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 			
 			# special case for tmp_ind_gt, filename is too long for MySQL 64-char table name limit
 			my $match = $f;
-			$match =~ s/tmp_gt/tmp_individual_genotype_single_bp/;
+			$match =~ s/tmp_gt/tmp_sample_genotype_single_bp/;
 			
 			my $ok = 0;
 			foreach my $t(keys %{$config->{tables}}) {
