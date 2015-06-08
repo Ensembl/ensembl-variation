@@ -1208,7 +1208,6 @@ create table structural_variation_feature (
 @column structural_variation_sample_id  Primary key, internal identifier.
 @column structural_variation_id         Foreign key references to the @link structural_variation table.
 @column sample_id		                    Foreign key references to the @link sample table. Defines the individual or sample name.
-@column strain_id		                    Foreign key references to the @link individual table. Defines the strain name.
 
 @see structural_variation
 @see sample
@@ -1219,12 +1218,10 @@ CREATE TABLE structural_variation_sample (
 	structural_variation_sample_id int(10) unsigned NOT NULL auto_increment,
 	structural_variation_id int(10) unsigned NOT NULL,
 	sample_id int(10) unsigned DEFAULT NULL,
-	strain_id int(10) unsigned DEFAULT NULL,
 	
 	primary key (structural_variation_sample_id),
 	key structural_variation_idx(structural_variation_id),
-	key sample_idx(sample_id),
-	key strain_idx(strain_id)
+	key sample_idx(sample_id)
 );
 
 /**
@@ -1770,6 +1767,8 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_b.sql|Create new sample table and update individual table. Copy individual data into new sample table.');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_d.sql|Update type of motif_name to varchar.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_e.sql|Drop the column strain_id from structural_variation_sample');
+
 
 /**
 @header  Failed tables

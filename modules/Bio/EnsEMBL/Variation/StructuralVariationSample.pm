@@ -117,13 +117,14 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain,$study_id, $study) =
-    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE STRAIN _STUDY_ID STUDY)],@_); 
+  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain_id,$strain,$study_id, $study) =
+    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY)],@_); 
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
   $self->{'_structural_variation_id'} = $structural_variation_id;
   $self->{'sample'}                   = $sample;
+  $self->{'_strain_id'}               = $strain_id;
   $self->{'strain'}                   = $strain;
   $self->{'_study_id'}                = $study_id;
   $self->{'study'}                    = $study;
@@ -223,14 +224,14 @@ sub study {
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
 sub individual {
   my $self = shift;
-  return $self->{'individual'} = shift if(@_);
-  return $self->{'individual'};
+  
+  return $self->strain(@_);
 }
 
 =head2 sample
@@ -265,8 +266,23 @@ sub sample {
 
 sub strain {
   my $self = shift;
-  return $self->{'strain'} = shift if(@_);
+  
+  # set
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw("Bio::EnsEMBL::Variation::Individual argument expected");
+    }
+    $self->{'strain'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'strain'}) && $self->adaptor() && defined($self->{'_strain_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_IndividualAdaptor();
+    $self->{'strain'} = $sa->fetch_by_dbID($self->{'_strain_id'});
+  }
+  
   return $self->{'strain'};
 }
+
 
 1;
