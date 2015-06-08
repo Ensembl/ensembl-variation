@@ -83,7 +83,7 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
-               'outer_end','strand','parent','clinical','sample','strain_name','gender','is_ssv',
+               'outer_end','strand','parent','clinical','subject','sample','gender','is_ssv',
                'is_failed','population','bp_order','is_somatic','status','alias','length','copy_number');
 
 my %attribs_col = ('ID'          => 'id *',
@@ -98,8 +98,8 @@ my %attribs_col = ('ID'          => 'id *',
                    'strand'      => 'strand i',
                    'parent'      => 'parent *',
                    'clinical'    => 'clinic',
+                   'subject'     => 'subject *', # or strain
                    'sample'      => 'sample *',
-                   'strain_name' => 'strain *',
                    'gender'      => 'gender',
                    'is_ssv'      => 'is_ssv i',
                    'is_failed'   => 'is_failed i',
@@ -275,7 +275,7 @@ sub load_file_data{
   }
   
   
-  foreach my $col('clinic', 'sample', 'strain', 'status', 'alias', 'length', 'copy_number') {
+  foreach my $col('clinic', 'sample', 'subject', 'status', 'alias', 'length', 'copy_number') {
     $dbVar->do(qq{UPDATE $temp_table SET $col = NULL WHERE $col = '';});
   }
   
@@ -791,41 +791,60 @@ sub structural_variation_sample {
 
   my $study_name = ($dbVar->selectrow_arrayref(qq{SELECT name FROM study WHERE study_id=$study_id;}))->[0];
 
-  # Create sample entries
-  $stmt = qq{ SELECT DISTINCT sample, gender FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from individual)};
-  my $rows_samples = $dbVar->selectall_arrayref($stmt);
-  foreach my $row (@$rows_samples) {
-    my $sample = $row->[0];
-    my $gender = ($row->[1] ne '') ? $row->[1] : 'Unknown';
-    next if ($sample eq  '');
-
-    my $itype_val = ($species =~ /human|homo/i) ? 3 : ($species =~ /mouse|mus/i ? 1 : 2);
-    
-    $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$sample','Subject from the DGVa study $study_name','$gender',$itype_val)});
-  }
-  
-  
   # Create strain entries
   if ($species =~ /mouse|mus/i) {
-    $stmt = qq{ SELECT DISTINCT strain FROM $temp_table 
-                WHERE strain NOT IN (SELECT DISTINCT name from individual WHERE display!='UNDISPLAYABLE' AND individual_type_id=1)
+    $stmt = qq{ SELECT DISTINCT subject FROM $temp_table 
+                WHERE subject NOT IN (SELECT DISTINCT name from individual WHERE individual_type_id=1)
               };
     my $rows_strains = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_strains) {
-      my $sample = $row->[0];
-      next if ($sample eq  '');
+      my $strain = $row->[0];
+      next if ($strain eq  '');
     
-      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' LIMIT 1})) {
-        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,display,individual_type_id) VALUES ('$sample','Strain from the DGVa study $study_name','Unknown','MARTDISPLAYABLE',1)});
+      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' LIMIT 1})) {
+        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','Unknown',1)});
       }
       else{
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' AND display='UNDISPLAYABLE'})) {
-          $dbVar->do(qq{UPDATE individual SET display='MARTDISPLAYABLE' WHERE name='$sample' AND display='UNDISPLAYABLE'});
-        }
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' AND display!='UNDISPLAYABLE' AND individual_type_id!=1})) {
-          $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$sample' AND display!='UNDISPLAYABLE' AND type!=1});
+        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' AND individual_type_id!=1})) {
+          $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$strain' AND individual_type_id!=1});
         }
       }
+    }
+    
+    # Create sample entries
+    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample WHERE study_id=$study_id AND display!="UNDISPLAYABLE")};
+    my $rows_samples = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_samples) {
+      my $sample  = $row->[0];
+      my $subject = $row->[1];
+      next if ($sample eq  '' || $subject eq '');
+
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",individual_id FROM individual WHERE name='$subject'});
+    }
+  }
+  # Create individual entries (not for mouse)
+  else { 
+    $stmt = qq{ SELECT DISTINCT subject, gender FROM $temp_table WHERE is_ssv=1 AND subject NOT IN (SELECT DISTINCT name from individual)};
+    my $rows_subjects = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_subjects) {
+      my $subject = $row->[0];
+      my $gender = ($row->[1] =~ /\w+/) ? $row->[1] : 'Unknown';
+      next if ($subject eq  '');
+
+      my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
+    
+      $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$subject','Subject from the DGVa study $study_name','$gender',$itype_val)});
+    }
+  
+    # Create sample entries
+    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample WHERE study_id=$study_id)};
+    my $rows_samples = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_samples) {
+      my $sample  = $row->[0];
+      my $subject = $row->[1];
+      next if ($sample eq  '' || $subject eq '');
+
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, individual_id FROM individual WHERE name='$subject'});
     }
   }
 
@@ -834,30 +853,41 @@ sub structural_variation_sample {
   
   # For mouse
   if ($species =~ /mouse|mus/i) {
-    #$ext1 = " AND i1.display='UNDISPLAYABLE'";
-    $ext2 = " AND i2.display!='UNDISPLAYABLE'";
+    $stmt = qq{
+      INSERT IGNORE INTO $svs_table (
+        structural_variation_id,
+        sample_id
+      )
+      SELECT DISTINCT
+        sv.structural_variation_id,
+        s.sample_id
+      FROM
+        $sv_table sv,
+        $temp_table t
+        LEFT JOIN sample s ON (s.name=t.sample AND s.display!='UNDISPLAYABLE')
+      WHERE
+        sv.variation_name=t.id AND
+        (t.sample is not null OR t.subject is not null)
+      };
   }
-  
-  $stmt = qq{
-    INSERT IGNORE INTO
-    $svs_table (
-      structural_variation_id,
-      individual_id,
-      strain_id
-    )
-    SELECT DISTINCT
-      sv.structural_variation_id,
-      i1.individual_id,
-      i2.individual_id
-    FROM
-      $sv_table sv,
-      $temp_table t
-      LEFT JOIN individual i1 ON (i1.name=t.sample$ext1)
-      LEFT JOIN individual i2 ON (i2.name=t.strain$ext2)
-    WHERE
-      sv.variation_name=t.id AND
-      (t.sample is not null OR t.strain is not null)
-  };
+  else {
+    $stmt = qq{
+      INSERT IGNORE INTO $svs_table (
+        structural_variation_id,
+        sample_id
+      )
+      SELECT DISTINCT
+        sv.structural_variation_id,
+        s.sample_id
+      FROM
+        $sv_table sv,
+        $temp_table t
+        LEFT JOIN sample s ON (s.name=t.sample)
+      WHERE
+        sv.variation_name=t.id AND
+        t.sample is not null
+      };
+  }
   $dbVar->do($stmt);
 }
 
@@ -925,8 +955,8 @@ sub phenotype_feature {
 
 
 sub drop_tmp_table {
-  $dbVar->do(qq{DROP TABLE $temp_table;});
-  $dbVar->do(qq{DROP TABLE $temp_phen_table;});
+  $dbVar->do(qq{DROP TABLE $temp_table;}) unless ($debug);
+  $dbVar->do(qq{DROP TABLE $temp_phen_table;}) unless ($debug);
 }
 
 
@@ -1323,10 +1353,15 @@ sub parse_9th_col {
           $info->{sample} = ($samples{$value}{population}) ? $samples{$value}{population} : $value;
         } else {
           $info->{sample} = ($samples{$value}{subject}) ? $samples{$value}{subject} : $value;
-        }  
+        }
+        if (scalar(keys(%subjects)) == 1 ) {
+          my $subject_name = (keys(%subjects))[0];
+          $info->{subject} = $subject_name;
+        } else {
+          $info->{subject} = ($samples{$value}{subject}) ? $samples{$value}{subject} : $info->{sample};
+        }
         $info->{population}  = ($samples{$value}{population}) ? $samples{$value}{population} : undef; # 1000 Genomes study
         $info->{gender}      = ($samples{$value}{gender}) ? $samples{$value}{gender} : undef;
-        $info->{strain_name} = $info->{population} if ($species =~ /mouse|mus_musculus/i);
         
         my $s_phenotype = ($samples{$value}{phenotype}) ? $samples{$value}{phenotype} : $samples{$value}{tissue};
         $info->{phenotype}{$s_phenotype} = 1;
@@ -1431,7 +1466,7 @@ sub pre_processing {
   
   # Prepare the structural_variation_sample table
   if ($dbVar->do(qq{SHOW KEYS FROM $svs_table WHERE Key_name='sv_id_key';}) < 1){
-    $dbVar->do(qq{ALTER TABLE $svs_table ADD CONSTRAINT  UNIQUE KEY `sv_id_key` (`structural_variation_id`,`individual_id`,`strain_id`)});
+    $dbVar->do(qq{ALTER TABLE $svs_table ADD CONSTRAINT  UNIQUE KEY `sv_id_key` (`structural_variation_id`,`sample_id`)});
   }
   
   # Prepare the individual table
@@ -1458,33 +1493,31 @@ sub pre_processing {
 sub post_processing_annotation {
   debug(localtime()." Post processing of the table $svs_table");
   
-  my $stmt = qq{
-    DELETE FROM $svs_table
-    WHERE individual_id IS NULL AND strain_id IS NULL
-  };
+  my $stmt = qq{ DELETE FROM $svs_table WHERE sample_id IS NULL };
   $dbVar->do($stmt);
   
-  # Remove duplicated combinations sample/strain
-  my @sv_list;
-  my $sth = $dbVar->prepare(qq{ SELECT structural_variation_id, count(structural_variation_sample_id) c 
-                                FROM $svs_table GROUP BY structural_variation_id HAVING c>1
-                           });
-  $sth->execute();
-  while (my @res = ($sth->fetchrow_array)) {
-    push (@sv_list,$res[0]);
-  }
-  if (scalar(@sv_list)>0) {
-    my $svs  = join(',',@sv_list); 
-    $stmt = qq{ DELETE FROM $svs_table WHERE individual_id=strain_id AND structural_variation_id IN ($svs) };
-    $dbVar->do($stmt);
-  }
+  ## Remove duplicated combinations sample/strain
+  #my @sv_list;
+  #my $sth = $dbVar->prepare(qq{ SELECT structural_variation_id, count(structural_variation_sample_id) c 
+  #                              FROM $svs_table GROUP BY structural_variation_id HAVING c>1
+  #                         });
+  #$sth->execute();
+  #while (my @res = ($sth->fetchrow_array)) {
+  #  push (@sv_list,$res[0]);
+  #}
+  #if (scalar(@sv_list)>0) {
+  #  my $svs  = join(',',@sv_list); 
+  #  $stmt = qq{ DELETE FROM $svs_table WHERE individual_id=strain_id AND structural_variation_id IN ($svs) };
+  #  $dbVar->do($stmt);
+  #}
   
   # Duplicate strains at the SV level (only for mouse)
   if ($species =~ /mouse|mus/i) {
     $stmt = qq{
-      INSERT IGNORE INTO $svs_table (structural_variation_id,strain_id) 
-      SELECT distinct sva.structural_variation_id,svs.strain_id FROM $svs_table svs, $sva_table sva 
-      WHERE sva.supporting_structural_variation_id=svs.structural_variation_id AND svs.strain_id is not null
+      INSERT IGNORE INTO $svs_table (structural_variation_id,sample_id) 
+      SELECT distinct sva.structural_variation_id,svs.sample_id FROM $svs_table svs, $sva_table sva, sample s 
+      WHERE sva.supporting_structural_variation_id=svs.structural_variation_id AND s.sample_id=svs.sample_id
+        AND s.display!='UNDISPLAYABLE'
     };
     $dbVar->do($stmt);
   } 
@@ -1511,11 +1544,27 @@ sub post_processing_sample {
   debug(localtime()." Post processing of the table individual");
   my $stmt;
   
+  # Sample
+  my $sth = $dbVar->prepare(qq{ SELECT s.sample_id, s.description, count(DISTINCT sv.study_id) c 
+                                FROM $sv_table sv, sample s, $svs_table svs
+                                WHERE sv.structural_variation_id=svs.structural_variation_id AND s.sample_id=svs.sample_id
+                                GROUP BY svs.sample_id HAVING c>1
+                              });
+  $sth->execute();
+  while (my @res = ($sth->fetchrow_array)) {
+    if ($res[1] =~ /^(Sample|Subject) from the DGVa study/) {
+      $stmt = qq{UPDATE sample SET description='Sample from several DGVa studies' WHERE sample_id=$res[0]};
+      $dbVar->do($stmt);
+    }
+  }
+  $sth->finish;
+  
   # Individual
-  my $sth = $dbVar->prepare(qq{ SELECT i.individual_id, i.description, count(DISTINCT sv.study_id) c 
-                                FROM $sv_table sv, individual i, $svs_table svs
-                                WHERE sv.structural_variation_id=svs.structural_variation_id AND i.individual_id=svs.individual_id
-                                GROUP BY svs.individual_id HAVING c>1
+  $sth = $dbVar->prepare(qq{ SELECT i.individual_id, i.description, count(DISTINCT sv.study_id) c 
+                                FROM $sv_table sv, sample s, individual i, $svs_table svs
+                                WHERE sv.structural_variation_id=svs.structural_variation_id AND s.sample_id=svs.sample_id
+                                  AND s.individual_id=i.individual_id
+                                GROUP BY i.individual_id HAVING c>1
                               });
   $sth->execute();
   while (my @res = ($sth->fetchrow_array)) {
@@ -1524,6 +1573,7 @@ sub post_processing_sample {
       $dbVar->do($stmt);
     }
   }
+  $sth->finish;
   
   # Strain
   if ($species =~ /mouse|mus/i) {
