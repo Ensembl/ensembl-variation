@@ -50,15 +50,20 @@ sub default_options {
         # (currently set to BRCA1 in InitJobs.pm), this is useful when testing new installations
         # of sift and polyphen, alterations to the pipeline etc. When set to 0 the full pipeline
         # will be run
-
-        hive_use_triggers       => 0,
+        
+        hive_force_init => 1,
+        hive_use_param_stack => 0,
+        hive_use_triggers => 0,
+        hive_auto_rebalance_semaphores => 0, 
+        hive_no_init => 0,
 
         debug_mode              => 0,
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD/',
-
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
+        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
+        
         pipeline_name           => 'protein_function',
 
         pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
@@ -95,16 +100,12 @@ sub default_options {
             -driver => 'mysql',
         },
         
-        hive_use_triggers       => 0,
-        hive_force_init => 0,
-        hive_use_param_stack => 0,
-        
         # configuration for the various resource options used in the pipeline
         
         default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-q long -R"select[mem>8000] rusage[mem=8000]" -M8000',
         medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
+        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-q long -R"select[mem>8000] rusage[mem=8000]" -M8000', # this is Sanger LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
@@ -171,23 +172,23 @@ sub default_options {
     };
 }
 
-sub pipeline_create_commands {
-    my ($self) = @_;
-    return [
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 0).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
-        @{$self->SUPER::pipeline_create_commands}, 
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'INSERT INTO meta (meta_key, meta_value) VALUES ("hive_output_dir", "}.$self->o('output_dir').q{")'},
-    ];
-}
+#sub pipeline_create_commands {
+#    my ($self) = @_;
+#    return [
+#        'mysql '.$self->dbconn_2_mysql('pipeline_db', 0).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
+#        @{$self->SUPER::pipeline_create_commands}, 
+#        'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'INSERT INTO meta (meta_key, meta_value) VALUES ("hive_output_dir", "}.$self->o('output_dir').q{")'},
+#    ];
+#}
 
 sub resource_classes {
     my ($self) = @_;
     return {
-        0 => { -desc => 'default',  'LSF' => $self->o('default_lsf_options') },
-        1 => { -desc => 'urgent',   'LSF' => $self->o('urgent_lsf_options')  },
-        2 => { -desc => 'highmem',  'LSF' => $self->o('highmem_lsf_options') },
-        3 => { -desc => 'long',     'LSF' => $self->o('long_lsf_options')    },
-        4 => { -desc => 'medmem',   'LSF' => $self->o('medmem_lsf_options')    },
+          'default' => { 'LSF' => $self->o('default_lsf_options') },
+          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options')  },
+          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
+          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
+          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
     };
 }
 
@@ -214,7 +215,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -input_ids  => [{}],
-            -rc_id      => 2,
+            -rc_name    => 'highmem',
             -flow_into  => {
                 2 => [ 'run_polyphen' ],
                 3 => [ 'run_sift' ],
@@ -232,7 +233,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('pph_max_workers'),
-            -rc_id          => 2,
+            -rc_name        => 'highmem',
             -flow_into      => {
                 2   => [ 'run_weka' ],
             },
@@ -249,7 +250,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
-            -rc_id          => 0,
+            -rc_name        => 'default',
             -flow_into      => {},
         },
         
@@ -267,7 +268,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
-            -rc_id          => 4,
+            -rc_name        => 'medmem',
             -flow_into      => {},
         },
     ];
