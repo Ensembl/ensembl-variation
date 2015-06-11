@@ -201,7 +201,7 @@ sub _tables{
 }
 
 sub _columns{
-    return qw(individual_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes);
+    return qw(c.individual_id c.seq_region_id c.seq_region_start c.seq_region_end c.seq_region_strand c.genotypes);
 }
 
 sub _write_columns{
