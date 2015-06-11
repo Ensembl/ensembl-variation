@@ -930,7 +930,7 @@ CREATE TABLE tmp_sample_genotype_single_bp (
 	subsnp_id int(15) unsigned,   
 	allele_1 char(1),
 	allele_2 char(1),
-	sample_id int,
+	sample_id int(10) unsigned not null,
 
 	key variation_idx(variation_id),
     key subsnp_idx(subsnp_id),
