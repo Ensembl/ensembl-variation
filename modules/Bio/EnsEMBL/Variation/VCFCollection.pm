@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotype;
 use Bio::EnsEMBL::Variation::Sample;
+use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
 
 our %TYPES = (
@@ -365,7 +366,6 @@ sub use_db {
 
 sub get_all_Samples {
   my $self = shift;
-  
   if(!defined($self->{samples})) {
     
     # we should only need to get samples from one chromosome's VCF
@@ -376,6 +376,7 @@ sub get_all_Samples {
     
     my $prefix = $self->sample_prefix;
     my $sample_adpt = $self->use_db ? $self->adaptor->db->get_SampleAdaptor() : undef;
+    my $individual_adpt = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
     
     my $sample_names = $vcf->get_samples();
     
@@ -390,12 +391,18 @@ sub get_all_Samples {
         Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
           adaptor         => $sample_adpt,
+          display         => 'UNDISPLAYABLE',
           dbID            => --($self->{_sample_id}),
+          individual      => Bio::EnsEMBL::Variation::Individual->new_fast({
+            name     => $prefix.$sample_name,
+            adaptor  => $individual_adpt,
+            type_individual => 'outbred',
+            dbID     => --($self->{_sample_id}),
+          }),
         });
-      
       # store the raw name to easily match to data returned from other methods
       $sample->{_raw_name} = $sample_name;
-      
+      print STDERR $sample->dbID, "\n";
       push @{$self->{samples}}, $sample;
     }
   }
@@ -878,7 +885,6 @@ sub _get_all_population_names {
     
     $self->{_population_names} = \@names;
   }
-  
   return $self->{_population_names};
 }
 
