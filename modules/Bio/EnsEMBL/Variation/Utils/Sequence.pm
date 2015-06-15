@@ -654,7 +654,7 @@ sub format_hgvs_string{
 
     elsif($hgvs_notation->{'type'} =~ /\[\d+\]/){
 	#### insertion described by string and number
-	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'};
+	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};
     }
 
     else{
