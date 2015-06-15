@@ -1826,46 +1826,6 @@ sub format_rest_output {
     $hash->{variant_class} = $vf->{class_SO_term};
   }
   
-  # add existing variants
-  if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-    foreach my $ex(@{$vf->{existing}}) {
-      delete $ex->{$_} for qw(failed);
-      
-      # frequencies
-      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EUR AA EA)) {
-        my $tmp = $ex->{$pop};
-        
-        if($tmp =~ /(\w)\:([\d\.]+)/) {
-          $ex->{lc($pop).'_maf'} = $2;
-          $ex->{lc($pop).'_allele'} = $1;
-        }
-        else {
-          $ex->{lc($pop).'_maf'} = $tmp;
-        }
-        
-        delete $ex->{$pop};
-      }
-      
-      # remove empty
-      foreach my $key(keys %$ex) {
-        delete $ex->{$key} if !defined($ex->{$key}) || $ex->{$key} eq '' || ($key !~ /maf/ && $ex->{$key} eq 0);
-      }
-      
-      # fix comma-separated lists into arrays
-      foreach my $key(grep {defined($ex->{$_})} @list_fields) {
-        $ex->{$key} = [split(',', $ex->{$key})];
-      }
-      
-      # rename
-      foreach my $key(grep {defined($ex->{$_})} keys %rename) {
-        $ex->{$rename{$key}} = $ex->{$key};
-        delete $ex->{$key};
-      }
-      
-      push @{$hash->{colocated_variants}}, $ex;
-    }
-  }
-  
   # record all cons terms so we can get the most severe
   my @con_terms;
   
@@ -1954,6 +1914,46 @@ sub format_rest_output {
   
   # add assembly
   $hash->{assembly_name} = $config->{assembly} || $config->{cache_assembly};
+  
+  # add existing variants
+  if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+    foreach my $ex(@{$vf->{existing}}) {
+      delete $ex->{$_} for qw(failed);
+      
+      # frequencies
+      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EUR AA EA)) {
+        my $tmp = $ex->{$pop};
+        
+        if($tmp =~ /(\w)\:([\d\.]+)/) {
+          $ex->{lc($pop).'_maf'} = $2;
+          $ex->{lc($pop).'_allele'} = $1;
+        }
+        else {
+          $ex->{lc($pop).'_maf'} = $tmp;
+        }
+        
+        delete $ex->{$pop};
+      }
+      
+      # remove empty
+      foreach my $key(keys %$ex) {
+        delete $ex->{$key} if !defined($ex->{$key}) || $ex->{$key} eq '' || ($key !~ /maf/ && $ex->{$key} eq 0);
+      }
+      
+      # fix comma-separated lists into arrays
+      foreach my $key(grep {defined($ex->{$_})} @list_fields) {
+        $ex->{$key} = [split(',', $ex->{$key})];
+      }
+      
+      # rename
+      foreach my $key(grep {defined($ex->{$_})} keys %rename) {
+        $ex->{$rename{$key}} = $ex->{$key};
+        delete $ex->{$key};
+      }
+      
+      push @{$hash->{colocated_variants}}, $ex;
+    }
+  }
   
   numberify($hash);
   
@@ -2913,7 +2913,7 @@ sub init_line {
         
         # somatic?
         my @somatic = map {$_->{somatic}} @{$vf->{existing}};
-        $line->{Extra}->{SOMATIC} = join(",", @somatic) if grep {defined($_) && $_ > 0} @somatic;
+        $line->{Extra}->{SOMATIC} = join(",", map {$_ ||= 0; $_} @somatic) if grep {defined($_) && $_ > 0} @somatic;
         
         # phenotype or disease
         my @p_or_d = map {$_->{phenotype_or_disease}} @{$vf->{existing}};
