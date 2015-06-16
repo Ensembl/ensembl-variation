@@ -402,7 +402,6 @@ sub get_all_Samples {
         });
       # store the raw name to easily match to data returned from other methods
       $sample->{_raw_name} = $sample_name;
-      print STDERR $sample->dbID, "\n";
       push @{$self->{samples}}, $sample;
     }
   }
