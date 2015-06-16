@@ -678,8 +678,7 @@ create table population_structure (
 
 @see individual_synonym
 @see individual_type
-@see sample_population
-@see sample_genotype_multiple_bp
+@see sample
 */
 
 create table individual(
@@ -743,6 +742,11 @@ with a study.
 
 @see individual
 @see study
+@see sample_population
+@see sample_genotype_multiple_bp
+@see read_coverage
+@see compressed_genotype_region
+@see compressed_genotype_var
 @see variation_set
 */
 
