@@ -4017,7 +4017,7 @@ sub check_existing_tabix {
       next unless -e $file;
       #die("ERROR: Could not read from file $file\n") unless -e $file;
       
-      open VARS, "tabix $file $region_string 2>&1 |"
+      open VARS, "tabix -f $file $region_string 2>&1 |"
         or die "\nERROR: Could not open tabix pipe for $file\n";
       
       # convert list to hash so we can look up quickly by position
@@ -5189,7 +5189,7 @@ sub freqs_from_vcf {
     my $file = $vcf_conf->{file};
     next unless -e $file;
     
-    open VCF, "tabix $file $region_string 2>&1 |"
+    open VCF, "tabix -f $file $region_string 2>&1 |"
       or die "\nERROR: Could not open tabix pipe for $file\n";
     
     while(<VCF>) {
