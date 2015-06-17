@@ -237,13 +237,13 @@ sub configure {
 		'allele'                          => 1,
 		'population_genotype'             => 1,
 		'compressed_genotype_var'         => 1,
-		'individual_genotype_multiple_bp' => 0,
+		'sample_genotype_multiple_bp'     => 0,
 		'compressed_genotype_region'      => 0,
 		'transcript_variation'            => 0,
 		'sample'                          => 1,
 		'population'                      => 1,
-		'individual'                      => 1,
-		'individual_population'           => 1,
+		'sample'                          => 1,
+		'sample_population'               => 1,
 		'allele_code'                     => 1,
 		'genotype_code'                   => 1,
 		'meta_coord'                      => 1,
@@ -281,11 +281,11 @@ sub configure {
 	# force some back in
 	$tables->{$_} = 1 for qw/source meta_coord/;
 	
-	$tables->{individual_genotype_multiple_bp} = 1 if defined($config->{mart_genotypes});
+	$tables->{sample_genotype_multiple_bp} = 1 if defined($config->{mart_genotypes});
 	
 	# special case for sample, we also want to set the other sample tables to on
 	if($tables->{sample}) {
-		$tables->{$_} = 1 for qw/population individual individual_population/;
+		$tables->{$_} = 1 for qw/population sample sample_population/;
 	}
 	
 	# force population if user wants allele or population_genotype
@@ -293,9 +293,9 @@ sub configure {
 		$tables->{$_} = 1 for qw/population sample/;
 	}
 	
-	# force individual tables for individual level data
-	if($tables->{compressed_genotype_region} || $tables->{individual_genotype_multiple_bp} || $tables->{compressed_genotype_var}) {
-		$tables->{$_} = 1 for qw/population individual individual_population sample variation variation_synonym variation_feature flanking_sequence/;
+	# force sample tables for sample level data
+	if($tables->{compressed_genotype_region} || $tables->{sample_genotype_multiple_bp} || $tables->{compressed_genotype_var}) {
+		$tables->{$_} = 1 for qw/population sample sample_population variation variation_synonym variation_feature flanking_sequence/;
 	}
 	
 	if($tables->{population_genotype} || $tables->{compressed_genotype_region} || $tables->{compressed_genotype_var}) {
@@ -826,13 +826,13 @@ sub main {
 			population_genotype($config, $data) if $config->{tables}->{population_genotype};
 			
 			# individual genotypes
-			individual_genotype($config, $data) if $config->{tables}->{compressed_genotype_var} || defined($config->{mart_genotypes});
+			sample_genotype($config, $data) if $config->{tables}->{compressed_genotype_var} || defined($config->{mart_genotypes});
 			
 			# GENOTYPES BY REGION
 			#####################
 			
 			# multi bp
-			#if($config->{tables}->{individual_genotype_multiple_bp} && $force_multi && @{$data->{genotypes}}) {
+			#if($config->{tables}->{sample_genotype_multiple_bp} && $force_multi && @{$data->{genotypes}}) {
 			#	&multi_bp_genotype($dbVar, $data);
 			#}
 			
@@ -845,7 +845,7 @@ sub main {
 				if(defined($vf->{seq_region_id}) && defined($vf->{start})) {
 				
 					foreach my $gt(@{$data->{genotypes}}) {
-						my $sample_id = $gt->individual->dbID;
+						my $sample_id = $gt->sample->dbID;
 						
 						next if $gt->genotype_string =~ /\./;
 						
@@ -878,13 +878,13 @@ sub main {
 							$genotypes->{$sample_id}->{genotypes} .=
 								escape($blob).
 								escape(pack("w", $data->{variation}->dbID || 0)).
-								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
+								escape(pack("w", $config->{samplegenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
 						}
 						else{
 							#first genotype starts in the region_start, not necessary the number
 							$genotypes->{$sample_id}->{genotypes} =
 								escape(pack("w", $data->{variation}->dbID || 0)).
-								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
+								escape(pack("w", $config->{samplegenotype_adaptor}->_genotype_code($gt->genotype, $gt->phased)));
 						}
 						
 						$genotypes->{$sample_id}->{region_end} = $vf->{start};
@@ -1328,15 +1328,16 @@ sub get_adaptors {
 	# variation adaptors
 	foreach my $type(qw(
 		population
-		individual
+		sample
+    individual
 		variation
 		variationfeature
 		allele
 		populationgenotype
 		genotypecode
 		attribute
-		individualgenotype
-		individualgenotypefeature
+		samplegenotype
+		samplegenotypefeature
 		transcriptvariation
 	)) {
 		$config->{$type.'_adaptor'} = $config->{reg}->get_adaptor($config->{species}, "variation", $type);
@@ -1584,10 +1585,10 @@ sub parse_header {
 		if(defined($headers{FORMAT})) {
 			$config->{first_sample_col} = $headers{FORMAT} + 1;
 			
-			# splice @split hash to get just individual IDs
+			# splice @split hash to get just sample IDs
 			splice(@split, 0, $config->{first_sample_col});
 			
-			$config->{individuals} = individuals($config, \@split);
+			$config->{samples} = samples($config, \@split);
 		}
 		
 		# if no sample data
@@ -1687,35 +1688,35 @@ sub population{
 	if(defined($config->{panel})) {
 		open PANEL, $config->{panel} or die "ERROR: Could not read from panel file ".$config->{panel}."\n";
 		
-		my $pop_inds = {};
-		my $ind_pops = {};
+		my $pop_samples = {};
+		my $sample_pops = {};
 		
 		while(<PANEL>) {
 			chomp;
 			my @split = split /\s+|\,/;
-			my $ind = shift @split;
+			my $sample = shift @split;
 			
-			$ind = $config->{ind_prefix}.$ind;
+			$sample = $config->{sample_prefix}.$sample;
 			
-			# make all individuals a member of top-level population if specified
+			# make all samples a member of top-level population if specified
 			push @split, $config->{population} if defined($config->{population});
 			
 			foreach my $pop(@split) {
 				$pop = $config->{pop_prefix}.$pop;
-				$pop_inds->{$pop}->{$ind} = 1; 
-				$ind_pops->{$ind}->{$pop} = 1;
+				$pop_samples->{$pop}->{$sample} = 1; 
+				$sample_pops->{$sample}->{$pop} = 1;
 			}
 		}
 		
 		close PANEL;
 		
-		$config->{ind_pops} = $ind_pops;
-		$config->{pop_inds} = $pop_inds;
+		$config->{sample_pops} = $sample_pops;
+		$config->{pop_samples} = $pop_samples;
 		@pops = keys %$pop_inds;
 		
 		if(defined($config->{test})) {
 			debug($config, "(TEST) Population counts:");
-			debug($config, "(TEST) $_\t".(scalar keys %{$pop_inds->{$_}})) for keys %$pop_inds;
+			debug($config, "(TEST) $_\t".(scalar keys %{$pop_samples->{$_}})) for keys %$pop_samples;
 		}
 	}
 	
@@ -1730,7 +1731,7 @@ sub population{
 	
 	# check GMAF pop is one of those we are adding
 	if(defined($config->{gmaf})) {
-		die "ERROR: Population specified using --gmaf (".$config->{gmaf}." is not one of those to be added; use \"--gmaf ALL\" to calculate GMAF from all individuals in the file\n" unless grep {$config->{gmaf} eq 'ALL' or $config->{gmaf} eq $_ or $config->{pop_prefix}.$config->{gmaf} eq $_} @pops;
+		die "ERROR: Population specified using --gmaf (".$config->{gmaf}." is not one of those to be added; use \"--gmaf ALL\" to calculate GMAF from all samples in the file\n" unless grep {$config->{gmaf} eq 'ALL' or $config->{gmaf} eq $_ or $config->{pop_prefix}.$config->{gmaf} eq $_} @pops;
 	}
 	
 	my @return;
@@ -1793,40 +1794,40 @@ sub pedigree {
 	return $ped;
 }
 
-sub individuals {
+sub samples {
 	my $config    = shift;
 	my $split_ref = shift;
 	
-	# get an individual adaptor
-	my $ia = $config->{individual_adaptor};
-	
+	# get sample and individual adaptor
+	my $sample_adpt = $config->{sample_adaptor};
+  my $ia = $config->{individual_adaptor};	
 	# populate %ind_pops hash if it doesn't exist (this will happen when using --population but no panel file)
-	if(!exists($config->{ind_pops})) {
-		my %ind_pops = map { $config->{ind_prefix}.$_ => {$config->{pop_prefix}.$config->{population} => 1} } @$split_ref;
-		$config->{ind_pops} = \%ind_pops;
+	if(!exists($config->{sample_pops})) {
+		my %sample_pops = map { $config->{sample_prefix}.$_ => {$config->{pop_prefix}.$config->{population} => 1} } @$split_ref;
+		$config->{sample_pops} = \%sample_pops;
 	}
 	
 	# need the relationship to go both ways (allele/pop_genotype uses this way round later on)
-	if(!exists($config->{pop_inds})) {
-		my %pop_inds;
-		$pop_inds{$config->{pop_prefix}.$config->{population}}->{$config->{ind_prefix}.$_} = 1 for @$split_ref;
-		$config->{pop_inds} = \%pop_inds;
+	if(!exists($config->{pop_samples})) {
+		my %pop_samples;
+		$pop_samples{$config->{pop_prefix}.$config->{population}}->{$config->{sample_prefix}.$_} = 1 for @$split_ref;
+		$config->{pop_samples} = \%pop_samples;
 	}
 	
-	my (@individuals, %ind_objs);
+	my (@samples, %sample_objs);
 	
-	# only add the individuals that were defined in the panel file (this will be all if no panel file)
-	my @sorted = grep {defined $config->{ind_pops}->{$config->{ind_prefix}.$_}} @$split_ref;
+	# only add the samples that were defined in the panel file (this will be all if no panel file)
+	my @sorted = grep {defined $config->{sample_pops}->{$config->{sample_prefix}.$_}} @$split_ref;
 	
-	# if we have pedigree, we need to sort it so the parent individuals get added first
+	# if we have pedigree, we need to sort it so the parent samples get added first
 	if(defined($config->{pedigree}) && ref($config->{pedigree}) eq 'HASH') {
 		@sorted = sort {
 			(
-				defined($config->{pedigree}->{$config->{ind_prefix}.$a}->{father}) +
-				defined($config->{pedigree}->{$config->{ind_prefix}.$a}->{mother})
+				defined($config->{pedigree}->{$config->{sample_prefix}.$a}->{father}) +
+				defined($config->{pedigree}->{$config->{sample_prefix}.$a}->{mother})
 			) <=> (
-				defined($config->{pedigree}->{$config->{ind_prefix}.$b}->{father}) +
-				defined($config->{pedigree}->{$config->{ind_prefix}.$b}->{mother})
+				defined($config->{pedigree}->{$config->{sample_prefix}.$b}->{father}) +
+				defined($config->{pedigree}->{$config->{sample_prefix}.$b}->{mother})
 			)
 		} @$split_ref;
 	}
@@ -1834,58 +1835,60 @@ sub individuals {
 	# get population objects in hash indexed by name
 	my %pop_objs = map {$_->name => $_} @{$config->{populations}};
 	
-	foreach my $individual_name(@sorted) {
+	foreach my $sample_name(@sorted) {
 		
-		# add individual prefix if defined
-		$individual_name = $config->{ind_prefix}.$individual_name;
+		# add sample prefix if defined
+		$sample_name = $config->{sample_prefix}.$sample_name;
 		
-		my $inds = $ia->fetch_all_by_name($individual_name);
-		my $ind;
+		my $samples = $sample_adpt->fetch_all_by_name($sample_name);
+		my $sample;
 		
-		if(scalar @$inds > 1) {
-			die "ERROR: Multiple individuals with name $individual_name found, cannot continue\n";
+		if(scalar @$samples > 1) {
+			die "ERROR: Multiple samples with name $sample_name found, cannot continue\n";
 		}
-		elsif(scalar @$inds == 1) {
-			$ind = $inds->[0];
+		elsif(scalar @$samples == 1) {
+			$sample = $samples->[0];
 		}
 		
 		# create new
 		else {
 			
-			$ind = Bio::EnsEMBL::Variation::Individual->new(
-				-name            => $individual_name,
-				-adaptor         => $ia,
-				-type_individual => 'outbred',
+			$sample = Bio::EnsEMBL::Variation::Sample->new(
+				-name            => $sample_name,
+				-adaptor         => $sample_adpt,
 				-display         => 'UNDISPLAYABLE',
+        -individual      => Bio::EnsEMBL::Variation::Individual->new(
+          -type_individual => 'outbred',
+          -adaptor         => $ia,
+        ),
 			);
-			$ind->{populations} = [map {$pop_objs{$_}} keys %{$config->{ind_pops}->{$individual_name}}];
+			$sample->{populations} = [map {$pop_objs{$_}} keys %{$config->{sample_pops}->{$sample_name}}];
 			
 			# add data from pedigree file
-			if(defined($config->{pedigree}) && ref($config->{pedigree}) eq 'HASH' && (my $ped = $config->{pedigree}->{$individual_name})) {
-				$ind->{gender}            = $ped->{gender} if defined($ped->{gender});
-				$ind->{father_individual} = $ind_objs{$ped->{father}} if defined($ped->{father});
-				$ind->{mother_individual} = $ind_objs{$ped->{mother}} if defined($ped->{mother});
+			if(defined($config->{pedigree}) && ref($config->{pedigree}) eq 'HASH' && (my $ped = $config->{pedigree}->{$sample_name})) {
+				$sample->individual->{gender}            = $ped->{gender} if defined($ped->{gender});
+				$sample->individual->{father_individual} = $sample_objs{$ped->{father}} if defined($ped->{father});
+				$sample->individual->{mother_individual} = $sample_objs{$ped->{mother}} if defined($ped->{mother});
 			}
 			
-			if($config->{tables}->{individual}) {
+			if($config->{tables}->{sample}) {
 				if(defined($config->{test})) {
-					debug($config, "(TEST) Writing individual object named $individual_name");
+					debug($config, "(TEST) Writing sample object named $sample_name");
 				}
 				else {				
-					$ia->store($ind);
+					$sample_adpt->store($sample);
 				}
 				
-				$config->{rows_added}->{individual}++;
 				$config->{rows_added}->{sample}++;
-				$config->{rows_added}->{individual_population} += scalar @{$ind->{populations}};
+				$config->{rows_added}->{sample_population} += scalar @{$sample->{populations}};
 			}
 		}
 		
-		push @individuals, $ind;
-		$ind_objs{$individual_name} = $ind;
+		push @samples, $sample;
+		$sample_objs{$sample_name} = $sample;
 	}
 	
-	return \@individuals;
+	return \@samples;
 }
 
 
@@ -2274,7 +2277,7 @@ sub get_genotypes {
 		
 		push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 			variation => $data->{variation},
-			individual => $config->{individuals}->[$i-9],
+			sample => $config->{samples}->[$i-9],
 			genotype => \@bits,
 			phased => $phased,
       subsnp => defined($data->{SS_ID}) ? $data->{SS_ID} : undef,
@@ -2304,8 +2307,8 @@ sub add_gmaf {
 			map {@{$_->{genotype}}}
 			grep {
 				$config->{gmaf} eq 'ALL' ||
-				$config->{pop_inds}->{$config->{gmaf}}->{$_->{individual}->{name}} ||
-				$config->{pop_inds}->{$config->{pop_prefix}.$config->{gmaf}}->{$_->{individual}->{name}}
+				$config->{pop_samples}->{$config->{gmaf}}->{$_->{sample}->{name}} ||
+				$config->{pop_samples}->{$config->{pop_prefix}.$config->{gmaf}}->{$_->{sample}->{name}}
 			}
 			@{$data->{genotypes}};
 			
@@ -2348,7 +2351,7 @@ sub allele {
 			map {$counts{$_}++}
 				grep {$_ ne '.'}
 				map {@{$_->{genotype}}}
-				grep {$config->{pop_inds}->{$pop_name}->{$_->{individual}->{name}}}
+				grep {$config->{pop_samples}->{$pop_name}->{$_->{sample}->{name}}}
 				@{$data->{genotypes}};
 				
 			$total += $_ for values %counts;
