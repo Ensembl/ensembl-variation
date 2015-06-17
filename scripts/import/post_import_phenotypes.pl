@@ -65,7 +65,7 @@ sub main {
     });
     $dbh->do(qq{
       UPDATE variation_feature vf, variation_ids_old_phenotype_evdn e
-      SET v.evidence_attribs = REPLACE(v.evidence_attribs, '$phenotype_attrib_id', '')
+      SET vf.evidence_attribs = REPLACE(vf.evidence_attribs, '$phenotype_attrib_id', '')
       WHERE e.variation_id = vf.variation_id;
     });
   }

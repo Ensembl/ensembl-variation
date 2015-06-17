@@ -64,7 +64,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::StructuralVariationSample;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
 use Bio::EnsEMBL::Storable;
@@ -230,7 +230,7 @@ sub study {
 
 sub individual {
   my $self = shift;
-  
+  deprecate("Please use Bio::EnsEMBL::Variation::StructuralVariationSample::sample.");   
   return $self->strain(@_);
 }
 

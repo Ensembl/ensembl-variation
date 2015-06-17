@@ -930,7 +930,7 @@ CREATE TABLE tmp_sample_genotype_single_bp (
 	subsnp_id int(15) unsigned,   
 	allele_1 char(1),
 	allele_2 char(1),
-	sample_id int,
+	sample_id int(10) unsigned not null,
 
 	key variation_idx(variation_id),
     key subsnp_idx(subsnp_id),
@@ -1772,7 +1772,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_d.sql|Update type of motif_name to varchar.');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_e.sql|Drop the column strain_id from structural_variation_sample');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_f.sql|Update meta. Rename sample to individual.');
 
 /**
 @header  Failed tables
