@@ -74,24 +74,27 @@ sub store {
 
   my ($individual, $individual_id); 
   $individual = $sample->individual;
+
   if ($individual) {
     $individual_id = $individual->dbID;   
-    $individual = $individual->store($individual); 
-    $individual_id = $individual->dbID();
+    if (!$individual_id) {
+      my $ia = $self->adaptor->db->get_IndividualAdaptor;
+      $individual = $ia->store($individual); 
+    }
   } else {
     $individual_id = $sample->{individual_id};
+    if (!$individual_id) {
+      my $ia = $self->adaptor->db->get_IndividualAdaptor;
+      $individual = Bio::EnsEMBL::Variation::Individual->new(
+        name            => $sample->name,
+        adaptor         => $ia,
+        type_individual => 'outbred',
+      );
+      $individual = $ia->store($individual); 
+      $individual_id = $individual->dbID();
+      $sample->individual($individual);
+    }
   }
-  if (!$individual_id) {
-    my $ia = $self->adaptor->db->get_IndividualAdaptor;
-    $individual = Bio::EnsEMBL::Variation::Individual->new(
-      name            => $sample->name,
-      adaptor         => $ia,
-      type_individual => 'outbred',
-    );
-    $individual = $individual->store($individual); 
-    $individual_id = $individual->dbID();
-    $sample->individual($individual);
-  } 
 	
 	# add entry to sample table
 	my $sth = $dbh->prepare(q{
