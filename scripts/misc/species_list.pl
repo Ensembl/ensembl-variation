@@ -96,15 +96,17 @@ my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800',    'legend'
                 'hundred'     => { 'order' => 4, 'colour' => '#070',    'legend' => 'From 1 to 999'}
               );              
               
-my %tables = ( 'Genotype - Individual' => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
-               'Genotype - Population' => { 'order' => 3 , 'table' => 'population_genotype'},
-               'Phenotype'             => { 'order' => 4 , 'table' => 'phenotype_feature'},
-               'Citation'              => { 'order' => 5 , 'table' => 'variation_citation'},
-               'Structural variant'    => { 'order' => 1 , 'table' => 'structural_variation'}
+my %tables = ( 'Sample'             => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
+               'Population'         => { 'order' => 3 , 'table' => 'population_genotype'},
+               'Phenotype'          => { 'order' => 4 , 'table' => 'phenotype_feature'},
+               'Citation'           => { 'order' => 5 , 'table' => 'variation_citation'},
+               'Structural variant' => { 'order' => 1 , 'table' => 'structural_variation'}
              );
+             
 my %columns = ( 'SIFT'     => {'order' => 1 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'sift_version'},
                 'PolyPhen' => {'order' => 2 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'polyphen_version'}
-              );            
+              );
+                        
 my %species_list;
 
 my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
@@ -166,23 +168,36 @@ my $species_data_tables = get_species_data_tables();
 
 my $species_data_columns = get_species_data_columns();
 
-my $th_border_left = qq{style="border-left:1px solid #DDD"};
+my $th_bg = qq{background-color:#BBB};
+my $th_border_left = qq{border-left:1px solid #DDD};
+my $th_border_left_top = qq{style="$th_border_left;text-align:center"};
 
-my $data_tables_header  = join("</th><th $th_border_left>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
-my $data_columns_header = join("</th><th $th_border_left>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
+
+#my $data_tables_header  = join("</th><th $th_border_left>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
+
+my $data_tables_header  = join("</th><th style=\"$th_bg;$th_border_left\">", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
+my $data_columns_header = join("</th><th style=\"$th_bg;$th_border_left\">", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
 
 my $html_content = qq{
   <table class="ss" style="width:auto">
     <tr class="ss_header">
-      <th>Species</th>
-      <th $th_border_left>Sequence variant count</th>
-      <th style="padding-left:0px">
+      <th></th>
+      <th $th_border_left_top colspan="3">Variant</th>
+      <th $th_border_left_top colspan="2">Genotype</th>
+      <th $th_border_left_top colspan="2">Association</th>
+      <th $th_border_left_top colspan="2">Prediction</th>
+    </tr>
+    
+    <tr class="ss_header">
+      <th style="$th_bg">Species</th>  
+      <th style="$th_bg;$th_border_left">Sequence variant</th>
+      <th style="$th_bg;padding-left:0px">
         <span class="_ht ht" title="Sequence variant count difference with the previous Ensembl release (v.$p_version)">
           <small>(e!$e_version vs e!$p_version)</small>
         </span>
       </th>
-      <th $th_border_left>$data_tables_header</th>
-      <th $th_border_left>$data_columns_header</th>
+      <th style="$th_bg;$th_border_left">$data_tables_header</th>
+      <th style="$th_bg;$th_border_left">$data_columns_header</th>
     </tr>};
 my $bg = '';
 

@@ -122,7 +122,7 @@ my %data_type_example = (
                             },
   'phenotype_feature'    => {
                              'sql'       => qq{SELECT object_id, type, phenotype_id FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
-                             'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},
+                             'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature WHERE type!="SupportingStructuralVariation" GROUP BY source_id},
                              'types'     => qq{SELECT source_id, GROUP_CONCAT(DISTINCT type ORDER BY type ASC SEPARATOR ', ')
                                                FROM phenotype_feature WHERE type!="SupportingStructuralVariation" GROUP BY source_id},
                              'Variation'           => 'Variation/Phenotype?v=',
@@ -324,7 +324,7 @@ sub source_table {
   if ($is_new) {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F;box-shadow: 2px 2px 2px #888" /></a>
+      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
@@ -332,7 +332,7 @@ sub source_table {
   else {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle;box-shadow: 2px 2px 2px #888" /></a>
+      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2>
     </div>
     };
