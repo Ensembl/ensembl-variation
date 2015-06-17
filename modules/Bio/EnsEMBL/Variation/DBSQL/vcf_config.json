@@ -4,9 +4,22 @@
       "id": "1000genomes_phase3",
       "species": "homo_sapiens",
       "assembly": "GRCh37",
-      "type": "local",
+      "type": "remote",
       "strict_name_match": 1,
-      "filename_template": "/path/to/data/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/grch37/release-79/variation/vcf/homo_sapiens/1000GENOMES-phase_3-genotypes/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22"
+      ],
+      "individual_prefix": "1000GENOMES:phase_3:"
+    },
+    {
+      "id": "1000genomes_phase3",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "strict_name_match": 1,
+      "filename_template": "ftp://ftp.ensembl.org/pub/release-80/variation/vcf/homo_sapiens/1000GENOMES-phase_3-genotypes/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.GRCh38_dbSNP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22"
