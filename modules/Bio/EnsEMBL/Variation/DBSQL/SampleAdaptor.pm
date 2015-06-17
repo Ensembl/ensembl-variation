@@ -78,17 +78,18 @@ sub store {
   if ($individual) {
     $individual_id = $individual->dbID;   
     if (!$individual_id) {
-      my $ia = $self->adaptor->db->get_IndividualAdaptor;
+      my $ia = $individual->adaptor;
       $individual = $ia->store($individual); 
+      $individual_id = $individual->dbID;
     }
   } else {
     $individual_id = $sample->{individual_id};
     if (!$individual_id) {
-      my $ia = $self->adaptor->db->get_IndividualAdaptor;
+      my $ia = $sample->adaptor->db->get_IndividualAdaptor;
       $individual = Bio::EnsEMBL::Variation::Individual->new(
-        name            => $sample->name,
-        adaptor         => $ia,
-        type_individual => 'outbred',
+        -name            => $sample->name,
+        -adaptor         => $ia,
+        -type_individual => 'outbred',
       );
       $individual = $ia->store($individual); 
       $individual_id = $individual->dbID();
