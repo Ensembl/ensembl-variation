@@ -126,6 +126,7 @@ sub store {
 	my $dbID = $dbh->last_insert_id(undef, undef, 'individual', 'individual_id');
 	$individual->{dbID}    = $dbID;
 	$individual->{adaptor} = $self;
+  return $individual;
 }
 
 =head2 fetch_individual_by_synonym
