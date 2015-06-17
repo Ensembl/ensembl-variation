@@ -27,7 +27,7 @@ my $vdba = $multi->get_DBAdaptor('variation');
 
 my $pa = $vdba->get_PopulationAdaptor;
 my $sa = $vdba->get_SampleAdaptor;
-
+my $ia = $vdba->get_IndividualAdaptor;
 my ($tests, $samples, $sample, $all);
 
 # Test SampleAdaptor
@@ -87,5 +87,73 @@ ok($sa->get_reference_strain_name() eq "NA18635", "reference strain");
 
 $strains = $sa->get_display_strains;
 is(scalar @$strains, 3, "Number of display strains");
+
+
+# storing new samples
+
+my $individual = Bio::EnsEMBL::Variation::Individual->new(
+  -name => 'test_individual',
+  -type_individual => 'outbred', 
+  -adaptor => $ia, 
+);
+
+$individual = $ia->store($individual);
+my $individual_dbID = $individual->dbID; 
+
+$sample = Bio::EnsEMBL::Variation::Sample->new(
+  -name => 'test_sample',
+  -display => 'UNDISPLAYABLE',
+  -adaptor => $sa,
+  -individual => $individual,
+);
+
+$sa->store($sample);
+$sample = $sa->fetch_all_by_name('test_sample')->[0];
+
+ok($individual_dbID == $sample->individual->dbID, "retrieve individual_id from associated sample");
+
+$sample = Bio::EnsEMBL::Variation::Sample->new(
+  -name => 'test_sample2',
+  -adaptor => $sa,
+  -display => 'UNDISPLAYABLE',
+  -individual => Bio::EnsEMBL::Variation::Individual->new(
+    -name => 'test_individual2',
+    -type_individual => 'outbred',
+    -adaptor         => $ia,
+  ),
+);
+
+$sa->store($sample);
+$sample = $sa->fetch_all_by_name('test_sample2')->[0];
+
+ok($sample->individual->name eq 'test_individual2', "retrieve individual's name from associated sample");
+
+$sample = Bio::EnsEMBL::Variation::Sample->new(
+  -name => 'test_sample3',
+  -adaptor => $sa,
+  -display => 'UNDISPLAYABLE',
+  -individual_id => $individual_dbID,
+);
+
+$sa->store($sample);
+$sample = $sa->fetch_all_by_name('test_sample3')->[0];
+
+ok($individual_dbID == $sample->individual->dbID, "Just provide individual_id for storing a new sample object");
+
+$sample = Bio::EnsEMBL::Variation::Sample->new(
+  -name => 'test_sample4',
+  -adaptor => $sa,
+  -display => 'UNDISPLAYABLE',
+);
+
+$sa->store($sample);
+$sample = $sa->fetch_all_by_name('test_sample4')->[0];
+
+ok($sample->individual->name eq $sample->name, "Store a new sample object without providing information on an individual.");
+
+
+
+=end
+=cut
 
 done_testing();
