@@ -76,6 +76,8 @@ sub store {
   $individual = $sample->individual;
   if ($individual) {
     $individual_id = $individual->dbID;   
+    $individual = $individual->store($individual); 
+    $individual_id = $individual->dbID();
   } else {
     $individual_id = $sample->{individual_id};
   }
@@ -86,7 +88,6 @@ sub store {
       adaptor         => $ia,
       type_individual => 'outbred',
     );
-    
     $individual = $individual->store($individual); 
     $individual_id = $individual->dbID();
     $sample->individual($individual);
