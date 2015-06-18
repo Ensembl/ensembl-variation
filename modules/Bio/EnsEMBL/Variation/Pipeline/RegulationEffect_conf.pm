@@ -97,7 +97,7 @@ sub default_options {
         debug => 0,
 
         only_update_vf => 0,
-        update_vf => 0,
+        update_vf => 1,
         only_motif_feature => 0,
         only_regulatory_feature => 0,
 
