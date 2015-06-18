@@ -6113,7 +6113,7 @@ sub get_cache_chromosomes {
 sub get_version_data {
   my $config = shift;
   
-  if(!exists($config->{version_data})) {
+  if(!exists($config->{version_data}) && !defined($config->{offline})) {
     my %version_data = ();
     
     # sift/polyphen versions
@@ -6183,6 +6183,8 @@ sub get_version_data {
     
     $config->{version_data} = \%version_data;
   }
+
+  $config->{version_data} ||= {};
   
   return $config->{version_data};
 }
