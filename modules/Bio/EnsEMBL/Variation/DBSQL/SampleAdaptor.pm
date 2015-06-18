@@ -118,8 +118,8 @@ sub store {
 	);
 	$sth->finish;
 	my $dbID = $dbh->last_insert_id(undef, undef, 'sample', 'sample_id');
-	$individual->{dbID}    = $dbID;
-	$individual->{adaptor} = $self;
+	$sample->{dbID}    = $dbID;
+	$sample->{adaptor} = $self;
 
 	# store individual/population relationships
 	$sth = $dbh->prepare(q{
