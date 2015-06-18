@@ -31,20 +31,20 @@ usage() if (!scalar(@ARGV));
 my $config = {};
 
 GetOptions(
-    $config,
-    'tmp_dir=s',
-    'fasta_files_dir=s',
-	'mode=s',
-	'resume_update=s',
-	'version=i',
-    'registry=s',
-	'species=s',
-    'host=s',
-    'dbname=s',
-    'user=s',
-    'pass=s',
-    'port=i',
-    'help!',
+  $config,
+  'tmp_dir=s',
+  'fasta_files_dir=s',
+  'mode=s',
+  'resume_update=s',
+  'version=i',
+  'registry=s',
+  'species=s',
+  'host=s',
+  'dbname=s',
+  'user=s',
+  'pass=s',
+  'port=i',
+  'help!',
 ) or die "Error: Failed to parse command line arguments\n";
 
 usage() if ($config->{help});
