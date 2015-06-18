@@ -35,6 +35,7 @@ by Will McLaren (wm2@ebi.ac.uk)
 use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Utils::Exception qw(warning);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line get_all_consequences);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 
@@ -131,6 +132,7 @@ sub configure {
 		'gp',
     'remap=s',
 		'ind_prefix=s',
+		'sample_prefix=s',
 		'pop_prefix=s',
 		'var_prefix=s',
 		
@@ -172,7 +174,10 @@ sub configure {
 		&usage;
 		exit(0);
 	}
-	
+  if (defined($config->{ind_prefix})) {
+    $config->{sample_prefix} = $config->{ind_prefix};
+    warning('--ind_prefix is deprecated. The content has been copied to --sample_prefix. Please update your script and use --sample_prefix');	
+  }
 	# read config from file?
   read_config_from_file($config, $config->{config}) if defined $config->{config};
 	
@@ -825,7 +830,7 @@ sub main {
 			# population genotypes
 			population_genotype($config, $data) if $config->{tables}->{population_genotype};
 			
-			# individual genotypes
+			# sample genotypes
 			sample_genotype($config, $data) if $config->{tables}->{compressed_genotype_var} || defined($config->{mart_genotypes});
 			
 			# GENOTYPES BY REGION
@@ -2446,7 +2451,7 @@ sub population_genotype {
 			map {$counts{$_}++}
 				grep {$_ !~ /\./}
 				map {join '|', sort @{$_->{genotype}}}
-				grep {$config->{pop_inds}->{$pop_name}->{$_->{individual}->{name}}}
+				grep {$config->{pop_samples}->{$pop_name}->{$_->{sample}->{name}}}
 				@{$data->{genotypes}};
 			$total += $_ for values %counts;
 			%freqs = map {$_ => ($counts{$_} / $total)} keys %counts;
@@ -2529,7 +2534,7 @@ sub population_genotype {
 	$config->{rows_added}->{population_genotype} += scalar @objs;
 }
 
-sub individual_genotype {
+sub sample_genotype {
 	my $config = shift;
 	my $data   = shift;
 	
@@ -2554,8 +2559,8 @@ sub individual_genotype {
 				foreach my $b(@$db_gts) {
 					if(
 						$a->genotype_string eq $b->genotype_string and
-						defined $b->individual and
-						$a->individual->dbID eq $b->individual->dbID
+						defined $b->sample and
+						$a->sample->dbID eq $b->sample->dbID
 					) {
 						$matched = 1;
 						$count++;
@@ -2575,18 +2580,18 @@ sub individual_genotype {
 		}
 		
 		if($config->{tables}->{compressed_genotype_var}) {
-			my $rows_added = $config->{individualgenotype_adaptor}->store(\@gts);
+			my $rows_added = $config->{samplegenotype_adaptor}->store(\@gts);
 			$config->{rows_added}->{compressed_genotype_var} += $rows_added;
 		}
 		if($config->{mart_genotypes}) {
-			my $table = $data->{vf}->{allele_string} =~ /^[ACGTN](\/[ACGTN])+$/ ? 'tmp_individual_genotype_single_bp' : 'individual_genotype_multiple_bp';
+			my $table = $data->{vf}->{allele_string} =~ /^[ACGTN](\/[ACGTN])+$/ ? 'tmp_sample_genotype_single_bp' : 'sample_genotype_multiple_bp';
 			
-			my $rows_added = $config->{individualgenotype_adaptor}->store_uncompressed(\@gts, $table);
+			my $rows_added = $config->{samplegenotype_adaptor}->store_uncompressed(\@gts, $table);
 			$config->{rows_added}->{$table} += $rows_added;
 		}
 	}
 	
-	$config->{rows_added}->{individual_genotype} += scalar @gts;
+	$config->{rows_added}->{sample_genotype} += scalar @gts;
 }
 
 # populates meta_coord table
@@ -2732,7 +2737,7 @@ sub import_tmp_file{
 			# we need to get the columns from the DB adaptor
 			my %adaptors = (
 				'allele'                     => 'allele',
-				'compressed_genotype_region' => 'individualgenotypefeature',
+				'compressed_genotype_region' => 'samplegenotypefeature',
 				'population_genotype'        => 'populationgenotype',
 			);
 			
@@ -2757,7 +2762,7 @@ sub print_file{
 	my $file_handle = get_tmp_file_handle($config, 'compressed_genotype_region');
 	
 	if(defined($config->{test})) {
-		debug($config, "(TEST) Writing genotypes for ", (scalar keys %$genotypes), " individuals to temp file");
+		debug($config, "(TEST) Writing genotypes for ", (scalar keys %$genotypes), " samples to temp file");
 	}
 	else {
 		if (!defined $sample_id){
@@ -2831,22 +2836,22 @@ Options
 --species             Species to use [default: "human"]
 --source              Name of source [required]
 --source_description  Description of source [optional]
---population          Name of population for all individuals in file
---panel               Panel file containing individual population membership. One or
+--population          Name of population for all samples in file
+--panel               Panel file containing sample population membership. One or
                       more of --population or --panel is required. Frequencies are
                       calculated for each population specified. Individuals may belong
                       to more than one population
---pedigree            Pedigree file containing family relationships and individual
+--pedigree            Pedigree file containing family relationships and sample
                       genders
 					  
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
-                      individuals in the file; specifying any other population name
+                      samples in the file; specifying any other population name
                       will use the selected population for the GMAF.
 
 --somatic             Indicate the data in this VCF is somatic (will not be merged
                       with germline, and vice versa if --somatic not used)
 
---ind_prefix          Prefix added to individual names [default: not used]
+--sample_prefix       Prefix added to sample names [default: not used]
 --pop_prefix          Prefix added to population names [default: not used]
 --var_prefix          Prefix added to constructed variation names [default: not used]
 
