@@ -2547,7 +2547,7 @@ sub sample_genotype {
 	else {
 		# recovery check
 		if(defined($config->{recover_check})) {
-			my $db_gts = $data->{variation}->get_all_IndividualGenotypes;
+			my $db_gts = $data->{variation}->get_all_SampleGenotypes;
 			
 			my @final_objs = ();
 			my $count = 0;
