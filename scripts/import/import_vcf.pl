@@ -1717,7 +1717,7 @@ sub population{
 		
 		$config->{sample_pops} = $sample_pops;
 		$config->{pop_samples} = $pop_samples;
-		@pops = keys %$pop_inds;
+		@pops = keys %$pop_samples;
 		
 		if(defined($config->{test})) {
 			debug($config, "(TEST) Population counts:");
