@@ -41,7 +41,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 
 # object types need to imported explicitly to use new_fast
 use Bio::EnsEMBL::Variation::Variation;
-use Bio::EnsEMBL::Variation::IndividualGenotype;
+use Bio::EnsEMBL::Variation::SampleGenotype;
 
 # use this for remapping
 use Bio::EnsEMBL::SimpleFeature;
@@ -2280,7 +2280,7 @@ sub get_genotypes {
     
     @bits = grep {defined($_)} @bits;
 		
-		push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+		push @genotypes, Bio::EnsEMBL::Variation::SampleGenotype->new_fast({
 			variation => $data->{variation},
 			sample => $config->{samples}->[$i-9],
 			genotype => \@bits,
@@ -2839,7 +2839,7 @@ Options
 --population          Name of population for all samples in file
 --panel               Panel file containing sample population membership. One or
                       more of --population or --panel is required. Frequencies are
-                      calculated for each population specified. Individuals may belong
+                      calculated for each population specified. Samples may belong
                       to more than one population
 --pedigree            Pedigree file containing family relationships and sample
                       genders
