@@ -691,12 +691,12 @@ MAIN_LOOP : while(<$INPUT>) {
 
         # handle large deletions, insertions and indels
         if (defined($forward_strand_ref_allele)) {
-          if (length($forward_strand_ref_allele) > 50) {
+          if (length($forward_strand_ref_allele) > 50 || ($stop-$start+1) > 50) {
             $allele_string = ($forward_strand_mut_allele eq '-') ? "LARGE_DELETION" : "LARGE_INDEL";
           }
         }
         if (defined($forward_strand_mut_allele)) {
-          if (length($forward_strand_mut_allele) > 50) { 
+          if (length($forward_strand_mut_allele) > 50 || ($stop-$start+1) > 50) { 
             $allele_string = ($forward_strand_ref_allele eq '-') ? "LARGE_INSERTION" : "LARGE_INDEL";
           }
         }
