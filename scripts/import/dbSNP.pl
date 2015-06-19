@@ -65,8 +65,8 @@ if (scalar(@ARGV) == 1) {
     chomp;
     next unless/\w+/;
     my ($name,$val) = (split/\s+/,$_,2);             #altered for cow which had space in primary assembly tag
+    $val =~ s/\s+$//;
     push(@opts,('-' . $name,$val));
-
   }
   close(CFG);
   @ARGV = @opts;
