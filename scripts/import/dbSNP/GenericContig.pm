@@ -51,8 +51,8 @@ use DBI qw(:sql_types);
 use Fcntl qw( LOCK_SH LOCK_EX );
 use List::Util qw ( min max );
 
-our $FARM_BINARY = "bsub -R 'select[gpfs]'  ";  ##EBI
-#our $FARM_BINARY = "bsub";
+#our $FARM_BINARY = "bsub -R 'select[gpfs]'  ";  ##EBI
+our $FARM_BINARY = "bsub";
 
 our %FARM_PARAMS = (
   
@@ -171,7 +171,7 @@ sub dump_dbSNP{
   
   #the following steps need to be run when initial starting the job. If job failed for some reason and some steps below are already finished, then can comment them out
   my @subroutines = (
-    'create_coredb',
+   'create_coredb',
    'source_table', 
    'population_table',
    'individual_table',
@@ -483,88 +483,7 @@ sub table_exists_and_populated {
 
     return 0;
 }
-### This is no longer used - data comes from directly clinvar 
 
-sub clin_sig {
-    my $self = shift;
-
-    return unless $self->table_exists_and_populated('SNPClinSig');
-
-    my $logh = $self->{'log'};
-    
-    # dump the data from dbSNP and store it in a temporary clin_sig table
-    # in the variation database
-
-    print $logh Progress::location();
-    debug(localtime() . "\tDumping clinical significance");
-
-    my $stmt = qq{
-        SELECT  cs.snp_id, csc.descrip 
-        FROM    SNPClinSig cs, ClinSigCode csc
-        WHERE   cs.clin_sig_id = csc.code
-    };
-    
-    dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
-    
-    print $logh Progress::location();
-    debug(localtime() . "\tLoading clinical significance");
-    
-    create_and_load( $self->{'dbVar'}, "clin_sig", "snp_id i*", "descrip");
-
-    # check that we know about all the possible values
-    
-    $stmt = qq{
-        SELECT  count(descrip) 
-        FROM    clin_sig 
-        WHERE   descrip NOT IN (
-            SELECT  a.value 
-            FROM    attrib a, attrib_type att 
-            WHERE   a.attrib_type_id = att.attrib_type_id 
-            AND     att.code = 'dbsnp_clin_sig'
-        )
-    };
-
-    my ($count) = $self->{'dbVar'}->db_handle->selectrow_array($stmt);
-
-    if ($count > 0) {   
-        die "There are unexpected (probably new) clinical significance types, add them to the attrib table first";
-    }
-
-    # update the variation table with the correct attrib_ids
-
-    print $logh Progress::location();
-    debug(localtime() . "\tUpdating variation table with clinical significance");
-
-    $stmt = qq{
-        UPDATE  variation v, clin_sig c, attrib a, attrib_type att
-        SET     v.clinical_significance_attrib_id = a.attrib_id
-        WHERE   att.code = 'dbsnp_clin_sig'
-        AND     a.attrib_type_id = att.attrib_type_id
-        AND     c.descrip = a.value
-        AND     v.name = CONCAT('rs', c.snp_id)
-    };
-
-    $self->{'dbVar'}->do($stmt);
-
-    # in case dbsnp also assign clin sigs to synonyms we also join to the variation_synonym table
-    # (for build 135 they (redundantly) had both the original and the synonym rsID associated with 
-    # a clinical significance, but this may  change in the future as it has for MAF and suspect 
-    # SNPs and it doesn't do any harm to run this statement)
-
-    $stmt = qq{ 
-        UPDATE  variation v, variation_synonym vs, clin_sig c, attrib a, attrib_type att
-        SET     v.clinical_significance_attrib_id = a.attrib_id
-        WHERE   att.code = 'dbsnp_clin_sig'
-        AND     a.attrib_type_id = att.attrib_type_id
-        AND     c.descrip = a.value
-        AND     vs.name = CONCAT('rs', c.snp_id)
-        AND     vs.variation_id = v.variation_id
-    };
-
-    $self->{'dbVar'}->do($stmt);
-
-    $self->{'dbVar'}->do(qq{DROP TABLE clin_sig});
-}
 
 sub minor_allele_freq {
     my $self = shift;
@@ -593,58 +512,7 @@ sub minor_allele_freq {
     debug(localtime() . "\tLoading global minor allele freqs");
     
     create_and_load($self->{'dbVar'}, "maf", "snp_id i* not_null", "allele l", "freq f", "count i", "is_minor_allele i");
-=head do the updates in post processing when writing new copies of the tables
-    print $logh Progress::location(); # 
-    debug(localtime() . "\tUpdating variations with global minor allele frequencies");
-   
-    my $variation_sql = qq{
-        UPDATE  variation v, maf m
-        SET     v.minor_allele_freq = m.freq, v.minor_allele_count = m.count, v.minor_allele = m.allele
-        WHERE   v.snp_id =  m.snp_id
-    };
 
-    my $synonym_sql = qq{
-        UPDATE  variation v, maf m, variation_synonym vs
-        SET     v.minor_allele_freq = m.freq, v.minor_allele_count = m.count, v.minor_allele = m.allele
-        WHERE   vs.name = CONCAT('rs', m.snp_id)
-        AND     v.variation_id = vs.variation_id
-    };
-
-
-    my $get_max_sth = $self->{'dbVar'}->prepare(qq[select min(snp_id), max(snp_id) from maf ]);
-    $get_max_sth->execute()||die;
-    my $range = $get_max_sth->fetchall_arrayref();
-
-    my $batch_size = 100000;
-    my $start      = $range->[0]->[0];
-    my $max        = $range->[0]->[1];
-
-    while ( $start < $max ){
-
-        my $end =  $start + $batch_size;
-
-        # update the variation table with the frequencies for only the minor alleles
-
-        $self->{'dbVar'}->do($variation_sql . " AND m.is_minor_allele AND m.snp_id BETWEEN $start AND $end");
-        print $logh Progress::location(); 
-        # it seems dbSNP also store frequencies on synonyms but don't copy this across to the
-        # merged refsnp for some reason, we want to do this though so we also join to the 
-        # variation_synonym table and copy across the data
-    
-        $self->{'dbVar'}->do($synonym_sql . " AND m.is_minor_allele AND m.snp_id BETWEEN $start AND $end");
-
-        # we also copy across data where the MAF = 0.5 which do not have the is_minor_allele 
-        # flag set, we will ensure this is set on the non-reference allele later in the post-processing
-        # when we have the allele string from the variation_feature table to check which is the 
-        # reference allele
-
-        $self->{'dbVar'}->do($variation_sql . " AND m.freq = 0.5 AND m.snp_id BETWEEN $start AND $end");
-
-        $self->{'dbVar'}->do($synonym_sql . " AND m.freq = 0.5 AND m.snp_id BETWEEN $start AND $end");
-
-        $start =  $end +1
-    }
-=cut
     debug(localtime() . "\tComplete MAF update");
     # we don't delete the maf temporary table because we need it for post-processing MAFs = 0.5
 }
@@ -1385,9 +1253,9 @@ sub individual_table {
    $self->{'dbVar'}->do(qq{
                           CREATE TABLE tmp_ind (
                             submitted_ind_id int(10) unsigned not null,
-                            individual_id int(10) unsigned not null,
+                            sample_id int(10) unsigned not null,
                             primary key(submitted_ind_id),
-                            key individual_id_idx (individual_id))
+                            key individual_id_idx (sample_id))
                          });
 
 
@@ -1412,14 +1280,18 @@ sub individual_table {
                                                     set  father_individual_id =?, mother_individual_id =?, gender =?
                                                     where individual_id = ? ]);
 
-    my $tmp_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO tmp_ind (individual_id, submitted_ind_id) values (?,?)]);
+    my $tmp_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO tmp_ind (sample_id, submitted_ind_id) values (?,?)]);
 
-    my $pop_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT  INTO individual_population (individual_id, population_id)
+    my $pop_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample_population (sample_id, population_id)
 				                   values (?,?)
                                                  ]);
 
     my $syn_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual_synonym (individual_id,source_id,name)  values (?,?,?)  ]);
 
+
+    my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample
+                                                    ( individual_id, name)
+                                                    values (?,?)]);
 
 
 
@@ -1428,6 +1300,7 @@ sub individual_table {
     my %done;
     my $n = 1000000;
     foreach my $ind (keys %$individuals){
+        my $sample_id; 
         ## not all SubmittedIndividual are currated to dbSNP Individuals
 	$individuals->{$ind}{ind} = $n unless defined $individuals->{$ind}{ind} ; ## not clustered into Individual entry by dbSNP
 	$n++;
@@ -1437,28 +1310,38 @@ sub individual_table {
 	    $ind_ins_sth->execute( $individuals->{$ind}{name}, $individuals->{$ind}{des},$individual_type_id );
 	    my $individual_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
 
+            ## temp - to be de-merged
+            $sam_ins_sth->execute( $individual_id, $individuals->{$ind}{name});
+            ## save to attach to pop
+            $sample_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'sample', 'sample_id');
+
+            ## save temp look up table for genotype import
+            $tmp_ins_sth->execute($sample_id, $ind);
+
+
+            ## attach to population
+            if(defined $individuals->{$ind}{pid}){
+
+              if(defined $pop_ids->{$individuals->{$ind}{pid}}){
+                  $pop_ins_sth->execute( $sample_id , $pop_ids->{$individuals->{$ind}{pid}});
+              }
+              else{
+                  warn "No individual id for population id $individuals->{$ind}{pid} for individual $individuals->{$ind}{name}\n";
+              }
+            }
+
 	    if(defined $individuals->{$ind}{ind} && $individuals->{$ind}{ind} < 1000000){
                  ## insert dbSNP synonym [not fakes]
 		$syn_ins_sth->execute( $individual_id, 1, $individuals->{$ind}{ind});
-	    }	    
+	    }
+
             ## save individual_id  based on name and dbSNP merged id  (merging only these on import) 
 	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $individual_id;
 
 	}
-
-	$tmp_ins_sth->execute($done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}}, $ind);
         ## save individual ids for ped look up
 	$individual_id{$ind} = $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}};
 
-	if(defined $individuals->{$ind}{pid}){
-	    #warn "Adding ind_pop link $individuals->{$ind}{name} ($sample_id{$ind}) to $individuals->{$ind}{pid} ($pop_ids->{$individuals->{$ind}{pid}})\n";
-	    if(defined $pop_ids->{$individuals->{$ind}{pid}}){
-		$pop_ins_sth->execute( $individual_id{$ind} , $pop_ids->{$individuals->{$ind}{pid}});
-	    }
-	    else{
-		warn "No individual id for population id $individuals->{$ind}{pid} for individual $individuals->{$ind}{name}\n";
-	    }
-	}
    }
 
    
@@ -1625,8 +1508,8 @@ sub update_population_size{
     my $self = shift;
 
     my $size_ext_sth = $self->{'dbVar'}->prepare(qq[ select population.population_id, count(*) 
-                                                     from population, individual_population
-                                                     where population.population_id = individual_population.population_id
+                                                     from population, sample_population
+                                                     where population.population_id = sample_population.population_id
                                                      group by population.population_id
                                                    ]);
 
@@ -2346,11 +2229,11 @@ sub variation_feature {
   debug(localtime() . "\tCreating genotyped variations");
     
   #creating the temporary table with the genotyped variations
-  $self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+  $self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_sample_genotype_single_bp});
   print $logh Progress::location();
   $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
   print $logh Progress::location();
-  $self->{'dbVar'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+  $self->{'dbVar'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM sample_genotype_multiple_bp});
   print $logh Progress::location();
 
     
@@ -2386,12 +2269,12 @@ sub parallelized_individual_genotypes {
   my $load_only = shift;
 
   debug(localtime() . "\tStarting parallelized_individual_genotypes");
-  my $genotype_table = 'tmp_individual_genotype_single_bp';
-  my $multi_bp_gty_table = 'individual_genotype_multiple_bp';
+  my $genotype_table = 'tmp_sample_genotype_single_bp';
+  my $multi_bp_gty_table = 'sample_genotype_multiple_bp';
   my $jobindex;
 
 
- #Get the create statement for tmp_individual_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
+ #Get the create statement for tmp_sample_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
   my $ind_gty_stmt = get_create_statement($genotype_table,$self->{'schema_file'});
   ## set default db engine
   $ind_gty_stmt =~ s/\;//;
@@ -2451,7 +2334,7 @@ sub parallelized_individual_genotypes {
     
     print $logh Progress::location() . "\t\tProcessing $subind_table\n";
     #The subtable to store the data for this subind table and the loadfile to use. The mapping file is used to temporarily store the subsnp_id -> variation_id mapping
-    my $dst_table = "tmp_individual_genotype_single_bp\_$subind_table";
+    my $dst_table = "tmp_sample_genotype_single_bp\_$subind_table";
     my $loadfile = $file_prefix . '_' . $dst_table . '.txt';
     my $mapping_file = $file_prefix . '_subsnp_mapping_' . $subind_table . '.txt';
     #warn "setting up gty_tables: $subind_table=> $dst_table,$loadfile,$mapping_file\n";
@@ -2559,13 +2442,13 @@ sub parallelized_individual_genotypes {
     next unless (-e $loadfile);
     
     $jobindex++;
-    print "Writing to load file $jobindex $loadfile $dst_table variation_id subsnp_id individual_id allele_1 allele_2\n";
-    print MGMT qq{$jobindex $loadfile $dst_table variation_id subsnp_id individual_id allele_1 allele_2\n};
+    print "Writing to load file $jobindex $loadfile $dst_table variation_id subsnp_id sample_id allele_1 allele_2\n";
+    print MGMT qq{$jobindex $loadfile $dst_table variation_id subsnp_id sample_id allele_1 allele_2\n};
   }
   # Include the multiple bp genotype file here as well
   if (-e $multi_bp_gty_file) {
     $jobindex++;
-    print MGMT qq{$jobindex $multi_bp_gty_file $multi_bp_gty_table variation_id subsnp_id individual_id allele_1 allele_2\n};
+    print MGMT qq{$jobindex $multi_bp_gty_file $multi_bp_gty_table variation_id subsnp_id sample_id allele_1 allele_2\n};
   }
   close(MGMT);
   
@@ -2711,7 +2594,7 @@ sub create_parallelized_individual_genotypes_task_file{
   my $task_manager_file  = 'individual_genotypes_task_management.txt';
 
   #Multi-bp genotypes will be written to a separate loadfile
-  my $multi_bp_gty_file =  $self->{'tmpdir'} . '/individual_genotypes_multi_bp_gty';
+  my $multi_bp_gty_file =  $self->{'tmpdir'} . '/sample_genotypes_multi_bp_gty';
 
   # Store the data for the farm submission in a hash with the data as key. This way, the jobs will be "randomized" w.r.t. chromosomes and chunks when submitted so all processes shouldn't work on the same tables/files at the same time.
   my %job_data;

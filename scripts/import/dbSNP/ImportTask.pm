@@ -37,7 +37,7 @@ use Digest::MD5 qw ( md5_hex );
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
-
+use Data::Dumper;
 
 our %QUICK_COMP = ( "A" => "T",
                     "T" => "A",
@@ -364,6 +364,7 @@ sub get_population{
 
 ## convert dbSNP allele id to letter representation of base
 ## not done as join in main query due db holding 2 rows per id
+## used in allele and individual_genotype look up
 sub get_allele{
 
     my $allele_id      = shift;
@@ -373,7 +374,7 @@ sub get_allele{
 
     ## forward and reverse returned
     my  $alleles = $allele_sth->fetchall_arrayref();
-    ## curently first row is A, C second (A)1 (C)1
+    ## currently first row is A, C second (A)1 (C)1
     return $alleles->[0];
 
 }
@@ -438,7 +439,7 @@ sub get_with_freq_stmt{
       afbsp.pop_id ASC
   };
 
-    return  $ss_with_freq_stmt;
+   return  $ss_with_freq_stmt;
 }
 
 #Prepare statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
@@ -472,6 +473,7 @@ sub get_var_ss_map{
 
 
 # Prepare statement to get the alleles from dbSNP ids
+# for allele & individual_grnotype import
 sub get_allele_sth{
 
     my $self = shift;
@@ -493,7 +495,7 @@ sub get_allele_sth{
   };
   my $allele_sth = $dbh->prepare($stmt)||die "ERROR preparing allele_sth: $DBI::errstr\n";
 
-    return  $allele_sth;
+  return  $allele_sth;
 }
   
 
@@ -569,8 +571,6 @@ sub calculate_gtype {
   my $start = shift;
   my $end = shift;
   my $mapping_file = shift;
-#  my $allele_file = shift;
-  #my $sample_file = shift;
   my $source_engine = shift;  ## mysql or mssql syntax
   
   #Put the log filehandle in a local variable
@@ -609,32 +609,20 @@ sub calculate_gtype {
   };
   my $vs_sth = $dbVar->dbc()->prepare($stmt);
   
-  # Prepared statement to get the ensembl individual_id from a dbSNP ind_id
+  # Prepared statement to get the ensembl sample_id from a dbSNP ind_id
   $stmt = qq{
     SELECT
-      t.individual_id
+      t.sample_id
     FROM
       tmp_ind t
     WHERE
       t.submitted_ind_id = ?
   };
-  my $individual_sth = $dbVar->dbc()->prepare($stmt);
+  my $sample_sth = $dbVar->dbc()->prepare($stmt);
   
   # Prepared statement to get the alleles. We get each one of these when needed.
-  $stmt = qq{
-    SELECT
-      a.allele,
-      ar.allele
-    FROM
-      $shared_db.Allele a JOIN
-      $shared_db.Allele ar ON (
-	ar.allele_id = a.rev_allele_id
-      )
-    WHERE
-      a.allele_id = ?
-  };
-  my $allele_sth = $dbSNP->dbc()->prepare($stmt);
-  
+  my $allele_sth = $self->get_allele_sth();
+
 
   my %all_individuals;
 
@@ -642,23 +630,21 @@ sub calculate_gtype {
 
   #Hash to hold the alleles in memory
   my %alleles;
-  #ÊIf the allele file exist, we'll read alleles from it
-#  %alleles = %{read_alleles($allele_file)} if (defined($allele_file) && -e $allele_file);
   print $logh Progress::location();
   # The allele_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value.
   $alleles{0} = ['\N','\N'];
   # Keep track if we did any new lookups
   my $new_alleles = 0;
   
-  #Hash to keep individual_ids in memory
-  my %individuals;
-  #If the sample file exist, we'll read alleles from it
-  #%individuals = %{read_samples($sample_file)} if (defined($sample_file) && -e $sample_file);
+  #Hash to keep sample_ids in memory
+  my %sample;
+
+
   print $logh Progress::location();
   # The individual_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
-  $individuals{0} = '\N';
-  # Keep track if we did any new lookups
-  #my $new_samples = 0;
+  $sample{0} = '\N';
+
+
   
   #ÊHash to keep subsnp_id to variation_id mappings in memory
   my %variation_ids;
@@ -670,19 +656,19 @@ sub calculate_gtype {
   # Keep track if we did any new lookups
   my $new_mappings = 0;
   
-  #ÊKeep the genotypes in an array and write them in the end to avoid locking the file more than necessary. Separate signle and multiple bp genotypes. Use a hash having the md5sum of the row to determine whether we've already used this one 
-  my @single_bp_gty;
-  my @multiple_bp_gty;
+  #ÊUse a hash having the md5sum of the row to determine whether we've already used this one 
   my %row_md5s;
 
   # Open a file handle to the temp file that will be used for loading
   open(SGL,'>',$loadfile) or die ("Could not open import file $loadfile for writing");
-  
+  # Open a file handle to the file that will be used for loading the multi-bp genotypes
+  open(MLT,'>',$mlt_file) or die ("Could not open import file $mlt_file for writing");
+
   # First, get all SubSNPs
   
   print $logh Progress::location();
 
-  my $sql = qq{
+  my $genotype_ext_stmt = qq{
     SELECT 
       si.subsnp_id,
       si.submitted_ind_id, 
@@ -712,8 +698,13 @@ sub calculate_gtype {
       si.subsnp_id ASC
   };
 
+
+   ####
+   if($source_engine =~/psql/){
+
+
    $dbSNP->dbc()->db_handle->begin_work();
-   $dbSNP->dbc()->do("DECLARE csr CURSOR  FOR $sql");
+   $dbSNP->dbc()->do("DECLARE csr CURSOR  FOR $genotype_ext_stmt");
 
   #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
 
@@ -724,18 +715,18 @@ sub calculate_gtype {
    
      while ( my $data = $csth->fetchrow_arrayref() ) {
 
-    my $subsnp_id = $data->[0];
+    my $subsnp_id   = $data->[0];
     my $ind_sub_id  = $data->[1];
-    my $allele_1 = $data->[2];
-    my $allele_2 = $data->[3];
-    my $sub_strand = $data->[4];
+    my $allele_id_1 = $data->[2];
+    my $allele_id_2 = $data->[3];
+    my $sub_strand  = $data->[4];
     my $rev_alleles = $data->[5];
     my $pattern_length = $data->[6];
   
     # If pattern length is less than 3, skip this genotype
     next if ($pattern_length < 3);
     # If ind_id is null (there is a case where this happens because one individual in SubmittedIndividual is missing from Individual (131)), skip this genotype.
-    ##next if (!defined($ind_id)); e!69 - fix this
+
 
     # Look up the variation_id if necessary. This should be slow for the first chunk on each chromosome but fast for the rest..
     if (!exists($variation_ids{$subsnp_id})) {
@@ -747,106 +738,160 @@ sub calculate_gtype {
       #ÊIf, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
       next if (!defined($vs_subsnp_id));
       $variation_ids{$subsnp_id} = [$variation_id,$substrand_reversed_flag];
-      $new_mappings = 1;
     }
-    
-    #ÊShould the alleles be flipped?
+
+    ## now linking to sample ##
+    $sample{$ind_sub_id} = get_sample_for_ind($sample_sth, $ind_sub_id) if !exists $sample{$ind_sub_id} ;
+    if (!exists $sample{$ind_sub_id}){
+      warn "Skipping genotypes due to lack ofindividual record (submitted_ind_id:$ind_sub_id) & ss$subsnp_id\n";
+      next;
+    }
+
+    ########## sort out alleles ##########
+
+    next if !defined $allele_id_1 || !defined $allele_id_2;
+
+    #ÊShould the alleles be flipped? Set flag to specify
     my $reverse = ((($rev_alleles + $sub_strand + $variation_ids{$subsnp_id}->[1])%2 != 0) ? 1 : 0);
     
     #ÊIf any of the allele_ids were null, set the id to 0
-    $allele_1 ||= 0;
-    $allele_2 ||= 0;
+#    $allele_id_1 ||= 0;
+#    $allele_id_2 ||= 0;
     
     # Look up the alleles if necessary
-    foreach my $allele_id ($allele_1,$allele_2) {
-      if (!exists($alleles{$allele_id})) {
-	$allele_sth->execute($allele_id);
-	my ($a,$arev);
-	$allele_sth->bind_columns(\$a,\$arev);
-	$allele_sth->fetch();
-	next if (!defined($a) || !defined($arev));
-	$alleles{$allele_id} = [$a,$arev];
-	$new_alleles = 1;
-      }
+    foreach my $allele_id ($allele_id_1,$allele_id_2) {
+      $alleles{$allele_id} = get_allele($allele_id, $allele_sth);
+      next if (!exists($alleles{$allele_id}));
     }
 
-    if(!exists $individuals{$ind_sub_id} ){
+    ## select allele string in correct orientation	
+    my $allele_1 = $alleles{$allele_id_1}->[$reverse];
+    my $allele_2 = $alleles{$allele_id_2}->[$reverse];
 
-	$individual_sth->execute($ind_sub_id);
-	my $individual_id;
-	$individual_sth->bind_columns(\$individual_id);
-	$individual_sth->fetch();
-	if (!defined($individual_id)){  ### check for further drop out??
-	    warn "Skipping genotypes due to lack ofindividual record (submitted_ind_id:$ind_sub_id) & ss$subsnp_id\n";
-	    next;
-	} 
-	$individuals{$ind_sub_id} = $individual_id;
-#	    $all_individuals{$ind_id}{$ind_sub_id} = $sample_id;
-	
-    }
-    $allele_1 = $alleles{$allele_1}->[$reverse];
-    $allele_2 = $alleles{$allele_2}->[$reverse];
-    
+    #ÊSkip this genotype if the alleles are N or first allele contains the string 'indeterminate'
+    next if (($allele_1 eq 'N' && $allele_2 eq 'N') || 
+        $allele_1 =~ m/indeterminate/i || $allele_2 =~ m/indeterminate/i);
+   
     # Order the alleles in alphabetical order
     ($allele_1,$allele_2) = sort {uc($a) cmp uc($b)} ($allele_1,$allele_2);
     # Then in length order
     ($allele_1,$allele_2) = sort {length($a) <=> length($b)} ($allele_1,$allele_2);
     
-    #ÊSkip this genotype if the alleles are N
-    next if ($allele_1 eq 'N' && $allele_2 eq 'N');
     
-    #my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$samples{$ind_id},$allele_1,$allele_2));
-    my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$individuals{$ind_sub_id},$allele_1,$allele_2));
+
+    ########## print to load file ##########
+    my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$sample{$ind_sub_id},$allele_1,$allele_2));
     my $md5 = md5_hex($row);
     next if (exists($row_md5s{$md5}));
     $row_md5s{$md5}++;
     
-    # Determine if this should go into the single or multiple genotype table
+    # Determine if this should go into the single or multiple genotype table & write to load file
     if ((length($allele_2) == 1 && length($allele_2) == 1) && $allele_1 ne '-' && $allele_2 ne '-') {
-#      push(@single_bp_gty,$row);
-      print SGL "$row\n"; #### write straight out for meme reassons~~***************
+      print SGL "$row\n"; 
     }
-    else {
-      #ÊSkip this genotype if the first allele contains the string 'indeterminate'
-      next if ($allele_1 =~ m/indeterminate/i);
-      push(@multiple_bp_gty,$row);
-    }
+    else { 
+      print MLT "$row\n"; 
      }
    }
- $dbSNP->dbc()->do("CLOSE csr");
+  $dbSNP->dbc()->do("CLOSE csr");
   print $logh Progress::location();
-=head  
-  if (scalar(@single_bp_gty)) {
-    # Open a file handle to the temp file that will be used for loading
-    open(SGL,'>',$loadfile) or die ("Could not open import file $loadfile for writing");
-    #ÊGet a lock on the file
-    flock(SGL,LOCK_EX);
-    # Write the genotypes
-    foreach my $gty (@single_bp_gty) {
-      print SGL qq{$gty\n};
     }
-    close(SGL);
-    print $logh Progress::location();
-  }
-=cut
+}
+    ##### mysql msql syntax #####
+    else{
+     
+
+   #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
+    my $subind_sth = $dbSNP->dbc()->prepare($genotype_ext_stmt) ||die;
+     $subind_sth->execute()||die;
+    while ( my $data = $subind_sth->fetchrow_arrayref() ) {
+
+    my $subsnp_id   = $data->[0];
+    my $ind_sub_id  = $data->[1];
+    my $allele_id_1 = $data->[2];
+    my $allele_id_2 = $data->[3];
+    my $sub_strand  = $data->[4];
+    my $rev_alleles = $data->[5];
+    my $pattern_length = $data->[6];
+
+    # If pattern length is less than 3, skip this genotype
+    next if ($pattern_length < 3);
+    # If ind_id is null (there is a case where this happens because one individual in SubmittedIndividual is missing from Individual (131)), skip this genotype.
+
+
+    # Look up the variation_id if necessary. This should be slow for the first chunk on each chromosome but fast for the rest..
+    if (!exists($variation_ids{$subsnp_id})) {
+      $vs_sth->bind_param(1,$subsnp_id,SQL_INTEGER);
+      $vs_sth->execute();
+      my ($vs_subsnp_id,$variation_id,$substrand_reversed_flag);
+      $vs_sth->bind_columns(\$vs_subsnp_id,\$variation_id,\$substrand_reversed_flag);
+      $vs_sth->fetch();
+      #ÊIf, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
+      next if (!defined($vs_subsnp_id));
+      $variation_ids{$subsnp_id} = [$variation_id,$substrand_reversed_flag];
+    }
+
+    ## now linking to sample ##
+    $sample{$ind_sub_id} = get_sample_for_ind($sample_sth, $ind_sub_id) if !exists $sample{$ind_sub_id} ;
+    if (!exists $sample{$ind_sub_id}){
+      warn "Skipping genotypes due to lack ofindividual record (submitted_ind_id:$ind_sub_id) & ss$subsnp_id\n";
+      next;
+    }
+
+    ########## sort out alleles ##########
+
+    next if !defined $allele_id_1 || !defined $allele_id_2;
+
+    #ÊShould the alleles be flipped? Set flag to specify
+    my $reverse = ((($rev_alleles + $sub_strand + $variation_ids{$subsnp_id}->[1])%2 != 0) ? 1 : 0);
+
+
+    # Look up the alleles if necessary
+    foreach my $allele_id ($allele_id_1,$allele_id_2) {
+      $alleles{$allele_id} = get_allele($allele_id, $allele_sth);
+      next if (!exists($alleles{$allele_id}));
+    }
+#print Dumper %alleles;
+# print "Looking up allele for id $allele_id_1 & strand $reverse\n";
+    my $allele_1 = $alleles{$allele_id_1}->[$reverse];
+    my $allele_2 = $alleles{$allele_id_2}->[$reverse];
+
+    #ÊSkip this genotype if the alleles are N or first allele contains the string 'indeterminate'
+    next if (($allele_1 eq 'N' && $allele_2 eq 'N') ||
+        $allele_1 =~ m/indeterminate/i || $allele_2 =~ m/indeterminate/i);
+
+    # Order the alleles in alphabetical order
+    ($allele_1,$allele_2) = sort {uc($a) cmp uc($b)} ($allele_1,$allele_2);
+    # Then in length order
+    ($allele_1,$allele_2) = sort {length($a) <=> length($b)} ($allele_1,$allele_2);
+
+
+
+    ########## print to load file ##########
+    my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$sample{$ind_sub_id},$allele_1,$allele_2));
+    my $md5 = md5_hex($row);
+    next if (exists($row_md5s{$md5}));
+    $row_md5s{$md5}++;
+
+    # Determine if this should go into the single or multiple genotype table & write to load file
+    if ((length($allele_2) == 1 && length($allele_2) == 1) && $allele_1 ne '-' && $allele_2 ne '-') {
+      print SGL "$row\n";
+    }
+    else {
+      print MLT "$row\n";
+     }
+   }
+
+
  
-  if (scalar(@multiple_bp_gty)) {
-    # Open a file handle to the file that will be used for loading the multi-bp genotypes
-    open(MLT,'>',$mlt_file) or die ("Could not open import file $mlt_file for writing");
-    #ÊGet a lock on the file
-    #flock(MLT,LOCK_EX);
-    # Write the genotypes
-    foreach my $gty (@multiple_bp_gty) {
-      print MLT qq{$gty\n};
-    }
-    close(MLT);
-    close(SGL);
-    print $logh Progress::location();
   }
+  close(MLT);
+  close(SGL);
+  print $logh Progress::location();
   
   # If we had an allele file and we need to update it, do that
   delete($alleles{0});
-#  write_alleles($allele_file,\%alleles) if (defined($allele_file) && $new_alleles);
+
   print $logh Progress::location();
   # If we had a sample file and we need to update it, do that
   #delete($samples{0});
@@ -857,6 +902,20 @@ sub calculate_gtype {
   
   print $logh Progress::location() . "\tFinished dumping from $subind_table to $loadfile\n";
   return 1;
+}
+
+## look up ensembl sample id for dbSNP submitted individual id
+sub get_sample_for_ind{
+
+  my ($sample_sth, $ind_sub_id) = @_;
+  my $sample_id;
+
+  $sample_sth->execute($ind_sub_id);
+  $sample_sth->bind_columns(\$sample_id);
+  $sample_sth->fetch();
+
+  return $sample_id;
+            
 }
 
 sub load_data_infile {

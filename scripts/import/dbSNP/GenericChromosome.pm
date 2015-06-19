@@ -370,29 +370,18 @@ sub extract_haplotype_mappings{
     my $ContigInfo   = shift;
     my $group_label  = shift;
         
-=head pre GRCh38
+
     ## copy synonyms & fake chrom seq_region_ids from core db to temp table
     my $syn_ext_stmt = qq[ select sr2.seq_region_id, sr2.name, srs.synonym, assembly.asm_start, assembly.asm_end
                            from  seq_region sr1, seq_region_synonym srs, seq_region sr2, assembly
                            where sr1.seq_region_id = srs.seq_region_id 
-                           and sr2.name = sr1.name
                            and sr2.seq_region_id = assembly.asm_seq_region_id
                            and sr1.seq_region_id = assembly.cmp_seq_region_id
-];
-=cut
+                         ];
 
-    my $syn_ext_stmt = qq[ select sr.seq_region_id, 
-                                  sr.name,  
-                                  srs.synonym, 
-                                  asse.seq_region_start, 
-                                  asse.seq_region_start 
-                          from  seq_region sr, seq_region_synonym srs, assembly_exception asse  
-                          where sr.seq_region_id = srs.seq_region_id  
-                          and sr.seq_region_id = asse.seq_region_id];
 
-   dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
+    dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
     
-
     create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null", "asm_start i", "asm_end i"   );
 
     ### check for reverse strand patches - not expecting any, so merely warn
