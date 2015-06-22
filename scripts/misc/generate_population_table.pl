@@ -334,7 +334,7 @@ sub get_size {
   my $dbname   = shift;
   my $hostname = shift;
 
-  my $stmt = qq{ SELECT count(*) FROM individual_population WHERE population_id=?};
+  my $stmt = qq{ SELECT count(*) FROM sample_population WHERE population_id=?};
   my $sth = get_connection_and_query($dbname, $hostname, $stmt, [$pop_id]);
   my $size = ($sth->fetchrow_array)[0];
   $sth->finish;
