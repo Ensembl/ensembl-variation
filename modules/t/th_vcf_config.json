@@ -10,9 +10,9 @@
       "source_name": "1000genomes",
       "source_version": "20141202",
       "source_url": "http://www.1000genomes.org",
-      "individual_prefix": "1000GENOMES:phase_3:",
+      "sample_prefix": "1000GENOMES:phase_3:",
       "population_prefix": "1000GENOMES:phase_3_",
-      "individual_populations": {
+      "sample_populations": {
         "HG00096": ["GBR", "EUR"],
         "HG00097": ["GBR", "EUR"],
         "HG00099": ["GBR", "EUR"],

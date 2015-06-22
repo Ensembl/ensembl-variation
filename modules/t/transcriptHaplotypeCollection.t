@@ -44,7 +44,7 @@ my $vcf_coll = $vca->fetch_all->[0];
 my $temp = $vcf_coll->filename_template();
 $temp =~ s/###t\-root###/$dir/;
 $vcf_coll->filename_template($temp);
-$vcf_coll->_add_Populations_to_Individuals();
+$vcf_coll->_add_Populations_to_Samples();
 
 # get transcript
 my $ta = $cdb->get_TranscriptAdaptor;
@@ -54,11 +54,11 @@ my $tr = $ta->fetch_by_stable_id('ENST00000502692');
 my @gts;
 
 # we don't want variants in introns
-push @gts, @{$vcf_coll->get_all_IndividualGenotypeFeatures_by_Slice($_->feature_Slice, undef, 1)} for @{$tr->get_all_Exons};
+push @gts, @{$vcf_coll->get_all_SampleGenotypeFeatures_by_Slice($_->feature_Slice, undef, 1)} for @{$tr->get_all_Exons};
 
 my $c = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new($tr, \@gts, $vdb);
 
-my ($i) = grep {$_->name =~ /NA18499/} @{$vcf_coll->get_all_Individuals};
+my ($s) = grep {$_->name =~ /NA18499/} @{$vcf_coll->get_all_Samples};
 
 
 ## TESTS
@@ -91,16 +91,16 @@ is(scalar @h, 75, "get all CDSHaplotypes - count");
 @h = @{$c->get_all_ProteinHaplotypes};
 is(scalar @h, 54, "get all ProteinHaplotypes - count");
 
-@h = @{$c->get_all_TranscriptHaplotypes_by_Individual($i)};
-is(scalar @h, 4, "get_all_TranscriptHaplotypes_by_Individual - count");
+@h = @{$c->get_all_TranscriptHaplotypes_by_Sample($s)};
+is(scalar @h, 4, "get_all_TranscriptHaplotypes_by_Sample - count");
 
 $DB::single = 1;
 
-@h = @{$c->get_all_CDSHaplotypes_by_Individual($i)};
-is(scalar @h, 2, "get_all_CDSHaplotypes_by_Individual - count");
+@h = @{$c->get_all_CDSHaplotypes_by_Sample($s)};
+is(scalar @h, 2, "get_all_CDSHaplotypes_by_Sample - count");
 
-@h = @{$c->get_all_ProteinHaplotypes_by_Individual($i)};
-is(scalar @h, 2, "get_all_ProteinHaplotypes_by_Individual - count");
+@h = @{$c->get_all_ProteinHaplotypes_by_Sample($s)};
+is(scalar @h, 2, "get_all_ProteinHaplotypes_by_Sample - count");
 
 @h = @{$c->get_all_most_frequent_CDSHaplotypes};
 ok(scalar @h == 1, "get_all_most_frequent_CDSHaplotypes");
@@ -114,6 +114,8 @@ is($h[0]->name, 'ENST00000502692:566R>Q,620*>R,671C>R,819Q>R', "get_all_most_fre
 
 # counts etc
 is($c->total_haplotype_count, 4254, "total haplotype count");
+
+$DB::single = 1;
 
 $counts = $c->total_population_counts();
 $exp = {
@@ -155,7 +157,7 @@ is_deeply($counts, $exp, "total population counts");
 
 ## TranscriptHaplotype tests
 
-@h = @{$c->get_all_ProteinHaplotypes_by_Individual($i)};
+@h = @{$c->get_all_ProteinHaplotypes_by_Sample($s)};
 $h = $h[1];
 
 is($h->container, $c, 'container');

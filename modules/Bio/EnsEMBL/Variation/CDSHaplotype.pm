@@ -37,7 +37,7 @@ Bio::EnsEMBL::Variation::CDSHaplotype
 
 =head1 DESCRIPTION
 
-A class for representing a transcript's CDS sequence modified by individual
+A class for representing a transcript's CDS sequence modified by sample
 genotypes.
 
 =cut

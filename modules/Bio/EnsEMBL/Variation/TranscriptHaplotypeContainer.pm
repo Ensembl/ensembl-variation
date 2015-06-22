@@ -67,11 +67,11 @@ sub new {
   # check what we've been given looks sensible
   assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
   assert_ref($gts, 'ARRAY', 'Genotypes listref');
-  assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::IndividualGenotypeFeature', 'First member of genotypes listref');
+  assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::SampleGenotypeFeature', 'First member of genotypes listref');
   
   my $self = {
     _transcript => $transcript,
-    _individual_genotype_features => $gts || [],
+    _sample_genotype_features => $gts || [],
     _db => $db,
     transcript_id => $transcript->stable_id,
   };
@@ -88,9 +88,9 @@ sub transcript {
   return $self->{_transcript};
 }
 
-sub get_all_IndividualGenotypeFeatures {
+sub get_all_SampleGenotypeFeatures {
   my $self = shift;
-  return $self->{_individual_genotype_features};
+  return $self->{_sample_genotype_features};
 }
 
 sub _variation_features {
@@ -101,7 +101,7 @@ sub _variation_features {
     $self->{_variation_features} = $vfs;
   }
   elsif(!exists($self->{_variation_features})) {
-    $self->{_variation_features} = [map {$_->variation_feature} @{$self->get_all_IndividualGenotypeFeatures}];
+    $self->{_variation_features} = [map {$_->variation_feature} @{$self->get_all_SampleGenotypeFeatures}];
   }
   
   return $self->{_variation_features};
@@ -136,22 +136,22 @@ sub get_all_TranscriptHaplotypes {
   return [@{$_[0]->get_all_CDSHaplotypes}, @{$_[0]->get_all_ProteinHaplotypes}];
 }
 
-sub get_all_CDSHaplotypes_by_Individual {
+sub get_all_CDSHaplotypes_by_Sample {
   my $self = shift;
-  my $ind = shift;
-  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_CDSHaplotypes}];
+  my $sample = shift;
+  return [grep {$_->{samples}->{$sample->name}} @{$self->get_all_CDSHaplotypes}];
 }
 
-sub get_all_ProteinHaplotypes_by_Individual {
+sub get_all_ProteinHaplotypes_by_Sample {
   my $self = shift;
-  my $ind = shift;
-  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_ProteinHaplotypes}];
+  my $sample = shift;
+  return [grep {$_->{samples}->{$sample->name}} @{$self->get_all_ProteinHaplotypes}];
 }
 
-sub get_all_TranscriptHaplotypes_by_Individual {
+sub get_all_TranscriptHaplotypes_by_Sample {
   my $self = shift;
-  my $ind = shift;
-  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_TranscriptHaplotypes}];
+  my $sample = shift;
+  return [grep {$_->{samples}->{$sample->name}} @{$self->get_all_TranscriptHaplotypes}];
 }
 
 sub get_all_most_frequent_CDSHaplotypes {
@@ -207,10 +207,10 @@ sub total_population_counts {
   if(!exists($self->{total_population_counts})) {
     my $counts = {};
     
-    my $hash = $self->_get_individual_population_hash();
+    my $hash = $self->_get_sample_population_hash();
     
-    foreach my $ind(keys %$hash) {
-      $counts->{$_} += (scalar keys %{$self->{protein_haplotypes}} ? 2 : 1) for keys %{$hash->{$ind}};
+    foreach my $sample(keys %$hash) {
+      $counts->{$_} += (scalar keys %{$self->{protein_haplotypes}} ? 2 : 1) for keys %{$hash->{$sample}};
     }
     
     $self->{total_population_counts} = $counts;
@@ -219,21 +219,23 @@ sub total_population_counts {
   return $self->{total_population_counts};
 }
 
-## Generates a two-level hash giving the populations for each individual
-sub _get_individual_population_hash {
+## Generates a two-level hash giving the populations for each sample
+sub _get_sample_population_hash {
   my $self = shift;
   
-  if(!exists($self->{_individual_population_hash})) {
+  if(!exists($self->{_sample_population_hash})) {
     my $hash = {};
+
+    $DB::single = 1;
     
-    foreach my $ind(values %{{map {$_->individual->name => $_->individual()} @{$self->get_all_IndividualGenotypeFeatures}}}) {
-      $hash->{$ind->name}->{$_->name} = 1 for @{$ind->get_all_Populations};
+    foreach my $sample(values %{{map {$_->sample->name => $_->sample()} @{$self->get_all_SampleGenotypeFeatures}}}) {
+      $hash->{$sample->name}->{$_->name} = 1 for @{$sample->get_all_Populations};
     }
     
-    $self->{_individual_population_hash} = $hash;
+    $self->{_sample_population_hash} = $hash;
   }
   
-  return $self->{_individual_population_hash};
+  return $self->{_sample_population_hash};
 }
 
 ## Prefetches everything that would otherwise be lazy-loaded
@@ -265,13 +267,13 @@ sub _init {
   my @new_vars = grep {$_->{_cds_mapping}} @$vfs;
   $self->_variation_features(\@new_vars);
   
-  # group vfs by individual
-  my %by_ind;
-  push @{$by_ind{$_->individual->name}}, $_ for @{$self->get_all_IndividualGenotypeFeatures};
+  # group vfs by sample
+  my %by_sample;
+  push @{$by_sample{$_->sample->name}}, $_ for @{$self->get_all_SampleGenotypeFeatures};
   
   # do the transcript magic
-  foreach my $ind(keys %by_ind) {
-    my $obj = $self->_mutate_sequences($by_ind{$ind});
+  foreach my $sample(keys %by_sample) {
+    my $obj = $self->_mutate_sequences($by_sample{$sample});
     
     # store unique alt seqs so we only align each once
     foreach my $type(qw(cds protein)) {
@@ -308,7 +310,7 @@ sub _init {
         }
         
         # increment counts
-        $haplotype->{individuals}->{$ind}++;
+        $haplotype->{samples}->{$sample}++;
         $self->{_counts}->{$hex}++;
         
         # store mapping between hashes of cds and protein
@@ -352,7 +354,7 @@ sub _get_mappings {
   }
 }
 
-## Applies a set of IndividualGenotypeFeatures to the transcript sequence
+## Applies a set of SampleGenotypeFeatures to the transcript sequence
 ## Returns a hashref that contains the info necessary to construct a
 ## TranscriptHaplotype object
 sub _mutate_sequences {
@@ -424,7 +426,7 @@ sub _mutate_sequences {
   return $self->{_mutated_by_fingerprint}->{$fingerprint};
 }
 
-## gets an md5 hex for an individuals VFs/genotypes combination
+## gets an md5 hex for an samples VFs/genotypes combination
 ## this means we don't have to run _mutate_sequences more than
 ## once for essentially the same sequence
 sub _fingerprint_gts {
@@ -518,7 +520,7 @@ sub _get_unique_VariationFeatures_with_consequences {
     if(!defined($unique_vfs{$key})) {
       my $vf_copy = { %$vf };
       bless $vf_copy, ref($vf);
-      delete $vf_copy->{$_} for qw(_line phased individual genotype non_variant hom_ref);
+      delete $vf_copy->{$_} for qw(_line phased sample genotype non_variant hom_ref);
       $vf_copy->{ref_allele} = $ref_allele;
       $unique_vfs{$key} = $vf_copy;
     }

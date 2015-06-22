@@ -893,24 +893,24 @@ sub _get_Population_Sample_hash {
   return $self->{_population_hash};
 }
 
-sub _add_Populations_to_Individuals {
+sub _add_Populations_to_Samples {
   my $self = shift;
   
   # get hash
-  my $hash = $self->_get_Population_Individual_hash();
+  my $hash = $self->_get_Population_Sample_hash();
   
   # get all population objects
   my $pa = $self->adaptor->db->get_PopulationAdaptor();
   my %pop_objs_by_dbID = map {$_->dbID => $_} @{$pa->fetch_all_by_dbID_list([keys %$hash]) || []};
   
-  # get individual objects
-  my %ind_objs_by_dbID = map {$_->dbID => $_} @{$self->get_all_Individuals()};
+  # get sample objects
+  my %sam_objs_by_dbID = map {$_->dbID => $_} @{$self->get_all_Samples()};
   
   foreach my $pop_id(keys %$hash) {
     if(my $pop_obj = $pop_objs_by_dbID{$pop_id}) {
-      foreach my $ind_id(keys %{$hash->{$pop_id}}) {
-        if(my $ind_obj = $ind_objs_by_dbID{$ind_id}) {
-          push @{$ind_obj->{populations}}, $pop_obj;
+      foreach my $sam_id(keys %{$hash->{$pop_id}}) {
+        if(my $sam_obj = $sam_objs_by_dbID{$sam_id}) {
+          push @{$sam_obj->{populations}}, $pop_obj;
         }
       }
     }

@@ -37,7 +37,7 @@ Bio::EnsEMBL::Variation::TranscriptHaplotype
 
 =head1 DESCRIPTION
 
-A helper class for representing a transcript sequence modified by individual
+A helper class for representing a transcript sequence modified by sample
 genotypes. Not to be used directly.
 
 =cut
@@ -141,11 +141,11 @@ sub get_all_population_counts {
   my $self = shift;
   
   if(!exists($self->{population_counts})) {
-    my $ind_pop_hash = $self->container->_get_individual_population_hash();
+    my $sample_pop_hash = $self->container->_get_sample_population_hash();
     my $counts = {};
     
-    foreach my $ind(keys %{$self->{individuals}}) {
-      $counts->{$_} += $self->{individuals}->{$ind} for keys %{$ind_pop_hash->{$ind}};
+    foreach my $sample(keys %{$self->{samples}}) {
+      $counts->{$_} += $self->{samples}->{$sample} for keys %{$sample_pop_hash->{$sample}};
     }
     
     $self->{population_counts} = $counts;
