@@ -103,6 +103,7 @@ sub get_available_adaptors{
       'VariationFeature'                => 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor',
       'VariationSet'                    => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
       'VCFCollection'                   => 'Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor',
+      'TranscriptHaplotype'             => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptHaplotypeAdaptor',
     );
 	
     return (\%pairs);
