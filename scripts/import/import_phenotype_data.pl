@@ -954,6 +954,12 @@ sub parse_animal_qtl {
       'seq_region_strand' => 1
     };
     
+    if ($phenotype->{'seq_region_start'} > $phenotype->{'seq_region_end'}) {
+      my $tmp_end = $phenotype->{'seq_region_end'};
+      $phenotype->{'seq_region_start'} = $phenotype->{'seq_region_end'};
+      $phenotype->{'seq_region_end'}   = $tmp_end;
+    }
+    
     # add additional fields if found
     $phenotype->{'study'} = 'pubmed/'.$extra->{PUBMED_ID} if defined($extra->{PUBMED_ID});
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
