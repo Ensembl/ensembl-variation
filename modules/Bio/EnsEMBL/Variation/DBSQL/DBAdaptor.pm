@@ -363,4 +363,12 @@ sub vcf_config_file {
   return $self->{vcf_config_file};
 }
 
+sub vcf_root_dir {
+  my $self = shift;
+  
+  $self->{vcf_root_dir} = shift if @_;
+  
+  return $self->{vcf_root_dir};
+}
+
 1;
