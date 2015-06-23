@@ -150,6 +150,15 @@ sub new {
   my $config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $config_file");
   
   $self->{config} = $config;
+
+  ## set up root dir
+  my $root_dir = '';
+  if($ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}) {
+    $root_dir = $ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}.'/';
+  }
+  elsif($self->db && $self->db->vcf_root_dir) {
+    $root_dir = $self->db->vcf_root_dir.'/';
+  }
   
   bless($self, $class);
   
@@ -200,12 +209,11 @@ sub new {
         push @{$populations}, $pop;
       }
     }
-
     
     my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
       -type => $hash->{type},
-      -filename_template => ($ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR} ? $ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}.'/' : '').$hash->{filename_template},
+      -filename_template => $root_dir.$hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
@@ -216,11 +224,6 @@ sub new {
       -strict_name_match => $hash->{strict_name_match},
       -adaptor => $self,
     );
-    
-    use Data::Dumper;
-    $Data::Dumper::Maxdepth = 2;
-    $Data::Dumper::Indent = 1;
-    print STDERR Dumper \%ENV;
     
     $self->{collections}->{$collection->id} = $collection;
     push @{$self->{order}}, $collection->id;
