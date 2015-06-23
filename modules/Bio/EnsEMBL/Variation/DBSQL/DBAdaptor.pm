@@ -355,6 +355,21 @@ sub use_vcf {
   return $self->{use_vcf}
 }
 
+sub vcf_config {
+  my $self = shift;
+
+  if(!exists($self->{vcf_config})) {
+    if(@_) {
+      $self->{vcf_config} = shift;
+    }
+    else {
+      $self->{vcf_config} = {};
+    }
+  }
+  
+  return $self->{vcf_config};
+}
+
 sub vcf_config_file {
   my $self = shift;
   

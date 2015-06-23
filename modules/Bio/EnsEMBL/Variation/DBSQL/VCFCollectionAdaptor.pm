@@ -125,31 +125,39 @@ sub new {
   eval {$self = $class->SUPER::new(shift);};
   $self ||= {};
 
-  my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
-  
-  # try and get config file from global variable or ENV
-  $config_file ||= $CONFIG_FILE || ($self->db ? $self->db->vcf_config_file : undef) || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
-  
-  # try and find default config file in API dir
-  if(!defined($config_file)) {
-    my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/VCFCollectionAdaptor.pm';
-    $config_file  = $INC{$mod_path};
-    $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
+  my $config = {};
+
+  # try and get config from DB adaptor
+  $self->db->vcf_config if $self->db;
+
+  unless($config && scalar keys %$config) {
+    my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
+    
+    # try and get config file from global variable or ENV
+    $config_file ||= $CONFIG_FILE || ($self->db ? $self->db->vcf_config_file : undef) || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
+    
+    # try and find default config file in API dir
+    if(!defined($config_file)) {
+      my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/VCFCollectionAdaptor.pm';
+      $config_file  = $INC{$mod_path};
+      $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
+    }
+    
+    throw("ERROR: No config file defined") unless defined($config_file);
+    throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
+    
+    # read config from JSON config file
+    open IN, $config_file or throw("ERROR: Could not read from config file $config_file");
+    local $/ = undef;
+    my $json_string = <IN>;
+    close IN;
+    
+    # parse JSON into hashref $config
+    $config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $config_file");
   }
   
-  throw("ERROR: No config file defined") unless defined($config_file);
-  throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
-  
-  # read config from JSON config file
-  open IN, $config_file or throw("ERROR: Could not read from config file $config_file");
-  local $/ = undef;
-  my $json_string = <IN>;
-  close IN;
-  
-  # parse JSON into hashref $config
-  my $config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $config_file");
-  
   $self->{config} = $config;
+  $self->db->vcf_config($config) if $self->db;
 
   ## set up root dir
   my $root_dir = '';
