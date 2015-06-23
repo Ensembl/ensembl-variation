@@ -50,6 +50,28 @@ use Bio::EnsEMBL::Variation::TranscriptHaplotype;
 
 use base qw(Bio::EnsEMBL::Variation::TranscriptHaplotype);
 
+=head2 new
+
+  Arg [-CONTAINER]:  Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer
+  Arg [-SEQ]:        string
+  Arg [-HEX]:        string
+  Arg [-INDEL]:      bool
+
+  Example    : my $ch = Bio::EnsEMBL::Variation::ProteinHaplotype->new(
+                  -CONTAINER => $container,
+                  -SEQ       => $seq,
+                  -HEX       => $hex,
+                  -INDEL     => $indel
+               );
+
+  Description: Constructor.  Instantiates a new ProteinHaplotype object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::ProteinHaplotype
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -58,13 +80,44 @@ sub new {
   
   my $self = $class->SUPER::new(%args);
   bless($self, $class);
+
+  $self->type('protein');
   
   return $self;
 }
 
+
+=head2 get_all_CDSHaplotypes
+
+  Example    : my @chs = @{$ph->get_all_CDSHaplotypes()}
+  Description: Get all CDSHaplotypes that translate to this ProteinHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::CDSHaplotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_CDSHaplotypes {
   return $_[0]->get_other_Haplotypes;
 }
+
+
+=head2 get_all_diffs
+
+  Example    : my @diffs = @{$ph->get_all_diffs}
+  Description: Get a list of differences to the reference. Each difference is a
+               hashref containing a string 'diff' representing a change
+               e.g. 19P>L represents a change of Proline to Leucine at position 19.
+
+               The hashref may also contain keys representing predictions and scores
+               from SIFT and PolyPhen.
+  Returntype : arrayref of hashrefs
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub get_all_diffs {
   my $self = shift;
@@ -103,14 +156,39 @@ sub get_all_diffs {
   return $self->{diffs};
 }
 
+
+=head2 mean_sift_score
+
+  Example    : my $score = @{$ph->mean_sift_score()}
+  Description: Get the mean SIFT score across all diffs in this ProteinHaplotype
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub mean_sift_score {
   return $_[0]->_mean_score('sift');
 }
+
+
+=head2 mean_polyphen_score
+
+  Example    : my $score = @{$ph->mean_polyphen_score()}
+  Description: Get the mean PolyPhen score across all diffs in this ProteinHaplotype
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub mean_polyphen_score {
   return $_[0]->_mean_score('polyphen');
 }
 
+## used to calculate means for mean_sift_score and mean_polyphen_score
 sub _mean_score {
   my $self = shift;
   my $tool = shift;

@@ -50,6 +50,30 @@ use warnings;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
+=head2 new
+
+  Arg [-CONTAINER]:  Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer
+  Arg [-TYPE]:       string - "cds" or "protein"
+  Arg [-SEQ]:        string
+  Arg [-HEX]:        string
+  Arg [-INDEL]:      bool
+
+  Example    : my $ch = Bio::EnsEMBL::Variation::TranscriptHaplotype->new(
+                  -CONTAINER => $container,
+                  -TYPE      => 'protein',
+                  -SEQ       => $seq,
+                  -HEX       => $hex,
+                  -INDEL     => $indel
+               );
+
+  Description: Constructor.  Instantiates a new TranscriptHaplotype object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::TranscriptHaplotype
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -70,11 +94,62 @@ sub new {
   return $self;
 }
 
+
+=head2 name
+
+  Example    : my $name = $th->name()
+  Description: Get a name for this haplotype based on the transcript identifier
+               and a concatenated string of its difference to the reference
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub name {
+  my $self = shift;
+  
+  if(!exists($self->{name})) {
+    $self->{name} = sprintf("%s:%s", $self->transcript->stable_id, join(",", @{$self->_get_raw_diffs}) || 'REF');
+  }
+  
+  return $self->{name};
+}
+
+
+=head2 container
+
+  Arg [1]    : Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer $container (optional)
+               Set the container for this TranscriptHaplotype
+  Example    : my $container = $th->container()
+  Description: Getter/Setter for the container object.
+  Returntype : Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub container {
   my $self = shift;
   $self->{_container} = shift if @_;
   return $self->{_container};
 }
+
+
+=head2 type
+
+  Arg [1]    : string $type (optional)
+  Example    : my $type = $th->type()
+  Description: Getter/Setter for the type of this TranscriptHaplotype,
+               one of "CDS" or "Protein"
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub type {
   my $self = shift;
@@ -82,11 +157,39 @@ sub type {
   return $self->{type};
 }
 
+
+=head2 seq
+
+  Arg [1]    : string $seq (optional)
+  Example    : my $seq = $th->seq()
+  Description: Getter/Setter for the sequence of this TranscriptHaplotype
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub seq {
   my $self = shift;
   $self->{seq} = shift if @_;
   return $self->{seq};
 }
+
+
+=head2 has_indel
+
+  Arg [1]    : bool $has_indel (optional)
+  Example    : my $has_indel = $th->has_indel()
+  Description: Getter/Setter for the flag indicating if this
+               TranscriptHaplotype has an insertion or deletion
+               relative to the reference
+  Returntype : bool
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub has_indel {
   my $self = shift;
@@ -94,36 +197,77 @@ sub has_indel {
   return $self->{has_indel};
 }
 
-sub hex {
-  my $self = shift;
-  $self->{hex} = shift if @_;
-  return $self->{hex};
-}
 
-sub other_hexes {
-  my $self = shift;
-  $self->{other_hexes} = shift if @_;
-  return [keys %{$self->{other_hexes}}];
-}
+=head2 transcript
+
+  Example    : my $tr = $th->transcript()
+  Description: Get the Transcript object used as the reference for this
+               TranscriptHaplotype
+  Returntype : Bio::EnsEMBL::Transcript
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub transcript {
   return $_[0]->container->transcript;
 }
 
+
+=head2 get_other_Haplotypes
+
+  Example    : my @ths = $th->get_other_Haplotypes()
+  Description: Get the partner TranscriptHaplotypes to this one i.e. 
+               get all CDSHaplotypes that translate to this ProteinHaplotype OR
+               get the ProteinHaplotype representing the translation of this CDSHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::TranscriptHaplotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_other_Haplotypes {
   my $self = shift;
-  return [map {$self->container->get_TranscriptHaplotype_by_hex($_)} @{$self->other_hexes}];
+  return [map {$self->container->_get_TranscriptHaplotype_by_hex($_)} @{$self->_other_hexes}];
 }
+
+
+=head2 count
+
+  Example    : my $count = $th->count()
+  Description: Counts the number of times this haplotype has been observed
+               within the individuals defined in the container
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub count {
   my $self = shift;
   
   if(!exists($self->{count})) {
-    $self->{count} = $self->container->{_counts}->{$self->hex};
+    $self->{count} = $self->container->{_counts}->{$self->_hex};
   }
   
   return $self->{count};
 }
+
+
+=head2 frequency
+
+  Example    : my $frequency = $th->frequency()
+  Description: Get the observed frequency of this haplotype amongst
+               those defined in the container
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub frequency {
   my $self = shift;
@@ -136,6 +280,19 @@ sub frequency {
   
   return $self->{frequency};
 }
+
+
+=head2 get_all_population_counts
+
+  Example    : my %counts = %{$th->get_all_population_counts()}
+  Description: Counts the number of times this haplotype has been observed
+               in each population defined in the container
+  Returntype : hashref e.g. { $population_name => $count }
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub get_all_population_counts {
   my $self = shift;
@@ -154,6 +311,19 @@ sub get_all_population_counts {
   return $self->{population_counts};
 }
 
+
+=head2 get_all_population_frequencies
+
+  Example    : my %freqs = %{$th->get_all_population_frequencies()}
+  Description: Gets the observed frequency of this haplotype in each population
+               defined in the container
+  Returntype : hashref e.g. { $population_name => $freq }
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_population_frequencies {
   my $self = shift;
   
@@ -169,14 +339,20 @@ sub get_all_population_frequencies {
   return $self->{population_frequencies};
 }
 
-sub name {
+## Get/set the hex string uniquely identifying this haplotype
+sub _hex {
   my $self = shift;
-  
-  if(!exists($self->{name})) {
-    $self->{name} = sprintf("%s:%s", $self->transcript->stable_id, join(",", @{$self->_get_raw_diffs}) || 'REF');
-  }
-  
-  return $self->{name};
+  $self->{hex} = shift if @_;
+  return $self->{hex};
+}
+
+## Get/set an arrayref of hexes identifying the partner haplotypes to this one
+## i.e. all possible CDSHaplotypes for a ProteinHaplotype
+## or the ProteinHaplotype for a CDSHaplotype
+sub _other_hexes {
+  my $self = shift;
+  $self->{other_hexes} = shift if @_;
+  return [keys %{$self->{other_hexes}}];
 }
 
 ## Get differences between this TranscriptHaplotype and the reference sequence
@@ -264,6 +440,7 @@ sub _get_raw_diffs {
   return $self->{_raw_diffs};
 }
 
+## creates a diff string from a pair of "alleles" and a position
 sub _create_diff {
   my ($self, $a1, $a2, $pp) = @_;
   

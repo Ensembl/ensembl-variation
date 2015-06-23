@@ -50,6 +50,28 @@ use Bio::EnsEMBL::Variation::TranscriptHaplotype;
 
 use base qw(Bio::EnsEMBL::Variation::TranscriptHaplotype);
 
+=head2 new
+
+  Arg [-CONTAINER]:  Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer
+  Arg [-SEQ]:        string
+  Arg [-HEX]:        string
+  Arg [-INDEL]:      bool
+
+  Example    : my $ch = Bio::EnsEMBL::Variation::CDSHaplotype->new(
+                  -CONTAINER => $container,
+                  -SEQ       => $seq,
+                  -HEX       => $hex,
+                  -INDEL     => $indel
+               );
+
+  Description: Constructor.  Instantiates a new CDSHaplotype object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::CDSHaplotype
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -58,13 +80,44 @@ sub new {
   
   my $self = $class->SUPER::new(%args);
   bless($self, $class);
+
+  $self->type('cds');
   
   return $self;
 }
 
+
+=head2 get_ProteinHaplotype
+
+  Example    : my $ph = $ch->get_ProteinHaplotype()
+  Description: Get the ProteinHaplotype representing the translation of this CDSHaplotype
+  Returntype : Bio::EnsEMBL::Variation::ProteinHaplotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_ProteinHaplotype {
   return $_[0]->get_other_Haplotypes->[0];
 }
+
+
+=head2 get_all_diffs
+
+  Example    : my @diffs = @{$ch->get_all_diffs}
+  Description: Get a list of differences to the reference. Each difference is a
+               hashref containing a string 'diff' representing a change
+               e.g. 25A>T represents a change of "A" to "T" at position 25. The
+               hashref may also contain a pointer to the VariationFeature object
+               that contributes this change (if a single VariatioFeature can be
+               identified)
+  Returntype : arrayref of hashrefs
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub get_all_diffs {
   my $self = shift;

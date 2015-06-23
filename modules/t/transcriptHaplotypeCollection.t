@@ -74,13 +74,13 @@ ok($c->db->isa('Bio::EnsEMBL::Variation::DBSQL::DBAdaptor'), "db method");
 
 
 # get methods
-$h = $c->get_TranscriptHaplotype_by_hex('25f6ab7d0476132b731c630d743d2868');
+$h = $c->_get_TranscriptHaplotype_by_hex('25f6ab7d0476132b731c630d743d2868');
 ok($h->isa('Bio::EnsEMBL::Variation::CDSHaplotype'), "get by hex - isa");
 is($h->name, 'ENST00000502692:1697G>A,1818A>G,1858T>C,2011T>C,2033A>C,2456A>G', "get by hex - name");
 
 $h = $c->get_TranscriptHaplotype_by_name('ENST00000502692:1697G>A,1818A>G,1858T>C,2011T>C,2033A>C,2456A>G');
 ok($h->isa('Bio::EnsEMBL::Variation::CDSHaplotype'), "get by name - isa");
-is($h->hex, '25f6ab7d0476132b731c630d743d2868', "get by name - hex");
+is($h->_hex, '25f6ab7d0476132b731c630d743d2868', "get by name - hex");
 
 @h = @{$c->get_all_TranscriptHaplotypes};
 is(scalar @h, 129, "get all TranscriptHaplotypes - count");
@@ -93,8 +93,6 @@ is(scalar @h, 54, "get all ProteinHaplotypes - count");
 
 @h = @{$c->get_all_TranscriptHaplotypes_by_Sample($s)};
 is(scalar @h, 4, "get_all_TranscriptHaplotypes_by_Sample - count");
-
-$DB::single = 1;
 
 @h = @{$c->get_all_CDSHaplotypes_by_Sample($s)};
 is(scalar @h, 2, "get_all_CDSHaplotypes_by_Sample - count");
@@ -114,8 +112,6 @@ is($h[0]->name, 'ENST00000502692:566R>Q,620*>R,671C>R,819Q>R', "get_all_most_fre
 
 # counts etc
 is($c->total_haplotype_count, 4254, "total haplotype count");
-
-$DB::single = 1;
 
 $counts = $c->total_population_counts();
 $exp = {
@@ -164,8 +160,8 @@ is($h->container, $c, 'container');
 is($h->type, 'protein', 'type');
 is($h->seq, 'MGIGLCVPPARCWKRLTRSSRGQPLERPAATIIIGLSIVERSKQTQRGPVDFSRSHSAPAAEQECKPRISAARSTPAPPSPAVPGFRTTPCQTFTAWCNSHLRKAGTQIENIEEDFRNGLKLMLLLEVISGERLPRPDKGKMRFHKIANVNKALDFIASKGVKLVSIGAEEIVDGNLKMTLGMIWTIILRFAIQDISVEETSAKEGLLLWCQRKTAPYRNVNVQNFHTSWKDGLALCALIHRHRPDLIDYAKLRKDDPIGNLNTAFEVAEKYLDIPKMLDAEDIVNTPKPDEKAIMTYVSCFYHAFAGAEQAETAANRICKVLAVNQENEKLMEEYEKLASELLEWIRRTVPWLENRVGEPSMSAMQRKLEDFRDYRRLHKPPRIQEKCQLEINFNTLQTKLRLSHRPAFMPSEGKLVSDIANAWRGLEQVEKGYEDWLLSEIRRLQRLQHLAEKFRQKASLHEAWTRGKEEMLSQRDYDSALLQEVRALLRRHEAFESDLAAHQDRVEHIAALAQELNELDYHEAASVNSRCQAICDQWDNLGTLTQKRRDALERMEKLLETIDQLQLEFARRAAPFNNWLDGAVEDLQDVWLVHSVEETQSLLTAHDQFKATLPEADRERGAIMGIQGEIQKICQTYGLRPCSTNPYITLSPQDINTKWDMVRKLVPSRDQTLQEALARQQVNERLRRQFAAQANAIGPWIQAKVEEVGRLAAGLAGSLEEQMAGLRQQEQNIINYKTNIDRLEGDHQLLQESLVFDNKHTVYSMEHIRVGWEQLLTSIARTINEVENQVLTRDAKGLSQEQLNEFRASFNHFDRKRNGMMEPDDFRACLISMGYDLGEVEFARIMTMVDPNAAGVVTFQAFIDFMTRETAETDTTEQVVASFKILAGDKNYITPELLRRELPAKQAEYCIRRMVPYKGSGAPAGALDYVAFSSALYGESDL*', 'seq');
 is($h->has_indel, 0, 'has_indel');
-is($h->hex, 'dff67d1fb7b3812a10cf152d2d9528f7', 'hex');
-is_deeply($h->other_hexes, ['fbb87de3331ea4225df6847e8335d622'], 'other_hexes');
+is($h->_hex, 'dff67d1fb7b3812a10cf152d2d9528f7', '_hex');
+is_deeply($h->_other_hexes, ['fbb87de3331ea4225df6847e8335d622'], '_other_hexes');
 is($h->transcript, $c->transcript, 'transcript');
 is($h->count, 47, 'count');
 is($h->frequency, 0.0110484250117536, 'frequency');
@@ -212,7 +208,5 @@ is($diffs->[0]->{diff}, '1539G>A', "cds diffs - raw name");
 is($diffs->[0]->{variation_feature}->variation_name, 'rs114371258', "cds diffs - variation feature");
 is($diffs->[-1]->{diff}, '2695GA>TT', "cds diffs - compound");
 is($diffs->[-1]->{variation_feature}, undef, "cds diffs - compound no variation feature");
-
-$DB::single = 1;
 
 done_testing();
