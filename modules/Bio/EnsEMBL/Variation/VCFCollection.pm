@@ -120,7 +120,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -134,6 +134,7 @@ sub new {
     id => $id,
     type => $type,
     sample_prefix => $sample_prefix,
+    individual_prefix => $individual_prefix,
     population_prefix => $pop_prefix,
     populations => $populations,
     chromosomes => $chromosomes,
@@ -260,7 +261,7 @@ sub strict_name_match {
 sub sample_prefix {
   my $self = shift;
   $self->{sample_prefix} = shift if @_;
-  return $self->{sample_prefix} || '';
+  return $self->{sample_prefix} || $self->{individual_prefix} || '';
 }
 
 
