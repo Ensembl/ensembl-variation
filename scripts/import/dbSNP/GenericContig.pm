@@ -1304,8 +1304,12 @@ sub individual_table {
         ## not all SubmittedIndividual are currated to dbSNP Individuals
 	$individuals->{$ind}{ind} = $n unless defined $individuals->{$ind}{ind} ; ## not clustered into Individual entry by dbSNP
 	$n++;
-	unless (defined $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}} ){
-
+	if (defined $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}} ){
+           ## currently lumping together - to be divided
+           $tmp_ins_sth->execute($done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}}, $ind);
+        }
+        else{
+           
             ## insert individual
 	    $ind_ins_sth->execute( $individuals->{$ind}{name}, $individuals->{$ind}{des},$individual_type_id );
 	    my $individual_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
@@ -1336,7 +1340,7 @@ sub individual_table {
 	    }
 
             ## save individual_id  based on name and dbSNP merged id  (merging only these on import) 
-	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $individual_id;
+	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $sample_id;
 
 	}
         ## save individual ids for ped look up

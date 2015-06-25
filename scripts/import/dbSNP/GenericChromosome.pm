@@ -240,14 +240,14 @@ sub variation_feature{
     debug(localtime() . "\tCreating genotyped variations");
     #creating the temporary table with the genotyped variations
 
-    my $gtype_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM  tmp_individual_genotype_single_bp});
+    my $gtype_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM  tmp_sample_genotype_single_bp});
     my $gtype_row = $gtype_ref->[0][0] if $gtype_ref;
     if ($gtype_row) {
-	$self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+	$self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_sample_genotype_single_bp});
 	print Progress::location();
 	$self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
 	print Progress::location();
-	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM sample_genotype_multiple_bp});
 	print Progress::location();
     }
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");

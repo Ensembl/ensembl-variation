@@ -25,9 +25,6 @@ use Data::Dumper;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
-use_ok('dbSNP::ImportTask'); 
-use_ok('dbSNP::GenericChromosome');
-use_ok('dbSNP::GenericContig');
 
 my @test_patterns = ( ["(AGAC)25/26/27/28/29/30/31/32/33/34/35/36/37/38/39/40/41/42/43/44/", 
                       "(AGAC)25/(AGAC)26/(AGAC)27/(AGAC)28/(AGAC)29/(AGAC)30/(AGAC)31/(AGAC)32/(AGAC)33/(AGAC)34/(AGAC)35/(AGAC)36/(AGAC)37/(AGAC)38/(AGAC)39/(AGAC)40/(AGAC)41/(AGAC)42/(AGAC)43/(AGAC)44"],

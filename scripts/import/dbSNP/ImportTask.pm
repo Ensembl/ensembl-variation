@@ -210,7 +210,6 @@ sub allele_table {
   my $logh = $self->{'log'};
   my $dbm  = $self->{'db_manager'};
 
-  
   open my $output_file,'>',$loadfile ||die "ERROR opening loadfile : $!\n";
  
   print  Progress::location() . "\tImporting for SubSNP ids from $task_start to $task_end to output $loadfile\n";
@@ -262,15 +261,15 @@ sub allele_table {
   ########## extract alleles with frequency data
   
   my $cursor_name = "csr_$task_start";
-  $dbm->dbSNP()->dbc->db_handle->begin_work();
-  $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_with_freq_stmt");
+  $dbm->dbSNP()->dbc->db_handle->begin_work() ||die "Error beginning : $!\n"; ;
+  $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_with_freq_stmt") ||die "Failed to declare cursor :$!\n";
   while (1) {
-      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name ");
-      $sth->execute() ;
+      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name ")||die "Failed to prep cursor select: $!\n";
+      $sth->execute() ||die "Error getting freq data :$!\n";
       last if 0 == $sth->rows;
       
       while( my $line = $sth->fetchrow_arrayref()){
-          
+
           ## line content: [ss.subsnp_id,afbsp.pop_id, allele_id,sssl.substrand_reversed_flag,afbsp.freq,afbsp.cnt, pop.handle ]
           unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n";}
           
@@ -287,11 +286,11 @@ sub allele_table {
           ## save as done by subsnp id pop and allele (don't loose 2nd allele for non-poly)
           $done{$line->[0]}{$line->[1]}{$alleles{$line->[2]}->[$line->[3]]} = 1;
           ##$done{$line->[0]}{0} = 1;  ## don't want to import records without population info if records with held
-          
+
           
           my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
 	  
-          print  $output_file "$row\n";
+          print  $output_file "$row\n"||die "Error printing out freq data: $!\n";;
       }
   }
   $dbm->dbSNP()->dbc->do("CLOSE $cursor_name");
@@ -303,16 +302,17 @@ sub allele_table {
 
 
   # Fetch all alleles and exclude those already written
-  $dbm->dbSNP()->dbc->db_handle->begin_work();
-  $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_no_freq_stmt");
+  $dbm->dbSNP()->dbc->db_handle->begin_work()||die "Failed to begin work: $!\n";
+  $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_no_freq_stmt")||die "Failed to declare cursor: $!\n";
+
   while (1) {
-      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name");
-      $sth->execute( );
+      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name") ||die "Failed to prep cursor select: $!\n";
+      $sth->execute() ||die "Error getting no-freq data :$!\n";;
       last if 0 == $sth->rows;
       
       # line content: [ss.subsnp_id,  b.pop_id,uv.allele_id ,  sssl.substrand_reversed_flag,'\\N' AS frequency, \\N' AS count,0 AS handle]
     while( my $line = $sth->fetchrow_arrayref()){
-        
+
         unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n"; next}
         
         ## default pop_id to enter as null
@@ -331,10 +331,11 @@ sub allele_table {
           ## ens variation_id, subsnp_id, ens population_id, allele, frequency, count, handle
           my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
           
-          print $output_file "$row\n";
+          print $output_file "$row\n" ||die "Error printing out no freq data :$!\n";
         }
      }
   }
+  close $output_file;
   $dbm->dbSNP()->dbc->do("CLOSE $cursor_name ");
   $dbm->dbSNP()->dbc->db_handle->rollback();
 
@@ -700,16 +701,16 @@ sub calculate_gtype {
 
 
    ####
-   if($source_engine =~/psql/){
+   if($source_engine =~/postgreSQL/){
 
-
+   my $cursor_name = "csr_$start";
    $dbSNP->dbc()->db_handle->begin_work();
-   $dbSNP->dbc()->do("DECLARE csr CURSOR  FOR $genotype_ext_stmt");
+   $dbSNP->dbc()->do("DECLARE $cursor_name  CURSOR  FOR $genotype_ext_stmt");
 
   #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
 
    while (1) {
-     my $csth = $dbSNP->dbc()->prepare("fetch 50000 from csr");
+     my $csth = $dbSNP->dbc()->prepare("fetch 50000 from $cursor_name ");
      $csth->execute;
      last if 0 == $csth->rows;
    
@@ -760,7 +761,7 @@ sub calculate_gtype {
     
     # Look up the alleles if necessary
     foreach my $allele_id ($allele_id_1,$allele_id_2) {
-      $alleles{$allele_id} = get_allele($allele_id, $allele_sth);
+      $alleles{$allele_id} = get_allele($allele_id, $allele_sth) unless exists($alleles{$allele_id});
       next if (!exists($alleles{$allele_id}));
     }
 
@@ -793,9 +794,10 @@ sub calculate_gtype {
       print MLT "$row\n"; 
      }
    }
-  $dbSNP->dbc()->do("CLOSE csr");
+}
+  $dbSNP->dbc()->do("CLOSE $cursor_name");
   print $logh Progress::location();
-    }
+   
 }
     ##### mysql msql syntax #####
     else{
@@ -848,11 +850,10 @@ sub calculate_gtype {
 
     # Look up the alleles if necessary
     foreach my $allele_id ($allele_id_1,$allele_id_2) {
-      $alleles{$allele_id} = get_allele($allele_id, $allele_sth);
+      $alleles{$allele_id} = get_allele($allele_id, $allele_sth)  if !exists($alleles{$allele_id}) ;
       next if (!exists($alleles{$allele_id}));
     }
-#print Dumper %alleles;
-# print "Looking up allele for id $allele_id_1 & strand $reverse\n";
+
     my $allele_1 = $alleles{$allele_id_1}->[$reverse];
     my $allele_2 = $alleles{$allele_id_2}->[$reverse];
 
