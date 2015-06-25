@@ -124,6 +124,8 @@ sub new {
   my $self;
   eval {$self = $class->SUPER::new(shift);};
   $self ||= {};
+  
+  bless($self, $class);
 
   my $config = {};
 
@@ -167,8 +169,6 @@ sub new {
   elsif($self->db && $self->db->vcf_root_dir) {
     $root_dir = $self->db->vcf_root_dir.'/';
   }
-  
-  bless($self, $class);
   
   throw("ERROR: No collections defined in config file") unless $config->{collections} && scalar @{$config->{collections}};
   
