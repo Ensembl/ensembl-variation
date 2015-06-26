@@ -42,6 +42,7 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows count_group_by);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 my $DEBUG = 0;
 
@@ -542,6 +543,13 @@ sub check_flipping{
          next;
      }
      if($l->[1] eq $l->[2]){
+        ## test if this is OK (eg ATAT/ATAT pre and ATAT/ATAT post) 
+        my $test_comp = $l->[1];
+        reverse_comp(\$test_comp);
+        if ($test_comp eq $l->[1]){
+           print $report "Flipping issue - assuming OK: ($type) $l->[0] is $l->[1] pre and $l->[2] post\n";
+           next;
+        }
         $is_fail = 1;
         print $report "Flipping error ($type) $l->[0] is $l->[1] pre and $l->[2] post\n";
      }

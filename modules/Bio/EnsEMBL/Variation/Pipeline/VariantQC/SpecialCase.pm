@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::Pipeline::VariantQC::SpecialCase
 
 ammends failure status in special cases and imports static data from production db
     - variants in PAR regions should not be failed on multiple map locations
-    - some individuals need their display status setting
+    - some samples need their display status setting
     - chip set information is imported
 
 
@@ -141,7 +141,7 @@ sub check_Pubmed_variants{
 
 =head2 set_display
 
-  set display status on expected strains/individuals to enable mart filtering & read coverage viewing
+  set display status on expected strains/samples to enable mart filtering & read coverage viewing
   report missing or duplicated samples
 
 =cut
@@ -164,11 +164,11 @@ sub set_display{
     }
 
 
-    my $display_update_sth = $var_dba->dbc->prepare(qq[update individual set display = ? where name = ? ]);
+    my $display_update_sth = $var_dba->dbc->prepare(qq[update sample set display = ? where name = ? ]);
 
-    ## check individuals are neither missing or duplicated
-    my $individual_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
-                                                           where individual.name = ?
+    ## check samples are neither missing or duplicated
+    my $sample_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from sample
+                                                           where sample.name = ?
                                                           ]);
 
 
@@ -181,22 +181,22 @@ sub set_display{
 
 
     $individual_ext_sth->execute($self->required_param('species'));
-    my $individual = $individual_ext_sth->fetchall_arrayref();
+    my $samples = $individual_ext_sth->fetchall_arrayref();
 
-    foreach my $l (@{$individual}){
+    foreach my $l (@{$samples}){
 
-	$individual_check_sth->execute( $l->[0] )||die "Failed to check displayable individuals \n";
-	my $count = $individual_check_sth->fetchall_arrayref();
+	$sample_check_sth->execute( $l->[0] )||die "Failed to check displayable samples \n";
+	my $count = $sample_check_sth->fetchall_arrayref();
 	if($count->[0]->[0] == 1){
-            ## set display status on individual
-	    print $report "Single individual seen - setting display for: $l->[0]\n";
+            ## set display status on sample
+	    print $report "Single sample seen - setting display for: $l->[0]\n";
         }
         elsif ($count->[0]->[0] ==0){
-	    print $report "Error : individual $l->[0] missing from new import\n";
+	    print $report "Error : sample $l->[0] missing from new import\n";
 	    next;
 	}
 	else{
-	    print $report "Error : individual $l->[0] duplicated (x $count->[0]->[0]) in new import - setting display for all entries\n";
+	    print $report "Error : sample $l->[0] duplicated (x $count->[0]->[0]) in new import - setting display for all entries\n";
 	}
 	$display_update_sth->execute($l->[1], $l->[0] )||die "Failed to update display status \n";
 	

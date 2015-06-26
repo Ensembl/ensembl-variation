@@ -171,6 +171,13 @@ sub run_variation_checks{
       $var->{variation_set_id} = $failed_set_id ;
     }
 
+### Add post db patch
+    ## Type 20 - It is unlikely a variant at the first base of a reference sequence is a good call
+#    if( $var->{start}  ==1){
+#      push @{$fail_variant{20}}, $var->{v_id};
+#      $var->{variation_set_id} = $failed_set_id ;
+#    }
+
 
     ## Type 4 - novariation fails - flag variants as fails & don't run further checks
 

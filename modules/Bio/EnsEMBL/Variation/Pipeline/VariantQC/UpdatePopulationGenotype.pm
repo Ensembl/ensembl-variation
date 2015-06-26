@@ -55,9 +55,9 @@ sub run {
    my $var_dba      = $self->get_species_adaptor('variation');
 
 
-  ## populate temp table with genotypes from individual_genotype_multiple_bp
+  ## populate temp table with genotypes from sample_genotype_multiple_bp
   $var_dba->dbc->do(qq[INSERT IGNORE INTO genotype_code_tmp(allele_1, allele_2, phased) 
-                      SELECT distinct allele_1, allele_2, 0 FROM individual_genotype_multiple_bp]);
+                      SELECT distinct allele_1, allele_2, 0 FROM sample_genotype_multiple_bp]);
 
   ## populate temp table with genotypes from flipped population_genotype table 
   $var_dba->dbc->do(qq[INSERT IGNORE INTO genotype_code_tmp(allele_1, allele_2, phased) 
