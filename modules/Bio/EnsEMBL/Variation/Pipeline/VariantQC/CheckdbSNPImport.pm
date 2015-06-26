@@ -53,13 +53,13 @@ sub run {
 
     my $dir = $self->required_param('pipeline_dir');
 
-    ## don't check final tmp_individual_genotype_single_bp for human as merge table
-    my @genotype_tables_to_check = ("population_genotype", "individual_genotype_multiple_bp");
+    ## don't check final tmp_sample_genotype_single_bp for human as merge table
+    my @genotype_tables_to_check = ("population_genotype", "sample_genotype_multiple_bp");
     if($self->required_param('species') =~/homo|human/){
-	push @genotype_tables_to_check, "tmp_individual_genotype_single_bp_SubInd_ch22";
+	push @genotype_tables_to_check, "tmp_sample_genotype_single_bp_SubInd_ch22";
     }
     else{
-	push @genotype_tables_to_check, "tmp_individual_genotype_single_bp";
+	push @genotype_tables_to_check, "tmp_sample_genotype_single_bp";
     }
 
 
@@ -213,8 +213,6 @@ sub count_sampleless_geno{
     my $var_dba   = $self->get_species_adaptor('variation');
 
     my $tot = 0;
-    #my @individual_tables = ('individual_genotype_multiple_bp', 'tmp_individual_genotype_single_bp_SubInd_ch22', 'tmp_individual_genotype_single_bp');
-    #my @population_tables = ('population_genotype');
 
    foreach my $table ( @{$tables} ){ 
 
@@ -224,7 +222,12 @@ sub count_sampleless_geno{
        if ($table =~ /individual/) {
            $sample = 'individual';
            $sample_id = 'individual_id';
-       } else {
+       }
+       elsif ($table =~ /sample/) {
+           $sample = 'sample';
+           $sample_id = 'sample_id';
+       }  
+       else {
           $sample = 'population';
           $sample_id = 'population_id';
        }
@@ -284,7 +287,7 @@ sub count_geno_ss_problem{
     my $var_dba   = $self->get_species_adaptor('variation');
 
    ## useful (slow) SQL:
-   ## select count(*) from tmp_individual_genotype_single_bp  where subsnp_id  not in (select subsnp_id from allele)
+   ## select count(*) from tmp_sample_genotype_single_bp  where subsnp_id  not in (select subsnp_id from allele)
 
     my $total_problem = 0;
 
