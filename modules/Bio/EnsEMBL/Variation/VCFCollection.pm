@@ -82,6 +82,7 @@ use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
 use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Variation::VCFVariationFeature;
 
 our %TYPES = (
   'remote' => 1,
@@ -597,6 +598,33 @@ sub has_Population {
   my $name = ref($pop) eq '' ? $pop : $pop->name;
   
   return grep {$name eq $_} @{$self->_get_all_population_names};
+}
+
+sub get_all_VariationFeatures_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  
+  return [] unless $self->_seek_by_Slice($slice);
+  
+  my $vcf = $self->_current();
+  
+  my @vfs;
+  
+  while($vcf->{record} && $vcf->get_start <= $slice->end) {
+    
+    my $copy = $vcf->get_frozen_copy();
+    
+    push @vfs,
+      map {Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature($_, $self, $copy)}
+      grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')}
+      @{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))};
+    
+      $DB::single = 1 if scalar @vfs;
+    
+    $vcf->next();
+  }
+  
+  return \@vfs;
 }
 
 
@@ -1137,8 +1165,7 @@ sub _get_vcf_by_chr {
     
     if($self->type eq 'local' && !-e $file) {
       $self->{files}->{chr} = undef;
-    }    
-    
+    }
     else {
 
       # close first opened handle to prevent going over max allowed connections
