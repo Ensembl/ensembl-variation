@@ -109,8 +109,9 @@ my %columns = ( 'SIFT'     => {'order' => 1 ,'table' => 'meta', 'column' => 'met
                         
 my %species_list;
 
-my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
-my $sql2 = qq{SELECT count(variation_id) FROM variation};
+my $sql   = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
+my $sql2  = qq{SELECT COUNT(variation_id) FROM variation};
+my $sql2a = qq{SELECT COUNT(DISTINCT source_id) FROM variation};
 
 foreach my $hostname (@hostnames) {
   
@@ -145,6 +146,11 @@ foreach my $hostname (@hostnames) {
     $sth2->finish;
     $species_list{$s_name}{'count'} = round_count($count_var);
 
+    # Count the number of variantion sources
+    my $sth2a = get_connection_and_query($dbname, $hostname, $sql2a);
+    my $count_src = $sth2a->fetchrow_array;
+    $sth2a->finish;
+    $species_list{$s_name}{'src_count'} = $count_src;
 
     # Previous database
     my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
@@ -182,7 +188,8 @@ my $html_content = qq{
   <table class="ss" style="width:auto">
     <tr class="ss_header">
       <th></th>
-      <th $th_border_left_top colspan="3">Variant</th>
+      <th $th_border_left_top colspan="3">Short variant</th>
+      <th $th_border_left_top colspan="1">Long variant</th>
       <th $th_border_left_top colspan="2">Genotype</th>
       <th $th_border_left_top colspan="2">Association</th>
       <th $th_border_left_top colspan="2">Prediction</th>
@@ -193,9 +200,10 @@ my $html_content = qq{
       <th style="$th_bg;$th_border_left">Sequence variant</th>
       <th style="$th_bg;padding-left:0px">
         <span class="_ht ht" title="Sequence variant count difference with the previous Ensembl release (v.$p_version)">
-          <small>(e!$e_version vs e!$p_version)</small>
+          <small>(e!$p_version &rarr; e!$e_version)</small>
         </span>
       </th>
+      <th style="$th_bg;$th_border_left">Source(s)</th>
       <th style="$th_bg;$th_border_left">$data_tables_header</th>
       <th style="$th_bg;$th_border_left">$data_columns_header</th>
     </tr>};
@@ -208,25 +216,28 @@ foreach my $sp (sort keys(%species_list)) {
   my $img_src = "/i/species/48/$uc_sp.png";
   my $var_count = $species_list{$sp}{'count'};
   my $var_p_count = $species_list{$sp}{'p_count'};
+  my $var_src_count  = $species_list{$sp}{'src_count'};
+     $var_src_count .= ($var_src_count > 1) ? ' sources' : ' source';
   
   $html_content .= qq{
   <tr$bg style="vertical-align:middle">
     <td>
       <div>
-        <div style="float:left;vertical-align:middle;margin-right:4px">
+        <div style="float:left">
           <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
-            <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:32px;height:32px" />
+            <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:28px;height:28px" />
           </a>
-        </div>
-        <div style="float:left;margin-top:0px">
-          <div class="bigtext" style="font-style:italic;margin-bottom:2px">$label</div>
-          <div><a href="sources_documentation.html#$sp" style="text-decoration:none" title="$label sources list">[sources]</a></div>
-        </div>
-        <div style="clear:both"></div>
-      </div>
+         </div>
+         <div class="bigtext" style="float:left;margin-left:4px;margin-top:6px;font-style:italic">$label</div>
+         <div style="clear:both"></div>
+       </div>
     </td>
     <td style="text-align:right">$var_count</td>
-    <td style="text-align:right">$var_p_count</td>\n};
+    <td style="text-align:right">$var_p_count</td>
+    <td style="text-align:right">
+      <a href="sources_documentation.html#$sp" style="text-decoration:none" title="$label sources list">$var_src_count</a>
+    </td>\n};
+  
   
   # Tables
   foreach my $type (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)) {
