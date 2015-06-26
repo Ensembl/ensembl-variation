@@ -55,6 +55,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::VCFVariation;
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Exception qw(warning throw);
 use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Variation::Variation;
@@ -120,9 +121,16 @@ sub get_all_Alleles {
     
     foreach my $pop_id(keys %$pop_hash) {
       
+      # don't try and add data for a population we don't have
+      next unless $pops_by_dbID{$pop_id};
+      
       # get counts
       my %counts;
-      $counts{$_}++ for map {@{$_->genotype}} map {$gt_hash{$_}} keys %{$pop_hash->{$pop_id}};
+      $counts{$_}++ for
+        map {@{$_->genotype}}
+        map {$gt_hash{$_}}
+        grep {$gt_hash{$_}}
+        keys %{$pop_hash->{$pop_id}};
       
       # get total
       my $total = 0;
@@ -156,13 +164,133 @@ sub get_all_IndividualGenotypes {
     
     # use method in VCFCollection to generate genotypes
     my $collection = $self->collection();
-    $self->{genotypes} = $collection->_create_IndividualGenotypeFeatures($collection->get_all_Individuals, $self->vcf_record->get_individuals_genotypes, $self->variation_feature);
+    my $inds = $collection->get_all_Individuals;
     
-    # weaken ref back to variation feature
-    weaken($_->{variation_feature}) for @{$self->{genotypes}};    
+    if(scalar @$inds) {
+      $self->{genotypes} = $collection->_create_IndividualGenotypeFeatures(
+        $inds,
+        $self->vcf_record->get_individuals_genotypes,
+        $self->variation_feature
+      );
+    
+      # weaken ref back to variation feature
+      weaken($_->{variation_feature}) for @{$self->{genotypes}};    
+    }
+    else {
+      $self->{genotypes} = [];
+    }
   }
    
   return $self->{genotypes};
 }
+
+sub minor_allele {
+  my $self = shift;
+  
+  if(!exists($self->{minor_allele})) {
+    my $counts = $self->_allele_counts;
+    $self->{minor_allele} = scalar keys %$counts ? (sort {$counts->{$a} <=> $counts->{$b}} keys %{$counts})[0] : undef;    
+  }
+  
+  return $self->{minor_allele};
+}
+
+sub minor_allele_count {
+  my $self = shift;
+  
+  if(!exists($self->{minor_allele_count})) {
+    my $allele = $self->minor_allele;
+    $self->{minor_allele_count} = $allele ? $self->_allele_counts->{$allele} : undef;
+  }
+  
+  return $self->{minor_allele_count};
+}
+
+sub minor_allele_frequency {
+  my $self = shift;
+  
+  if(!exists($self->{minor_allele_frequency})) {
+    my $total = 0;
+    $total += $_ for values %{$self->_allele_counts};
+    
+    my $minor_allele_count = $self->minor_allele_count;
+    
+    $self->{minor_allele_frequency} = ($total && defined($minor_allele_count)) ? $minor_allele_count / $total : undef;
+  }
+  
+  return $self->{minor_allele_frequency};
+}
+
+sub _allele_counts {
+  my $self = shift;
+  
+  if(!exists($self->{_allele_counts})) {
+    
+    my %counts = ();
+    
+    ## first try and use INFO fields, should be faster
+    my $vcf_record = $self->vcf_record();
+    my $info = $vcf_record->get_info();
+    my @alts = @{$vcf_record->get_alternatives};
+    my $ref = $vcf_record->get_reference;
+    
+    # check we have required fields before attempting
+    if(
+      $info && ref($info) eq 'HASH' &&
+      $info->{AN} &&
+      (defined($info->{AC}) || defined($info->{AF})) &&
+      $ref && scalar @alts
+    ) {
+      
+      if($info->{AC}) {
+        
+        # may have one per ALT if multiple ALTS
+        my @alt_counts = split(',', $info->{AC});
+        
+        # check for formatting error
+        throw("ERROR: ALT count ".(scalar @alts)." doesn't match AC INFO field (".(scalar @alt_counts).")") unless scalar @alts == scalar @alt_counts;
+        
+        my $total = 0;
+        
+        for(my $i = 0; $i <= $#alt_counts; $i++) {
+          $counts{$alts[$i]} = $alt_counts[$i];
+          $total += $alt_counts[$i];
+        }
+        
+        # get ref count
+        $counts{$ref} = $info->{AN} - $total;
+      }
+      
+      elsif(defined($info->{AF})) {
+        
+        # may have one per ALT if multiple ALTS
+        my @alt_freqs = split(',', $info->{AF});
+        
+        # check for formatting error
+        throw("ERROR: ALT count ".(scalar @alts)." doesn't match AF INFO field (".(scalar @alt_freqs).")") unless scalar @alts == scalar @alt_freqs;
+        
+        my $total = 0;
+        
+        for(my $i = 0; $i <= $#alt_freqs; $i++) {
+          $counts{$alts[$i]} = sprintf("%.0f", $info->{AN} * $alt_freqs[$i]);
+          $total += $alt_freqs[$i];
+        }
+        
+        # get ref count
+        $counts{$ref} = $info->{AN} - sprintf("%.0f", $info->{AN} * $total);
+      }
+    }
+    
+    ## otherwise fetch genotypes to get counts
+    else {
+      $counts{$_}++ for map {@{$_->genotype}} @{$self->get_all_IndividualGenotypes};
+    }
+    
+    $self->{_allele_counts} = \%counts;
+  }
+  
+  return $self->{_allele_counts};
+}
+
 
 1;

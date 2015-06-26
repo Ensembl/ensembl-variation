@@ -55,6 +55,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::VCFVariationFeature;
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::VCFVariation;
 
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -70,21 +71,26 @@ sub new_from_VariationFeature {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
+  my ($vf, $collection, $vcf_record, $slice, $adaptor) = rearrange([qw(VARIATION_FEATURE COLLECTION VCF_RECORD SLICE ADAPTOR)], @_);
+  
   # get and check VF
-  my $vf = shift;
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
   bless $vf, $class;
   
-  my $collection = shift;
-  assert_ref($collection, 'Bio::EnsEMBL::Variation::VCFCollection');
+  # assert_ref($collection, ('Bio::EnsEMBL::Variation::VCFCollection');
   $vf->{collection} = $collection;
   
-  my $vcf_record = shift;
-  assert_ref($vcf_record, 'Bio::EnsEMBL::IO::Parser::BaseVCF4');
+  # assert_ref($vcf_record, 'Bio::EnsEMBL::IO::Parser::BaseVCF4');
   $vf->{vcf_record} = $vcf_record;
+
+  # assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
+  $vf->{adaptor} = $adaptor;
   
-  return $vf;
+  $vf->{slice} = $slice->seq_region_Slice;
+  my $transferred = $vf->transfer($slice);
+  
+  return $transferred;
 }
 
 sub collection {
@@ -111,12 +117,20 @@ sub variation {
   return $self->{variation};
 }
 
-# sub get_all_Alleles {
-#   return $_[0]->variation->get_all_Alleles;
-# }
-
 sub get_all_IndividualGenotypes {
   return $_[0]->variation->get_all_IndividualGenotypes;
+}
+
+sub minor_allele {
+  return $_[0]->variation->minor_allele;
+}
+
+sub minor_allele_count {
+  return $_[0]->variation->minor_allele_count;
+}
+
+sub minor_allele_frequency {
+  return $_[0]->variation->minor_allele_frequency;
 }
 
 1;

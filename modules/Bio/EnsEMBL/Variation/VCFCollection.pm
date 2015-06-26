@@ -607,6 +607,8 @@ sub get_all_VariationFeatures_by_Slice {
   return [] unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
+  my $sr_slice = $slice->seq_region_Slice();
+  my $vfa = $self->use_db ? $self->adaptor->db->get_VariationFeatureAdaptor : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($self->species);
   
   my @vfs;
   
@@ -614,12 +616,19 @@ sub get_all_VariationFeatures_by_Slice {
     
     my $copy = $vcf->get_frozen_copy();
     
-    push @vfs,
-      map {Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature($_, $self, $copy)}
-      grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')}
-      @{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))};
-    
-      $DB::single = 1 if scalar @vfs;
+    foreach my $parsed_vf(@{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))}) {
+      next unless $parsed_vf->isa('Bio::EnsEMBL::Variation::VariationFeature');
+      
+      my $vcf_vf = Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature(
+        -variation_feature => $parsed_vf,
+        -collection => $self,
+        -vcf_record => $copy,
+        -slice => $slice,
+        -adaptor => $vfa
+      );
+      
+      push @vfs, $vcf_vf;
+    }
     
     $vcf->next();
   }
@@ -658,6 +667,8 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
   my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
   my @sample_names = map {$_->{_raw_name}} @$samples;
   
+  return [] unless scalar @$samples;
+
   return $self->_create_SampleGenotypeFeatures(
     $samples,
     $vcf->get_samples_genotypes(\@sample_names),
@@ -1317,7 +1328,7 @@ sub _get_Population_Sample_hash {
   my $self = shift;
   
   if(!exists($self->{_population_hash})) {
-    my $hash;
+    my $hash = {};
     
     # populations defined in config?
     if(defined($self->{_raw_populations})) {
