@@ -132,7 +132,7 @@ sub compress_genotypes{
 	# get sample_ids
 	my $sth = $dbVar->prepare(qq{
 		SELECT distinct(s.sample_id)
-		FROM sample i, population p, sample_population sp
+		FROM sample s, population p, sample_population sp
 		WHERE s.sample_id = sp.sample_id
 		AND sp.population_id = p.population_id
 		AND (
