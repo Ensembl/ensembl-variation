@@ -57,7 +57,7 @@ sub run {
   my $refseq  = $self->required_param('species_refseq') ? '--refseq' : '';
   my $dir     = $self->required_param('pipeline_dir');
 
-  my ($assembly, $version);
+  my ($assembly, $version, $eg_version);
   my ($host, $port, $user, $pass);
 
   if($eg){
@@ -69,12 +69,13 @@ sub run {
         make_path($dir);
      }
 
-     $assembly = $meta_container->single_value_by_key('assembly.default');
-     $version  = $meta_container->schema_version();
-     $host     = $meta_container->dbc->host();
-     $port     = $meta_container->dbc->port();
-     $user     = $meta_container->dbc->username();
-     $pass     = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
+     $assembly   = $meta_container->single_value_by_key('assembly.default');
+     $version    = $meta_container->schema_version();
+     $eg_version = $self->param('eg_version');
+     $host       = $meta_container->dbc->host();
+     $port       = $meta_container->dbc->port();
+     $user       = $meta_container->dbc->username();
+     $pass       = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
 
      $meta_container->dbc()->disconnect_if_idle();
      
@@ -129,7 +130,7 @@ sub run {
   
   # construct command
   my $cmd = sprintf(
-    '%s %s/variant_effect_predictor.pl %s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s',
+    '%s %s/variant_effect_predictor.pl %s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s --cache_version %s',
     $perl,
     $vep_dir,
     $vep,
@@ -143,7 +144,9 @@ sub run {
     $assembly,
     $version,
     $dir,
-    $species_flags_cmd
+    $species_flags_cmd,
+
+    $eg_version
   );
   
   my $finished = 0;

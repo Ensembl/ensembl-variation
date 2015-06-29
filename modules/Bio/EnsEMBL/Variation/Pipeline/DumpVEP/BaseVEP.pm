@@ -44,7 +44,18 @@ sub tar {
   my $assembly = $self->required_param('assembly');
   my $version  = $self->required_param('ensembl_release');
   my $dir      = $self->required_param('pipeline_dir');
-  
+ 
+  if($eg){
+     $version = $self->param_required('eg_version');      
+
+     my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
+   
+     if($meta_container->is_multispecies()==1){
+        my $collection_db=$1 if($meta_container->dbc->dbname()=~/(.+)\_core/);
+        $dir = $dir."/".$collection_db;
+     }
+  } 
+ 
   $species .= $type ? '_'.$type : '';
   $mod ||= '';
   
@@ -64,15 +75,6 @@ sub tar {
   }
   
   # check dir exists
-  if($eg){
-     my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
-
-     if($meta_container->is_multispecies()==1){
-        my $collection_db=$1 if($meta_container->dbc->dbname()=~/(.+)\_core/);
-        $dir = $dir."/".$collection_db;
-     }
-  }
-
   my $root_dir = $dir;
   my $sub_dir  = $species."/".$version."_".$assembly;
   
