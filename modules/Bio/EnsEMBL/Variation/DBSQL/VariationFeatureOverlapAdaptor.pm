@@ -48,6 +48,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor);
 
@@ -200,8 +201,8 @@ sub _func_all_by_VariationFeatures_with_constraint {
     
     # deal with those with no ID
     if(scalar @no_id) {
-      my $method = $func.'_all_by_VariationFeatures_no_DB';
-      $data = $self->$method(\@no_id, $features, $constraint);
+      my $method = '_'.$func.'_all_by_VariationFeatures_no_DB';
+      my $data = $self->$method(\@no_id, $features, $constraint);
       push @alldata, ref($data) eq 'ARRAY' ? @$data : $data;
     }
 
@@ -303,6 +304,35 @@ sub fetch_all_by_SO_terms {
     my $constraint = $self->_get_consequence_constraint($terms);
 
     return $self->generic_fetch($constraint);
+}
+
+## this method fetches ranged slices from variation features
+## the idea is to create as small a number of slices as possible from
+## an arrayref of VFs
+sub _get_ranged_slices_from_VariationFeatures {
+  my $self = shift;
+  my $vfs = shift;
+  my $range = shift;
+
+  # quick check - do all the VFs have the same slice?
+  my %slice_refs = map {$_->slice + 0 => 1} @$vfs;
+  if(scalar keys %slice_refs == 1) {
+    return [$vfs->[0]->slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)];
+  }
+
+  ## TO BE FINISHED
+  ## WRITE CODE TO FETCH RANGE SLICES FROM VFS
+  # default range
+  $range ||= 1000;
+
+  # this will store ranges by chromosome
+  my $ranges;
+
+  foreach my $vf(@$vfs) {
+    my ($min, $max) = $vf->seq_region_start, $vf->seq_region_end;
+  }
+
+  return [];
 }
 
 
