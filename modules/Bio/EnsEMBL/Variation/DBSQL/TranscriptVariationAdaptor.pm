@@ -324,11 +324,14 @@ sub fetch_all_by_Transcripts_with_constraint {
 }
 
 sub _fetch_all_by_VariationFeatures_no_DB {
-  my ($self, $vfs, $features);
+  my ($self, $vfs, $features) = @_;
+
+  $DB::single = 1;
   
   # get features?
-  if(!@$features) {
-    1;
+  if(!$features || !@$features) {
+    my $slices = $self->_get_ranged_slices_from_VariationFeatures($vfs);
+    @$features = map {@{$_->get_all_Transcripts(1)}} @$slices;
   }
   
   my @return;
@@ -340,6 +343,8 @@ sub _fetch_all_by_VariationFeatures_no_DB {
         -variation_feature  => $vf,
         -transcript         => $f,
         -adaptor            => $self,
+        -no_ref_check      => 1,
+        -no_transfer       => ($vf->slice + 0) == ($f->slice + 0)
       );
       
       $vf->add_TranscriptVariation($vfo);
