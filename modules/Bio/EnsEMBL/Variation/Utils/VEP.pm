@@ -4484,7 +4484,7 @@ sub cache_transcripts {
                         # in human and mouse otherfeatures DB, there may be duplicate genes
                         # skip those from analysis refseq_human_import and refseq_mouse_import
                         # $DB::single = 1;
-                        # next if defined($config->{refseq}) && $tr->analysis && $tr->analysis->logic_name =~ /^refseq_[a-z]+_import$/;
+                        next if defined($config->{refseq}) && $tr->analysis && $tr->analysis->logic_name =~ /^refseq_[a-z]+_import$/;
                       
                         $tr->{_gene_stable_id} = $gene_stable_id;
                         $tr->{_gene} = $gene;
