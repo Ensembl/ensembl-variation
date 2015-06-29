@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -603,6 +604,7 @@ sub has_Population {
 sub get_all_VariationFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
+  my $dont_fetch_vf_overlaps = shift;
   
   return [] unless $self->_seek_by_Slice($slice);
   
@@ -632,6 +634,14 @@ sub get_all_VariationFeatures_by_Slice {
     }
     
     $vcf->next();
+  }
+
+  unless($dont_fetch_vf_overlaps || !$self->use_db) {
+    my @trs = 
+      map {$_->transfer($slice)}
+      @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)};
+
+    $self->adaptor->db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures_SO_terms(\@vfs, \@trs);
   }
   
   return \@vfs;
