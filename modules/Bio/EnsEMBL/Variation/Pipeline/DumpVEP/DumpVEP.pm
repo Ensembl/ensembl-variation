@@ -146,7 +146,7 @@ sub run {
     $dir,
     $species_flags_cmd,
 
-    $eg_version
+    $eg_version || $version
   );
   
   my $finished = 0;
