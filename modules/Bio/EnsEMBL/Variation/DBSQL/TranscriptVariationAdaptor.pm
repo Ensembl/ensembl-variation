@@ -325,8 +325,6 @@ sub fetch_all_by_Transcripts_with_constraint {
 
 sub _fetch_all_by_VariationFeatures_no_DB {
   my ($self, $vfs, $features) = @_;
-
-  $DB::single = 1;
   
   # get features?
   if(!$features || !@$features) {
