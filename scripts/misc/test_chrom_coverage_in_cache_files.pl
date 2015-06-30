@@ -80,9 +80,9 @@ die "vep_input: ", $config->{vep_input}, " is not a file." unless (-f $config->{
 
 $config->{cache_dir} ||= $ENV{HOME} . '/.vep';
 
-all_cache_files_are_installed($config);
+#all_cache_files_are_installed($config);
 run_vep($config);
-test_chrom_coverage($config);
+tests($config);
 cleanup($config) unless($config->{no_cleanup});
 
 sub all_cache_files_are_installed {
@@ -119,7 +119,7 @@ sub run_vep {
       $output_files->{$vep_run_name}->{vep_output} = $output;
       $output_files->{$vep_run_name}->{err} = $err_file;
       $output_files->{$vep_run_name}->{out} = $out_file;
-      my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats $params";
+      my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats --regulatory --sift b --polyphen b --cache_version 80 $params";
 
       run_cmd("$cmd 1>$out_file 2>$err_file");
     }
@@ -128,31 +128,43 @@ sub run_vep {
   $config->{output_files} = $output_files;
 }
 
-sub test_chrom_coverage {
+sub tests {
   my $config = shift;
   my $output_files = $config->{output_files};
+
+  my @annotations = qw/SIFT PolyPhen MotifFeature RegulatoryFeature/;
 
   foreach my $vep_run_name (keys %$output_files) {
     my $vep_out_file = $output_files->{$vep_run_name}->{vep_output};
     my $fh = FileHandle->new($vep_out_file, 'r');
     my $covered_chroms = {};
+    my $has_annotation = {};
     while (<$fh>) {
       chomp;
       next if /^#/;
       my ($name, $location, $rest) = split("\t", $_, 3);
       my ($chrom, $position) = split(':', $location);
       $covered_chroms->{$chrom} = 1;
+      foreach my $annotation (@annotations) {
+        if ($rest =~ /$annotation/) {
+          $has_annotation->{$annotation} = 1;
+        } 
+      }
     }
-
     $fh->close();
     foreach my $chrom (1..22, 'X', 'Y', 'MT') {
       if (!$covered_chroms->{$chrom}) {
-        die "Chrom $chrom is missing from VEP output. Need to check cache files are dumped correctly.";
+        die "Chrom $chrom is missing from VEP output $vep_out_file. Need to check cache files are dumped correctly.";
       }
     }
     print STDOUT "All chromosomes are covered in $vep_out_file\n";
+    foreach my $annotation (@annotations) {
+      if (!$has_annotation->{$annotation}) {
+        die "Annotation: $annotation is missing from VEP output $vep_out_file. Need to check cache files are dumped correctly.";
+      }
+    }
+    print STDOUT "Annotations (", join(', ', @annotations), ") are contained in $vep_out_file\n";
   }
-
   return 1;
 }
 
