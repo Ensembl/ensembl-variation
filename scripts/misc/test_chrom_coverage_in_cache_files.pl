@@ -119,7 +119,8 @@ sub run_vep {
       $output_files->{$vep_run_name}->{vep_output} = $output;
       $output_files->{$vep_run_name}->{err} = $err_file;
       $output_files->{$vep_run_name}->{out} = $out_file;
-      my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats --regulatory --sift b --polyphen b --cache_version 80 $params";
+      # -cache_version
+      my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats --regulatory --sift b --polyphen b $params";
 
       run_cmd("$cmd 1>$out_file 2>$err_file");
     }
