@@ -284,7 +284,7 @@ sub fetch_by_VariationFeature {
     return undef;
   }
 
-  if(!defined($vf->dbID())) {
+  if(!defined($vf->dbID()) && !$vf->isa('Bio::EnsEMBL::Variation::VCFVariationFeature')) {
     throw("VariationFeature arg must have defined dbID");
   }
   
@@ -300,7 +300,7 @@ sub fetch_by_VariationFeature {
   delete $self->{_vf_pos};
   delete $self->{_vf_name};
   
-  $ldFeatureContainer->name($vf->dbID);
+  $ldFeatureContainer->name($vf->dbID || $vf->location_string);
   
   return $ldFeatureContainer;
 }
