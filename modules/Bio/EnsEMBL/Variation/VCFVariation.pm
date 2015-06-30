@@ -127,15 +127,15 @@ sub get_all_Alleles {
   
     my @alleles;
     
-    # get genotypes as a hash keyed on individual dbID
-    my %gt_hash = map {$_->individual->dbID() => $_} @{$self->get_all_IndividualGenotypes()};
+    # get genotypes as a hash keyed on sample dbID
+    my %gt_hash = map {$_->sample->dbID() => $_} @{$self->get_all_SampleGenotypes()};
     
     ## fetch from genotypes
     if(scalar keys %gt_hash) {
       
       # get pop/ind hash
       # $hash->{$pop_dbID}->{$ind_dbID} => 1
-      my $pop_hash = $self->collection->_get_Population_Individual_hash();
+      my $pop_hash = $self->collection->_get_Population_Sample_hash();
     
       my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
     
@@ -239,15 +239,15 @@ sub get_all_PopulationGenotypes {
   
     my @pgs;
     
-    # get genotypes as a hash keyed on individual dbID
-    my %gt_hash = map {$_->individual->dbID() => $_} @{$self->get_all_IndividualGenotypes()};
+    # get genotypes as a hash keyed on sample dbID
+    my %gt_hash = map {$_->sample->dbID() => $_} @{$self->get_all_SampleGenotypes()};
     
     ## fetch from genotypes
     if(scalar keys %gt_hash) {
       
       # get pop/ind hash
       # $hash->{$pop_dbID}->{$ind_dbID} => 1
-      my $pop_hash = $self->collection->_get_Population_Individual_hash();
+      my $pop_hash = $self->collection->_get_Population_Sample_hash();
     
       my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
     
@@ -291,19 +291,19 @@ sub get_all_PopulationGenotypes {
 }
 
 
-sub get_all_IndividualGenotypes {
+sub get_all_SampleGenotypes {
   my $self = shift;
   
   if(!exists($self->{genotypes})) {
     
     # use method in VCFCollection to generate genotypes
     my $collection = $self->collection();
-    my $inds = $collection->get_all_Individuals;
+    my $inds = $collection->get_all_Samples;
     
     if(scalar @$inds) {
-      $self->{genotypes} = $collection->_create_IndividualGenotypeFeatures(
+      $self->{genotypes} = $collection->_create_SampleGenotypeFeatures(
         $inds,
-        $self->vcf_record->get_individuals_genotypes,
+        $self->vcf_record->get_samples_genotypes,
         $self->variation_feature
       );
     
@@ -417,7 +417,7 @@ sub _allele_counts {
     
     ## otherwise fetch genotypes to get counts
     else {
-      $counts{$_}++ for map {@{$_->genotype}} @{$self->get_all_IndividualGenotypes};
+      $counts{$_}++ for map {@{$_->genotype}} @{$self->get_all_SampleGenotypes};
     }
     
     $self->{_allele_counts} = \%counts;
