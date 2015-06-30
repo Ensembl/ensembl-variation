@@ -41,11 +41,11 @@ Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor
   
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
-  $sa = $reg->get_adaptor("human","core","slice");
-  $lda = $reg->get_adaptor("human","variation","ldfeaturecontainer");
-  $vfa = $reg->get_adaptor("human","variation","variationfeature");
+  $sa = $reg->get_adaptor('human', 'core', 'slice');
+  $lda = $reg->get_adaptor('human', 'variation', 'ldfeaturecontainer');
+  $vfa = $reg->get_adaptor('human', 'variation', 'variationfeature');
 
-  # Get a LDFeatureContainer in a region
+  # Get a LDFeatureContainer for a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
 
   $ldContainer = $lda->fetch_by_Slice($slice);
