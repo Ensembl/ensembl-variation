@@ -251,52 +251,52 @@ poulation is used
 
 =cut
 
-sub get_d_prime{
-    my $self = shift;
-    my $variation_feature_1 = shift;
-    my $variation_feature_2 = shift;
-    my $population_id = shift;
+sub get_d_prime {
+  my $self = shift;
+  my $variation_feature_1 = shift;
+  my $variation_feature_2 = shift;
+  my $population_id = shift;
 
-    $population_id ||= 0; #in case no population provided, to avoid warning in the hash
-    my $d_prime;
-    my $key;
+  $population_id ||= 0; #in case no population provided, to avoid warning in the hash
+  my $d_prime;
+  my $key;
 
-    if (! defined $self->{'_default_population'}){
-	$self->{'_default_population'} = $self->_get_major_population;
-    }
-    #first of all, check that both arguments have been properly provided
-    if (!ref($variation_feature_1) || !$variation_feature_1->isa('Bio::EnsEMBL::Variation::VariationFeature') || !ref($variation_feature_2) || !$variation_feature_2->isa('Bio::EnsEMBL::Variation::VariationFeature')){
-	throw("Bio::EnsEMBL::Variation::VariationFeature arguments expected");
-    }
-    else{
-	#check if the ldContainer does not contain pairwise information for the variation features provided
-	if (!exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()} && !exists $self->{'ldContainer'}->{$variation_feature_2->dbID() . '-' . $variation_feature_1->dbID()}){
-	    warning("variation features have no pairwise ld information");
-	} 
-	else{
-	    #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
-	    if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
-		$key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
-	    }
-	    else{
-		$key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
-	    }
-	    #and finally, if population provided or the only population
-	    if (exists $self->{'ldContainer'}->{$key}->{$population_id}){
-		$d_prime = $self->{'ldContainer'}->{$key}->{$population_id}->{'d_prime'};
-	    }
-	    else{
-		if (exists $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}){
-		    #there was no population provided, return the r_square for the default population
-		    $d_prime = $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}->{'d_prime'};
-		}
-		else{
-		    warning("variation features have no pairwise ld information for default population ", $self->{'_default_population'});
-		}
-	    }
-	}	    
-    }
-    return $d_prime;
+  if (! defined $self->{'_default_population'}){
+    $self->{'_default_population'} = $self->_get_major_population;
+  }
+  #first of all, check that both arguments have been properly provided
+  if (!ref($variation_feature_1) || !$variation_feature_1->isa('Bio::EnsEMBL::Variation::VariationFeature') || !ref($variation_feature_2) || !$variation_feature_2->isa('Bio::EnsEMBL::Variation::VariationFeature')){
+    throw("Bio::EnsEMBL::Variation::VariationFeature arguments expected");
+  }
+  else {
+    #check if the ldContainer does not contain pairwise information for the variation features provided
+    if (!exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()} && !exists $self->{'ldContainer'}->{$variation_feature_2->dbID() . '-' . $variation_feature_1->dbID()}){
+      warning("variation features have no pairwise ld information");
+    } 
+    else {
+      #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
+      if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
+        $key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
+      }
+      else {
+        $key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
+      }
+      #and finally, if population provided or the only population
+      if (exists $self->{'ldContainer'}->{$key}->{$population_id}){
+        $d_prime = $self->{'ldContainer'}->{$key}->{$population_id}->{'d_prime'};
+      }
+      else {
+        if (exists $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}){
+          #there was no population provided, return the r_square for the default population
+          $d_prime = $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}->{'d_prime'};
+        }
+        else {
+          warning("variation features have no pairwise ld information for default population ", $self->{'_default_population'});
+        }
+      }
+    }    
+  }
+  return $d_prime;
 }
 
 
