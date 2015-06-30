@@ -312,32 +312,32 @@ sub get_d_prime {
 =cut
 
 
-sub get_all_ld_values{
-    my $self = shift;
-    my @ld_values; #contains ALL the ld values in the container
+sub get_all_ld_values {
+  my $self = shift;
+  my @ld_values; #contains ALL the ld values in the container
 
-    #the keys in the ldContainer hash
-    my $variation_feature_id_1;
-    my $variation_feature_id_2;
-    
-    if (! defined $self->{'_default_population'}){
-	$self->{'_default_population'} = $self->_get_major_population;
+  #the keys in the ldContainer hash
+  my $variation_feature_id_1;
+  my $variation_feature_id_2;
+
+  if (! defined $self->{'_default_population'}){
+    $self->{'_default_population'} = $self->_get_major_population;
+  }
+  foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
+    my %ld_value;  #contains a single ld value in the container {variation_feature variation_feature d_prime r2 snp_distance_count}
+    ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
+    if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}) {
+      #add the information to the ld_value hash
+      $ld_value{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
+      $ld_value{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
+      $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
+      $ld_value{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
+      $ld_value{'sample_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'};
+      $ld_value{'population_id'} = $self->{'_default_population'};
+      push @ld_values, \%ld_value;
     }
-    foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-	my %ld_value;  #contains a single ld value in the container {variation_feature variation_feature d_prime r2 snp_distance_count}
-	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-	if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
-	    #add the information to the ld_value hash
-	    $ld_value{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
-	    $ld_value{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
-	    $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
-	    $ld_value{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
-	    $ld_value{'sample_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'};
-	    $ld_value{'population_id'} = $self->{'_default_population'};
-	    push @ld_values, \%ld_value;
-	}
-    }
-    return \@ld_values;
+  }
+  return \@ld_values;
 }
 
 
