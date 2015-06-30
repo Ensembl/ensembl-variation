@@ -163,14 +163,13 @@ sub name{
 
 =cut
 
-sub get_variations{
-    my $self = shift;
-    my @variations;
-
-    foreach my $variation_feature (keys %{$self->{'variationFeatures'}}){
-	push @variations,$self->{'variationFeatures'}->{$variation_feature}->variation();
-    }    
-    return \@variations;
+sub get_variations {
+  my $self = shift;
+  my @variations;
+  foreach my $variation_feature (keys %{$self->{'variationFeatures'}}) {
+    push @variations,$self->{'variationFeatures'}->{$variation_feature}->variation();
+  }    
+  return \@variations;
 }
 
 =head2 get_r_square
