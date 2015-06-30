@@ -43,7 +43,6 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 
 our ($species,$TMP_DIR,$TMP_FILE,$registry_file);
 
-
 GetOptions(
   'species=s'  => \$species,
   'tmpdir=s'   => \$ImportUtils::TMP_DIR,
@@ -56,28 +55,9 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-my $sadb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,"sara_$species");
 
-my $dbCore = $cdb->dbc;
 my $dbVar = $vdb->dbc;
-#my $dbSara = $sadb->dbc;
-
-my (%seq_region_ids);
- 
-
-my $sthc = $dbCore->prepare(qq{
-  select sra.seq_region_id, sr.name 
-  from seq_region_attrib sra, attrib_type at, seq_region sr
-  where sra.attrib_type_id = at.attrib_type_id 
-  and at.code = "toplevel" 
-  and sr.seq_region_id = sra.seq_region_id });
-$sthc->execute();
-
-while (my ($seq_region_id, $seq_region_name) = $sthc->fetchrow_array()) {
-  $seq_region_ids{$seq_region_id} = $seq_region_name;
-}
 
 get_gtype_poly();
 
@@ -101,14 +81,6 @@ sub get_gtype_poly {
 
   %sample_id = map {$count++,$_} @sample_ids;
 
-  #my @nums = keys %sample_id;
-  #print "There are @nums ",scalar @nums," sample_ids\n";
-
-  #foreach my $sample_id (keys %sample_name) {
-  #  print "num is $num and sample_id is $sample_id{$num}\n";
-  #  print "name is $sample_name{$sample_id}\n";
-  #}
-
   dumpSQL($dbVar, qq{
     SELECT tg.variation_id,tg.allele_1,tg.sample_id,substring(vf.allele_string,1,1) as ref_allele
     FROM tmp_sample_genotype_single_bp tg, variation_feature vf
@@ -127,12 +99,12 @@ sub get_gtype_poly {
   while (<IN>) {
     my ($variation_id,$allele,$sample_id,$ref_allele) = split;
     next if (!$sample_name{$sample_id});
-    
+
     if ($previous_varid != $variation_id and $previous_varid != 0) {
       foreach my $num (sort {$a<=>$b} keys %sample_id) {
-		my $sampleid = $sample_id{$num};
-		my $allele = ($rec{$sampleid}) ? $rec{$sampleid} : '';
-		push @alleles, $allele;
+        my $sampleid = $sample_id{$num};
+        my $allele = ($rec{$sampleid}) ? $rec{$sampleid} : '';
+        push @alleles, $allele;
       }
       push @alleles, $previous_ref_allele;
       print OUT join ("\t", $previous_varid,@alleles)."\n";
@@ -151,7 +123,7 @@ sub get_gtype_poly {
       $rec{$sample_id} = "?" if $allele ne $rec{$sample_id};
     }
   }
- 
+
   #for last variation_id
   foreach my $num (sort {$a<=>$b} keys %sample_id) {
     my $sampleid = $sample_id{$num};
@@ -172,25 +144,22 @@ sub get_gtype_poly {
     $ref_strain = "reference_BN_SsNHsd_Mcwi";
   }
   elsif ($dbVar->dbname =~ /mouse|mus/) {
-     $ref_strain = "reference_C57BL_6J";
-   }
+    $ref_strain = "reference_C57BL_6J";
+  }
 
   push @columns, "$ref_strain varchar(100)";
   push @cols, "$ref_strain";
 
   my $column_name = join ",",@columns;
   my $cols_name = join ",",@cols;
-  #print "column_name is $column_name\n";
 
-#  $dbVar->do(qq{DROP TABLE IF EXISTS strain_gtype_poly});
-  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS strain_gtype_poly_small (
-              variation_id int(10) unsigned not null,
-              $column_name,
-              primary key( variation_id ))
-              });
+  $dbVar->do(qq{DROP TABLE IF EXISTS strain_gtype_poly});
+  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS strain_gtype_poly (
+                variation_id int(10) unsigned not null,
+                $column_name,
+                primary key( variation_id ))
+             });
   system("mv $TMP_DIR/$TMP_FILE\_GTYPE $TMP_DIR/$TMP_FILE");
-  #print "$cols_name\n";
-  load($dbVar,"strain_gtype_poly_small","variation_id",$cols_name);
+  load($dbVar,"strain_gtype_poly","variation_id",$cols_name);
 }
-
 
