@@ -327,7 +327,7 @@ sub fetch_all_somatic {
 =cut
 
 sub fetch_all_by_Slice_constraint {
-    my ($self, $slice, $constraint) = @_;
+    my ($self, $slice, $constraint, $no_cons) = @_;
     
     # by default, filter out somatic mutations
     my $somatic_constraint = 'vf.somatic = 0';
@@ -344,7 +344,7 @@ sub fetch_all_by_Slice_constraint {
     
     if($use_vcf) { # && !$constraint) {
       push @vfs,
-        map {@{$_->get_all_VariationFeatures_by_Slice($slice)}}
+        map {@{$_->get_all_VariationFeatures_by_Slice($slice, $no_cons)}}
         @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
     }
     if($use_vcf <= 1) {
@@ -425,8 +425,8 @@ sub fetch_all_somatic_by_Slice_constraint {
 =cut
 
 sub fetch_all_by_Slice {
-  my ($self, $slice) = @_;
-  return $self->fetch_all_by_Slice_constraint($slice, '');
+  my ($self, $slice, $no_cons) = @_;
+  return $self->fetch_all_by_Slice_constraint($slice, '', $no_cons);
 }
 
 =head2 fetch_all_somatic_by_Slice
