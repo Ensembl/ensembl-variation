@@ -1086,7 +1086,7 @@ sub get_all_consequences {
     }
     
     # log sorted order for VCF input
-    if($config->{format} eq 'vcf' || defined($config->{rest})) {
+    if(($config->{format} && $config->{format} eq 'vcf') || defined($config->{rest})) {
       my $i = 0;
       $_->{_order} = sprintf("%09d", ++$i) for @$listref;
     }
