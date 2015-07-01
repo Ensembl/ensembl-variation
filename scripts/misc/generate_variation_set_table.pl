@@ -99,7 +99,7 @@ foreach my $top_vs (@{$top_vss}) {
 
 ## Print the common table headers
 my $html;
-$html .= "<h4>Variation sets common to all species</h4>\n";
+$html .= "<h4>Variant sets common to all species</h4>\n";
 $html .= "<table id=\"variation_set_table\" class=\"ss\">\n";
 $html .= "$table_header\n";
 
@@ -110,7 +110,7 @@ $html .= "</table>\n";
 
 
 ## Print the human specific table headers
-$html .= "<br />\n<h4>Variation sets specific to Human</h4>\n";
+$html .= "<br />\n<h4>Variant sets specific to Human</h4>\n";
 $html .= "<table id=\"human_variation_set_table\" class=\"ss\">\n";
 $html .= $table_header;
 

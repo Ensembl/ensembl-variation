@@ -78,9 +78,9 @@ my $default_colour = '#000000';
 
 
 my %type = (
-  '1' => 'Variation',
-  '2' => '<span class="_ht ht" title="Structural variation">SV</span>',
-  '3' => 'Variation</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variation">SV</span>',
+  '1' => 'Variant',
+  '2' => '<span class="_ht ht" title="Structural variant">SV</span>',
+  '3' => 'Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span>',
   '4' => 'CNV probe',
 );
 
@@ -161,7 +161,7 @@ $html .= qq{</table>\n};
 
 $html .= qq{
 <p>
-<b>*</b> Corresponding colours for the Ensembl web displays (only for Structural variations). 
+<b>*</b> Corresponding colours for the Ensembl web displays (only for Structural variants). 
 The colours are based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
 <p>
 };
@@ -256,7 +256,7 @@ sub get_var_class_piechart {
   <input type="hidden" class="graph_data" value="[%s]" />
   
   <div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #CCC;border-radius:8px;box-shadow:0 1px 3px #666">
-     <h3 style="padding:10px 10px 5px">%s Variation class distribution - Ensembl %s</h4>
+     <h3 style="padding:10px 10px 5px">%s variant class distribution - Ensembl %s</h4>
      <div id="graphHolder0"></div>
   </div>
 </div>
