@@ -89,7 +89,6 @@ my $database = "";
 my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
-my $start = 0;
 my %colours = ( 'version'     => '#090',
                 'source'      => '#00F',
                 'lot_million' => '#800',
@@ -188,6 +187,8 @@ my $html_content = '';
 my %top_species_list;
 my @species_list;
 my %species_news;
+my %display_list;
+my %top_display;
 
 my $cols_sql2  = 'source_id, name, version, description, url, type, somatic_status, data_types';
 my $term_sql2  = 'dbSNP';
@@ -202,7 +203,11 @@ my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHE
                (name like "%illumina%" OR name like "%affymetrix%" OR description like "%illumina%" OR description like "%affymetrix%")
                 AND name NOT IN (SELECT name FROM source)};
 my $sql4b = $sql2b;
+my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
+
+# Get the list of species and their common names
+print STDERR "# Databases list:\n";
 foreach my $hostname (@hostnames) {
 
   my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
@@ -216,7 +221,7 @@ foreach my $hostname (@hostnames) {
     print STDERR $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
-
+    
     if ($etype) { # EG site - need to filter out species
       my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
       if (! -e $img_thumb) {
@@ -225,50 +230,73 @@ foreach my $hostname (@hostnames) {
       } 
     }
     print STDERR "\n";
-    # Get list of sources from the new databases
-    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-    $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types,\$s_order);
     
-    my $sth2b = get_connection_and_query($dbname, $hostname, $sql2b);
-    $sth2b->bind_columns(\$set_id,\$set_name,\$set_description);
+    # Get species display name
+    my $core_dbname = $dbname;
+       $core_dbname =~ s/variation/core/i;
+    my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
+    my $display_name = $sth_core->fetchrow_array;  
+       $display_name =~ s/saccharomyces/S\./i;
     
-    
-    # Previous database (and sources)
-    my $p_version = $e_version-1;
-    my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
-    my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
-    my $p_dbname = $sth3->fetchrow_array;
- 
-    my %p_list;
-    my %p_set_list;
-    my $is_new_species = 0;
-    if ($p_dbname) {
-      # Previous sources
-      my $sth4 = get_connection_and_query($p_dbname, $previous_host, $sql4);
-      while (my @p = $sth4->fetchrow_array) {
-        $p_list{$p[0]} = $p[1];
-      }
-      # Previous sets
-      my $sth4b = get_connection_and_query($p_dbname, $previous_host, $sql4b);
-      while (my @s = $sth4b->fetchrow_array) {
-        $p_set_list{$s[1]} = $s[2];
-      }
-    }
-    else {
-      $is_new_species = 1;
-    }
-    
-    # Display the species at the top of the list
     if ($top_species{$s_name}) {
-      $html_top_content .= source_table($s_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
+      $top_display{$display_name} = 1;
     }
-    else {
-      $html_content .= source_table($s_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
-    }
-    
-    $start = 1 if ($start == 0);
+    $display_list{$display_name} = {'name' => $s_name, 'dbname' => $dbname, 'hostname' => $hostname};
   }
-   die ("No variation databases found on $hostname for the version $e_version!") if ($db_found == 0);
+  die ("No variation databases found on $hostname for the version $e_version!") if ($db_found == 0);
+}
+
+
+print STDERR "\n# Get sources for each species:\n";
+foreach my $display_name (sort { $top_display{$a} cmp $top_display{$b} || $a cmp $b} keys(%display_list)) {
+
+  my $s_name   = $display_list{$display_name}{'name'};
+  my $dbname   = $display_list{$display_name}{'dbname'};
+  my $hostname = $display_list{$display_name}{'hostname'};
+
+  print STDERR "- $display_name ($s_name) ...";
+
+  # Get list of sources from the new databases
+  my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
+  $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types,\$s_order);
+
+  my $sth2b = get_connection_and_query($dbname, $hostname, $sql2b);
+  $sth2b->bind_columns(\$set_id,\$set_name,\$set_description);
+    
+    
+  # Previous database (and sources)
+  my $p_version = $e_version-1;
+  my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
+  my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
+  my $p_dbname = $sth3->fetchrow_array;
+
+  my %p_list;
+  my %p_set_list;
+  my $is_new_species = 0;
+  if ($p_dbname) {
+    # Previous sources
+    my $sth4 = get_connection_and_query($p_dbname, $previous_host, $sql4);
+    while (my @p = $sth4->fetchrow_array) {
+      $p_list{$p[0]} = $p[1];
+    }
+    # Previous sets
+    my $sth4b = get_connection_and_query($p_dbname, $previous_host, $sql4b);
+    while (my @s = $sth4b->fetchrow_array) {
+      $p_set_list{$s[1]} = $s[2];
+    }
+  }
+  else {
+    $is_new_species = 1;
+  }
+    
+  # Display the species at the top of the list
+  if ($top_species{$s_name}) {
+    $html_top_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
+  }
+  else {
+    $html_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
+  }
+  print STDERR " done\n";
 }
 
 my $html_menu = create_menu();
@@ -298,14 +326,15 @@ close(HTML);
 ###############
 
 sub source_table {
-  my $name       = shift;
-  my $sth        = shift;
-  my $sth_set    = shift;
-  my $is_new     = shift;
-  my $db_name    = shift;
-  my $hostname   = shift;
-  my $p_list     = shift;
-  my $p_set_list = shift;
+  my $name         = shift;
+  my $display_name = shift;
+  my $sth          = shift;
+  my $sth_set      = shift;
+  my $is_new       = shift;
+  my $db_name      = shift;
+  my $hostname     = shift;
+  my $p_list       = shift;
+  my $p_set_list   = shift;
 
   
   my $s_name = ucfirst($name);
@@ -314,26 +343,26 @@ sub source_table {
   my $s_name_id = $name;
   
   if ($top_species{$name}) {
-    $top_species_list{$name} = {name => $species, s_name => $s_name, anchor => $s_name_id};
+    $top_species_list{$name} = {name => $species, display => $display_name, s_name => $s_name, anchor => $s_name_id};
   }
   else {
-    push (@species_list,{name => $species, s_name => $s_name, anchor => $s_name_id});
+    push (@species_list,{name => $species, display => $display_name, s_name => $s_name, anchor => $s_name_id});
   }
   
-  my $html = qq{<!-- $species -->};
+  my $html = qq{<!-- $display_name ($species) -->};
   if ($is_new) {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small" style="font-style:italic;font-weight:normal;padding-left:8px;color:#555"></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
   }
   else {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
-      <a href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$species</h2>
+      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small" style="font-style:italic;font-weight:normal;padding-left:8px;color:#555"> ($species)</span</h2>
     </div>
     };
   }
@@ -645,8 +674,8 @@ sub create_menu {
   
   my $label_style = "display:inline-block;height:8px;width:8px;border-radius:4px";
   my %desc = ( 
-              'version' => qq{New data version(s) for this species},
-              'source'  => qq{New data source(s) for this species}
+              'version' => qq{New data version(s)},
+              'source'  => qq{New data source(s)}
              );
   
   my $html = qq{
@@ -793,6 +822,7 @@ sub menu_list {
   my $desc = shift;
   
   my $name = $species->{name};
+  my $display = $species->{display};
   my $s_name = $species->{s_name};
   my $anchor = $species->{anchor};
   my $new_data = '';
@@ -801,17 +831,16 @@ sub menu_list {
     my $count_type = 0;
     foreach my $type (@types) {
       $count_type ++;
-      my $type_margin = ($count_type == scalar(@types)) ? '2px' : '1px';
       my $label_colour = $colours{$type};
       my $label_desc = $desc->{$type};
-      $new_data .= qq{<span style="$label_style;margin-left:2px;margin-right:$type_margin;background-color:$label_colour" title="$label_desc"></span>};
+      $new_data .= qq{<span style="$label_style;margin-left:4px;background-color:$label_colour" title="$label_desc"></span>};
     }
   }
   my $img = $name;
   return qq{
   <div style="margin-left:4px;margin-bottom:5px">
-    <img src="/i/species/16/$s_name.png" alt="$name" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
-    <a href="#$anchor" style="margin-right:2px;text-decoration:none;vertical-align:middle">$name</a>$new_data
+    <img src="/i/species/16/$s_name.png" alt="$display" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
+    <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>$new_data
   </div>
   };
 }

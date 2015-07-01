@@ -108,10 +108,12 @@ my %columns = ( 'SIFT'     => {'order' => 1 ,'table' => 'meta', 'column' => 'met
               );
                         
 my %species_list;
+my %display_list;
 
 my $sql   = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2  = qq{SELECT COUNT(variation_id) FROM variation};
 my $sql2a = qq{SELECT COUNT(DISTINCT source_id) FROM variation};
+my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
 foreach my $hostname (@hostnames) {
   
@@ -139,6 +141,15 @@ foreach my $hostname (@hostnames) {
     my $label_name = ucfirst($s_name);
        $label_name =~ s/_/ /g;
     $species_list{$s_name}{label} = $label_name;
+    
+    # Get species display name
+    my $core_dbname = $dbname;
+       $core_dbname =~ s/variation/core/i;
+    my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
+    my $display_name = $sth_core->fetchrow_array;  
+       $display_name =~ s/saccharomyces/S\./i;
+    $species_list{$s_name}{'name'} = $display_name;
+    $display_list{$display_name} = $s_name;
     
     # Count the number of variations
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
@@ -209,11 +220,13 @@ my $html_content = qq{
     </tr>};
 my $bg = '';
 
-foreach my $sp (sort keys(%species_list)) {
+foreach my $display_name (sort keys(%display_list)) {
 
-  my $label = $species_list{$sp}{label};
+  my $sp = $display_list{$display_name};
+  my $label = $species_list{$sp}{'label'};
   my $uc_sp = ucfirst($sp);      
   my $img_src = "/i/species/48/$uc_sp.png";
+  my $display_name = $species_list{$sp}{'name'};
   my $var_count = $species_list{$sp}{'count'};
   my $var_p_count = $species_list{$sp}{'p_count'};
   my $var_src_count  = $species_list{$sp}{'src_count'};
@@ -228,7 +241,10 @@ foreach my $sp (sort keys(%species_list)) {
             <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:28px;height:28px" />
           </a>
          </div>
-         <div class="bigtext" style="float:left;margin-left:4px;margin-top:6px;font-style:italic">$label</div>
+         <div style="float:left;margin-left:4px">
+           <div class="bigtext">$display_name</div>
+           <div class="small" style="font-style:italic">$label</div>
+         </div>
          <div style="clear:both"></div>
        </div>
     </td>
