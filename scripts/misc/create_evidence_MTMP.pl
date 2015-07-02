@@ -31,6 +31,9 @@ else{
 foreach my $db_name (@{$databases}){
     
     my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:3306", $user, $pass, undef);
+
+    $dbh->do(qq[update variation set evidence_attribs = NULL where evidence_attribs = '';]);
+    $dbh->do(qq[update variation_feature set evidence_attribs = NULL where evidence_attribs = '';]);
     
     $dbh->do(qq[create table MTMP_evidence (
               variation_id int(10) , 
