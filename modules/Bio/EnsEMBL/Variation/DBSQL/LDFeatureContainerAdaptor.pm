@@ -130,78 +130,79 @@ sub fetch_by_Slice {
   my $slice = shift;
   my $population = shift;
 
-  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-    throw('Bio::EnsEMBL::Slice arg expected');
+  if (!ref($slice)) {
+    throw('Bio::EnsEMBL::Slice arg or listref of Bio::EnsEMBL::Slice expected');
   }
   
+  my @slice_objects = ();
+
+  if (ref $slice eq 'ARRAY') {
+    foreach (@$slice) {
+      if (!$_->isa('Bio::EnsEMBL::Slice')) {
+        throw('Bio::EnsEMBL::Slice arg expected');
+      }
+      push @slice_objects, $_;
+    }
+  } else {
+    if (!$slice->isa('Bio::EnsEMBL::Slice')) {
+      throw('Bio::EnsEMBL::Slice arg expected');
+    }
+    push @slice_objects, $slice;
+  }
+
+  my @genotypes = ();
+
   # use VCF?
-  my $vcf_container;
-  
-  if($self->db->use_vcf) {
-    if(!defined($population)) {
-      $vcf_container = $self->_fetch_by_Slice_VCF($slice);
-      return $vcf_container if $self->db->use_vcf > 1;
+  if ($self->db->use_vcf) {
+    if (!defined($population)) {
+      foreach my $slice (@slice_objects) {
+        push @genotypes, $self->_fetch_by_Slice_VCF($slice);
+      }
+      if ($self->db->use_vcf > 1) {
+        my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
+        $ldFeatureContainer->name($slice_objects[0]->name());
+        return $ldFeatureContainer;
+      }
     }
-    elsif(grep {$_} map {$_->has_Population($population)} @{$self->db->get_VCFCollectionAdaptor->fetch_all}) {
-      return $self->_fetch_by_Slice_VCF($slice, $population);
+    elsif (grep {$_} map {$_->has_Population($population)} @{$self->db->get_VCFCollectionAdaptor->fetch_all}) {
+      foreach my $slice (@slice_objects) {    
+        push @genotypes, $self->_fetch_by_Slice_VCF($slice, $population);
+      }
+      my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
+      $ldFeatureContainer->name($slice_objects[0]->name());
+      return $ldFeatureContainer;
     }
-  }
+  } 
   
-  my $sth;
-  my $in_str;
   my $siblings = {};
-  
   #when there is no population selected, return LD in the HapMap and PerlEgen populations
-  $in_str = $self->_get_LD_populations($siblings);
+  my $in_str = $self->_get_LD_populations($siblings);
   
   #if a population is passed as an argument, select the LD in the region with the population
-  if ($population){
-    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+  if ($population) {
+    if (!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
       throw('Bio::EnsEMBL::Variation::Population arg expected');
     }
     my $population_id = $population->dbID;
     $in_str = " = $population_id";
   }
 
-  if ($in_str eq ''){
+  if ($in_str eq '') {
     #there is no population, not a human specie or not passed as an argument, return the empy container
-    my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+    my $empty_container = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
       '-ldContainer'=> {},
-      '-name' => $slice->name,
+      '-name' => $slice_objects[0]->name,
       '-variationFeatures' => {}
     );
-    return $t
+    return $empty_container;
   }
 
-  $sth = $self->prepare(qq{
-    SELECT c.sample_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, c.genotypes, sp.population_id
-    FROM compressed_genotype_region c, sample_population sp
-    WHERE  sp.sample_id = c.sample_id
-    AND   sp.population_id $in_str
-    AND   c.seq_region_id = ?
-    AND   c.seq_region_start >= ? and c.seq_region_start <= ?
-    AND   c.seq_region_end >= ?
-    ORDER BY c.seq_region_id, c.seq_region_start
-  }, {mysql_use_result => 1});
+  foreach my $slice (@slice_objects) {
+    push @genotypes, $self->_fetch_by_Slice_DB($slice, $in_str, $siblings);
+  }
 
-  $sth->bind_param(1,$slice->get_seq_region_id,SQL_INTEGER);
-  $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE >= 1);
-  $sth->bind_param(2,1,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE < 1);
-  $sth->bind_param(3,$slice->end,SQL_INTEGER);
-  $sth->bind_param(4,($slice->start < 1 ? 1 : $slice->start),SQL_INTEGER);
-
-  $sth->execute();
-
-  my $ldFeatureContainer = $self->_objs_from_sth($sth,$slice,$siblings);
-  
-  # merge with results from VCF?
-  $self->_merge_containers($ldFeatureContainer, $vcf_container) if $vcf_container;
-
-  $sth->finish();
-  
-  # store the name of the slice in the Container
-  $ldFeatureContainer->name($slice->name());
-  
+  my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
+  $ldFeatureContainer->name($slice_objects[0]->name());
   return $ldFeatureContainer;
 }
 
@@ -209,7 +210,8 @@ sub fetch_by_Slice {
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
   Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
-  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);  Description: Retrieves LDFeatureContainer for a given variation feature.  If optional population is supplied, values are only returned for that population.
+  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);
+  Description: Retrieves LDFeatureContainer for a given variation feature. If optional population is supplied, values are only returned for that population.
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
@@ -234,7 +236,7 @@ sub fetch_by_VariationFeature {
   $self->{_vf_pos} = $vf->seq_region_start;
   
   # fetch by slice using expanded feature slice
-  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand(MAX_SNP_DISTANCE,MAX_SNP_DISTANCE),$pop);
+  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand(MAX_SNP_DISTANCE,MAX_SNP_DISTANCE), $pop);
   
   # delete the cached pos
   delete $self->{_vf_pos};
@@ -244,8 +246,47 @@ sub fetch_by_VariationFeature {
   return $ldFeatureContainer;
 }
 
+=head2 fetch_by_VariationFeatures
 
-sub get_populations_by_Slice{
+  Arg [1]    : Listref of Bio::EnsEMBL:Variation::VariationFeature args
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeatures([$vf1, $vf2]);
+  Description: Retrieves LDFeatureContainer for a given set of variation features. If optional population is supplied, values are only returned for that population.
+  Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_by_VariationFeatures {
+  my $self = shift;
+  my $vfs  = shift;
+  my $pop = shift;
+  
+  my @slice_objects = ();
+  if (!ref($vfs)) {
+    throw('Listref of Bio::EnsEMBL::Variation::VariationFeature args expected');
+  }
+  foreach my $vf (@$vfs) {
+    if (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+      throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
+    }
+    if (!defined($vf->dbID())) {
+      throw("VariationFeature arg must have defined dbID");
+    }
+    push @slice_objects, $vf->feature_Slice->expand(1, 1);
+  }
+  
+  # fetch by slice using expanded feature slice
+  my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $pop);
+  
+  $ldFeatureContainer->name($vfs->[0]->dbID);
+  
+  return $ldFeatureContainer;
+}
+
+sub get_populations_by_Slice {
   my $self = shift;
   
   my $population_hash = $self->get_populations_hash_by_Slice(@_);
@@ -369,6 +410,31 @@ sub get_populations_hash_by_Slice {
   }
   
   return \%results;
+}
+
+sub _fetch_by_Slice_DB {
+  my $self = shift;
+  my $slice = shift;
+  my $in_str = shift;
+  my $siblings = shift;
+  my $sth = $self->prepare(qq{
+    SELECT c.sample_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, c.genotypes, sp.population_id
+    FROM compressed_genotype_region c, sample_population sp
+    WHERE  sp.sample_id = c.sample_id
+    AND   sp.population_id $in_str
+    AND   c.seq_region_id = ?
+    AND   c.seq_region_start >= ? and c.seq_region_start <= ?
+    AND   c.seq_region_end >= ?
+    ORDER BY c.seq_region_id, c.seq_region_start
+  }, {mysql_use_result => 1});
+
+  $sth->bind_param(1,$slice->get_seq_region_id,SQL_INTEGER);
+  $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE >= 1);
+  $sth->bind_param(2,1,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE < 1);
+  $sth->bind_param(3,$slice->end,SQL_INTEGER);
+  $sth->bind_param(4,($slice->start < 1 ? 1 : $slice->start),SQL_INTEGER);
+  $sth->execute();
+  $self->_objs_from_sth($sth, $slice, $siblings);
 }
 
 sub _fetch_by_Slice_VCF {
@@ -607,8 +673,11 @@ sub _objs_from_sth {
   }
   
   $sth->finish();
-  
-  return $self->_ld_calc(\%alleles_variation, \%sample_information, $slice);
+  return {
+    'alleles_variation' => \%alleles_variation,
+    'sample_information' => \%sample_information,
+    'slice' => $slice,
+  }; 
 }
 
 sub _objs_from_sth_vcf {
@@ -645,22 +714,40 @@ sub _objs_from_sth_vcf {
       }
     }
   }
-  
-  return $self->_ld_calc(\%alleles_variation, \%sample_information, $slice);
+  return {
+    'alleles_variation' => \%alleles_variation,
+    'sample_information' => \%sample_information,
+    'slice' => $slice,
+  }; 
 }
 
 sub _ld_calc {
   my $self = shift;
-  my $alleles_variation = shift;
-  my $sample_information = shift;
-  my $slice = shift;
-  
-  #create a hash that maps the position->vf_id
-  my $vfa = $self->db->get_VariationFeatureAdaptor();
-  my $variations = $vfa->fetch_all_by_Slice($slice);
+  my $genotypes = shift; 
+  my $alleles_variation = {};
+  my $sample_information = {};
   my $pos_vf = {};
-  my $region_Slice = $slice->seq_region_Slice();
-  map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
+
+  my $vfa = $self->db->get_VariationFeatureAdaptor();
+
+  foreach my $genotype (@$genotypes) {
+    my $next_alleles_variation = $genotype->{'alleles_variation'};
+    $alleles_variation = { %$alleles_variation, %$next_alleles_variation };
+
+    my $next_sample_information = $genotype->{'sample_information'};
+    foreach my $pop_id (keys %$next_sample_information) {
+      foreach my $snp_start (keys %{$next_sample_information->{$pop_id}}) {
+        my $hash = $next_sample_information->{$pop_id}->{$snp_start};
+        $sample_information->{$pop_id}->{$snp_start} = $hash;
+      }
+    }
+
+    #create a hash that maps the position->vf_id
+    my $slice = $genotype->{'slice'}; 
+    my $variations = $vfa->fetch_all_by_Slice($slice);
+    my $region_Slice = $slice->seq_region_Slice();
+    map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
+  }
 
   my %_pop_ids;
 
@@ -715,10 +802,9 @@ sub _ld_calc {
   # close file handles and check file sizes
   foreach my $key(keys %in_files) {
     my $f = $in_files{$key};
-	
-    my @stats = stat $f;
     $f->close;
-    if($stats[7] == 0) {
+    my $file = $in_file_names{$key} . '.in';
+    if (-z $file) { # file is empty
       unlink($in_file_names{$key}.'.in');
       delete $in_file_names{$key};
       delete $in_files{$key};
@@ -728,8 +814,7 @@ sub _ld_calc {
   # run LD binary
   `$bin <$_\.in >$_\.out` for values %in_file_names;
   
-  
-  foreach my $file(values %in_file_names) {
+  foreach my $file (values %in_file_names) {
     open OUT, "$file.out";
     while(<OUT>){
       my %ld_values = ();
@@ -737,11 +822,9 @@ sub _ld_calc {
       #     936	965891	164284	166818	0.628094	0.999996	120 
       #get the ouput into the hashes
       chomp;
-	  
       ($population_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
-	  
       # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
-      if(defined($self->{_vf_pos})) {
+      if (defined($self->{_vf_pos})) {
         next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
       }
 	  
