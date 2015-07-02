@@ -729,10 +729,14 @@ sub _ld_calc {
   my $pos_vf = {};
 
   my $vfa = $self->db->get_VariationFeatureAdaptor();
-
   foreach my $genotype (@$genotypes) {
     my $next_alleles_variation = $genotype->{'alleles_variation'};
-    $alleles_variation = { %$alleles_variation, %$next_alleles_variation };
+    foreach my $snp_start (keys %$next_alleles_variation) {
+      foreach my $pop_id (keys %{$next_alleles_variation->{$snp_start}}) {
+        my $hash = $next_alleles_variation->{$snp_start}->{$pop_id};
+        $alleles_variation->{$snp_start}->{$pop_id} = $hash; 
+      }
+    }    
 
     my $next_sample_information = $genotype->{'sample_information'};
     foreach my $pop_id (keys %$next_sample_information) {
@@ -771,7 +775,6 @@ sub _ld_calc {
   
   foreach my $snp_start (sort{$a<=>$b} keys %$alleles_variation){
     foreach my $population (keys %{$alleles_variation->{$snp_start}}){
-	  
       my $fh;
 	  
       # create file handles in hash
@@ -804,11 +807,11 @@ sub _ld_calc {
     my $f = $in_files{$key};
     $f->close;
     my $file = $in_file_names{$key} . '.in';
-    if (-z $file) { # file is empty
-      unlink($in_file_names{$key}.'.in');
-      delete $in_file_names{$key};
-      delete $in_files{$key};
-    }
+#    if (-z $file) { # file is empty
+#      unlink($in_file_names{$key}.'.in');
+#      delete $in_file_names{$key};
+#      delete $in_files{$key};
+#    }
   }
   
   # run LD binary
