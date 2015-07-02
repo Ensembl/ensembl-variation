@@ -40,11 +40,19 @@ my $ldContainer;
 ok($ldfca && $ldfca->isa('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor'), "get adaptor");
 
 my $sa = $db->get_SliceAdaptor();
+my $vfa = $vdb->get_VariationFeatureAdaptor();
+my $va = $vdb->get_VariationAdaptor();
+my $pa = $vdb->get_PopulationAdaptor();
+
+
 my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
+#rs4977575 and rs1333050
+my $vf1 = $vfa->fetch_by_dbID(3854101);
+my $vf2 = $vfa->fetch_by_dbID(1004337);
+my $pop_id = 101082;
 
 # get_populations_by_Slice
 my $pops = $ldfca->get_populations_by_Slice($slice);
-my $pa = $vdb->get_PopulationAdaptor();
 ok(scalar @$pops && $pops->[0] eq '1000GENOMES:phase_1_CEU', "get_populations_by_Slice");
 
 my $p1 = $pa->fetch_by_name($pops->[0]);
@@ -57,13 +65,17 @@ $ld_values = count_ld_values($ldContainer);
 is($ld_values, 15, "fetch_by_Slice - count LD values");
 
 # fetch_by_VariationFeature
-my $vfa = $vdb->get_VariationFeatureAdaptor();
 my $vf = $vfa->fetch_by_dbID(1004336);
-
 $ldContainer = $ldfca->fetch_by_VariationFeature($vf, $p1);
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 5, "fetch_by_VariationFeature - count LD values");
+
+# fetch_by_VariationFeatures
+$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2]);
+print_container($ldContainer);
+$ld_values = count_ld_values($ldContainer);
+is($ld_values, 2, "fetch_by_VariationFeatures - count LD values");
 
 ## VCF
 my $dir = $multi->curr_dir();
