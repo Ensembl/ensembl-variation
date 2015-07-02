@@ -16,7 +16,6 @@ use strict;
 use warnings;
 use Test::More;
 
-
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -27,7 +26,6 @@ use_ok('Bio::EnsEMBL::Variation::LDFeatureContainer');
 use_ok('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor');
 
 ## examples to be updated & added to test-genome-DBs files
-
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
@@ -42,7 +40,7 @@ my $ldContainer;
 ok($ldfca && $ldfca->isa('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor'), "get adaptor");
 
 my $sa = $db->get_SliceAdaptor();
-my $slice = $sa->fetch_by_region('chromosome','9',22124503,22126503);
+my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
 
 # get_populations_by_Slice
 my $pops = $ldfca->get_populations_by_Slice($slice);
@@ -97,31 +95,27 @@ print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 72, "fetch_by_Slice - VCF and DB");
 
-
 done_testing();
 
-
-sub count_ld_values{
-    my $container = shift;
-    my $ld_values = 0;
-    foreach my $key (keys %{$container->{'ldContainer'}}) {
-	$ld_values += keys %{$container->{'ldContainer'}->{$key}};
-    }
-   
-    return $ld_values;
+sub count_ld_values {
+  my $container = shift;
+  my $ld_values = 0;
+  foreach my $key (keys %{$container->{'ldContainer'}}) {
+    $ld_values += keys %{$container->{'ldContainer'}->{$key}};
+  }
+  return $ld_values;
 }
 
 sub print_container {
   my $container = shift;
   return if(!$verbose);
- 
+
   print STDERR "\nContainer name: ", $container->{'name'},"\n";
   foreach my $key (keys %{$container->{'ldContainer'}}) {
-      my ($key1,$key2) = split /-/,$key;
-      print STDERR "LD values for ", $container->{'variationFeatures'}->{$key1}->variation_name, " and ",$container->{'variationFeatures'}->{$key2}->variation_name;
-      foreach my $population (keys %{$container->{'ldContainer'}->{$key}}){
-	  print STDERR " in population $population:\n d_prime - ",$container->{'ldContainer'}->{$key}->{$population}->{'d_prime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
-      }
+    my ($key1,$key2) = split /-/,$key;
+    print STDERR "LD values for ", $container->{'variationFeatures'}->{$key1}->variation_name, " and ",$container->{'variationFeatures'}->{$key2}->variation_name;
+    foreach my $population (keys %{$container->{'ldContainer'}->{$key}}){
+      print STDERR " in population $population:\n d_prime - ",$container->{'ldContainer'}->{$key}->{$population}->{'d_prime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
+    }
   }
-
 }
