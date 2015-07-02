@@ -807,11 +807,11 @@ sub _ld_calc {
     my $f = $in_files{$key};
     $f->close;
     my $file = $in_file_names{$key} . '.in';
-#    if (-z $file) { # file is empty
-#      unlink($in_file_names{$key}.'.in');
-#      delete $in_file_names{$key};
-#      delete $in_files{$key};
-#    }
+    if (-z $file) { # file is empty
+      unlink($in_file_names{$key}.'.in');
+      delete $in_file_names{$key};
+      delete $in_files{$key};
+    }
   }
   
   # run LD binary
