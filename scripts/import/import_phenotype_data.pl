@@ -1725,7 +1725,9 @@ sub get_attrib_types {
   
   my ($attrib_type, @tmp_types);
   $sth->bind_columns(\$attrib_type);
-  push @tmp_types, $attrib_type while $sth->fetch();
+  while ($sth->fetch()) {
+    push @tmp_types, $attrib_type if ($attrib_type ne 'description');
+  }
   $sth->finish;
   
   return \@tmp_types;
