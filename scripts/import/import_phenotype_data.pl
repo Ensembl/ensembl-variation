@@ -520,6 +520,7 @@ sub parse_uniprot {
 sub parse_nhgri {
   my $infile = shift;
   
+  my %headers;
   my @phenotypes;
   
   # Open the input file for reading
@@ -534,81 +535,96 @@ sub parse_nhgri {
   while (<IN>) {
     chomp;
     
-    my @content = split(/\t/,$_);
+    my @row_data = split(/\t/,$_);
     
-    my $pubmed_id      = $content[1];
-    my $study          = $content[6];
-    my $phenotype      = $content[7];
-    my $gene           = ($content[13] =~ /\?/) ? '' : $content[13];
-    my $rs_risk_allele = ($content[20] =~ /\?/) ? '' : $content[20];
-    my $rs_id          = $content[21];
-    my $risk_frequency = ($content[20] ne '') ? $content[25] : '';
-    my $pvalue         = ($content[26] ne '') ? $content[26] : '';
-    my $ratio          = $content[28];
-    my $ratio_info     = $content[29];
-
-    if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\?|\w+)\s*$/i) {
-      $rs_risk_allele = $1;
+    # header
+    if(/^DATE\s+ADDED\s+TO\s+CATALOG/) {
+      $headers{uc($row_data[$_])} = $_ for 0..$#row_data;
     }
+    else {
+      die "ERROR: Couldn't find header data\n" unless %headers;
+    
+      my %content;
+      $content{$_} = $row_data[$headers{$_}] for keys %headers;
+    
+      my $pubmed_id      = $content{'PUBMEDID'};
+      my $study          = $content{'STUDY'};
+      my $phenotype      = $content{'DISEASE/TRAIT'};
+      my $gene           = ($content{'REPORTED GENE(S)'} =~ /\?/) ? '' : $content{'REPORTED GENE(S)'};
+      my $rs_risk_allele = ($content{'STRONGEST SNP-RISK ALLELE'} =~ /\?/) ? '' : $content{'STRONGEST SNP-RISK ALLELE'};
+      my $rs_id          = $content{'SNPS'};
+      my $pvalue         = ($content{'P-VALUE'} ne '') ? $content{'P-VALUE'} : '';
+      my $ratio          = $content{'OR OR BETA'};
+      my $ratio_info     = $content{'95% CI (TEXT)'};
+
+      my $risk_frequency = '';
+      if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\w+)\s*$/i) {
+        $rs_risk_allele = $1;
+        $risk_frequency = $content{'RISK ALLELE FREQUENCY'};
+      }
       
-    my %data = (
-      'study_type' => 'GWAS',
-      'description' => $phenotype,
-      'associated_gene' => $gene,
-      'risk_allele' => $rs_risk_allele,
-      'risk_allele_freq_in_controls' => $risk_frequency,
-      'p_value' => $pvalue,
-      'study_description' => $study
-    );
+      my %data = (
+        'study_type' => 'GWAS',
+        'description' => $phenotype,
+        'associated_gene' => $gene,
+        'risk_allele' => $rs_risk_allele,
+        'risk_allele_freq_in_controls' => $risk_frequency,
+        'p_value' => $pvalue,
+        'study_description' => $study
+      );
+   
     
-    
-    
-    # Post process the ratio data
-    if (defined($ratio)) {
-      $ratio =~ s/µ/micro/g;
+      # Post process the ratio data
+      if (defined($ratio)) {
+        $ratio =~ s/µ/micro/g;
 
-      if ($ratio =~ /(\d+)?(\.\d+)$/) {
-        my $pre  = $1;
-        my $post = $2;
-        $ratio = (defined($pre)) ? "$pre$post" : "0$post";
-        $ratio = 0 if ($ratio eq '0.00');
-      } else {
-        $ratio = undef;
-      }
-    }
-    # Add ratio/coef
-    if (defined($ratio)) {
-      # Parse the ratio info column to extract the unit information (we are not interested in the confidence interval)
-      if ($ratio_info =~ /^(\s*(\[|\().+(\)|\]))?\s*(.+)$/) {
-        my $unit = $4;
-        if ($unit =~ /^\s+$/ || $unit =~ /^\s*(\(|\[)/ || $unit =~ /\]\s*$/ || $unit =~ /^\s*NR\s*$/) {
-          $data{'odds_ratio'} = $ratio;
+        if ($ratio =~ /(\d+)?(\.\d+)$/) {
+          my $pre  = $1;
+          my $post = $2;
+          $ratio = (defined($pre)) ? "$pre$post" : "0$post";
+          $ratio = 0 if ($ratio eq '0.00');
         } else {
-          $data{'beta_coef'} = "$ratio $unit";
+          $ratio = undef;
         }
-      } else {
-        $data{'odds_ratio'} = $ratio;
       }
+      # Add ratio/coef
+      if (defined($ratio)) {
+        # Parse the ratio info column to extract the unit information (we are not interested in the confidence interval)
+        if ($ratio_info =~ /^\s*(\[.+\])?\s*(.+)$/) {
+          my $unit = $2;
+             $unit =~ s/\(//g;
+             $unit =~ s/\)//g;
+          if ($unit =~ /^\s+$/ || $ratio >= 1) {
+            $data{'odds_ratio'} = $ratio;
+          }
+          else {
+            $data{'beta_coef'} = "$ratio $unit";
+          }
+        }
+        else {
+          $data{'odds_ratio'} = $ratio;
+        }
+      }
+    
+      # Parse the ids
+      my @ids;
+      $rs_id ||= "";
+      while ($rs_id =~ m/(rs[0-9]+)/g) {
+        push(@ids,$1);
+      }
+      $data{'variation_names'} = join(',',@ids);
+      $data{'study'} = 'pubmed/' . $pubmed_id if (defined($pubmed_id));
+      
+      # If we didn't get any rsIds, skip this row (this will also get rid of the header)
+      warn("Could not parse any rsIds from string '$rs_id'") if (!scalar(@ids));
+      next if (!scalar(@ids));
+      
+      map {
+        my %t_data = %{\%data};
+        $t_data{'id'} = $_;
+        push(@phenotypes,\%t_data)
+      } @ids;
     }
-    
-    # Parse the ids
-    my @ids;
-    $rs_id ||= "";
-    while ($rs_id =~ m/(rs[0-9]+)/g) {
-      push(@ids,$1);
-    }
-    $data{'variation_names'} = join(',',@ids);
-    $data{'study'} = 'pubmed/' . $pubmed_id if (defined($pubmed_id));
-    
-    # If we didn't get any rsIds, skip this row (this will also get rid of the header)
-    warn("Could not parse any rsIds from string '$rs_id'") if (!scalar(@ids));
-    next if (!scalar(@ids));
-    
-    map {
-      my %t_data = %{\%data};
-      $t_data{'id'} = $_;
-      push(@phenotypes,\%t_data)
-    } @ids;
   }
   close(IN);
 
