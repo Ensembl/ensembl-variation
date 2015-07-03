@@ -1213,7 +1213,7 @@ sub _get_hgvs_peptides{
       else{ $min = $hgvs_notation->{end};}
 
       $hgvs_notation->{ref} = $self->_get_surrounding_peptides( $min, 
-                                                                $hgvs_notation->{original_ref});
+                                                                $hgvs_notation->{original_ref}, 2);
    
   }
   elsif($hgvs_notation->{type} eq "del" ){
@@ -1411,8 +1411,6 @@ sub _get_surrounding_peptides{
   my $original_ref = shift;
   my $length  = shift;
 
-  $length = 2 unless defined $length;
-
   my $ref_trans  = $self->transcript_variation->_peptide();
  
   $ref_trans .= $original_ref
@@ -1421,8 +1419,13 @@ sub _get_surrounding_peptides{
   ## can't find peptide after the end
   return if length($ref_trans) <=  $ref_pos ;
 
-  my $ref_string = substr($ref_trans, $ref_pos-1, $length);
-
+  my $ref_string;
+  if(defined $length) {
+     $ref_string = substr($ref_trans, $ref_pos-1, $length);
+  }
+  else{
+    $ref_string = substr($ref_trans, $ref_pos-1 );
+  }
   return ($ref_string);
 
 }
@@ -1599,7 +1602,6 @@ sub _check_peptides_post_del{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-   
     ## check peptides after deletion 
     my $post_pos = $hgvs_notation->{end}+1;
     my $post_seq = $self->_get_surrounding_peptides( $post_pos,
