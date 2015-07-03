@@ -1225,7 +1225,7 @@ sub _get_hgvs_peptides{
       else{ $min = $hgvs_notation->{end};}
 
       $hgvs_notation->{ref} = $self->_get_surrounding_peptides($min, 
-                                                               $hgvs_notation->{original_ref});
+                                                               $hgvs_notation->{original_ref},2);
 
    
   }
@@ -1424,8 +1424,6 @@ sub _get_surrounding_peptides{
   my $original_ref = shift;
   my $length  = shift;
 
-  $length = 2 unless defined $length;
-
   my $ref_trans  = $self->transcript_variation->_peptide();
   $ref_trans .= $original_ref
     if defined $original_ref && $original_ref =~ /^\*/;
@@ -1433,7 +1431,13 @@ sub _get_surrounding_peptides{
   ## can't find peptide after the end
   return if length($ref_trans) <=  $ref_pos ;
 
-  my $ref_string = substr($ref_trans, $ref_pos-1, $length);
+  my $ref_string;
+  if(defined $length) {
+     $ref_string = substr($ref_trans, $ref_pos-1, $length);
+  }
+  else{
+    $ref_string = substr($ref_trans, $ref_pos-1 );
+  }
 
   return ($ref_string);
 
