@@ -120,10 +120,15 @@ if ($config->{population}) {
 }
 if ($config->{individuals}) {
     my $individualAdaptor = $vdba->get_IndividualAdaptor;
-    my @names = split(',', $config->{individuals});
-    foreach my $name (@names) {
-        my $individual = $individualAdaptor->fetch_by_name($name);
-        push @$individuals, $individual;
+    if (uc $config->{individuals} eq 'ALL') {
+      $individuals = $individualAdaptor->fetch_all();
+    } else {
+      my @names = split(',', $config->{individuals});
+      foreach my $name (@names) {
+          my $individual_objects = $individualAdaptor->fetch_all_by_name($name);
+          die "More than one individual for name $name." if (scalar @$individual_objects > 1);
+          push @$individuals, $individual_objects->[0];
+      }
     }
     $config->{sample_data} = 1;
     $config->{format} = 'GT';
