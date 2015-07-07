@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Script to generate an HTML page containing the variation sources of each species
+# Script to generate an HTML page containing the variant sources of each species
 
 
 =head1 CONTACT
@@ -143,7 +143,7 @@ my %data_type_example = (
 my $html_header = q{
 <html>
 <head>
-  <title>Variation Sources</title>
+  <title>Variant Sources</title>
   <script type="text/javascript">
     window.onload = function() {
       $('.ht').helptip({'track': true});
@@ -160,7 +160,7 @@ my $html_title = qq{
   <div style="float:left;width:75%">
     <h1 style="margin-top:15px">Ensembl Variation - Sources Documentation</h1>
 
-    <h2>List of Variation sources for each species - $ecaption $e_version</h2>
+    <h2>List of variant sources for each species - $ecaption $e_version</h2>
 
     <div style="margin-bottom:20px">
       <a href="sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
@@ -838,7 +838,7 @@ sub menu_list {
   }
   my $img = $name;
   return qq{
-  <div style="margin-left:4px;margin-bottom:5px">
+  <div style="margin:0px 4px 5px">
     <img src="/i/species/16/$s_name.png" alt="$display" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
     <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>$new_data
   </div>
@@ -1085,7 +1085,7 @@ sub usage {
   print qq{
   Usage: perl sources2html.pl [OPTION]
   
-  Put all variation sources, for each species, into an HTML document.
+  Put all variant sources, for each species, into an HTML document.
   
   Options:
 
