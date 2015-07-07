@@ -467,14 +467,16 @@ sub export_data_adding_allele_string{
 
   foreach my $l(@{$variant_data}){
  
-      next if defined $l->[20] &&  $l->[20] eq "0" && 
-	  (! $potentially_no_minor{$l->[2]} && $l->[18] ==0.5);
+      if (defined $l->[20] &&  $l->[20] eq "0" && 
+	  (! $potentially_no_minor{$l->[2]} && $l->[18] ==0.5)){
+        ## if no minor allele, just take the second seen for displayinf frequency
+        $potentially_no_minor{$l->[2]} = 1;
+        next; 
+      }
 
       ## some variants are assigned 2 minor alleles
       next if defined $found_minor{$l->[2]} && $found_minor{$l->[2]} ==1;
       $found_minor{$l->[2]} =1; 
-
-      $potentially_no_minor{$l->[2]} = 1 if defined $l->[18] &&  $l->[18] ==0.5;
 
       $map_count{$l->[0]}++;
       my %save;
