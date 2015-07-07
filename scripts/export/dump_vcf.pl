@@ -82,6 +82,7 @@ die "Can't fetch for a population and an individual at once"
     if $config->{population} && $config->{individuals};
 
 # default to a sensible file name
+my $species = $config->{species};
 $config->{output_file} ||= "$species.vcf";
 
 my $reg = 'Bio::EnsEMBL::Registry';
@@ -271,13 +272,13 @@ sub genotypes {
         if (scalar @$igts > 0) {
             my $igt = $igts->[0];
             my @alleles = split /\//, $vcf_line->{allele_string};
-            my $allele1_idx = first { $alleles[$_] eq $igt->genotype->[0] } 0..$#alleles;
-            my $allele2_idx = first { $alleles[$_] eq $igt->genotype->[1] } 0..$#alleles;
+            my $allele1_idx = (first { $alleles[$_] eq $igt->genotype->[0] } 0..$#alleles) || '.';
+            my $allele2_idx = (first { $alleles[$_] eq $igt->genotype->[1] } 0..$#alleles) || '.';
             my $genotype = "$allele1_idx/$allele2_idx";
             $vcf_line->{sample}->{$individual->name} = $genotype;
             $has_gt = 1;
         } else {
-            $vcf_line->{sample}->{$individual->name} = 'N/N';
+            $vcf_line->{sample}->{$individual->name} = '.';
         }
     }
     return $has_gt;
