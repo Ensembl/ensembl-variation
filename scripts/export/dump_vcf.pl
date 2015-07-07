@@ -497,7 +497,9 @@ sub print_vcf_line {
     if ($vcf_line->{sample}) {
         $sample = "\t" . $config->{format} . "\t" . join("\t", map {$vcf_line->{sample}->{$_}} sort keys %{$vcf_line->{sample}});
     }
-
+    $vcf_line->{QUAL} = '.';
+    $vcf_line->{FILTER} = '.';
+    $sample ||= ''; 
     my $line = join("\t", map {$vcf_line->{$_}} qw/CHROM POS ID REF ALT QUAL FILTER/);
     print $file_handle $line . $info . $sample . "\n";
 }
