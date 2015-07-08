@@ -1743,6 +1743,9 @@ sub rejoin_variants {
           $original->{$type}->{$vf->{alt_allele}.'_'.$key} = $val;
         }
       }
+
+      add_allele_nums($config, $vf) unless defined($vf->{_allele_nums});
+      add_allele_nums($config, $original) unless defined($original->{_allele_nums});
       
       # allele numbers
       if($vf->{_allele_nums} && $original->{_allele_nums}) {
@@ -1985,6 +1988,14 @@ sub numberify {
   }
 }
 
+sub add_allele_nums {
+  my $config = shift;
+  my $vf = shift;
+
+  my @alleles = split /\//, $vf->allele_string || '';
+  $vf->{_allele_nums} ||= {map {$alleles[$_] => $_} (0..$#alleles)};
+}
+
 # takes a variation feature and returns ready to print consequence information
 sub vf_to_consequences {
   my $config = shift;
@@ -2007,10 +2018,7 @@ sub vf_to_consequences {
   my @return = ();
   
   # get allele nums
-  if(defined($config->{allele_number})) {
-    my @alleles = split /\//, $vf->allele_string || '';
-    $vf->{_allele_nums} ||= {map {$alleles[$_] => $_} (0..$#alleles)};
-  }
+  add_allele_nums($config, $vf) if defined($config->{allele_number});
   
   # method name stub for getting *VariationAlleles
   my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
