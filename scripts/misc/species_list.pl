@@ -112,7 +112,7 @@ my %display_list;
 
 my $sql   = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2  = qq{SELECT COUNT(variation_id) FROM variation};
-my $sql2a = qq{SELECT COUNT(DISTINCT source_id) FROM variation};
+my $sql2a = qq{SELECT DISTINCT s.name FROM variation v, source s WHERE s.source_id=v.source_id ORDER BY s.name};
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
 foreach my $hostname (@hostnames) {
@@ -159,9 +159,11 @@ foreach my $hostname (@hostnames) {
 
     # Count the number of variantion sources
     my $sth2a = get_connection_and_query($dbname, $hostname, $sql2a);
-    my $count_src = $sth2a->fetchrow_array;
+    $species_list{$s_name}{'sources'} = [];
+    while(my $src = ($sth2a->fetchrow_array)[0]) {
+      push(@{$species_list{$s_name}{'sources'}},$src);
+    }
     $sth2a->finish;
-    $species_list{$s_name}{'src_count'} = $count_src;
 
     # Previous database
     my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
@@ -229,8 +231,12 @@ foreach my $display_name (sort keys(%display_list)) {
   my $display_name = $species_list{$sp}{'name'};
   my $var_count = $species_list{$sp}{'count'};
   my $var_p_count = $species_list{$sp}{'p_count'};
-  my $var_src_count  = $species_list{$sp}{'src_count'};
-     $var_src_count .= ($var_src_count > 1) ? ' sources' : ' source';
+  
+  # Source(s)
+  my @sources_list = sort { $a !~ /^dbSNP$/ cmp $b !~ /^dbSNP$/ || $a cmp $b } @{$species_list{$sp}{'sources'}};
+  my $var_src_count  = @sources_list;
+     $var_src_count .= ($var_src_count == 1) ? ' source' : ' sources';
+  my $var_src_title  = ($var_src_count == 1) ? $sources_list[0] : join(' , ', @sources_list);
   
   $html_content .= qq{
   <tr$bg style="vertical-align:middle">
@@ -251,7 +257,7 @@ foreach my $display_name (sort keys(%display_list)) {
     <td style="text-align:right">$var_count</td>
     <td style="text-align:right">$var_p_count</td>
     <td style="text-align:right">
-      <a href="sources_documentation.html#$sp" style="text-decoration:none" title="$label sources list">$var_src_count</a>
+      <a href="sources_documentation.html#$sp" class="ht _ht" style="text-decoration:none" title="$var_src_title">$var_src_count</a>
     </td>\n};
   
   
