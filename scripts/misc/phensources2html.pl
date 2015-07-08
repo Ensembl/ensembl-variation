@@ -502,7 +502,7 @@ sub create_menu {
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #22949b;border-right:1px dotted #22949b;border-bottom:1px dotted #22949b">
+  <div style="margin: 2px 0px 16px 8px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #22949b;border-right:1px dotted #22949b;border-bottom:1px dotted #22949b">
     <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #22949b;border-bottom:1px solid #22949b;margin-bottom:5px">
       <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
       Species with phenotype
@@ -535,7 +535,6 @@ sub create_menu {
     <br />
     <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
   </div>
-  <br />
   <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #22949b;border-right:1px dotted #22949b;border-bottom:1px dotted #22949b">
     <!-- Legend header -->
     <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #22949b;border-bottom:1px solid #22949b;margin-bottom:2px">
@@ -599,10 +598,12 @@ sub create_menu {
         if (window.pageYOffset-80 > legend_element_pos)  {
           legend_element.style.position = "fixed";
           legend_element.style.top = "10px";
+          legend_element.style.right = "16px"; // Padding right of the page content
         }
         else {
           legend_element.style.position = "relative";
           legend_element.style.top = "auto";
+          legend_element.style.right = "0px";
         }
       };
     </script>
