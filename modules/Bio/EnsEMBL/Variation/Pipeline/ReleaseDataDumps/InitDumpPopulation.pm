@@ -40,12 +40,6 @@ sub fetch_input {
     my $self = shift;
 
     my $populations = {
-        '1000G' => {
-            '1000GENOMES:phase_1_AFR' => 'AFR',
-            '1000GENOMES:phase_1_AMR' => 'AMR',
-            '1000GENOMES:phase_1_ASN' => 'ASN',
-            '1000GENOMES:phase_1_EUR' => 'EUR',
-        },
         'HAPMAP' => {
             'CSHL-HAPMAP:HAPMAP-ASW' => 'ASW',
             'CSHL-HAPMAP:HAPMAP-CHB' => 'CHB',
