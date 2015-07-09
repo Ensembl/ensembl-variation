@@ -44,11 +44,30 @@ sub run {
   my $self = shift;
   my $data_dump_dir = $self->param('pipeline_dir');
   my $all_species = $self->get_all_species();
+  $self->delete_tmp_files($data_dump_dir, $all_species);
   tabix_vcf_files($data_dump_dir, $all_species);
   $self->add_readme($data_dump_dir, $all_species);
   compute_checksums($data_dump_dir, $all_species);
   lc_dir($data_dump_dir, $all_species);
   rm_uc_dir($data_dump_dir, $all_species);
+}
+
+sub delete_tmp_files {
+  my ($self, $data_dir, $all_species) = @_;
+  my $tmp_dir = $self->param('tmp_dir');
+  foreach my $species (keys %$all_species) {
+    foreach my $file_type (qw/vcf gvf/) {
+      my $working_dir = "$data_dir/$file_type/$species/"; 
+      opendir(DIR, $working_dir) or die $!;
+      while (my $file = readdir(DIR)) {
+        if ($file =~ m/_validate\.vcf.gz$|\.txt$/) {
+          system("mv $working_dir/$file $tmp_dir");
+          $self->warning($file); 
+        }
+      }
+      closedir(DIR);    
+    }
+  }
 }
 
 sub tabix_vcf_files {
