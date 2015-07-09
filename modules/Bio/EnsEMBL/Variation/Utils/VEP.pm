@@ -1788,7 +1788,7 @@ sub format_rest_output {
     Location
     Uploaded_variation
     Existing_variation
-    GMAF AFR_MAF AMR_MAF ASN_MAF EUR_MAF AA_MAF EA_MAF
+    GMAF AFR_MAF AMR_MAF ASN_MAF EAS_MAF SAS_MAF EUR_MAF AA_MAF EA_MAF
     PUBMED CLIN_SIG SOMATIC VARIANT_CLASS PHENO
   );
   
@@ -1924,7 +1924,7 @@ sub format_rest_output {
       delete $ex->{$_} for qw(failed);
       
       # frequencies
-      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EUR AA EA)) {
+      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EAS SAS EUR AA EA)) {
         my $tmp = $ex->{$pop};
         
         if($tmp =~ /(\w)\:([\d\.]+)/) {
