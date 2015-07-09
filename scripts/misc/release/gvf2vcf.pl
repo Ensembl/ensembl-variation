@@ -185,6 +185,9 @@ sub init_data {
         'mobile_element_insertion' => 'MEI',
         'novel_sequence_insertion' => 'NSI',
         'indel' => 'INDEL',
+        'translocation' => 'TL',
+        'interchromosomal_breakpoint' => 'InterCB',
+        'intrachromosomal_breakpoint' => 'IntraCB',
     };
 }
 
@@ -580,6 +583,9 @@ sub print_header {
             '##ALT=<ID=MEI,Description="mobile_element_insertion">',
             '##ALT=<ID=NSI,Description="novel_sequence_insertion">',
             '##ALT=<ID=INDEL,Description="indel">',
+            '##ALT=<ID=InterCB,Description="interchromosomal_breakpoint">',
+            '##ALT=<ID=IntraCB,Description="intrachromosomal_breakpoint">',
+            '##ALT=<ID=TL,Description="translocation">',
         )), "\n";
     }
 
