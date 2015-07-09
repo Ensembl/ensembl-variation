@@ -75,7 +75,7 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
         
-        finish_dumps => 0,
+        only_finish_dumps => 1,
         human_population_dumps => 0,
 
         hive_db_host    => 'ens-variation',
@@ -122,203 +122,211 @@ sub resource_classes {
 }
 
 sub pipeline_analyses {
-    my ($self) = @_;
-    my @analyses;
-
-        push @analyses, (
-            {   -logic_name => 'pre_run_checks_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-                -input_ids => [{},],
-                -max_retry_count => 1,
-                -flow_into => {
-                    1 => ['export_config_file'],
-                },
-                -parameters => {
-                    'file_type' => 'gvf',   
-                },
+  my ($self) = @_;
+  my @analyses;
+  if ($self->o('only_finish_dumps')) {
+    push @analyses, (
+      { -logic_name => 'finish_dumps',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+        -input_ids => [{},],
+      },
+    );
+  } else {
+    push @analyses, (
+        {   -logic_name => 'pre_run_checks_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+            -input_ids => [{},],
+            -max_retry_count => 1,
+            -flow_into => {
+                1 => ['export_config_file'],
             },
-            {   -logic_name => 'export_config_file',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
-                -max_retry_count => 1,
-                -rc_name => 'default',
-                 -flow_into => {
-                    1 => ['species_factory_gvf_dumps'],
-                },
+            -parameters => {
+                'file_type' => 'gvf',   
             },
-            {   -logic_name => 'species_factory_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
-                -flow_into => {
-                    '2->A' => ['init_dump'],
-                    'A->1' => ['report_gvf_dumps']
-                 },
+        },
+        {   -logic_name => 'export_config_file',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
+            -max_retry_count => 1,
+            -rc_name => 'default',
+             -flow_into => {
+                1 => ['species_factory_gvf_dumps'],
             },
-            {   -logic_name => 'init_dump',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-                -max_retry_count => 1,
-                -analysis_capacity => 5,
-                -flow_into => {
-                    1 => ['submit_job_gvf_dumps'],
-                },
-                -parameters => {
-                    'file_type' => 'gvf',
-                    'job_type'  => 'dump',
-                },
-                -rc_name => 'default',
+        },
+        {   -logic_name => 'species_factory_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            -flow_into => {
+                '2->A' => ['init_dump'],
+                'A->1' => ['report_gvf_dumps']
+             },
+        },
+        {   -logic_name => 'init_dump',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
+            -max_retry_count => 1,
+            -analysis_capacity => 5,
+            -flow_into => {
+                1 => ['submit_job_gvf_dumps'],
             },
-            {   -logic_name => 'submit_job_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-                -max_retry_count => 1,
-                -rc_name => 'default',
+            -parameters => {
+                'file_type' => 'gvf',
+                'job_type'  => 'dump',
             },
-            {   -logic_name => 'report_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report',
-                -parameters => {
-                    'file_type'   => 'gvf',
-                    'report_name' => 'ReportDumpGVF',
-                },
-                -flow_into => {1 => ['species_factory_validate_gvf']},
+            -rc_name => 'default',
+        },
+        {   -logic_name => 'submit_job_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -max_retry_count => 1,
+            -rc_name => 'default',
+        },
+        {   -logic_name => 'report_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report',
+            -parameters => {
+                'file_type'   => 'gvf',
+                'report_name' => 'ReportDumpGVF',
             },
-            {   -logic_name => 'species_factory_validate_gvf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
-                -analysis_capacity => 3,
-                -flow_into => {
-                    '2->A' => ['join_dump'],
-                    'A->1' => ['summary_validate_gvf']
-                 },
-                -parameters => {
-                    'file_type' => 'gvf',
-                },
+            -flow_into => {1 => ['species_factory_validate_gvf']},
+        },
+        {   -logic_name => 'species_factory_validate_gvf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+            -analysis_capacity => 3,
+            -flow_into => {
+                '2->A' => ['join_dump'],
+                'A->1' => ['summary_validate_gvf']
+             },
+            -parameters => {
+                'file_type' => 'gvf',
             },
-            {   -logic_name => 'join_dump',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
-                -flow_into => {
-                    1 => ['validate_gvf'],
-                }
+        },
+        {   -logic_name => 'join_dump',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+            -flow_into => {
+                1 => ['validate_gvf'],
+            }
+        },
+        {   -logic_name => 'validate_gvf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
+            -parameters => {
+                'file_type'     => 'gvf',
+                'so_file'       => $self->o('so_file'),
+                'gvf_validator' => $self->o('gvf_validator'),
             },
-            {   -logic_name => 'validate_gvf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
-                -parameters => {
-                    'file_type'     => 'gvf',
-                    'so_file'       => $self->o('so_file'),
-                    'gvf_validator' => $self->o('gvf_validator'),
-                },
+        },
+        {   -logic_name => 'summary_validate_gvf', # die if Error?
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
+            -parameters => {
+                'file_type' => 'gvf',
             },
-            {   -logic_name => 'summary_validate_gvf', # die if Error?
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
-                -parameters => {
-                    'file_type' => 'gvf',
-                },
-                -flow_into => {
-                    1 => ['clean_up_gvf_dumps']
-                },
+            -flow_into => {
+                1 => ['clean_up_gvf_dumps']
             },
-            {   -logic_name => 'clean_up_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
-                -parameters => {
-                    'file_type' => 'gvf',
-                },
-                -flow_into => {
-                    1 => ['species_factory_gvf_dumps_population'],
-                },
+        },
+        {   -logic_name => 'clean_up_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
+            -parameters => {
+                'file_type' => 'gvf',
             },
-            {   -logic_name => 'species_factory_gvf_dumps_population',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
-                -flow_into => {
-                    '2->A' => ['init_population_dump'],
-                    'A->1' => ['report_population_gvf_dumps']
-                 },
+            -flow_into => {
+                1 => ['species_factory_gvf_dumps_population'],
             },
-            {   -logic_name => 'init_population_dump',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-                -max_retry_count => 1,
-                -analysis_capacity => 5,
-                -flow_into => {
-                    1 => ['submit_job_population_gvf_dumps'],
-                },
-                -parameters => {
-                    'file_type' => 'gvf',
-                    'job_type'  => 'dump_population',
-                },
-                -rc_name => 'default',
+        },
+        {   -logic_name => 'species_factory_gvf_dumps_population',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            -flow_into => {
+                '2->A' => ['init_population_dump'],
+                'A->1' => ['report_population_gvf_dumps']
+             },
+        },
+        {   -logic_name => 'init_population_dump',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
+            -max_retry_count => 1,
+            -analysis_capacity => 5,
+            -flow_into => {
+                1 => ['submit_job_population_gvf_dumps'],
             },
-            {   -logic_name => 'submit_job_population_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-                -max_retry_count => 1,
-                -rc_name => 'default',
+            -parameters => {
+                'file_type' => 'gvf',
+                'job_type'  => 'dump_population',
             },
-            {   -logic_name => 'report_population_gvf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report',
-                -parameters => {
-                    'file_type'   => 'gvf',
-                    'report_name' => 'ReportPopulationDumpGVF',
-                },
-                -flow_into => {
-                    1 => ['pre_run_checks_gvf2vcf']
-                },
+            -rc_name => 'default',
+        },
+        {   -logic_name => 'submit_job_population_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -max_retry_count => 1,
+            -rc_name => 'default',
+        },
+        {   -logic_name => 'report_population_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report',
+            -parameters => {
+                'file_type'   => 'gvf',
+                'report_name' => 'ReportPopulationDumpGVF',
             },
-            {   -logic_name => 'pre_run_checks_gvf2vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-                -max_retry_count => 1,
-                -flow_into => {
-                    1 => ['species_factory_gvf2vcf'],
-                },
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
+            -flow_into => {
+                1 => ['pre_run_checks_gvf2vcf']
             },
-            {   -logic_name => 'species_factory_gvf2vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
-                -analysis_capacity => 3,
-                -flow_into => {
-                    '2->A' => ['init_parse'],
-                    'A->1' => ['summary_validate_vcf']
-                 },
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
+        },
+        {   -logic_name => 'pre_run_checks_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+            -max_retry_count => 1,
+            -flow_into => {
+                1 => ['species_factory_gvf2vcf'],
             },
-            {   -logic_name => 'init_parse',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-                -flow_into => {
-                    1 => ['submit_job_gvf2vcf'],
-                },
-                -parameters => {
-                    'file_type' => 'vcf',
-                    'job_type'  => 'parse',
-                },
+            -parameters => {
+                'file_type' => 'vcf',
             },
-            {   -logic_name => 'submit_job_gvf2vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-                -flow_into => {
-                    1 => ['validate_vcf'],
-                },
+        },
+        {   -logic_name => 'species_factory_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+            -analysis_capacity => 3,
+            -flow_into => {
+                '2->A' => ['init_parse'],
+                'A->1' => ['summary_validate_vcf']
+             },
+            -parameters => {
+                'file_type' => 'vcf',
             },
-            {   -logic_name => 'validate_vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
+        },
+        {   -logic_name => 'init_parse',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
+            -flow_into => {
+                1 => ['submit_job_gvf2vcf'],
             },
-           {   -logic_name => 'summary_validate_vcf',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
-                -flow_into => {
-                    1 => ['clean_up_vcf_dumps'],
-                },
+            -parameters => {
+                'file_type' => 'vcf',
+                'job_type'  => 'parse',
             },
-            {   -logic_name => 'clean_up_vcf_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
-                -parameters => {
-                    'file_type' => 'vcf',
-                },
+        },
+        {   -logic_name => 'submit_job_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -flow_into => {
+                1 => ['validate_vcf'],
             },
-            {   -logic_name => 'finish_dumps',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+        },
+        {   -logic_name => 'validate_vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
+            -parameters => {
+                'file_type' => 'vcf',
             },
-        );
-    return \@analyses;
+        },
+       {   -logic_name => 'summary_validate_vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+            -flow_into => {
+                1 => ['clean_up_vcf_dumps'],
+            },
+        },
+        {   -logic_name => 'clean_up_vcf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+        },
+        {   -logic_name => 'finish_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+        },
+    );
+  }
+  return \@analyses;
 }
 
 1;
