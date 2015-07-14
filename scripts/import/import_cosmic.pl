@@ -142,13 +142,13 @@ die "Didn't find COSMIC set id?" unless defined $cosmic_set_id;
 
 # Variation set phenotypes
 my $get_phenotype_set_id_sth = $dbh->prepare(qq{
-    SELECT variation_set_id FROM variation_set WHERE name like '%phenotype-associated variants%'
+    SELECT variation_set_id FROM variation_set WHERE name like '%phenotype/disease-associated variants%'
 });
 $get_phenotype_set_id_sth->execute;
 
 my ($phenotype_set_id) = $get_phenotype_set_id_sth->fetchrow_array;
 
-die "Didn't find COSMIC variation set id?" unless defined $phenotype_set_id;
+die "Didn't find phenotype/disease set id?" unless defined $phenotype_set_id;
 
 
 my $add_var_sth = $dbh->prepare(qq{
