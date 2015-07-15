@@ -58,6 +58,8 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
+our $DEBUG = 0;
+
 my ($data_file, $registry_file, $assembly, $structvar, $done_file);
 
 GetOptions ("data_file=s"  => \$data_file,
@@ -145,6 +147,24 @@ while (my $set = $ref->get_record() ){
 
 	foreach my $measure(@measures){
 	    next unless(ref($measure) eq 'HASH');
+
+            ## Look for gene symbols - if it's a big variant, it could cover 2 genes
+            if(defined $measure->{MeasureRelationship}){
+                
+                if( ref( $measure->{MeasureRelationship})  eq 'HASH'){    
+                   $record{gene} = $measure->{MeasureRelationship}->{Symbol}->{ElementValue}->[0];
+                 }
+                 else{
+                    ## API doesn't handle 2 genes currently
+                    my @multi;
+                    foreach my $meas (@{$measure->{MeasureRelationship}}){
+                        push @multi, $meas->{Symbol}->{ElementValue}->[0];
+                    } 
+                    $record{gene} = join(",", @multi);
+                 }
+  
+            }
+
 
 	    ### get dbSNP rs id  & OMIM id Xrefs, if available
 	    if(defined $measure->{XRef}){
@@ -302,10 +322,11 @@ sub import{
     $attribs{external_id}      = $record->{Acc};
     $attribs{clinvar_clin_sig} = $record->{Desc};
     $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
-
+    $attribs{associated_gene}  = $record->{gene} if defined $record->{gene};
 
     foreach my $feature (@{$feat}){
-	print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n";
+	print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
+           if $DEBUG == 1;
 
     my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
 	-slice          => $feature->slice(),
@@ -386,7 +407,7 @@ sub get_variant{
 
     ### else have to enter variation & associated records
 
-    print "No record found for $record->{dbSNP}\n";
+    print "No record found for $record->{dbSNP}\n" if $DEBUG ==1;
     if(!defined $var_ob && !defined $record->{hgvs_g}  ){
 	warn "Not entering new refSNP: $record->{dbSNP} as no HGVS available for alleles\n";
 	return undef;
