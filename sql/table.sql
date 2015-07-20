@@ -1764,15 +1764,11 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '80');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '82');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_b.sql|Create new sample table and update individual table. Copy individual data into new sample table.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_c.sql|Update table, column and index names from individual to sample.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_d.sql|Update type of motif_name to varchar.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_e.sql|Drop the column strain_id from structural_variation_sample');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_80_81_f.sql|Update meta. Rename sample to individual.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_81_82_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_81_82_b.sql|update the description in the failed_description table');
 
 /**
 @header  Failed tables
@@ -2068,22 +2064,22 @@ CREATE TABLE protein_function_predictions_attrib (
 
 #possible values in the failed_description table
 
-INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation maps to more than 3 different locations');
+INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variant maps to more than 3 different locations');
 INSERT INTO failed_description (failed_description_id,description) VALUES (2,'None of the variant alleles match the reference allele');
-INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation has more than 3 different alleles');
+INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variant has more than 3 different alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Loci with no observed variant alleles in dbSNP');
-INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome');
-INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Variation has no genotypes');
+INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variant does not map to the genome');
+INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Variant has no genotypes');
 INSERT INTO failed_description (failed_description_id,description) VALUES (7,'Genotype frequencies do not add up to 1');
-INSERT INTO failed_description (failed_description_id,description) VALUES (8,'Variation has no associated sequence');
-INSERT INTO failed_description (failed_description_id,description) VALUES (9,'Variation submission has been withdrawn by the 1000 genomes project due to high false positive rate');
+INSERT INTO failed_description (failed_description_id,description) VALUES (8,'Variant has no associated sequence');
+INSERT INTO failed_description (failed_description_id,description) VALUES (9,'Variant submission has been withdrawn by the 1000 genomes project due to high false positive rate');
 INSERT INTO failed_description (failed_description_id,description) VALUES (11,'Additional submitted allele data from dbSNP does not agree with the dbSNP refSNP alleles'); 
-INSERT INTO failed_description (failed_description_id,description) VALUES (12,'Variation has more than 3 different submitted alleles');         
+INSERT INTO failed_description (failed_description_id,description) VALUES (12,'Variant has more than 3 different submitted alleles');         
 INSERT INTO failed_description (failed_description_id,description) VALUES (13,'Alleles contain non-nucleotide characters');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (14,'Alleles contain ambiguity codes');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (15,'Mapped position is not compatible with reported alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Flagged as suspect by dbSNP');
-INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variation can not be re-mapped to the current assembly');
+INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variant can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
-INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variation maps to more than one genomic location');
+INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variant maps to more than one genomic location');
 
