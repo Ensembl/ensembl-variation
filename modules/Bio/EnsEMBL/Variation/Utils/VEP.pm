@@ -1408,7 +1408,9 @@ sub vf_list_to_cons {
                     }
                 }
                 
-                $_ ||= '.' for @$line;
+                for(@$line) {
+                    $_ = '.' unless defined($_);
+                }
                 
                 my $tmp = join "\t", @$line;
                 
