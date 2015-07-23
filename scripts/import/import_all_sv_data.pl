@@ -82,6 +82,11 @@ else {
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+my %study_to_skip =  ( 'nstd8'  => 1, # Human & chimp
+                       'nstd9'  => 1, # Chimp
+                       'nstd82' => 1, # Several monkey species
+                     );
+
 my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
                'outer_end','strand','parent','clinical','subject','sample','gender','is_ssv',
                'is_failed','population','bp_order','is_somatic','status','alias','length','copy_number');
@@ -175,6 +180,12 @@ pre_processing();
 foreach my $in_file (@files) {
   next if ($in_file !~ /\.gvf$/);
   
+  $in_file =~ /^(\w{4}\d+)_/;
+  if ($study_to_skip{$1}) {
+    debug("Study $1 (".$in_file.") skipped because it contains non ".$species." data");
+    next;
+  }
+
   my $msg ="File: $in_file ($f_count/$f_nb)";
   print "$msg\n";
   debug("\n##############################\n$msg\n##############################");
@@ -848,6 +859,9 @@ sub structural_variation_sample {
     }
   }
 
+  $dbVar->do(q{OPTIMIZE TABLE sample});
+  $dbVar->do(q{OPTIMIZE TABLE individual});
+
   my $ext1;
   my $ext2;
   
@@ -1475,6 +1489,12 @@ sub pre_processing {
     $dbVar->do(qq{ALTER TABLE individual ADD KEY `name_key` (`name`)});
   }
   
+  # Prepare the sample table
+  debug(localtime()."\t - Add temporary unique keys in the sample table");
+  if ($dbVar->do(qq{SHOW KEYS FROM sample WHERE Key_name='name_key';}) < 1){
+    $dbVar->do(qq{ALTER TABLE sample ADD KEY `name_key` (`name`)});
+  }
+
   debug(localtime()."\t - Add temporary columns in the $sv_table table");
   
   if ($dbVar->do(qq{show columns from $sv_table like '$tmp_sv_col';}) != 1){
@@ -1558,7 +1578,7 @@ sub post_processing_sample {
     }
   }
   $sth->finish;
-  
+
   # Individual
   $sth = $dbVar->prepare(qq{ SELECT i.individual_id, i.description, count(DISTINCT sv.study_id) c 
                                 FROM $sv_table sv, sample s, individual i, $svs_table svs
@@ -1744,7 +1764,11 @@ sub cleanup {
   # Drop a unique constraint in individual;
   $dbVar->do(qq{ALTER TABLE individual DROP KEY name_key});
   debug(localtime()."\t - Table individual: cleaned");
-  
+
+  # Drop a unique constraint in sample;
+  $dbVar->do(qq{ALTER TABLE sample DROP KEY name_key});
+  debug(localtime()."\t - Table sample: cleaned");
+
   # structural_variation table
   
   my $sv_flag = 0;
@@ -1805,10 +1829,7 @@ sub remove_data {
                  (SELECT structural_variation_id FROM $sv_table WHERE study_id=$study_id)
             });          
   # phenotype_feature                  
-  $dbVar->do(qq{ DELETE from $pf_table WHERE object_id IN 
-                 (SELECT variation_name FROM $sv_table WHERE study_id=$study_id) AND 
-                 study_id=$study_id
-            });          
+  $dbVar->do(qq{ DELETE from $pf_table WHERE study_id=$study_id });
   # failed_structural_variation
   $dbVar->do(qq{ DELETE from $sv_failed WHERE structural_variation_id IN 
                  (SELECT structural_variation_id FROM $sv_table WHERE study_id=$study_id)
