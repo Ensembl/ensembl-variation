@@ -1746,6 +1746,24 @@ sub rejoin_variants {
         }
       }
 
+      # intergenic variation is a bit different
+      # there is only one, and no reference feature to key on
+      # means we have to copy over alleles manually
+      if(my $iv = $vf->{intergenic_variation}) {
+
+        $iv->base_variation_feature($original);
+        
+        if(my $oiv = $original->{intergenic_variation}) {
+            push @{$oiv->{alt_alleles}}, @{$iv->{alt_alleles}};
+            $oiv->{_alleles_by_seq}->{$_->variation_feature_seq} = $_ for @{$oiv->{alt_alleles}};
+        }
+
+        # this probably won't happen, but can't hurt to cover all bases
+        else {
+            $original->{intergenic_variation} = $iv;
+        }
+      }      
+
       add_allele_nums($config, $vf) unless defined($vf->{_allele_nums});
       add_allele_nums($config, $original) unless defined($original->{_allele_nums});
       
@@ -1756,7 +1774,7 @@ sub rejoin_variants {
       }
       
       # reset these keys, they can be recalculated
-      delete $original->{$_} for qw(overlap_consequences _most_severe_consequence intergenic_variation);
+      delete $original->{$_} for qw(overlap_consequences _most_severe_consequence);
     }
     
     # normal
