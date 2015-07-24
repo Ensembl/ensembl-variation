@@ -121,11 +121,6 @@ my $html_title = qq{
     <div>
       <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
     </div>
-    
-    <h2 id="phenotype" style="margin-top:25px">Phenotype/disease/trait data</h2>
-    <div>
-      <span>The list of phenotype/disease/trait association sources by species is available in the page <a href="sources_phenotype_documentation.html">Phenotype sources</a>.</span>
-    </div>
 };
 
 ##############
@@ -229,9 +224,11 @@ foreach my $type (@sql_order) {
   
   my $sql_a   = $sql_list{$type}{'sqla'}{'sql'};
   my $label_a = $sql_list{$type}{'sqla'}{'label'};
+  my $lc_label_a = lc($label_a);
   
   my $sql_b   = $sql_list{$type}{'sqlb'}{'sql'};
   my $label_b = $sql_list{$type}{'sqlb'}{'label'};
+  my $lc_label_b = lc($label_b);
   my $b_type;
 
   foreach my $hostname (@hostnames) {
@@ -347,10 +344,10 @@ foreach my $type (@sql_order) {
     next if ($a_count eq "0" && $b_type ne 'num');
     
     $count_species++;
-    $a_count = round_count($a_count,$lc_type);
-    $b_count = ($b_type eq 'num') ? round_count($b_count,$lc_type) : qq{<ul style="margin-bottom:0px"><li style="margin-top:0px">}.join("</li><li>", split(',',$b_count))."</li></ul>";
-    my $a_p_count = round_count_diff($species_list{$sp}{'p_a'},$lc_type);
-    my $b_p_count = ($b_type eq 'num') ? round_count_diff($species_list{$sp}{'p_b'},$lc_type) : undef;
+    $a_count = round_count($a_count,$lc_label_a);
+    $b_count = ($b_type eq 'num') ? round_count($b_count,$lc_label_b) : qq{<ul style="margin-bottom:0px"><li style="margin-top:0px">}.join("</li><li>", split(',',$b_count))."</li></ul>";
+    my $a_p_count = round_count_diff($species_list{$sp}{'p_a'},$lc_label_a);
+    my $b_p_count = ($b_type eq 'num') ? round_count_diff($species_list{$sp}{'p_b'},$lc_label_b) : undef;
   
     my $b_align = ($b_type eq 'num') ? 'right' : 'left';
     if ($b_type ne 'num') {
@@ -384,7 +381,7 @@ foreach my $type (@sql_order) {
   }
   $html_content .= qq{</table>\n};
 
-  my $h2_style = 'style="margin-top:40px"';
+  my $h2_style = ($html) ? 'style="margin-top:40px"' : '';
   $html .= qq{<h2 id="$lc_type"$h2_style>$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
   $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the variation databases in Ensembl:</p>\n};
@@ -449,7 +446,8 @@ sub get_connection_and_query {
 sub round_count {
   my $count = shift;
   my $type = shift;
-     $type ||= 'variants';
+     $type ||= 'variant';
+     $type .= 's';
   my $symbol = '+';
   
   my $count_label;
@@ -495,8 +493,9 @@ sub round_count {
 
 sub round_count_diff {
   my $count = shift;
-  my $type = 'variants';
-
+  my $type  = shift;
+     $type ||= 'variant';
+     $type .= 's';
   my ($count_label,$colour,$symbol,$label);
 
   if ($count == 0) {
