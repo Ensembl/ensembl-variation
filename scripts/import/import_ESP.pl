@@ -24,13 +24,11 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw/SO_variation_class/;
 use Bio::EnsEMBL::Utils::Sequence qw/reverse_comp/;
 use FileHandle;
 use Getopt::Long;
-
+use Data::Dumper;
 =doc
-
   - Parse variation and variation_feature from VCF file
   - Find co-located variants from dbSNP, if variation class is the same: link ESP variant to co-located variant
   - If alleles from co-located variant cannot be merged create new variant and variation_feature objects
-
 =end
 =cut
 
@@ -376,18 +374,24 @@ sub variation_feature {
       });
       $new_variation->{class_attrib_id} = $class_id;
     } 
-
-    $config->{variation_adaptor}->store($new_variation);
-
+    if (!$config->{test}) {
+      $config->{variation_adaptor}->store($new_variation);
+    } else {
+      print STDERR Dumper($new_variation), "\n";
+    }
     $vf->{variation} = $new_variation;
     $vf->{_source_id} = $config->{source_id};
     $vf->{is_somatic} = 0;
     my $so_term = SO_variation_class($vf->{allele_string}, 1);
     $vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
     $vf->{variation_name} = $vf->{variation}->name;
-    $vf->{variation_id} = $vf->{variation}->{dbID};
-    $vfa->store($vf);
-
+    
+    if (!$config->{test}) {
+      $vf->{variation_id} = $vf->{variation}->{dbID};
+      $vfa->store($vf);
+    } else {
+      print STDERR Dumper($vf), "\n";
+    }
     $data->{variation} = $new_variation;
   } else {
     $data->{variation} = $vf->variation;
@@ -494,7 +498,6 @@ sub population_genotype {
       foreach my $allele (@allele_objs) {
         print STDERR 'A  ', $allele->population->name, ' ', $allele->variation->name, ' ', $allele->variation->dbID, ' ', $allele->allele, ' ', $allele->count, ' ', $allele->frequency, "\n";
       }
-
       $allele_adaptor->store_multiple(\@allele_objs);
     }
 # observed genotypes
