@@ -47,22 +47,29 @@ GetOptions(
   'import_vcf',
   'assign_evidence',
   'create_set',
-  'version=i',
+  'release_version=i',
+  'esp_version=i',
   'assembly=i',
   'help!',
 ) or die "Error: Failed to parse command line arguments\n";
 
 usage() if ($config->{help});
 
-foreach my (qw/vcf_files_dir tmp_dir assembly registry version/) {
+foreach my $param (qw/vcf_files_dir tmp_dir assembly registry release_version esp_version/) {
   die ("Parameter (--$param) is required") unless (defined($config->{$param}));
+}
+
+if ($config->{test}) {
+  print STDERR "Run in test mode\n";
 }
 
 setup_db_connections($config);
 set_ESP_related_parameters($config);
 
-my $fh_variation_ids;
-my $fh_variation_ids = FileHandle->new("$tmp_dir/variation_ids_$assembly\_$version.txt", 'w');
+my $tmp_dir = $config->{tmp_dir};
+my $assembly = $config->{assembly};
+my $release_version = $config->{release_version};
+my $fh_variation_ids = FileHandle->new("$tmp_dir/variation_ids_$assembly\_$release_version.txt", 'w');
 main($config);
 $fh_variation_ids->close();
 
@@ -102,6 +109,7 @@ sub setup_db_connections {
   $config->{attribute_adaptor} = $vdba->get_AttributeAdaptor;
   $config->{population_adaptor} = $vdba->get_PopulationAdaptor;
   $config->{population_gt_adaptor} = $vdba->get_PopulationGenotypeAdaptor;
+  $config->{source_adaptor} = $vdba->get_SourceAdaptor;
   $config->{variation_adaptor} = $vdba->get_VariationAdaptor;
   $config->{variation_adaptor}->db->include_failed_variations(1);
   $config->{variation_set_adaptor} = $vdba->get_VariationSetAdaptor;
@@ -112,32 +120,58 @@ sub setup_db_connections {
 
 sub set_ESP_related_parameters {
   my $config = shift;
-  my $dbh = $config->{dbh};
   my $pa = $config->{population_adaptor};
   my $aa = $pa->fetch_by_name('ESP6500:African_American');
+
+  if (!$aa) {
+    $aa = Bio::EnsEMBL::Variation::Population->new(
+        -name => 'ESP6500:African_American',
+        -display_group_id => 3,
+    );
+    $pa->store($aa);
+    $config->{AA}->{population_id} = $aa->{dbID};
+  } else {
+    $config->{AA}->{population_id} = $aa->dbID();
+  }
+
   my $ea = $pa->fetch_by_name('ESP6500:European_American');
+  if (!$ea) {
+    $ea = Bio::EnsEMBL::Variation::Population->new(
+      -name => 'ESP6500:European_American',
+      -display_group_id => 3,
+    );
+    $pa->store($ea);
+    $config->{EA}->{population_id} = $ea->{dbID};
+  } else {
+    $config->{EA}->{population_id} = $ea->dbID();
+  }
 
-  die ("Couldn't fetch population_id for name ESP6500:African_American") unless (defined($aa));
-  die ("Couldn't fetch population_id for name ESP6500:European_American") unless (defined($ea));
+  $config->{AA}->{population} = $aa;
+  $config->{EA}->{population} = $ea;
 
-  $config->{AA}->{population_id} = $aa->dbID();
-  $config->{EA}->{population_id} = $ea->dbID();
-
-  $config->{AA}->{population}    = $aa;
-  $config->{EA}->{population}    = $ea;
-
-  my $source = 'ESP';
+  my $source_name = 'ESP';
   my $source_id;
-
-  # check existing
-  my $sth = $dbh->prepare(qq{SELECT source_id FROM source WHERE name = ?});
-  $sth->execute($source);
-  $sth->bind_columns(\$source_id);
-  $sth->fetch;
-  $sth->finish;
-  die ("Couldn't fetch source_id for name ESP") unless (defined($source_id));
-  $config->{source_id} = $source_id;
-  $config->{source} = $source;
+  my $source_adaptor = $config->{source_adaptor};
+  my $version = $config->{esp_version}; 
+  my $source = $source_adaptor->fetch_by_name($source_name);
+  if (!$source) {
+    $source = Bio::EnsEMBL::Variation::Source->new(
+      -name => 'ESP',
+      -description => 'Data from NHLBI ESP version v.0.0.30. The goal of the NHLBI GO Exome Sequencing Project is to discover novel genes and mechanisms contributing to heart, lung and blood disorders by sequencing the protein coding regions of the human genome.',
+      -version => $version,
+      -url => 'http://evs.gs.washington.edu/EVS/',
+      -data_types => 'variation',         
+    );
+    $source_adaptor->store($source);
+    $config->{source_id} = $source_id->{dbID};
+  } else {
+    # version update
+    my $source_id = $source->dbID;
+    my $dbh = $config->{dbh};
+    $dbh->do(qq/UPDATE source SET version=$version WHERE source_id=$source_id;/) or die $dbh->errstr;
+    $config->{source_id} = $source_id;
+  } 
+  $config->{source} = $source_name;
 }
 
 sub main {
@@ -570,7 +604,7 @@ sub prepare_update_evidence {
 sub cleanup_old_evidence {
   my $config = shift;
   my $tmp_dir = $config->{tmp_dir};
-  my $version = $config->{version};
+  my $version = $config->{release_version};
 
   my $dbh = $config->{dbh};
 
@@ -624,7 +658,7 @@ sub cleanup_old_evidence {
 
 sub update_new_evidence {
   my $config = shift;
-  my $version = $config->{version};
+  my $version = $config->{release_version};
   my $tmp_dir = $config->{tmp_dir};
 
   my $dbh = $config->{dbh};
