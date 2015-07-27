@@ -126,6 +126,7 @@ sub set_ESP_related_parameters {
   if (!$aa) {
     $aa = Bio::EnsEMBL::Variation::Population->new(
         -name => 'ESP6500:African_American',
+        -display => 'UNDISPLAYABLE',
         -display_group_id => 3,
     );
     $pa->store($aa);
@@ -138,6 +139,7 @@ sub set_ESP_related_parameters {
   if (!$ea) {
     $ea = Bio::EnsEMBL::Variation::Population->new(
       -name => 'ESP6500:European_American',
+      -display => 'UNDISPLAYABLE',
       -display_group_id => 3,
     );
     $pa->store($ea);
