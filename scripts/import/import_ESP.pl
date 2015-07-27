@@ -140,7 +140,6 @@ sub set_ESP_related_parameters {
   die ("Couldn't fetch source_id for name ESP") unless (defined($source_id));
   $config->{source_id} = $source_id;
   $config->{source} = $source;
-
 }
 
 sub main {
@@ -228,7 +227,9 @@ sub import_vcf {
       $data->{vf}        = variation_feature($config, $data);
       
       if ($data->{vf}) {
-        population_genotype($config, $data);
+        if (!$config->{test}) {
+          population_genotype($config, $data);
+        }
       }
     }
   }
@@ -325,22 +326,21 @@ sub variation_feature {
           push @merged_alleles, @sorted_alleles;
           $merged_allele_string = join('/', @merged_alleles);
           if ($merged_allele_string ne $existing_allele_string) {
-            
             print STDERR "Merge alleles for $existing_name from $existing_allele_string to $merged_allele_string\n";
-            my $sth = $dbh->prepare(qq{
-              UPDATE variation_feature
-              SET allele_string = ?
-              WHERE variation_feature_id = ?;
-            });
-            $sth->execute($merged_allele_string, $existing_vf->dbID);
+            if (!$config->{test}) {
+              my $sth = $dbh->prepare(qq{
+                UPDATE variation_feature
+                SET allele_string = ?
+                WHERE variation_feature_id = ?;
+              });
+              $sth->execute($merged_allele_string, $existing_vf->dbID);
+            }
             $existing_vf->{allele_string} = $merged_allele_string;
-
           }
           # link existing variant to ESP
           print $fh_variation_ids $existing_vf->get_Variation_dbID(), "\n"; 
           $count_match++;
           $vf = $existing_vf;
-
         }
       } # Allele strings match: 
       print $fh_variation_ids $existing_vf->get_Variation_dbID(), "\n"; 
@@ -365,7 +365,6 @@ sub variation_feature {
           $count++;
           $variation_name = join('_', @components) . '_' . $count;
         }
-       
       }
       my $so_term = SO_variation_class($vf->allele_string, 1);
       my $class_id = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
@@ -377,6 +376,7 @@ sub variation_feature {
       });
       $new_variation->{class_attrib_id} = $class_id;
     } 
+
     $config->{variation_adaptor}->store($new_variation);
 
     $vf->{variation} = $new_variation;
@@ -385,18 +385,13 @@ sub variation_feature {
     my $so_term = SO_variation_class($vf->{allele_string}, 1);
     $vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
     $vf->{variation_name} = $vf->{variation}->name;
+    $vf->{variation_id} = $vf->{variation}->{dbID};
     $vfa->store($vf);
+
     $data->{variation} = $new_variation;
   } else {
     $data->{variation} = $vf->variation;
   }
-  #$data->{variation} = $new_variation;
-#  my $test_variation = $data->{variation};
-#  unless ($test_variation->dbID) {
-#    print STDERR "count_match $count_match\n";
-#    print STDERR 'DEBUG ', $test_variation->name, "\n";
-#    print STDERR 'DEBUG ', $test_variation->dbID, "\n";
-#  }
 
   $data->{vf} = $vf;
   return $vf;
