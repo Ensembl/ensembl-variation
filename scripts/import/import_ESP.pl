@@ -711,8 +711,18 @@ sub create_set {
 
   my $vsa = $config->{variation_set_adaptor};
   my $set = $vsa->fetch_by_name('ESP_6500');
-  my $set_id = $set->dbID;
+  my $set_id = '';
 
+  if (!$set) {
+    $dbh->do(qq{INSERT INTO variation_set(name, description, short_name_attrib_id) values('ESP_6500', 'Variants from the NHLBI Exome Sequencing Project (investigating heart, lung and blood disorders)', 344)});
+    my $sth = $dbh->prepare(qq{SELECT variation_set_id FROM variation_set WHERE name = 'ESP_6500'});
+    $sth->execute();
+    $sth->bind_columns(\$set_id);
+    $sth->fetch;
+    $sth->finish;
+  } else {
+    $set_id = $set->dbID;
+  }
   die "Variation set id for ESP_6500 is not defined." unless defined($set_id);
 
   my $afr_population_id = $config->{AA}->{population_id};
