@@ -1,3 +1,18 @@
+#!/usr/bin/env perl
+
+# Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 use strict;
 use warnings;
 
@@ -6,8 +21,9 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VEP qw/parse_line get_all_consequences/;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw/SO_variation_class/;
-
 use Bio::EnsEMBL::Utils::Sequence qw/reverse_comp/;
+use FileHandle;
+use Getopt::Long;
 
 =doc
 
@@ -18,12 +34,7 @@ use Bio::EnsEMBL::Utils::Sequence qw/reverse_comp/;
 =end
 =cut
 
-
-use FileHandle;
-use Getopt::Long;
-
 my $config = {};
-
 GetOptions(
   $config,
   'tmp_dir=s',
@@ -38,43 +49,30 @@ GetOptions(
   'import_vcf',
   'assign_evidence',
   'create_set',
+  'version=i',
+  'assembly=i',
   'help!',
 ) or die "Error: Failed to parse command line arguments\n";
 
-$config->{vcf_files_dir} = '';
-$config->{tmp_dir} = '';
-$config->{assembly} = 38;
-$config->{registry} = '';
-$config->{source} = 'ESP';
-$config->{source_id} = 7;
-#$config->{test} = 0;
-#$config->{assign_evidence} = 1;
-$config->{create_set} = 1;
-$config->{version} = 79;
+usage() if ($config->{help});
 
-#$config->{dbname} = 'homo_sapiens_variation_79_37';
-#$config->{user} = 'ensro';
-#$config->{host} = 'genebuild13';
-#$config->{pass} = '';
-#$config->{port} = 3306;
+foreach my (qw/vcf_files_dir tmp_dir assembly registry version/) {
+  die ("Parameter (--$param) is required") unless (defined($config->{$param}));
+}
 
 setup_db_connections($config);
 set_ESP_related_parameters($config);
 
-
 my $fh_variation_ids;
-#my $fh_variation_ids = FileHandle->new('/lustre/scratch109/ensembl/at7/ESP_79/variation_ids_38_2.txt', 'w');
-#main($config);
-#$fh_variation_ids->close();
+my $fh_variation_ids = FileHandle->new("$tmp_dir/variation_ids_$assembly\_$version.txt", 'w');
+main($config);
+$fh_variation_ids->close();
 
-
-#my $fh_variation_ids;
-
-#if ($config->{assign_evidence}) {
-#  prepare_update_evidence($config);
-#  cleanup_old_evidence($config);
-#  update_new_evidence($config);
-#}
+if ($config->{assign_evidence}) {
+  prepare_update_evidence($config);
+  cleanup_old_evidence($config);
+  update_new_evidence($config);
+}
 
 if ($config->{create_set}) {
   create_set($config)
@@ -116,9 +114,7 @@ sub setup_db_connections {
 
 sub set_ESP_related_parameters {
   my $config = shift;
-
   my $dbh = $config->{dbh};
-
   my $pa = $config->{population_adaptor};
   my $aa = $pa->fetch_by_name('ESP6500:African_American');
   my $ea = $pa->fetch_by_name('ESP6500:European_American');
@@ -226,9 +222,6 @@ sub import_vcf {
         ($data->{tmp_vf}) = @{parse_line($config, $line_38)};
         $data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$data->{tmp_vf}->{chr}};
 
-
-      
-
       } # end changes for new choordinates
 
       $data->{variation} = variation($config, $data);
@@ -237,9 +230,7 @@ sub import_vcf {
       if ($data->{vf}) {
         population_genotype($config, $data);
       }
-
     }
-
   }
   $fh->close();
 }
@@ -324,7 +315,6 @@ sub variation_feature {
         my $existing_ref = shift @existing_alleles;
 
         if ($new_ref eq $existing_ref) {
-
           my $merged_hash = {};
           foreach my $allele (@new_alleles, @existing_alleles) {
             $merged_hash->{$allele} = 1;
@@ -356,7 +346,6 @@ sub variation_feature {
       print $fh_variation_ids $existing_vf->get_Variation_dbID(), "\n"; 
       $count_match++;
       $vf = $existing_vf;
-      
     }
   }
 
@@ -387,14 +376,10 @@ sub variation_feature {
           is_somatic => 0,
       });
       $new_variation->{class_attrib_id} = $class_id;
-
     } 
     $config->{variation_adaptor}->store($new_variation);
 
-
-
     $vf->{variation} = $new_variation;
-
     $vf->{_source_id} = $config->{source_id};
     $vf->{is_somatic} = 0;
     my $so_term = SO_variation_class($vf->{allele_string}, 1);
@@ -412,8 +397,6 @@ sub variation_feature {
 #    print STDERR 'DEBUG ', $test_variation->name, "\n";
 #    print STDERR 'DEBUG ', $test_variation->dbID, "\n";
 #  }
-
-
 
   $data->{vf} = $vf;
   return $vf;
