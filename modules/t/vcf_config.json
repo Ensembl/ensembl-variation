@@ -10,7 +10,10 @@
       "sample_prefix": "1000GENOMES:phase_1:",
       "source_name": "1000genomes",
       "source_version": "20141202",
-      "source_url": "http://www.1000genomes.org"
+      "source_url": "http://www.1000genomes.org",
+      "created": "1432745640000",
+      "updated": "1432745640000",
+      "is_remapped": "1"
     }
   ]
 }
