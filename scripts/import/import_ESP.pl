@@ -65,6 +65,7 @@ if ($config->{test}) {
 
 setup_db_connections($config);
 set_ESP_related_parameters($config);
+clear_old_data($config);
 
 my $tmp_dir = $config->{tmp_dir};
 my $assembly = $config->{assembly};
@@ -175,6 +176,20 @@ sub set_ESP_related_parameters {
   } 
   $config->{source} = $source_name;
 }
+
+sub clear_old_data {
+  my $config = shift;
+  my $dbh = $config->{dbh};
+  my $source_id = $config->{source_id};
+  $dbh->do(qq/DELETE FROM variation WHERE source_id=$source_id;/) or die  $dbh->errstr;
+  $dbh->do(qq/DELETE FROM variation_feature WHERE source_id=$source_id;/) or die  $dbh->errstr;
+
+  my $EA_population_id = $config->{EA}->{population_id};
+  my $AA_population_id = $config->{AA}->{population_id};
+  $dbh->do(qq/DELETE FROM allele WHERE population_id=$EA_population_id OR population_id=$AA_population_id;/) or die  $dbh->errstr;
+  $dbh->do(qq/DELETE FROM population_genotype WHERE population_id=$EA_population_id OR population_id=$AA_population_id;/) or die  $dbh->errstr;
+}
+
 
 sub main {
   my $config = shift;
