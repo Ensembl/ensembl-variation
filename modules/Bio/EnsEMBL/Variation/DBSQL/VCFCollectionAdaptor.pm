@@ -230,6 +230,9 @@ sub new {
       -assembly  => $hash->{assembly} || undef,
       -source => $source || undef,
       -strict_name_match => $hash->{strict_name_match},
+      -created =>$hash->{created} || undef,
+      -updated =>$hash->{updated} || undef,
+      -is_remapped => $hash->{is_remapped} ||0,
       -adaptor => $self,
     );
     
