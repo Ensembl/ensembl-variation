@@ -17,6 +17,8 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Registry;
+Bio::EnsEMBL::Registry->set_disconnect_when_inactive();
+Bio::EnsEMBL::Registry->set_reconnect_when_lost();
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VEP qw/parse_line get_all_consequences/;
