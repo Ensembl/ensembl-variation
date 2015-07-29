@@ -545,7 +545,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
   'label' => 'Start lost',
   'rank' => '7',
-  'impact' => 'LOW',
+  'impact' => 'HIGH',
   'display_term' => 'NON_SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }

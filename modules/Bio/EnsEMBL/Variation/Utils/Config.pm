@@ -506,7 +506,7 @@ our @OVERLAP_CONSEQUENCES = (
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
         description => 'A codon variant that changes at least one base of the canonical start codon',
         label => 'Start lost',
-        impact => 'LOW',
+        impact => 'HIGH',
         include => {
           coding => 1,
         }
