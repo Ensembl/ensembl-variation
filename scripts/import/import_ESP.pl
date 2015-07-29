@@ -18,7 +18,6 @@ use warnings;
 
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->set_disconnect_when_inactive();
-Bio::EnsEMBL::Registry->set_reconnect_when_lost();
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VEP qw/parse_line get_all_consequences/;
@@ -93,6 +92,8 @@ sub setup_db_connections {
   my ($dbh, $dbc, $vdba);
   if ($config->{registry}) {
     $registry->load_all($config->{registry});
+#    $registry->set_disconnect_when_inactive();
+#    $registry->set_reconnect_when_lost();
     $vdba = $registry->get_DBAdaptor($species, 'variation');
   } else {
     $vdba = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
@@ -407,6 +408,23 @@ sub variation_feature {
       my $variation_name = $new_variation->{name};
       if ($variation_name =~ /^rs/) {
         $variation_name = $data->{tmp_id};
+        # check that tmp_id is not already stored in database
+        my $is_new = 0;
+        while (!$is_new) {
+          my $new_var = $config->{variation_adaptor}->fetch_by_name($variation_name); 
+          if ($new_var) {
+            my @components = split('_', $variation_name); # TMP_ESP_Chrom_start_end
+            if (scalar @components == 5) {
+              $variation_name = "$variation_name\_2";
+            } else {
+              my $count = pop @components;
+              $count++;
+              $variation_name = join('_', @components) . '_' . $count;
+            }
+          } else {
+            $is_new = 1;
+          }
+        }
       } else {
         my @components = split('_', $variation_name); # TMP_ESP_Chrom_start_end
         if (scalar @components == 5) {
