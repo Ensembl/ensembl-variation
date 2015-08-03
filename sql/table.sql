@@ -2082,4 +2082,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (16,'F
 INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variant can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variant maps to more than one genomic location');
-
+INSERT INTO failed_description (failed_description_id,description) VALUES (20,'Variant at first base in sequence');
