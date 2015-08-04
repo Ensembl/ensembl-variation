@@ -330,9 +330,9 @@ sub fetch_all_somatic {
 sub fetch_all_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
-    # by default, filter outsomatic mutations
+    # by default, filter out somatic mutations
     my $somatic_constraint = 'vf.somatic = 0';
-    
+
     if ($constraint) {
         $constraint .= " AND $somatic_constraint";
     }
@@ -1849,7 +1849,7 @@ sub _parse_hgvs_protein_position{
   my ($description, $reference, $transcript ) = @_;
 
   ## only supporting the parsing of hgvs substitutions [eg. Met213Ile]
-  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?)$/; 
+  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
 
   throw("Could not parse HGVS protein notation " . $reference . ":p.". $description ) unless $from and $pos and $to; 
 
@@ -1865,6 +1865,24 @@ sub _parse_hgvs_protein_position{
   my $start  = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
   my $end    = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
 
+  ## find reference sequence 
+  my $slice = $transcript->slice();
+
+  ## make a small slice for sequence look-up
+  my $from_slice = Bio::EnsEMBL::Slice->new(-coord_system => $slice->coord_system(),
+                                            -start => $coords[0]->start(),
+                                            -end => $coords[0]->start()+2,
+                                            -strand => $slice->strand(),
+                                            -seq_region_name => $slice->seq_region_name,
+                                            -seq_region_length => 3,
+                                            -adaptor => $slice->adaptor);
+
+  my $from_codon_ref = $from_slice->seq();
+
+  throw ("Unable to find the genomic reference sequence for protein $reference") unless defined $from_codon_ref; 
+
+  ## correct for strand
+  reverse_comp(\$from_codon_ref) if $strand <0;
 
   # get correct codon table 
   my $attrib = $transcript->slice->get_all_Attributes('codon_table')->[0]; 
@@ -1872,30 +1890,41 @@ sub _parse_hgvs_protein_position{
   # default to the vertebrate codon table which is denoted as 1 
   my $codon_table = Bio::Tools::CodonTable->new( -id => ($attrib ? $attrib->value : 1)); 
 
-  # rev-translate 
-  my @from_codons = $codon_table->revtranslate($from); 
+  # check genomic codon is compatible with input HGVS
+  my $check_prot   = $codon_table->translate($from_codon_ref);
+  my @from_codons;
+  if ($check_prot eq $from){
+    push @from_codons, $from_codon_ref ;
+  }
+  else{
+    # rev-translate input ref sequence if the genome sequence does not match
+    @from_codons   = $codon_table->revtranslate($from);
+  }
+
+
+  # rev-translate alt sequence
   my @to_codons   = $codon_table->revtranslate($to); 
 
   # now iterate over all possible mutation paths 
   my %paths; 
+  foreach my $from_codon (@from_codons) {
+    foreach my $to_codon (@to_codons) { 
 
-  foreach my $f(@from_codons) { 
-      foreach my $t(@to_codons) { 
-          my $key = $f.'_'.$t; 
-
-          for my $i(0..2) { 
-              my ($a, $b) = (substr($f, $i, 1), substr($t, $i, 1)); 
-              next if $a eq $b; 
-              push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b); 
-          } 
-
-          # non consecutive paths 
-          if(scalar @{$paths{$key}} == 2 and $paths{$key}->[0] =~ /^0/ and $paths{$key}->[1] =~ /^2/) { 
-              splice(@{$paths{$key}}, 1, 0, '1_'.substr($f, 1, 1).'/'.substr($f, 1, 1)); 
-          } 
-
-          $paths{$key} = join ",", @{$paths{$key}}; 
+      my $key = $from_codon .'_'. $to_codon;
+      for my $i(0..2) { 
+       
+        my ($a, $b) = (substr($from_codon, $i, 1), substr($to_codon, $i, 1)); 
+        next if uc($a) eq uc($b); 
+        push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b); 
       } 
+
+      # non consecutive paths 
+      if(scalar @{$paths{$key}} == 2 and $paths{$key}->[0] =~ /^0/ and $paths{$key}->[1] =~ /^2/) { 
+         splice(@{$paths{$key}}, 1, 0, '1_'.substr($from_codon, 1, 1).'/'.substr($from_codon, 1, 1)); 
+      } 
+
+      $paths{$key} = join ",", @{$paths{$key}}; 
+    }
   } 
 
   # get shortest dist and best paths with that dist 
