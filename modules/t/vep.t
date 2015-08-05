@@ -176,7 +176,6 @@ $config = copy_config($base_config, { regulatory => 1 });
 ($vf) = @{parse_line($config, '21 25560805 25568206 DEL +')};
 $cons = get_all_consequences($config, [$vf]);
 ok((grep {$_->{Feature} eq 'ENSR00000612089'} @$cons), "regulatory - SV overlap");
-exit(0);
 
 ## input formats
 
