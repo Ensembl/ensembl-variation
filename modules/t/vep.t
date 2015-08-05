@@ -171,6 +171,13 @@ $cons = get_all_consequences($config, [$vf]);
 ok((grep {$_->{Extra}->{BIOTYPE} && $_->{Extra}->{BIOTYPE} eq 'promoter'} @$cons), "regulatory - type");
 ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.017} @$cons), "regulatory - motif score");
 
+# regulatory SV
+$config = copy_config($base_config, { regulatory => 1 });
+($vf) = @{parse_line($config, '21 25560805 25568206 DEL +')};
+$cons = get_all_consequences($config, [$vf]);
+ok((grep {$_->{Feature} eq 'ENSR00000612089'} @$cons), "regulatory - SV overlap");
+exit(0);
+
 ## input formats
 
 # ensembl SV
