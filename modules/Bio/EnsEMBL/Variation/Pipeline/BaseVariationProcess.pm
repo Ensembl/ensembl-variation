@@ -108,6 +108,8 @@ sub _load_registry {
     my ($self) = @_;
     
     my $reg_file = $self->required_param('ensembl_registry');
+
+    die("ERROR: Registry file $reg_file not found\n") unless -e $reg_file;
     
     Bio::EnsEMBL::Registry->load_all($reg_file, 0, 1);
     
