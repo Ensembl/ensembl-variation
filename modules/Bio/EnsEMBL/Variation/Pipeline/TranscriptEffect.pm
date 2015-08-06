@@ -104,14 +104,14 @@ sub run {
         
             ## populate tables for website index building
 
-            $genelu_ins_sth->execute( $vf->variation->dbID(), $transcript->get_Gene->display_xref->display_id ) 
+            my $var_id = $vf->get_Variation_dbID();
+
+            $genelu_ins_sth->execute( $var_id, $transcript->get_Gene->display_xref->display_id ) 
                 if defined $transcript->get_Gene->display_xref();
 
             for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
 
                 next unless defined $allele->hgvs_transcript();
-
-		my $var_id = $vf->get_Variation_dbID();
 
                 my $hgvs_transcript = (split/\:/, $allele->hgvs_transcript())[1];
                 my $hgvs_protein    = (split/\:/, $allele->hgvs_protein())[1];
