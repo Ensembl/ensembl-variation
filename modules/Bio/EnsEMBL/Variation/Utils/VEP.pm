@@ -1487,8 +1487,8 @@ sub vf_list_to_cons {
                 # and process them into VCF-compatible string
                 my $string = 'CSQ=';
                 
-                foreach my $line(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
-                    
+                foreach my $line_hash(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
+
                     # use the field list (can be user-defined by setting --fields)
                     for my $col(@{$config->{fields}}) {
                         
@@ -1496,7 +1496,7 @@ sub vf_list_to_cons {
                         next if $col eq 'Uploaded_variation' or $col eq 'Location' or $col eq 'Extra';
                         
                         # search for data in main line hash as well as extra field
-                        my $data = defined $line->{$col} ? $line->{$col} : $line->{Extra}->{$col};
+                        my $data = defined $line_hash->{$col} ? $line_hash->{$col} : $line_hash->{Extra}->{$col};
                         reverse_comp(\$data) if $vf->strand < 0 and $col eq 'Allele' and $config->{format} ne 'vcf';
                         
                         # "-" means null for everything except the Allele field (confusing...)
