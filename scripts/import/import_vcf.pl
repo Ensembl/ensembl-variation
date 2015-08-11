@@ -2734,6 +2734,9 @@ sub import_tmp_file{
 			);
 			
 			my @columns = $config->{$adaptors{$table}.'_adaptor'}->_write_columns;
+
+			# remove leading column e.g. c.sample_id
+			@columns = map {s/^.+\.//; $_} @columns;
 			
 			load($config->{dbVar},($table, @columns));
 		}
