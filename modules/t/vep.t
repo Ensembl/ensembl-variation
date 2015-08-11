@@ -256,6 +256,21 @@ $config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /21\s+25606454\s+test\s+G\s+./, "vcf format - non variant");
 
+# vcf weird "*" type
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25606454 test G C,* . . .')};
+is($vf->allele_string, 'G/C', 'vcf format - *-type 1');
+
+$config = copy_config($base_config);
+($vf) = @{parse_line($config, '21 25606454 test GC G,* . . .')};
+is($vf->allele_string, 'C/-', 'vcf format - *-type 1 indel');
+
+# this type is produced by GATK, we have to force VEP to parse it as VCF as it's not in the standard
+$config = copy_config($base_config, {format => 'vcf'});
+($vf) = @{parse_line($config, '21 25606454 test G C,<DEL:*> . . .')};
+is($vf->allele_string, 'G/C', 'vcf format - *-type 2');
+
+
 # use minimal to reduce allele strings
 ($vf) = @{parse_line($config, '21 25606454 test GA GT')};
 is($vf->allele_string, 'GA/GT', "minimal - dont use");
