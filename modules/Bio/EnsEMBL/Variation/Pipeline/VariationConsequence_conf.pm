@@ -258,7 +258,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [{}],
                 -hive_capacity  => 1,
-                -rc_name        => 'highmem',
+                -rc_name        => 'default',
                 -wait_for       => ( $self->o('run_transcript_effect') ? [ 'update_variation_feature' ] : [] ),
                 -flow_into      => {
                     1 => [ 'finish_variation_class' ],
