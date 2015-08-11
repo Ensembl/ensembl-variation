@@ -79,41 +79,28 @@ sub fetch_input {
     $dbc->do(qq{ALTER TABLE $temp_var_table DISABLE KEYS});
     $dbc->do(qq{ALTER TABLE $temp_var_feat_table DISABLE KEYS});
 
-    # now get an ordered list of all the variation_ids
-        
-    my $get_var_ids_sth = $dbc->prepare(qq{
-        SELECT variation_id FROM variation ORDER BY variation_id
+    # now get bins of variation_ids to update
+
+    my $get_max_var_id_sth = $dbc->prepare(qq{
+        SELECT max(variation_id) FROM variation
     });
 
-    $get_var_ids_sth->execute;
+    $get_max_var_id_sth->execute;
+    my $max = $get_max_var_id_sth->fetchall_arrayref();
 
-    my @var_ids;
-
-    while (my ($var_id) = $get_var_ids_sth->fetchrow_array) {
-        push @var_ids, $var_id;
-    }
-
-    # and split them up into as many chunks as requested
-
-    my $num_vars = scalar @var_ids;
-
-    my $chunk_size = ceil($num_vars / $num_chunks);
+    my $chunk_size = ceil($max->[0]->[0] / $num_chunks);
 
     my @output_ids;
-
-    while (@var_ids) {
-
-        my $start = $var_ids[0];
-        my $stop  = $chunk_size <= $#var_ids ? $var_ids[$chunk_size - 1] : $var_ids[$#var_ids];
-
-        splice(@var_ids, 0, $chunk_size);
-
-        push @output_ids, {
+    my $start = 1;    
+    while ($start < $max->[0]->[0]){
+      my $stop =  $start + $chunk_size -1;
+      push @output_ids, {
             variation_id_start  => $start,
             variation_id_stop   => $stop,
             temp_var_table      => $temp_var_table,
             temp_var_feat_table => $temp_var_feat_table,
         };
+      $start = $stop + 1;
     }
 
     $self->param('chunk_output_ids', \@output_ids);
