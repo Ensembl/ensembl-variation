@@ -374,7 +374,7 @@ sub detect_format {
         $data[0] =~ /(chr)?\w+/ &&
         $data[1] =~ /^\d+$/ &&
         $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+$|^(\<[\w]+\>)$/i
+        $data[4] && $data[4] =~ /^([\.ACGTN\-\*]+\,?)+$|^(\<[\w]+\>)$/i
     ) {
         return 'vcf';
     }
@@ -515,7 +515,7 @@ sub parse_vcf {
     $end += (length($ref) - 1);
     
     # structural variation
-    if((defined($data[7]) && $data[7] =~ /SVTYPE/) || $alt =~ /\<|\[|\]|\>/) {
+    if((defined($data[7]) && $data[7] =~ /SVTYPE/) || $alt =~ /[\<|\[]^\*[\]\>]/) {
         
         # parse INFO field
         my %info = ();
@@ -602,10 +602,11 @@ sub parse_vcf {
     
     # normal variation
     else {
+
         # find out if any of the alt alleles make this an insertion or a deletion
         my ($is_indel, $is_sub, $ins_count, $total_count);
         foreach my $alt_allele(split /\,/, $alt) {
-            $is_indel = 1 if $alt_allele =~ /D|I/;
+            $is_indel = 1 if $alt_allele =~ /^[DI]/;
             $is_indel = 1 if length($alt_allele) != length($ref);
             $is_sub = 1 if length($alt_allele) == length($ref);
             $ins_count++ if length($alt_allele) > length($ref);
@@ -618,14 +619,15 @@ sub parse_vcf {
                 my @alts;
                 
                 # find out if all the alts start with the same base
-                my %first_bases = map {substr($_, 0, 1) => 1} ($ref, split(/\,/, $alt));
+                # ignore "*"-types
+                my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} ($ref, split(/\,/, $alt));
                 
                 if(scalar keys %first_bases == 1) {
                     $ref = substr($ref, 1) || '-';
                     $start++;
                 
                     foreach my $alt_allele(split /\,/, $alt) {
-                        $alt_allele = substr($alt_allele, 1);
+                        $alt_allele = substr($alt_allele, 1) unless $alt_allele =~ /\*/;
                         $alt_allele = '-' if $alt_allele eq '';
                         push @alts, $alt_allele;
                     }
@@ -655,6 +657,15 @@ sub parse_vcf {
                 $start++;
             }
         }
+
+        # remove * alleles
+        # these indicate an allele is not present, often due to an upstream deletion
+        # take a backup though, as they may be present in an individual's genotype
+        my $original_alt = $alt;
+        if($alt =~ /\*/) {
+            $alt = join('/', grep {!/\*/} split('/', $alt));
+            $non_variant = 1 unless $alt;
+        }
         
         # create VF object
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
@@ -673,7 +684,7 @@ sub parse_vcf {
         
         # individuals?
         if(defined($config->{individual})) {
-            my @alleles = split /\//, $ref.'/'.$alt;
+            my @alleles = split /\//, $ref.'/'.$original_alt;
             
             my @return;
             
@@ -693,8 +704,8 @@ sub parse_vcf {
                 my $vf_copy = { %$vf };
                 bless $vf_copy, ref($vf);
                 
-                # get non-refs
-                my %non_ref = map {$_ => 1} grep {$_ ne $ref} @bits;
+                # get non-refs, remembering to exclude "*"-types
+                my %non_ref = map {$_ => 1} grep {$_ ne $ref && $_ !~ /\*/} @bits;
                 
                 # construct allele_string
                 if(scalar keys %non_ref) {
