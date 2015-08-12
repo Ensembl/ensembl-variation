@@ -64,6 +64,7 @@ my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine",
                      "rattus_norvegicus"=>  [ "rattus norvegicus", "rat"],
 		     "sus_scrofa"      =>   [ "sus scrofa", "pig", "porcine" ],
 		     "ovis_aries"      =>   [ "ovis aries", "sheep", "ovine"],
+                     "equus_caballus"  =>   [ "equus caballus", "horse", "equine"],
     );
 
 our $species_string = join "|", @{$check_species{$species}} if defined $check_species{$species};
