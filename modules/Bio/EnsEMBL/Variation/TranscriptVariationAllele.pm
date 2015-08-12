@@ -833,7 +833,7 @@ sub _create_hgvs_tva{
     my $ref_allele =  $tv->get_reference_TranscriptVariationAllele->variation_feature_seq();
     my $alt_allele =  $self->variation_feature_seq();
     my $var_class  =  $vf->var_class();
-
+    $var_class  =~ s/somatic_//;
 
     ##  only check insertions & deletions & don't move beyond transcript
     if( ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&  
