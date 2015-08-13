@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$help);
+my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$skip_name,$help);
 my ($set_id,$set_name,$set_description);
 
 ## EG options
@@ -44,13 +44,14 @@ my ($site, $etype);
 usage() if (!scalar(@ARGV));
  
 GetOptions(
-     'v=s'     => \$e_version,
-     'o=s'     => \$html_file,
-     'help!'   => \$help,
-     'hlist=s' => \$hlist,
-     'phost=s' => \$phost,
-     'site=s'  => \$site,
-     'etype=s' => \$etype
+     'v=s'        => \$e_version,
+     'o=s'        => \$html_file,
+     'help!'      => \$help,
+     'hlist=s'    => \$hlist,
+     'phost=s'    => \$phost,
+     'site=s'     => \$site,
+     'skip_name!' => \$skip_name, 
+     'etype=s'    => \$etype
 );
 
 if (!$e_version) {
@@ -130,6 +131,10 @@ my $html_header = q{
 <div>
 };
 
+
+#############
+### Title ###
+#############
 my $html_title = qq{
   <div style="float:left;width:75%">
     <h1 style="margin-top:15px">Ensembl Variation - Phenotype Sources Documentation</h1>
@@ -201,11 +206,15 @@ foreach my $hostname (@hostnames) {
     print STDERR "\n";
     
     # Get species display name
-    my $core_dbname = $dbname;
-       $core_dbname =~ s/variation/core/i;
-    my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
-    my $display_name = $sth_core->fetchrow_array;  
-       $display_name =~ s/saccharomyces/S\./i;
+    my $display_name = $s_name;
+    
+    if (!$skip_name) {
+      my $core_dbname = $dbname;
+         $core_dbname =~ s/variation/core/i;
+      my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
+      $display_name = $sth_core->fetchrow_array;  
+      $display_name =~ s/saccharomyces/S\./i;
+    }
     
     if ($top_species{$s_name}) {
       $top_display{$display_name} = 1;
