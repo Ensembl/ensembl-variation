@@ -852,6 +852,8 @@ sub usage {
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -skip_name      Flag to avoid the connection to the Core databases (use to retrieve the species display name, e.g. Human).
+                    If the flag is used, the species name displayed will be the scientific name (e.g. Homo_sapiens).
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";
