@@ -85,6 +85,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 my %study_to_skip =  ( 'nstd8'  => 1, # Human & chimp
                        'nstd9'  => 1, # Chimp
                        'nstd82' => 1, # Several monkey species
+                       'nstd95' => 1, # Mus musculus domesticus
                      );
 
 my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
@@ -830,7 +831,7 @@ sub structural_variation_sample {
       my $subject = $row->[1];
       next if ($sample eq  '' || $subject eq '');
 
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",individual_id FROM individual WHERE name='$subject'});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
     }
   }
   # Create individual entries (not for mouse)
@@ -855,7 +856,7 @@ sub structural_variation_sample {
       my $subject = $row->[1];
       next if ($sample eq  '' || $subject eq '');
 
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, individual_id FROM individual WHERE name='$subject'});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
     }
   }
 
@@ -1566,22 +1567,23 @@ sub post_processing_sample {
   
   # Sample
   my $sth = $dbVar->prepare(qq{ SELECT s.sample_id, s.description, count(DISTINCT sv.study_id) c 
-                                FROM $sv_table sv, sample s, $svs_table svs
+                                FROM $sv_table sv, $svs_table svs, sample s
                                 WHERE sv.structural_variation_id=svs.structural_variation_id AND s.sample_id=svs.sample_id
                                 GROUP BY svs.sample_id HAVING c>1
                               });
   $sth->execute();
   while (my @res = ($sth->fetchrow_array)) {
     if ($res[1] =~ /^(Sample|Subject) from the DGVa study/) {
-      $stmt = qq{UPDATE sample SET description='Sample from several DGVa studies' WHERE sample_id=$res[0]};
+      $stmt = qq{UPDATE sample SET description='Sample from several DGVa studies', study_id=null WHERE sample_id=$res[0]};
       $dbVar->do($stmt);
     }
   }
   $sth->finish;
 
   # Individual
+  my $type = ($species =~ /mouse|mus/i) ? 'Strain' : 'Subject';
   $sth = $dbVar->prepare(qq{ SELECT i.individual_id, i.description, count(DISTINCT sv.study_id) c 
-                                FROM $sv_table sv, sample s, individual i, $svs_table svs
+                                FROM $sv_table sv, individual i, $svs_table svs, sample s
                                 WHERE sv.structural_variation_id=svs.structural_variation_id AND s.sample_id=svs.sample_id
                                   AND s.individual_id=i.individual_id
                                 GROUP BY i.individual_id HAVING c>1
@@ -1589,28 +1591,11 @@ sub post_processing_sample {
   $sth->execute();
   while (my @res = ($sth->fetchrow_array)) {
     if ($res[1] =~ /^(Sample|Subject) from the DGVa study/) {
-      $stmt = qq{UPDATE individual SET description='Subject from several DGVa studies' WHERE individual_id=$res[0]};
+      $stmt = qq{UPDATE individual SET description='$type from several DGVa studies' WHERE individual_id=$res[0]};
       $dbVar->do($stmt);
     }
   }
   $sth->finish;
-  
-  # Strain
-  if ($species =~ /mouse|mus/i) {
-    my $sth2 = $dbVar->prepare(qq{ SELECT i.individual_id, i.description, count(DISTINCT sv.study_id) c 
-                                   FROM $sv_table sv, individual i, $svs_table svs
-                                   WHERE sv.structural_variation_id=svs.structural_variation_id
-                                     AND i.individual_id=svs.strain_id AND svs.strain_id is not NULL  
-                                   GROUP BY svs.strain_id HAVING c>1
-                                 });
-    $sth2->execute();
-    while (my @res = ($sth2->fetchrow_array)) {
-      if ($res[1] =~ /^Strain from the DGVa study/) {
-        $stmt = qq{UPDATE individual SET description='Strain from several DGVa studies' WHERE individual_id=$res[0]};
-        $dbVar->do($stmt);
-      }
-    }
-  }
 }
 
 
@@ -1772,7 +1757,7 @@ sub cleanup {
   # structural_variation table
   
   my $sv_flag = 0;
-  # Column tmp_class_name" in structural_variation
+  # Column "tmp_class_name" in structural_variation
   my $sth1 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE source_id=$source_id AND class_attrib_id=0});
   $sth1->execute();
   my $sv_count = ($sth1->fetchrow_array)[0];
@@ -1785,7 +1770,7 @@ sub cleanup {
     $dbVar->do(qq{ALTER TABLE $sv_table DROP COLUMN $tmp_sv_col});
   }
   
-  # Column tmp_clinic_name" in structural_variation
+  # Column "tmp_clinic_name" in structural_variation
   my $sth2 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE clinical_significance is NULL AND $tmp_sv_clin_col is not NULL});
   $sth2->execute();
   my $sv_clin_count = ($sth2->fetchrow_array)[0];
