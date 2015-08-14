@@ -1488,15 +1488,17 @@ sub vf_list_to_cons {
                 if(!defined($line->[7]) || $line->[7] eq '.') {
                     $line->[7] = '';
                 }
+
+                my $fieldname = $config->{vcf_info_field} || 'CSQ';
                 
                 # nuke existing CSQ field
-                if($line->[7] =~ /CSQ\=/ && !defined($config->{keep_csq})) {
-                  $line->[7] =~ s/CSQ\=\S+?(\;|$)(\S|$)/$2/;
+                if($line->[7] =~ /$fieldname\=/ && !defined($config->{keep_csq})) {
+                  $line->[7] =~ s/$fieldname\=\S+?(\;|$)(\S|$)/$2/;
                 }
                 
                 # get all the lines the normal way                
                 # and process them into VCF-compatible string
-                my $string = 'CSQ=';
+                my $string = $fieldname.'=';
                 
                 foreach my $line_hash(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
 
@@ -1524,7 +1526,7 @@ sub vf_list_to_cons {
                 
                 $string =~ s/\,$//;
                 
-                if(!defined($config->{no_consequences}) && $string ne 'CSQ=') {
+                if(!defined($config->{no_consequences}) && $string ne $fieldname.'=') {
                     $line->[7] .= ($line->[7] ? ';' : '').$string;
                 }
                 
