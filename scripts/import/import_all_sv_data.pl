@@ -849,7 +849,7 @@ sub structural_variation_sample {
     }
   
     # Create sample entries
-    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample WHERE study_id=$study_id)};
+    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample)};
     my $rows_samples = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_samples) {
       my $sample  = $row->[0];
