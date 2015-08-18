@@ -123,7 +123,6 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 		my (@filtered, %map);
 		
 		foreach my $f(@species_files) {
-			
 			# strip off filetype
 			$f =~ s/\..+$//g;
 			
@@ -135,7 +134,9 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 			foreach my $t(keys %{$config->{tables}}) {
 				if($match =~ /$t/) {
 					$ok = 1;
-					$map{$t} = $f;
+          $f =~ /(.+\_variation_)(\d+)(.+)/;
+          my $version = $2;
+					$map{$t}{$version} = $f;
 				}
 			}
 			
@@ -154,12 +155,12 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 				print "Table $t already exists on $host for $species, skipping\n";
 				next;
 			}
-			
+		  my $latest_version = (sort {$b <=> $a} keys %{$map{$t}})[0];	
 			print "$species: Copying $t\n";
 			
 			for my $ext(qw(frm MYD MYI)) {
-				system "scp ".$config->{dir}."/$map{$t}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext";
-				#print "scp ".$config->{dir}."/$map{$t}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext\n";
+				system "scp ".$config->{dir}."/$map{$t}{$latest_version}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext";
+#				print "scp ".$config->{dir}."/$map{$t}{$latest_version}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext\n";
 			}
 		}
 	}
