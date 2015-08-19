@@ -1178,8 +1178,8 @@ sub get_all_consequences {
                   # This is then thawed by the parent process.
                   # $$, or the PID, is added so that the input can be sorted
                   # back into the correct order for output
-                
-                  print  PARENT $$." ".encode_base64(freeze($_), "\t")."\n" for @$cons;
+                    
+                  print  PARENT $$." ".encode_base64(freeze($_), "\t")."\n" for grep {defined($_)} @$cons;
                   
                   # some plugins may cache stuff, check for this and try and
                   # reconstitute it into parent's plugin cache
