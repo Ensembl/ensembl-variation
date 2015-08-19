@@ -126,9 +126,10 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 			# strip off filetype
 			$f =~ s/\..+$//g;
 			
-			# special case for tmp_ind_gt, filename is too long for MySQL 64-char table name limit
+			# special case for tmp_gt, filename is too long for MySQL 64-char table name limit
 			my $match = $f;
 			$match =~ s/tmp_gt/tmp_sample_genotype_single_bp/;
+			$match =~ s/pop_gt/population_genotype/;
 			
 			my $ok = 0;
 			foreach my $t(keys %{$config->{tables}}) {
