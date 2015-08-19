@@ -121,7 +121,7 @@ my $html_header = q{
   <title>Phenotype Sources</title>
   <script type="text/javascript">
     window.onload = function() {
-      $('.ht').helptip({'track': true});
+      $('._ht').helptip({'track': true});
     };
   </script>
 </head>
@@ -168,6 +168,8 @@ my @species_list;
 my %species_news;
 my %display_list;
 my %top_display;
+
+my @new_status = ('version','source');
 
 my $cols_sql2  = 'source_id, name, version, description, url, type, somatic_status, data_types';
 my $term_sql2  = 'dbSNP';
@@ -369,20 +371,24 @@ sub source_phen_table {
   ########## Sources ##########    
   
   while ($sth->fetch) {
+    
+    # Check data types
+    my %data_types = map { $_ => 1 } split(",", $s_data_types);
+    next if (!$data_types{'phenotype_feature'});
   
     # Check if the source or its version is new
     my $s_new      = '';
     my $s_new_type = '';
     my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
     if (!grep {$_ eq $source} @p_sources) {
-      $s_new_type = 'source';
+      $s_new_type = $new_status[1]; # New source
     }
     elsif ($p_list->{$source} ne $s_version){
-      $s_new_type = 'version';
+      $s_new_type = $new_status[0]; # New version
     }
    
     if ($s_new_type) {
-      $species_news{$species}{$s_new_type} = 1;
+      $species_news{$species}{$s_new_type} += 1;
       my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
       $s_header .= $borders if ($bg == 1);
       $s_new = '<span style="color:'.$colours{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
@@ -403,13 +409,10 @@ sub source_phen_table {
     my $is_somatic = ($s_status eq 'somatic') ? 1 : undef;
     
     # Data types
-    my %data_types = map { $_ => 1 } split(",", $s_data_types);
     my $data_type_string = '';
     my $counts;
     my $examples;
-    
-    next if (!$data_types{'phenotype_feature'});
-    
+
     foreach my $type (keys %{$counts_species->{$source_id}}) {
       my $type_label = ($type =~ /structural\s?variation/i) ? 'SV' : $type;
       my $dt_phe_title = "Provides $type phenotype association data";
@@ -502,10 +505,10 @@ sub get_connection_and_query {
 
 sub create_menu {
   
-  my $label_style = "display:inline-block;height:8px;width:8px;border-radius:4px";
+  my $label_style = "display:inline-block;height:12px;width:12px;border-radius:4px;text-align:center;font-size:0.8em;color:#FFF";
   my %desc = ( 
-              'version' => qq{New data version(s)},
-              'source'  => qq{New data source(s)}
+              'version' => qq{New data version},
+              'source'  => qq{New data source}
              );
   
   my $html = qq{
@@ -534,15 +537,15 @@ sub create_menu {
   my $fm_colour = $colours{'few_million'};
   my $t_colour  = $colours{'thousand'};
   my $h_colour  = $colours{'hundred'};
-  my $v_label   = $desc{'version'};
-  my $s_label   = $desc{'source'};
+  my $v_label   = $desc{'version'}.'(s)';
+  my $s_label   = $desc{'source'}.'(s)';
   
   my $legend_div_id = 'legend';
 
   $html .= sprintf ( qq{
-    <span style="$label_style;margin-left:5px;background-color:$v_colour"></span><small> : $v_label</small>
+    <span style="$label_style;margin-left:5px;background-color:$v_colour">#</span><small> : $v_label</small>
     <br />
-    <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
+    <span style="$label_style;margin-left:5px;background-color:$s_colour">#</span><small> : $s_label</small>
   </div>
   <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #22949b;border-right:1px dotted #22949b;border-bottom:1px dotted #22949b">
     <!-- Legend header -->
@@ -630,27 +633,50 @@ sub menu_list {
   my $species = shift;
   my $label_style = shift;
   my $desc = shift;
-  
+
+  my $right_margin = 54;
+  my $diff = 2; # Pixel difference if the count > 9
+
   my $name    = $species->{name};
   my $display = $species->{display};
   my $s_name  = $species->{s_name};
   my $anchor  = $species->{anchor};
   my $new_data = '';
   if ($species_news{$species->{name}}) {
-    my @types = sort {$b cmp $a} keys(%{$species_news{$species->{name}}});
-    my $count_type = 0;
-    foreach my $type (@types) {
-      $count_type ++;
+    foreach my $type (@new_status) {
+      next if (!$species_news{$species->{name}}{$type});
+      my $count_type = $species_news{$species->{name}}{$type};
       my $label_colour = $colours{$type};
-      my $label_desc = $desc->{$type};
-      $new_data .= qq{<span style="$label_style;margin-left:4px;background-color:$label_colour" title="$label_desc"></span>};
+      my $label_desc = "$count_type ".lc($desc->{$type});
+         $label_desc .= 's' if ($count_type > 1);
+         
+      my $tmp_label_style = $label_style;
+      my $left_margin = 6;
+      
+      if ($count_type > 9) {
+        $tmp_label_style =~ /width:(\d+)px/;
+        my $tmp_width = $1;
+        my $new_width = $tmp_width+$diff;
+        $left_margin -= $diff;
+        $tmp_label_style =~ s/width:$tmp_width/width:$new_width/;
+      }
+      
+      $left_margin .= 'px';
+      $new_data .= qq{<span class="_ht" style="$tmp_label_style;margin-left:$left_margin;background-color:$label_colour" title="$label_desc">$count_type</span>};
+      $right_margin -= ($type eq 'source' && !$species_news{$species->{name}}{'version'}) ? 36 : 18;
     }
   }
   my $img = $name;
   return qq{
-  <div style="margin:0px 4px 5px">
-    <img src="/i/species/16/$s_name.png" alt="$display" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
-    <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>$new_data
+  <div style="margin:0px $right_margin\px 5px 4px">
+    <div style="float:left">
+      <img src="/i/species/16/$s_name.png" alt="$display" style="margin-right:4px;vertical-align:middle" />
+      <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>
+    </div>
+    <div style="float:right">  
+      $new_data
+    </div>
+    <div style="clear:both"></div>  
   </div>
   };
 }
