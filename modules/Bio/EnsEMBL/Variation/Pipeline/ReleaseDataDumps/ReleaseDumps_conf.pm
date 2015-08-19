@@ -65,7 +65,7 @@ sub default_options {
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
         gvf_validator      => '/nfs/users/nfs_a/at7/tools/gvf_validator',
-        so_file            => '/nfs/users/nfs_a/at7/obo/e81/so.obo',
+        so_file            => '/nfs/users/nfs_a/at7/obo/e' . $self->o('ensembl_release') . '/so.obo',
 
         tmp_dir           => $self->o('tmp_dir'),
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
