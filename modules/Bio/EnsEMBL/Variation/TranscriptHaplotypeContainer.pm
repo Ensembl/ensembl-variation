@@ -86,7 +86,7 @@ sub new {
   # check what we've been given looks sensible
   assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
   assert_ref($gts, 'ARRAY', 'Genotypes listref');
-  assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::SampleGenotypeFeature', 'First member of genotypes listref');
+  assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::SampleGenotypeFeature', 'First member of genotypes listref') if scalar @$gts;
   
   my $self = {
     _transcript => $transcript,
