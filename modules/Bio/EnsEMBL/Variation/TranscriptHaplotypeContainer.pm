@@ -46,6 +46,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 use Bio::EnsEMBL::Variation::CDSHaplotype;
 use Bio::EnsEMBL::Variation::ProteinHaplotype;
@@ -57,14 +58,16 @@ use Scalar::Util qw(weaken);
 
 =head2 new
 
-  Arg [1]:     Bio::EnsEMBL::Transcript
-  Arg [2]:     arrayref of Bio::EnsEMBL::Variation::SampleGenotypeFeature
-  Arg [3]:     Bio::EnsEMBL::Variation::DBSQL::DBAdaptor
+  Arg [-TRANSCRIPT]: Bio::EnsEMBL::Transcript
+  Arg [-GENOTYPES]:  arrayref of Bio::EnsEMBL::Variation::SampleGenotypeFeature (non-reference genotypes)
+  Arg [-SAMPLES]:    arrayref of Bio::EnsEMBL::Variation::Sample (all samples)
+  Arg [-DB]:         Bio::EnsEMBL::Variation::DBSQL::DBAdaptor
 
   Example    : my $thc = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new(
-                  $transcript,
-                  $genotypes,
-                  $db
+                  -TRANSCRIPT => $transcript,
+                  -GENOTYPES  => $genotypes,
+                  -SAMPLES    => $samples,
+                  -DB         => $db
                );
 
   Description: Constructor.  Instantiates a new TranscriptHaplotypeContainer object.
@@ -78,20 +81,24 @@ use Scalar::Util qw(weaken);
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  
-  my $transcript = shift;
-  my $gts = shift;
-  my $db = shift;
+
+  my ($transcript, $gts, $samples, $db) = rearrange([qw(TRANSCRIPT GENOTYPES SAMPLES DB)], @_);
   
   # check what we've been given looks sensible
   assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
   assert_ref($gts, 'ARRAY', 'Genotypes listref');
   assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::SampleGenotypeFeature', 'First member of genotypes listref') if scalar @$gts;
+
+  if($samples) {
+    assert_ref($samples, 'ARRAY', 'Samples listref');
+    assert_ref($samples->[0], 'Bio::EnsEMBL::Variation::Sample', 'First member of samples listref');
+  }
   
   my $self = {
     _transcript => $transcript,
     _sample_genotype_features => $gts || [],
     _db => $db,
+    _samples => $samples,
     transcript_id => $transcript->stable_id,
   };
   bless($self, $class);
@@ -118,6 +125,28 @@ sub transcript {
   my $self = shift;
   $self->{_transcript} = shift if @_;
   return $self->{_transcript};
+}
+
+
+=head2 get_all_Samples
+
+  Example    : my $samples = $thc->get_all_Samples()
+  Description: Get list of samples in this container
+  Returntype : listref of Bio::EnsEMBL::Variation::Sample
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_Samples {
+  my $self = shift;
+
+  if(!$self->{_samples}) {
+    $self->{_samples} = [values %{{map {$_->sample->name => $_->sample()} @{$self->get_all_SampleGenotypeFeatures}}}];
+  }
+
+  return $self->{_samples};
 }
 
 
