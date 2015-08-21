@@ -452,8 +452,6 @@ sub _get_sample_population_hash {
   if(!exists($self->{_sample_population_hash})) {
     my $hash = {};
 
-    $DB::single = 1;
-    
     foreach my $sample(values %{{map {$_->sample->name => $_->sample()} @{$self->get_all_SampleGenotypeFeatures}}}) {
       $hash->{$sample->name}->{$_->name} = 1 for @{$sample->get_all_Populations};
     }
@@ -536,9 +534,127 @@ sub _init {
       }
     }
   }
+
+  $self->_add_reference_haplotypes();
   
   # clear cached translated sequences
   delete($self->{_translations});
+}
+
+sub _add_reference_haplotypes {
+  my $self = shift;
+
+  # get list of samples that have alt GTs
+  my %have_alt_gts = map {$_->sample->name => 1} @{$self->get_all_SampleGenotypeFeatures};
+
+  # now get the remaining samples and assign them reference status
+  my @ref_samples = grep {!$have_alt_gts{$_->name}} @{$self->get_all_Samples};
+
+  if(scalar @ref_samples) {
+    my $tr = $self->transcript;
+
+    # get/create reference CDS haplotype
+    my $ref_cds_seq = $tr->{cds};
+    my $ref_cds_hex = md5_hex($ref_cds_seq);
+
+    my $ref_cds_haplotype = $self->_get_TranscriptHaplotype_by_hex($ref_cds_hex);
+
+    if(!$ref_cds_haplotype) {
+      $ref_cds_haplotype = Bio::EnsEMBL::Variation::CDSHaplotype->new(
+        -container => $self,
+        -type      => 'cds',
+        -seq       => $ref_cds_seq,
+        -hex       => $ref_cds_hex,
+        -indel     => 0
+      );
+
+      $self->{'cds_haplotypes'}->{$ref_cds_hex} = $ref_cds_haplotype;
+      
+      weaken($ref_cds_haplotype->{_container});
+    }
+
+    # get/create reference protein haplotype
+    my $ref_protein_seq = $tr->{protein};
+    my $ref_protein_hex = md5_hex($ref_protein_seq);
+
+    my $ref_protein_haplotype = $self->_get_TranscriptHaplotype_by_hex($ref_protein_hex);
+
+    if(!$ref_protein_haplotype) {
+      $ref_protein_haplotype = Bio::EnsEMBL::Variation::CDSHaplotype->new(
+        -container => $self,
+        -type      => 'protein',
+        -seq       => $ref_protein_seq,
+        -hex       => $ref_protein_hex,
+        -indel     => 0,
+      );
+
+      $self->{'protein_haplotypes'}->{$ref_protein_haplotype} = $ref_protein_haplotype;
+      
+      weaken($ref_protein_haplotype->{_container});
+    }
+
+    # update other haplotype hex
+    $ref_cds_haplotype->{other_hexes}->{$ref_protein_hex} = 1;
+    $ref_protein_haplotype->{other_hexes}->{$ref_cds_hex} = 1;
+
+    # increment counts
+    my $sample_ploidy  = $self->_sample_ploidy();
+    my $default_ploidy = $self->_default_ploidy();
+
+    for(@ref_samples) {
+      my $ploidy = $sample_ploidy->{$_->name} || $default_ploidy;
+
+      $ref_cds_haplotype->{samples}->{$_->name}     += $ploidy;
+      $self->{_counts}->{$ref_cds_hex}              += $ploidy;
+
+      $ref_protein_haplotype->{samples}->{$_->name} += $ploidy;
+      $self->{_counts}->{$ref_protein_hex}          += $ploidy;
+    }
+  }
+}
+
+## get the ploidy of each sample
+## this will vary e.g. for different genders in an X chromosome region
+## we do this by fetching ALL genotypes for one variant
+sub _sample_ploidy {
+  my $self = shift;
+
+  if(!exists($self->{_sample_ploidy})) {
+    my $gts = $self->get_all_SampleGenotypeFeatures;
+
+    if($gts && scalar @$gts) {
+      if(my $v = $gts->[0]->variation) {
+        %{$self->{_sample_ploidy}} =
+          map {$_->sample->name => scalar @{$_->genotype}}
+          @{$v->get_all_SampleGenotypes};
+      }
+    }
+    
+    if(!$self->{_sample_ploidy}) {
+      my $default_ploidy = $self->_default_ploidy();
+      %{$self->{_sample_ploidy}} = map {$_->name => $default_ploidy} @{$self->get_all_Samples};
+    }
+  }
+  
+  return $self->{_sample_ploidy};
+}
+
+## get default ploidy
+## fallback for if we can't get per-sample ploidy
+sub _default_ploidy {
+  my $self = shift;
+
+  if(!exists($self->{_ploidy})) {
+    if(my $db = $self->db) {
+      if(my $va = $db->get_VariationAdaptor) {
+        $self->{_ploidy} = $va->ploidy;
+      }
+    }
+
+    $self->{_ploidy} = 2 unless defined($self->{_ploidy});
+  }
+
+  return $self->{_ploidy};
 }
 
 ## Uses a transcript's mapper to get genomic->CDS coord mappings for each
@@ -627,6 +743,9 @@ sub _mutate_sequences {
     
       # remove anything beyond a stop
       #$protein =~ s/\*.+/\*/;
+
+      # remove stop
+      # $protein =~ s/\*$//;
     
       push @{$mutated->{cds}}, $seq;
       push @{$mutated->{protein}}, $protein;
