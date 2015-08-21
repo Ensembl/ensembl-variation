@@ -452,7 +452,7 @@ sub _get_sample_population_hash {
   if(!exists($self->{_sample_population_hash})) {
     my $hash = {};
 
-    foreach my $sample(values %{{map {$_->sample->name => $_->sample()} @{$self->get_all_SampleGenotypeFeatures}}}) {
+    foreach my $sample(@{$self->get_all_Samples}) {
       $hash->{$sample->name}->{$_->name} = 1 for @{$sample->get_all_Populations};
     }
     
