@@ -56,7 +56,12 @@ my @gts;
 # we don't want variants in introns
 push @gts, @{$vcf_coll->get_all_SampleGenotypeFeatures_by_Slice($_->feature_Slice, undef, 1)} for @{$tr->get_all_Exons};
 
-my $c = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new($tr, \@gts, $vdb);
+my $c = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new(
+  -transcript => $tr,
+  -genotypes => \@gts,
+  # -samples => $vcf_coll->get_all_Samples,
+  -db => $vdb,
+);
 
 my ($s) = grep {$_->name =~ /NA18499/} @{$vcf_coll->get_all_Samples};
 
