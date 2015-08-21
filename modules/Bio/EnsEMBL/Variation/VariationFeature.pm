@@ -972,8 +972,8 @@ sub class_SO_term {
   Arg [1]    : none
   Example    : my @vstates = @{$vf->get_all_validation_states()};
   Description: Retrieves all evidence values for this variationFeature.  Current
-               possible evidence values are 'Multiple_observations','Frequency',
-              'HapMap', '1000Genomes','Cited'
+               possible evidence values are 'Multiple_observations', 'Frequency',
+               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease'
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general

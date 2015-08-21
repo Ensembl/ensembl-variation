@@ -523,8 +523,8 @@ sub add_synonym {
   Arg [1]    : none
   Example    : my @evidence = @{$v->get_all_evidence_values()};
   Description: Retrieves all evidence values for this variation. Current
-               possible evidence values are 'Multiple_observations',
-              'Frequency','HapMap', '1000Genomes','Cited'
+               possible evidence values are 'Multiple_observations', 'Frequency',
+               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease'
   Returntype : Listref of strings
   Exceptions : none
   Caller     : general
