@@ -829,7 +829,7 @@ sub menu_list {
   my $label_style = shift;
   my $desc = shift;
 
-  my $right_margin = 54;
+  my $right_margin = 66;
   my $diff = 2; # Pixel difference if the count > 9
 
   my $name = $species->{name};
@@ -846,7 +846,7 @@ sub menu_list {
          $label_desc .= 's' if ($count_type > 1);
       
       my $tmp_label_style = $label_style;
-      my $left_margin = 6;
+      my $left_margin = 10;
       
       if ($count_type > 9) {
         $tmp_label_style =~ /width:(\d+)px/;
@@ -858,7 +858,7 @@ sub menu_list {
       
       $left_margin .= 'px';
       $new_data .= qq{<span class="_ht" style="$tmp_label_style;margin-left:$left_margin;background-color:$label_colour" title="$label_desc">$count_type</span>};
-      $right_margin -= ($type eq 'source' && !$species_news{$species->{name}}{'version'}) ? 36 : 18;
+      $right_margin -= ($type eq 'source' && !$species_news{$species->{name}}{'version'}) ? 44 : 22;
     }
   }
   my $img = $name;
