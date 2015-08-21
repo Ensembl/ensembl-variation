@@ -491,7 +491,8 @@ sub _init {
     # store unique alt seqs so we only align each once
     foreach my $type(qw(cds protein)) {
       
-      # iterate over haplotypes (should be 2)
+      # iterate over haplotypes
+      # usually there will be 2, though for e.g. male samples on an chrX transcript there will be 1
       foreach my $i(0..$#{$obj->{$type}}) {
         
         my $seq = $obj->{$type}->[$i];
@@ -708,8 +709,11 @@ sub _mutate_sequences {
     }
   
     my $mutated = {};
+
+    # get sample ploidy
+    my $ploidy = $self->_sample_ploidy()->{$gts->[0]->sample->name} || $self->_default_ploidy();
   
-    for my $hap(0,1) {
+    for my $hap(0..($ploidy - 1)) {
       my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
       my $ref_seq = $seq;
     
