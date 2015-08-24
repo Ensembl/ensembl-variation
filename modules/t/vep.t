@@ -526,6 +526,40 @@ $config = copy_config($base_config, {
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && $cons->[0]->{most_severe_consequence} eq 'missense_variant', "json output");
 
+# check
+$config = copy_config($base_config, {
+  json => 1,
+  rest => 1,
+  check_existing => 1,
+  pubmed => 1,
+});
+($vf) = @{parse_line($config, '21 25227941 25227941 T/C +')};
+$cons = get_all_consequences($config, [$vf, $vf]);
+is_deeply(
+  $cons->[0]->{colocated_variants},
+  [{
+    'amr_maf' => '0.05',
+    'strand' => 1,
+    'id' => 'rs41504145',
+    'asn_maf' => '0.0035',
+    'allele_string' => 'T/C',
+    'amr_allele' => 'C',
+    'minor_allele_freq' => '0.1139',
+    'afr_allele' => 'C',
+    'afr_maf' => '0.43',
+    'eur_maf' => '0.03',
+    'end' => 25227941,
+    'eur_allele' => 'C',
+    'minor_allele' => 'C',
+    'asn_allele' => 'C',
+    'start' => 25227941,
+    'pubmed' => [
+      17903302
+    ]
+  }],
+  'json output - duplicate position'
+);
+
 # solr xml
 $config = copy_config($base_config, {
   solr => 1,
