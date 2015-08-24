@@ -1953,7 +1953,13 @@ sub format_rest_output {
   
   # add existing variants
   if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-    foreach my $ex(@{$vf->{existing}}) {
+
+    foreach my $ex_orig(@{$vf->{existing}}) {
+      
+      # work on a copy as we're going to modify/delete things
+      my $ex;
+      %$ex = %$ex_orig;
+
       delete $ex->{$_} for qw(failed);
       
       # frequencies
