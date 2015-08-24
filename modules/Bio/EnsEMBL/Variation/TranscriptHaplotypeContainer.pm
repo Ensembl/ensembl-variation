@@ -581,7 +581,7 @@ sub _add_reference_haplotypes {
     my $ref_protein_haplotype = $self->_get_TranscriptHaplotype_by_hex($ref_protein_hex);
 
     if(!$ref_protein_haplotype) {
-      $ref_protein_haplotype = Bio::EnsEMBL::Variation::CDSHaplotype->new(
+      $ref_protein_haplotype = Bio::EnsEMBL::Variation::ProteinHaplotype->new(
         -container => $self,
         -type      => 'protein',
         -seq       => $ref_protein_seq,
