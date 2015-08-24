@@ -262,6 +262,9 @@ $config = copy_config($base_config, {allow_non_variant => 1, vcf => 1});
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /21\s+25606454\s+test\s+G\s+./, "vcf format - non variant");
 
+# check csq removed
+ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
+
 # vcf weird "*" type
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, '21 25606454 test G C,* . . .')};
@@ -296,8 +299,15 @@ is($by_allele{'T'}->{Consequence}, 'missense_variant', "minimal - complex (SNP)"
 is($by_allele{'-'}->{Consequence}, 'inframe_deletion,splice_region_variant', "minimal - complex (del)");
 is($by_allele{'-'}->{Extra}->{MINIMISED}, 1, "minimal - extra flag");
 
-# check csq removed
-ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
+$config = copy_config($base_config, {minimal => 1, allele_number => 1});
+($vf) = @{parse_line($config, '21 25606454 test G GC,C')};
+$cons = get_all_consequences($config, [$vf]);
+ok(defined($cons->[0]->{Extra}->{ALLELE_NUM}), "minimal - allele num defined");
+
+%by_allele = map {$_->{Consequence} => $_} grep {$_->{Feature} eq 'ENST00000419219'} @$cons;
+is(scalar keys %{{map {$_->{Allele} => 1} values %by_allele}}, 1, "minimal - allele num where two alts resolve to same allele (check allele)");
+is($by_allele{frameshift_variant}->{Extra}->{ALLELE_NUM}, 1, "minimal - allele num where two alts resolve to same allele (frameshift)");
+is($by_allele{missense_variant}->{Extra}->{ALLELE_NUM}, 2, "minimal - allele num where two alts resolve to same allele (missense)");
 
 # vcf individual data
 $config = copy_config($base_config, {

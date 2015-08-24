@@ -201,12 +201,14 @@ sub new {
         -variation_feature_overlap   => $self,
         -variation_feature_seq       => $ref_allele,
         -is_reference                => 1,
+        -allele_number               => 0,
     );
     
     $self->add_VariationFeatureOverlapAllele($ref_vfoa);
 
     # create objects representing the alternate alleles
-    
+    my $allele_number = 1 + ($variation_feature->{_base_allele_number} || 0);
+
     for my $allele (@alleles) {
         
         next if $allele eq $ref_allele;
@@ -215,6 +217,7 @@ sub new {
             -variation_feature_overlap  => $self,
             -variation_feature_seq      => $allele,
             -is_reference               => 0,
+            -allele_number              => $allele_number++,
         );
        
         $self->add_VariationFeatureOverlapAllele($vfoa);

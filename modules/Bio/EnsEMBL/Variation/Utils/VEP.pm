@@ -1638,6 +1638,7 @@ sub split_variants {
       
       my @tmp;
       my $changed = 0;
+      my $base_allele_number = 1;
       
       foreach my $alt(@alleles) {
         
@@ -1680,6 +1681,7 @@ sub split_variants {
         # not the first one ($first already exists)
         if($first) {
           $new_vf->{merge_with} = $first;
+          $new_vf->{_base_allele_number} = $base_allele_number++;
         }
         
         # this is the first one
@@ -1775,15 +1777,6 @@ sub rejoin_variants {
         else {
             $original->{intergenic_variation} = $iv;
         }
-      }      
-
-      add_allele_nums($config, $vf) unless defined($vf->{_allele_nums});
-      add_allele_nums($config, $original) unless defined($original->{_allele_nums});
-      
-      # allele numbers
-      if($vf->{_allele_nums} && $original->{_allele_nums}) {
-        my $max = (sort {$a <=> $b} values %{$original->{_allele_nums}})[-1];
-        $original->{_allele_nums}->{$_} = $vf->{_allele_nums}->{$_} + $max for grep {$vf->{_allele_nums}->{$_} > 0} keys %{$vf->{_allele_nums}};
       }
       
       # reset these keys, they can be recalculated
@@ -2027,14 +2020,6 @@ sub numberify {
   }
 }
 
-sub add_allele_nums {
-  my $config = shift;
-  my $vf = shift;
-
-  my @alleles = split /\//, $vf->allele_string || '';
-  $vf->{_allele_nums} ||= {map {$alleles[$_] => $_} (0..$#alleles)};
-}
-
 # takes a variation feature and returns ready to print consequence information
 sub vf_to_consequences {
   my $config = shift;
@@ -2055,9 +2040,6 @@ sub vf_to_consequences {
   return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
   
   my @return = ();
-  
-  # get allele nums
-  add_allele_nums($config, $vf) if defined($config->{allele_number});
   
   # method name stub for getting *VariationAlleles
   my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
@@ -2723,7 +2705,7 @@ sub add_extra_fields {
     
     # allele number
     if(defined($config->{allele_number})) {
-      $line->{Extra}->{ALLELE_NUM} = $bvfoa->base_variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->base_variation_feature->{_allele_nums};
+      $line->{Extra}->{ALLELE_NUM} = $bvfoa->allele_number if $bvfoa->can('allele_number');
     }
     
     # strand
