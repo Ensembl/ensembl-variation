@@ -47,8 +47,8 @@ GetOptions(
   'user=s'         => \$user,
   'port=i'         => \$port,
   'species|s=s'    => \$species,
-  'colour_file=s'  => \$web_colour_file,
-  'mapping_file=s' => \$web_mapping_colour
+#  'colour_file=s'  => \$web_colour_file,
+#  'mapping_file=s' => \$web_mapping_colour
 );
 
 usage("input and output files must be specified") unless ($input_file && $output_file);
@@ -67,13 +67,13 @@ my $section;
 my ($content_before, $new_content, $content_after);
 
 # Generates the "List of consequences" table documentation
-$section = 'consequences';
-$content_before = get_content($section,'start');
-$content_after  = get_content($section,'end');
-`perl generate_consequence_table.pl -o $tmp_section -colour_file $web_colour_file -mapping_file $web_mapping_colour`;
-$new_content = `cat $tmp_section`;
-`rm -f $tmp_section`;
-print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
+#$section = 'consequences';
+#$content_before = get_content($section,'start');
+#$content_after  = get_content($section,'end');
+#`perl generate_consequence_table.pl -o $tmp_section -colour_file $web_colour_file -mapping_file $web_mapping_colour`;
+#$new_content = `cat $tmp_section`;
+#`rm -f $tmp_section`;
+#print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
 
 ## SIFT and PolyPhen ##
@@ -299,15 +299,16 @@ sub usage {
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
     -user           MySQL user name (Required)
     -port           MySQL port. 3306 by default (optional)
-    -colour_file    If you want to use directly the colours from the web colours configuration file
-                    instead of the almost-up-to-date-colour-hash \%colour hash. (optional)
-                    Usually, you can find the colour configuration file in:
-                    ensembl-webcode/conf/ini-files/COLOUR.ini 
-    -mapping_file   Web module to map the colour names to the corresponding hexadecimal code. (optional)
-                    Useful because some colour names are internal to Ensembl and won't be displayed in the 
-                    documentation pages (i.e. not using the perl modules).
-                    The module ColourMap.pm can be find in:
-                    ensembl-webcode/modules/Sanger/Graphics/ColourMap.pm
   } . "\n";
+#    -colour_file    If you want to use directly the colours from the web colours configuration file
+#                    instead of the almost-up-to-date-colour-hash \%colour hash. (optional)
+#                    Usually, you can find the colour configuration file in:
+#                    ensembl-webcode/conf/ini-files/COLOUR.ini 
+#    -mapping_file   Web module to map the colour names to the corresponding hexadecimal code. (optional)
+#                    Useful because some colour names are internal to Ensembl and won't be displayed in the 
+#                    documentation pages (i.e. not using the perl modules).
+#                    The module ColourMap.pm can be find in:
+#                    ensembl-webcode/modules/Sanger/Graphics/ColourMap.pm
+#  } . "\n";
   exit(0);
 }
