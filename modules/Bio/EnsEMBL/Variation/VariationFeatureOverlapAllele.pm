@@ -39,6 +39,7 @@ Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele
         -variation_feature_overlap  => $vfo,
         -variation_feature_seq      => 'A',
         -is_reference               => 0,
+        -allele_number              => 1,
     );
 
     print "sequence with respect to the feature: ", $vfoa->feature_seq, "\n";
@@ -87,11 +88,16 @@ our $SPECIFIED_LENGTH = qr /(\d+) BP (INSERTION|DELETION)/i;
   Arg [-IS_REFERENCE] :
     A flag indicating if this allele is the reference allele or not
 
+  Arg [-ALLELE_NUMBER] :
+    The order in which this allele appears in the BaseVariationFeature's
+    allele string
+
   Example : 
     my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
         -variation_feature_ovelap   => $vfo,
         -variation_feature_seq      => 'A',
         -is_reference               => 0
+        -allele_number              => 1,
     );
 
   Description: Constructs a new VariationFeatureOverlapAllele instance given a 
@@ -122,9 +128,11 @@ sub new {
     assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
 
     my (
-        $variation_feature_seq, 
+        $variation_feature_seq,
+        $allele_number
     ) = rearrange([qw(
-            VARIATION_FEATURE_SEQ 
+            VARIATION_FEATURE_SEQ
+            ALLELE_NUMBER
         )], %args);
 
 
@@ -132,6 +140,7 @@ sub new {
         unless $variation_feature_seq;
 
     $self->{variation_feature_seq} = $variation_feature_seq;
+    $self->{allele_number} = $allele_number;
 
     return $self;
 }
@@ -346,6 +355,24 @@ sub allele_string {
     else {
         return $ref.'/'.$self->variation_feature_seq;
     }
+}
+
+=head2 allele_number
+
+  Description: Getter/setter for the allele number; represents the order of this allele
+               in the BaseVariationFeature's allele string
+  Returntype : int
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub allele_number {
+  my $self = shift;
+
+  $self->{allele_number} = shift if @_;
+
+  return $self->{allele_number};
 }
 
 
