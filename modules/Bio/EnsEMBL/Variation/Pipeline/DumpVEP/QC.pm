@@ -52,8 +52,10 @@ sub run {
   foreach my $assembly (qw/GRCh37 GRCh38/) {
     foreach my $type (qw/vep refseq_vep merged_vep/) {
       my $file = "homo_sapiens_$type\_$version\_$assembly.tar.gz";
-      $self->run_cmd("cp $dir/$file $cache_dir");
-      $self->run_cmd("tar -C $cache_dir -xzf $cache_dir/$file");
+      if (-f "$dir/$file") { 
+        $self->run_cmd("cp $dir/$file $cache_dir");
+        $self->run_cmd("tar -C $cache_dir -xzf $cache_dir/$file");
+      }
     } 
   }                 
   my $cmd = "perl $ensembl_variation/scripts/misc/test_chrom_coverage_in_cache_files.pl -version $version -cache_dir $cache_dir -script_dir $ensembl_tools/scripts/variant_effect_predictor/";
