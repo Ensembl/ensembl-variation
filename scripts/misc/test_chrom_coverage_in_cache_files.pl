@@ -110,19 +110,22 @@ sub run_vep {
 
   foreach my $cache_dir (keys %$cache_dirs) {
     foreach my $assembly (@assemblies) {
-      my $vep_run_name = "$cache_dir\_$version\_$assembly";
-      my $params = $cache_dirs->{$cache_dir} . " --assembly $assembly";
-      my $output = "$script_dir/test_vep_output_$vep_run_name"; 
-      my $err_file = "$script_dir/err_$vep_run_name"; 
-      my $out_file = "$script_dir/out_$vep_run_name"; 
-      
-      $output_files->{$vep_run_name}->{vep_output} = $output;
-      $output_files->{$vep_run_name}->{err} = $err_file;
-      $output_files->{$vep_run_name}->{out} = $out_file;
-      # -cache_version
-      my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats --regulatory --sift b --polyphen b $params";
+      my $dir = "$root_cache_dir/$cache_dir/$version\_$assembly";
+      if (-d $dir) {
+        my $vep_run_name = "$cache_dir\_$version\_$assembly";
+        my $params = $cache_dirs->{$cache_dir} . " --assembly $assembly";
+        my $output = "$script_dir/test_vep_output_$vep_run_name"; 
+        my $err_file = "$script_dir/err_$vep_run_name"; 
+        my $out_file = "$script_dir/out_$vep_run_name"; 
+        
+        $output_files->{$vep_run_name}->{vep_output} = $output;
+        $output_files->{$vep_run_name}->{err} = $err_file;
+        $output_files->{$vep_run_name}->{out} = $out_file;
+        # -cache_version
+        my $cmd = "perl $script_dir/variant_effect_predictor.pl --cache --offline --dir $root_cache_dir -i $input -o $output --force_overwrite --no_stats --regulatory --sift b --polyphen b $params";
 
-      run_cmd("$cmd 1>$out_file 2>$err_file");
+        run_cmd("$cmd 1>$out_file 2>$err_file");
+      }
     }
   } 
 
