@@ -114,9 +114,9 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'default' => { 'LSF' => '-q long -R"select[mem>4500] rusage[mem=4500]" -M4500'},
         'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-        'highmem' => { 'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
+        'highmem' => { 'LSF' => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
         'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
     };
 }
@@ -176,6 +176,14 @@ sub pipeline_analyses {
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
             -max_retry_count => 1,
             -rc_name => 'default',
+            -flow_into => {
+              -1 => ['submit_job_gvf_dumps_highmem'],
+            }
+        },
+        {   -logic_name => 'submit_job_gvf_dumps_highmen',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -max_retry_count => 1,
+            -rc_name => 'highmem',
         },
         {   -logic_name => 'report_gvf_dumps',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report',
@@ -228,6 +236,7 @@ sub pipeline_analyses {
                 1 => ['species_factory_gvf_dumps_population'],
             },
         },
+#-------------------- Start Dump Populations
         {   -logic_name => 'species_factory_gvf_dumps_population',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
             -flow_into => {
@@ -263,6 +272,7 @@ sub pipeline_analyses {
                 1 => ['pre_run_checks_gvf2vcf']
             },
         },
+#-------------------- Finish Dump Populations
         {   -logic_name => 'pre_run_checks_gvf2vcf',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
             -max_retry_count => 1,
