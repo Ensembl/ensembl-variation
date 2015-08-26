@@ -1024,6 +1024,50 @@ sub fetch_all_somatic_by_Slice_SO_terms {
   return $vfs;
 }
 
+=head2 fetch_all_by_Slice_VariationSet_SO_terms
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : listref of SO terms
+  Arg [2]    : Bio::EnsEMBL::Variation::VariationSet
+  Description: Fetch all VariationFeatures on the given slice with consequences
+               with given SO terms in the given set
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_Slice_VariationSet_SO_terms{
+
+my ($self, $slice, $set, $terms, $without_children, $included_so) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  if(!defined($terms) || scalar @$terms == 0 ) {
+    throw('SO terms expected');
+  }
+
+  if( !ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
+  }
+
+  my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
+
+  # Get the bitvalue for this set and its subsets
+  my $bitvalue = $set->_get_bitvalue();  
+  $constraint .= " and vf.variation_set_id & $bitvalue ";
+  
+  if (!$constraint) {
+    return [];
+  }
+
+  my $vfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+
+  return $vfs;
+}
+
+
 # call to method in BaseAdaptor
 sub _get_consequence_constraint {
 	my $self = shift;

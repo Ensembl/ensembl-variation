@@ -17,16 +17,22 @@ use strict;
 use warnings;
 use Test::More;
 use Data::Dumper;
-
+use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 our $verbose = 0;
 
+
+my $omulti = Bio::EnsEMBL::Test::MultiTestDB->new('multi');
+my $odb = $omulti->get_DBAdaptor('ontology');
+Bio::EnsEMBL::Registry->add_db($omulti, 'ontology', $odb);
+
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
 my $db  = $multi->get_DBAdaptor('core');
+
 
 $vdb->dnadb($db);
 
@@ -171,6 +177,13 @@ print "\n# Test - fetch_all_by_Slice_Population\n";
 my $pop = $pa->fetch_by_name('SSMP:SSM');
 my $vfs9 = $vfa->fetch_all_by_Slice_Population($slice,$pop);
 ok($vfs9->[0]->variation_name() eq $vf_name, "vf by slice & population");
+
+# test fetch all by Slice VariationSet & SO term
+print "\n# Test - fetch_all_by_Slice_VariationSet & SO term\n";
+my $vfs8b = $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set,$vs,['intron_variant'] );
+
+ok($vfs8b->[0]->variation_name() eq 'rs182218163', "vf by slice & variation set & SO term");
+
 
 
 ## Slice Somatic ##

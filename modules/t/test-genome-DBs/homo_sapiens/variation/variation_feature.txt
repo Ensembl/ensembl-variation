@@ -11,7 +11,7 @@
 29136727	27523	34381884	34381884	1	25992950	C/G	rs117161559	1	\N	1	freq,1000Genome	intergenic_variant		2	0	G	0.00688705	15	1	\N	\N	1
 29558567	27506	117232346	117232346	1	26469702	C/T	rs121908760	1	\N	1	\N	stop_gained,downstream_gene_variant		2	0	\N	\N	\N	1	pathogenic	\N	1
 33303674	27512	23821095	23821095	1	30220007	G/A	rs142276873	1	genotyped	1	cluster,1000Genome	NMD_transcript_variant,intron_variant		2	0	A	0.123049	268	1	\N	\N	1
-42630412	27509	56744087	56744087	1	39404961	C/T	rs182218163	1	\N	1	1000Genome	NMD_transcript_variant,intron_variant,upstream_gene_variant		2	0	T	0.000459137	1	1	\N	\N	1
+42630412	27509	56744087	56744087	1	39404961	C/T	rs182218163	1	\N	1	1000Genome	NMD_transcript_variant,intron_variant,upstream_gene_variant	24	2	0	T	0.000459137	1	1	\N	\N	1
 43836173	27516	112994601	112994601	1	40717093	C/T	rs183531458	1	\N	1	1000Genome	non_coding_transcript_variant,intron_variant		2	0	T	0.000604595	1	1	\N	\N	1
 44269065	27515	88478741	88478741	1	41158182	A/G	rs183972897	1	\N	1	1000Genome	intergenic_variant		2	0	G	0.00137741	3	1	\N	\N	1
 47294881	27523	60403074	60403074	1	44132876	G/A/T	rs186950277	1	\N	1	1000Genome	intergenic_variant		2	0	A	0.00137741	3	1	\N	\N	1
