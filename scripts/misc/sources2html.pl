@@ -91,12 +91,15 @@ my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
 my %colours = ( 'version'     => '#090',
-                'source'      => '#00F',
-                'lot_million' => '#800',
-                'few_million' => '#007',
-                'thousand'    => '#006266', 
-                'hundred'     => '#070'
+                'source'      => '#00F'
               );
+my %colour_class = ( 'version'     => 'vdoc_new_version',
+                     'source'      => 'vdoc_new_source',
+                     'lot_million' => 'vdoc_million_1',
+                     'few_million' => 'vdoc_million_2',
+                     'thousand'    => 'vdoc_thousand', 
+                     'hundred'     => 'vdoc_hundred'
+                   );              
 
 my $phen_icon = '/i/val/var_phenotype_data_small.png';
 my $internal_link = '/i/16/internal_link.png';
@@ -361,7 +364,7 @@ sub source_table {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
       <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small" style="font-style:italic;font-weight:normal;padding-left:8px;color:#555"></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
   }
@@ -369,7 +372,7 @@ sub source_table {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
       <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small" style="font-style:italic;font-weight:normal;padding-left:8px;color:#555"> ($species)</span</h2>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"> ($species)</span</h2>
     </div>
     };
   }
@@ -393,9 +396,10 @@ sub source_table {
   my $counts_species = get_species_count(\%data_type_example, $s_name, $db_name, $hostname);
   my $phe_types      = get_phenotype_types(\%data_type_example, $s_name, $db_name, $hostname);
 
-  my $type_style  = qq{style="float:left;width:65px;text-align:left"};
-  my $count_style = qq{style="float:left;width:60px;text-align:right;margin:0px 5px"};
-  my $eg_style    = qq{style="float:left;width:20px;text-align:center"};
+  my $dt_class    = 'vdoc_data_types';
+  my $type_class  = 'vdoc_type_style';
+  my $count_class = 'vdoc_count_style';
+  my $eg_class    = 'vdoc_example_style';
   my $spaces      = "          ";
   my $phe_title   = "Provides phenotype association data";
   
@@ -457,38 +461,38 @@ sub source_table {
     my $examples;
     
     foreach my $dt (@data_types) {
-      $data_type_string .= qq{$spaces<div>};
+      $data_type_string .= qq{$spaces<div class="$dt_class">};
       
       my $data_type_label = ucfirst($dt);
       $data_type_label =~ s/_/ /g;
 
       if ($dt eq 'phenotype_feature') {
         my $dt_phe_title = ($phe_types->{$dt}{$source_id}) ? "Provides ".$phe_types->{$dt}{$source_id}." phenotype association data" : $phe_title;
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$dt_phe_title">Phenotype</span></div>};
+        $data_type_string .= qq{\n$spaces  <div  class="$type_class"><span class="_ht ht" title="$dt_phe_title">Phenotype</span></div>};
         $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$dt_phe_title" title="$dt_phe_title" />};
       }
       elsif ($dt eq 'study') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="Data are grouped by study/publication">$data_type_label</span></div>};
+        $data_type_string .= qq{\n$spaces  <div class="$type_class"><span class="_ht ht" title="Data are grouped by study/publication">$data_type_label</span></div>};
       }
       elsif ($dt eq 'variation_synonym') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
+        $data_type_string .= qq{\n$spaces  <div class="$type_class"><span class="_ht ht" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
       }
       elsif ($dt eq 'structural_variation') {
-        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht ht" title="$data_type_label">SV</span></div>};
+        $data_type_string .= qq{\n$spaces  <div class="$type_class"><span class="_ht ht" title="$data_type_label">SV</span></div>};
       }
       else {
-        $data_type_string .= qq{\n$spaces  <div $type_style>$data_type_label</div>};
+        $data_type_string .= qq{\n$spaces  <div class="$type_class">$data_type_label</div>};
       }
       
       
       # Count
       my $count = $counts_species->{$dt}{$source_id};
-      $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};
+      $data_type_string .= qq{\n$spaces  <div class="$count_class">$count</div>};
       
       # Example
       my $somatic_example = ($is_somatic && $dt eq 'variation') ? 1 : undef;
       my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname, $somatic_example);
-      $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
+      $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
       
       $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
     }
@@ -498,15 +502,15 @@ sub source_table {
     
     # Variation source (i.e. chip data) having data in variation set as well
     if ($source_var_set_id) { # Also in variation set 
-      $data_type_string .= qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+      $data_type_string .= qq{\n$spaces<div class="$dt_class">\n$spaces  <div class="$type_class"><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
       # Count
       my $count = get_species_set_count($source_var_set_id, $s_name, $db_name, $hostname);
-      $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};;
+      $data_type_string .= qq{\n$spaces  <div class="$count_class">$count</div>};;
    
       # Example
       my $example = get_example('variation_set', $source_var_set_id, $s_name, $db_name, $hostname);
-      $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
+      $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
     
       $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
     }
@@ -586,15 +590,15 @@ sub source_table {
     
     # Data types
     my @data_types = split(",", $s_data_types);
-    my $data_type_string = qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+    my $data_type_string = qq{\n$spaces<div class="$dt_class">\n$spaces  <div class="$type_class"><span class="_ht ht" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
     # Count
     my $count = get_species_set_count($set_id, $s_name, $db_name, $hostname);
-    $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};;
+    $data_type_string .= qq{\n$spaces  <div class="$count_class">$count</div>};;
    
     # Example
     my $example = get_example('variation_set', $set_id, $s_name, $db_name, $hostname);
-    $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
+    $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
     
     $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
     
@@ -679,7 +683,6 @@ sub get_connection_and_query {
 
 sub create_menu {
   
-  my $label_style = "display:inline-block;height:12px;width:12px;border-radius:4px;text-align:center;font-size:0.8em;color:#FFF";
   my %desc = ( 
               'version' => qq{New data version},
               'source'  => qq{New data source}
@@ -688,42 +691,42 @@ sub create_menu {
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div style="margin: 2px 0px 16px 8px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #336;border-right:1px dotted #336;border-bottom:1px dotted #336">
-    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;margin-bottom:5px">
+  <div class="vdoc_menu vdoc_menu_src" >
+    <div class="vdoc_menu_header vdoc_menu_header_src">
       <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
       Species list
     </div>
   };
   foreach my $top_sp (sort { $top_species{$a} <=> $top_species{$b} } keys(%top_species)) {
     my $species = $top_species_list{$top_sp};
-    $html .= menu_list($species,$label_style,\%desc) if (defined($species));
+    $html .= menu_list($species,\%desc) if (defined($species));
   }
   if (scalar(keys(%top_species_list))) {
-    $html .= qq{<div style="border-top:1px dotted #336;height:1px;margin:2px 0px 6px"></div>};
+    $html .= qq{<div class="vdoc_menu_separator"></div>};
   }
   
   foreach my $species (@species_list) {
-    $html .= menu_list($species,$label_style,\%desc);
+    $html .= menu_list($species,\%desc);
   }
-  my $v_colour  = $colours{'version'};
-  my $s_colour  = $colours{'source'};
-  my $lm_colour = $colours{'lot_million'};
-  my $fm_colour = $colours{'few_million'};
-  my $t_colour  = $colours{'thousand'};
-  my $h_colour  = $colours{'hundred'};
+  my $v_colour  = $colour_class{'version'};
+  my $s_colour  = $colour_class{'source'};
+  my $lm_colour = $colour_class{'lot_million'};
+  my $fm_colour = $colour_class{'few_million'};
+  my $t_colour  = $colour_class{'thousand'};
+  my $h_colour  = $colour_class{'hundred'};
   my $v_label   = $desc{'version'}.'(s)';
   my $s_label   = $desc{'source'}.'(s)';
   
   my $legend_div_id = 'legend';
 
   $html .= sprintf ( qq{
-    <span style="$label_style;margin-left:5px;background-color:$v_colour">#</span><small> : $v_label</small>
+    <span class="$v_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $v_label</small>
     <br />
-    <span style="$label_style;margin-left:5px;background-color:$s_colour">#</span><small> : $s_label</small>
+    <span class="$s_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $s_label</small>
   </div>
-  <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #336;border-right:1px dotted #336;border-bottom:1px dotted #336">
+  <div id="$legend_div_id" class="vdoc_menu vdoc_menu_src">
     <!-- Legend header -->
-    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;margin-bottom:2px">
+    <div class="vdoc_menu_header vdoc_menu_header_src">
       <div style="float:left">
         <img src="/i/16/info.png" style="vertical-align:top" />
         Icons legend
@@ -736,11 +739,15 @@ sub create_menu {
     <!-- Main legend -->
     <table>
       <tr>
-        <td style="padding-top:6px;text-align:center">%s   </td>
+        <td style="padding-top:6px;text-align:center">
+          <div class="vdoc_source_legend $v_colour"></div>
+        </td>
         <td style="padding-top:4px"><b>New version</b> of the data<br />source in this release<br />for the species</td>
       </tr>
       <tr>
-        <td style="padding-top:6px;text-align:center">%s   </td>
+        <td style="padding-top:6px;text-align:center">
+          <div class="vdoc_source_legend $s_colour"></div>
+        </td>
         <td style="padding-top:4px"><b>New data source</b> in this<br />release for the species</td>
       </tr>
       <tr>
@@ -769,25 +776,25 @@ sub create_menu {
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
-            <span style="background-color:$lm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+            <span class="vdoc_cound_legend $lm_colour"></span>
           </td>
           <td style="padding-top:4px">greater than 10 million</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
-            <span style="background-color:$fm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+            <span class="vdoc_cound_legend $fm_colour"></span>
           </td>
           <td style="padding-top:4px">from 1 million to 9.9 million</td>
         </tr>
         <tr>
           <td style="padding-top:3px;text-align:center">
-            <span style="background-color:$t_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+            <span class="vdoc_cound_legend $t_colour"></span>
           </td>
           <td style="padding-top:3px">from 1,000 to 999,999</td>
         </tr>
         <tr>
           <td style="padding-top:3px;text-align:center">
-            <span style="background-color:$h_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+            <span class="vdoc_cound_legend $h_colour"></span>
           </td>
           <td style="padding-top:3px">less than 1,000</td>
         </tr>
@@ -815,8 +822,6 @@ sub create_menu {
   </div>
 </div>
   },
-  qq{<div style="width:4px;height:25px;background-color:$v_colour;margin-left:9px"></div>},
-  qq{<div style="width:4px;height:25px;background-color:$s_colour;margin-left:9px"></div>},
   somatic_status('germline'),
   somatic_status('somatic'),
   somatic_status('mixed'));
@@ -826,57 +831,38 @@ sub create_menu {
 
 sub menu_list {
   my $species = shift;
-  my $label_style = shift;
   my $desc = shift;
 
-  my $right_margin = 66;
-  my $diff = 2; # Pixel difference if the count > 9
-
-  my $name = $species->{name};
+  my $name    = $species->{name};
   my $display = $species->{display};
-  my $s_name = $species->{s_name};
-  my $anchor = $species->{anchor};
+  my $s_name  = $species->{s_name};
+  my $anchor  = $species->{anchor};
   my $new_data = '';
   if ($species_news{$species->{name}}) {
     foreach my $type (@new_status) {
       next if (!$species_news{$species->{name}}{$type});
       my $count_type = $species_news{$species->{name}}{$type};
-      my $label_colour = $colours{$type};
+      my $label_colour = $colour_class{$type};
       my $label_desc = "$count_type ".lc($desc->{$type});
          $label_desc .= 's' if ($count_type > 1);
-      
-      my $tmp_label_style = $label_style;
-      my $left_margin = 10;
-      
-      if ($count_type > 9) {
-        $tmp_label_style =~ /width:(\d+)px/;
-        my $tmp_width = $1;
-        my $new_width = $tmp_width+$diff;
-        $left_margin -= $diff;
-        $tmp_label_style =~ s/width:$tmp_width/width:$new_width/;
-      }
-      
-      $left_margin .= 'px';
-      $new_data .= qq{<span class="_ht" style="$tmp_label_style;margin-left:$left_margin;background-color:$label_colour" title="$label_desc">$count_type</span>};
-      $right_margin -= ($type eq 'source' && !$species_news{$species->{name}}{'version'}) ? 44 : 22;
+
+      $new_data .= qq{<span class="_ht vdoc_source_count $label_colour" title="$label_desc">$count_type</span>};
     }
   }
   my $img = $name;
   return qq{
-  <div style="margin:0px $right_margin\px 5px 4px">
-    <div style="float:left">
+  <div style="margin:0px 4px 5px">
+    <div class="vdoc_menu_left">
       <img src="/i/species/16/$s_name.png" alt="$display" style="margin-right:4px;vertical-align:middle" />
       <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>
     </div>
-    <div style="float:right">  
+    <div class="vdoc_menu_right">  
       $new_data
     </div>
     <div style="clear:both"></div>  
   </div>
   };
 }
-
-
 
 sub new_source_or_version {
   my $type = shift;
@@ -930,11 +916,11 @@ sub table_header {
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
 
   my $data_type_header = qq{
-     <th style="width:155px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">Data type(s)
-       <div>
-         <div style="float:left;width:65px;text-align:center"><span class="_ht ht" $border_color title="Data type"><small>Type</small></div>
-         <div style="float:left;width:70px;text-align:center"><span class="_ht ht" $border_color title="Variants count"><small>Count</small></span></div>
-         <div style="float:left;width:20px;text-align:center"><span class="_ht ht" $border_color title="Example"><small>e.g.</small></span></div>
+     <th class="vdoc_data_types vdoc_extra_column" style="background-color:#BBB">Data type(s)
+       <div class="vdoc_data_types">
+         <div class="vdoc_type_style" style="text-align:center"><span class="_ht ht" $border_color title="Data type"><small>Type</small></div>
+         <div class="vdoc_count_style" style="text-align:center"><span class="_ht ht" $border_color title="Variants count"><small>Count</small></span></div>
+         <div class="vdoc_example_style"><span class="_ht ht" $border_color title="Example"><small>e.g.</small></span></div>
          <div style="clear:both"></div>
        </div>
      </th>
@@ -961,9 +947,9 @@ sub set_row {
         <td style="font-weight:bold">$source</td>
         <td>$version</td>
         <td style="max-width:800px">$desc</td>
-        <td style="border-left:1px solid #CCC;padding:4px 2px">$data_type</td>
+        <td class="vdoc_extra_column">$data_type</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #CCC">$phenotype</td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
+        <td style="width:160px;text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
   };
   return $row;
 }
@@ -1042,14 +1028,14 @@ sub get_count {
   
   my $count_label;
   my $count_display;
-  my $bg_color;
+  my $bg_class;
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number million";
     $count_label = "Over $count variants";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'few_million'};
+    $bg_class = $colour_class{'few_million'};
   }
   # From 10 million
   elsif ($count =~ /^(\d+)\d{6}$/) {
@@ -1057,22 +1043,22 @@ sub get_count {
     $count = "$number million";
     $count_label = "Over $count variants";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'lot_million'};
+    $bg_class = $colour_class{'lot_million'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count variants";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'thousand'};
+    $bg_class = $colour_class{'thousand'};
   }
   # From 1 to 999
   else {
     $count_label = "$count variants";
     $count_display = $count;
-    $bg_color = $colours{'hundred'};
+    $bg_class = $colour_class{'hundred'};
   }
-  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:1px 2px;cursor:help;white-space:nowrap" title="$count_label"><small>$count_display</small></span>};
+  return qq{<span class="vdoc_dtype_count $bg_class" title="$count_label">$count_display</span>};
 }
 
 sub get_example {
