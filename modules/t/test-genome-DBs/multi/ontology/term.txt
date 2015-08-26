@@ -161,3 +161,5 @@
 40788	5	NULL	SO:0001217	protein_coding_gene	""""" []"	0	0
 40842	5	NULL	SO:0001272	tRNA_gene	""""" []"	0	0
 41072	5	NULL	SO:0001503	processed_transcript	"""A transcript for which no open reading frame has been identified and for which no other function has been determined."" [MGI:hdeen]"	0	0
+45078	5	NULL	SO:0001583	missense_variant	"A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved." [EBI:fc, EBI:gr, SO:ke]	0	0
+45119	5	NULL	SO:0001627	intron_variant	"A transcript variant occurring within an intron." [SO:ke]	0	0
