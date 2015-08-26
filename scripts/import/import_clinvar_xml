@@ -158,7 +158,7 @@ while (my $set = $ref->get_record() ){
                     ## API doesn't handle 2 genes currently
                     my @multi;
                     foreach my $meas (@{$measure->{MeasureRelationship}}){
-                        push @multi, $meas->{Symbol}->{ElementValue}->[0];
+                        push @multi, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
                     } 
                     $record{gene} = join(",", @multi);
                  }
