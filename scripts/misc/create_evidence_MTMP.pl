@@ -44,7 +44,7 @@ foreach my $db_name (@{$databases}){
     my $evidence_id = get_evidence_id($dbh);
 
     
-    my $filename = "$db\.dat";
+    my $filename = "$db_name\.dat";
     open my $out, ">$filename"||die "Failed to open $filename to write evidence statuses : $!\n"; 
     
     my $ev_ext_sth  = $dbh->prepare(qq[ select variation_id, evidence_attribs from variation ]);
