@@ -125,6 +125,12 @@ my %SOURCES = (
     url => "http://www.zfin.org/",
     type => "Gene",
   },
+  
+  "GOA" => {
+    description => "Gene Ontology Annotation data associated with Inferred from Mutant Phenotype (IMP) evidences",
+    url => "http://www.ebi.ac.uk/GOA",
+    type => "Gene",
+  },
 );
 
 usage() if (!scalar(@ARGV));
@@ -259,10 +265,6 @@ elsif ($source =~ m/^omim$/i) {
   $result = parse_omim($infile);
   $source_name = 'OMIM';
 }
-elsif ($source =~ m/dbsnp/i) {
-  $result = parse_dbsnp_omim($infile);
-  $source_name = 'OMIM';
-}
 elsif ($source =~ m/ega/i) {
   $source_name = 'EGA';
   $source_description = $SOURCES{$source_name}->{description};
@@ -332,6 +334,10 @@ elsif ($source =~ m/zfin/i) {
 elsif ($source =~ m/dbgap/i) {
   $result = parse_dbgap($infile);
   $source_name = 'dbGaP';
+}
+elsif ($source =~ m/^goa$/i) {
+  $result = parse_goa($infile, $core_db_adaptor);
+  $source_name = 'GOA';
 }
 else {
   die("Source $source is not recognized");
@@ -563,6 +569,8 @@ sub parse_nhgri {
         $risk_frequency = $content{'RISK ALLELE FREQUENCY'};
       }
       
+      $gene =~ s/ //g;
+      
       my %data = (
         'study_type' => 'GWAS',
         'description' => $phenotype,
@@ -675,74 +683,11 @@ sub parse_omim {
       push(@phenotypes,$data);
     }
   }
-  
   close(IN);
   
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
 }
-
-
-sub parse_dbsnp_omim {
-  my $infile = shift;
-  
-  my @phenotypes;
-  my @attribute_keys = (
-    'ID',
-    'Phenotype_study',
-    'Phenotype_associated_variant_risk_seq',
-    'Omim_title',
-    'Allele_title',
-    'Gene_names'
-  );
-  
-  # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
-  
-  # Read through the file and parse out the desired fields
-  while (<IN>) {
-    chomp;
-    
-    my @attributes = split(/\t/);
-    
-    # Skip the risk allele if the variant is "0000"
-    my $data = {
-      'id'      => 'rs' . $attributes[0],
-      'study'       => 'MIM:' . $attributes[1],
-      'associated_gene' => $attributes[5],
-      'variation_names' => 'rs' . $attributes[0],
-      'risk_allele' => ($attributes[2] !~ m/^\s*0+\s*$/ ? $attributes[2] : undef),
-
-    };
-    
-    # If available, use the variant title, else use the omim record title
-    if (defined($data->{'risk_allele'}) and $attributes[4] ne '') {
-      $data->{'description'} = $attributes[4];
-    } else {
-      $data->{'description'} = $attributes[3];
-    }
-    
-    # If possible, try to extract the last comma-separated word as this should be the short name for the phenotype
-    @attributes = split(/;/,$data->{'description'});
-    if (scalar(@attributes) > 1) {
-      ($data->{'name'}) = pop(@attributes) =~ m/(\S+)/;
-      $data->{'description'} = join(';',@attributes);
-    }
-    
-    push(@phenotypes,$data);
-  }
-  
-  close(IN);
-  
-  my %result = ('phenotypes' => \@phenotypes);
-  return \%result;
-}
-
 
 sub parse_ega {
   my $infile = shift;
@@ -862,6 +807,78 @@ sub parse_ega {
   close(IN);
 }
 
+sub parse_goa {
+  my $infile = shift;
+  my $core_db_adaptor = shift;
+  
+  my $ga = $core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor") unless defined($ga);
+  
+  my @phenotypes;
+  my %headers;
+  
+  # Open the input file for reading
+	if($infile =~ /gz$/) {
+		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+	}
+	else {
+		open(IN,'<',$infile) or die ("Could not open $infile for reading");
+	}
+  
+  # Read through the file and parse out the desired fields
+  while (<IN>) {
+    chomp;
+    
+    my @row_data = split(/\t/,$_);
+    
+    # header
+    if(/^Gene_ID/) {
+      $headers{uc($row_data[$_])} = $_ for 0..$#row_data;
+    }
+    else {
+      die "ERROR: Couldn't find header data\n" unless %headers;
+    
+      my %content;
+      $content{$_} = $row_data[$headers{$_}] for keys %headers;
+
+      my $pubmed_ids  = ($content{'PMID(S)'} eq '') ? undef : $content{'PMID(S)'};
+      my $gene_id     = $content{'GENE_ID'};
+      my $external_id = $content{'GO_TERM'};
+      my $phenotype   = $content{'GO_DESCRIPTION'};
+      my $uniprot_id  = $content{'UNIPROT_ID'};
+     
+    
+      my $gene = $ga->fetch_by_stable_id($gene_id);
+    
+      if(!$gene) {
+        print STDERR "WARNING: No matching found the Ensembl gene ID '$gene_id'\n";
+      }
+    
+      next unless $gene;
+    
+    
+      my %data = (
+        'id' => $gene->stable_id,
+        'description' => $phenotype,
+        'external_id' => $external_id,
+        'seq_region_id' => $gene->slice->get_seq_region_id,
+        'seq_region_start' => $gene->seq_region_start,
+        'seq_region_end' => $gene->seq_region_end,
+        'seq_region_strand' => $gene->seq_region_strand,
+        'xref_id' => $uniprot_id
+      );
+      
+      $data{'pubmed_id'} = $pubmed_ids if ($pubmed_ids);
+    
+      push(@phenotypes,\%data);
+    }
+  }
+  close(IN);
+  
+  my %result = ('phenotypes' => \@phenotypes);
+  return \%result;
+}
+
 sub parse_omia {
   my $infile = shift;
   my $core_db_adaptor = shift;
@@ -907,6 +924,7 @@ sub parse_omia {
       };
     }
   }
+  close(IN);
   
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
@@ -2473,7 +2491,7 @@ sub usage {
   Options:
     
       -verbose           Progress information is printed
-      -help               Print this message
+      -help              Print this message
       
       -skip_phenotypes   Skip the study, phenotype_feature, phenotype_feature_attrib and phenotype tables insertions.
       -skip_synonyms     Skip the variation_synonym table insertion.
