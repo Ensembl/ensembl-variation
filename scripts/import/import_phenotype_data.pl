@@ -180,6 +180,8 @@ my $source_url;
 my $object_type;
 my $prev_prog;
 
+my $pubmed_prefix = 'PMID:';
+
 =head
 
     The parser subroutines parse the input file into a common data structure.
@@ -621,7 +623,7 @@ sub parse_nhgri {
         push(@ids,$1);
       }
       $data{'variation_names'} = join(',',@ids);
-      $data{'study'} = 'pubmed/' . $pubmed_id if (defined($pubmed_id));
+      $data{'study'} = $pubmed_prefix . $pubmed_id if (defined($pubmed_id));
       
       # If we didn't get any rsIds, skip this row (this will also get rid of the header)
       warn("Could not parse any rsIds from string '$rs_id'") if (!scalar(@ids));
@@ -760,7 +762,7 @@ sub parse_ega {
     my @attributes = split(",",$_);
     next if ($attributes[1] eq '');
     my $name = $attributes[0];
-    my $pubmed = 'pubmed/'.$attributes[1];
+    my $pubmed = $pubmed_prefix.$attributes[1];
     my $url = $attributes[2];
     
     # NHGRI study
@@ -868,7 +870,7 @@ sub parse_goa {
         'xref_id' => $uniprot_id
       );
       
-      $data{'pubmed_id'} = $pubmed_ids if ($pubmed_ids);
+      $data{'study'} = $pubmed_ids if ($pubmed_ids);
     
       push(@phenotypes,\%data);
     }
@@ -995,7 +997,7 @@ sub parse_animal_qtl {
     }
     
     # add additional fields if found
-    $phenotype->{'study'} = 'pubmed/'.$extra->{PUBMED_ID} if defined($extra->{PUBMED_ID});
+    $phenotype->{'study'} = $pubmed_prefix.$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'});
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
     $phenotype->{'f_stat'} = $extra->{'F-stat'} if defined($extra->{'F-stat'});
     $phenotype->{'lod_score'} = $extra->{'LOD-score'} if defined($extra->{'LOD-score'});
@@ -1650,7 +1652,7 @@ sub parse_dbgap {
       push(@ids,$1);
     }
     $data{'variation_names'} = join(',',@ids);
-    $data{'study'} = 'pubmed/' . $pubmed_id if (defined($pubmed_id));
+    $data{'study'} = $pubmed_prefix . $pubmed_id if (defined($pubmed_id));
     
     # If we didn't get any rsIds, skip this row (this will also get rid of the header)
     warn("Could not parse any rsIds from string '$rs_id'") if (!scalar(@ids));

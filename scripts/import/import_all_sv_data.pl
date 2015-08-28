@@ -358,7 +358,7 @@ sub study_table{
       else {    
         $pmid_desc .= join(',',@$pmid);
       }
-      $pubmed = "pubmed/".join(",pubmed/", @$pmid);
+      $pubmed = "PMID:".join(",PMID:", @$pmid);
     }
   }
   my $external_link = ($display_name{$author}) ? $display_name{$author} : $pubmed;
