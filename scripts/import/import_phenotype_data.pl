@@ -127,7 +127,7 @@ my %SOURCES = (
   },
   
   "GOA" => {
-    description => "Gene Ontology Annotation data associated with Inferred from Mutant Phenotype (IMP) evidences",
+    description => "Inferred from Mutant Phenotype (IMP), annotated by Gene Ontology Annotation",
     url => "http://www.ebi.ac.uk/GOA",
     type => "Gene",
   },
