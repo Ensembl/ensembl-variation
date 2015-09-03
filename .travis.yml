@@ -6,10 +6,14 @@ perl:
 env:
   - COVERALLS=true  DB=mysql
 
+sudo: false
+
+addons:
+    apt:
+        packages:
+        - unzip
+
 before_install:
-    - sudo apt-get -y update
-    - sudo apt-get -y install unzip
-    - sudo apt-get -y install sendmail
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
@@ -27,10 +31,7 @@ before_install:
     - cd ../../
     - cd C_code/
     - make
-    - sudo cp calc_genotypes /usr/bin/
     - cd ../
-    - echo -e "[server]\nwait_timeout=28000" | sudo tee -a /etc/mysql/my.cnf
-    - sudo service mysql restart
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  

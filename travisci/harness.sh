@@ -2,7 +2,7 @@
 
 export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-2-3:$PWD/ensembl-test/modules:$PWD/ensembl/modules:$PWD/ensembl-hive/modules:$PWD/modules:$PWD/scripts/import/:$PWD/ensembl-io/modules:$PWD/ensembl-funcgen/modules
 
-export PATH=$PATH:$PWD/tabix
+export PATH=$PATH:$PWD/tabix:$PWD/C_code
 
 echo "Running test suite"
 echo "Using $PERL5LIB"
