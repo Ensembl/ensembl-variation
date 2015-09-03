@@ -846,7 +846,8 @@ sub menu_list {
       my $label_desc = "$count_type ".lc($desc->{$type});
          $label_desc .= 's' if ($count_type > 1);
 
-      $new_data .= qq{<span class="_ht vdoc_source_count $label_colour" title="$label_desc">$count_type</span>};
+      my $label_pos = 'vdoc_new_'.$type.'_count';
+      $new_data .= qq{<span class="_ht vdoc_source_count $label_colour $label_pos" title="$label_desc">$count_type</span>};
     }
   }
   my $img = $name;
