@@ -131,7 +131,7 @@ ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types f
 
 $rfva->store($rfv);
 $rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
-ok(scalar @$rfvs == 1, 'fetch_all_by_VariationFeatures');
+is(scalar @$rfvs, 1, 'fetch_all_by_VariationFeatures');
 
 my $var1 = $va->fetch_by_name('rs187207343');
 my $vf1 = $vfa->fetch_all_by_Variation($var1)->[0];
