@@ -791,6 +791,12 @@ sub inframe_insertion {
         return 0 unless ( length($alt_codon) > length ($ref_codon) );
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+        # if we have a stop codon in the alt peptide
+        # trim off everything after it
+        # this allows us to detect inframe insertions that retain a stop
+        $alt_pep =~ s/\*.+/\*/;
+
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
     }

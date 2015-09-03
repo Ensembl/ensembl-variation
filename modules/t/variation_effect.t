@@ -677,6 +677,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_end,
         effects => [qw(stop_lost)],
     }, {
+        comment => 'insertion in stop codon that shifts stop downstream and has additional bases beyond stop',
+        alleles => 'CTGAGG',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(inframe_insertion)],
+    }, {
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
         start   => $cds_end-10,
