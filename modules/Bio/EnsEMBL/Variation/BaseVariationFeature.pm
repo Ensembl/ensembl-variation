@@ -109,10 +109,10 @@ sub consequence_type {
 
   Arg [1]    : (optional) String $term_type
   Description: Get the term for the most severe consequence of this 
-               VariationFeature. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
+               VariationFeature. By default returns the Sequence Ontology term
+               (e.g. 'missense_variant'). $term_type can also be 'label'
+               (e.g. 'Missense variant'), 'Ensembl' ((e.g. 'NON_SYNONYMOUS_CODING') 
+               or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
   Status     : Stable
