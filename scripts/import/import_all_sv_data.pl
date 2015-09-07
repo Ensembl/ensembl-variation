@@ -404,9 +404,11 @@ sub study_table{
       $study_desc = $1;
     }
     
+    $external_link = ($external_link =~ /NULL/i) ? $external_link : "'$external_link'";
+    
     $stmt = qq{ UPDATE $study_table SET 
                   description='$study_desc',
-                  external_reference='$external_link',
+                  external_reference=$external_link,
                   study_type='$study_type',
                   url='$study_ftp'
                 WHERE study_id=$study_id
