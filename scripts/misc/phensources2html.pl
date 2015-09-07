@@ -518,11 +518,11 @@ sub create_menu {
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div class="vdoc_menu vdoc_menu_phen">
-    <div class="vdoc_menu_header vdoc_menu_header_phen">
-      <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
-      Species with phenotype
-    </div>
+    <div class="vdoc_menu vdoc_menu_phen">
+      <div class="vdoc_menu_header vdoc_menu_header_phen">
+        <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
+        Species with phenotype
+      </div>
   };
   foreach my $top_sp (sort { $top_species{$a} <=> $top_species{$b} } keys(%top_species)) {
     my $species = $top_species_list{$top_sp};
@@ -586,25 +586,25 @@ sub create_menu {
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
-            <span class="vdoc_cound_legend $lm_colour"></span>
+            <span class="vdoc_count_legend $lm_colour"></span>
           </td>
           <td style="padding-top:4px">greater than 10 million</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
-            <span class="vdoc_cound_legend $fm_colour"></span>
+            <span class="vdoc_count_legend $fm_colour"></span>
           </td>
           <td style="padding-top:4px">from 1 million to 9.9 million</td>
         </tr>
         <tr>
           <td style="padding-top:3px;text-align:center">
-            <span class="vdoc_cound_legend $t_colour"></span>
+            <span class="vdoc_count_legend $t_colour"></span>
           </td>
           <td style="padding-top:3px">from 1,000 to 999,999</td>
         </tr>
         <tr>
           <td style="padding-top:3px;text-align:center">
-            <span class="vdoc_cound_legend $h_colour"></span>
+            <span class="vdoc_count_legend $h_colour"></span>
           </td>
           <td style="padding-top:3px">less than 1,000</td>
         </tr>
