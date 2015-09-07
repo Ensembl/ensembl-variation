@@ -55,7 +55,8 @@ ok($var->minor_allele() eq 'A',      'minor allele by var id');
 ok($var->minor_allele_count() == 358, 'minor allele count by var id');
 ok($var->minor_allele_frequency() eq '0.164371', 'minor allele frequency by var id' );
 ok($var->get_all_clinical_significance_states()->[0] eq 'benign', 'clinsig by var id');
-ok($var->display_consequence() eq 'Intron variant', 'display status by var id');
+ok($var->display_consequence() eq 'intron_variant', 'display SO consequence by var id');
+ok($var->display_consequence('label') eq 'Intron variant', 'display consequence label by var id');
 ok( !$var->is_failed(),              "failed status");
 
 my %syns = map {$_ => 1} @{$var->get_all_synonyms()};

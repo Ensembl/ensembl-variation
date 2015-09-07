@@ -1373,9 +1373,23 @@ sub get_all_PhenotypeFeatures {
 
 }
 
+=head2 display_consequence
+
+  Arg [1]    : (optional) String $term_type
+  Description: Get the term for the most severe consequence of this 
+               VariationFeature. By default returns the Sequence Ontology term
+               (e.g. 'missense_variant'). $term_type can also be 'label'
+               (e.g. 'Missense variant'), 'Ensembl' ((e.g. 'NON_SYNONYMOUS_CODING') 
+               or 'NCBI' (e.g. 'missense')
+  Returntype : string
+  Exceptions : none
+  Status     : Stable
+
+=cut
 sub display_consequence {
     my $self = shift;
-    
+    my $term_type = shift;
+        
     my @ocs = map {@{$_->get_all_OverlapConsequences}} @{$self->get_all_VariationFeatures};
     
     ## there is no consequence if there is no genomic location
@@ -1390,7 +1404,15 @@ sub display_consequence {
         }
     }
 	
-    return $highest->label;
+	  my $method_name;
+    if(defined($term_type)) {
+        $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+        $method_name = 'SO_term' unless @ocs && $ocs[0]->can($method_name);
+    }
+
+    $method_name ||= 'SO_term';
+	
+    return $highest->$method_name;
 }
 
     
