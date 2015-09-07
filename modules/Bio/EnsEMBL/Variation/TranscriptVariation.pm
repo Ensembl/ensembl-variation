@@ -319,7 +319,7 @@ sub _protein_function_predictions {
     my $matrix = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
 
     unless ($matrix || exists($tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis})) {
-        return undef unless $self->{adaptor}->db;
+        return undef unless $self->{adaptor} && $self->{adaptor}->db;
         
         my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
            
