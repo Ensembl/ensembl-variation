@@ -87,24 +87,25 @@ my $db_type = 'variation';
 my $default_port = 3306;
 $port ||= $default_port;
 my $p_version = $e_version-1;
+my $detailed_counts = 'species_detailed_counts.html';
 
 my $html;
    
-my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800',    'legend' => 'From 10 million'},
-                'few_million' => { 'order' => 2, 'colour' => '#007',    'legend' => 'From 1 million to 9.9 million'},
-                'thousand'    => { 'order' => 3, 'colour' => '#006266', 'legend' => 'From 1,000 to 999,999'},
-                'hundred'     => { 'order' => 4, 'colour' => '#070',    'legend' => 'From 1 to 999'}
+my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 million'},
+                'few_million' => { 'order' => 2, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9.9 million'},
+                'thousand'    => { 'order' => 3, 'colour' => 'vdoc_thousand',  'legend' => 'From 1,000 to 999,999'},
+                'hundred'     => { 'order' => 4, 'colour' => 'vdoc_hundred',   'legend' => 'From 1 to 999'}
               );              
               
-my %tables = ( 'Sample'             => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
-               'Population'         => { 'order' => 3 , 'table' => 'population_genotype'},
-               'Phenotype'          => { 'order' => 4 , 'table' => 'phenotype_feature'},
-               'Citation'           => { 'order' => 5 , 'table' => 'variation_citation'},
-               'Structural variant' => { 'order' => 1 , 'table' => 'structural_variation'}
+my %tables = ( 'Sample'             => { 'order' => 2 , 'anchor' => '#genotype',             'table' => 'compressed_genotype_var'},
+               'Population'         => { 'order' => 3 , 'anchor' => '#genotype',             'table' => 'population_genotype'},
+               'Phenotype'          => { 'order' => 4 , 'anchor' => '#phenotype',            'table' => 'phenotype_feature'},
+               'Citation'           => { 'order' => 5 , 'anchor' => '#citation',             'table' => 'variation_citation'},
+               'Structural variant' => { 'order' => 1 , 'anchor' => '#structural_variation', 'table' => 'structural_variation'}
              );
              
-my %columns = ( 'SIFT'     => {'order' => 1 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'sift_version'},
-                'PolyPhen' => {'order' => 2 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'polyphen_version'}
+my %columns = ( 'SIFT'     => {'order' => 1 , 'anchor' => '#prediction', 'table' => 'meta', 'column' => 'meta_key', 'value' => 'sift_version'},
+                'PolyPhen' => {'order' => 2 , 'anchor' => '#prediction', 'table' => 'meta', 'column' => 'meta_key', 'value' => 'polyphen_version'}
               );
                         
 my %species_list;
@@ -192,10 +193,19 @@ my $th_border_left = qq{border-left:1px solid #DDD};
 my $th_border_left_top = qq{style="$th_border_left;text-align:center"};
 
 
-#my $data_tables_header  = join("</th><th $th_border_left>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
 
-my $data_tables_header  = join("</th><th style=\"$th_bg;$th_border_left\">", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
-my $data_columns_header = join("</th><th style=\"$th_bg;$th_border_left\">", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
+
+my $data_tables_header = '';
+my $header_link = qq{<a class="_ht" style="text-decoration:none" title="See detailed counts" href="};
+foreach my $column_title (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)) {
+  my $link = $header_link.$detailed_counts.$tables{$column_title}{'anchor'}.qq{">$column_title</a>};
+  $data_tables_header .= qq{<th style="$th_bg;$th_border_left">$link</th>};
+}
+my $data_columns_header = '</th>';
+foreach my $column_title (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)) {
+  my $link = $header_link.$detailed_counts.$columns{$column_title}{'anchor'}.qq{">$column_title</a>};
+  $data_columns_header .= qq{<th style="$th_bg;$th_border_left">$link</th>};
+}
 
 my $html_content = qq{
   <table class="ss" style="width:auto">
@@ -217,8 +227,8 @@ my $html_content = qq{
         </span>
       </th>
       <th style="$th_bg;$th_border_left">Source(s)</th>
-      <th style="$th_bg;$th_border_left">$data_tables_header</th>
-      <th style="$th_bg;$th_border_left">$data_columns_header</th>
+      $data_tables_header
+      $data_columns_header
     </tr>};
 my $bg = '';
 
@@ -284,11 +294,11 @@ my $html_legend = qq{
   <span style="margin-right:5px;font-weight:bold">Colour legend: </span>
 };
 foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
-  my $desc   = $colours{$type}{'legend'};
-  my $colour = $colours{$type}{'colour'};
+  my $desc  = $colours{$type}{'legend'};
+  my $class = $colours{$type}{'colour'};
   $html_legend .= qq{  
   <span style="margin-left:20px">
-    <span style="background-color:$colour;color:#FFF;border-radius:5px;padding:0px 12px;white-space:nowrap;margin-right:5px"></span>
+    <span class="vdoc_count_legend $class" style="margin-right:5px"></span>
     <span>$desc</span>
   </span>};
 }
@@ -331,14 +341,14 @@ sub round_count {
   
   my $count_label;
   my $count_display;
-  my $bg_color;
+  my $bg_class;
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number million";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'few_million'}{'colour'};
+    $bg_class = $colours{'few_million'}{'colour'};
   }
   # From 10 million
   elsif ($count =~ /^(\d+)\d{6}$/) {
@@ -346,22 +356,22 @@ sub round_count {
     $count = "$number million";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'lot_million'}{'colour'};
+    $bg_class = $colours{'lot_million'}{'colour'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'thousand'}{'colour'};
+    $bg_class = $colours{'thousand'}{'colour'};
   }
   # From 1 to 999
   else {
     $count_label = "$count $type";
     $count_display = "$count";
-    $bg_color = $colours{'hundred'}{'colour'};
+    $bg_class = $colours{'hundred'}{'colour'};
   }
-  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
+  return qq{<span class="$bg_class" style="color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
 }
 
 sub round_count_diff {
@@ -482,9 +492,9 @@ sub set_bg {
 sub usage {
   
   print qq{
-  Usage: perl sources2html.pl [OPTION]
+  Usage: perl species_list.pl [OPTION]
   
-  Put all variation sources, for each species, into an HTML document.
+  Put data information for each species, into an HTML document.
   
   Options:
 
