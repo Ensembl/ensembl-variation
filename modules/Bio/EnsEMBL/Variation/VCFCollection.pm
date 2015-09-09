@@ -120,7 +120,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $created, $updated, $is_remapped, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH CREATED UPDATED IS_REMAPPED ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -142,9 +142,6 @@ sub new {
     assembly  => $assembly,
     source => $source,
     strict_name_match => defined($strict) ? $strict : 0,
-    created => $created,
-    updated => $updated,
-    is_remapped => $is_remapped,
     _use_db => 1,
     _raw_populations => $sample_pops,
   );
@@ -571,6 +568,21 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   return \@genotypes;
 }
 
+sub get_all_location2name_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  return [] unless $self->_seek_by_Slice($slice); 
+ 
+  my $vcf = $self->_current();   
+
+  my $vfs = {};
+  while ($vcf->{record} && $vcf->get_start <= $slice->end) {
+    $vfs->{$vcf->get_start} = $vcf->get_IDs->[0];
+    $vcf->next;
+  }
+  return $vfs;
+}
+
 sub source {
   my $self = shift;
   
@@ -605,24 +617,6 @@ sub source_url{
 sub assembly{
   my $self = shift;
   return $self->{assembly};
-}
-
-## used for GA4GH - milliseconds from the epoch 
-## could store by file (chrom) rather than collection?
-sub created{
-  my $self = shift;
-  return $self->{created};
-}
-## used for GA4GH - milliseconds from the epoch
-sub updated{
-  my $self = shift;
-  return $self->{updated};
-}
-
-## info values cannot all be trusted for lifted over positions
-sub is_remapped{
-  my $self = shift;
-  return $self->{is_remapped};
 }
 
 ## INTERNAL METHODS
