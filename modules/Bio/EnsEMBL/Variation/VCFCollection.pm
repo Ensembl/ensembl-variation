@@ -119,8 +119,8 @@ our %TYPES = (
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  
-  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH ADAPTOR)], @_);
+
+  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $created, $updated, $is_remapped, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH CREATED UPDATED IS_REMAPPED ADAPTOR)], @_); 
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -142,6 +142,9 @@ sub new {
     assembly  => $assembly,
     source => $source,
     strict_name_match => defined($strict) ? $strict : 0,
+    created => $created,
+    updated => $updated,
+    is_remapped => $is_remapped,
     _use_db => 1,
     _raw_populations => $sample_pops,
   );
@@ -581,6 +584,24 @@ sub get_all_location2name_by_Slice {
     $vcf->next;
   }
   return $vfs;
+}
+
+## used for GA4GH - milliseconds from the epoch 
+## could store by file (chrom) rather than collection?
+sub created{
+  my $self = shift;
+  return $self->{created};
+}
+## used for GA4GH - milliseconds from the epoch
+sub updated{
+  my $self = shift;
+  return $self->{updated};
+}
+
+## info values cannot all be trusted for lifted over positions
+sub is_remapped{
+  my $self = shift;
+  return $self->{is_remapped};
 }
 
 sub source {
