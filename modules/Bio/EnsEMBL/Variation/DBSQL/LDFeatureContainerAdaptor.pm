@@ -749,7 +749,7 @@ sub _ld_calc {
     if ($use_vcf) {
       my $vca = $self->db->get_VCFCollectionAdaptor();
       foreach my $vc (@{$vca->fetch_all}) {
-        my $vfs = $vc->get_all_VariationFeatures_by_Slice($slice);
+        my $vfs = $vc->get_all_location2name_by_Slice($slice);
         foreach my $position (keys %$vfs) {
           $pos_vf->{$position} = $vfs->{$position};
         }  
