@@ -118,7 +118,7 @@ my $html_title = qq{
 
     <h2>List of data counts by category and species - $ecaption $e_version</h2>
 
-    <div>
+    <div style="margin-bottom:30px">
       <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
     </div>
 };
@@ -129,12 +129,12 @@ my $html_title = qq{
 my $html_legend = qq{
   <!-- Right hand side legend -->
   <div style="float:right;width:200px;top:20px">
-    <div style="margin: 2px 0px 16px 8px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #22949b;border-right:1px dotted #22949b;border-bottom:1px dotted #22949b">
-      <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #22949b;border-bottom:1px solid #22949b;margin-bottom:5px">
+    <div class="vdoc_menu vdoc_menu_phen">
+      <div class="vdoc_menu_header vdoc_menu_header_phen">
         <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
         Colour legend
-    </div>
-    <table>
+      </div>
+      <table>
 };
 
 ##############
@@ -147,45 +147,46 @@ my $html_footer = q{
 </html>};
 
    
-my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800',    'legend' => 'From 10 million'},
-                'few_million' => { 'order' => 2, 'colour' => '#007',    'legend' => 'From 1 million to 9.9 million'},
-                'thousand'    => { 'order' => 3, 'colour' => '#006266', 'legend' => 'From 1,000 to 999,999'},
-                'hundred'     => { 'order' => 4, 'colour' => '#070',    'legend' => 'From 1 to 999'},
-                'zero'        => { 'order' => 5, 'colour' => '#CCC',    'legend' => 'No data'}
+my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 million'},
+                'few_million' => { 'order' => 2, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9.9 million'},
+                'thousand'    => { 'order' => 3, 'colour' => 'vdoc_thousand',  'legend' => 'From 1,000 to 999,999'},
+                'hundred'     => { 'order' => 4, 'colour' => 'vdoc_hundred',   'legend' => 'From 1 to 999'},
+                'zero'        => { 'order' => 5, 'colour' => 'vdoc_zero',      'legend' => 'No data'}
               );  
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 
-my %sql_list = ( "Structural variant" => { 'sqla'  => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
-                                                                     WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name="DGVa"},
-                                                        'label' => 'Structural variant'
-                                                      }, 
-                                           'sqlb'  => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
-                                                                    WHERE sv.is_evidence=1 AND s.source_id=sv.source_id AND s.name="DGVa"},
-                                                        'label' => 'Supporting evidence'
-                                                      }, 
+my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
+                                                                      WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name="DGVa"},
+                                                         'label' => 'Structural variant'
+                                                       }, 
+                                           'sqlb'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
+                                                                     WHERE sv.is_evidence=1 AND s.source_id=sv.source_id AND s.name="DGVa"},
+                                                         'label' => 'Supporting evidence'
+                                                       },
                                          },
-                   "Citation"         => { 'sqla'  => { 'sql'   => q{SELECT COUNT(DISTINCT variation_id) FROM variation_citation},
-                                                        'label' => 'Cited sequence variant'
-                                                      }, 
-                                            'sqlb'  => { 'sql'   => q{SELECT COUNT(DISTINCT publication_id) FROM variation_citation},
+                   "Citation"         => { 'sqla'   => { 'sql'   => q{SELECT COUNT(DISTINCT variation_id) FROM variation_citation},
+                                                         'label' => 'Cited sequence variant'
+                                                       }, 
+                                           'sqlb'   => { 'sql'   => q{SELECT COUNT(DISTINCT publication_id) FROM variation_citation},
                                                          'label' => 'Publication'
-                                                      },
+                                                       },
                                          },
-                   "Phenotype"        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(phenotype_id) FROM phenotype},
-                                                        'label' => 'Phenotype'
-                                                      },
-                                           'sqlb'  => { 'sql'   => q{SELECT COUNT(phenotype_feature_id) FROM phenotype_feature},
-                                                        'label' => 'Phenotype association'
-                                                      },
-                                           'extra' => q{The list of phenotype/disease/trait association sources by species is available in the page <a href="sources_phenotype_documentation.html">Phenotype sources</a>.}
+                   "Phenotype"        => { 'sqla'   => { 'sql'   => q{SELECT COUNT(phenotype_id) FROM phenotype},
+                                                         'label' => 'Phenotype'
+                                                       },
+                                           'sqlb'   => { 'sql'   => q{SELECT COUNT(phenotype_feature_id) FROM phenotype_feature},
+                                                         'label' => 'Phenotype association'
+                                                       },
+                                           'extra'  => q{The list of phenotype/disease/trait association sources by species is available in the page <a href="sources_phenotype_documentation.html">Phenotype sources</a>.}
                                          },
-                   "Genotype"         => { 'sqla'  => { 'sql'   => q{SELECT COUNT(sample_id) FROM sample WHERE description NOT LIKE "%DGVa%"},
-                                                        'label' => 'Sample'
-                                                      },
-                                           'sqlb'  => { 'sql'   => q{SELECT COUNT(population_id) FROM population WHERE name NOT LIKE "COSMIC%"},
-                                                        'label' => 'Population'
-                                                      }
+                   "Genotype"         => { 'sqla'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM compressed_genotype_var},
+                                                         'label' => 'Variants with sample genotype'
+                                                       },
+                                           'sqlb'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM population_genotype},
+                                                         'label' => 'Variants with population genotype'
+                                                       },
+                                           'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
                                          },
                    "Prediction"       => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
@@ -196,10 +197,10 @@ my %sql_list = ( "Structural variant" => { 'sqla'  => { 'sql'   => q{SELECT COUN
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="polyphen_version" 
                                                                      AND tv.polyphen_score IS NOT NULL},
                                                         'label' => 'Variants with PolyPhen data'
-                                                      }
+                                                      },
                                          } # Too long ?
                );
-my @sql_order = ("Structural variant","Genotype","Phenotype","Citation","Prediction");                       
+my @sql_order = ("Structural variant","Genotype","Phenotype","Citation","Prediction");                          
                                            
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
@@ -219,6 +220,9 @@ foreach my $type (@sql_order) {
   print "\n# $type\n";
   my $lc_type = lc($type);
   
+  my $anchor = $lc_type;
+     $anchor =~ s/ /_/g;
+     
   my %species_list;
   my %display_list;
   
@@ -382,23 +386,22 @@ foreach my $type (@sql_order) {
   $html_content .= qq{</table>\n};
 
   my $h2_style = ($html) ? 'style="margin-top:40px"' : '';
-  $html .= qq{<h2 id="$lc_type"$h2_style>$type data</h2>};
+  $html .= qq{\n  <h2 id="$anchor"$h2_style>$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
   $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the variation databases in Ensembl:</p>\n};
   $html .= $html_content;
-  #$html .= $html_legend;
 }
 
 
 # Legend
 foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
-  my $desc   = $colours{$type}{'legend'};
-  my $colour = $colours{$type}{'colour'};
+  my $desc  = $colours{$type}{'legend'};
+  my $class = $colours{$type}{'colour'};
 
   $html_legend .= qq{
       <tr>
         <td style="padding-top:4px;text-align:center">
-          <span style="background-color:$colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+          <span class="vdoc_count_legend $class"></span>
         </td>
         <td style="padding-top:4px">$desc</td>
       </tr>};
@@ -447,19 +450,19 @@ sub round_count {
   my $count = shift;
   my $type = shift;
      $type ||= 'variant';
-     $type .= 's';
+     $type .= 's' if ($type !~ /data$/);
   my $symbol = '+';
   
   my $count_label;
   my $count_display;
-  my $bg_color;
+  my $bg_class;
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number million";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'few_million'}{'colour'};
+    $bg_class = $colours{'few_million'}{'colour'};
   }
   # From 10 million
   elsif ($count =~ /^(\d+)\d{6}$/) {
@@ -467,28 +470,28 @@ sub round_count {
     $count = "$number million";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'lot_million'}{'colour'};
+    $bg_class = $colours{'lot_million'}{'colour'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count $type";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'thousand'}{'colour'};
+    $bg_class = $colours{'thousand'}{'colour'};
   }
   # From 1 to 999
   elsif ($count > 0) {
     $count_label = "$count $type";
     $count_display = "$count";
-    $bg_color = $colours{'hundred'}{'colour'};
+    $bg_class = $colours{'hundred'}{'colour'};
   }
   # No data
   else {
     $count_label = "No data";
     $count_display = "$count";
-    $bg_color = $colours{'zero'}{'colour'};
+    $bg_class = $colours{'zero'}{'colour'};
   }
-  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
+  return qq{<span class="$bg_class" style="color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
 }
 
 sub round_count_diff {
