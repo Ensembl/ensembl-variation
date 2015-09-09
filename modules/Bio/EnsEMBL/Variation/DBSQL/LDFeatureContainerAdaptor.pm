@@ -441,7 +441,6 @@ sub _fetch_by_Slice_VCF {
   my $self = shift;
   my $slice = shift;
   my $population = shift;
-  
   my $vca = $self->db->get_VCFCollectionAdaptor();
   
   # fetch genotypes
@@ -460,7 +459,8 @@ sub _fetch_by_Slice_VCF {
     # get "raw" genotypes; comes back as a hash like $hash->{$pos}->{$ind_name} = $gt
     # doing this saves constructing objects we don't need e.g. Genotypes, VariationFeatures
     my $vc_genotypes = $vc->_get_all_LD_genotypes_by_Slice($slice, $population);
-    
+ 
+   
     # copy them to main $genotypes hash
     foreach my $p(keys %$vc_genotypes) {
       $genotypes->{$p}->{$_} = $vc_genotypes->{$p}->{$_} for keys %{$vc_genotypes->{$p}};
@@ -484,7 +484,6 @@ sub _fetch_by_Slice_VCF {
       $pops{$sample_dbID_name{$_}}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
     }
   }
-  
   return $self->_objs_from_sth_vcf($genotypes, $slice, \%pops);
 }
 
@@ -724,12 +723,13 @@ sub _objs_from_sth_vcf {
 sub _ld_calc {
   my $self = shift;
   my $genotypes = shift; 
+  my $use_vcf = $self->db->use_vcf;
   my $alleles_variation = {};
   my $sample_information = {};
   my $pos_vf = {};
 
   my $vfa = $self->db->get_VariationFeatureAdaptor();
-  foreach my $genotype (@$genotypes) {
+  foreach my $genotype (@$genotypes) { 
     my $next_alleles_variation = $genotype->{'alleles_variation'};
     foreach my $snp_start (keys %$next_alleles_variation) {
       foreach my $pop_id (keys %{$next_alleles_variation->{$snp_start}}) {
@@ -737,7 +737,6 @@ sub _ld_calc {
         $alleles_variation->{$snp_start}->{$pop_id} = $hash; 
       }
     }    
-
     my $next_sample_information = $genotype->{'sample_information'};
     foreach my $pop_id (keys %$next_sample_information) {
       foreach my $snp_start (keys %{$next_sample_information->{$pop_id}}) {
@@ -745,14 +744,23 @@ sub _ld_calc {
         $sample_information->{$pop_id}->{$snp_start} = $hash;
       }
     }
-
     #create a hash that maps the position->vf_id
     my $slice = $genotype->{'slice'}; 
-    my $variations = $vfa->fetch_all_by_Slice($slice);
-    my $region_Slice = $slice->seq_region_Slice();
-    map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
+    if ($use_vcf) {
+      my $vca = $self->db->get_VCFCollectionAdaptor();
+      foreach my $vc (@{$vca->fetch_all}) {
+        my $vfs = $vc->get_all_VariationFeatures_by_Slice($slice);
+        foreach my $position (keys %$vfs) {
+          $pos_vf->{$position} = $vfs->{$position};
+        }  
+      }
+    } else {
+      my $variations = $vfa->fetch_all_by_Slice($slice);
+      my $region_Slice = $slice->seq_region_Slice();
+      map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
+    }
   }
-
+  
   my %_pop_ids;
 
   my ($ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count,$population_id);
@@ -772,7 +780,7 @@ sub _ld_calc {
   
   #we have to print the variations
   my (%in_files, %in_file_names);
-  
+
   foreach my $snp_start (sort{$a<=>$b} keys %$alleles_variation){
     foreach my $population (keys %{$alleles_variation->{$snp_start}}){
       my $fh;
@@ -794,9 +802,8 @@ sub _ld_calc {
       if (keys %{$alleles_variation->{$snp_start}{$population}} == 2){
         $self->_convert_genotype($alleles_variation->{$snp_start}{$population},$sample_information->{$population}{$snp_start});
         foreach my $sample_id (keys %{$sample_information->{$population}{$snp_start}}){
-          print $fh join("\t",$previous_seq_region_id,$snp_start, $snp_start,
-          $population, $sample_id,
-          $sample_information->{$population}{$snp_start}{$sample_id}{genotype})."\n" || warn $!;
+          print $fh join("\t",$previous_seq_region_id, $snp_start, $snp_start, $population, $sample_id, $sample_information->{$population}{$snp_start}{$sample_id}{genotype})."\n" || warn $!;
+
         }
       }
     }
@@ -813,10 +820,12 @@ sub _ld_calc {
       delete $in_files{$key};
     }
   }
-  
+ 
   # run LD binary
   `$bin <$_\.in >$_\.out` for values %in_file_names;
-  
+ 
+  my $va = $self->db->get_VariationAdaptor();
+  my $name2vf = {};
   foreach my $file (values %in_file_names) {
     open OUT, "$file.out";
     while(<OUT>){
@@ -838,12 +847,35 @@ sub _ld_calc {
       if (!defined $pos_vf->{$ld_region_start} || !defined $pos_vf->{$ld_region_end}){
         next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
       }
-      $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
-      $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
-	  
-      $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
-      $vf_objects{$vf_id1} = $pos_vf->{$ld_region_start};
-      $vf_objects{$vf_id2} = $pos_vf->{$ld_region_end};
+      if ($use_vcf) {
+        my $v_name1 = $pos_vf->{$ld_region_start};
+        my $v_name2 = $pos_vf->{$ld_region_end};
+        my ($v1, $v2, $vf1, $vf2);
+        $vf1 = $name2vf->{$v_name1};
+        $vf2 = $name2vf->{$v_name2};
+        if (!$vf1) {
+          $v1 = $va->fetch_by_name($v_name1);
+          $vf1 =  (grep {$_->seq_region_start == $ld_region_start} @{$v1->get_all_VariationFeatures})[0] || $v1->get_all_VariationFeatures()->[0];
+          $name2vf->{$v_name1} = $vf1;
+        }
+        if (!$vf2) {
+          $v2 = $va->fetch_by_name($v_name2);
+          $vf2 =  (grep {$_->seq_region_start == $ld_region_end} @{$v2->get_all_VariationFeatures})[0] || $v2->get_all_VariationFeatures()->[0];
+          $name2vf->{$v_name2} = $vf2;
+        }
+        $vf_id1 = $vf1->dbID();
+        $vf_id2 = $vf2->dbID();
+        $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
+        $vf_objects{$vf_id1} = $vf1;
+        $vf_objects{$vf_id2} = $vf2;
+      } else {
+        $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
+        $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
+      
+        $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
+        $vf_objects{$vf_id1} = $pos_vf->{$ld_region_start};
+        $vf_objects{$vf_id2} = $pos_vf->{$ld_region_end};
+      }
 	  
       $_pop_ids{$population_id} = 1;	  
     }
@@ -852,7 +884,6 @@ sub _ld_calc {
     unlink( "$file.in" );
     unlink( "$file.out" );
   }
-  
   OUT:
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
     '-ldContainer'=> \%feature_container,
