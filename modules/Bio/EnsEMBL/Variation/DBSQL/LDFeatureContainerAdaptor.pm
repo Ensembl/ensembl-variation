@@ -90,9 +90,15 @@ use constant MAX_SNP_DISTANCE => 100_000;
 
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-our $MAX_SNP_DISTANCE = 100000;
+#our $MAX_SNP_DISTANCE = 100000;
 our $BINARY_FILE      = '';
 our $TMP_PATH         = '';
+
+sub max_snp_distance {
+  my $self = shift;
+  return $self->{'max_snp_distance'} = shift if(@_);
+  return $self->{'max_snp_distance'};
+}
 
 sub executable {
   my $self = shift;
@@ -236,7 +242,9 @@ sub fetch_by_VariationFeature {
   $self->{_vf_pos} = $vf->seq_region_start;
   
   # fetch by slice using expanded feature slice
-  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand(MAX_SNP_DISTANCE,MAX_SNP_DISTANCE), $pop);
+  my $max_snp_distance = $self->{max_snp_distance} || MAX_SNP_DISTANCE;
+  print STDERR "max_snp_distance $max_snp_distance\n";
+  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
   
   # delete the cached pos
   delete $self->{_vf_pos};
