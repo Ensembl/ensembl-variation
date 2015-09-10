@@ -243,7 +243,6 @@ sub fetch_by_VariationFeature {
   
   # fetch by slice using expanded feature slice
   my $max_snp_distance = $self->{max_snp_distance} || MAX_SNP_DISTANCE;
-  print STDERR "max_snp_distance $max_snp_distance\n";
   my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
   
   # delete the cached pos
