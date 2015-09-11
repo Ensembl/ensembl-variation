@@ -183,6 +183,7 @@ our @EXTRA_HEADERS = (
   { flag => 'xref_refseq',     cols => ['RefSeq'] },
   { flag => 'refseq',          cols => ['REFSEQ_MATCH'] },
   { flag => 'merged',          cols => ['REFSEQ_MATCH'] },
+  { flag => 'gene_phenotype',  cols => ['GENE_PHENO'] },
   
   # non-synonymous predictions
   { flag => 'sift',            cols => ['SIFT'] },
@@ -272,6 +273,7 @@ our %COL_DESCS = (
     'REFSEQ_MATCH'       => 'RefSeq transcript match status',
     'VARIANT_CLASS'      => 'SO variant class',
     'PHENO'              => 'Indicates if existing variant is associated with a phenotype, disease or trait',
+    'GENE_PHENO'         => 'Indicates if gene is associated with a phenotype, disease or trait',
     'MINIMISED'          => 'Alleles in this variant have been converted to minimal representation before consequence calculation',
     'HGVS_OFFSET'        => 'Indicates by how many bases the HGVS notations for this variant have been shifted',
 );
@@ -2831,6 +2833,11 @@ sub add_extra_fields_transcript {
             $line->{Extra}->{TSL} = $1 if $1;
         }
     }
+
+    # gene phenotype
+    if(defined($config->{gene_phenotype}) && $tr->{_gene_phenotype}) {
+        $line->{Extra}->{GENE_PHENO} = 1;
+    }
     
     return $line;
 }
@@ -4511,6 +4518,14 @@ sub cache_transcripts {
                 foreach my $gene(map {$_->transfer($sr_slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
                     my $gene_stable_id = $gene->stable_id;
                     my $canonical_tr_id = $gene->{canonical_transcript_id};
+
+                    # any phenotypes?
+                    my $gene_has_phenotype = 0;
+
+                    if($config->{pfa}) {
+                        my $pfs = $config->{pfa}->fetch_all_by_Gene($gene);
+                        $gene_has_phenotype = $pfs && scalar @$pfs;
+                    }
                     
                     my @trs;
                     
@@ -4528,6 +4543,9 @@ sub cache_transcripts {
                         
                         # indicate if canonical
                         $tr->{is_canonical} = 1 if defined $canonical_tr_id and $tr->dbID eq $canonical_tr_id;
+
+                        # indicate phenotype
+                        $tr->{_gene_phenotype} = $gene_has_phenotype;
                         
                         prefetch_transcript_data($config, $tr);
                         
