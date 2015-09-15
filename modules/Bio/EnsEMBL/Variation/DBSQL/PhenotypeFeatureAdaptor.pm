@@ -51,7 +51,7 @@ Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
   $v = $va->fetch_by_name('rs56');
 
   foreach $pf (@{$pfa->fetch_all_by_Variation($v)}) {
-    print $pf->phenotype->description(), $pf->source(), $pf->study_type(),"\n";
+    print $pf->phenotype->description(), $pf->source(),"\n";
   }
 
 =head1 DESCRIPTION

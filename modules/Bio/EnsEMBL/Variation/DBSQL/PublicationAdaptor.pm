@@ -194,7 +194,7 @@ sub fetch_all_by_dbID_list {
 =head2 fetch_all_by_Variation
 
   Arg [1]    : listref $list
-  Example    : $publication = $publication_adaptor->fetch_all_by_variant( $var_object]);
+  Example    : $publication = $publication_adaptor->fetch_all_by_Variation( $var_object]);
   Description: Retrieves a listref of publication objects via a variation object
   Returntype : listref of Bio::EnsEMBL::Variation::Publication objects
   Exceptions : throw if variation argument is not defined
