@@ -932,7 +932,7 @@ sub _create_hgvs_tva{
 =head2 hgvs_offset
 
   Description: Return the number of bases the variant was shifted 3'
-               to defined the HGVS annotation 
+               to defined the HGVS transcript annotation 
   Returntype : int or undef if HGVS has not been calculated or shift not applied
   Exceptions : none
   Status     : At risk
@@ -1149,11 +1149,6 @@ sub _get_hgvs_protein_type{
 
           $hgvs_notation->{type} = "del";
       }
-      elsif( (length($hgvs_notation->{alt}) >  length($hgvs_notation->{ref}) ) &&       
-           $hgvs_notation->{alt} =~ /$hgvs_notation->{ref}/ ) {
-          ### capture duplication event described as TTT/TTTTT 
-          $hgvs_notation->{type} = "dup";        
-      }
 
       elsif( (length($hgvs_notation->{alt}) >0 && length($hgvs_notation->{ref}) >0) &&
              (length($hgvs_notation->{alt}) ne length($hgvs_notation->{ref}) ) ) {
@@ -1211,6 +1206,9 @@ sub _get_hgvs_peptides{
   }
   elsif($hgvs_notation->{type} eq "ins" ){
 
+      ### Check if bases directly after insertion match inserted sequence
+      $hgvs_notation = $self->_check_peptides_post_var($hgvs_notation);
+
       ### Check that inserted bases do not duplicate 3' reference sequence [set to type = dup and return if so]
       $hgvs_notation = $self->_check_for_peptide_duplication($hgvs_notation) unless $hgvs_notation->{alt} =~/\*/;
       return ($hgvs_notation) if $hgvs_notation->{type} eq "dup";              
@@ -1228,8 +1226,8 @@ sub _get_hgvs_peptides{
    
   }
   elsif($hgvs_notation->{type} eq "del" ){
-      ##check if bases directly after deletion match start of deletion
-      $hgvs_notation = $self->_check_peptides_post_del($hgvs_notation);
+      ##check if bases directly after deletion match the deletion
+      $hgvs_notation = $self->_check_peptides_post_var($hgvs_notation);
   }
 
   ### Convert peptide to 3 letter code as used in HGVS
@@ -1503,22 +1501,22 @@ sub _check_for_peptide_duplication{
    ##### get reference sequence
    my $reference_cds_seq = $self->transcript_variation->_translateable_seq();
 
-   ##### get sequence upstream of variant
-   my $upstream_seq   =  substr($reference_cds_seq, 0, ($self->transcript_variation->cds_start() -1) );
-   
-   ##### create translation to check against inserted peptides 
-   my $upstream_cds =Bio::PrimarySeq->new(-seq => $upstream_seq,  -id => 'alt_cds', -alphabet => 'dna');
-   my $upstream_trans = $upstream_cds->translate()->seq();
+   my $reference_cds =Bio::PrimarySeq->new(-seq => $reference_cds_seq,  -id => 'alt_cds', -alphabet => 'dna');
+   my $reference_trans = $reference_cds->translate()->seq();
+ 
+   ##### get sequence upstream of variant - use hgvs start; may have been shifted
+   my $upstream_trans  = substr($reference_trans, 0, ($hgvs_notation->{'start'} -1) );
+   print "Checking for peptide duplication: $hgvs_notation->{alt} vs $upstream_trans  $hgvs_notation->{preseq} \n" if $DEBUG ==1;
+
    $upstream_trans  .= $hgvs_notation->{preseq} if defined $hgvs_notation->{preseq}; ## add back on anything previously chopped off ref allele
-   
+
    ## Test whether alt peptide matches the reference sequence just before the variant
    my $test_new_start = $hgvs_notation->{'start'} - length($hgvs_notation->{'alt'}) -1 ;
 
    if( (length($upstream_trans) >=  $test_new_start + length($hgvs_notation->{'alt'}) ) && $test_new_start  >=0){
        my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
        
-       if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
-           
+       if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {           
            $hgvs_notation->{type}   = 'dup';
            $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
            $hgvs_notation->{start} -= length($hgvs_notation->{alt});
@@ -1569,7 +1567,7 @@ sub _stop_loss_extra_AA{
   
     else{
       $extra_aa = $+[0]  - 1 - $ref_len;
-      if($DEBUG==1){ print "Stop change ($test): found $extra_aa amino acids before next stop [ $+[0] - 1 -normal stop $ref_len)]\n";}        
+      if($DEBUG==1){ print "Stop change (non-fs): found $extra_aa amino acids before next stop [ $+[0] - 1 -normal stop $ref_len)]\n";}        
     }
   }
   
@@ -1612,9 +1610,9 @@ sub _get_del_peptides{
   return $hgvs_notation;
 }
 
-## HGVS counts deletion from first different peptide, 
-## so check the sequence post deletion and increment accordingly
-sub _check_peptides_post_del{
+## HGVS counts from first different peptide, 
+## so check the sequence post variant and increment accordingly
+sub _check_peptides_post_var{
 
     my $self          = shift;
     my $hgvs_notation = shift;
