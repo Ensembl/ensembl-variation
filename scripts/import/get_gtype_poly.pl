@@ -76,11 +76,11 @@ sub get_gtype_poly {
   while ($sth->fetch()) {
     $name =~ s/\/| |\+|\.|\-|\,|\(|\)|\<|\>/\_/g;
     $sample_name{$sample_id} = $name;
+    print STDERR "$sample_id $name\n";
     push @sample_ids, $sample_id;
   }
 
   %sample_id = map {$count++,$_} @sample_ids;
-
   dumpSQL($dbVar, qq{
     SELECT tg.variation_id,tg.allele_1,tg.sample_id,substring(vf.allele_string,1,1) as ref_allele
     FROM tmp_sample_genotype_single_bp tg, variation_feature vf
@@ -135,8 +135,9 @@ sub get_gtype_poly {
 
   my (@cols,@columns);
   foreach my $num (sort {$a<=>$b} keys %sample_id ) {
-    push @columns, "$sample_name{$sample_id{$num}} varchar(100)"; #column names
-    push @cols, "$sample_name{$sample_id{$num}}";#column values
+    my $strain_name = $sample_name{$sample_id{$num}};
+    push @columns, "`$strain_name` varchar(100)"; #column names
+    push @cols, "`$strain_name`"; #column names
   }
 
   my $ref_strain;
@@ -147,8 +148,8 @@ sub get_gtype_poly {
     $ref_strain = "reference_C57BL_6J";
   }
 
-  push @columns, "$ref_strain varchar(100)";
-  push @cols, "$ref_strain";
+  push @columns, "`$ref_strain` varchar(100)";
+  push @cols, "`$ref_strain`";
 
   my $column_name = join ",",@columns;
   my $cols_name = join ",",@cols;
