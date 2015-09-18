@@ -118,7 +118,7 @@ my $html_title = qq{
 
     <h2>List of data counts by category and species - $ecaption $e_version</h2>
 
-    <div style="margin-bottom:30px">
+    <div>
       <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
     </div>
 };
@@ -128,7 +128,7 @@ my $html_title = qq{
 ##############
 my $html_legend = qq{
   <!-- Right hand side legend -->
-  <div style="float:right;width:200px;top:20px">
+  <div style="float:right;max-width:220px;top:20px">
     <div class="vdoc_menu vdoc_menu_phen">
       <div class="vdoc_menu_header vdoc_menu_header_phen">
         <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
@@ -200,8 +200,8 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                                       },
                                          } # Too long ?
                );
-my @sql_order = ("Structural variant","Genotype","Phenotype","Citation","Prediction");                          
-                                           
+my @sql_order = ("Structural variant","Genotype","Phenotype","Citation","Prediction");
+
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
 # Get the populated tables by species
@@ -226,10 +226,12 @@ foreach my $type (@sql_order) {
   my %species_list;
   my %display_list;
   
+  # Column A
   my $sql_a   = $sql_list{$type}{'sqla'}{'sql'};
   my $label_a = $sql_list{$type}{'sqla'}{'label'};
   my $lc_label_a = lc($label_a);
   
+  # Column B
   my $sql_b   = $sql_list{$type}{'sqlb'}{'sql'};
   my $label_b = $sql_list{$type}{'sqlb'}{'label'};
   my $lc_label_b = lc($label_b);
@@ -271,13 +273,13 @@ foreach my $type (@sql_order) {
       $species_list{$s_name}{'name'} = $display_name;
       $display_list{$display_name} = $s_name;
       
-      # Count the number of variations
+      # Count the number of variations - column A
       my $sth_a = get_connection_and_query($dbname, $hostname, $sql_a);
       my $res_a = $sth_a->fetchrow_array;
       $sth_a->finish;
       $species_list{$s_name}{'a'} = $res_a;
 
-      # Count the number of variations
+      # Count the number of variations - column B
       my $sth_b = get_connection_and_query($dbname, $hostname, $sql_b);
       my $res_b = $sth_b->fetchrow_array;
       $sth_b->finish;
@@ -289,12 +291,14 @@ foreach my $type (@sql_order) {
       my $p_dbname = $sth3->fetchrow_array;
 
       if ($p_dbname) {
-        # Previous variants
+
+        # Previous variants - column A
         my $sth4a = get_connection_and_query($p_dbname, $phost, $sql_a);
         my $p_res_a = $sth4a->fetchrow_array;
         $sth4a->finish;
         $species_list{$s_name}{'p_a'} = $res_a-$p_res_a;
-        # Previous publications
+
+        # Previous variants - column B
         my $p_res_b;
         if ($res_b =~ /^\d+$/) {
           $b_type = "num";
@@ -385,8 +389,7 @@ foreach my $type (@sql_order) {
   }
   $html_content .= qq{</table>\n};
 
-  my $h2_style = ($html) ? 'style="margin-top:40px"' : '';
-  $html .= qq{\n  <h2 id="$anchor"$h2_style>$type data</h2>};
+  $html .= qq{\n  <h2 id="$anchor" style="margin-top:40px">$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
   $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the variation databases in Ensembl:</p>\n};
   $html .= $html_content;
