@@ -62,7 +62,7 @@ GetOptions(
 
 
 my $dump_file = 'compressed_genotype_var.txt';
-$genotype_table ||= 'tmp_individual_genotype_single_bp';
+$genotype_table ||= 'tmp_sample_genotype_single_bp';
 $start_sp_id ||= 1;
 $jump ||= 100000;
 $monoploid = 0 unless defined($monoploid);
@@ -160,7 +160,7 @@ sub compress_genotypes{
 	# straight, no ordering (for human)
 	if(defined($straight)) {
 		$sth = $dbVar->prepare(qq{
-			SELECT gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.individual_id FROM
+			SELECT gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
 			$genotype_table gt
 		}, {mysql_use_result => 1});
 		
@@ -184,7 +184,7 @@ sub compress_genotypes{
 		});
 		
 		$sth = $dbVar->prepare(qq{
-			SELECT STRAIGHT_JOIN gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.individual_id FROM
+			SELECT STRAIGHT_JOIN gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
 			$tmp_var_table tv, $genotype_table gt 
 			WHERE gt.variation_id = tv.variation_id
 		}, {mysql_use_result => 1});
