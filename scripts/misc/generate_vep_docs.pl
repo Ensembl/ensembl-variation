@@ -5,7 +5,11 @@ use warnings;
 
 my @files = @ARGV;
 
-print "<html><title>VEP documentation</title><body>\n";
+print qq{
+<html>
+  <title>VEP documentation</title>
+  <body>
+};
 
 foreach my $file(@files) {
   open IN, $file or die("ERROR: Could not read from file $file\n");
@@ -14,7 +18,7 @@ foreach my $file(@files) {
 
   while(<IN>) {
     if(/\<title\>/) {
-      s/title/h1/g;
+      s/title/h1"/g;
       print;
     }
 
@@ -28,6 +32,8 @@ foreach my $file(@files) {
   }
 
   close IN;
+
+  print '<div style="clear:both"><h1 style="page-break-after: always">&nbsp</h1></div>';
 }
 
 print "</body></html>\n";
