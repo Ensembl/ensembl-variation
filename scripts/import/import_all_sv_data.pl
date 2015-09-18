@@ -46,7 +46,7 @@ GetOptions('species=s'         => \$species,
            'tmpdir=s'          => \$ImportUtils::TMP_DIR,
            'tmpfile=s'         => \$ImportUtils::TMP_FILE,
            'var_set=i'         => \$var_set_id,
-           'mapping'           => \$mapping,
+           'mapping!'          => \$mapping,
            'gaps=i'            => \$num_gaps,
            'target_assembly=s' => \$target_assembly,
            'size_diff=i'       => \$size_diff,
@@ -858,7 +858,8 @@ sub structural_variation_sample {
       my $subject = $row->[1];
       next if ($sample eq  '' || $subject eq '');
 
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
+      #$dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', min(individual_id) FROM individual WHERE name='$subject'});
     }
   }
 
@@ -881,7 +882,7 @@ sub structural_variation_sample {
       FROM
         $sv_table sv,
         $temp_table t
-        LEFT JOIN sample s ON (s.name=t.sample AND s.display!='UNDISPLAYABLE')
+        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name) AND s.display!='UNDISPLAYABLE')
       WHERE
         sv.variation_name=t.id AND
         (t.sample is not null OR t.subject is not null)
@@ -899,7 +900,7 @@ sub structural_variation_sample {
       FROM
         $sv_table sv,
         $temp_table t
-        LEFT JOIN sample s ON (s.name=t.sample)
+        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name))
       WHERE
         sv.variation_name=t.id AND
         t.sample is not null
@@ -1518,21 +1519,6 @@ sub post_processing_annotation {
   
   my $stmt = qq{ DELETE FROM $svs_table WHERE sample_id IS NULL };
   $dbVar->do($stmt);
-  
-  ## Remove duplicated combinations sample/strain
-  #my @sv_list;
-  #my $sth = $dbVar->prepare(qq{ SELECT structural_variation_id, count(structural_variation_sample_id) c 
-  #                              FROM $svs_table GROUP BY structural_variation_id HAVING c>1
-  #                         });
-  #$sth->execute();
-  #while (my @res = ($sth->fetchrow_array)) {
-  #  push (@sv_list,$res[0]);
-  #}
-  #if (scalar(@sv_list)>0) {
-  #  my $svs  = join(',',@sv_list); 
-  #  $stmt = qq{ DELETE FROM $svs_table WHERE individual_id=strain_id AND structural_variation_id IN ($svs) };
-  #  $dbVar->do($stmt);
-  #}
   
   # Duplicate strains at the SV level (only for mouse)
   if ($species =~ /mouse|mus/i) {
