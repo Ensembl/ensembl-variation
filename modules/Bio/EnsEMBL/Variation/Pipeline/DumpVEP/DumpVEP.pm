@@ -59,6 +59,7 @@ sub run {
 
   my ($assembly, $version, $eg_version);
   my ($host, $port, $user, $pass);
+  my $is_multispecies = 0;
 
   if($eg){
      my $meta_container = Bio::EnsEMBL::Registry->get_adaptor($species,'core','MetaContainer');
@@ -76,6 +77,8 @@ sub run {
      $port       = $meta_container->dbc->port();
      $user       = $meta_container->dbc->username();
      $pass       = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
+
+     $is_multispecies = $meta_container->is_multispecies() ? 1 : 0;
 
      $meta_container->dbc()->disconnect_if_idle();
      
@@ -130,7 +133,7 @@ sub run {
   
   # construct command
   my $cmd = sprintf(
-    '%s %s/variant_effect_predictor.pl %s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s --cache_version %s',
+    '%s %s/variant_effect_predictor.pl %s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s --cache_version %s --is_multispecies %s',
     $perl,
     $vep_dir,
     $vep,
@@ -146,11 +149,12 @@ sub run {
     $dir,
     $species_flags_cmd,
 
-    $eg_version || $version
+    $eg_version || $version,
+    $is_multispecies
   );
-  
+ 
   my $finished = 0;
-  
+ 
   if($debug) {
     print STDERR "$cmd\n";
   }
