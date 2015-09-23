@@ -91,18 +91,18 @@ my %info = (
            );
 
 
-my %star_ranking = ( 'status' => { 'not classified by submitter'       => 0,
-                                   'classified by single submitter'    => 1,
-                                   'classified by multiple submitters' => 2,
-                                   'reviewed by expert panel'          => 3,
-                                   'reviewed by professional society'  => 4
+my %star_ranking = ( 'status' => { 'not classified by submitter'       => { 'term' => 'no assertion',             'stars' => 0 },
+                                   'classified by single submitter'    => { 'term' => 'single submitter',         'stars' => 1 },
+                                   'classified by multiple submitters' => { 'term' => 'multiple submitters',      'stars' => 2 },
+                                   'reviewed by expert panel'          => { 'term' => 'reviewed by expert panel', 'stars' => 3 },
+                                   'practice guideline'                => { 'term' => 'practice guideline',       'stars' => 4 }
                                  },
                      'query'  => [qq{ SELECT pf.object_id FROM phenotype_feature pf, phenotype_feature_attrib pfa, attrib_type a 
                                      WHERE pf.phenotype_feature_id=pfa.phenotype_feature_id 
                                        AND pfa.attrib_type_id=a.attrib_type_id
                                        AND a.code='review_status'
                                        AND pf.type='Variation'
-                                       AND pfa.value=?
+                                       AND pfa.value LIKE ?
                                    }],
                      'link'   => [qq{/Homo_sapiens/Variation/Phenotype?v=}]
                    );
@@ -147,15 +147,16 @@ foreach my $cs_term (sort(keys %clin_sign)) {
 
 # Four-star rating
 my $html_star_content;
-foreach my $review_status (sort {$star_ranking{'status'}{$a} <=> $star_ranking{'status'}{$b}} keys(%{$star_ranking{'status'}})) {
-  my $count_stars = $star_ranking{'status'}{$review_status};
+foreach my $review_status (sort {$star_ranking{'status'}{$a}{'stars'} <=> $star_ranking{'status'}{$b}{'stars'}} keys(%{$star_ranking{'status'}})) {
+  my $count_stars = $star_ranking{'status'}{$review_status}{'stars'};
+  my $search_term = $star_ranking{'status'}{$review_status}{'term'};
   my $stars = qq{<span class="_ht" title="$review_status">};
   for (my $i=1; $i<5; $i++) {
     my $star_color = ($i <= $count_stars) ? 'gold' : 'grey';
     $stars .= qq{<img style="vertical-align:top" src="/i/val/$star_color\_star.png" alt="$star_color"/>};
   }
   $stars .= qq{</span>};
-  my $star_example = get_variant_example(0,$review_status,\%star_ranking);
+  my $star_example = get_variant_example(0,$search_term,\%star_ranking);
   $html_star_content .= qq{  <tr$bg>\n    <td>$stars</td>\n    <td>$review_status</td>\n    $star_example\n  </tr>};
   $bg = set_bg();
 }
@@ -208,7 +209,9 @@ sub get_variant_example {
   my $value = shift;
   my $data  = shift;
   
-  my $var = (execute_stmt_one_result($data->{'query'}->[$order],$value))[0];
+  my $value_like = '%'.$value.'%';
+  
+  my $var = (execute_stmt_one_result($data->{'query'}->[$order],$value_like))[0];
   my $example = (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$data->{'link'}->[$order],$var,$var) : '-';
 
   return qq{<td$border_left>$example</td>};
