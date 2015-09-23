@@ -429,34 +429,35 @@ sub fetch_default_LDPopulation {
 
 sub fetch_all_LD_Populations {
   my $self = shift;
-  my $use_vcf = $self->db->use_vcf;
+#   return $self->_fetch_all_db_LD_Populations;
+#   my $use_vcf = $self->db->use_vcf;
   
-  if ($use_vcf) {
-    my @vcf_pops = map {@{$_->get_all_Populations}} @{$self->db->get_VCFCollectionAdaptor->fetch_all};
+#   if ($use_vcf) {
+#     my @vcf_pops = map {@{$_->get_all_Populations}} @{$self->db->get_VCFCollectionAdaptor->fetch_all};
     
-    # value of >1 means use only VCF pops
-    if ($use_vcf > 1) {
-      return \@vcf_pops;
-    }
+#     # value of >1 means use only VCF pops
+#     if ($use_vcf > 1) {
+#       return \@vcf_pops;
+#     }
     
-    # value of 1 means use both VCF and DB pops
-    else {
-      my @db_pops = @{$self->_fetch_all_db_LD_Populations};
+#     # value of 1 means use both VCF and DB pops
+#     else {
+#       my @db_pops = @{$self->_fetch_all_db_LD_Populations};
       
-      # merge populations
-      my %merged = map {$_->name() => $_} (@vcf_pops, @db_pops);
+#       # merge populations
+#       my %merged = map {$_->name() => $_} (@vcf_pops, @db_pops);
       
-      return [values %merged];
-    }
-  }
+#       return [values %merged];
+#     }
+#   }
   
-  else {
-    return $self->_fetch_all_db_LD_Populations;
-  }
-}
+#   else {
+#     return $self->_fetch_all_db_LD_Populations;
+#   }
+# }
 
-sub _fetch_all_db_LD_Populations {
-  my $self = shift;
+# sub _fetch_all_db_LD_Populations {
+#   my $self = shift;
   return [grep {$_->name !~ /ALL|AFR|AMR|ASN|EUR/} @{$self->generic_fetch(qq{ p.display = 'LD' })}];
 }
 
