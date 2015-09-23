@@ -637,6 +637,8 @@ sub fetch_all {
 sub _check_gene_by_HGNC {
   my $self = shift;
   my $hgnc = shift;
+
+  my $extra_sql = $self->_is_significant_constraint();
   
   my $sth = $self->dbc->prepare(qq{
     SELECT count(*)
