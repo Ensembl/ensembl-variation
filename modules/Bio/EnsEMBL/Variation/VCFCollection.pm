@@ -571,21 +571,6 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   return \@genotypes;
 }
 
-sub get_all_location2name_by_Slice {
-  my $self = shift;
-  my $slice = shift;
-  return [] unless $self->_seek_by_Slice($slice); 
- 
-  my $vcf = $self->_current();   
-
-  my $vfs = {};
-  while ($vcf->{record} && $vcf->get_start <= $slice->end) {
-    $vfs->{$vcf->get_start} = $vcf->get_IDs->[0];
-    $vcf->next;
-  }
-  return $vfs;
-}
-
 ## used for GA4GH - milliseconds from the epoch 
 ## could store by file (chrom) rather than collection?
 sub created{
@@ -922,6 +907,21 @@ sub _get_all_population_names {
     $self->{_population_names} = \@names;
   }
   return $self->{_population_names};
+}
+
+sub _get_all_location2name_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  return {} unless $self->_seek_by_Slice($slice);
+ 
+  my $vcf = $self->_current();
+
+  my $vfs = {};
+  while ($vcf->{record} && $vcf->get_start <= $slice->end) {
+    $vfs->{$vcf->get_start} = $vcf->get_IDs->[0];
+    $vcf->next;
+  }
+  return $vfs;
 }
 
 
