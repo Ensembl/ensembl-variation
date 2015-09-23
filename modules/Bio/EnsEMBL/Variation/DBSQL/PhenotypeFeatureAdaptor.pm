@@ -640,9 +640,13 @@ sub _check_gene_by_HGNC {
   
   my $sth = $self->dbc->prepare(qq{
     SELECT count(*)
-    FROM phenotype_feature_attrib pfa, attrib_type at
-    WHERE pfa.attrib_type_id = at.attrib_type_id
+    FROM phenotype_feature pf, phenotype_feature_attrib pfa, attrib_type at, source s
+    WHERE pf.phenotype_feature_id = pfa.phenotype_feature_id
+    AND pfa.attrib_type_id = at.attrib_type_id
+    AND pf.source_id = s.source_id
+    AND s.name != 'COSMIC'
     AND at.code = 'associated_gene'
+    AND $extra_sql
     AND pfa.value = ?
   });
   
