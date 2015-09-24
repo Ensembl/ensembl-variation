@@ -439,6 +439,10 @@ sub get_reference_strain_name {
     $sth->bind_columns(\$name);
     $sth->fetch();
     $sth->finish;
+    # temporary fix for release 82
+    if ($name eq 'refGRCh37') {
+      $name = 'Homo_sapiens';
+    }
     return $name;
 }
 
