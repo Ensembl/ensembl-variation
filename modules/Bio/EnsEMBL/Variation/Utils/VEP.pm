@@ -196,7 +196,7 @@ our @EXTRA_HEADERS = (
   
   # frequency stuff
   { flag => 'gmaf',            cols => ['GMAF'] },
-  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','ASN_MAF','EAS_MAF','EUR_MAF','SAS_MAF'] },
+  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','EAS_MAF','EUR_MAF','SAS_MAF'] },
   { flag => 'maf_esp',         cols => ['AA_MAF','EA_MAF'] },
   { flag => 'check_frequency', cols => ['FREQS'] },
   
@@ -5198,7 +5198,7 @@ sub parse_variation {
   }
   
   # sanity check frequency data
-  foreach my $pop(grep {defined($v{$_})} qw(AFR AMR ASN EUR AA EA)) {
+  foreach my $pop(grep {defined($v{$_})} qw(AFR AMR ASN EAS EUR SAS AA EA)) {
     $v{$pop} = undef unless $v{$pop} =~ /^([ACGTN-]+\:)?(0|0\.\d+|1)$/;
   }
   
