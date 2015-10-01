@@ -2754,7 +2754,9 @@ sub add_extra_fields_transcript {
         my @strings;
 
         for my $feat (@$feats) {
-            my $label = $feat->analysis->display_label.':'.$feat->hseqname;
+
+            # do a join/grep in case of missing data
+            my $label = join(':', grep {$_} ($feat->analysis->display_label, $feat->hseqname));
 
             # replace any special characters
             $label =~ s/[\s;=]/_/g;
