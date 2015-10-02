@@ -4156,7 +4156,9 @@ sub get_slice {
     
     # with a FASTA DB we can just spoof slices
     if(defined($config->{fasta_db}) && !defined($use_db)) {
-        my $length = $config->{fasta_db}->length($chr) || 1;
+
+        my $fa_length = $config->{fasta_db}->length($chr);
+        my $length = $fa_length && $fa_length > 0 ? $fa_length : 1;
         
         $slice = Bio::EnsEMBL::Slice->new(
           -COORD_SYSTEM      => $config->{coord_system},
