@@ -192,8 +192,15 @@ sub new {
     # an empty string and we want to treat this as a deletion, so 
     # we replace
     # any empty strings with '-'
-    
-    @alleles = keys %{ { map { ($_ || '-') => 1 } @alleles } };
+    my (@new, %seen_alleles);
+
+    foreach my $a(@alleles) {
+        $a ||= '-';
+        next if $seen_alleles{$a};
+        push @new, $a;
+        $seen_alleles{$a} = 1;
+    }
+    @alleles = @new;
 
     # create an object representing the reference allele
     
