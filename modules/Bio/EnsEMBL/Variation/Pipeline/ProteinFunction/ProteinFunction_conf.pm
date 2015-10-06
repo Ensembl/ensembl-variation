@@ -269,8 +269,25 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
-            -flow_into      => {},
+            -flow_into      => {
+              -1 => ['run_sift_highmem'],
+            }
         },
+
+        {   -logic_name     => 'run_sift_highmem',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift',
+            -parameters     => {
+                sift_dir        => $self->o('sift_dir'),
+                sift_working    => $self->o('sift_working'),
+                ncbi_dir        => $self->o('ncbi_dir'),
+                blastdb         => $self->o('blastdb'),
+                use_compara     => $self->o('sift_use_compara'),
+                @common_params,
+            },
+            -input_ids      => [],
+            -rc_name        => 'highmem',
+        },
+
     ];
 }
 
