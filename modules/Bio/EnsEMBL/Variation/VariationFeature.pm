@@ -1884,7 +1884,7 @@ sub summary_as_hash {
   my $summary_ref = $self->SUPER::summary_as_hash;
   $summary_ref->{'consequence_type'} = $self->display_consequence;
   my @allele_list = split(/\//,$self->allele_string);
-  $summary_ref->{'alt_alleles'} = \@allele_list;
+  $summary_ref->{'alleles'} = \@allele_list;
   $summary_ref->{'clinical_significance'} = \@{$self->get_all_clinical_significance_states};
   return $summary_ref;
 }
