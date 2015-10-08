@@ -278,8 +278,7 @@ sub _tables {
   my $self = shift;
   my @tables = ([ 'structural_variation_sample', 'svs'],
 								[ 'structural_variation', 'sv'],
-								[ 'sample', 's'],
-								[ 'individual', 'i']
+								[ 'sample', 's']
 							 ); 
 							 
 	# If we are excluding failed_structural_variations, add that table
