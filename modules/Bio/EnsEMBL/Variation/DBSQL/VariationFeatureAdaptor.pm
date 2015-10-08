@@ -1779,15 +1779,9 @@ sub fetch_by_hgvs_notation {
       my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
       my ($gene) = @{$gene_adaptor->fetch_all_by_external_name($reference)};
       
-      if($gene) {  
-        $transcript = $gene->canonical_transcript();
-        
-        if(!defined($transcript)) { 
-          foreach my $tr(@{$gene->get_all_Transcripts}) {
-            $transcript = $tr if grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
-          }
-        }
-      }
+      $transcript = $self->_pick_likely_transcript($gene->get_all_Transcripts) if $gene;
+
+      print STDERR "Picked transcript ".$transcript->stable_id."\n" if $DEBUG==1;
     }
     
     throw ("Could not get a Transcript object for '$reference'") if !defined($transcript);
@@ -1878,6 +1872,83 @@ sub fetch_by_hgvs_notation {
 
   return $variation_feature;
 
+}
+
+## when a user gives a HGVS notation on a gene
+## we want to pick the "most likely" transcript
+sub _pick_likely_transcript {
+  my $self = shift;
+  my $transcripts = shift;
+  
+  return $transcripts->[0] if scalar @$transcripts == 1;
+  
+  my @tr_info;
+
+  foreach my $tr(@$transcripts) {
+
+    # create a hash of info for this transcript that will be used to rank it
+    my $info = {
+      canonical => 1,
+      ccds => 1,
+      length => 0,
+      biotype => 1,
+      tsl => 100,
+      appris => 100,
+      tr => $tr
+    };
+     
+    # 0 is "best"
+    $info->{canonical} = $tr->is_canonical ? 0 : 1;
+    $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
+    $info->{ccds} = (grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries}) ? 0 : 1;
+    
+    # "invert" length so longer is best
+    $info->{length} = 0 - $tr->length();
+    
+    # lower TSL is best
+    if(my ($tsl) = @{$tr->get_all_Attributes('TSL')}) {
+      if($tsl->value =~ m/tsl(\d+)/) {
+        $info->{tsl} = $1 if $1;
+      }
+    }
+
+    # same for APPRIS
+    if(my ($appris) = @{$tr->get_all_Attributes('APPRIS')}) {
+      if($appris->value =~ m/(.+?)(\d+)/) {
+        $2 += 10 unless $1 eq 'principal';
+        $info->{appris} = $2 if $2;
+      }
+    }
+    
+    push @tr_info, $info;
+  }
+  
+  my @order = qw(appris tsl canonical biotype ccds rank length);
+  my $picked;
+  
+  # go through each category in order
+  foreach my $cat(@order) {
+    
+    # sort on that category
+    @tr_info = sort {$a->{$cat} <=> $b->{$cat}} @tr_info;
+    
+    # take the first (will have the lowest value of $cat)
+    $picked = shift @tr_info;
+    my @tmp = ($picked);
+    
+    # now add to @tmp those vfoas that have the same value of $cat as $picked
+    push @tmp, shift @tr_info while @tr_info && $tr_info[0]->{$cat} eq $picked->{$cat};
+    
+    # if there was only one, return
+    return $picked->{tr} if scalar @tmp == 1;
+    
+    # otherwise shrink the array to just those that had the lowest
+    # this gives fewer to sort on the next round
+    @tr_info = @tmp;
+  }
+  
+  # probably shouldn't get here, but if we do, return the first
+  return $tr_info[0]->{tr};
 }
 
 ## Extract enough information to make a variation_feature from HGVS protein nomenclature
