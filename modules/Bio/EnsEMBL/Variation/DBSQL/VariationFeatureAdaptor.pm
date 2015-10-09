@@ -1915,8 +1915,10 @@ sub _pick_likely_transcript {
     # same for APPRIS
     if(my ($appris) = @{$tr->get_all_Attributes('APPRIS')}) {
       if($appris->value =~ m/(.+?)(\d+)/) {
-        $2 += 10 unless $1 eq 'principal';
-        $info->{appris} = $2 if $2;
+        if(my $num = $2) {
+          $num += 10 unless $1 eq 'principal';
+          $info->{appris} = $num if $num;
+        }
       }
     }
     
