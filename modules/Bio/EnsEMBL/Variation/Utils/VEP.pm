@@ -2449,6 +2449,17 @@ sub vfoa_to_line {
   else {
     return undef;
   }
+
+  # warn user if no consequence type was added
+  if(!$line->{Consequence}) {
+    $line->{Consequence} = '?';
+
+    warning_msg(
+        $config,
+        "Unable to assign consequence type on line ".$vfoa->variation_feature->{_line_number}.
+        ($vfoa->can('feature') && $vfoa->feature ? " for ".$vfoa->feature->stable_id : "")
+    );
+  }
   
   # add extra fields
   $line = add_extra_fields($config, $line, $vfoa);
@@ -3660,7 +3671,7 @@ sub fetch_transcripts {
             
             # add loaded transcripts to main cache
             if(defined($tmp_cache->{$chr})) {
-                while(my $tr = shift @{$tmp_cache->{$chr}}) {
+                TRANSCRIPT: while(my $tr = shift @{$tmp_cache->{$chr}}) {
                     
                     # there are some transcripts in the otherfeatures DB with no stable ID!
                     next unless $tr->stable_id;
@@ -3718,6 +3729,23 @@ sub fetch_transcripts {
                     ## hack to copy RefSeq gene stuff
                     if(defined($config->{refseq}) || defined($config->{merged})) {
                       $refseq_stuff{$tr->{_gene}->stable_id}->{$_} ||= $tr->{$_} for qw(_gene_symbol _gene_symbol_source _gene_hgnc_id);
+
+                      # check for transcripts with overlapping exons
+                      # Argh, too slow!
+                      # my @exons = @{$tr->get_all_Exons};
+
+                      # for my $i(0..($#exons - 1)) {
+                      #   my $e1 = $exons[$i];
+
+                      #   for my $j($i+1..$#exons) {
+                      #       my $e2 = $exons[$j];
+
+                      #       if(overlap($e1->start, $e1->end, $e2->start, $e2->end)) {
+                      #           warning_msg($config, "Overlapping exons found in transcript ".$tr->stable_id.", skipping");
+                      #           next TRANSCRIPT;
+                      #       }
+                      #   }
+                      # }
                     }
                     
                     $seen_trs{$dbID} = 1;
