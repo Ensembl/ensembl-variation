@@ -1173,7 +1173,7 @@ sub get_all_consequences {
 
                   # reinitialise FASTA if using FAIDX
                   # the XS code doesn't seem to like being forked
-                  if($config->{fasta_db}->isa('Faidx')) {
+                  if($config->{fasta_db} && $config->{fasta_db}->isa('Faidx')) {
                     delete($config->{fasta_db});
                     $config->{fasta_db} = Faidx->new($config->{fasta});
                   }
