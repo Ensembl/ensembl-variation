@@ -843,11 +843,11 @@ sub parse_goa {
       my %content;
       $content{$_} = $row_data[$headers{$_}] for keys %headers;
 
-      my $pubmed_ids  = ($content{'PMID(S)'} eq '') ? undef : $content{'PMID(S)'};
+      my $pubmed_ids  = ($content{'PMIDS'} eq '') ? undef : $content{'PMIDS'};
       my $gene_id     = $content{'GENE_ID'};
       my $external_id = $content{'GO_TERM'};
       my $phenotype   = $content{'GO_DESCRIPTION'};
-      my $uniprot_id  = $content{'UNIPROT_ID'};
+      my $uniprot_ids = $content{'UNIPROT_IDS'};
      
     
       my $gene = $ga->fetch_by_stable_id($gene_id);
@@ -867,7 +867,7 @@ sub parse_goa {
         'seq_region_start' => $gene->seq_region_start,
         'seq_region_end' => $gene->seq_region_end,
         'seq_region_strand' => $gene->seq_region_strand,
-        'xref_id' => $uniprot_id
+        'xref_id' => $uniprot_ids
       );
       
       $data{'study'} = $pubmed_ids if ($pubmed_ids);
@@ -1909,12 +1909,14 @@ sub get_or_add_source {
         source (
           name,
           description,
-          url
+          url,
+          version
         )
       VALUES (
         '$source_name',
         '$source_description',
-        '$source_url'
+        '$source_url',
+        $source_version
       )
     };
     $db_adaptor->dbc->do($stmt);
