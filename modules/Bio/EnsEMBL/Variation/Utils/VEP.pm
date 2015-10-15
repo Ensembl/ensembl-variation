@@ -1170,6 +1170,13 @@ sub get_all_consequences {
                   
                   *PARENT = $parent;
                   *STDERR = *PARENT;
+
+                  # reinitialise FASTA if using FAIDX
+                  # the XS code doesn't seem to like being forked
+                  if($config->{fasta_db}->isa('Faidx')) {
+                    delete($config->{fasta_db});
+                    $config->{fasta_db} = Faidx->new($config->{fasta});
+                  }
                   
                   #die("TEST DEATH\n") if rand() < 0.1;
                   
