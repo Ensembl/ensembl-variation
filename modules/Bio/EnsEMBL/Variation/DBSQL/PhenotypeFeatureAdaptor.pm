@@ -796,13 +796,7 @@ sub _objs_from_sth {
   
   my $sta = $self->db()->get_StudyAdaptor();
 
-  my %done; ## fix for ClinVar duplicates e!82  
   FEATURE: while($sth->fetch()) {
-
-    ## fix for ClinVar duplicates e!82  
-    next if $source_id == 32 && defined $done{$object_id}{$seq_region_start}{$phenotype_id};
-    $done{$object_id}{$seq_region_start}{$phenotype_id} = 1 
-      if $source_id == 32 && $self->dbc->dbname() eq 'homo_sapiens_variation_82_38';
 
     # remap
     my $slice = $slice_hash{"ID:".$seq_region_id};
