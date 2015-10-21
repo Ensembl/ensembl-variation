@@ -1764,11 +1764,10 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '82');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '83');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_81_82_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_81_82_b.sql|update the description in the failed_description table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_82_83_a.sql|schema version');
 
 /**
 @header  Failed tables
