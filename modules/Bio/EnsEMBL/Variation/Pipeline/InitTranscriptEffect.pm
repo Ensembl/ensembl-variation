@@ -50,7 +50,7 @@ sub fetch_input {
 
     # check for out of date seq_regions in variation database
     my $sequences_ok = $self->check_seq_region();
-    die "Seq region ids are not compatible\n" unless $sequences_ok == 1;
+    die "Seq region ids are not compatible. Run ensembl-variation/scripts/misc/update_seq_region_ids.pl\n" unless $sequences_ok == 1;
 
 
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
