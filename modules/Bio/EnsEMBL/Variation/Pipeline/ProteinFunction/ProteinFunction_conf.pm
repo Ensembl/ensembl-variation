@@ -65,8 +65,8 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-
-        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch110/ensembl/at7/release_83/chicken/protein_function/',
+#        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
@@ -92,7 +92,7 @@ sub default_options {
         # connection details for the hive's own database
 
         pipeline_db => {
-            -host   => 'ens-variation',
+            -host   => 'ens-variation3',
             -port   => 3306,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
@@ -103,9 +103,9 @@ sub default_options {
         # configuration for the various resource options used in the pipeline
         
         default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
+        medmem_lsf_options  => '-R"select[mem>8000] rusage[mem=8000]" -M8000',
         urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-q long -R"select[mem>8000] rusage[mem=8000]" -M8000', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-q long -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
@@ -164,7 +164,7 @@ sub default_options {
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => FULL,
+        sift_run_type           => UPDATE,
 
         sift_use_compara        => 0,
 
