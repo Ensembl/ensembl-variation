@@ -65,8 +65,7 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-        pipeline_dir            => '/lustre/scratch110/ensembl/at7/release_83/chicken/protein_function/',
-#        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
