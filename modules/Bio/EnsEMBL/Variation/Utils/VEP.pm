@@ -198,6 +198,7 @@ our @EXTRA_HEADERS = (
   { flag => 'gmaf',            cols => ['GMAF'] },
   { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','EAS_MAF','EUR_MAF','SAS_MAF'] },
   { flag => 'maf_esp',         cols => ['AA_MAF','EA_MAF'] },
+  { flag => 'maf_exac',        cols => ['ExAC_MAF','ExAC_Adj_MAF','ExAC_AFR_MAF','ExAC_AMR_MAF','ExAC_EAS_MAF','ExAC_FIN_MAF','ExAC_NFE_MAF','ExAC_OTH_MAF','ExAC_SAS_MAF'] },
   { flag => 'check_frequency', cols => ['FREQS'] },
   
   # misc variation stuff
@@ -262,6 +263,15 @@ our %COL_DESCS = (
     'SAS_MAF'            => 'Frequency of existing variant in 1000 Genomes combined South Asian population',
     'AA_MAF'             => 'Frequency of existing variant in NHLBI-ESP African American population',
     'EA_MAF'             => 'Frequency of existing variant in NHLBI-ESP European American population',
+    'ExAC_MAF',          => 'Frequency of existing variant in ExAC combined population',
+    'ExAC_Adj_MAF',      => 'Adjusted frequency of existing variant in ExAC combined population',
+    'ExAC_AFR_MAF',      => 'Frequency of existing variant in ExAC African/American population',
+    'ExAC_AMR_MAF',      => 'Frequency of existing variant in ExAC American population',
+    'ExAC_EAS_MAF',      => 'Frequency of existing variant in ExAC East Asian population',
+    'ExAC_FIN_MAF',      => 'Frequency of existing variant in ExAC Finnish population',
+    'ExAC_NFE_MAF',      => 'Frequency of existing variant in ExAC Non-Finnish European population',
+    'ExAC_OTH_MAF',      => 'Frequency of existing variant in ExAC combined other combined populations',
+    'ExAC_SAS_MAF',      => 'Frequency of existing variant in ExAC South Asian population',
     'DISTANCE'           => 'Shortest distance from variant to transcript',
     'CLIN_SIG'           => 'Clinical significance of variant from dbSNP',
     'BIOTYPE'            => 'Biotype of transcript or regulatory feature',
@@ -1823,7 +1833,9 @@ sub format_rest_output {
     Location
     Uploaded_variation
     Existing_variation
-    GMAF AFR_MAF AMR_MAF ASN_MAF EAS_MAF SAS_MAF EUR_MAF AA_MAF EA_MAF
+    GMAF AFR_MAF AMR_MAF ASN_MAF EAS_MAF SAS_MAF EUR_MAF
+    AA_MAF EA_MAF
+    ExAC_MAF ExAC_Adj_MAF ExAC_AFR_MAF ExAC_AMR_MAF ExAC_EAS_MAF ExAC_FIN_MAF ExAC_NFE_MAF ExAC_OTH_MAF ExAC_SAS_MAF
     PUBMED CLIN_SIG SOMATIC VARIANT_CLASS PHENO
   );
   
@@ -1965,10 +1977,14 @@ sub format_rest_output {
       delete $ex->{$_} for qw(failed);
       
       # frequencies
-      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EAS SAS EUR AA EA)) {
+      foreach my $pop(grep {defined($ex->{$_})} qw(
+        AFR AMR ASN EAS SAS EUR
+        AA EA
+        ExAC ExAC_Adj ExAC_AFR ExAC_AMR ExAC_EAS ExAC_FIN ExAC_NFE ExAC_OTH ExAC_SAS
+      )) {
         my $tmp = $ex->{$pop};
         
-        if($tmp =~ /(\w)\:([\d\.]+)/) {
+        if($tmp =~ /(\w)\:([\d\.\-e]+)/) {
           $ex->{lc($pop).'_maf'} = $2;
           $ex->{lc($pop).'_allele'} = $1;
         }
@@ -2937,6 +2953,22 @@ sub init_line {
         # ESP MAFs?
         if(defined($config->{maf_esp})) {
             my @pops = qw(AA EA);
+            
+            foreach my $var(@{$vf->{existing}}) {
+                foreach my $pop(grep {defined($var->{$_})} @pops) {
+                    my $freq = $var->{$pop};
+                    $freq = '-' unless defined($freq);
+                    $line->{Extra}->{$pop.'_MAF'} =
+                        exists($line->{Extra}->{$pop.'_MAF'}) ?
+                        $line->{Extra}->{$pop.'_MAF'}.','.$freq :
+                        $freq;
+                }
+            }
+        }
+        
+        # ExAC MAFs?
+        if(defined($config->{maf_exac})) {
+            my @pops = ('ExAC', map {'ExAC_'.$_} qw(Adj AFR AMR EAS FIN NFE OTH SAS));
             
             foreach my $var(@{$vf->{existing}}) {
                 foreach my $pop(grep {defined($var->{$_})} @pops) {
@@ -5161,7 +5193,7 @@ sub dump_variation_cache {
       }
 
       if(defined($config->{freq_vcf}) && scalar @{$config->{freq_vcf}}) {
-        foreach my $pop(map {@{$_->{pops}}} @{$config->{freq_vcf}}) {
+        foreach my $pop(map {@{$_->{prefixed_pops}}} @{$config->{freq_vcf}}) {
           push @tmp, $v->{$pop} || '';
         }
       }
@@ -5282,6 +5314,9 @@ sub freqs_from_vcf {
   foreach my $vcf_conf(@{$config->{freq_vcf}}) {
     my $file = $vcf_conf->{file};
     next unless -e $file;
+
+    my $prefix = $vcf_conf->{prefix} || '';
+    $prefix .= '_' if $prefix && $prefix !~ /\_$/;
     
     open VCF, "tabix -f $file $region_string 2>&1 |"
       or die "\nERROR: Could not open tabix pipe for $file\n";
@@ -5339,44 +5374,102 @@ sub freqs_from_vcf {
             my @vcf_alleles = split('/', $vcf_vf->{allele_string});
             shift @vcf_alleles;
             
-            # match to parts of the INFO field from the VCF
-            while(m/([A-Z]+)\_A([CF])\=([0-9\.\,]+)/g) {
-              
-              # check the matched population name is one we're interested in
-              my ($pop) = grep {$1 eq $_} @{$vcf_conf->{pops}};
-              
-              if($pop) {
+            # have to process ExAC differently from 1KG and ESP
+            if($prefix =~ /exac/i) {
+
+              my $freq_hash = {};
+
+              # match to parts of the INFO field from the VCF
+              while(m/A([CFN])\_?([A-Za-z]+)?\=([0-9\.\,\-e]+)/g) {
+                my ($pop) = grep {($2 || '') eq $_} @{$vcf_conf->{pops}};
+
+                if(defined($pop)) {
+
+                  if($1 eq 'N') {
+                    $freq_hash->{$pop}->{N} = $3;
+                  }
+
+                  else {
+                    my @split = split(',', $3);
+
+                    $freq_hash->{$pop}->{$1}->{$vcf_alleles[$_]} = $split[$_] for 0..$#split; 
+                  }
+                }
+              }
+
+              foreach my $pop(keys %$freq_hash) {
                 my @f;
-                
-                # have count, e.g AA_AC from ESP 
-                if($2 eq 'C') {
-                  
-                  # get total count
-                  my @c = split(',', $3);
-                  my $total = 0;
-                  $total += $_ for @c;
-                  
-                  # ESP VCFs include REF as last allele so remove it
-                  pop @c;
-                  
-                  my $i = 0;
-                  foreach my $c(@c) {
-                    my $f = sprintf('%.4f', ($c / $total));
-                    $f =~ s/\.?0+$//;
-                    push @f, $vcf_alleles[$i++].':'.($f || '0');
+
+                foreach my $allele(
+                  keys %{{
+                    map {$_ => 1} (
+                      keys %{$freq_hash->{$pop}->{C}},
+                      keys %{$freq_hash->{$pop}->{F}}
+                    )
+                  }}
+                ) {
+                  unless(exists($freq_hash->{$pop}->{F}->{$allele})) {
+
+                    $DB::single = 1 if $freq_hash->{$pop}->{N} == 0;
+
+                    $freq_hash->{$pop}->{F}->{$allele} = sprintf(
+                      '%.4g',
+                      $freq_hash->{$pop}->{C}->{$allele} / $freq_hash->{$pop}->{N}
+                    ) if defined $freq_hash->{$pop}->{C}->{$allele} && defined $freq_hash->{$pop}->{N} && $freq_hash->{$pop}->{N} > 0;
+                  }
+
+                  if(exists($freq_hash->{$pop}->{F}->{$allele})) {
+                    push @f, $allele.':'.$freq_hash->{$pop}->{F}->{$allele};
                   }
                 }
+
+                my $store_name = $prefix.$pop;
+                $store_name =~ s/\_$//;
+
+                $v->{$store_name} = join(',', @f);
+              }
+            }
+
+            else {
+              # match to parts of the INFO field from the VCF
+              while(m/([A-Z]+)\_A([CF])\=([0-9\.\,]+)/g) {
                 
-                # have freq, e.g. AFR_AF from 1KG
-                else {
-                  my $i = 0;
-                  foreach my $f(split(',', $3)) {
-                    push @f, $vcf_alleles[$i++].':'.($f || 0);
+                # check the matched population name is one we're interested in
+                my ($pop) = grep {$1 eq $_} @{$vcf_conf->{pops}};
+                
+                if($pop) {
+                  my @f;
+                  
+                  # have count, e.g AA_AC from ESP 
+                  if($2 eq 'C') {
+                    
+                    # get total count
+                    my @c = split(',', $3);
+                    my $total = 0;
+                    $total += $_ for @c;
+                    
+                    # ESP VCFs include REF as last allele so remove it
+                    pop @c;
+                    
+                    my $i = 0;
+                    foreach my $c(@c) {
+                      my $f = sprintf('%.4f', ($c / $total));
+                      $f =~ s/\.?0+$//;
+                      push @f, $vcf_alleles[$i++].':'.($f || '0');
+                    }
                   }
+                  
+                  # have freq, e.g. AFR_AF from 1KG
+                  else {
+                    my $i = 0;
+                    foreach my $f(split(',', $3)) {
+                      push @f, $vcf_alleles[$i++].':'.($f || 0);
+                    }
+                  }
+                  
+                  # add freqs to object
+                  $v->{$prefix.$pop} = join(',', @f);
                 }
-                
-                # add freqs to object
-                $v->{$pop} = join(',', @f);
               }
             }
           }
