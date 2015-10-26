@@ -545,7 +545,7 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   return [] unless scalar @$samples;
   
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
-    my $start = $vcf->get_raw_start;
+    my $start = $vcf->get_start;
     
     my $vf;
     
@@ -689,6 +689,14 @@ sub _create_SampleGenotypeFeatures {
   my @genotypes;
   
   $self->{_gta} ||= $self->use_db ? $self->adaptor->db->get_SampleGenotypeFeatureAdaptor : undef;
+
+  # we need the alleles unless this is a SNP
+  my @alleles;
+  
+  if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
+    my $vcf = $self->_current();
+    @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
+  }
   
   foreach my $sample(@$samples) {
     next unless defined($raw_gts->{$sample->{_raw_name}});
@@ -705,8 +713,6 @@ sub _create_SampleGenotypeFeatures {
     
     # adjust alleles for non-SNVs
     if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
-      my $vcf = $self->_current();
-      my @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
       my %first_char = map {substr($_, 0, 1)} @alleles;
       
       # only do this if the first base is the same in all alleles
