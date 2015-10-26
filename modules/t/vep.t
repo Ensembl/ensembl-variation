@@ -743,6 +743,7 @@ $config = copy_config($config, {
   freq_vcf    => [
     {
       pops => ['AFR','AMR'],
+      prefixed_pops => ['AFR','AMR'],
       file => "$Bin\/testdata/freqs.vcf.gz",
     },
   ],

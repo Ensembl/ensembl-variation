@@ -5193,7 +5193,7 @@ sub dump_variation_cache {
       }
 
       if(defined($config->{freq_vcf}) && scalar @{$config->{freq_vcf}}) {
-        foreach my $pop(map {@{$_->{prefixed_pops}}} @{$config->{freq_vcf}}) {
+        foreach my $pop(map {@{$_->{prefixed_pops} || $_->{pops}}} @{$config->{freq_vcf}}) {
           push @tmp, $v->{$pop} || '';
         }
       }
