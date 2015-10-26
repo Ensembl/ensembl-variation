@@ -668,18 +668,32 @@ sub _get_mappings {
   my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
   
   foreach my $vf(@{$self->_variation_features}) {
-    next if $vf->{_cds_mapping};
+    next if $vf->{_cds_mapping} || $vf->{_cds_mapping_failed};
     
     my @mapped = $mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tr_strand);
 
     # clean mapping
-    if(scalar @mapped == 1 && !$mapped[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-      $vf->{_cds_mapping} = $mapped[0];
+    if(scalar @mapped == 1) {
+      if($mapped[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+        $vf->{_cds_mapping_failed} = 'gap';
+      }
+      else {
+        $vf->{_cds_mapping} = $mapped[0];
+      }
     }
 
-    # complex mapping, we can't deal with this ATM
-    elsif(scalar @mapped > 1) {
-      warn "WARNING: genomic coord ".$vf->seq_region_start."-".$vf->seq_region_end." possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
+    else {
+
+      # complex mapping, we can't deal with this ATM
+      if(grep {$_->isa('Bio::EnsEMBL::Mapper::Coordinate')} @mapped) {
+        warn "WARNING: genomic coord ".$vf->seq_region_start."-".$vf->seq_region_end." possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
+
+        $vf->{_cds_mapping_failed} = 'complex';
+      }
+
+      else {
+        $vf->{_cds_mapping_failed} ||= 'multiple_gaps';
+      }
     }
   }
 }
@@ -746,7 +760,7 @@ sub _mutate_sequences {
       my $protein = $self->_get_translation($seq, $codon_table);
     
       # remove anything beyond a stop
-      #$protein =~ s/\*.+/\*/;
+      $protein =~ s/\*.+/\*/;
 
       # remove stop
       # $protein =~ s/\*$//;

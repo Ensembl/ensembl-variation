@@ -46,6 +46,10 @@ package Bio::EnsEMBL::Variation::ProteinHaplotype;
 
 use strict;
 use warnings;
+
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
+use Bio::EnsEMBL::Utils::Exception qw(throw);
+
 use Bio::EnsEMBL::Variation::TranscriptHaplotype;
 
 use base qw(Bio::EnsEMBL::Variation::TranscriptHaplotype);
@@ -100,6 +104,22 @@ sub new {
 
 sub get_all_CDSHaplotypes {
   return $_[0]->get_other_Haplotypes;
+}
+
+
+=head2 reference_seq
+
+  Example    : my $ref_seq = $ph->reference_seq
+  Description: Get the reference protein sequence
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub reference_seq {
+  return $_[0]->transcript->{protein};
 }
 
 
@@ -200,6 +220,18 @@ sub _mean_score {
   $sum += $_ for @scores;
   
   return $sum / scalar @scores;
+}
+
+sub TO_JSON {
+  my $self = shift;
+  
+  # make a hash copy of self
+  my %copy = %{$self};
+  
+  # delete keys starting with _
+  delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
+  
+  return \%copy;
 }
 
 1;

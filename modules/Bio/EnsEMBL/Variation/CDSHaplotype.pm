@@ -46,6 +46,9 @@ package Bio::EnsEMBL::Variation::CDSHaplotype;
 
 use strict;
 use warnings;
+
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
+
 use Bio::EnsEMBL::Variation::TranscriptHaplotype;
 
 use base qw(Bio::EnsEMBL::Variation::TranscriptHaplotype);
@@ -103,6 +106,22 @@ sub get_ProteinHaplotype {
 }
 
 
+=head2 reference_seq
+
+  Example    : my $ref_seq = $ph->reference_seq
+  Description: Get the reference CDS sequence
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub reference_seq {
+  return $_[0]->transcript->{cds};
+}
+
+
 =head2 get_all_diffs
 
   Example    : my @diffs = @{$ch->get_all_diffs}
@@ -149,8 +168,19 @@ sub TO_JSON {
   # make a hash copy of self
   my %copy = %{$self};
   
+  # delete keys starting with _
+  delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
+  
   # change VF links to VF name
-  $_->{variation_feature} = $_->{variation_feature}->variation_name for grep {$_->{variation_feature}} @{$self->{diffs}};
+  if($self->{diffs}) {
+    $copy{diffs} = [];
+
+    foreach my $diff(@{$self->{diffs} || []}) {
+      my %diff_copy = %{$diff};
+      $diff_copy{variation_feature} = $diff->{variation_feature}->variation_name if $diff->{variation_feature};
+      push @{$copy{diffs}}, \%diff_copy;
+    }
+  }
   
   return \%copy;
 }

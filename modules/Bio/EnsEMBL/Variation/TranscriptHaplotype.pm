@@ -47,8 +47,11 @@ package Bio::EnsEMBL::Variation::TranscriptHaplotype;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+
+use Bio::AlignIO;
+use Bio::SimpleAlign;
+use Bio::LocatableSeq;
 
 =head2 new
 
@@ -339,6 +342,90 @@ sub get_all_population_frequencies {
   return $self->{population_frequencies};
 }
 
+sub get_aligned_sequences {
+  my $self = shift;
+
+  if(!exists($self->{aligned_sequences})) {
+
+    my $aln = $self->_get_SimpleAlign_obj();
+
+    # get sequences
+    my @aligned = $aln->each_seq;
+
+    # pad
+    my $longest = (sort {$a <=> $b} map {$_->length} @aligned)[-1];
+    my @padded = map {$_->seq.('-' x ($longest - $_->length))} @aligned;
+
+    $self->{aligned_sequences} = \@padded;
+  }
+
+  return $self->{aligned_sequences};
+}
+
+sub get_formatted_alignment {
+  my $self = shift;
+  my $format = shift || 'clustalw';
+
+  my $aln_out;
+  open(my $fh, ">", \$aln_out);
+  Bio::AlignIO->new(-format => $format, -fh => $fh)->write_aln($self->_get_SimpleAlign_obj);
+
+  return $aln_out;
+}
+
+sub _get_SimpleAlign_obj {
+  my $self = shift;
+
+  if(!exists($self->{_SimpleAlign_obj})) {
+
+    # if there are any indels we need to align
+    if($self->has_indel) {
+
+      # try and use bioperl-ext packages
+      eval q{use Bio::Tools::dpAlign};
+
+      # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
+      if($@) {
+        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(align_seqs($self->reference_seq, $self->seq));
+      }
+
+      # ok to use fast dpAlign
+      else {
+
+        # create Bio::Seq objects to feed aligner
+        my $s1 = Bio::Seq->new(-id => "REF", -seq => $self->reference_seq);
+        my $s2 = Bio::Seq->new(-id => "ALT", -seq => $self->seq);
+
+        # get factory
+        my $factory;
+
+        eval {$factory = Bio::Tools::dpAlign->new(-alg => 2)};
+
+        throw($@) if $@;
+
+        # create alignment
+        $self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2);
+      }
+    }
+
+    else {
+      $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair($self->reference_seq, $self->seq);
+    }
+  }
+
+  return $self->{_SimpleAlign_obj};
+}
+
+sub _create_SimpleAlign_from_sequence_pair {
+  my ($self, $s1, $s2) = @_;
+
+  my $aln = Bio::SimpleAlign->new();
+  $aln->add_seq(Bio::LocatableSeq->new(-id => "REF", -seq => $s1));
+  $aln->add_seq(Bio::LocatableSeq->new(-id => "ALT", -seq => $s2));
+
+  return $aln;
+}
+
 ## Get/set the hex string uniquely identifying this haplotype
 sub _hex {
   my $self = shift;
@@ -361,15 +448,12 @@ sub _get_raw_diffs {
   my $self = shift;
   
   if(!exists($self->{_raw_diffs})) {
-    my $s1 = $self->transcript->{$self->type};
-    my $s2 = $self->seq;
-    my $indel = $self->has_indel;
-    
+
+    my ($al1, $al2) = @{$self->get_aligned_sequences};
     my @diffs;
     
-    if($s1 ne $s2) {
-      my ($al1, $al2) = $indel ? @{align_seqs($s1, $s2)} : ($s1, $s2);
-      
+    if($al1 ne $al2) {
+
       # if there was a stop introduced, then $al2 will be shorter
       # pad it out with '-' to make seqs same length
       $al2 .= '-' x (length($al1) - length($al2));
@@ -378,12 +462,12 @@ sub _get_raw_diffs {
       ## copied verbatim from http://www.perlmonks.org/?node_id=882593
       ## can probably be XS'd in future, see http://www.perlmonks.org/?node_id=882590
       my ($m, @pos, $c1, @p1, $c2, @p2);
-      $m  = $s1 ^ $s2;
+      $m  = $al1 ^ $al2;
       push @pos, pos( $m ) while $m =~ m{(?=([^\x00]))}g;
       $m  =~ tr{[\x01-\xfe]}{\xff};
-      $c1 = $s1 & $m;
+      $c1 = $al1 & $m;
       @p1 = $c1 =~ m{([^\x00])}g;
-      $c2 = $s2 & $m;
+      $c2 = $al2 & $m;
       @p2 = $c2 =~ m{([^\x00])}g;
       
       ## this bit then joins together consecutive mismatches
