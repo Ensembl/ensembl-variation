@@ -85,14 +85,6 @@ print "Found COSMIC source ID: $source_id\n" if $verbose;
 
 # now delete stuff...
 
-# first stuff that doesn't depend on variation
-
-# population - population_id
-
-$dbh->do(qq{  DELETE FROM population WHERE name LIKE "COSMIC:gene%"});
-
-print "Deleted all populations\n" if $verbose;
-
 # now all the stuff that is joined to variation
 
 # failed_variation - variation_id

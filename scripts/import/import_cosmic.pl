@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,59 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
-
-=head1 CONTACT
-
-  Please email comments or questions to the public Ensembl
-  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
-
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk.org>.
-
-=cut
-
-# Import COSMIC data into an Ensembl variation schema database
-
 use strict;
-use warnings;
-
 use Getopt::Long;
-
-use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use ImportUtils qw(create);
+use DBI qw(:sql_types);
 
-my $USE_DB = 1;
-my $ADD_SETS = 1;
-my $VERBOSE = 1;
-
-my $import_file;
-my $registry_file;
-my $version;
-my $help;
+my ( $infile, $registry_file, $version, $help );
 
 GetOptions(
-    "import|i=s"    => \$import_file,
-    "registry|r=s"  => \$registry_file,
-    "verbose|v"     => \$VERBOSE,
-    "version=s"     => \$version,
-    "test|t"        => \$USE_DB,
-    "help|h"        => \$help,
+  "import|i=s"   => \$infile,
+  "registry|r=s" => \$registry_file,
+  "version=s"    => \$version,
+  "help|h"       => \$help,
 );
 
-unless (defined($registry_file) && defined($import_file) && defined($version)) {
+unless (defined($registry_file) && defined($infile) && defined($version)) {
     print "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
 }
-if ($import_file =~ /\.gz$/) {
-  print "Please unzip the input file before running the script!\n";
-  exit(0);
-}
 if ($help) {
-    print "Usage: $0 --import <import_file> --registry <reg_file> --version <cosmic_version>\n";
+    print "Usage: $0 --import <input_file> --registry <reg_file> --version <cosmic_version>\n";
     exit(0);
 }
 
@@ -72,814 +43,293 @@ my $registry = 'Bio::EnsEMBL::Registry';
 
 $registry->load_all($registry_file);
 
-my $sa = $registry->get_adaptor(
-    'human', 'core', 'slice'
-);
-
 my $dbh = $registry->get_adaptor(
     'human', 'variation', 'variation'
-)->dbc->db_handle;
+)->dbc;
+my $dbVar = $dbh->db_handle;
 
-open my $INPUT, "<$import_file" or die "Can't open '$import_file'";    
 
-my $set_version_sth = $dbh->prepare(qq{UPDATE source SET version = ? WHERE source_id = ?});
-    
-# check to see if we already have the COSMIC source
-my $src_sth = $dbh->prepare(qq{ SELECT source_id FROM source WHERE name LIKE "COSMIC%" });
-$src_sth->execute;
+my $source_name = 'COSMIC';
+my $source_id = get_source_id(); # COSMIC source_id
+my $variation_set_id = get_variation_set_id(); # COSMIC variation set
+my $temp_table      = 'MTMP_tmp_cosmic';
+my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
 
-my ($source_id) = $src_sth->fetchrow_array;
+my $default_class = 'sequence_alteration'; 
+my %class_mapping = ( 'Substitution' => 'SNV',
+                      'Indel'        => 'indel',
+                      'Insertion'    => 'insertion',
+                      'Deletion'     => 'deletion',
+                    );
 
-if ($source_id) {
-    print "Found existing source_id: $source_id\n";
-    $set_version_sth->execute($version,$source_id);
+my $default_strand = 1;
+my $somatic = 1;
+my $allele  = 'COSMIC_MUTATION';
+  
+$dbVar->do("DROP TABLE IF EXISTS $temp_table;");
+$dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
+  
+my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i', 'new_var_id i*');
+create($dbVar, "$temp_table", @cols);
+
+my @cols_phen = ('name *', 'phenotype_id i*');
+create($dbVar, "$temp_phen_table", @cols_phen);
+
+my $cosmic_ins_stmt = qq{
+    INSERT INTO
+      $temp_table (
+        name,
+        seq_region_id,
+        seq_region_start,
+        seq_region_end,
+        class
+      )
+      VALUES (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+      )
+};
+my $cosmic_ins_sth = $dbh->prepare($cosmic_ins_stmt);
+
+my $cosmic_phe_ins_stmt = qq{
+    INSERT INTO
+      $temp_phen_table (
+        name,
+        phenotype_id
+      )
+      VALUES (
+        ?,
+        ?
+      )
+};
+my $cosmic_phe_ins_sth = $dbh->prepare($cosmic_phe_ins_stmt);
+
+my $class_attrib_ids = get_class_attrib_ids();
+my $seq_region_ids   = get_seq_region_ids();
+my $phenotype_ids    = get_phenotype_ids();
+
+my %chr_names = ( '23' => 'X',
+                  '24' => 'Y',
+                  '25' => 'MT');
+
+
+if ($infile =~ /gz$/) {
+  open IN, "zcat $infile |" or die ("Could not open $infile for reading");
 }
 else {
-    # if not, add it
-    my $sth = $dbh->prepare(qq{
-        INSERT INTO source (name, description, url, somatic_status, version) 
-        VALUES (
-            'COSMIC', 
-            'Somatic mutations found in human cancers from the COSMIC project', 
-            'http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/',
-            'somatic',
-            $version
-        );
-    });
-
-    $sth->execute;
-
-    $source_id = $dbh->last_insert_id(undef, undef, undef, undef);
-
-    print "New source_id: $source_id\n";
+  open(IN,'<',$infile) or die ("Could not open $infile for reading");
 }
 
-# set up the various queries and inserts we'll need
+# Read through the file and parse out the desired fields
+while (<IN>) {
+  chomp;
+  next if ($_ =~ /^chromosome/);
+  my @line = split(',',$_);
+  
+  my $chr = shift(@line);
+     $chr = $chr_names{$chr} if ($chr_names{$chr});
+  my $start         = shift(@line);
+  my $end           = shift(@line);
+  my $cosmic_id     = shift(@line);
+  shift(@line); # Skip this column
+  my $cosmic_class  = pop(@line);
+  
+  my $class = get_equivalent_class($cosmic_class,$start,$end);
+  
+  my $seq_region_id = $seq_region_ids->{$chr};
 
-my %failed_desc_list = ( 1 => 'Variation has no associated sequence',
-                         2 => 'Mapped position is not compatible with reported alleles'
-                       );
+  if (!$seq_region_id) {
+    print STDERR "COSMIC $cosmic_id: chromosome '$chr' not found in ensembl. Entry skipped.\n";
+    next;
+  }
 
-my $vf_table = 'variation_feature';
-my $cosmic_phe_prefix = 'COSMIC:tumour_site:';
+  my $class_attrib_id = $class_attrib_ids->{$class};
+  
+  $cosmic_ins_sth->bind_param(1,$cosmic_id,SQL_VARCHAR);
+  $cosmic_ins_sth->bind_param(2,$seq_region_id,SQL_INTEGER);
+  $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
+  $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  $cosmic_ins_sth->bind_param(5,$class_attrib_id,SQL_INTEGER);
+  $cosmic_ins_sth->execute();
+  
+  foreach my $phenotype (@line) {
+    my $phenotype    = "COSMIC:tumour_site:$phenotype";
+    my $phenotype_id = $phenotype_ids->{$phenotype};
+    
+    if (!$phenotype_id) {
+      $phenotype_id = add_phenotype($phenotype);
+      print STDERR "COSMIC $cosmic_id: phenotype '$phenotype' not found in ensembl. Phenotype added.\n";
+    }
+    
+    $cosmic_phe_ins_sth->bind_param(1,$cosmic_id,SQL_VARCHAR);
+    $cosmic_phe_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
+    $cosmic_phe_ins_sth->execute();
+  }
+}
+close(IN);
+$cosmic_ins_sth->finish();
+$cosmic_phe_ins_sth->finish();
 
-# Variations
-my $find_existing_var_sth = $dbh->prepare(qq{
-    SELECT variation_id FROM variation WHERE name = ?
-});
-
-# Variation set COSMIC
-my $get_cosmic_set_id_sth = $dbh->prepare(qq{
-    SELECT variation_set_id FROM variation_set WHERE name = "COSMIC phenotype variants"
-});
-
-$get_cosmic_set_id_sth->execute;
-
-my ($cosmic_set_id) = $get_cosmic_set_id_sth->fetchrow_array;
-
-die "Didn't find COSMIC set id?" unless defined $cosmic_set_id;
+# Insert COSMIC in the latest release which are not in COSMIC 71
+insert_cosmic_entries();
 
 
-# Variation set phenotypes
-my $get_phenotype_set_id_sth = $dbh->prepare(qq{
-    SELECT variation_set_id FROM variation_set WHERE name like '%phenotype/disease-associated variants%'
-});
-$get_phenotype_set_id_sth->execute;
+sub get_equivalent_class {
+  my $type  = shift;
+  my $start = shift;
+  my $end   = shift;
 
-my ($phenotype_set_id) = $get_phenotype_set_id_sth->fetchrow_array;
+  my @type_parts = split(' ',$type);
+  $type = $type_parts[0];
 
-die "Didn't find phenotype/disease set id?" unless defined $phenotype_set_id;
+  my $class = $default_class;
 
+  if ($type eq 'Substitution') {
+    $class = ($start == $end) ? $class_mapping{$type} : $class_mapping{'Indel'};
+  }
+  elsif ($class_mapping{$type}) {
+    $class = $class_mapping{$type};
+  }
+  return $class;
+}
 
-my $add_var_sth = $dbh->prepare(qq{
-    INSERT INTO variation (source_id, name, flipped, class_attrib_id, somatic) VALUES (?,?,?,?,1)
-});
-
-my $add_var_set_sth = $dbh->prepare(qq{
-    INSERT INTO variation_set_variation (variation_id, variation_set_id) VALUES (?,?)
-});
-
-my $add_failed_var_sth = $dbh->prepare(qq{
-    INSERT INTO failed_variation (variation_id, failed_description_id) VALUES (?,?)
-});
-
-my $add_vf_sth = $dbh->prepare(qq{
-    INSERT INTO $vf_table (variation_id, seq_region_id, seq_region_start,
-        seq_region_end, seq_region_strand, variation_name, allele_string, map_weight, 
-        source_id, class_attrib_id, somatic)
-    VALUES (?,?,?,?,?,?,?,?,?,?,1)
-});
-
-my $select_populations_sth = $dbh->prepare(qq{
-    SELECT population_id, name FROM population WHERE name like "COSMIC%"
-});
-
-my $add_population_sth = $dbh->prepare(qq{
-    INSERT INTO population (name, size, description) 
-    VALUES (?,?,?)
-});
-
-my $add_allele_with_code_sth = $dbh->prepare(qq{
-    INSERT INTO allele (variation_id, population_id, allele_code_id, frequency)
-    VALUES (?,?,?,?)
-});
-
-my $select_phenotypes_sth = $dbh->prepare(qq{
-    SELECT phenotype_id, description FROM phenotype WHERE description LIKE "$cosmic_phe_prefix%"
-});
-
-my $add_phenotype_sth = $dbh->prepare(qq{
-    INSERT INTO phenotype (description) VALUE (?)
-});
-
-my $add_phe_feature_sth = $dbh->prepare(qq{
-    INSERT INTO phenotype_feature (phenotype_id, source_id, type, object_id, seq_region_id,
-        seq_region_start, seq_region_end, seq_region_strand)
-    VALUES (?,?,'Variation',?,?,?,?,?)
-});
-
-my $add_phe_feature_attrib_sth = $dbh->prepare(qq{
-    INSERT INTO phenotype_feature_attrib (phenotype_feature_id, attrib_type_id, value)
-    SELECT ?, attrib_type_id, ? FROM attrib_type WHERE code=?    
-});
-
-# allele code id
-my $select_allele_codes_sth = $dbh->prepare(qq{
-    SELECT allele_code_id, allele FROM allele_code WHERE allele IN ('A','T','G','C','-');
-});
-
-my $get_allele_code_sth = $dbh->prepare(qq{
-    SELECT allele_code_id
-    FROM allele_code
-    WHERE allele=?
-});
-my $count_like_allele_code_sth = $dbh->prepare(qq{
-    SELECT count(allele_code_id)
-    FROM allele_code
-    WHERE allele like ?
-});
-my $insert_allele_code_sth = $dbh->prepare(qq{
-    INSERT INTO allele_code (allele) VALUES (?)
-});
-
-# get the failed description ID we will use
-
-my $get_failed_desc_sth = $dbh->prepare(qq{
-    SELECT failed_description_id 
-    FROM   failed_description
-    WHERE  description = ?
-});
-
-my $get_class_attrib_ids_sth = $dbh->prepare(qq{
+sub get_class_attrib_ids {
+  my %class_attrib_ids;
+  my $get_class_attrib_ids_sth = $dbh->prepare(
+  qq{
     SELECT a.value, a.attrib_id
     FROM   attrib a, attrib_type at
     WHERE  a.attrib_type_id = at.attrib_type_id
     AND    at.code = 'SO_term'
-});
-
-my $patched_version = 0;
-
-my %class_attrib_ids;
-my %cosmic_genes_list;
-my %cosmic_populations_list;
-my %cosmic_phenotypes_list;
-my %allele_codes_list;
-
-#### Pre load some of the data ####
-# Variant classes list
-$get_class_attrib_ids_sth->execute;
-while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
-  $class_attrib_ids{$value} = $attrib_id;
-}
-
-# Existing COSMIC populations (empty if you used the "remove_cosmic.pl" script before running this script)
-$select_populations_sth->execute;
-while (my ($p_id, $p_name) = $select_populations_sth->fetchrow_array) {
-  $cosmic_populations_list{$p_name} = $p_id;
-}
-
-# Existing COSMIC phenotypes
-$select_phenotypes_sth->execute;
-while (my ($phe_id, $phe_name) = $select_phenotypes_sth->fetchrow_array) {
-  $cosmic_phenotypes_list{$phe_name} = $phe_id;
-}
-
-# Allele code IDs (A,T,G,C,')
-$select_allele_codes_sth->execute;
-while (my ($ac_id, $ac_name) = $select_allele_codes_sth->fetchrow_array) {
-  $allele_codes_list{$ac_name} = $ac_id;
-}
-
-
-# loop over the input file
-
-MAIN_LOOP : while(<$INPUT>) {
-
-    next unless /COSM/;
+  });
+  $get_class_attrib_ids_sth->execute;
+  while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
+    $class_attrib_ids{$value} = $attrib_id;
+  }
+  $get_class_attrib_ids_sth->finish();
   
-    my $line = $_;
-    
-    my (
-        $cosmic_version,
-        $cosmic_id, 
-        $cosmic_gene,
-        $accession,
-        $class,
-        $cds, 
-        $aa, 
-        $chr, 
-        $start, 
-        $stop, 
-        $mut_nt, 
-        $mut_aa,
-        $is_snp,
-        $tumour_site,
-        $mutated_samples,
-        $total_samples,
-        $freq
-    ) = split /,/, $_;
-
-
-    next unless $cosmic_id =~ /COSM\d+/;
-    
-    while (!defined($freq)) {
-      my $new_line = <$INPUT>;
-      chomp $line;
-      $line = "$line$new_line";
-      
-      (
-        $cosmic_version,
-        $cosmic_id, 
-        $cosmic_gene,
-        $accession,
-        $class,
-        $cds, 
-        $aa, 
-        $chr, 
-        $start, 
-        $stop, 
-        $mut_nt, 
-        $mut_aa,
-        $is_snp,
-        $tumour_site,
-        $mutated_samples,
-        $total_samples,
-        $freq
-      ) = split /,/, $line;
-    }
-
-    unless ($patched_version) {
-
-        my ($curr_version) = $cosmic_version =~ /COSMIC v(\d+)/;
-
-        die "No version information in file" unless $curr_version;
-
-        $set_version_sth->execute($curr_version, $source_id);
-
-        print "Set COSMIC version to $curr_version\n";
-        
-        $patched_version = 1;
-    }
-
-    my %cosmic_attrib = ('associated_gene' => $cosmic_gene);
-
-    print "$cosmic_id:";
-    
-    if ($chr == 23) {
-        $chr = 'X';
-    }
-    elsif ($chr == 24) {
-        $chr = 'Y';
-    }
-
-    # check if we should swap the start & end
-
-    if ($start > $stop + 1) {
-        ($start, $stop) = ($stop, $start);
-        print "Swapped start & end incorrect coords: start: $start stop: $stop\n";
-    }
-
-#    if ($class =~ /insertion/i && $mut_nt =~ /(^-)|^\s*$/ && $cds !~ /dup/i && $cds !~ /del/) {
-#        if ($stop == $start+1) {
-#            ($start, $stop) = ($stop, $start);
-#            print "Swapped start & end for insertion: start: $start stop: $stop\n";
-#        }
-#        else {
-#            print "Wierd start stop for insertion?\n";
-#        }
-#    }
-
-    my $fail_variation = 0;
-
-    my $dont_rev_comp = 0;
-
-    if ($mut_nt =~ /^\s+$/) {
-        #print "$cosmic_id: $cds $class\n";
-        $mut_nt = '';
-        
-        if ($cds =~ /del([A-Z]+)/) {
-            $mut_nt = "$1>-";
-        }
-        elsif ($cds =~ /del([0-9]+)/) {
-            $mut_nt = "($1 BP DELETION)>-";
-            $dont_rev_comp = 1;
-        }
-        elsif ($cds =~ /del?/) {
-            $mut_nt = "DELETION>-";
-            $dont_rev_comp = 1;
-        }
-        elsif ($cds =~ /ins([A-Z]+)/) {
-            $mut_nt = "->$1";
-        }
-        elsif ($cds =~ /ins([0-9]+)/) {
-            $mut_nt = "->($1 BP INSERTION)";
-            $dont_rev_comp = 1;
-        }
-        elsif ($cds =~ /ins?/) {
-            $mut_nt = "->INSERTION";
-            $dont_rev_comp = 1;
-        }
-        elsif ($cds =~ /([A-Z]+)>([A-Z]+)/) {
-            $mut_nt = "$1>$2";
-        }
-        elsif ($cds =~ />([A-Z]+)/) {
-            $mut_nt = "->$1";
-        }
-        else {
-            $fail_variation = 1;
-            print "buggy: failing variation\n";
-        }
-    }
-
-    $mut_nt = uc($mut_nt);
-
-    # cosmic doesn't prefix insertions with a '-', so add one if necessary
-
-    $mut_nt = '-'.$mut_nt if $mut_nt =~ /^>/;
-    
-    if ($mut_nt =~ /^-/) {
-        if ($stop == $start+1) {
-            ($start, $stop) = ($stop, $start);
-            print "Swapped start & end for insertion: start: $start stop: $stop\n";
-        }
-        else {
-            if ($start == $stop) {
-                $start++;
-                print "Insertion start == stop, patched to: start: $start stop: $stop\n";
-            }
-            else {
-                $fail_variation = 2;
-                print "Wierd start stop for insertion?\n";
-            }
-        }
-    }
-
-    if ($mut_nt =~ /([A-Z]+)>-$/) {
-        my $seq = $1;
-        my $seq_len = length($seq);
-        if (($seq_len) > 1 && ($stop == $start)) {
-            $stop = $start + $seq_len - 1;
-            print "Patched stop coordinate for deletion\n";
-        }
-    }
-
-    my $slice = $sa->fetch_by_region('chromosome', $chr, $start, $stop);
-
-    if ($slice) {
-
-        # try to find a matching ensembl gene
-
-        my $ens_gene;
-
-        my @genes = @{ $slice->get_all_Genes };
-
-        my $check_strand = 0;
-
-        my $strand;
-
-        GENE : for my $gene (@genes) {
-        
-            # Use existing gene found
-            if ($cosmic_genes_list{$cosmic_gene}{$accession}) {
-              if ($cosmic_genes_list{$cosmic_gene}{$accession} eq $gene) {
-                $ens_gene = $gene;
-                last;
-              }
-            }
-        
-            if ($gene->external_name eq $cosmic_gene) {
-                $ens_gene = $gene;
-                last;
-            }
-            else {
-                # try synonyms of this gene
-                for my $db_entry (@{ $gene->get_all_DBEntries } ) {
-                    for my $syn (@{ $db_entry->get_all_synonyms }) {
-                        if ($syn eq $cosmic_gene) {
-                            $ens_gene = $gene;
-                            last GENE;
-                        }
-                    }
-                }
-            }
-            
-            if ($gene->display_xref && $gene->display_xref->display_id eq $cosmic_gene) {
-                $ens_gene = $gene;
-                last GENE;
-            }
-
-            if ($accession =~ /ENST/) {
-                for my $tran (@{ $gene->get_all_Transcripts }) {
-                    if ($tran->stable_id eq $accession) {
-                        $ens_gene = $gene;
-                        last GENE;
-                    }
-                }
-                 
-                # Extract the gene name (e.g. CDKN2A_ENST00000361570 => extracts CDKN2A)
-                my @g_names = split('_',$cosmic_gene);
-                if (scalar @g_names > 1 and $g_names[1] =~ /ENST/) {
-                    if ($gene->external_name eq $g_names[0]) {
-                        $ens_gene = $gene;
-                        last GENE;
-                    }
-                    else {
-                        # try synonyms of this gene
-                        for my $db_entry (@{ $gene->get_all_DBEntries } ) {
-                            for my $syn (@{ $db_entry->get_all_synonyms }) {
-                                if ($syn eq $g_names[0]) {
-                                    $ens_gene = $gene;
-                                    last GENE;
-                                }
-                            }
-                        }
-                    }
-                }  
-            }            
-            
-            if ($gene->description && $gene->description =~ /$cosmic_gene/) {
-                $ens_gene = $gene;
-                last GENE;
-            }
-            
-        }
-
-        if (!$ens_gene && @genes == 1) {
-            $ens_gene = $genes[0];
-            print "Guess gene is ".$ens_gene->external_name."\n";
-            $check_strand = 1;
-        }
-
-        if ($ens_gene) {
-            $strand = $ens_gene->strand;
-            $cosmic_genes_list{$cosmic_gene}{$accession} = $ens_gene if (!$cosmic_genes_list{$cosmic_gene}{$accession});
-        }
-        else {
-            my $num = @genes;
-
-            my $strands_match = 0;
-
-            my $poss_strand;
-
-            if ($num > 0) {
-                $strands_match = 1;
-                $poss_strand = $genes[0]->strand;
-                for my $gene (@genes) {
-                    if ($poss_strand != $gene->strand) {
-                        $strands_match = 0;
-                        $poss_strand = undef;
-                        last;
-                    }
-                }
-            }
-
-            $strand = $poss_strand;
-
-            print "Can't find a matching gene for $cosmic_gene or $accession ";
-            print "($num genes lie here - strands match: $strands_match)\n";
-            
-            $check_strand = 1;
-        }
-        
-        my $ens_ref = $slice->seq || '-';
-
-        my $ens_ref_comp = $ens_ref;
-
-        reverse_comp(\$ens_ref_comp);
-       
-        my ($cs_ref_nt, $cs_mut_nt) = split />/, $mut_nt;
-        my ($cs_ref_aa, $cs_mut_aa) = split />/, $mut_aa;
-
-        if ($check_strand && $fail_variation != 1) {
-            if ($cs_ref_nt eq $ens_ref) {
-                
-                if (defined $strand && $strand == 1) {
-                    print "Guessed strand 1 looks OK\n";
-                }
-                else {
-                    print "cosmic reference matches ensembl reference, using 1\n";
-                    $strand = 1;
-                }
-            }
-            elsif ($cs_ref_nt eq $ens_ref_comp) {
-                if (defined $strand && $strand == -1) {
-                    print "Guessed strand -1 looks OK\n";
-                }
-                else {
-                    print "cosmic reference matches reverse complemented ensembl reference, using -1\n";
-                    $strand = -1;
-                }
-            }
-
-            unless (defined $strand) {
-                print "Reference bases mismatch and no evidence for any strand - leaving\n";
-                next;
-            }
-        }
-        
-        unless (defined $strand) {
-          print "Reference bases mismatch and no evidence for any strand - leaving\n";
-          next;
-        }
-
-        # these two variables are used when adding this feature to the DB because we 
-        # add everything as if it were on the forward strand, regardless of the cosmic 
-        # strand
-
-        my $flipped = 0;
-        my $var_strand = $strand;
-        
-        my $forward_strand_ref_allele = $cs_ref_nt;
-        my $forward_strand_mut_allele = $cs_mut_nt;
-
-        my $mismatching_reference;
-
-        unless ($fail_variation == 1) {
-            if ($cs_ref_nt ne $ens_ref) {
-              if ($cs_ref_nt =~ /^[^ATGC]$/ && $class =~ /^Substitution/) {
-                if ($cds =~ /c\.\d+(\w)>\w$/) {
-                  $cs_ref_nt = uc($1) if ($1 !~ /$cs_ref_nt/i);
-                }  
-              } elsif ($cs_ref_nt =~ /^\d+$/ && $class =~ /^Deletion/) {
-                 $cs_ref_nt = $ens_ref;
-              }
-            }
-        
-            my $flag_update_allele = 0;
-            
-            # Reverse complement if alleles match the reverse strand sequence
-            if ($strand == 1) {
-              if ($cs_ref_nt ne $ens_ref) {
-                unless ($dont_rev_comp) {
-                  reverse_comp(\$cs_ref_nt);
-                  reverse_comp(\$cs_mut_nt);
-                }    
-                if ($cs_ref_nt ne $ens_ref) {
-                  $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
-                }  
-                else {
-                  $flipped = 1;
-                  $flag_update_allele = 1;
-                }
-              }
-            }
-            # Reverse complement and change strand if alleles match the reverse strand sequence
-            else {
-              if ($cs_ref_nt eq $ens_ref_comp) {
-                unless ($dont_rev_comp) {
-                  reverse_comp(\$cs_ref_nt);
-                  reverse_comp(\$cs_mut_nt);
-                  $flipped = 1;
-                  $flag_update_allele = 1;
-                  $var_strand = 1;
-                }    
-              } elsif ($cs_ref_nt eq $ens_ref) {
-                $var_strand = 1;
-              }  else {  
-                $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
-              }  
-            }
-            
-            if ($flag_update_allele == 1 && !$mismatching_reference) {
-              $forward_strand_ref_allele = $cs_ref_nt;
-              $forward_strand_mut_allele = $cs_mut_nt;
-            }
-        }
-       
-        if ($mismatching_reference) {
-            my $ens_gene_id = ($ens_gene) ? $ens_gene->stable_id : 'Ensembl gene not found';
-            print "Reference bases don't match for $cosmic_gene ($ens_gene_id): $mismatching_reference\n";
-
-#            print "Other variations here:\n";
-#
-#            my $vfs = $slice->get_all_VariationFeatures;
-#
-#            for my $vf (@$vfs) {
-#                print $vf->allele_string, "\n";
-#            }
-#
-#            next;
-        }
-        
-        my $allele_string = ($fail_variation == 1) ? '' : "$forward_strand_ref_allele/$forward_strand_mut_allele";
-        
-        my $class_id = $class_attrib_ids{
-            SO_variation_class($allele_string, defined $mismatching_reference ? 0 : 1)
-        };
-
-        die "No class attrib id for allele string: $allele_string" unless defined $class_id;
-
-        # handle large deletions, insertions and indels
-        if (defined($forward_strand_ref_allele)) {
-          if (length($forward_strand_ref_allele) > 50 || ($stop-$start+1) > 50) {
-            $allele_string = ($forward_strand_mut_allele eq '-') ? "LARGE_DELETION" : "LARGE_INDEL";
-          }
-        }
-        if (defined($forward_strand_mut_allele)) {
-          if (length($forward_strand_mut_allele) > 50 || ($stop-$start+1) > 50) { 
-            $allele_string = ($forward_strand_ref_allele eq '-') ? "LARGE_INSERTION" : "LARGE_INDEL";
-          }
-        }
-
-        unless ($USE_DB) {
-            print " all OK\n";
-            next;
-        }
-
-        # all OK so far so let's (try to) add stuff to the database
-
-        my $seq_region_id = $sa->get_seq_region_id($slice);
-
-        # first check to see if we already have this variation
-
-        $find_existing_var_sth->execute($cosmic_id);
-
-        my ($variation_id) = $find_existing_var_sth->fetchrow_array;
-
-        if (!$variation_id) {
-
-            # it's new, so add the main variation object,
-
-            $add_var_sth->execute($source_id, $cosmic_id, $flipped, $class_id);
-
-            $variation_id = $dbh->last_insert_id(undef, undef, undef, undef);
-
-            if ($fail_variation) {
-                my $failed_description_id = get_failed_description_id($fail_variation);
-                $add_failed_var_sth->execute($variation_id, $failed_description_id);
-                print "Failed variation\n";
-                next MAIN_LOOP if ($fail_variation == 1);
-            }
-            
-            if ($ADD_SETS) {
-                $add_var_set_sth->execute($variation_id, $cosmic_set_id);
-            }
-
-            # the variation feature object.
-
-            $add_vf_sth->execute(
-                $variation_id,
-                $seq_region_id,
-                $start,
-                $stop,
-                $var_strand,
-                $cosmic_id,
-                $allele_string,
-                1,
-                $source_id,
-                $class_id,
-            ); 
-        }
-        
-        # add sample and allele information
-
-        # first check if there is an existing population
-        
-        my $population_id;
-
-        my $sample_name = "COSMIC:gene:$cosmic_gene:tumour_site:$tumour_site";
-        
-        if ($cosmic_populations_list{$sample_name}) {
-            $population_id = $cosmic_populations_list{$sample_name};
-        }
-        else {
-            # there is not, so add it
-
-            $add_population_sth->execute(
-                $sample_name, 
-                $total_samples,
-                "$total_samples $tumour_site tumours examined through the $cosmic_gene gene"
-            );
-
-            $population_id = $dbh->last_insert_id(undef, undef, undef, undef);
-            $cosmic_populations_list{$sample_name} = $population_id;
-        }
-
-        my $mut_freq = $mutated_samples / $total_samples;
-          
-        # add the mutant allele
-        my $mut_allele_code_id = get_allele_code($forward_strand_mut_allele);
-        $add_allele_with_code_sth->execute(
-            $variation_id,
-            $population_id,
-            $mut_allele_code_id,
-            $mut_freq,
-        );
-        
-        # and the reference allele
-        my $ref_allele_code_id = get_allele_code($forward_strand_ref_allele);
-        $add_allele_with_code_sth->execute(
-            $variation_id,
-            $population_id,
-            $ref_allele_code_id,
-            (1 - $mut_freq)
-        );
-
-        # try to find an existing phenotype, or create a new phenotype entry
-
-        my $phenotype_id;
-        
-        my $phenotype_name = "$cosmic_phe_prefix$tumour_site";
-
-        if ($cosmic_phenotypes_list{$phenotype_name}) {
-            $phenotype_id = $cosmic_phenotypes_list{$phenotype_name};
-        }
-        else {
-            $add_phenotype_sth->execute($phenotype_name);
-            $phenotype_id = $dbh->last_insert_id(undef, undef, undef, undef);
-            $cosmic_phenotypes_list{$phenotype_name} = $phenotype_id;
-        }
-
-        # add variation annotation (phenotype_feature)
-
-        $add_phe_feature_sth->execute(
-          $phenotype_id,
-          $source_id,
-          $cosmic_id,
-          $seq_region_id,
-          $start,
-          $stop,
-          1
-        );
-        my $pf_id = $dbh->last_insert_id(undef, undef, undef, undef);
-        
-        # add phenotype feature attributes
-        foreach my $attrib (keys(%cosmic_attrib)) {
-          $add_phe_feature_attrib_sth->execute($pf_id,$cosmic_attrib{$attrib},$attrib);
-        }
-        print " added to DB\n";
-    }
-    else {
-        print "Failed to get slice for chr $chr $start - $stop\n";
-        next;
-    }
+  return \%class_attrib_ids;
 }
 
-
-sub get_failed_description_id {
-  my $failed_id = shift;
-  my $description = $failed_desc_list{$failed_id};
+sub get_seq_region_ids {
   
-  $get_failed_desc_sth->execute($description);
-  my ($failed_description_id) = $get_failed_desc_sth->fetchrow_array;
+  my $sth = $dbh->prepare(
+  qq{
+    SELECT seq_region_id, name
+    FROM seq_region
+  });
+  $sth->execute;
   
-  return $failed_description_id;
+  my (%seq_region_ids, $id, $name);
+  $sth->bind_columns(\$id, \$name);
+  $seq_region_ids{$name} = $id while $sth->fetch();
+  $sth->finish;
+  
+  return \%seq_region_ids;
+}
+
+sub get_phenotype_ids {
+  
+  my $sth = $dbh->prepare(
+  qq{
+    SELECT phenotype_id, description
+    FROM phenotype
+  });
+  $sth->execute;
+  
+  my (%phenotype_ids, $id, $desc);
+  $sth->bind_columns(\$id, \$desc);
+  $phenotype_ids{$desc} = $id while $sth->fetch();
+  $sth->finish;
+  
+  return \%phenotype_ids;
 }
 
 
-sub get_allele_code {
-    my $allele = shift;
-    
-    my $allele_code_id;
-
-    # Check if an entry exists in the allele_code hash
-    if ($allele_codes_list{$allele}) { # A,T,G,C,-
-      $allele_code_id = $allele_codes_list{$allele};
-    }
-    # Check if an entry exists in the allele_code table
-    else {
-      $get_allele_code_sth->execute($allele);
-      ($allele_code_id) = $get_allele_code_sth->fetchrow_array;
-    }
-    
-    # Check with large allele, because of issue with the allele index 
-    # (limited to unique 1000 first bases)
-    if (!defined($allele_code_id) && length($allele) >= 1000) {
-      my $indexed_string = substr($allele,0,1000).'%';
-      $count_like_allele_code_sth->execute($indexed_string);
-      my ($count_allele) = $count_like_allele_code_sth->fetchrow_array;
-      if ($count_allele > 0) {
-        $allele = '(LARGE ALLELE)';
-        $get_allele_code_sth->execute($allele);
-        ($allele_code_id) = $get_allele_code_sth->fetchrow_array;
-      }
-    }
-    
-    # Insert a new allele in the allele_code table
-    if (!defined($allele_code_id)) {
-      $insert_allele_code_sth->execute($allele);
-      $allele_code_id = $dbh->last_insert_id(undef, undef, undef, undef);
-    }
-    
-    return $allele_code_id;
+sub get_source_id {
+  
+  # Check if the COSMIC source already exists, else it create the entry
+  if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name="$source_name";})) {
+    $dbVar->do(qq{UPDATE IGNORE source SET version=$version where name="$source_name";});
+  }
+  else {
+    $dbVar->do(qq{INSERT INTO source (name,description,url,version,somatic_status,data_types) VALUES ("$source_name",'Somatic mutations found in human cancers from the COSMIC project - Public version','http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/',$version,'somatic','variation,phenotype_feature');});
+  }
+  my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name="$source_name";})};
+  return $source_id[0];
 }
+
+
+sub add_phenotype {
+  my $phenotype = shift;
+  $dbVar->do(qq{INSERT INTO phenotype (description) VALUES ("$phenotype")});
+  my $phenotype_id = $dbVar->selectrow_arrayref(qq{SELECT phenotype_id FROM phenotype WHERE description="$phenotype"});
+  return $phenotype_id->[0];
+}
+
+sub get_variation_set_id {
+  
+  # Check if the COSMIC set already exists, else it create the entry
+  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE 'COSMIC%'});
+  if (!$variation_set_ids) {
+    die("Couldn't find the COSMIC variation set");
+  }
+  else {
+    return $variation_set_ids->[0];
+  }
+}
+
+sub get_allele_code_id {
+  my $allele = shift;
+  
+  # Check if the allele_code_id already exists, else it create the entry
+  if (!$dbVar->selectrow_arrayref(qq{SELECT allele_code_id FROM allele_code WHERE allele="$allele"})) {
+    $dbVar->do(qq{INSERT INTO allele_code (allele) VALUES ("$allele")});
+  }
+  my $allele_code_ids = $dbVar->selectrow_arrayref(qq{SELECT allele_code_id FROM allele_code WHERE allele="$allele"});
+  return $allele_code_ids->[0];
+}
+
+
+sub insert_cosmic_entries {
+  
+  my $allele_code_id = get_allele_code_id($allele);
+  
+  # Insert Var
+  my $stmt_var = qq{INSERT IGNORE INTO variation (name, source_id, class_attrib_id, somatic)
+                    SELECT name, ?, class, ? FROM $temp_table};
+  my $sth_var  = $dbh->prepare($stmt_var);
+  $sth_var->execute($source_id, $somatic);
+
+  # Insert VF
+  my $stmt_vf = qq{INSERT IGNORE INTO variation_feature 
+                   (variation_id, variation_name, source_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
+                   SELECT v.variation_id, v.name, v.source_id, v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
+                   FROM variation v, $temp_table c WHERE v.name=c.name};
+  my $sth_vf  = $dbh->prepare($stmt_vf);
+  $sth_vf->execute($allele, $default_strand);
+  
+  # Insert PF
+  my $stmt_pf = qq{INSERT IGNORE INTO phenotype_feature 
+                   (object_id, type, source_id, phenotype_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
+                   SELECT v.name, "Variation", v.source_id, pc.phenotype_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
+                   FROM variation v, $temp_table c, $temp_phen_table pc WHERE v.name=c.name AND c.name=pc.name};
+  my $sth_pf  = $dbh->prepare($stmt_pf);
+  $sth_pf->execute($default_strand);
+  
+  # Insert Set
+  my $stmt_set = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+                    SELECT variation_id, ? FROM variation WHERE source_id=?};
+  my $sth_set  = $dbh->prepare($stmt_set);
+  $sth_set->execute($variation_set_id, $source_id);
+  
+  # Insert Allele
+  my $stmt_al = qq{INSERT IGNORE INTO allele (variation_id, allele_code_id)
+                   SELECT variation_id, ? FROM variation WHERE source_id=?};
+  my $sth_al  = $dbh->prepare($stmt_al);
+  $sth_al->execute($allele_code_id, $source_id);
+}
+
