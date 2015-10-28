@@ -137,12 +137,14 @@ sub default_options {
             freq_vcf => [
               '/nfs/ensembl/wm2/VEP/cache/1KG.phase3.GRCh37.vcf.gz,AFR,AMR,EAS,EUR,SAS',
               '/nfs/ensembl/wm2/VEP/cache/ESP.GRCh37.vcf.gz,AA,EA',
+              '/nfs/ensembl/wm2/VEP/cache/ExAC.0.3.GRCh37.vcf.gz,prefix=ExAC,,AFR,AMR,Adj,EAS,FIN,NFE,OTH,SAS',
             ],
           },
           GRCh38 => {
             freq_vcf => [
               '/nfs/ensembl/wm2/VEP/cache/1KG.phase3.GRCh38.vcf.gz,AFR,AMR,EAS,EUR,SAS',
               '/nfs/ensembl/wm2/VEP/cache/ESP.GRCh38.vcf.gz,AA,EA',
+              '/nfs/ensembl/wm2/VEP/cache/ExAC.0.3.GRCh38.vcf.gz,prefix=ExAC,,AFR,AMR,Adj,EAS,FIN,NFE,OTH,SAS',
             ],
           },
         }
