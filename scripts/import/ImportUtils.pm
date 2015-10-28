@@ -37,7 +37,7 @@ use Exporter;
 
 our @ISA = ('Exporter');
 
-our @EXPORT_OK = qw(dumpSQL debug create_and_load load loadfile get_create_statement make_xml_compliant update_table);
+our @EXPORT_OK = qw(dumpSQL debug create create_and_load load loadfile get_create_statement make_xml_compliant update_table);
 
 our $TMP_DIR = "/tmp";
 our $TMP_FILE = 'tabledump.txt';
@@ -219,17 +219,16 @@ sub loadfile {
 
 
 #
-# creates a table with specified columns and loads data that was dumped
-# to a tmp file into the table.
+# creates a table with specified columns
 #
 # by default all columns are VARCHAR(255), but an 'i' may be added after the
 # column name to make it an INT.  Additionally a '*' means add an index to
 # the column.
 #
-# e.g.  create_and_load('mytable', 'col0', 'col1 *', 'col2 i', 'col3 i*');
+# e.g.  create($db, 'mytable', 'col0', 'col1 *', 'col2 i', 'col3 i*');
 #
 
-sub create_and_load {
+sub create {
   my $db = shift;
   my $tablename = shift;
   my @cols = @_;
@@ -284,6 +283,27 @@ sub create_and_load {
   $sql .= " ENGINE = 'MyISAM' "; ##may not be default engine
 
   $db->do( $sql );
+
+  return @col_names;
+}
+
+#
+# creates a table with specified columns and loads data that was dumped
+# to a tmp file into the table.
+#
+# by default all columns are VARCHAR(255), but an 'i' may be added after the
+# column name to make it an INT.  Additionally a '*' means add an index to
+# the column.
+#
+# e.g.  create_and_load($db, 'mytable', 'col0', 'col1 *', 'col2 i', 'col3 i*');
+#
+
+sub create_and_load {
+  my $db = shift;
+  my $tablename = shift;
+  my @cols = @_;
+
+  my @col_names = create($db,$tablename,@cols);
 
   load( $db, $tablename, @col_names );
 }
