@@ -37,17 +37,21 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($db, $host, $user, $pass, $mode);
+my ($db, $host, $user, $pass, $mode, $tmpdir, $filename);
 
 GetOptions ("db=s"    => \$db,
             "host=s"  => \$host,
             "user=s"  => \$user,
             "pass=s"  => \$pass,
             "mode:s"  => \$mode,
+            "tmpdir:s" => \$tmpdir,
+            "tmpfile:s" => \$filename,
     );
 
 die usage() unless defined $host && defined $user && defined $pass && defined $mode;
 
+$tmpdir ||= `pwd`;
+chomp $tmpdir;
 
 my $databases;
 if( defined $db){
@@ -96,8 +100,8 @@ sub create_mtmp_evidence{
     my $evidence_id = get_evidence_id($dbh);
 
     
-    my $filename = "$db_name\.dat";
-    open my $out, ">$filename"||die "Failed to open $filename to write evidence statuses : $!\n"; 
+    $filename = "$db_name\.dat" unless defined $filename;
+    open my $out, ">$tmpdir/$filename"||die "Failed to open $filename to write evidence statuses : $!\n"; 
     
     my $ev_ext_sth  = $dbh->prepare(qq[ select variation_id, evidence_attribs from variation ]);
     
@@ -134,8 +138,9 @@ sub create_mtmp_evidence{
 
     close $out;
 
-    $dbh->do( qq[ LOAD DATA LOCAL INFILE "$filename" INTO TABLE  MTMP_evidence]) || die "Error loading $filename data \n";
-    unlink $filename || warn "Failed to remove temp file: $filename :$!\n";
+    $dbh->do( qq[ LOAD DATA LOCAL INFILE "$tmpdir/$filename" INTO TABLE  MTMP_evidence]) || die "Error loading $filename data \n";
+    unlink "$tmpdir/$filename" || warn "Faile
+d to remove temp file: $tmpdir/$filename :$!\n";
   }
 }
 
@@ -215,6 +220,8 @@ sub usage{
                                      -mode [evidence|pop_geno|both]\n
 
 \t\tOptions: -db [database name]    default: all* variation databases on the host
+\t\t         -tmpdir [directory for temp files]
+\t\t         -tmpfile [ name for temp files]
 
 \t\t* Note: MTMP_population_genotype is not required for human databases\n\n";
 

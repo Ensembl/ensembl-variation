@@ -314,13 +314,15 @@ sub update_variant_citation {
     ## ensure any variations with citations are displayed in browser tracks/ returned by default
     my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =?  ]);
     my $vfdisplay_upt_sth = $dbh->prepare(qq[ update variation_feature set display =? where  variation_id =?  ]);
+
+    my $varfeat_ext_sth   = $dbh->prepare(qq[ select variation_feature_id  
+                                              from variation_feature
+                                              where  variation_id =? ]);
+ 
     my $tvdisplay_upt_sth = $dbh->prepare(qq[ update transcript_variation 
                                               set display =? 
-                                              where  variation_feature_id in (
-                                                select variation_feature_id  
-                                                from variation_feature
-                                                where  variation_id =?   
-                                               ) ]);
+                                              where  variation_feature_id =?
+                                           ]);
 
     my @var_objects ;
 
@@ -352,8 +354,13 @@ sub update_variant_citation {
 	## set cited variants to be displayable
 	$vdisplay_upt_sth->execute( 1,  $var_obj->dbID());
         $vfdisplay_upt_sth->execute( 1,  $var_obj->dbID());
-        $tvdisplay_upt_sth->execute( 1,  $var_obj->dbID());
-    }    
+        ## don't join TV & VF in update
+        $varfeat_ext_sth->execute($var_obj->dbID());
+        my $vf_ids = $varfeat_ext_sth->fetchall_arrayref();
+        foreach my $vf_id (@{$vf_ids}){
+            $tvdisplay_upt_sth->execute( 1,  $vf_id->[0]);
+        }
+    }
 }
 
 sub update_ucsc_id {
