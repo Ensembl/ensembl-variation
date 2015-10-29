@@ -568,7 +568,7 @@ sub _intron_effects {
 
         my $tree = $self->_intron_interval_tree();
         if($tree) {
-          @introns = @{$tree->fetch($min - 2, $max + 2)};
+          @introns = @{$tree->fetch($min - 1, $max)};
         }
         else {
           @introns = @{$self->_introns};
@@ -711,9 +711,9 @@ sub _create_intron_trees {
 
   for(@{$self->_introns}) {
     my ($intron_start, $intron_end) = ($_->start, $_->end);
-    $intron_tree->insert($_, $intron_start - 8, $intron_end + 8);
-    $boundary_tree->insert($_, $intron_start - 8, $intron_start + 8);
-    $boundary_tree->insert($_, $intron_end - 8, $intron_end + 8);
+    $intron_tree->insert($_, $intron_start - 9, $intron_end + 8);
+    $boundary_tree->insert($_, $intron_start - 9, $intron_start + 8);
+    $boundary_tree->insert($_, $intron_end - 9, $intron_end + 8);
 
     # cache this as it affects whether we should call something as overlapping an exon
     $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
@@ -736,7 +736,7 @@ sub _exon_interval_tree {
 
     else {
       my $tree = Set::IntervalTree->new();
-      $tree->insert($_, $_->start, $_->end) for @{$self->_exons};
+      $tree->insert($_, $_->start - 1, $_->end) for @{$self->_exons};
       $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = $tree;
     }
   }

@@ -343,11 +343,11 @@ sub _pre_consequence_predicates {
           # use interval trees, should be whizzy fast (also neater code)
           if($bvfo->_can_use_interval_tree) {
             if(my $tree = $bvfo->_intron_interval_tree()) {
-              $bvfo_preds->{intron} = scalar @{$tree->fetch($min_vf - 1, $max_vf + 1)} ? 1 : 0;
+              $bvfo_preds->{intron} = scalar @{$tree->fetch($min_vf - 1, $max_vf)} ? 1 : 0;
             }
 
             if(my $tree = $bvfo->_intron_boundary_interval_tree()) {
-              $bvfo_preds->{intron_boundary} = scalar @{$tree->fetch($min_vf - 1, $max_vf + 1)} ? 1 : 0;
+              $bvfo_preds->{intron_boundary} = scalar @{$tree->fetch($min_vf - 1, $max_vf)} ? 1 : 0;
             }
 
             if(my $tree = $bvfo->_exon_interval_tree()) {
@@ -355,9 +355,9 @@ sub _pre_consequence_predicates {
               # apply a "stretch" to the VF coordinates if we have a frameshift intron
               # the introns can be up to 12 bases long and if a variant falls in one
               # we actually want to call it exonic
-              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 13 : 1;
+              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 12 : 0;
 
-              $bvfo_preds->{exon} = scalar @{$tree->fetch($min_vf - $stretch, $max_vf + $stretch)} ? 1 : 0;
+              $bvfo_preds->{exon} = scalar @{$tree->fetch($min_vf - ($stretch + 1), $max_vf + $stretch)} ? 1 : 0;
             }
           }
 
