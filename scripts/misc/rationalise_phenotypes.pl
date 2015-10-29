@@ -32,6 +32,10 @@ use Getopt::Long;
 
 my $config = {};
 
+my $table_phe_map = 'MTMP_tmp_phenotype_map';
+my $table_pf_bak  = 'MTMP_tmp_phenotype_feature_bak';
+my $table_phe_bak = 'MTMP_tmp_phenotype_bak';
+
 GetOptions(
   $config,
   'host|h=s',
@@ -42,7 +46,7 @@ GetOptions(
   'help=s'
 ) or die "ERROR: Could not parse command line options\n";
 
-if($config->{help} || !@ARGV) {
+if($config->{help}) {
   usage();
   exit(0);
 }
@@ -97,16 +101,16 @@ foreach my $string(keys %id_by_desc) {
 
 # create a table to store mappings
 $dbc->do(qq{
-  CREATE TABLE IF NOT EXISTS `phenotype_map` (
+  CREATE TABLE IF NOT EXISTS `$table_phe_map` (
     `old_phenotype_id` int(11) unsigned NOT NULL,
     `new_phenotype_id` int(11) unsigned NOT NULL,
     KEY `old_phenotype_id` (`old_phenotype_id`),
     KEY `new_phenotype_id` (`new_phenotype_id`)
   )
 });
-# $dbc->do(qq{TRUNCATE TABLE phenotype_map});
+# $dbc->do(qq{TRUNCATE TABLE $table_phe_map});
 
-$sth = $dbc->prepare("INSERT INTO phenotype_map(old_phenotype_id, new_phenotype_id) VALUES (?, ?)");
+$sth = $dbc->prepare("INSERT INTO $table_phe_map (old_phenotype_id, new_phenotype_id) VALUES (?, ?)");
 
 my $count = 0;
 
@@ -148,31 +152,31 @@ if($count) {
   
   print "\nFound $count semantic duplicate entries in phenotype\n";
   
-  print "Backing up phenotype_feature entries to phenotype_feature_bak_map\n";
+  print "Backing up phenotype_feature entries to $table_pf_bak\n";
 
   # create backups of the entries we're going to change
   $dbc->do(qq{
-    CREATE TABLE IF NOT EXISTS `phenotype_feature_bak_map`
+    CREATE TABLE IF NOT EXISTS `$table_pf_bak`
     LIKE phenotype_feature
   });
   $a = $dbc->do(qq{
-    INSERT IGNORE INTO phenotype_feature_bak_map
+    INSERT IGNORE INTO $table_pf_bak
     SELECT pf.*
-    FROM phenotype_feature pf, phenotype_map pm
+    FROM phenotype_feature pf, $table_phe_map pm
     WHERE pm.old_phenotype_id = pf.phenotype_id
   });
   print "Backed up $a entries\n";
   
-  print "Backing up phenotype entries to phenotype_bak_map\n";
+  print "Backing up phenotype entries to $table_phe_bak\n";
 
   $dbc->do(qq{
-    CREATE TABLE IF NOT EXISTS `phenotype_bak_map`
+    CREATE TABLE IF NOT EXISTS `$table_phe_bak`
     LIKE phenotype
   });
   $a = $dbc->do(qq{
-    INSERT IGNORE INTO phenotype_bak_map
+    INSERT IGNORE INTO $table_phe_bak
     SELECT p.*
-    FROM phenotype p, phenotype_map pm
+    FROM phenotype p, $table_phe_map pm
     WHERE pm.old_phenotype_id = p.phenotype_id
   });
   print "Backed up $a entries\n";
@@ -181,7 +185,7 @@ if($count) {
 
   # alter the phenotype_feature entries
   $a = $dbc->do(qq{
-    UPDATE phenotype_feature pf, phenotype_map pm
+    UPDATE phenotype_feature pf, $table_phe_map pm
     SET pf.phenotype_id = pm.new_phenotype_id
     WHERE pf.phenotype_id = pm.old_phenotype_id
   });
@@ -192,7 +196,7 @@ if($count) {
   # delete from phenotype
   $a = $dbc->do(qq{
     DELETE FROM p
-    USING phenotype p, phenotype_map pm
+    USING phenotype p, $table_phe_map pm
     WHERE p.phenotype_id = pm.old_phenotype_id
   });
 
@@ -200,8 +204,8 @@ if($count) {
 }
 
 else {
-  print "\n Found no duplicates, removing phenotype_map table\n";
-  $dbc->do(qq{DROP TABLE phenotype_map});
+  print "\n Found no duplicates, removing $table_phe_map table\n";
+  $dbc->do(qq{DROP TABLE $table_phe_map});
 }
 
 print "\nAll done!\n";
@@ -217,8 +221,8 @@ This script looks for semantic duplicates in the phenotype table using the
 description column. Any phenotypes that match in all alphanumeric characters
 (spaces and punctuation not considered) will be merged into one entry.
 
-Removed phenotypes are backed up to phenotype_bak_map
-Changed phenotype_feature entries are backed up to phenotype_feature_bak_map
+Removed phenotypes are backed up to $table_phe_bak
+Changed phenotype_feature entries are backed up to $table_pf_bak
 
 Usage:
 perl rationalise_phenotypes.pl -h [host] -u [user] -p [pass] -P [port] -d [database]
