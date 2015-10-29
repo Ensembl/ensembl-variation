@@ -81,9 +81,14 @@ sub transcript_stable_id {
 =cut
 
 sub transcript {
-    my ($self, $transcript) = @_;
+  my ($self, $transcript) = @_;
+
+  if($transcript) {
     assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript;
-    return $self->SUPER::feature($transcript, 'Transcript');
+    delete $self->{_cached_transcript};
+  }
+
+  $self->{_cached_transcript} ||= $self->SUPER::feature($transcript, 'Transcript');
 }
 
 =head2 feature
