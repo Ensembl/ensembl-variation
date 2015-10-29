@@ -149,27 +149,27 @@ ok($svfs8->[0]->variation_name() eq $sv_names[0], "sv by slice and study");
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";
 my $set = $vsa->fetch_by_name('1000 Genomes - High coverage - Trios');
 my @sv_sets = ('esv89107','esv93078');
-my $svfs8 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
-ok($svfs8->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
-ok($svfs8->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
+my $svfs9 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
+ok($svfs9->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
+ok($svfs9->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
 
 
 ## Other ##
 
 # test list_dbIDs
 print "\n# Test - list_dbIDs\n";
-my $svfs9 = $svfa->list_dbIDs();
-ok($svfs9->[0] == 1850296, "sv id by list of dbIDs");
+my $svfs10 = $svfa->list_dbIDs();
+ok($svfs10->[0] == 1850296, "sv id by list of dbIDs");
 
 # test fetch all by Study
 print "\n# Test - fetch_all_by_Study\n";
-my $svfs10 = $svfa->fetch_all_by_Study($study);
-ok($svfs10->[0]->variation_name() eq $sv_names[0], "sv by study");
+my $svfs11 = $svfa->fetch_all_by_Study($study);
+ok($svfs11->[0]->variation_name() eq $sv_names[0], "sv by study");
 
 # test fetch all by Source
 print "\n# Test - fetch_all_by_Source\n";
-my $svfs11 = $svfa->fetch_all_by_Source($source);
-ok($svfs11->[0]->variation_name() eq 'esv93078', "sv by source");
+my $svfs12 = $svfa->fetch_all_by_Source($source);
+ok($svfs12->[0]->variation_name() eq 'esv93078', "sv by source");
 
 
 ## store ##
