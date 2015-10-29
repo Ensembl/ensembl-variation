@@ -162,9 +162,19 @@ my $vfs7b = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen, undef, 'dbSNP')
 ok($vfs7b->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice - using phenotype source");
 
 # fetch_all_with_phenotype_by_Slice - using phenotype
-my $vfs7c = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen, undef, undef, 'ACHONDROPLASIA') ;
+my $vfs7c = $vfa->fetch_all_with_phenotype_by_Slice($slice_phen, undef, undef, 'ACHONDROPLASIA');
 ok($vfs7c->[0]->variation_name() eq $vf2_name, "vf with phenotype by slice - using phenotype");
 
+## test fetch all with maf by Slice ##
+print "\n# Test - fetch_all_with_maf_by_Slice\n";
+# fetch_all_with_maf_by_Slice
+my $vfs_maf_a = $vfa->fetch_all_with_maf_by_Slice($slice);
+ok(scalar(@$vfs_maf_a) == 2, "vf with MAF by slice");
+
+# fetch_all_with_maf_by_Slice - using a MAF threshold
+my $maf = 0.1;
+my $vfs_maf_b = $vfa->fetch_all_with_maf_by_Slice($slice,$maf);
+ok(scalar(@$vfs_maf_b) == 1, "vf with MAF by slice - using the MAF threshold $maf");
 
 # test fetch all by Slice VariationSet
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";

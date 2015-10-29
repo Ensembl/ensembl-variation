@@ -558,6 +558,55 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
   return $self->_objs_from_sth($sth, undef, $slice);
 }
 
+=head2 fetch_all_with_maf_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : $maximum_frequency [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_maf_by_Slice($slice,$maximum_frequency)};
+  Description: Retrieves all germline variation features associated with a minor
+               allele frequency (MAF) for a given slice.
+               The optional $maximum_frequency argument can be used to
+               retrieve only variation features with a minor allele frequency (MAF)
+               lesser or equal than $maximum_frequency will be returned.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_with_maf_by_Slice {
+  my $self = shift;
+  my ($slice, $freq) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $maf_col = 'vf.minor_allele_freq';
+
+  # Add the MAF constraint
+  my $constraint = " $maf_col IS NOT NULL ";
+
+  # Add the MAF threshold constraint
+  if(defined $freq) {
+	  # adjust frequency if given a percentage
+	  $freq /= 100 if $freq > 1;
+	  if ($freq > 0.5) {
+      throw("The maximum value of the minor allele frequency parameter should to be lesser than 0.5 (the value provided is $freq).");
+    }
+	  $constraint .= " AND $maf_col <= $freq ";
+  }
+
+  # Add the constraint for failed variations
+  $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
+
+  # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
+  my $vfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+
+  return $vfs;
+}
+
 =head2 fetch_all_with_phenotype_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
