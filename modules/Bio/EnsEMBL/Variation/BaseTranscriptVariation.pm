@@ -54,6 +54,8 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds _intro
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
+our $CAN_USE_INTERVAL_TREE;
+
 =head2 transcript_stable_id
 
   Description: Returns the stable_id of the associated Transcript
@@ -557,18 +559,32 @@ sub _intron_effects {
         my ($min, $max) = sort {$a <=> $b} ($vf_start, $vf_end);
         my $vf_3_prime_end = $tr_strand > 0 ? $max : $min;
 
-        for my $intron (@{ $self->_introns }) {
+        my @introns;
+
+        my $tree = $self->_intron_interval_tree();
+        if($tree) {
+          @introns = @{$tree->fetch($min - 2, $max + 2)};
+        }
+        else {
+          @introns = @{$self->_introns};
+        }
+
+        for my $intron (@introns) {
 
             my $intron_start = $intron->start;
             my $intron_end   = $intron->end;
             
-            # skip remainder if vf out of range
-            last if
-              ( $tr_strand > 1 && $vf_3_prime_end < $intron_start - 8) ||
-              ( $tr_strand < 1 && $vf_3_prime_end > $intron_end + 8);
-              
-            # skip this one if vf out of range
-            next unless overlap($min, $max, $intron_start - 8, $intron_end + 8);
+            # don't need these coord checks if we used the interval tree
+            unless($tree) {
+             
+              # skip remainder if vf out of range
+              last if
+                ( $tr_strand > 1 && $vf_3_prime_end < $intron_start - 8) ||
+                ( $tr_strand < 1 && $vf_3_prime_end > $intron_end + 8);
+                
+              # skip this one if vf out of range
+              next unless overlap($min, $max, $intron_start - 8, $intron_end + 8);
+            }
             
             # under various circumstances the genebuild process can introduce
             # artificial short (<= 12 nucleotide) introns into transcripts
@@ -640,6 +656,87 @@ sub _exons {
     my $exons = $tran->{_variation_effect_feature_cache}->{exons} ||= $tran->get_all_Exons;
 
     return $exons;
+}
+
+sub _can_use_interval_tree {
+  my $self = shift;
+
+  if(!defined($CAN_USE_INTERVAL_TREE)) {
+    eval q{ use Set::IntervalTree; };
+    $CAN_USE_INTERVAL_TREE = $@ ? 0 : 1;
+  }
+
+  return $CAN_USE_INTERVAL_TREE;
+}
+
+sub _intron_interval_tree {
+  my $self = shift;
+
+  my $tr = $self->transcript;
+  
+  $self->_create_intron_trees() unless exists($tr->{_variation_effect_feature_cache}->{_intron_interval_tree});
+
+  return $tr->{_variation_effect_feature_cache}->{_intron_interval_tree};
+}
+
+sub _intron_boundary_interval_tree {
+  my $self = shift;
+
+  my $tr = $self->transcript;
+  
+  $self->_create_intron_trees() unless exists($tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree});
+
+  return $tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree};
+}
+
+# this creates the intron and intron boundary trees
+sub _create_intron_trees {
+  my $self = shift;
+
+  my $tr = $self->transcript;
+
+  if(!$self->_can_use_interval_tree) {
+    $tr->{_variation_effect_feature_cache}->{_intron_interval_tree} = undef;
+    $tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree} = undef;
+    return;
+  }
+
+  my $intron_tree   = Set::IntervalTree->new();
+  my $boundary_tree = Set::IntervalTree->new();
+
+  for(@{$self->_introns}) {
+    my ($intron_start, $intron_end) = ($_->start, $_->end);
+    $intron_tree->insert($_, $intron_start - 8, $intron_end + 8);
+    $boundary_tree->insert($_, $intron_start - 8, $intron_start + 8);
+    $boundary_tree->insert($_, $intron_end - 8, $intron_end + 8);
+
+    # cache this as it affects whether we should call something as overlapping an exon
+    $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
+  }
+
+  $tr->{_variation_effect_feature_cache}->{_intron_interval_tree} = $intron_tree;
+  $tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree} = $boundary_tree;
+}
+
+sub _exon_interval_tree {
+  my $self = shift;
+
+  my $tr = $self->transcript;
+
+  if(!exists($tr->{_variation_effect_feature_cache}->{_exon_interval_tree})) {
+
+    if(!$self->_can_use_interval_tree) {
+      $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = undef;
+    }
+
+    else {
+      my $tree = Set::IntervalTree->new();
+      $tree->insert($_, $_->start, $_->end) for @{$self->_exons};
+      $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = $tree;
+    }
+  }
+
+  return $tr->{_variation_effect_feature_cache}->{_exon_interval_tree};
 }
 
 sub _mapper {

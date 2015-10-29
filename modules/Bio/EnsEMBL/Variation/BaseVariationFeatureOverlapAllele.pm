@@ -217,6 +217,8 @@ sub get_all_OverlapConsequences {
         my $feat = $bvfo->feature;
         
         my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
+
+        # print STDERR "\n".join(" ", map {$_.'='.$pre->{$_}} keys %{$pre})."\n";
         
         # loop over all the possible consequences
         OC: for my $oc (@{$self->get_sorted_OverlapConsequences}) {
@@ -241,6 +243,8 @@ sub get_all_OverlapConsequences {
                 
                 # check that this consequence applies to this type of feature
                 if ($feat->isa($oc->feature_class)) {
+
+                    # print STDERR $oc->SO_term." ".join(" ", map {$_.'='.$oc->include->{$_}} keys %{$oc->include})."\n";
                     
                     # if so, check if the predicate of this consequence holds for this bvfoa
                     my $check = $oc->predicate->($self, $feat, $bvfo, $bvf);
@@ -292,9 +296,11 @@ sub _pre_consequence_predicates {
       if($is_sv) {
         if($class_SO_term =~ /deletion/) {
           $bvf_preds->{deletion} = 1;
+          $bvf_preds->{decrease_length} = 1;
         }
         elsif($class_SO_term =~ /insertion|duplication/) {
           $bvf_preds->{insertion} = 1;
+          $bvf_preds->{increase_length} = 1;
         }
       }
       
@@ -315,10 +321,11 @@ sub _pre_consequence_predicates {
     unless(exists($bvfo->{pre_consequence_predicates})) {
       
       my $bvfo_preds = {};
-      my ($min_vf, $max_vf) = sort {$a <=> $b} ($bvf->start, $bvf->end);
+      my ($vf_start, $vf_end) = ($bvf->start, $bvf->end);
+      my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
       
       # within feature
-      $bvfo_preds->{within_feature} = overlap($min_vf, $max_vf, $feat->start, $feat->end) ? 1 : 0;
+      $bvfo_preds->{within_feature} = overlap($vf_start, $vf_end, $feat->start, $feat->end) ? 1 : 0;
       
       if($bvfo_preds->{within_feature}) {
         
@@ -331,48 +338,99 @@ sub _pre_consequence_predicates {
           
           # store biotype
           $bvfo_preds->{$feat->biotype} = 1;
-          
-          ## code to get exon/intron status actually slower than calling predicates
-          ## presumably since running it for every variant is slower than lazy-running on demand
-          ## left here in case we find a way to incorporate it in future
-          
-          # my $tr_strand = $feat->strand();
-          # my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
-          #
-          # # intronic?
-          # $bvfo_preds->{intron} = 0;
-          #
-          # foreach my $intron(@{$bvfo->_introns}) {
-          #   last if
-          #     ( $tr_strand > 1 && $vf_3_prime_end < $intron->start) ||
-          #     ( $tr_strand < 1 && $vf_3_prime_end > $intron->end);
-          #
-          #   if(overlap($min_vf, $max_vf, $intron->start, $intron->end)) {
-          #     $bvfo_preds->{intron} = 1;
-          #     last;
-          #   }
-          # }
-          #
-          # # exonic?
-          # $bvfo_preds->{exon} = 0;
-          #
-          # foreach my $exon(@{$bvfo->_exons}) {
-          #   last if
-          #     ( $tr_strand > 1 && $vf_3_prime_end < $exon->start) ||
-          #     ( $tr_strand < 1 && $vf_3_prime_end > $exon->end);
-          #
-          #   if(overlap($min_vf, $max_vf, $exon->start, $exon->end)) {
-          #     $bvfo_preds->{exon} = 1;
-          #     last;
-          #   }
-          # }
+
+          # use interval trees, should be whizzy fast (also neater code)
+          if($bvfo->_can_use_interval_tree) {
+            if(my $tree = $bvfo->_intron_interval_tree()) {
+              $bvfo_preds->{intron} = scalar @{$tree->fetch($min_vf - 1, $max_vf + 1)} ? 1 : 0;
+            }
+
+            if(my $tree = $bvfo->_intron_boundary_interval_tree()) {
+              $bvfo_preds->{intron_boundary} = scalar @{$tree->fetch($min_vf - 1, $max_vf + 1)} ? 1 : 0;
+            }
+
+            if(my $tree = $bvfo->_exon_interval_tree()) {
+
+              # apply a "stretch" to the VF coordinates if we have a frameshift intron
+              # the introns can be up to 12 bases long and if a variant falls in one
+              # we actually want to call it exonic
+              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 13 : 1;
+
+              $bvfo_preds->{exon} = scalar @{$tree->fetch($min_vf - $stretch, $max_vf + $stretch)} ? 1 : 0;
+            }
+          }
+
+          # otherwise fall back to using overlap()
+          else {
+            my $tr_strand = $feat->strand();
+            my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
+            
+            # intronic?
+            my $within_intron = 0;
+            my $within_boundary = 0;
+            
+            foreach my $intron(@{$bvfo->_introns}) {
+
+              my ($intron_start, $intron_end) = ($intron->start, $intron->end);
+
+              # check intron
+              if(!$within_intron && overlap($min_vf, $max_vf, $intron_start - 8, $intron_end + 8)) {
+                $within_intron = 1;
+              }
+
+              if(!$within_boundary && (
+                overlap($min_vf, $max_vf, $intron_start - 8, $intron_start + 8) ||
+                overlap($min_vf, $max_vf, $intron_end - 8, $intron_end + 8)
+              )) {
+                $within_boundary = 1;
+              }
+
+              # cache whether this transcript has a frameshift intron
+              # we use it later to assess exonic status
+              $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
+
+              # we only want binary status so leave if both are true
+              last if $within_intron && $within_boundary;
+
+              # also leave if we've gone beyond the bounds of the VF
+              # subsequent introns won't be in range
+              last if
+                ( $tr_strand > 1 && $vf_3_prime_end < ($intron->start - 8)) ||
+                ( $tr_strand < 1 && $vf_3_prime_end > ($intron->end + 8));
+            }
+
+            $bvfo_preds->{intron} = $within_intron;
+            $bvfo_preds->{intron_boundary} = $within_boundary;
+            
+            # exonic?
+            $bvfo_preds->{exon} = 0;
+            
+            foreach my $exon(@{$bvfo->_exons}) {
+
+              # apply a "stretch" to the exon coordinates if we have a frameshift intron
+              # the introns can be up to 12 bases long and if a variant falls in one
+              # we actually want to call it exonic
+              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 12 : 0;
+
+              # also leave if we've gone beyond the bounds of the VF
+              # subsequent introns won't be in range
+              last if
+                ( $tr_strand > 1 && $vf_3_prime_end < $exon->start - $stretch) ||
+                ( $tr_strand < 1 && $vf_3_prime_end > $exon->end + $stretch);
+            
+              if(overlap($min_vf, $max_vf, $exon->start - $stretch, $exon->end + $stretch)) {
+                $bvfo_preds->{exon} = 1;
+                last;
+              }
+            }
+          }
         }
         
         # coding transcript specific
         if($tr_coding_start && $tr_coding_end) {
-          
+
           # completely within UTR
-          if($max_vf < $tr_coding_start || $min_vf > $tr_coding_end) {
+          if(!overlap($min_vf, $max_vf, $tr_coding_start, $tr_coding_end)) {
             $bvfo_preds->{utr} = 1;
           }
         
@@ -382,25 +440,32 @@ sub _pre_consequence_predicates {
             if($min_vf < $tr_coding_start || $max_vf > $tr_coding_end) {
               $bvfo_preds->{utr} = 1;
             }
-            
-            my $cds_coords = $bvfo->cds_coords;
-            
-            # compeletely within coding region
-            if(scalar @$cds_coords == 1 && $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-              $bvfo_preds->{coding} = 1;
+
+            # shortcut if trees used
+            if(exists($bvfo_preds->{exon}) && !$bvfo_preds->{exon}) {
+              $bvfo_preds->{non_coding} = 1;
             }
-            
+
             else {
+              my $cds_coords = $bvfo->cds_coords;
               
-              # completely in non-coding region
-              if(scalar @$cds_coords == 0) {
-                $bvfo_preds->{non_coding} = 1;
-              }
-              
-              # partly in coding region
-              else {
+              # compeletely within coding region
+              if(scalar @$cds_coords == 1 && $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 $bvfo_preds->{coding} = 1;
               }
+              
+              else {
+                
+                # completely in non-coding region
+                if(scalar @$cds_coords == 0) {
+                  $bvfo_preds->{non_coding} = 1;
+                }
+                
+                # partly in coding region
+                else {
+                  $bvfo_preds->{coding} = 1;
+                }
+              } 
             }
           }
         }
@@ -428,9 +493,11 @@ sub _pre_consequence_predicates {
       }
       elsif( $ref_length > length($vf_seq) ) {
         $preds->{deletion} = 1;
+        $preds->{decrease_length} = 1;
       }
       elsif( $ref_length < length($vf_seq) ) {
         $preds->{insertion} = 1;
+        $preds->{increase_length} = 1;
       }
     }
     
@@ -477,25 +544,29 @@ sub SO_isa {
 
 sub get_sorted_OverlapConsequences {
   my $self = shift;
+
+  my $bvf = $self->base_variation_feature;
   
   # this can either be cached on the VEP config hash
-  if(defined($self->base_variation_feature->{config})) {
-    if(!defined($self->base_variation_feature->{config}->{sorted_cons})) {
+  if(defined($bvf->{config})) {
+    if(!defined($bvf->{config}->{sorted_cons})) {
       my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-      $self->base_variation_feature->{config}->{sorted_cons} = \@sorted;
+      $bvf->{config}->{sorted_cons} = \@sorted;
     }
     
-    return $self->base_variation_feature->{config}->{sorted_cons};
+    return $bvf->{config}->{sorted_cons};
   }
   
   # or on the TVA adaptor
   else {
-    if(!defined($self->base_variation_feature_overlap->adaptor->{sorted_cons})) {
+    my $ad = $self->base_variation_feature_overlap->adaptor;
+
+    if(!defined($ad->{sorted_cons})) {
       my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-      $self->base_variation_feature_overlap->adaptor->{sorted_cons} = \@sorted;
+      $ad->{sorted_cons} = \@sorted;
     }
   
-    return $self->base_variation_feature_overlap->adaptor->{sorted_cons};
+    return $ad->{sorted_cons};
   }
 }
 
