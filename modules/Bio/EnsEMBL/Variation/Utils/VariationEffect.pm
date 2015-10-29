@@ -460,20 +460,24 @@ sub donor_splice_site {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $feat ||= $bvfo->feature;
+
+    my $ie = $bvfo->_intron_effects;
     
     return $feat->strand == 1 ? 
-        $bvfo->_intron_effects->{start_splice_site} :
-        $bvfo->_intron_effects->{end_splice_site};
+        $ie->{start_splice_site} :
+        $ie->{end_splice_site};
 }
 
 sub acceptor_splice_site {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $feat ||= $bvfo->feature;
+
+    my $ie = $bvfo->_intron_effects;
     
     return $feat->strand == 1 ? 
-        $bvfo->_intron_effects->{end_splice_site} :
-        $bvfo->_intron_effects->{start_splice_site};
+        $ie->{end_splice_site} :
+        $ie->{start_splice_site};
 }
 
 sub essential_splice_site {
@@ -597,7 +601,7 @@ sub within_5_prime_utr {
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $feat ||= $bvfo->feature;
     $bvf  ||= $bvfo->base_variation_feature;
-    
+
     my $five_prime_of_coding = 
         $feat->strand == 1 ? 
             _before_coding($bvf, $feat) : 
