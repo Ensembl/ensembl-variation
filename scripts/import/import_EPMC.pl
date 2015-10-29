@@ -222,14 +222,11 @@ sub get_publication_info_from_epmc{
     my $pub       = shift;
     my $error_log = shift;
 
-    my ($ref, $mined);
-
+    my $ref;
 
     ### check is species mentioned if not human?
-    unless ($species_string =~/human|homo/){         
-        
-        $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );
-        
+    if ($species_string !~/human|homo/ && defined $data->{$pub}->{pmcid} ){         
+        my $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );        
         my $looks_ok = check_species($mined ,$data) ;
         
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
@@ -469,7 +466,7 @@ sub update_evidence{
     foreach my $l (@{$dat}){
 
         my $evidence;
-        if($l->[1] =~ /\w+/){
+        if(defined $l->[1] && $l->[1] =~ /\w+/){
             $evidence .= "$l->[1],$attrib->[0]->[0]";
         }
         else{
