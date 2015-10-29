@@ -66,6 +66,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Scalar::Util qw(weaken);
 
 our $PREDICATE_COUNT = 0;
+our @SORTED_OVERLAP_CONSEQUENCES = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
 
 =head2 new
 
@@ -221,7 +222,7 @@ sub get_all_OverlapConsequences {
         # print STDERR "\n".join(" ", map {$_.'='.$pre->{$_}} keys %{$pre})."\n";
         
         # loop over all the possible consequences
-        OC: for my $oc (@{$self->get_sorted_OverlapConsequences}) {
+        OC: for my $oc (@SORTED_OVERLAP_CONSEQUENCES) {
             
             # check include to hash to determine whether to run this predicate
             if(my $inc = $oc->include) {
@@ -271,7 +272,7 @@ sub get_all_OverlapConsequences {
 # used to work out whether to execute predicates in get_all_OverlapConsequences
 # uses a complex if/else structure to avoid executing unnecessary code
 sub _pre_consequence_predicates {
-  my ($self, $feat, $bvfo, $bvf) = shift;
+  my ($self, $feat, $bvfo, $bvf) = @_;
   
   unless(exists($self->{pre_consequence_predicates})) {
     $bvfo ||= $self->base_variation_feature_overlap;
@@ -540,34 +541,6 @@ sub SO_isa {
             return 1;
         }
     } 
-}
-
-sub get_sorted_OverlapConsequences {
-  my $self = shift;
-
-  my $bvf = $self->base_variation_feature;
-  
-  # this can either be cached on the VEP config hash
-  if(defined($bvf->{config})) {
-    if(!defined($bvf->{config}->{sorted_cons})) {
-      my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-      $bvf->{config}->{sorted_cons} = \@sorted;
-    }
-    
-    return $bvf->{config}->{sorted_cons};
-  }
-  
-  # or on the TVA adaptor
-  else {
-    my $ad = $self->base_variation_feature_overlap->adaptor;
-
-    if(!defined($ad->{sorted_cons})) {
-      my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-      $ad->{sorted_cons} = \@sorted;
-    }
-  
-    return $ad->{sorted_cons};
-  }
 }
 
 1;
