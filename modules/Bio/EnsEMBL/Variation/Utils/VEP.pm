@@ -1134,15 +1134,16 @@ sub get_all_consequences {
       
       debug("Calculating consequences") unless defined($config->{quiet});
       progress($config, 0, 1);
+
+      my $delta = 0.5;
+      my $minForkSize = 50;
+      my $maxForkSize = int($config->{buffer_size} / (2 * $config->{fork}));
       
       # loop while variants in $listref or forks running
       while (scalar @$listref or $active_forks ) {
         
         # only spawn new forks if we have space
         if ($active_forks <= $config->{fork} ) {
-          my $delta = 0.5;
-          my $minForkSize = 5;
-          my $maxForkSize = 200;
           my $numLines = scalar @$listref;
           my $forkSize = int($numLines / ($config->{fork} + $delta*$config->{fork}) + $minForkSize ) + 1;
           
@@ -2557,7 +2558,7 @@ sub tva_to_line {
     $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
   }
   
-  my $line = init_line($config, $tva->variation_feature, $base_line);
+  my $line = init_line($config, $tv->variation_feature, $base_line);
   
   # HGVS
   if(defined $config->{hgvs}) {
