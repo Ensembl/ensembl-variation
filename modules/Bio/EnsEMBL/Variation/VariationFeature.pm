@@ -728,7 +728,21 @@ sub add_TranscriptVariation {
     assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation');
     # we need to weaken the reference back to us to avoid a circular reference
     weaken($tv->{base_variation_feature}) unless isweak($tv->{base_variation_feature});
-    $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
+
+    # use a different method for speed
+    my $tr_stable_id;
+
+    # best for cache/VEP
+    if(my $tr = $tv->transcript) {
+      $tr_stable_id = $tr->stable_id;
+    }
+
+    # best for API/DB
+    else {
+      $tr_stable_id = $tv->transcript_stable_id;
+    }
+
+    $self->{transcript_variations}->{$tr_stable_id} = $tv;
 }
 
 =head2 add_RegulatoryFeatureVariation
