@@ -37,10 +37,11 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($db, $host, $user, $pass, $mode, $tmpdir, $filename);
+my ($db, $host, $port, $user, $pass, $mode, $tmpdir, $filename);
 
 GetOptions ("db=s"    => \$db,
             "host=s"  => \$host,
+            "port=s"  => \$port,
             "user=s"  => \$user,
             "pass=s"  => \$pass,
             "mode:s"  => \$mode,
@@ -50,8 +51,11 @@ GetOptions ("db=s"    => \$db,
 
 die usage() unless defined $host && defined $user && defined $pass && defined $mode;
 
+
 $tmpdir ||= `pwd`;
 chomp $tmpdir;
+
+$port ||= 3306;
 
 my $databases;
 if( defined $db){
@@ -83,7 +87,7 @@ sub create_mtmp_evidence{
 
   foreach my $db_name (@{$databases}){
     
-    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:3306", $user, $pass, undef);
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef);
 
     $dbh->do(qq[update variation set evidence_attribs = NULL where evidence_attribs = '';]);
     $dbh->do(qq[update variation_feature set evidence_attribs = NULL where evidence_attribs = '';]);
@@ -174,7 +178,7 @@ sub create_mtmp_population_genotype{
     ## this table is not created for human databases as it is too large to use
     next if $db_name =~/homo_sapiens/;
 
-    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:3306", $user, $pass, undef);
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef);
 
     ## no need to re-create if the table is already present for a new import
     my $check_present_sth = $dbh->prepare(qq[show tables like 'MTMP_population_genotype']);
@@ -233,7 +237,7 @@ sub get_dbs_by_host{
 
     my @databases;
 
-    my $dbh = DBI->connect("dbi:mysql:information_schema:$host:3306", $user, $pass, undef);
+    my $dbh = DBI->connect("dbi:mysql:information_schema:$host:$port", $user, $pass, undef);
 
     my $db_ext_sth = $dbh->prepare(qq[ show databases like '%variation%']);
 
