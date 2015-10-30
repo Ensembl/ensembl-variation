@@ -205,6 +205,11 @@ our @VARIATION_CLASSES = (
         SO_term => 'novel_sequence_insertion',
         display_term => 'Novel sequence insertion',
     },
+    {
+        SO_accession => 'SO:0002060',
+        SO_term => 'interchromosomal_translocation',
+        display_term => 'Interchromosomal translocation',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
