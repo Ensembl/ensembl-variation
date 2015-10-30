@@ -63,7 +63,7 @@ if( defined $db){
 }
 else{
     ## find all variation databases on the host
-    $databases = get_dbs_by_host($host, $user, $pass);
+    $databases = get_dbs_by_host($host, $port, $user, $pass);
 } 
 
 if($mode =~/evi/){
@@ -87,7 +87,7 @@ sub create_mtmp_evidence{
 
   foreach my $db_name (@{$databases}){
     
-    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef);
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef) || die "Failed to connect to $db_name\n";
 
     $dbh->do(qq[update variation set evidence_attribs = NULL where evidence_attribs = '';]);
     $dbh->do(qq[update variation_feature set evidence_attribs = NULL where evidence_attribs = '';]);
@@ -175,10 +175,7 @@ sub create_mtmp_population_genotype{
 
   foreach my $db_name (@{$databases}){
 
-    ## this table is not created for human databases as it is too large to use
-    next if $db_name =~/homo_sapiens/;
-
-    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef);
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef) ||die "Failed to connect to $db_name\n";
 
     ## no need to re-create if the table is already present for a new import
     my $check_present_sth = $dbh->prepare(qq[show tables like 'MTMP_population_genotype']);
@@ -202,6 +199,13 @@ sub create_mtmp_population_genotype{
             KEY `subsnp_idx` (`subsnp_id`),
             KEY `population_idx` (`population_id`)
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1 ]);
+
+    ## this table is not created for human databases as it is too large to use
+    ## and most data is calculated on the fly from VCF
+    if ($db_name =~/homo_sapiens/){
+      print "Not populating MTMP_population_genotype table for human as not required\n";
+      next;
+    }
 
     $dbh->do(qq[INSERT IGNORE INTO MTMP_population_genotype
             SELECT p.population_genotype_id, p.variation_id, p.subsnp_id, 
@@ -233,11 +237,11 @@ sub usage{
     
 sub get_dbs_by_host{
 
-    my ($host, $user, $pass) = @_;
+    my ($host, $port, $user, $pass) = @_;
 
     my @databases;
 
-    my $dbh = DBI->connect("dbi:mysql:information_schema:$host:$port", $user, $pass, undef);
+    my $dbh = DBI->connect("dbi:mysql:information_schema:$host:$port", $user, $pass, undef) || die "Failed to look up available databases\n";
 
     my $db_ext_sth = $dbh->prepare(qq[ show databases like '%variation%']);
 
