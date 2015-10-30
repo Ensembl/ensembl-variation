@@ -67,12 +67,9 @@ use Scalar::Util qw(weaken);
 
 our $PREDICATE_COUNT = 0;
 our @SORTED_OVERLAP_CONSEQUENCES = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-our @ALLOWED_INCLUDES = keys %{{map {$_ => 1} map {keys %{$_->include}} values %OVERLAP_CONSEQUENCES}};
+# our @ALLOWED_INCLUDES = keys %{{map {$_ => 1} map {keys %{$_->include}} values %OVERLAP_CONSEQUENCES}};
 
-use Data::Dumper;
-$Data::Dumper::Maxdepth = 3;
-$Data::Dumper::Indent = 1;
-print STDERR Dumper \@ALLOWED_INCLUDES;
+our $ASSERT_REFS = 1;
 
 =head2 new
 
@@ -109,7 +106,7 @@ sub new {
             IS_REFERENCE
         )], @_);
 
-    assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap');
+    assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $ASSERT_REFS;
     
     my $self = bless {
         base_variation_feature_overlap  => $base_variation_feature_overlap,
@@ -143,7 +140,7 @@ sub base_variation_feature_overlap {
     my ($self, $bvfo) = @_;
 
     if ($bvfo) {
-        assert_ref($bvfo, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap');
+        assert_ref($bvfo, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $ASSERT_REFS;
         $self->{base_variation_feature_overlap} = $bvfo;
         # avoid a memory leak, because the bvfo also has a reference to us
         weaken $self->{base_variation_feature_overlap};
@@ -231,7 +228,7 @@ sub get_all_OverlapConsequences {
         OC: for my $oc (@SORTED_OVERLAP_CONSEQUENCES) {
             
             # check include to hash to determine whether to run this predicate
-            if(my $inc = $oc->include) {
+            if(my $inc = $oc->{include}) {
               foreach my $key(keys %$inc) {
                 if($inc->{$key} == 0) {
                   next OC if exists($pre->{$key}) && $pre->{$key} ne $inc->{$key};
@@ -242,11 +239,13 @@ sub get_all_OverlapConsequences {
               }
             }
             
-            last if defined($assigned_tier) and $oc->tier > $assigned_tier;
+            my $tier = $oc->tier;
+            last if defined($assigned_tier) and $tier > $assigned_tier;
            
             # check that this consequence applies to this type of variation feature
+            my $vfc = $oc->variant_feature_class;
 
-            if ($oc->variant_feature_class && $bvf->isa($oc->variant_feature_class)) {
+            if ($vfc && $bvf->isa($vfc)) {
                 
                 # check that this consequence applies to this type of feature
                 if ($feat->isa($oc->feature_class)) {
@@ -262,7 +261,7 @@ sub get_all_OverlapConsequences {
 
                     if ($check) {
                         push @$cons, $oc;
-                        $assigned_tier = $oc->tier;
+                        $assigned_tier = $tier;
                     }
                 }
             }
@@ -284,6 +283,8 @@ sub _pre_consequence_predicates {
     $bvfo ||= $self->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
     $feat ||= $bvfo->feature;
+
+    my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});
     
     my $preds = {};
     
@@ -314,25 +315,24 @@ sub _pre_consequence_predicates {
       # otherwise for sequence variants, log the reference length here
       # we'll use it later to determine class per-allele
       else {
-        $bvf_preds->{ref_length} = ($bvf->{end} - $bvf->{start}) + 1;
+        $bvf_preds->{ref_length} = ($vf_end - $vf_start) + 1;
       }
       
       $bvf->{pre_consequence_predicates} = $bvf_preds;
     }
     
     # copy from bvf
-    $preds->{$_} = $bvf->{pre_consequence_predicates}->{$_} for keys %{$bvf->{pre_consequence_predicates}};
+    @$preds{keys %{$bvf->{pre_consequence_predicates}}} = values %{$bvf->{pre_consequence_predicates}};
     
     
     ## feature-specific location
     unless(exists($bvfo->{pre_consequence_predicates})) {
       
       my $bvfo_preds = {};
-      my ($vf_start, $vf_end) = ($bvf->start, $bvf->end);
       my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
       
       # within feature
-      $bvfo_preds->{within_feature} = overlap($vf_start, $vf_end, $feat->start, $feat->end) ? 1 : 0;
+      $bvfo_preds->{within_feature} = overlap($vf_start, $vf_end, $feat->{start}, $feat->{end}) ? 1 : 0;
       
       if($bvfo_preds->{within_feature}) {
         
@@ -346,93 +346,10 @@ sub _pre_consequence_predicates {
           # store biotype
           $bvfo_preds->{$feat->biotype} = 1;
 
-          # use interval trees, should be whizzy fast (also neater code)
-          if($bvfo->_can_use_interval_tree) {
-            if(my $tree = $bvfo->_intron_interval_tree()) {
-              $bvfo_preds->{intron} = scalar @{$tree->fetch($min_vf - 1, $max_vf)} ? 1 : 0;
-            }
-
-            if(my $tree = $bvfo->_intron_boundary_interval_tree()) {
-              $bvfo_preds->{intron_boundary} = scalar @{$tree->fetch($min_vf - 1, $max_vf)} ? 1 : 0;
-            }
-
-            if(my $tree = $bvfo->_exon_interval_tree()) {
-
-              # apply a "stretch" to the VF coordinates if we have a frameshift intron
-              # the introns can be up to 12 bases long and if a variant falls in one
-              # we actually want to call it exonic
-              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 12 : 0;
-
-              $bvfo_preds->{exon} = scalar @{$tree->fetch($min_vf - ($stretch + 1), $max_vf + $stretch)} ? 1 : 0;
-            }
-          }
-
-          # otherwise fall back to using overlap()
-          else {
-            my $tr_strand = $feat->strand();
-            my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
-            
-            # intronic?
-            my $within_intron = 0;
-            my $within_boundary = 0;
-            
-            foreach my $intron(@{$bvfo->_introns}) {
-
-              my ($intron_start, $intron_end) = ($intron->start, $intron->end);
-
-              # check within intron
-              if(!$within_intron && overlap($min_vf, $max_vf, $intron_start, $intron_end)) {
-                $within_intron = 1;
-              }
-
-              # check intron boundary
-              # add flank to capture splice_region_variants
-              if(!$within_boundary && (
-                overlap($min_vf, $max_vf, $intron_start - 3, $intron_start + 7) ||
-                overlap($min_vf, $max_vf, $intron_end - 7, $intron_end + 3)
-              )) {
-                $within_boundary = 1;
-              }
-
-              # cache whether this transcript has a frameshift intron
-              # we use it later to assess exonic status
-              $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
-
-              # we only want binary status so leave if both are true
-              last if $within_intron && $within_boundary;
-
-              # also leave if we've gone beyond the bounds of the VF
-              # subsequent introns won't be in range
-              last if
-                ( $tr_strand > 1 && $vf_3_prime_end < ($intron->start - 3)) ||
-                ( $tr_strand < 1 && $vf_3_prime_end > ($intron->end + 3));
-            }
-
-            $bvfo_preds->{intron} = $within_intron;
-            $bvfo_preds->{intron_boundary} = $within_boundary;
-            
-            # exonic?
-            $bvfo_preds->{exon} = 0;
-            
-            foreach my $exon(@{$bvfo->_exons}) {
-
-              # apply a "stretch" to the exon coordinates if we have a frameshift intron
-              # the introns can be up to 12 bases long and if a variant falls in one
-              # we actually want to call it exonic
-              my $stretch = $feat->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 12 : 0;
-
-              # also leave if we've gone beyond the bounds of the VF
-              # subsequent introns won't be in range
-              last if
-                ( $tr_strand > 1 && $vf_3_prime_end < $exon->start - $stretch) ||
-                ( $tr_strand < 1 && $vf_3_prime_end > $exon->end + $stretch);
-            
-              if(overlap($min_vf, $max_vf, $exon->start - $stretch, $exon->end + $stretch)) {
-                $bvfo_preds->{exon} = 1;
-                last;
-              }
-            }
-          }
+          # find any overlapping introns, intron boundary regions and exons
+          $bvfo_preds->{intron}          = scalar @{$bvfo->_overlapped_introns($min_vf, $max_vf)} ? 1 : 0;
+          $bvfo_preds->{intron_boundary} = scalar @{$bvfo->_overlapped_introns_boundary($min_vf, $max_vf)} ? 1 : 0;
+          $bvfo_preds->{exon}            = scalar @{$bvfo->_overlapped_exons($min_vf, $max_vf)} ? 1 : 0;
         }
         
         # coding transcript specific
@@ -488,7 +405,7 @@ sub _pre_consequence_predicates {
     }
     
     # copy from bvfo
-    $preds->{$_} = $bvfo->{pre_consequence_predicates}->{$_} for keys %{$bvfo->{pre_consequence_predicates}};
+    @$preds{keys %{$bvfo->{pre_consequence_predicates}}} = values %{$bvfo->{pre_consequence_predicates}};
     
     
     ## allele-specific type for non-SVs
@@ -529,7 +446,7 @@ sub _pre_consequence_predicates {
 
 sub add_OverlapConsequence {
     my ($self, $oc) = @_;
-    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
+    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence') if $ASSERT_REFS;
     $self->{overlap_consequences} ||= [];
     push @{ $self->{overlap_consequences} }, $oc;
 }
