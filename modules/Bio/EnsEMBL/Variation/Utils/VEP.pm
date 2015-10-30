@@ -4958,6 +4958,45 @@ sub get_dump_file_name {
     return $dump_file;
 }
 
+sub serialize_to_file {
+  my ($config, $file, $obj) = @_;
+
+  if($config->{sereal}) {
+    $config->{encoder} ||= Sereal::Encoder->new({compress => 1});
+
+    open OUT, ">".$file or die("ERROR: Could not write to dump file $file");
+    print OUT $config->{encoder}->encode($obj);
+    close OUT;
+  }
+
+  else {
+    open my $fh, "| gzip -9 -c > ".$file or die "ERROR: Could not write to dump file $file";
+    nstore_fd($obj, $fh);
+    close $fh;
+  }
+}
+
+sub deserialize_from_file {
+  my ($config, $file) = @_;
+
+  my $obj;
+
+  if($config->{sereal}) {
+    $config->{decoder} ||= Sereal::Decoder->new();
+    open IN, $file;
+    $obj = $config->{decoder}->decode(join('', <IN>));
+    close IN;
+  }
+
+  else {
+    open my $fh, $config->{compress}." ".$file." |" or die "ERROR: $!";
+    $obj = fd_retrieve($fh);
+    close $fh;
+  }
+
+  return $obj;
+}
+
 # dumps out transcript cache to file
 sub dump_transcript_cache {
     my $config = shift;
@@ -4978,11 +5017,8 @@ sub dump_transcript_cache {
     my $dump_file = get_dump_file_name($config, $chr, $region, 'transcript');
     
     debug("Writing to $dump_file") unless defined($config->{quiet});
-    
-    # storable
-    open my $fh, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
-    nstore_fd($tr_cache, $fh);
-    close $fh;
+
+    serialize_to_file($config, $dump_file, $tr_cache);
 }
 
 #sub dump_transcript_cache_tabix {
@@ -5054,10 +5090,7 @@ sub load_dumped_transcript_cache {
     
     debug("Reading cached transcript data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
     
-    open my $fh, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
-    my $tr_cache;
-    $tr_cache = fd_retrieve($fh);
-    close $fh;
+    my $tr_cache = deserialize_from_file($config, $dump_file);
     
     # reattach adaptors
     foreach my $t(@{$tr_cache->{$chr}}) {
@@ -5642,11 +5675,8 @@ sub dump_reg_feat_cache {
     my $dump_file = get_dump_file_name($config, $chr, $region, 'reg');
     
     debug("Writing to $dump_file") unless defined($config->{quiet});
-    
-    # storable
-    open my $fh, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
-    nstore_fd($rf_cache, $fh);
-    close $fh;
+
+    serialize_to_file($config, $dump_file, $rf_cache);
 }
 
 #sub dump_reg_feat_cache_tabix {
@@ -5700,10 +5730,7 @@ sub load_dumped_reg_feat_cache {
     
     debug("Reading cached reg feat data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
     
-    open my $fh, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
-    my $rf_cache;
-    $rf_cache = fd_retrieve($fh);
-    close $fh;
+    my $rf_cache = deserialize_from_file($config, $dump_file);
     
     # reattach adaptors
     $_->{slice}->{adaptor} = $config->{sa} for map {@{$rf_cache->{$chr}->{$_}}} keys %{$rf_cache->{$chr}};
