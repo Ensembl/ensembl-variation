@@ -1144,7 +1144,7 @@ sub get_all_consequences {
 
       my $delta = 0.5;
       my $minForkSize = 50;
-      my $maxForkSize = int($config->{buffer_size} / (2 * $config->{fork}));
+      my $maxForkSize = int(($config->{buffer_size} || 5000) / (2 * $config->{fork}));
       
       # loop while variants in $listref or forks running
       while (scalar @$listref or $active_forks ) {
@@ -2894,7 +2894,7 @@ sub init_line {
     
     my $line = {
         Uploaded_variation  => $vf->variation_name,
-        Location            => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
+        Location            => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->{start}, $vf->{end}),
         Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->{variation_name} || ''} @{$vf->{existing}} : '-',
         Extra               => {},
     };
@@ -3447,8 +3447,8 @@ sub whole_genome_fetch_transcript {
         my $tr = $tr_cache->{$chr}->[$tr_counter++];
         
         # do each overlapping VF
-        my $s = $tr->start - ($tr->strand == 1 ? $up_size : $down_size);
-        my $e = $tr->end + ($tr->strand == 1 ? $down_size : $up_size);
+        my $s = $tr->{start} - ($tr->strand == 1 ? $up_size : $down_size);
+        my $e = $tr->{end} + ($tr->strand == 1 ? $down_size : $up_size);
         
         # get the chunks this transcript overlaps
         my %chunks;
@@ -4203,7 +4203,7 @@ sub check_svs_hash {
                         foreach my $var(@{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
                             my $string = join ",",
                                 map {$_->variation_name}
-                                grep {$_->seq_region_start <= $var->end && $_->seq_region_end >= $var->start}
+                                grep {$_->seq_region_start <= $var->{end} && $_->seq_region_end >= $var->{start}}
                                 @$svs;
                             
                             $var->{overlapping_svs} = $string if $string;
@@ -4314,7 +4314,7 @@ sub regions_from_hash {
             
             foreach my $chunk(keys %{$vf_hash->{$chr}}) {
                 foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                    add_region($_->start, $_->end, $include_regions{$chr}) for @{$vf_hash->{$chr}{$chunk}{$pos}};
+                    add_region($_->{start}, $_->{end}, $include_regions{$chr}) for @{$vf_hash->{$chr}{$chunk}{$pos}};
                 }
             }
         }
@@ -4512,7 +4512,7 @@ sub prune_min_max {
         
         $i++;
         
-        if($max - $f->start() > 0 && $f->end - $min > 0) {
+        if($max - $f->{start} > 0 && $f->{end} - $min > 0) {
             push @new_cache, $f;
         }
         
