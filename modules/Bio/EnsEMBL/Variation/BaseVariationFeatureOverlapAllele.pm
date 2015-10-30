@@ -67,6 +67,12 @@ use Scalar::Util qw(weaken);
 
 our $PREDICATE_COUNT = 0;
 our @SORTED_OVERLAP_CONSEQUENCES = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
+our @ALLOWED_INCLUDES = keys %{{map {$_ => 1} map {keys %{$_->include}} values %OVERLAP_CONSEQUENCES}};
+
+use Data::Dumper;
+$Data::Dumper::Maxdepth = 3;
+$Data::Dumper::Indent = 1;
+print STDERR Dumper \@ALLOWED_INCLUDES;
 
 =head2 new
 
@@ -374,14 +380,16 @@ sub _pre_consequence_predicates {
 
               my ($intron_start, $intron_end) = ($intron->start, $intron->end);
 
-              # check intron
-              if(!$within_intron && overlap($min_vf, $max_vf, $intron_start - 8, $intron_end + 8)) {
+              # check within intron
+              if(!$within_intron && overlap($min_vf, $max_vf, $intron_start, $intron_end)) {
                 $within_intron = 1;
               }
 
+              # check intron boundary
+              # add flank to capture splice_region_variants
               if(!$within_boundary && (
-                overlap($min_vf, $max_vf, $intron_start - 8, $intron_start + 8) ||
-                overlap($min_vf, $max_vf, $intron_end - 8, $intron_end + 8)
+                overlap($min_vf, $max_vf, $intron_start - 3, $intron_start + 7) ||
+                overlap($min_vf, $max_vf, $intron_end - 7, $intron_end + 3)
               )) {
                 $within_boundary = 1;
               }
@@ -396,8 +404,8 @@ sub _pre_consequence_predicates {
               # also leave if we've gone beyond the bounds of the VF
               # subsequent introns won't be in range
               last if
-                ( $tr_strand > 1 && $vf_3_prime_end < ($intron->start - 8)) ||
-                ( $tr_strand < 1 && $vf_3_prime_end > ($intron->end + 8));
+                ( $tr_strand > 1 && $vf_3_prime_end < ($intron->start - 3)) ||
+                ( $tr_strand < 1 && $vf_3_prime_end > ($intron->end + 3));
             }
 
             $bvfo_preds->{intron} = $within_intron;

@@ -711,9 +711,21 @@ sub _create_intron_trees {
 
   for(@{$self->_introns}) {
     my ($intron_start, $intron_end) = ($_->start, $_->end);
-    $intron_tree->insert($_, $intron_start - 9, $intron_end + 8);
-    $boundary_tree->insert($_, $intron_start - 9, $intron_start + 8);
-    $boundary_tree->insert($_, $intron_end - 9, $intron_end + 8);
+
+    # this is the actual plot
+    #
+    # ..........IIIIIIIIIIIIIIIIIIII..........
+    # .......rrrrrrrrrrrrrrrrrrrrrrrrrr.......
+    # .......bbbbbbbbbbb....bbbbbbbbbbb.......
+    #
+    # I is the intron itself
+    # r is the region we care about overlapping for intron
+    # b is the boundary region for splice_region_variant calls
+    # starts adjusted by -1 to account for 0-based coords in interval tree
+
+    $intron_tree->insert($_, $intron_start - 4, $intron_end + 3);
+    $boundary_tree->insert($_, $intron_start - 4, $intron_start + 7);
+    $boundary_tree->insert($_, $intron_end - 8, $intron_end + 3);
 
     # cache this as it affects whether we should call something as overlapping an exon
     $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
