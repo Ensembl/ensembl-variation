@@ -107,49 +107,49 @@ sub _intron_overlap {
 }
 
 sub within_feature {
-    my ($bvfoa, $feat) = @_;
-    my $bvf            = $bvfoa->base_variation_feature;
-    $feat              = $bvfoa->feature unless defined($feat);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->feature;
     
     return overlap(
-        $bvf->start, 
-        $bvf->end,
-        $feat->start, 
-        $feat->end
+        $bvf->{start}, 
+        $bvf->{end},
+        $feat->{start}, 
+        $feat->{end}
     );
 }
 
 sub partial_overlap_feature {
-    my ($bvfoa, $feat) = @_;
-    my $bvf            = $bvfoa->base_variation_feature;
-    $feat              = $bvfoa->feature unless defined($feat);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->feature;
     
     return (
         within_feature(@_) and 
         (not complete_overlap_feature(@_)) and
-        (($bvf->end > $feat->end) or ($bvf->start < $feat->start))
+        (($bvf->{end} > $feat->{end}) or ($bvf->{start} < $feat->{start}))
     );
 }
 
 sub complete_within_feature {
-    my ($bvfoa, $feat) = @_;
-    my $bvf            = $bvfoa->base_variation_feature;
-    $feat              = $bvfoa->feature unless defined($feat);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->feature;
     
     return (
-        ($bvf->start >= $feat->start) and 
-        ($bvf->end <= $feat->end)
+        ($bvf->{start} >= $feat->{start}) and 
+        ($bvf->{end} <= $feat->{end})
     );
 }
 
 sub complete_overlap_feature {
-    my ($bvfoa, $feat) = @_;
-    my $bvf            = $bvfoa->base_variation_feature;
-    $feat              = $bvfoa->feature unless defined($feat);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->feature;
     
     return ( 
-        ($bvf->start <= $feat->start) and 
-        ($bvf->end >= $feat->end) 
+        ($bvf->{start} <= $feat->{start}) and 
+        ($bvf->{end} >= $feat->{end}) 
     );
 }
 
@@ -263,14 +263,14 @@ sub feature_ablation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return (complete_overlap_feature($bvfoa, $feat) and deletion(@_));
+    return (complete_overlap_feature($bvfoa, $feat, $bvfo, $bvf) and deletion(@_));
 }
 
 sub feature_amplification {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return (complete_overlap_feature($bvfoa, $feat) and copy_number_gain(@_));
+    return (complete_overlap_feature($bvfoa, $feat, $bvfo, $bvf) and copy_number_gain(@_));
 }
 
 sub feature_elongation {
@@ -280,7 +280,7 @@ sub feature_elongation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
-        complete_within_feature($bvfoa, $feat) and
+        complete_within_feature($bvfoa, $feat, $bvfo, $bvf) and
         (copy_number_gain(@_) or insertion(@_))
     );
 }
@@ -292,8 +292,13 @@ sub feature_truncation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
-        (partial_overlap_feature($bvfoa, $feat) or complete_within_feature($bvfoa, $feat)) and
-        (copy_number_loss(@_) or deletion(@_))
+        (
+            partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
+            complete_within_feature($bvfoa, $feat, $bvfo, $bvf)
+        ) and
+        (
+            copy_number_loss(@_) or deletion(@_)
+        )
     );
 }
 
@@ -329,14 +334,14 @@ sub protein_altering_variant{
 sub _before_start {
     my ($bvf, $feat, $dist) = @_;
     
-    return ( ($bvf->end >= ($feat->start - $dist)) and 
-        ($bvf->end < $feat->start) );
+    return ( ($bvf->{end} >= ($feat->{start} - $dist)) and 
+        ($bvf->{end} < $feat->{start}) );
 }
 
 sub _after_end {
     my ($bvf, $feat, $dist) = @_;
-    return ( ($bvf->start <= ($feat->end + $dist)) 
-            and ($bvf->start > $feat->end) );
+    return ( ($bvf->{start} <= ($feat->{end} + $dist)) 
+            and ($bvf->{start} > $feat->{end}) );
 }
 
 sub _upstream {
@@ -377,10 +382,10 @@ sub affects_transcript {
     return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
     
     return overlap(
-        $bvf->start, 
-        $bvf->end,
-        $tran->start - 5000, 
-        $tran->end + 5000
+        $bvf->{start}, 
+        $bvf->{end},
+        $tran->{start} - 5000, 
+        $tran->{end} + 5000
     );
 }
 
@@ -410,7 +415,7 @@ sub non_coding_exon_variant {
     
     my $exons = $bvfo->_exons;
     
-    if(scalar grep {overlap($bvf->start, $bvf->end, $_->start, $_->end)} @$exons) {
+    if(scalar grep {overlap($bvf->{start}, $bvf->{end}, $_->{start}, $_->{end})} @$exons) {
         return 1;
     }
     else {
@@ -443,8 +448,8 @@ sub within_mature_miRNA {
         for my $coord ($bvfo->_mapper->cdna2genomic($1, $2, $feat->strand)) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if (overlap(
-                        $bvf->start, 
-                        $bvf->end, 
+                        $bvf->{start}, 
+                        $bvf->{end}, 
                         $coord->start, 
                         $coord->end) ) {
                     return 1;
@@ -526,8 +531,8 @@ sub within_cds {
         $bvfo->_intron_effects->{within_frameshift_intron}) {
  
         return overlap(
-            $bvf->start, 
-            $bvf->end, 
+            $bvf->{start}, 
+            $bvf->{end}, 
             $feat->coding_region_start,
             $feat->coding_region_end,
         );
@@ -566,9 +571,9 @@ sub _before_coding {
     my ($bvf, $tran) = @_;
     return 0 unless defined $tran->translation;
     
-    my $bvf_s  = $bvf->start;
-    my $bvf_e  = $bvf->end;
-    my $t_s    = $tran->start;
+    my $bvf_s  = $bvf->{start};
+    my $bvf_e  = $bvf->{end};
+    my $t_s    = $tran->{start};
     my $cds_s  = $tran->coding_region_start;
     
     # we need to special case insertions just before the CDS start
@@ -583,9 +588,9 @@ sub _after_coding {
     my ($bvf, $tran) = @_;
     return 0 unless defined $tran->translation;
     
-    my $bvf_s  = $bvf->start;
-    my $bvf_e  = $bvf->end;
-    my $t_e    = $tran->end;
+    my $bvf_s  = $bvf->{start};
+    my $bvf_e  = $bvf->{end};
+    my $t_e    = $tran->{end};
     my $cds_e  = $tran->coding_region_end;
     
     # we need to special case insertions just after the CDS end
@@ -744,10 +749,10 @@ sub affects_start_codon {
         return 0 unless defined($tr_crs) && defined($tr_cre);
         
         if($feat->strand == 1) {
-            return overlap($tr_crs, $tr_crs + 2, $bvf->start, $bvf->end);
+            return overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
         }
         else {
-            return overlap($tr_cre-2, $tr_cre, $bvf->start, $bvf->end);
+            return overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
         }
     }
     
@@ -881,7 +886,7 @@ sub inframe_deletion {
         return (
            scalar @$cds_coords == 1 and
            $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Coordinate') and
-           scalar grep {complete_within_feature($bvfoa, $_)} @$exons and
+           scalar grep {complete_within_feature($bvfoa, $_, $bvfo, $bvf)} @$exons and
            $bvf->length() % 3 == 0
         );
     }
@@ -935,10 +940,10 @@ sub stop_lost {
         return 0 unless defined($tr_crs) && defined($tr_cre);
         
         if($feat->strand == 1) {
-            return overlap($tr_cre-2, $tr_cre, $bvf->start, $bvf->end);
+            return overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
         }
         else {
-            return overlap($tr_crs, $tr_crs + 2, $bvf->start, $bvf->end);
+            return overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
         }
     }
     
@@ -978,7 +983,7 @@ sub frameshift {
                 deletion(@_) or
                 copy_number_loss(@_)
             ) and
-            scalar grep {complete_within_feature($bvfoa, $_)} @$exons and
+            scalar grep {complete_within_feature($bvfoa, $_, $bvfo, $bvf)} @$exons and
             $bvf->length % 3 != 0
         );
         
@@ -1027,14 +1032,14 @@ sub coding_unknown {
 
 sub within_regulatory_feature {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    return within_feature($bvfoa, $feat);
+    return within_feature(@_);
 }
 
 #package Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele;
 
 sub within_external_feature {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    return (within_feature($bvfoa, $feat) and (not within_miRNA_target_site(@_)));
+    return (within_feature(@_) and (not within_miRNA_target_site(@_)));
 }
 
 #sub within_miRNA_target_site {
@@ -1058,7 +1063,7 @@ sub within_external_feature {
 
 sub within_motif_feature {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    return within_feature($bvfoa, $feat);
+    return within_feature(@_);
 }
 
 #sub increased_binding_affinity {
@@ -1079,7 +1084,7 @@ sub contains_entire_feature {
     my $bvf  = $vfo->base_variation_feature;
     my $feat = $vfo->feature;
 
-    return ( ($bvf->start <= $feat->start) && ($bvf->end >= $feat->end) ); 
+    return ( ($bvf->{start} <= $feat->{start}) && ($bvf->{end} >= $feat->{end}) ); 
 }
 
 1;
