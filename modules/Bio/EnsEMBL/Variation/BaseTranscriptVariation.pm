@@ -56,6 +56,18 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 our $CAN_USE_INTERVAL_TREE;
 
+our $ASSERT_REFS = 1;
+
+BEGIN {
+  if (eval { require Set::IntervalTree; 1 }) {
+    $CAN_USE_INTERVAL_TREE = 1;
+  }
+  else {
+    $CAN_USE_INTERVAL_TREE = 0;
+  }
+}
+
+
 =head2 transcript_stable_id
 
   Description: Returns the stable_id of the associated Transcript
@@ -84,7 +96,7 @@ sub transcript {
   my ($self, $transcript) = @_;
 
   if($transcript) {
-    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript;
+    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript && $ASSERT_REFS;
     delete $self->{_cached_transcript};
   }
 
@@ -287,7 +299,7 @@ sub cdna_coords {
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript; 
-        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->start, $vf->end, $tran->strand) ];
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->{start}, $vf->{end}, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
@@ -310,7 +322,7 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->start, $vf->end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->{start}, $vf->{end}, $tran->strand) ];
     }
     
     return $self->{_cds_coords};
@@ -333,7 +345,7 @@ sub translation_coords {
     unless ($self->{_translation_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript; 
-        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->start, $vf->end, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->{start}, $vf->{end}, $tran->strand) ];
     }
     
     return $self->{_translation_coords};
@@ -367,10 +379,10 @@ sub distance_to_transcript {
         my $tr = $self->transcript;
         
         my @dists = (
-            $vf->start - $tr->start,
-            $vf->start - $tr->end,
-            $vf->end - $tr->start,
-            $vf->end - $tr->end
+            $vf->{start} - $tr->{start},
+            $vf->{start} - $tr->{end},
+            $vf->{end} - $tr->{start},
+            $vf->{end} - $tr->{end}
         );
         
         # make positive if <0 and sort
@@ -415,7 +427,7 @@ sub get_overlapping_ProteinFeatures {
                 }
               
                 for my $feat (@{ $tr->{_variation_effect_feature_cache}->{protein_features} }) {
-                    if (overlap($feat->start, $feat->end, $tl_start, $tl_end)) { 
+                    if (overlap($feat->{start}, $feat->{end}, $tl_start, $tl_end)) { 
                         push @{ $self->{_protein_features} }, $feat;
                     }
                 }
@@ -490,8 +502,8 @@ sub _exon_intron_number {
 
     my $vf = $self->base_variation_feature;    
     
-    my $vf_start = $vf->start;
-    my $vf_end   = $vf->end;
+    my $vf_start = $vf->{start};
+    my $vf_end   = $vf->{end};
 
     my $strand = $self->transcript->strand;
 
@@ -509,14 +521,14 @@ sub _exon_intron_number {
 
         $exon_count++;
         
-        if (overlap($vf_start, $vf_end, $exon->start, $exon->end)) {
+        if (overlap($vf_start, $vf_end, $exon->{start}, $exon->{end})) {
             push @overlapped_exons, $exon_count;
             #$self->{exon_number} = defined($self->{exon_number}) ? $self->{exon_number}.",".$exon_count : $exon_count;
         }
 
         if ($prev_exon) {
-            my $intron_start = $strand == 1 ? $prev_exon->end + 1 : $exon->end + 1;
-            my $intron_end   = $strand == 1 ? $exon->start - 1 : $prev_exon->start - 1;
+            my $intron_start = $strand == 1 ? $prev_exon->{end} + 1 : $exon->{end} + 1;
+            my $intron_end   = $strand == 1 ? $exon->{start} - 1 : $prev_exon->{start} - 1;
 
             if ($prev_exon && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
                 push @overlapped_introns, $exon_count - 1;
@@ -536,105 +548,83 @@ sub _exon_intron_number {
 }
 
 sub _intron_effects {
-    my $self = shift;
+  my $self = shift;
 
-    # internal method used by Bio::EnsEMBL::Variation::Utils::VariationEffect
-    # when calculating various consequence types
+  # internal method used by Bio::EnsEMBL::Variation::Utils::VariationEffect
+  # when calculating various consequence types
+  
+  # this method is a major bottle neck in the effect calculation code so 
+  # we cache results and use local variables instead of method calls where
+  # possible to speed things up - caveat bug-fixer!
+  
+  unless ($self->{_intron_effects}) {
+      
+    my $vf = $self->base_variation_feature;
     
-    # this method is a major bottle neck in the effect calculation code so 
-    # we cache results and use local variables instead of method calls where
-    # possible to speed things up - caveat bug-fixer!
+    my $intron_effects = {};
     
-    unless ($self->{_intron_effects}) {
-        
-        my $vf = $self->base_variation_feature;
-        
-        my $intron_effects = {};
-        
-        my $found_effect = 0;
-        
-        my $vf_start = $vf->start;
-        my $vf_end   = $vf->end;
+    my $vf_start = $vf->{start};
+    my $vf_end   = $vf->{end};
 
-        my $insertion = $vf_start == $vf_end+1;
-        
-        my $tr = $self->transcript();
-        my $tr_strand = $tr->strand();
-        
-        my ($min, $max) = sort {$a <=> $b} ($vf_start, $vf_end);
-        my $vf_3_prime_end = $tr_strand > 0 ? $max : $min;
+    my $insertion = $vf_start == $vf_end+1;
+    
+    my ($min, $max) = sort {$a <=> $b} ($vf_start, $vf_end);
 
-        my @introns;
+    # check introns themselves
+    for my $intron (@{$self->_overlapped_introns($min, $max)}) {
 
-        my $tree = $self->_intron_interval_tree();
-        if($tree) {
-          @introns = @{$tree->fetch($min - 1, $max)};
-        }
-        else {
-          @introns = @{$self->_introns};
-        }
+      my $intron_start = $intron->{start};
+      my $intron_end   = $intron->{end};
 
-        for my $intron (@introns) {
+      # check frameshift intron
+      # this hash key gets set when the trees are created
+      if($intron->{_frameshift} && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+        $intron_effects->{within_frameshift_intron} = 1;
+        next;
+      }
 
-            my $intron_start = $intron->start;
-            my $intron_end   = $intron->end;
-            
-            # don't need these coord checks if we used the interval tree
-            unless($tree) {
-             
-              # skip remainder if vf out of range
-              last if
-                ( $tr_strand > 1 && $vf_3_prime_end < $intron_start - 8) ||
-                ( $tr_strand < 1 && $vf_3_prime_end > $intron_end + 8);
-                
-              # skip this one if vf out of range
-              next unless overlap($min, $max, $intron_start - 8, $intron_end + 8);
-            }
-            
-            # under various circumstances the genebuild process can introduce
-            # artificial short (<= 12 nucleotide) introns into transcripts
-            # (e.g. to deal with errors in the reference sequence etc.), we
-            # don't want to categorise variations that fall in these introns
-            # as intronic, or as any kind of splice variant
-            
-            my $frameshift_intron = ( abs($intron_end - $intron_start) <= 12 );
-            
-            if ($frameshift_intron) {
-                if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
-                    $intron_effects->{within_frameshift_intron} = 1;
-                    next;
-                }
-            }
-
-            if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
-                $intron_effects->{start_splice_site} = 1;
-            }
-            
-            if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
-                $intron_effects->{end_splice_site} = 1;
-            }
-            
-            # we need to special case insertions between the donor and acceptor sites
-
-            if (overlap($vf_start, $vf_end, $intron_start+2, $intron_end-2) or 
-                ($insertion && ($vf_start == $intron_start+2 || $vf_end == $intron_end-2)) ) {
-                $intron_effects->{intronic} = 1;
-            }
-            
-            # the definition of splice_region (SO:0001630) is "within 1-3 bases 
-            # of the exon or 3-8 bases of the intron", the intron start is the 
-            # first base of the intron so we only need to add or subtract 7 from 
-            # it to get the correct coordinate. We also need to special case 
-            # insertions between the edge of an exon and a donor or acceptor site
-            # and between a donor or acceptor site and the intron
-            
-            $intron_effects->{splice_region} = _intron_overlap($vf_start, $vf_end, $intron_start, $intron_end, $insertion);
-        }
-        
-        $self->{_intron_effects} = $intron_effects;       
+      if (
+        overlap($vf_start, $vf_end, $intron_start+2, $intron_end-2) or 
+        ($insertion && ($vf_start == $intron_start+2 || $vf_end == $intron_end-2))
+      ) {
+        $intron_effects->{intronic} = 1;
+      }
     }
 
-    return $self->{_intron_effects};
+    # now check intron boundaries
+    for my $intron (@{$self->_overlapped_introns_boundary($min, $max)}) {
+
+      my $intron_start = $intron->{start};
+      my $intron_end   = $intron->{end};
+
+      # check frameshift intron
+      if($intron->{_frameshift} && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+        $intron_effects->{within_frameshift_intron} = 1;
+        next;
+      }
+
+      if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
+        $intron_effects->{start_splice_site} = 1;
+      }
+      
+      if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
+        $intron_effects->{end_splice_site} = 1;
+      }
+      
+      # the definition of splice_region (SO:0001630) is "within 1-3 bases 
+      # of the exon or 3-8 bases of the intron", the intron start is the 
+      # first base of the intron so we only need to add or subtract 7 from 
+      # it to get the correct coordinate. We also need to special case 
+      # insertions between the edge of an exon and a donor or acceptor site
+      # and between a donor or acceptor site and the intron            
+      $intron_effects->{splice_region} = _intron_overlap($vf_start, $vf_end, $intron_start, $intron_end, $insertion)
+        unless $intron_effects->{start_splice_site} or $intron_effects->{end_splice_site};
+    }
+      
+    $self->{_intron_effects} = $intron_effects;       
+  }
+
+  return $self->{_intron_effects};
 }
 
 # NB: the methods below all cache their data in the associated transcript itself, this
@@ -643,6 +633,7 @@ sub _intron_effects {
 # is garbage collected rather than us having to maintain a transcript feature cache 
 # ourselves
 
+# gets all introns for the transcript, cached on transcript
 sub _introns {
     my $self = shift;
     
@@ -653,6 +644,7 @@ sub _introns {
     return $introns;
 }
 
+# gets all exons for the transcript, cached on transcript
 sub _exons {
     my $self = shift;
 
@@ -663,17 +655,156 @@ sub _exons {
     return $exons;
 }
 
-sub _can_use_interval_tree {
-  my $self = shift;
+# gets all introns that overlap this VF, cached on $self
+sub _overlapped_introns {
+  my ($self, $min_vf, $max_vf) = @_;
 
-  if(!defined($CAN_USE_INTERVAL_TREE)) {
-    eval q{ use Set::IntervalTree; };
-    $CAN_USE_INTERVAL_TREE = $@ ? 0 : 1;
+  if(!exists($self->{_overlapped_introns})) {
+
+    if(!($min_vf || $max_vf)) {
+      my $vf = $self->base_variation_feature;
+      ($min_vf, $max_vf) = sort {$a <=> $b} ($vf->{start}, $vf->{end});
+    }
+
+    if($CAN_USE_INTERVAL_TREE) {
+      $self->{_overlapped_introns} = $self->_intron_interval_tree->fetch($min_vf - 1, $max_vf);
+    }
+
+    else {
+      $self->_overlapped_introns_and_boundary_no_tree($min_vf, $max_vf);
+    }
   }
 
-  return $CAN_USE_INTERVAL_TREE;
+  return $self->{_overlapped_introns};
 }
 
+# gets all introns whose boundary region overlaps this VF, cached on $self
+sub _overlapped_introns_boundary {
+  my ($self, $min_vf, $max_vf) = @_;
+
+  if(!exists($self->{_overlapped_introns_boundary})) {
+
+    if(!($min_vf || $max_vf)) {
+      my $vf = $self->base_variation_feature;
+      ($min_vf, $max_vf) = sort {$a <=> $b} ($vf->{start}, $vf->{end});
+    }
+
+    if($CAN_USE_INTERVAL_TREE) {
+      $self->{_overlapped_introns_boundary} = $self->_intron_boundary_interval_tree->fetch($min_vf - 1, $max_vf);
+    }
+
+    else {
+      $self->_overlapped_introns_and_boundary_no_tree($min_vf, $max_vf);
+    }
+  }
+
+  return $self->{_overlapped_introns_boundary};
+}
+
+# gets all exons that overlap this VF, cached on $self
+sub _overlapped_exons {
+  my ($self, $min_vf, $max_vf) = @_;
+
+  if(!exists($self->{_overlapped_exons})) {
+
+    if(!($min_vf || $max_vf)) {
+      my $vf = $self->base_variation_feature;
+      ($min_vf, $max_vf) = sort {$a <=> $b} ($vf->{start}, $vf->{end});
+    }
+
+    # apply a "stretch" to the exon coordinates if we have a frameshift intron
+    # the introns can be up to 12 bases long and if a variant falls in one
+    # we actually want to call it exonic
+    my $stretch = $self->transcript->{_variation_effect_feature_cache}->{_has_frameshift_intron} ? 12 : 0;
+
+    $self->{_overlapped_exons} = 
+      $CAN_USE_INTERVAL_TREE ?
+      $self->_exon_interval_tree->fetch($min_vf - ($stretch + 1), $max_vf + $stretch) :
+      $self->_overlapped_exons_no_tree($min_vf, $max_vf, $stretch);
+  }
+
+  return $self->{_overlapped_exons};
+}
+
+# slower method for looking up overlaps
+# used when user does not have Set::IntervalTree installed
+sub _overlapped_introns_and_boundary_no_tree {
+  my ($self, $min_vf, $max_vf) = @_;
+
+  my $tr = $self->transcript;
+  my $tr_strand = $tr->strand();
+  my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
+  
+  my (@introns, @boundary);
+  
+  foreach my $intron(@{$self->_introns}) {
+
+    my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
+
+    # check within intron
+    if(overlap($min_vf, $max_vf, $intron_start, $intron_end)) {
+      push @introns, $intron;
+    }
+
+    # check intron boundary
+    # add flank to capture splice_region_variants
+    if(
+      overlap($min_vf, $max_vf, $intron_start - 3, $intron_start + 7) ||
+      overlap($min_vf, $max_vf, $intron_end - 7, $intron_end + 3)
+    ) {
+      push @boundary, $intron;
+    }
+
+    # cache whether this transcript has a frameshift intron
+    # we use it later to assess exonic status
+    if(abs($intron_end - $intron_start) <= 12) {
+      $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1;
+      $intron->{_frameshift} = 1;
+    }
+    
+    # also leave if we've gone beyond the bounds of the VF
+    # subsequent introns won't be in range
+    last if
+      ( $tr_strand > 1 && $vf_3_prime_end < ($intron->{start} - 3)) ||
+      ( $tr_strand < 1 && $vf_3_prime_end > ($intron->{end} + 3));
+  }
+
+  $self->{_overlapped_introns} = \@introns;
+  $self->{_overlapped_introns_boundary} = \@boundary;
+}
+
+# slower method for looking up overlaps
+# used when user does not have Set::IntervalTree installed
+sub _overlapped_exons_no_tree {
+  my ($self, $min_vf, $max_vf, $stretch) = @_;
+
+  my $tr = $self->transcript;
+  my $tr_strand = $tr->strand();
+  my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
+
+  my @exons;
+
+  foreach my $exon(@{$self->_exons}) {
+
+    # also leave if we've gone beyond the bounds of the VF
+    # subsequent introns won't be in range
+    last if
+      ( $tr_strand > 1 && $vf_3_prime_end < $exon->{start} - $stretch) ||
+      ( $tr_strand < 1 && $vf_3_prime_end > $exon->{end} + $stretch);
+
+    if(overlap($min_vf, $max_vf, $exon->{start} - $stretch, $exon->{end} + $stretch)) {
+      push @exons, $exon;
+    }
+  }
+
+  return \@exons;
+}
+
+
+## interval tree methods
+########################
+
+# create intron interval tree for this transcript, cached on transcript
 sub _intron_interval_tree {
   my $self = shift;
 
@@ -684,6 +815,7 @@ sub _intron_interval_tree {
   return $tr->{_variation_effect_feature_cache}->{_intron_interval_tree};
 }
 
+# create intron boundary interval tree for this transcript, cached on transcript
 sub _intron_boundary_interval_tree {
   my $self = shift;
 
@@ -695,12 +827,13 @@ sub _intron_boundary_interval_tree {
 }
 
 # this creates the intron and intron boundary trees
+# not cached as it should only be called by _intron_interval_tree or _intron_boundary_interval_tree
 sub _create_intron_trees {
   my $self = shift;
 
   my $tr = $self->transcript;
 
-  if(!$self->_can_use_interval_tree) {
+  if(!$CAN_USE_INTERVAL_TREE) {
     $tr->{_variation_effect_feature_cache}->{_intron_interval_tree} = undef;
     $tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree} = undef;
     return;
@@ -709,8 +842,8 @@ sub _create_intron_trees {
   my $intron_tree   = Set::IntervalTree->new();
   my $boundary_tree = Set::IntervalTree->new();
 
-  for(@{$self->_introns}) {
-    my ($intron_start, $intron_end) = ($_->start, $_->end);
+  for my $intron(@{$self->_introns}) {
+    my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
 
     # this is the actual plot
     #
@@ -723,18 +856,22 @@ sub _create_intron_trees {
     # b is the boundary region for splice_region_variant calls
     # starts adjusted by -1 to account for 0-based coords in interval tree
 
-    $intron_tree->insert($_, $intron_start - 4, $intron_end + 3);
-    $boundary_tree->insert($_, $intron_start - 4, $intron_start + 7);
-    $boundary_tree->insert($_, $intron_end - 8, $intron_end + 3);
+    $intron_tree->insert($intron, $intron_start - 4, $intron_end + 3);
+    $boundary_tree->insert($intron, $intron_start - 4, $intron_start + 7);
+    $boundary_tree->insert($intron, $intron_end - 8, $intron_end + 3);
 
     # cache this as it affects whether we should call something as overlapping an exon
-    $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1 if abs($intron_end - $intron_start) <= 12;
+    if(abs($intron_end - $intron_start) <= 12) {
+      $tr->{_variation_effect_feature_cache}->{_has_frameshift_intron} = 1;
+      $intron->{_frameshift} = 1;
+    }
   }
 
   $tr->{_variation_effect_feature_cache}->{_intron_interval_tree} = $intron_tree;
   $tr->{_variation_effect_feature_cache}->{_intron_boundary_interval_tree} = $boundary_tree;
 }
 
+# create exon interval tree for this transcript, cached on transcript
 sub _exon_interval_tree {
   my $self = shift;
 
@@ -742,13 +879,13 @@ sub _exon_interval_tree {
 
   if(!exists($tr->{_variation_effect_feature_cache}->{_exon_interval_tree})) {
 
-    if(!$self->_can_use_interval_tree) {
+    if(!$CAN_USE_INTERVAL_TREE) {
       $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = undef;
     }
 
     else {
       my $tree = Set::IntervalTree->new();
-      $tree->insert($_, $_->start - 1, $_->end) for @{$self->_exons};
+      $tree->insert($_, $_->{start} - 1, $_->{end}) for @{$self->_exons};
       $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = $tree;
     }
   }
