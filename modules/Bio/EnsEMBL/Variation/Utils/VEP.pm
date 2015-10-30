@@ -329,6 +329,13 @@ our @VAR_CACHE_COLS = qw(
 
 our @PICK_ORDER = qw(canonical tsl biotype ccds rank length);
 
+# set ASSERT_REFS statuses to 0
+$Bio::EnsEMBL::Variation::VariationFeatureOverlap::ASSERT_REFS = 0;
+$Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele::ASSERT_REFS = 0;
+$Bio::EnsEMBL::Variation::BaseTranscriptVariation::ASSERT_REFS = 0;
+$Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap::ASSERT_REFS = 0;
+$Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele::ASSERT_REFS = 0;
+
 # parses a line of input, returns VF object(s)
 sub parse_line {
     my $config = shift;
