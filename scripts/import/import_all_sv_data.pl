@@ -1390,6 +1390,7 @@ sub parse_9th_col {
     $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
     $info->{is_somatic}  = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
     $info->{bp_order}    = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
+    $info->{bp_order}    = 1 if ($info->{SO_term} =~ /translocation/i);
     $info->{status}      = 'High quality' if ($key eq 'variant_region_description' && $value =~ /high.quality/i);
     $info->{alias}       = $value if ($key eq 'Alias' && $value !~ /^\d+$/);
     $info->{length}      = $value if ($key eq 'variant_call_length');
@@ -1816,12 +1817,13 @@ sub generate_data_row {
   my $info = shift;
   my $somatic = shift;
  
-  if ($info->{is_somatic} == 1 || $somatic) {
-    $info->{bp_order}= 1 if(!defined($info->{bp_order}));
-  } else {
-    $info->{bp_order} = undef;
+  if(!defined($info->{bp_order})) {
+    if ($info->{is_somatic} == 1 || $somatic) {
+      $info->{bp_order} = 1;
+    } else  {
+      $info->{bp_order} = undef;
+    }
   }
- 
   $info->{phenotype} = decode_text($info->{phenotype}); 
  
   my @row = map { $info->{$_} } @attribs;
