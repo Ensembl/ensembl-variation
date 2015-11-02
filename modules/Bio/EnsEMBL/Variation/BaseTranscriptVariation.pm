@@ -101,6 +101,8 @@ sub transcript {
   }
 
   $self->{_cached_transcript} ||= $self->SUPER::feature($transcript, 'Transcript');
+
+  return $self->{_cached_transcript};
 }
 
 =head2 feature
