@@ -2534,13 +2534,15 @@ sub tva_to_line {
   my $config = shift;
   my $tva = shift;
   
-  my $tv = $tva->transcript_variation;
+  my $tv = $tva->base_variation_feature_overlap;
   my $t  = $tv->transcript;
-  
-  my $pre = $tva->_pre_consequence_predicates();
   
   # method name for consequence terms
   my $term_method = $config->{terms}.'_term';
+
+  my $csq = join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences};
+  
+  my $pre = $tva->_pre_consequence_predicates();
   
   my $base_line = {
     Feature_type     => 'Transcript',
@@ -2548,7 +2550,7 @@ sub tva_to_line {
     
     # use pre_consequence_predicates to avoid calling coord methods
     cDNA_position    =>
-      ($pre->{within_feature} ? format_coords($tv->cdna_start, $tv->cdna_end) : format_coords(undef, undef)).
+      ($pre->{exon} ? format_coords($tv->cdna_start, $tv->cdna_end) : format_coords(undef, undef)).
       (defined($config->{total_length}) ? '/'.$t->length : ''),
     
     CDS_position     =>
@@ -2568,14 +2570,14 @@ sub tva_to_line {
     Allele           => $tva->variation_feature_seq,
     Amino_acids      => ($pre->{coding} ? $tva->pep_allele_string : undef),
     Codons           => ($pre->{coding} ? $tva->display_codon_allele_string : undef),
-    Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
+    Consequence      => $csq,
   };
   
   if(!defined($config->{no_stats}) && $pre->{coding} && defined($tv->translation_start)) {
     $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
   }
   
-  my $line = init_line($config, $tv->variation_feature, $base_line);
+  my $line = init_line($config, $tv->base_variation_feature, $base_line);
   
   # HGVS
   if(defined $config->{hgvs}) {
@@ -2711,6 +2713,7 @@ sub mfva_to_line {
     Feature      => $mf->binding_matrix->name,
     Extra        => {
       MOTIF_NAME  => $matrix,
+      STRAND      => $mf->strand
     }
   };
   
@@ -2761,15 +2764,7 @@ sub add_extra_fields {
     if(defined($config->{allele_number})) {
       $line->{Extra}->{ALLELE_NUM} = $bvfoa->allele_number if $bvfoa->can('allele_number');
     }
-    
-    # strand
-    if(my $f = $bvfoa->feature) {
-      my $strand = $f->seq_region_strand;
-      
-      # regfeats have an undefined strand (0); recommended not to report this
-      $line->{Extra}->{STRAND} = $strand if $strand;
-    }
-    
+
     # add transcript-specific fields
     $line = add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
     
@@ -2791,10 +2786,13 @@ sub add_extra_fields_transcript {
     my $tva = shift;
     
     my $tv = $tva->base_variation_feature_overlap;
-    my $tr = $tva->transcript;
+    my $tr = $tv->transcript;
     
     # get gene
     $line->{Gene} = $tr->{_gene_stable_id};
+
+    # strand
+    $line->{Extra}->{STRAND} = $tr->seq_region_strand;
     
     # exon/intron numbers
     if ($config->{numbers}) {
