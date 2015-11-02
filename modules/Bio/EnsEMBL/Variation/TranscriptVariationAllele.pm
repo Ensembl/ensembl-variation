@@ -291,66 +291,69 @@ sub peptide {
 =cut
 
 sub codon {
-    my ($self, $codon) = @_;
-    
-    $self->{codon} = $codon if defined $codon;
-    
-    my $tv = $self->transcript_variation;      
-    
-    return undef unless $tv->translation_start && $tv->translation_end;
-   
-    return undef unless $self->seq_is_dna;
-    
-    unless ($self->{codon}) {
-      
-        # try to calculate the codon sequence
-    
-        my $seq = $self->feature_seq;
-        
-        $seq = '' if $seq eq '-';
-        
-        # calculate necessary coords and lengths
-        
-        my $codon_cds_start = $tv->translation_start * 3 - 2;
-        my $codon_cds_end   = $tv->translation_end * 3;
-        my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-        my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
-        my $allele_len      = $self->seq_length;
-        
-        my $cds;
-        if ($allele_len != $vf_nt_len) {
-            if (abs($allele_len - $vf_nt_len) % 3) {
-                # this is a frameshift variation, we don't attempt to 
-                # calculate the resulting codon or peptide change as this 
-                # could get quite complicated 
-               # return undef;
+  my ($self, $codon) = @_;
+  
+  $self->{codon} = $codon if defined $codon;
+  
+  unless(exists($self->{codon})) {
 
-            }
-            ## Bioperl Seq object
-	    my $cds_obj = $self->_get_alternate_cds();
-	    $cds = $cds_obj->seq();
-        }
-	else{
-	    # splice the allele sequence into the CDS
-        
-	    $cds = $tv->_translateable_seq;
-    
-	    substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
-        }
-        # and extract the codon sequence
-        
-        my $codon = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
-        
-        if (length($codon) < 1) {
-            $self->{codon}   = '-';
-            $self->{peptide} = '-';
-        }
-        else {
-             $self->{codon} = $codon;
-        }
+    $self->{codon} = undef;
+  
+    my $tv = $self->transcript_variation;
+
+    my ($tv_tr_start, $tv_tr_end) = ($tv->translation_start, $tv->translation_end);
+
+    unless($tv_tr_start && $tv_tr_end && $self->seq_is_dna) {
+      return $self->{codon};
     }
+  
+    # try to calculate the codon sequence
+    my $seq = $self->feature_seq;
     
-    return $self->{codon};
+    $seq = '' if $seq eq '-';
+    
+    # calculate necessary coords and lengths
+    
+    my $codon_cds_start = $tv_tr_start * 3 - 2;
+    my $codon_cds_end   = $tv_tr_end * 3;
+    my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
+    my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
+    my $allele_len      = $self->seq_length;
+    
+    my $cds;
+    if ($allele_len != $vf_nt_len) {
+      if (abs($allele_len - $vf_nt_len) % 3) {
+        # this is a frameshift variation, we don't attempt to 
+        # calculate the resulting codon or peptide change as this 
+        # could get quite complicated 
+        # return undef;
+      }
+
+      ## Bioperl Seq object
+      my $cds_obj = $self->_get_alternate_cds();
+      $cds = $cds_obj->seq();
+    }
+
+    else {
+      # splice the allele sequence into the CDS
+      $cds = $tv->_translateable_seq;
+    
+      substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
+    }
+
+    # and extract the codon sequence
+    my $codon = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
+    
+    if (length($codon) < 1) {
+      $self->{codon}   = '-';
+      $self->{peptide} = '-';
+    }
+    else {
+       $self->{codon} = $codon;
+    }
+  }
+  
+  return $self->{codon};
 }
 
 =head2 display_codon
@@ -365,32 +368,36 @@ sub codon {
 =cut
 
 sub display_codon {
-    my $self = shift;
+  my $self = shift;
 
-    unless ($self->{_display_codon}) {
+  unless(exists($self->{_display_codon})) {
 
-        if ($self->codon && defined $self->transcript_variation->codon_position) {
+    # initialise so it doesn't get called again
+    $self->{_display_codon} = undef;
+
+    if(my $codon = $self->codon) {
+
+      my $display_codon = lc $self->codon;
+
+      if(my $codon_pos = $self->transcript_variation->codon_position) {
+
+        # if this allele is an indel then just return all lowercase
+        if ($self->feature_seq ne '-') {
             
-            my $display_codon = lc $self->codon;
+          # codon_position is 1-based, while substr assumes the string starts at 0          
+          my $pos = $codon_pos - 1;
 
-            # if this allele is an indel then just return all lowercase
-            
-            if ($self->feature_seq ne '-') {
-                
-                # codon_position is 1-based, while substr assumes the string starts at 0
-                
-                my $pos = $self->transcript_variation->codon_position - 1;
+          my $len = length $self->feature_seq;
 
-                my $len = length $self->feature_seq;
-
-                substr($display_codon, $pos, $len) = uc substr($display_codon, $pos, $len);
-            }
-
-            $self->{_display_codon} = $display_codon;
+          substr($display_codon, $pos, $len) = uc substr($display_codon, $pos, $len);
         }
-    }
+      }
 
-    return $self->{_display_codon};
+      $self->{_display_codon} = $display_codon;
+    }
+  }
+
+  return $self->{_display_codon};
 }
 
 =head2 polyphen_prediction
