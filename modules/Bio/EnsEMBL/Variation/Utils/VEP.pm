@@ -1427,7 +1427,7 @@ sub vf_list_to_cons {
     }
     
     # if using consequence filter, we're not interested in how many remain yet
-    $config->{stats}->{filter_count} += scalar @$new_listref unless defined($config->{filter});
+    $config->{stats}->{filter_count} += scalar @$new_listref unless defined($config->{filter}) || defined($config->{no_stats});
     
     # get overlapping SVs
     &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
@@ -2063,29 +2063,31 @@ sub vf_to_consequences {
   if(defined $config->{whole_genome}) {
     $vf->{$_} ||= {} for map {$_.'_variations'} ('transcript', map {lc_rf_type($_)} @REG_FEAT_TYPES);
   }
+
+  # stats
+  unless(defined($config->{no_stats})) {
+
+    # position
+    $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
+
+    # most severe consequence
+    $config->{stats}->{var_cons}->{$vf->display_consequence}++;
+
+    # known variants
+    $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
   
-  # pos stats
-  $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
-  
-  $config->{stats}->{var_cons}->{$vf->display_consequence}++;
+    # get stats
+    my $so_term = $vf->class_SO_term;
+    if(defined($so_term)) {
+      $config->{stats}->{classes}->{$so_term}++;
+      $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
+    }
+  }
   
   # use a different method for SVs
   return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
   
   my @return = ();
-  
-  # method name stub for getting *VariationAlleles
-  my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
-  
-  # get stats
-  my $so_term = SO_variation_class($vf->allele_string, 1);
-  if(defined($so_term)) {
-    $config->{stats}->{classes}->{$so_term}++;
-    $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
-  }
-  
-  # stats
-  $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
   
   # prefetch intergenic variation
   # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
@@ -2093,7 +2095,9 @@ sub vf_to_consequences {
   $vf->get_IntergenicVariation(1);
   return \@return if defined($config->{no_intergenic}) && defined($vf->{intergenic_variation});
   
-  
+  # method name stub for getting *VariationAlleles
+  my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
+
   # get all VFOAs
   # need to be sensitive to whether --regulatory or --coding_only is switched on
   my $vfos;
@@ -2136,7 +2140,9 @@ sub vf_to_consequences {
       $line->{Consequence} = $oc->$term_method || $oc->SO_term;
     }
     
-    $config->{stats}->{consequences}->{$_}++ for split(',', $line->{Consequence});
+    unless(defined($config->{no_stats})) {
+      $config->{stats}->{consequences}->{$_}++ for split(',', $line->{Consequence});
+    }
     
     push @return, $line;
   }
@@ -2314,7 +2320,7 @@ sub svf_to_consequences {
     my @return = ();
     
     # stats
-    $config->{stats}->{classes}->{$svf->{class_SO_term}}++;
+    $config->{stats}->{classes}->{$svf->{class_SO_term}}++ unless defined($config->{no_stats});
     
     my $term_method = $config->{terms}.'_term';
     
@@ -2335,7 +2341,7 @@ sub svf_to_consequences {
             
             $line->{Consequence} = $cons->$term_method || $cons->SO_term;
             
-            $config->{stats}->{consequences}->{$cons->$term_method || $cons->SO_term}++;
+            $config->{stats}->{consequences}->{$cons->$term_method || $cons->SO_term}++ unless defined($config->{no_stats});
             
             $line = run_plugins($iva, $line, $config);
             
@@ -2380,7 +2386,9 @@ sub svf_to_consequences {
                 sort {$a->rank <=> $b->rank}
                 @{$svoa->get_all_OverlapConsequences};
             
-            map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$svoa->get_all_OverlapConsequences};
+            unless(defined($config->{no_stats})) {
+              map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$svoa->get_all_OverlapConsequences};
+            }
             
             # work out overlap amounts            
             my $overlap_start  = (sort {$a <=> $b} ($svf->start, $feature->start))[-1];
@@ -2460,8 +2468,10 @@ sub vfoa_to_line {
   my $vfoa = shift;
   
   # stats
-  my $term_method = $config->{terms}.'_term';
-  map {$config->{stats}->{consequences}->{$_->$term_method || $_->SO_term}++} @{$vfoa->get_all_OverlapConsequences};
+  unless(defined($config->{no_stats})) {
+    my $term_method = $config->{terms}.'_term';
+    map {$config->{stats}->{consequences}->{$_->$term_method || $_->SO_term}++} @{$vfoa->get_all_OverlapConsequences};
+  }
   
   my $line;
   
@@ -2561,7 +2571,7 @@ sub tva_to_line {
     Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
   };
   
-  if($pre->{coding} && defined($tv->translation_start)) {
+  if(!defined($config->{no_stats}) && $pre->{coding} && defined($tv->translation_start)) {
     $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
   }
   
@@ -2626,7 +2636,7 @@ sub tva_to_line {
       }
       
       # update stats
-      $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth;
+      $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth && !defined($config->{no_stats});
     }
   }
   
@@ -2767,8 +2777,10 @@ sub add_extra_fields {
     $line->{Extra}->{PICK} = 1 if defined($bvfoa->{PICK});
     
     # stats
-    $config->{stats}->{gene}->{$line->{Gene}}++ if defined($line->{Gene});
-    $config->{stats}->{lc($line->{Feature_type})}->{$line->{Feature}}++ if defined($line->{Feature_type}) && defined($line->{Feature});
+    unless(defined($config->{no_stats})) {
+      $config->{stats}->{gene}->{$line->{Gene}}++ if defined($line->{Gene});
+      $config->{stats}->{lc($line->{Feature_type})}->{$line->{Feature}}++ if defined($line->{Feature_type}) && defined($line->{Feature});
+    }
     
     return $line;
 }
