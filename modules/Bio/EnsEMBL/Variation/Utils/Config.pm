@@ -210,6 +210,16 @@ our @VARIATION_CLASSES = (
         SO_term => 'interchromosomal_translocation',
         display_term => 'Interchromosomal translocation',
     },
+    {
+        SO_accession => 'SO:0002061',
+        SO_term => 'intrachromosomal_translocation',
+        display_term => 'Intrachromosomal translocation',
+    },
+    {
+        SO_accession => 'SO:0002063',
+        SO_term => 'Alu_insertion',
+        display_term => 'Alu insertion',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
