@@ -2318,7 +2318,7 @@ sub parallelized_individual_genotypes {
  my $table_sth = $self->{'dbVar'}->prepare($table2_ext_stmt);
  
  # Use one common file for alleles and one for samples.
- my $file_prefix = $self->{'tmpdir'} . '/individual_genotypes';
+ my $file_prefix = $self->{'tmpdir'} . '/sample_genotypes';
  #Multi-bp genotypes will be written to a separate loadfile
  my $multi_bp_gty_file = $file_prefix . '_multi_bp_gty';
  # Allele file is used for caching the alleles
