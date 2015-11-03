@@ -2211,13 +2211,11 @@ sub pick_worst_vfoa {
   return $vfoas->[0] if scalar @$vfoas == 1;
   
   foreach my $vfoa(@$vfoas) {
-    my @ocs = sort {$a->rank <=> $b->rank} @{$vfoa->get_all_OverlapConsequences};
-    next unless scalar @ocs;
     
     # create a hash of info for this VFOA that will be used to rank it
     my $info = {
       vfoa => $vfoa,
-      rank => $ranks{$ocs[0]->SO_term},
+      rank => undef,
       
       # these will only be used by transcript types, default to 1 for others
       # to avoid writing an else clause below
@@ -2256,6 +2254,14 @@ sub pick_worst_vfoa {
     
     # go through each category in order
     foreach my $cat(@order) {
+
+      # get ranks here as it saves time
+      if($cat eq 'rank') {
+        foreach my $info(@vfoa_info) {
+          my @ocs = sort {$a->rank <=> $b->rank} @{$info->{vfoa}->get_all_OverlapConsequences};
+          $info->{rank} = scalar @ocs ? $ranks{$ocs[0]->SO_term} : 1000;
+        }
+      }
       
       # sort on that category
       @vfoa_info = sort {$a->{$cat} <=> $b->{$cat}} @vfoa_info;
@@ -2852,8 +2858,10 @@ sub add_extra_fields_transcript {
       $tr->{_refseq} ne '-';
     
     # refseq match info
-    my @rseq_attrs = grep {$_->code =~ /^rseq/} @{$tr->get_all_Attributes()};
-    $line->{Extra}->{REFSEQ_MATCH} = join(",", map {$_->code} @rseq_attrs) if scalar @rseq_attrs;
+    if(defined($config->{refseq}) || defined($config->{merged})) {
+      my @rseq_attrs = grep {$_->code =~ /^rseq/} @{$tr->get_all_Attributes()};
+      $line->{Extra}->{REFSEQ_MATCH} = join(",", map {$_->code} @rseq_attrs) if scalar @rseq_attrs;
+    }
     
     # protein ID
     $line->{Extra}->{ENSP} = $tr->{_protein} if
