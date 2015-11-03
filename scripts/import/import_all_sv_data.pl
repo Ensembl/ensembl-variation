@@ -1326,7 +1326,7 @@ sub parse_line {
   
   $data[0] =~ /Chr(.+)$/;
   $info->{chr} = defined($1) ? $1 : $data[0];
-  $info->{SO_term} = $data[2];
+  $info->{SO_term} = ($data[2] eq 'alu_insertion') ? ucfirst($data[2]) : $data[2];
   $info->{start}   = $data[3];
   $info->{end}     = $data[4];
   $info->{strand}  = ($data[6] eq '.') ? 1 : ($data[6] eq '-') ? -1 : 1;
@@ -1420,8 +1420,8 @@ sub parse_9th_col {
 
     foreach my $p_link (@phenotype_links) {
       # Look at the MedGen data
-      if ($medgen_file && $p_link =~ /^MedGen:[A-Za-z]\d+$/) {
-        $p_link =~ /^MedGen:([A-Za-z]\d+)$/;
+      if ($medgen_file && $p_link =~ /^MedGen:\w+$/i) {
+        $p_link =~ /^MedGen:(\w+)$/i;
         my $phenotype_value = get_medgen_phenotype($1);
         $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
       }
@@ -1591,6 +1591,9 @@ sub post_processing_sample {
 # Create entries in phenotype_feature for the structural variation (most of the time, the phenotypes are at the SSV level)
 sub post_processing_phenotype {
   debug(localtime()." Post processing of the table $pf_table");
+
+  $dbVar->do(q{OPTIMIZE TABLE phenotype});
+
   my $stmt;
   
   $stmt = qq{
