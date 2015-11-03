@@ -60,6 +60,11 @@ use Scalar::Util qw(weaken);
 use Digest::MD5 qw(md5_hex);
 use IO::Socket;
 use IO::Select;
+use Exporter;
+
+BEGIN {
+  eval q{ use Sereal; 1; };
+}
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -90,7 +95,6 @@ use Bio::EnsEMBL::DBSQL::TranscriptAdaptor;
 use Bio::EnsEMBL::DBSQL::MetaContainer;
 use Bio::EnsEMBL::DBSQL::CoordSystemAdaptor;
 
-use Exporter;
 use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
