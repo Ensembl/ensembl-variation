@@ -1045,7 +1045,7 @@ sub get_all_clinical_significance_states {
 sub get_all_validation_states {
   my $self = shift;
 
-  deprecate("Please use get_all_evidence_values() instead. This method will be removed in e86\n");
+  deprecate("Please use get_all_evidence_values() instead. This method will be removed in e87\n");
 
   return $self->get_all_evidence_values();
 }
@@ -1064,7 +1064,7 @@ sub get_all_validation_states {
 =cut
 
 sub add_validation_state {
-  deprecate("The API doesn't store validation_state data anymore.  This method will be removed in e86\n");
+  deprecate("The API doesn't store validation_state data anymore.  This method will be removed in e87\n");
 }
 
 

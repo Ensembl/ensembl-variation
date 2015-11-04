@@ -929,7 +929,7 @@ sub add_validation_state {
   my $obj = shift;
   my $state = shift;
 
-  deprecate("The API doesn't store validation_status data anymore. This method will be removed in e86\n");
+  deprecate("The API doesn't store validation_status data anymore. This method will be removed in e87\n");
 
   return;
 }
@@ -947,7 +947,7 @@ sub add_validation_state {
 =cut
 
 sub get_all_validation_states {
-    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e86\n");
+    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e87\n");
     return bitval_to_array(shift,\@VALIDATION_STATES);
 }
 
@@ -963,7 +963,7 @@ sub get_all_validation_states {
 =cut
 
 sub get_validation_code {
-    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e86\n");
+    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e87\n");
     return array_to_bitval(shift,\@VALIDATION_STATES);
 }
 
