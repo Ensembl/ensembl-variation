@@ -60,7 +60,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Utils::Sequence;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
@@ -914,61 +914,56 @@ sub bitval_to_array {
 
 
 =head2 add_validation_state
-
+  Deprecated. The API doesn't store validation_status data anymore
   Arg [1]    : string $state
   Example    : add_validation_state('cluster');
   Description: Adds a validation state to this variation.
   Returntype : none
   Exceptions : warning if validation state is not a recognised type
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED
 
 =cut
 
 sub add_validation_state {
   my $obj = shift;
   my $state = shift;
-  
-  #Get the bitvalue for the new state 
-  my $newbit = get_validation_code($state) || 0;
-  
-  #Bit-add it to the current validation_code
-  my $oldbit = $obj->{'validation_code'} || 0;
-  $newbit |= $oldbit;
-  
-  # Set the validation_code
-  $obj->{'validation_code'} = $newbit;
-  
+
+  deprecate("The API doesn't store validation_status data anymore. This method will be removed in e86\n");
+
   return;
 }
 
 =head2 get_all_validation_states
-
+  Deprecated. The API doesn't use validation_status data anymore
   Arg [1]    : int $bitval
   Example    : my @vstates = @{get_all_validation_states($var->{'validation_code'})};
   Description: Retrieves all validation states for a specified bit value.
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
+  Status     : DEPRECATED
 
 =cut
 
 sub get_all_validation_states {
+    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e86\n");
     return bitval_to_array(shift,\@VALIDATION_STATES);
 }
 
 =head2 get_validation_code
-
+  Deprecated. The API doesn't use validation_status data anymore
   Arg [1]    : arrayref $validation_status
   Example    : $var->{'validation_code'} = get_validation_code(['submitter','precious']);
   Description: Retrieves the bit value for a combination of validation statuses.
   Returntype : int
   Exceptions : none
   Caller     : Variation::new
-
+  Status     : DEPRECATED
 =cut
 
 sub get_validation_code {
+    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e86\n");
     return array_to_bitval(shift,\@VALIDATION_STATES);
 }
 
