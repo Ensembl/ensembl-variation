@@ -70,7 +70,6 @@ foreach my $synonyms (@synonyms){
 my $a1 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'A', -adaptor => $variation_adaptor);
 my $a2 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'C', -adaptor => $variation_adaptor);
 my $alleles = [$a1,$a2];
-my $validation_states = ['submitter', 'cluster'];
 my $ancestral_allele = 'A';
 my $moltype = 'Genomic';
 my $clin_sig = 'untested';
@@ -83,7 +82,6 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
    -synonyms          => \%syonym,
    -alleles           => $alleles,
    -adaptor           => $variation_adaptor,
-   -validation_states => $validation_states,
    -ancestral_allele  => $ancestral_allele,
    -moltype           => $moltype,
    -is_somatic        => 0,
@@ -114,8 +112,6 @@ my $n = scalar @{$v->get_all_synonyms()};
 ok(@{$v->get_all_synonyms()} == 3, "count synonym");
 ok($v->get_all_synonyms('TSC')->[0] eq '12565', "syonym by source");
 ok($v->get_all_Alleles()->[0]->allele() eq 'A', "allele");
-ok($v->get_all_validation_states()->[0] eq 'cluster' &&
-   $v->get_all_validation_states()->[1] eq 'submitter', "validation");
 
 #test amibg_code
 ok($v->ambig_code() eq 'M', "ambig code");
@@ -152,17 +148,6 @@ ok(@{$v->get_all_synonyms()} == 4, "count synonyms");
 my $a3  = Bio::EnsEMBL::Variation::Allele->new( -allele => '-', -adaptor => $variation_adaptor);
 $v->add_Allele($a3);
 ok($v->get_all_Alleles()->[2] == $a3, "adding allele");
-
-
-# test add_validation_state
-$v->add_validation_state('freq');
-# states are always added in same order
-ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter', "valiation states 1");
-
-# adding the same state twice does nothing
-$v->add_validation_state('freq');
-# states are always added in same order
-ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter', "valiation states 2");
 
 
 #test get_all_SampleGenotypes

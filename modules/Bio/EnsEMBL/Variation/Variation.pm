@@ -42,10 +42,6 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
     $v->add_synonym('dbSNP', 'ss3242');
     $v->add_synonym('TSC', '53253');
 
-    # add some validation states for this SNP
-    $v->add_validation_status('freq');
-    $v->add_validation_status('cluster');
-
     # add alleles associated with this SNP
     $a1 = Bio::EnsEMBL::Allele->new(...);
     $a2 = Bio::EnsEMBL::Allele->new(...);
@@ -72,11 +68,6 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
       @synonyms = $v->get_all_synonyms($src);
       print "$src: @synonyms\n";
     }
-
-
-    # print out validation states
-    my @vstates = @{$v->get_all_validation_states()};
-    print "@validation_states\n";
 
     # print out flanking sequences
     print "5' flanking: ", $v->five_prime_flanking_seq(), "\n";
@@ -144,7 +135,7 @@ use Scalar::Util qw(weaken);
   Arg [-ALLELES] :
     Listref of Bio::EnsEMBL::Variation::Allele objects
 
-  Arg [-VALIDATION_STATES] :
+  Arg [-EVIDENCE] :
     Listref of strings
 
   Arg [-MOLTYPE] :
@@ -174,16 +165,11 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $class_so_term, $source_id, $source, $is_somatic, $flipped, $syns,
-      $ancestral_allele, $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
+      $ancestral_allele, $alleles, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES 
-                      VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES
+                      MOLTYPE FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
                       MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
-
-  # convert the validation state strings into a bit field
-  # this preserves the same order and representation as in the database
-  # and filters out invalid states
-  my $vcode = Bio::EnsEMBL::Variation::Utils::Sequence::get_validation_code($valid_states);
 
   my $self = bless {
     'dbID' => $dbID,
@@ -196,7 +182,6 @@ sub new {
     'flipped' => $flipped,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
-    'validation_code' => $vcode,
     'moltype' => $moltype,
     'five_prime_flanking_seq' => $five_seq,
     'three_prime_flanking_seq' => $three_seq,
@@ -524,7 +509,7 @@ sub add_synonym {
   Example    : my @evidence = @{$v->get_all_evidence_values()};
   Description: Retrieves all evidence values for this variation. Current
                possible evidence values are 'Multiple_observations', 'Frequency',
-               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease'
+               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease', 'ExAC'
   Returntype : Listref of strings
   Exceptions : none
   Caller     : general
@@ -541,7 +526,7 @@ sub get_all_evidence_values {
 
 
 =head2 get_all_validation_states
-
+  Deprecated. Please use get_all_evidence_values() instead.
   Arg [1]    : none
   Example    : my @vstates = @{$v->get_all_validation_states()};
   Description: Retrieves all validation states for this variation.  Current
@@ -550,33 +535,33 @@ sub get_all_evidence_values {
   Returntype : Listref of strings
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED
 
 =cut
 
 sub get_all_validation_states {
-    my $self = shift;
-    
-    return Bio::EnsEMBL::Variation::Utils::Sequence::get_all_validation_states($self->{'validation_code'});
+  my $self = shift;
+
+  deprecate("Please use get_all_evidence_values() instead. This method will be removed in e86\n");
+
+  return $self->get_all_evidence_values();
 }
 
 
-
-
 =head2 add_validation_state
-
+  Deprecated. The API doesn't store validation_state data anymore
   Arg [1]    : string $state
   Example    : $v->add_validation_state('cluster');
   Description: Adds a validation state to this variation.
   Returntype : none
   Exceptions : warning if validation state is not a recognised type
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED
 
 =cut
 
 sub add_validation_state {
-    Bio::EnsEMBL::Variation::Utils::Sequence::add_validation_state(@_);
+  deprecate("The API doesn't store validation_state data anymore. This method will be removed in e86\n");
 }
 
 

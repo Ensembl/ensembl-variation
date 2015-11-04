@@ -150,7 +150,7 @@ our $DEBUG = 0;
   Arg [-SOURCE] :
     object ref - the source object describing where the variant comes from.
 
-  Arg [-VALIDATION_CODE] :
+  Arg [-EVIDENCE] :
      reference to list of strings
 
   Arg [-OVERLAP_CONSEQUENCES] :
@@ -171,7 +171,6 @@ our $DEBUG = 0;
         -variation_name => 'rs635421',
         -map_weight  => 1,
 	      -source  => 'dbSNP',
-	      -validation_code => ['cluster','doublehit'],
         -variation => $v
     );
 
@@ -197,8 +196,7 @@ sub new {
       $variation_id, 
       $source_id,
       $source,
-      $is_somatic, 
-      $validation_code, 
+      $is_somatic,
       $overlap_consequences,
       $class_so_term,
       $minor_allele,
@@ -215,9 +213,8 @@ sub new {
           _VARIATION_ID 
           _SOURCE_ID
           SOURCE
-          IS_SOMATIC 
-          VALIDATION_CODE 
-		  OVERLAP_CONSEQUENCES 
+          IS_SOMATIC
+          OVERLAP_CONSEQUENCES 
           CLASS_SO_TERM
           MINOR_ALLELE
           MINOR_ALLELE_FREQUENCY
@@ -235,7 +232,6 @@ sub new {
   $self->{'_source_id'}             = $source_id;
   $self->{'source'}                 = $source;
   $self->{'is_somatic'}             = $is_somatic;
-  $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'class_SO_term'}          = $class_so_term;
   $self->{'minor_allele'}           = $minor_allele;
@@ -981,13 +977,14 @@ sub class_SO_term {
 
     return $self->{class_SO_term};
 }
+
 =head2 get_all_evidence_values
 
   Arg [1]    : none
-  Example    : my @vstates = @{$vf->get_all_validation_states()};
+  Example    : my @vstates = @{$vf->get_all_evidence_values()};
   Description: Retrieves all evidence values for this variationFeature.  Current
                possible evidence values are 'Multiple_observations', 'Frequency',
-               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease'
+               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease', 'ExAC'
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
@@ -1032,7 +1029,7 @@ sub get_all_clinical_significance_states {
 
 
 =head2 get_all_validation_states
-
+  Deprecated. Please use get_all_evidence_values() instead.
   Arg [1]    : none
   Example    : my @vstates = @{$vf->get_all_validation_states()};
   Description: Retrieves all validation states for this variationFeature.  Current
@@ -1041,30 +1038,33 @@ sub get_all_clinical_significance_states {
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED
 
 =cut
 
 sub get_all_validation_states {
-    my $self = shift;
-    return Bio::EnsEMBL::Variation::Utils::Sequence::get_all_validation_states($self->{'validation_code'});
+  my $self = shift;
+
+  deprecate("Please use get_all_evidence_values() instead. This method will be removed in e86\n");
+
+  return $self->get_all_evidence_values();
 }
 
 
 =head2 add_validation_state
-
+  Deprecated. The API doesn't store validation_state data anymore
   Arg [1]    : string $state
-  Example    : $vf->add_validation_state('cluster');
+  Example    : $v->add_validation_state('cluster');
   Description: Adds a validation state to this variation.
   Returntype : none
   Exceptions : warning if validation state is not a recognised type
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED
 
 =cut
 
 sub add_validation_state {
-    Bio::EnsEMBL::Variation::Utils::Sequence::add_validation_state(@_);
+  deprecate("The API doesn't store validation_state data anymore.  This method will be removed in e86\n");
 }
 
 

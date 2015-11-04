@@ -147,7 +147,6 @@ sub store {
             map_weight,
             flags,
             source_id,
-            validation_status,
             consequence_types,
             variation_set_id,
             class_attrib_id,
@@ -157,7 +156,7 @@ sub store {
             minor_allele_count,
             alignment_quality,
             evidence_attribs
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -171,7 +170,6 @@ sub store {
         $vf->map_weight || 1,
         $vf->{flags},
         $vf->{source} ? $vf->{source}->dbID : $vf->{_source_id},
-        (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
         $vf->{class_attrib_id} || ( $vf->{class_SO_term} && $self->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $vf->{class_SO_term}) ) || 18,
@@ -239,7 +237,6 @@ sub update {
             map_weight = ?,
             flags = ?,
             source_id = ?,
-            validation_status = ?,
             consequence_types = ?,
             variation_set_id = ?,
             class_attrib_id = ?,
@@ -263,7 +260,6 @@ sub update {
         $vf->map_weight || 1,
         $vf->{flags},
         $vf->{source} ? $vf->{source}->dbID : $vf->{_source_id},
-        (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ?
           (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
@@ -1259,7 +1255,7 @@ sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight vf.source_id vf.somatic 
-             vf.validation_status vf.consequence_types vf.class_attrib_id
+             vf.consequence_types vf.class_attrib_id
              vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality 
              vf.evidence_attribs vf.clinical_significance vf.display);
 }
@@ -1287,16 +1283,16 @@ sub _objs_from_sth {
     my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_id,
-      $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
+      $is_somatic, $consequence_types, $class_attrib_id,
       $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,
       $alignment_quality,$evidence_attribs,$clin_sig,$display );
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight, \$source_id, \$is_somatic, \$validation_status, 
+                     \$map_weight, \$source_id, \$is_somatic,
                      \$consequence_types, \$class_attrib_id,
-		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,
+                     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,
                      \$alignment_quality, \$evidence_attribs, \$clin_sig, \$display);
 
     my $asm_cs;
@@ -1397,21 +1393,17 @@ sub _objs_from_sth {
                 }
                 $slice = $dest_slice;
             }
-            my $validation_code;
-            if (defined($validation_status)) {
-                $validation_code = get_validation_code([split(',',$validation_status)]);
+
+            my @evidence;
+            if (defined($evidence_attribs)) {
+              my $aa  = $self->db->get_AttributeAdaptor;
+              my @attrib_ids = split(/,/,$evidence_attribs);
+              foreach my $attrib_id (@attrib_ids){
+                my $evidence_value = $aa->attrib_value_for_id($attrib_id);
+                push @evidence, $evidence_value ;
+              }
             }
-	    my @evidence;
-	    if (defined($evidence_attribs)) {
-		my $aa  = $self->db->get_AttributeAdaptor;
-		my @attrib_ids = split(/,/,$evidence_attribs);
-		foreach my $attrib_id (@attrib_ids){
-		    my $evidence_value = $aa->attrib_value_for_id($attrib_id);
-		    push @evidence, $evidence_value ;
-		}
-	    }
-	   
-      
+
             my @clin_sig;
             if (defined($clin_sig)) {
               @clin_sig = split(/,/,$clin_sig );
@@ -1438,7 +1430,6 @@ sub _objs_from_sth {
                 'map_weight' => $map_weight,
                 '_source_id'   => $source_id,
                 'is_somatic' => $is_somatic,
-                'validation_code' => $validation_code,
                 'overlap_consequences' => $overlap_consequences,
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),

@@ -1,899 +1,899 @@
-20985957	1	rs111067473	\N	\N	0	18	0	\N	\N	\N	\N	\N	0
-7930418	1	rs12360064	hapmap	\N	0	2	0	\N	\N	\N	\N	\N	1
-57137110	1	rs371828972	\N	\N	0	2	0	\N	\N	\N	\N	\N	1
-5808764	1	rs9882584	cluster,freq,doublehit,hapmap,1000Genome	\N	0	2	0	C	0.293388	639	\N	\N	0
-41158182	1	rs183972897	1000Genome	\N	0	2	0	G	0.00137741	3	\N	\N	1
-56515594	1	rs371163522	\N	\N	0	2	0	\N	\N	\N	\N	\N	1
-27085574	1	rs138574806	1000Genome	\N	0	2	0	T	0.000918274	2	\N	\N	1
-1748253	1	rs2299222	cluster,freq,submitter,hapmap,1000Genome	\N	0	2	0	C	0.0399449	87	\N	\N	1
-3776807	1	rs6129257	hapmap	\N	0	2	0	\N	\N	\N	\N	\N	1
-44132876	1	rs186950277	1000Genome	\N	0	2	0	A	0.00137741	3	\N	\N	1
-57993427	1	rs372745831	\N	\N	0	2	0	\N	\N	\N	\N	\N	1
-40717093	1	rs183531458	1000Genome	\N	0	2	0	T	0.000604595	1	\N	\N	1
-4770800	1	rs7569578	cluster,freq,doublehit,hapmap,1000Genome	A	0	2	0	A	0.164371	358	benign,likely benign,likely pathogenic,drug response,histocompatibility	367,368,369,370	1
-44527501	1	rs187345249	cluster,1000Genome	\N	0	2	0	T	0.000459137	1	\N	\N	1
-40763453	1	rs183577856	cluster,1000Genome	\N	0	2	0	C	0.000918274	2	\N	\N	1
-6106976	1	rs10193249	cluster	\N	0	2	0	\N	\N	\N	\N	\N	1
-24098261	1	rs114402518	cluster,freq,1000Genome	\N	0	2	0	A	0.00918274	20	\N	\N	1
-9051025	1	rs17081232	cluster,freq,1000Genome	G	0	2	0	A	0.244261	532	\N	\N	1
-30220007	1	rs142276873	cluster,1000Genome	G	0	2	0	A	0.123049	268	\N	367,370	1
-18671529	1	rs77284492	cluster,freq,1000Genome	\N	0	2	0	A	0.0119376	26	\N	\N	1
-49574443	1	rs192396716	1000Genome	\N	0	2	0	G	0.000459137	1	\N	\N	1
-14128071	1	rs67521280	\N	\N	0	14	0	\N	\N	\N	\N	\N	0
-4897829	1	rs7698608	cluster,freq,doublehit,hapmap,1000Genome	\N	0	2	0	C	0.448577	977	\N	\N	1
-2979980	1	rs4492973	cluster,doublehit,1000Genome	\N	0	2	0	C	0.0528007	115	\N	\N	1
-10089212	1	rs34490520	cluster,freq,1000Genome	\N	0	2	0	A	0.0224977	49	\N	\N	1
-26469702	1	rs121908760	\N	\N	0	2	0	\N	\N	\N	pathogenic	\N	1
-25992950	1	rs117161559	freq,1000Genome	\N	0	2	0	G	0.00688705	15	\N	\N	1
-63646321	26	COSM946275	\N	\N	1	2	1	\N	\N	\N	\N	\N	1
-39404961	1	rs182218163	1000Genome	\N	0	2	0	T	0.000459137	1	\N	\N	1
-61997151	1	rs377040510	\N	\N	0	2	0	\N	\N	\N	\N	\N	1
-1	1	tmp__	\N		\N	1	0	\N	\N	\N	\N	\N	1
-63646322	1	rs2255888	freq,hapmap,1000Genome	\N	0	2	0	\N	\N	\N	\N	\N	1
-63646323	1	rs144235347		\N	0	2	0	\N	\N	\N	\N	\N	1
-63646324	1	rs1162	cluster,freq,doublehit,hapmap,1000Genome	\N	0	2	0	\N	\N	\N	\N	\N	1
-11951520	1	rs56179254	cluster,freq	G	0	2	0	\N	\N	\N		367,368,372	1
-20949480	1	rs80359157	\N	C	0	2	0	\N	\N	\N		\N	1
-20949482	1	rs80359159	cluster	C	0	2	0	\N	\N	\N	pathogenic	\N	1
-20949483	1	rs80359161	\N	G	0	2	0	\N	\N	\N	\N	\N	1
-20949484	1	rs80359162	\N	C	0	2	0	\N	\N	\N		\N	1
-20949486	1	rs80359164	\N	A	0	2	0	\N	\N	\N		\N	1
-20949487	1	rs80359165	cluster	A	0	2	0	\N	\N	\N	pathogenic	367,372	1
-51737500	1	rs200814465	\N	A	0	2	0	\N	\N	\N	\N	368	1
-53003732	1	rs202155613	cluster,1000Genome	C	0	2	0	G	0.000459137	1	\N	367	1
-936135	1	rs1333047	cluster,freq,doublehit,hapmap,1000Genome	T	0	2	0	A	0.341598	744	\N	367,368,369,370,371	1
-63646327	1	rs2686912	\N	G	1	2	0	\N	\N	\N	\N	367	1
-63646329	1	rs187207343	1000Genome	C	\N	2	0	T	0.000459137	1	\N	370	1
-63646330	1	rs372423729	\N	A	\N	2	0	\N	\N	\N	\N	\N	1
-63646331	1	rs7811371	cluster,freq,hapmap,1000Genome	G	\N	2	0	A	0.0316804	69	\N	367,368,369,370	1
-63646332	1	rs182759002	1000Genome	C	\N	2	0	G	0.00137741	3	\N	370	1
-63646333	1	rs6953261	cluster,freq,doublehit,hapmap,1000Genome	T	\N	2	0	T	0.310836	677	\N	367,368,369,370	1
-63646334	1	rs9606207	\N	T	\N	2	0	\N	\N	\N	\N	\N	1
-63646335	1	rs372526539	\N	A	\N	2	0	\N	\N	\N	\N	\N	1
-63646336	1	rs182313188	1000Genome	C	\N	2	0	T	0.000918274	2	\N	370	1
-63646337	1	rs140471675	1000Genome	G	\N	2	0	A	0.00505051	11	\N	370	1
-63646338	1	rs77560907	cluster,freq,1000Genome	G	\N	2	0	A	0.0528007	115	\N	367,368,370	1
-63646339	1	rs187605906	1000Genome	T	\N	2	0	C	0.000459137	1	\N	370	1
-32633975	1	rs145134970	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-6499767	1	rs10757279	cluster,freq,doublehit,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,370,371	1
-3379920	1	rs4977575	cluster,freq,doublehit,hapmap,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370	1
-35985982	1	rs149114363	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-38517888	1	rs181330262	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-15292318	1	rs72655407	cluster,freq,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
-15939031	1	rs73443203	cluster,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
-16102185	1	rs73650062	cluster,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
-40768405	1	rs183582810	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-20641511	1	rs79944118	cluster,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,370	1
-45448905	1	rs188267508	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-936136	1	rs1333048	cluster,freq,doublehit,hapmap,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
-22784039	1	rs112935422	1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,370	1
-936137	1	rs1333049	cluster,freq,submitter,doublehit,hapmap,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
-29674364	1	rs141631698	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-38148693	1	rs180960747	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-16102186	1	rs73650063	cluster,freq,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
-26999456	1	rs138473131	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-44426212	1	rs187243869	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-49174309	1	rs191996219	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-38798524	1	rs181611157	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-44149082	1	rs186966498	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-31703565	1	rs144033269	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-936138	1	rs1333050	cluster,freq,doublehit,hapmap,1000Genome	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
-47382962	1	rs190203239	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-39982579	1	rs182796288	1000Genome	\N	\N	2	0	\N	\N	\N	\N	370	1
-48637689	1	rs193053973	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99487608	1	rs565196557	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-62089654	1	rs527798603	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-81735847	1	rs547444796	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-39165074	1	rs183559947	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95651998	1	rs561360947	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-12197588	1	rs59345015	cluster	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-64210990	1	rs529919939	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-29450865	1	rs143162807	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-35898674	1	rs150880895	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52681874	1	rs368835939	\N	\N	\N	2	0	\N	\N	\N		\N	1
-72689513	1	rs538398462	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86649732	1	rs552358681	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99902491	1	rs565611440	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53811229	1	rs370058043	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57419370	1	rs373967954	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59920392	1	rs376683828	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-53565993	1	rs369792497	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56299147	1	rs372753126	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50478027	1	rs201200629	\N	\N	\N	2	0	\N	\N	\N		\N	1
-51160129	1	rs201937354	\N	\N	\N	2	0	\N	\N	\N		\N	1
-49656369	1	rs200315462	\N	\N	\N	2	0	\N	\N	\N		\N	1
-91142078	1	rs556851027	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-16429043	1	rs75898802	\N	\N	\N	2	0	\N	\N	\N		\N	1
-79530753	1	rs545239702	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-42705674	1	rs187108590	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-24501765	1	rs117126977	\N	\N	\N	2	0	\N	\N	\N		\N	1
-75838482	1	rs541547431	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95226676	1	rs560935625	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-64372377	1	rs530081326	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-20524612	1	rs112008389	\N	\N	\N	2	0	\N	\N	\N		\N	1
-21340237	1	rs112895239	\N	\N	\N	12	0	\N	\N	\N		\N	1
-97491949	1	rs563200898	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-66749576	1	rs532458525	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-47520639	1	rs191934459	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-100193015	1	rs565901964	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-68703266	1	rs534412215	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-82605682	1	rs548314631	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-21248891	1	rs112795925	\N	\N	\N	2	0	\N	\N	\N		\N	1
-71298343	1	rs537007292	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-91305269	1	rs557014218	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-111069711	1	rs576778660	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-11842461	1	rs57808314	\N	\N	\N	2	0	\N	\N	\N		\N	1
-93484039	1	rs559192988	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-93157920	1	rs558866869	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-31135071	1	rs145173944	\N	\N	\N	2	0	\N	\N	\N		\N	1
-9459177	1	rs34059914	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-26834866	1	rs140043269	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58699688	1	rs375357663	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-65136238	1	rs530845187	\N	\N	\N	2	0	\N	\N	\N		\N	1
-84841692	1	rs550550641	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-108892228	1	rs574601177	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95185431	1	rs560894380	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-77668082	1	rs543377031	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-22484505	1	rs114184303	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-66581755	1	rs532290704	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-79068572	1	rs544777521	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-8952041	1	rs17496586	\N	\N	\N	2	0	\N	\N	\N		\N	1
-93572329	1	rs559281278	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-62535745	1	rs528244694	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-21106666	1	rs112641095	\N	\N	\N	2	0	\N	\N	\N		\N	1
-10484575	1	rs35370278	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-383173	1	rs544021	\N	\N	\N	2	0	\N	\N	\N		\N	1
-74626102	1	rs540335051	\N	\N	\N	2	0	\N	\N	\N		\N	1
-39787467	1	rs184183759	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59932521	1	rs376696968	\N	\N	\N	2	0	\N	\N	\N		\N	1
-104749635	1	rs570458584	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-9568253	1	rs34198417	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-73244000	1	rs538952949	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93538991	1	rs559247940	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-100535955	1	rs566244904	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86306703	1	rs552015652	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-69470314	1	rs535179263	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-42231022	1	rs186632859	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-108862006	1	rs574570955	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-77835754	1	rs543544703	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-91218818	1	rs556927767	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-111507684	1	rs577216633	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-80173482	1	rs545882431	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93852255	1	rs559561204	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103250047	1	rs568958996	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-62684602	1	rs528393551	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-76310935	1	rs542019884	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-13796233	1	rs71457726	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-96180837	1	rs561889786	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-15441597	1	rs74538782	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56549295	1	rs373024374	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59881405	1	rs376641441	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-29824854	1	rs143609138	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-72173223	1	rs537882172	\N	\N	\N	2	0	\N	\N	\N		\N	1
-32501540	1	rs146808586	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-100619529	1	rs566328478	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-47965059	1	rs192379895	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-66655816	1	rs532364765	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-427996	1	rs597626	\N	\N	\N	2	0	\N	\N	\N		\N	1
-89018807	1	rs554727756	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-102648149	1	rs568357098	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-71436551	1	rs537145500	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-91281933	1	rs556990882	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-111569135	1	rs577278084	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74080548	1	rs539789497	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87408461	1	rs553117410	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-107364371	1	rs573073320	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-27313265	1	rs140613388	\N	\N	\N	2	0	\N	\N	\N		\N	1
-96144170	1	rs561853119	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-109846079	1	rs575555028	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-78712107	1	rs544421056	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58571026	1	rs375218111	\N	\N	\N	2	0	\N	\N	\N		\N	1
-41164445	1	rs185563817	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-29419997	1	rs143125973	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-46075078	1	rs190485593	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-36170884	1	rs151207527	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53332053	1	rs369539518	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-24701384	1	rs117569537	\N	\N	\N	2	0	\N	\N	\N		\N	1
-102709209	1	rs568418158	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53799846	1	rs370045702	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-12670147	1	rs61393902	\N	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-61430055	1	rs398016471	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-71499902	1	rs537208851	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-7737826	1	rs12418904	\N	\N	\N	2	0	\N	\N	\N		\N	1
-33811689	1	rs148377955	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-85203041	1	rs550911990	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87890048	1	rs553598997	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-105190302	1	rs570899251	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-56087393	1	rs372523579	\N	\N	\N	2	0	\N	\N	\N		\N	1
-87603921	1	rs553312870	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-107673002	1	rs573381951	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-27114096	1	rs140376150	\N	\N	\N	2	0	\N	\N	\N		\N	1
-37370829	1	rs181761647	\N	\N	\N	2	0	\N	\N	\N		\N	1
-89942403	1	rs555651352	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-18636907	1	rs78940060	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53509387	1	rs369731305	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-40072200	1	rs184469093	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59829990	1	rs376585545	\N	\N	\N	2	0	\N	\N	\N		\N	1
-111936632	1	rs577645581	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-44135144	1	rs188541322	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-94380793	1	rs560089742	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-63102425	1	rs528811374	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-82867106	1	rs548576055	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-21750338	1	rs113341514	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-85005765	1	rs550714714	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-24685267	1	rs117533632	\N	\N	\N	2	0	\N	\N	\N		\N	1
-36654105	1	rs181043346	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-1272422	1	rs1791690	\N	\N	\N	2	0	\N	\N	\N		\N	1
-105279727	1	rs570988676	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74207346	1	rs539916295	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-24516596	1	rs117160185	\N	\N	\N	2	0	\N	\N	\N		\N	1
-35485339	1	rs150384593	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6760196	1	rs11227528	\N	\N	\N	2	0	\N	\N	\N		\N	1
-41120623	1	rs185519895	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95246756	1	rs560955705	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-46495913	1	rs190907372	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-72070423	1	rs537779372	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103819493	1	rs569528442	\N	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-92214821	1	rs557923770	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87403263	1	rs553112212	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-11685147	1	rs57127845	\N	\N	\N	2	0	\N	\N	\N		\N	1
-74715085	1	rs540424034	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74470530	1	rs540179479	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-87836404	1	rs553545353	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49363170	1	rs199999916	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-107706301	1	rs573415250	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-16379717	1	rs75830916	\N	\N	\N	2	0	\N	\N	\N		\N	1
-96461512	1	rs562170461	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-65383292	1	rs531092241	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-36566130	1	rs180955186	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-98993480	1	rs564702429	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54624603	1	rs370938559	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-49142136	1	rs199762276	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-59317536	1	rs376028578	\N	\N	\N	2	0	\N	\N	\N		\N	1
-51371490	1	rs202165715	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-53734795	1	rs369975190	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-42882800	1	rs187286120	\N	\N	\N	2	0	\N	\N	\N		\N	1
-101229237	1	rs566938186	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-47661861	1	rs192076014	\N	\N	\N	2	0	\N	\N	\N		\N	1
-82192785	1	rs547901734	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-31633482	1	rs145769591	\N	\N	\N	2	0	\N	\N	\N		\N	1
-66531996	1	rs532240945	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-103599994	1	rs569308943	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-72431508	1	rs538140457	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-51689253	1	rs367762793	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50754056	1	rs201498603	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-338639	1	rs490998	\N	\N	\N	2	0	\N	\N	\N		\N	1
-25705693	1	rs138699570	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56897921	1	rs373402473	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59518262	1	rs376246680	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54325254	1	rs370614471	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-68003865	1	rs533712814	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103313312	1	rs569022261	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-11438128	1	rs56146874	\N	\N	\N	2	0	\N	\N	\N		\N	1
-65730410	1	rs531439359	\N	\N	\N	2	0	\N	\N	\N		\N	1
-76637544	1	rs542346493	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-38633380	1	rs183027086	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-110296121	1	rs576005070	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-79285016	1	rs544993965	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6359893	1	rs10791881	\N	\N	\N	2	0	\N	\N	\N		\N	1
-67986273	1	rs533695222	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6359894	1	rs10791882	\N	\N	\N	2	0	\N	\N	\N		\N	1
-94987782	1	rs560696731	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54504435	1	rs370808453	\N	\N	\N	2	0	\N	\N	\N		\N	1
-30809476	1	rs144785164	\N	\N	\N	2	0	\N	\N	\N		\N	1
-42950154	1	rs187353633	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-65856276	1	rs531565225	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86057600	1	rs551766549	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-105712640	1	rs571421589	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-46262452	1	rs190673378	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58117545	1	rs374725723	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-81462550	1	rs547171499	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-101452061	1	rs567161010	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-70233795	1	rs535942744	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-90086412	1	rs555795361	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-19309096	1	rs79867392	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-79596393	1	rs545305342	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-15447161	1	rs74546442	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-110389900	1	rs576098849	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-33619656	1	rs148147816	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-28477461	1	rs142000945	\N	\N	\N	2	0	\N	\N	\N		\N	1
-38157410	1	rs182550065	\N	\N	\N	2	0	\N	\N	\N		\N	1
-42841178	1	rs187244400	\N	\N	\N	2	0	\N	\N	\N		\N	1
-94950922	1	rs560659871	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-48216941	1	rs192632292	\N	\N	\N	2	0	\N	\N	\N		\N	1
-40085789	1	rs184482712	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-44602173	1	rs189009403	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-94504181	1	rs560213130	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-93018914	1	rs558727863	\N	\N	\N	2	0	\N	\N	\N		\N	1
-19940354	1	rs111373258	\N	\N	\N	2	0	\N	\N	\N		\N	1
-20651465	1	rs112146418	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-99604582	1	rs565313531	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-61870826	1	rs527579775	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-48735349	1	rs193151864	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-378381	1	rs538330	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-10597143	1	rs35515266	\N	\N	\N	12	0	\N	\N	\N		\N	1
-101521288	1	rs567230237	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-57064601	1	rs373583366	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-35734987	1	rs150684733	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-40330726	1	rs184728197	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-26961615	1	rs140194286	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103915093	1	rs569624042	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-44385965	1	rs188792688	\N	\N	\N	2	0	\N	\N	\N		\N	1
-66350104	1	rs532059053	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-29767425	1	rs143540578	\N	\N	\N	2	0	\N	\N	\N		\N	1
-88906340	1	rs554615289	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-92544290	1	rs558253239	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-37207335	1	rs181597797	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-468994	1	rs647476	\N	\N	\N	2	0	\N	\N	\N		\N	1
-26475194	1	rs139615291	\N	\N	\N	2	0	\N	\N	\N		\N	1
-108690964	1	rs574399913	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-77505378	1	rs543214327	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99193289	1	rs564902238	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-51751085	1	rs367829722	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-11638901	1	rs56928794	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-20359031	1	rs111828343	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-3432337	1	rs5792393	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-35441510	1	rs150332198	cluster,1000Genome	\N	\N	12	0	\N	\N	\N		\N	1
-1558406	1	rs2096583	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-3375129	1	rs4990284	\N	\N	\N	2	0	\N	\N	\N		\N	1
-468626	1	rs647029	\N	\N	\N	2	0	\N	\N	\N		\N	1
-79813205	1	rs545522154	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49725477	1	rs200389883	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-2708049	1	rs4013815	\N	\N	\N	12	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-31454636	1	rs145556235	\N	\N	\N	2	0	\N	\N	\N		\N	1
-61927935	1	rs527636884	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-39485906	1	rs183881494	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55895262	1	rs372315310	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-10279664	1	rs35107173	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-65017375	1	rs530726324	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-34219992	1	rs148867550	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-19146900	1	rs79643360	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-28699456	1	rs142265818	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-52611824	1	rs368760322	\N	\N	\N	2	0	\N	\N	\N		\N	1
-45297115	1	rs189705873	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-104158894	1	rs569867843	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95315414	1	rs561024363	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-66390269	1	rs532099218	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86588352	1	rs552297301	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99938718	1	rs565647667	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-29002977	1	rs142627911	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57718956	1	rs374293113	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-88915807	1	rs554624756	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-109060045	1	rs574768994	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-9552164	1	rs34177967	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-102227798	1	rs567936747	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59797449	1	rs376550230	\N	\N	\N	2	0	\N	\N	\N		\N	1
-90760713	1	rs556469662	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-110912051	1	rs576621000	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-1944434	1	rs2509559	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-1944433	1	rs2509558	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-79563411	1	rs545272360	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-7570210	1	rs12222434	\N	\N	\N	2	0	\N	\N	\N		\N	1
-106517328	1	rs572226277	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-1945916	1	rs2511216	\N	\N	\N	2	0	\N	\N	\N		\N	1
-10814066	1	rs35794957	\N	\N	\N	5	0	\N	\N	\N	\N	\N	1
-1945917	1	rs2511217	\N	\N	\N	2	0	\N	\N	\N		\N	1
-19419519	1	rs80019849	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-10290988	1	rs35121692	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-111284874	1	rs576993823	\N	\N	\N	12	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-25701310	1	rs138694339	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-36447227	1	rs180836022	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6902012	1	rs11448724	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-59546801	1	rs376277697	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-56872429	1	rs373374755	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-10661585	1	rs35598096	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-20019076	1	rs111458945	\N	\N	\N	2	0	\N	\N	\N		\N	1
-97625795	1	rs563334744	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-19555832	1	rs80207660	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-57495294	1	rs374050345	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-60325730	1	rs377124055	\N	\N	\N	2	0	\N	\N	\N		\N	1
-13796234	1	rs71457727	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-54186096	1	rs370463721	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57859352	1	rs374445358	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-51636818	1	rs367706008	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56459180	1	rs372926742	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-49960372	1	rs200642793	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-100041803	1	rs565750752	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-62513285	1	rs528222234	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-82481924	1	rs548190873	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-102392299	1	rs568101248	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-13796235	1	rs71457728	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54394954	1	rs370689871	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-33368086	1	rs147846428	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-6453274	1	rs10896127	cluster	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-12290956	1	rs59749879	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-865482	1	rs1188610	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-91057840	1	rs556766789	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52636025	1	rs368786434	\N	\N	\N	2	0	\N	\N	\N		\N	1
-108637965	1	rs574346914	\N	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-11563270	1	rs56394515	\N	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-57538702	1	rs374097478	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-73483312	1	rs539192261	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93200362	1	rs558909311	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58895802	1	rs375570577	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54149943	1	rs370424638	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56892831	1	rs373396941	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-60741671	1	rs377576225	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-78174665	1	rs543883614	\N	\N	\N	2	0	\N	\N	\N		\N	1
-108830768	1	rs574539717	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-77747289	1	rs543456238	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54441718	1	rs370740496	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-97854644	1	rs563563593	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-66617885	1	rs532326834	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-37404458	1	rs181795354	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93911237	1	rs559620186	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-26944089	1	rs140173495	\N	\N	\N	2	0	\N	\N	\N		\N	1
-23049107	1	rs114978179	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-10793135	1	rs35767888	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-96057424	1	rs561766373	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-35441940	1	rs150332716	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-84615310	1	rs550324259	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-104595893	1	rs570304842	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99658304	1	rs565367253	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-25111213	1	rs137992441	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52598992	1	rs368746409	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-34837316	1	rs149608017	\N	\N	\N	2	0	\N	\N	\N		\N	1
-100266255	1	rs565975204	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-69082935	1	rs534791884	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-88888090	1	rs554597039	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55188163	1	rs371549163	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52209071	1	rs368324882	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54264985	1	rs370549158	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59200769	1	rs375901785	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-52216996	1	rs368333449	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-9817894	1	rs34515982	\N	\N	\N	2	0	\N	\N	\N		\N	1
-100572569	1	rs566281518	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-59378332	1	rs376094609	\N	\N	\N	2	0	\N	\N	\N		\N	1
-91395229	1	rs557104178	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49783411	1	rs200452235	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57042481	1	rs373559300	\N	\N	\N	2	0	\N	\N	\N		\N	1
-53326220	1	rs369533215	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-24196604	1	rs116592366	\N	\N	\N	2	0	\N	\N	\N		\N	1
-76343620	1	rs542052569	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59248288	1	rs375953442	\N	\N	\N	2	0	\N	\N	\N		\N	1
-50864518	1	rs201617889	\N	\N	\N	2	0	\N	\N	\N		\N	1
-84821081	1	rs550530030	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-60001314	1	rs376771744	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59933622	1	rs376698169	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54614147	1	rs370927251	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-12851769	1	rs61890370	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-51474859	1	rs267603128	\N	\N	\N	2	0	\N	\N	\N	\N		1
-30437189	1	rs144340728	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60581264	1	rs377401840	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-86790503	1	rs552499452	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-100326448	1	rs566035397	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-104593404	1	rs570302353	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-69139618	1	rs534848567	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-42084918	1	rs186486417	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-25954091	1	rs138995175	\N	\N	\N	2	0	\N	\N	\N		\N	1
-71473518	1	rs537182467	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-72130910	1	rs537839859	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-12851770	1	rs61890371	\N	\N	\N	2	0	\N	\N	\N		\N	1
-28722776	1	rs142293523	\N	\N	\N	2	0	\N	\N	\N		\N	1
-74113708	1	rs539822657	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-24867342	1	rs117938990	\N	\N	\N	2	0	\N	\N	\N		\N	1
-72658889	1	rs538367838	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-22350879	1	rs113996345	\N	\N	\N	2	0	\N	\N	\N		\N	1
-76310873	1	rs542019822	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87806869	1	rs553515818	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-106506082	1	rs572215031	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-18351811	1	rs78546822	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-7570707	1	rs12223171	\N	\N	\N	2	0	\N	\N	\N		\N	1
-109575846	1	rs575284795	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-78310140	1	rs544019089	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-98398603	1	rs564107552	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-67038552	1	rs532747501	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74143125	1	rs539852074	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53930600	1	rs370187321	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59460627	1	rs376183971	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-38727990	1	rs183121899	\N	\N	\N	2	0	\N	\N	\N		\N	1
-63078040	1	rs528786989	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-32072572	1	rs146294881	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54704387	1	rs371024898	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-58705456	1	rs375363893	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-52218026	1	rs368334575	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-26418762	1	rs139548317	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-65320494	1	rs531029443	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55723304	1	rs372129294	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-85039821	1	rs550748770	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58485873	1	rs375125612	\N	\N	\N	2	0	\N	\N	\N		\N	1
-105221279	1	rs570930228	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-107575128	1	rs573284077	\N	\N	\N	12	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74097596	1	rs539806545	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87719217	1	rs553428166	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-15632639	1	rs74802042	\N	\N	\N	2	0	\N	\N	\N		\N	1
-21576986	1	rs113153038	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-70076971	1	rs535785920	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-89822998	1	rs555531947	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-7204730	1	rs11823504	\N	\N	\N	2	0	\N	\N	\N		\N	1
-35692535	1	rs150633715	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60538081	1	rs377354912	\N	\N	\N	2	0	\N	\N	\N		\N	1
-78112531	1	rs543821480	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-111975505	1	rs577684454	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-56850606	1	rs373351050	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-59990494	1	rs376760022	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-6271892	1	rs10647726	\N	\N	\N	10	0	\N	\N	\N		\N	1
-12656924	1	rs61336335	cluster	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-12250400	1	rs59574118	\N	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-60459687	1	rs377269719	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-33177173	1	rs147617581	cluster	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-61291399	1	rs397824296	cluster	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-28107147	1	rs141559427	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-74110003	1	rs539818952	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-26612693	1	rs139778616	\N	\N	\N	2	0	\N	\N	\N		\N	1
-372655	1	rs531490	\N	\N	\N	2	0	\N	\N	\N		\N	0
-76454226	1	rs542163175	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-96696770	1	rs562405719	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52060240	1	rs368163887	\N	\N	\N	2	0	\N	\N	\N		\N	1
-111671630	1	rs577380579	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-495263	1	rs679228	\N	\N	\N	2	0	\N	\N	\N		\N	1
-105118341	1	rs570827290	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-67786807	1	rs533495756	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-84077029	1	rs549785978	\N	\N	\N	2	0	\N	\N	\N		\N	1
-101207028	1	rs566915977	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-43784645	1	rs188190059	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-89618124	1	rs555327073	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103433194	1	rs569142143	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-102385791	1	rs568094740	\N	\N	\N	2	0	\N	\N	\N		\N	1
-46925698	1	rs191338154	\N	\N	\N	2	0	\N	\N	\N		\N	1
-38438533	1	rs182831801	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6453275	1	rs10896128	\N	\N	\N	2	0	\N	\N	\N		\N	1
-43044531	1	rs187448221	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-494583	1	rs678397	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56381395	1	rs372842284	\N	\N	\N	2	0	\N	\N	\N		\N	1
-76513104	1	rs542222053	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53755105	1	rs369997208	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-96499395	1	rs562208344	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-28705623	1	rs142273140	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60773056	1	rs377610342	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54683458	1	rs371002263	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-493835	1	rs677488	\N	\N	\N	2	0	\N	\N	\N		\N	1
-99029598	1	rs564738547	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-67749609	1	rs533458558	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-88269111	1	rs553978060	\N	\N	\N	2	0	\N	\N	\N		\N	1
-46912257	1	rs191324676	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58422179	1	rs375056410	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-63555637	1	rs529264586	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52139635	1	rs368249676	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-6760198	1	rs11227530	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-83665782	1	rs549374731	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103321186	1	rs569030135	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58593042	1	rs375241946	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-72464970	1	rs538173919	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-85567095	1	rs551276044	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-9964977	1	rs34704108	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-49897341	1	rs200574979	\N	\N	\N	2	0	\N	\N	\N		\N	1
-83629750	1	rs549338699	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-54886501	1	rs371222320	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58108922	1	rs374716398	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-53695442	1	rs369932492	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50743405	1	rs201487054	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59836760	1	rs376592844	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-53270531	1	rs369473048	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56904060	1	rs373409167	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60670374	1	rs377498768	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54303644	1	rs370591007	\N	\N	\N	2	0	\N	\N	\N		\N	1
-90441755	1	rs556150704	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-56868237	1	rs373370220	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-60569230	1	rs377388767	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-55247766	1	rs371613741	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-110125669	1	rs575834618	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-30609373	1	rs144546392	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52347156	1	rs368474114	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50788809	1	rs201536131	\N	\N	\N	2	0	\N	\N	\N		\N	1
-112476281	1	rs578185230	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-18629320	1	rs78929709	\N	\N	\N	2	0	\N	\N	\N		\N	1
-94827922	1	rs560536871	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-63722136	1	rs529431085	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-103563609	1	rs569272558	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-83378803	1	rs549087752	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-12851795	1	rs61890399	\N	\N	\N	2	0	\N	\N	\N		\N	1
-65794241	1	rs531503190	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-85895751	1	rs551604700	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55379310	1	rs371756314	\N	\N	\N	2	0	\N	\N	\N		\N	1
-67992763	1	rs533701712	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59090169	1	rs375781686	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52838515	1	rs369005221	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-49122713	1	rs199741304	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-60911398	1	rs377760740	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-111954624	1	rs577663573	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-10955051	1	rs35977173	\N	\N	\N	2	0	\N	\N	\N		\N	1
-86293879	1	rs552002828	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-70673601	1	rs536382550	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-90169223	1	rs555878172	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55206663	1	rs371569219	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50145761	1	rs200842599	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-51044891	1	rs201812719	\N	\N	\N	2	0	\N	\N	\N		\N	1
-72552798	1	rs538261747	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54355804	1	rs370647530	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-49267623	1	rs199897168	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60094285	1	rs376872731	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54002402	1	rs370264933	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57931816	1	rs374523998	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-112545000	1	rs578253949	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58380791	1	rs375011535	\N	\N	\N	2	0	\N	\N	\N		\N	1
-88727342	1	rs554436291	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-108330578	1	rs574039527	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-38736309	1	rs183130234	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-29698766	1	rs143458538	\N	\N	\N	2	0	\N	\N	\N		\N	1
-1467349	1	rs2000939	\N	\N	\N	2	0	\N	\N	\N		\N	1
-43448140	1	rs187852781	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-47589679	1	rs192003678	1000Genome	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-99097795	1	rs564806744	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-35952926	1	rs150945945	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-81462685	1	rs547171634	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-51389245	1	rs202184913	\N	\N	\N	2	0	\N	\N	\N		\N	1
-64042201	1	rs529751150	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-27456296	1	rs140783486	\N	\N	\N	2	0	\N	\N	\N		\N	1
-103954287	1	rs569663236	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-31077226	1	rs145104915	\N	\N	\N	2	0	\N	\N	\N		\N	1
-12300704	1	rs59792175	\N	\N	\N	2	0	\N	\N	\N		\N	1
-106240247	1	rs571949196	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-68823616	1	rs534532565	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-25938490	1	rs138976718	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-354302	1	rs509556	\N	\N	\N	2	0	\N	\N	\N		\N	1
-77152534	1	rs542861483	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-7625002	1	rs12284262	\N	\N	\N	2	0	\N	\N	\N		\N	1
-55182144	1	rs371542692	\N	\N	\N	2	0	\N	\N	\N		\N	1
-45403254	1	rs189812225	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59867704	1	rs376626525	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-99261694	1	rs564970643	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53313046	1	rs369518979	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-13796236	1	rs71457729	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-1724953	1	rs2275998	\N	\N	\N	2	0	\N	\N	\N		\N	1
-75268094	1	rs540977043	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-28667883	1	rs142228234	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52591898	1	rs368738759	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-64151001	1	rs529859950	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-84016185	1	rs549725134	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49381961	1	rs200020088	cluster,freq	\N	\N	2	0	\N	\N	\N		\N	1
-50572359	1	rs201302484	\N	\N	\N	2	0	\N	\N	\N		\N	1
-103997069	1	rs569706018	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-50247349	1	rs200951999	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-52309096	1	rs368433069	\N	\N	\N	2	0	\N	\N	\N		\N	1
-55564752	1	rs371957271	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-86479927	1	rs552188876	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-100015669	1	rs565724618	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58640370	1	rs375293272	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52952723	1	rs369128953	\N	\N	\N	2	0	\N	\N	\N		\N	1
-55455672	1	rs371839154	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-60406528	1	rs377211880	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-88756105	1	rs554465054	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53573432	1	rs369800588	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57953158	1	rs374547195	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59577931	1	rs376311597	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-53402070	1	rs369615114	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-22617237	1	rs114371258	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59863142	1	rs376621537	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-71114626	1	rs536823575	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-90797423	1	rs556506372	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-110755595	1	rs576464544	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-73078042	1	rs538786991	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-92818463	1	rs558527412	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-106355044	1	rs572063993	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-17869083	1	rs77881617	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-95496237	1	rs561205186	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-12851796	1	rs61890400	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-108956594	1	rs574665543	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-77872968	1	rs543581917	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-97664253	1	rs563373202	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-66528958	1	rs532237907	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86545445	1	rs552254394	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93790456	1	rs559499405	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53825998	1	rs370074102	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56185599	1	rs372629956	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-58639550	1	rs375292387	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-59048921	1	rs375736866	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54638697	1	rs370953791	\N	\N	\N	2	0	\N	\N	\N		\N	1
-48118331	1	rs192533489	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-102214837	1	rs567923786	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58013119	1	rs374612362	\N	\N	\N	2	0	\N	\N	\N		\N	1
-84630125	1	rs550339074	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-104493120	1	rs570202069	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-73143624	1	rs538852573	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-92879613	1	rs558588562	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-10746979	1	rs35708364	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-10430783	1	rs35301289	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-106517375	1	rs572226324	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52106911	1	rs368214398	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54620018	1	rs370933594	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-1210632	1	rs1671064	\N	\N	\N	2	0	\N	\N	\N		\N	1
-51988611	1	rs368086463	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-10373685	1	rs35227829	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-55697906	1	rs372101780	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-108952845	1	rs574661794	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-40518764	1	rs184916656	\N	\N	\N	2	0	\N	\N	\N		\N	1
-51623886	1	rs367692010	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56144969	1	rs372586045	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-97893152	1	rs563602101	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-111607445	1	rs577316394	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-44627215	1	rs189034495	\N	\N	\N	2	0	\N	\N	\N		\N	1
-36558267	1	rs180947302	\N	\N	\N	2	0	\N	\N	\N		\N	1
-93753734	1	rs559462683	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-13796237	1	rs71457730	\N	\N	\N	2	0	\N	\N	\N		\N	1
-95859328	1	rs561568277	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-41958113	1	rs186359307	\N	\N	\N	2	0	\N	\N	\N		\N	1
-34789086	1	rs149550207	\N	\N	\N	2	0	\N	\N	\N		\N	1
-19154906	1	rs79654508	\N	\N	\N	2	0	\N	\N	\N		\N	1
-17426294	1	rs77271331	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59351123	1	rs376065059	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-1681519	1	rs2229455	\N	\N	\N	2	0	\N	\N	\N		\N	1
-47766071	1	rs192180462	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58905024	1	rs375580657	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-1292688	1	rs1815739	\N	\N	\N	2	0	\N	\N	\N			1
-51248168	1	rs202032409	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-112643605	1	rs587683188	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-30351475	1	rs144238180	\N	\N	\N	2	0	\N	\N	\N		\N	1
-60282206	1	rs377076795	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54771101	1	rs371097266	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57611036	1	rs374176001	\N	\N	\N	2	0	\N	\N	\N		\N	1
-111523568	1	rs577232517	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-80290300	1	rs545999249	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-5065219	1	rs7949754	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54196090	1	rs370474512	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-107253530	1	rs572962479	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-75896673	1	rs541605622	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-13796238	1	rs71457731	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-34114434	1	rs148740903	\N	\N	\N	2	0	\N	\N	\N		\N	1
-45180266	1	rs189588769	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-28052641	1	rs141494262	\N	\N	\N	2	0	\N	\N	\N		\N	1
-37166587	1	rs181556947	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-82103321	1	rs547812270	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-66986815	1	rs532695764	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-86628487	1	rs552337436	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-75742459	1	rs541451408	\N	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54262225	1	rs370546164	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-27474355	1	rs140804966	\N	\N	\N	10	0	\N	\N	\N	\N	\N	1
-2594649	1	rs3837428	\N	\N	\N	10	0	\N	\N	\N		\N	1
-6283339	1	rs10669417	\N	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-49088908	1	rs199704987	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-2553205	1	rs3782080	\N	\N	\N	2	0	\N	\N	\N		\N	1
-42554633	1	rs186957191	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58638650	1	rs375291417	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-49794030	1	rs200463643	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-20121389	1	rs111569964	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-445307	1	rs618838	\N	\N	\N	2	0	\N	\N	\N		\N	1
-1681520	1	rs2229456	\N	\N	\N	2	0	\N	\N	\N		\N	1
-71312765	1	rs537021714	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52636193	1	rs368786615	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-91709479	1	rs557418428	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49750004	1	rs200416232	\N	\N	\N	2	0	\N	\N	\N		\N	1
-99934901	1	rs565643850	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-58471055	1	rs375109520	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50924066	1	rs201682133	\N	\N	\N	2	0	\N	\N	\N		\N	1
-74073483	1	rs539782432	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-52328771	1	rs368454306	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-55144907	1	rs371502365	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-1738980	1	rs2290463	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52777422	1	rs368939115	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56233908	1	rs372682307	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-107316381	1	rs573025330	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-436207	1	rs607736	\N	\N	\N	2	0	\N	\N	\N		\N	1
-53575943	1	rs369803301	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57369810	1	rs373914148	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-89428626	1	rs555137575	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-60775169	1	rs377612653	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-73512962	1	rs539221911	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-51570774	1	rs367634549	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-54756352	1	rs371081325	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-58607175	1	rs375257311	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-30509726	1	rs144427563	\N	\N	\N	2	0	\N	\N	\N		\N	1
-54074724	1	rs370343189	\N	\N	\N	2	0	\N	\N	\N		\N	1
-49590621	1	rs200244682	\N	\N	\N	2	0	\N	\N	\N		\N	1
-83437566	1	rs549146515	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-47477830	1	rs191891560	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-55535208	1	rs371925216	\N	\N	\N	2	0	\N	\N	\N		\N	1
-91840049	1	rs557548998	\N	\N	\N	2	0	\N	\N	\N		\N	1
-62932492	1	rs528641441	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-93181147	1	rs558890096	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-22290455	1	rs113929928	\N	\N	\N	2	0	\N	\N	\N		\N	1
-20303274	1	rs111767746	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-21026273	1	rs112553703	\N	\N	\N	2	0	\N	\N	\N		\N	1
-110209759	1	rs575918708	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-65359506	1	rs531068455	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-38421084	1	rs182814311	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-15300957	1	rs74345685	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58301908	1	rs374925994	\N	\N	\N	2	0	\N	\N	\N		\N	1
-81165588	1	rs546874537	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-17557572	1	rs77452366	\N	\N	\N	2	0	\N	\N	\N		\N	1
-26128580	1	rs139202727	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-10118830	1	rs34901026	\N	\N	\N	12	0	\N	\N	\N	\N	\N	1
-15353170	1	rs74417612	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-16773177	1	rs76371571	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-89855998	1	rs555564947	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-6760199	1	rs11227531	hapmap	\N	\N	2	0	\N	\N	\N		\N	1
-109527433	1	rs575236382	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-87412877	1	rs553121826	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-71883557	1	rs537592506	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-57960517	1	rs374555219	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-52198419	1	rs368313316	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-55674964	1	rs372076882	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-91621393	1	rs557330342	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-58286006	1	rs374908695	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56366282	1	rs372825946	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-111464409	1	rs577173358	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-42226310	1	rs186628132	\N	\N	\N	2	0	\N	\N	\N		\N	1
-53597548	1	rs369826688	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-55762178	1	rs372171270	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-77629278	1	rs543338227	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-55400255	1	rs371778972	\N	\N	\N	2	0	\N	\N	\N		\N	1
-90569686	1	rs556278635	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-59069733	1	rs375759429	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-109139655	1	rs574848604	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-35054516	1	rs149868156	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-60238677	1	rs377029613	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-17403385	1	rs77239910	\N	\N	\N	2	0	\N	\N	\N		\N	1
-19444430	1	rs80054068	\N	\N	\N	2	0	\N	\N	\N		\N	1
-21272099	1	rs112821173	\N	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
-57671053	1	rs374241099	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-380513	1	rs540874	\N	\N	\N	2	0	\N	\N	\N		\N	1
-85338855	1	rs551047804	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-98871234	1	rs564580183	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-49714178	1	rs200377702	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-22792586	1	rs114618009	\N	\N	\N	2	0	\N	\N	\N		\N	1
-58158785	1	rs374770413	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59333099	1	rs376045465	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-17449727	1	rs77303460	\N	\N	\N	2	0	\N	\N	\N		\N	1
-56884627	1	rs373387982	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-100924050	1	rs566632999	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-45206578	1	rs189615138	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-109048880	1	rs574757829	\N	\N	\N	2	0	\N	\N	\N		\N	1
-37900917	1	rs182292961	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-71945505	1	rs537654454	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-91682794	1	rs557391743	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-60030647	1	rs376803666	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57791278	1	rs374371617	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-59489345	1	rs376215230	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57941887	1	rs374534956	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-50559764	1	rs201288932	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-825167	1	rs1126675	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-43298025	1	rs187702310	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-88053061	1	rs553762010	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-50149784	1	rs200846952	cluster	\N	\N	2	0	\N	\N	\N		\N	1
-51645247	1	rs367715133	\N	\N	\N	2	0	\N	\N	\N		\N	1
-76847021	1	rs542555970	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-109104780	1	rs574813729	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-54952647	1	rs371294094	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-57690832	1	rs374262572	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-48253844	1	rs192669291	\N	\N	\N	2	0	\N	\N	\N		\N	1
-110043803	1	rs575752752	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-56283500	1	rs372736156	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-60342670	1	rs377142436	\N	\N	\N	2	0	\N	\N	\N		\N	1
-39270217	1	rs183665329	\N	\N	\N	2	0	\N	\N	\N		\N	1
-34374317	1	rs149052902	\N	\N	\N	2	0	\N	\N	\N		\N	1
-67784883	1	rs533493832	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-74907896	1	rs540616845	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-109727904	1	rs575436853	\N	\N	\N	2	0	\N	\N	\N	\N	\N	1
-76156042	1	rs541864991	\N	\N	\N	2	0	\N	\N	\N		\N	1
-63465523	1	rs529174472	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-59530132	1	rs376259578	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-51627501	1	rs367695922	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-48991023	1	rs199599736	\N	\N	\N	2	0	\N	\N	\N		\N	1
-23975515	1	rs116281147	\N	\N	\N	2	0	\N	\N	\N		\N	1
-61089674	1	rs386754438	\N	\N	\N	5	0	\N	\N	\N	\N	\N	1
-23275359	1	rs115296201	\N	\N	\N	2	0	\N	\N	\N		\N	1
-57951265	1	rs374545131	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-85479902	1	rs551188851	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-13796239	1	rs71457732	\N	\N	\N	2	0	\N	\N	\N		\N	1
-53586687	1	rs369814936	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-56382747	1	rs372843748	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-30743712	1	rs144706748	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-60444088	1	rs377252716	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-87776946	1	rs553485895	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-53893890	1	rs370147618	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-43803380	1	rs188208827	\N	\N	\N	2	0	\N	\N	\N		\N	1
-59049068	1	rs375737030	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-54637314	1	rs370952307	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-70169098	1	rs535878047	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-90281820	1	rs555990769	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-57956125	1	rs374550441	\N	\N	\N	2	0	\N	\N	\N		\N	1
-48752477	1	rs193169026	\N	\N	\N	2	0	\N	\N	\N		\N	1
-92715903	1	rs558424852	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-54997484	1	rs371342586	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-19054743	1	rs79516407	\N	\N	\N	2	0	\N	\N	\N		\N	1
-75062780	1	rs540771729	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
-50825815	1	rs201576110	\N	\N	\N	2	0	\N	\N	\N		\N	1
-52016882	1	rs368116977	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-55699840	1	rs372103863	\N	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
-6760200	1	rs11227532	\N	\N	\N	2	0	\N	\N	\N		\N	1
-40238386	1	rs184635649	\N	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+20985957	1	rs111067473	\N	0	18	0	\N	\N	\N	\N	\N	0
+7930418	1	rs12360064	\N	0	2	0	\N	\N	\N	\N	\N	1
+57137110	1	rs371828972	\N	0	2	0	\N	\N	\N	\N	\N	1
+5808764	1	rs9882584	\N	0	2	0	C	0.293388	639	\N	\N	0
+41158182	1	rs183972897	\N	0	2	0	G	0.00137741	3	\N	\N	1
+56515594	1	rs371163522	\N	0	2	0	\N	\N	\N	\N	\N	1
+27085574	1	rs138574806	\N	0	2	0	T	0.000918274	2	\N	\N	1
+1748253	1	rs2299222	\N	0	2	0	C	0.0399449	87	\N	\N	1
+3776807	1	rs6129257	\N	0	2	0	\N	\N	\N	\N	\N	1
+44132876	1	rs186950277	\N	0	2	0	A	0.00137741	3	\N	\N	1
+57993427	1	rs372745831	\N	0	2	0	\N	\N	\N	\N	\N	1
+40717093	1	rs183531458	\N	0	2	0	T	0.000604595	1	\N	\N	1
+4770800	1	rs7569578	A	0	2	0	A	0.164371	358	benign,likely benign,likely pathogenic,drug response,histocompatibility	367,368,369,370	1
+44527501	1	rs187345249	\N	0	2	0	T	0.000459137	1	\N	\N	1
+40763453	1	rs183577856	\N	0	2	0	C	0.000918274	2	\N	\N	1
+6106976	1	rs10193249	\N	0	2	0	\N	\N	\N	\N	\N	1
+24098261	1	rs114402518	\N	0	2	0	A	0.00918274	20	\N	\N	1
+9051025	1	rs17081232	G	0	2	0	A	0.244261	532	\N	\N	1
+30220007	1	rs142276873	G	0	2	0	A	0.123049	268	\N	367,370	1
+18671529	1	rs77284492	\N	0	2	0	A	0.0119376	26	\N	\N	1
+49574443	1	rs192396716	\N	0	2	0	G	0.000459137	1	\N	\N	1
+14128071	1	rs67521280	\N	0	14	0	\N	\N	\N	\N	\N	0
+4897829	1	rs7698608	\N	0	2	0	C	0.448577	977	\N	\N	1
+2979980	1	rs4492973	\N	0	2	0	C	0.0528007	115	\N	\N	1
+10089212	1	rs34490520	\N	0	2	0	A	0.0224977	49	\N	\N	1
+26469702	1	rs121908760	\N	0	2	0	\N	\N	\N	pathogenic	\N	1
+25992950	1	rs117161559	\N	0	2	0	G	0.00688705	15	\N	\N	1
+63646321	26	COSM946275	\N	1	2	1	\N	\N	\N	\N	\N	1
+39404961	1	rs182218163	\N	0	2	0	T	0.000459137	1	\N	\N	1
+61997151	1	rs377040510	\N	0	2	0	\N	\N	\N	\N	\N	1
+1	1	tmp__		\N	1	0	\N	\N	\N	\N	\N	1
+63646322	1	rs2255888	\N	0	2	0	\N	\N	\N	\N	\N	1
+63646323	1	rs144235347	\N	0	2	0	\N	\N	\N	\N	\N	1
+63646324	1	rs1162	\N	0	2	0	\N	\N	\N	\N	\N	1
+11951520	1	rs56179254	G	0	2	0	\N	\N	\N		367,368,372	1
+20949480	1	rs80359157	C	0	2	0	\N	\N	\N		\N	1
+20949482	1	rs80359159	C	0	2	0	\N	\N	\N	pathogenic	\N	1
+20949483	1	rs80359161	G	0	2	0	\N	\N	\N	\N	\N	1
+20949484	1	rs80359162	C	0	2	0	\N	\N	\N		\N	1
+20949486	1	rs80359164	A	0	2	0	\N	\N	\N		\N	1
+20949487	1	rs80359165	A	0	2	0	\N	\N	\N	pathogenic	367,372	1
+51737500	1	rs200814465	A	0	2	0	\N	\N	\N	\N	368	1
+53003732	1	rs202155613	C	0	2	0	G	0.000459137	1	\N	367	1
+936135	1	rs1333047	T	0	2	0	A	0.341598	744	\N	367,368,369,370,371	1
+63646327	1	rs2686912	G	1	2	0	\N	\N	\N	\N	367	1
+63646329	1	rs187207343	C	\N	2	0	T	0.000459137	1	\N	370	1
+63646330	1	rs372423729	A	\N	2	0	\N	\N	\N	\N	\N	1
+63646331	1	rs7811371	G	\N	2	0	A	0.0316804	69	\N	367,368,369,370	1
+63646332	1	rs182759002	C	\N	2	0	G	0.00137741	3	\N	370	1
+63646333	1	rs6953261	T	\N	2	0	T	0.310836	677	\N	367,368,369,370	1
+63646334	1	rs9606207	T	\N	2	0	\N	\N	\N	\N	\N	1
+63646335	1	rs372526539	A	\N	2	0	\N	\N	\N	\N	\N	1
+63646336	1	rs182313188	C	\N	2	0	T	0.000918274	2	\N	370	1
+63646337	1	rs140471675	G	\N	2	0	A	0.00505051	11	\N	370	1
+63646338	1	rs77560907	G	\N	2	0	A	0.0528007	115	\N	367,368,370	1
+63646339	1	rs187605906	T	\N	2	0	C	0.000459137	1	\N	370	1
+32633975	1	rs145134970	\N	\N	2	0	\N	\N	\N	\N	370	1
+6499767	1	rs10757279	\N	\N	2	0	\N	\N	\N	\N	367,368,370,371	1
+3379920	1	rs4977575	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370	1
+35985982	1	rs149114363	\N	\N	2	0	\N	\N	\N	\N	370	1
+38517888	1	rs181330262	\N	\N	2	0	\N	\N	\N	\N	370	1
+15292318	1	rs72655407	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
+15939031	1	rs73443203	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
+16102185	1	rs73650062	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
+40768405	1	rs183582810	\N	\N	2	0	\N	\N	\N	\N	370	1
+20641511	1	rs79944118	\N	\N	2	0	\N	\N	\N	\N	367,370	1
+45448905	1	rs188267508	\N	\N	2	0	\N	\N	\N	\N	370	1
+936136	1	rs1333048	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
+22784039	1	rs112935422	\N	\N	2	0	\N	\N	\N	\N	367,370	1
+936137	1	rs1333049	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
+29674364	1	rs141631698	\N	\N	2	0	\N	\N	\N	\N	370	1
+38148693	1	rs180960747	\N	\N	2	0	\N	\N	\N	\N	370	1
+16102186	1	rs73650063	\N	\N	2	0	\N	\N	\N	\N	367,368,370	1
+26999456	1	rs138473131	\N	\N	2	0	\N	\N	\N	\N	370	1
+44426212	1	rs187243869	\N	\N	2	0	\N	\N	\N	\N	370	1
+49174309	1	rs191996219	\N	\N	2	0	\N	\N	\N	\N	370	1
+38798524	1	rs181611157	\N	\N	2	0	\N	\N	\N	\N	370	1
+44149082	1	rs186966498	\N	\N	2	0	\N	\N	\N	\N	370	1
+31703565	1	rs144033269	\N	\N	2	0	\N	\N	\N	\N	370	1
+936138	1	rs1333050	\N	\N	2	0	\N	\N	\N	\N	367,368,369,370,371	1
+47382962	1	rs190203239	\N	\N	2	0	\N	\N	\N	\N	370	1
+39982579	1	rs182796288	\N	\N	2	0	\N	\N	\N	\N	370	1
+48637689	1	rs193053973	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99487608	1	rs565196557	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+62089654	1	rs527798603	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+81735847	1	rs547444796	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+39165074	1	rs183559947	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95651998	1	rs561360947	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+12197588	1	rs59345015	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+64210990	1	rs529919939	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+29450865	1	rs143162807	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+35898674	1	rs150880895	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52681874	1	rs368835939	\N	\N	2	0	\N	\N	\N		\N	1
+72689513	1	rs538398462	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86649732	1	rs552358681	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99902491	1	rs565611440	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53811229	1	rs370058043	\N	\N	2	0	\N	\N	\N		\N	1
+57419370	1	rs373967954	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59920392	1	rs376683828	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+53565993	1	rs369792497	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56299147	1	rs372753126	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50478027	1	rs201200629	\N	\N	2	0	\N	\N	\N		\N	1
+51160129	1	rs201937354	\N	\N	2	0	\N	\N	\N		\N	1
+49656369	1	rs200315462	\N	\N	2	0	\N	\N	\N		\N	1
+91142078	1	rs556851027	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+16429043	1	rs75898802	\N	\N	2	0	\N	\N	\N		\N	1
+79530753	1	rs545239702	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+42705674	1	rs187108590	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+24501765	1	rs117126977	\N	\N	2	0	\N	\N	\N		\N	1
+75838482	1	rs541547431	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95226676	1	rs560935625	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+64372377	1	rs530081326	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+20524612	1	rs112008389	\N	\N	2	0	\N	\N	\N		\N	1
+21340237	1	rs112895239	\N	\N	12	0	\N	\N	\N		\N	1
+97491949	1	rs563200898	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+66749576	1	rs532458525	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+47520639	1	rs191934459	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+100193015	1	rs565901964	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+68703266	1	rs534412215	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+82605682	1	rs548314631	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+21248891	1	rs112795925	\N	\N	2	0	\N	\N	\N		\N	1
+71298343	1	rs537007292	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+91305269	1	rs557014218	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+111069711	1	rs576778660	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+11842461	1	rs57808314	\N	\N	2	0	\N	\N	\N		\N	1
+93484039	1	rs559192988	\N	\N	2	0	\N	\N	\N	\N	\N	1
+93157920	1	rs558866869	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+31135071	1	rs145173944	\N	\N	2	0	\N	\N	\N		\N	1
+9459177	1	rs34059914	\N	\N	10	0	\N	\N	\N	\N	\N	1
+26834866	1	rs140043269	\N	\N	2	0	\N	\N	\N		\N	1
+58699688	1	rs375357663	\N	\N	2	0	\N	\N	\N	\N	\N	1
+65136238	1	rs530845187	\N	\N	2	0	\N	\N	\N		\N	1
+84841692	1	rs550550641	\N	\N	2	0	\N	\N	\N	\N	\N	1
+108892228	1	rs574601177	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95185431	1	rs560894380	\N	\N	2	0	\N	\N	\N	\N	\N	1
+77668082	1	rs543377031	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+22484505	1	rs114184303	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+66581755	1	rs532290704	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+79068572	1	rs544777521	\N	\N	2	0	\N	\N	\N	\N	\N	1
+8952041	1	rs17496586	\N	\N	2	0	\N	\N	\N		\N	1
+93572329	1	rs559281278	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+62535745	1	rs528244694	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+21106666	1	rs112641095	\N	\N	2	0	\N	\N	\N		\N	1
+10484575	1	rs35370278	\N	\N	12	0	\N	\N	\N	\N	\N	1
+383173	1	rs544021	\N	\N	2	0	\N	\N	\N		\N	1
+74626102	1	rs540335051	\N	\N	2	0	\N	\N	\N		\N	1
+39787467	1	rs184183759	\N	\N	2	0	\N	\N	\N		\N	1
+59932521	1	rs376696968	\N	\N	2	0	\N	\N	\N		\N	1
+104749635	1	rs570458584	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+9568253	1	rs34198417	\N	\N	10	0	\N	\N	\N	\N	\N	1
+73244000	1	rs538952949	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93538991	1	rs559247940	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+100535955	1	rs566244904	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86306703	1	rs552015652	\N	\N	2	0	\N	\N	\N	\N	\N	1
+69470314	1	rs535179263	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+42231022	1	rs186632859	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+108862006	1	rs574570955	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+77835754	1	rs543544703	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+91218818	1	rs556927767	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+111507684	1	rs577216633	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+80173482	1	rs545882431	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93852255	1	rs559561204	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103250047	1	rs568958996	\N	\N	2	0	\N	\N	\N	\N	\N	1
+62684602	1	rs528393551	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+76310935	1	rs542019884	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+13796233	1	rs71457726	\N	\N	2	0	\N	\N	\N	\N	\N	1
+96180837	1	rs561889786	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+15441597	1	rs74538782	\N	\N	2	0	\N	\N	\N		\N	1
+56549295	1	rs373024374	\N	\N	2	0	\N	\N	\N		\N	1
+59881405	1	rs376641441	\N	\N	2	0	\N	\N	\N	\N	\N	1
+29824854	1	rs143609138	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+72173223	1	rs537882172	\N	\N	2	0	\N	\N	\N		\N	1
+32501540	1	rs146808586	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+100619529	1	rs566328478	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+47965059	1	rs192379895	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+66655816	1	rs532364765	\N	\N	2	0	\N	\N	\N	\N	\N	1
+427996	1	rs597626	\N	\N	2	0	\N	\N	\N		\N	1
+89018807	1	rs554727756	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+102648149	1	rs568357098	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+71436551	1	rs537145500	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+91281933	1	rs556990882	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+111569135	1	rs577278084	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74080548	1	rs539789497	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87408461	1	rs553117410	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+107364371	1	rs573073320	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+27313265	1	rs140613388	\N	\N	2	0	\N	\N	\N		\N	1
+96144170	1	rs561853119	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+109846079	1	rs575555028	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+78712107	1	rs544421056	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58571026	1	rs375218111	\N	\N	2	0	\N	\N	\N		\N	1
+41164445	1	rs185563817	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+29419997	1	rs143125973	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+46075078	1	rs190485593	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+36170884	1	rs151207527	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53332053	1	rs369539518	\N	\N	2	0	\N	\N	\N	\N	\N	1
+24701384	1	rs117569537	\N	\N	2	0	\N	\N	\N		\N	1
+102709209	1	rs568418158	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53799846	1	rs370045702	\N	\N	10	0	\N	\N	\N	\N	\N	1
+12670147	1	rs61393902	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+61430055	1	rs398016471	\N	\N	10	0	\N	\N	\N	\N	\N	1
+71499902	1	rs537208851	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+7737826	1	rs12418904	\N	\N	2	0	\N	\N	\N		\N	1
+33811689	1	rs148377955	\N	\N	2	0	\N	\N	\N	\N	\N	1
+85203041	1	rs550911990	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87890048	1	rs553598997	\N	\N	2	0	\N	\N	\N	\N	\N	1
+105190302	1	rs570899251	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+56087393	1	rs372523579	\N	\N	2	0	\N	\N	\N		\N	1
+87603921	1	rs553312870	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+107673002	1	rs573381951	\N	\N	2	0	\N	\N	\N	\N	\N	1
+27114096	1	rs140376150	\N	\N	2	0	\N	\N	\N		\N	1
+37370829	1	rs181761647	\N	\N	2	0	\N	\N	\N		\N	1
+89942403	1	rs555651352	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+18636907	1	rs78940060	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53509387	1	rs369731305	\N	\N	2	0	\N	\N	\N	\N	\N	1
+40072200	1	rs184469093	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59829990	1	rs376585545	\N	\N	2	0	\N	\N	\N		\N	1
+111936632	1	rs577645581	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+44135144	1	rs188541322	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+94380793	1	rs560089742	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+63102425	1	rs528811374	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+82867106	1	rs548576055	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+21750338	1	rs113341514	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+85005765	1	rs550714714	\N	\N	2	0	\N	\N	\N	\N	\N	1
+24685267	1	rs117533632	\N	\N	2	0	\N	\N	\N		\N	1
+36654105	1	rs181043346	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+1272422	1	rs1791690	\N	\N	2	0	\N	\N	\N		\N	1
+105279727	1	rs570988676	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74207346	1	rs539916295	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+24516596	1	rs117160185	\N	\N	2	0	\N	\N	\N		\N	1
+35485339	1	rs150384593	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6760196	1	rs11227528	\N	\N	2	0	\N	\N	\N		\N	1
+41120623	1	rs185519895	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95246756	1	rs560955705	\N	\N	2	0	\N	\N	\N	\N	\N	1
+46495913	1	rs190907372	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+72070423	1	rs537779372	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103819493	1	rs569528442	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+92214821	1	rs557923770	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87403263	1	rs553112212	\N	\N	2	0	\N	\N	\N	\N	\N	1
+11685147	1	rs57127845	\N	\N	2	0	\N	\N	\N		\N	1
+74715085	1	rs540424034	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74470530	1	rs540179479	\N	\N	2	0	\N	\N	\N	\N	\N	1
+87836404	1	rs553545353	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49363170	1	rs199999916	\N	\N	2	0	\N	\N	\N	\N	\N	1
+107706301	1	rs573415250	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+16379717	1	rs75830916	\N	\N	2	0	\N	\N	\N		\N	1
+96461512	1	rs562170461	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+65383292	1	rs531092241	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+36566130	1	rs180955186	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+98993480	1	rs564702429	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54624603	1	rs370938559	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+49142136	1	rs199762276	\N	\N	2	0	\N	\N	\N		\N	1
+59317536	1	rs376028578	\N	\N	2	0	\N	\N	\N		\N	1
+51371490	1	rs202165715	\N	\N	2	0	\N	\N	\N		\N	1
+53734795	1	rs369975190	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+42882800	1	rs187286120	\N	\N	2	0	\N	\N	\N		\N	1
+101229237	1	rs566938186	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+47661861	1	rs192076014	\N	\N	2	0	\N	\N	\N		\N	1
+82192785	1	rs547901734	\N	\N	2	0	\N	\N	\N	\N	\N	1
+31633482	1	rs145769591	\N	\N	2	0	\N	\N	\N		\N	1
+66531996	1	rs532240945	\N	\N	2	0	\N	\N	\N	\N	\N	1
+103599994	1	rs569308943	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+72431508	1	rs538140457	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+51689253	1	rs367762793	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50754056	1	rs201498603	\N	\N	2	0	\N	\N	\N	\N	\N	1
+338639	1	rs490998	\N	\N	2	0	\N	\N	\N		\N	1
+25705693	1	rs138699570	\N	\N	2	0	\N	\N	\N		\N	1
+56897921	1	rs373402473	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59518262	1	rs376246680	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54325254	1	rs370614471	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+68003865	1	rs533712814	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103313312	1	rs569022261	\N	\N	2	0	\N	\N	\N	\N	\N	1
+11438128	1	rs56146874	\N	\N	2	0	\N	\N	\N		\N	1
+65730410	1	rs531439359	\N	\N	2	0	\N	\N	\N		\N	1
+76637544	1	rs542346493	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+38633380	1	rs183027086	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+110296121	1	rs576005070	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+79285016	1	rs544993965	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6359893	1	rs10791881	\N	\N	2	0	\N	\N	\N		\N	1
+67986273	1	rs533695222	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6359894	1	rs10791882	\N	\N	2	0	\N	\N	\N		\N	1
+94987782	1	rs560696731	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54504435	1	rs370808453	\N	\N	2	0	\N	\N	\N		\N	1
+30809476	1	rs144785164	\N	\N	2	0	\N	\N	\N		\N	1
+42950154	1	rs187353633	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+65856276	1	rs531565225	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86057600	1	rs551766549	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+105712640	1	rs571421589	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+46262452	1	rs190673378	\N	\N	2	0	\N	\N	\N		\N	1
+58117545	1	rs374725723	\N	\N	2	0	\N	\N	\N	\N	\N	1
+81462550	1	rs547171499	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+101452061	1	rs567161010	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+70233795	1	rs535942744	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+90086412	1	rs555795361	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+19309096	1	rs79867392	\N	\N	2	0	\N	\N	\N	\N	\N	1
+79596393	1	rs545305342	\N	\N	10	0	\N	\N	\N	\N	\N	1
+15447161	1	rs74546442	\N	\N	2	0	\N	\N	\N	\N	\N	1
+110389900	1	rs576098849	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+33619656	1	rs148147816	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+28477461	1	rs142000945	\N	\N	2	0	\N	\N	\N		\N	1
+38157410	1	rs182550065	\N	\N	2	0	\N	\N	\N		\N	1
+42841178	1	rs187244400	\N	\N	2	0	\N	\N	\N		\N	1
+94950922	1	rs560659871	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+48216941	1	rs192632292	\N	\N	2	0	\N	\N	\N		\N	1
+40085789	1	rs184482712	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+44602173	1	rs189009403	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+94504181	1	rs560213130	\N	\N	2	0	\N	\N	\N	\N	\N	1
+93018914	1	rs558727863	\N	\N	2	0	\N	\N	\N		\N	1
+19940354	1	rs111373258	\N	\N	2	0	\N	\N	\N		\N	1
+20651465	1	rs112146418	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+99604582	1	rs565313531	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+61870826	1	rs527579775	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+48735349	1	rs193151864	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+378381	1	rs538330	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+10597143	1	rs35515266	\N	\N	12	0	\N	\N	\N		\N	1
+101521288	1	rs567230237	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+57064601	1	rs373583366	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+35734987	1	rs150684733	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+40330726	1	rs184728197	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+26961615	1	rs140194286	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103915093	1	rs569624042	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+44385965	1	rs188792688	\N	\N	2	0	\N	\N	\N		\N	1
+66350104	1	rs532059053	\N	\N	2	0	\N	\N	\N	\N	\N	1
+29767425	1	rs143540578	\N	\N	2	0	\N	\N	\N		\N	1
+88906340	1	rs554615289	\N	\N	2	0	\N	\N	\N	\N	\N	1
+92544290	1	rs558253239	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+37207335	1	rs181597797	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+468994	1	rs647476	\N	\N	2	0	\N	\N	\N		\N	1
+26475194	1	rs139615291	\N	\N	2	0	\N	\N	\N		\N	1
+108690964	1	rs574399913	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+77505378	1	rs543214327	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99193289	1	rs564902238	\N	\N	12	0	\N	\N	\N	\N	\N	1
+51751085	1	rs367829722	\N	\N	12	0	\N	\N	\N	\N	\N	1
+11638901	1	rs56928794	\N	\N	12	0	\N	\N	\N	\N	\N	1
+20359031	1	rs111828343	\N	\N	2	0	\N	\N	\N	\N	\N	1
+3432337	1	rs5792393	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+35441510	1	rs150332198	\N	\N	12	0	\N	\N	\N		\N	1
+1558406	1	rs2096583	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+3375129	1	rs4990284	\N	\N	2	0	\N	\N	\N		\N	1
+468626	1	rs647029	\N	\N	2	0	\N	\N	\N		\N	1
+79813205	1	rs545522154	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49725477	1	rs200389883	\N	\N	2	0	\N	\N	\N	\N	\N	1
+2708049	1	rs4013815	\N	\N	12	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+31454636	1	rs145556235	\N	\N	2	0	\N	\N	\N		\N	1
+61927935	1	rs527636884	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+39485906	1	rs183881494	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55895262	1	rs372315310	\N	\N	2	0	\N	\N	\N	\N	\N	1
+10279664	1	rs35107173	\N	\N	10	0	\N	\N	\N	\N	\N	1
+65017375	1	rs530726324	\N	\N	12	0	\N	\N	\N	\N	\N	1
+34219992	1	rs148867550	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+19146900	1	rs79643360	\N	\N	2	0	\N	\N	\N	\N	\N	1
+28699456	1	rs142265818	\N	\N	12	0	\N	\N	\N	\N	\N	1
+52611824	1	rs368760322	\N	\N	2	0	\N	\N	\N		\N	1
+45297115	1	rs189705873	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+104158894	1	rs569867843	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95315414	1	rs561024363	\N	\N	2	0	\N	\N	\N	\N	\N	1
+66390269	1	rs532099218	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86588352	1	rs552297301	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99938718	1	rs565647667	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+29002977	1	rs142627911	\N	\N	2	0	\N	\N	\N		\N	1
+57718956	1	rs374293113	\N	\N	2	0	\N	\N	\N	\N	\N	1
+88915807	1	rs554624756	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+109060045	1	rs574768994	\N	\N	2	0	\N	\N	\N	\N	\N	1
+9552164	1	rs34177967	\N	\N	10	0	\N	\N	\N	\N	\N	1
+102227798	1	rs567936747	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59797449	1	rs376550230	\N	\N	2	0	\N	\N	\N		\N	1
+90760713	1	rs556469662	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+110912051	1	rs576621000	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+1944434	1	rs2509559	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+1944433	1	rs2509558	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+79563411	1	rs545272360	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+7570210	1	rs12222434	\N	\N	2	0	\N	\N	\N		\N	1
+106517328	1	rs572226277	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+1945916	1	rs2511216	\N	\N	2	0	\N	\N	\N		\N	1
+10814066	1	rs35794957	\N	\N	5	0	\N	\N	\N	\N	\N	1
+1945917	1	rs2511217	\N	\N	2	0	\N	\N	\N		\N	1
+19419519	1	rs80019849	\N	\N	2	0	\N	\N	\N	\N	\N	1
+10290988	1	rs35121692	\N	\N	10	0	\N	\N	\N	\N	\N	1
+111284874	1	rs576993823	\N	\N	12	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+25701310	1	rs138694339	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+36447227	1	rs180836022	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6902012	1	rs11448724	\N	\N	10	0	\N	\N	\N	\N	\N	1
+59546801	1	rs376277697	\N	\N	12	0	\N	\N	\N	\N	\N	1
+56872429	1	rs373374755	\N	\N	2	0	\N	\N	\N	\N	\N	1
+10661585	1	rs35598096	\N	\N	10	0	\N	\N	\N	\N	\N	1
+20019076	1	rs111458945	\N	\N	2	0	\N	\N	\N		\N	1
+97625795	1	rs563334744	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+19555832	1	rs80207660	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+57495294	1	rs374050345	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+60325730	1	rs377124055	\N	\N	2	0	\N	\N	\N		\N	1
+13796234	1	rs71457727	\N	\N	2	0	\N	\N	\N	\N	\N	1
+54186096	1	rs370463721	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57859352	1	rs374445358	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+51636818	1	rs367706008	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56459180	1	rs372926742	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+49960372	1	rs200642793	\N	\N	2	0	\N	\N	\N	\N	\N	1
+100041803	1	rs565750752	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+62513285	1	rs528222234	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+82481924	1	rs548190873	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+102392299	1	rs568101248	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+13796235	1	rs71457728	\N	\N	2	0	\N	\N	\N		\N	1
+54394954	1	rs370689871	\N	\N	12	0	\N	\N	\N	\N	\N	1
+33368086	1	rs147846428	\N	\N	2	0	\N	\N	\N	\N	\N	1
+6453274	1	rs10896127	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+12290956	1	rs59749879	\N	\N	12	0	\N	\N	\N	\N	\N	1
+865482	1	rs1188610	\N	\N	2	0	\N	\N	\N	\N	\N	1
+91057840	1	rs556766789	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52636025	1	rs368786434	\N	\N	2	0	\N	\N	\N		\N	1
+108637965	1	rs574346914	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+11563270	1	rs56394515	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+57538702	1	rs374097478	\N	\N	12	0	\N	\N	\N	\N	\N	1
+73483312	1	rs539192261	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93200362	1	rs558909311	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58895802	1	rs375570577	\N	\N	2	0	\N	\N	\N		\N	1
+54149943	1	rs370424638	\N	\N	2	0	\N	\N	\N		\N	1
+56892831	1	rs373396941	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+60741671	1	rs377576225	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+78174665	1	rs543883614	\N	\N	2	0	\N	\N	\N		\N	1
+108830768	1	rs574539717	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+77747289	1	rs543456238	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54441718	1	rs370740496	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+97854644	1	rs563563593	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+66617885	1	rs532326834	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+37404458	1	rs181795354	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93911237	1	rs559620186	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+26944089	1	rs140173495	\N	\N	2	0	\N	\N	\N		\N	1
+23049107	1	rs114978179	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+10793135	1	rs35767888	\N	\N	10	0	\N	\N	\N	\N	\N	1
+96057424	1	rs561766373	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+35441940	1	rs150332716	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+84615310	1	rs550324259	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+104595893	1	rs570304842	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99658304	1	rs565367253	\N	\N	2	0	\N	\N	\N	\N	\N	1
+25111213	1	rs137992441	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52598992	1	rs368746409	\N	\N	2	0	\N	\N	\N	\N	\N	1
+34837316	1	rs149608017	\N	\N	2	0	\N	\N	\N		\N	1
+100266255	1	rs565975204	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+69082935	1	rs534791884	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+88888090	1	rs554597039	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55188163	1	rs371549163	\N	\N	2	0	\N	\N	\N		\N	1
+52209071	1	rs368324882	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54264985	1	rs370549158	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59200769	1	rs375901785	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+52216996	1	rs368333449	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+9817894	1	rs34515982	\N	\N	2	0	\N	\N	\N		\N	1
+100572569	1	rs566281518	\N	\N	2	0	\N	\N	\N	\N	\N	1
+59378332	1	rs376094609	\N	\N	2	0	\N	\N	\N		\N	1
+91395229	1	rs557104178	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49783411	1	rs200452235	\N	\N	2	0	\N	\N	\N		\N	1
+57042481	1	rs373559300	\N	\N	2	0	\N	\N	\N		\N	1
+53326220	1	rs369533215	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+24196604	1	rs116592366	\N	\N	2	0	\N	\N	\N		\N	1
+76343620	1	rs542052569	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59248288	1	rs375953442	\N	\N	2	0	\N	\N	\N		\N	1
+50864518	1	rs201617889	\N	\N	2	0	\N	\N	\N		\N	1
+84821081	1	rs550530030	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+60001314	1	rs376771744	\N	\N	2	0	\N	\N	\N		\N	1
+59933622	1	rs376698169	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54614147	1	rs370927251	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+12851769	1	rs61890370	\N	\N	2	0	\N	\N	\N	\N	\N	1
+51474859	1	rs267603128	\N	\N	2	0	\N	\N	\N	\N		1
+30437189	1	rs144340728	\N	\N	2	0	\N	\N	\N		\N	1
+60581264	1	rs377401840	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+86790503	1	rs552499452	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+100326448	1	rs566035397	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+104593404	1	rs570302353	\N	\N	2	0	\N	\N	\N	\N	\N	1
+69139618	1	rs534848567	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+42084918	1	rs186486417	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+25954091	1	rs138995175	\N	\N	2	0	\N	\N	\N		\N	1
+71473518	1	rs537182467	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+72130910	1	rs537839859	\N	\N	2	0	\N	\N	\N	\N	\N	1
+12851770	1	rs61890371	\N	\N	2	0	\N	\N	\N		\N	1
+28722776	1	rs142293523	\N	\N	2	0	\N	\N	\N		\N	1
+74113708	1	rs539822657	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+24867342	1	rs117938990	\N	\N	2	0	\N	\N	\N		\N	1
+72658889	1	rs538367838	\N	\N	2	0	\N	\N	\N	\N	\N	1
+22350879	1	rs113996345	\N	\N	2	0	\N	\N	\N		\N	1
+76310873	1	rs542019822	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87806869	1	rs553515818	\N	\N	2	0	\N	\N	\N	\N	\N	1
+106506082	1	rs572215031	\N	\N	2	0	\N	\N	\N	\N	\N	1
+18351811	1	rs78546822	\N	\N	2	0	\N	\N	\N	\N	\N	1
+7570707	1	rs12223171	\N	\N	2	0	\N	\N	\N		\N	1
+109575846	1	rs575284795	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+78310140	1	rs544019089	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+98398603	1	rs564107552	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+67038552	1	rs532747501	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74143125	1	rs539852074	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53930600	1	rs370187321	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59460627	1	rs376183971	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+38727990	1	rs183121899	\N	\N	2	0	\N	\N	\N		\N	1
+63078040	1	rs528786989	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+32072572	1	rs146294881	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54704387	1	rs371024898	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+58705456	1	rs375363893	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+52218026	1	rs368334575	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+26418762	1	rs139548317	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+65320494	1	rs531029443	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55723304	1	rs372129294	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+85039821	1	rs550748770	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58485873	1	rs375125612	\N	\N	2	0	\N	\N	\N		\N	1
+105221279	1	rs570930228	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+107575128	1	rs573284077	\N	\N	12	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74097596	1	rs539806545	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87719217	1	rs553428166	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+15632639	1	rs74802042	\N	\N	2	0	\N	\N	\N		\N	1
+21576986	1	rs113153038	\N	\N	2	0	\N	\N	\N	\N	\N	1
+70076971	1	rs535785920	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+89822998	1	rs555531947	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+7204730	1	rs11823504	\N	\N	2	0	\N	\N	\N		\N	1
+35692535	1	rs150633715	\N	\N	2	0	\N	\N	\N		\N	1
+60538081	1	rs377354912	\N	\N	2	0	\N	\N	\N		\N	1
+78112531	1	rs543821480	\N	\N	2	0	\N	\N	\N	\N	\N	1
+111975505	1	rs577684454	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+56850606	1	rs373351050	\N	\N	10	0	\N	\N	\N	\N	\N	1
+59990494	1	rs376760022	\N	\N	2	0	\N	\N	\N	\N	\N	1
+6271892	1	rs10647726	\N	\N	10	0	\N	\N	\N		\N	1
+12656924	1	rs61336335	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+12250400	1	rs59574118	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+60459687	1	rs377269719	\N	\N	2	0	\N	\N	\N	\N	\N	1
+33177173	1	rs147617581	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+61291399	1	rs397824296	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+28107147	1	rs141559427	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+74110003	1	rs539818952	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+26612693	1	rs139778616	\N	\N	2	0	\N	\N	\N		\N	1
+372655	1	rs531490	\N	\N	2	0	\N	\N	\N		\N	0
+76454226	1	rs542163175	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+96696770	1	rs562405719	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52060240	1	rs368163887	\N	\N	2	0	\N	\N	\N		\N	1
+111671630	1	rs577380579	\N	\N	2	0	\N	\N	\N	\N	\N	1
+495263	1	rs679228	\N	\N	2	0	\N	\N	\N		\N	1
+105118341	1	rs570827290	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+67786807	1	rs533495756	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+84077029	1	rs549785978	\N	\N	2	0	\N	\N	\N		\N	1
+101207028	1	rs566915977	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+43784645	1	rs188190059	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+89618124	1	rs555327073	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103433194	1	rs569142143	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+102385791	1	rs568094740	\N	\N	2	0	\N	\N	\N		\N	1
+46925698	1	rs191338154	\N	\N	2	0	\N	\N	\N		\N	1
+38438533	1	rs182831801	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6453275	1	rs10896128	\N	\N	2	0	\N	\N	\N		\N	1
+43044531	1	rs187448221	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+494583	1	rs678397	\N	\N	2	0	\N	\N	\N		\N	1
+56381395	1	rs372842284	\N	\N	2	0	\N	\N	\N		\N	1
+76513104	1	rs542222053	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53755105	1	rs369997208	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+96499395	1	rs562208344	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+28705623	1	rs142273140	\N	\N	2	0	\N	\N	\N		\N	1
+60773056	1	rs377610342	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54683458	1	rs371002263	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+493835	1	rs677488	\N	\N	2	0	\N	\N	\N		\N	1
+99029598	1	rs564738547	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+67749609	1	rs533458558	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+88269111	1	rs553978060	\N	\N	2	0	\N	\N	\N		\N	1
+46912257	1	rs191324676	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58422179	1	rs375056410	\N	\N	2	0	\N	\N	\N	\N	\N	1
+63555637	1	rs529264586	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52139635	1	rs368249676	\N	\N	2	0	\N	\N	\N	\N	\N	1
+6760198	1	rs11227530	\N	\N	2	0	\N	\N	\N	\N	\N	1
+83665782	1	rs549374731	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103321186	1	rs569030135	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58593042	1	rs375241946	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+72464970	1	rs538173919	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+85567095	1	rs551276044	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+9964977	1	rs34704108	\N	\N	10	0	\N	\N	\N	\N	\N	1
+49897341	1	rs200574979	\N	\N	2	0	\N	\N	\N		\N	1
+83629750	1	rs549338699	\N	\N	2	0	\N	\N	\N	\N	\N	1
+54886501	1	rs371222320	\N	\N	2	0	\N	\N	\N		\N	1
+58108922	1	rs374716398	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+53695442	1	rs369932492	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50743405	1	rs201487054	\N	\N	2	0	\N	\N	\N		\N	1
+59836760	1	rs376592844	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+53270531	1	rs369473048	\N	\N	2	0	\N	\N	\N		\N	1
+56904060	1	rs373409167	\N	\N	2	0	\N	\N	\N		\N	1
+60670374	1	rs377498768	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54303644	1	rs370591007	\N	\N	2	0	\N	\N	\N		\N	1
+90441755	1	rs556150704	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+56868237	1	rs373370220	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+60569230	1	rs377388767	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+55247766	1	rs371613741	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+110125669	1	rs575834618	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+30609373	1	rs144546392	\N	\N	2	0	\N	\N	\N		\N	1
+52347156	1	rs368474114	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50788809	1	rs201536131	\N	\N	2	0	\N	\N	\N		\N	1
+112476281	1	rs578185230	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+18629320	1	rs78929709	\N	\N	2	0	\N	\N	\N		\N	1
+94827922	1	rs560536871	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+63722136	1	rs529431085	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+103563609	1	rs569272558	\N	\N	2	0	\N	\N	\N	\N	\N	1
+83378803	1	rs549087752	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+12851795	1	rs61890399	\N	\N	2	0	\N	\N	\N		\N	1
+65794241	1	rs531503190	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+85895751	1	rs551604700	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55379310	1	rs371756314	\N	\N	2	0	\N	\N	\N		\N	1
+67992763	1	rs533701712	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59090169	1	rs375781686	\N	\N	2	0	\N	\N	\N		\N	1
+52838515	1	rs369005221	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+49122713	1	rs199741304	\N	\N	2	0	\N	\N	\N		\N	1
+60911398	1	rs377760740	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+111954624	1	rs577663573	\N	\N	2	0	\N	\N	\N	\N	\N	1
+10955051	1	rs35977173	\N	\N	2	0	\N	\N	\N		\N	1
+86293879	1	rs552002828	\N	\N	2	0	\N	\N	\N	\N	\N	1
+70673601	1	rs536382550	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+90169223	1	rs555878172	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55206663	1	rs371569219	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50145761	1	rs200842599	\N	\N	2	0	\N	\N	\N		\N	1
+51044891	1	rs201812719	\N	\N	2	0	\N	\N	\N		\N	1
+72552798	1	rs538261747	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54355804	1	rs370647530	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+49267623	1	rs199897168	\N	\N	2	0	\N	\N	\N		\N	1
+60094285	1	rs376872731	\N	\N	2	0	\N	\N	\N		\N	1
+54002402	1	rs370264933	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57931816	1	rs374523998	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+112545000	1	rs578253949	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58380791	1	rs375011535	\N	\N	2	0	\N	\N	\N		\N	1
+88727342	1	rs554436291	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+108330578	1	rs574039527	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+38736309	1	rs183130234	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+29698766	1	rs143458538	\N	\N	2	0	\N	\N	\N		\N	1
+1467349	1	rs2000939	\N	\N	2	0	\N	\N	\N		\N	1
+43448140	1	rs187852781	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+47589679	1	rs192003678	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+99097795	1	rs564806744	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+35952926	1	rs150945945	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+81462685	1	rs547171634	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+51389245	1	rs202184913	\N	\N	2	0	\N	\N	\N		\N	1
+64042201	1	rs529751150	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+27456296	1	rs140783486	\N	\N	2	0	\N	\N	\N		\N	1
+103954287	1	rs569663236	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+31077226	1	rs145104915	\N	\N	2	0	\N	\N	\N		\N	1
+12300704	1	rs59792175	\N	\N	2	0	\N	\N	\N		\N	1
+106240247	1	rs571949196	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+68823616	1	rs534532565	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+25938490	1	rs138976718	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+354302	1	rs509556	\N	\N	2	0	\N	\N	\N		\N	1
+77152534	1	rs542861483	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+7625002	1	rs12284262	\N	\N	2	0	\N	\N	\N		\N	1
+55182144	1	rs371542692	\N	\N	2	0	\N	\N	\N		\N	1
+45403254	1	rs189812225	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59867704	1	rs376626525	\N	\N	2	0	\N	\N	\N	\N	\N	1
+99261694	1	rs564970643	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53313046	1	rs369518979	\N	\N	2	0	\N	\N	\N	\N	\N	1
+13796236	1	rs71457729	\N	\N	2	0	\N	\N	\N	\N	\N	1
+1724953	1	rs2275998	\N	\N	2	0	\N	\N	\N		\N	1
+75268094	1	rs540977043	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+28667883	1	rs142228234	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52591898	1	rs368738759	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+64151001	1	rs529859950	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+84016185	1	rs549725134	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49381961	1	rs200020088	\N	\N	2	0	\N	\N	\N		\N	1
+50572359	1	rs201302484	\N	\N	2	0	\N	\N	\N		\N	1
+103997069	1	rs569706018	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+50247349	1	rs200951999	\N	\N	2	0	\N	\N	\N	\N	\N	1
+52309096	1	rs368433069	\N	\N	2	0	\N	\N	\N		\N	1
+55564752	1	rs371957271	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+86479927	1	rs552188876	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+100015669	1	rs565724618	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58640370	1	rs375293272	\N	\N	2	0	\N	\N	\N		\N	1
+52952723	1	rs369128953	\N	\N	2	0	\N	\N	\N		\N	1
+55455672	1	rs371839154	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+60406528	1	rs377211880	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+88756105	1	rs554465054	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53573432	1	rs369800588	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57953158	1	rs374547195	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59577931	1	rs376311597	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+53402070	1	rs369615114	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+22617237	1	rs114371258	\N	\N	2	0	\N	\N	\N		\N	1
+59863142	1	rs376621537	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+71114626	1	rs536823575	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+90797423	1	rs556506372	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+110755595	1	rs576464544	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+73078042	1	rs538786991	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+92818463	1	rs558527412	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+106355044	1	rs572063993	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+17869083	1	rs77881617	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+95496237	1	rs561205186	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+12851796	1	rs61890400	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+108956594	1	rs574665543	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+77872968	1	rs543581917	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+97664253	1	rs563373202	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+66528958	1	rs532237907	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86545445	1	rs552254394	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93790456	1	rs559499405	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53825998	1	rs370074102	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56185599	1	rs372629956	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+58639550	1	rs375292387	\N	\N	2	0	\N	\N	\N	\N	\N	1
+59048921	1	rs375736866	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54638697	1	rs370953791	\N	\N	2	0	\N	\N	\N		\N	1
+48118331	1	rs192533489	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+102214837	1	rs567923786	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58013119	1	rs374612362	\N	\N	2	0	\N	\N	\N		\N	1
+84630125	1	rs550339074	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+104493120	1	rs570202069	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+73143624	1	rs538852573	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+92879613	1	rs558588562	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+10746979	1	rs35708364	\N	\N	10	0	\N	\N	\N	\N	\N	1
+10430783	1	rs35301289	\N	\N	10	0	\N	\N	\N	\N	\N	1
+106517375	1	rs572226324	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52106911	1	rs368214398	\N	\N	2	0	\N	\N	\N		\N	1
+54620018	1	rs370933594	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+1210632	1	rs1671064	\N	\N	2	0	\N	\N	\N		\N	1
+51988611	1	rs368086463	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+10373685	1	rs35227829	\N	\N	12	0	\N	\N	\N	\N	\N	1
+55697906	1	rs372101780	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+108952845	1	rs574661794	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+40518764	1	rs184916656	\N	\N	2	0	\N	\N	\N		\N	1
+51623886	1	rs367692010	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56144969	1	rs372586045	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+97893152	1	rs563602101	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+111607445	1	rs577316394	\N	\N	2	0	\N	\N	\N	\N	\N	1
+44627215	1	rs189034495	\N	\N	2	0	\N	\N	\N		\N	1
+36558267	1	rs180947302	\N	\N	2	0	\N	\N	\N		\N	1
+93753734	1	rs559462683	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+13796237	1	rs71457730	\N	\N	2	0	\N	\N	\N		\N	1
+95859328	1	rs561568277	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+41958113	1	rs186359307	\N	\N	2	0	\N	\N	\N		\N	1
+34789086	1	rs149550207	\N	\N	2	0	\N	\N	\N		\N	1
+19154906	1	rs79654508	\N	\N	2	0	\N	\N	\N		\N	1
+17426294	1	rs77271331	\N	\N	2	0	\N	\N	\N		\N	1
+59351123	1	rs376065059	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+1681519	1	rs2229455	\N	\N	2	0	\N	\N	\N		\N	1
+47766071	1	rs192180462	\N	\N	2	0	\N	\N	\N		\N	1
+58905024	1	rs375580657	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+1292688	1	rs1815739	\N	\N	2	0	\N	\N	\N			1
+51248168	1	rs202032409	\N	\N	2	0	\N	\N	\N	\N	\N	1
+112643605	1	rs587683188	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+30351475	1	rs144238180	\N	\N	2	0	\N	\N	\N		\N	1
+60282206	1	rs377076795	\N	\N	2	0	\N	\N	\N		\N	1
+54771101	1	rs371097266	\N	\N	2	0	\N	\N	\N		\N	1
+57611036	1	rs374176001	\N	\N	2	0	\N	\N	\N		\N	1
+111523568	1	rs577232517	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+80290300	1	rs545999249	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+5065219	1	rs7949754	\N	\N	2	0	\N	\N	\N		\N	1
+54196090	1	rs370474512	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+107253530	1	rs572962479	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+75896673	1	rs541605622	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+13796238	1	rs71457731	\N	\N	2	0	\N	\N	\N	\N	\N	1
+34114434	1	rs148740903	\N	\N	2	0	\N	\N	\N		\N	1
+45180266	1	rs189588769	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+28052641	1	rs141494262	\N	\N	2	0	\N	\N	\N		\N	1
+37166587	1	rs181556947	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+82103321	1	rs547812270	\N	\N	2	0	\N	\N	\N	\N	\N	1
+66986815	1	rs532695764	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+86628487	1	rs552337436	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+75742459	1	rs541451408	\N	\N	10	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54262225	1	rs370546164	\N	\N	10	0	\N	\N	\N	\N	\N	1
+27474355	1	rs140804966	\N	\N	10	0	\N	\N	\N	\N	\N	1
+2594649	1	rs3837428	\N	\N	10	0	\N	\N	\N		\N	1
+6283339	1	rs10669417	\N	\N	10	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+49088908	1	rs199704987	\N	\N	2	0	\N	\N	\N	\N	\N	1
+2553205	1	rs3782080	\N	\N	2	0	\N	\N	\N		\N	1
+42554633	1	rs186957191	\N	\N	2	0	\N	\N	\N		\N	1
+58638650	1	rs375291417	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+49794030	1	rs200463643	\N	\N	2	0	\N	\N	\N		\N	1
+20121389	1	rs111569964	\N	\N	2	0	\N	\N	\N	\N	\N	1
+445307	1	rs618838	\N	\N	2	0	\N	\N	\N		\N	1
+1681520	1	rs2229456	\N	\N	2	0	\N	\N	\N		\N	1
+71312765	1	rs537021714	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52636193	1	rs368786615	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+91709479	1	rs557418428	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49750004	1	rs200416232	\N	\N	2	0	\N	\N	\N		\N	1
+99934901	1	rs565643850	\N	\N	2	0	\N	\N	\N	\N	\N	1
+58471055	1	rs375109520	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50924066	1	rs201682133	\N	\N	2	0	\N	\N	\N		\N	1
+74073483	1	rs539782432	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+52328771	1	rs368454306	\N	\N	2	0	\N	\N	\N	\N	\N	1
+55144907	1	rs371502365	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+1738980	1	rs2290463	\N	\N	2	0	\N	\N	\N		\N	1
+52777422	1	rs368939115	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56233908	1	rs372682307	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+107316381	1	rs573025330	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+436207	1	rs607736	\N	\N	2	0	\N	\N	\N		\N	1
+53575943	1	rs369803301	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57369810	1	rs373914148	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+89428626	1	rs555137575	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+60775169	1	rs377612653	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+73512962	1	rs539221911	\N	\N	2	0	\N	\N	\N	\N	\N	1
+51570774	1	rs367634549	\N	\N	2	0	\N	\N	\N	\N	\N	1
+54756352	1	rs371081325	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+58607175	1	rs375257311	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+30509726	1	rs144427563	\N	\N	2	0	\N	\N	\N		\N	1
+54074724	1	rs370343189	\N	\N	2	0	\N	\N	\N		\N	1
+49590621	1	rs200244682	\N	\N	2	0	\N	\N	\N		\N	1
+83437566	1	rs549146515	\N	\N	2	0	\N	\N	\N	\N	\N	1
+47477830	1	rs191891560	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+55535208	1	rs371925216	\N	\N	2	0	\N	\N	\N		\N	1
+91840049	1	rs557548998	\N	\N	2	0	\N	\N	\N		\N	1
+62932492	1	rs528641441	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+93181147	1	rs558890096	\N	\N	2	0	\N	\N	\N	\N	\N	1
+22290455	1	rs113929928	\N	\N	2	0	\N	\N	\N		\N	1
+20303274	1	rs111767746	\N	\N	2	0	\N	\N	\N	\N	\N	1
+21026273	1	rs112553703	\N	\N	2	0	\N	\N	\N		\N	1
+110209759	1	rs575918708	\N	\N	2	0	\N	\N	\N	\N	\N	1
+65359506	1	rs531068455	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+38421084	1	rs182814311	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+15300957	1	rs74345685	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58301908	1	rs374925994	\N	\N	2	0	\N	\N	\N		\N	1
+81165588	1	rs546874537	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+17557572	1	rs77452366	\N	\N	2	0	\N	\N	\N		\N	1
+26128580	1	rs139202727	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+10118830	1	rs34901026	\N	\N	12	0	\N	\N	\N	\N	\N	1
+15353170	1	rs74417612	\N	\N	2	0	\N	\N	\N	\N	\N	1
+16773177	1	rs76371571	\N	\N	2	0	\N	\N	\N	\N	\N	1
+89855998	1	rs555564947	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+6760199	1	rs11227531	\N	\N	2	0	\N	\N	\N		\N	1
+109527433	1	rs575236382	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+87412877	1	rs553121826	\N	\N	2	0	\N	\N	\N	\N	\N	1
+71883557	1	rs537592506	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+57960517	1	rs374555219	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+52198419	1	rs368313316	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+55674964	1	rs372076882	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+91621393	1	rs557330342	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+58286006	1	rs374908695	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56366282	1	rs372825946	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+111464409	1	rs577173358	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+42226310	1	rs186628132	\N	\N	2	0	\N	\N	\N		\N	1
+53597548	1	rs369826688	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+55762178	1	rs372171270	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+77629278	1	rs543338227	\N	\N	2	0	\N	\N	\N	\N	\N	1
+55400255	1	rs371778972	\N	\N	2	0	\N	\N	\N		\N	1
+90569686	1	rs556278635	\N	\N	2	0	\N	\N	\N	\N	\N	1
+59069733	1	rs375759429	\N	\N	2	0	\N	\N	\N		\N	1
+109139655	1	rs574848604	\N	\N	2	0	\N	\N	\N	\N	\N	1
+35054516	1	rs149868156	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+60238677	1	rs377029613	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+17403385	1	rs77239910	\N	\N	2	0	\N	\N	\N		\N	1
+19444430	1	rs80054068	\N	\N	2	0	\N	\N	\N		\N	1
+21272099	1	rs112821173	\N	\N	2	0	\N	\N	\N	uncertain significance,not provided,benign,likely benign,pathogenic,drug response,other	\N	1
+57671053	1	rs374241099	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+380513	1	rs540874	\N	\N	2	0	\N	\N	\N		\N	1
+85338855	1	rs551047804	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+98871234	1	rs564580183	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+49714178	1	rs200377702	\N	\N	2	0	\N	\N	\N	\N	\N	1
+22792586	1	rs114618009	\N	\N	2	0	\N	\N	\N		\N	1
+58158785	1	rs374770413	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59333099	1	rs376045465	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+17449727	1	rs77303460	\N	\N	2	0	\N	\N	\N		\N	1
+56884627	1	rs373387982	\N	\N	2	0	\N	\N	\N	\N	\N	1
+100924050	1	rs566632999	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+45206578	1	rs189615138	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+109048880	1	rs574757829	\N	\N	2	0	\N	\N	\N		\N	1
+37900917	1	rs182292961	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+71945505	1	rs537654454	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+91682794	1	rs557391743	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+60030647	1	rs376803666	\N	\N	2	0	\N	\N	\N		\N	1
+57791278	1	rs374371617	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+59489345	1	rs376215230	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57941887	1	rs374534956	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+50559764	1	rs201288932	\N	\N	2	0	\N	\N	\N		\N	1
+825167	1	rs1126675	\N	\N	2	0	\N	\N	\N	\N	\N	1
+43298025	1	rs187702310	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+88053061	1	rs553762010	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+50149784	1	rs200846952	\N	\N	2	0	\N	\N	\N		\N	1
+51645247	1	rs367715133	\N	\N	2	0	\N	\N	\N		\N	1
+76847021	1	rs542555970	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+109104780	1	rs574813729	\N	\N	2	0	\N	\N	\N	\N	\N	1
+54952647	1	rs371294094	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+57690832	1	rs374262572	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+48253844	1	rs192669291	\N	\N	2	0	\N	\N	\N		\N	1
+110043803	1	rs575752752	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+56283500	1	rs372736156	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+60342670	1	rs377142436	\N	\N	2	0	\N	\N	\N		\N	1
+39270217	1	rs183665329	\N	\N	2	0	\N	\N	\N		\N	1
+34374317	1	rs149052902	\N	\N	2	0	\N	\N	\N		\N	1
+67784883	1	rs533493832	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+74907896	1	rs540616845	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+109727904	1	rs575436853	\N	\N	2	0	\N	\N	\N	\N	\N	1
+76156042	1	rs541864991	\N	\N	2	0	\N	\N	\N		\N	1
+63465523	1	rs529174472	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+59530132	1	rs376259578	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+51627501	1	rs367695922	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+48991023	1	rs199599736	\N	\N	2	0	\N	\N	\N		\N	1
+23975515	1	rs116281147	\N	\N	2	0	\N	\N	\N		\N	1
+61089674	1	rs386754438	\N	\N	5	0	\N	\N	\N	\N	\N	1
+23275359	1	rs115296201	\N	\N	2	0	\N	\N	\N		\N	1
+57951265	1	rs374545131	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+85479902	1	rs551188851	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+13796239	1	rs71457732	\N	\N	2	0	\N	\N	\N		\N	1
+53586687	1	rs369814936	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+56382747	1	rs372843748	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+30743712	1	rs144706748	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+60444088	1	rs377252716	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+87776946	1	rs553485895	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+53893890	1	rs370147618	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+43803380	1	rs188208827	\N	\N	2	0	\N	\N	\N		\N	1
+59049068	1	rs375737030	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+54637314	1	rs370952307	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+70169098	1	rs535878047	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+90281820	1	rs555990769	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+57956125	1	rs374550441	\N	\N	2	0	\N	\N	\N		\N	1
+48752477	1	rs193169026	\N	\N	2	0	\N	\N	\N		\N	1
+92715903	1	rs558424852	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+54997484	1	rs371342586	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+19054743	1	rs79516407	\N	\N	2	0	\N	\N	\N		\N	1
+75062780	1	rs540771729	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
+50825815	1	rs201576110	\N	\N	2	0	\N	\N	\N		\N	1
+52016882	1	rs368116977	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+55699840	1	rs372103863	\N	\N	2	0	\N	\N	\N	benign,likely pathogenic,pathogenic,drug response,other	\N	1
+6760200	1	rs11227532	\N	\N	2	0	\N	\N	\N		\N	1
+40238386	1	rs184635649	\N	\N	2	0	\N	\N	\N	not provided,likely pathogenic,pathogenic,drug response,other	\N	1

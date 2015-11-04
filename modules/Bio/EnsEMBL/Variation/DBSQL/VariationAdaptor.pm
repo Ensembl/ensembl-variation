@@ -131,8 +131,7 @@ sub store {
     my $sth = $dbh->prepare(q{
         INSERT INTO variation (
             source_id,
-			name,
-			validation_status,
+            name,
             ancestral_allele,
             flipped,
             class_attrib_id,
@@ -142,13 +141,12 @@ sub store {
             minor_allele_count,
             clinical_significance,
             evidence_attribs
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
         $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
-        (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
         $var->{flipped},
         $var->{class_attrib_id} || ( $var->{class_SO_term} && $self->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term})) || 18,
@@ -204,7 +202,6 @@ sub update {
         UPDATE variation
            SET source_id = ?,
                name = ?,
-               validation_status = ?,
                ancestral_allele = ?,
                flipped = ?,
                class_attrib_id = ?,
@@ -220,7 +217,6 @@ sub update {
     $sth->execute(
         $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
-        (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
         $var->{flipped},
         $var->{class_attrib_id} || $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) || 18,
@@ -400,7 +396,6 @@ sub _columns {
     my @cols = (
         "v.variation_id",
         "v.name AS v_name",
-        "v.validation_status AS v_validation_status",
         "v.class_attrib_id AS v_class_attrib_id",
         "v.source_id AS v_source_id",
         "v.somatic AS v_somatic",
@@ -1525,13 +1520,7 @@ sub _obj_from_row {
     my $obj = $self->{_temp_objs}{$row->{variation_id}}; 
     
     unless (defined($obj)) {
-        
-        # Get the validation status
-        my @states;
 
-        if (defined($row->{v_validation_status})) {
-            @states = split(/,/,$row->{v_validation_status}); 
-        } 
         ## convert attrib ids to values for evidence
         my @evidence;
         if (defined($row->{evidence_attribs})) {
@@ -1557,7 +1546,6 @@ sub _obj_from_row {
             -FLIPPED => $row->{v_flipped},
             -ANCESTRAL_ALLELE => $row->{v_ancestral_allele},
             -MOLTYPE => $row->{vs_moltype},
-            -VALIDATION_STATES => \@states,
             -FLANK_FLAG => $row->{fs_flank_flag},
             -CLASS_SO_TERM => $self->AttributeAdaptor()->attrib_value_for_id($row->{v_class_attrib_id}),
             -CLINICAL_SIGNIFICANCE => \@clin_sig,

@@ -112,7 +112,6 @@ ok($vf->is_reference,                   "check that the VF's slice is a referenc
 ok($vf->consequence_type->[0] eq $consequence->SO_term, "get the consequence");
 
 ok($vf->add_evidence_value("Cited"), 'add a permitted evidence value');
-#ok($vf->add_validation_state('submitter'), 'add a permitted validation state');
 my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(-SO_term => 'missense_variant');
 ok($vf->add_OverlapConsequence($oc), 'add_OverlapConsequence');
 ok($vf->get_all_evidence_values()->[0] eq 'Cited', 'get_all_evidence_values');
