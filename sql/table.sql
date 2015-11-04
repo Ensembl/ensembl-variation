@@ -32,12 +32,11 @@ SET storage_engine=MYISAM;
       The most common type is the single nucleotide variation (SNP) though the schema also accommodates copy number variations (CNVs) and structural variations (SVs).<br />
 			In Ensembl, a variation is defined by its flanking sequence rather than its mapped location on a chromosome; a variation may in fact have multiple mappings across a genome, 
 			although this fails our <a href="/info/genome/variation/data_description.html#quality_control">Quality Control</a>.<br /> 
-      This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with a validation status and ancestral (or reference) allele.
+      This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with an ancestral (or reference) allele.
 
 @column variation_id		       Primary key, internal identifier.
 @column source_id			         Foreign key references to the @link source table.
 @column name				           Name of the variation. e.g. "rs1333049".
-@column validation_status	     Variant discovery method and validation from dbSNP.
 @column ancestral_allele	     Taken from dbSNP to show ancestral allele for the variation.
 @column flipped				         This is set to 1 if the variant is flipped from the negative to the positive strand during import.
 @column class_attrib_id		     Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
@@ -63,10 +62,6 @@ create table variation (
   variation_id int(10) unsigned not null auto_increment, # PK
   source_id int(10) unsigned not null, 
   name varchar(255),
-  validation_status SET('cluster','freq',
-								 'submitter','doublehit',
-								 'hapmap','1000Genome',
-								 'failed','precious'),
   ancestral_allele varchar(255) DEFAULT NULL,
   flipped tinyint(1) unsigned NULL DEFAULT NULL,
   class_attrib_id int(10) unsigned default 0,
@@ -122,7 +117,6 @@ CREATE TABLE variation_attrib (
 @column map_weight				     The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
 @column flags						       Flag to filter the selection of variations.
 @column source_id					     Foreign key references to the source table.
-@column validation_status		   Variant discovery method and validation from dbSNP.
 @column consequence_types		   The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
 @column variation_set_id		   The variation feature can belong to a @link variation_set.
 @column class_attrib_id			   Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
@@ -144,27 +138,18 @@ CREATE TABLE variation_attrib (
 */
 
 create table variation_feature(
-	variation_feature_id int(10) unsigned not null auto_increment,
-	seq_region_id int(10) unsigned not null,
-	seq_region_start int not null,
-	seq_region_end int not null,
-	seq_region_strand tinyint not null,
-	variation_id int(10) unsigned not null,
-	allele_string varchar(50000),
-    variation_name varchar(255),
-	map_weight int not null,
-	flags SET('genotyped'),
-	source_id int(10) unsigned not null, 
-	validation_status SET(
-        'cluster',
-        'freq',
-		'submitter',
-        'doublehit',
-		'hapmap',
-        '1000Genome',
-		'precious'
-    ),
-    consequence_types SET (
+  variation_feature_id int(10) unsigned not null auto_increment,
+  seq_region_id int(10) unsigned not null,
+  seq_region_start int not null,
+  seq_region_end int not null,
+  seq_region_strand tinyint not null,
+  variation_id int(10) unsigned not null,
+  allele_string varchar(50000),
+  variation_name varchar(255),
+  map_weight int not null,
+  flags SET('genotyped'),
+  source_id int(10) unsigned not null,
+  consequence_types SET (
         'intergenic_variant',
         'splice_acceptor_variant',
         'splice_donor_variant',
@@ -1769,6 +1754,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_82_83_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_82_83_b.sql|Add the evidence ExAC in variation and variation_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_82_83_c.sql|Drop the column validation_status in variation and variation_feature');
 
 
 /**
