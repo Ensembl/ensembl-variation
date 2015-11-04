@@ -480,122 +480,121 @@ sub sequence_with_ambiguity{
 
 =cut
 sub hgvs_variant_notation {
-    my $alt_allele = shift;
-    my $ref_sequence = shift;
-    my $ref_start = shift;
-    my $ref_end = shift;
-    my $display_start = shift;
-    my $display_end = shift;
-    my $var_name  = shift;
-    
-    # If display_start and display_end were not specified, use ref_start and ref_end
-    $display_start ||= $ref_start;
-    $display_end ||= $ref_end;
-    
-    #Throw an exception if the lengths of the display interval and reference interval are different
-    throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));
-    
-    # Length of the reference allele. Negative lengths make no sense
-    my $ref_length = ($ref_end - $ref_start + 1);
-    if ($ref_length < 0) {
-	$ref_length = 0;
-    }
-    
-    # Remove any gap characters in the alt allele
-    $alt_allele =~ s/\-//g;
-    
-    # Length of alternative allele
-    my $alt_length = length($alt_allele);
-    
-    # Get the reference allele
-    my $ref_allele = substr($ref_sequence,($ref_start-1),$ref_length);
+  my $alt_allele = shift;
+  my $ref_sequence = shift;
+  my $ref_start = shift;
+  my $ref_end = shift;
+  my $display_start = shift;
+  my $display_end = shift;
+  my $var_name  = shift;
+  
+  # If display_start and display_end were not specified, use ref_start and ref_end
+  $display_start ||= $ref_start;
+  $display_end ||= $ref_end;
+  
+  #Throw an exception if the lengths of the display interval and reference interval are different
+  throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));
+  
+  # Length of the reference allele. Negative lengths make no sense
+  my $ref_length = ($ref_end - $ref_start + 1);
+  if ($ref_length < 0) {
+    $ref_length = 0;
+  }
+  
+  # Remove any gap characters in the alt allele
+  $alt_allele =~ s/\-//g;
+  
+  # Length of alternative allele
+  my $alt_length = length($alt_allele);
+  
+  # Get the reference allele
+  my $ref_allele = substr($ref_sequence,($ref_start-1),$ref_length);
 
-    # Check that the alleles are different, otherwise return undef
-    if($ref_allele eq $alt_allele){
-	#warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
-	return undef ;
+  # Check that the alleles are different, otherwise return undef
+  if($ref_allele eq $alt_allele){
+    #warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
+    return undef ;
+  }
+  
+  # Store the notation in a hash that will be returned
+  my %notation;
+  $notation{'start'} = $display_start;
+  $notation{'end'} = $display_end;
+  $notation{'ref'} = $ref_allele;
+  $notation{'alt'} = $alt_allele;
+  
+  # The simplest case is a deletion
+  if (!$alt_length) {
+    $notation{'type'} = 'del';
+      
+    # Return the notation
+    return \%notation;
+  }
+  
+  # Another case is if the allele lengths are equal
+  if ($ref_length == $alt_length) {
+      
+    # If length is 1 it's a single substitution
+    if ($ref_length == 1) {
+      $notation{'type'} = '>';
+      return \%notation;
     }
-    
-    # Store the notation in a hash that will be returned
-    my %notation;
-    $notation{'start'} = $display_start;
-    $notation{'end'} = $display_end;
-    $notation{'ref'} = $ref_allele;
-    $notation{'alt'} = $alt_allele;
-    
-    # The simplest case is a deletion
-    if (!$alt_length) {
-	$notation{'type'} = 'del';
-        
-        # Return the notation
-        return \%notation;
+      
+    # Check if it's an inversion
+    my $rev_ref = $ref_allele;
+    reverse_comp(\$rev_ref);
+    if ($alt_allele eq $rev_ref) {
+      $notation{'type'} = 'inv';
+      return \%notation;
     }
-    
-    # Another case is if the allele lengths are equal
-    if ($ref_length == $alt_length) {
-        
-	# If length is 1 it's a single substitution
-        if ($ref_length == 1) {
-	    $notation{'type'} = '>';
-	    return \%notation;
-        }
-        
-	# Check if it's an inversion
-        my $rev_ref = $ref_allele;
-        reverse_comp(\$rev_ref);
-        if ($alt_allele eq $rev_ref) {
-	    $notation{'type'} = 'inv';
-	    return \%notation;
-        }
-        
-	$notation{'type'} = 'delins';
-	
-        return \%notation;
-    }
-    
-    # If this is an insertion, we should check if the preceeding reference nucleotides match the insertion. In that case it should be annotated as a multiplication.
-    if (!$ref_length) {
-    
-        # Get the same number of nucleotides preceding the insertion as the length of the insertion
-        my $prev_str = substr($ref_sequence,($ref_end-$alt_length),$alt_length);
-        
-        # If they match, this is a duplication
-        if ($prev_str eq $alt_allele) {
-
-	    $notation{'start'} = ($display_end - $alt_length + 1);
-	    $notation{'type'} = 'dup';
-	    $notation{'ref'} = $prev_str;
-            # Return the notation
-	    return \%notation;
-        }
-        
-        # If they didn't match it's a plain insertion
-	$notation{'start'} = $display_end;
-	$notation{'end'} = $display_start;
-	$notation{'type'} = 'ins';
-        
-        return \%notation;
-    }
-    
-    # Otherwise, the reference and allele are of different lengths. By default, this is a delins but
-    # we need to check if the alt allele is a multiplication of the reference
-    # Check if the length of the alt allele is a multiple of the reference allele
-    if ($alt_length%$ref_length == 0) {
-        my $multiple = ($alt_length / $ref_length);
-        if ($alt_allele eq ($ref_allele x $multiple)) {
-            if ($multiple == 2) {
-		$notation{'type'} = 'dup';
-            }
-            else {
-		$notation{'type'} = '[' . $multiple . ']';
-            }
-	    return \%notation;
-        }
-    }
-    
-    # Else, it's gotta be a delins
+      
     $notation{'type'} = 'delins';
     return \%notation;
+  }
+  
+  # If this is an insertion, we should check if the preceeding reference nucleotides match the insertion. In that case it should be annotated as a multiplication.
+  if (!$ref_length) {
+  
+    # Get the same number of nucleotides preceding the insertion as the length of the insertion
+    my $prev_str = substr($ref_sequence,($ref_end-$alt_length),$alt_length);
+
+    # If they match, this is a duplication
+    if ($prev_str eq $alt_allele) {
+
+      $notation{'start'} = ($display_end - $alt_length + 1);
+      $notation{'type'} = 'dup';
+      $notation{'ref'} = $prev_str;
+      # Return the notation
+      return \%notation;
+    }
+
+    # If they didn't match it's a plain insertion
+    $notation{'start'} = $display_end;
+    $notation{'end'} = $display_start;
+    $notation{'type'} = 'ins';
+
+    return \%notation;
+  }
+  
+  # Otherwise, the reference and allele are of different lengths. By default, this is a delins but
+  # we need to check if the alt allele is a multiplication of the reference
+  # Check if the length of the alt allele is a multiple of the reference allele
+  if ($alt_length%$ref_length == 0) {
+    my $multiple = ($alt_length / $ref_length);
+    if ($alt_allele eq ($ref_allele x $multiple)) {
+      if ($multiple == 2) {
+        $notation{'type'} = 'dup';
+      }
+      else {
+        $notation{'type'} = '[' . $multiple . ']';
+      }
+      return \%notation;
+    }
+  }
+  
+  # Else, it's gotta be a delins
+  $notation{'type'} = 'delins';
+  return \%notation;
 }
 
 
@@ -613,56 +612,55 @@ sub hgvs_variant_notation {
 =cut
 
 sub format_hgvs_string{
-    ##### generic formatting routine for genomic and coding HGVS names
- 
-    my $hgvs_notation = shift;
-  
-    ### all start with refseq name & numbering type
-    $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
+  ##### generic formatting routine for genomic and coding HGVS names
 
-    my $coordinates;
-    #### if single base event, list position only once
-    if($hgvs_notation->{'start'} eq $hgvs_notation->{'end'}){
-	$coordinates =  $hgvs_notation->{'start'};
-    }
-    else{
-	$coordinates = $hgvs_notation->{'start'} . "_" . $hgvs_notation->{'end'};
-    }
+  my $hgvs_notation = shift;
 
-    ##### format rest of string according to type
+  ### all start with refseq name & numbering type
+  $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
 
-    if($hgvs_notation->{'type'} eq 'del' ||  $hgvs_notation->{'type'} eq 'inv' || $hgvs_notation->{'type'} eq 'dup'){
-	### inversion of reference bases => list ref not alt
-	### deletion  of reference bases => list ref lost
-	### duplication  of reference bases (eg ref = GAAA alt = GAAAGAAA) => list duplicated ref (dupGAAA)
-	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};      
-    }
+  my $coordinates;
+  #### if single base event, list position only once
+  if($hgvs_notation->{'start'} eq $hgvs_notation->{'end'}){
+    $coordinates =  $hgvs_notation->{'start'};
+  }
+  else{
+    $coordinates = $hgvs_notation->{'start'} . "_" . $hgvs_notation->{'end'};
+  }
 
-    elsif( $hgvs_notation->{'type'} eq '>'){
-	### substitution - list both alleles
-	$hgvs_notation->{'hgvs'} .= $hgvs_notation->{'start'} . $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-    }
+  ##### format rest of string according to type
 
-    elsif( $hgvs_notation->{'type'} eq 'delins'){
-	$hgvs_notation->{'hgvs'} .= $coordinates . 'del' . $hgvs_notation->{'ref'} . 'ins' . $hgvs_notation->{'alt'};
-    }   
+  if($hgvs_notation->{'type'} eq 'del' ||  $hgvs_notation->{'type'} eq 'inv' || $hgvs_notation->{'type'} eq 'dup'){
+    ### inversion of reference bases => list ref not alt
+    ### deletion  of reference bases => list ref lost
+    ### duplication  of reference bases (eg ref = GAAA alt = GAAAGAAA) => list duplicated ref (dupGAAA)
+    $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};      
+  }
 
-    elsif($hgvs_notation->{'type'} eq 'ins'){
-	## reference not listed
-	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-    }
+  elsif( $hgvs_notation->{'type'} eq '>'){
+    ### substitution - list both alleles
+    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'start'} . $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
+  }
 
-    elsif($hgvs_notation->{'type'} =~ /\[\d+\]/){
-	#### insertion described by string and number
-	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'};
-    }
+  elsif( $hgvs_notation->{'type'} eq 'delins'){
+    $hgvs_notation->{'hgvs'} .= $coordinates . 'del' . $hgvs_notation->{'ref'} . 'ins' . $hgvs_notation->{'alt'};
+  }   
 
-    else{
-	warn "PROBLEM with generic HGVS formatter - type = ". $hgvs_notation->{'type'} ."\n";
-    }
-  
-    return $hgvs_notation->{'hgvs'};
+  elsif($hgvs_notation->{'type'} eq 'ins'){
+    ## reference not listed
+    $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
+  }
 
+  elsif($hgvs_notation->{'type'} =~ /\[\d+\]/){
+    #### insertion described by string and number
+    $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'};
+  }
+
+  else{
+    warn "PROBLEM with generic HGVS formatter - type = ". $hgvs_notation->{'type'} ."\n";
+  }
+
+  return $hgvs_notation->{'hgvs'};
 }
 
 =head2 get_hgvs_alleles
@@ -678,7 +676,7 @@ sub format_hgvs_string{
 
 sub get_hgvs_alleles{
     
-    #### extract ref and alt alleles where possible from HGVS g/c/n string
+  #### extract ref and alt alleles where possible from HGVS g/c/n string
 
   my ( $hgvs) = shift;
 
@@ -707,8 +705,8 @@ sub get_hgvs_alleles{
     
   # A duplication, the reference allele is optional
   elsif ($description =~ m/dup/i) {
-     $ref_allele ="-";
-     ($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
+    $ref_allele ="-";
+    ($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
   }
     
   # An inversion, the reference allele is optional
