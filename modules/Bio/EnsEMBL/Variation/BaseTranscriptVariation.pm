@@ -637,24 +637,34 @@ sub _intron_effects {
 
 # gets all introns for the transcript, cached on transcript
 sub _introns {
-    my $self = shift;
-    
-    my $tran = $self->transcript;
-    
-    my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
-    
-    return $introns;
+  my $self = shift;
+  
+  my $tran = $self->transcript;
+  
+  my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
+  
+  return $introns;
 }
 
 # gets all exons for the transcript, cached on transcript
 sub _exons {
-    my $self = shift;
+  my $self = shift;
 
-    my $tran = $self->transcript;
+  my $tran = $self->transcript;
 
-    my $exons = $tran->{_variation_effect_feature_cache}->{exons} ||= $tran->get_all_Exons;
+  my $exons = $tran->{_variation_effect_feature_cache}->{exons} ||= $tran->get_all_Exons;
 
-    return $exons;
+  return $exons;
+}
+
+sub _sorted_exons {
+  my $self = shift;
+
+  my $tran = $self->transcript;
+
+  my $exons = $tran->{_variation_effect_feature_cache}->{sorted_exons} ||= [sort {$a->start <=> $b->start} @{$self->_exons}];
+
+  return $exons;
 }
 
 # gets all introns that overlap this VF, cached on $self

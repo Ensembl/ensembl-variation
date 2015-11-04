@@ -340,6 +340,8 @@ $Bio::EnsEMBL::Variation::BaseTranscriptVariation::ASSERT_REFS = 0;
 $Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap::ASSERT_REFS = 0;
 $Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele::ASSERT_REFS = 0;
 
+$Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = 1;
+
 # parses a line of input, returns VF object(s)
 sub parse_line {
     my $config = shift;
@@ -1198,6 +1200,9 @@ sub get_all_consequences {
                   if($config->{fasta_db} && $config->{fasta_db}->isa('Faidx')) {
                     delete($config->{fasta_db});
                     $config->{fasta_db} = Faidx->new($config->{fasta});
+
+                    no warnings 'once';
+                    $Bio::EnsEMBL::Slice::fasta_db = $config->{fasta_db};
                   }
                   
                   #die("TEST DEATH\n") if rand() < 0.1;
@@ -2590,7 +2595,7 @@ sub tva_to_line {
   my $line = init_line($config, $tv->base_variation_feature, $base_line);
   
   # HGVS
-  if(defined $config->{hgvs}) {
+  if(defined $config->{hgvs} && $pre->{within_feature}) {
     my $hgvs_t = $tva->hgvs_transcript;
     my $hgvs_p = $tva->hgvs_protein;
     my $offset = $tva->hgvs_offset;
@@ -4798,6 +4803,7 @@ sub prefetch_transcript_data {
     }
     
     $tr->{_variation_effect_feature_cache}->{introns} ||= $introns;
+    $tr->{_variation_effect_feature_cache}->{sorted_exons} ||= [sort {$a->start <=> $b->start} @{$tr->get_all_Exons}];
     
     # translateable_seq, mapper
     $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
