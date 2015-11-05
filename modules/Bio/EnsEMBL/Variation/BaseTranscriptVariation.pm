@@ -56,8 +56,6 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 our $CAN_USE_INTERVAL_TREE;
 
-our $ASSERT_REFS = 1;
-
 BEGIN {
   if (eval { require Set::IntervalTree; 1 }) {
     $CAN_USE_INTERVAL_TREE = 1;
@@ -96,7 +94,7 @@ sub transcript {
   my ($self, $transcript) = @_;
 
   if($transcript) {
-    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript && $ASSERT_REFS;
+    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript;
     delete $self->{_cached_transcript};
   }
 

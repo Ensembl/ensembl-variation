@@ -76,8 +76,6 @@ our $ALL_NUCLEOTIDES = qr/^[ACGTUMRWSYKVHDBXN-]+$/i;
 
 our $SPECIFIED_LENGTH = qr /(\d+) BP (INSERTION|DELETION)/i;
 
-our $ASSERT_REFS = 1;
-
 =head2 new
 
   Arg [-VARIATION_FEATURE_OVERLAP] : 
@@ -127,7 +125,7 @@ sub new {
 
     my $self = $class->SUPER::new(%args);
 
-    assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap') if $ASSERT_REFS;
+    assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
 
     my (
         $variation_feature_seq,
@@ -189,7 +187,7 @@ sub variation_feature_overlap {
     my ($self, $variation_feature_overlap) = @_;
     
     if ($variation_feature_overlap) {
-        assert_ref($variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap') if $ASSERT_REFS;
+        assert_ref($variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
     }
     
     return $self->base_variation_feature_overlap($variation_feature_overlap);

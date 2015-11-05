@@ -333,13 +333,10 @@ our @VAR_CACHE_COLS = qw(
 
 our @PICK_ORDER = qw(canonical tsl biotype ccds rank length);
 
-# set ASSERT_REFS statuses to 0
-$Bio::EnsEMBL::Variation::VariationFeatureOverlap::ASSERT_REFS = 0;
-$Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele::ASSERT_REFS = 0;
-$Bio::EnsEMBL::Variation::BaseTranscriptVariation::ASSERT_REFS = 0;
-$Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap::ASSERT_REFS = 0;
-$Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele::ASSERT_REFS = 0;
+# don't assert refs
+$Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
 
+# avoid using transfer
 $Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = 1;
 
 # parses a line of input, returns VF object(s)
