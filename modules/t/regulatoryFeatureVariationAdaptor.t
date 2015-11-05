@@ -100,6 +100,8 @@ if (!$v) {
 }
 
 $vfs = $vfa->fetch_all_by_Variation($v);
+$vf = $vfs->[0];
+=begin
 if (!scalar @$vfs) {
   $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
     -start   => 151409224,
@@ -117,6 +119,8 @@ if (!scalar @$vfs) {
 } else {
   $vf = $vfs->[0];
 }
+=end
+=cut
 
 $rf = $rfa->fetch_by_stable_id('ENSR00000636355');
 $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
@@ -129,7 +133,7 @@ $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
 $consequence_types = join(',', sort @{$rfv->consequence_type});
 ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types for regulatory_feature_variation');
 
-$rfva->store($rfv);
+ok($rfva->store($rfv), 'store');
 $rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
 is(scalar @$rfvs, 1, 'fetch_all_by_VariationFeatures');
 
