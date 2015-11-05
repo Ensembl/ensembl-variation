@@ -2609,51 +2609,53 @@ sub tva_to_line {
     $line->{Extra}->{HGVS_OFFSET} = $offset if $offset;
   }
   
-  foreach my $tool (qw(SIFT PolyPhen)) {
-    my $lc_tool = lc($tool);
-    
-    if (my $opt = $config->{$lc_tool}) {
-      my $want_pred  = $opt =~ /^p/i;
-      my $want_score = $opt =~ /^s/i;
-      my $want_both  = $opt =~ /^b/i;
+  if($pre->{coding}) {
+    foreach my $tool (qw(SIFT PolyPhen)) {
+      my $lc_tool = lc($tool);
       
-      if ($want_both) {
-        $want_pred  = 1;
-        $want_score = 1;
-      }
-      
-      next unless $want_pred || $want_score;
-      
-      my $pred_meth  = $lc_tool.'_prediction';
-      my $score_meth = $lc_tool.'_score';
-      my $analysis   = $config->{polyphen_analysis} if $lc_tool eq 'polyphen';
-      
-      my $pred = $tva->$pred_meth($analysis);
-      
-      if($pred) {
+      if (my $opt = $config->{$lc_tool}) {
+        my $want_pred  = $opt =~ /^p/i;
+        my $want_score = $opt =~ /^s/i;
+        my $want_both  = $opt =~ /^b/i;
         
-        if ($want_pred) {
-          $pred =~ s/\s+/\_/g;
-          $pred =~ s/\_\-\_/\_/g;
-          $line->{Extra}->{$tool} = $pred;
+        if ($want_both) {
+          $want_pred  = 1;
+          $want_score = 1;
         }
+        
+        next unless $want_pred || $want_score;
+        
+        my $pred_meth  = $lc_tool.'_prediction';
+        my $score_meth = $lc_tool.'_score';
+        my $analysis   = $config->{polyphen_analysis} if $lc_tool eq 'polyphen';
+        
+        my $pred = $tva->$pred_meth($analysis);
+        
+        if($pred) {
           
-        if ($want_score) {
-          my $score = $tva->$score_meth($analysis);
-          
-          if(defined $score) {
-            if($want_pred) {
-              $line->{Extra}->{$tool} .= "($score)";
-            }
-            else {
-              $line->{Extra}->{$tool} = $score;
+          if ($want_pred) {
+            $pred =~ s/\s+/\_/g;
+            $pred =~ s/\_\-\_/\_/g;
+            $line->{Extra}->{$tool} = $pred;
+          }
+            
+          if ($want_score) {
+            my $score = $tva->$score_meth($analysis);
+            
+            if(defined $score) {
+              if($want_pred) {
+                $line->{Extra}->{$tool} .= "($score)";
+              }
+              else {
+                $line->{Extra}->{$tool} = $score;
+              }
             }
           }
         }
+        
+        # update stats
+        $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth && !defined($config->{no_stats});
       }
-      
-      # update stats
-      $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth && !defined($config->{no_stats});
     }
   }
   
@@ -2802,20 +2804,29 @@ sub add_extra_fields_transcript {
     
     my $tv = $tva->base_variation_feature_overlap;
     my $tr = $tv->transcript;
+    my $pre = $tva->_pre_consequence_predicates;
     
     # get gene
     $line->{Gene} = $tr->{_gene_stable_id};
 
     # strand
-    $line->{Extra}->{STRAND} = $tr->seq_region_strand;
+    $line->{Extra}->{STRAND} = $tr->strand;
     
     # exon/intron numbers
     if ($config->{numbers}) {
-        $line->{Extra}->{EXON} = $tv->exon_number if defined $tv->exon_number;
-        $line->{Extra}->{INTRON} = $tv->intron_number if defined $tv->intron_number;
+      if($pre->{exon}) {
+        if(my $num = $tv->exon_number) {
+          $line->{Extra}->{EXON} = $num;
+        }
+      }
+      if($pre->{intron}) {
+        if(my $num = $tv->intron_number) {
+          $line->{Extra}->{INTRON} = $num;
+        }
+      }
     }
 
-    if ($config->{domains}) {
+    if ($config->{domains} && $pre->{coding}) {
         my $feats = $tv->get_overlapping_ProteinFeatures;
 
         my @strings;
