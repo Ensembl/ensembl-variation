@@ -256,21 +256,21 @@ sub variation_feature{
 
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.start,tcl.end,
-                                      tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
+                                      tcl.strand, v.name, v.source_id, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
 				      AND tcl.start>2 
                                       AND tcl.chr = ts.name
     });#to get rid of lots of start=1
 
-    create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
+    create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "aln_quality d");
   print Progress::location();
     
     debug(localtime() . "\tCreating tmp_variation_feature_ctg data in GenericChromosome");
     #if tcl.start = 1 or tcl.end=1, this means we don't have mappings on chromosome, we take ctg coordinates if it is in toplevel
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.ctg_start,tcl.ctg_end,
-                                      tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
+                                      tcl.strand, v.name, v.source_id, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
 				      AND (
@@ -282,7 +282,7 @@ sub variation_feature{
                                       AND tcl.ctg = ts.name
    });
 
-    create_and_load($self->{'dbVar'},'tmp_variation_feature_ctg',"variation_id i* not_null","seq_region_id i ", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
+    create_and_load($self->{'dbVar'},'tmp_variation_feature_ctg',"variation_id i* not_null","seq_region_id i ", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id",  "aln_quality d");
   print Progress::location();
 
     debug(localtime() . "\tDumping data into variation_feature table in GenericChromosome");
@@ -294,8 +294,8 @@ sub variation_feature{
     if ($gtype_row) {
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
-     	my $vf_ins_sth = $self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
-				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
+     	my $vf_ins_sth = $self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, alignment_quality, somatic)
+				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
                                   LEFT JOIN variation v on tvf.variation_id = v.variation_id
 				  WHERE tvf.variation_id between ? and ?
@@ -328,8 +328,8 @@ sub variation_feature{
 
       debug(localtime() . "\tDumping data into variation_feature table only used if table tmp_genotyped_var is not ready");
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-	 my $vf_ins_sth =$self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
- 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality, v.somatic
+	 my $vf_ins_sth =$self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, alignment_quality, somatic)
+ 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.aln_quality, v.somatic
  				  FROM $table tvf, variation v
                                   WHERE v.variation_id = tvf.variation_id
 				  AND tvf.variation_id between ? and ?
@@ -435,9 +435,9 @@ sub extract_haplotype_mappings{
     debug(localtime() . "\tAdding VariationFeature data for haplotypes");
     ### copy to variation_feature table
     $self->{'dbVar'}->do(qq[ INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
-                                                            variation_name, source_id, validation_status, alignment_quality, somatic)
+                                                            variation_name, source_id, alignment_quality, somatic)
                                                                    SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+ths.asm_start-1, tvf.seq_end+ths.asm_start-1, tvf.strand, 
-                                         v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
+                                         v.name, v.source_id, tvf.aln_quality,  v.somatic
                                   FROM tmp_contig_loc_hap tvf  
                                   LEFT JOIN variation v on tvf.snp_id = v.snp_id
                                    LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av 

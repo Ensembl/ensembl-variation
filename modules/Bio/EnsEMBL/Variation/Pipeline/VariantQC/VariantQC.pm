@@ -437,8 +437,7 @@ sub export_data_adding_allele_string{
                                                       v.class_attrib_id,
                                                       sr.name,
                                                       vf.alignment_quality,
-                                                      als.allele_string,
-                                                      vf.validation_status,
+                                                      als.allele_string, 
                                                       maf.allele,
                                                       maf.freq,
                                                       maf.count,
@@ -467,11 +466,11 @@ sub export_data_adding_allele_string{
 
   foreach my $l(@{$variant_data}){
 
-      next if defined $l->[18]  && $l->[18] >0.5 ;
+      next if defined $l->[17]  && $l->[17] >0.5 ;
  
-      if (defined $l->[20] &&  $l->[20] eq "0" && 
-	  (! $potentially_no_minor{$l->[2]} && $l->[18] ==0.5)){
-        ## if no minor allele, just take the second seen for displayinf frequency
+      if (defined $l->[19] &&  $l->[19] eq "0" && 
+	  (! $potentially_no_minor{$l->[2]} && $l->[17] ==0.5)){
+        ## if no minor allele, just take the second seen for displaying frequency
         $potentially_no_minor{$l->[2]} = 1;
         next; 
       }
@@ -500,12 +499,11 @@ sub export_data_adding_allele_string{
       $save{class_attrib_id}  = $l->[12];
       $save{seqreg_name}      = $l->[13];
       $save{align_qual}       = $l->[14];
-      $save{validation_status}= $l->[16];
 
-      $save{min_allele}    = $l->[17];
-      $save{min_af}        = $l->[18];
-      $save{min_al_count}  = $l->[19];
-      $save{flags}         = $l->[21];
+      $save{min_allele}    = $l->[16];
+      $save{min_af}        = $l->[17];
+      $save{min_al_count}  = $l->[18];
+      $save{flags}         = $l->[20];
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -677,8 +675,8 @@ sub write_variation_features{
                                                    seq_region_end, seq_region_strand,  allele_string, map_weight,  
                                                    source_id, consequence_types, variation_set_id, somatic,
                                                    class_attrib_id, alignment_quality, flags, evidence_attribs,
-                                                   minor_allele, minor_allele_freq, minor_allele_count,validation_status, display )
-                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                                   minor_allele, minor_allele_freq, minor_allele_count, display )
+                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
@@ -710,7 +708,6 @@ sub write_variation_features{
                                $data->{min_allele},
                                $data->{min_af},
                                $data->{min_al_count},
-			       $data->{validation_status},
                                $display
                              )|| die "ERROR importing variation feature info\n";
 
@@ -747,8 +744,7 @@ sub write_variation{
                                                       maf.freq,
                                                       maf.count,
                                                       maf.is_minor_allele,
-                                                      clinical_significance,
-                                                      validation_status
+                                                      clinical_significance 
                                                from variation v left outer join maf on ( maf.snp_id = v.snp_id)
                                                where v.variation_id between ? and ?
 
@@ -767,9 +763,8 @@ sub write_variation{
                                                minor_allele_count,
                                                clinical_significance,
                                                evidence_attribs,
-                                               validation_status,
                                                display)
-                                               values (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                               values (?,?,?,?,?,?,?,?,?,?,?,?)
                                               ]); 
 
       
@@ -814,7 +809,6 @@ sub write_variation{
                            $v->[8],
                            $v->[10],
                            $evidence_attribs,
-                           $v->[11],
                            $display )||    die "ERROR writing variation table\n";    
 
   }

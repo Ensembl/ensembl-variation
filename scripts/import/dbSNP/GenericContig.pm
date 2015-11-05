@@ -771,10 +771,6 @@ sub variation_table {
     if( $self->{source_engine} =~/mssql/ ){
 	$stmt .= qq{ 1, 
 	             'rs'+LTRIM(STR(snp.snp_id)) AS sorting_id, 
-	             CASE WHEN snp.validation_status = 0
-	              THEN  NULL
-	              ELSE snp.validation_status
-	            END,
 	            snp.snp_id
 		    FROM SNP snp 
 		    WHERE exemplar_subsnp_id != 0
@@ -783,10 +779,6 @@ sub variation_table {
     elsif( $self->{source_engine} =~/postgreSQL/i ){
 	$stmt .= qq{ 1, 
 	             'rs' || snp.snp_id AS sorting_id, 
-	             CASE WHEN snp.validation_status = 0
-	              THEN  NULL
-	              ELSE snp.validation_status
-	            END,
 	            snp.snp_id
 		    FROM SNP snp 
 		    WHERE exemplar_subsnp_id != 0
@@ -795,7 +787,6 @@ sub variation_table {
     else{
 	$stmt .= qq{ 1, 
 	          CONCAT('rs', CAST(snp.snp_id AS CHAR)) AS sorting_id, 	          
-                  snp.validation_status,
 	          snp.snp_id
 		  FROM SNP snp 
 		  WHERE exemplar_subsnp_id != 0
@@ -819,7 +810,7 @@ sub variation_table {
       $self->{'dbVar'}->do( qq[ALTER TABLE variation disable keys]);  
 
     }
-    load( $self->{'dbVar'}, "variation", "source_id", "name", "validation_status", "snp_id" ) unless ($resume_at_subsnp_id > 0);
+    load( $self->{'dbVar'}, "variation", "source_id", "name", "snp_id" ) unless ($resume_at_subsnp_id > 0);
     $self->{'dbVar'}->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" ) unless ($resume_at_subsnp_id > 0);
     debug(localtime() . "\tVariation table loaded");
     
@@ -2243,17 +2234,17 @@ sub variation_feature {
     
   debug(localtime() . "\tCreating tmp_variation_feature data");
     
-  dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality, v.somatic, v.class_attrib_id
+  dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, tcl.aln_quality, v.somatic, v.class_attrib_id
 					  FROM variation v, tmp_contig_loc tcl, seq_region ts
 					  WHERE v.snp_id = tcl.snp_id
 					  AND ts.name = tcl.contig});
 
-  create_and_load($self->{'dbVar'},'tmp_variation_feature',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand i", "variation_name", "source_id i not_null", "validation_status i", "aln_quality d", "somatic i", "class_attrib_id i");
+  create_and_load($self->{'dbVar'},'tmp_variation_feature',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand i", "variation_name", "source_id i not_null", "aln_quality d", "somatic i", "class_attrib_id i");
   print $logh Progress::location();
 
   debug(localtime() . "\tDumping data into variation_feature table");
-  $self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic, class_attrib_id)
-				SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality, tvf.somatic, tvf.class_attrib_id
+  $self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, alignment_quality, somatic, class_attrib_id)
+				SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.aln_quality, tvf.somatic, tvf.class_attrib_id
 				FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				 });
   print $logh Progress::location();

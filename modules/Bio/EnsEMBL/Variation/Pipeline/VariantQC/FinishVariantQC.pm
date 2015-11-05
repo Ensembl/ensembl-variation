@@ -335,7 +335,7 @@ sub check_MT_fails{
 
   Check for consistency between new and old variation_feature tables 
   by comparing the number of rows with each possible value for the 
-  validation_status, somatic and seq_region_id columns
+  somatic and seq_region_id columns
 
 =cut
 sub check_variation_feature_consistency{
