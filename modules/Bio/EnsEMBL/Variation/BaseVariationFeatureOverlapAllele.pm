@@ -235,6 +235,8 @@ sub get_all_OverlapConsequences {
                 }
               }
             }
+
+            last if $assigned_tier && $oc->{tier} > $assigned_tier;
             
             # check that this consequence applies to this type of variation feature
             my $vfc = $oc->variant_feature_class;
@@ -255,6 +257,11 @@ sub get_all_OverlapConsequences {
 
                     if ($check) {
                         push @$cons, $oc;
+
+                        my $tier = $oc->{tier};
+                        if($tier <= 2) {
+                          $assigned_tier = $tier;
+                        }
                     }
                 }
             }
