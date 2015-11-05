@@ -116,9 +116,6 @@ sub store {
             $rfv->variation_feature->is_somatic,
             (join ',', map { $_->SO_term } @{ $allele->get_all_OverlapConsequences }),
         );
-        if ( $sth->err ) {
-          die "ERROR! return code:" . $sth->err . " error msg: " . $sth->errstr . "\n";
-        }
     }
   $sth->finish();
 }
