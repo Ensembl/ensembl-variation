@@ -4736,8 +4736,14 @@ sub prefetch_transcript_data {
     
     # three prime UTR
     my $transferred = $tr->transfer($tr->feature_Slice());
-    $tr->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
-    
+   
+    eval {
+        $tr->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
+    };
+    if($@) {
+        warn "Problem getting 3' UTR:".$@;
+    }
+ 
     # peptide
     unless ($tr->{_variation_effect_feature_cache}->{peptide}) {
         my $translation = $tr->translate;
