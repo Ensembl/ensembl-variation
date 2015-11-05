@@ -88,13 +88,13 @@ ok($h->isa('Bio::EnsEMBL::Variation::CDSHaplotype'), "get by name - isa");
 is($h->_hex, '25f6ab7d0476132b731c630d743d2868', "get by name - hex");
 
 @h = @{$c->get_all_TranscriptHaplotypes};
-is(scalar @h, 129, "get all TranscriptHaplotypes - count");
+is(scalar @h, 115, "get all TranscriptHaplotypes - count");
 
 @h = @{$c->get_all_CDSHaplotypes};
 is(scalar @h, 75, "get all CDSHaplotypes - count");
 
 @h = @{$c->get_all_ProteinHaplotypes};
-is(scalar @h, 54, "get all ProteinHaplotypes - count");
+is(scalar @h, 40, "get all ProteinHaplotypes - count");
 
 @h = @{$c->get_all_TranscriptHaplotypes_by_Sample($s)};
 is(scalar @h, 4, "get_all_TranscriptHaplotypes_by_Sample - count");
