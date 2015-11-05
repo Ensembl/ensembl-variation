@@ -134,8 +134,6 @@ $consequence_types = join(',', sort @{$rfv->consequence_type});
 ok($consequence_types eq 'regulatory_region_variant', 'Print consequence types for regulatory_feature_variation');
 
 ok($rfva->store($rfv), 'store');
-$rfvs = $rfva->fetch_all_by_VariationFeatures([$vf]);
-is(scalar @$rfvs, 1, 'fetch_all_by_VariationFeatures');
 
 my $var1 = $va->fetch_by_name('rs187207343');
 my $vf1 = $vfa->fetch_all_by_Variation($var1)->[0];
@@ -148,4 +146,7 @@ my $rfvs2 = $rfva->fetch_all_by_RegulatoryFeatures_SO_terms([$rf1], ['sequence_v
 ok(scalar @$rfvs2 == 0, 'fetch_all_by_RegulatoryFeatures_SO_terms');
 my $rfvs3 = $rfva->fetch_all_somatic_by_RegulatoryFeatures_SO_terms([$rf1], ['sequence_variant']);
 ok(scalar @$rfvs3 == 0, 'fetch_all_somatic_by_RegulatoryFeatures_SO_terms');
+my $rfvs4 = $rfva->fetch_all_by_VariationFeatures([$vf1]);
+is(scalar @$rfvs, 1, 'fetch_all_by_VariationFeatures');
+
 done_testing();
