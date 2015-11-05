@@ -469,9 +469,39 @@ sub affects_cds {
 =cut
 
 sub exon_number {
-    my $self = shift;
-    $self->_exon_intron_number unless exists $self->{exon_number};
-    return $self->{exon_number};
+  my $self = shift;
+
+  if(!exists($self->{_exon_number})) {
+    my $total = scalar @{$self->_exons};
+
+    my $tr = $self->transcript;
+    my $vf = $self->base_variation_feature;
+    my $vf_start = $vf->{start};
+    my $vf_end   = $vf->{end};
+
+    my @numbers =
+      map {$tr->{_variation_effect_feature_cache}->{_exon_numbers}->{sprintf('%s', $_)}}
+      grep {overlap($vf_start, $vf_end, $_->{start}, $_->{end})}
+      @{$self->_overlapped_exons};
+
+    my $number_string = undef;
+
+    if(@numbers) {
+      if(scalar @numbers > 1) {
+        @numbers = sort {$a <=> $b} @numbers;
+        $number_string = $numbers[0].'-'.$numbers[-1];
+      }
+      else {
+        $number_string = $numbers[0];
+      }
+
+      $number_string .= '/'.$total;
+    }
+
+    $self->{_exon_number} = $number_string;
+  }
+
+  return $self->{_exon_number};
 }
 
 =head2 intron_number
@@ -487,66 +517,39 @@ sub exon_number {
 =cut
 
 sub intron_number {
-    my $self = shift;
-    $self->_exon_intron_number unless exists $self->{intron_number};
-    return $self->{intron_number};
-}
+  my $self = shift;
 
-sub _exon_intron_number {
-    my $self = shift;
+  if(!exists($self->{_intron_number})) {
+    my $total = scalar @{$self->_introns};
 
-    # work out which exon or intron this variant falls in
-
-    # ensure the keys exist so even if we don't fall in an exon 
-    # or intron we'll only call this method once
-
-    $self->{exon_number} = $self->{intron_number} = undef;
-
-    my $vf = $self->base_variation_feature;    
-    
+    my $tr = $self->transcript;
+    my $vf = $self->base_variation_feature;
     my $vf_start = $vf->{start};
     my $vf_end   = $vf->{end};
 
-    my $strand = $self->transcript->strand;
+    my @numbers =
+      map {$tr->{_variation_effect_feature_cache}->{_intron_numbers}->{sprintf('%s', $_)}}
+      grep {overlap($vf_start, $vf_end, $_->{start}, $_->{end})}
+      @{$self->_overlapped_introns};
 
-    my $exons = $self->_exons;
+    my $number_string = undef;
 
-    my $tot_exons = scalar(@$exons);
+    if(@numbers) {
+      if(scalar @numbers > 1) {
+        @numbers = sort {$a <=> $b} @numbers;
+        $number_string = $numbers[0].'-'.$numbers[-1];
+      }
+      else {
+        $number_string = $numbers[0];
+      }
 
-    my $exon_count = 0;
-
-    my $prev_exon;
-    
-    my (@overlapped_exons, @overlapped_introns);
-
-    for my $exon (@$exons) {
-
-        $exon_count++;
-        
-        if (overlap($vf_start, $vf_end, $exon->{start}, $exon->{end})) {
-            push @overlapped_exons, $exon_count;
-            #$self->{exon_number} = defined($self->{exon_number}) ? $self->{exon_number}.",".$exon_count : $exon_count;
-        }
-
-        if ($prev_exon) {
-            my $intron_start = $strand == 1 ? $prev_exon->{end} + 1 : $exon->{end} + 1;
-            my $intron_end   = $strand == 1 ? $exon->{start} - 1 : $prev_exon->{start} - 1;
-
-            if ($prev_exon && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
-                push @overlapped_introns, $exon_count - 1;
-                #$self->{intron_number} = defined($self->{intron_number}) ? $self->{intron_number}.",".($exon_count - 1) : ($exon_count - 1);
-            }
-        }
-
-        $prev_exon = $exon;
+      $number_string .= '/'.$total;
     }
-    
-    if(@overlapped_exons) {
-        $self->{exon_number} = (scalar @overlapped_exons > 1 ? $overlapped_exons[0].'-'.$overlapped_exons[-1] : $overlapped_exons[0]).'/'.$tot_exons;
-    }
-    if(@overlapped_introns) {
-        $self->{intron_number} = (scalar @overlapped_introns > 1 ? $overlapped_introns[0].'-'.$overlapped_introns[-1] : $overlapped_introns[0]).'/'.($tot_exons - 1);
-    }
+
+    $self->{_intron_number} = $number_string;
+  }
+
+  return $self->{_intron_number};
 }
 
 sub _intron_effects {
@@ -748,8 +751,13 @@ sub _overlapped_introns_and_boundary_no_tree {
   my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
   
   my (@introns, @boundary);
+  my $intron_number = 0;
+  my $num_cache = $tr->{_variation_effect_feature_cache}->{_intron_numbers} ||= {};
   
   foreach my $intron(@{$self->_introns}) {
+
+    # log numbers
+    $num_cache->{sprintf('%s', $intron)} = ++$intron_number;
 
     my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
 
@@ -795,8 +803,13 @@ sub _overlapped_exons_no_tree {
   my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
 
   my @exons;
+  my $exon_number = 0;
+  my $num_cache = $tr->{_variation_effect_feature_cache}->{_exon_numbers} ||= {};
 
   foreach my $exon(@{$self->_exons}) {
+
+    # log numbers
+    $num_cache->{sprintf('%s', $exon)} = ++$exon_number;
 
     # also leave if we've gone beyond the bounds of the VF
     # subsequent introns won't be in range
@@ -854,7 +867,14 @@ sub _create_intron_trees {
   my $intron_tree   = Set::IntervalTree->new();
   my $boundary_tree = Set::IntervalTree->new();
 
+  my $intron_number = 0;
+  my $num_cache = $tr->{_variation_effect_feature_cache}->{_intron_numbers} ||= {};
+
   for my $intron(@{$self->_introns}) {
+
+    # log numbers
+    $num_cache->{sprintf('%s', $intron)} = ++$intron_number;
+
     my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
 
     # this is the actual plot
@@ -897,7 +917,17 @@ sub _exon_interval_tree {
 
     else {
       my $tree = Set::IntervalTree->new();
-      $tree->insert($_, $_->{start} - 1, $_->{end}) for @{$self->_exons};
+      my $exon_number = 0;
+      my $num_cache = $tr->{_variation_effect_feature_cache}->{_exon_numbers} ||= {};
+
+      foreach my $exon(@{$self->_exons}) {
+
+        # add it to the tree
+        $tree->insert($exon, $exon->{start} - 1, $exon->{end});
+
+        # log numbers
+        $num_cache->{sprintf('%s', $exon)} = ++$exon_number;
+      }
       $tr->{_variation_effect_feature_cache}->{_exon_interval_tree} = $tree;
     }
   }
