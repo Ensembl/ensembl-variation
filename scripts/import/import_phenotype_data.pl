@@ -83,14 +83,14 @@ my %SOURCES = (
     url => "http://rgd.mcw.edu/",
     type => "QTL",
   },
-  
+
   "GIANT" => {
     description => "The Genetic Investigation of ANthropometric Traits (GIANT) consortium is an international collaboration that seeks to identify genetic loci that modulate human body size and shape, including height and measures of obesity",
     url => "http://www.broadinstitute.org/collaboration/giant/index.php/Main_Page",
     type => "Variation",
   },
-	
-	"MAGIC" => {
+  
+  "MAGIC" => {
     description => "MAGIC (the Meta-Analyses of Glucose and Insulin-related traits Consortium) represents a collaborative effort to combine data from multiple GWAS to identify additional loci that impact on glycemic and metabolic traits",
     url => "http://www.magicinvestigators.org/",
     type => "Variation",
@@ -101,12 +101,12 @@ my %SOURCES = (
     url => "http://www.orpha.net/",
     type => "Gene",
   },
-	
-	"DDG2P" => {
-		description => "Developmental Disorders Genotype-to-Phenotype Database",
-		url => "http://decipher.sanger.ac.uk/",
-		type => "Gene",
-	},
+
+  "DDG2P" => {
+    description => "Developmental Disorders Genotype-to-Phenotype Database",
+    url => "http://decipher.sanger.ac.uk/",
+    type => "Gene",
+  },
   
   "MIM morbid" => {
     description => "Online Mendelian Inheritance in Man (OMIM) database",
@@ -130,6 +130,7 @@ my %SOURCES = (
     description => "Inferred from Mutant Phenotype (IMP), annotated by Gene Ontology Annotation",
     url => "http://www.ebi.ac.uk/GOA",
     type => "Gene",
+    status => "mixed"
   },
 );
 
@@ -177,6 +178,7 @@ my $result;
 my $source_name;
 my $source_description;
 my $source_url;
+my $source_status = 'germline';
 my $object_type;
 my $prev_prog;
 
@@ -271,7 +273,7 @@ elsif ($source =~ m/ega/i) {
   $source_name = 'EGA';
   $source_description = $SOURCES{$source_name}->{description};
   $source_url         = $SOURCES{$source_name}->{url};
-  my $source_id = get_or_add_source($source_name,$source_description,$source_url,$db_adaptor);
+  my $source_id = get_or_add_source($source_name,$source_description,$source_url,$source_status,$db_adaptor);
   print STDOUT "$source source_id is $source_id\n" if ($verbose);
   parse_ega($infile,$source_id);
   exit(0);
@@ -326,8 +328,8 @@ elsif($source =~ /ddg2p/i) {
   $source_name = 'DDG2P';
 }
 elsif($source =~ /mim.+dump/) {
-	$result = parse_mim_dump($infile);
-	$source_name = 'MIM morbid';
+  $result = parse_mim_dump($infile);
+  $source_name = 'MIM morbid';
 }
 elsif ($source =~ m/zfin/i) {
   $result = parse_zfin($infile, $core_db_adaptor);
@@ -349,6 +351,7 @@ $source_description = $SOURCES{$source_name}->{description};
 $source_url         = $SOURCES{$source_name}->{url};
 $set                = defined($SOURCES{$source_name}->{set}) ? $SOURCES{$source_name}->{set} : undef;
 $object_type        = $SOURCES{$source_name}->{type};
+$source_status      = $SOURCES{$source_name}->{status} if (defined($SOURCES{$source_name}->{status}));
 
 my %synonym;
 my @phenotypes;
@@ -403,7 +406,7 @@ foreach my $id(keys %$coords) {
 }
 
 # Get or add a source
-my $source_id = get_or_add_source($source_name,$source_description,$source_url,$db_adaptor);
+my $source_id = get_or_add_source($source_name,$source_description,$source_url,$source_status,$db_adaptor);
 print STDOUT "$source source_id is $source_id\n" if ($verbose);
 
 
@@ -415,8 +418,8 @@ unless ($skip_synonyms) {
 
 # Now, insert phenotypes
 unless ($skip_phenotypes) {
-	die("ERROR: No phenotypes or objects retrieved from input\n") unless scalar @phenotypes;
-	
+  die("ERROR: No phenotypes or objects retrieved from input\n") unless scalar @phenotypes;
+
   print STDOUT "Adding phenotypes\n" if ($verbose);
   add_phenotypes(\@phenotypes,$coords,$source_id,$object_type,$db_adaptor);
 
@@ -454,12 +457,12 @@ sub parse_uniprot {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -532,12 +535,12 @@ sub parse_nhgri {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -649,12 +652,12 @@ sub parse_omim {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -820,12 +823,12 @@ sub parse_goa {
   my %headers;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -891,12 +894,12 @@ sub parse_omia {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -942,12 +945,12 @@ sub parse_animal_qtl {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -1022,12 +1025,12 @@ sub parse_rgd_qtl {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   my (%headers, $line_num);
   
@@ -1102,12 +1105,12 @@ sub parse_rgd_gene {
   die("ERROR: Could not get gene adaptor") unless defined($gene_adaptor);
 
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
 
   my %rgd_coords;
 
@@ -1186,12 +1189,12 @@ sub parse_giant {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
@@ -1219,49 +1222,49 @@ sub parse_giant {
 
 sub parse_magic {
   my $infile = shift;
-  
+
   my @phenotypes;
-  
+
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
-  
-	my @headers;
-	
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
+
+  my @headers;
+
   # Read through the file and parse out the desired fields
   while (<IN>) {
     chomp;
-    
+
     if(/^snp/i) {
-			@headers = split /\s+/;
-		}
-		else {
-			$DB::single = 1;
-			
-			my @split = split(/\s+/);
-			
-			my %hash = map {$headers[$_] => $split[$_]} 0..$#split;
-			
-			# fix p-value
-			$hash{pvalue} =~ s/^\./0\./;
-			
-			my $data = {
-				'id'              => $hash{snp} || $hash{Snp},
-				'risk_allele'     => uc($hash{effect_allele}),
-				'p_value'         => $hash{pvalue},
-				'description'     => $global_phenotype_description,
-			};
-			
-			push(@phenotypes,$data);
-		}
+      @headers = split /\s+/;
+    }
+    else {
+      $DB::single = 1;
+
+      my @split = split(/\s+/);
+
+      my %hash = map {$headers[$_] => $split[$_]} 0..$#split;
+
+      # fix p-value
+      $hash{pvalue} =~ s/^\./0\./;
+
+      my $data = {
+        'id'              => $hash{snp} || $hash{Snp},
+        'risk_allele'     => uc($hash{effect_allele}),
+        'p_value'         => $hash{pvalue},
+        'description'     => $global_phenotype_description,
+      };
+
+      push(@phenotypes,$data);
+    }
   }
-  
+
   close(IN);
-  
+
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
 }
@@ -1311,9 +1314,7 @@ sub parse_orphanet {
             push @$genes, $g if defined($g);
           }
         }
-        
-        
-        
+
         if(scalar @$genes == 0 && defined($ref)) {
           my $genes = $ref =~ /^\d+$/ ? $ga->fetch_all_by_description('%HGNC:'.$ref.']%') : $ga->fetch_all_by_external_name($ref, 'HGNC');
           
@@ -1360,67 +1361,67 @@ sub parse_ddg2p {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
-		next if /^track/;
+    next if /^track/;
     chomp;
-		
-		my @data = split /\t/, $_;
-		
-		# get coords
-		my ($c, $s, $e) = @data[0..2];
-		$c =~ s/chr//i;
-		
-		# bed is 0-indexed
-		$s++;
-		
-		# get phenotype details from BED column
-		my ($symbol,$allelic,$mode,$status,$phen,$id) = split /\|/, $data[3];
-		
-		if($symbol && $phen) {
-			$phen =~ s/\_/ /g;
-			
-			my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
-			
-			# we don't want any LRG genes
-			@$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
-			
-			# try restricting by name
-			if(scalar(@$genes) > 1) {
-				my @tmp = grep {$_->external_name eq $symbol} @$genes;
-				$genes = \@tmp if scalar @tmp;
-			}
-			
-			if(scalar @$genes != 1) {
-				$DB::single = 1;
-				print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
-			}
-			
-			next unless scalar @$genes;
-			
-			foreach my $gene(@$genes) {
-				push @phenotypes, {
-					'id' => $gene->stable_id,
-					'description' => $phen,
-					'external_id' => $id,
-					'seq_region_id' => $gene->slice->get_seq_region_id,
-					'seq_region_start' => $gene->seq_region_start,
-					'seq_region_end' => $gene->seq_region_end,
-					'seq_region_strand' => $gene->seq_region_strand,
-					'mutation_consequence' => $mode,
-					'inheritance_type' => $allelic,
-				};
-			}
-		}
-	}
-  
+
+    my @data = split /\t/, $_;
+
+    # get coords
+    my ($c, $s, $e) = @data[0..2];
+    $c =~ s/chr//i;
+
+    # bed is 0-indexed
+    $s++;
+
+    # get phenotype details from BED column
+    my ($symbol,$allelic,$mode,$status,$phen,$id) = split /\|/, $data[3];
+
+    if($symbol && $phen) {
+      $phen =~ s/\_/ /g;
+
+      my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
+
+      # we don't want any LRG genes
+      @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+
+      # try restricting by name
+      if(scalar(@$genes) > 1) {
+        my @tmp = grep {$_->external_name eq $symbol} @$genes;
+        $genes = \@tmp if scalar @tmp;
+      }
+
+      if(scalar @$genes != 1) {
+        $DB::single = 1;
+        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
+      }
+
+      next unless scalar @$genes;
+
+      foreach my $gene(@$genes) {
+        push @phenotypes, {
+          'id' => $gene->stable_id,
+          'description' => $phen,
+          'external_id' => $id,
+          'seq_region_id' => $gene->slice->get_seq_region_id,
+          'seq_region_start' => $gene->seq_region_start,
+          'seq_region_end' => $gene->seq_region_end,
+          'seq_region_strand' => $gene->seq_region_strand,
+          'mutation_consequence' => $mode,
+          'inheritance_type' => $allelic,
+        };
+      }
+    }
+  }
+
   return {'phenotypes' => \@phenotypes};
 }
 
@@ -1540,71 +1541,71 @@ sub parse_omim_gene {
 #}
 
 sub parse_mim2gene {
-	my $file = shift;
+  my $file = shift;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
-	
-	my %return;
-	
-	while(<IN>) {
-		next if /^\#/;
-		chomp;
-		
-		my ($mim, $type, $genes, $symbols) = split /\s+/;
-		
-		$return{$mim} = {
-			type => $type,
-			genes => $genes,
-			symbols => $symbols
-		};
-	}
-	
-	close IN;
-	
-	return \%return;
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
+  
+  my %return;
+  
+  while(<IN>) {
+    next if /^\#/;
+    chomp;
+    
+    my ($mim, $type, $genes, $symbols) = split /\s+/;
+    
+    $return{$mim} = {
+      type => $type,
+      genes => $genes,
+      symbols => $symbols
+    };
+  }
+  
+  close IN;
+  
+  return \%return;
 }
 
 sub parse_mim_dump {
-	my $file = shift;
+  my $file = shift;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
-	
-	my @phenotypes;
-	
-	while(<IN>) {
-		next if /^stable_id/;
-		chomp;
-		
-		my ($gene, $sr, $s, $e, $str, $id, $desc) = split /\t/;
-		
-		next unless $desc && $gene;
-		
-		# sometimes they have spaces at the start?
-		$desc =~ s/^\s+//;
-		
-		push @phenotypes, {
-			'id' => $gene,
-			'description' => $desc,
-			'external_id' => $id,
-			'seq_region_id' => $sr,
-			'seq_region_start' => $s,
-			'seq_region_end' => $e,
-			'seq_region_strand' => $str,
-			'type' => 'Gene',
-		}
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
+  
+  my @phenotypes;
+  
+  while(<IN>) {
+    next if /^stable_id/;
+    chomp;
+    
+    my ($gene, $sr, $s, $e, $str, $id, $desc) = split /\t/;
+    
+    next unless $desc && $gene;
+    
+    # sometimes they have spaces at the start?
+    $desc =~ s/^\s+//;
+    
+    push @phenotypes, {
+      'id' => $gene,
+      'description' => $desc,
+      'external_id' => $id,
+      'seq_region_id' => $sr,
+      'seq_region_start' => $s,
+      'seq_region_end' => $e,
+      'seq_region_strand' => $str,
+      'type' => 'Gene',
+    }
+  }
   
   return {'phenotypes' => \@phenotypes};
 }
@@ -1681,19 +1682,19 @@ sub parse_zfin {
   my @phenotypes;
   
   # Open the input file for reading
-	if($infile =~ /gz$/) {
-		open IN, "zcat $infile |" or die ("Could not open $infile for reading");
-	}
-	else {
-		open(IN,'<',$infile) or die ("Could not open $infile for reading");
-	}
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
   
   # Read through the file and parse out the desired fields
   while (<IN>) {
     chomp;
-		
-		my @data = split /\t/, $_;
-		
+    
+    my @data = split /\t/, $_;
+    
     my $symbol = $data[1];
     my $phen = $data[4];
     
@@ -1703,32 +1704,32 @@ sub parse_zfin {
     
     if($symbol && $phen) {
       my $genes = $ga->fetch_all_by_external_name($symbol);
-			
-			# try restricting by name
-			if(scalar(@$genes) > 1) {
-				my @tmp = grep {$_->external_name eq $symbol} @$genes;
-				$genes = \@tmp if scalar @tmp;
-			}
-			
-			if(scalar @$genes != 1) {
-				print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene ID $symbol\n";
-			}
-			
-			next unless scalar @$genes;
-			
-			foreach my $gene(@$genes) {
-				push @phenotypes, {
-					'id' => $gene->stable_id,
-					'description' => $phen,
-					'external_id' => $data[0],
-					'seq_region_id' => $gene->slice->get_seq_region_id,
-					'seq_region_start' => $gene->seq_region_start,
-					'seq_region_end' => $gene->seq_region_end,
-					'seq_region_strand' => $gene->seq_region_strand,
-				};
-			}
+      
+      # try restricting by name
+      if(scalar(@$genes) > 1) {
+        my @tmp = grep {$_->external_name eq $symbol} @$genes;
+        $genes = \@tmp if scalar @tmp;
+      }
+      
+      if(scalar @$genes != 1) {
+        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene ID $symbol\n";
+      }
+      
+      next unless scalar @$genes;
+      
+      foreach my $gene(@$genes) {
+        push @phenotypes, {
+          'id' => $gene->stable_id,
+          'description' => $phen,
+          'external_id' => $data[0],
+          'seq_region_id' => $gene->slice->get_seq_region_id,
+          'seq_region_start' => $gene->seq_region_start,
+          'seq_region_end' => $gene->seq_region_end,
+          'seq_region_strand' => $gene->seq_region_strand,
+        };
+      }
     }
-	}
+  }
   
   return {'phenotypes' => \@phenotypes};
 }
@@ -1821,7 +1822,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-		
+    
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
   
@@ -1885,8 +1886,9 @@ sub get_coords {
 sub get_or_add_source {
   my $source_name = shift;
   my $source_description = shift;
-  my $source_url = shift;
-  my $db_adaptor = shift;
+  my $source_url    = shift;
+  my $source_status = shift;
+  my $db_adaptor    = shift;
   
   my $stmt = qq{
     SELECT
@@ -1910,12 +1912,14 @@ sub get_or_add_source {
           name,
           description,
           url,
+          somatic_status,
           version
         )
       VALUES (
         '$source_name',
         '$source_description',
         '$source_url',
+        '$source_status',
         $source_version
       )
     };
@@ -2087,19 +2091,19 @@ sub add_phenotypes {
   my $study_count = 0;
   my $phenotype_feature_count = 0;
   
-	my $total = scalar @sorted;
-	my $i = 0;
-	
+  my $total = scalar @sorted;
+  my $i = 0;
+  
   while (my $phenotype = shift(@sorted)) {
-		progress($i++, $total);
-		
-		$object_type = $phenotype->{type} if defined($phenotype->{type});
+    progress($i++, $total);
+    
+    $object_type = $phenotype->{type} if defined($phenotype->{type});
     
     # If the rs could not be mapped to a variation id, skip it
     next if $object_type =~ /Variation/ && (!defined($variation_ids->{$phenotype->{"id"}}[0]));
-		
-		# if we have no coords, skip it
-		next unless defined($coords->{$phenotype->{id}});
+    
+    # if we have no coords, skip it
+    next unless defined($coords->{$phenotype->{id}});
     
     my $study_id;
     
@@ -2214,7 +2218,7 @@ sub add_phenotypes {
       }
     }
   }
-	end_progress();
+  end_progress();
   print STDOUT "$study_count new studies added\n" if ($verbose);
   print STDOUT "$phenotype_feature_count new phenotype_features added\n" if ($verbose);
 }
@@ -2465,23 +2469,23 @@ sub remove_carriage_return {
 
 # update or initiate progress bar
 sub progress {
-	my ($i, $total) = @_;
-	
-	my $width = 60;
-	my $percent = int(($i/$total) * 100);
-	my $numblobs = int((($i/$total) * $width) - 2);
-	
-	# this ensures we're not writing to the terminal too much
-	return if defined($prev_prog) && $numblobs.'-'.$percent eq $prev_prog;
-	$prev_prog = $numblobs.'-'.$percent;
-	
-	printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
+  my ($i, $total) = @_;
+  
+  my $width = 60;
+  my $percent = int(($i/$total) * 100);
+  my $numblobs = int((($i/$total) * $width) - 2);
+  
+  # this ensures we're not writing to the terminal too much
+  return if defined($prev_prog) && $numblobs.'-'.$percent eq $prev_prog;
+  $prev_prog = $numblobs.'-'.$percent;
+  
+  printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
 
 # end progress bar
 sub end_progress {
-	progress(1,1);
-	print "\n";
+  progress(1,1);
+  print "\n";
 }
 
 
