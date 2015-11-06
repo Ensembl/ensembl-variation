@@ -133,7 +133,6 @@ my $count = 0;
 my $cs_term_count = scalar (keys %clin_sign);
 foreach my $cs_term (sort(keys %clin_sign)) {
   $count ++;
-  print STDERR qq{Term "$cs_term" done ($count/$cs_term_count)\n};
   my $icon_label = $cs_term;
      $icon_label =~ s/ /-/g;
   my $icon_col = qq{<td style="text-align:center"><img src="$icon_path$icon_label.png" title="$cs_term"/></td>};
@@ -143,6 +142,7 @@ foreach my $cs_term (sort(keys %clin_sign)) {
   }
   $html_content .= qq{  <tr$bg>$icon_col<td>$cs_term</td>$examples</tr>\n};
   $bg = set_bg();
+  print STDERR qq{Term "$cs_term" done ($count/$cs_term_count)\n};
 }
 
 # Four-star rating
@@ -156,7 +156,7 @@ foreach my $review_status (sort {$star_ranking{'status'}{$a}{'stars'} <=> $star_
     $stars .= qq{<img style="vertical-align:top" src="/i/val/$star_color\_star.png" alt="$star_color"/>};
   }
   $stars .= qq{</span>};
-  my $star_example = get_variant_example(0,$search_term,\%star_ranking);
+  my $star_example = get_variant_example(0,'%'.$search_term.'%',\%star_ranking);
   $html_star_content .= qq{  <tr$bg>\n    <td>$stars</td>\n    <td>$review_status</td>\n    $star_example\n  </tr>};
   $bg = set_bg();
 }
@@ -209,9 +209,7 @@ sub get_variant_example {
   my $value = shift;
   my $data  = shift;
   
-  my $value_like = '%'.$value.'%';
-  
-  my $var = (execute_stmt_one_result($data->{'query'}->[$order],$value_like))[0];
+  my $var = (execute_stmt_one_result($data->{'query'}->[$order],$value))[0];
   my $example = (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$data->{'link'}->[$order],$var,$var) : '-';
 
   return qq{<td$border_left>$example</td>};
