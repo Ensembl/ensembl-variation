@@ -564,7 +564,7 @@ sub source_table {
     }
    
     if ($s_new_type) {
-      $species_news{$species}{$s_new_type} = 1;
+      $species_news{$species}{$s_new_type} += 1;
       my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
       if ($s_type eq 'chip') {
         $s_header .= $borders if ($cbg == 1);
