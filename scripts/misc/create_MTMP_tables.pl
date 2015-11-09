@@ -25,11 +25,12 @@
 
 =cut
 
-## script to create a tables of evidence values and/or population genotypes for mart building
+## script to create a tables of evidence values, population genotypes and 
+## sets for mart building
 
 ## evidence tables are always re-created even if present (may change)
 ## population genotype tables are only created if missing (don't change)
-## the population genotype table is not created for human
+##    - the population genotype table is not created for human
 
 
 use strict;
@@ -72,12 +73,11 @@ if($mode =~/evi/){
 elsif($mode =~/pop_geno/){
     create_mtmp_population_genotype($databases);
 }
-elsif($mode =~/both/){
-    create_mtmp_evidence($databases);
-    create_mtmp_population_genotype($databases);
+elsif($mode eq 'variation_set_variation' || $mode eq 'variation_set_structural_variation'){
+    create_mtmp_variation_set($databases, $mode);
 }
 else{
-    warn "\nERROR: Mode needed\n\n";
+    warn "\nERROR: Supported mode needed\n\n";
     die usage();
 }
 
@@ -219,13 +219,59 @@ sub create_mtmp_population_genotype{
             AND gc2.allele_code_id = ac2.allele_code_id]);
     }
 }
+## variation/structural_variation sets can have parents sets
+## create MTMP table linking each variation/structural_variation to each set
+
+sub create_mtmp_variation_set{
+
+  my $databases = shift;
+  my $table     = shift;
+
+  foreach my $db_name (@{$databases}){
+
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef) || die "Failed to connect to $db_name\n";
+
+    my $mtmp_table_name = 'MTMP_'. $table ;
+ 
+    my $object_id = $table;
+    $object_id    =~ s/variation_set_//;
+    $object_id .= "_id";
+
+    ## production require table to be created newly each time
+    $dbh->do(qq[ drop table if exists $mtmp_table_name ]);   
+    $dbh->do(qq[ create table $mtmp_table_name like $table ])|| die "Failed to create MTMP_$table" ;
+
+    ## copy direct variant <-> set relationships
+    $dbh->do(qq[ insert into $mtmp_table_name select * from $table ]);
+    
+    ## add variant <-> parent set relationships
+    $dbh->do(qq[ insert into $mtmp_table_name ( $object_id, variation_set_id )
+                 select vsv.$object_id, vss.variation_set_super 
+                 from $table vsv, 
+                      variation_set_structure vss 
+                 where vss.variation_set_sub = vsv.variation_set_id 
+               ]);
+
+    ## add variant <-> parent of parent set relationships
+    $dbh->do(qq[ insert into $mtmp_table_name ($object_id, variation_set_id )
+                 select vsv.$object_id, vss2.variation_set_super 
+                 from $table vsv, 
+                      variation_set_structure vss,
+                      variation_set_structure vss2
+                 where vss.variation_set_sub = vsv.variation_set_id
+                 and vss.variation_set_sub = vss2.variation_set_super
+               ]);
+
+  }
+}
+
 
 sub usage{
 
     die "\n\tUsage: create_MTMP_tables.pl -host [host] 
                                      -user [write-user name] 
                                      -pass [write-user password] 
-                                     -mode [evidence|pop_geno|both]\n
+                                     -mode [evidence|pop_geno|variation_set_variation|variation_set_structural_variation]\n
 
 \t\tOptions: -db [database name]    default: all* variation databases on the host
 \t\t         -tmpdir [directory for temp files]
