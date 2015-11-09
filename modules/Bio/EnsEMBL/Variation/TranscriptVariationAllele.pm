@@ -674,13 +674,15 @@ sub hgvs_transcript {
 
 
   ### get position relative to transcript features [use HGVS coords not variation feature coords due to dups]
+  # avoid doing this twice if start and end are the same
+  my $same_pos = $hgvs_notation->{start} == $hgvs_notation->{end};
   $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} );
-  $hgvs_notation->{end}   = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} );
+  $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} );
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 
   # Make sure that start is always less than end
   my ($exon_start_coord, $intron_start_offset) = $hgvs_notation->{start} =~ m/(\-?[0-9]+)\+?(\-?[0-9]+)?/;
-  my ($exon_end_coord,   $intron_end_offset)   = $hgvs_notation->{end} =~ m/(\-?[0-9]+)\+?(\-?[0-9]+)?/;
+  my ($exon_end_coord,   $intron_end_offset)   = $same_pos ? ($exon_start_coord, $intron_start_offset) : $hgvs_notation->{end} =~ m/(\-?[0-9]+)\+?(\-?[0-9]+)?/;
   $intron_start_offset ||= 0;
   $intron_end_offset   ||= 0;
   print "pre pos sort : $hgvs_notation->{start},$hgvs_notation->{end}\n" if $DEBUG ==1;
