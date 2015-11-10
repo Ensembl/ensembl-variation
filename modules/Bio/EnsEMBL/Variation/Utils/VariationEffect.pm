@@ -404,7 +404,7 @@ sub within_non_coding_gene {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)));
+    return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)) );
 }
 
 sub non_coding_exon_variant {
@@ -413,7 +413,10 @@ sub non_coding_exon_variant {
     
     return 0 unless within_non_coding_gene(@_);
     
-    my $exons = $bvfo->_exons;
+    # get overlapped exons
+    # this may include some non-overlapping ones in the case of transcripts with frameshift introns
+    # so we double check with overlap()
+    my $exons = $bvfo->_overlapped_exons;
     
     if(scalar grep {overlap($bvf->{start}, $bvf->{end}, $_->{start}, $_->{end})} @$exons) {
         return 1;
@@ -431,7 +434,7 @@ sub within_miRNA {
     return 0;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return ( within_transcript(@_) and ($feat->biotype eq 'miRNA') );
+    return ( ($feat->biotype eq 'miRNA') and within_transcript(@_) );
 }
 
 sub within_mature_miRNA {
@@ -440,7 +443,7 @@ sub within_mature_miRNA {
     $bvf  ||= $bvfo->base_variation_feature;
     $feat ||= $bvfo->feature;
         
-    return 0 unless ( within_transcript(@_) and ($feat->biotype eq 'miRNA') );
+    return 0 unless ( ($feat->biotype eq 'miRNA') and within_transcript(@_) );
         
     my ($attribute) = @{ $feat->get_all_Attributes('miRNA') };
     
