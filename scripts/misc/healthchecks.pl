@@ -14,76 +14,200 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+=head healthchecks.pl
+
+Joining human tables to check the display status is the same across variation, variation_feature
+and transcript_variation is inefficient for human databases.
+
+This checks in a less databases intensive way.
+
+=cut
+
 use strict;
 use warnings;
-
-use Bio::EnsEMBL::Registry;
-
-use DBI qw(:sql_types);
+use DBI;
 use Getopt::Long;
 
-usage() if (!scalar(@ARGV));
+## less common value to check on
+our %value = ( display  => 0,
+               somatic  => 1 
+             );
 
-my $config = {};
+my ($db, $host, $port, $user, $mode);
 
-GetOptions(
-  $config,
-  'registry=s',
-  'species=s',
-  'help!',
-) or die "Error: Failed to parse command line arguments\n";
+GetOptions ("db=s"    => \$db,
+            "host=s"  => \$host,
+            "port=s"  => \$port,
+            "user=s"  => \$user,
+            "mode:s"  => \$mode,
+    );
 
-usage() if ($config->{help});
+die usage() unless defined $host && defined $user ;
 
-die ('A registry file is required (--registry)') unless (defined($config->{registry}));
 
-my $registry = 'Bio::EnsEMBL::Registry';   
-$registry->load_all($config->{registry});
-$config->{species} ||= 'human';
-my $species = $config->{species};
-my $vdba = $registry->get_DBAdaptor($species, 'variation');
-my $dbh = $vdba->dbc->db_handle;
+$port ||= 3306;
 
-my $arguments = [
-  ["variation", "variation_id", "somatic", "variation_feature", "variation_id", "somatic"],
-  ["variation_feature", "variation_feature_id", "somatic", "transcript_variation", "variation_feature_id", "somatic"],
-  ["variation", "variation_id", "display", "variation_feature", "variation_id", "display"],
-  ["variation_feature", "variation_feature_id", "display", "transcript_variation", "variation_feature_id", "display"],
-];
 
-foreach my $argument_list (@$arguments) {
-  check_for_bad_denormalization(@$argument_list);
+my $databases;
+if( defined $db){
+    push @{$databases}, $db;
+}
+else{
+    ## find all variation databases on the host
+    $databases = get_dbs_by_host($host, $port, $user );
+} 
+
+if($mode =~/display/){
+    check_denorm($databases, 'display');
+}
+elsif($mode =~/somatic/){
+    check_denorm($databases, 'somatic');
+}
+elsif($mode =~/both/){
+    check_denorm($databases, 'display');
+    check_denorm($databases, 'somatic');
+}
+else{
+    warn "\nERROR: Mode needed\n\n";
+    die usage();
 }
 
-sub check_for_bad_denormalization {
-  my ($table1, $col1, $col1d, $table2, $col2, $col2d) = @_;
 
-  my $sql = "$table1, $table2 WHERE $table1.$col1 = $table2.$col2 AND $table1.$col1d != $table2.$col2d";
-  my $useful_sql = "SELECT $table1.$col1, $table1.$col1d, $table2.$col2, $table2.$col2d FROM $sql"; 
+sub check_denorm{
 
-  print STDERR "Running SELECT count(*) FROM $sql\n";
+  my $databases = shift;
+  my $column    = shift;
 
-  my $sth = $dbh->prepare("SELECT count(*) FROM $sql", {mysql_use_result => 1});
-  $sth->execute();
-  while (my @row = $sth->fetchrow_array) {
-    my $count = $row[0];
-    if ($count > 0) {
-      print STDERR "FAILED $table1 -> $table2 on the denormalization of $col1d using the FK $col1\n";
-      print STDERR "FAILURE DETAILS: $count $col1d entries are different in $table1 and $table2\n";
-      print STDERR "USEFUL SQL: $useful_sql\n";
+  foreach my $db_name (@{$databases}){
+    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, undef, undef) ||die "Failed to connect to $db_name\n";
+
+    ## get the set with the least common value for each table
+    my $var_ext_sth  = $dbh->prepare(qq[ select variation_id 
+                                        from variation where $column = $value{$column} ],
+                                     {mysql_use_result => 1});
+
+    my $varf_ext_sth = $dbh->prepare(qq[ select variation_id, variation_feature_id 
+                                         from variation_feature where $column =  $value{$column}],
+                                     {mysql_use_result => 1});
+
+    my $trv_ext_sth  = $dbh->prepare(qq[ select variation_feature_id 
+                                         from transcript_variation where $column =  $value{$column}],
+                                     {mysql_use_result => 1});
+
+
+    ## check if variation_feature or transcript_variation records exist 
+    ##if the value is not found to be the same as in variation
+    my $varf_check_sth = $dbh->prepare(qq[ select variation_feature_id, $column from variation_feature where variation_id = ?]);
+    my $trv_check_sth  = $dbh->prepare(qq[ select $column from transcript_variation where variation_feature_id = ?]);
+
+
+    ## get all variation's with least common value
+    my %variation;
+    $var_ext_sth->execute()||die;
+    my $var = $var_ext_sth->fetchall_arrayref();
+    foreach my $l(@{$var}){
+      $variation{$l->[0]} = 1;
+    }
+
+
+    ## get all variation_feature's with least common value to compare
+    my %variation_feature;
+    my %checked_var;
+    $varf_ext_sth->execute()||die;
+    my $varf = $varf_ext_sth->fetchall_arrayref();
+
+    foreach my $l(@{$varf}){
+
+      ## report if different
+      print "$db_name variation_feature.$column different to variation.$column : $l->[0]\n" 
+        unless defined $variation{$l->[0]};
+
+      ## save for reverse check
+      $checked_var{$l->[0]} = 1;
+
+      ## save VF id to check TV
+      $variation_feature{$l->[1]} = 1;
+    }
+
+
+    ## if both variation and variation_feature do not have the least common value
+    ## either there is no variation_feature or there is and error
+    foreach my $var(keys %variation){
+
+      ## already checked - skip
+      next if $checked_var{$var} == 1;
+
+      $varf_check_sth->execute($var);
+      my $unchecked_var = $varf_check_sth->fetchall_arrayref();
+      print "$db_name variation_feature.$column different to variation.$column : $var\n" 
+        if defined $unchecked_var->[0]->[0];
+    }
+
+
+    ## delete to save memory
+    undef %variation;
+    undef %checked_var;
+
+
+    ## Check transcript variation
+    ## get all transcript_variation's with least common value to compare
+    my %checked_varf;
+    $trv_ext_sth->execute()||die;
+    my $trv = $trv_ext_sth->fetchall_arrayref();
+    foreach my $l(@{$trv}){
+
+      ## should not be least common value if variation_feature not least common value
+      print "$db_name transcript_variation.$column different to variation_feature.$column : $l->[0]\n" 
+        unless defined $variation_feature{$l->[0]};
+
+      ## save for reverse check
+      $checked_varf{$l->[0]} = 1;
+    }
+
+
+    ## if both transcript_variation and variation_feature do not have the least common value
+    ## either there is no transcript_variation or an error
+    foreach my $varf(keys %variation_feature){
+
+      ## already checked - skip
+      next if $checked_varf{$varf} == 1;
+
+      $trv_check_sth->execute($varf);
+      my $unchecked_varf = $trv_check_sth->fetchall_arrayref();
+      print "$db_name transcript_variation.$column different to variation_feature.$column : $varf\n" 
+        if defined $unchecked_varf->[0]->[0];
     }
   }
-  $sth->finish();
 }
 
-sub usage {
-  print qq{
-  Usage: perl healthchecks.pl -registry [registry_file] [OPTIONS]
-  Run long running healthchecks separately from overnight healthchecks.
+sub get_dbs_by_host{
 
-  Options:
-    -species     Default is human
-    -help        Print this message
-  } . "\n";
-  exit(0);
+    my ($host, $port, $user ) = @_;
+
+    my @databases;
+
+    my $dbh = DBI->connect("dbi:mysql:information_schema:$host:$port", $user, undef, undef) || die "Failed to look up available databases\n";
+
+    my $db_ext_sth = $dbh->prepare(qq[ show databases like '%variation%']);
+
+    $db_ext_sth->execute()||die;
+    my $db_list = $db_ext_sth->fetchall_arrayref();
+    foreach my $l(@{$db_list}){
+        next if $l->[0] =~/master/;
+        push @databases, $l->[0] ;
+    }
+
+    return \@databases;
 }
+
+
+sub usage{
+
+  die "\n\thealthchecks.pl -host [host] 
+                        -user [read-user name] 
+                        -mode [display|somatic|both]\n
+
+\t\tOptions: -db [database name]    default: all variation databases on the host
+\n\n";
+}
+
