@@ -67,10 +67,10 @@ else{
     $databases = get_dbs_by_host($host, $port, $user, $pass);
 } 
 
-if($mode =~/evi/){
+if($mode =~/evidence/){
     create_mtmp_evidence($databases);
 }
-elsif($mode =~/pop_geno/){
+elsif($mode =~/population_genotype/){
     create_mtmp_population_genotype($databases);
 }
 elsif($mode eq 'variation_set_variation' || $mode eq 'variation_set_structural_variation'){
@@ -271,7 +271,7 @@ sub usage{
     die "\n\tUsage: create_MTMP_tables.pl -host [host] 
                                      -user [write-user name] 
                                      -pass [write-user password] 
-                                     -mode [evidence|pop_geno|variation_set_variation|variation_set_structural_variation]\n
+                                     -mode [evidence|population_genotype|variation_set_variation|variation_set_structural_variation]\n
 
 \t\tOptions: -db [database name]    default: all* variation databases on the host
 \t\t         -tmpdir [directory for temp files]
