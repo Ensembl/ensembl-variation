@@ -1957,7 +1957,7 @@ sub _exon_cdna_start {
   my ($self, $exon, $tr) = @_;
 
   my $tr_stable_id = $tr->stable_id;
-  my $fc = $exon->{_variation_effect_feature_cache}->{tr_stable_id} ||= {};
+  my $fc = $exon->{_variation_effect_feature_cache}->{$tr_stable_id} ||= {};
 
   if(!exists($fc->{_cdna_start})) {
     $fc->{_cdna_start} = $exon->cdna_start($tr);
@@ -1970,7 +1970,7 @@ sub _exon_cdna_end {
   my ($self, $exon, $tr) = @_;
 
   my $tr_stable_id = $tr->stable_id;
-  my $fc = $exon->{_variation_effect_feature_cache}->{tr_stable_id} ||= {};
+  my $fc = $exon->{_variation_effect_feature_cache}->{$tr_stable_id} ||= {};
 
   if(!exists($fc->{_cdna_end})) {
     $fc->{_cdna_end} = $exon->cdna_end($tr);
