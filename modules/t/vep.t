@@ -135,29 +135,29 @@ $cons = get_all_consequences($config, [$vf]);
 ok($cons && scalar @$cons == 3, "get_all_consequences - everything 1");
 
 $exp = {
+  'IMPACT' => 'MODERATE',
   'SYMBOL' => 'MRPL39',
-  'DOMAINS' => 'Superfamily_domains:SSF81271',
+  'DOMAINS' => 'hmmpanther:PTHR11451,Gene3D:3.10.20.30,Superfamily_domains:SSF81271',
   'SYMBOL_SOURCE' => 'HGNC',
   'ENSP' => 'ENSP00000404426',
+  'ALLELE_NUM' => 1,
   'PolyPhen' => 'probably_damaging(0.975)',
   'BIOTYPE' => 'protein_coding',
   'UNIPARC' => 'UPI0000E5A387',
   'AA_MAF' => 'C:0',
-  'SIFT' => 'deleterious(0.01)',
+  'SIFT' => 'deleterious(0)',
   'STRAND' => -1,
   'HGNC_ID' => 'HGNC:14027',
   'HGVSc' => 'ENST00000419219.1:c.275N>G',
   'HGVSp' => 'ENSP00000404426.1:p.Ala92Gly',
   'TREMBL' => 'C9JG87',
-  'EA_MAF' => 'C:0.000116',
-  'EXON' => '2/8',
-  'TSL' => '5',
-  'ALLELE_NUM' => '1',
-  'IMPACT' => 'MODERATE',
+  'EA_MAF' => 'C:0.0001',
   'VARIANT_CLASS' => 'SNV',
+  'EXON' => '2/8',
+  'TSL' => '5'
 };
 
-is_deeply($exp, $cons->[0]->{Extra}, "get_all_consequences - everything 2");
+is_deeply($cons->[0]->{Extra}, $exp, "get_all_consequences - everything 2");
 
 # regulatory
 $config = copy_config($base_config, {
@@ -396,21 +396,22 @@ $input = qq{21 25000248 25000248 C/G + test1
 $config = copy_config($base_config, {
   check_existing => 1,
   check_frequency => 1,
-  freq_pop => '1kg_asn',
-  freq_freq => 0.04,
+  freq_pop => '1kg_eas',
+  freq_freq => 0.03,
   freq_gt_lt => 'lt',
   freq_filter => 'include',
 });
 $cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\n", $input)]);
+$DB::single = 1;
 my %ex = map {$_->{Uploaded_variation} => 1} @$cons;
 ok(!$ex{test1} && $ex{test2}, "check frequency 1");
-ok($cons->[0]->{Extra}->{FREQS} eq '1kg_asn:0.0035', "check frequency 2");
+is($cons->[0]->{Extra}->{FREQS}, '1kg_eas:0.0010', "check frequency 2");
 
 $config = copy_config($base_config, {
   check_existing => 1,
   check_frequency => 1,
-  freq_pop => '1kg_asn',
-  freq_freq => 0.04,
+  freq_pop => '1kg_eas',
+  freq_freq => 0.03,
   freq_gt_lt => 'lt',
   freq_filter => 'exclude',
 });
@@ -421,8 +422,8 @@ ok($ex{test1} && !$ex{test2}, "check frequency 3");
 $config = copy_config($base_config, {
   check_existing => 1,
   check_frequency => 1,
-  freq_pop => '1kg_asn',
-  freq_freq => 0.04,
+  freq_pop => '1kg_eas',
+  freq_freq => 0.03,
   freq_gt_lt => 'gt',
   freq_filter => 'include',
 });
@@ -538,24 +539,25 @@ $cons = get_all_consequences($config, [$vf, $vf]);
 is_deeply(
   $cons->[0]->{colocated_variants},
   [{
-    'amr_maf' => '0.05',
+    'phenotype_or_disease' => 1,
+    'eas_allele' => 'C',
+    'amr_maf' => '0.0432',
     'strand' => 1,
     'id' => 'rs41504145',
-    'asn_maf' => '0.0035',
+    'sas_allele' => 'C',
+    'sas_maf' => '0.0133',
     'allele_string' => 'T/C',
     'amr_allele' => 'C',
-    'minor_allele_freq' => '0.1139',
+    'minor_allele_freq' => '0.127',
     'afr_allele' => 'C',
-    'afr_maf' => '0.43',
-    'eur_maf' => '0.03',
+    'eas_maf' => '0.003',
+    'afr_maf' => '0.4289',
+    'eur_maf' => '0.0229',
     'end' => 25227941,
     'eur_allele' => 'C',
     'minor_allele' => 'C',
-    'asn_allele' => 'C',
     'start' => 25227941,
-    'pubmed' => [
-      17903302
-    ]
+    'pubmed' => [17903302],
   }],
   'json output - duplicate position'
 );

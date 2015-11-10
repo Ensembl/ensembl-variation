@@ -132,6 +132,13 @@ my %SOURCES = (
     type => "Gene",
     status => "mixed"
   },
+
+  "Cancer Gene Census" => {
+    description => "Catalog of genes of which mutations have been causally implicated in cancer",
+    url => "http://cancer.sanger.ac.uk/census",
+    type => "Gene",
+    status => "somatic"
+  }
 );
 
 usage() if (!scalar(@ARGV));
@@ -326,6 +333,12 @@ elsif($source =~ /ddg2p/i) {
   
   $result = parse_ddg2p($infile, $core_db_adaptor);
   $source_name = 'DDG2P';
+}
+elsif($source =~ /^cgc$/i) {
+  die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
+
+  $result = parse_cancer_gene_census($infile, $core_db_adaptor);
+  $source_name = 'Cancer Gene Census';
 }
 elsif($source =~ /mim.+dump/) {
   $result = parse_mim_dump($infile);
@@ -1421,6 +1434,59 @@ sub parse_ddg2p {
       }
     }
   }
+
+  return {'phenotypes' => \@phenotypes};
+}
+
+sub parse_cancer_gene_census {
+  my $infile = shift;
+  my $core_db_adaptor = shift;
+
+  my $ga = $core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor") unless defined($ga);
+
+  my @phenotypes;
+
+  # Open the input file for reading
+  if($infile =~ /gz$/) {
+    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
+
+  # Read through the file and parse out the desired fields
+  while (<IN>) {
+    chomp;
+
+    my @row_data = split(/\t/, $_);
+
+    # get data
+    my $gene_id = $row_data[1];
+    my $phen    = $row_data[4];
+    my $pmids   = $row_data[5];
+
+    my $gene = $ga->fetch_by_stable_id($gene_id);
+
+    if(!$gene) {
+      print STDERR "WARNING: Ensembl gene $gene_id not found in the Ensembl Core database. Skipped!\n";
+      next;
+    }
+
+    my %data = (
+      'id' => $gene_id,
+      'description' => $phen,
+      'seq_region_id' => $gene->slice->get_seq_region_id,
+      'seq_region_start' => $gene->seq_region_start,
+      'seq_region_end' => $gene->seq_region_end,
+      'seq_region_strand' => $gene->seq_region_strand,
+    );
+
+    $data{'study'} = $pmids if ($pmids);
+
+    push(@phenotypes,\%data);
+  }
+  close(IN);
 
   return {'phenotypes' => \@phenotypes};
 }

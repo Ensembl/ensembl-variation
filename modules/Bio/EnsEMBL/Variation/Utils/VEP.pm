@@ -181,6 +181,7 @@ our @EXTRA_HEADERS = (
   { flag => 'biotype',         cols => ['BIOTYPE'] },
   { flag => 'canonical',       cols => ['CANONICAL'] },
   { flag => 'tsl',             cols => ['TSL']},
+  { flag => 'appris',          cols => ['APPRIS']},
   { flag => 'ccds',            cols => ['CCDS'] },
   { flag => 'protein',         cols => ['ENSP'] },
   { flag => 'uniprot',         cols => ['SWISSPROT', 'TREMBL', 'UNIPARC'] },
@@ -233,6 +234,7 @@ our %COL_DESCS = (
     'IMPACT'             => 'Subjective impact classification of consequence type',
     'CANONICAL'          => 'Indicates if transcript is canonical for this gene',
     'TSL'                => 'Transcript support level',
+    'APPRIS'             => 'Annotates alternatively spliced transcripts as primary or alternate based on a range of computational methods',
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
     'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
     'SYMBOL_SOURCE'      => 'Source of gene symbol',
@@ -331,7 +333,7 @@ our @VAR_CACHE_COLS = qw(
     phenotype_or_disease
 );
 
-our @PICK_ORDER = qw(canonical tsl biotype ccds rank length);
+our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length);
 
 # don't assert refs
 $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
@@ -2226,6 +2228,7 @@ sub pick_worst_vfoa {
       length => 0,
       biotype => 1,
       tsl => 100,
+      appris => 100,
     };
     
     if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
@@ -2243,6 +2246,19 @@ sub pick_worst_vfoa {
       if(my ($tsl) = @{$tr->get_all_Attributes('TSL')}) {
         if($tsl->value =~ m/tsl(\d+)/) {
           $info->{tsl} = $1 if $1;
+        }
+      }
+      
+      # lower APPRIS is best
+      if(my ($appris) = @{$tr->get_all_Attributes('appris')}) {
+        if($appris->value =~ m/([A-Za-z])(\d+)/) {
+          my ($type, $grade) = ($1, $2);
+
+          # values are principal1, principal2, ..., alternate1, alternate2
+          # so add 10 to grade if alternate
+          $grade += 10 if $type eq 'alternate';
+
+          $info->{appris} = $grade if $grade;
         }
       }
     }
@@ -2910,6 +2926,15 @@ sub add_extra_fields_transcript {
     if(defined($config->{tsl}) && (my ($tsl) = @{$tr->get_all_Attributes('TSL')})) {
         if($tsl->value =~ m/tsl(\d+)/) {
             $line->{Extra}->{TSL} = $1 if $1;
+        }
+    }
+    
+    # APPRIS
+    if(defined($config->{appris}) && (my ($appris) = @{$tr->get_all_Attributes('appris')})) {
+        if(my $value = $appris->value) {
+            $value =~ s/principal/P/;
+            $value =~ s/alternate/A/;
+            $line->{Extra}->{APPRIS} = $value;
         }
     }
 
@@ -4720,7 +4745,7 @@ sub clean_transcript {
     # clean attributes
     if(defined($tr->{attributes})) {
         my @new_atts;
-        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF TSL rseq_mrna_match rseq_mrna_nonmatch rseq_5p_mismatch rseq_cds_mismatch rseq_3p_mismatch rseq_nctran_mismatch rseq_no_comparison rseq_ens_match_wt rseq_ens_match_cds rseq_ens_no_match);
+        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF TSL appris rseq_mrna_match rseq_mrna_nonmatch rseq_5p_mismatch rseq_cds_mismatch rseq_3p_mismatch rseq_nctran_mismatch rseq_no_comparison rseq_ens_match_wt rseq_ens_match_cds rseq_ens_no_match);
         foreach my $att(@{$tr->{attributes}}) {
             delete $att->{description};
             push @new_atts, $att if defined($keep{$att->{code}});

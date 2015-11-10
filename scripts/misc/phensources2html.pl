@@ -580,7 +580,7 @@ sub create_menu {
       </tr>
     </table>
     
-    <!-- Variant and structural variant count colour legend -->
+    <!-- Phenotype associations count colour legend -->
     <div style="border-top:1px dotted #22949b;margin-top:2px;padding:4px 0px 0px">
       <span style="padding-left:4px;font-weight:bold">Associations count:</span>
       <table>
@@ -744,7 +744,7 @@ sub get_phenotype_feature_count {
   if ($sth) {
     while (my ($source_id,$type,$count) = $sth->fetchrow_array) {
       $type =~ s/StructuralVariation/Structural Variation/;
-      $count_by_type{$source_id}{$type} = get_count($count);
+      $count_by_type{$source_id}{$type} = get_count($count,$type);
     }
     $sth->finish();
   }
@@ -774,16 +774,18 @@ sub get_phenotype_count {
 
 sub get_count {
   my $count = shift;
+  my $type  = lc(shift);
   my $symbol = '+';
   
   my $count_label;
   my $count_display;
+  my $end_label = 'phenotype associations';
   my $bg_class;
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number million";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $type $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'few_million'};
   }
@@ -791,20 +793,21 @@ sub get_count {
   elsif ($count =~ /^(\d+)\d{6}$/) {
     my $number = $1;
     $count = "$number million";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $type $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'lot_million'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $type $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'thousand'};
   }
   # From 1 to 999
   else {
-    $count_label = "$count variants";
+    my $s = ($count > 1) ? 's' : '';
+    $count_label = "$count $type phenotype association$s";
     $count_display = $count;
     $bg_class = $colour_class{'hundred'};
   }

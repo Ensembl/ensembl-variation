@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$phost,$user,$port,$help);
+my ($e_version,$html_file,$hlist,$phost,$user,$port,$skip_prediction,$help);
 ## EG options
 my ($site, $etype);
 
@@ -50,7 +50,8 @@ GetOptions(
      'user=s'  => \$user,
      'port=i'  => \$port,
      'site=s'  => \$site,
-     'etype=s' => \$etype
+     'etype=s' => \$etype,
+     'skip_prediction' => \$skip_prediction
 );
 
 if (!$e_version) {
@@ -146,6 +147,7 @@ my $html_footer = q{
 </body>
 </html>};
 
+my $prediction = 'Prediction';
    
 my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 million'},
                 'few_million' => { 'order' => 2, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9.9 million'},
@@ -188,7 +190,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                                        },
                                            'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
                                          },
-                   "Prediction"       => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
+                   $prediction        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
                                                                      AND tv.sift_score IS NOT NULL},
                                                         'label' => 'Variants with SIFT data'
@@ -200,7 +202,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                                       },
                                          } # Too long ?
                );
-my @sql_order = ("Structural variant","Genotype","Phenotype","Citation","Prediction");
+my @sql_order = ("Structural variant","Genotype","Phenotype","Citation",$prediction);
 
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
@@ -211,6 +213,11 @@ my $th_border_left = qq{border-left:1px solid #DDD};
 my $th_border_left_top = qq{style="$th_border_left;text-align:center"};
 
 foreach my $type (@sql_order) {
+
+  if ($skip_prediction && $type eq $prediction) {
+    print STDERR "'skip_prediction' option used: the category $prediction will be skipped.\n";
+    next;
+  }
 
   if (!$sql_list{$type}) {
     print STDERR "Can't recognise the category '$type'! Skip this category.\n";

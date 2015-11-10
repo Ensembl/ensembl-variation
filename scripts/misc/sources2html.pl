@@ -772,7 +772,7 @@ sub create_menu {
     
     <!-- Variant and structural variant count colour legend -->
     <div style="border-top:1px dotted #336;margin-top:2px;padding:4px 0px 0px">
-      <span style="padding-left:4px;font-weight:bold">Data types - variants count:</span>
+      <span style="padding-left:4px;font-weight:bold">Data types - entries count:</span>
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
@@ -920,7 +920,7 @@ sub table_header {
      <th class="vdoc_data_types vdoc_extra_column" style="background-color:#BBB">Data type(s)
        <div class="vdoc_data_types">
          <div class="vdoc_type_style" style="text-align:center"><span class="_ht ht" $border_color title="Data type"><small>Type</small></div>
-         <div class="vdoc_count_style" style="text-align:center"><span class="_ht ht" $border_color title="Variants count"><small>Count</small></span></div>
+         <div class="vdoc_count_style" style="text-align:center"><span class="_ht ht" $border_color title="Entries count"><small>Count</small></span></div>
          <div class="vdoc_example_style"><span class="_ht ht" $border_color title="Example"><small>e.g.</small></span></div>
          <div style="clear:both"></div>
        </div>
@@ -1029,12 +1029,13 @@ sub get_count {
   
   my $count_label;
   my $count_display;
+  my $end_label = 'entries';
   my $bg_class;
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number million";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'few_million'};
   }
@@ -1042,20 +1043,21 @@ sub get_count {
   elsif ($count =~ /^(\d+)\d{6}$/) {
     my $number = $1;
     $count = "$number million";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'lot_million'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
-    $count_label = "Over $count variants";
+    $count_label = "Over $count $end_label";
     $count_display = "$count$symbol";
     $bg_class = $colour_class{'thousand'};
   }
   # From 1 to 999
   else {
-    $count_label = "$count variants";
+    my $entry = ($count > 1) ? $end_label : 'entry';
+    $count_label = "$count $entry";
     $count_display = $count;
     $bg_class = $colour_class{'hundred'};
   }
