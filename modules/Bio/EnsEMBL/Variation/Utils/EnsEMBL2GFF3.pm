@@ -411,11 +411,11 @@ use warnings;
         
         $gff->{attributes}->{ID} = $self->variation_name;
         
-        $gff->{source} = $self->source;
+        $gff->{source} = $self->source_name;
         
         my $sv = $self->structural_variation;
         
-        $gff->{attributes}->{Dbxref} = $self->source . ':' . $self->variation_name;
+        $gff->{attributes}->{Dbxref} = $self->source_name . ':' . $self->variation_name;
         
         $gff->{attributes}->{study_accession} = $sv->study->name if $sv->study->name;
 
