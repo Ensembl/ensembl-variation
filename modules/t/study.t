@@ -69,7 +69,7 @@ ok($associated_studies{$asso_studies->[1]->name}, 'associated_studies - 2');
 
 ## Source methods ##
 print "\n## Source methods ##\n";
-ok($study->source_object()->name eq $source_name, "source_object");
+ok($study->source()->name eq $source_name, "source");
 ok($study->source_name() eq $source_name, "source_name");
 ok($study->source_version() eq 201310, "source_version");
 
@@ -82,7 +82,7 @@ ok(test_getter_setter($study, 'url', 'http://www.ebi.ac.uk/ega'), "get/set url")
 
 ## Deprecated methods ##
 print "\n## Deprecated methods ##\n";
-ok($study->source() eq $source_name, "deprecated 'source'");
+ok($study->source_object->name() eq $source_name, "deprecated 'source_object'");
 
 
 done_testing();

@@ -84,7 +84,7 @@ ok($ssv->study->name() eq $study_name,  "study");
 ok($ssv->is_evidence() == 1,            "is_evidence");
 ok($ssv->is_somatic() == 0,             "is_somatic");
 # source
-ok($ssv->source_object->name() eq $source_name,     'ssv -> source_object' );
+ok($ssv->source->name() eq $source_name,            'ssv -> source' );
 ok($ssv->source_name eq $source_name,               'ssv -> source_name');
 ok($ssv->source_description eq $source_description, 'ssv -> source_description');
 ok($ssv->source_version eq $source_version,         'ssv -> source_version');

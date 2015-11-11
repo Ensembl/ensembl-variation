@@ -52,7 +52,7 @@ ok($svfa && $svfa->isa('Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatu
 
 
 my $svf = $svfa->fetch_by_dbID($dbID);
-my $source = $svf->source_object;
+my $source = $svf->source;
 my $slice  = $svf->slice;
 
 ok($svf->outer_start() == $outer_start, "svf_id -> outer_start");
@@ -75,7 +75,7 @@ my $sv = $sva->fetch_by_dbID(3506221);
 my $svfs = $svfa->fetch_all_by_StructuralVariation($sv);
 ok(@$svfs == 1,                         "sv -> vf count ");
 $svf = $svfs->[0];
-$source = $svf->source_object;
+$source = $svf->source;
 $slice  = $svf->slice;
 
 ok($svf->dbID() == $dbID,               "sv -> svf id");

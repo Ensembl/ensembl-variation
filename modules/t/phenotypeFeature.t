@@ -156,11 +156,11 @@ my $source2 = Bio::EnsEMBL::Variation::Source->new
   (-name           => $source_name2,
    -version        => $source_version2,
 );
-$pf->source_object($source2);
+$pf->source($source2);
 ok($pf->source_name() eq $source_name2,             "update source");
 
 
-# Tests to populate empty variables ('object', 'variation', 'source_object')
+# Tests to populate empty variables ('object', 'variation', 'source')
 my $pf2 = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
     -adaptor    => $pf_adaptor,
     -type       => 'Variation',
@@ -170,7 +170,7 @@ my $pf2 = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
    );
 ok($pf2->object()->name eq $v_name,    "pf 'object' 2 (using argument)");
 ok($pf2->variation()->name eq $v_name, "pf 'variation' (using argument)");
-ok($pf2->source_object()->name eq $source_name, "pf 'source_object' (using argument)");
+ok($pf2->source()->name eq $source_name, "pf 'source' (using argument)");
 
 # Test associated studies
 my $pfs3 = $pf_adaptor->fetch_all_by_object_id('rs2299222');
@@ -187,7 +187,7 @@ ok($pf2->strain->name eq 'NA12891', 'strain');
 
 
 # DEPRECATED - source
-ok($pf2->source eq $source_name, "svf -> DEPRECATED 'source'");
+ok($pf2->source_object->name() eq $source_name, "svf -> DEPRECATED 'source_object'");
 
 
 done_testing();

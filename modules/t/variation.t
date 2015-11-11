@@ -95,7 +95,7 @@ ok($v->flipped() eq 0,            "flipped");
 ok($v->moltype() eq 'Genomic',    "moltype");
 ok($v->ancestral_allele() eq 'A', "ancestral_allele");
 # source
-ok($v->source_object->name() eq $source_name,           'source_object' );
+ok($v->source->name() eq $source_name,                  'source' );
 ok($v->source_name eq $source_name,                     'source_name');
 ok($v->source_description eq $source_description,       'source_description');
 ok($v->source_version eq $source_version,               'source_version');
@@ -104,13 +104,13 @@ ok($v->source_somatic_status eq $source_somatic_status, 'source_somatic_status')
 ok($v->has_somatic_source == 0,                         'has_somatic_source');
 
 # test source object
-ok($v->source_object($source), 'source_object (using argument)');
+ok($v->source($source), 'source (using argument)');
 
 
 my $n = scalar @{$v->get_all_synonyms()};
 
 ok(@{$v->get_all_synonyms()} == 3, "count synonym");
-ok($v->get_all_synonyms('TSC')->[0] eq '12565', "syonym by source");
+ok($v->get_all_synonyms('TSC')->[0] eq '12565', "synonym by source");
 ok($v->get_all_Alleles()->[0]->allele() eq 'A', "allele");
 
 #test amibg_code
@@ -264,5 +264,6 @@ ok($vf2->variation_name eq $var_name, 'get_VariationFeature_by_dbID');
 
 # clinical significance
 ok($var_cs->clinical_significance() eq 'pathogenic', 'DEPRECATED - clinical_significance');
+ok($v->source_object->name() eq $source_name, 'DEPRECATED - source_object');
 
 done_testing();

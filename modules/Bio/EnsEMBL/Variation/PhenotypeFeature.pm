@@ -389,10 +389,32 @@ sub is_significant {
 
 
 =head2 source_object
-
+  Deprecated. Please use source() instead.
   Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
                The new value to set the source attribute to
   Example    : $source_obj = $pf->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : DEPRECATED
+
+=cut
+
+sub source_object {
+  my $self = shift;
+  
+  deprecate("Please use source() instead. This method will be removed in e87\n");
+
+  return $self->source();
+}
+
+
+=head2 source
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source = $pf->source()
   Description: Getter/Setter for the source object attribute
   Returntype : Bio::EnsEMBL::Variation::Source
   Exceptions : none
@@ -401,11 +423,11 @@ sub is_significant {
 
 =cut
 
-sub source_object {
+sub source{
   my $self = shift;
   
   # set
- if(@_) {
+  if(@_) {
     if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
       throw("Bio::EnsEMBL::Variation::Source argument expected");
     }
@@ -419,27 +441,6 @@ sub source_object {
   }
   
   return $self->{'source'};
-}
-
-
-=head2 source
-
-  Arg [1]    : string $source (optional)
-               The new value to set the source attribute to
-  Example    : $source = $pf->source()
-  Description: Getter/Setter for the source attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub source{
-  my $self = shift;
-  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
-  return $self->source_name(@_) if(@_);
-  return $self->source_name;
 }
 
 =head2 source_name

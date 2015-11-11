@@ -110,7 +110,7 @@ ok($svf->is_somatic() eq $is_somatic,   "svf -> is_somatic");
 ok($svf->class_SO_term() eq $SO_term,   "svf -> class");
 ok($svf->display_id() eq $var_name,     "svf -> display_id");
 # source
-ok($svf->source_object->name() eq $source_name,     'svf -> source' );
+ok($svf->source->name() eq $source_name,     'svf -> source' );
 ok($svf->source_name eq $source_name,               'svf -> source_name');
 ok($svf->source_description eq $source_description, 'svf -> source_description');
 ok($svf->source_version eq $source_version,         'svf -> source_version');
@@ -150,8 +150,8 @@ my $secs = $svf2->get_all_supporting_evidence_classes();
 ok($secs->[0] eq 'copy_number_loss', 'get_all_supporting_evidence_classes');
 
 # test source object
-my $sv_source = $svf2->source_object();
-ok($svf2->source_object($sv_source), 'source_object (using argument)');
+my $sv_source = $svf2->source();
+ok($svf2->source($sv_source), 'source (using argument)');
 
 # test study object
 my $sv_study = $svf2->study();
@@ -179,7 +179,7 @@ ok($svf3_new->seq_region_name eq $svf3_chr && $svf3_new->seq_region_start == $ch
 
 
 # DEPRECATED - source
-ok($svf2->source eq $source_name, "svf -> DEPRECATED 'source'");
+ok($svf2->source_object->name() eq $source_name, "svf -> DEPRECATED 'source_object'");
 
 
 done_testing();

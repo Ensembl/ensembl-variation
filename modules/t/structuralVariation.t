@@ -96,7 +96,7 @@ ok($sv->validation_status() eq $validation_status, "validation status");
 ok($sv->is_evidence() eq 0,                        "is_evidence");
 ok($sv->is_somatic() eq 0,                         "is_somatic");
 # source
-ok($sv->source_object->name() eq $source_name,     'sv -> source_object' );
+ok($sv->source->name() eq $source_name,     'sv -> source' );
 ok($sv->source_name eq $source_name,               'sv -> source_name');
 ok($sv->source_description eq $source_description, 'sv -> source_description');
 ok($sv->source_version eq $source_version,         'sv -> source_version');
@@ -134,8 +134,8 @@ my $sv2 = $sv_adaptor->fetch_by_name($name);
 
 
 # test source object
-my $sv_source = $sv2->source_object();
-ok($sv2->source_object($sv_source), 'source_object (using argument)');
+my $sv_source = $sv2->source();
+ok($sv2->source($sv_source), 'source (using argument)');
 
 # test study object
 my $sv_study = $sv2->study();
@@ -158,7 +158,7 @@ ok($sv2->summary_as_hash->{'display_id'} eq $name, 'sv-> summary');
 
 
 ## DEPRECATED ##
-ok($sv2->source eq $source_name,                                 "sv -> DEPRECATED 'source'");
+ok($sv2->source_object->name() eq $source_name,                  "sv -> DEPRECATED 'source_object'");
 ok($sv2->clinical_significance eq join(',',@$clin_signs),        "sv -> DEPRECATED 'clinical_significance'");
 ok($sv2->get_all_validation_states()->[0] eq $validation_status, "sv -> DEPRECATED 'get_all_validation_states'");
 

@@ -39,7 +39,7 @@ print "\n# Test - fetch_by_dbID\n";
 my $sv = $sva->fetch_by_dbID(3506221);
 
 ok($sv->variation_name() eq 'esv93078',  'variation name by sv id');
-ok($sv->source_object->name() eq 'DGVa', 'source name by sv id');
+ok($sv->source->name() eq 'DGVa',        'source name by sv id');
 ok($sv->study->name() eq 'estd59',       'study name by sv id' );
 ok($sv->var_class() eq 'CNV',            'sv class display by sv id' );
 ok($sv->class_SO_term() eq 'copy_number_variation', 'sv class SO term by sv id' );
@@ -57,7 +57,7 @@ $sv = $sva->fetch_by_name('esv2421345');
 
 ok($sv->variation_name() eq 'esv2421345', "name by name");
 ok($sv->dbID() == 16158654,      "id by name" );
-ok($sv->source_object->name() eq 'DGVa',"source by name");
+ok($sv->source->name() eq 'DGVa',"source by name");
 ok($sv->alias eq 'HM3_CNP_741', "alias by name");
 
 # test store
@@ -142,7 +142,7 @@ ok($sv11->[0]->variation_name eq $sv_names[0], "sv by study");
 
 # test fetch all by Source
 print "\n# Test - fetch_all_by_Source\n";
-my $sv12= $sva->fetch_all_by_Source($sv->source_object);
+my $sv12= $sva->fetch_all_by_Source($sv->source);
 ok($sv12->[0]->variation_name eq $sv_names[0], "sv by source");
 
 # test get_all_failed_descriptions
