@@ -809,6 +809,11 @@ sub hgvs_protein {
 
     ##### Convert ref & alt peptides taking into account HGVS rules
     $hgvs_notation = $hgvs_tva->_get_hgvs_peptides($hgvs_notation);
+
+    unless($hgvs_notation) {
+      $self->{hgvs_protein} = undef;
+      return undef;
+    }
   }
   print "Got protein type $hgvs_notation->{type} \n" if $DEBUG ==1;
 
@@ -1243,6 +1248,8 @@ sub _get_hgvs_peptides {
       $hgvs_notation->{original_ref},
       2
     );
+
+    return undef unless $hgvs_notation->{ref};
   }
   elsif($hgvs_notation->{type} eq "del" ){
     ##check if bases directly after deletion match the deletion
