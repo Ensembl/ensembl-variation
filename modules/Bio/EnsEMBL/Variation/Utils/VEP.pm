@@ -1498,7 +1498,7 @@ sub vf_list_to_cons {
             
             # GVF output
             if(defined($config->{gvf})) {
-                $vf->source_object(Bio::EnsEMBL::Variation::Source->new_fast({name => "User"}));
+                $vf->source(Bio::EnsEMBL::Variation::Source->new_fast({name => "User"}));
                 
                 $config->{gvf_id} ||= 1;
                 
