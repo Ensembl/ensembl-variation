@@ -5015,7 +5015,7 @@ sub get_dump_file_name {
     #my $dir = $config->{dir}.'/'.$chr.'/'.$subdir;
     
     my $dir = $config->{dir}.'/'.$chr;
-    my $dump_file = $dir.'/'.$region.$type.'.gz';
+    my $dump_file = $dir.'/'.$region.$type.($config->{sereal} && $type ne '_var' ? '.sereal' : '.gz');
     
     # make directory if it doesn't exist
     if(defined($config->{write_cache}) && !(-e $dir)) {
@@ -5088,63 +5088,6 @@ sub dump_transcript_cache {
     serialize_to_file($config, $dump_file, $tr_cache);
 }
 
-#sub dump_transcript_cache_tabix {
-#    my $config = shift;
-#    my $tr_cache = shift;
-#    my $chr = shift;
-#    my $region = shift;
-#    
-#    debug("Dumping cached transcript data") unless defined($config->{quiet});
-#    
-#    # clean the slice adaptor before storing
-#    clean_slice_adaptor($config);
-#    
-#    strip_transcript_cache($config, $tr_cache);
-#    
-#    $config->{reg}->disconnect_all;
-#    
-#    my $dir = $config->{dir}.'/'.$chr;
-#    my $dump_file = $dir.'/'.($region || "dump").'_tabix.gz';
-#    
-#    # make directory if it doesn't exist
-#    if(!(-e $dir)) {
-#        mkpath($dir);
-#    }
-#    
-#    debug("Writing to $dump_file") unless defined($config->{quiet});
-#    
-#    use Storable qw(nfreeze);
-#    use MIME::Base64 qw(encode_base64);
-#    #open NEW, "| bgzip -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
-#    #
-#    #foreach my $tr(sort {$a->start <=> $b->start} @{$tr_cache->{$chr}}) {
-#    #    print NEW join "\t", (
-#    #        $chr,
-#    #        $tr->start,
-#    #        $tr->end,
-#    #        encode_base64(freeze($tr), "")
-#    #    );
-#    #    print NEW "\n";
-#    #}
-#    #close NEW;
-#    #
-#    ## tabix it
-#    #my $output = `tabix -s 1 -b 2 -e 3 -f $dump_file 2>&1`;
-#    #die("ERROR: Failed during tabix indexing\n$output\n") if $output;
-#    open NEW, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
-#    
-#    foreach my $tr(sort {$a->start <=> $b->start} @{$tr_cache->{$chr}}) {
-#        print NEW join "\t", (
-#            $chr,
-#            $tr->start,
-#            $tr->end,
-#            encode_base64(freeze($tr), "")
-#        );
-#        print NEW "\n";
-#    }
-#    close NEW;
-#}
-
 # loads in dumped transcript cache to memory
 sub load_dumped_transcript_cache {
     my $config = shift;
@@ -5174,61 +5117,6 @@ sub load_dumped_transcript_cache {
     
     return $tr_cache;
 }
-
-#sub load_dumped_transcript_cache_tabix {
-#    my $config = shift;
-#    my $chr = shift;
-#    my $region = shift;
-#    
-#    my $dir = $config->{dir}.'/'.$chr;
-#    my $dump_file = $dir.'/all_trs.gz';
-#    
-#    #print STDERR "Reading from $dump_file\n";
-#    
-#    return undef unless -e $dump_file;
-#    
-#    debug("Reading cached transcript data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
-#    
-#    my $tr_cache;
-#    
-#    use MIME::Base64 qw(decode_base64);
-#    use Storable qw(thaw);
-#    
-#    $DB::single = 1;
-#    
-#    my ($s, $e) = split /\-/, $region;
-#    #my @regions = grep {overlap($s, $e, (split /\-/, $_))} @{$trim_regions->{$chr}};
-#    my $regions = "";
-#    $regions .= " $chr\:$region";
-#    
-#    #print STDERR "tabix $dump_file $regions |\n";
-#    open IN, "tabix $dump_file $regions |";
-#    #open IN, "gzip -dc $dump_file |";
-#    while(<IN>) {
-#        chomp;
-#        my ($chr, $start, $end, $blob) = split /\t/, $_;
-#        #next unless grep {overlap($start, $end, (split /\-/, $_))} @regions;
-#        my $tr = thaw(decode_base64($blob));
-#        push @{$tr_cache->{$chr}}, $tr;
-#    }
-#    close IN;
-#    
-#    # reattach adaptors
-#    foreach my $t(@{$tr_cache->{$chr}}) {
-#        if(defined($t->{translation})) {
-#            $t->{translation}->{adaptor} = $config->{tra} if defined $t->{translation}->{adaptor};
-#            $t->{translation}->{transcript} = $t;
-#            weaken($t->{translation}->{transcript});
-#        }
-#        
-#        $t->{slice}->{adaptor} = $config->{sa};
-#    }
-#    
-#    # add empty array ref so code doesn't try and fetch from DB too
-#    $tr_cache->{$chr} ||= [];
-#    
-#    return $tr_cache;
-#}
 
 # strips cache before writing to disk
 sub strip_transcript_cache {
