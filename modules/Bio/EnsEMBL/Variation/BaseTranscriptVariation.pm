@@ -759,6 +759,10 @@ sub _overlapped_introns_and_boundary_no_tree {
 
     my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
 
+    # sometimes RefSeq transcripts can have overlapping exons
+    # this leads to "introns" coming out with start > end
+    next unless $intron_start < $intron_end;
+
     # check within intron
     if(overlap($min_vf, $max_vf, $intron_start, $intron_end)) {
       push @introns, $intron;
@@ -874,6 +878,10 @@ sub _create_intron_trees {
     $num_cache->{sprintf('%s', $intron)} = ++$intron_number;
 
     my ($intron_start, $intron_end) = ($intron->{start}, $intron->{end});
+
+    # sometimes RefSeq transcripts can have overlapping exons
+    # this leads to "introns" coming out with start > end
+    next unless $intron_start < $intron_end;
 
     # this is the actual plot
     #
