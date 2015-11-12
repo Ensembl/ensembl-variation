@@ -134,15 +134,15 @@ sub new {
     assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS && $adaptor;
 
-    $ref_feature ||= $variation_feature->slice;
-
-    $self->{adaptor}        = $adaptor;
-    $self->{ref_feature}    = $ref_feature;
+    $self->{adaptor} = $adaptor;
 
     my $ref_allele;
     
     # we take the reference allele sequence from the reference sequence, not from the allele string
     unless($no_ref_check) {
+        $ref_feature ||= $variation_feature->slice;
+        $self->{ref_feature}    = $ref_feature;
+
         $ref_allele = $ref_feature->subseq(
             $variation_feature->start, 
             $variation_feature->end, 
