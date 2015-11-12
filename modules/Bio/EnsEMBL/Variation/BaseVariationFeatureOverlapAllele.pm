@@ -103,7 +103,7 @@ sub new {
             IS_REFERENCE
         )], @_);
 
-    assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap');
+    assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     
     my $self = bless {
         base_variation_feature_overlap  => $base_variation_feature_overlap,
@@ -137,7 +137,7 @@ sub base_variation_feature_overlap {
     my ($self, $bvfo) = @_;
 
     if ($bvfo) {
-        assert_ref($bvfo, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap');
+        assert_ref($bvfo, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
         $self->{base_variation_feature_overlap} = $bvfo;
         # avoid a memory leak, because the bvfo also has a reference to us
         weaken $self->{base_variation_feature_overlap};
@@ -446,7 +446,7 @@ sub _pre_consequence_predicates {
 
 sub add_OverlapConsequence {
     my ($self, $oc) = @_;
-    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
+    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     $self->{overlap_consequences} ||= [];
     push @{ $self->{overlap_consequences} }, $oc;
 }
