@@ -396,7 +396,8 @@ our %OVERLAP_CONSEQUENCES = (
 '5_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'utr' => 1
+                 'utr' => 1,
+                 'exon' => 1
                },
   'NCBI_term' => 'untranslated_5',
   'feature_SO_term' => 'mRNA',
@@ -415,7 +416,8 @@ our %OVERLAP_CONSEQUENCES = (
 '3_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'utr' => 1
+                 'utr' => 1,
+                 'exon' => 1
                },
   'NCBI_term' => 'untranslated_3',
   'feature_SO_term' => 'mRNA',
@@ -453,7 +455,9 @@ our %OVERLAP_CONSEQUENCES = (
 'missense_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
   'include' => {
-                 'coding' => 1
+                 'coding' => 1,
+                 'increase_length' => 0,
+                 'decrease_length' => 0
                },
   'NCBI_term' => 'missense',
   'feature_SO_term' => 'mRNA',

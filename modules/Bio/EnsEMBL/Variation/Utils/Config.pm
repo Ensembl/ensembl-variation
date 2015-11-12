@@ -358,6 +358,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             utr => 1,
+            exon => 1,
         }
     },
     {
@@ -376,6 +377,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             utr => 1,
+            exon => 1,
         }
     },
 #    {
@@ -425,6 +427,8 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODERATE',
         include => {
             coding => 1,
+            increase_length => 0,
+            decrease_length => 0,
         }
     },
     {
