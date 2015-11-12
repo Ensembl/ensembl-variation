@@ -386,7 +386,7 @@ sub distance_to_transcript {
         );
         
         # make positive if <0 and sort
-        @dists = sort {$a <=> $b} map {$_ < 0 ? 0 - $_ : $_} @dists;
+        @dists = sort {$a <=> $b} map {abs($_)} @dists;
         
         $self->{distance_to_transcript} = $dists[0];
     }
@@ -571,7 +571,7 @@ sub _intron_effects {
 
     my $insertion = $vf_start == $vf_end+1;
     
-    my ($min, $max) = sort {$a <=> $b} ($vf_start, $vf_end);
+    my ($min, $max) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
 
     # check introns themselves
     for my $intron (@{$self->_overlapped_introns($min, $max)}) {
