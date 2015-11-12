@@ -2578,18 +2578,18 @@ sub tva_to_line {
     
     # use pre_consequence_predicates to avoid calling coord methods
     cDNA_position    =>
-      ($pre->{exon} ? format_coords($tv->cdna_start, $tv->cdna_end) : format_coords(undef, undef)).
+      ($pre->{exon} ? format_coords($tv->cdna_start, $tv->cdna_end) : '-').
       (defined($config->{total_length}) ? '/'.$t->length : ''),
     
     CDS_position     =>
-      ($pre->{coding} ? format_coords($tv->cds_start, $tv->cds_end) : format_coords(undef, undef)).
+      ($pre->{coding} ? format_coords($tv->cds_start, $tv->cds_end) : '-').
       (
         defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
         '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
       ),
     
     Protein_position =>
-      ($pre->{coding} ? format_coords($tv->translation_start, $tv->translation_end) : format_coords(undef, undef)).
+      ($pre->{coding} ? format_coords($tv->translation_start, $tv->translation_end) : '-').
       (
         defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
         '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
