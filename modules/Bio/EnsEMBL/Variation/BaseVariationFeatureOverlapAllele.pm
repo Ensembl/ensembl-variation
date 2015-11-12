@@ -411,6 +411,7 @@ sub _pre_consequence_predicates {
     ## allele-specific type for non-SVs
     unless($preds->{sv}) {
       my $vf_seq = $self->variation_feature_seq();
+      $vf_seq = '' if $vf_seq eq '-';
       my $ref_length = $preds->{ref_length};
     
       # most variants we see will be SNPs, so test this first
