@@ -116,11 +116,12 @@ sub new {
 
     # swap a '-variation_feature_overlap' argument for a '-base_variation_feature_overlap'
     # and a '-variation_feature' for a '-base_variation_feature' for the superclass
-
-    for my $arg (keys %args) {
+    unless($args{'-base_variation_feature_overlap'} ||= delete $args{'-variation_feature_overlap'}) {
+      for my $arg (keys %args) {
         if (lc($arg) eq '-variation_feature_overlap') {
-            $args{'-base_variation_feature_overlap'} = delete $args{$arg};
+          $args{'-base_variation_feature_overlap'} = delete $args{$arg};
         }
+      }
     }
 
     my $self = $class->SUPER::new(%args);
@@ -393,4 +394,3 @@ sub _convert_to_sara {
 }
 
 1;
-

@@ -107,10 +107,11 @@ sub new {
     my %args = @_;
 
     # swap a '-variation_feature' argument for a '-base_variation_feature' one for the superclass
-
-    for my $arg (keys %args) {
-        if (lc($arg) eq '-variation_feature') {
-            $args{'-base_variation_feature'} = delete $args{$arg};
+    unless($args{'-base_variation_feature'} ||= delete $args{'-variation_feature'}) {
+        for my $arg (keys %args) {
+            if (lc($arg) eq '-variation_feature') {
+                $args{'-base_variation_feature'} = delete $args{$arg};
+            }
         }
     }
 
