@@ -649,21 +649,29 @@ sub complex_indel {
 sub _get_peptide_alleles {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
-    return () unless defined $bvfoa;
-    #return () if frameshift(@_);
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-    my $alt_pep = $bvfoa->peptide;
-    
-    return () unless defined $alt_pep;
-    
-    my $ref_pep = _get_ref_pep(@_);
-    
-    return () unless defined $ref_pep;
-    
-    $ref_pep = '' if $ref_pep eq '-';
-    $alt_pep = '' if $alt_pep eq '-';
-    
-    return ($ref_pep, $alt_pep);
+    unless(exists($cache->{_get_peptide_alleles})) {
+        my @alleles = ();
+
+        #return () if frameshift(@_);
+
+        if(
+            defined $bvfoa &&
+            (my $alt_pep = $bvfoa->peptide) &&        
+            (my $ref_pep = _get_ref_pep(@_))
+        ) {
+            $ref_pep = '' if $ref_pep eq '-';
+            $alt_pep = '' if $alt_pep eq '-';
+        
+            @alleles = ($ref_pep, $alt_pep);
+        }
+
+        $cache->{_get_peptide_alleles} = \@alleles;
+    }
+
+    return @{$cache->{_get_peptide_alleles}};
 }
 
 sub _get_ref_pep {
@@ -712,56 +720,77 @@ sub _get_alleles {
 
 sub stop_retained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-    return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-    ## handle inframe insertion of a stop just before the stop (no ref peptide)
-    if(
-      $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-      $bvfo->_peptide &&
-      $bvfo->translation_start() > length($bvfo->_peptide)
-    ) {
-      return 1;
+    unless(exists($cache->{stop_retained})) {
+
+        $cache->{stop_retained} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
+
+        ## handle inframe insertion of a stop just before the stop (no ref peptide)
+        if(
+          $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
+          $bvfo->_peptide &&
+          $bvfo->translation_start() > length($bvfo->_peptide)
+        ) {
+          $cache->{stop_retained} = 1;
+        }
+        else {
+            return 0 unless $ref_pep;
+
+            $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
+        }
     }
-    
-    return 0 unless $ref_pep;
 
-    return ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
+    return $cache->{stop_retained};
 }
 
 sub affects_start_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    $feat ||= $bvfo->feature;
-    $bvf  ||= $bvfo->base_variation_feature;
-    
-    # sequence variant
-    if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-    
-        return 0 unless $ref_pep;
-    
-        return ( ($bvfo->translation_start == 1) and (substr($ref_pep,0,1) ne substr($alt_pep,0,1)) );
-    }
-    
-    # structural variant
-    elsif($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation')) {        
-        my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
-        return 0 unless defined($tr_crs) && defined($tr_cre);
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{affects_start_codon})) {
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $feat ||= $bvfo->feature;
+        $bvf  ||= $bvfo->base_variation_feature;
         
-        if($feat->strand == 1) {
-            return overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
+        # sequence variant
+        if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
+            my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        
+            return 0 unless $ref_pep;
+        
+            $cache->{affects_start_codon} = ( ($bvfo->translation_start == 1) and (substr($ref_pep,0,1) ne substr($alt_pep,0,1)) );
         }
+        
+        # structural variant
+        elsif($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation')) {        
+            my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
+            return 0 unless defined($tr_crs) && defined($tr_cre);
+            
+            if($feat->strand == 1) {
+                $cache->{affects_start_codon} = overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
+            }
+            else {
+                $cache->{affects_start_codon} = overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
+            }
+        }
+        
         else {
-            return overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
+            return 0;
         }
     }
-    
-    else {
-        return 0;
-    }
+
+    return $cache->{affects_start_codon};
 }
 
 sub synonymous_variant {
@@ -781,10 +810,6 @@ sub missense_variant {
     return 0 if stop_lost(@_);
     return 0 if stop_gained(@_);
     return 0 if partial_codon(@_);
-    return 0 if frameshift(@_);
-
-    return 0 if inframe_deletion(@_);
-    return 0 if inframe_insertion(@_);
     
     return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
 }
@@ -901,58 +926,76 @@ sub inframe_deletion {
 
 sub stop_gained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
-    return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
-    ## check for inframe insertion before stop 
-    return 0 if stop_retained(@_);
 
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-    
-    return 0 unless defined $ref_pep;
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-    return ( ($alt_pep =~ /\*/) and ($ref_pep !~ /\*/) );
+    unless(exists($cache->{stop_gained})) {
+        $cache->{stop_gained} = 0;
+        
+        ## check for inframe insertion before stop 
+        return 0 if stop_retained(@_);
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        
+        return 0 unless defined $ref_pep;
+
+        $cache->{stop_gained} = ( ($alt_pep =~ /\*/) and ($ref_pep !~ /\*/) );
+    }
+
+    return $cache->{stop_gained};
 }
 
 sub stop_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    $bvf  ||= $bvfo->base_variation_feature;
-    $feat ||= $bvfo->feature;
-    
-    # sequence variant
-    if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{stop_lost})) {
+        $cache->{stop_lost} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $bvf  ||= $bvfo->base_variation_feature;
+        $feat ||= $bvfo->feature;
         
-        # special case frameshift
-#        if(frameshift(@_)) {
-#          my $ref_pep = _get_ref_pep(@_);
-#          return $ref_pep && $ref_pep =~ /\*/;
-#        }
+        # sequence variant
+        if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+            
+            # special case frameshift
+    #        if(frameshift(@_)) {
+    #          my $ref_pep = _get_ref_pep(@_);
+    #          return $ref_pep && $ref_pep =~ /\*/;
+    #        }
+            
+            my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+            
+            return 0 unless defined $ref_pep;
         
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-        
-        return 0 unless defined $ref_pep;
-    
-        return ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
-    }
-    
-    # structural variant
-    elsif($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele')) {
-        return 0 unless deletion(@_);
-        
-        my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
-        return 0 unless defined($tr_crs) && defined($tr_cre);
-        
-        if($feat->strand == 1) {
-            return overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
+            $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
         }
+        
+        # structural variant
+        elsif($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele')) {
+            return 0 unless deletion(@_);
+            
+            my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
+            return 0 unless defined($tr_crs) && defined($tr_cre);
+            
+            if($feat->strand == 1) {
+                $cache->{stop_lost} = overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
+            }
+            else {
+                $cache->{stop_lost} = overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
+            }
+        }
+        
         else {
-            return overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
+            return 0;
         }
     }
-    
-    else {
-        return 0;
-    }
+
+    return $cache->{stop_lost};
 }
 
 sub frameshift {
