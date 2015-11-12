@@ -43,11 +43,12 @@ sub new {
     my %args = @_;
 
     # swap a '-motif_feature' argument for a '-feature' one for the superclass
-
-    for my $arg (keys %args) {
+    unless($args{'-feature'} ||= delete $args{'-motif_feature'}) {
+      for my $arg (keys %args) {
         if (lc($arg) eq '-motif_feature') {
-            $args{'-feature'} = delete $args{$arg};
+          $args{'-feature'} = delete $args{$arg};
         }
+      }
     }
 
     # call the superclass constructor

@@ -108,11 +108,12 @@ sub new {
     my %args = @_;
 
     # swap a '-transcript' argument for a '-feature' one for the superclass
-
-    for my $arg (keys %args) {
+    unless($args{'-feature'} ||= delete $args{'-transcript'}) {
+      for my $arg (keys %args) {
         if (lc($arg) eq '-transcript') {
-            $args{'-feature'} = delete $args{$arg};
+          $args{'-feature'} = delete $args{$arg};
         }
+      }
     }
 
     # call the superclass constructor

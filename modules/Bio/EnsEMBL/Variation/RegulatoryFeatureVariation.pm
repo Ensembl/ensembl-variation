@@ -43,10 +43,11 @@ sub new {
     my %args = @_;
 
     # swap a '-regulatory_feature' argument for a '-feature' one for the superclass
-
-    for my $arg (keys %args) {
-        if (lc($arg) eq '-regulatory_feature') {
-            $args{'-feature'} = delete $args{$arg};
+    unless($args{'-feature'} ||= delete $args{'-regulatory_feature'}) {
+        for my $arg (keys %args) {
+            if (lc($arg) eq '-regulatory_feature') {
+                $args{'-feature'} = delete $args{$arg};
+            }
         }
     }
    
