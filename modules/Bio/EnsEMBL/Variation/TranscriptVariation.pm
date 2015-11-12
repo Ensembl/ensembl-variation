@@ -121,7 +121,7 @@ sub new {
 
     # rebless the alleles from vfoas to tvas
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } 
-        @{ $self->get_all_TranscriptVariationAlleles };
+        @{ $self->get_all_BaseVariationFeatureOverlapAlleles };
     
     return $self;
 }
