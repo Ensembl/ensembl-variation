@@ -207,79 +207,80 @@ sub display_codon_allele_string {
 =cut
 
 sub peptide {
-    my ($self, $peptide) = @_;
-    
-    $self->{peptide} = $peptide if $peptide;
-    
-    unless ($self->{peptide}) {
+  my ($self, $peptide) = @_;
 
-        return undef unless $self->seq_is_unambiguous_dna;
-        
-        if (my $codon = $self->codon) {
-            
-            # the codon method can set the peptide in some circumstances 
-            # so check here before we try an (expensive) translation
-            return $self->{peptide} if $self->{peptide};
-            
-            # translate the codon sequence to establish the peptide allele
-            
-            # allow for partial codons - split the sequence into whole and partial
-            # e.g. AAAGG split into AAA and GG            
-            my $whole_codon   = substr($codon, 0, int(length($codon) / 3) * 3);
-            my $partial_codon = substr($codon, int(length($codon) / 3) * 3);
+  $self->{peptide} = $peptide if $peptide;
 
-            my $pep = '';
-            
-            if($whole_codon) {
-                # for mithocondrial dna we need to to use a different codon table
-                my $codon_table = $self->transcript_variation->_codon_table;
-                
-                my $codon_seq = Bio::Seq->new(
-                    -seq        => $whole_codon,
-                    -moltype    => 'dna',
-                    -alphabet   => 'dna',
-                );
-                
-                $pep .= $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
-            }
-            
-            # apply any seq edits?
-            if($self->{is_reference}) {
-              my $tv = $self->transcript_variation;
-              my $seq_edits = $tv->_seq_edits;
-              
-              if(scalar @$seq_edits) {
-                
-                # get TV coords, switch if necessary
-                my ($tv_start, $tv_end) = ($tv->translation_start, $tv->translation_end);
-                ($tv_start, $tv_end) = ($tv_end, $tv_start) if $tv_start > $tv_end;
-                
-                # get all overlapping seqEdits
-                foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
-                  my ($se_start, $se_end, $alt) = ($se->start, $se->end, $se->alt_seq);
-                  
-                  # loop over each overlapping pos
-                  foreach my $tv_pos(grep {overlap($_, $_, $se_start, $se_end)} ($tv_start..$tv_end)) {
-                    
-                    # apply edit, adjusting for string position
-                    substr($pep, $tv_pos - $tv_start, 1) = substr($alt, $tv_pos - $se_start, 1);
-                  }
-                }
-              }
-            }
-            
-            if($partial_codon && $pep ne '*') {
-		
-                $pep .= 'X';
-            }
+  unless(exists($self->{peptide})) {
 
-            $pep ||= '-';
-	    
-            $self->{peptide} = $pep;
+    $self->{peptide} = undef;
+
+    return $self->{peptide} unless $self->seq_is_unambiguous_dna;
+
+    if(my $codon = $self->codon) {
+
+      # the codon method can set the peptide in some circumstances 
+      # so check here before we try an (expensive) translation
+      return $self->{peptide} if $self->{peptide};
+      
+      # translate the codon sequence to establish the peptide allele
+      
+      # allow for partial codons - split the sequence into whole and partial
+      # e.g. AAAGG split into AAA and GG            
+      my $whole_codon   = substr($codon, 0, int(length($codon) / 3) * 3);
+      my $partial_codon = substr($codon, int(length($codon) / 3) * 3);
+
+      my $pep = '';
+      my $tv = $self->base_variation_feature_overlap;
+      
+      if($whole_codon) {
+          # for mithocondrial dna we need to to use a different codon table
+          my $codon_table = $tv->_codon_table;
+          
+          my $codon_seq = Bio::Seq->new(
+            -seq        => $whole_codon,
+            -moltype    => 'dna',
+            -alphabet   => 'dna',
+            );
+          
+          $pep .= $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
         }
+
+      # apply any seq edits?
+      if($self->{is_reference}) {
+        my $seq_edits = $tv->_seq_edits;
+        
+        if(scalar @$seq_edits) {
+
+          # get TV coords, switch if necessary
+          my ($tv_start, $tv_end) = ($tv->translation_start, $tv->translation_end);
+          ($tv_start, $tv_end) = ($tv_end, $tv_start) if $tv_start > $tv_end;
+          
+          # get all overlapping seqEdits
+          foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
+            my ($se_start, $se_end, $alt) = ($se->start, $se->end, $se->alt_seq);
+            
+            # loop over each overlapping pos
+            foreach my $tv_pos(grep {overlap($_, $_, $se_start, $se_end)} ($tv_start..$tv_end)) {
+
+              # apply edit, adjusting for string position
+              substr($pep, $tv_pos - $tv_start, 1) = substr($alt, $tv_pos - $se_start, 1);
+            }
+          }
+        }
+      }
+      
+      if($partial_codon && $pep ne '*') {
+        $pep .= 'X';
+      }
+
+      $pep ||= '-';
+
+      $self->{peptide} = $pep;
     }
-    
-    return $self->{peptide};
+  }
+
+  return $self->{peptide};
 }
 
 =head2 codon
@@ -300,7 +301,7 @@ sub codon {
 
     $self->{codon} = undef;
   
-    my $tv = $self->transcript_variation;
+    my $tv = $self->base_variation_feature_overlap;
 
     my ($tv_tr_start, $tv_tr_end) = ($tv->translation_start, $tv->translation_end);
 
