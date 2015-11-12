@@ -142,7 +142,7 @@ sub get_TranscriptVariationAllele_for_allele_seq {
 
 sub add_TranscriptVariationAllele {
     my ($self, $tva) = @_;
-    assert_ref($tva, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    assert_ref($tva, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     return $self->SUPER::add_VariationFeatureOverlapAllele($tva);
 }
 

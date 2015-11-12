@@ -94,7 +94,7 @@ sub transcript {
   my ($self, $transcript) = @_;
 
   if($transcript) {
-    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript;
+    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS && $transcript;
     delete $self->{_cached_transcript};
   }
 

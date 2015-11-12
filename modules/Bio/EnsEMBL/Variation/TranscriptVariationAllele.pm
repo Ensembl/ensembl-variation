@@ -106,7 +106,7 @@ sub new_fast {
 
 sub transcript_variation {
     my ($self, $tv) = @_;
-    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation') if $tv;
+    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS && $tv;
     return $self->variation_feature_overlap($tv);
 }
 

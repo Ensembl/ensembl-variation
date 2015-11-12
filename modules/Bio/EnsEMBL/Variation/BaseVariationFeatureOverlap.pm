@@ -78,11 +78,11 @@ sub new {
             NO_TRANSFER
         )], @_);
  
-    assert_ref($base_variation_feature, 'Bio::EnsEMBL::Variation::BaseVariationFeature');
+    assert_ref($base_variation_feature, 'Bio::EnsEMBL::Variation::BaseVariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     
     if (defined $feature) {
 
-        assert_ref($feature, 'Bio::EnsEMBL::Feature');
+        assert_ref($feature, 'Bio::EnsEMBL::Feature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
 
         # we need to ensure the Feature and the BaseVariationFeature live on the same slice
         # so we explicitly transfer the Feature here
@@ -120,7 +120,7 @@ sub feature {
     my ($self, $feature, $type) = @_;
     
     if ($feature) {
-        assert_ref($feature, 'Bio::EnsEMBL::Feature');
+        assert_ref($feature, 'Bio::EnsEMBL::Feature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
         $self->{feature} = $feature;
     }
  
@@ -262,7 +262,7 @@ sub base_variation_feature {
     my ($self, $bvf) = @_;
     
     if ($bvf) {
-        assert_ref($bvf, 'Bio::EnsEMBL::Variation::BaseVariationFeature');
+        assert_ref($bvf, 'Bio::EnsEMBL::Variation::BaseVariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
         $self->{base_variation_feature} = $bvf;
     }
 
@@ -282,7 +282,7 @@ sub base_variation_feature {
 sub add_BaseVariationFeatureOverlapAllele {
     my ($self, $bvfoa) = @_;
 
-    assert_ref($bvfoa, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele');
+    assert_ref($bvfoa, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
 
     if ($bvfoa->is_reference) {
         $self->{reference_allele} = $bvfoa;

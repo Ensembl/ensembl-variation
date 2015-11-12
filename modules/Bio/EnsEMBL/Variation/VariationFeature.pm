@@ -721,7 +721,7 @@ sub get_all_VariationFeatureOverlaps {
 
 sub add_TranscriptVariation {
     my ($self, $tv) = @_;
-    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation');
+    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     # we need to weaken the reference back to us to avoid a circular reference
     weaken($tv->{base_variation_feature}) unless isweak($tv->{base_variation_feature});
 
@@ -754,7 +754,7 @@ sub add_TranscriptVariation {
 
 sub add_RegulatoryFeatureVariation {
     my ($self, $rfv) = @_;
-    assert_ref($rfv, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariation');
+    assert_ref($rfv, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariation') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     # we need to weaken the reference back to us to avoid a circular reference
     weaken($rfv->{base_variation_feature}) unless isweak($rfv->{base_variation_feature});
     $self->{regulatory_feature_variations}->{$rfv->regulatory_feature_stable_id} = $rfv;
@@ -773,7 +773,7 @@ sub add_RegulatoryFeatureVariation {
 
 sub add_MotifFeatureVariation {
     my ($self, $mfv) = @_;
-    assert_ref($mfv, 'Bio::EnsEMBL::Variation::MotifFeatureVariation');
+    assert_ref($mfv, 'Bio::EnsEMBL::Variation::MotifFeatureVariation') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     # we need to weaken the reference back to us to avoid a circular reference
     weaken($mfv->{base_variation_feature}) unless isweak($mfv->{base_variation_feature});
     $self->{motif_feature_variations}->{$mfv->motif_feature_id} = $mfv;
@@ -870,7 +870,7 @@ sub get_all_OverlapConsequences {
 
 sub add_OverlapConsequence {
     my ($self, $oc) = @_;
-    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
+    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
     push @{ $self->{overlap_consequences} ||= [] }, $oc;
 }
 

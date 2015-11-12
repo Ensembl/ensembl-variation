@@ -130,8 +130,8 @@ sub new {
 
     my $variation_feature = $self->base_variation_feature;
 
-    assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
-    assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $adaptor;
+    assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+    assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS && $adaptor;
 
     $ref_feature ||= $variation_feature->slice;
 
@@ -271,7 +271,7 @@ sub variation_feature {
     my ($self, $variation_feature) = @_;
 
     if ($variation_feature) {
-        assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
+        assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
         $self->base_variation_feature($variation_feature);
     }
     
@@ -335,7 +335,7 @@ sub get_VariationFeatureOverlapAllele_for_allele_seq {
 sub add_VariationFeatureOverlapAllele {
     my ($self, $vfoa) = @_;
 
-    assert_ref($vfoa, 'Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele');
+    assert_ref($vfoa, 'Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
 
     $self->add_BaseVariationFeatureOverlapAllele($vfoa);
 
