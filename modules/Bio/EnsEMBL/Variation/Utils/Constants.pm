@@ -587,7 +587,8 @@ our %OVERLAP_CONSEQUENCES = (
 'frameshift_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'coding' => 1
+                 'coding' => 1,
+                 'snp' => 0
                },
   'NCBI_term' => 'frameshift',
   'feature_SO_term' => 'mRNA',

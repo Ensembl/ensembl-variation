@@ -553,6 +553,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'HIGH',
         include => {
             coding => 1,
+            snp => 0,
         }
     },
     {
