@@ -256,12 +256,12 @@ sub get_all_OverlapConsequences {
             last if $assigned_tier && $oc->{tier} > $assigned_tier;
             
             # check that this consequence applies to this type of variation feature
-            my $vfc = $oc->variant_feature_class;
+            my $vfc = $oc->{variant_feature_class};
 
             if ($vfc && $bvf->isa($vfc)) {
                 
                 # check that this consequence applies to this type of feature
-                if ($feat->isa($oc->feature_class)) {
+                if ($feat->isa($oc->{feature_class})) {
 
                     # print STDERR $oc->SO_term." ".join(" ", map {$_.'='.$oc->include->{$_}} keys %{$oc->include})."\n";
                     
