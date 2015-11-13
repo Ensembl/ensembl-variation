@@ -1279,19 +1279,6 @@ sub minor_allele_count {
     return $self->{minor_allele_count}
 }
 
-=head2 clinical_significance
-
-  Description: DEPRECATED: use get_all_clinical_significance_states instead
-  Status     : DEPRECATED
-
-=cut
-
-sub clinical_significance {
-    my ($self, $clinical_significance) = @_;
-    deprecate("clinical_significance should no longer be used, use get_all_clinical_significance_states instead\n");
-    push @{$self->{clinical_significance}}, $clinical_significance if defined $clinical_significance;
-    return defined($self->{clinical_significance}) ?  join ",", @{$self->{clinical_significance}} : undef;
-}
 
 =head2 get_all_clinical_significance_states
 

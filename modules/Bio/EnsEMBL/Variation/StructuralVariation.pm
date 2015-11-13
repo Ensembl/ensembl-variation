@@ -75,7 +75,6 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariation;
 
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
-use Bio::EnsEMBL::Utils::Exception qw(deprecate);
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseStructuralVariation');
 
@@ -109,25 +108,6 @@ sub get_all_SupportingStructuralVariants {
   }
   warn("No variation database attached");
   return [];
-}
-
-
-
-=head2 get_all_supporting_evidence_classes
-
-  Example     : $sv->get_all_supporting_evidence_classes
-  Description : Retrieves the classes (SO term) of the supporting evidence associated with this structural variation.
-                Return empty list if there are none.
-  Returntype  : reference to list of string
-  Exceptions  : None
-  Caller      : general
-  Status      : Stable
-
-=cut
-
-sub get_all_supporting_evidence_classes {
-  my $self = shift;
-	deprecate('Use the method "_get_all_supporting_evidence_classes" in the StructuralVariationFeature object.');
 }
 
 

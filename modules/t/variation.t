@@ -261,9 +261,6 @@ ok($vf2->variation_name eq $var_name, 'get_VariationFeature_by_dbID');
 
 
 ## DEPRECATED ##
-
-# clinical significance
-ok($var_cs->clinical_significance() eq 'pathogenic', 'DEPRECATED - clinical_significance');
 ok($v->source_object->name() eq $source_name, 'DEPRECATED - source_object');
 
 done_testing();
