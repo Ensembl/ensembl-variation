@@ -143,7 +143,7 @@ sub get_available_adaptors{
 			# Do something...
 		    }
 		    # If not, check if any of its subsnps have been flagged as failed
-		    elsif ($v->has_failed_subsnps()) {
+		    elsif ($v->has_failed_alleles()) {
 			#Do something else...
 		    }
 		    else {

@@ -204,19 +204,6 @@ sub new_fast {
   return bless $hashref, $class;
 }
 
-=head2 has_failed_subsnps
-
-  Description: DEPRECATED: Use has_failed_alleles instead.
-  Status     : DEPRECATED
-
-=cut
-
-sub has_failed_subsnps {
-    my $self = shift;
-  
-    deprecate("has_failed_subsnps should no longer be used, use has_failed_alleles instead\n");
-    return $self->has_failed_alleles();
-}
 
 =head2 has_failed_alleles
 

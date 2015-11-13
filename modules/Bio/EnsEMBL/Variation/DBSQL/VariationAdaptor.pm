@@ -907,28 +907,6 @@ sub get_all_sources{
 }
 
 
-=head2 get_default_source
-
-  Args      : none
-  Example     : $default_source = $va->get_default_source();
-  Description : DEPRECATED - Retrieves from the database the default source used for display purposes
-  ReturnType  : string
-  Exceptions  : none
-  Caller      : web
-  Status      : DEPRECATED
-
-=cut
-
-sub get_default_source{
-    my $self = shift;
-
-    my $source_name;
-    deprecate("The method 'get_default_source' is not used anymore. Please use the method 'get_all_sources' instead.\n");
-
-    return $source_name;
-}
-
-
 =head2 get_source_version
 
   Arg[1]      : string $name
@@ -1359,33 +1337,6 @@ sub _fetch_attribs_by_dbID {
     return $attribs;
 } 
 
-=head2 is_failed
-
-  Description : DEPRECATED. The appropriate subroutine on the Variation/Allele object should be used instead.
-  Exceptions  : Thrown on invocation.
-  Status      : DEPRECATED
-
-=cut
-
-sub is_failed {
-  my $self = shift;
-  
-    throw("The is_failed subroutine in VariationAdaptor is deprecated. Use the appropriate subroutine on the Variation/Allele object instead");
-}
-
-=head2 has_failed_subsnps
-
-  Description : DEPRECATED. Use has_failed_alleles on the Variation object instead.
-  Exceptions  : Thrown on invocation.
-  Status      : DEPRECATED
-
-=cut
-
-sub has_failed_subsnps {
-    my $self = shift;
-  
-    throw("The has_failed_subsnps subroutine in VariationAdaptor is deprecated. Use has_failed_alleles on the Variation object instead");
-}
 
 =head2 get_all_failed_descriptions
 
@@ -1415,20 +1366,6 @@ sub get_all_failed_descriptions {
     return $description;
 }
 
-
-=head2 get_failed_description
-
-  Description : DEPRECATED. The appropriate subroutine on the Variation/Allele object should be used instead.
-  Exceptions  : Thrown on invocation.
-  Status      : DEPRECATED
-
-=cut
-
-sub get_failed_description {
-    my $self = shift;
-    
-    throw("The get_failed_description subroutine in VariationAdaptor is deprecated. Use the appropriate subroutine on the Variation/Allele object instead");
-}
 
 # API-internal method for getting failed descriptions for a variation
 sub _internal_get_failed_descriptions {
