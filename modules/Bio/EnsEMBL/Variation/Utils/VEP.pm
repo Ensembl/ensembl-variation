@@ -338,6 +338,9 @@ our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length);
 # don't assert refs
 $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
 
+# don't use rearrange
+$Bio::EnsEMBL::Utils::Argument::NO_REARRANGE = 1;
+
 # avoid using transfer
 $Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = 1;
 
