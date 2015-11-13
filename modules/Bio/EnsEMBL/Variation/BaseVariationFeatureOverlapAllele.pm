@@ -93,27 +93,44 @@ our @SORTED_OVERLAP_CONSEQUENCES = sort {$a->tier <=> $b->tier} values %OVERLAP_
 =cut 
 
 sub new {
-    my $class = shift;
+  my $class = shift;
 
-    my (
-        $base_variation_feature_overlap,
-        $is_reference
+  my (
+    $base_variation_feature_overlap,
+    $is_reference
+  );
+
+  if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
+    my %args = @_;
+    (
+      $base_variation_feature_overlap,
+      $is_reference
+    ) = (
+      $args{-base_variation_feature_overlap},
+      $args{-is_reference},
+    );
+  }
+  else {
+    (
+      $base_variation_feature_overlap,
+      $is_reference
     ) = rearrange([qw(
-            BASE_VARIATION_FEATURE_OVERLAP
-            IS_REFERENCE
-        )], @_);
+      BASE_VARIATION_FEATURE_OVERLAP
+      IS_REFERENCE
+    )], @_);
+  }
 
-    assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
-    
-    my $self = bless {
-        base_variation_feature_overlap  => $base_variation_feature_overlap,
-        is_reference                    => $is_reference,
+  assert_ref($base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+  
+  my $self = bless {
+    base_variation_feature_overlap  => $base_variation_feature_overlap,
+    is_reference                    => $is_reference,
     }, $class;
 
-    # avoid a memory leak, because the bvfo also has a reference to us
-    weaken $self->{base_variation_feature_overlap};
+  # avoid a memory leak, because the bvfo also has a reference to us
+  weaken $self->{base_variation_feature_overlap};
 
-    return $self;
+  return $self;
 }
 
 sub new_fast {

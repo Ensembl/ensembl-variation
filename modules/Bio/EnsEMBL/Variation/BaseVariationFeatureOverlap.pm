@@ -64,41 +64,66 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
 sub new {
-    my $class = shift;
+  my $class = shift;
 
-    my (
-        $adaptor,
-        $base_variation_feature,
-        $feature, 
-        $no_transfer
+  my (
+    $adaptor,
+    $base_variation_feature,
+    $feature, 
+    $no_transfer
+  );
+
+  if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
+    my %args = @_;
+
+    (
+      $adaptor,
+      $base_variation_feature,
+      $feature, 
+      $no_transfer
+    ) = (
+      $args{-adaptor},
+      $args{-base_variation_feature},
+      $args{-feature},
+      $args{-no_transfer}
+    );
+  }
+
+  else {
+    (
+      $adaptor,
+      $base_variation_feature,
+      $feature, 
+      $no_transfer
     ) = rearrange([qw(
-            ADAPTOR
-            BASE_VARIATION_FEATURE
-            FEATURE
-            NO_TRANSFER
-        )], @_);
- 
-    assert_ref($base_variation_feature, 'Bio::EnsEMBL::Variation::BaseVariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
-    
-    if (defined $feature) {
+      ADAPTOR
+      BASE_VARIATION_FEATURE
+      FEATURE
+      NO_TRANSFER
+    )], @_);
+  }
 
-        assert_ref($feature, 'Bio::EnsEMBL::Feature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+  assert_ref($base_variation_feature, 'Bio::EnsEMBL::Variation::BaseVariationFeature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
 
-        # we need to ensure the Feature and the BaseVariationFeature live on the same slice
-        # so we explicitly transfer the Feature here
-        unless($no_transfer && $no_transfer == 1) {
-            $feature = $feature->transfer($base_variation_feature->slice) 
-                or throw("Unable to transfer the supplied feature to the same slice as the base variation feature");
-        }
+  if (defined $feature) {
+
+    assert_ref($feature, 'Bio::EnsEMBL::Feature') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+
+    # we need to ensure the Feature and the BaseVariationFeature live on the same slice
+    # so we explicitly transfer the Feature here
+    unless($no_transfer && $no_transfer == 1) {
+      $feature = $feature->transfer($base_variation_feature->slice) 
+        or throw("Unable to transfer the supplied feature to the same slice as the base variation feature");
     }
+  }
 
-    my $self = bless {
-        base_variation_feature  => $base_variation_feature,
-        feature                 => $feature,
-        adaptor                 => $adaptor,
-    }, $class;
+  my $self = bless {
+    base_variation_feature  => $base_variation_feature,
+    feature                 => $feature,
+    adaptor                 => $adaptor,
+  }, $class;
 
-    return $self;
+  return $self;
 }
 
 sub new_fast {

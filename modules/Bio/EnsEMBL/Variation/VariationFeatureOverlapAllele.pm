@@ -110,40 +110,56 @@ our $SPECIFIED_LENGTH = qr /(\d+) BP (INSERTION|DELETION)/i;
 =cut 
 
 sub new {
-    my $class = shift;
+  my $class = shift;
 
-    my %args = @_;
+  my %args = @_;
 
-    # swap a '-variation_feature_overlap' argument for a '-base_variation_feature_overlap'
-    # and a '-variation_feature' for a '-base_variation_feature' for the superclass
-    unless($args{'-base_variation_feature_overlap'} ||= delete $args{'-variation_feature_overlap'}) {
-      for my $arg (keys %args) {
-        if (lc($arg) eq '-variation_feature_overlap') {
-          $args{'-base_variation_feature_overlap'} = delete $args{$arg};
-        }
+  # swap a '-variation_feature_overlap' argument for a '-base_variation_feature_overlap'
+  # and a '-variation_feature' for a '-base_variation_feature' for the superclass
+  unless($args{'-base_variation_feature_overlap'} ||= delete $args{'-variation_feature_overlap'}) {
+    for my $arg (keys %args) {
+      if (lc($arg) eq '-variation_feature_overlap') {
+        $args{'-base_variation_feature_overlap'} = delete $args{$arg};
       }
     }
+  }
 
-    my $self = $class->SUPER::new(%args);
+  my $self = $class->SUPER::new(%args);
 
-    assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+  assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
 
-    my (
-        $variation_feature_seq,
-        $allele_number
+  my (
+    $variation_feature_seq,
+    $allele_number
+  );
+
+  if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
+    (
+      $variation_feature_seq,
+      $allele_number
+    ) = (
+      $args{-variation_feature_seq},
+      $args{-allele_number},
+    );
+  }
+  else {
+    (
+      $variation_feature_seq,
+      $allele_number
     ) = rearrange([qw(
-            VARIATION_FEATURE_SEQ
-            ALLELE_NUMBER
-        )], %args);
+      VARIATION_FEATURE_SEQ
+      ALLELE_NUMBER
+    )], %args);
+  }
 
 
-    throw("Allele sequence required (variation "+$self->variation_feature->variation_name+")") 
-        unless $variation_feature_seq;
+  throw("Allele sequence required (variation "+$self->variation_feature->variation_name+")") 
+    unless $variation_feature_seq;
 
-    $self->{variation_feature_seq} = $variation_feature_seq;
-    $self->{allele_number} = $allele_number;
+  $self->{variation_feature_seq} = $variation_feature_seq;
+  $self->{allele_number} = $allele_number;
 
-    return $self;
+  return $self;
 }
 
 sub new_fast {
