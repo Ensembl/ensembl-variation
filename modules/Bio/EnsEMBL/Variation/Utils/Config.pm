@@ -98,7 +98,9 @@ our @evidence_statuses = (
     'HapMap',
     '1000Genomes',
     'Cited',
-    'ESP'
+    'ESP',
+    'Phenotype_or_Disease',
+    'ExAC'
 );
 
 our @VARIATION_CLASSES = (
