@@ -64,21 +64,20 @@ our @dbsnp_clinical_significance_types = qw(
 );
 
 our @clinvar_clinical_significance_types = (
-    'Uncertain significance',
+    'uncertain significance',
     'not provided',
-    'Benign',
-    'Likely benign',
-    'Likely pathogenic',
-    'Pathogenic',
+    'benign',
+    'likely benign',
+    'likely pathogenic',
+    'pathogenic',
     'drug response',
     'histocompatibility',
     'other',
     'confers sensitivity',
     'risk factor',
     'association',
-    'protective' 
+    'protective'
 );
-
 
 our @dgva_clinical_significance_types = (
     'Not tested',
