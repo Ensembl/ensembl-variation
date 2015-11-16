@@ -346,20 +346,6 @@ sub hgvs_genomic {
     return _hgvs_generic(@_,'genomic');
 }
 
-=head2 hgvs_coding
-
-  Description: Return the strings representing the CDS-level effect of each of the alleles 
-               of this variation in HGVS format
-  Returntype : hashref where the key is the allele sequence and then value is the HGVS string 
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub hgvs_coding {
-    deprecate('HGVS coding support has been moved to hgvs_transcript. This method will be removed in the next release.');
-    return _hgvs_generic(@_,'transcript');
-}
 
 =head2 hgvs_transcript
 
