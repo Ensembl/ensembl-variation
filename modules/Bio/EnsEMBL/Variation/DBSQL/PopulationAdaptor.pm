@@ -799,22 +799,6 @@ sub get_dbIDs_for_population_names {
   return \%dbIDs;
 }
 
-=head2 get_sample_id_for_population_names
-
-  Arg [1]     : $population_names reference to list of population names
-  Example     : my $ids = $pop_adaptor->get_sample_id_for_population_names(['CSHL-HAPMAP:HAPMAP-MEX','1000GENOMES:pilot_1_CHB+JPT_low_coverage_panel']);
-                map {printf("Population: \%s has sample_id \%d\n",$ids->{$_},$_)} keys(%{$ids});
-  Description : Retrieve the sample_ids for a list of population names
-  ReturnType  : reference to hash with sample_ids as keys and population names as values
-  Caller      : web
-  Status      : At Risk
-
-=cut
-
-sub get_sample_id_for_population_names {
-  my $self = shift;
-  warn('The use of this method is deprecated. Use get_dbIDs_for_population_names instead.');
-}
 
 sub _get_sample_population_hash {
 	my $self = shift;

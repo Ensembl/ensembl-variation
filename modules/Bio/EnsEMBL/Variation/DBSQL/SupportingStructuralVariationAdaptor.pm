@@ -70,7 +70,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 use DBI qw(:sql_types);
 

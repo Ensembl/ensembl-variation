@@ -131,10 +131,6 @@ ok($pop_ids[0] == 101082, 'get_dbIDs_for_population_names');
 #my $vfs = $vfa->fetch_all_by_Variation($v);
 #$populations = $pa->fetch_tag_Population($vfs->[0]);
 
-# fetch_tagged_Population
-
-# get_sample_id_for_population_names
-
 # store
 $population = $pa->fetch_by_dbID(649);
 delete $population->{$_} for qw(dbID name);

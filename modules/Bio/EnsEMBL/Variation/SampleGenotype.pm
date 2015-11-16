@@ -60,7 +60,7 @@ package Bio::EnsEMBL::Variation::SampleGenotype;
 
 use Bio::EnsEMBL::Variation::Genotype;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use vars qw(@ISA);
 

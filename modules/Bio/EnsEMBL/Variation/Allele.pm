@@ -82,7 +82,7 @@ package Bio::EnsEMBL::Variation::Allele;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
 use Scalar::Util qw(weaken);
 use Bio::EnsEMBL::Variation::Failable;
