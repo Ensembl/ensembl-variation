@@ -219,6 +219,8 @@ foreach my $type (@sql_order) {
     next;
   }
 
+  print STDERR "# $type\n";
+
   if (!$sql_list{$type}) {
     print STDERR "Can't recognise the category '$type'! Skip this category.\n";
     next;
@@ -515,12 +517,12 @@ sub round_count_diff {
     return '-';
   }
   elsif ($count > 0) {
-    $colour = '#090';
+    $colour = ' style="color:#090"';
     $symbol = '+';
     $label  = 'more'
   }
   else {
-    $colour = '#900';
+    $colour = '';
     $symbol = '-';
     $label  = 'less';
   }
@@ -549,7 +551,7 @@ sub round_count_diff {
     $count = $1;
     $count_label = "$count $label $type";
   }
-  return qq{<span style="color:$colour" title="$count_label"><small>($symbol$count)</small></span>};
+  return qq{<span$colour title="$count_label"><small>($symbol$count)</small></span>};
 }
 
 
