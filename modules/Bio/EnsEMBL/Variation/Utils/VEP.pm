@@ -56,7 +56,7 @@ use Getopt::Long;
 use FileHandle;
 use File::Path qw(mkpath);
 use Storable qw(nstore_fd fd_retrieve freeze thaw);
-use Scalar::Util qw(weaken);
+use Scalar::Util qw(weaken looks_like_number);
 use Digest::MD5 qw(md5_hex);
 use IO::Socket;
 use IO::Select;
@@ -2048,7 +2048,8 @@ sub numberify {
         numberify($ref->{$k});
       }
       else {
-        $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $k ne 'seq_region_name' && $k ne 'id' && $ref->{$k} =~ /^\-?\d+\.?\d*(e\-?\d+)?$/;
+        $DB::single = 1 if $k eq 'strand';
+        $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $k ne 'seq_region_name' && $k ne 'id' && looks_like_number($ref->{$k});
       }
     }
   }
@@ -2058,7 +2059,7 @@ sub numberify {
         numberify($ref->[$i]);
       }
       else {
-        $ref->[$i] = $ref->[$i] + 0 if defined($ref->[$i]) && $ref->[$i] =~ /^\-?\d+\.?\d*(e\-?\d+)?$/;
+        $ref->[$i] = $ref->[$i] + 0 if defined($ref->[$i]) && looks_like_number($ref->[$i]);
       }
     }
   }
@@ -2746,7 +2747,7 @@ sub mfva_to_line {
     Feature      => $mf->binding_matrix->name,
     Extra        => {
       MOTIF_NAME  => $matrix,
-      STRAND      => $mf->strand
+      STRAND      => $mf->strand + 0
     }
   };
   
@@ -2826,7 +2827,7 @@ sub add_extra_fields_transcript {
     $line->{Gene} = $tr->{_gene_stable_id};
 
     # strand
-    $line->{Extra}->{STRAND} = $tr->strand;
+    $line->{Extra}->{STRAND} = $tr->strand + 0;
     
     # exon/intron numbers
     if ($config->{numbers}) {
