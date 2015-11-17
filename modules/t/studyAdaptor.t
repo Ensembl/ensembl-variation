@@ -60,5 +60,8 @@ ok($studies->[0]->name() eq $name, "study by source");
 my $studies2 = $sta->fetch_all_by_dbID_list(\@study_IDs);
 ok($studies2->[0]->name() eq $name, "study by dbID list");
 
+# test fetch all by external reference
+my $studies = $sta->fetch_all_by_external_reference($external_ref);
+ok($studies->[0]->name() eq $name, "study by external reference");
 
 done_testing();

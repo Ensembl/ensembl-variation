@@ -207,6 +207,29 @@ sub _fetch_all_associate_study_id {
 		return \@study_list;
 }
 
+=head2 fetch_all_by_external_reference
+
+  Arg [1]    : string $external_reference
+  Example    : my $study = $study_adaptor->fetch_by_external_reference('PMID:25917933');
+  Description: Retrieves the Study object associated with an external reference.
+  Returntype : listref of Bio::EnsEMBL::Variation::Study
+  Exceptions : thrown if external reference not provided
+  Caller     : general
+  Status     : Experimental
+
+=cut
+sub fetch_all_by_external_reference{
+
+  my $self    = shift;
+  my $ext_ref = shift;
+
+  throw('external reference argument expected') if !defined $ext_ref ;
+
+  my $result = $self->generic_fetch("st.external_reference='$ext_ref'");
+
+  ## Could be multiple studies if 2 groups extracted data from same publication
+  return ($result ? $result : undef);
+}
 
 sub _columns {
   return qw(st.study_id st.name st.description st.url st.external_reference st.study_type st.source_id);
