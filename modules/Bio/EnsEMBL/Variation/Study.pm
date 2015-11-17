@@ -299,7 +299,7 @@ sub source{
 
 sub source_name{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->name(@_) if(@_);
@@ -322,7 +322,7 @@ sub source_name{
 
 sub source_version{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->version(@_) if(@_);

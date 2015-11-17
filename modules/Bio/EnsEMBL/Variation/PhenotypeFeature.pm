@@ -137,11 +137,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_id,$source_object,$study,$study_id,$is_significant,$attribs) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$attribs) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
-      SOURCE _SOURCE_ID SOURCE_OBJECT STUDY _STUDY_ID
+      SOURCE_NAME _SOURCE_ID SOURCE STUDY _STUDY_ID
       IS_SIGNIFICANT
       ATTRIBS
     )], @_);
@@ -172,8 +172,8 @@ sub new {
   elsif(defined($source_id)) {
     $self->{_source_id} = $source_id;
   }
-   elsif(defined($source_object)) {
-    $self->{source_object} = $source_object;
+   elsif(defined($source_name)) {
+    $self->{source_name} = $source_name;
   }
 
   # can get study or study ID
@@ -458,7 +458,7 @@ sub source{
 
 sub source_name{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->name(@_) if(@_);
@@ -481,7 +481,7 @@ sub source_name{
 
 sub source_version{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->version(@_) if(@_);

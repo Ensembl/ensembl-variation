@@ -651,7 +651,7 @@ sub source{
 
 sub source_name{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->name(@_) if(@_);
@@ -674,7 +674,7 @@ sub source_name{
 
 sub source_type{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->type(@_) if(@_);
@@ -697,7 +697,7 @@ sub source_type{
 
 sub source_description{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->description(@_) if(@_);
@@ -721,7 +721,7 @@ sub source_description{
 
 sub source_version{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->version(@_) if(@_);
@@ -745,7 +745,7 @@ sub source_version{
 
 sub source_url{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->url(@_) if(@_);
@@ -768,7 +768,7 @@ sub source_url{
 
 sub source_somatic_status{
   my $self = shift;
-  my $source = $self->source_object;
+  my $source = $self->source;
   return unless defined $source;
   
   $source->somatic_status(@_) if(@_);
