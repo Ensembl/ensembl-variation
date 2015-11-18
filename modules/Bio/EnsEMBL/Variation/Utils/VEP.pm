@@ -659,15 +659,8 @@ sub parse_vcf {
                 $start++;
             }
         }
-
-        # remove * alleles
-        # these indicate an allele is not present, often due to an upstream deletion
-        # take a backup though, as they may be present in an individual's genotype
+        
         my $original_alt = $alt;
-        if($alt =~ /\*/) {
-            $alt = join('/', grep {!/\*/} split('/', $alt));
-            $non_variant = 1 unless $alt;
-        }
         
         # create VF object
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
