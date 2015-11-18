@@ -222,6 +222,10 @@ sub _mean_score {
   return $sum / scalar @scores;
 }
 
+sub _reference_name {
+  return $_[0]->transcript->translation->stable_id;
+}
+
 sub TO_JSON {
   my $self = shift;
   

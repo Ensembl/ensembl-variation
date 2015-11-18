@@ -114,7 +114,7 @@ sub name {
   my $self = shift;
   
   if(!exists($self->{name})) {
-    $self->{name} = sprintf("%s:%s", $self->transcript->stable_id, join(",", @{$self->_get_raw_diffs}) || 'REF');
+    $self->{name} = sprintf("%s:%s", $self->_reference_name, join(",", @{$self->_get_raw_diffs}) || 'REF');
   }
   
   return $self->{name};

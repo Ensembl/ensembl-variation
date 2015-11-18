@@ -162,6 +162,10 @@ sub get_all_diffs {
   return $self->{diffs};
 }
 
+sub _reference_name {
+  return $_[0]->transcript->stable_id;
+}
+
 sub TO_JSON {
   my $self = shift;
   
