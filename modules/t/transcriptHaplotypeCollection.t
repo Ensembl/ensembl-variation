@@ -64,6 +64,7 @@ my $c = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new(
 );
 
 my ($s) = grep {$_->name =~ /NA18499/} @{$vcf_coll->get_all_Samples};
+ok($s && $s->isa('Bio::EnsEMBL::Variation::Sample'), "get_all_Samples");
 
 
 ## TESTS
@@ -111,7 +112,10 @@ is($h[0]->name, 'ENST00000502692:1697G>A,1858T>C,2011T>C,2456A>G', "get_all_most
 
 @h = @{$c->get_all_most_frequent_ProteinHaplotypes};
 ok(scalar @h == 1, "get_all_most_frequent_ProteinHaplotypes");
-is($h[0]->name, 'ENST00000502692:566R>Q,620*>R,671C>R,819Q>R', "get_all_most_frequent_ProteinHaplotypes - name");
+is($h[0]->name, 'ENSP00000422007:566R>Q,620*>R,671C>R,819Q>R', "get_all_most_frequent_ProteinHaplotypes - name");
+
+@h = @{$c->get_all_Populations};
+is(scalar @h, 31, "get_all_Populations - count");
 
 
 
