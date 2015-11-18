@@ -437,16 +437,19 @@ sub _raw_allele_hashes {
     };
 
     # create objects representing the alternate alleles
-    my $allele_number = 1 + ($vf->{_base_allele_number} || 0);
+    my $allele_number = ($vf->{_base_allele_number} || 0);
 
     for my $allele (@alleles) {
       
       next if $allele eq $ref_allele;
 
+      $allele_number++;
+      next if $allele eq '*' || $allele eq '<DEL:*>';
+
       push @raw_allele_hashes, {
         -variation_feature_seq => $allele,
         -is_reference          => 0,
-        -allele_number         => $allele_number++
+        -allele_number         => $allele_number
       };
     }
 
