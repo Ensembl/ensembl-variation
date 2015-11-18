@@ -214,17 +214,20 @@ sub new {
     $self->add_VariationFeatureOverlapAllele($ref_vfoa);
 
     # create objects representing the alternate alleles
-    my $allele_number = 1 + ($variation_feature->{_base_allele_number} || 0);
+    my $allele_number = ($variation_feature->{_base_allele_number} || 0);
 
     for my $allele (@alleles) {
         
         next if $allele eq $ref_allele;
+
+        $allele_number++;
+        next if $allele eq '*' || $allele eq '<*:DEL>';
        
         my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
             -variation_feature_overlap  => $self,
             -variation_feature_seq      => $allele,
             -is_reference               => 0,
-            -allele_number              => $allele_number++,
+            -allele_number              => $allele_number,
         );
        
         $self->add_VariationFeatureOverlapAllele($vfoa);
