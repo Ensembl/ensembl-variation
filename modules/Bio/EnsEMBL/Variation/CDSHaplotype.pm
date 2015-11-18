@@ -181,7 +181,12 @@ sub TO_JSON {
 
     foreach my $diff(@{$self->{diffs} || []}) {
       my %diff_copy = %{$diff};
-      $diff_copy{variation_feature} = $diff->{variation_feature}->variation_name if $diff->{variation_feature};
+
+      if($diff->{variation_feature}) {
+        $diff_copy{variation_feature} = $diff->{variation_feature}->variation_name;
+        $diff_copy{variation_feature_id} = $diff->{variation_feature}->dbID;
+      }
+      
       push @{$copy{diffs}}, \%diff_copy;
     }
   }
