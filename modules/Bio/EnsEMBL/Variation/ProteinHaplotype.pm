@@ -146,25 +146,35 @@ sub get_all_diffs {
     my $matrices = $self->container->_get_prediction_matrices;
     
     my @diffs;
+
+    my $seen_indel = 0;
+    my $ref_length = length($self->reference_seq());
     
     foreach my $raw_diff(@{$self->_get_raw_diffs}) {
       
       my $diff = { diff => $raw_diff };
       
       # extract change from raw diff
-      if($raw_diff =~ /^(\d+)[A-Z]\>([A-Z])$/) {
+      if($raw_diff =~ /^(\d+)[A-Z]\>([A-Z])$/ && !$seen_indel) {
         my $pos = $1;
         my $aa  = $2;
-        
+
         # get sift/polyphen predictions from cached matrices
-        foreach my $tool(qw(sift polyphen)) {
-          if(my $matrix = $matrices->{$tool}) {
-            my ($pred, $score) = $matrix->get_prediction($pos, $aa);
-            
-            $diff->{$tool.'_score'}       = $score if defined($score);
-            $diff->{$tool.'_prediction'}  = $pred if defined($pred);
+        # but only if within range
+        if($pos <= $ref_length) {
+          foreach my $tool(qw(sift polyphen)) {
+            if(my $matrix = $matrices->{$tool}) {
+              my ($pred, $score) = $matrix->get_prediction($pos, $aa);
+              
+              $diff->{$tool.'_score'}       = $score if defined($score);
+              $diff->{$tool.'_prediction'}  = $pred if defined($pred);
+            }
           }
         }
+      }
+
+      elsif($raw_diff =~ /ins|del/) {
+        $seen_indel = 1;
       }
       
       push @diffs, $diff;
