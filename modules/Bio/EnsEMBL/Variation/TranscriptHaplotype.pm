@@ -366,11 +366,19 @@ sub get_formatted_alignment {
   my $self = shift;
   my $format = shift || 'clustalw';
 
-  my $aln_out;
-  open(my $fh, ">", \$aln_out);
-  Bio::AlignIO->new(-format => $format, -fh => $fh)->write_aln($self->_get_SimpleAlign_obj);
+  if(
+    !exists($self->{formatted_alignment}) ||
+    ($self->{alignment_format} && ($self->{alignment_format} ne '$format'))
+  ) {
+    my $aln_out;
+    open(my $fh, ">", \$aln_out);
+    Bio::AlignIO->new(-format => $format, -fh => $fh)->write_aln($self->_get_SimpleAlign_obj);
 
-  return $aln_out;
+    $self->{formatted_alignment} = $aln_out;
+    $self->{alignment_format} = 'format';
+  }
+
+  return $self->{formatted_alignment};
 }
 
 sub _get_SimpleAlign_obj {
