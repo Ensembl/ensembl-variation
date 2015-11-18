@@ -503,7 +503,7 @@ sub round_count {
     $count_display = "$count";
     $bg_class = $colours{'zero'}{'colour'};
   }
-  return qq{<span class="$bg_class" style="color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
+  return qq{<span class="vdoc_var_count $bg_class" title="$count_label">$count_display</span>};
 }
 
 sub round_count_diff {
