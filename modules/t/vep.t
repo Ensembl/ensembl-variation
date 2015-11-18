@@ -268,16 +268,16 @@ ok(${$cons->[0]} !~ /CSQ\=A/, "vcf format - existing CSQ removed");
 # vcf weird "*" type
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, '21 25606454 test G C,* . . .')};
-is($vf->allele_string, 'G/C', 'vcf format - *-type 1');
+is($vf->allele_string, 'G/C/*', 'vcf format - *-type 1');
 
 $config = copy_config($base_config);
 ($vf) = @{parse_line($config, '21 25606454 test GC G,* . . .')};
-is($vf->allele_string, 'C/-', 'vcf format - *-type 1 indel');
+is($vf->allele_string, 'C/-/*', 'vcf format - *-type 1 indel');
 
 # this type is produced by GATK, we have to force VEP to parse it as VCF as it's not in the standard
 $config = copy_config($base_config, {format => 'vcf'});
 ($vf) = @{parse_line($config, '21 25606454 test G C,<DEL:*> . . .')};
-is($vf->allele_string, 'G/C', 'vcf format - *-type 2');
+is($vf->allele_string, 'G/C/<DEL:*>', 'vcf format - *-type 2');
 
 
 # use minimal to reduce allele strings
@@ -308,6 +308,12 @@ ok(defined($cons->[0]->{Extra}->{ALLELE_NUM}), "minimal - allele num defined");
 is(scalar keys %{{map {$_->{Allele} => 1} values %by_allele}}, 1, "minimal - allele num where two alts resolve to same allele (check allele)");
 is($by_allele{frameshift_variant}->{Extra}->{ALLELE_NUM}, 1, "minimal - allele num where two alts resolve to same allele (frameshift)");
 is($by_allele{missense_variant}->{Extra}->{ALLELE_NUM}, 2, "minimal - allele num where two alts resolve to same allele (missense)");
+
+$config = copy_config($base_config, {allele_number => 1});
+($vf) = @{parse_line($config, '21 25606454 test G *,C')};
+$cons = get_all_consequences($config, [$vf]);
+%by_allele = map {$_->{Allele} => $_} grep {$_->{Feature} eq 'ENST00000419219'} @$cons;
+is($by_allele{C}->{Extra}->{ALLELE_NUM}, 2, "allele_num - * first allele");
 
 # vcf individual data
 $config = copy_config($base_config, {
