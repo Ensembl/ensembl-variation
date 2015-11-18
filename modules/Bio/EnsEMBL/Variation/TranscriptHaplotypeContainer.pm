@@ -150,6 +150,28 @@ sub get_all_Samples {
 }
 
 
+=head2 get_all_Populations
+
+  Example    : my $pops = $thc->get_all_Populations()
+  Description: Get list of populations in this container
+  Returntype : listref of Bio::EnsEMBL::Variation::Population
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_Populations {
+  my $self = shift;
+
+  if(!exists($self->{_population_objects})) {
+    $self->{_population_objects} = [values %{{map {$_->dbID => $_} map {@{$_->get_all_Populations}} @{$self->get_all_Samples}}}];
+  }
+
+  return $self->{_population_objects};
+}
+
+
 =head2 get_TranscriptHaplotype_by_name
 
   Example    : my $th = $thc->get_TranscriptHaplotype_by_name()
