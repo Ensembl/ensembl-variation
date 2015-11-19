@@ -36,28 +36,28 @@ use File::Path qw(make_path);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
 sub run {
-    my $self = shift;
-	my @input;
-	my $config_file = $self->param('config_file');
-	my $fh = FileHandle->new($config_file, 'r');
-	my $config_text = <$fh>;
-	my $config = decode_json($config_text);
-	$fh->close();	
-	foreach my $species (keys %$config) {
-		my $params = {};
-		$params->{species} = $species;
-		$params->{config}  = $config->{$species};
-		push @input, $params;			
-	}
-    $self->param('species', \@input); 
+  my $self = shift;
+  my @input;
+  my $config_file = $self->param('config_file');
+  my $fh = FileHandle->new($config_file, 'r');
+  my $config_text = <$fh>;
+  my $config = decode_json($config_text);
+  $fh->close();	
+  foreach my $species (keys %$config) {
+    my $params = {};
+    $params->{species} = $species;
+    $params->{config}  = $config->{$species};
+    push @input, $params;			
+  }
+  $self->param('species', \@input); 
 }
 
 # some dataflow to perform
 sub write_output { 
-    my $self = shift;
-    my $input = $self->param('species');
-    $self->dataflow_output_id($input, 2);
-    return 1;
+  my $self = shift;
+  my $input = $self->param('species');
+  $self->dataflow_output_id($input, 2);
+  return 1;
 }
 
 1;

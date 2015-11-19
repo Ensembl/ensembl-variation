@@ -35,35 +35,161 @@ use FileHandle;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
+
+=begin
+  Different file joins:
+  - join slice pieces to seq_region
+  - join seq_regions to complete dump file
+  - adjust header lines in dump file:
+    - GVF: get correct sequence_regions
+
+=end
+=cut
+
 sub run {
   my $self = shift;
 
   my $species      = $self->param('species');
   my $pipeline_dir = $self->param('pipeline_dir');
-  my $file_type    = 'gvf';	
-
+  my $file_type    = $self->param('file_type');	
   my $working_dir = "$pipeline_dir/$file_type/$species/";
-  my $files = $self->get_files($working_dir, $file_type);
-  if ($self->contains_unjoined_files($files)) {		
-    $self->join_gvf($working_dir, $files);
+
+  my $mode = $self->param('mode'); 
+
+  if ($mode eq 'join_slice_split') {
+    my $files = $self->get_slice_split_files($working_dir, $file_type);  
+    $self->join_split_slice_files($working_dir, $files);
+  } elsif ($mode eq 'final_join') {
+    $self->final_join;
+  } elsif ($mode eq 'no_join') {
+    $self->warning('No final join required');  
+  } else {
+    die "Unknown mode: $mode in JoinDump";
   }
-  my @input = ();
-  foreach my $file_name (keys %$files) {
-    my $params = {};
-    $params->{file_name}   = $file_name;
-    $params->{working_dir} = $working_dir;
-    push @input, $params;
-  }
-  $self->param('input_for_validation', \@input);	
 }
 
-sub get_files {
+sub final_join {
+  my $self = shift;
+  my $file_type = $self->param('file_type');
+  if ($file_type eq 'gvf') {
+    $self->final_join_gvf();
+  } else {
+    $self->final_join_vcf();
+  }
+}
+
+sub final_join_gvf {
+  my $self = shift;
+  my $dir = $self->param('dir');
+  my $file_name = $self->param('file_name');
+  my $dump_type = $self->param('dump_type');
+  my @input_ids = sort @{$self->param('input_ids')};
+ 
+  my $covered_seq_region_ids = $self->get_covered_seq_regions; 
+  my $species = $self->param('species');
+  my $cdba = $self->get_species_adaptor($species, 'core');
+  my $sa = $cdba->get_SliceAdaptor;
+  my @sequence_regions = {};
+  foreach my $seq_region_id (keys %$covered_seq_region_ids) {
+    my $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+    push @sequence_regions, {
+      'name' => $slice->seq_region_name,
+      'start' => $slice->start,
+      'end' => $slice->end,
+    };
+  }
+
+  my $first_file_id = $input_ids[0];
+  
+  my $fh_join = FileHandle->new("$dir/$file_name.gvf", 'w');
+
+  `gunzip $dir/$dump_type-$first_file_id.gvf.gz`; 
+
+  my $fh = FileHandle->new("$dir/$dump_type-$first_file_id.gvf", 'r');
+
+  # print the header first
+  while (<$fh>)  {
+    chomp;
+    my $line = $_;
+    if ($line =~ m/^#/) {
+      next if ($line =~ m/^##sequence-region/);
+      print $fh_join $line, "\n";
+    } 
+  }  
+  $fh->close();
+  `gzip $dir/$dump_type-$first_file_id.gvf`; 
+
+  foreach my $sequence_region (@sequence_regions) {
+    print $fh_join join(' ', '##sequence-region', $sequence_region->{name}, $sequence_region->{start}, $sequence_region->{end}), "\n";
+  }
+
+  my $id_count = 1; 
+
+  foreach my $file_id (@input_ids) {
+    `gunzip $dir/$dump_type-$file_id.gvf.gz`; 
+    my $fh = FileHandle->new("$dir/$dump_type-$file_id.gvf", 'r');
+    while (<$fh>) {
+      chomp;
+      my $line = $_;
+      next if ($line =~ m/^#/);
+      my $gvf_line = get_gvf_line($line, $id_count);
+      print $fh_join $gvf_line, "\n";   
+      $id_count++;
+    }
+    $fh->close();
+    `rm $dir/$dump_type-$file_id.gvf`;
+  }
+  $fh_join->close();
+}
+
+sub final_join_vcf {
+  my $self = shift;
+  my $dir = $self->param('dir');
+  my $file_name = $self->param('file_name');
+  my $dump_type = $self->param('dump_type');
+  my @input_ids = sort @{$self->param('input_ids')};
+ 
+  my $first_file_id = shift @input_ids;
+  
+  my $joined_fh = FileHandle->new("$dir/$file_name.vcf", 'w');
+
+  `gunzip $dir/$dump_type-$first_file_id.vcf.gz`; 
+  my $fh = FileHandle->new("$dir/$dump_type-$first_file_id.vcf", 'r');
+  while (<$fh>)  {
+    chomp;
+    print $joined_fh $_, "\n";
+  }  
+  $fh->close();
+
+  `rm $dir/$dump_type-$first_file_id.vcf`;
+
+  foreach my $file_id (@input_ids) {
+    `gunzip $dir/$dump_type-$file_id.vcf.gz`; 
+    my $fh = FileHandle->new("$dir/$dump_type-$file_id.vcf", 'r');
+    while (<$fh>) {
+      chomp;
+      my $line = $_;
+      next if ($line =~ m/^#/);
+      print $joined_fh $line, "\n";
+    }
+    $fh->close();
+    `rm $dir/$dump_type-$file_id.vcf`;
+  }
+  $joined_fh->close();
+
+  my $vcf_file = "$dir/$file_name.vcf";
+  my $cmd = "vcf-sort < $vcf_file | bgzip > $vcf_file.gz";
+  $self->run_cmd($cmd); 
+  `rm $vcf_file`;
+}
+
+sub get_slice_split_files {
   my $self = shift;
   my $working_dir = shift;
   my $file_type = shift;	
   opendir(DIR, $working_dir) or die $!; 
   my $files = {};
-  my ($range, $file_name);
+  my ($split_slice_range, $file_name);
   while (my $file = readdir(DIR)) {
     next if ($file =~ m/^\./);
     if ($file =~ m/\.$file_type/) {
@@ -71,113 +197,67 @@ sub get_files {
       my @file_name_components =  split('-', $file);
       if (scalar @file_name_components == 2) {
         $file_name  = shift @file_name_components;
-        $range = shift @file_name_components;
-        $files->{$file_name}->{$range} = 1;
-      } else {
-        $file_name = join('-', @file_name_components);
-        $files->{$file_name}->{1} = 1;
-      }
+        $split_slice_range = shift @file_name_components;
+        my @components = split('_', $split_slice_range);
+        if (scalar @components == 3) {
+          my ($seq_region_id, $start, $end) = @components; 
+          $files->{$file_name}->{$seq_region_id}->{$start} = "$file_name-$seq_region_id\_$start\_$end.$file_type";
+        }
+      } 
     } # else .err and .out files
   }
   closedir(DIR);
   return $files;	
 }
 
-sub contains_unjoined_files {
+sub join_split_slice_files {
   my $self = shift;
-  my $files = shift;
-  foreach my $type (keys %$files) {
-    return ((scalar keys %{$files->{$type}}) > 1);
-  }
-  return 0;	
-} 
-
-sub join_gvf {
-  my $self  = shift;
   my $working_dir = shift;
   my $files = shift;
-  my $species = $self->param('species');
-  my $tmp_dir = $self->param('tmp_dir');	
 
-# check there are the same number of sub_files for each dump_type
-  my $first_file_name     = (keys %$files)[0];
-  my $sub_file_count = scalar keys %{$files->{$first_file_name}};
+  my $tmp_dir = $self->param('tmp_dir');
 
-  foreach my $file_name (keys %$files) {
-    my $file_count = scalar keys %{$files->{$file_name}};
-    die "file count differs for type: $file_name" unless ($file_count == $sub_file_count);	
-  }
-
-# first assemble header: 
-# from first file complete header, then only sequence_region information
-  foreach my $file_name (keys %$files) {
-    my $fh = FileHandle->new("> $working_dir/$file_name.gvf");
-# header ---------------------------------------------------------------------
-    my @sub_files = keys %{$files->{$file_name}};
-    my $first_file_range = shift @sub_files;
-    my $tmp_header_fh = FileHandle->new("< $working_dir/$file_name-$first_file_range.gvf");
-    while (<$tmp_header_fh>) {
-      chomp;
-      my $line = $_;
-      if ($line =~ m/^#/) {
-        print $fh $line, "\n";
-      } else {last;}
-    }
-    $tmp_header_fh->close();
-
-    foreach my $file_range (@sub_files) {
-      $self->warning("<$working_dir/$file_name-$file_range.gvf");		
-      $tmp_header_fh = FileHandle->new("< $working_dir/$file_name-$file_range.gvf");
-      while (<$tmp_header_fh>) {
+  foreach my $file_type (keys %$files) {
+    foreach my $seq_region_id (keys %{$files->{$file_type}}) {
+      my $id_count = 1;
+      my @start_positions = sort keys %{$files->{$file_type}->{$seq_region_id}};
+      my $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
+      my $first_start_position = $start_positions[0];
+      my $file_name = $files->{$file_type}->{$seq_region_id}->{$first_start_position};
+      my $fh = FileHandle->new("$working_dir/$file_name", 'r');
+      while (<$fh>)  {
         chomp;
         my $line = $_;
-        last unless ($line =~ m/^#/);
-        if ($line =~ m/^##sequence-region/) {
-          print $fh $line, "\n";
+        if ($line =~ m/^#/) {
+          next if ($line =~ m/^##sequence-region/);
+          print $fh_join $line, "\n";
         }
-      }
-      $tmp_header_fh->close();
-    }
-# header ---------------------------------------------------------------------
+      }  
+      $fh->close();
 
-# body -----------------------------------------------------------------------
-# refresh sub_files
-    @sub_files = keys %{$files->{$file_name}};
-    my $id_count = 1;
-    foreach my $file_range (@sub_files) {
-      $tmp_header_fh = FileHandle->new("< $working_dir/$file_name-$file_range.gvf");
-      while (<$tmp_header_fh>) {
-        chomp;
-        my $line = $_;
-        next if ($line =~ m/^#/);
-# do some corrections here:
-        my $gvf_line = get_gvf_line($line);
-        $gvf_line->{attributes}->{ID} = $id_count;
-
-        $line = join("\t", map {$gvf_line->{$_}} (
-              'seq_id', 
-              'source', 
-              'type', 
-              'start', 
-              'end', 
-              'score', 
-              'strand', 
-              'phase'));
-        my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
-        print $fh $line, "\t", $attributes, "\n";   
-        $id_count++;
+      foreach my $start_position (@start_positions) {
+        my $file_name = $files->{$file_type}->{$seq_region_id}->{$start_position};
+        my $fh = FileHandle->new("$working_dir/$file_name", 'r');
+        while (<$fh>) {
+          chomp;
+          my $line = $_;
+          next if ($line =~ m/^#/);
+          my $gvf_line = get_gvf_line($line, $id_count);
+          print $fh_join $gvf_line, "\n";   
+          $id_count++;
+        }
+        $fh->close();
+        `gzip $working_dir/$file_name`;
+        `mv -f $working_dir/$file_name.gz $tmp_dir`;
       }
-      $tmp_header_fh->close();
-      system("gzip $working_dir/$file_name-$file_range.gvf");
-      system("mv $working_dir/$file_name-$file_range.gvf.gz $tmp_dir");
+      $fh_join->close();
     }
-# body -----------------------------------------------------------------------
-    $fh->close();
   }
 }
 
 sub get_gvf_line {
   my $line = shift; 
+  my $id_count = shift;  
   my $gvf_line = {};
   my @header_names = qw/seq_id source type start end score strand phase/;
   my @header_values = split(/\t/, $line);
@@ -194,13 +274,59 @@ sub get_gvf_line {
       $gvf_line->{attributes}->{$key} = $value;
     }
   }
-  return $gvf_line;
+
+  $gvf_line->{attributes}->{ID} = $id_count;
+  $line = join("\t", map {$gvf_line->{$_}} (
+    'seq_id', 
+    'source', 
+    'type', 
+    'start', 
+    'end', 
+    'score', 
+    'strand', 
+    'phase'));
+  my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
+  return "$line\t$attributes";
 }
 
 sub write_output {
   my $self = shift;
   $self->dataflow_output_id($self->param('input_for_validation'), 1);
   return;
+}
+
+sub run_cmd {
+  my $self = shift;
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>= 8;
+    die "system($cmd) failed: $return_value";
+  }
+}
+
+sub get_covered_seq_regions {
+  my $self = shift;
+  my $species = $self->param('species');
+  my $counts;
+  my $vdba = $self->get_species_adaptor($species, 'variation');
+  my $dbh = $vdba->dbc->db_handle;
+  my $sth = $dbh->prepare(qq{
+      SELECT sr.seq_region_id, count(*)
+      FROM seq_region sr, variation_feature vf
+      WHERE sr.seq_region_id = vf.seq_region_id
+      GROUP BY sr.seq_region_id;
+      });
+  $sth->{'mysql_use_result'} = 1;
+  $sth->execute();
+  my ($slice_id, $count);
+  $sth->bind_columns(\$slice_id, \$count);
+  while ($sth->fetch()) {
+    if ($count > 0) {
+      $counts->{$slice_id} = $count;
+    }
+  }
+  $sth->finish();
+  return $counts;
 }
 
 1;

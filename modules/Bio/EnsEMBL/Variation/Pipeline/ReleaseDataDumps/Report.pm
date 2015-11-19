@@ -35,24 +35,21 @@ use FileHandle;
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
 sub fetch_input {
-    my $self = shift;
-	my $pipeline_dir = $self->param('pipeline_dir');
-	my $file_type   = $self->param('file_type');
-	my $report_name = $self->param('report_name');
-
-    my $all_species = $self->get_all_species();
-
-	my $fh = FileHandle->new("$pipeline_dir/$report_name", 'w');
-	foreach my $species (keys %$all_species) {
-		opendir(DIR, "$pipeline_dir/$file_type/$species") or die $!;			
-		while (my $file = readdir(DIR)) {
-			next if ($file =~ m/^\./);
-			print $fh $file, "\n";		
-		}	
-	}
-	$fh->close();
-	closedir(DIR);
+  my $self = shift;
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $file_type   = $self->param('file_type');
+  my $report_name = $self->param('report_name');
+  my $all_species = $self->get_all_species();
+  my $fh = FileHandle->new("$pipeline_dir/$report_name", 'w');
+  foreach my $species (keys %$all_species) {
+    opendir(DIR, "$pipeline_dir/$file_type/$species") or die $!;			
+    while (my $file = readdir(DIR)) {
+      next if ($file =~ m/^\./);
+      print $fh $file, "\n";		
+    }	
+  }
+  $fh->close();
+  closedir(DIR);
 }
-
 
 1;

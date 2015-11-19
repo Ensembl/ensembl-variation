@@ -1,37 +1,43 @@
 =head1 LICENSE
+<<<<<<< HEAD
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
+=======
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+>>>>>>> Speed up pipeline ENSVAR-283.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
 http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
 =cut
 
 
 =head1 CONTACT
-
 Please email comments or questions to the public Ensembl
 developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
-
 Questions may also be sent to the Ensembl help desk at
 <http://www.ensembl.org/Help/Contact>.
-
 =cut
 package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob;
 
 use strict;
 use warnings;
 
+use FileHandle;
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
+
+use constant GLOBAL_VF_COUNT => 1_000; # 5_000_000 1_000
+use constant MAX_VF_LOAD => 100; # 2_000_000 100
+use constant VF_PER_SLICE => 10_000; # 2_000_000 10_000
+my $max_length = 5e7;
+my $overlap = 0;
 
 sub fetch_input {
   my $self = shift;
@@ -100,7 +106,14 @@ sub fetch_input {
     }
   }
   if ($job_type eq 'dump' || $job_type eq 'dump_population') {  
-    $input = $self->get_input_gvf_dumps($script_args); 
+    my $global_vf_count = $self->get_global_vf_count();
+    if ($global_vf_count > GLOBAL_VF_COUNT) {
+      my $covered_seq_regions = $self->get_covered_seq_regions();
+      my $vf_distributions = $self->get_vf_distributions($covered_seq_regions);
+      $input = $self->get_input_gvf_dumps($script_args, $vf_distributions);
+    } else {
+      $input = $self->get_input_gvf_dumps($script_args);
+    }
   } elsif ($job_type eq 'parse') {
     $input = $self->get_input_gvf2vcf($script_args); 
   } else {
@@ -108,76 +121,6 @@ sub fetch_input {
   }
 
   $self->param('input_for_submit_job', $input); 
-}
-
-
-sub get_input_gvf_dumps {
-  my $self = shift;
-  my $script_args = shift;
-
-  my $file_type       = 'gvf';
-  my $script_dir      = $self->param('script_dir');
-  my $script          = '/export/release/dump_gvf.pl';
-  my $output_dir      = $self->param('pipeline_dir');
-  my $connection_args = '--registry ' . $self->param('registry_file');
-  my $species = $self->param('species');
-  my @input = ();
-
-  if ($self->param('job_type') eq 'dump_population') {
-    foreach my $script_arg (keys %$script_args) {	
-      my $file_name = $script_args->{$script_arg};
-      my $params = {};
-      my $output_file = "--gvf_file $output_dir/$file_type/$species/$file_name.$file_type";
-      my $err = "$output_dir/$file_type/$species/$file_name-$file_type.err";
-      my $out = "$output_dir/$file_type/$species/$file_name-$file_type.out";
-      $params->{'species'}          = $species;
-      $params->{'script'}           = "$script_dir/$script";
-      $params->{'connection_args'}  = $connection_args;
-      $params->{'script_args'}      = $script_arg;
-      $params->{'gvf_file'}         = $output_file;
-      $params->{'err'}              = $err;
-      $params->{'out'}              = $out;
-
-      push @input, $params;
-    }
-  } else {
-    my $slice_load = $self->get_slice_load($species);    
-
-    foreach my $script_arg (keys %$script_args) {	
-      my $file_name = $script_args->{$script_arg};
-      foreach my $slice_set (keys %$slice_load) {
-        my @seq_region_ids = @{$slice_load->{$slice_set}};
-        my $seq_region_file = '';
-        my $seq_regions = '';
-        if (@seq_region_ids) {
-          # store seq_region ids in file
-          $seq_regions = $seq_region_ids[0] . '_' . $seq_region_ids[-1];
-          $seq_region_file = "$output_dir/$file_type/$species/$seq_regions.txt";
-          my $fh = FileHandle->new($seq_region_file, 'w');                                
-          foreach my $seq_region_id (@seq_region_ids) {
-            print $fh $seq_region_id, "\n";
-          }
-          $fh->close();
-        }
-        my $params = {};
-        my $seq_regions_arg = ($seq_regions ? "-$seq_regions" : '');
-        my $output_file = "--gvf_file $output_dir/$file_type/$species/$file_name" . "$seq_regions_arg.$file_type";
-        my $err = "$output_dir/$file_type/$species/$file_name" . "$seq_regions_arg.err";
-        my $out = "$output_dir/$file_type/$species/$file_name" . "$seq_regions_arg.out";
-        $params->{'species'}          = $species;
-        $params->{'script'}           = "$script_dir/$script";
-        $params->{'connection_args'}  = $connection_args;
-        $params->{'seq_region_file'}  = ($seq_region_file ? "--seq_region_file $seq_region_file" : '');
-        $params->{'script_args'}      = $script_arg;
-        $params->{'gvf_file'}         = $output_file;
-        $params->{'err'}              = $err;
-        $params->{'out'}              = $out;
-
-        push @input, $params;
-      }
-    }
-  }
-  return \@input;
 }
 
 sub get_input_gvf2vcf {
@@ -194,84 +137,195 @@ sub get_input_gvf2vcf {
 
   # don't forget to parse Populations and Individuals
 
-  foreach my $script_arg (keys %$script_args) {	
-    my $file_name = $script_args->{$script_arg};
-    my $params = {};
-    my $err = "$output_dir/$file_type/$species/$file_name-$file_type.err";
-    my $out = "$output_dir/$file_type/$species/$file_name-$file_type.out";
-    $params->{'species'}          = $species;
-    $params->{'script'}           = "$script_dir/$script";
-    $params->{'connection_args'}  = $connection_args;
-    $params->{'script_args'}      = $script_arg;
-    $params->{'err'}              = $err;
-    $params->{'out'}              = $out;
+  my $gvf_dir = "$output_dir/gvf/$species/";
+  opendir(DIR, $gvf_dir) or die $!;
 
-    my $gvf_file_name = "$file_name.gvf.gz";
-    my $vcf_file_name = "$file_name.vcf";
+  while (my $gvf_file = readdir(DIR)) {
+    next if ($gvf_file =~ m/^\./);
+    next if ($gvf_file =~ m/failed/); # don't parse gvf files storing failed variants
+    if ($gvf_file =~ m/\.gvf\.gz$/) {
+      my $script_arg = $self->get_script_arg($gvf_file, $script_args);
+      my $params = {};
+      my $file_name = $gvf_file;
+      $file_name =~ s/\.gvf\.gz//;
 
-    if ($file_name =~ m/generic/) {
-      $gvf_file_name = "$species.gvf.gz";
-      $vcf_file_name = "$species.vcf";
+      my $err = "$output_dir/$file_type/$species/$file_name.err";
+      my $out = "$output_dir/$file_type/$species/$file_name.out";
+      my $vcf_file = "$output_dir/$file_type/$species/$file_name.vcf";
+      $params->{'species'}          = $species;
+      $params->{'script'}           = "$script_dir/$script";
+      $params->{'connection_args'}  = $connection_args;
+      $params->{'script_args'}      = $script_arg;
+      $params->{'err'}              = $err;
+      $params->{'out'}              = $out;
+      $params->{'gvf_file'}         = "--gvf_file $gvf_dir/$gvf_file";
+      $params->{'vcf_file'}         = "--vcf_file $vcf_file";
+      push @input, $params;
     }
+  }
+  closedir(DIR);
+  return \@input;
+}
 
-    my $gvf_file = "$output_dir/gvf/$species/$gvf_file_name";
-    die "GVF file $gvf_file not found" unless(-e $gvf_file);
-    my $vcf_file = "$output_dir/vcf/$species/$vcf_file_name";	
+sub get_script_arg {
+  my $self = shift;
+  my $file_name = shift;
+  my $script_args = shift;
+  while (my ($script_arg, $dump_type) = each %$script_args) {
+    if ($file_name =~ /$dump_type/) {
+      return $script_arg;
+    }    
+  }
+}
 
-    $params->{'gvf_file'} = "--gvf_file $gvf_file";
-    $params->{'vcf_file'} = "--vcf_file $vcf_file";
-    push @input, $params;
+sub get_input_gvf_dumps {
+  my $self = shift;
+  my $script_args = shift;
+  my $vf_distributions = shift; 
+
+  my $file_type       = 'gvf';
+  my $script_dir      = $self->param('script_dir');
+  my $script          = '/export/release/dump_gvf.pl';
+  my $output_dir      = $self->param('pipeline_dir');
+  my $connection_args = '--registry ' . $self->param('registry_file');
+  my $species = $self->param('species');
+  my @input = ();
+  my $default_params = {
+    'species' => $species,
+    'script' => "$script_dir/$script",
+    'connection_args' => $connection_args,
+    'file_type' => $file_type,
+    'output_dir' => $output_dir,
+  };
+  
+  if ($vf_distributions) {
+    foreach my $script_arg (keys %$script_args) {
+      my $file_name = $script_args->{$script_arg};
+      foreach my $vf_distribution (@$vf_distributions) {   
+        my $params = {};
+        my $file_id = $vf_distribution->{file_id};
+        my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name-$file_id.$file_type";
+        my $err = "$output_dir/$file_type/$species/$file_name-$file_id.err";
+        my $out = "$output_dir/$file_type/$species/$file_name-$file_id.out";
+        $params->{'script_args'} = $script_arg;
+        foreach my $param (qw/species script connection_args/) {
+          $params->{$param} = $default_params->{$param};
+        }
+        if ($vf_distribution->{is_slice_piece}) {
+          foreach my $param (qw/seq_region_id slice_piece_name slice_piece_start slice_piece_end/) {
+            $params->{$param} = $vf_distribution->{$param};
+          }
+          $params->{is_slice_piece} = '--is_slice_piece';
+        } else {
+          $params->{seq_region_ids_file} = $vf_distribution->{seq_region_ids_file};
+        }
+        $params->{'gvf_file'} = $output_file;
+        $params->{'err'} = $err;
+        $params->{'out'} = $out;
+        push @input, $params;
+      }
+    }
+  } else {
+    foreach my $script_arg (keys %$script_args) {
+      my $params = {};
+      my $file_name = $script_args->{$script_arg};
+      my $file_id = $vf_distributions->{file_id};
+      my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name.$file_type";
+      $params->{'script_args'} = $script_arg;
+      my $err = "$output_dir/$file_type/$species/$file_name.err";
+      my $out = "$output_dir/$file_type/$species/$file_name.out";
+      foreach my $param (qw/species script connection_args/) {
+        $params->{$param} = $default_params->{$param};
+      }
+      $params->{'gvf_file'} = $output_file;
+      $params->{'err'} = $err;
+      $params->{'out'} = $out;
+      push @input, $params;
+    }
   }
   return \@input;
 }
 
-sub get_slice_load {
+sub get_vf_distributions {
   my $self = shift;
-  my $species = shift;
-  my $global_vfs_count = $self->_get_global_vf_count($species);
-  my $count = 0;
-  my $instance = 1;
-  my $slice_load;
-  if ($global_vfs_count > 5_000_000) { 
-    my $vf_counts = $self->_get_vf_counts_per_slice($species);
-    my $max_load = $global_vfs_count / 20;
-    my @seq_region_ids = @{$self->_get_seq_region_ids($species)};
-    foreach my $seq_region_id (@seq_region_ids) {
-      if (defined $vf_counts->{$seq_region_id}) {
-        my $local_vfs_count = $vf_counts->{$seq_region_id};
-        $count += $local_vfs_count;
-        if ($count < $max_load) {
-          push @{$slice_load->{$instance}}, $seq_region_id;
-        } else {
-          push @{$slice_load->{$instance}}, $seq_region_id;
-          $instance++;
-          $count = 0;
-        }
+  my $covered_seq_regions_counts = shift;
+  my $output_dir = $self->param('pipeline_dir');
+  my $species = $self->param('species');
+  my @vf_loads = ();
+
+  my $current_vf_load = 0;
+  my @seq_region_ids = ();
+
+  while (my ($seq_region_id, $vf_count) = each %$covered_seq_regions_counts) {
+    if ($vf_count > VF_PER_SLICE) {
+      push @vf_loads, @{$self->get_split_slices($seq_region_id)};
+    } else {
+      if (($current_vf_load + $vf_count) > MAX_VF_LOAD) {
+        push @seq_region_ids, $seq_region_id;
+        push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
+        @seq_region_ids = ();
+        $current_vf_load = 0;
+      } else {
+        push @seq_region_ids, $seq_region_id;
+        $current_vf_load += $vf_count;
       }
     }
-  } else {
-    push @{$slice_load->{$instance}}, ();
   }
-  return $slice_load;	
+
+  if (scalar @seq_region_ids > 0) {
+    push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
+  }
+
+  return \@vf_loads;
 }
 
-sub _get_seq_region_ids {
+sub get_seq_regions {
   my $self = shift;
-  my $species = shift;
+  my $seq_region_ids = shift;
+  my $species_dir = shift;
+  my $seq_regions = $seq_region_ids->[0] . '_' . $seq_region_ids->[-1];
+  my $seq_region_ids_file = "$species_dir/$seq_regions.txt";
+  my $fh = FileHandle->new($seq_region_ids_file, 'w');
+  foreach my $seq_region_id (@$seq_region_ids) {
+    print $fh $seq_region_id, "\n";
+  }
+  $fh->close();
+
+  return {
+    file_id => $seq_regions,
+    seq_region_ids_file => "--seq_region_ids_file $seq_region_ids_file",
+    is_slice_split => 0,
+  };
+}
+
+sub get_split_slices {
+  my $self = shift;
+  my $seq_region_id = shift;
+  my $species = $self->param('species');
   my $cdba = $self->get_species_adaptor($species, 'core');
   my $sa = $cdba->get_SliceAdaptor;
-  my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
-  my @seq_region_ids;
-  foreach my $slice (@$slices) {
-    push @seq_region_ids, $slice->get_seq_region_id;
+  my @slice_piece_ids = ();
+  my $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+  my $seq_region_name = $slice->seq_region_name;
+  my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
+  foreach my $slice_piece (@$slice_pieces) {
+    my $start = $slice_piece->start;
+    my $end = $slice_piece->end;
+    push @slice_piece_ids, {
+      'is_slice_piece' => 1,
+      'file_id' => "$seq_region_id\_$start\_$end",
+      'seq_region_id' => "--seq_region_id $seq_region_id",
+      'slice_piece_name' => "--seq_region_name $seq_region_name",
+      'slice_piece_start' => "--slice_piece_start $start",
+      'slice_piece_end' => "--slice_piece_end $end",
+    };
   }
-  my @sorted_ids = sort {$a <=> $b} @seq_region_ids;
-  return \@sorted_ids;
+  return \@slice_piece_ids;
 }
 
-sub _get_global_vf_count {
+sub get_global_vf_count {
   my $self = shift;
-  my $species = shift;
+  my $species = $self->param('species');
   my $count;
   my $vdba = $self->get_species_adaptor($species, 'variation');
   my $dbh = $vdba->dbc->db_handle;
@@ -279,14 +333,14 @@ sub _get_global_vf_count {
   $sth->{'mysql_use_result'} = 1;
   $sth->execute();
   $sth->bind_columns(\$count);
-  $sth->fetch(); 
+  $sth->fetch();
   $sth->finish();
   return $count;
 }
 
-sub _get_vf_counts_per_slice {
+sub get_covered_seq_regions {
   my $self = shift;
-  my $species = shift;
+  my $species = $self->param('species');
   my $counts;
   my $vdba = $self->get_species_adaptor($species, 'variation');
   my $dbh = $vdba->dbc->db_handle;
@@ -309,7 +363,6 @@ sub _get_vf_counts_per_slice {
   return $counts;
 }
 
-# some dataflow to perform
 sub write_output { 
   my $self = shift;
   my $dump_input_parameters = $self->param('input_for_submit_job');

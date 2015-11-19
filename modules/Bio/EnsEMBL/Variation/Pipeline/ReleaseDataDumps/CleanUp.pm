@@ -41,28 +41,44 @@ sub run {
   my $data_dump_dir = $self->param('pipeline_dir');
   my $tmp_dir = $self->param('tmp_dir');
   my $file_type = $self->param('file_type');
-  my $all_species = $self->get_all_species();	
 
-  foreach my $species (keys %$all_species) {
-    my $working_dir = "$data_dump_dir/$file_type/$species/";			
-    `mv -f $working_dir/*.out $tmp_dir`;
-    `mv -f $working_dir/*.err $tmp_dir`;			
+  my $species = $self->param('species');
+  my $mode = $self->param('mode');
+  
+  if ($mode eq 'post_gvf_dump') {
+    my $working_dir = "$data_dump_dir/$file_type/$species";
     opendir(DIR, $working_dir) or die $!;
     while (my $file = readdir(DIR))	{
-      next if ($file =~ m/^\./);
-      if ($file =~ m/gvf/) {
-        if ($file =~ m/generic/) {
-          my $current_name = $file;
-          $file =~ s/_generic//;
-          `mv $working_dir/$current_name $working_dir/$file`; # rename file name
-        }
+      if ($file =~ m/gvf$/) {
         `gzip $working_dir/$file`;
-      } elsif ($file =~ m/\.vcf$/) {
-        `mv -f $working_dir/$file $tmp_dir`;
       } 
+      if ($file =~ m/^Validate/) {
+        `mv $working_dir/$file $tmp_dir`;
+      }
     }				
     closedir(DIR);
-  }	
+  }
+
+  if ($mode eq 'post_join_dumps') {
+    foreach my $file_type (qw/vcf gvf/) {
+      my $working_dir = "$data_dump_dir/$file_type/$species";
+      opendir(DIR, $working_dir) or die $!;
+      while (my $file = readdir(DIR))	{
+        if ($file =~ m/generic/) {
+          my $file_name = $file;
+          $file_name =~ s/_generic//;
+          `mv $working_dir/$file $working_dir/$file_name`;
+          if ($file_name =~ /gvf$/) {
+            `gzip $working_dir/$file_name`;
+          }
+        } 
+        if ($file =~ /gvf$/) {
+          `gzip $working_dir/$file`;
+        }
+      }				
+      closedir(DIR);
+    }
+  }
 }
 
 sub write_output {
