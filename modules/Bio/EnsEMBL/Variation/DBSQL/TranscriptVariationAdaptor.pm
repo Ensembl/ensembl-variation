@@ -104,7 +104,7 @@ our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 =cut
 
 sub store {
-    my ($self, $tv) = @_;
+    my ($self, $tv, $mtmp) = @_;
     
     my $dbh = $self->dbc->db_handle;
     
@@ -135,6 +135,28 @@ sub store {
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
+    my $mtmp_sth = $dbh->prepare_cached(q{
+        INSERT DELAYED INTO MTMP_transcript_variation (
+            variation_feature_id,
+            feature_stable_id,
+            allele_string,
+            consequence_types,
+            cds_start,
+            cds_end,
+            cdna_start,
+            cdna_end,
+            translation_start,
+            translation_end,
+            distance_to_transcript,
+            pep_allele_string,
+            polyphen_prediction,
+            polyphen_score,
+            sift_prediction,
+            sift_score,
+            display
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    }) if $mtmp;
+
     for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
         
         $sth->execute(
@@ -161,6 +183,28 @@ sub store {
             $allele->sift_score,
             $tv->variation_feature->display
         );
+
+        if($mtmp && $mtmp_sth) {
+            $mtmp_sth->execute(
+                $tv->variation_feature->dbID,
+                $tv->feature->stable_id,
+                $allele->allele_string,
+                $_,
+                $tv->cds_start, 
+                $tv->cds_end,
+                $tv->cdna_start,
+                $tv->cdna_end,
+                $tv->translation_start,
+                $tv->translation_end,
+                $tv->distance_to_transcript,
+                $allele->pep_allele_string,
+                $allele->polyphen_prediction,
+                $allele->polyphen_score,
+                $allele->sift_prediction,
+                $allele->sift_score,
+                $tv->variation_feature->display
+            ) for map { $_->SO_term } @{ $allele->get_all_OverlapConsequences };
+        }
     }
 }
 
