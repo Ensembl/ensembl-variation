@@ -45,7 +45,9 @@ sub run {
     my $transcript_id = $self->required_param('transcript_stable_id'); 
 
     my $disambiguate_sn_alleles = 
-        $self->param('disambiguate_single_nucleotide_alleles'); 
+        $self->param('disambiguate_single_nucleotide_alleles');
+
+    my $mtmp = $self->param('mtmp_table');
     
     my $variations_to_include;
     
@@ -100,7 +102,7 @@ sub run {
         # if the variation has no effect on the transcript $tv will be undef
 
         if ($tv && ( scalar(@{ $tv->consequence_type }) > 0) ) {
-            $tva->store($tv);
+            $tva->store($tv, $mtmp);
         
             ## populate tables for website index building
 
@@ -114,9 +116,12 @@ sub run {
                 next unless defined $allele->hgvs_transcript();
 
                 my $hgvs_transcript = (split/\:/, $allele->hgvs_transcript())[1];
-                my $hgvs_protein    = (split/\:/, $allele->hgvs_protein())[1];
 
                 $hgvslu_ins_sth->execute( $var_id, $hgvs_transcript) if defined $hgvs_transcript;
+                
+                next unless defined $allele->hgvs_protein();
+
+                my $hgvs_protein    = (split/\:/, $allele->hgvs_protein())[1];
 
                 $hgvslu_ins_sth->execute( $var_id, $hgvs_protein) 
                     if defined $hgvs_protein && $hgvs_protein =~/^p/; ## don't store synonymous

@@ -41,6 +41,7 @@ sub fetch_input {
 
     my $include_lrg = $self->param('include_lrg');
     my $biotypes = $self->param('limit_biotypes');
+    my $mtmp = $self->param('mtmp_table');
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
@@ -113,9 +114,49 @@ sub fetch_input {
 
         $self->param('transcript_output_ids', \@transcript_output_ids);
 
+        my @rebuild = ('transcript_variation');
+
+        # set up MTMP table
+        if($mtmp) {
+          my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
+          my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
+
+          my $sth = $dbc->prepare(qq{
+            SHOW CREATE TABLE $source_table
+          });
+          $sth->execute();
+
+          my $create_sth = $sth->fetchall_arrayref->[0]->[1];
+          $sth->finish;
+
+          # convert set to enum
+          $create_sth =~ s/^set/enum/;
+
+          # rename table
+          $create_sth =~ s/TABLE \`$source_table\`/TABLE IF NOT EXISTS \`$table\`/;
+
+          # filter out some columns
+          $create_sth =~ s/\`?$_.+?,// for @exclude;
+
+          # filter out some indices
+          $create_sth =~ s/AUTO_INCREMENT=\d+//;
+          $create_sth =~ s/somatic_feature_idx/feature_idx/;
+          $create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
+          $create_sth =~ s/,\`somatic\`//;
+
+          # remove final comma
+          $create_sth =~ s/,(\s+\))/$1/;
+
+          $dbc->do($create_sth);
+          $dbc->do('TRUNCATE TABLE MTMP_transcript_variation');
+          $dbc->do("ALTER TABLE MTMP_transcript_variation DISABLE KEYS");
+
+          push @rebuild, $table;
+        }
+
         $self->param(
             'rebuild_indexes', [{
-                tables => ['transcript_variation'],
+                tables => \@rebuild,
             }]
         );
 

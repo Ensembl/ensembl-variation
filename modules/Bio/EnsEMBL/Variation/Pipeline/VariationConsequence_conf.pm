@@ -119,6 +119,12 @@ sub default_options {
         # Limit analysis to specific gene biotypes
         limit_biotypes => [],
 
+        # create MTMP_transcript_variation
+        mtmp_table => 0,
+
+        # points to a FASTA file, much faster than using DB for sequence lookup if available
+        fasta => undef,
+
         # these flags control which parts of the pipeline are run
 
         run_transcript_effect   => 1,
@@ -180,6 +186,8 @@ sub pipeline_analyses {
                 -parameters => {
                     include_lrg => $self->o('include_lrg'),
                     limit_biotypes => $self->o('limit_biotypes'),
+                    mtmp_table => $self->o('mtmp_table'),
+                    fasta => $self->o('fasta'),
                     @common_params,
                 },
                 -input_ids  => [{}],
@@ -196,7 +204,9 @@ sub pipeline_analyses {
             {   -logic_name     => 'transcript_effect',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
                 -parameters     => { 
-                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'), 
+                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+                    mtmp_table => $self->o('mtmp_table'),
+                    fasta => $self->o('fasta'),
                     @common_params,
                 },
                 -input_ids      => [],
