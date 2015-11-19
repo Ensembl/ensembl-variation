@@ -48,44 +48,50 @@ $| = 1;
 my $config = {};
 my $gvf_line;
 GetOptions(
-    $config,
-    'help|h',
-    'debug',
-    'gvf_file=s',
-    'species=s',
-    'registry=s',
+$config,
+  'help|h',
+  'debug',
+  'gvf_file=s',
+  'species=s',
+  'registry=s',
 
-    'seq_region_file=s',
+  'seq_region_ids_file=s',
 
-    'ancestral_allele|aa',
-    'global_maf',
-    'evidence',
-    'clinical_significance',	
-    'validation_status',
+  'seq_region_id=s',
+  'seq_region_name=s',
+  'slice_piece_name=s',
+  'slice_piece_start=s',
+  'slice_piece_end=s',
+  'is_slice_piece',
 
-    'structural_variations|svs',
+  'ancestral_allele|aa',
+  'global_maf',
+  'evidence',
+  'clinical_significance',	
+  'validation_status',
 
-    'incl_consequences',
-    'protein_coding_details',
-	'sift',
-	'polyphen',
+  'structural_variations|svs',
 
-    'failed',
-    'somatic',
-   
-    'print_variation_sets=s', 
-    'set_name=s', # phenotype_associated clinically_associated
+  'incl_consequences',
+  'protein_coding_details',
+  'sift',
+  'polyphen',
 
-    'individual=s',
+  'failed',
+  'somatic',
 
-    'population=s',
-    'input_gvf=s',
-    'frequencies_dir=s', # cache_files_dir?
-    'short_name=s',
+  'print_variation_sets=s', 
+  'set_name=s', # phenotype_associated clinically_associated
 
-    'allele_string',
-    'variation_id',
+  'individual=s',
 
+  'population=s',
+  'input_gvf=s',
+  'frequencies_dir=s', # cache_files_dir?
+  'short_name=s',
+
+  'allele_string',
+  'variation_id',
 ) or die "Error: Failed to parse command-line args.\n";
 
 check_arguments($config);
@@ -113,27 +119,27 @@ sub check_arguments {
 }
 
 sub init_db_connections {
-    my $config = shift;
-    my $registry = 'Bio::EnsEMBL::Registry';
-    my $registry_file = $config->{registry};
-    die "Could not find registry_file $registry_file" unless (-e $registry_file);
-    $registry->load_all($registry_file);
+  my $config = shift;
+  my $registry = 'Bio::EnsEMBL::Registry';
+  my $registry_file = $config->{registry};
+  die "Could not find registry_file $registry_file" unless (-e $registry_file);
+  $registry->load_all($registry_file);
 
-    my $vdba = $registry->get_DBAdaptor($config->{species}, 'variation') || usage('Cannot connect to variation db.');
-    if ($config->{failed}) {
-        $vdba->include_failed_variations(1);
-    }
-    my $cdba = $registry->get_DBAdaptor($config->{species}, 'core') || usage('Cannot connect to core db.');
-    $config->{vdba} = $vdba;
-    $config->{cdba} = $cdba;
-    $config->{slice_adaptor} = $cdba->get_SliceAdaptor;
-    $config->{individual_gt_adaptor} = $vdba->get_IndividualGenotypeAdaptor;
-    $config->{individual_adaptor} = $vdba->get_IndividualAdaptor;
-    $config->{vf_adaptor}  = $vdba->get_VariationFeatureAdaptor;
-    $config->{tv_adaptor}  = $vdba->get_TranscriptVariationAdaptor;
-    $config->{variation_set_adaptor} = $vdba->get_VariationSetAdaptor;
-    $config->{svf_adaptor} = $vdba->get_StructuralVariationFeatureAdaptor;
-    $config->{sv_adaptor} = $vdba->get_StructuralVariationAdaptor;
+  my $vdba = $registry->get_DBAdaptor($config->{species}, 'variation') || usage('Cannot connect to variation db.');
+  if ($config->{failed}) {
+    $vdba->include_failed_variations(1);
+  }
+  my $cdba = $registry->get_DBAdaptor($config->{species}, 'core') || usage('Cannot connect to core db.');
+  $config->{vdba} = $vdba;
+  $config->{cdba} = $cdba;
+  $config->{slice_adaptor} = $cdba->get_SliceAdaptor;
+  $config->{individual_gt_adaptor} = $vdba->get_IndividualGenotypeAdaptor;
+  $config->{individual_adaptor} = $vdba->get_IndividualAdaptor;
+  $config->{vf_adaptor}  = $vdba->get_VariationFeatureAdaptor;
+  $config->{tv_adaptor}  = $vdba->get_TranscriptVariationAdaptor;
+  $config->{variation_set_adaptor} = $vdba->get_VariationSetAdaptor;
+  $config->{svf_adaptor} = $vdba->get_StructuralVariationFeatureAdaptor;
+  $config->{sv_adaptor} = $vdba->get_StructuralVariationAdaptor;
 }
 
 sub init_variation_set {
@@ -152,25 +158,25 @@ sub init_variation_set {
 }
 
 sub init_failed_variations {
-    my $config = shift;
-    my ($variation_id, $failed_desc_id, $desc);
-    my $failed_variations = {};
+  my $config = shift;
+  my ($variation_id, $failed_desc_id, $desc);
+  my $failed_variations = {};
 
-    my $vdba = $config->{vdba};
-    my $dbh = $vdba->dbc->db_handle;
+  my $vdba = $config->{vdba};
+  my $dbh = $vdba->dbc->db_handle;
 
-    my $sth = $dbh->prepare(qq{
-        SELECT fv.variation_id, fd.description
-        FROM failed_variation fv, failed_description fd
-        WHERE fv.failed_description_id = fd.failed_description_id;
-    });
-    $sth->execute();
-    $sth->bind_columns(\($variation_id, $desc));
-    while ($sth->fetch()) {
-        $failed_variations->{$variation_id}->{$desc} = 1;
-    }
-    $sth->finish();
-    $config->{failed_variations} = $failed_variations;
+  my $sth = $dbh->prepare(qq{
+    SELECT fv.variation_id, fd.description
+    FROM failed_variation fv, failed_description fd
+    WHERE fv.failed_description_id = fd.failed_description_id;
+  });
+  $sth->execute();
+  $sth->bind_columns(\($variation_id, $desc));
+  while ($sth->fetch()) {
+    $failed_variations->{$variation_id}->{$desc} = 1;
+  }
+  $sth->finish();
+  $config->{failed_variations} = $failed_variations;
 }
 
 sub init_sample_data {
@@ -197,23 +203,29 @@ sub init_consequence_data {
 }
 
 sub init_slices {
-    my $config = shift;
-    my $sa = $config->{slice_adaptor};
-    my $slices = [];
-    if ($config->{seq_region_file}) {
-        my $seq_region_file = $config->{seq_region_file};
-        die "Could not find seq_region_file $seq_region_file" unless (-e $seq_region_file);
-        my $fh = FileHandle->new($seq_region_file, 'r');
-        while (<$fh>) {
-            chomp;
-            my $slice = $sa->fetch_by_seq_region_id($_);
-            push @$slices, $slice;
-        } 
-        $fh->close();
-    } else {
-        $slices = $sa->fetch_all('toplevel', undef, 0, 1);
-    }
-    $config->{slices} = $slices;
+  my $config = shift;
+  my $sa = $config->{slice_adaptor};
+  my $slices = [];
+  if ($config->{seq_region_ids_file}) {
+    my $seq_region_file = $config->{seq_region_ids_file};
+    die "Could not find seq_region_file $seq_region_file" unless (-e $seq_region_file);
+    my $fh = FileHandle->new($seq_region_file, 'r');
+    while (<$fh>) {
+      chomp;
+      my $slice = $sa->fetch_by_seq_region_id($_);
+      push @$slices, $slice;
+    } 
+    $fh->close();
+  } elsif ($config->{is_slice_piece}) {
+    my $seq_name = $config->{seq_region_name};
+    my $start = $config->{slice_piece_start};
+    my $end = $config->{slice_piece_end};
+    my $slice = $sa->fetch_by_region('toplevel', $seq_name, $start, $end, 1);
+    push @$slices, $slice;
+  } else {
+    $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+  }
+  $config->{slices} = $slices;
 }
 
 sub dump_svs_data {
@@ -288,7 +300,7 @@ sub dump_data {
     my $vfa = $config->{vf_adaptor};
     my $slices = $config->{slices};
     my $vf_it;
-    my $max_length = 5e6;
+    my $max_length = 1e6;
     my $overlap = 0;
 
     foreach my $slice (@$slices) {
@@ -767,4 +779,19 @@ sub print_gvf_line {
     }
     print $fh $line, "\n";
 }
+
+=begin
+Dump logic:
+  - input: 
+    - chromosome: global vf count <= 40_000_000, structural variations?
+    - slice piece
+  
+
+=end
+=cut
+
+
+
+
+
 
