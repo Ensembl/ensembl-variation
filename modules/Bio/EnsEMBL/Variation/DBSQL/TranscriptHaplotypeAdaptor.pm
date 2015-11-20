@@ -182,8 +182,6 @@ sub fetch_all_ProteinHaplotypes_by_Transcript {
 sub get_TranscriptHaplotypeContainer_by_Transcript {
   my ($self, $tr) = @_;
 
-  $DB::single = 1 if ref($tr) ne 'Bio::EnsEMBL::Transcript';
-
   assert_ref($tr, 'Bio::EnsEMBL::Transcript');
 
   # we cache the container on the transcript so we don't fetch it more than once
