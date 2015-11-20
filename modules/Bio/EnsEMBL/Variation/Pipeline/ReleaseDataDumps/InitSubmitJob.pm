@@ -33,9 +33,9 @@ use FileHandle;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
-use constant GLOBAL_VF_COUNT => 1_000; # 5_000_000 1_000
-use constant MAX_VF_LOAD => 100; # 2_000_000 100
-use constant VF_PER_SLICE => 10_000; # 2_000_000 10_000
+use constant GLOBAL_VF_COUNT => 5_000_000; # 5_000_000 1_000
+use constant MAX_VF_LOAD => 2_000_000; # 2_000_000 100
+use constant VF_PER_SLICE => 2_000_000; # 2_000_000 10_000
 my $max_length = 5e7;
 my $overlap = 0;
 

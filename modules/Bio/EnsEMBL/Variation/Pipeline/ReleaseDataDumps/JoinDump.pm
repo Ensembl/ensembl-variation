@@ -248,7 +248,7 @@ sub join_split_slice_files {
         }
         $fh->close();
         `gzip $working_dir/$file_name`;
-        `mv -f $working_dir/$file_name.gz $tmp_dir`;
+        `rm -f $working_dir/$file_name.gz $tmp_dir`;
       }
       $fh_join->close();
     }

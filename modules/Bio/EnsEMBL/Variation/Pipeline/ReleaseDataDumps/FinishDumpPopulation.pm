@@ -47,96 +47,95 @@ sub run {
 }
 
 sub clean_up_vcf_files {
-    my $self = shift;
-    my $pipeline_dir = $self->param('pipeline_dir');
-    my $tmp_dir = $self->param('tmp_dir');
-    my $human_vcf_dir = "$pipeline_dir/vcf/Homo_sapiens/";
-    die "$human_vcf_dir is not a directory" unless (-d $human_vcf_dir);
-    
-    opendir(DIR, "$pipeline_dir/vcf/Homo_sapiens") or die $!;
-    while (my $file = readdir(DIR)) {
-        if ($file =~ m/\.vcf$/) {
-            my $vcf_file = "$pipeline_dir/vcf/Homo_sapiens/$file";
-            $self->run_cmd("vcf-sort < $vcf_file | bgzip > $vcf_file.gz");
-            $self->run_cmd("mv $vcf_file $tmp_dir");
-        }
-        if ($file =~ m/\.out$/ || $file =~ m/\.err$/) {
-            $self->run_cmd("mv $pipeline_dir/vcf/Homo_sapiens/$file $tmp_dir");
-        }
-    } 
+  my $self = shift;
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $tmp_dir = $self->param('tmp_dir');
+  my $human_vcf_dir = "$pipeline_dir/vcf/Homo_sapiens/";
+  die "$human_vcf_dir is not a directory" unless (-d $human_vcf_dir);
 
+  opendir(DIR, "$pipeline_dir/vcf/Homo_sapiens") or die $!;
+  while (my $file = readdir(DIR)) {
+    if ($file =~ m/\.vcf$/) {
+      my $vcf_file = "$pipeline_dir/vcf/Homo_sapiens/$file";
+      $self->run_cmd("vcf-sort < $vcf_file | bgzip > $vcf_file.gz");
+      $self->run_cmd("rm $vcf_file");
+    }
+    if ($file =~ m/\.out$/ || $file =~ m/\.err$/) {
+      $self->run_cmd("rm $pipeline_dir/vcf/Homo_sapiens/$file");
+    }
+  } 
 }
 
 sub clean_up_gvf_file {
-    my $self = shift;
-    my $pipeline_dir = $self->param('pipeline_dir');
-    my $human_gvf_file = "$pipeline_dir/gvf/Homo_sapiens/Homo_sapiens.gvf";
-    my $human_gvf_file_before_clean_up = "$pipeline_dir/gvf/Homo_sapiens/Homo_sapiens_before_clean_up.gvf";
-    die "Couldn't find $human_gvf_file" unless (-f $human_gvf_file);
-    $self->run_cmd("mv $human_gvf_file $human_gvf_file_before_clean_up"); 
-    die "Couldn't find $human_gvf_file_before_clean_up" unless (-f $human_gvf_file_before_clean_up);
-   
-    my $fh_before = FileHandle->new($human_gvf_file_before_clean_up, 'r');
-    my $fh_after = FileHandle->new($human_gvf_file, 'w');
+  my $self = shift;
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $human_gvf_file = "$pipeline_dir/gvf/Homo_sapiens/Homo_sapiens.gvf";
+  my $human_gvf_file_before_clean_up = "$pipeline_dir/gvf/Homo_sapiens/Homo_sapiens_before_clean_up.gvf";
+  die "Couldn't find $human_gvf_file" unless (-f $human_gvf_file);
+  $self->run_cmd("mv $human_gvf_file $human_gvf_file_before_clean_up"); 
+  die "Couldn't find $human_gvf_file_before_clean_up" unless (-f $human_gvf_file_before_clean_up);
 
-    while (<$fh_before>) {
-        chomp;
-        if (/^#/) {
-            print $fh_after $_, "\n";
-        } else {
-            my $line = $_;
-            my $gvf_line = get_gvf_line($line);
-#            delete $gvf_line->{attributes}->{variation_id};
-#            delete $gvf_line->{attributes}->{allele_string};
-            $line = join("\t", map {$gvf_line->{$_}} (
-            'seq_id',
-            'source',
-            'type',
-            'start',
-            'end',
-            'score',
-            'strand',
-            'phase'));
-            my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
-            print $fh_after $line, "\t", $attributes, "\n";
-        }
+  my $fh_before = FileHandle->new($human_gvf_file_before_clean_up, 'r');
+  my $fh_after = FileHandle->new($human_gvf_file, 'w');
+
+  while (<$fh_before>) {
+    chomp;
+    if (/^#/) {
+      print $fh_after $_, "\n";
+    } else {
+    my $line = $_;
+    my $gvf_line = get_gvf_line($line);
+    delete $gvf_line->{attributes}->{variation_id};
+    delete $gvf_line->{attributes}->{allele_string};
+    $line = join("\t", map {$gvf_line->{$_}} (
+      'seq_id',
+      'source',
+      'type',
+      'start',
+      'end',
+      'score',
+      'strand',
+      'phase'));
+    my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
+    print $fh_after $line, "\t", $attributes, "\n";
     }
+  }
 
-    $fh_before->close();
-    $fh_after->close();
-  
-    $self->run_cmd("gzip $human_gvf_file");  
-    $self->run_cmd("rm $human_gvf_file_before_clean_up");  
+  $fh_before->close();
+  $fh_after->close();
+
+  $self->run_cmd("gzip $human_gvf_file");  
+  $self->run_cmd("rm $human_gvf_file_before_clean_up");  
 }
 
 sub get_gvf_line {
-    my $line = shift;
-    my $gvf_line = {};
-    my @header_names = qw/seq_id source type start end score strand phase/;
-    my @header_values = split(/\t/, $line);
-    my $attrib = pop @header_values;
+  my $line = shift;
+  my $gvf_line = {};
+  my @header_names = qw/seq_id source type start end score strand phase/;
+  my @header_values = split(/\t/, $line);
+  my $attrib = pop @header_values;
 
-    for my $i (0 .. $#header_names) {
-        $gvf_line->{$header_names[$i]} = $header_values[$i];
-    }
+  for my $i (0 .. $#header_names) {
+    $gvf_line->{$header_names[$i]} = $header_values[$i];
+  }
 
-    my @attributes = split(';', $attrib);
-    foreach my $attribute (@attributes) {
-        my ($key, $value) = split('=', $attribute);
-        if ($value) {
-            $gvf_line->{attributes}->{$key} = $value;
-        }
+  my @attributes = split(';', $attrib);
+  foreach my $attribute (@attributes) {
+    my ($key, $value) = split('=', $attribute);
+    if ($value) {
+      $gvf_line->{attributes}->{$key} = $value;
     }
-    return $gvf_line;
+  }
+  return $gvf_line;
 }
 
 sub run_cmd {
-    my $self = shift;
-    my $cmd = shift;
-    if (my $return_value = system($cmd)) {
-        $return_value >>= 8;
-        die "system($cmd) failed: $return_value";
-    }
+  my $self = shift;
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>= 8;
+    die "system($cmd) failed: $return_value";
+  }
 }
 
 1;
