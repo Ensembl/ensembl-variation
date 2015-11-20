@@ -143,8 +143,7 @@ sub create_mtmp_evidence{
     close $out;
 
     $dbh->do( qq[ LOAD DATA LOCAL INFILE "$tmpdir/$filename" INTO TABLE  MTMP_evidence]) || die "Error loading $filename data \n";
-    unlink "$tmpdir/$filename" || warn "Faile
-d to remove temp file: $tmpdir/$filename :$!\n";
+    unlink "$tmpdir/$filename" || warn "Failed to remove temp file: $tmpdir/$filename :$!\n";
   }
 }
 
@@ -160,7 +159,7 @@ sub get_evidence_id{
                                      and attrib.attrib_type_id =attrib_type.attrib_type_id
                                     ]);
 
-    $att_ext_sth->execute()||die;
+    $att_ext_sth->execute()||die "Failed to get evidence attribs\n";
     my $attdata = $att_ext_sth->fetchall_arrayref();
     foreach my $l(@{$attdata}){
 
@@ -216,7 +215,7 @@ sub create_mtmp_population_genotype{
             AND gc1.allele_code_id = ac1.allele_code_id
             AND p.genotype_code_id = gc2.genotype_code_id 
             AND gc2.haplotype_id = 2 
-            AND gc2.allele_code_id = ac2.allele_code_id]);
+            AND gc2.allele_code_id = ac2.allele_code_id])|| die "Failed to create MTMP_population_genotype\n";
     }
 }
 ## variation/structural_variation sets can have parents sets
@@ -242,25 +241,26 @@ sub create_mtmp_variation_set{
     $dbh->do(qq[ create table $mtmp_table_name like $table ])|| die "Failed to create MTMP_$table" ;
 
     ## copy direct variant <-> set relationships
-    $dbh->do(qq[ insert into $mtmp_table_name select * from $table ]);
+    $dbh->do(qq[ insert into $mtmp_table_name select * from $table ])
+          || die "Failed to extract sets\n";;
     
     ## add variant <-> parent set relationships
-    $dbh->do(qq[ insert into $mtmp_table_name ( $object_id, variation_set_id )
+    $dbh->do(qq[ insert ignore into $mtmp_table_name ( $object_id, variation_set_id )
                  select vsv.$object_id, vss.variation_set_super 
                  from $table vsv, 
                       variation_set_structure vss 
                  where vss.variation_set_sub = vsv.variation_set_id 
-               ]);
+               ]) || die "Failed to extract first level sub sets\n";
 
     ## add variant <-> parent of parent set relationships
-    $dbh->do(qq[ insert into $mtmp_table_name ($object_id, variation_set_id )
+    $dbh->do(qq[ insert ignore into $mtmp_table_name ($object_id, variation_set_id )
                  select vsv.$object_id, vss2.variation_set_super 
                  from $table vsv, 
                       variation_set_structure vss,
                       variation_set_structure vss2
                  where vss.variation_set_sub = vsv.variation_set_id
-                 and vss.variation_set_sub = vss2.variation_set_super
-               ]);
+                 and vss2.variation_set_sub = vss.variation_set_super
+               ])|| die "Failed to extract second level sub sets\n";
 
   }
 }
@@ -291,7 +291,7 @@ sub get_dbs_by_host{
 
     my $db_ext_sth = $dbh->prepare(qq[ show databases like '%variation%']);
 
-    $db_ext_sth->execute()||die;
+    $db_ext_sth->execute()||die "Failed to extract database list\n";
     my $db_list = $db_ext_sth->fetchall_arrayref();
     foreach my $l(@{$db_list}){
         next if $l->[0] =~/master/;
