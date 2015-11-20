@@ -26,7 +26,10 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta clear_fasta_cache revert_fasta);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
-my $fasta = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test.fa.gz";
+my $gz_fasta = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test.fa.gz";
+my $fasta = $gz_fasta;
+$fasta =~ s/\.gz//;
+`gzip -dc $gz_fasta > $fasta` if(-e "$gz_fasta");
 
 my ($db, $slice1, $slice2, $seq1, $seq2);
 
@@ -42,7 +45,7 @@ ok($db, "single arg");
 throws_ok(sub {setup_fasta()}, qr/No FASTA file specified/, 'throws - No FASTA file specified');
 throws_ok(sub {setup_fasta(-FASTA => '/does/not/exist')}, qr/not found/, 'throws - not found');
 throws_ok(sub {setup_fasta(-FASTA => $fasta, -TYPE => 'invalid')}, qr/Unrecognised index type/, 'throws - Unrecognised index type');
-throws_ok(sub {setup_fasta(-FASTA => $fasta, -TYPE => 'Bio::DB::Fasta')}, qr/Cannot index bgzipped FASTA file with Bio::DB::Fasta/, 'throws - Cannot index bgzipped FASTA file with Bio::DB::Fasta');
+throws_ok(sub {setup_fasta(-FASTA => $gz_fasta, -TYPE => 'Bio::DB::Fasta')}, qr/Cannot index bgzipped FASTA file with Bio::DB::Fasta/, 'throws - Cannot index bgzipped FASTA file with Bio::DB::Fasta');
 
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
@@ -89,5 +92,9 @@ is($slice1->expand(10, 0)->seq, 'N' x 20, "expand beyond start of chrom");
 
 # remember to revert!!!
 revert_fasta();
+
+# and clean up
+unlink($fasta);
+unlink("$fasta\.index");
 
 done_testing();
