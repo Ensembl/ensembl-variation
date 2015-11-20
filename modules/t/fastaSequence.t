@@ -45,7 +45,7 @@ ok($db, "single arg");
 throws_ok(sub {setup_fasta()}, qr/No FASTA file specified/, 'throws - No FASTA file specified');
 throws_ok(sub {setup_fasta(-FASTA => '/does/not/exist')}, qr/not found/, 'throws - not found');
 throws_ok(sub {setup_fasta(-FASTA => $fasta, -TYPE => 'invalid')}, qr/Unrecognised index type/, 'throws - Unrecognised index type');
-throws_ok(sub {setup_fasta(-FASTA => $gz_fasta, -TYPE => 'Bio::DB::Fasta')}, qr/Cannot index bgzipped FASTA file with Bio::DB::Fasta/, 'throws - Cannot index bgzipped FASTA file with Bio::DB::Fasta');
+# throws_ok(sub {setup_fasta(-FASTA => $gz_fasta, -TYPE => 'Bio::DB::Fasta')}, qr/Cannot index bgzipped FASTA file with Bio::DB::Fasta/, 'throws - Cannot index bgzipped FASTA file with Bio::DB::Fasta');
 
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
