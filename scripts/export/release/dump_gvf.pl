@@ -241,6 +241,8 @@ sub dump_svs_data {
     foreach my $slice (@$slices) {
         my $svfs = $svfa->fetch_all_by_Slice($slice, 1);
         for my $svf (@$svfs) {
+            next if ($svf->seq_region_start <= $slice->start); # avoid duplicated lines caused by vf overlapping two slice pieces
+
             my $gvf_line = {};
             # ignore CNV probes
             next if $svf->var_class eq 'CNV_PROBE';
