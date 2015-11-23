@@ -31,6 +31,9 @@ package Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect;
 
 use strict;
 use warnings;
+
+use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
@@ -56,7 +59,7 @@ sub fetch_input {
 
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
-    my @transcript_output_ids;
+    my @gene_output_ids;
 
     
     my $gene_count = 0;
@@ -80,13 +83,11 @@ sub fetch_input {
 
     for my $gene (@genes) {
         $gene_count++;
-        
-        for my $transcript (@{ $gene->get_all_Transcripts }) {
 
-            push @transcript_output_ids, {
-                transcript_stable_id  => $transcript->stable_id,
-            };
-        }            
+        push @gene_output_ids, {
+            gene_stable_id  => $gene->stable_id,
+        };
+        
         if ($DEBUG) {
             last if $gene_count >= 100;
         }
@@ -94,7 +95,7 @@ sub fetch_input {
 
 
 
-    if (@transcript_output_ids) {
+    if (@gene_output_ids) {
         
         # check we actually found some transcripts
 
@@ -112,7 +113,7 @@ sub fetch_input {
         $dbc->do("TRUNCATE TABLE variation_genename ");
 
 
-        $self->param('transcript_output_ids', \@transcript_output_ids);
+        $self->param('gene_output_ids', \@gene_output_ids);
 
         my @rebuild = ('transcript_variation');
 
@@ -166,16 +167,24 @@ sub fetch_input {
         $self->param(
             'update_vf', [{}]
         );
+
+        # setup fasta
+        if(my $fasta = $self->param('fasta')) {
+
+          # run this here as it generates the index
+          # don't want competing jobs writing to it
+          setup_fasta(-FASTA => $fasta);
+        }
     }
 }
 
 sub write_output {
     my $self = shift;
     
-    if (my $transcript_output_ids = $self->param('transcript_output_ids')) {
+    if (my $gene_output_ids = $self->param('gene_output_ids')) {
         $self->dataflow_output_id($self->param('rebuild_indexes'), 2);
         $self->dataflow_output_id($self->param('update_vf'), 3);
-        $self->dataflow_output_id($transcript_output_ids, 4);
+        $self->dataflow_output_id($gene_output_ids, 4);
         $self->dataflow_output_id($self->param('check_transcript_variation'), 5);
     }
 

@@ -120,7 +120,7 @@ sub default_options {
         limit_biotypes => [],
 
         # create MTMP_transcript_variation
-        mtmp_table => 0,
+        mtmp_table => 1,
 
         # points to a FASTA file, much faster than using DB for sequence lookup if available
         fasta => undef,
