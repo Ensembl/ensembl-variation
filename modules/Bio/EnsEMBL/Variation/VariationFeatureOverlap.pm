@@ -165,11 +165,24 @@ sub new {
     $ref_feature ||= $variation_feature->slice;
     $self->{ref_feature}  = $ref_feature;
 
-    $ref_allele = $ref_feature->subseq(
-      $variation_feature->start, 
-      $variation_feature->end, 
-      $variation_feature->strand
-    );
+    my ($vf_start, $vf_end) = ($variation_feature->start, $variation_feature->end);
+
+    if($vf_start > $vf_end) {
+      $ref_allele = '-';
+    }
+    else {
+      my $ss = $ref_feature->sub_Slice(
+        $variation_feature->start, 
+        $variation_feature->end, 
+        $variation_feature->strand
+      );
+
+      $ss ||= $variation_feature->feature_Slice();
+
+      throw("Could not fetch sub_Slice for $vf_start\-$vf_end\:".$variation_feature->strand) unless $ss;
+
+      $ref_allele = $ss->seq;
+    }
   }
 
   # get raw allele hashes
@@ -385,7 +398,7 @@ sub _raw_allele_hashes {
 
     my @alleles = split /\//, $allele_string;
     
-    $ref_allele ||= $alleles[0];
+    $ref_allele //= $alleles[0];
     $ref_allele = '-' unless $ref_allele;
     
     if ($disambiguate_sn_alleles) {
