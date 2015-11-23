@@ -964,8 +964,6 @@ sub _make_hgvs_tva {
   my $alt_allele = shift;
   my $offset     = shift;
 
-  $DB::single = 1;
-
   my $allele_string =  $ref_allele . "/" . $alt_allele;
   
   my $tv        = $self->transcript_variation;
@@ -985,7 +983,7 @@ sub _make_hgvs_tva {
     map_weight     => $vf->map_weight(),
     #	-adaptor        => $self->transcript_variation->adaptor->db->get_VariationFeatureAdaptor(),
     variation_name => $vf->variation_name(),
-    variation      => $vf->variation(),
+    # variation      => $vf->variation(), ## dont think we need variation, this was running a DB lookup!!!
     slice          => $vf->slice()
   });
 
@@ -1748,12 +1746,15 @@ sub _hgvs_generic {
   unless ($self->{$sub}) {
 
     # Use the transcript this VF is on as the reference feature
-    my $reference_feature = $self->transcript;
+    my $reference_feature = $self->feature;
     # If we want genomic coordinates, the reference_feature should actually be the slice for the underlying seq_region
     $reference_feature = $reference_feature->slice->seq_region_Slice if ($reference eq 'genomic');
 
     # Calculate the HGVS notation on-the-fly and pass it to the TranscriptVariation in order to distribute the result to the other alleles
-    $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($reference_feature,substr($reference,0,1),undef,undef,$self->transcript_variation));
+    my $tv = $self->base_variation_feature_overlap;
+    my $vf = $self->base_variation_feature;
+
+    $tv->$sub($vf->get_all_hgvs_notations($reference_feature,substr($reference,0,1),undef,undef,$tv));
   }
   
   return $self->{$sub};
