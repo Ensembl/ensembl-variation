@@ -1726,37 +1726,37 @@ sub get_all_hgvs_notations {
 ### HGVS short flanking sequence required to check if HGVS variant class should be dup rather than ins
 sub _get_flank_seq{
 
-    my $self = shift;
+  my $self = shift;
 
-    # Get the underlying slice and sequence
-    my $ref_slice = $self->slice();
-    
-    my @allele = split(/\//,$self->allele_string());
-    #### add flank at least as long as longest allele to allow checking 
-    my $add_length = 0;
+  # Get the underlying slice and sequence
+  my $ref_slice = $self->slice();
 
-    foreach my $al(@allele){ ## may have >2 alleles
-	if(length($al) > $add_length){
-	    $add_length = length $al ;
-	}
+  my @allele = split(/\//,$self->allele_string());
+  #### add flank at least as long as longest allele to allow checking 
+  my $add_length = 0;
+
+  foreach my $al(@allele){ ## may have >2 alleles
+    if(length($al) > $add_length){
+      $add_length = length $al ;
     }
-    $add_length++;
-    
-    my $ref_start = $add_length ;
-    my $ref_end   = $add_length + ($self->end() - $self->start());
-    my $seq_start = ($self->start() - $ref_start);
-    
-    # Should we be at the beginning of the sequence, adjust the coordinates to not cause an exception
-    if ($seq_start < 0) {
-	$ref_start += $seq_start;
-	$ref_end   += $seq_start;
-	$seq_start  = 0;
-    }
-  	
-    my $flank_seq   = $ref_slice->subseq($seq_start +1 , $seq_start + $ref_end, 1);
-    
-    
-    return ($flank_seq, $ref_start, $ref_end );
+  }
+  $add_length++;
+
+  my $ref_start = $add_length ;
+  my $ref_end   = $add_length + ($self->end() - $self->start());
+  my $seq_start = ($self->start() - $ref_start);
+
+  # Should we be at the beginning of the sequence, adjust the coordinates to not cause an exception
+  if ($seq_start < 0) {
+    $ref_start += $seq_start;
+    $ref_end   += $seq_start;
+    $seq_start  = 0;
+  }
+
+  my $ss = $ref_slice->sub_Slice($seq_start +1 , $seq_start + $ref_end, 1);
+  my $flank_seq = $ss ? $ss->seq : $ref_slice->subseq($seq_start +1 , $seq_start + $ref_end, 1);
+
+  return ($flank_seq, $ref_start, $ref_end );
 }
 
 #### format HGVS hash for genomic reference sequence
@@ -1785,95 +1785,98 @@ sub _get_flank_seq{
   Status     : Experimental
 
 =cut
-sub hgvs_genomic{
-    
-    my $self             = shift;
-    my $ref_feature      = shift;    ## can be a transcript
-    my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
-    my $use_allele       = shift;    ## optional single allele to check
+sub hgvs_genomic {
 
-    my %hgvs;
-    ########set up sequence reference
-    my $ref_slice;  #### need this for genomic notation
-    
-    if ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
-	$ref_slice = $ref_feature;
+  my $self             = shift;
+  my $ref_feature      = shift;    ## can be a transcript
+  my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
+  my $use_allele       = shift;    ## optional single allele to check
+
+  my %hgvs;
+  ########set up sequence reference
+  my $ref_slice;  #### need this for genomic notation
+
+  if ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
+    $ref_slice = $ref_feature;
+  }
+  else {	
+    # get slice if not supplied
+    $ref_slice = $ref_feature->feature_Slice;	    
+  }         
+
+  my $tr_vf = $self;
+  my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
+
+
+  # Return undef if this VariationFeature does not fall within the supplied feature.
+  return {} if ($vf_start < 1 || 
+    $vf_end   < 1 || 
+    $vf_start > $ref_length || 
+    $vf_end   > $ref_length);
+
+  #########   define reference sequence name ###################################
+
+  # If the reference is a slice, use the seq_region_name as identifier
+  $reference_name ||= $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
+
+  # Use the feature's display id as reference name unless specified otherwise. 
+  # If the feature is a transcript or translation, append the version number as well
+  $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && 
+  $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
+
+  ##### get short flank sequence for duplication checking & adjusted variation coordinates
+  my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);
+
+  my @all_alleles = split(/\//,$tr_vf->allele_string());    
+  shift @all_alleles;  ## remove reference allele - not useful for HGVS
+
+  foreach my $allele ( @all_alleles ) {
+
+    ## If a particular allele was requested, ignore others
+    next if  (defined($use_allele) && $allele ne $use_allele);
+
+    ## expand tandems before check for non nucleotide character
+    expand(\$allele);
+    # Skip if the allele contains weird characters
+    next if $allele =~ m/[^ACGT\-]/ig;   
+
+    ##### vf strand is relative to slice - if transcript feature slice, may need complimenting
+    my $check_allele = $allele;
+    if(
+      $self->strand() <0 && $ref_slice->strand >0 ||
+      $self->strand() >0 && $ref_slice->strand < 0
+    ){	    
+      reverse_comp(\$check_allele);
+      if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
     }
-    else {	
-	# get slice if not supplied
-	$ref_slice = $ref_feature->feature_Slice;	    
-    }         
-    
-    my $tr_vf = $self;
-	
-	
-    # Return undef if this VariationFeature does not fall within the supplied feature.
-    return {} if ($tr_vf->start < 1 || 
-		  $tr_vf->end   < 1 || 
-		  $tr_vf->start > ($ref_feature->end - $ref_feature->start + 1) || 
-		  $tr_vf->end   > ($ref_feature->end - $ref_feature->start + 1));
-    
-    #########   define reference sequence name ###################################
-        
-    # If the reference is a slice, use the seq_region_name as identifier
-    $reference_name ||= $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
-      
-    # Use the feature's display id as reference name unless specified otherwise. 
-    # If the feature is a transcript or translation, append the version number as well
-    $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && 
-						      $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
-    
-  
-    ##### get short flank sequence for duplication checking & adjusted variation coordinates
-    my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);
 
-    my @all_alleles = split(/\//,$tr_vf->allele_string());    
-    shift @all_alleles;  ## remove reference allele - not useful for HGVS
-    foreach my $allele ( @all_alleles ) {
-	
-	## If a particular allele was requested, ignore others
-	next if  (defined($use_allele) && $allele ne $use_allele);
+    my $chr_start = $tr_vf->seq_region_start();
+    my $chr_end   = $tr_vf->seq_region_end();
 
-        ## expand tandems before check for non nucleotide character
-        expand(\$allele);
-	# Skip if the allele contains weird characters
-	next if $allele =~ m/[^ACGT\-]/ig;   
-	
-	##### vf strand is relative to slice - if transcript feature slice, may need complimenting
-	my $check_allele = $allele;
-	if( $self->strand() <0 && $ref_slice->strand >0 ||
-	    $self->strand() >0 && $ref_slice->strand < 0
-	    ){	    
-	    reverse_comp(\$check_allele);
-	    if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
-	}
+    my $hgvs_notation = hgvs_variant_notation(
+      $check_allele,          ## alt allele in refseq strand orientation
+      $ref_seq,               ## substring of slice for ref allele extraction
+      $ref_start,             ## start on substring of slice for ref allele extraction
+      $ref_end,
+      $chr_start,             ## start wrt seq region slice is on (eg. chrom)
+      $chr_end,   
+      $self->variation_name() ## for error message 
+    );
 
-	my $chr_start = $tr_vf->seq_region_start();
-	my $chr_end   = $tr_vf->seq_region_end();
-	
-	my $hgvs_notation = hgvs_variant_notation( $check_allele,          ## alt allele in refseq strand orientation
-						   $ref_seq,               ## substring of slice for ref allele extraction
-						   $ref_start,             ## start on substring of slice for ref allele extraction
-						   $ref_end,
-						   $chr_start,             ## start wrt seq region slice is on (eg. chrom)
-						   $chr_end,   
-						   $self->variation_name()); ## for error message 
-      
+    # Skip if e.g. allele is identical to the reference slice
+    next if (!defined($hgvs_notation));
 
-	# Skip if e.g. allele is identical to the reference slice
-	next if (!defined($hgvs_notation));
-	
-	# Add the name of the reference
-	$hgvs_notation->{'ref_name'} = $reference_name;
-	# Add the position_numbering scheme
-	$hgvs_notation->{'numbering'} = 'g';     
-	
-	# Construct the HGVS notation from the data in the hash
-	$hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
-	
-	$hgvs{$allele} = $hgvs_notation->{'hgvs'};
-    }
-    return \%hgvs;
+    # Add the name of the reference
+    $hgvs_notation->{'ref_name'} = $reference_name;
+    # Add the position_numbering scheme
+    $hgvs_notation->{'numbering'} = 'g';     
+
+    # Construct the HGVS notation from the data in the hash
+    $hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
+
+    $hgvs{$allele} = $hgvs_notation->{'hgvs'};
+  }
+  return \%hgvs;
 
 }
 
