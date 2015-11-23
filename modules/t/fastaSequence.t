@@ -96,5 +96,6 @@ revert_fasta();
 # and clean up
 unlink($fasta);
 unlink("$fasta\.index");
+unlink("$fasta\.fai");
 
 done_testing();
