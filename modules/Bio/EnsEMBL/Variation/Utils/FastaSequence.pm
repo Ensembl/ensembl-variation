@@ -339,7 +339,7 @@ sub _new_slice_seq {
     return "" if $start > $end;
 
     my $fa_length = $Bio::EnsEMBL::Slice::fasta_db->length($sr_name);
-    unless($fa_length && $fa_length > 0 && !$self->can('_fasta_old_db_seq')) {
+    if(!($fa_length && $fa_length > 0) && $self->can('_fasta_old_db_seq')) {
       print STDERR "USING DATABASE\n" if $DEBUG;
       return $self->_fasta_old_db_seq();
     }
