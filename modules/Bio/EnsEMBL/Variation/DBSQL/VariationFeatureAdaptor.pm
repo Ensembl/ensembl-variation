@@ -557,13 +557,16 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
 =head2 fetch_all_with_maf_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
-  Arg [2]    : $maximum_frequency [optional]
+  Arg [2]    : float $threshold_frequency [optional]
+  Arg [3]    : int $greater_than_threshold [optional]
   Example    : my @vfs = @{$vfa->fetch_all_with_maf_by_Slice($slice,$maximum_frequency)};
   Description: Retrieves all germline variation features associated with a minor
                allele frequency (MAF) for a given slice.
-               The optional $maximum_frequency argument can be used to
-               retrieve only variation features with a minor allele frequency (MAF)
-               lesser or equal than $maximum_frequency will be returned.
+               The optional $threshold_frequency argument can be used to
+               retrieve only variation features with a MAF lesser or equal than
+               $threshold_frequency will be returned by default.
+               To retrieve the MAF greater than the $threshold_frequency argument, the optional
+               flag $greater_than_threshold must me populated (with the value 1 for instance).
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -573,7 +576,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
 
 sub fetch_all_with_maf_by_Slice {
   my $self = shift;
-  my ($slice, $freq) = @_;
+  my ($slice, $freq, $greater_than_freq) = @_;
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
@@ -590,8 +593,9 @@ sub fetch_all_with_maf_by_Slice {
    $freq /= 100 if $freq > 1;
    if ($freq > 0.5) {
       throw("The maximum value of the minor allele frequency parameter should to be lesser than 0.5 (the value provided is $freq).");
-    }
-   $constraint .= " AND $maf_col <= $freq ";
+   }
+   my $operator = ($greater_than_freq) ? '>' : '<=';
+   $constraint .= " AND $maf_col $operator $freq ";
   }
 
   # Add the constraint for failed variations

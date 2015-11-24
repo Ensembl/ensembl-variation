@@ -174,7 +174,9 @@ ok(scalar(@$vfs_maf_a) == 2, "vf with MAF by slice");
 # fetch_all_with_maf_by_Slice - using a MAF threshold
 my $maf = 0.1;
 my $vfs_maf_b = $vfa->fetch_all_with_maf_by_Slice($slice,$maf);
-ok(scalar(@$vfs_maf_b) == 1, "vf with MAF by slice - using the MAF threshold $maf");
+ok($vfs_maf_b->[0]->minor_allele_frequency <= $maf, "vf with MAF lesser or equal than $maf by slice");
+my $vfs_maf_c = $vfa->fetch_all_with_maf_by_Slice($slice,$maf,1);
+ok($vfs_maf_c->[0]->minor_allele_frequency > $maf, "vf with MAF greater than $maf by slice");
 
 # test fetch all by Slice VariationSet
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";
