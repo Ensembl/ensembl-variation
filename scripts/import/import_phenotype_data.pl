@@ -1704,7 +1704,13 @@ sub parse_dbgap {
        $study = $study_prefix.$study_0[length($study)].$study if (defined($study));
 
     $gene =~ s/ /,/g;
-    
+
+    # Store 2 decimals
+    if ($pvalue =~ /^(\d\.\d+)(e-\d+)$/) {
+      my $val = sprintf("%.2f", $1);
+      $pvalue = "$val$2";
+    }
+
     my %data = (
       'description'       => $phenotype,
       'associated_gene'   => $gene,
@@ -2505,9 +2511,6 @@ sub convert_p_value {
     }
     if ($pval =~ /^(\d+\.\d{1})(e-?\d+)/) {
       $pval="$1"."0$2";  
-    }
-    if ($pval =~ /^(\d+\.\d+e-?)(\d{1})$/) {
-      $pval = "$1"."0$2";
     }
     $sci_pval = $pval;
   }
