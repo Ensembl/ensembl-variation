@@ -119,7 +119,7 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q normal -R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'default' => { 'LSF' => '-q normal -R"select[mem>3500] rusage[mem=3500]" -M3500'},
         'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
         'highmem' => { 'LSF' => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
         'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
