@@ -143,18 +143,18 @@ sub init_db_connections {
 }
 
 sub init_variation_set {
-    my $config = shift;
-    my $variation_set_name = $config->{set_name};
-    if ($variation_set_name eq 'phenotype_associated') {
-        $variation_set_name = 'All phenotype/disease-associated variants';
-    }
-    if ($variation_set_name eq 'clinically_associated') {
-      $variation_set_name = 'Clinically associated variants';
-    }
-    my $vsa = $config->{variation_set_adaptor};
-    my $variation_set = $vsa->fetch_by_name($variation_set_name);
-    die "Wrong variation set name: $variation_set_name" unless($variation_set);
-    $config->{variation_set} = $variation_set;
+  my $config = shift;
+  my $variation_set_name = $config->{set_name};
+  if ($variation_set_name eq 'phenotype_associated') {
+    $variation_set_name = 'All phenotype/disease-associated variants';
+  }
+  if ($variation_set_name eq 'clinically_associated') {
+    $variation_set_name = 'Clinically associated variants';
+  }
+  my $vsa = $config->{variation_set_adaptor};
+  my $variation_set = $vsa->fetch_by_name($variation_set_name);
+  die "Wrong variation set name: $variation_set_name" unless($variation_set);
+  $config->{variation_set} = $variation_set;
 }
 
 sub init_failed_variations {
@@ -239,6 +239,7 @@ sub dump_svs_data {
     my $id_count = 0;
     
     foreach my $slice (@$slices) {
+        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
         my $svfs = $svfa->fetch_all_by_Slice($slice, 1);
         for my $svf (@$svfs) {
             next if ($svf->seq_region_start <= $slice->start); # avoid duplicated lines caused by vf overlapping two slice pieces
@@ -306,6 +307,7 @@ sub dump_data {
     my $overlap = 0;
 
     foreach my $slice (@$slices) {
+        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
         my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
         foreach my $slice_piece (@$slice_pieces) {
             if ($config->{individual}) { 
