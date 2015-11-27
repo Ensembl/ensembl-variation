@@ -303,7 +303,11 @@ sub summarise_evidence{
 
       push @{$evidence{$var}},  $evidence_ids->{ESP}
            if defined $ss_variations->{$var}->{'ESP'} ;
-      
+
+      push @{$evidence{$var}},  $evidence_ids->{ExAC}
+           if defined $ss_variations->{$var}->{'ExAC'} ;
+
+ 
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
            if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'KG'}) ;
 
@@ -385,7 +389,8 @@ sub get_ss_variations{
 
         $l->[2] = "N" unless defined $l->[2];
 
-        $evidence{$l->[0]}{'KG'}  = 1 if $l->[1] =~/1000GENOMES/;
+        $evidence{$l->[0]}{'KG'}    = 1 if $l->[1] =~/1000GENOMES/;
+        $evidence{$l->[0]}{'freq'}  = 1 if $l->[1] =~/1000GENOMES/;
 
         #save  submitter handle, population and ss id to try to discern independent submissions
         push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
@@ -397,10 +402,12 @@ sub get_ss_variations{
             ## flag if frequency data available
             $evidence{$l->[0]}{'freq'}  = 1;
 
-            ## special case for human only
-            $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
+            ## special case for human only - flag specific submitters of frequency data
+            $evidence{$l->[0]}{'HM'}  = 1  if defined $l->[4] && $l->[4]  =~/HapMap/i;
 
-	    $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]   =~/NHLBI-ESP/i;
+            $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]  =~/NHLBI-ESP/i;
+
+            $evidence{$l->[0]}{'ExAC'} = 1 if defined $l->[4] && $l->[4]  =~/EVA_EXAC/i;
         }
     }
 
