@@ -68,7 +68,7 @@ sub run {
 
   if ( $self->required_param('species') =~/sus_scrofa/ ){ $self->add_synonym();}
 
-  if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris|homo_sapiens/ ){ $self->set_display();}
+  if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris/ ){ $self->set_display();}
 
   $self->add_chip_info();
 
