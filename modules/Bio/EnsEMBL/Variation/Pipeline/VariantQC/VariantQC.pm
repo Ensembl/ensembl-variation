@@ -61,7 +61,9 @@ our %QUICK_COMP = ( "A" => "T",
                     "G" => "C"
     ); 
 
-
+our %FLIPPED_FROM = ( 1  => -1,
+                      -1 => 1
+                     );
 
 =head2 run
 
@@ -240,32 +242,33 @@ sub run_variation_checks{
 	}
     }
 
-    ## Compliment allele string only for variants with 1 genomic location or same strand for all locations 
-    next if $map_count->{$var->{v_id}} > 1  && $strand_summary->{$var->{v_id}} eq '0';
+    ## Check against reference only for variants with 1 reference genomic location
+    next if $map_count->{$var->{v_id}} > 1;
 
 
-    ## flip allele string if on reverse strand and single mapping
-  
-    if( $var->{strand} eq "-1" ){
+    ## flip allele string if on reverse strand for all reference mappings, regardless of patch mappings
+    if( $strand_summary->{$var->{v_id}} eq '-1'){ 
+
       reverse_comp(\$expanded );          ## for ref check
       if( $var->{allele}=~ /\(/){
-          $var->{allele} = revcomp_tandem($var->{allele});
+         $var->{allele} = revcomp_tandem($var->{allele});
       }
       else{
           reverse_comp(\$var->{allele} );   ## for database storage
       }
-      $var->{strand} = 1;
+      ## correct strand ( patch may now be reverse strand)
+      $var->{strand} = $FLIPPED_FROM{$var->{strand}};
 
       ### store variation_id to use when flipping alleles & allele stringfor multi-map flips
       $flip{$var->{v_id}} = 1;
       $allele_string{$var->{v_id}} = $var->{allele};
     }
+
   
     ## Reference match checks and re-ordering only run for variants with 1 genomic location
-    next if $var->{map} > 1;
+    next if $var->{map} > 1 ;
   
-    # Extract reference sequence to run ref checks [ compliments for reverse strand multi-mappers]
-  
+    # Extract reference sequence to run ref checks
     my $ref_seq ;
     if( $self->param('use_seqdb')  == 1){
         my $fasta_file = $self->required_param('pipeline_dir') . "/genomic.fa";
@@ -442,7 +445,8 @@ sub export_data_adding_allele_string{
                                                       maf.freq,
                                                       maf.count,
                                                       maf.is_minor_allele,
-                                                      vf.flags
+                                                      vf.flags,
+                                                      sr.is_reference
                                                  FROM variation_feature vf
                                                       left outer join tmp_map_weight_working  tmw on (vf.variation_id = tmw.variation_id ),
                                                       seq_region sr,
@@ -466,6 +470,7 @@ sub export_data_adding_allele_string{
 
   foreach my $l(@{$variant_data}){
 
+      ## reporting all frequencies but store minor => skip any major
       next if defined $l->[17]  && $l->[17] >0.5 ;
  
       if (defined $l->[19] &&  $l->[19] eq "0" && 
@@ -504,6 +509,7 @@ sub export_data_adding_allele_string{
       $save{min_af}        = $l->[17];
       $save{min_al_count}  = $l->[18];
       $save{flags}         = $l->[20];
+      $save{is_reference}  = $l->[21];
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -515,12 +521,19 @@ sub export_data_adding_allele_string{
 
     push @to_check,\%save;
 
-    ## summarise strands seen - if multi-mapping but always reverse, safe to flip
-    if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
+
+    ## Try to convert to forward strand if on reference sequence
+    ##   - if one mapping, flip 
+    ##   - if multi-mapping but always reverse, safe to flip
+    ##   - mappings to patches may be on reverse strand
+    ##   If strand summary == -1, flip all
+    if($save{is_reference} ==1 ){ 
+      if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
 	$strand_summary{$l->[0]} = 0;
-    }
-    else{
+      }
+      else{
 	$strand_summary{$l->[0]} = $save{strand};
+      }
     }
   }
 
