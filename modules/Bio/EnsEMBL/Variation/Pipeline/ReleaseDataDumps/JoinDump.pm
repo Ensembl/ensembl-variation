@@ -304,6 +304,7 @@ sub run_cmd {
   }
 }
 
+=begin
 sub get_covered_seq_regions {
   my $self = shift;
   my $species = $self->param('species');
@@ -328,5 +329,44 @@ sub get_covered_seq_regions {
   $sth->finish();
   return $counts;
 }
+=end
+=cut
+
+sub get_covered_seq_regions {
+  my $self = shift;
+  my $species = $self->param('species');
+  my $counts;
+  my $vdba = $self->get_species_adaptor($species, 'variation');
+  my $cdba = $self->get_species_adaptor($species, 'core');
+  my $toplevel_seq_region_ids = {};
+  my $sa = $cdba->get_SliceAdaptor;
+  my $toplevel_slices = $sa->fetch_all('toplevel');
+  foreach my $toplevel_slice (@$toplevel_slices) {
+    $toplevel_seq_region_ids->{$toplevel_slice->get_seq_region_id} = 1;
+  }
+
+  my $dbh = $vdba->dbc->db_handle;
+  my $sth = $dbh->prepare(qq{
+      SELECT sr.seq_region_id, count(*)
+      FROM seq_region sr, variation_feature vf
+      WHERE sr.seq_region_id = vf.seq_region_id
+      GROUP BY sr.seq_region_id;
+      });
+  $sth->{'mysql_use_result'} = 1;
+  $sth->execute();
+  my ($slice_id, $count);
+  $sth->bind_columns(\$slice_id, \$count);
+  while ($sth->fetch()) {
+    if ($count > 0) {
+      if ($toplevel_seq_region_ids->{$slice_id}) {
+        $counts->{$slice_id} = $count;
+      }
+    }
+  }
+  $sth->finish();
+
+  return $counts;
+}
+
 
 1;
