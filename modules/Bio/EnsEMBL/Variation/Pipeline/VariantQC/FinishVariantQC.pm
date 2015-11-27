@@ -612,7 +612,8 @@ sub rename_tables{
   $var_dba->dbc->do(qq[ rename table MTMP_population_genotype_working to MTMP_population_genotype]) || die;
   $var_dba->dbc->do(qq[ rename table population_genotype_working to population_genotype]) || die;
 
-
+  ## remove temp column from seq_region table
+  $var_dba->dbc->do(qq{alter table seq_region drop column is_reference});
  
   
 

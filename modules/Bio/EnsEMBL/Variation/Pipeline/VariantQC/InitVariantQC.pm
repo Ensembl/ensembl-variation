@@ -343,10 +343,6 @@ sub create_map_weight_table{
     $var_dba->dbc->do(qq{ALTER TABLE tmp_map_weight_working 
                          ADD UNIQUE INDEX variation_idx(variation_id)});
 
- 
-    ## clean up seq_region table
-    $var_dba->dbc->do(qq{alter table seq_region drop column is_reference});
-
 
 }
 
