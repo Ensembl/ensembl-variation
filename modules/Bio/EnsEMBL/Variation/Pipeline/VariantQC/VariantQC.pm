@@ -141,8 +141,6 @@ sub run_variation_checks{
   my %flip;           # hash of variation ids which have their strand changed in this process
   my %allele_string;  # hash of expected allele for each variation_id strings saved for allele checking
 
-  
-
 
   my $var_dba = $self->get_species_adaptor('variation');
 
@@ -152,7 +150,7 @@ sub run_variation_checks{
 
 
   ## export current variation_feature data
-  my ($to_check, $map_count, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
+  my ($to_check, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
 
 
   my $failed_set_id = find_failed_variation_set_id($var_dba);
@@ -160,7 +158,7 @@ sub run_variation_checks{
 
 
   foreach my $var (@{$to_check}){
-  
+
     die "No allele string for $var->{name}\n" unless defined $var->{allele}; ## kill whole batch before any db updates
     ## save initial value of allele string for allele checking incase multi-mapping
     $allele_string{$var->{v_id}} = $var->{allele};
@@ -218,15 +216,6 @@ sub run_variation_checks{
     next;  ## don't attempt to order variation_feature.allele_string or compliment
   }
 
-
-  ## Type 3  flag variation as fail if it has [A/T/G/C] allele string 
-
-  my $all_possible_check = check_four_bases($expanded);
-  if ($all_possible_check ==1){        
-      push @{$fail_variant{3}}, $var->{v_id};
-      $var->{variation_set_id} = $failed_set_id ;
-  }
-
   ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
 
     my $is_ambiguous = check_for_ambiguous_alleles($expanded );
@@ -243,7 +232,7 @@ sub run_variation_checks{
     }
 
     ## Check against reference only for variants with 1 reference genomic location
-    next if $map_count->{$var->{v_id}} > 1;
+    next if $var->{map} > 1;
 
 
     ## flip allele string if on reverse strand for all reference mappings, regardless of patch mappings
@@ -262,6 +251,8 @@ sub run_variation_checks{
       ### store variation_id to use when flipping alleles & allele stringfor multi-map flips
       $flip{$var->{v_id}} = 1;
       $allele_string{$var->{v_id}} = $var->{allele};
+
+
     }
 
   
@@ -421,8 +412,6 @@ sub export_data_adding_allele_string{
   
   my @to_check;
   my %strand_summary;  ## hold strands seen for multi-mapping variants here rather than check later
-  my %map_count;       ## count all locations including non-ref locations not used in map_weight calculation
-
   my %found_minor;     ## dbSNP flag 2 alleles as minor for some tri-allelic variants
 
   my $variant_ext_sth = $var_dba->dbc->prepare(qq[SELECT vf.variation_id,
@@ -468,6 +457,7 @@ sub export_data_adding_allele_string{
 
   my %potentially_no_minor; ## if bi-allelic & equal frequencies assign one as minor at random
 
+
   foreach my $l(@{$variant_data}){
 
       ## reporting all frequencies but store minor => skip any major
@@ -484,7 +474,6 @@ sub export_data_adding_allele_string{
       next if defined $found_minor{$l->[2]} && $found_minor{$l->[2]} ==1;
       $found_minor{$l->[2]} =1; 
 
-      $map_count{$l->[0]}++;
       my %save;
 
       $save{v_id}           = $l->[0];
@@ -528,7 +517,8 @@ sub export_data_adding_allele_string{
     ##   - mappings to patches may be on reverse strand
     ##   If strand summary == -1, flip all
     if($save{is_reference} ==1 ){ 
-      if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
+
+     if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
 	$strand_summary{$l->[0]} = 0;
       }
       else{
@@ -537,7 +527,7 @@ sub export_data_adding_allele_string{
     }
   }
 
-  return (\@to_check, \%map_count, \%strand_summary);  
+  return (\@to_check, \%strand_summary);  
 
 }
 
