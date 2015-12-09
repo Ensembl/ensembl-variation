@@ -974,7 +974,7 @@ sub stop_lost {
             
             return 0 unless defined $ref_pep;
         
-            $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
+            $cache->{stop_lost} = ( ($alt_pep !~ /\*|X/) and ($ref_pep =~ /\*|X/) );
         }
         
         # structural variant
