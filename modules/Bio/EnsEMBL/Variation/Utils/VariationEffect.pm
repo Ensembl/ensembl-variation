@@ -919,8 +919,8 @@ sub stop_lost {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
         return 0 unless defined $ref_pep;
-    
-        return ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
+
+        return ( ($alt_pep !~ /\*|X/) and ($ref_pep =~ /\*|X/) );
     }
     
     # structural variant
