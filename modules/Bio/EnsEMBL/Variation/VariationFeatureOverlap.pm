@@ -233,7 +233,7 @@ sub variation_feature {
     $self->base_variation_feature($variation_feature);
   }
   
-  if (my $vf_id = $self->{_variation_feature_id}) {
+  if (!exists($self->{base_variation_feature}) && (my $vf_id = $self->{_variation_feature_id})) {
     
     # lazy-load the VariationFeature
 
