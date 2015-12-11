@@ -6223,8 +6223,12 @@ sub write_cache_info {
    
   # cell types
   if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
-    my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
-    print OUT "cell_types\t".(join ",", map {$_->name} @{$cta->fetch_all});
+
+    my $aa = $config->{RegulatoryFeature_adaptor}->db->get_AnalysisAdaptor();
+    my $analysis = $aa->fetch_by_logic_name('Regulatory_Build');
+    my $fsa = $config->{RegulatoryFeature_adaptor}->db->get_FeatureSetAdaptor();
+
+    print OUT "cell_types\t".(join ",", map {$_->cell_type->name} @{$fsa->fetch_all_by_Analysis($analysis)});
     print OUT "\n";
   }
     
