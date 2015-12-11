@@ -870,11 +870,13 @@ sub _ld_calc {
           $vf2 =  (grep {$_->seq_region_start == $ld_region_end} @{$v2->get_all_VariationFeatures})[0] || $v2->get_all_VariationFeatures()->[0];
           $name2vf->{$v_name2} = $vf2;
         }
-        $vf_id1 = $vf1->dbID();
-        $vf_id2 = $vf2->dbID();
-        $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
-        $vf_objects{$vf_id1} = $vf1;
-        $vf_objects{$vf_id2} = $vf2;
+        if ($vf1 && $vf2) {
+          $vf_id1 = $vf1->dbID();
+          $vf_id2 = $vf2->dbID();
+          $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
+          $vf_objects{$vf_id1} = $vf1;
+          $vf_objects{$vf_id2} = $vf2;
+        }
       } else {
         $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
         $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
