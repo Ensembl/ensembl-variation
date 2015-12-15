@@ -257,14 +257,14 @@ sub allele_table {
   
   my %done;  ## remove duplicates
 
-
+  print    Progress::location() . "Starting to extract allele data\n";
   ########## extract alleles with frequency data
   
-  my $cursor_name = "csr_$task_start";
+  my $cursor_name = "csr_al$task_start";
   $dbm->dbSNP()->dbc->db_handle->begin_work() ||die "Error beginning : $!\n"; ;
   $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_with_freq_stmt") ||die "Failed to declare cursor :$!\n";
   while (1) {
-      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name ")||die "Failed to prep cursor select: $!\n";
+      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 500 from $cursor_name ")||die "Failed to prep cursor select: $!\n";
       $sth->execute() ||die "Error getting freq data :$!\n";
       last if 0 == $sth->rows;
       
@@ -296,7 +296,7 @@ sub allele_table {
   $dbm->dbSNP()->dbc->do("CLOSE $cursor_name");
   $dbm->dbSNP()->dbc->db_handle->rollback();
 
-
+  print    Progress::location() . "Written allele with frequency data\n";
 
   ########## Extract allele data without frequency info
 
@@ -306,7 +306,7 @@ sub allele_table {
   $dbm->dbSNP()->dbc->do("DECLARE $cursor_name CURSOR  FOR $ss_no_freq_stmt")||die "Failed to declare cursor: $!\n";
 
   while (1) {
-      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 100000 from $cursor_name") ||die "Failed to prep cursor select: $!\n";
+      my $sth = $dbm->dbSNP()->dbc->prepare("fetch 500 from $cursor_name") ||die "Failed to prep cursor select: $!\n";
       $sth->execute() ||die "Error getting no-freq data :$!\n";;
       last if 0 == $sth->rows;
       
@@ -417,28 +417,23 @@ sub get_with_freq_stmt{
     my $task_start = shift; 
     my $task_end   = shift;
 
-    my  $ss_with_freq_stmt = qq{
-    SELECT
-      ss.subsnp_id,
+    my  $ss_with_freq_stmt = qq{SELECT
+      sssl.subsnp_id,
       afbsp.pop_id,
       afbsp.allele_id ,
       sssl.substrand_reversed_flag,
       afbsp.freq,
       afbsp.cnt,
-      pop.handle 
-    FROM
-      SNPSubSNPLink sssl,
-      SubSNP ss,
-      AlleleFreqBySsPop afbsp, 
-      Population pop      
-    WHERE ss.subsnp_id BETWEEN $task_start AND $task_end
-    AND   ss.subsnp_id = sssl.subsnp_id  
-    AND   afbsp.subsnp_id = ss.subsnp_id
-    AND   afbsp.pop_id = pop.pop_id
+      pop.handle
+    FROM  SNPSubSNPLink sssl
+    JOIN  AlleleFreqBySsPop afbsp on (afbsp.subsnp_id = sssl.subsnp_id)
+    JOIN  Population pop  on (afbsp.pop_id = pop.pop_id)
+    WHERE afbsp.subsnp_id BETWEEN $task_start and $task_end
     ORDER BY
-      ss.subsnp_id ASC,   
+      sssl.subsnp_id ASC,   
       afbsp.pop_id ASC
   };
+## for human 1KG removal: AND   pop.pop_id not in (16651, 16652,16653,16654, 16655)
 
    return  $ss_with_freq_stmt;
 }
@@ -703,15 +698,14 @@ sub calculate_gtype {
    ####
    if($source_engine =~/postgreSQL/){
 
-   my $cursor_name = "csr_$start";
+   my $cursor_name = "csr_g$start";
    $dbSNP->dbc()->db_handle->begin_work();
    $dbSNP->dbc()->do("DECLARE $cursor_name  CURSOR  FOR $genotype_ext_stmt");
 
   #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
-
    while (1) {
-     my $csth = $dbSNP->dbc()->prepare("fetch 50000 from $cursor_name ");
-     $csth->execute;
+     my $csth = $dbSNP->dbc()->prepare("fetch 250 from $cursor_name ");
+     $csth->execute()|| die "Failed to execute fetch from  $cursor_name & $genotype_ext_stmt";
      last if 0 == $csth->rows;
    
      while ( my $data = $csth->fetchrow_arrayref() ) {
@@ -754,10 +748,6 @@ sub calculate_gtype {
 
     #ÊShould the alleles be flipped? Set flag to specify
     my $reverse = ((($rev_alleles + $sub_strand + $variation_ids{$subsnp_id}->[1])%2 != 0) ? 1 : 0);
-    
-    #ÊIf any of the allele_ids were null, set the id to 0
-#    $allele_id_1 ||= 0;
-#    $allele_id_2 ||= 0;
     
     # Look up the alleles if necessary
     foreach my $allele_id ($allele_id_1,$allele_id_2) {
