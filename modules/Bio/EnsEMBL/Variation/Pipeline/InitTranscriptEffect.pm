@@ -214,9 +214,9 @@ sub write_output {
     $self->dataflow_output_id($self->param('finish_transcript_effect'), 6);
   }
 
-  if (my $big_gene_output_ids = $self->param('big_gene_output_ids')) {
-    $self->dataflow_output_id($big_gene_output_ids, 7);
-  }
+  # if (my $big_gene_output_ids = $self->param('big_gene_output_ids')) {
+  #   $self->dataflow_output_id($big_gene_output_ids, 7);
+  # }
 
   return;
 }
