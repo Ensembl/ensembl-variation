@@ -544,7 +544,6 @@ sub _default_where_clause {
 
 }
 
-
 ## helper routines used by store
 ################################
 
@@ -699,6 +698,9 @@ sub _get_mtmp_write_data_from_tv_write_data {
       $hash{$write_columns[$i]} = $data->[$i];
     }
 
+    # this is the key difference between transcript_variation and MTMP_
+    # MTMP_ has one row per consequence, whereas transcript_variation can
+    # have multiple cons separated by "," in a single row
     foreach my $term(split(',', $hash{consequence_types})) {
       my %copy = %hash;
       $copy{consequence_types} = $term;
