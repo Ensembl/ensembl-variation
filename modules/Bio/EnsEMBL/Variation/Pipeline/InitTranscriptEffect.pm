@@ -89,9 +89,9 @@ sub fetch_input {
         #   };
         # }
         # else {
-          push @gene_output_ids, {
-            gene_stable_id  => $gene->stable_id,
-          };
+          # push @gene_output_ids, {
+          #   gene_stable_id  => $gene->stable_id,
+          # };
         # }
 
         push @gene_output_ids, {
