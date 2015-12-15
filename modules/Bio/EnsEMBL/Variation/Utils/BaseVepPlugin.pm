@@ -102,6 +102,37 @@ sub new {
     }, $class;
 }
 
+=head2 params_to_hash
+
+  Description: Returns a hashref of parameters as specified on the command line
+               in the style "--plugin MyPlugin,param1=value1,param2=value2"
+  Returntype : hashref
+  Status     : Experimental
+
+=cut
+
+sub params_to_hash {
+  my $self = shift;
+
+  if(!exists($self->{_params_hash})) {
+
+    my $params = $self->params;
+
+    my %hash = ();
+    return \%hash unless grep {/\=/} @$params;
+
+    foreach my $param(@$params) {
+      my ($key, $val) = split('=', $param);
+      die("ERROR: Failed to parse parameter $param\n") unless defined($key) && defined($val);
+      $hash{$key} = $val;
+    }
+
+    $self->{_params_hash} = \%hash;
+  }
+
+  return $self->{_params_hash};
+}
+
 =head2 version
 
   Arg [1]    : (optional) a version number string in the form N.N.N
