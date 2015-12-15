@@ -122,6 +122,11 @@ sub default_options {
         # create MTMP_transcript_variation
         mtmp_table => 1,
 
+        # sort variation_feature before we start?
+        # disable this if you are sure the table is already sorted
+        # or if the table is sufficiently small that it won't make much difference
+        sort_variation_feature => 0,
+
         # points to a FASTA file, much faster than using DB for sequence lookup if available
         fasta => undef,
 
@@ -188,16 +193,19 @@ sub pipeline_analyses {
                     limit_biotypes => $self->o('limit_biotypes'),
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
+                    pipeline_dir => $self->o('pipeline_dir'),
+                    sort_variation_feature => $self->o('sort_variation_feature'),
                     @common_params,
                 },
                 -input_ids  => [{}],
-                -rc_name    => 'default',
+                -rc_name    => 'long',
                 -flow_into  => {
                     2 => [ 'rebuild_tv_indexes' ],
                     3 => [ 'update_variation_feature' ],
                     4 => [ 'transcript_effect' ],
                     5 => [ 'check_transcript_variation' ],
-
+                    6 => [ 'finish_transcript_effect' ],
+                    # 7 => [ 'transcript_effect_highmem' ],
                 },
             },
 
@@ -207,11 +215,42 @@ sub pipeline_analyses {
                     disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
+                    pipeline_dir => $self->o('pipeline_dir'),
                     @common_params,
                 },
                 -input_ids      => [],
                 -hive_capacity  => $self->o('transcript_effect_capacity'),
                 -rc_name        => 'default',
+                -flow_into      => {},
+                # -flow_into      => {
+                #   -1 => ['transcript_effect_highmem'],
+                # }
+            },
+
+            # {   -logic_name     => 'transcript_effect_highmem',
+            #     -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+            #     -parameters     => {
+            #         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+            #         mtmp_table => $self->o('mtmp_table'),
+            #         fasta => $self->o('fasta'),
+            #         pipeline_dir => $self->o('pipeline_dir'),
+            #         @common_params,
+            #     },
+            #     -input_ids      => [],
+            #     -hive_capacity  => $self->o('transcript_effect_capacity'),
+            #     -rc_name        => 'highmem',
+            # },
+
+            {   -logic_name     => 'finish_transcript_effect',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
+                -parameters     => {
+                    pipeline_dir => $self->o('pipeline_dir'),
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => 1,
+                -rc_name        => 'highmem',
+                -wait_for       => [ 'transcript_effect' ],# 'transcript_effect_highmem' ],
                 -flow_into      => {},
             },
 
@@ -223,7 +262,7 @@ sub pipeline_analyses {
                 -input_ids      => [],
                 -hive_capacity  => 1,
                 -rc_name        => 'urgent',
-                -wait_for       => [ 'transcript_effect' ],
+                -wait_for       => [ 'finish_transcript_effect' ],
                 -flow_into      => {},
             },
         
