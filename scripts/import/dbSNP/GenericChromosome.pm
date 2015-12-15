@@ -122,6 +122,9 @@ sub variation_feature{
 	 $tablename1 = 'b' .  $tablename1 unless  $tablename1 =~/^b/;
 	 $tablename2 = 'b' .  $tablename2 unless  $tablename2 =~/^b/;
      }
+    ## hack for human multi-build support
+    $tablename1 = $tablename1 . "_107" if $self->{'group_label'} eq 'GRCh38.p2';
+    $tablename2 = $tablename2 . "_107" if $self->{'group_label'} eq 'GRCh38.p2';
 
     my $stmt;
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
