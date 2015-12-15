@@ -59,9 +59,7 @@ sub fetch_input {
 
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
-    my @gene_output_ids;
-
-    
+    my (@gene_output_ids, @big_gene_output_ids);    
     my $gene_count = 0;
 
     my @genes;  
@@ -84,6 +82,18 @@ sub fetch_input {
     for my $gene (@genes) {
         $gene_count++;
 
+        # decision which analysis depends on gene length
+        # if($gene->length > 1e6) {
+        #   push @big_gene_output_ids, {
+        #     gene_stable_id  => $gene->stable_id,
+        #   };
+        # }
+        # else {
+          push @gene_output_ids, {
+            gene_stable_id  => $gene->stable_id,
+          };
+        # }
+
         push @gene_output_ids, {
             gene_stable_id  => $gene->stable_id,
         };
@@ -93,9 +103,13 @@ sub fetch_input {
         }
     }
 
+    $dbc->do(qq{
+      ALTER TABLE variation_feature
+      ORDER BY seq_region_id, seq_region_start, seq_region_end
+    }) if $self->param('sort_variation_feature');
 
 
-    if (@gene_output_ids) {
+    if (@gene_output_ids || @big_gene_output_ids) {
         
         # check we actually found some transcripts
 
@@ -111,11 +125,18 @@ sub fetch_input {
         # truncate tables incase TranscriptVariation is being updated for a pre-existing database
         $dbc->do("TRUNCATE TABLE variation_hgvs");
         $dbc->do("TRUNCATE TABLE variation_genename ");
+        $dbc->do("ALTER TABLE variation_hgvs DISABLE KEYS");
+        $dbc->do("ALTER TABLE variation_genename DISABLE KEYS");
 
+        # remove temporary files if they exist
+        my $dir = $self->param('pipeline_dir');
+        unlink("$dir/variation_hgvs.txt");
+        unlink("$dir/variation_genename.txt");        
 
         $self->param('gene_output_ids', \@gene_output_ids);
+        $self->param('big_gene_output_ids', \@big_gene_output_ids);
 
-        my @rebuild = ('transcript_variation');
+        my @rebuild = qw(transcript_variation variation_hgvs variation_genename);
 
         # set up MTMP table
         if($mtmp) {
@@ -168,6 +189,10 @@ sub fetch_input {
             'update_vf', [{}]
         );
 
+        $self->param(
+            'finish_transcript_effect', [{}]
+        );
+
         # setup fasta
         if(my $fasta = $self->param('fasta')) {
 
@@ -179,16 +204,21 @@ sub fetch_input {
 }
 
 sub write_output {
-    my $self = shift;
-    
-    if (my $gene_output_ids = $self->param('gene_output_ids')) {
-        $self->dataflow_output_id($self->param('rebuild_indexes'), 2);
-        $self->dataflow_output_id($self->param('update_vf'), 3);
-        $self->dataflow_output_id($gene_output_ids, 4);
-        $self->dataflow_output_id($self->param('check_transcript_variation'), 5);
-    }
+  my $self = shift;
 
-    return;
+  if (my $gene_output_ids = $self->param('gene_output_ids')) {
+    $self->dataflow_output_id($self->param('rebuild_indexes'), 2);
+    $self->dataflow_output_id($self->param('update_vf'), 3);
+    $self->dataflow_output_id($gene_output_ids, 4);
+    $self->dataflow_output_id($self->param('check_transcript_variation'), 5);
+    $self->dataflow_output_id($self->param('finish_transcript_effect'), 6);
+  }
+
+  if (my $big_gene_output_ids = $self->param('big_gene_output_ids')) {
+    $self->dataflow_output_id($big_gene_output_ids, 7);
+  }
+
+  return;
 }
 
 ## check for out of date seq_regions in variation database
