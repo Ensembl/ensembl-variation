@@ -586,7 +586,9 @@ sub _get_write_data {
   foreach my $allele(@{$tv->get_all_alternate_TranscriptVariationAlleles}) {
 
     # use pre-predicate data to avoid running costly subs
-    my $pre = $allele->_pre_consequence_predicates();
+    # we also need the HGVS tva in case shifting has changed things (this might be the original tva anyway, no extra cost)
+    my $pre = $allele->_pre_consequence_predicates;
+    my $hgvs_pre = $allele->_hgvs_tva->_pre_consequence_predicates;
 
     my (
       $codon_allele_string, $pep_allele_string,
@@ -594,11 +596,6 @@ sub _get_write_data {
       $polyphen_prediction, $polyphen_score,
       $sift_prediction, $sift_score
     );
-
-    # within feature
-    if($pre->{within_feature}) {
-      $hgvs_transcript = $allele->hgvs_transcript;
-    }
 
     # exon
     if($pre->{exon}) {
@@ -619,7 +616,15 @@ sub _get_write_data {
       $polyphen_score      = $allele->polyphen_score;
       $sift_prediction     = $allele->sift_prediction;
       $sift_score          = $allele->sift_score;
-      $hgvs_protein        = $allele->hgvs_protein;
+    }
+
+    # HGVS-specific
+    if($hgvs_pre->{within_feature}) {
+      $hgvs_transcript = $allele->hgvs_transcript;
+    }
+
+    if($hgvs_pre->{coding}) {
+      $hgvs_protein = $allele->hgvs_protein;
     }
 
     push @return, [
