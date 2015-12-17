@@ -339,14 +339,10 @@ sub SO_variation_class {
 
     # default to sequence_alteration
     my $class = SO_TERM_SEQUENCE_ALTERATION;
-
+    
     if ($alleles =~ /^$allele_class(\/$allele_class)+$/) {
         # A/T, A/T/G
         $class = SO_TERM_SNV;
-    }
-    elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
-        # AA/TTT
-        $class = SO_TERM_SUBSTITUTION;
     }
     elsif ($alleles =~ /\)\d+/) {
         # (CAG)8/(CAG)9
@@ -378,13 +374,23 @@ sub SO_variation_class {
                     # A/-, A/(LARGEDELETION)
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
+
+                elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
+                    # AA/TT   => SO_TERM_SUBSTITUTION
+                    # AA/TTTT => SO_TERM_INDEL
+                    my $same_size = 1;
+                    foreach (my $n =0; $n< scalar(@alleles); $n++){
+                        $same_size = 0 unless length($alleles[$n]) eq length($ref);
+                    }
+                    $class = $same_size == 1 ? SO_TERM_SUBSTITUTION : SO_TERM_INDEL;
+                }
             }
             elsif ($ref =~ /DEL/) {
                 unless (grep { $_ !~ /-/ } @alleles) {
                     # (LARGEDELETION)/-, (2345 BP DELETION)/-
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
-            }
+            } 
         }
         elsif (@alleles == 1) {
             if ($alleles[0] =~ /INS/) {
