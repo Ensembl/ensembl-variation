@@ -48,7 +48,7 @@ sub run {
   foreach my $file(qw(variation_hgvs.txt variation_genename.txt)) {
     system(
       sprintf(
-        'sort -u %s/%s > %s/%s.unique',
+        'sort --parallel=4 -u %s/%s > %s/%s.unique',
         $dir, $file, $dir, $file
       )
     ) and die("ERROR: Failed to unique sort $file");
