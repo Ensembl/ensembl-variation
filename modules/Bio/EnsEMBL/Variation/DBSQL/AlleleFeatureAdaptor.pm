@@ -39,13 +39,13 @@ Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor
 =head1 SYNOPSIS
   $reg = 'Bio::EnsEMBL::Registry';
   
-  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  $reg->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org',
+    -user => 'anonymous'
+  );
   
-  $afa = $reg->get_adaptor("human","variation","allelefeature");
-  $sa = $reg->get_adaptor("human","core","slice");
-
-  # Get a VariationFeature by its internal identifier
-  $af = $afa->fetch_by_dbID(145);
+  $af_adaptor = $reg->get_adaptor('human', 'variation', 'allelefeature');
+  $slice_adaptor = $reg->get_adaptor('human', 'core', 'slice');
 
   # get all AlleleFeatures in a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
@@ -83,9 +83,9 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
    Arg[1]      : (optional) Bio::EnsEMBL::Variation::Sample $sample
-   Example     : my $vf = $vfa->fetch_all_by_Slice($slice, $sample);   
-   Description : Gets all the VariationFeatures in a certain Slice for a given
-                 Individual (optional). Individual must be a designated strain.
+   Example     : my $afs = $afa->fetch_all_by_Slice($slice, $sample);   
+   Description : Gets all AlleleFeatures in a certain Slice for a given
+                 Sample (optional). Sample must be a designated strain.
    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
@@ -93,7 +93,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
    
 =cut
 
-sub fetch_all_by_Slice{
+sub fetch_all_by_Slice {
   my $self = shift;
   my $slice = shift; 
   my $sample = shift;
@@ -102,7 +102,7 @@ sub fetch_all_by_Slice{
     throw('Bio::EnsEMBL::Slice arg expected');
   }
   
-  if (defined $sample){
+  if (defined $sample) {
     if(!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
       throw('Bio::EnsEMBL::Variation::Sample arg expected');
     }
@@ -119,7 +119,7 @@ sub fetch_all_by_Slice{
   my @new_afs = ();
   
   # merge AlleleFeatures with genotypes
-  foreach my $af (@{$afs}){
+  foreach my $af (@{$afs}) {
     
     # get valid alleles from allele_string
     my %valid_alleles = map {$_ => 1} split('/', $af->{allele_string});
@@ -154,32 +154,28 @@ sub fetch_all_by_Slice{
   return \@new_afs;
 }
 
-sub _tables{    
-    my $self = shift;
-    
-    my @tables = (
-        ['variation_feature', 'vf'],
-		['source', 's FORCE INDEX(PRIMARY)']
-	);
-	
-	return @tables;
+sub _tables {    
+  my $self = shift;
+  my @tables = (
+    ['variation_feature', 'vf'], ['source', 's FORCE INDEX(PRIMARY)']
+  );
+  return @tables;
 }
 
-
-sub _columns{
-    my $self = shift;
-	
-    return qw(vf.variation_id 
-	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string vf.consequence_types);
+sub _columns {
+  my $self = shift;
+  return qw(
+    vf.variation_id vf.seq_region_id vf.seq_region_start vf.seq_region_end vf.seq_region_strand
+    vf.variation_name s.name vf.variation_feature_id vf.allele_string vf.consequence_types
+  );
 }
 
-sub _default_where_clause{
-    my $self = shift;
-    return "vf.source_id = s.source_id";
+sub _default_where_clause {
+  my $self = shift;
+  return "vf.source_id = s.source_id";
 }
 
-sub _objs_from_sth{
+sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
 	
 	#
@@ -213,7 +209,7 @@ sub _objs_from_sth{
 	my $asm_cs_name;
 	my $cmp_cs_vers;
 	my $cmp_cs_name;
-	if($mapper) {
+	if ($mapper) {
 		$asm_cs = $mapper->assembled_CoordSystem();
 		$cmp_cs = $mapper->component_CoordSystem();
 		$asm_cs_name = $asm_cs->name();
@@ -226,7 +222,7 @@ sub _objs_from_sth{
 	my $dest_slice_end;
 	my $dest_slice_strand;
 	my $dest_slice_length;
-	if($dest_slice) {
+	if ($dest_slice) {
 		$dest_slice_start  = $dest_slice->start();
 		$dest_slice_end    = $dest_slice->end();
 		$dest_slice_strand = $dest_slice->strand();
@@ -322,7 +318,7 @@ sub _objs_from_sth{
 
 =head2 get_all_synonym_sources
 
-    Args[1]     : Bio::EnsEMBL::Variation::AlleleFeature vf
+    Args[1]     : Bio::EnsEMBL::Variation::AlleleFeature $af
     Example     : my @sources = @{$af_adaptor->get_all_synonym_sources($af)};
     Description : returns a list of all the sources for synonyms of this
                   AlleleFeature
@@ -334,42 +330,42 @@ sub _objs_from_sth{
 =cut
 
 sub get_all_synonym_sources{
-    my $self = shift;
-    my $af = shift;
-    my %sources;
-    my @sources;
+  my $self = shift;
+  my $af = shift;
+  my %sources;
+  my @sources;
 
-    if(!ref($af) || !$af->isa('Bio::EnsEMBL::Variation::AlleleFeature')) {
-	 throw("Bio::EnsEMBL::Variation::AlleleFeature argument expected");
-    }
-    
-    if (!defined($af->{'_variation_id'}) && !defined($af->{'variation'})){
-	warning("Not possible to get synonym sources for the AlleleFeature: you need to attach a Variation first");
-	return \@sources;
-    }
-    #get the variation_id
-    my $variation_id;
-    if (defined ($af->{'_variation_id'})){
-	$variation_id = $af->{'_variation_id'};
-    }
-    else{
-	$variation_id = $af->variation->dbID();
-    }
-    #and go to the varyation_synonym table to get the extra sources
-    my $source_name;
-    my $sth = $self->prepare(qq{SELECT s.name 
-				FROM variation_synonym vs, source s 
-				WHERE s.source_id = vs.source_id
-			        AND   vs.variation_id = ?
-			    });
-    $sth->bind_param(1,$variation_id,SQL_INTEGER);
-    $sth->execute();
-    $sth->bind_columns(\$source_name);
-    while ($sth->fetch){
-	$sources{$source_name}++;
-    }
-    @sources = keys(%sources); 
+  if (!ref($af) || !$af->isa('Bio::EnsEMBL::Variation::AlleleFeature')) {
+    throw("Bio::EnsEMBL::Variation::AlleleFeature argument expected");
+  }
+
+  if (!defined($af->{'_variation_id'}) && !defined($af->{'variation'})){
+    warning("Not possible to get synonym sources for the AlleleFeature: you need to attach a Variation first");
     return \@sources;
+  }
+  #get the variation_id
+  my $variation_id;
+  if (defined ($af->{'_variation_id'})){
+    $variation_id = $af->{'_variation_id'};
+  }
+  else {
+    $variation_id = $af->variation->dbID();
+  }
+  #and go to the varyation_synonym table to get the extra sources
+  my $source_name;
+  my $sth = $self->prepare(qq{SELECT s.name 
+    FROM variation_synonym vs, source s 
+    WHERE s.source_id = vs.source_id
+    AND   vs.variation_id = ?
+  });
+  $sth->bind_param(1,$variation_id,SQL_INTEGER);
+  $sth->execute();
+  $sth->bind_columns(\$source_name);
+  while ($sth->fetch){
+    $sources{$source_name}++;
+  }
+  @sources = keys(%sources); 
+  return \@sources;
 }
 
 1;
