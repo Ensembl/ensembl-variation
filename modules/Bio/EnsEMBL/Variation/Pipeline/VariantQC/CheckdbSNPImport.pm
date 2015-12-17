@@ -56,7 +56,7 @@ sub run {
     ## don't check final tmp_sample_genotype_single_bp for human as merge table
     my @genotype_tables_to_check = ("population_genotype", "sample_genotype_multiple_bp");
     if($self->required_param('species') =~/homo|human/){
-	push @genotype_tables_to_check, "tmp_sample_genotype_single_bp_SubInd_ch22";
+	push @genotype_tables_to_check, "tmp_sample_genotype_single_bp_subind_ch22";
     }
     else{
 	push @genotype_tables_to_check, "tmp_sample_genotype_single_bp";
