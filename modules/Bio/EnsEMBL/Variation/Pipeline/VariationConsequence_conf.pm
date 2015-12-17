@@ -96,8 +96,9 @@ sub default_options {
         # requirements, queue parameters etc.) to suit your own data
         
         default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
         urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is Sanger LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
@@ -169,6 +170,7 @@ sub resource_classes {
           'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
           'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
           'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
     };
 }
 
@@ -205,7 +207,7 @@ sub pipeline_analyses {
                     4 => [ 'transcript_effect' ],
                     5 => [ 'check_transcript_variation' ],
                     6 => [ 'finish_transcript_effect' ],
-                    # 7 => [ 'transcript_effect_highmem' ],
+                    7 => [ 'transcript_effect_highmem' ],
                 },
             },
 
@@ -227,19 +229,20 @@ sub pipeline_analyses {
                 # }
             },
 
-            # {   -logic_name     => 'transcript_effect_highmem',
-            #     -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            #     -parameters     => {
-            #         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-            #         mtmp_table => $self->o('mtmp_table'),
-            #         fasta => $self->o('fasta'),
-            #         pipeline_dir => $self->o('pipeline_dir'),
-            #         @common_params,
-            #     },
-            #     -input_ids      => [],
-            #     -hive_capacity  => $self->o('transcript_effect_capacity'),
-            #     -rc_name        => 'highmem',
-            # },
+            {   -logic_name     => 'transcript_effect_highmem',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+                -parameters     => {
+                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+                    mtmp_table => $self->o('mtmp_table'),
+                    fasta => $self->o('fasta'),
+                    pipeline_dir => $self->o('pipeline_dir'),
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => $self->o('transcript_effect_capacity'),
+                -rc_name        => 'medmem',
+                -can_be_empty   => 1,
+            },
 
             {   -logic_name     => 'finish_transcript_effect',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
@@ -250,7 +253,7 @@ sub pipeline_analyses {
                 -input_ids      => [],
                 -hive_capacity  => 1,
                 -rc_name        => 'highmem',
-                -wait_for       => [ 'transcript_effect' ],# 'transcript_effect_highmem' ],
+                -wait_for       => [ 'transcript_effect', 'transcript_effect_highmem' ],
                 -flow_into      => {},
             },
 
