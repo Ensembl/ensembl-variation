@@ -183,6 +183,9 @@ sub new {
 
       $ref_allele = $ss->seq;
     }
+
+    # throw it away if it comes back "N"
+    undef $ref_allele if $ref_allele =~ /^N+$/;
   }
 
   # get raw allele hashes
