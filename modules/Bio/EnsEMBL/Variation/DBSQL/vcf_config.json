@@ -25,6 +25,54 @@
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
       ],
       "sample_prefix": "1000GENOMES:phase_3:"
+    },
+    {
+      "id": "nextgen_cow_irbt",
+      "species": "bos_taurus",
+      "assembly": "UMD3.1",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/bos_taurus/IRBT.population_sites.UMD3_1.20140322_EVA_ss_IDs.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "nextgen_sheep_iroa",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/ovis_aries/IROA.population_sites.OARv3_1.20140307.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "mouse_genome_project_snp",
+      "species": "mus_musculus",
+      "assembly": "GRCm38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/mus_musculus/mgp.v3.snps.sorted.rsIDdbSNPv137.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
+    },
+    {
+      "id": "mouse_genome_project_indel",
+      "species": "mus_musculus",
+      "assembly": "GRCm38",
+      "type": "local",
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/mus_musculus/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
     }
   ]
 }
