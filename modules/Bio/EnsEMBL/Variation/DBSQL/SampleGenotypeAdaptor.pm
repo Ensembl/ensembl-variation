@@ -236,7 +236,7 @@ sub store_uncompressed {
                $sgtypes = $sgtype_adaptor->fetch_all_by_Variation( $var )
   Description: Retrieves a list of sample genotypes for the given Variation.
                If none are available an empty listref is returned.
-  Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
+  Returntype : listref Bio::EnsEMBL::Variation::SampleGenotype 
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -283,6 +283,7 @@ sub fetch_all_by_Variation {
 
     if ($use_vcf) {
       my $vf = $variation->get_all_VariationFeatures->[0];
+
       @$cached = map {@{$_->get_all_SampleGenotypeFeatures_by_VariationFeature($vf)}}
                   @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
     }
