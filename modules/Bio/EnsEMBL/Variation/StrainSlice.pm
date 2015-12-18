@@ -123,8 +123,6 @@ sub new {
   my $sample = shift @{$sample_adaptor->fetch_all_by_name($self->{'strain_name'})}; #the name should be unique for a strain
 
   if (defined $sample) {
-    print $self->{'slice'}, "\n";
-    print join(' ', keys %$self), "\n";   
     my $allele_features = $af_adaptor->fetch_all_by_Slice($self, $sample);
     my $vf_ids = {}; #hash containing the relation vf_id -> af
     $self->{'_strain'} = $sample;		
