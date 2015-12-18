@@ -187,6 +187,90 @@ sub get_all_diffs {
 }
 
 
+=head2 get_all_flags
+
+  Example    : my @flags = @{$ph->get_all_flags}
+  Description: Get a list of flags for this haplotype. Current possible
+               flags are: "deleterious_sift_or_polyphen", "stop_change",
+               "indel"
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_flags {
+  my $self = shift;
+
+  if(!exists($self->{flags})) {
+    my @flags;
+    for my $flag(qw(deleterious_sift_or_polyphen stop_change indel)) {
+      my $method = 'has_'.$flag;
+      push @flags, $flag if $self->$method;
+    }
+    $self->{flags} = \@flags;
+  }
+
+  return $self->{flags};
+}
+
+
+=head2 has_deleterious_sift_or_polyphen
+
+  Example    : my $has_del = $ph->has_deleterious_sift_or_polyphen
+  Description: Indicates if any of the protein differences are qualified
+               as deleterious (SIFT) or probably damaging (PolyPhen)
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub has_deleterious_sift_or_polyphen {
+  my $self = shift;
+
+  my $has = 0;
+
+  foreach my $diff(@{$self->get_all_diffs}) {
+    $has = 1 if
+      ($diff->{sift_prediction} && $diff->{sift_prediction} eq 'deleterious') ||
+      ($diff->{polyphen_prediction} && $diff->{polyphen_prediction} eq 'probably_damaging');
+    last if $has;
+  }
+
+  return $has;
+}
+
+
+=head2 has_stop_change
+
+  Example    : my $has_sc = $ph->has_stop_change
+  Description: Indicates if this protein has any changes to the reference
+               stop codon. This may be either a stop gain (truncating) or
+               a stop lost (extending)
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub has_stop_change {
+  my $self = shift;
+
+  my $has = 0;
+
+  foreach my $diff(@{$self->get_all_diffs}) {
+    $has = 1 if $diff->{diff} =~ /\*/;
+    last if $has;
+  }
+
+  return $has;
+}
+
+
 =head2 mean_sift_score
 
   Example    : my $score = @{$ph->mean_sift_score()}
@@ -238,6 +322,8 @@ sub _reference_name {
 
 sub TO_JSON {
   my $self = shift;
+
+  $self->get_all_flags;
   
   # make a hash copy of self
   my %copy = %{$self};
