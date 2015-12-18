@@ -93,6 +93,7 @@ sub get_available_adaptors{
       'SampleGenotype'                  => 'Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeAdaptor',
       'SampleGenotypeFeature'           => 'Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeFeatureAdaptor',
       'Source'                          => 'Bio::EnsEMBL::Variation::DBSQL::SourceAdaptor',
+      'StrainSlice'                     => 'Bio::EnsEMBL::Variation::DBSQL::StrainSliceAdaptor',
       'StructuralVariation'             => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor',
       'StructuralVariationFeature'      => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor',
       'StructuralVariationSample'       => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor',
