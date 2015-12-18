@@ -236,7 +236,7 @@ sub has_deleterious_sift_or_polyphen {
   foreach my $diff(@{$self->get_all_diffs}) {
     $has = 1 if
       ($diff->{sift_prediction} && $diff->{sift_prediction} eq 'deleterious') ||
-      ($diff->{polyphen_prediction} && $diff->{polyphen_prediction} eq 'probably_damaging');
+      ($diff->{polyphen_prediction} && $diff->{polyphen_prediction} eq 'probably damaging');
     last if $has;
   }
 
