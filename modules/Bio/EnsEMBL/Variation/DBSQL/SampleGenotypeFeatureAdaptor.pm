@@ -169,10 +169,15 @@ sub fetch_all_by_Slice {
     }
   }
 
-  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $use_vcf = $self->db->use_vcf();
+  if ($use_vcf) { 
+    @$features = map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($slice, $sample)}} @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+  }
+  if ($use_vcf <= 1) {
+    push @$features, @{$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)};
+  }
 
   my $seq_region_slice = $slice->seq_region_Slice;
-
   foreach my $sampleFeature (@{$features}){
     if ($sampleFeature->start > 0 && ($slice->end - $slice->start + 1) >= $sampleFeature->end){	
       if ($sampleFeature->slice->strand == -1){ #ignore the different strand transformation
@@ -187,9 +192,8 @@ sub fetch_all_by_Slice {
       else {
         push @results, $sampleFeature->transfer($seq_region_slice);
       }
-    }
-  }
-
+    } 
+  } 
   return \@results;
 }
 
