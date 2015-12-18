@@ -757,7 +757,7 @@ sub get_all_differences_Slice {
 
 =cut
 
-sub _get_all_VariationFeatures {
+sub get_all_AlleleFeatures {
   my $self = shift;
   my $with_coverage = shift;
   $with_coverage ||= 0;
