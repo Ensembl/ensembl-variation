@@ -196,7 +196,6 @@ sub new_fast {
 sub allele_string{
   my $self = shift;
   return $self->{'allele_string'} = shift if $_[0];
-  
   return $self->{'allele_string'} if ($self->{'_half_genotype'}); #for half genotypes
   return join('|',split (//,unambiguity_code($self->{'allele_string'}))); #for heterozygous alleles
 }
