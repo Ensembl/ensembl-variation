@@ -253,7 +253,7 @@ sub seq {
   return $self->{'seq'} if ($self->{'seq'});
 
   if ($self->adaptor()) {
-    my $seqAdaptor = $self->db()->dnadb()->get_SequenceAdaptor();
+    my $seqAdaptor = $self->adaptor()->db()->get_SequenceAdaptor();
     my $reference_sequence = $seqAdaptor->fetch_by_Slice_start_end_strand($self, 1, undef, 1); #get the reference sequence for that slice
     
     # default to lowercase sequence
@@ -283,7 +283,7 @@ sub seq {
     }
 
     #need to find coverage information if different from reference
-    my $sampleAdaptor = $self->adaptor->db->get_SampleAdaptor;
+    my $sampleAdaptor = $self->adaptor->db->get_db_adaptor('variation')->get_SampleAdaptor;
     my $ref_strain = $sampleAdaptor->get_reference_strain_name;
     $self->_add_coverage_information($reference_sequence) if ($with_coverage == 1 && $self->strain_name ne $ref_strain);
     return substr(${$reference_sequence}, 0, 1) if ($self->length == 1); 
@@ -438,8 +438,8 @@ sub get_all_differences_StrainSlice {
   my $self = shift;
   my $strainSlice = shift;
 
-  if (!ref($strainSlice) || !$strainSlice->isa('Bio::EnsEMBL::StrainSlice')) {
-    throw('Bio::EnsEMBL::StrainSlice arg expected');
+  if (!ref($strainSlice) || !$strainSlice->isa('Bio::EnsEMBL::Variation::StrainSlice')) {
+    throw('Bio::EnsEMBL::Variation::StrainSlice arg expected');
   }
   if ( @{$self->{'alleleFeatures'}} == 0 && @{$strainSlice->{'alleleFeatures'}} == 0) {
     return undef; #there are no differences in any of the Strains
