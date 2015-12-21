@@ -31,18 +31,14 @@ my $strain_slice_adaptor = $vdb->get_StrainSliceAdaptor;
 my $sample_adaptor = $vdb->get_SampleAdaptor;
 my $slice = $sa->fetch_by_region('chromosome', '9', 22124500, 22126505);
 my $msc = Bio::EnsEMBL::MappedSliceContainer->new(-SLICE => $slice);
-$msc->set_StrainSliceAdaptor($strain_slice_adaptor);
-my $samples = $sample_adaptor->fetch_all_by_name('1000GENOMES:phase_1:NA06984');
-my $sample = $samples->[0];
-$msc->attach_StrainSlice($sample);
 
-my $mapped_slices = $msc->get_all_MappedSlices();
-ok(scalar @$mapped_slices == 1, 'count MappedSlices');
-
+my $sample_name = '1000GENOMES:phase_1:NA06984';
+my $mapped_slices = $strain_slice_adaptor->fetch_by_name($msc, $sample_name);
 my $mapped_slice = $mapped_slices->[0];
-ok($mapped_slice && $mapped_slice->isa('Bio::EnsEMBL::MappedSlice'), 'is MappedSlice');
+my $pairs = $mapped_slice->get_all_Slice_Mapper_pairs();
+ok(scalar @$pairs == 1, 'get_all_Slice_Mapper_pairs');
+my $pair = $pairs->[0];
+my ($slice_mapped, $mapper) = @$pair;
 
-my $mapped_slice_name = $mapped_slice->name;
-ok($mapped_slice_name eq 'chromosome:GRCh37:9:22124500:22126505:1#strain_1000GENOMES:phase_1:NA06984', 'mapped slice name');
 
 done_testing();
