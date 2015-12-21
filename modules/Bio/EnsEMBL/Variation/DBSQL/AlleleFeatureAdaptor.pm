@@ -150,7 +150,6 @@ sub fetch_all_by_Slice {
       push @new_afs, $new_af;
     }
   }
-  
   return \@new_afs;
 }
 
