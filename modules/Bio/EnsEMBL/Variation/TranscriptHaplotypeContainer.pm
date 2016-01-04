@@ -86,6 +86,10 @@ sub new {
   
   # check what we've been given looks sensible
   assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
+
+  # only works for coding transcripts ATM
+  return undef unless $transcript->translation;
+
   assert_ref($gts, 'ARRAY', 'Genotypes listref');
   assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::SampleGenotypeFeature', 'First member of genotypes listref') if scalar @$gts;
 
@@ -490,10 +494,12 @@ sub _init {
   
   my $tr = $self->transcript;
   my $vfs = $self->_variation_features;
+
+  my $is_protein_coding = $tr->translation ? 1 : 0;
   
   # cache reference sequences on transcript object
   $tr->{cds} = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
-  $tr->{protein} = ($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq).'*';
+  $tr->{protein} = $is_protein_coding ? ($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq).'*' : undef;
   
   # get mappings of all variation feature coordinates
   my $mappings = $self->_get_mappings;
@@ -512,6 +518,8 @@ sub _init {
     
     # store unique alt seqs so we only align each once
     foreach my $type(qw(cds protein)) {
+
+      next if $type eq 'protein' && !$is_protein_coding;
       
       # iterate over haplotypes
       # usually there will be 2, though for e.g. male samples on an chrX transcript there will be 1
@@ -550,10 +558,12 @@ sub _init {
         $self->{_counts}->{$hex}++;
         
         # store mapping between hashes of cds and protein
-        my $other_type = $type eq 'cds' ? 'protein' : 'cds';
-        my $other_hex  = md5_hex($obj->{$other_type}->[$i]);
-        
-        $haplotype->{other_hexes}->{$other_hex} = 1;
+        if($is_protein_coding) {
+          my $other_type = $type eq 'cds' ? 'protein' : 'cds';
+          my $other_hex  = md5_hex($obj->{$other_type}->[$i]);
+          
+          $haplotype->{other_hexes}->{$other_hex} = 1;
+        }
       }
     }
   }
@@ -576,6 +586,8 @@ sub _add_reference_haplotypes {
   if(scalar @ref_samples) {
     my $tr = $self->transcript;
 
+    my $is_protein_coding = $tr->translation ? 1 : 0;
+
     # get/create reference CDS haplotype
     my $ref_cds_seq = $tr->{cds};
     my $ref_cds_hex = md5_hex($ref_cds_seq);
@@ -597,28 +609,33 @@ sub _add_reference_haplotypes {
     }
 
     # get/create reference protein haplotype
-    my $ref_protein_seq = $tr->{protein};
-    my $ref_protein_hex = md5_hex($ref_protein_seq);
+    my $ref_protein_haplotype;
+    my $ref_protein_hex;
 
-    my $ref_protein_haplotype = $self->_get_TranscriptHaplotype_by_hex($ref_protein_hex);
+    if($is_protein_coding) {
+      my $ref_protein_seq = $tr->{protein};
+      $ref_protein_hex = md5_hex($ref_protein_seq);
 
-    if(!$ref_protein_haplotype) {
-      $ref_protein_haplotype = Bio::EnsEMBL::Variation::ProteinHaplotype->new(
-        -container => $self,
-        -type      => 'protein',
-        -seq       => $ref_protein_seq,
-        -hex       => $ref_protein_hex,
-        -indel     => 0,
-      );
+      $ref_protein_haplotype = $self->_get_TranscriptHaplotype_by_hex($ref_protein_hex);
 
-      $self->{'protein_haplotypes'}->{$ref_protein_haplotype} = $ref_protein_haplotype;
-      
-      weaken($ref_protein_haplotype->{_container});
+      if(!$ref_protein_haplotype) {
+        $ref_protein_haplotype = Bio::EnsEMBL::Variation::ProteinHaplotype->new(
+          -container => $self,
+          -type      => 'protein',
+          -seq       => $ref_protein_seq,
+          -hex       => $ref_protein_hex,
+          -indel     => 0,
+        );
+
+        $self->{'protein_haplotypes'}->{$ref_protein_haplotype} = $ref_protein_haplotype;
+        
+        weaken($ref_protein_haplotype->{_container});
+      }
+
+      # update other haplotype hex
+      $ref_cds_haplotype->{other_hexes}->{$ref_protein_hex} = 1;
+      $ref_protein_haplotype->{other_hexes}->{$ref_cds_hex} = 1;
     }
-
-    # update other haplotype hex
-    $ref_cds_haplotype->{other_hexes}->{$ref_protein_hex} = 1;
-    $ref_protein_haplotype->{other_hexes}->{$ref_cds_hex} = 1;
 
     # increment counts
     my $sample_ploidy  = $self->_sample_ploidy();
@@ -630,8 +647,10 @@ sub _add_reference_haplotypes {
       $ref_cds_haplotype->{samples}->{$_->name}     += $ploidy;
       $self->{_counts}->{$ref_cds_hex}              += $ploidy;
 
-      $ref_protein_haplotype->{samples}->{$_->name} += $ploidy;
-      $self->{_counts}->{$ref_protein_hex}          += $ploidy;
+      if($is_protein_coding) {
+        $ref_protein_haplotype->{samples}->{$_->name} += $ploidy;
+        $self->{_counts}->{$ref_protein_hex}          += $ploidy;
+      }
     }
   }
 }
@@ -647,6 +666,9 @@ sub _sample_ploidy {
 
     if($gts && scalar @$gts) {
       if(my $v = $gts->[0]->variation) {
+
+        $DB::single = 1;
+        
         %{$self->{_sample_ploidy}} =
           map {$_->sample->name => scalar @{$_->genotype}}
           @{$v->get_all_SampleGenotypes};
@@ -763,6 +785,8 @@ sub _mutate_sequences {
       
         my $mapping = $vf->{_cds_mapping};
         next unless $mapping;
+
+        $DB::single = 1 unless $gt->genotype->[$hap];
       
         my $genotype = $gt->genotype->[$hap];
       
@@ -779,7 +803,7 @@ sub _mutate_sequences {
       }
     
       # now translate
-      my $protein = $self->_get_translation($seq, $codon_table);
+      my $protein = $self->_get_translation($seq, $codon_table) if $tr->translation;
     
       # remove anything beyond a stop
       $protein =~ s/\*.+/\*/;
@@ -788,7 +812,7 @@ sub _mutate_sequences {
       # $protein =~ s/\*$//;
     
       push @{$mutated->{cds}}, $seq;
-      push @{$mutated->{protein}}, $protein;
+      push @{$mutated->{protein}}, $protein if $protein;
       push @{$mutated->{indel}}, $indel;
     }
   
