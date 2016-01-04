@@ -61,8 +61,8 @@ die ("Variation database credentials (--host, --dbname, --user, --pass, --port) 
 die ("Core database credentials (--chost, --cdbname, --cport) are required") if (!$core_credentials && !$registry);
 
 set_up_db_connections($config);
-clear_data_from_last_release($config);
 get_data($config);
+clear_data_from_last_release($config);
 get_marker_coords($config);
 populate_phenotype_table($config);
 import_phenotype_features($config);
@@ -124,9 +124,49 @@ sub clear_data_from_last_release {
   # create backup tables for: individual, phenotype_feature_attrib, phenotype, phenotype_feature --> not needed,
   # if something goes wrong, tables are available on ens-livemirror
 
-  $dbh->do(qq{TRUNCATE TABLE phenotype;}) or die $dbh->errstr;
-  $dbh->do(qq{TRUNCATE TABLE phenotype_feature;}) or die $dbh->errstr;
-  $dbh->do(qq{TRUNCATE TABLE phenotype_feature_attrib;}) or die $dbh->errstr;
+  my $phenotype_file = $config->{phenotype_file};
+  my $fh = FileHandle->new($phenotype_file, 'r');
+  my $source_names = {};
+  my $source_name2id = {};
+
+  while (<$fh>) {
+    chomp;
+    my @pairs = split("\t", $_);
+    my $hash;
+    foreach my $pair (@pairs) {
+      my ($key, $value) = split('=', $pair);
+      if ($key eq 'resource_name') {
+        $source_names->{$value} = 1;
+      }
+    }
+  }
+  $fh->close();
+  foreach my $source_name (keys %$source_names) {  
+    my $stmt = qq{ SELECT source_id FROM source WHERE name = '$source_name' LIMIT 1};
+    my $sth = $dbh->prepare($stmt);
+    $sth->execute();
+    my $source_id;
+    $sth->bind_columns(\$source_id);
+    $sth->fetch();
+    if (defined($source_id)) {
+      $source_name2id->{$source_name} = $source_id;  
+    }
+    $sth->finish();
+  }
+
+  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature;}) or die $dbh->errstr;
+  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature;}) or die $dbh->errstr;
+  $dbh->do(qq{INSERT INTO TMP_phenotype_feature SELECT * FROM phenotype_feature;}) or die $dbh->errstr;
+
+  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature_attrib LIKE phenotype_feature_attrib;}) or die $dbh->errstr;
+  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature_attrib;}) or die $dbh->errstr;
+  $dbh->do(qq{INSERT INTO TMP_phenotype_feature_attrib SELECT * FROM phenotype_feature_attrib;}) or die $dbh->errstr;
+
+  my $source_ids = join(',', values %$source_name2id);
+
+  $dbh->do(qq{ DELETE pfa FROM TMP_phenotype_feature_attrib pfa JOIN TMP_phenotype_feature pf ON pfa.phenotype_feature_id = pf.phenotype_feature_id AND pf.source_id IN ($source_ids);} );
+  $dbh->do(qq{ DELETE FROM TMP_phenotype_feature WHERE source_id IN ($source_ids);} );
+
 }
 
 sub get_data {
@@ -204,13 +244,25 @@ sub populate_phenotype_table {
 
   # populate phenotype table
   my $dbh = $config->{dbh};
+  
+  my $phenotype_descriptions = {};
+  my $stmt = qq{ SELECT description FROM phenotype;};
+  my $sth = $dbh->prepare($stmt);
+  $sth->execute();
+  my $description;
+  $sth->bind_columns(\$description);
+  while ($sth->fetch()) {
+    $phenotype_descriptions->{$description} = 1;
+  }
+  $sth->finish();
+
   my $sql = "INSERT INTO phenotype (description) values (?)";
-  my $sth = $dbh->prepare($sql);
-  my $phenotype_id = 1;
+  $sth = $dbh->prepare($sql);
   foreach my $description (sort keys %$mp_term_names) {
-    $sth->bind_param(1, $description, SQL_VARCHAR);
-    $sth->execute();
-    $phenotype_id++;
+    if (!$phenotype_descriptions->{$description}) {
+      $sth->bind_param(1, $description, SQL_VARCHAR);
+      $sth->execute();
+    }
   }
   $sth->finish();
 }
