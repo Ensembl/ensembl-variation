@@ -188,6 +188,8 @@ sub get_TranscriptHaplotypeContainer_by_Transcript {
   if(!exists($tr->{_transcript_haplotype_container})) {
 
     # get VCF Collection Adaptor
+    $self->db->use_vcf(1);
+    
     my $vca = $self->db->get_VCFCollectionAdaptor();
 
     # doing this saves a lot of time!
