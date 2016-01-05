@@ -61,8 +61,9 @@ die ("Variation database credentials (--host, --dbname, --user, --pass, --port) 
 die ("Core database credentials (--chost, --cdbname, --cport) are required") if (!$core_credentials && !$registry);
 
 set_up_db_connections($config);
+get_version($config);
 get_data($config);
-clear_data_from_last_release($config);
+clear_data_from_last_release($config); # update source version
 get_marker_coords($config);
 populate_phenotype_table($config);
 import_phenotype_features($config);
@@ -154,6 +155,12 @@ sub clear_data_from_last_release {
     $sth->finish();
   }
 
+  # update version
+  my $version = $config->{version};
+  foreach my $source_name (keys %$source_names) {
+    $dbh->do(qq{UPDATE source SET version=$version WHERE name=$source_name;}) or die $dbh->errstr;
+  }
+
   $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature;}) or die $dbh->errstr;
   $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature;}) or die $dbh->errstr;
   $dbh->do(qq{INSERT INTO TMP_phenotype_feature SELECT * FROM phenotype_feature;}) or die $dbh->errstr;
@@ -169,6 +176,46 @@ sub clear_data_from_last_release {
 
 }
 
+sub get_version {
+  my $config = shift;
+  my $http = HTTP::Tiny->new();
+
+  my $url = 'http://www.mousephenotype.org/data/release.json';
+  my $response = $http->get($url, {
+    headers => { 'Content-type' => 'application/json' }
+  });
+  my $hash = decode_json($response->{content});
+  my $data_release_date = $hash->{data_release_date};
+  die "data_release_date not defined\n" unless $data_release_date;
+
+ # e.g. 20 October 2015 
+  my ($date, $month, $year) = split(' ', $hash->{data_release_date}) ;
+
+  my $months = {
+    'January' => '01',
+    'February' => '02',
+    'March' => '03',
+    'April' => '04',
+    'May' => '05',
+    'June' => '06',
+    'July' => '07',
+    'August' => '08',
+    'September' => '09',
+    'October' => '10',
+    'November' => '11',
+    'December' => '12',
+  };
+
+  my $month_number = $months->{$month}; 
+  die "month_number not defined\n" unless $month_number;
+
+  my $version = sprintf '%d%d%.2d', $year, $month_number, $date; 
+
+  $config->{version} = $version;
+
+}
+
+
 sub get_data {
   my $config = shift;
 
@@ -181,13 +228,13 @@ sub get_data {
 
   my $i      = 0;
   my $rows   = 0;
-  my $server = 'http://wwwdev.ebi.ac.uk';
-  my $ext     = "/mi/impc/dev/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
+  my $server = 'http://www.ebi.ac.uk';
+  my $ext     = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
 
   # get total number of rows
   while ($i == $rows) {
     $i += 1000;
-    $ext = "/mi/impc/dev/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
+    $ext = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
     my $response = $http->get($server.$ext, {
         headers => { 'Content-type' => 'application/json' }
         });
@@ -197,7 +244,7 @@ sub get_data {
   #print $rows, "\n";
   my $start = 0;
   while ($start <= $rows) {
-    $ext = "/mi/impc/dev/solr/genotype-phenotype/select?q=*:*&rows=100&wt=json&start=$start";
+    $ext = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=100&wt=json&start=$start";
     my $response = $http->get($server.$ext, {
         headers => { 'Content-type' => 'application/json' }
         });
