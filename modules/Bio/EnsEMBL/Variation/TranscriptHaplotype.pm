@@ -53,6 +53,17 @@ use Bio::AlignIO;
 use Bio::SimpleAlign;
 use Bio::LocatableSeq;
 
+my $CAN_USE_DPALIGN;
+
+BEGIN {
+  if (eval { require Bio::Tools::dpAlign; 1 }) {
+    $CAN_USE_DPALIGN = 1;
+  }
+  else {
+    $CAN_USE_DPALIGN = 0;
+  }
+}
+
 =head2 new
 
   Arg [-CONTAINER]:  Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer
@@ -389,20 +400,14 @@ sub _get_SimpleAlign_obj {
     # if there are any indels we need to align
     if($self->has_indel) {
 
-      # try and use bioperl-ext packages
-      eval q{use Bio::Tools::dpAlign};
-
-      # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
-      if($@) {
-        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(align_seqs($self->reference_seq, $self->seq));
-      }
-
       # ok to use fast dpAlign
-      else {
+      if($CAN_USE_DPALIGN) {
+
+        my $alphabet = $self->type eq 'cds' ? 'dna' : 'protein';
 
         # create Bio::Seq objects to feed aligner
-        my $s1 = Bio::Seq->new(-id => "REF", -seq => $self->reference_seq);
-        my $s2 = Bio::Seq->new(-id => "ALT", -seq => $self->seq);
+        my $s1 = Bio::Seq->new(-id => "REF", -alphabet => $alphabet, -seq => $self->reference_seq);
+        my $s2 = Bio::Seq->new(-id => "ALT", -alphabet => $alphabet, -seq => $self->seq);
 
         # get factory
         my $factory;
@@ -413,6 +418,11 @@ sub _get_SimpleAlign_obj {
 
         # create alignment
         $self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2);
+      }
+
+      # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
+      else {
+        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(align_seqs($self->reference_seq, $self->seq));
       }
     }
 
@@ -427,9 +437,11 @@ sub _get_SimpleAlign_obj {
 sub _create_SimpleAlign_from_sequence_pair {
   my ($self, $s1, $s2) = @_;
 
+  my $alphabet = $self->type eq 'cds' ? 'dna' : 'protein';
+
   my $aln = Bio::SimpleAlign->new();
-  $aln->add_seq(Bio::LocatableSeq->new(-id => "REF", -seq => $s1));
-  $aln->add_seq(Bio::LocatableSeq->new(-id => "ALT", -seq => $s2));
+  $aln->add_seq(Bio::LocatableSeq->new(-id => "REF", -alphabet => $alphabet, -seq => $s1));
+  $aln->add_seq(Bio::LocatableSeq->new(-id => "ALT", -alphabet => $alphabet, -seq => $s2));
 
   return $aln;
 }
