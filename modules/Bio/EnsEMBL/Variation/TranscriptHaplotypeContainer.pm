@@ -508,13 +508,13 @@ sub _init {
   my @new_vars = grep {$_->{_cds_mapping}} @$vfs;
   $self->_variation_features(\@new_vars);
   
-  # group vfs by sample
+  # group genotypes by sample and sort
   my %by_sample;
   push @{$by_sample{$_->sample->name}}, $_ for @{$self->get_all_SampleGenotypeFeatures};
   
   # do the transcript magic
   foreach my $sample(keys %by_sample) {
-    my $obj = $self->_mutate_sequences($by_sample{$sample});
+    my $obj = $self->_mutate_sequences($self->_filter_and_sort_genotypes($by_sample{$sample}), $sample);
     
     # store unique alt seqs so we only align each once
     foreach my $type(qw(cds protein)) {
@@ -665,10 +665,7 @@ sub _sample_ploidy {
     my $gts = $self->get_all_SampleGenotypeFeatures;
 
     if($gts && scalar @$gts) {
-      if(my $v = $gts->[0]->variation) {
-
-        $DB::single = 1;
-        
+      if(my $v = $gts->[0]->variation) {        
         %{$self->{_sample_ploidy}} =
           map {$_->sample->name => scalar @{$_->genotype}}
           @{$v->get_all_SampleGenotypes};
@@ -742,12 +739,26 @@ sub _get_mappings {
   }
 }
 
+## this subroutine filters out genotypes with no mappings
+## and sorts them into reverse order ready for applying to the sequence
+sub _filter_and_sort_genotypes {
+  my $self = shift;
+  my $gts = shift;
+
+  return [
+    sort {$b->variation_feature->{_cds_mapping}->start <=> $a->variation_feature->{_cds_mapping}->start}
+    grep {$_->variation_feature->{_cds_mapping}}
+    @$gts
+  ];
+}
+
 ## Applies a set of SampleGenotypeFeatures to the transcript sequence
 ## Returns a hashref that contains the info necessary to construct a
 ## TranscriptHaplotype object
 sub _mutate_sequences {
   my $self = shift;
   my $gts = shift;
+  my $sample_name = shift;
   
   my $fingerprint = $self->_fingerprint_gts($gts);
   
@@ -769,7 +780,7 @@ sub _mutate_sequences {
     my $mutated = {};
 
     # get sample ploidy
-    my $ploidy = $self->_sample_ploidy()->{$gts->[0]->sample->name} || $self->_default_ploidy();
+    my $ploidy = $self->_sample_ploidy()->{$sample_name} || $self->_default_ploidy();
   
     for my $hap(0..($ploidy - 1)) {
       my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
@@ -778,15 +789,12 @@ sub _mutate_sequences {
       # flag if indel observed, we need to align seqs later
       my $indel = 0;
     
-      # iterate through in reverse order
-      foreach my $gt(reverse @$gts) {
+      # iterate through, they are already sorted into reverse order by sequence mapping
+      foreach my $gt(@$gts) {
         my $vf = $gt->variation_feature;
         my ($s, $e) = ($vf->{start}, $vf->{end});
       
         my $mapping = $vf->{_cds_mapping};
-        next unless $mapping;
-
-        $DB::single = 1 unless $gt->genotype->[$hap];
       
         my $genotype = $gt->genotype->[$hap];
       
