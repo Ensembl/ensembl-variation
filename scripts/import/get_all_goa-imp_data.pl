@@ -78,7 +78,8 @@ my %species_list;
 my %species_found;
 
 
-my $sql  = qq{SHOW DATABASES LIKE '%$db_var_type\_$e_version%'};
+my $sql_var  = qq{SHOW DATABASES LIKE '%$db_var_type\_$e_version%'};
+my $sql_core = qq{SHOW DATABASES LIKE '%$db_core_type\_$e_version%'};
 
 my $sql1 = qq{
   SELECT t.translation_id, t.stable_id, t.transcript_id, x1.dbprimary_acc, x2.display_label, x2.description
@@ -97,6 +98,9 @@ my $sql1 = qq{
 
 foreach my $hostname (@hostnames) {
   
+  my $db_type = (scalar(keys(%species_list))) ? $db_core_type : $db_var_type;
+
+  my $sql = (scalar(keys(%species_list))) ? $sql_core : $sql_var;
   my $sth = get_connection_and_query($database, $hostname, $sql);
   
   # loop over databases
@@ -108,11 +112,12 @@ foreach my $hostname (@hostnames) {
     my %go_uniprot;
     my %gene_tr;
     
-    print "# $dbname\n";
-    print STDERR "# $dbname";
-    $dbname =~ /^(.+)_variation/;
+    $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1;
     
+    print "# $s_name\n";
+    print STDERR "# $s_name";
+
     if (%species_list) {
       if (!$species_list{$s_name}) {
         print STDERR " ... skipped\n";
@@ -121,11 +126,11 @@ foreach my $hostname (@hostnames) {
       $species_found{$s_name} = 1;
     }
     print STDERR "\n";
-    
+
     my $output_file = $output_dir."/".$s_name."_imp.txt"; 
     
     my $core_dbname = $dbname;
-       $core_dbname =~ s/variation/core/i;
+       $core_dbname =~ s/$db_type/$db_core_type/i;
 
     my ($translation_id, $translation, $transcript_id, $uniprot_id, $go_term, $go_desc);
     my $sth1 = get_connection_and_query($core_dbname, $hostname, $sql1);
