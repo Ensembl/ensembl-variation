@@ -24,45 +24,25 @@ use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
 
-our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $num_gaps,
-     $target_assembly, $cs_version_number, $size_diff, $version, $registry_file, $replace_data, $debug);
+our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE,
+     $version, $registry_file, $debug);
 
 GetOptions('species=s'         => \$species,
            'source_name=s'     => \$source_name,
            'input_file=s'      => \$input_file,
-           'input_dir=s'       => \$input_dir,
            'tmpdir=s'          => \$ImportUtils::TMP_DIR,
            'tmpfile=s'         => \$ImportUtils::TMP_FILE,
-           'mapping'           => \$mapping,
-           'gaps=i'            => \$num_gaps,
-           'target_assembly=s' => \$target_assembly,
-           'size_diff=i'       => \$size_diff,
            'version=i'         => \$version,
            'registry=s'        => \$registry_file,
-           'replace!'          => \$replace_data,
            'debug!'            => \$debug,
           );
 $registry_file ||= $Bin . "/ensembl.registry";
 $source_name   ||= 'DECIPHER';
-$num_gaps = 1 unless defined $num_gaps;
 
 usage('-species argument is required')    if (!$species);
-usage('-input_file or -input_dir argument is required') if (!$input_file and !$input_dir);
+usage('-input_file argument is required') if (!$input_file);
 usage('-version argument is required')    if (!$version);
 
-my @files;
-my $f_count = 1;
-my $f_nb    = 1;
-if ($input_dir) {
-  opendir(DIR, $input_dir) or die $!;
-  @files = readdir(DIR); 
-  @files = sort(@files);
-  close(DIR);
-  $f_nb = (scalar(@files)-2);
-}
-else {
-  @files = ($input_file);
-}
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
@@ -91,14 +71,6 @@ my $dbVar = $vdb->dbc->db_handle;
 my $csa = Bio::EnsEMBL::Registry->get_adaptor($species, "core", "coordsystem");
 our $default_cs = $csa->fetch_by_name("chromosome");
 
-
-# set the target assembly
-$target_assembly ||= $default_cs->version;
-
-# get the default CS version
-$cs_version_number = $target_assembly;
-$cs_version_number =~ s/\D//g;
-
 # Inheritance type
 my $inheritance_attrib_type = 'inheritance_type';
 my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$inheritance_attrib_type'};
@@ -123,62 +95,35 @@ my $source_id = source();
 
 pre_processing();
 
-foreach my $in_file (@files) {
-  next if ($in_file !~ /\.txt$/);
-  
-  my $msg ="File: $in_file ($f_count/$f_nb)";
-  print "$msg\n";
-  debug("\n##############################\n$msg\n##############################");
-  
-  $fname = undef;
-  if ($input_dir) {
-    $fname = "$input_dir/$in_file";
-  }
-  else {
-    $fname = $in_file;
-  }
-  
-  %num_mapped = ();
-  %num_not_mapped = ();
-  %samples = ();
-  $no_mapping_needed = 0;
-  $skipped = 0;
-  $failed = [];
-  $somatic_study = 0;
+%num_mapped = ();
+%num_not_mapped = ();
+%samples = ();
+$no_mapping_needed = 0;
+$skipped = 0;
+$failed = [];
+$somatic_study = 0;
   
 
-  # Parsing
-  parse_input($fname);
-  load_file_data();
+# Parsing
+parse_input($input_file);
+load_file_data();
 	
-	# Removing old data
-  remove_data() if (defined($replace_data) && defined($source_id));
-	
-  # Insertion
-  structural_variation();
-  failed_structural_variation();
-  structural_variation_feature();
-  #structural_variation_association();
-  #somatic_study_processing() if ($somatic_study == 1);
-  #structural_variation_set() if ($var_set_id);
-  structural_variation_sample();
-  phenotype_feature();
-  drop_tmp_table() if (!defined($debug));
-  debug(localtime()." Done!\n");
-  $f_count ++;
-}
+# Insertion
+structural_variation();
+failed_structural_variation();
+structural_variation_feature();
+structural_variation_sample();
+phenotype_feature();
+drop_tmp_table() if (!defined($debug));
+debug(localtime()." Done!\n");
 
 ## Post processings ##
 
 # Post processing for mouse annotation (delete duplicated entries in structural_variation_sample)
-#post_processing_annotation() if ($species =~ /mouse|mus/i);
 post_processing_feature();
-#post_processing_sample();
-#post_processing_phenotype();
 
 # Finishing methods
 meta_coord();
-#verifications(); # URLs
 cleanup() if (!defined($debug));
 
 debug(localtime()." All done!");
@@ -479,7 +424,6 @@ sub parse_input {
   my $infile = shift;
   
   debug(localtime()." Parse input file: $infile");
-  debug(localtime()." Start mapping features to $target_assembly if needed") if $mapping;
   
   open IN, $infile or die "Could not read from input file $infile\n";
   
@@ -496,120 +440,15 @@ sub parse_input {
 		
     my $current_line = $_;
     chomp ($current_line);
+    
     my $info = parse_line($current_line);
+            
+    my $data = generate_data_row($info);           
     
-    my $is_failed = 0;
-    
-    
-    #foreach my $info (@$infos) {
-    
-      ###### Mapping work ######  
-      if ($mapping && $assembly !~ /$cs_version_number/) {
-        
-        # get a slice on the old assembly
-        my $slice;
-        my $start_c = $info->{start};
-        my $end_c   = $info->{end};
-  
-        if (!$info->{start}) {
-          $start_c = ($info->{outer_start}) ? $info->{outer_start} : $info->{inner_start};
-        }
-        if (!$info->{end}) {
-          $end_c = ($info->{outer_end}) ? $info->{outer_end} : $info->{inner_end};
-        }
-  
-        eval { $slice = $sa->fetch_by_region('chromosome', $info->{chr}, $start_c, $end_c, 1, $assembly); };
-  
-        # check got the slice OK
-        if(!defined($slice)) {
-           warn("Structural variant '".$info->{ID}."' (study ".$header->{study}."): Unable to map from assembly $assembly or unable to retrieve slice ".$info->{chr}."\:$start_c\-$end_c");
-          $skipped++;
-          $num_not_mapped{$assembly}++;
-          $is_failed = 2;
-        }
-        else {
-          my $count = 0;
-          my ($min_start, $max_end) = (999999999, -999999999);
-          my $to_chr;
-    
-          # project the slice to the latest assembly
-          # this may produce several "segments"
-          foreach my $segment(@{$slice->project('chromosome', $target_assembly)}) {
-    
-              # get the slice that this segment is on
-            my $to_slice = $segment->to_Slice();
-    
-            # check this segment is on the same chrom
-            if((defined $to_chr) && ($to_chr ne $to_slice->seq_region_name)) {
-              $count = 0;
-              warn("Segments of ".$info->{ID}." map to different chromosomes ($to_chr and ", $to_slice->seq_region_name, ")");
-              $is_failed = 2;
-            }
-    
-            # get the chromosome name
-            $to_chr = $to_slice->seq_region_name;
-    
-            # get the slice start and end
-            my $to_start = $to_slice->start;
-            my $to_end = $to_slice->end;
-    
-            # now calculate the coords of the segment on the slice
-            $to_start = ($to_start + $segment->from_start) - 1;
-            $to_end = ($to_end + $segment->from_start) - 1;
-    
-            # store the min/max
-            $min_start = $to_start if $to_start < $min_start;
-            $max_end = $to_end if $to_end > $max_end;
-    
-            # print this segment
-            #print "$id\t$chr\t$start\t$end\tsize ",($end - $start + 1), "\t\-\>\t", $to_chr, "\t", $to_start, "\t", $to_end, " size ", ($to_end - $to_start + 1), "\n";
-          
-            $count++;
-          }
-      
-          #my $diff = abs(100 - (100 * (($end - $start + 1) / ($max_end - $min_start + 1))));
-  
-          #print "Before ",($end - $start + 1), " After ", ($max_end - $min_start + 1), " Diff $diff count $count\n";
-  
-          # allow gaps?
-          if((($count - 1) <= $num_gaps && $count && !$is_failed)) {# && $diff < $size_diff) {
-          
-            $num_mapped{$assembly}++ if (!$info->{is_ssv});
-        
-            $info->{chr}   = $to_chr;
-            $info->{start} = $min_start;
-            $info->{end}   = $max_end;
-        
-            # calculate inner/outer coords
-            $info->{outer_start} = $min_start - ($start_c - $info->{outer_start}) if $info->{outer_start} >= 1;
-            $info->{inner_start} = $min_start + ($info->{inner_start} - $start_c) if $info->{inner_start} >= 1;
-            $info->{inner_end}   = $max_end - ($end_c - $info->{inner_end}) if $info->{inner_end} >= 1;
-            $info->{outer_end}   = $max_end + ($info->{outer_end} - $end_c) if $info->{outer_end} >= 1;
-
-          }
-          else {
-            if (!$info->{is_ssv}) {
-              warn ("Structural variant '".$info->{ID}."' (study ".$header->{study}.") has location '$assembly:".$info->{chr}.":$start_c\-$end_c' , which could not be re-mapped to $target_assembly. This variant will be labelled as failed");
-              $num_not_mapped{$assembly}++;
-            }  
-            $is_failed = 1;
-          }
-        }
-      }
-    
-      $info->{is_failed} = $is_failed;
-               
-      my $data = generate_data_row($info);           
-    
-      print OUT (join "\t", @{$data})."\n";
-    #}
+    print OUT (join "\t", @{$data})."\n";
   }
   close IN;
   close OUT;
-  
-  if ($mapping && $assembly !~ /$cs_version_number/) {
-    debug(localtime()." Finished SV mapping:\n\t\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\t\tFailed: ".(join " ", %num_not_mapped)." (In no existing chromosome: $skipped)");
-  }
 }
 
 
@@ -783,46 +622,6 @@ sub cleanup {
 
 #### Other methods ####
 
-sub remove_data {
-  
-  debug(localtime()." Remove the structural variation data of this study");
-
-  # structural_variation_sample
-  $dbVar->do(qq{ DELETE from $svs_table WHERE structural_variation_id IN 
-                 (SELECT structural_variation_id FROM $sv_table WHERE source_id=$source_id);
-            });
-  # structural_variation_association          
-  $dbVar->do(qq{ DELETE from $sva_table WHERE structural_variation_id IN 
-                 (SELECT structural_variation_id FROM $sv_table WHERE source_id=$source_id)
-            });  
-  # structural_variation_feature                  
-  $dbVar->do(qq{ DELETE from $svf_table WHERE structural_variation_id IN 
-                 (SELECT structural_variation_id FROM $sv_table WHERE source_id=$source_id)
-            });
-  # variation_set_structural_variation          
-  $dbVar->do(qq{ DELETE from $set_table WHERE structural_variation_id IN 
-                 (SELECT structural_variation_id FROM $sv_table WHERE source_id=$source_id)
-            });
-						
-	# phenotype_feature_attrib                  
-  $dbVar->do(qq{ DELETE from $pfa_table WHERE phenotype_feature_id IN 
-                 (SELECT phenotype_feature_id FROM $pf_table WHERE source_id=$source_id AND 
-                 (type='StructuralVariation' OR type='SupportingStructuralVariation'))
-            }); 					          
-  # phenotype_feature                  
-  $dbVar->do(qq{ DELETE from $pf_table WHERE object_id IN 
-                 (SELECT variation_name FROM $sv_table WHERE source_id=$source_id) AND 
-                 (type='StructuralVariation' OR type='SupportingStructuralVariation')
-            });          
-  # failed_structural_variation
-  $dbVar->do(qq{ DELETE from $sv_failed WHERE structural_variation_id IN 
-                 (SELECT structural_variation_id FROM $sv_table WHERE source_id=$source_id)
-            });
-  # structural_variation
-  $dbVar->do(qq{ DELETE from $sv_table WHERE source_id=$source_id });                  
-}
-
-
 sub generate_data_row {
   my $info = shift;
  
@@ -857,12 +656,8 @@ Options -
   -tmpfile         : (optional)
   -input_file      : file containing DGVa data dump (required if no input_dir)
   -input_dir       : directory containing DGVa data dump (required if no input_file)
-  -mapping         : if set, the data will be mapped to $target_assembly using the Ensembl API
-  -gaps            : number of gaps allowed in mapping (defaults to 1) (optional)
-  -size_diff       : % difference allowed in size after mapping (optional)
   -version         : version number of the data (required)
   -registry        : registry file (optional)
-  -replace         : flag to remove the existing study data from the database before import them (optional)
   -debug           : flag to keep the $temp_table table (optional)
   };
 }

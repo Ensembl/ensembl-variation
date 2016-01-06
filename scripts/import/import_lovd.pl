@@ -58,7 +58,7 @@ my $dbh = $registry->get_adaptor(
 
 open my $INPUT, "<$import_file" or die "Can't open '$import_file'";    
     
-# check to see if we already have the COSMIC source
+# check to see if we already have the LOVD source
 
 my $src_sth = $dbh->prepare(qq{
     SELECT  source_id
