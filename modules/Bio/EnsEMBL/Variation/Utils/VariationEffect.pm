@@ -759,6 +759,9 @@ sub affects_start_codon {
 
     unless(exists($cache->{affects_start_codon})) {
 
+        # default
+        $cache->{affects_start_codon} = 0;
+
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         $bvf  ||= $bvfo->base_variation_feature;
@@ -1045,17 +1048,29 @@ sub frameshift {
 
 sub partial_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    
-    return 0 unless defined $bvfo->translation_start;
 
-    my $cds_length = length $bvfo->_translateable_seq;
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-    my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
+    unless(exists($cache->{_partial_codon})) {
 
-    my $last_codon_length = $cds_length - ($codon_cds_start - 1);
-    
-    return ( $last_codon_length < 3 and $last_codon_length > 0 );
+        # default
+        $cache->{_partial_codon} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        
+        return 0 unless defined $bvfo->translation_start;
+
+        my $cds_length = length $bvfo->_translateable_seq;
+
+        my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
+
+        my $last_codon_length = $cds_length - ($codon_cds_start - 1);
+        
+        $cache->{_partial_codon} = ( $last_codon_length < 3 and $last_codon_length > 0 );
+    }
+
+    return $cache->{_partial_codon};
 }
 
 sub coding_unknown {
