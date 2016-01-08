@@ -126,7 +126,7 @@ sub files {
 
     unless(@files) {
       foreach my $p(@{$self->params}) {
-        push @files, $p if $p =~ /gz/ || -e $p;
+        push @files, $p if $p =~ /\.gz$/ || -e $p;
       }
     }
 
