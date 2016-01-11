@@ -109,7 +109,7 @@ sub run {
   # write VFs to table file for web search indexes
   if($gene_name) {
     my $fh = FileHandle->new();
-    $fh->open(">>".$self->param('pipeline_dir')."/variation_genename.txt");
+    $fh->open(">>".$self->param('pipeline_dir')."/variation_genename.txt") or die "Cannot open dump file ".$self->param('pipeline_dir')."/variation_genename.txt: $!";
 
     print STDERR "Getting flock for variation_hgvs\n" if $DEBUG;
     flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
@@ -271,7 +271,7 @@ sub dump_hgvs_var {
 
   if($hgvs_by_var) {
     my $fh = FileHandle->new();
-    $fh->open(">>".$self->param('pipeline_dir')."/variation_hgvs.txt");
+    $fh->open(">>".$self->param('pipeline_dir')."/variation_hgvs.txt") or die "Cannot open dump file ".$self->param('pipeline_dir')."/variation_hgvs.txt: $!";
 
     print STDERR "Getting flock for variation_hgvs\n" if $DEBUG;
     flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
