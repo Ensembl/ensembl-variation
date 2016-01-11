@@ -147,7 +147,7 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'ens-variation',
+        hive_db_host    => 'ens-variation2',
         hive_db_port    => 3306,
         hive_db_user    => 'ensadmin',
 
