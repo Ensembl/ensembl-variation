@@ -34,6 +34,8 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
+use File::Path qw(mkpath);
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
@@ -130,6 +132,9 @@ sub fetch_input {
 
         # remove temporary files if they exist
         my $dir = $self->param('pipeline_dir');
+        unless(-d $dir) {
+          mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
+        }
         unlink("$dir/variation_hgvs.txt");
         unlink("$dir/variation_genename.txt");        
 
