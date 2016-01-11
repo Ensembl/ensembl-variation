@@ -31,6 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect;
 use strict;
 use warnings;
 use ImportUtils qw(load);
+use Sys::Hostname;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -44,22 +45,28 @@ sub run {
   my $dir = $self->required_param('pipeline_dir');
   $ImportUtils::TMP_DIR = $dir;
 
+  my $host = hostname;
+
   # do unique sort on command line, it's faster than relying on MySQL's unique index
-  foreach my $file(qw(variation_hgvs.txt variation_genename.txt)) {
+  foreach my $file(grep {-e "$dir/$_"} qw(variation_hgvs.txt variation_genename.txt)) {
     system(
       sprintf(
-        'sort --parallel=4 -u %s/%s > %s/%s.unique',
-        $dir, $file, $dir, $file
+        'sort %s -u %s/%s > %s/%s.unique',
+        $host =~ /sanger/ ? '--parallel=4' : '', $dir, $file, $dir, $file
       )
     ) and die("ERROR: Failed to unique sort $file");
-    unlink("$dir/$file");
+    system("gzip $dir/$file");# unlink("$dir/$file");
   }
 
-  $ImportUtils::TMP_FILE = 'variation_hgvs.txt.unique';
-  load($dbc, qw(variation_hgvs variation_id hgvs_name));
+  if(-e $dir.'/variation_hgvs.txt.unique') {
+    $ImportUtils::TMP_FILE = 'variation_hgvs.txt.unique';
+    load($dbc, qw(variation_hgvs variation_id hgvs_name));
+  }
 
-  $ImportUtils::TMP_FILE = 'variation_genename.txt.unique';
-  load($dbc, qw(variation_genename variation_id gene_name));
+  if(-e $dir.'/variation_genename.txt.unique') {
+    $ImportUtils::TMP_FILE = 'variation_genename.txt.unique';
+    load($dbc, qw(variation_genename variation_id gene_name));
+  }
 
   return;
 }
