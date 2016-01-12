@@ -337,7 +337,7 @@ sub import{
 	-is_significant => 1,
 	-type           => $type,
 	-object         => $feature_object,
-	-source_object  => $source,
+	-source         => $source,
 	-attribs        => \%attribs
 	);
         $pheno_feat_adaptor->store($phenofeat);
@@ -357,7 +357,6 @@ sub get_phenotype{
     $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
     $desc =~s /\'//g;            ## remove '
 
-    
     my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
 
     unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){

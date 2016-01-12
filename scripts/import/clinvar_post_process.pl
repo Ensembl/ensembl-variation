@@ -148,7 +148,7 @@ sub get_set{
     };
 
     my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib 
-                                           where value = ? and attrib_type_id = 9]);
+                                           where value = ? and attrib_type_id = 477]);
     
     my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id 
                                         from variation_set, attrib
@@ -254,7 +254,7 @@ sub check_counts{
    my $varf =  $varf_count_ext_sth->fetchall_arrayref();
    warn "$varf->[0]->[0] variation_feature entries with ClinVar statuses\n";
 
-   foreach my $set ('clinically associated', 'All ClinVar'){
+   foreach my $set ('Clinically associated variants', 'All ClinVar'){
        $set_count_ext_sth->execute($set)||die;
        my $set_count =  $set_count_ext_sth->fetchall_arrayref();
        warn "$set_count->[0]->[0] variation entries in $set set\n";
