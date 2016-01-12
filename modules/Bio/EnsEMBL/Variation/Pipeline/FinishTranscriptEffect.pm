@@ -52,7 +52,8 @@ sub run {
     system(
       sprintf(
         'sort %s -u %s/%s > %s/%s.unique',
-        $host =~ /sanger/ ? '--parallel=4' : '', $dir, $file, $dir, $file
+        (($host =~ /sanger/ || $host =~ /^bc/) ? '--parallel=4' : ''),
+        $dir, $file, $dir, $file
       )
     ) and die("ERROR: Failed to unique sort $file");
     system("gzip $dir/$file");# unlink("$dir/$file");
