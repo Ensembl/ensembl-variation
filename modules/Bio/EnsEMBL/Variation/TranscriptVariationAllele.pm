@@ -1153,14 +1153,12 @@ sub _get_hgvs_protein_type {
     if($hgvs_notation->{ref} eq "-" || $hgvs_notation->{ref} eq "") {
       $hgvs_notation->{type} = "ins";
     }
-    elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
-      $hgvs_notation->{type} = ">";
-    }
-
     elsif($hgvs_notation->{alt} eq "" || $hgvs_notation->{alt} eq "-") {
       $hgvs_notation->{type} = "del";
     }
-
+    elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+      $hgvs_notation->{type} = ">";
+    }
     elsif(
       (length($hgvs_notation->{alt}) >0 && length($hgvs_notation->{ref}) >0) &&
       (length($hgvs_notation->{alt}) ne length($hgvs_notation->{ref}))
