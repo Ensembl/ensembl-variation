@@ -755,7 +755,7 @@ sub _ld_calc {
     my $slice = $genotype->{'slice'};
     my $variations = $vfa->fetch_all_by_Slice($slice);
     my $region_Slice = $slice->seq_region_Slice();
-    map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$variations};
+    $pos_vf->{$_->start} = $_ for map {$_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$variations};
   }
   
   my %_pop_ids;
