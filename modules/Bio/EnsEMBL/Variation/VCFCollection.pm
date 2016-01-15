@@ -707,8 +707,12 @@ sub _get_all_LD_genotypes_by_Slice {
   
   my %gts;
   
-  while($vcf->{record} && $vcf->get_start <= $slice->end) {
-    $gts{$vcf->get_raw_start} = $vcf->get_samples_genotypes(\@sample_names);
+  while($vcf->{record}) {
+    my $start = $vcf->get_raw_start;
+    last if $start > $slice->end;
+    
+    $gts{$start} = $vcf->get_samples_genotypes(\@sample_names) if $vcf->is_polymorphic(\@sample_names);
+
     $vcf->next();
   }
   
@@ -1029,21 +1033,6 @@ sub _get_all_population_names {
     $self->{_population_names} = \@names;
   }
   return $self->{_population_names};
-}
-
-sub _get_all_location2name_by_Slice {
-  my $self = shift;
-  my $slice = shift;
-  return {} unless $self->_seek_by_Slice($slice);
- 
-  my $vcf = $self->_current();
-
-  my $vfs = {};
-  while ($vcf->{record} && $vcf->get_start <= $slice->end) {
-    $vfs->{$vcf->get_start} = $vcf->get_IDs->[0];
-    $vcf->next;
-  }
-  return $vfs;
 }
 
 

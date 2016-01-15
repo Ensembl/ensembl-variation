@@ -752,20 +752,10 @@ sub _ld_calc {
       }
     }
     #create a hash that maps the position->vf_id
-    my $slice = $genotype->{'slice'}; 
-    if ($use_vcf) {
-      my $vca = $self->db->get_VCFCollectionAdaptor();
-      foreach my $vc (@{$vca->fetch_all}) {
-        my $vfs = $vc->_get_all_location2name_by_Slice($slice);
-        foreach my $position (keys %$vfs) {
-          $pos_vf->{$position} = $vfs->{$position};
-        }  
-      }
-    } else {
-      my $variations = $vfa->fetch_all_by_Slice($slice);
-      my $region_Slice = $slice->seq_region_Slice();
-      map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
-    }
+    my $slice = $genotype->{'slice'};
+    my $variations = $vfa->fetch_all_by_Slice($slice);
+    my $region_Slice = $slice->seq_region_Slice();
+    map {$pos_vf->{$_->seq_region_start} = $_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$variations};
   }
   
   my %_pop_ids;
@@ -854,37 +844,13 @@ sub _ld_calc {
       if (!defined $pos_vf->{$ld_region_start} || !defined $pos_vf->{$ld_region_end}){
         next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
       }
-      if ($use_vcf) {
-        my $v_name1 = $pos_vf->{$ld_region_start};
-        my $v_name2 = $pos_vf->{$ld_region_end};
-        my ($v1, $v2, $vf1, $vf2);
-        $vf1 = $name2vf->{$v_name1};
-        $vf2 = $name2vf->{$v_name2};
-        if (!$vf1) {
-          $v1 = $va->fetch_by_name($v_name1);
-          $vf1 =  (grep {$_->seq_region_start == $ld_region_start} @{$v1->get_all_VariationFeatures})[0] || $v1->get_all_VariationFeatures()->[0];
-          $name2vf->{$v_name1} = $vf1;
-        }
-        if (!$vf2) {
-          $v2 = $va->fetch_by_name($v_name2);
-          $vf2 =  (grep {$_->seq_region_start == $ld_region_end} @{$v2->get_all_VariationFeatures})[0] || $v2->get_all_VariationFeatures()->[0];
-          $name2vf->{$v_name2} = $vf2;
-        }
-        if ($vf1 && $vf2) {
-          $vf_id1 = $vf1->dbID();
-          $vf_id2 = $vf2->dbID();
-          $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
-          $vf_objects{$vf_id1} = $vf1;
-          $vf_objects{$vf_id2} = $vf2;
-        }
-      } else {
-        $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
-        $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
       
-        $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
-        $vf_objects{$vf_id1} = $pos_vf->{$ld_region_start};
-        $vf_objects{$vf_id2} = $pos_vf->{$ld_region_end};
-      }
+      $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
+      $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
+    
+      $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
+      $vf_objects{$vf_id1} = $pos_vf->{$ld_region_start};
+      $vf_objects{$vf_id2} = $pos_vf->{$ld_region_end};
 	  
       $_pop_ids{$population_id} = 1;	  
     }
