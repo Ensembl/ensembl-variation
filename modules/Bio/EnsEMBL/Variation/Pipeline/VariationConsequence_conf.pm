@@ -131,6 +131,9 @@ sub default_options {
         # points to a FASTA file, much faster than using DB for sequence lookup if available
         fasta => undef,
 
+        # sets the maximum distance to a transcript for which up/downstream consequences are assessed
+        max_distance => undef,
+
         # these flags control which parts of the pipeline are run
 
         run_transcript_effect   => 1,
@@ -218,6 +221,7 @@ sub pipeline_analyses {
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
                     pipeline_dir => $self->o('pipeline_dir'),
+                    max_distance => $self->o('max_distance'),
                     @common_params,
                 },
                 -input_ids      => [],
@@ -236,6 +240,7 @@ sub pipeline_analyses {
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
                     pipeline_dir => $self->o('pipeline_dir'),
+                    max_distance => $self->o('max_distance'),
                     @common_params,
                 },
                 -input_ids      => [],

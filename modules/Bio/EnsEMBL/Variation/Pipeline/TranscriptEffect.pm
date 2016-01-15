@@ -61,6 +61,19 @@ sub run {
   #   $variations_to_include = { map { $_ => 1 } @$vars };
   # }
 
+  # set max distance
+  my $opt_max_distance = $self->param('max_distance');
+  my $max_distance;
+
+  if(defined($opt_max_distance)) {
+    $max_distance = $opt_max_distance;
+    $Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE = $opt_max_distance;
+    $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE = $opt_max_distance;
+  }
+  else {
+    $max_distance = MAX_DISTANCE_FROM_TRANSCRIPT;
+  }
+
   my $core_dba = $self->get_species_adaptor('core');
   my $var_dba = $self->get_species_adaptor('variation');
   
@@ -91,7 +104,7 @@ sub run {
 
   my $slice = $sa->fetch_by_gene_stable_id(
     $gene->stable_id, 
-    MAX_DISTANCE_FROM_TRANSCRIPT
+    $max_distance
   ) or die "failed to get slice around gene: ".$gene->stable_id;
   
   # call seq here to help cache
@@ -165,7 +178,7 @@ sub run {
         next unless $variations_to_include->{$vf->variation_name};
       }
 
-      next unless overlap($vf->start, $vf->end, $transcript->start - MAX_DISTANCE_FROM_TRANSCRIPT, $transcript->end + MAX_DISTANCE_FROM_TRANSCRIPT);
+      next unless overlap($vf->start, $vf->end, $transcript->start - $max_distance, $transcript->end + $max_distance);
 
       my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
         -transcript     => $transcript,
@@ -228,8 +241,6 @@ sub run {
       }                       
     }
   }
-
-  close OUT;
 
   ## uncomment this if using BEHAVIOUR 2 above
   # if(@write_data) {
