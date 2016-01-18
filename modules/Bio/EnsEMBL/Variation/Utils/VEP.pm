@@ -62,7 +62,20 @@ use IO::Socket;
 use IO::Select;
 use Exporter;
 
+my $CAN_USE_TABIX_PM;
+
 BEGIN {
+  if (eval { require Tabix; 1 }) {
+    $CAN_USE_TABIX_PM = 1;
+  }
+  else {
+    $CAN_USE_TABIX_PM = 0;
+
+    # test tabix
+    die "ERROR: tabix does not seem to be in your path\n" unless `which tabix 2>&1` =~ /tabix$/;
+  }
+
+  # use Sereal
   eval q{ use Sereal; 1; };
 }
 
@@ -524,10 +537,10 @@ sub parse_vcf {
         $chr = undef;
         $start = undef;
         
-        foreach my $pair(split /\;/, $data[7]) {
-            my ($key, $value) = split /\=/, $pair;
+        foreach my $pair(split ';', $data[7]) {
+            my ($key, $value) = split '=', $pair;
             if($key eq 'GP') {
-                ($chr, $start) = split /\:/, $value;
+                ($chr, $start) = split ':', $value;
                 $end = $start;
             }
         }
@@ -547,8 +560,8 @@ sub parse_vcf {
         # parse INFO field
         my %info = ();
         
-        foreach my $bit(split /\;/, ($data[7] || '')) {
-            my ($key, $value) = split /\=/, $bit;
+        foreach my $bit(split ';', ($data[7] || '')) {
+            my ($key, $value) = split '=', $bit;
             $info{$key} = $value;
         }
         
@@ -567,13 +580,13 @@ sub parse_vcf {
         my ($min_start, $max_start, $min_end, $max_end);
         
         if(defined($info{CIPOS})) {
-            my ($low, $high) = split /\,/, $info{CIPOS};
+            my ($low, $high) = split ',', $info{CIPOS};
             $min_start = $start + $low;
             $max_start = $start + $high;
         }
         
         if(defined($info{CIEND})) {
-            my ($low, $high) = split /\,/, $info{CIEND};
+            my ($low, $high) = split ',', $info{CIEND};
             $min_end = $end + $low;
             $max_end = $end + $high;
         }
@@ -632,7 +645,7 @@ sub parse_vcf {
 
         # find out if any of the alt alleles make this an insertion or a deletion
         my ($is_indel, $is_sub, $ins_count, $total_count);
-        foreach my $alt_allele(split /\,/, $alt) {
+        foreach my $alt_allele(split ',', $alt) {
             $is_indel = 1 if $alt_allele =~ /^[DI]/;
             $is_indel = 1 if length($alt_allele) != length($ref);
             $is_sub = 1 if length($alt_allele) == length($ref);
@@ -647,20 +660,20 @@ sub parse_vcf {
                 
                 # find out if all the alts start with the same base
                 # ignore "*"-types
-                my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} ($ref, split(/\,/, $alt));
+                my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} ($ref, split(',', $alt));
                 
                 if(scalar keys %first_bases == 1) {
                     $ref = substr($ref, 1) || '-';
                     $start++;
                 
-                    foreach my $alt_allele(split /\,/, $alt) {
+                    foreach my $alt_allele(split ',', $alt) {
                         $alt_allele = substr($alt_allele, 1) unless $alt_allele =~ /\*/;
                         $alt_allele = '-' if $alt_allele eq '';
                         push @alts, $alt_allele;
                     }
                 }
                 else {
-                    push @alts, split(/\,/, $alt);
+                    push @alts, split(',', $alt);
                 }
                 
                 $alt = join "/", @alts;
@@ -704,7 +717,7 @@ sub parse_vcf {
         
         # individuals?
         if(defined($config->{individual})) {
-            my @alleles = split /\//, $ref.'/'.$original_alt;
+            my @alleles = split '\/', $ref.'/'.$original_alt;
             
             my @return;
             
@@ -712,7 +725,7 @@ sub parse_vcf {
                 
                 # get alleles present in this individual
                 my @bits;
-                my $gt = (split /\:/, $data[$config->{ind_cols}->{$ind}])[0];
+                my $gt = (split ':', $data[$config->{ind_cols}->{$ind}])[0];
                 
                 my $phased = ($gt =~ /\|/ ? 1 : 0);
                 
@@ -805,7 +818,7 @@ sub parse_pileup {
     
     # in/del
     else {
-        my %tmp_hash = map {$_ => 1} split /\//, $data[3];
+        my %tmp_hash = map {$_ => 1} split '\/', $data[3];
         my @genotype = keys %tmp_hash;
         
         foreach my $allele(@genotype){
@@ -924,7 +937,7 @@ sub convert_to_vcf {
     # look for imbalance in the allele string
     if($vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
         my %allele_lengths;
-        my @alleles = split /\//, $vf->allele_string;
+        my @alleles = split '\/', $vf->allele_string;
         
         map {reverse_comp(\$_)} @alleles if $vf->strand < 0;
         
@@ -1404,11 +1417,18 @@ sub vf_list_to_cons {
     my @non_variants = grep {$_->{non_variant}} @$listref;
     
     # check existing VFs
-    if(defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' && !defined($config->{database})) {
-      check_existing_tabix($config, $listref) if defined($config->{check_existing});
-    }
-    else {
-      check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});
+    if(defined($config->{check_existing})) {
+      if(defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' && !defined($config->{database})) {
+        if($CAN_USE_TABIX_PM) {
+          check_existing_tabix_pm($config, $listref);
+        }
+        else {
+          check_existing_tabix($config, $listref);
+        }
+      }
+      else {
+        check_existing_hash($config, \%vf_hash);
+      }
     }
     
     my $new_listref = [];
@@ -3254,7 +3274,7 @@ sub validate_vf {
     }
     
     # check length of reference matches seq length spanned
-    my @alleles = split /\//, $vf->{allele_string};
+    my @alleles = split '\/', $vf->{allele_string};
     my $ref_allele = shift @alleles;
     my $tmp_ref_allele = $ref_allele;
     $tmp_ref_allele =~ s/\-//g;
@@ -3715,11 +3735,11 @@ sub fetch_transcripts {
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
     
     foreach my $chr(keys %{$regions}) {
-        foreach my $region(sort {(split /\-/, $a)[0] <=> (split /\-/, $b)[1]} @{$regions->{$chr}}) {
+        foreach my $region(sort {(split '-', $a)[0] <=> (split '-', $b)[1]} @{$regions->{$chr}}) {
             progress($config, $counter++, $region_count);
             
             # skip regions beyond the end of the chr
-            next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
+            next if defined($slice_cache->{$chr}) && (split '-', $region)[0] > $slice_cache->{$chr}->length;
             
             next if defined($config->{loaded_tr}->{$chr}->{$region});
             
@@ -3914,13 +3934,13 @@ sub fetch_regfeats {
     debug("Reading regulatory data from cache and/or database") unless defined($config->{quiet});
     
     foreach my $chr(keys %$regions) {
-        foreach my $region(sort {(split /\-/, $a)[0] cmp (split /\-/, $b)[1]} @{$regions->{$chr}}) {
+        foreach my $region(sort {(split '-', $a)[0] cmp (split '-', $b)[1]} @{$regions->{$chr}}) {
             progress($config, $counter++, $region_count);
             
             next if defined($config->{loaded_rf}->{$chr}->{$region});
             
             # skip regions beyond the end of the chr
-            next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
+            next if defined($slice_cache->{$chr}) && (split '-', $region)[0] > $slice_cache->{$chr}->length;
             
             # force quiet so other methods don't mess up the progress bar
             my $quiet = $config->{quiet};
@@ -4228,6 +4248,52 @@ sub check_existing_tabix {
   end_progress($config);
 }
 
+sub check_existing_tabix_pm {
+  my $config = shift;
+  my $listref = shift;
+  
+  debug("Checking for existing variations") unless defined($config->{quiet});
+  
+  # we only care about non-SVs here
+  my %by_chr;
+  push @{$by_chr{$_->{chr}}}, $_ for grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')} @$listref;
+  
+  my $total = scalar @$listref;
+  my $p = 0;
+  
+  foreach my $chr(keys %by_chr) {
+
+    my $file = get_dump_file_name($config, $chr, "all", "vars");
+    next unless -e $file;
+    my $tabix_obj = $config->{_vf_tabix}->{$chr} ||= Tabix->new(-data => $file);
+
+    foreach my $vf(@{$by_chr{$chr}}) {
+      progress($config, $p++, $total);
+      
+      my $iter = $tabix_obj->query($vf->{chr}, $vf->{start} - 1, $vf->{end} + 1);
+
+      while(my $line = $tabix_obj->read($iter)) {
+        chomp $line;
+        my $existing = parse_variation($config, $line);
+
+        if(
+          $existing->{start} == $vf->{start} &&
+          $existing->{failed} <= $config->{failed} &&
+          !is_var_novel($config, $existing, $vf)
+        ) {
+          push @{$vf->{existing}}, $existing unless
+            grep {$_->{variation_name} eq $existing->{variation_name}}
+            @{$vf->{existing} || []};
+        }
+      }
+      
+      $vf->{existing} ||= [];
+    }
+  }
+  
+  end_progress($config);
+}
+
 
 # gets overlapping SVs for a vf_hash
 sub check_svs_hash {
@@ -4398,7 +4464,7 @@ sub add_region {
     my $i = 0;
     
     while ($i < scalar @$region_list) {
-        my ($region_start, $region_end) = split /\-/, $region_list->[$i];
+        my ($region_start, $region_end) = split '-', $region_list->[$i];
         
         if($start <= $region_end && $end >= $region_start) {
             my $new_region_start = ($start < $end ? $start : $end) - $up_down_size;
@@ -4438,11 +4504,11 @@ sub merge_regions {
         
         for my $i(0..$max_index) {
             next if $skip{$i};
-            my ($s, $e) = split /\-/, $include_regions->{$chr}[$i];
+            my ($s, $e) = split '-', $include_regions->{$chr}[$i];
             
             for my $j(($i+1)..$max_index) {
                 next if $skip{$j};
-                my ($ns, $ne) = split /\-/, $include_regions->{$chr}[$j];
+                my ($ns, $ne) = split '-', $include_regions->{$chr}[$j];
                 
                 if($s <= ($ne + $consecutive) && $e >= ($ns - $consecutive)) {
                     $s = $ns if $ns < $s;
@@ -4479,7 +4545,7 @@ sub convert_regions {
         my %temp_regions;
         
         foreach my $region(@{$regions->{$chr}}) {
-            my ($s, $e) = split /\-/, $region;
+            my ($s, $e) = split '-', $region;
             
             my $low = int ($s / $region_size);
             my $high = int ($e / $region_size) + 1;
@@ -4524,7 +4590,7 @@ sub prune_cache {
         # get total area spanned by regions    
         my ($min, $max);
         foreach my $region(@{$regions->{$chr}}) {
-            my ($s, $e) = split /\-/, $region;
+            my ($s, $e) = split '-', $region;
             $min = $s if !defined($min) or $s < $min;
             $max = $e if !defined($max) or $e > $max;
         }
@@ -4632,7 +4698,7 @@ sub cache_transcripts {
         foreach my $region(@{$include_regions->{$chr}}) {
             progress($config, $i++, $region_count || $config->{region_count});
             
-            my ($s, $e) = split /\-/, $region;
+            my ($s, $e) = split '-', $region;
             
             # adjust relative to seq_region
             $s = ($s - $slice->start) + 1;
@@ -5239,7 +5305,8 @@ sub parse_variation {
   my $line = shift;
   
   my @cols = @{get_variation_columns($config)};
-  my @data = split / |\t/, $line;
+  my $delim = defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' ? "\t" : " ";
+  my @data = split $delim, $line;
   
   # assumption fix for old cache files
   if(scalar @data > scalar @cols) {
@@ -5519,7 +5586,7 @@ sub cache_reg_feats {
         foreach my $region(@{$include_regions->{$chr}}) {
             progress($config, $i++, $region_count || $config->{region_count});
             
-            my ($s, $e) = split /\-/, $region;
+            my ($s, $e) = split '-', $region;
             
             # adjust relative to seq_region
             $s = ($s - $slice->start) + 1;
@@ -5772,7 +5839,7 @@ sub cache_custom_annotation {
                     die "\nERROR: Could not find temporary directory ".$config->{tmpdir}." - use --tmpdir [dir] to define an existing directory\n" unless -d $config->{tmpdir};
                     
                     foreach my $region(@tmp_regions) {
-                        my ($s, $e) = split /\-/, $region;
+                        my ($s, $e) = split '-', $region;
                         my $tmp_file = $config->{tmpdir}.'/vep_tmp_'.$$.'_'.$tmp_chr.'_'.$s.'_'.$e;
                         push @tmp_files, $tmp_file;
                         my $bigwig_file = $custom->{file};
@@ -5816,7 +5883,7 @@ sub cache_custom_annotation {
                         $error_flag = 0;
                     }
                     
-                    my @data = split /\t/, $_;
+                    my @data = split "\t", $_;
                     
                     my $feature;
                     
@@ -5877,7 +5944,7 @@ sub cache_custom_annotation {
                             $tmp_params{type} =~ s/^\#//g;
                             
                             foreach my $pair(@split) {
-                                my ($key, $value) = split /\=/, $pair;
+                                my ($key, $value) = split '=', $pair;
                                 $tmp_params{$key} = $value;
                             }
                             
@@ -5957,8 +6024,8 @@ sub build_full_cache {
   if(lc($config->{build}) ne 'all') {
     my @i;
     
-    foreach my $r(split(/\,/, $config->{build})) {
-      my ($f, $t) = split(/\-/, $r);
+    foreach my $r(split(',', $config->{build})) {
+      my ($f, $t) = split('-', $r);
       push @i, ($t ? ($f..$t) : $f);
     }
     
@@ -6250,13 +6317,13 @@ sub read_cache_info {
   while(<IN>) {
     next if /^#/;
     chomp;
-    my ($param, $value) = split /\t/;
+    my ($param, $value) = split "\t";
     
     if($param =~ s/^source_//) {
       $config->{version_data}->{$param} = $value;
     }
     elsif($param =~ /variation_col/) {
-      $config->{'cache_'.$param} = [split /\,/, $value];
+      $config->{'cache_'.$param} = [split ',', $value];
     }
     else {
       $config->{'cache_'.$param} = $value unless defined $value && $value eq '-';
@@ -6414,10 +6481,10 @@ sub is_var_novel {
     if(defined($config->{check_alleles})) {
         my %existing_alleles;
         
-        $existing_alleles{$_} = 1 for split /\//, $existing_var->{allele_string};
+        $existing_alleles{$_} = 1 for split '\/', $existing_var->{allele_string};
         
         my $seen_new = 0;
-        foreach my $a(split /\//, ($new_var->allele_string || "")) {
+        foreach my $a(split '\/', ($new_var->allele_string || "")) {
             reverse_comp(\$a) if $new_var->strand ne $existing_var->{strand};
             $seen_new = 1 unless defined $existing_alleles{$a};
         }
@@ -6448,7 +6515,7 @@ sub check_frequencies {
     # going to the DB
     if($freq_pop =~ /1kg|esp/i) {
         my $freq;
-        my $sub_pop = uc((split /\_/, $freq_pop)[-1]);
+        my $sub_pop = uc((split '_', $freq_pop)[-1]);
         
         $freq = $var->{minor_allele_freq} if $sub_pop =~ /all/i;
         
@@ -6468,7 +6535,7 @@ sub check_frequencies {
     if(defined($config->{va}) && $checked_cache == 0) {
         my $v = $config->{va}->fetch_by_name($var_name);
         
-        my $freq_pop_name = (split /\_/, $freq_pop)[-1];
+        my $freq_pop_name = (split '_', $freq_pop)[-1];
         $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap|any/;
         
         foreach my $a(@{$v->get_all_Alleles}) {
@@ -6504,7 +6571,7 @@ sub get_variations_in_region {
     my $chr = shift;
     my $region = shift;
     
-    my ($start, $end) = split /\-/, $region;
+    my ($start, $end) = split '-', $region;
     
     my %variations;
     
