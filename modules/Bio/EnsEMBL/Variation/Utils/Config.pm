@@ -221,6 +221,11 @@ our @VARIATION_CLASSES = (
         SO_term => 'Alu_insertion',
         display_term => 'Alu insertion',
     },
+    {
+        SO_accession => 'SO:1000005',
+        SO_term => 'complex_substitution',
+        display_term => 'Complex substitution',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
