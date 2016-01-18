@@ -1625,7 +1625,9 @@ sub _parse_hgvs_transcript_position {
  my $is_exonic = 1;
  $is_exonic = 0 if ($start_offset || $end_offset || substr($start,0,1) eq '*' || (defined $end && substr($end,0,1) eq '*') || $start < 0);
 
-  my ($start_direction, $end_direction); ## go back or forward into intron
+  ## go back or forward into intron
+  my $start_direction = 0;
+  my $end_direction   = 0;
 
   if($start_offset ){
   ### extract + or - for intronic positions in coding nomenclature
@@ -1701,7 +1703,7 @@ sub _parse_hgvs_transcript_position {
 
     #### intronic variants are described as after or before the nearest exon 
     #### - add this offset to genomic start & end positions
-    if(defined $start_direction ){
+    if($start_direction ne 0 || $end_direction ne 0){
       if($strand  == 1){
 
         if($start_direction eq "+"){ $start = $start + $start_offset; }
