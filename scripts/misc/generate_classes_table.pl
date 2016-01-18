@@ -59,20 +59,24 @@ $registry->load_registry_from_db(
 );
 
 my %colour = (
-    'copy_number_variation'         => '#8601AF',
-    'insertion'                     => '#000099',
-    'copy_number_gain'              => '#0000CC', 
-    'copy_number_loss'              => '#CC0000',
-    'inversion'                     => '#C530FF',
-    'complex_structural_alteration' => '#007FFF',
-    'tandem_duplication'            => '#732E00',
-    'mobile_element_insertion'      => '#000099',
-    'novel_sequence_insertion'      => '#000099',
-    'translocation'                 => '#C3A4FF',
-    'deletion'                      => '#CC0000',
-    'duplication'                   => '#0000CC',
-    'indel'                         => 'gold',
-    'probe'                         => '#4682B4',
+    'copy_number_variation'          => '#8601AF',
+    'insertion'                      => '#000099',
+    'copy_number_gain'               => '#0000CC',
+    'copy_number_loss'               => '#CC0000',
+    'inversion'                      => '#C530FF',
+    'complex_structural_alteration'  => '#007FFF',
+    'complex_substitution'           => '#007FFF',
+    'tandem_duplication'             => '#732E00',
+    'mobile_element_insertion'       => '#000080',
+    'novel_sequence_insertion'       => '#000080',
+    'Alu_insertion'                  => '#000080',
+    'translocation'                  => '#C3A4FF',
+    'interchromosomal_translocation' => '#C3A4FF',
+    'intrachromosomal_translocation' => '#C3A4FF',
+    'deletion'                       => '#CC0000',
+    'duplication'                    => '#0000CC',
+    'indel'                          => 'gold',
+    'probe'                          => '#4682B4',
 );
 my $default_colour = '#000000';
 
