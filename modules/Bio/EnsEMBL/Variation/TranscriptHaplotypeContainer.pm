@@ -498,8 +498,8 @@ sub _init {
   my $is_protein_coding = $tr->translation ? 1 : 0;
   
   # cache reference sequences on transcript object
-  $tr->{cds} = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
-  $tr->{protein} = $is_protein_coding ? ($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq).'*' : undef;
+  $tr->{cds} = $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
+  $tr->{protein} = $is_protein_coding ? ($tr->{_variation_effect_feature_cache}->{peptide} ||= $tr->translation->seq).'*' : undef;
   
   # get mappings of all variation feature coordinates
   my $mappings = $self->_get_mappings;
@@ -706,7 +706,7 @@ sub _get_mappings {
   
   my $tr = $self->transcript();
   my $tr_strand = $tr->strand;
-  my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
+  my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} ||= $tr->get_TranscriptMapper;
   
   foreach my $vf(@{$self->_variation_features}) {
     next if $vf->{_cds_mapping} || $vf->{_cds_mapping_failed};
@@ -783,7 +783,7 @@ sub _mutate_sequences {
     my $ploidy = $self->_sample_ploidy()->{$sample_name} || $self->_default_ploidy();
   
     for my $hap(0..($ploidy - 1)) {
-      my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
+      my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
       my $ref_seq = $seq;
     
       # flag if indel observed, we need to align seqs later
@@ -880,7 +880,8 @@ sub _get_prediction_matrices {
     # retrive from DB
     if(my $db = $self->db) {
       my $pfpma = $db->get_ProteinFunctionPredictionMatrixAdaptor();
-      my $tr_md5 = md5_hex($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq);
+      my $peptide = $tr->{_variation_effect_feature_cache}->{peptide} ||= $tr->translation->seq;
+      my $tr_md5 = md5_hex($peptide);
       
       foreach my $tool(qw(sift polyphen)) {
         my $method = sprintf('fetch_%s_predictions_by_translation_md5', $tool);
