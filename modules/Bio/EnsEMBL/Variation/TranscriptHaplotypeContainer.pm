@@ -1023,25 +1023,38 @@ sub _prefetch_everything {
   }
 }
 
+## use this to tell the JSON serialiser to delete certain keys
+sub _dont_export {
+  my $self = shift;
+  my $key = shift;
+
+  $self->{_dont_export} ||= {};
+  $self->{_dont_export}->{$key} = 1 if $key;
+
+  return $self->{_dont_export};
+}
+
 ## Convert this object to a hash that can be written as JSON.
 ## Basically just prefetches everything that would otherwise be lazy loaded,
 ## deletes "private" keys starting with "_", and presents the haplotypes in
 ## order of frequency
 sub TO_JSON {
   my $self = shift;
-  
+
   # prefetch counts, predictions etc
   $self->_prefetch_everything();
   
   # make a hash copy of self
   my %copy = %{$self};
+
+  delete $copy{$_} for keys %{$self->_dont_export};
   
   # delete keys starting with "_"
   delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
   
   # convert haplotype hashrefs to listrefs
-  $copy{'cds_haplotypes'} = [sort {$b->count <=> $a->count} @{$self->get_all_CDSHaplotypes}];
-  $copy{'protein_haplotypes'} = [sort {$b->count <=> $a->count} @{$self->get_all_ProteinHaplotypes}];
+  $copy{'cds_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_CDSHaplotypes}];
+  $copy{'protein_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_ProteinHaplotypes}];
   
   return \%copy;
 }

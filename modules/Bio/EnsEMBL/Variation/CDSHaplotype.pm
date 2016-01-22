@@ -171,6 +171,8 @@ sub TO_JSON {
   
   # make a hash copy of self
   my %copy = %{$self};
+
+  delete $copy{$_} for keys %{$self->container->_dont_export};
   
   # delete keys starting with _
   delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
