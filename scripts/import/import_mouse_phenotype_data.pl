@@ -158,7 +158,7 @@ sub clear_data_from_last_release {
   # update version
   my $version = $config->{version};
   foreach my $source_name (keys %$source_names) {
-    $dbh->do(qq{UPDATE source SET version=$version WHERE name=$source_name;}) or die $dbh->errstr;
+    $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) or die $dbh->errstr;
   }
 
   $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature;}) or die $dbh->errstr;
@@ -171,8 +171,8 @@ sub clear_data_from_last_release {
 
   my $source_ids = join(',', values %$source_name2id);
 
-  $dbh->do(qq{ DELETE pfa FROM TMP_phenotype_feature_attrib pfa JOIN TMP_phenotype_feature pf ON pfa.phenotype_feature_id = pf.phenotype_feature_id AND pf.source_id IN ($source_ids);} );
-  $dbh->do(qq{ DELETE FROM TMP_phenotype_feature WHERE source_id IN ($source_ids);} );
+  $dbh->do(qq{ DELETE pfa FROM phenotype_feature_attrib pfa JOIN phenotype_feature pf ON pfa.phenotype_feature_id = pf.phenotype_feature_id AND pf.source_id IN ($source_ids);} );
+  $dbh->do(qq{ DELETE FROM phenotype_feature WHERE source_id IN ($source_ids);} );
 
 }
 
@@ -380,6 +380,10 @@ sub import_phenotype_features {
     my $marker_accession_id = $hash->{marker_accession_id};
     my $phenotypes = $phenotype_adaptor->fetch_by_description($hash->{mp_term_name});
     my $phenotype = @{$phenotypes}[0];
+    if (! $hash->{mp_term_name}) {
+      print STDERR "No mp_term_name: $_\n";
+      next;  
+    } 
     unless ($phenotype) {
       die("No phenotype description for term: ", $hash->{mp_term_name});
     }
