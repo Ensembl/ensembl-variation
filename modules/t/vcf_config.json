@@ -6,7 +6,7 @@
       "assembly": "GRCh37",
       "type": "local",
       "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/test.vcf.gz",
-      "chromosomes": [ "2" ],
+      "chromosomes": [ "2", "7" ],
       "sample_prefix": "1000GENOMES:phase_1:",
       "source_name": "1000genomes",
       "source_version": "20141202",

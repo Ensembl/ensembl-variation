@@ -95,6 +95,7 @@ our %TYPES = (
   Arg [-POPULATION_PREFIX]:      string
   Arg [-SAMPLE_POPULATIONS]:     hashref - { 'sample1': ['pop1','pop2'] }
   Arg [-STRICT_NAME_MATCH]:      boolean
+  Arg [-USE_SEQ_REGION_SYNONYMS]:boolean
   Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
 
   Example    : my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
@@ -120,7 +121,46 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($id, $type, $filename_template, $chromosomes, $sample_prefix, $individual_prefix, $pop_prefix, $sample_pops, $populations, $assembly, $source, $strict, $created, $updated, $is_remapped, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES SAMPLE_PREFIX INDIVIDUAL_PREFIX POPULATION_PREFIX SAMPLE_POPULATIONS POPULATIONS ASSEMBLY SOURCE STRICT_NAME_MATCH CREATED UPDATED IS_REMAPPED ADAPTOR)], @_); 
+  my (
+    $id,
+    $type,
+    $filename_template,
+    $chromosomes,
+    $sample_prefix,
+    $individual_prefix,
+    $pop_prefix,
+    $sample_pops,
+    $populations,
+    $assembly,
+    $source,
+    $strict,
+    $created,
+    $updated,
+    $is_remapped,
+    $adaptor,
+    $use_seq_region_synonyms
+  ) = rearrange(
+    [qw(
+      ID
+      TYPE
+      FILENAME_TEMPLATE
+      CHROMOSOMES
+      SAMPLE_PREFIX
+      INDIVIDUAL_PREFIX
+      POPULATION_PREFIX
+      SAMPLE_POPULATIONS
+      POPULATIONS
+      ASSEMBLY
+      SOURCE
+      STRICT_NAME_MATCH
+      CREATED
+      UPDATED
+      IS_REMAPPED
+      ADAPTOR
+      USE_SEQ_REGION_SYNONYMS
+    )],
+    @_
+  ); 
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -145,6 +185,7 @@ sub new {
     created => $created,
     updated => $updated,
     is_remapped => $is_remapped,
+    use_seq_region_synonyms => $use_seq_region_synonyms,
     _use_db => 1,
     _raw_populations => $sample_pops,
   );
@@ -311,6 +352,26 @@ sub filename_template {
   my $self = shift;
   $self->{filename_template} = shift if @_;
   return $self->{filename_template};
+}
+
+
+=head2 use_seq_region_synonyms
+
+  Arg [1]    : int $use_seq_region_synonyms (optional)
+               The new value to set the use_seq_region_synonyms attribute to
+  Example    : my $use_seq_region_synonyms = $collection->use_seq_region_synonyms()
+  Description: Getter/Setter for the parameter that tells the API to look
+               up seq_region synonyms in VCF queries
+  Returntype : bool
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_seq_region_synonyms {
+  my $self = shift;
+  $self->{use_seq_region_synonyms} = shift if @_;
+  return $self->{use_seq_region_synonyms};
 }
 
 
@@ -767,6 +828,29 @@ sub _get_vcf_by_chr {
   return $self->{files}->{$chr};
 }
 
+sub _get_synonyms_by_chr {
+  my $self = shift;
+  my $chr = shift;
+
+  my $cache = $self->{_seq_region_synonyms} ||= {};
+
+  if(!exists($cache->{$chr})) {
+    my @synonyms = ();
+
+    if(my $db = $self->adaptor->db) {
+      if(my $sa = $db->dnadb->get_SliceAdaptor()) {
+        if(my $s = $sa->fetch_by_region(undef, $chr)) {
+          @synonyms = map {$_->name} @{$s->get_all_synonyms};
+        }
+      }
+    }
+
+    $cache->{$chr} = \@synonyms;
+  }
+
+  return $cache->{$chr};
+}
+
 sub _get_vcf_filename_by_chr {
   my ($self, $chr) = @_;
   my $file = $self->filename_template;
@@ -792,8 +876,14 @@ sub _seek {
   
   # now seek
   $vcf->seek($c, $s, $e);
+
+  if($self->use_seq_region_synonyms && !defined($vcf->{iterator}) && (my @synonyms = @{$self->_get_synonyms_by_chr($c)})) {
+    while(!defined($vcf->{iterator}) && @synonyms) {
+      $vcf->seek(shift @synonyms, $s, $e);
+    }
+  }
   
-  return $self->_current;
+  return $vcf->{iterator} ? $vcf : undef;
 }
 
 sub _seek_by_Slice {
@@ -802,7 +892,7 @@ sub _seek_by_Slice {
   
   my $vcf = $self->_seek($slice->seq_region_name, $slice->start, $slice->end);
   return unless $vcf;
-  
+
   $vcf->next();
   
   return defined($vcf->{record});

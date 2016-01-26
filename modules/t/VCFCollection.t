@@ -44,7 +44,8 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
     'HG00096' => ['pop1','pop2'],
     'HG00097' => ['pop3'],
     'HG00099' => ['pop4']
-  }
+},
+  -use_seq_region_synonyms => 1,
 );
 
 
@@ -54,6 +55,7 @@ ok($c->strict_name_match() eq 0, "strict_name_match");
 ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test.vcf.gz', "filename_template");
 ok($c->sample_prefix() eq "s_prefix:", "sample_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
+ok($c->use_seq_region_synonyms() eq "1", "use_seq_region_synonyms");
 
 # tell it not to use the DB
 ok(!$c->use_db(0), "use_db");
@@ -156,5 +158,18 @@ ok($coll->updated() eq "1432745640000", "updated");
 ok($coll->is_remapped() eq "1", "is_remapped");
 
 ok($coll->vcf_collection_close, 'close VCF collection filehandle');
+
+# test synonym fetch
+$v = $va->fetch_by_name('rs2299222');
+ok($v && $v->isa('Bio::EnsEMBL::Variation::Variation'), "get variation rs2299222");
+($vf) = @{$v->get_all_VariationFeatures};
+ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature");
+
+$gts = $coll->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
+ok($gts && scalar @$gts == 0, "get_all_SampleGenotypeFeatures_by_VariationFeature without synonyms 0");
+
+$coll->use_seq_region_synonyms(1);
+$gts = $coll->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
+ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_VariationFeature with synonyms 3");
 
 done_testing();
