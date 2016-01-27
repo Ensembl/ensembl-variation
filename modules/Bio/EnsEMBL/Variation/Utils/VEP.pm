@@ -3313,7 +3313,7 @@ sub validate_vf {
             
             else {
                 $slice_ref_allele = $slice_ref->seq;
-                $ok = ($slice_ref_allele eq $ref_allele ? 1 : 0);
+                $ok = (uc($slice_ref_allele) eq uc($ref_allele) ? 1 : 0);
             }
         }
         
