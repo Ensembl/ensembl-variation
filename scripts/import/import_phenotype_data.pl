@@ -1767,8 +1767,9 @@ sub parse_zfin {
     
     my @data = split /\t/, $_;
     
-    my $symbol = $data[1];
-    my $phen = $data[4];
+    my $symbol  = $data[1];
+    my $gene_id = $data[2];
+    my $phen    = $data[4];
     
     for my $i(6, 8, 10, 12) {
       $phen .= ($phen ? ', ' : '').$data[$i] if $data[$i];
@@ -1793,7 +1794,7 @@ sub parse_zfin {
         push @phenotypes, {
           'id' => $gene->stable_id,
           'description' => $phen,
-          'external_id' => $data[0],
+          'external_id' => $gene_id,
           'seq_region_id' => $gene->slice->get_seq_region_id,
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
