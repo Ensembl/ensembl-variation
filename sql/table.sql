@@ -1251,6 +1251,9 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 @column description						Description of the set.
 @column short_name_attrib_id	Foreign key references to the @link attrib table. Short name used for web purpose.
 
+@example See below the command to display the list of variation set entries, e.g. for human:
+         @sql SELECT * FROM variation_set;
+
 @see variation_set_variation
 @see variation_set_structure
 */
