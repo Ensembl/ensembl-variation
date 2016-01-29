@@ -142,12 +142,85 @@ ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_Slice count 3")
 ok($gts->[0]->genotype_string eq 'T|T', "get_all_SampleGenotypeFeatures_by_Slice first genotype T|T");
 
 # fetch LD genotypes by slice
-my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
-ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice is hash");
+my ($ld_gts, $pos2name) = @{$coll->_get_all_LD_genotypes_by_Slice($slice)};
+ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice element 1 is hash");
+ok($pos2name && ref($pos2name) eq 'HASH', "_get_all_LD_genotypes_by_Slice element 2 is hash");
 
-ok(scalar keys %$ld_gts == 65, "_get_all_LD_genotypes_by_Slice has 374 position keys");
-ok($ld_gts->{45415424} && scalar keys %{$ld_gts->{45415424}} == 3, "_get_all_LD_genotypes_by_Slice pos 45421006 has 3 genotypes");
-ok($ld_gts->{45419542}->{HG00096} eq 'T|C', "_get_all_LD_genotypes_by_Slice pos 45419542 ind HG00096 has genotype T|C");
+ok(scalar keys %$ld_gts == 65, "genotypes hash has 65 position keys");
+ok($ld_gts->{45415424} && scalar keys %{$ld_gts->{45415424}} == 3, "genotypes hash pos 45421006 has 3 genotypes");
+is_deeply($ld_gts->{45419542}, {
+  'HG00096' => 'T|C',
+  'HG00099' => 'C|C',
+  'HG00097' => 'C|T'
+}, "genotypes hash pos 45419542");
+
+is_deeply($pos2name, {
+  '45409047' => 'rs111664974',
+  '45413788' => 'rs3851322',
+  '45404628' => 'rs4953202',
+  '45414330' => 'rs11685453',
+  '45414280' => 'rs200716478',
+  '45409426' => 'rs17392134',
+  '45414629' => 'rs12104907',
+  '45410572' => 'rs148810371',
+  '45404221' => 'rs3914640',
+  '45418073' => 'rs62130762',
+  '45417945' => 'rs13012034',
+  '45402006' => 'rs7591926',
+  '45407132' => 'rs4087318',
+  '45420335' => 'rs115798714',
+  '45419724' => 'rs13025449',
+  '45412892' => 'rs13013994',
+  '45417972' => 'rs10176710',
+  '45406912' => 'rs13425566',
+  '45405066' => 'rs3914643',
+  '45416527' => 'rs35033699',
+  '45411642' => 'rs13392505',
+  '45405049' => 'rs13418468',
+  '45408893' => 'rs56311136',
+  '45401456' => 'rs62133249',
+  '45407136' => 'rs116303659',
+  '45416594' => 'rs10490353',
+  '45407742' => 'rs11903171',
+  '45408189' => 'rs4082958',
+  '45407137' => 'rs11682694',
+  '45410584' => 'rs12613107',
+  '45410922' => 'rs7605658',
+  '45414283' => 'rs199959267',
+  '45402927' => 'rs117686991',
+  '45406704' => 'rs35898031',
+  '45408678' => 'rs13011860',
+  '45414766' => 'rs12105277',
+  '45420469' => 'rs150678278',
+  '45406940' => 'rs35148156',
+  '45418046' => 'rs72799959',
+  '45419796' => 'rs66875838',
+  '45402571' => 'rs11125005',
+  '45419542' => 'rs13025039',
+  '45409988' => 'rs17033132',
+  '45410449' => 'rs142989295',
+  '45402400' => 'rs7595106',
+  '45415870' => 'rs60985044',
+  '45420082' => 'rs7569588',
+  '45406898' => 'rs11125006',
+  '45414716' => 'rs72799957',
+  '45411443' => 'rs72799955',
+  '45411130' => 'rs7569578',
+  '45414256' => 'rs199825428',
+  '45414221' => 'rs11685398',
+  '45408269' => 'rs6720296',
+  '45418074' => 'rs13017211',
+  '45404640' => 'rs4953203',
+  '45415841' => 'rs12612869',
+  '45402029' => 'rs3851319',
+  '45414377' => 'rs35679497',
+  '45420660' => 'rs62130764',
+  '45404086' => 'rs11677981',
+  '45411188' => 'rs2342702',
+  '45414282' => 'rs202033786',
+  '45415424' => 'rs17885373',
+  '45406008' => 'rs78097421'
+}, "pos2name hash");
 
 
 ok($coll->assembly() eq "GRCh37", "assembly");
