@@ -712,7 +712,7 @@ sub _get_all_LD_genotypes_by_Slice {
   my %pos2name;
   
   while($vcf->{record}) {
-    my $start = $vcf->get_raw_start;
+    my $start = $vcf->get_start;
     last if $start > $slice->end;
     
     if($vcf->is_polymorphic(\@sample_names)) {
