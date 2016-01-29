@@ -129,7 +129,7 @@ sub new {
     'name' => $name,
     'ldContainer' => $ldContainer,
     'pos2name' => $pos2name,
-    'slices' => $slice,
+    'slices' => $slices,
   }, $class;
 
   # only add these keys if it they are properly populated
