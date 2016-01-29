@@ -29,86 +29,92 @@ use Bio::EnsEMBL::Variation::Variation;
 our $verbose = 0;
 
 #test constructor
-my $v1 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs193',
-                                                -source => 'dbSNP');
-my $v2 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs203',
-                                                -source => 'dbSNP');
-my $v3 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs848',
-                                                -source => 'dbSNP');
-my $v4 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs847',
-                                                -source => 'dbSNP');
+my $v1 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs193', -source => 'dbSNP');
+my $v2 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs203', -source => 'dbSNP');
+my $v3 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs848', -source => 'dbSNP');
+my $v4 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs847', -source => 'dbSNP');
 
 
-my $vf1 = Bio::EnsEMBL::Variation::VariationFeature->new(-dbID => 153,
-							 -start => 27686081,
-							 -end => 27686081,
-							 -strand => 1,
-							 -variation_name => 'rs193',
-							 -map_weight => 1,
-							 -allele_string => 'C/T',
-							 -variation => $v1
-							 );
+my $vf1 = Bio::EnsEMBL::Variation::VariationFeature->new(
+	-dbID => 153,
+	-start => 27686081,
+	-end => 27686081,
+	-strand => 1,
+	-variation_name => 'rs193',
+	-map_weight => 1,
+	-allele_string => 'C/T',
+	-variation => $v1
+);
 
-my $vf2 = Bio::EnsEMBL::Variation::VariationFeature->new(-dbID => 163,
-							 -start => 27689871,
-							 -end => 27689871,
-							 -strand => 1,
-							 -variation_name => 'rs203',
-							 -map_weight => 1,
-							 -allele_string => 'T/C',
-							 -variation => $v2
-							 );
+my $vf2 = Bio::EnsEMBL::Variation::VariationFeature->new(
+	-dbID => 163,
+	-start => 27689871,
+	-end => 27689871,
+	-strand => 1,
+	-variation_name => 'rs203',
+	-map_weight => 1,
+	-allele_string => 'T/C',
+	-variation => $v2
+);
 
-my $vf3 = Bio::EnsEMBL::Variation::VariationFeature->new(-dbID => 749,
-							 -start => 132072716,
-							 -end => 132072716,
-							 -strand => -1,
-							 -variation_name => 'rs848',
-							 -map_weight => 1,
-							 -allele_string => 'T/G',
-							 -variation => $v3
-							 );
+my $vf3 = Bio::EnsEMBL::Variation::VariationFeature->new(
+	-dbID => 749,
+	-start => 132072716,
+	-end => 132072716,
+	-strand => -1,
+	-variation_name => 'rs848',
+	-map_weight => 1,
+	-allele_string => 'T/G',
+	-variation => $v3
+);
 
-my $vf4 = Bio::EnsEMBL::Variation::VariationFeature->new(-dbID => 748,
-							 -start => 132072885,
-							 -end => 132072885,
-							 -strand => -1,
-							 -variation_name => 'rs847',
-							 -map_weight => 1,
-							 -allele_string => 'A/G',
-							 -variation => $v4
-							 );
+my $vf4 = Bio::EnsEMBL::Variation::VariationFeature->new(
+	-dbID => 748,
+	-start => 132072885,
+	-end => 132072885,
+	-strand => -1,
+	-variation_name => 'rs847',
+	-map_weight => 1,
+	-allele_string => 'A/G',
+	-variation => $v4
+);
 
-my $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new('-name' => 'container_1',
-								   '-ldContainer' =>{ 
-								       '153-163' =>{ 
-									   51 =>
-									   { 'd_prime'             => 0.533013,
-									     'r2'                 => 0.258275,
-									     'snp_distance_count' => 1,
-									     'sample_count'       => 42
-									     },
-									     140 =>
-									 { 'd_prime'             => 0.999887,
-									   'r2'                 => 0.642712,
-									   'snp_distance_count' => 1,
-									   'sample_count'       => 10
-									   }
-								       },
-								       '749-748' => { 140 =>
-										      { 'd_prime'             => 0.999924,
-											'r2'                 => 0.312452,
-											'snp_distance_count' => 1,
-											'sample_count'       => 22
-											}
-										  }
-								   },
-								   '-variationFeatures' =>{ 153 => $vf1,
-											    163 => $vf2,
-											    749 => $vf3,
-											    748 => $vf4
-											    }
-							    );
+my $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+	'-name' => 'container_1',
+	'-ldContainer' => { 
+		'27686081-27689871' => { 
+			51 => {
+				'd_prime'            => 0.533013,
+				'r2'                 => 0.258275,
+				'sample_count'       => 42
+			},
+			140 => {
+				'd_prime'            => 0.999887,
+				'r2'                 => 0.642712,
+				'sample_count'       => 10
+			}
+		},
+		'132072716-132072885' => {
+			140 => {
+				'd_prime'            => 0.999924,
+				'r2'                 => 0.312452,
+				'sample_count'       => 22
+			}
+		}
+	},
+	'-pos2name' => {
+		27686081  => 'rs193',
+		27689871  => 'rs203',
+		132072716 => 'rs848',
+		132072885 => 'rs847'
+	},
+	'-pos2vf' => {
+		27686081  => $vf1,
+		27689871  => $vf2,
+		132072716 => $vf3,
+		132072885 => $vf4
+	}
+);
 
 ok($ldContainer->name()  eq 'container_1', "container name");
 
@@ -140,7 +146,7 @@ ok($d_prime == 0.999924, "d prime for vfs, with population");
 $d_prime = $ldContainer->get_d_prime($vf1,$vf2);
 ok($d_prime == 0.999887, "d prime for vfs, no population");
 
-#check method to get ALL ld values in container (d_prime, r2, snp_distance_count and sample_count
+#check method to get ALL ld values in container (d_prime, r2, and sample_count
 my $ld_values;
 $ld_values = $ldContainer->get_all_ld_values();
 ok(@{$ld_values} == 2, "count total stats");
