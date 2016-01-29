@@ -692,6 +692,9 @@ sub assembly{
 # This method is called in LDFeatureContainerAdaptor::_fetch_by_Slice_VCF.
 # It bypasses a lot of the object-creation overhead of
 # get_all_SampleGenotypeFeatures_by_Slice so should return quite a bit faster
+# it returns an arrayref:
+# [0]: two-level hashref of genotypes keyed on position then sample name
+# [1]: hashref mapping chromosome position to variant name
 sub _get_all_LD_genotypes_by_Slice {
   my $self = shift;
   my $slice = shift;
@@ -706,17 +709,38 @@ sub _get_all_LD_genotypes_by_Slice {
   my @sample_names = map {$_->{_raw_name}} @$samples;
   
   my %gts;
+  my %pos2name;
   
   while($vcf->{record}) {
     my $start = $vcf->get_raw_start;
     last if $start > $slice->end;
     
-    $gts{$start} = $vcf->get_samples_genotypes(\@sample_names) if $vcf->is_polymorphic(\@sample_names);
+    if($vcf->is_polymorphic(\@sample_names)) {
+      $gts{$start} = $vcf->get_samples_genotypes(\@sample_names);
+
+      my $names = $vcf->get_IDs;
+
+      # one name, OK
+      if(scalar @$names == 1) {
+        $pos2name{$start} = $names->[0];
+      }
+      # more than one name, we're going to take the lower rsID as what else can we do really!!!
+      else {
+        my %nums;
+
+        foreach my $name(@$names) {
+          $name =~ /(\d+)/;
+          $nums{$name} = $1;
+        }
+
+        $pos2name{$start} = (sort {$nums{$a} <=> $nums{$b}} @$names)[0]; 
+      }
+    }
 
     $vcf->next();
   }
   
-  return \%gts;
+  return [\%gts, \%pos2name];
 }
 
 sub _limit_Samples {

@@ -455,6 +455,9 @@ sub _fetch_by_Slice_VCF {
     
   # create hash giving populations for each sample
   my %pops;
+
+  # create hash mapping positions to variant names
+  my %pos2name;
   
   foreach my $vc(@{$vca->fetch_all}) {
     
@@ -465,13 +468,16 @@ sub _fetch_by_Slice_VCF {
     
     # get "raw" genotypes; comes back as a hash like $hash->{$pos}->{$ind_name} = $gt
     # doing this saves constructing objects we don't need e.g. Genotypes, VariationFeatures
-    my $vc_genotypes = $vc->_get_all_LD_genotypes_by_Slice($slice, $population);
+    my ($vc_genotypes, $vc_pos2name) = @{$vc->_get_all_LD_genotypes_by_Slice($slice, $population)};
  
    
     # copy them to main $genotypes hash
     foreach my $p(keys %$vc_genotypes) {
       $genotypes->{$p}->{$_} = $vc_genotypes->{$p}->{$_} for keys %{$vc_genotypes->{$p}};
     }
+
+    # and copy position map
+    $pos2name{$_} = $vc_pos2name->{$_} for keys %$vc_pos2name;
     
     # get Population->Sample hash; we need to trim and transpose this
     my $hash = $vc->_get_Population_Sample_hash();
@@ -491,7 +497,7 @@ sub _fetch_by_Slice_VCF {
       $pops{$sample_dbID_name{$_}}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
     }
   }
-  return $self->_objs_from_sth_vcf($genotypes, $slice, \%pops);
+  return $self->_objs_from_sth_vcf($genotypes, $slice, \%pops, \%pos2name);
 }
 
 sub _merge_containers {
@@ -691,6 +697,7 @@ sub _objs_from_sth_vcf {
   my $gts = shift;
   my $slice = shift;
   my $pops = shift;
+  my $pos2name = shift;
   
   my (%alleles_variation, %sample_information);
   
@@ -724,56 +731,74 @@ sub _objs_from_sth_vcf {
     'alleles_variation' => \%alleles_variation,
     'sample_information' => \%sample_information,
     'slice' => $slice,
+    'pos2name' => $pos2name,
   }; 
 }
 
 sub _ld_calc {
   my $self = shift;
-  my $genotypes = shift; 
+  my $genotype_hashes = shift; 
   my $use_vcf = $self->db->use_vcf;
   my $alleles_variation = {};
   my $sample_information = {};
-  my $pos_vf = {};
+  my $pos2name = {};
+  my $pos2vf = {};
+  my @slices;
+  my $vfa;
 
-  my $vfa = $self->db->get_VariationFeatureAdaptor();
-  foreach my $genotype (@$genotypes) { 
-    my $next_alleles_variation = $genotype->{'alleles_variation'};
+  # what we're doing here is copying data from component hashes to a merged hash
+  # this is because we can receive more than one genotype hash
+  foreach my $genotype_hash (@$genotype_hashes) { 
+
+    # this contains allele frequency data
+    my $next_alleles_variation = $genotype_hash->{'alleles_variation'};
     foreach my $snp_start (keys %$next_alleles_variation) {
       foreach my $pop_id (keys %{$next_alleles_variation->{$snp_start}}) {
         my $hash = $next_alleles_variation->{$snp_start}->{$pop_id};
         $alleles_variation->{$snp_start}->{$pop_id} = $hash; 
       }
-    }    
-    my $next_sample_information = $genotype->{'sample_information'};
+    }
+
+    # this contains the actual genotypes
+    my $next_sample_information = $genotype_hash->{'sample_information'};
     foreach my $pop_id (keys %$next_sample_information) {
       foreach my $snp_start (keys %{$next_sample_information->{$pop_id}}) {
         my $hash = $next_sample_information->{$pop_id}->{$snp_start};
         $sample_information->{$pop_id}->{$snp_start} = $hash;
       }
     }
-    #create a hash that maps the position->vf_id
-    my $slice = $genotype->{'slice'};
-    my $variations = $vfa->fetch_all_by_Slice($slice);
-    my $region_Slice = $slice->seq_region_Slice();
-    $pos_vf->{$_->start} = $_ for map {$_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$variations};
+
+    # we'll store the slices and send them to the container
+    # this way the container can lazy-load the VariationFeature objects
+    push @slices, $genotype_hash->{'slice'};
+    
+    # the pos2name hash maps positions to variant names
+    # the VCF API sends these through as part of its genotype fetch
+    if(my $next_pos2name = $genotype_hash->{'pos2name'}) {
+      $pos2name->{$_} = $next_pos2name->{$_} for keys %$next_pos2name;
+    }
+    # But the database API has no such feature
+    # this means we need to look up the VariationFeatures here.
+    # But since we can do that here, we can then also send pos2vf through
+    # to the container so no lazy-loading needs to be done
+    else {
+      my $slice = $genotype_hash->{'slice'};
+      $vfa ||= $self->db->get_VariationFeatureAdaptor();
+      my $vfs = $vfa->fetch_all_by_Slice($slice);
+      my $region_Slice = $slice->seq_region_Slice();
+
+      # the sort here "favours" variants from dbSNP since it is assumed dbSNP will have source_id = 1
+      # otherwise we'd get co-located COSMIC IDs overwriting the dbSNP ones
+      foreach my $vf(map {$_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$vfs}) {
+        $pos2name->{$vf->start} = $vf->variation_name;
+        $pos2vf->{$vf->start} = $vf;
+      }
+    }
   }
   
   my %_pop_ids;
 
-  my ($ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count,$population_id);
-  my ($vf_id1,$vf_id2);
   my $previous_seq_region_id = 0;
-
-  my %feature_container = ();
-  my %vf_objects = ();
-  my @cmd = qw(calc_genotypes);
-
-  #open the pipe between processes if the binary file exists in the PATH
-  my $bin = $self->executable;
-  if( ! $bin ) {
-    warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
-    goto OUT;
-  }
   
   #we have to print the variations
   my (%in_files, %in_file_names);
@@ -817,12 +842,22 @@ sub _ld_calc {
       delete $in_files{$key};
     }
   }
+
+  my @cmd = qw(calc_genotypes);
+
+  #open the pipe between processes if the binary file exists in the PATH
+  my $bin = $self->executable;
+  if( ! $bin ) {
+    warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
+    goto OUT;
+  }
  
   # run LD binary
   `$bin <$_\.in >$_\.out` for values %in_file_names;
+
+  # now create the container from the output of the LD binary
+  my %feature_container = ();
  
-  my $va = $self->db->get_VariationAdaptor();
-  my $name2vf = {};
   foreach my $file (values %in_file_names) {
     open OUT, "$file.out";
     while(<OUT>){
@@ -831,7 +866,7 @@ sub _ld_calc {
       #     936	965891	164284	166818	0.628094	0.999996	120 
       #get the ouput into the hashes
       chomp;
-      ($population_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
+      my ($population_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
       # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
       if (defined($self->{_vf_pos})) {
         next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
@@ -841,16 +876,11 @@ sub _ld_calc {
       $ld_values{'r2'} = $r2;
       $ld_values{'sample_count'} = $sample_count;
 	  
-      if (!defined $pos_vf->{$ld_region_start} || !defined $pos_vf->{$ld_region_end}){
+      if (!defined $pos2name->{$ld_region_start} || !defined $pos2name->{$ld_region_end}){
         next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
       }
-      
-      $vf_id1 = $pos_vf->{$ld_region_start}->dbID();
-      $vf_id2 = $pos_vf->{$ld_region_end}->dbID();
     
-      $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
-      $vf_objects{$vf_id1} = $pos_vf->{$ld_region_start};
-      $vf_objects{$vf_id2} = $pos_vf->{$ld_region_end};
+      $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
 	  
       $_pop_ids{$population_id} = 1;	  
     }
@@ -863,7 +893,9 @@ sub _ld_calc {
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
     '-ldContainer'=> \%feature_container,
     '-name' => '',
-    '-variationFeatures' => \%vf_objects
+    '-pos2name' => $pos2name,
+    '-pos2vf' => $pos2vf,
+    '-slices' => \@slices,
   );
 
   $t->{'_pop_ids'} =\%_pop_ids;

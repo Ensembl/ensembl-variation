@@ -118,15 +118,25 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($ldContainer,$name,$variationFeatures) =  rearrange([qw(LDCONTAINER NAME VARIATIONFEATURES)], @_);
+  my ($ldContainer,$name,$pos2vf,$pos2name,$slices) =  rearrange([qw(LDCONTAINER NAME POS2VF POS2NAME SLICES)], @_);
   if (defined($ldContainer) && ref($ldContainer ne 'HASH')){
       throw("Reference to a hash object expected as a LDContainer");
   }
   $ldContainer ||= {};
+  $pos2name ||= {};
 
-  return bless {'name' => $name,
-		'ldContainer' => $ldContainer,
-		'variationFeatures' => $variationFeatures}, $class;
+  my $self = bless {
+    'name' => $name,
+    'ldContainer' => $ldContainer,
+    'pos2name' => $pos2name,
+  }, $class;
+
+  # only add these keys if it they are properly populated
+  # makes the lazy-load later easier
+  $self->{pos2vf} = $pos2vf if $pos2vf && scalar keys $pos2vf;
+  $self->{slices} = $slices if $slices && scalar @$slices;
+
+  return $self;
 }
 
 =head2 name
@@ -149,6 +159,8 @@ sub name{
 }
 
 
+### THIS SHOULD REALLY BE NAMED get_all_Variations
+### IS IT STILL USED???
 =head2 get_variations
 
     Example     : $variations = $obj->get_variations()
@@ -162,11 +174,10 @@ sub name{
 
 sub get_variations {
   my $self = shift;
-  my @variations;
-  foreach my $variation_feature (keys %{$self->{'variationFeatures'}}) {
-    push @variations,$self->{'variationFeatures'}->{$variation_feature}->variation();
-  }    
-  return \@variations;
+
+  my $pos2vf = $self->_pos2vf;
+
+  return map {$pos2vf->{$_}->variation()} sort {$a <=> $b} keys %$pos2vf;
 }
 
 =head2 get_r_square
@@ -204,16 +215,16 @@ sub get_r_square {
   }
   else {
     #check if the ldContainer does not contain pairwise information for the variation features provided
-    if (!exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()} && !exists $self->{'ldContainer'}->{$variation_feature_2->dbID() . '-' . $variation_feature_1->dbID()}){
+    if (!exists $self->{'ldContainer'}->{$variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start()} && !exists $self->{'ldContainer'}->{$variation_feature_2->seq_region_start() . '-' . $variation_feature_1->seq_region_start()}){
       warning("variation features have no pairwise ld information");
     } 
     else {
       #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
-      if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
-        $key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
+      if (exists $self->{'ldContainer'}->{$variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start()}){
+        $key = $variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start();
       }
       else {
-        $key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
+        $key = $variation_feature_2->seq_region_start() . '-' . $variation_feature_1->seq_region_start();
       }
       #and finally, if population provided or the only population
       if (exists $self->{'ldContainer'}->{$key}->{$population_id}){
@@ -267,16 +278,16 @@ sub get_d_prime {
   }
   else {
     #check if the ldContainer does not contain pairwise information for the variation features provided
-    if (!exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()} && !exists $self->{'ldContainer'}->{$variation_feature_2->dbID() . '-' . $variation_feature_1->dbID()}){
+    if (!exists $self->{'ldContainer'}->{$variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start()} && !exists $self->{'ldContainer'}->{$variation_feature_2->seq_region_start() . '-' . $variation_feature_1->seq_region_start()}){
       warning("variation features have no pairwise ld information");
     } 
     else {
       #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
-      if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
-        $key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
+      if (exists $self->{'ldContainer'}->{$variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start()}){
+        $key = $variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start();
       }
       else {
-        $key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
+        $key = $variation_feature_2->seq_region_start() . '-' . $variation_feature_1->seq_region_start();
       }
       #and finally, if population provided or the only population
       if (exists $self->{'ldContainer'}->{$key}->{$population_id}){
@@ -299,6 +310,8 @@ sub get_d_prime {
 
 =head2 get_all_ld_values
 
+    Arg [1]     : bool $names_only - set to a true value to populate hashes with names only, not VariationFeature objects also
+                  Defaults to fetching VariationFeature objects too
     Example     : $ld_values = $obj->get_all_ld_values();
     Description : Get all the information contained in the LDFeatureContainer object
     ReturnType  : reference to list of hashes [{variation1 => Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, r2=>r2, sample_count=>sample_count, population_id=>population_id}]
@@ -311,22 +324,38 @@ sub get_d_prime {
 
 sub get_all_ld_values {
   my $self = shift;
-  my @ld_values; #contains ALL the ld values in the container
+  my $names_only = shift;
 
-  #the keys in the ldContainer hash
-  my $variation_feature_id_1;
-  my $variation_feature_id_2;
+  my @ld_values; #contains ALL the ld values in the container
 
   if (! defined $self->{'_default_population'}){
     $self->{'_default_population'} = $self->_get_major_population;
   }
+
+  # get these hashes for looking up names and VF objects
+  my $pos2name = $self->_pos2name();
+  my $pos2vf = $self->_pos2vf() unless $names_only;
+
   foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
-    my %ld_value;  #contains a single ld value in the container {variation_feature variation_feature d_prime r2 snp_distance_count}
-    ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
+
+    # contains a single ld value in the container {variation_feature variation_feature d_prime r2 snp_distance_count}
+    my %ld_value;  
+
+    # get the variation_features positions
+    my ($vf1_pos, $vf2_pos) =  split /-/,$key_ld;
+
     if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}) {
-      #add the information to the ld_value hash
-      $ld_value{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
-      $ld_value{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
+      
+      # add the information to the ld_value hash
+      unless($names_only) {
+        $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
+        $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
+        next unless $ld_value{'variation1'} && $ld_value{'variation2'};
+      }
+      $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
+      $ld_value{'variation_name2'} = $pos2name->{$vf2_pos};
+      next unless $ld_value{'variation_name1'} && $ld_value{'variation_name2'};
+
       $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
       $ld_value{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
       $ld_value{'sample_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'};
@@ -334,6 +363,7 @@ sub get_all_ld_values {
       push @ld_values, \%ld_value;
     }
   }
+
   return \@ld_values;
 }
 
@@ -352,28 +382,7 @@ sub get_all_ld_values {
 
 sub get_all_r_square_values {
   my $self = shift;
-  my @r_squares; #contains ALL the r2 values in the container
-
-  #the keys in the ldContainer hash
-  my $variation_feature_id_1;
-  my $variation_feature_id_2;
-
-  if (! defined $self->{'_default_population'}){
-    $self->{'_default_population'} = $self->_get_major_population;
-  }
-  foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-    my %r_square;  #contains a single r2 value in the container {variation_feature r2 population_id}
-    ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-    if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}) {
-      $r_square{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
-      $r_square{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
-      $r_square{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
-      $r_square{'population_id'} = $self->{'_default_population'};	    
-      #and add all the ld information to the final list
-      push @r_squares, \%r_square;
-    }
-  }
-  return \@r_squares;
+  return [map {delete $_->{d_prime}; $_} @{$self->get_all_ld_values(@_)}];
 }
 
 =head2 get_all_d_prime_values
@@ -390,29 +399,7 @@ sub get_all_r_square_values {
 
 sub get_all_d_prime_values {
   my $self = shift;
-  my @d_primes; #contains ALL the d_prime values in the container
-
-  #the keys in the ldContainer hash
-  my $variation_feature_id_1;
-  my $variation_feature_id_2;
-
-  if (! defined $self->{'_default_population'}){
-    $self->{'_default_population'} = $self->_get_major_population;
-  }
-  foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
-    my %d_prime;  #contains a single d_prime value in the container {variation_feature d_prime population_id}
-    ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-    #add the information to the ld_value array
-    if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
-      $d_prime{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
-      $d_prime{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
-      $d_prime{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
-      $d_prime{'population_id'} = $self->{'_default_population'};
-      #and add all the ld information to the final list if exists the value
-      push @d_primes, \%d_prime;
-    }
-  }
-  return \@d_primes;
+  return [map {delete $_->{r2}; $_} @{$self->get_all_ld_values(@_)}];
 }
 
 =head2 get_all_populations
@@ -452,11 +439,11 @@ sub get_all_populations {
     #if the variation_features are correct, return the list of populations
     else {
       #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
-      if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
-        $key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
+      if (exists $self->{'ldContainer'}->{$variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start()}){
+        $key = $variation_feature_1->seq_region_start() . '-' . $variation_feature_2->seq_region_start();
       }
       else {
-        $key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
+        $key = $variation_feature_2->seq_region_start() . '-' . $variation_feature_1->seq_region_start();
       }	    
       @populations = keys %{$self->{'ldContainer'}->{$key}};
     }
@@ -481,5 +468,35 @@ sub _get_major_population {
   my( $pop ) = $_[0]->_get_populations;
   return $pop;
 }
+
+sub _slices {
+  return $_[0]->{slices};
+}
+
+sub _pos2name {
+  return $_[0]->{pos2name};
+}
+
+sub _pos2vf {
+  my $self = shift;
+
+  if(!exists($self->{pos2vf})) {
+    my %pos2vf = ();
+
+    foreach my $slice(@{$self->_slices}) {
+      my $vfs = $slice->get_all_VariationFeatures;
+      my $region_Slice = $slice->seq_region_Slice();
+
+      # the sort here "favours" variants from dbSNP since it is assumed dbSNP will have source_id = 1
+      # otherwise we'd get co-located COSMIC IDs overwriting the dbSNP ones
+      $pos2vf{$_->start} = $_ for map {$_->transfer($region_Slice)} sort {$b->{_source_id} <=> $a->{_source_id}} @{$vfs};
+    }
+
+    $self->{pos2vf} = \%pos2vf;
+  }
+
+  return $self->{pos2vf};
+}
+
 1;
 
