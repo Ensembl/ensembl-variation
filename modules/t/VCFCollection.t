@@ -144,8 +144,9 @@ ok($gts->[0]->genotype_string eq 'T|T', "get_all_SampleGenotypeFeatures_by_Slice
 # fetch LD genotypes by slice
 my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
 ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice is hash");
-ok(scalar keys %$ld_gts == 374, "_get_all_LD_genotypes_by_Slice has 374 position keys");
-ok($ld_gts->{45421006} && scalar keys %{$ld_gts->{45421006}} == 3, "_get_all_LD_genotypes_by_Slice pos 45421006 has 3 genotypes");
+
+ok(scalar keys %$ld_gts == 65, "_get_all_LD_genotypes_by_Slice has 374 position keys");
+ok($ld_gts->{45415424} && scalar keys %{$ld_gts->{45415424}} == 3, "_get_all_LD_genotypes_by_Slice pos 45421006 has 3 genotypes");
 ok($ld_gts->{45419542}->{HG00096} eq 'T|C', "_get_all_LD_genotypes_by_Slice pos 45419542 ind HG00096 has genotype T|C");
 
 
