@@ -862,11 +862,13 @@ sub _ld_calc {
         $vf2 = $name2vf->{$v_name2};
         if (!$vf1) {
           $v1 = $va->fetch_by_name($v_name1);
+          next if (!$v1);
           $vf1 =  (grep {$_->seq_region_start == $ld_region_start} @{$v1->get_all_VariationFeatures})[0] || $v1->get_all_VariationFeatures()->[0];
           $name2vf->{$v_name1} = $vf1;
         }
         if (!$vf2) {
           $v2 = $va->fetch_by_name($v_name2);
+          next if (!$v2);
           $vf2 =  (grep {$_->seq_region_start == $ld_region_end} @{$v2->get_all_VariationFeatures})[0] || $v2->get_all_VariationFeatures()->[0];
           $name2vf->{$v_name2} = $vf2;
         }
