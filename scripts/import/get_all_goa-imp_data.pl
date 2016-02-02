@@ -190,11 +190,15 @@ foreach my $hostname (@hostnames) {
         my $rest_url_with_params = sprintf($rest_url, $go, $ens_linkage, $uniprot);
         my $response = $http->get($rest_url_with_params);
        
-        die "Failed for GO: $go and UniProt: $uniprot! ($rest_url_with_params)\n" unless $response->{success};
+        if ($response->{success}) {
     
-        my $pmids = parse_result($response->{content});
+          my $pmids = parse_result($response->{content});
     
-        $go_uniprot{$go}{'uniprot_list'}{$uniprot} = join(',',@{$pmids});
+          $go_uniprot{$go}{'uniprot_list'}{$uniprot} = join(',',@{$pmids});
+        }
+        else {
+          delete $go_uniprot{$go}{'uniprot_list'}{$uniprot};
+        }
       }
     }
 
