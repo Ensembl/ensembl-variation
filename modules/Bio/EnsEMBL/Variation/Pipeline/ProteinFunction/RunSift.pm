@@ -190,6 +190,7 @@ sub run {
         );
 
 	my %evidence_stored;
+        my $results_available = 0;
 
         while (<RESULTS>) {
 
@@ -203,6 +204,8 @@ sub run {
             my ($ref_aa, $pos, $alt_aa) = $subst =~ /([A-Z])(\d+)([A-Z])/;
 
             next unless $ref_aa && $alt_aa && defined $pos;
+
+            $results_available = 1;
 
             my $low_quality = 0;
             $low_quality = 1 if $median_cons > 3.25 || $num_seqs < 10;
@@ -221,13 +224,15 @@ sub run {
 		$evidence_stored{$pos} = 1;
 	    }
 	}
-        
-        my $var_dba = $self->get_species_adaptor('variation');
+        if ($results_available == 1 ){    
+            # avoid entering null matrices
+            my $var_dba = $self->get_species_adaptor('variation');
 
-        my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
-            or die "Failed to get matrix adaptor";
+            my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
+                or die "Failed to get matrix adaptor";
         
-        $pfpma->store($pred_matrix);
+            $pfpma->store($pred_matrix);
+        }
     }
 
     # tar up the files
