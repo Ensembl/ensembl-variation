@@ -312,7 +312,7 @@ sub protein_altering_variant{
     ## don't assign if child term appropriate
 
     return 0 if  length($alt_pep) eq length($ref_pep);       # synonymous_variant(@_);  missense_variant(@_);
-    return 0 if  $ref_pep =~/^\*|X/  || $alt_pep =~/^\*|X/;  # stop lost/ gained/ retained
+    return 0 if  $ref_pep =~/^\*/  || $alt_pep =~/^\*/;      # stop lost/ gained/ retained
     return 0 if  $alt_pep =~/^\Q$ref_pep\E|\Q$ref_pep\E$/;   # inframe_insertion(@_);
 
     return 0 if inframe_deletion(@_);  
@@ -880,6 +880,8 @@ sub inframe_deletion {
     
     # sequence variant
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+        return 0 if partial_codon(@_);
+
         my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
         
         return 0 unless defined $ref_codon;
@@ -977,7 +979,7 @@ sub stop_lost {
             
             return 0 unless defined $ref_pep;
         
-            $cache->{stop_lost} = ( ($alt_pep !~ /\*|X/) and ($ref_pep =~ /\*|X/) );
+            $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
         }
         
         # structural variant

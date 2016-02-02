@@ -1322,6 +1322,12 @@ $transcript_tests->{$t4->stable_id}->{tests} = [
         end     => $cds_end,
         effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
     }, 
+    {
+        start   => $cds_end,
+        end     => $cds_end,
+        alleles => '-',
+        effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
+    }, 
 ];
 
 # transcripts with frameshift introns
