@@ -183,7 +183,7 @@ our @EXTRA_HEADERS = (
   # general
   { flag => 'individual',      cols => ['IND','ZYG'] },
   { flag => 'allele_number',   cols => ['ALLELE_NUM'] },
-  { flag => 'user',            cols => ['IMPACT','DISTANCE','STRAND'] },
+  { flag => 'user',            cols => ['IMPACT','DISTANCE','STRAND','FLAGS'] },
   { flag => 'flag_pick',       cols => ['PICK'] },
   { flag => 'flag_pick_allele',cols => ['PICK'] },
   { flag => 'variant_class',   cols => ['VARIANT_CLASS']},
@@ -254,6 +254,7 @@ our %COL_DESCS = (
     'SOURCE'             => 'Source of transcript in merged gene set',
     'HGNC_ID'            => 'Stable identifer of HGNC gene symbol',
     'ENSP'               => 'Protein identifer',
+    'FLAGS'              => 'Transcript quality flags',
     'SWISSPROT'          => 'UniProtKB/Swiss-Prot identifier',
     'TREMBL'             => 'UniProtKB/TrEMBL identifier',
     'UNIPARC'            => 'UniParc identifier',
@@ -2841,6 +2842,12 @@ sub add_extra_fields_transcript {
 
     # strand
     $line->{Extra}->{STRAND} = $tr->strand + 0;
+
+    my @attribs = @{$tr->get_all_Attributes()};
+
+    # flags
+    my @flags = grep {$_->code =~ /^cds_/} @attribs;
+    $line->{Extra}->{FLAGS} = join(",", map {$_->code} @flags) if scalar @flags;
     
     # exon/intron numbers
     if ($config->{numbers}) {
@@ -2905,7 +2912,7 @@ sub add_extra_fields_transcript {
     
     # refseq match info
     if(defined($config->{refseq}) || defined($config->{merged})) {
-      my @rseq_attrs = grep {$_->code =~ /^rseq/} @{$tr->get_all_Attributes()};
+      my @rseq_attrs = grep {$_->code =~ /^rseq/} @attribs;
       $line->{Extra}->{REFSEQ_MATCH} = join(",", map {$_->code} @rseq_attrs) if scalar @rseq_attrs;
     }
     
@@ -2940,17 +2947,17 @@ sub add_extra_fields_transcript {
     }
     
     # transcript support level
-    if(defined($config->{tsl}) && (my ($tsl) = @{$tr->get_all_Attributes('TSL')})) {
+    if(defined($config->{tsl}) && (my ($tsl) = grep {$_->code eq 'TSL'} @attribs)) {
         if($tsl->value =~ m/tsl(\d+)/) {
             $line->{Extra}->{TSL} = $1 if $1;
         }
     }
     
     # APPRIS
-    if(defined($config->{appris}) && (my ($appris) = @{$tr->get_all_Attributes('appris')})) {
+    if(defined($config->{appris}) && (my ($appris) = grep {$_->code eq 'appris'} @attribs)) {
         if(my $value = $appris->value) {
             $value =~ s/principal/P/;
-            $value =~ s/alternate/A/;
+            $value =~ s/alternative/A/;
             $line->{Extra}->{APPRIS} = $value;
         }
     }

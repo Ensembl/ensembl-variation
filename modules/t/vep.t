@@ -88,6 +88,7 @@ my $exp = {
   'Extra' => {
     'STRAND' => -1,
     'IMPACT' => 'MODERATE',
+    'FLAGS' => 'cds_end_NF',
   },
   'Feature_type' => 'Transcript',
   'Uploaded_variation' => undef,
@@ -154,7 +155,8 @@ $exp = {
   'EA_MAF' => 'C:0.0001',
   'VARIANT_CLASS' => 'SNV',
   'EXON' => '2/8',
-  'TSL' => '5'
+  'TSL' => '5',
+  'FLAGS' => 'cds_end_NF',
 };
 
 is_deeply($cons->[0]->{Extra}, $exp, "get_all_consequences - everything 2");
