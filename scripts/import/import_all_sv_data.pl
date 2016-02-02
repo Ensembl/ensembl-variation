@@ -85,7 +85,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 my %study_to_skip =  ( 'nstd8'  => 1, # Human & chimp
                        'nstd9'  => 1, # Chimp
                        'nstd82' => 1, # Several monkey species
-                       'nstd95' => 1, # Mus musculus domesticus
+                       #'nstd95' => 1, # Mus musculus domesticus
                      );
 
 my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
