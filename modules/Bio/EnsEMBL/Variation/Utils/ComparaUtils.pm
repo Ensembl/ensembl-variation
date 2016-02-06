@@ -189,21 +189,19 @@ sub _get_ungapped_alignment {
     my $compara_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'compara')
         or throw("Failed to get compara DBAdaptor");
 
-    my $ma = $compara_dba->get_MemberAdaptor
-        or throw("Failed to get member adaptor");
+    my $sma = $compara_dba->get_SeqMemberAdaptor
+        or throw("Failed to get seq_member adaptor");
 
     my $fa = $compara_dba->get_FamilyAdaptor
         or throw("Failed to get family adaptor");
 
-    my $member = $ma->fetch_by_source_stable_id("ENSEMBLPEP", $translation_stable_id) 
-        or throw("Didn't find family member for $translation_stable_id");
+    my $seq_member = $sma->fetch_by_stable_id($translation_stable_id)
+        or throw("Didn't find family seq_member for $translation_stable_id");
 
-    my $fams = $fa->fetch_all_by_Member($member) 
+    my $fam = $fa->fetch_by_SeqMember($seq_member)
         or throw("Didn't find a family for $translation_stable_id");
 
-    throw("$translation_stable_id is in more than one family") if @$fams > 1;
-
-    my $orig_align = $fams->[0]->get_SimpleAlign;
+    my $orig_align = $fam->get_SimpleAlign;
 
     $compara_dba->dbc->disconnect_if_idle;
 
