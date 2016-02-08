@@ -710,8 +710,10 @@ sub _get_mappings {
   
   foreach my $vf(@{$self->_variation_features}) {
     next if $vf->{_cds_mapping} || $vf->{_cds_mapping_failed};
+
+    my ($vf_start, $vf_end) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : ($vf->start, $vf->end);
     
-    my @mapped = $mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tr_strand);
+    my @mapped = $mapper->genomic2cds($vf_start, $vf_end, $tr_strand);
 
     # clean mapping
     if(scalar @mapped == 1) {
@@ -727,7 +729,7 @@ sub _get_mappings {
 
       # complex mapping, we can't deal with this ATM
       if(grep {$_->isa('Bio::EnsEMBL::Mapper::Coordinate')} @mapped) {
-        warn "WARNING: genomic coord ".$vf->seq_region_start."-".$vf->seq_region_end." possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
+        warn "WARNING: genomic coord ".$vf_start."-".$vf_end." possibly maps across coding/non-coding boundary in ".$tr->stable_id."\n";
 
         $vf->{_cds_mapping_failed} = 'complex';
       }
