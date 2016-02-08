@@ -41,7 +41,7 @@ Bio::EnsEMBL::Variation::Utils::FastaSequence
   );
 
   This module overrides the sequence fetching method in
-  Bio::EnsEMBL::Slice with calls to either Bio::DB::Fasta or Faidx
+  Bio::EnsEMBL::Slice with calls to either Bio::DB::Fasta or Bio::DB::HTS::Faidx
 
 =head1 METHODS
 
@@ -97,7 +97,7 @@ our %PARS = (
 );
 
 BEGIN {
-  if (eval { require Faidx; 1 }) {
+  if (eval { require Bio::DB::HTS::Faidx; 1 }) {
     $CAN_USE_FAIDX = 1;
   }
   else {
@@ -135,11 +135,11 @@ BEGIN {
     $fasta_db = setup_fasta(
       -fasta    => '/path/to/homo_sapiens.fa.gz',
       -assembly => 'GRCh38',
-      -type     => 'Faidx',
+      -type     => 'Bio::DB::HTS::Faidx',
     );
 
   Description: Set up a FASTA DB to override the seq() method in Bio::EnsEMBL::Slice
-  Returntype : Bio::DB::Fasta or Faidx
+  Returntype : Bio::DB::Fasta or Bio::DB::HTS::Faidx
   Exceptions : no file, wrong path, wrong file type
   Caller     : VEP, VariationEffect pipeline
   Status     : Stable
@@ -160,14 +160,14 @@ sub setup_fasta {
     OFFLINE
     TYPE
   )], @_);
-  
+
   throw("ERROR: No FASTA file specified\n") unless $fasta;
   throw("ERROR: Specified FASTA file/directory $fasta not found\n") unless -e $fasta;
 
   # work out type
   if($type) {
-    if($type eq 'Faidx' && !$CAN_USE_FAIDX) {
-      throw("ERROR: Faidx not installed\n");
+    if($type eq 'Bio::DB::HTS::Faidx' && !$CAN_USE_FAIDX) {
+      throw("ERROR: Bio::DB::HTS::Faidx not installed\n");
     }
     elsif($type ne 'Bio::DB::Fasta') {
       throw("ERROR: Unrecognised index type $type\n");
@@ -188,7 +188,7 @@ sub setup_fasta {
     }
   }
 
-  $type ||= $CAN_USE_FAIDX ? 'Faidx' : 'Bio::DB::Fasta';
+  $type ||= $CAN_USE_FAIDX ? 'Bio::DB::HTS::Faidx' : 'Bio::DB::Fasta';
 
   throw("ERROR: Cannot index bgzipped FASTA file with Bio::DB::Fasta\n") if $type eq 'Bio::DB::Fasta' && $fasta =~ /\.gz$/;
 
@@ -269,7 +269,7 @@ sub clear_fasta_cache {
 
 
 # creates the FASTA DB object
-# returns either a Bio::DB::Fasta or a Faidx
+# returns either a Bio::DB::Fasta or a Bio::DB::HTS::Faidx
 # uses a lock file to avoid partial indexes getting used
 sub _get_fasta_db {
   my $fasta = shift;
@@ -278,7 +278,7 @@ sub _get_fasta_db {
   # check lock file
   my $lock_file = $fasta;
   $lock_file .= -d $fasta ? '/.vep.lock' : '.vep.lock';
-  
+
   # lock file exists, indexing failed
   if(-e $lock_file) {
     print STDERR "Lock file found, removing to allow re-indexing\n" if $DEBUG;
@@ -286,7 +286,7 @@ sub _get_fasta_db {
       unlink($fasta.$_) if -e $fasta.$_;
     }
   }
-  
+
   my $index_exists = 0;
 
   for my $fn(map {$fasta.$_} qw(.fai .index .gzi /directory.index /directory.fai)) {
@@ -303,11 +303,11 @@ sub _get_fasta_db {
     close LOCK;
     print STDERR "Indexing $fasta\n" if $DEBUG;
   }
-  
+
   # run indexing
   my $fasta_db;
-  if($type eq 'Faidx' && $CAN_USE_FAIDX) {
-    $fasta_db = Faidx->new($fasta);
+  if($type eq 'Bio::DB::HTS::Faidx' && $CAN_USE_FAIDX) {
+    $fasta_db = Bio::DB::HTS::Faidx->new($fasta);
   }
   elsif(!$type || $type eq 'Bio::DB::Fasta') {
     $fasta_db = Bio::DB::Fasta->new($fasta);
@@ -373,7 +373,7 @@ sub _new_slice_seq {
 
       # overhang 3'
       if($start < $region_start) {
-        
+
         # get missing sequence
         my $missing_seq = $self->_raw_seq($sr_name, $start, $region_start - 1, $region_strand);
 
@@ -394,7 +394,7 @@ sub _new_slice_seq {
 
       # overhang 5'
       if($end > $region_end) {
-        
+
         # get missing sequence
         my $missing_seq = $self->_raw_seq($sr_name, $region_end + 1, $end, $region_strand);
 
@@ -465,7 +465,7 @@ sub _new_slice_seq {
 sub _raw_seq {
   return sub {
     my ($self, $sr_name, $start, $end, $strand) = @_;
-    
+
     # indels
     return "" if $start > $end;
 
@@ -572,7 +572,7 @@ sub _raw_seq {
     my ($seq, $length);
 
     # different modules have different calls
-    if($fasta_db->isa('Faidx')) {
+    if($fasta_db->isa('Bio::DB::HTS::Faidx')) {
       my $location_string = $sr_name.":".$start."-".$end ;
       ($seq, $length) = $fasta_db->get_sequence($location_string);
     }
@@ -582,12 +582,12 @@ sub _raw_seq {
     else {
       throw("ERROR: Don't know how to fetch sequence from a ".ref($fasta_db)."\n");
     }
-    
+
     reverse_comp(\$seq) if $seq && defined($strand) && $strand < 0;
 
     # add on PAR overlapped chunks
     $seq = $pre.$seq.$post;
-    
+
     # default to a string of Ns if we couldn't get sequence
     if(!$seq) {
       warning(sprintf("WARNING: Could not obtain sequence for %s:%i-%i:%i\n", $sr_name, $start, $end, $strand));
