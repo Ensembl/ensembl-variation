@@ -74,7 +74,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
-use Bio::EnsEMBL::Variation::SampleGenotype;
+use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
 use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
@@ -781,8 +781,10 @@ sub _create_SampleGenotypeFeatures {
 
   # we need the alleles unless this is a SNP
   my @alleles;
-  
-  if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
+
+  my $class_SO_term = $vf->class_SO_term();
+   
+  if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
     my $vcf = $self->_current();
     @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
   }
@@ -801,7 +803,7 @@ sub _create_SampleGenotypeFeatures {
     }
     
     # adjust alleles for non-SNVs
-    if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
+    if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
       my %first_char = map {substr($_, 0, 1)} @alleles;
       
       # only do this if the first base is the same in all alleles
@@ -918,7 +920,7 @@ sub _seek_by_Slice {
   my $self = shift;
   my $slice = shift;
   
-  my $vcf = $self->_seek($slice->seq_region_name, $slice->start, $slice->end);
+  my $vcf = $self->_seek($slice->seq_region_name, $slice->start - 1, $slice->end);
   return unless $vcf;
 
   $vcf->next();
