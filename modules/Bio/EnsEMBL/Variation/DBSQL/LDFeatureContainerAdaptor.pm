@@ -212,6 +212,39 @@ sub fetch_by_Slice {
   return $ldFeatureContainer;
 }
 
+=head2 fetch_all_by_Variation
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Variation $v
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Example    : my $ldFeatureContainers = $ldFetureContainerAdaptor->fetch_all_by_Variation($v);
+  Description: Retrieves listref of LDFeatureContainers for a given variant. If optional population is supplied, values are only returned for that population.
+  Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Variation {
+  my $self = shift;
+  my $v = shift;
+  my $pop = shift;
+
+  if (!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation')) {
+    throw('Bio::EnsEMBL::Variation::Variation arg expected');
+  }
+
+  my $vfs = $v->get_all_VariationFeatures();
+  throw('Could not retrieve VariationFeatures (locations) for the given Variation. Include failed variants to return variants with multiple mappings.') if (scalar @$vfs == 0);
+
+  my @containers = ();
+  foreach my $vf (@$vfs) {
+    my $ldfc = $self->fetch_by_VariationFeature($vf, $pop);
+    push @containers, $ldfc;
+  }
+  return \@containers;
+}
+
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
