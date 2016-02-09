@@ -1993,7 +1993,7 @@ sub format_rest_output {
 
   # get most severe consequence from those logged in @con_terms
   my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
-  $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
+  $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} grep {$_ ne '?'} @con_terms)[0] || '?';
 
   # add assembly
   $hash->{assembly_name} = $config->{assembly} || $config->{cache_assembly};
