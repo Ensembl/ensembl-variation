@@ -64,6 +64,14 @@ print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 15, "fetch_by_Slice - count LD values");
 
+# fetch_all_by_Variation
+my $variation = $va->fetch_by_name('rs4977575');
+my $ldContainers = $ldfca->fetch_all_by_Variation($variation, $p1);
+is(scalar @$ldContainers, 1, "fetch_all_by_Variation - count containers");
+$ldContainer = $ldContainers->[0];
+$ld_values = count_ld_values($ldContainer);
+is($ld_values, 5, "fetch_all_by_Variation - count LD values");
+
 # fetch_by_VariationFeature
 my $vf = $vfa->fetch_by_dbID(1004336);
 $ldContainer = $ldfca->fetch_by_VariationFeature($vf, $p1);
