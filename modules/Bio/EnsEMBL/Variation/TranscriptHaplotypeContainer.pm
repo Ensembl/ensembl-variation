@@ -496,10 +496,17 @@ sub _init {
   my $vfs = $self->_variation_features;
 
   my $is_protein_coding = $tr->translation ? 1 : 0;
-  
+
   # cache reference sequences on transcript object
   $tr->{cds} = $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
-  $tr->{protein} = $is_protein_coding ? ($tr->{_variation_effect_feature_cache}->{peptide} ||= $tr->translation->seq).'*' : undef;
+
+  # find out if the transcript has a conventional stop codon
+  my $last_codon = substr($tr->{cds}, -3, 3);
+  my $has_stop_codon = ($last_codon eq 'TAA' || $last_codon eq 'TAG' || $last_codon eq 'TGA') ? 1 : 0;
+
+  # only append '*' to the sequence if the CDS has a stop codon
+  # otherwise it looks like * has disappeared every time from transcripts with no stop codon
+  $tr->{protein} = $is_protein_coding ? ($tr->{_variation_effect_feature_cache}->{peptide} ||= $tr->translation->seq).($has_stop_codon ? '*' : '') : undef;
   
   # get mappings of all variation feature coordinates
   my $mappings = $self->_get_mappings;
