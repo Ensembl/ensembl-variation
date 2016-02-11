@@ -804,7 +804,7 @@ sub _create_SampleGenotypeFeatures {
     
     # adjust alleles for non-SNVs
     if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
-      my %first_char = map {substr($_, 0, 1)} @alleles;
+      my %first_char = map {substr($_, 0, 1) => 1} @alleles;
       
       # only do this if the first base is the same in all alleles
       if(scalar keys %first_char == 1) {
