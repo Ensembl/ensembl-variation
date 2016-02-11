@@ -50,6 +50,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 use Bio::EnsEMBL::Variation::CDSHaplotype;
 use Bio::EnsEMBL::Variation::ProteinHaplotype;
+use Bio::EnsEMBL::Variation::TranscriptDiplotype;
 
 use Digest::MD5 qw(md5_hex);
 use Scalar::Util qw(weaken);
@@ -180,7 +181,7 @@ sub get_all_Populations {
 
   Example    : my $th = $thc->get_TranscriptHaplotype_by_name()
   Description: Fetch a TranscriptHaplotype by name
-  Returntype : Bio::EnsEMBL::TranscriptHaplotype
+  Returntype : Bio::EnsEMBL::Variation::TranscriptHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -199,7 +200,7 @@ sub get_TranscriptHaplotype_by_name {
 
   Example    : my @ths = @{$thc->get_all_CDSHaplotypes()}
   Description: Get all CDS and protein haplotypes for this container
-  Returntype : arrayref of Bio::EnsEMBL::TranscriptHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::TranscriptHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -215,7 +216,7 @@ sub get_all_TranscriptHaplotypes {
 
   Example    : my @chs = @{$thc->get_all_CDSHaplotypes()}
   Description: Get all CDS haplotypes for this container
-  Returntype : arrayref of Bio::EnsEMBL::CDSHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::CDSHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -231,7 +232,7 @@ sub get_all_CDSHaplotypes {
 
   Example    : my @phs = @{$thc->get_all_ProteinHaplotypes()}
   Description: Get all protein haplotypes for this container
-  Returntype : arrayref of Bio::EnsEMBL::ProteinHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::ProteinHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -248,7 +249,7 @@ sub get_all_ProteinHaplotypes {
   Arg[1]     : Bio::EnsEMBL::Variation::Sample $sample
   Example    : my @ths = @{$thc->get_all_TranscriptHaplotypes_by_Sample()}
   Description: Get all CDS and protein haplotypes for a specific sample
-  Returntype : arrayref of Bio::EnsEMBL::TranscriptHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::TranscriptHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -267,7 +268,7 @@ sub get_all_TranscriptHaplotypes_by_Sample {
   Arg[1]     : Bio::EnsEMBL::Variation::Sample $sample
   Example    : my @chs = @{$thc->get_all_CDSHaplotypes_by_Sample()}
   Description: Get all CDS haplotypes for a specified sample
-  Returntype : arrayref of Bio::EnsEMBL::CDSHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::CDSHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -286,7 +287,7 @@ sub get_all_CDSHaplotypes_by_Sample {
   Arg[1]     : Bio::EnsEMBL::Variation::Sample $sample
   Example    : my @phs = @{$thc->get_all_ProteinHaplotypes_by_Sample()}
   Description: Get all protein haplotypes for a specified sample
-  Returntype : arrayref of Bio::EnsEMBL::ProteinHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::ProteinHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -305,7 +306,7 @@ sub get_all_ProteinHaplotypes_by_Sample {
   Example    : my @chs = @{$thc->get_all_most_frequent_CDSHaplotypes()}
   Description: Get all CDS haplotypes that have an observed count equal
                to the maximum observed count
-  Returntype : arrayref of Bio::EnsEMBL::CDSHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::CDSHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -343,6 +344,41 @@ sub get_all_most_frequent_ProteinHaplotypes {
   return $self->{_most_frequent_protein};
 }
 
+
+=head2 get_all_CDSDiplotypes
+
+  Example    : my @cds = @{$thc->get_all_CDSDiplotypes()}
+  Description: Get all uniquely observed CDS diplotypes - a diplotype is the
+               pair of haplotypes observed in a given sample/individual
+  Returntype : arrayref of Bio::EnsEMBL::Variation::TranscriptDiplotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_CDSDiplotypes {
+  my $self = shift;
+  return $self->_generic_get_all_diplotypes('CDS', @_);
+}
+
+
+=head2 get_all_ProteinDiplotypes
+
+  Example    : my @pds = @{$thc->get_all_ProteinDiplotypes()}
+  Description: Get all uniquely observed protein diplotypes - a diplotype is the
+               pair of haplotypes observed in a given sample/individual
+  Returntype : arrayref of Bio::EnsEMBL::Variation::TranscriptDiplotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_ProteinDiplotypes {
+  my $self = shift;
+  return $self->_generic_get_all_diplotypes('Protein', @_);
+}
 
 =head2 total_haplotype_count
 
@@ -422,9 +458,9 @@ sub get_all_SampleGenotypeFeatures {
 
 =head2 db
 
-  Example    : my $db = $thc->transcript()
+  Example    : my $db = $thc->db()
   Description: Getter/setter for the DB object for this container
-  Returntype : Bio::EnsEMBL::Transcript
+  Returntype : Bio::EnsEMBL::DBAdaptor
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -436,6 +472,12 @@ sub db {
   $self->{_db} = shift if @_;
   return $self->{_db};
 }
+
+
+
+###################
+# PRIVATE METHODS #
+###################
 
 ## Get/set all the unique VariationFeatures from the SampleGenotypeFeature objects
 sub _variation_features {
@@ -486,6 +528,90 @@ sub _get_sample_population_hash {
   }
   
   return $self->{_sample_population_hash};
+}
+
+## generic sub used by get_all_ProteinDiplotypes and get_all_CDSDiplotypes
+## there's nothing particular to CDS or Protein diplotypes
+## so all logic is shared
+sub _generic_get_all_diplotypes {
+  my ($self, $type) = @_;
+
+  my $obj_key = '_'.$type.'_diplotypes';
+
+  if(!exists($self->{$obj_key})) {
+
+    # what we want is a hash of haplotype pairs
+    # keyed on individual
+    my %by_sample = ();
+
+    my $method = 'get_all_'.$type.'Haplotypes';
+
+    foreach my $ht(@{$self->$method}) {
+      foreach my $sample(keys %{$ht->{samples}}) {
+
+        # add for each time it is observed, i.e. add twice if it is homozygous
+        push @{$by_sample{$sample}}, $ht for 1..$ht->{samples}->{$sample};
+      }
+    }
+
+    # now do some aggregation
+    my %diplotypes;
+
+    foreach my $sample(keys %by_sample) {
+
+      # sort them by hex so we're always consistent in the ordering
+      # enables uniquification
+      my @haplos = sort {$a->_hex cmp $b->_hex} @{$by_sample{$sample}};
+
+      # create a unique key by joining the hexes
+      my $hex_pair = join("_", map {$_->_hex} @haplos);
+
+      # create a hashref that will become an object
+      $diplotypes{$hex_pair} ||= {
+        -haplotypes => \@haplos
+      };
+
+      # add samples as we come across them
+      push @{$diplotypes{$hex_pair}->{-samples}}, $sample;
+    }
+
+    # now convert to objects
+    $self->{$obj_key} = [map {Bio::EnsEMBL::Variation::TranscriptDiplotype->new(%$_)} values %diplotypes];
+  }
+
+  return $self->{$obj_key};
+}
+
+## we need this to get diplotype frequencies
+sub _total_sample_count {
+  my $self = shift;
+
+  if(!exists($self->{_total_sample_count})) {
+    $self->{_total_sample_count} = scalar @{$self->get_all_Samples};
+  }
+
+  return $self->{_total_sample_count};
+}
+
+## gets total population counts of diplotypes
+## since there will be one diplotype per sample, this basically
+## just returns a hashref of sample counts per population
+sub _total_diplotype_population_counts {
+  my $self = shift;
+  
+  if(!exists($self->{_total_diplotype_population_counts})) {
+    my $counts = {};
+    
+    my $hash = $self->_get_sample_population_hash();
+    
+    foreach my $sample(keys %$hash) {
+      $counts->{$_}++ for keys %{$hash->{$sample}};
+    }
+    
+    $self->{_total_diplotype_population_counts} = $counts;
+  }
+  
+  return $self->{_total_diplotype_population_counts};
 }
 
 ## Creates all the TranscriptHaplotype objects for this container
