@@ -429,17 +429,20 @@ sub _pre_consequence_predicates {
     unless($preds->{sv}) {
       my $vf_seq = $self->variation_feature_seq();
       $vf_seq = '' if $vf_seq eq '-';
+      my $alt_length = length($vf_seq);
+      $preds->{alt_length} = $alt_length;
+      
       my $ref_length = $preds->{ref_length};
     
       # most variants we see will be SNPs, so test this first
-      if(length($vf_seq) == $ref_length) {
+      if($alt_length == $ref_length) {
         $preds->{snp} = 1;
       }
-      elsif( $ref_length > length($vf_seq) ) {
+      elsif( $ref_length > $alt_length ) {
         $preds->{deletion} = 1;
         $preds->{decrease_length} = 1;
       }
-      elsif( $ref_length < length($vf_seq) ) {
+      elsif( $ref_length < $alt_length ) {
         $preds->{insertion} = 1;
         $preds->{increase_length} = 1;
       }

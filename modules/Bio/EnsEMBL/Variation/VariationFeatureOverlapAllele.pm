@@ -409,4 +409,65 @@ sub _convert_to_sara {
     return $self;
 }
 
+# establish which parts of the given ALT sequence are different from REF
+# returns listref of hashrefs
+# { s => $start, e => $end }
+# coords are 0-indexed
+sub _get_differing_regions {
+  my $self = shift;
+
+  if(!exists($self->{_differing_regions})) {
+    my $bvfo = $self->base_variation_feature_overlap;
+
+    my $pre = $self->_pre_consequence_predicates();
+    my ($ref_length, $alt_length) = ($pre->{ref_length}, $pre->{alt_length});
+
+    my @diff_regions;
+
+    # obviously we don't need to do this for SNPs or anything where one of ALT or REF is 1 base or less
+    # otherwise it wouldn't be a variant...
+    if($alt_length > 1 && $ref_length > 1) {
+      my $al1 = $bvfo->get_reference_BaseVariationFeatureOverlapAllele->variation_feature_seq;
+      my $al2 = $self->variation_feature_seq;
+
+      $al1 = '' if $al1 eq '-';
+      $al2 = '' if $al2 eq '-';
+
+      ## this code finds diffs between the sequences
+      ## copied verbatim from http://www.perlmonks.org/?node_id=882593
+      my ($m, @pos);
+      $m = $al1 ^ $al2;
+      push @pos, pos( $m ) while $m =~ m{(?=([^\x00]))}g;
+
+      # now we join them into contiguous regions
+      my ($region, $prev);
+
+      foreach my $pos(@pos) {
+        if($region && $pos == $prev + 1) {
+          $region->{e} = $pos;
+        }
+        else {
+          push @diff_regions, $region if $region;
+
+          $region = {
+            s => $pos,
+            e => $pos
+          };
+        }
+
+        $prev = $pos;
+      }
+
+      push @diff_regions, $region if $region;
+    }
+    else {
+      push @diff_regions, { s => 0, e => $ref_length - 1 };
+    }
+
+    $self->{_differing_regions} = \@diff_regions;
+  }
+
+  return $self->{_differing_regions};
+}
+
 1;

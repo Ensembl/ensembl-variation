@@ -543,6 +543,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $exon_start-10,
         end     => $exon_end+10,
         effects => [qw(intron_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
+    }, {
+        comment => 'long sequence var where middle is identical but overlaps splice site',
+        alleles => 'ATGTACTGCCTATGTGTGCTGTGAGTATGATACGGTGGACT',
+        debug   => 1,
+        start   => $intron_start - 20,
+        end     => $intron_start + 20,
+        effects => [qw(intron_variant coding_sequence_variant)],
     },
 
     # check the CDS 
@@ -1416,6 +1423,8 @@ for my $stable_id (keys %$transcript_tests) {
             reverse_comp(\$alt);
             $test->{alleles} = $alt;
         }
+
+        $DB::single = 1 if $test->{debug};
 
         $test->{strand} = $def_strand unless defined $test->{strand};
 

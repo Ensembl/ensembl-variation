@@ -81,5 +81,11 @@ sub structural_variation_feature {
     return $self->structural_variation_overlap->structural_variation_feature;
 }
 
+# required for intron overlap checking
+sub _get_differing_regions {
+  my $self = shift;
+  return $self->{_differing_regions} ||= [{ s => 0, e => ($self->{end} - $self->{start}) }];
+}
+
 1;
 
