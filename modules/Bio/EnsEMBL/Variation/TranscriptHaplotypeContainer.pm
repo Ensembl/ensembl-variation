@@ -881,8 +881,10 @@ sub _filter_and_sort_genotypes {
   my $gts = shift;
 
   return [
-    sort {$b->variation_feature->{_cds_mapping}->start <=> $a->variation_feature->{_cds_mapping}->start}
-    grep {$_->variation_feature->{_cds_mapping}}
+    map  { $_->[0] }
+    sort { $b->[1] <=> $a->[1] }
+    map  { [$_, $_->variation_feature->{_cds_mapping}->start] }
+    grep { $_->variation_feature->{_cds_mapping} }
     @$gts
   ];
 }
