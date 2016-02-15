@@ -274,7 +274,7 @@ sub summarise_evidence{
 
 
     ## summarise ss information
-    my $ss_variations =  get_ss_variations($var_dbh, $first, $last);
+    my $ss_variations =  get_ss_variations($var_dbh, $first, $last, $species);
 
 
     ## extract list of variants with pubmed citations
@@ -291,7 +291,8 @@ sub summarise_evidence{
 
 	## dbSNP ss submissions
 	push @{$evidence{$var}},  $evidence_ids->{Multiple_observations}  
-	   if defined $ss_variations->{$var}->{count} && $ss_variations->{$var}->{count} > 1;
+	   if defined $ss_variations->{$var}->{count} && $ss_variations->{$var}->{count} > 1
+           &&  $species !~/Homo|Human/i ;
 	
 	push @{$evidence{$var}}, $evidence_ids->{Frequency}            
            if defined $ss_variations->{$var}->{'freq'};
@@ -311,7 +312,16 @@ sub summarise_evidence{
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
            if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'KG'}) ;
 
-      ## pubmed citations
+      ## additional cow evidence
+      push @{$evidence{$var}}, $evidence_ids->{'1000Bull_Genomes'}
+           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'1000_BULL_GENOMES'}) ;
+     
+      ## additional mouse evidence
+      push @{$evidence{$var}}, $evidence_ids->{'WTSI_MGP'}
+           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'SC_MOUSE_GENOMES'}) ;
+
+
+      ## pubmed citations - multi species
       push @{$evidence{$var}}, $evidence_ids->{Cited}               
            if defined $pubmed_variations->{$var}; 
 	   
@@ -363,7 +373,8 @@ sub get_ss_variations{
     my $var_dbh = shift;
     my $first   = shift;
     my $last    = shift;
-    
+    my $species = shift;
+
     my %evidence;
 
     my $obs_var_ext_sth  = $var_dbh->prepare(qq[ select al.variation_id,
@@ -389,12 +400,20 @@ sub get_ss_variations{
 
         $l->[2] = "N" unless defined $l->[2];
 
+        ## human specific
         $evidence{$l->[0]}{'KG'}    = 1 if $l->[1] =~/1000GENOMES/;
         $evidence{$l->[0]}{'freq'}  = 1 if $l->[1] =~/1000GENOMES/;
 
-        #save  submitter handle, population and ss id to try to discern independent submissions
-        push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
+        ## cow specific
+        $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
+        ## mouse specific
+        $evidence{$l->[0]}{'SC_MOUSE_GENOMES'}  = 1 if $l->[1] =~/SC_MOUSE_GENOMES/;
 
+        #save submitter handle, population and ss id to try to discern independent submissions
+        ## no longer useful for Human 2016/01 
+        unless ($species =~/Homo|Human/i){
+          push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
+        }
 
        ## Save frequency evidence for variant by variant id - ensure at least 2 chromosomes assayed and variant poly
        ## only assign frequency status if population has more than 1 member.

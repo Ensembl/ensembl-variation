@@ -41,7 +41,7 @@ use strict;
 use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
-use Bio::EnsEMBL::Variation::Utils::QCUtils qw( count_rows count_for_statement);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( count_rows count_for_statement get_evidence_attribs);
 
 my $DEBUG = 0;
 
@@ -89,6 +89,7 @@ sub run {
     my $complimented_desc    = $self->check_complimented_desc();
     my $bad_position         = $self->check_bad_position();
 
+    my $attribs_loaded       = $self->check_attribs();
 
     print $report "Post-import preQC check
 
@@ -110,6 +111,9 @@ VariationFeature without seqregion: $varfeat_no_seqreg
 VariationFeature where end+1<start: $bad_position
 \n";  
 
+    print $report "\nERROR: missing evidence attribs\n\n" if $attribs_loaded == 0;
+
+
     print $report "ERROR: $complimented_desc complimented descriptions found - to be fixed manually\n\n" if $complimented_desc >0;
 
     if($var_no_ss_allele    > 0  || 
@@ -120,7 +124,8 @@ VariationFeature where end+1<start: $bad_position
        $geno_no_sample     >0    ||
        $varfeat_no_pos     >0    ||
        $varfeat_no_seqreg  >0    ||
-       $geno_no_subsnp     >0
+       $geno_no_subsnp     >0    ||
+       $attribs_loaded   == 0
        ){
 
         print $report "Exiting - missing data to import\n"; 
@@ -346,6 +351,27 @@ sub check_bad_position{
                            ]);
 
     return count_for_statement($var_dba , $data_ext_stat);
+}
+
+=head2 check_attribs
+
+  Check the expected evidence attribs are available.
+  Check early to avoid partial jobs - not future-proof but will catch some problems
+
+
+=cut
+sub check_attribs{
+
+    my $self = shift;
+
+    my $var_dba = $self->get_species_adaptor('variation');
+    my $attribs = get_evidence_attribs($var_dba);
+
+    my $found_everything = 1;
+    foreach my $ev ( "1000Genomes", "Cited", "ESP", "ExAC", "Frequency", "HapMap", "Multiple_observations","1000Bull_Genomes", "WTSI_MGP"){
+        $found_everything = 0 unless defined $attribs->{$ev};
+    }
+    return $found_everything;
 }
 
 1;
