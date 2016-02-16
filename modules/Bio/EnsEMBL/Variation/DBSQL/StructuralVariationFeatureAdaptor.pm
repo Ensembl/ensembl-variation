@@ -112,6 +112,38 @@ sub fetch_all_by_Slice {
   return $self->fetch_all_by_Slice_constraint($slice, undef, $include_supporting_evidence);
 }
 
+=head2 fetch_all_by_Slice_size_range
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Arg [2]    : int $size_min lower value for the size range
+  Arg [3]    : int $size_max upper value for the size range 
+  Arg [4]    : int $include_supporting_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_somatic_by_Slice($slice);
+  Description: Retrieves all structural variation features on the given Slice for the given size range.
+               If $include_supporting_evidence is set (i.e. $include_supporting_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_size_range {
+  my ($self, $slice, $size_min, $size_max, $include_supporting_evidence) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $constraint = qq{svf.seq_region_end - svf.seq_region_start >= $size_min};
+     $constraint .= qq{ AND svf.seq_region_end - svf.seq_region_start < $size_max } if (defined $size_max);
+
+  return $self->fetch_all_by_Slice_constraint($slice, $constraint, $include_supporting_evidence);
+}
+
 =head2 fetch_all_by_Slice_constraint
 
   Arg [1]    : Bio::EnsEMBL::Slice 
@@ -165,6 +197,76 @@ sub fetch_all_by_Slice_constraint {
 sub fetch_all_somatic_by_Slice {
   my ($self, $slice, $include_supporting_evidence) = @_;
   return $self->fetch_all_somatic_by_Slice_constraint($slice, undef, $include_supporting_evidence);
+}
+
+=head2 fetch_all_somatic_by_Slice_size_range
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Arg [2]    : int $size_min lower value for the size range
+  Arg [3]    : int $size_max upper value for the size range 
+  Arg [4]    : int $include_supporting_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_somatic_by_Slice($slice);
+  Description: Retrieves all somatic structural variation features on the given Slice for the given size range.
+               If $include_supporting_evidence is set (i.e. $include_supporting_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Slice_size_range {
+  my ($self, $slice, $size_min, $size_max, $include_supporting_evidence) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $constraint = qq{svf.seq_region_end - svf.seq_region_start >= $size_min};
+     $constraint .= qq{ AND svf.seq_region_end - svf.seq_region_start < $size_max } if (defined $size_max);
+
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, $constraint, $include_supporting_evidence);
+}
+
+=head2 fetch_all_somatic_by_Slice_Source
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return somatic mutations for the given source 
+  Arg [3]    : int $include_supporting_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_somatic_by_Slice($slice);
+  Description: Retrieves all somatic structural variation features on the given Slice for the given source.
+               If $include_supporting_evidence is set (i.e. $include_supporting_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+
+sub fetch_all_somatic_by_Slice_Source {
+  my $self  = shift;
+  my $slice = shift;
+  my $source = shift;
+  my $include_supporting_evidence = shift;
+  
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if (!ref($source) || !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw('Bio::EnsEMBL::Variation::Source arg expected');
+  }
+  
+  my $constraint = $self->_internal_exclude_failed_constraint("svf.source_id = " . $source->dbID);
+  
+  my $svfs = $self->fetch_all_somatic_by_Slice_constraint($slice, $constraint, $include_supporting_evidence);
+  return $svfs;
 }
 
 
@@ -368,6 +470,48 @@ sub fetch_all_by_Slice_Study {
   return $svfs;
 }
 
+=head2 fetch_all_by_Slice_Source
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Arg [2]    : Bio::EnsEMBL::Variation::Source $source
+  Arg [3]    : int $include_supporting_evidence [optional]
+  Example    : my @vsfs = @{$svfa->fetch_all_by_Slice_Source($slice, $source)};
+  Description: Retrieves all structural variation features in a slice that belong to a 
+               given source.
+               If $include_supporting_evidence is set (i.e. $include_supporting_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_Source {
+  my $self  = shift;
+  my $slice = shift;
+  my $source = shift;
+  my $include_supporting_evidence = shift;
+  
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if (!ref($source) || !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw('Bio::EnsEMBL::Variation::Source arg expected');
+  }
+  
+  my $constraint = $self->_internal_exclude_failed_constraint("svf.source_id = " . $source->dbID);
+  
+  # Include/exclude the supporting evidences
+  if (!$include_supporting_evidence) {
+    $constraint .= " AND " if (defined($constraint));
+    $constraint .= " svf.is_evidence=0 ";
+  }
+  
+  my $svfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  return $svfs;
+}
 
 =head2 fetch_all_by_Slice_VariationSet
 
