@@ -432,6 +432,38 @@ sub fetch_all_somatic_by_Slice {
   return $self->fetch_all_somatic_by_Slice_constraint($slice, '');
 }
 
+=head2 fetch_all_somatic_by_Slice_Source
+  Arg [1]    : Bio::EnsEMBL::Slice $slice the slice from which to obtain features
+  Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return somatic mutations for the given source
+  Example    : my $vfs = $vfa->fetch_all_somatic_by_Slice_Source($slice, $source);
+  Description: Retrieves a list of variation features representing somatic mutations on the given Slice for a given source.
+  Returntype : listref of Bio::EnsEMBL::VariationFeatures
+  Exceptions : throw on incorrect argument
+  Caller     : Bio::EnsEMBL::Slice
+  Status     : Stable
+=cut
+
+sub fetch_all_somatic_by_Slice_Source {
+  my ($self, $slice, $source) = @_;
+
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  if (!ref($source) || !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw('Bio::EnsEMBL::Variation::Source arg expected');
+  }
+
+  if (!$source->dbID()) {
+    warning("Source does not have dbID, cannot retrieve s variants");
+    return [];
+  }
+
+  my $constraint = 'vf.source_id = ' . $source->dbID;
+
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, $constraint);
+}
+
 =head2 fetch_all_by_Variation
 
   Arg [1]    : Bio::EnsEMBL:Variation::Variation $var
