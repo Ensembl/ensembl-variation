@@ -143,6 +143,14 @@ print "\n# Test - fetch_all_by_Slice_constraint_with_Variations\n";
 my $vfs4 = $vfa->fetch_all_by_Slice_constraint_with_Variations($slice,$constraint);
 ok($vfs4->[0]->variation_name() eq $vf_name, "vf by slice constraint with variation");
 
+# test fetch all by Slice SO terms
+print "\n# Test - fetch_all_by_Slice_SO_terms\n";
+my $vfs4a = $vfa->fetch_all_by_Slice_SO_terms($slice);
+ok(scalar @$vfs4a == 3, "fetch_all_by_Slice_SO_terms");
+
+$vfs4a = $vfa->fetch_all_by_Slice_SO_terms($slice, ['intron_variant']);
+ok(scalar @$vfs4a == 2, "fetch_all_by_Slice_SO_terms");
+
 # test fetch all by Slice constraint with TranscriptVariations
 print "\n# Test - fetch_all_by_Slice_constraint_with_TranscriptVariations\n";
 my $vfs5 = $vfa->fetch_all_by_Slice_constraint_with_TranscriptVariations($slice,$constraint);
@@ -200,7 +208,8 @@ print "\n# Test - fetch_all_by_Slice_VariationSet & SO term\n";
 my $vfs8b = $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set,$vs,['intron_variant'] );
 
 ok($vfs8b->[0]->variation_name() eq 'rs182218163', "vf by slice & variation set & SO term");
-
+throws_ok { $vfa->fetch_all_by_Slice_VariationSet_SO_terms('slice', $vs, ['intron_variant']); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set, 'variation_set', ['intron_variant']); } qr/VariationSet arg expected/, 'Throw on wrong variation set argument.';
 
 
 ## Slice Somatic ##
