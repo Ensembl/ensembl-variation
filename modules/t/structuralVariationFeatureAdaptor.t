@@ -75,6 +75,10 @@ print "\n# Test - fetch_all_by_StructuralVariation\n";
 my $sv = $sva->fetch_by_dbID(3506221);
 my $svfs = $svfa->fetch_all_by_StructuralVariation($sv);
 ok(@$svfs == 1,                         "sv -> vf count ");
+throws_ok { $svfa->fetch_all_by_StructuralVariation('sv'); } qr/SupportingStructuralVariation arg expected/, 'Throw on wrong SV argument.';
+my $sv2 = Bio::EnsEMBL::Variation::StructuralVariation->new(-variation_name => 'test');
+throws_ok { $svfa->fetch_all_by_StructuralVariation($sv2); } qr/StructuralVariation arg must have defined dbID/, 'Throw on missing dbID.';
+
 $svf = $svfs->[0];
 $source = $svf->source;
 $slice  = $svf->slice;
@@ -152,11 +156,20 @@ my $constraint_4 = "svf.variation_name='$sv_somatic'";
 my $svfs4 = $svfa->fetch_all_somatic_by_Slice($slice_soma);
 ok($svfs4->[0]->variation_name() eq $sv_somatic, "somatic sv by slice constraint");
 
+# test fetch all somatic by Slice Source
+print "\n# Test - fetch_all_somatic_by_Slice_Source\n";
+my $svfs4a = $svfa->fetch_all_somatic_by_Slice_Source($slice_soma, $source, 0);
+ok($svfs4a->[0]->variation_name() eq $sv_somatic, "somatic sv by slice source");
+throws_ok { $svfa->fetch_all_somatic_by_Slice_Source('slice', $source, 0); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $svfa->fetch_all_somatic_by_Slice_Source($slice_soma, 'source', 0); } qr/Source arg expected/, 'Throw on wrong source argument.';
+
 # test fetch all by Slice SO term
 print "\n# Test - fetch_all_by_Slice_SO_term\n";
 my $SO_term_6 = 'inversion';
 my $svfs6 = $svfa->fetch_all_by_Slice_SO_term($slice_test,$SO_term_6);
 ok($svfs6->[0]->variation_name() eq $sv_names[1], "sv by slice and SO term");
+throws_ok { $svfa->fetch_all_by_Slice_SO_term('slice', $SO_term_6); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+warns_like { $svfa->fetch_all_by_Slice_SO_term($slice_test, ['SO_term']); } qr/The SO term/, 'Warn on SO term has not been found.';
 
 # test fetch all cnv probe by Slice
 print "\n# Test - fetch_all_cnv_probe_by_Slice\n";
@@ -167,6 +180,15 @@ ok($svfs7->[0]->variation_name() eq 'CN_674347', "cnv probe by slice");
 print "\n# Test - fetch_all_by_Slice_Study\n";
 my $svfs8 = $svfa->fetch_all_by_Slice_Study($slice_test, $study);
 ok($svfs8->[0]->variation_name() eq $sv_names[0], "sv by slice and study");
+throws_ok { $svfa->fetch_all_by_Slice_Study('slice', $study); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $svfa->fetch_all_by_Slice_Study($slice_test, 'study'); } qr/Study arg expected/, 'Throw on wrong study argument.';
+
+# test fetch all by Slice Source
+print "\n# Test - fetch_all_by_Slice_Source\n";
+my $svfs8a = $svfa->fetch_all_by_Slice_Source($slice_test, $source, 0);
+ok(scalar @$svfs8a == 3, "svfs by slice and source");
+throws_ok { $svfa->fetch_all_by_Slice_Source('slice', $source); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $svfa->fetch_all_by_Slice_Source($slice_test, 'source'); } qr/Source arg expected/, 'Throw on wrong source argument.';
 
 # test fetch all by Slice VariationSet
 print "\n# Test - fetch_all_by_Slice_VariationSet\n";
@@ -175,7 +197,6 @@ my @sv_sets = ('esv89107','esv93078');
 my $svfs9 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
 ok($svfs9->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
 ok($svfs9->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
-
 
 ## Other ##
 
