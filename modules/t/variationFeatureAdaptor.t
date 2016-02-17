@@ -20,7 +20,7 @@ use Data::Dumper;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
-
+use Test::Exception;
 our $verbose = 0;
 
 
@@ -40,7 +40,7 @@ my $vfa = $vdb->get_VariationFeatureAdaptor();
 my $va  = $vdb->get_VariationAdaptor();
 my $vsa = $vdb->get_VariationSetAdaptor();
 my $pa = $vdb->get_PopulationAdaptor();
-
+my $source_adaptor = $vdb->get_SourceAdaptor(); 
 
 ok($vfa && $vfa->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'));
 
@@ -60,6 +60,11 @@ my $vf_id    = 33303674;
 # Somatic
 my $vf_somatic_name = 'COSM946275';
 
+# Source
+my $source_name = 'dbSNP';
+my $somatic_source_name = 'COSMIC';
+my $source = $source_adaptor->fetch_by_name($source_name);  
+my $somatic_source = $source_adaptor->fetch_by_name($somatic_source_name); 
 
 my $vf = $vfa->fetch_by_dbID($vf_id);
 
@@ -209,6 +214,17 @@ ok($vfs11->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice const
 print "\n# Test - fetch_all_somatic_by_Slice\n";
 my $vfs12 = $vfa->fetch_all_somatic_by_Slice($slice_somatic);
 ok($vfs12->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice");
+
+# fetch all somatic by Slice and Source
+print "\n# Test - fetch_all_somatic_by_Slice_Source\n";
+my $vfs12a = $vfa->fetch_all_somatic_by_Slice_Source($slice_somatic, $somatic_source);    
+ok($vfs12a->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice and source");
+throws_ok { $vfa->fetch_all_somatic_by_Slice_Source('slice', $somatic_source); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $vfa->fetch_all_somatic_by_Slice_Source($slice_somatic, 'somatic_source'); } qr/Source arg expected/, 'Throw on wrong source argument.';
+my $somatic_source2 = Bio::EnsEMBL::Variation::Source->new(
+  -name => 'test_source',
+);
+warns_like { $vfa->fetch_all_somatic_by_Slice_Source($slice_somatic, $somatic_source2); } qr/Source does not have dbID/, 'Warn on missing source dbID.';
 
 # test fetch all somatic with phenotype by Slice
 print "\n# Test - fetch_all_somatic_with_phenotype_by_Slice\n";
