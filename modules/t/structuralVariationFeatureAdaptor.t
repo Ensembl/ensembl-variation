@@ -197,6 +197,8 @@ my @sv_sets = ('esv89107','esv93078');
 my $svfs9 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
 ok($svfs9->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
 ok($svfs9->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
+throws_ok { $svfa->fetch_all_by_Slice_VariationSet('slice', $set); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+throws_ok { $svfa->fetch_all_by_Slice_VariationSet($slice_set, 'set'); } qr/VariationSet arg expected/, 'Throw on wrong variation set argument.';
 
 ## Other ##
 
@@ -209,12 +211,17 @@ ok($svfs10->[0] == 1850296, "sv id by list of dbIDs");
 print "\n# Test - fetch_all_by_Study\n";
 my $svfs11 = $svfa->fetch_all_by_Study($study);
 ok($svfs11->[0]->variation_name() eq $sv_names[0], "sv by study");
+throws_ok { $svfa->fetch_all_by_Study('study'); } qr/Study arg expected/, 'Throw on wrong study argument.';
+my $study11 = Bio::EnsEMBL::Variation::Study->new(-name => 'new_study');
+warns_like { $svfa->fetch_all_by_Study($study11); } qr/Study does not have dbID/, 'Warn on missing dbID.';
 
 # test fetch all by Source
 print "\n# Test - fetch_all_by_Source\n";
 my $svfs12 = $svfa->fetch_all_by_Source($source);
 ok($svfs12->[0]->variation_name() eq 'esv93078', "sv by source");
-
+throws_ok { $svfa->fetch_all_by_Source('source'); } qr/Source arg expected/, 'Throw on wrong source argument.';
+my $source12 = Bio::EnsEMBL::Variation::Source->new(-name => 'new_source');
+warns_like { $svfa->fetch_all_by_Source($source12); } qr/Source does not have dbID/, 'Warn on missing dbID.';
 
 ## store ##
 
