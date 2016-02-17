@@ -226,6 +226,14 @@ my $somatic_source2 = Bio::EnsEMBL::Variation::Source->new(
 );
 warns_like { $vfa->fetch_all_somatic_by_Slice_Source($slice_somatic, $somatic_source2); } qr/Source does not have dbID/, 'Warn on missing source dbID.';
 
+# test fetch all somatic by Slice SO terms
+print "\n# Test - fetch_all_somatic_by_Slice_SO_terms\n";
+my $vfs12b = $vfa->fetch_all_somatic_by_Slice_SO_terms($slice_somatic, ['missense_variant']);
+ok($vfs12b->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice and SO terms");
+throws_ok { $vfa->fetch_all_somatic_by_Slice_SO_terms('slice', ['missense_variant']); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+$vfs12b = $vfa->fetch_all_somatic_by_Slice_SO_terms($slice_somatic);
+ok($vfs12b->[0]->variation_name() eq $vf_somatic_name, "somatic vf by slice and no SO terms");
+
 # test fetch all somatic with phenotype by Slice
 print "\n# Test - fetch_all_somatic_with_phenotype_by_Slice\n";
 my $vfs13 = $vfa->fetch_all_somatic_with_phenotype_by_Slice($slice_somatic);
