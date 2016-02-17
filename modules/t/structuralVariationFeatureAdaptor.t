@@ -17,6 +17,7 @@ use strict;
 use warnings;
 use Test::More;
 use Data::Dumper;
+use Test::Exception;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -117,6 +118,28 @@ print "\n# Test - fetch_all_by_Slice_constraint\n";
 my $constraint_2 = "svf.variation_name='".$sv_names[0]."'";
 my $svfs2 = $svfa->fetch_all_by_Slice_constraint($slice_test,$constraint_2);
 ok($svfs2->[0]->variation_name() eq $sv_names[0], "sv by slice constraint");
+
+# test fetch all by Slice size range
+print "\n# Test - fetch_all_by_Slice_size_range\n";
+my $size_min = 40_000;
+my $size_max = 200_000;
+my $svfs2a = $svfa->fetch_all_by_Slice_size_range($slice_test, $size_min, $size_max);
+ok(scalar @$svfs2a == 2, "fetch all by Slice size range, size min and size max");
+$svfs2a = $svfa->fetch_all_by_Slice_size_range($slice_test, $size_min);
+ok(scalar @$svfs2a == 3, "fetch all by Slice size range, size min");
+#4169389 4288923 120_000
+#15976013 16025663 50_000
+#22294124 22772309 480_000
+throws_ok { $svfa->fetch_all_by_Slice_size_range('slice', $size_min, $size_max); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
+
+print "\n# Test - fetch_all_somatic_by_Slice_size_range\n";
+$size_min = 2;
+$size_max = 50;
+my $svfs2b = $svfa->fetch_all_somatic_by_Slice_size_range($slice_soma, $size_min, $size_max);
+ok(scalar @$svfs2b == 1, "fetch all somatic by Slice size range, size min and size max");
+$svfs2b = $svfa->fetch_all_somatic_by_Slice_size_range($slice_soma, $size_min);
+ok(scalar @$svfs2b == 1, "fetch all somatic by Slice size range, size min");
+throws_ok { $svfa->fetch_all_somatic_by_Slice_size_range('slice', $size_min, $size_max); } qr/Slice arg expected/, 'Throw on wrong slice argument.';
 
 # test fetch all somatic by Slice
 print "\n# Test - fetch_all_somatic_by_Slice\n";
