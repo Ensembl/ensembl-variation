@@ -317,7 +317,11 @@ sub fetch_by_VariationFeatures {
     }
     push @slice_objects, $vf->feature_Slice->expand(1, 1);
   }
-  
+  # cache positions
+  foreach my $vf (@$vfs) {
+    $self->{_pairwise}->{$vf->seq_region_start} = 1;
+  }  
+ 
   # fetch by slice using expanded feature slice
   my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $pop);
   
@@ -906,7 +910,11 @@ sub _ld_calc {
       if (defined($self->{_vf_pos})) {
         next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
       }
-	  
+      # skip entries for pairwise computation that don't match input variation feature loactions
+      if (defined $self->{_pairwise}) {
+        next unless ($self->{_pairwise}->{$ld_region_start} && $self->{_pairwise}->{$ld_region_end});
+      } 
+
       $ld_values{'d_prime'} = $d_prime;
       $ld_values{'r2'} = $r2;
       $ld_values{'sample_count'} = $sample_count;
@@ -934,7 +942,8 @@ sub _ld_calc {
   );
 
   $t->{'_pop_ids'} =\%_pop_ids;
-
+  delete $self->{_pairwise};
+  
   return $t;      
 }
 
