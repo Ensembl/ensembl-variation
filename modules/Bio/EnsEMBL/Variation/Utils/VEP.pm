@@ -2632,7 +2632,7 @@ sub tva_to_line {
     my $offset = $tva->hgvs_offset;
 
     # URI encode "="
-    $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !defined($config->{no_escape});
+    $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !(defined($config->{no_escape}) || defined($config->{json}) || defined($config->{rest}));
 
     $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
     $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
