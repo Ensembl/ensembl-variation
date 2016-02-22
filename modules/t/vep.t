@@ -523,14 +523,23 @@ ok($cons && ${$cons->[0]} =~ /missense_variant 0 mRNA ENST00000419219/, "gvf out
 $config = copy_config($base_config, {
   json => 1,
   rest => 1,
-  check_existing => 1,
-  sift => 'b',
-  domains => 1
 });
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && $cons->[0]->{most_severe_consequence} eq 'missense_variant', "json output");
+
+
+$config = copy_config($base_config, {
+  json => 1,
+  rest => 1,
+  hgvs => 1,
+});
+
+($vf) = @{parse_line($config, '21 25606453 25606453 G/C +')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && $cons->[0]->{transcript_consequences}->[0]->{hgvsp} eq 'ENST00000419219.1:c.276N>G(p.=)', "json HGVSp no escaping");
+
 
 # check
 $config = copy_config($base_config, {
