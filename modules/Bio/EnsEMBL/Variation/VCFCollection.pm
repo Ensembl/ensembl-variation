@@ -434,7 +434,7 @@ sub get_all_Samples {
   if(!defined($self->{samples})) {
     
     # we should only need to get samples from one chromosome's VCF
-    my $chr = $self->list_chromosomes->[0];
+    my $chr = $self->list_chromosomes ? $self->list_chromosomes->[0] : '';
     my $vcf = $self->_get_vcf_by_chr($chr);
     
     throw("ERROR: VCF file ".$self->_get_vcf_filename_by_chr($chr)." not found\n") unless $vcf;

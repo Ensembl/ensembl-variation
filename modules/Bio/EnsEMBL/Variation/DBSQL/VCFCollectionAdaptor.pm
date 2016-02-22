@@ -130,7 +130,7 @@ sub new {
   my $config = {};
 
   # try and get config from DB adaptor
-  $self->db->vcf_config if $self->db;
+  $config = $self->db->vcf_config if $self->db;
 
   unless($config && scalar keys %$config) {
     my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
