@@ -164,7 +164,7 @@ sub fetch_by_name {
   );
   
   # get the strain slice
-  my $strain_slice = $slice->get_by_strain($sample->name);
+  my $strain_slice = $self->get_by_Strain_Slice($sample, $slice);
   
   # get all allele features for this slice and sample
   #my @afs = sort {$a->start() <=> $b->start()} @{$af_adaptor->fetch_all_by_Slice($slice, $sample)};
@@ -320,6 +320,22 @@ sub fetch_by_name {
   return [$mapped_slice];
 }
 
+sub get_by_Strain_Slice {
+  my $self = shift;
+  my $strain = shift;
+  my $slice = shift;
+
+  return Bio::EnsEMBL::Variation::StrainSlice->new(
+    -START   => $slice->{'start'},
+    -END     => $slice->{'end'},
+    -STRAND  => $slice->{'strand'},
+    -ADAPTOR => $slice->adaptor(),
+    -SEQ     => $slice->{'seq'},
+    -SEQ_REGION_NAME => $slice->{'seq_region_name'},
+    -SEQ_REGION_LENGTH => $slice->{'seq_region_length'},
+    -COORD_SYSTEM    => $slice->{'coord_system'},
+    -STRAIN_NAME     => $strain->name);
+}
 
 1;
 
