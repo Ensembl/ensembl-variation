@@ -56,7 +56,7 @@ use Bio::LocatableSeq;
 my $CAN_USE_DPALIGN;
 
 BEGIN {
-  if (eval { require Bio::Tools::dpAlign; 1 }) {
+  if (eval { require Bio::Ext::Align; 1 }) {
     $CAN_USE_DPALIGN = 1;
   }
   else {
