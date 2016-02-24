@@ -594,7 +594,9 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my $use_db = $self->use_db;
   
   if($use_db) {
-    foreach my $vf(@{$slice->get_all_VariationFeatures()}) {
+    my $vfa = $self->adaptor->db->get_VariationFeatureAdaptor();
+
+    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice)}) {
       push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
     }
   }
