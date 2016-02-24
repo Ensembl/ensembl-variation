@@ -72,7 +72,7 @@ CREATE TABLE `assembly_exception` (
   PRIMARY KEY (`assembly_exception_id`),
   KEY `sr_idx` (`seq_region_id`,`seq_region_start`),
   KEY `ex_idx` (`exc_seq_region_id`,`exc_seq_region_start`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `associated_group` (
   `associated_group_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -143,7 +143,7 @@ CREATE TABLE `density_feature` (
   PRIMARY KEY (`density_feature_id`),
   KEY `seq_region_idx` (`density_type_id`,`seq_region_id`,`seq_region_start`),
   KEY `seq_region_id_idx` (`seq_region_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `density_type` (
   `density_type_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -153,7 +153,7 @@ CREATE TABLE `density_type` (
   `value_type` enum('sum','ratio') NOT NULL,
   PRIMARY KEY (`density_type_id`),
   UNIQUE KEY `analysis_idx` (`analysis_id`,`block_size`,`region_features`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `dependent_xref` (
   `object_xref_id` int(10) unsigned NOT NULL,
@@ -171,7 +171,7 @@ CREATE TABLE `ditag` (
   `tag_count` smallint(6) unsigned NOT NULL DEFAULT '1',
   `sequence` tinytext NOT NULL,
   PRIMARY KEY (`ditag_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `ditag_feature` (
   `ditag_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -191,7 +191,7 @@ CREATE TABLE `ditag_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
   KEY `ditag_idx` (`ditag_id`),
   KEY `ditag_pair_idx` (`ditag_pair_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `dna` (
   `seq_region_id` int(10) unsigned NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE `exon` (
   `is_current` tinyint(1) NOT NULL DEFAULT '1',
   `is_constitutive` tinyint(1) NOT NULL DEFAULT '0',
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`exon_id`),
@@ -291,7 +291,7 @@ CREATE TABLE `gene` (
   `is_current` tinyint(1) NOT NULL DEFAULT '1',
   `canonical_transcript_id` int(10) unsigned NOT NULL,
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`gene_id`),
@@ -384,13 +384,13 @@ CREATE TABLE `karyotype` (
   `stain` varchar(40) DEFAULT NULL,
   PRIMARY KEY (`karyotype_id`),
   KEY `region_band_idx` (`seq_region_id`,`band`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `map` (
   `map_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `map_name` varchar(30) NOT NULL,
   PRIMARY KEY (`map_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `mapping_session` (
   `mapping_session_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -402,7 +402,7 @@ CREATE TABLE `mapping_session` (
   `new_assembly` varchar(20) NOT NULL DEFAULT '',
   `created` datetime NOT NULL,
   PRIMARY KEY (`mapping_session_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `mapping_set` (
   `mapping_set_id` int(10) unsigned NOT NULL,
@@ -424,7 +424,7 @@ CREATE TABLE `marker` (
   PRIMARY KEY (`marker_id`),
   KEY `marker_idx` (`marker_id`,`priority`),
   KEY `display_idx` (`display_marker_synonym_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `marker_feature` (
   `marker_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -437,7 +437,7 @@ CREATE TABLE `marker_feature` (
   PRIMARY KEY (`marker_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `marker_map_location` (
   `marker_id` int(10) unsigned NOT NULL,
@@ -458,13 +458,13 @@ CREATE TABLE `marker_synonym` (
   PRIMARY KEY (`marker_synonym_id`),
   KEY `marker_synonym_idx` (`marker_synonym_id`,`name`),
   KEY `marker_idx` (`marker_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `meta` (
   `meta_id` int(11) NOT NULL AUTO_INCREMENT,
   `species_id` int(10) unsigned DEFAULT '1',
   `meta_key` varchar(40) NOT NULL,
-  `meta_value` varchar(255)   DEFAULT NULL,
+  `meta_value` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
@@ -494,7 +494,7 @@ CREATE TABLE `misc_feature` (
   `seq_region_strand` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`misc_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `misc_feature_misc_set` (
   `misc_feature_id` int(10) unsigned NOT NULL DEFAULT '0',
@@ -511,7 +511,7 @@ CREATE TABLE `misc_set` (
   `max_length` int(10) unsigned NOT NULL,
   PRIMARY KEY (`misc_set_id`),
   UNIQUE KEY `code_idx` (`code`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `object_xref` (
   `object_xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -543,7 +543,7 @@ CREATE TABLE `operon` (
   `display_label` varchar(255) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`operon_id`),
@@ -562,7 +562,7 @@ CREATE TABLE `operon_transcript` (
   `display_label` varchar(255) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`operon_transcript_id`),
@@ -583,7 +583,7 @@ CREATE TABLE `peptide_archive` (
   `peptide_seq` mediumtext NOT NULL,
   PRIMARY KEY (`peptide_archive_id`),
   KEY `checksum` (`md5_checksum`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `prediction_exon` (
   `prediction_exon_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -599,7 +599,7 @@ CREATE TABLE `prediction_exon` (
   PRIMARY KEY (`prediction_exon_id`),
   KEY `transcript_idx` (`prediction_transcript_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `prediction_transcript` (
   `prediction_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -612,7 +612,7 @@ CREATE TABLE `prediction_transcript` (
   PRIMARY KEY (`prediction_transcript_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `protein_align_feature` (
   `protein_align_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -669,7 +669,7 @@ CREATE TABLE `repeat_consensus` (
   KEY `class` (`repeat_class`),
   KEY `consensus` (`repeat_consensus`(10)),
   KEY `type` (`repeat_type`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `repeat_feature` (
   `repeat_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -686,7 +686,7 @@ CREATE TABLE `repeat_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `repeat_idx` (`repeat_consensus_id`),
   KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM   MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM  MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -717,10 +717,10 @@ CREATE TABLE `seq_region_mapping` (
 CREATE TABLE `seq_region_synonym` (
   `seq_region_synonym_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `seq_region_id` int(10) unsigned NOT NULL,
-  `synonym` varchar(50) NOT NULL,
+  `synonym` varchar(250) NOT NULL,
   `external_db_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`seq_region_synonym_id`),
-  UNIQUE KEY `syn_idx` (`synonym`)
+  UNIQUE KEY `syn_idx` (`synonym`,`seq_region_id`)
 ) ENGINE=MyISAM  ;
 
 CREATE TABLE `simple_feature` (
@@ -736,7 +736,7 @@ CREATE TABLE `simple_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `hit_idx` (`display_label`)
-) ENGINE=MyISAM   MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM  MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 CREATE TABLE `stable_id_event` (
   `old_stable_id` varchar(128) DEFAULT NULL,
@@ -775,7 +775,7 @@ CREATE TABLE `transcript` (
   `is_current` tinyint(1) NOT NULL DEFAULT '1',
   `canonical_translation_id` int(10) unsigned DEFAULT NULL,
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`transcript_id`),
@@ -821,7 +821,7 @@ CREATE TABLE `translation` (
   `seq_end` int(10) NOT NULL,
   `end_exon_id` int(10) unsigned NOT NULL,
   `stable_id` varchar(128) DEFAULT NULL,
-  `version` smallint(5) unsigned NOT NULL DEFAULT '1',
+  `version` smallint(5) unsigned DEFAULT NULL,
   `created_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `modified_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`translation_id`),
@@ -853,7 +853,7 @@ CREATE TABLE `unmapped_object` (
   PRIMARY KEY (`unmapped_object_id`),
   KEY `id_idx` (`identifier`),
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`)
-) ENGINE=MyISAM  ;
+) ENGINE=MyISAM ;
 
 CREATE TABLE `unmapped_reason` (
   `unmapped_reason_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -865,9 +865,9 @@ CREATE TABLE `unmapped_reason` (
 CREATE TABLE `xref` (
   `xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `external_db_id` int(10) unsigned DEFAULT NULL,
-  `dbprimary_acc` varchar(50) NOT NULL,
-  `display_label` varchar(128) NOT NULL,
-  `version` varchar(10) NOT NULL DEFAULT '0',
+  `dbprimary_acc` varchar(512) NOT NULL,
+  `display_label` varchar(512) NOT NULL,
+  `version` varchar(10) DEFAULT NULL,
   `description` text,
   `info_type` enum('NONE','PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED','COORDINATE_OVERLAP','CHECKSUM') NOT NULL DEFAULT 'NONE',
   `info_text` varchar(255) NOT NULL DEFAULT '',
