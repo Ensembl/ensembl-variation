@@ -703,6 +703,7 @@ sub _objs_from_sth_vcf {
       next unless $gts->{$snp_start}->{$sample};
       
       my @gt = split(/\||\//, $gts->{$snp_start}->{$sample});
+      next unless (defined $gt[0] && defined $gt[1]);
       next unless grep {defined($_)} @gt;
       
       # get sample ID
