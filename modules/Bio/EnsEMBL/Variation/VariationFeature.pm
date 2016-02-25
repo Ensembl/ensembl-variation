@@ -1412,7 +1412,7 @@ sub get_all_LD_Populations{
 	return [] unless $ld_pops;
 	
 	my $sth = $self->adaptor->dbc->prepare(qq{
-	  SELECT ip.population_id, c.seq_region_start, c.genotypes
+	  SELECT sp.population_id, c.seq_region_start, c.genotypes
 	  FROM compressed_genotype_region c, sample_population sp
 	  WHERE c.sample_id = sp.sample_id
 	  AND c.seq_region_id = ?
