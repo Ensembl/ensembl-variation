@@ -1380,14 +1380,14 @@ sub convert_to_SNP{
 
 =cut
 
-sub get_all_LD_values{
-    my $self = shift;
-    
-    if ($self->adaptor()){
-	my $ld_adaptor = $self->adaptor()->db()->get_LDFeatureContainerAdaptor();
-	return $ld_adaptor->fetch_by_VariationFeature($self);
-    }
-    return {};
+sub get_all_LD_values {
+  my $self = shift;
+
+  if ($self->adaptor()) {
+    my $ld_adaptor = $self->adaptor()->db()->get_LDFeatureContainerAdaptor();
+    return $ld_adaptor->fetch_by_VariationFeature($self);
+  }
+  return {};
 }
 
 =head2 get_all_LD_Populations
@@ -1402,61 +1402,61 @@ sub get_all_LD_values{
 
 =cut
 
-sub get_all_LD_Populations{
-    my $self = shift;
-    
-	my $pa = $self->adaptor->db->get_PopulationAdaptor;
-	return [] unless $pa;
-	
-	my $ld_pops = $pa->fetch_all_LD_Populations;
-	return [] unless $ld_pops;
-	
-	my $sth = $self->adaptor->dbc->prepare(qq{
-	  SELECT sp.population_id, c.seq_region_start, c.genotypes
-	  FROM compressed_genotype_region c, sample_population sp
-	  WHERE c.sample_id = sp.sample_id
-	  AND c.seq_region_id = ?
-	  AND c.seq_region_start < ?
-	  AND c.seq_region_end > ?
-	});
-	
-	my $this_vf_start = $self->seq_region_start;
-	
-	$sth->bind_param(1, $self->feature_Slice->get_seq_region_id);
-	$sth->bind_param(2, $self->seq_region_end);
-	$sth->bind_param(3, $this_vf_start);
-	
-	$sth->execute;
-	
-	my ($sample_id, $seq_region_start, $genotypes);
-	$sth->bind_columns(\$sample_id, \$seq_region_start, \$genotypes);
-	
-	my %have_genotypes = ();
-	
-	while($sth->fetch()) {
-	  
-	  next if $have_genotypes{$sample_id};
-	  
-	  if($seq_region_start == $this_vf_start) {
-		$have_genotypes{$sample_id} = 1;
-		next;
-	  }
-	  
-	  my @genotypes = unpack '(www)*', $genotypes;
-	  my $gt_start = $seq_region_start;
-	  
-	  while(my( $var_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
-		if($gt_start == $this_vf_start) {
-		  $have_genotypes{$sample_id} = 1;
-		  last;
-		}
-		$gt_start += $gap + 1 if defined $gap;
-	  }
-	}
-	
-	my @final_list = grep {$have_genotypes{$_->dbID}} @$ld_pops;
-	
-	return \@final_list;
+sub get_all_LD_Populations {
+  my $self = shift;
+
+  my $pa = $self->adaptor->db->get_PopulationAdaptor;
+  return [] unless $pa;
+
+  my $ld_pops = $pa->fetch_all_LD_Populations;
+  return [] unless $ld_pops;
+
+  my $sth = $self->adaptor->dbc->prepare(qq{
+    SELECT sp.population_id, c.seq_region_start, c.genotypes
+    FROM compressed_genotype_region c, sample_population sp
+    WHERE c.sample_id = sp.sample_id
+    AND c.seq_region_id = ?
+    AND c.seq_region_start < ?
+    AND c.seq_region_end > ?
+  });
+
+  my $this_vf_start = $self->seq_region_start;
+
+  $sth->bind_param(1, $self->feature_Slice->get_seq_region_id);
+  $sth->bind_param(2, $self->seq_region_end);
+  $sth->bind_param(3, $this_vf_start);
+
+  $sth->execute;
+
+  my ($sample_id, $seq_region_start, $genotypes);
+  $sth->bind_columns(\$sample_id, \$seq_region_start, \$genotypes);
+
+  my %have_genotypes = ();
+
+  while ($sth->fetch()) {
+
+    next if $have_genotypes{$sample_id};
+
+    if ($seq_region_start == $this_vf_start) {
+      $have_genotypes{$sample_id} = 1;
+      next;
+    }
+
+    my @genotypes = unpack '(www)*', $genotypes;
+    my $gt_start = $seq_region_start;
+
+    while (my( $var_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
+      if ($gt_start == $this_vf_start) {
+        $have_genotypes{$sample_id} = 1;
+        last;
+      }
+      $gt_start += $gap + 1 if defined $gap;
+    }
+  }
+
+  my @final_list = grep {$have_genotypes{$_->dbID}} @$ld_pops;
+
+  return \@final_list;
 }
 
 =head2 get_all_sources
