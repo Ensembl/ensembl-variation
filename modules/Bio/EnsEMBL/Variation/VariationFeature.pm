@@ -112,6 +112,8 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES); 
+use Data::Dumper;
+
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
@@ -1392,13 +1394,13 @@ sub get_all_LD_values {
 
 =head2 get_all_LD_Populations
 
-    Args        : none
-    Description : returns a list of populations that could produces LD values
-	              for this VariationFeature
-    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
-    Exceptions  : none
-    Caller      : snpview
-    Status      : At Risk
+  Args        : none
+  Description : returns a list of populations that could produces LD values
+                for this VariationFeature
+  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : none
+  Caller      : Web code snpview
+  Status      : Stable
 
 =cut
 
@@ -1410,6 +1412,29 @@ sub get_all_LD_Populations {
 
   my $ld_pops = $pa->fetch_all_LD_Populations;
   return [] unless $ld_pops;
+
+  my %have_genotypes = ();
+
+  if ($self->adaptor->db->use_vcf) {
+    my $vca = $self->adaptor->db->get_VCFCollectionAdaptor();
+    foreach my $vc (@{$vca->fetch_all}) {
+      my $population_samples = $vc->_get_Population_Sample_hash();
+      my $genotypes = $vc->get_all_SampleGenotypeFeatures_by_VariationFeature($self);
+      my %sample_ids = map { $_->sample->dbID => 1 } @$genotypes;
+      foreach my $pop_id (keys %$population_samples) {
+        foreach my $sample_id (keys %{ $population_samples->{$pop_id} }) {
+          if ($sample_ids{$sample_id}) {
+            $have_genotypes{$pop_id} = 1;
+            last;
+          }
+        }
+      }
+    }
+    if ($self->adaptor->db->use_vcf > 1) {
+      my @final_list = grep {$have_genotypes{$_->dbID}} @$ld_pops;
+      return \@final_list;
+    }
+  }
 
   my $sth = $self->adaptor->dbc->prepare(qq{
     SELECT sp.population_id, c.seq_region_start, c.genotypes
@@ -1430,8 +1455,6 @@ sub get_all_LD_Populations {
 
   my ($sample_id, $seq_region_start, $genotypes);
   $sth->bind_columns(\$sample_id, \$seq_region_start, \$genotypes);
-
-  my %have_genotypes = ();
 
   while ($sth->fetch()) {
 
