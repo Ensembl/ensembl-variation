@@ -84,6 +84,8 @@ our %TYPES = (
   'local'  => 1,
 );
 
+my $MAX_OPEN_FILES = 2;
+
 
 =head2 new
 
@@ -758,9 +760,19 @@ sub _get_vcf_by_chr {
     }    
     
     else {
+
+      # close first opened handle to prevent going over max allowed connections
+      while(scalar @{$self->{_open_files} || []} >= $MAX_OPEN_FILES) {
+        my $close = shift @{$self->{_open_files}};
+        $self->{files}->{$close}->close();
+        delete $self->{files}->{$close};
+      }
+
       $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
     
       $self->{files}->{$chr} = $obj;
+
+      push @{$self->{_open_files}}, $chr;
     }
   }
   
