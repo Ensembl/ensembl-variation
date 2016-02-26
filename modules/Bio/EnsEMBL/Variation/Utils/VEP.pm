@@ -3563,9 +3563,6 @@ sub whole_genome_fetch_transcript {
 
                 $vf->add_TranscriptVariation($tv);
 
-                # cache VF on the transcript if it is an unbalanced sub
-                push @{$tr->{indels}}, $vf if defined($vf->{indel});
-
                 if(defined($config->{individual})) {
 
                     # store VF on transcript, weaken reference to avoid circularity

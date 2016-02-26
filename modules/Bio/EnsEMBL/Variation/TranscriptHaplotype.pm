@@ -48,6 +48,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw(warning throw);
 
 use Bio::AlignIO;
 use Bio::SimpleAlign;
@@ -58,6 +59,7 @@ my $CAN_USE_DPALIGN;
 BEGIN {
   if (eval { require Bio::Ext::Align; 1 }) {
     $CAN_USE_DPALIGN = 1;
+    require Bio::Tools::dpAlign;
   }
   else {
     $CAN_USE_DPALIGN = 0;
