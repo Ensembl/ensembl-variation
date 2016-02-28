@@ -75,10 +75,10 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
         
-        only_finish_dumps => 1,
+        only_finish_dumps => 0,
         human_population_dumps => 0,
 
-        hive_db_host    => 'ens-variation',
+        hive_db_host    => 'ens-variation3',
         hive_db_port    => 3306,
         hive_db_user    => 'ensadmin',
 
@@ -114,7 +114,7 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q long -R"select[mem>4500] rusage[mem=4500]" -M4500'},
+        'default' => { 'LSF' => '-q long -R"select[mem>10500] rusage[mem=10500]" -M10500'},
         'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
         'highmem' => { 'LSF' => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
         'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
@@ -162,7 +162,7 @@ sub pipeline_analyses {
         {   -logic_name => 'init_dump',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
             -max_retry_count => 1,
-            -analysis_capacity => 5,
+            -analysis_capacity => 50,
             -flow_into => {
                 1 => ['submit_job_gvf_dumps'],
             },
@@ -180,7 +180,7 @@ sub pipeline_analyses {
               -1 => ['submit_job_gvf_dumps_highmem'],
             }
         },
-        {   -logic_name => 'submit_job_gvf_dumps_highmen',
+        {   -logic_name => 'submit_job_gvf_dumps_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
             -max_retry_count => 1,
             -rc_name => 'highmem',
