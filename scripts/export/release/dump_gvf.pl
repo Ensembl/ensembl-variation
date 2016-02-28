@@ -142,6 +142,9 @@ sub init_variation_set {
     if ($variation_set_name eq 'phenotype_associated') {
         $variation_set_name = 'All phenotype/disease-associated variants';
     }
+    if ($variation_set_name eq 'clinically_associated') {
+      $variation_set_name = 'Clinically associated variants';
+    }
     my $vsa = $config->{variation_set_adaptor};
     my $variation_set = $vsa->fetch_by_name($variation_set_name);
     die "Wrong variation set name: $variation_set_name" unless($variation_set);
@@ -395,7 +398,7 @@ sub annotate_vf {
 
 sub add_source {
     my ($gvf_line, $vf) = @_;
-    my $source          = $vf->source;
+    my $source          = $vf->source->name;
     $gvf_line->{source} = $source;
     $source .= '_' . $vf->source_version if defined $vf->source_version;
     $gvf_line->{attributes}->{Dbxref} = "$source:" . $vf->variation_name;
