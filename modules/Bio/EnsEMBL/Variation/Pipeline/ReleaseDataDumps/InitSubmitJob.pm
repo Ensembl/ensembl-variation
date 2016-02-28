@@ -232,7 +232,7 @@ sub get_slice_load {
   my $count = 0;
   my $instance = 1;
   my $slice_load;
-  if ($global_vfs_count > 15000000) { 
+  if ($global_vfs_count > 5_000_000) { 
     my $vf_counts = $self->_get_vf_counts_per_slice($species);
     my $max_load = $global_vfs_count / 20;
     my @seq_region_ids = @{$self->_get_seq_region_ids($species)};
