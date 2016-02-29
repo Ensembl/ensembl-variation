@@ -49,7 +49,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw);
-use Bio::Ensembl::Variation::Utils::Sequence qw(align_seqs);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
 
 use Bio::AlignIO;
 use Bio::SimpleAlign;
