@@ -425,7 +425,7 @@ sub _get_SimpleAlign_obj {
 
       # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
       else {
-        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(align_seqs($self->reference_seq, $self->seq));
+        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)});
       }
     }
 
