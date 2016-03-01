@@ -40,7 +40,7 @@ $Data::Dumper::Indent = 1;
 
 BEGIN {
   $| = 1;
-	use Test::More;
+  use Test::More;
 }
 
 my $config = {};
@@ -184,7 +184,17 @@ foreach my $host(split /\,/, $config->{host}) {
     
     my ($sr_id, $count, %counts);
     $sth->bind_columns(\$sr_id, \$count);
-    $counts{$sr_id} = $count while $sth->fetch;
+    $counts{$sr_id} += $count while $sth->fetch;
+    $sth->finish;
+
+    # get varfeat counts
+    $sth = $config->{current}->{vdb}->prepare(qq{
+      SELECT seq_region_id, COUNT(*)
+      FROM variation_feature
+      GROUP BY variation_feature_id;
+    });
+    $sth->bind_columns(\$sr_id, \$count);
+    $counts{$sr_id} += $count while $sth->fetch;
     $sth->finish;
     
     foreach my $slice(@slices) {
@@ -315,33 +325,33 @@ foreach my $host(split /\,/, $config->{host}) {
 done_testing();
 
 sub get_species_list {
-	my $config = shift;
-	my $host   = shift;
+  my $config = shift;
+  my $host   = shift;
 
-	my $connection_string = sprintf(
-			"DBI:mysql(RaiseError=>1):host=%s;port=%s",
-			$host,
-			$config->{port}
-		);
-	
-	# connect to DB
-	$config->{dbc} = DBI->connect(
-	    $connection_string, $config->{user}, $config->{password}
-	);
-	
-	my $version = $config->{version};
+  my $connection_string = sprintf(
+    "DBI:mysql(RaiseError=>1):host=%s;port=%s",
+    $host,
+    $config->{port}
+  );
+  
+  # connect to DB
+  $config->{dbc} = DBI->connect(
+    $connection_string, $config->{user}, $config->{password}
+  );
+  
+  my $version = $config->{version};
 
-	my $sth = $config->{dbc}->prepare(qq{
-		SHOW DATABASES LIKE '%\_core\_$version%'
-	});
-	$sth->execute();
-	
-	my $db;
-	$sth->bind_columns(\$db);
-	
-	my @dbs;
-	push @dbs, $db while $sth->fetch;
-	$sth->finish;
+  my $sth = $config->{dbc}->prepare(qq{
+    SHOW DATABASES LIKE '%\_core\_$version%'
+  });
+  $sth->execute();
+  
+  my $db;
+  $sth->bind_columns(\$db);
+  
+  my @dbs;
+  push @dbs, $db while $sth->fetch;
+  $sth->finish;
   
   # refseq?
   $sth = $config->{dbc}->prepare(qq{
@@ -353,17 +363,17 @@ sub get_species_list {
   push @dbs, $db while $sth->fetch;
   $sth->finish;
 
-	# remove master and coreexpression
-	@dbs = grep {$_ !~ /master|express/} @dbs;
+  # remove master and coreexpression
+  @dbs = grep {$_ !~ /master|express/} @dbs;
 
-	# filter on pattern if given
-	my $pattern = $config->{pattern};
-	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
+  # filter on pattern if given
+  my $pattern = $config->{pattern};
+  @dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
 
-	my @species;
+  my @species;
   my $dbc = $config->{dbc};
 
-	foreach my $current_db_name (@dbs) {
+  foreach my $current_db_name (@dbs) {
     
     # special case otherfeatures
     # check it has refseq transcripts
@@ -430,9 +440,9 @@ sub get_species_list {
       
       die("ERROR: Problem getting species and assembly names from $current_db_name; check meta table\n") unless $count;
     }
-	}
+  }
 
-	return \@species;
+  return \@species;
 }
 
 sub has_variation {

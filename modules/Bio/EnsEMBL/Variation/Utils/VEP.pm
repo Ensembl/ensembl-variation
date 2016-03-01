@@ -6087,6 +6087,19 @@ sub build_full_cache {
     $sth->fetch;
     $sth->finish;
 
+    # now check var feats
+    if($config->{vfa} && $config->{vfa}->db) {
+      $sth = $config->{vfa}->db->dbc->prepare("SELECT COUNT(*) FROM variation_feature WHERE seq_region_id = ?");
+      $sth->execute($slice->get_seq_region_id);
+
+      my $v_count;
+      $sth->bind_columns(\$v_count);
+      $sth->fetch;
+      $sth->finish;
+
+      $count += $v_count;
+    }
+
     next unless $count > 0;
 
     my $regions;

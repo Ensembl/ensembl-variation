@@ -96,8 +96,8 @@ sub default_options {
         pass => $self->o('dump_db_password'),
       },
       {
-        host => 'ensdb-web-14',
-        port => 5337,
+        host => 'ens-staging-grch37',
+        port => 3306,
         user => 'ensro',
         pass => $self->o('dump_db_password'),
         include_pattern => 'homo_sapiens',
@@ -122,7 +122,7 @@ sub default_options {
     
     # this sets the fraction of files per cache that
     # healthcheck_vep_caches.pl checks
-    hc_random => 0.01,
+    hc_random => 0.05,
     
     # special flags apply to certain species
     species_flags => {
@@ -157,7 +157,7 @@ sub default_options {
     # reflect their usage, but you may want to change the details (memory
     # requirements, queue parameters etc.) to suit your own data
         
-    default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+    default_lsf_options => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
     urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
     highmem_lsf_options => '-q basement -R"select[mem>15000] rusage[mem=15000]" -M15000', # this is Sanger LSF speak for "give me 15GB of memory"
     long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
@@ -166,7 +166,7 @@ sub default_options {
     # <username>_<pipeline_name>, and will drop any existing database with this
     # name
 
-    hive_db_host    => 'ens-variation',
+    hive_db_host    => 'ens-variation2',
     hive_db_port    => 3306,
     hive_db_user    => 'ensadmin',
 
@@ -224,10 +224,27 @@ sub pipeline_analyses {
       -meadow_type   => 'LOCAL',
       -hive_capacity => 1,
       -flow_into     => {
+        # 1 = distribute dumps (not set here)
+
+        # 2 = normal
+        # 3 = highmem
+        # 4 = refseq
+        # 5 = refseq highmem
+
+        # 6 = all (finish_dump)
+        # 7 = all refseqs (merge)
+        # 8 = var (convert)
+
         '1' => $self->o('debug') ? [] : ['distribute_dumps'],
-        '2' => $self->o('debug') ? ['dump_vep'] : ['dump_vep', 'finish_dump'],
-        '3' => ['merge_vep'],
-        '4' => ['convert_vep'],
+
+        '2' => ['dump_vep'],
+        '3' => ['dump_vep_highmem'],
+        '4' => ['dump_vep_refseq'],
+        '5' => ['dump_vep_refseq_highmem'],
+
+        '6' => $self->o('debug') ? [] : ['finish_dump'],
+        '7' => ['merge_vep'],
+        '8' => ['convert_vep'],
       },
     },
     {
@@ -240,21 +257,62 @@ sub pipeline_analyses {
         @common_params
       },
       -rc_name       => 'default',
-      -hive_capacity => 3,
+      -analysis_capacity => 2,
+    },
+    {
+      -logic_name    => 'dump_vep_highmem',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DumpVEP',
+      -parameters    => {
+        species_flags  => $self->o('species_flags'),
+        vep_command    => $self->o('vep_command'),
+        hc_random      => $self->o('hc_random'),
+        @common_params
+      },
+      -rc_name       => 'highmem',
+      -analysis_capacity => 2,
+      -can_be_empty   => 1,
+    },
+    {
+      -logic_name    => 'dump_vep_refseq',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DumpVEPRefSeq',
+      -parameters    => {
+        species_flags  => $self->o('species_flags'),
+        vep_command    => $self->o('vep_command'),
+        hc_random      => $self->o('hc_random'),
+        @common_params
+      },
+      -wait_for      => ['dump_vep'],
+      -rc_name       => 'default',
+      -analysis_capacity => 2,
+      -can_be_empty   => 1,
+    },
+    {
+      -logic_name    => 'dump_vep_refseq_highmem',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DumpVEPRefSeq',
+      -parameters    => {
+        species_flags  => $self->o('species_flags'),
+        vep_command    => $self->o('vep_command'),
+        hc_random      => $self->o('hc_random'),
+        @common_params
+      },
+      -wait_for      => ['dump_vep_highmem'],
+      -rc_name       => 'default',
+      -analysis_capacity => 2,
+      -can_be_empty   => 1,
     },
     {
       -logic_name    => 'merge_vep',
       -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::MergeVEP',
       -parameters    => { @common_params },
-      -wait_for      => ['dump_vep'],
-      -hive_capacity => 10,
+      -wait_for      => ['dump_vep_refseq', 'dump_vep_refseq_highmem'],
+      -analysis_capacity => 10,
     },
     {
       -logic_name    => 'convert_vep',
       -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::ConvertVEP',
       -parameters    => { @common_params },
       -wait_for      => ['merge_vep'],
-      -hive_capacity => 10,
+      -analysis_capacity => 10,
     }
   );
 

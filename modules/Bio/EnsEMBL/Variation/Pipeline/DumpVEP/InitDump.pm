@@ -57,19 +57,78 @@ sub fetch_input {
   foreach my $server(@$servers) {
     push @species, @{$self->get_species_list($server)};
   }
+
+  # make some lists
+  my (@var, @normal, @highmem, @refseq, @refseq_highmem);
+
+  foreach my $species(@species) {
+    push @var, $species if $species->{variation};
+
+    if($species->{species} eq 'homo_sapiens') {
+      if($species->{species_refseq}) {
+        push @refseq_highmem, $species;
+      }
+      else {
+        push @highmem, $species;
+      }
+    }
+    else {
+      if($species->{species_refseq}) {
+        push @refseq, $species;
+      }
+      else {
+        push @normal, $species;
+      }
+    }
+  }
   
-  $self->param('species_list', \@species);
-  $self->param('refseq_list', [grep {$_->{species_refseq}} @species]);
-  $self->param('variation_list', [grep {$_->{variation}} @species]);
+  $self->param('normal_list', \@normal);
+  $self->param('normal_highmem_list', \@highmem);
+  $self->param('refseq_list', \@refseq);
+  $self->param('refseq_highmem_list', \@refseq_highmem);
+  $self->param('var_list', \@var);
   return;
 }
 
 sub write_output {
   my $self = shift;
 
-  $self->dataflow_output_id($self->param('species_list'), 2);
-  $self->dataflow_output_id($self->param('refseq_list'), 3) if $self->param('merged');
-  $self->dataflow_output_id($self->param('variation_list'), 4) if $self->param('convert');
+  # 1 = distribute dumps (not set here)
+
+  # 2 = normal
+  # 3 = highmem
+  # 4 = refseq
+  # 5 = refseq highmem
+
+  # 6 = all (finish_dump)
+  # 7 = all refseqs (merge)
+  # 8 = var (convert)
+
+  $self->dataflow_output_id($self->param('normal_list'), 2);
+  $self->dataflow_output_id($self->param('normal_highmem_list'), 3);
+  $self->dataflow_output_id($self->param('refseq_list'), 4);
+  $self->dataflow_output_id($self->param('refseq_highmem_list'), 5);
+
+  $self->dataflow_output_id(
+    [
+      @{$self->param('normal_list')},
+      @{$self->param('normal_highmem_list')},
+      @{$self->param('refseq_list')},
+      @{$self->param('refseq_highmem_list')}
+    ],
+    6
+  ) if $self->param('merged');
+  
+  $self->dataflow_output_id(
+    [
+      @{$self->param('refseq_list')},
+      @{$self->param('refseq_highmem_list')}
+    ],
+    7
+  ) if $self->param('merged');
+
+  $self->dataflow_output_id($self->param('var_list'), 8) if $self->param('convert');
+  
   return;
 }
 
