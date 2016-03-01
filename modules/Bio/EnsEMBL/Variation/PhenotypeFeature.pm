@@ -995,6 +995,11 @@ sub strain {
   } elsif ( !defined($self->{'strain'}) && $self->{'adaptor'} ) {
     $self->{'strain_id'} = $self->get_all_attributes->{'strain_id'};  
   # lazy-load from database on demand
+    if (!$self->{'strain_id'}) {
+      my $sample_adaptor = $self->{'adaptor'}->db()->get_SampleAdaptor();
+      my $reference_strain = $sample_adaptor->fetch_reference_strain;
+      $self->{'strain_id'} = $reference_strain->individual->dbID;
+    }
     my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
     $self->{'strain'} = $ia->fetch_by_dbID($self->{'strain_id'});
   } else {
