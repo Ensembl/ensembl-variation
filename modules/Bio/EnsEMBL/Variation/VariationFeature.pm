@@ -112,8 +112,6 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES); 
-use Data::Dumper;
-
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
