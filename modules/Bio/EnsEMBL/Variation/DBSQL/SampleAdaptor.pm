@@ -446,6 +446,26 @@ sub get_reference_strain_name {
     return $name;
 }
 
+=head2 fetch_reference_strain
+
+    Args       : none
+    Example    : my $reference_strain = $sample_adaptor->fetch_reference_strain;
+    Description: Retrieves the reference strain
+    Returntype : Bio::EnsEMBL::Variation::Sample 
+    Exceptions : none
+    Caller     : general
+    Status     : stable
+
+=cut
+
+sub fetch_reference_strain {
+  my $self = shift;
+  my $strains = $self->generic_fetch("s.display = 'REFERENCE'");
+  return undef unless (scalar(@{$strains}));
+  return $strains->[0];
+}
+
+
 #
 # private method, constructs Samples from an executed statement handle
 # ordering of columns must be consistant
