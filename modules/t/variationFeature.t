@@ -189,5 +189,26 @@ ok($vf->add_consequence_type($oc2), "deprecated 'add_consequence_type'");
 # get consequence type
 ok($vf->get_consequence_type()->[0] eq $consequence->SO_term, "deprecated 'get_consequence_type'");
 
+# LD data
+# VCF
+my $dir = $multi->curr_dir();
+no warnings 'once';
+$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/ld_vcf_config.json';
+my $vca = $vdb->get_VCFCollectionAdaptor();
+my $coll = $vca->fetch_by_id('ld');
+# now we need to set the filename_template
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$vfa->db->use_vcf(1);
+my $vf7 = $vfa->fetch_by_dbID(3854101);
+my @LD_populations = @{$vf7->get_all_LD_Populations};
+ok(scalar @LD_populations == 2, 'get_all_LD_Populations use_vcf = 1');
+$vfa->db->use_vcf(2);
+@LD_populations = @{$vf7->get_all_LD_Populations};
+ok(scalar @LD_populations == 1, 'get_all_LD_Populations use_vcf = 2');
+$vfa->db->use_vcf(0);
+@LD_populations = @{$vf7->get_all_LD_Populations};
+ok(scalar @LD_populations == 1, 'get_all_LD_Populations use_vcf = 0');
 
 done_testing();
