@@ -84,13 +84,7 @@ sub default_options {
     # specify which servers to scan for databases to dump
     dump_servers => [
       {
-        host => 'ens-staging1',
-        port => 3306,
-        user => 'ensro',
-        pass => $self->o('dump_db_password'),
-      },
-      {
-        host => 'ens-staging2',
+        host => 'ens-dump',
         port => 3306,
         user => 'ensro',
         pass => $self->o('dump_db_password'),
