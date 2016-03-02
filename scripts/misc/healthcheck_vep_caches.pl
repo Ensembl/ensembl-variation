@@ -193,6 +193,8 @@ foreach my $host(split /\,/, $config->{host}) {
       FROM variation_feature
       GROUP BY variation_feature_id;
     });
+    $sth->execute();
+
     $sth->bind_columns(\$sr_id, \$count);
     $counts{$sr_id} += $count while $sth->fetch;
     $sth->finish;
