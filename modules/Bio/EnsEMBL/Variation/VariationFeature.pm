@@ -509,7 +509,7 @@ sub get_all_TranscriptVariations {
     }
     else {
         # return all TranscriptVariations
-        return [ values %{ $self->{transcript_variations} } ];
+        return [ map {$self->{transcript_variations}->{$_}} sort keys %{$self->{transcript_variations}} ];
     }
 }
 
@@ -552,7 +552,7 @@ sub get_all_RegulatoryFeatureVariations {
   if ($regulatory_features) {
     return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
   } else {
-    return [ values %{ $self->{regulatory_feature_variations}}];
+    return [ map {$self->{regulatory_feature_variations}->{$_}} sort keys %{$self->{regulatory_feature_variations}} ];
   }
 }
 
@@ -591,7 +591,7 @@ sub get_all_MotifFeatureVariations {
   if ($motif_features) {
     return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
   } else {
-    return [ values %{ $self->{motif_feature_variations}}];
+    return [ map {$self->{motif_feature_variations}->{$_}} sort keys %{$self->{motif_feature_variations}} ];
   }
 }
 
