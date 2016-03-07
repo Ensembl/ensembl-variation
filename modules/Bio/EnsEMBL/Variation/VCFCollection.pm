@@ -704,7 +704,7 @@ sub _get_all_LD_genotypes_by_Slice {
   my $slice = shift;
   my $sample = shift;
   
-  return {} unless $self->_seek_by_Slice($slice);
+  return [] unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
   
