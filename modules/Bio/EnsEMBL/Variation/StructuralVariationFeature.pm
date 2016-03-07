@@ -562,7 +562,7 @@ sub get_all_TranscriptStructuralVariations {
   }
   else {
   # return all TranscriptVariations
-  return [ values %{ $self->{transcript_structural_variations} } ];
+  return [ map {$self->{transcript_structural_variations}->{$_}} sort keys %{$self->{transcript_structural_variations}} ];
   }
 }
 

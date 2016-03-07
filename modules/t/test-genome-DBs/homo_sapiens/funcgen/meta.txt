@@ -1,4 +1,4 @@
-534	\N	schema_version	80
+534	\N	schema_version	84
 38	1	regbuild.version	12.1
 80	\N	patch	patch_50_51_b.sql|multispecies
 83	\N	patch	patch_50_51_c.sql|associated_feature_type
@@ -149,3 +149,14 @@
 585	\N	patch	patch_79_80_a.sql|schema_version
 586	\N	patch	patch_79_80_b.sql|dbfile_registry_unique_key
 587	\N	patch	patch_79_80_c.sql|stable_id_changed_to_varchar
+588	\N	patch	patch_80_81_a.sql|schema_version
+589	\N	patch	patch_80_81_b.sql|add gender: mixed to table cell_type 
+590	\N	patch	patch_80_81_c.sql|drop experiment.date
+591	\N	patch	patch_81_82_a.sql|schema_version
+592	\N	patch	patch_82_83_a.sql|schema_version
+593	\N	patch	patch_83_84_a.sql|schema_version
+594	\N	patch	patch_83_84_b.sql|Drop unique key for cell_type.efo_id
+595	\N	patch	patch_83_84_c.sql|Add not null constraint to cell_type.display_label
+596	\N	patch	patch_83_84_d.sql|Add segmentation enum to result_set.feature_class
+597	\N	patch	patch_83_84_e.sql|Increase length of regbuild_string.name
+598	\N	patch	patch_83_84_f.sql|Change regulatory_feature has_evidence to activity

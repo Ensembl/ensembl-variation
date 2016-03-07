@@ -1,23 +1,23 @@
-1	HeLa-S3	\N	Human Epithelial Carcinoma Cells	female	efo:EFO_0002791	cervix
-2	GM06990	\N	Human B-Lymphocyte cell line	female	efo:EFO_0002783	blood
-3	U2OS	\N	Human Bone Osteosarcoma Epithelial Cells	female	efo:EFO_0002869	bone
-4	CD4	\N	Human CD4 T-Cells	\N	CL:CL_0000492	blood
-5	IMR90	\N	Human Fetal Lung Fibroblast	female	efo:EFO_0001196	lung
-6	HL-60	\N	Human Promyelotic Leukemia Cells	female	efo:EFO_0002793	blood
-7	HepG2	\N	Human hepatocellular liver carcinoma cell line	male	efo:EFO_0001187	liver
-8	Lymphoblastoid	\N	Lymphoblastoid cells	\N	efo:EFO_0000572	blood
-10	CD133	\N	Human CD133+ Hematopoietic Stem Cell	\N	\N	blood
-11	CD36	\N	Human CD36+ Erythrocyte Precursor Cell	\N	\N	blood
-14	K562	\N	Human myelogenous leukaemia cell line	female	efo:EFO_0002067	blood
-15	GM12878	\N	Human B-Lymphocyte cell line	female	efo:EFO_0002784	blood
-16	HUVEC	\N	Human umbilical vein endothelial cell line	female	efo:EFO_0002795	endothelium
-17	NHEK	\N	Normal human epidermal keratinocyte cell line	female	efo:EFO_0002799	skin
-18	H1ESC	\N	Human Embryonic Stem Cells	\N	efo:EFO_0003042	embryonic stem cell
-19	MultiCell	\N	An aggregation of multiple cell types	\N	\N	\N
-20	K562b	\N	Human myelogenous leukaemia line (alternative)	female	\N	blood
-21	NH-A	\N	Normal Human Astrocytes	\N	\N	nervous
-22	HSMM	\N	Human Skeletal Muscle Myoblasts	\N	\N	muscle
-23	HMEC	\N	Human Mammary Epithelial Cells	\N	\N	breast
+1	HeLa-S3		Human Epithelial Carcinoma Cells	female	efo:EFO_0002791	cervix
+2	GM06990		Human B-Lymphocyte cell line	female	efo:EFO_0002783	blood
+3	U2OS		Human Bone Osteosarcoma Epithelial Cells	female	efo:EFO_0002869	bone
+4	CD4		Human CD4 T-Cells	\N	CL:CL_0000492	blood
+5	IMR90		Human Fetal Lung Fibroblast	female	efo:EFO_0001196	lung
+6	HL-60		Human Promyelotic Leukemia Cells	female	efo:EFO_0002793	blood
+7	HepG2		Human hepatocellular liver carcinoma cell line	male	efo:EFO_0001187	liver
+8	Lymphoblastoid		Lymphoblastoid cells	\N	efo:EFO_0000572	blood
+10	CD133		Human CD133+ Hematopoietic Stem Cell	\N	\N	blood
+11	CD36		Human CD36+ Erythrocyte Precursor Cell	\N	\N	blood
+14	K562		Human myelogenous leukaemia cell line	female	efo:EFO_0002067	blood
+15	GM12878		Human B-Lymphocyte cell line	female	efo:EFO_0002784	blood
+16	HUVEC		Human umbilical vein endothelial cell line	female	efo:EFO_0002795	endothelium
+17	NHEK		Normal human epidermal keratinocyte cell line	female	efo:EFO_0002799	skin
+18	H1ESC		Human Embryonic Stem Cells	\N	efo:EFO_0003042	embryonic stem cell
+19	MultiCell		An aggregation of multiple cell types	\N	\N	\N
+20	K562b		Human myelogenous leukaemia line (alternative)	female	\N	blood
+21	NH-A		Normal Human Astrocytes	\N	\N	nervous
+22	HSMM		Human Skeletal Muscle Myoblasts	\N	\N	muscle
+23	HMEC		Human Mammary Epithelial Cells	\N	\N	breast
 24	A549	A549	Epithelial Lung Carcinoma	male	\N	\N
 25	AG04449	AG04449	Fetal thigh fibroblast	male	\N	\N
 26	AG04450	AG04450	Fetal lung fibroblast	male	\N	\N

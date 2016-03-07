@@ -104,7 +104,7 @@ my $exp = {
   'Location' => '21:25606454'
 };
 
-is_deeply($exp, $cons->[0], "get_all_consequences 2");
+is_deeply($exp, $cons->[2], "get_all_consequences 2");
 
 # make a copy of $config with loads switched on
 $config = copy_config($base_config, {
@@ -159,7 +159,7 @@ $exp = {
   'FLAGS' => 'cds_end_NF',
 };
 
-is_deeply($cons->[0]->{Extra}, $exp, "get_all_consequences - everything 2");
+is_deeply($cons->[2]->{Extra}, $exp, "get_all_consequences - everything 2");
 
 # regulatory
 $config = copy_config($base_config, {
@@ -525,14 +525,23 @@ ok($cons && ${$cons->[0]} =~ /missense_variant 0 mRNA ENST00000419219/, "gvf out
 $config = copy_config($base_config, {
   json => 1,
   rest => 1,
-  check_existing => 1,
-  sift => 'b',
-  domains => 1
 });
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
 $cons = get_all_consequences($config, [$vf]);
 ok($cons && $cons->[0]->{most_severe_consequence} eq 'missense_variant', "json output");
+
+
+$config = copy_config($base_config, {
+  json => 1,
+  rest => 1,
+  hgvs => 1,
+});
+
+($vf) = @{parse_line($config, '21 25606453 25606453 G/C +')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && $cons->[0]->{transcript_consequences}->[2]->{hgvsp} eq 'ENST00000419219.1:c.276N>G(p.=)', "json HGVSp no escaping");
+
 
 # check
 $config = copy_config($base_config, {

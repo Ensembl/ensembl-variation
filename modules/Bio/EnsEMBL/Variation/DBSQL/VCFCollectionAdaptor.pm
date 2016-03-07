@@ -130,7 +130,7 @@ sub new {
   my $config = {};
 
   # try and get config from DB adaptor
-  $self->db->vcf_config if $self->db;
+  $config = $self->db->vcf_config if $self->db;
 
   unless($config && scalar keys %$config) {
     my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
@@ -230,6 +230,7 @@ sub new {
       -assembly  => $hash->{assembly} || undef,
       -source => $source || undef,
       -strict_name_match => $hash->{strict_name_match},
+      -use_seq_region_synonyms => $hash->{use_seq_region_synonyms},
       -created =>$hash->{created} || undef,
       -updated =>$hash->{updated} || undef,
       -is_remapped => $hash->{is_remapped} ||0,

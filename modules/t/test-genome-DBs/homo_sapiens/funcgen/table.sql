@@ -175,14 +175,13 @@ CREATE TABLE `binding_matrix` (
 CREATE TABLE `cell_type` (
   `cell_type_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
-  `display_label` varchar(30) DEFAULT NULL,
+  `display_label` varchar(30) NOT NULL,
   `description` varchar(80) DEFAULT NULL,
-  `gender` enum('male','female','hermaphrodite') DEFAULT NULL,
+  `gender` enum('male','female','hermaphrodite','mixed') DEFAULT NULL,
   `efo_id` varchar(20) DEFAULT NULL,
   `tissue` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`cell_type_id`),
-  UNIQUE KEY `name_idx` (`name`),
-  UNIQUE KEY `efo_idx` (`efo_id`)
+  UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM  ;
 
 CREATE TABLE `cell_type_lineage` (
@@ -254,7 +253,6 @@ CREATE TABLE `experiment` (
   `experiment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(100) DEFAULT NULL,
   `experimental_group_id` smallint(6) unsigned DEFAULT NULL,
-  `date` date DEFAULT '0000-00-00',
   `primary_design_type` varchar(30) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `mage_xml_id` int(10) unsigned DEFAULT NULL,
@@ -558,7 +556,7 @@ CREATE TABLE `probe_set` (
 
 CREATE TABLE `regbuild_string` (
   `regbuild_string_id` int(10) NOT NULL AUTO_INCREMENT,
-  `name` varchar(60) NOT NULL,
+  `name` varchar(150) NOT NULL,
   `species_id` smallint(5) unsigned NOT NULL DEFAULT '1',
   `string` text NOT NULL,
   PRIMARY KEY (`regbuild_string_id`),
@@ -587,7 +585,7 @@ CREATE TABLE `regulatory_feature` (
   `projected` tinyint(1) DEFAULT '0',
   `bound_start_length` mediumint(3) unsigned NOT NULL,
   `bound_end_length` mediumint(3) unsigned NOT NULL,
-  `has_evidence` tinyint(1) DEFAULT NULL,
+  `activity` tinyint(1) DEFAULT NULL,
   `cell_type_count` smallint(6) DEFAULT NULL,
   PRIMARY KEY (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`,`seq_region_id`,`seq_region_start`,`feature_type_id`),
@@ -625,7 +623,7 @@ CREATE TABLE `result_set` (
   `name` varchar(100) DEFAULT NULL,
   `cell_type_id` int(10) unsigned DEFAULT NULL,
   `feature_type_id` int(10) unsigned DEFAULT NULL,
-  `feature_class` enum('result','dna_methylation') DEFAULT NULL,
+  `feature_class` enum('result','dna_methylation','segmentation') DEFAULT NULL,
   `replicate` tinyint(3) unsigned NOT NULL,
   `experiment_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`result_set_id`),

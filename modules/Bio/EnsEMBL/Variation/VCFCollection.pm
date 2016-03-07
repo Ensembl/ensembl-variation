@@ -84,6 +84,8 @@ our %TYPES = (
   'local'  => 1,
 );
 
+my $MAX_OPEN_FILES = 2;
+
 
 =head2 new
 
@@ -434,7 +436,7 @@ sub get_all_Samples {
   if(!defined($self->{samples})) {
     
     # we should only need to get samples from one chromosome's VCF
-    my $chr = $self->list_chromosomes->[0];
+    my $chr = $self->list_chromosomes ? $self->list_chromosomes->[0] : '';
     my $vcf = $self->_get_vcf_by_chr($chr);
     
     throw("ERROR: VCF file ".$self->_get_vcf_filename_by_chr($chr)." not found\n") unless $vcf;
@@ -594,7 +596,9 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my $use_db = $self->use_db;
   
   if($use_db) {
-    foreach my $vf(@{$slice->get_all_VariationFeatures()}) {
+    my $vfa = $self->adaptor->db->get_VariationFeatureAdaptor();
+
+    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice)}) {
       push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
     }
   }
@@ -849,9 +853,19 @@ sub _get_vcf_by_chr {
     }    
     
     else {
+
+      # close first opened handle to prevent going over max allowed connections
+      while(scalar @{$self->{_open_files} || []} >= $MAX_OPEN_FILES) {
+        my $close = shift @{$self->{_open_files}};
+        $self->{files}->{$close}->close();
+        delete $self->{files}->{$close};
+      }
+
       $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
     
       $self->{files}->{$chr} = $obj;
+
+      push @{$self->{_open_files}}, $chr;
     }
   }
   

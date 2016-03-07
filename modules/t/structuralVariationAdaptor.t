@@ -149,7 +149,7 @@ ok($sv12->[0]->variation_name eq $sv_names[0], "sv by source");
 print "\n# Test - get_all_failed_descriptions\n";
 my $failed_sv = $sva->fetch_by_name('esv902225');
 my $sv13= $sva->get_all_failed_descriptions($failed_sv);
-ok($sv13->[0] eq 'Variation can not be re-mapped to the current assembly', "failed descriptions");
+ok($sv13->[0] eq 'Variant can not be re-mapped to the current assembly', "failed descriptions");
 
 
 done_testing();

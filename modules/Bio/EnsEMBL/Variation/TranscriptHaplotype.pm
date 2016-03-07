@@ -48,6 +48,8 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw(warning throw);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(align_seqs);
 
 use Bio::AlignIO;
 use Bio::SimpleAlign;
@@ -56,8 +58,9 @@ use Bio::LocatableSeq;
 my $CAN_USE_DPALIGN;
 
 BEGIN {
-  if (eval { require Bio::Tools::dpAlign; 1 }) {
+  if (eval { require Bio::Ext::Align; 1 }) {
     $CAN_USE_DPALIGN = 1;
+    require Bio::Tools::dpAlign;
   }
   else {
     $CAN_USE_DPALIGN = 0;
@@ -422,7 +425,7 @@ sub _get_SimpleAlign_obj {
 
       # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
       else {
-        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(align_seqs($self->reference_seq, $self->seq));
+        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)});
       }
     }
 
