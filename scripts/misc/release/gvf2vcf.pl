@@ -131,6 +131,7 @@ sub init_data {
         'E_Cited' => 'Cited',
         'E_ESP' => 'ESP',
         'E_Phenotype_or_Disease' => 'Phenotype_or_Disease', 
+        'E_ExAC' => 'ExAC',
     };
     $config->{evidence_value_to_abbr} = {
         'Multiple_observations' => 'E_Multiple_observations',
@@ -140,6 +141,7 @@ sub init_data {
         'Cited' => 'E_Cited',
         'ESP' => 'E_ESP',
         'Phenotype_or_Disease' => 'E_Phenotype_or_Disease',
+        'ExAC' => 'E_ExAC',
     };
     $config->{clin_significance_to_abbr} = {
         'uncertain significance' => 'CLIN_uncertain_significance',
@@ -188,6 +190,9 @@ sub init_data {
         'translocation' => 'TL',
         'interchromosomal_breakpoint' => 'InterCB',
         'intrachromosomal_breakpoint' => 'IntraCB',
+        'interchromosomal_translocation' => 'InterTL',
+        'intrachromosomal_translocation' => 'IntraTL',
+        'complex_substitution' => 'CS',
     };
 }
 
@@ -585,7 +590,10 @@ sub print_header {
             '##ALT=<ID=INDEL,Description="indel">',
             '##ALT=<ID=InterCB,Description="interchromosomal_breakpoint">',
             '##ALT=<ID=IntraCB,Description="intrachromosomal_breakpoint">',
+            '##ALT=<ID=InterTL,Description="interchromosomal_translocation">',
+            '##ALT=<ID=IntraTL,Description="intrachromosomal_translocation">',
             '##ALT=<ID=TL,Description="translocation">',
+            '##ALT=<ID=CS,Description="complex_substitution">',
         )), "\n";
     }
 
