@@ -277,7 +277,7 @@ sub get_all_population_frequencies {
   my $self = shift;
   
   if(!exists($self->{population_frequencies})) {
-    my $totals = $self->container->_total_diplotype_population_counts;
+    my $totals = $self->container->_sample_counts_by_population;
     my $counts = $self->get_all_population_counts;
     
     my %freqs = map {$_ => $counts->{$_} / $totals->{$_}} keys %$counts;
