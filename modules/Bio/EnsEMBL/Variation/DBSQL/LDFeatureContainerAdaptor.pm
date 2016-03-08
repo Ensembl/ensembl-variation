@@ -743,7 +743,7 @@ sub _objs_from_sth_vcf {
   my %sample_ids;
   
   foreach my $snp_start(keys %$gts) {
-    foreach my $sample(keys %{$gts->{$snp_start}}) {
+    foreach my $sample(sort keys %{$gts->{$snp_start}}) {
       next unless $gts->{$snp_start}->{$sample};
       
       my @gt = split(/\||\//, $gts->{$snp_start}->{$sample});
