@@ -4270,11 +4270,13 @@ sub check_existing_tabix_pm {
     my $file = get_dump_file_name($config, $chr, "all", "vars");
     next unless -e $file;
     my $tabix_obj = $config->{_vf_tabix}->{$chr} ||= Tabix->new(-data => $file);
+    next unless $tabix_obj;
 
     foreach my $vf(@{$by_chr{$chr}}) {
       progress($config, $p++, $total);
 
       my $iter = $tabix_obj->query($vf->{chr}, $vf->{start} - 1, $vf->{end} + 1);
+      next unless $iter && $iter->{_};
 
       while(my $line = $tabix_obj->read($iter)) {
         chomp $line;

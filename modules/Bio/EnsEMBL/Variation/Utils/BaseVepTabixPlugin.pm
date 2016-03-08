@@ -361,6 +361,7 @@ sub _get_data_pm {
     my $tabix_obj = $self->_tabix_obj($file);
 
     my $iter = $tabix_obj->query(@_);
+    next unless $iter && $iter->{_};
 
     while(my $line = $tabix_obj->read($iter)) {
       my $parsed = $self->parse_data($line);
