@@ -1192,6 +1192,11 @@ sub TO_JSON {
   # convert haplotype hashrefs to listrefs
   $copy{'cds_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_CDSHaplotypes}];
   $copy{'protein_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_ProteinHaplotypes}];
+
+  # do diplotypes if they've been added
+  foreach my $type(grep {$self->{'_'.$_.'_diplotypes'}} qw(CDS Protein)) {
+    $copy{lc($type).'_diplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->{'_'.$type.'_diplotypes'}}];
+  }
   
   return \%copy;
 }
