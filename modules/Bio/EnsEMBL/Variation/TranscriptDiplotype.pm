@@ -292,9 +292,14 @@ sub get_all_population_frequencies {
 ## Basically just deletes "private" keys starting with "_"
 sub TO_JSON {
   my $self = shift;
+
+  $self->$_ for qw(type name count frequency get_all_population_frequencies);
   
   # make a hash copy of self
   my %copy = %{$self};
+
+  # copy haplotypes as hexes
+  $copy{haplotypes} = [map {$_->_hex} @{$self->haplotypes}];
   
   # delete keys starting with _
   delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
