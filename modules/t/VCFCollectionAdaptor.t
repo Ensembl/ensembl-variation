@@ -31,8 +31,7 @@ my $vdb = $multi->get_DBAdaptor('variation');
 
 # set the VCFCollection config
 my $dir = $multi->curr_dir();
-no warnings 'once';
-$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/vcf_config.json';
+ok($vdb->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
 my $vca = $vdb->get_VCFCollectionAdaptor();
 
 ok($vca && $vca->isa('Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor'), "isa VCFCollectionAdaptor");

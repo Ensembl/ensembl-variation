@@ -37,8 +37,7 @@ my $cdb = $multi->get_DBAdaptor('core');
 
 # set the VCFCollection config
 my $dir = $multi->curr_dir();
-no warnings 'once';
-$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/th_vcf_config.json';
+ok($vdb->vcf_config_file($dir.'/th_vcf_config.json') eq $dir.'/th_vcf_config.json', "DBAdaptor vcf_config_file");
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $vcf_coll = $vca->fetch_all->[0];
 my $temp = $vcf_coll->filename_template();
@@ -308,8 +307,6 @@ $dts = $c->get_all_ProteinDiplotypes;
 is(scalar @$dts, 81, "Protein diplotypes - count");
 
 $dt = (sort {$b->count <=> $a->count} @$dts)[0];
-
-$DB::single = 1;
 
 is($dt->name, 'ENSP00000422007:621del{325}_566R>Q,620*>R,671C>R,819Q>R', "Protein diplotype name");
 is($dt->count, 676, "Protein diplotype count");

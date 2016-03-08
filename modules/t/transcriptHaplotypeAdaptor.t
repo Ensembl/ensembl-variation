@@ -43,8 +43,7 @@ my $tr = $ta->fetch_by_stable_id('ENST00000502692');
 
 # set the VCFCollection config
 my $dir = $multi->curr_dir();
-no warnings 'once';
-$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/th_vcf_config.json';
+ok($vdb->vcf_config_file($dir.'/th_vcf_config.json') eq $dir.'/th_vcf_config.json', "DBAdaptor vcf_config_file");
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $vcf_coll = $vca->fetch_all->[0];
 my $temp = $vcf_coll->filename_template();

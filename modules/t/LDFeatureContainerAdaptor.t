@@ -87,8 +87,7 @@ is($ld_values, 2, "fetch_by_VariationFeatures - count LD values");
 
 ## VCF
 my $dir = $multi->curr_dir();
-no warnings 'once';
-$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/ld_vcf_config.json';
+ok($vdb->vcf_config_file($dir.'/ld_vcf_config.json') eq $dir.'/ld_vcf_config.json', "DBAdaptor vcf_config_file");
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $coll = $vca->fetch_by_id('ld');
 
