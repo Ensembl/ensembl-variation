@@ -20,6 +20,7 @@ use Test::Exception;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use FindBin qw($Bin);
+use Cwd;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::TestUtils;
@@ -56,6 +57,7 @@ ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test
 ok($c->sample_prefix() eq "s_prefix:", "sample_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
 ok($c->use_seq_region_synonyms() eq "1", "use_seq_region_synonyms");
+ok($c->tmpdir() eq cwd(), "tmpdir");
 
 # tell it not to use the DB
 ok(!$c->use_db(0), "use_db");
@@ -94,8 +96,7 @@ ok($sa && $sa->isa('Bio::EnsEMBL::DBSQL::SliceAdaptor'), "get SliceAdaptor");
 my $va = $vdb->get_VariationAdaptor;
 ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), "get VariationAdaptor");
 
-no warnings 'once';
-$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/vcf_config.json';
+ok($vdb->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
 my $vca = $vdb->get_VCFCollectionAdaptor();
 
 ok($vca && $vca->isa('Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor'), "isa VCFCollectionAdaptor");
