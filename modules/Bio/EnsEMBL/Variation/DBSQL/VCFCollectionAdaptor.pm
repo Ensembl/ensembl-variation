@@ -89,6 +89,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor;
 
 use JSON;
+use Cwd;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
@@ -169,6 +170,16 @@ sub new {
   elsif($self->db && $self->db->vcf_root_dir) {
     $root_dir = $self->db->vcf_root_dir.'/';
   }
+
+  ## set up tmp dir
+  my $tmpdir = cwd();
+  if($ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}) {
+    $tmpdir = $ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}.'/';
+  }
+  elsif($self->db && $self->db->vcf_tmp_dir) {
+    $tmpdir = $self->db->vcf_tmp_dir.'/';
+  }
+
   
   throw("ERROR: No collections defined in config file") unless $config->{collections} && scalar @{$config->{collections}};
   
@@ -235,6 +246,7 @@ sub new {
       -updated =>$hash->{updated} || undef,
       -is_remapped => $hash->{is_remapped} ||0,
       -adaptor => $self,
+      -tmpdir => $hash->{tmpdir} || $tmpdir,
     );
     
     $self->{collections}->{$collection->id} = $collection;

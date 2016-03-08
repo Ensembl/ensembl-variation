@@ -388,4 +388,12 @@ sub vcf_root_dir {
   return $self->{vcf_root_dir};
 }
 
+sub vcf_tmp_dir {
+  my $self = shift;
+  
+  $self->{vcf_tmp_dir} = shift if @_;
+  
+  return $self->{vcf_tmp_dir};
+}
+
 1;

@@ -67,6 +67,8 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::VCFCollection;
 
+use Cwd;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
@@ -140,7 +142,8 @@ sub new {
     $updated,
     $is_remapped,
     $adaptor,
-    $use_seq_region_synonyms
+    $use_seq_region_synonyms,
+    $tmpdir,
   ) = rearrange(
     [qw(
       ID
@@ -160,6 +163,7 @@ sub new {
       IS_REMAPPED
       ADAPTOR
       USE_SEQ_REGION_SYNONYMS
+      TMPDIR
     )],
     @_
   ); 
@@ -188,6 +192,7 @@ sub new {
     updated => $updated,
     is_remapped => $is_remapped,
     use_seq_region_synonyms => $use_seq_region_synonyms,
+    tmpdir => $tmpdir || cwd(),
     _use_db => 1,
     _raw_populations => $sample_pops,
   );
@@ -354,6 +359,27 @@ sub filename_template {
   my $self = shift;
   $self->{filename_template} = shift if @_;
   return $self->{filename_template};
+}
+
+
+=head2 tmpdir
+
+  Arg [1]    : string $tmpdir (optional)
+               The new value to set the tmpdir attribute to
+  Example    : my $tmpdir = $collection->tmpdir()
+  Description: Getter/Setter for the temporary directory path used when
+               downloading indexes for remote tabix files.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub tmpdir {
+  my $self = shift;
+  $self->{tmpdir} = shift if @_;
+  return $self->{tmpdir};
 }
 
 
@@ -861,7 +887,15 @@ sub _get_vcf_by_chr {
         delete $self->{files}->{$close};
       }
 
+      # change dir
+      my $cwd = cwd();
+      chdir($self->tmpdir);
+
+      # open obect (remote indexes get downloaded)
       $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+
+      # change back
+      chdir($cwd);
     
       $self->{files}->{$chr} = $obj;
 
