@@ -411,7 +411,7 @@ sub total_haplotype_count {
 =head2 total_population_counts
 
   Example    : my %counts = %{$thc->total_population_counts()}
-  Description: Get observed haplotype counts by population name
+  Description: Get total haplotype counts by population name
   Returntype : hashref
   Exceptions : none
   Caller     : general
@@ -426,9 +426,11 @@ sub total_population_counts {
     my $counts = {};
     
     my $hash = $self->_get_sample_population_hash();
+    my $ploidy = $self->_sample_ploidy();
+    my $default = $self->_default_ploidy();
     
     foreach my $sample(keys %$hash) {
-      $counts->{$_} += (scalar keys %{$self->{protein_haplotypes}} ? 2 : 1) for keys %{$hash->{$sample}};
+      $counts->{$_} += defined($ploidy->{$sample}) ? $ploidy->{$sample} : $default for keys %{$hash->{$sample}};
     }
     
     $self->{total_population_counts} = $counts;
@@ -488,7 +490,7 @@ sub _variation_features {
     $self->{_variation_features} = $vfs;
   }
   elsif(!exists($self->{_variation_features})) {
-    $self->{_variation_features} = [map {$_->variation_feature} @{$self->get_all_SampleGenotypeFeatures}];
+    $self->{_variation_features} = [values %{{map {$self->_vf_identifier($_) => $_} map {$_->variation_feature} @{$self->get_all_SampleGenotypeFeatures}}}];
   }
   
   return $self->{_variation_features};
@@ -596,10 +598,10 @@ sub _total_sample_count {
 ## gets total population counts of diplotypes
 ## since there will be one diplotype per sample, this basically
 ## just returns a hashref of sample counts per population
-sub _total_diplotype_population_counts {
+sub _sample_counts_by_population {
   my $self = shift;
   
-  if(!exists($self->{_total_diplotype_population_counts})) {
+  if(!exists($self->{_sample_counts_by_population})) {
     my $counts = {};
     
     my $hash = $self->_get_sample_population_hash();
@@ -608,10 +610,10 @@ sub _total_diplotype_population_counts {
       $counts->{$_}++ for keys %{$hash->{$sample}};
     }
     
-    $self->{_total_diplotype_population_counts} = $counts;
+    $self->{_sample_counts_by_population} = $counts;
   }
   
-  return $self->{_total_diplotype_population_counts};
+  return $self->{_sample_counts_by_population};
 }
 
 ## Creates all the TranscriptHaplotype objects for this container
@@ -1037,6 +1039,18 @@ sub _get_prediction_matrices {
   }
   
   return $self->{_prediction_matrices};
+}
+
+
+sub _vf_identifier {
+  my $self = shift;
+  my $vf = shift;
+
+  if(!exists($vf->{_th_identifier})) {
+    $vf->{_th_identifier} = $vf->dbID || join("_", $vf->{start}, $vf->{end}, $vf->{allele_string});
+  }
+
+  return $vf->{_th_identifier};
 }
 
 ## Generates TranscriptVariation objects representing consequences.
