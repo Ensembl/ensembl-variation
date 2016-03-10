@@ -532,7 +532,8 @@ sub get_all_total_expected_population_frequency_deltas {
   return $self->{total_expected_population_frequency_deltas};
 }
 
-sub get_all_adjusted_deltas {
+## experimental methods (currently private)
+sub _get_all_adjusted_deltas {
   my $self = shift;
 
   if(!exists($self->{adjusted_deltas})) {
