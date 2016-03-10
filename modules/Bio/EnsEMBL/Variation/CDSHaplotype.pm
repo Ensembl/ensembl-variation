@@ -144,14 +144,16 @@ sub get_all_diffs {
   if(!defined($self->{diffs})) {
     my @diffs = ();
     
-    my $raw_to_vf = $self->container->_get_raw_diff_to_VariationFeature_hash();
+    my $raw_to_vf = $self->container->_get_diff_to_VariationFeature_hash();
     
     foreach my $raw(@{$self->_get_raw_diffs()}) {
+      my $formatted = $self->_format_diff($raw);
+
       my $diff = {
-        'diff' => $raw, 
+        'diff' => $formatted, 
       };
       
-      $diff->{variation_feature} = $raw_to_vf->{$raw} if $raw_to_vf->{$raw};
+      $diff->{variation_feature} = $raw_to_vf->{$formatted} if $raw_to_vf->{$formatted};
       
       push @diffs, $diff;
     }

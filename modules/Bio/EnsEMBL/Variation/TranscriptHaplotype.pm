@@ -128,7 +128,7 @@ sub name {
   my $self = shift;
   
   if(!exists($self->{name})) {
-    $self->{name} = sprintf("%s:%s", $self->_reference_name, join(",", @{$self->_get_raw_diffs}) || 'REF');
+    $self->{name} = sprintf("%s:%s", $self->_reference_name, join(",", map {$_->{diff}} @{$self->get_all_diffs}) || 'REF');
   }
   
   return $self->{name};
@@ -519,7 +519,11 @@ sub _get_raw_diffs {
           
           # if not, create a new diff
           else {
-            push @diffs, $self->_create_diff($a1, $a2, $pp);
+            push @diffs, {
+              a1 => $a1,
+              a2 => $a2,
+              p  => $pp,
+            };
             
             # re-initiate a1 and a2
             $a1 = $p1[$i];
@@ -538,7 +542,11 @@ sub _get_raw_diffs {
       }
       
       # there will be a diff left over
-      push @diffs, $self->_create_diff($a1, $a2, $pp);
+      push @diffs, {
+        a1 => $a1,
+        a2 => $a2,
+        p  => $pp,
+      };
     }
     
     $self->{_raw_diffs} = \@diffs;
@@ -547,9 +555,11 @@ sub _get_raw_diffs {
   return $self->{_raw_diffs};
 }
 
-## creates a diff string from a pair of "alleles" and a position
-sub _create_diff {
-  my ($self, $a1, $a2, $pp) = @_;
+## formats a diff string from a raw diff hash
+sub _format_diff {
+  my ($self, $hash) = @_;
+
+  my ($a1, $a2, $pp) = ($hash->{a1}, $hash->{a2}, $hash->{p});
   
   my $pos = ($pp - length($a1)) + 2;
   

@@ -152,12 +152,14 @@ sub get_all_diffs {
     
     foreach my $raw_diff(@{$self->_get_raw_diffs}) {
       
-      my $diff = { diff => $raw_diff };
+      my $formatted = $self->_format_diff($raw_diff);
+
+      my $diff = { diff => $formatted };
       
       # extract change from raw diff
-      if($raw_diff =~ /^(\d+)[A-Z]\>([A-Z])$/ && !$seen_indel) {
-        my $pos = $1;
-        my $aa  = $2;
+      if(!$seen_indel && length($raw_diff->{a1}) == 1 && length($raw_diff->{a2}) == 1 && $raw_diff->{a2} ne '*') {
+        my $pos = $raw_diff->{p} + 1;
+        my $aa  = $raw_diff->{a2};
 
         # get sift/polyphen predictions from cached matrices
         # but only if within range
@@ -173,7 +175,7 @@ sub get_all_diffs {
         }
       }
 
-      elsif($raw_diff =~ /ins|del/) {
+      elsif($formatted =~ /ins|del/) {
         $seen_indel = 1;
       }
       
