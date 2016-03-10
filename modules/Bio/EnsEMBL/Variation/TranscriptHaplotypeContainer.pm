@@ -532,6 +532,46 @@ sub get_all_total_expected_population_frequency_deltas {
   return $self->{total_expected_population_frequency_deltas};
 }
 
+sub get_all_adjusted_deltas {
+  my $self = shift;
+
+  if(!exists($self->{adjusted_deltas})) {
+
+    my $maxes = $self->_get_all_maximum_frequency_deltas;
+    my $deltas = $self->get_all_total_expected_population_frequency_deltas;
+
+    my %adj = map {$_ => $deltas->{$_} / $maxes->{$_}} keys %$deltas;
+
+    $self->{adjusted_deltas} = \%adj;
+  }
+
+  return $self->{adjusted_deltas};
+}
+
+sub _get_all_maximum_frequency_deltas {
+  my $self = shift;
+
+  if(!exists($self->{_maximum_frequency_deltas})) {
+
+    my %totals = ();
+
+    foreach my $ph(@{$self->get_all_ProteinHaplotypes}) {
+      my $freqs = $ph->get_all_expected_population_frequencies;
+
+      foreach my $pop(keys %$freqs) {
+        my $f = $freqs->{$pop};
+        $f = 1 - $f if $f < 0.5;
+
+        $totals{$pop} += $f;
+      }
+    }
+
+    $self->{_maximum_frequency_deltas} = \%totals;
+  }
+
+  return $self->{_maximum_frequency_deltas};
+}
+
 
 
 ###################
@@ -1096,158 +1136,59 @@ sub _protein_allele_frequencies {
 
   if(!exists($self->{_protein_allele_frequencies})) {
 
-    # get TVs, limit to those that affect the peptide
-    my @tvs = grep {$_->affects_peptide} @{$self->_transcript_variations};
+    my ($counts, $totals, $pos_totals);
 
-    # now get frequencies, limit to those VFs from TVs to save time
-    my $vf_freqs = $self->_vf_frequencies([map {$_->base_variation_feature} @tvs]);
+    # get sample population hash
+    my $hash = $self->_get_sample_population_hash;
 
-    my $freqs = {};
+    foreach my $ph(@{$self->get_all_ProteinHaplotypes}) {
+      foreach my $sample(keys %{$ph->{samples}}) {
 
-    foreach my $tv(@tvs) {
+        # sample may have more than one copy of a haplotype
+        my $sample_count = $ph->{samples}->{$sample};
 
-      my $vf_id = $self->_vf_identifier($tv->base_variation_feature);
-      my $pos = $tv->translation_start;
+        # get pops for this sample, add dummy _all population
+        my @pops = keys %{$hash->{$sample}};
+        push @pops, '_all';
 
-      $DB::single = 1 if $pos eq '899';
-      
-      # we do care about the reference for once!
-      foreach my $tva(@{$tv->get_all_TranscriptVariationAlleles}) {
-        my $vf_allele = $tva->variation_feature_seq;
-        my $prot_allele = $tva->peptide;
+        # record totals
+        $totals->{$_} += $sample_count for @pops;
 
-        if(my $tmp_freqs = $vf_freqs->{$vf_id}->{$vf_allele}) {
-          $freqs->{$pos}->{$prot_allele} = $tmp_freqs;
-          $freqs->{$pos}->{REF} = $tmp_freqs if $tva->is_reference;
+        # get raw diffs
+        foreach my $diff(@{$ph->_get_raw_diffs()}) {
+
+          # skip anything that isn't a simple AA change
+          next unless length($diff->{a1}) == length($diff->{a2}) && $diff->{a1} !~ /\-/ && $diff->{a2} !~ /\-/;
+
+          foreach my $pop(@pops) {
+            # log counts of this allele
+            $counts->{$diff->{p}}->{$diff->{a2}}->{$pop} += $sample_count;
+
+            # also keep track of total observed at this position, used to get REF freq later
+            $pos_totals->{$diff->{p}}->{$pop} += $sample_count;
+          }
         }
       }
+    }
+
+    # now convert counts to freqs
+    my $freqs;
+
+    foreach my $pos(keys %$counts) {
+
+      # calculate the ALT freqs
+      foreach my $alt(keys %{$counts->{$pos}}) {
+        $freqs->{$pos}->{$alt}->{$_} = $counts->{$pos}->{$alt}->{$_} / $totals->{$_} for keys %{$counts->{$pos}->{$alt}};
+      }
+
+      # add REF freqs using the $pos_totals hashref we generated above
+      $freqs->{$pos}->{REF}->{$_} = ($totals->{$_} - ($pos_totals->{$pos}->{$_} || 0)) / $totals->{$_} for keys %$totals;
     }
 
     $self->{_protein_allele_frequencies} = $freqs;
   }
 
   return $self->{_protein_allele_frequencies};
-}
-
-## get all transcript variations for all variation features
-## used by _protein_allele_frequencies
-sub _transcript_variations {
-  my $self = shift;
-
-  if(!exists($self->{_transcript_variations})) {
-    my $tr = $self->transcript;
-    my $vfs = $self->_variation_features;
-
-    my @tvs = map {@{$_->get_all_TranscriptVariations([$tr])}} @$vfs;
-
-    $self->{_transcript_variations} = \@tvs;
-  }
-
-  return $self->{_transcript_variations};
-}
-
-## gets VF frequencies as a multi-level hash
-## give a listref of VFs to limit calculation to those VFs
-## used by _protein_allele_frequencies
-## hash looks like:
-# {
-#   vf_id1 => {
-#     allele1 => {
-#       pop1 => 0.1,
-#       pop2 => 0.2,
-#     },
-#     allele2 => {
-#       pop1 => 0.9,
-#       pop2 => 0.8,
-#     }
-#   }
-# }
-#
-# vf_id1 is a unique VF ID as given by _vf_identifier()
-sub _vf_frequencies {
-  my $self = shift;
-  my $vfs = shift;
-
-  if(!exists($self->{_vf_frequencies}) || $self->{_vf_frequencies_partial}) {
-    my $gts = $self->get_all_SampleGenotypeFeatures;
-
-    my $hash = $self->_get_sample_population_hash;
-    my $counts = {};
-    my $seen_samples = {};
-
-    # either we got passed a list of VFs to process, or default to doing all
-    if($vfs && scalar @$vfs) {
-
-      # this flag tells the API we must run the calculation again next time _vf_frequencies is called
-      $self->{_vf_frequencies_partial} = 1;
-    }
-    else {
-      $vfs = $self->_variation_features;
-
-      # setting the flag to 0 means next time _vf_frequencies is called just return the cached freqs
-      # as even if the user specifies a different list of VFs it will be a subset of all of them
-      $self->{_vf_frequencies_partial} = 0;
-    }
-
-    # create an include list to skip those we're not interested in
-    my %include = map {$self->_vf_identifier($_) => 1} @{$vfs};
-
-    # first we tot up counts observed in the genotypes
-    foreach my $gt(@{$gts}) {
-
-      # we use an internal ID to track VFs
-      my $vf_id = $self->_vf_identifier($gt->variation_feature);
-      next unless $include{$vf_id};
-
-      my $sample = $gt->sample->name;
-
-      foreach my $allele(@{$gt->genotype}) {
-        $counts->{$vf_id}->{$allele}->{$_}++ for keys %{$hash->{$sample}};
-
-        # track implicit "all" population
-        $counts->{$vf_id}->{$allele}->{_all}++;
-
-        # use seen_samples to track which samples have an observation at each VF
-        $seen_samples->{$vf_id}->{$sample} = 1;
-      }
-    }
-
-    # now add samples with reference genotypes
-    # as these by default are not fetched for speed
-    my $ploidy = $self->_sample_ploidy;
-
-    foreach my $vf(@$vfs) {
-      my $vf_id = $self->_vf_identifier($vf);
-      next unless $counts->{$vf_id};
-
-      my $allele = (split('/', $vf->allele_string))[0];
-
-      # we want all samples that have not had an observation at this VF
-      foreach my $sample(grep {!$seen_samples->{$vf_id}->{$_}} keys %$ploidy) {
-        my $this_ploidy = $ploidy->{$sample};
-
-        # use ploidy to increment the counts, this should be reliable for X/Y transcripts
-        $counts->{$vf_id}->{$allele}->{$_} += $this_ploidy for keys %{$hash->{$sample}};
-
-        $counts->{$vf_id}->{$allele}->{_all} += $this_ploidy;
-      }
-    }
-
-    # now use totals to calculate frequencies
-    my $totals = $self->total_population_counts;
-    my $freqs = {};
-
-    foreach my $vf_id(keys %$counts) {
-      foreach my $allele(keys %{$counts->{$vf_id}}) {
-        my $allele_counts = $counts->{$vf_id}->{$allele};
-        %{$freqs->{$vf_id}->{$allele}} = map {$_ => $allele_counts->{$_} / $totals->{$_}} keys %$allele_counts;
-      }
-    }
-
-    $self->{_vf_frequencies} = $freqs;
-  }
-
-  return $self->{_vf_frequencies};
 }
 
 ## get a unique ID for a VF - usually this will be the dbID
