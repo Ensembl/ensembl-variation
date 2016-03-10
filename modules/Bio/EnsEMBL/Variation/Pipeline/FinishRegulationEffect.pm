@@ -113,6 +113,11 @@ sub run {
           $dbc->do(qq{DROP TABLE IF EXISTS $table;})
         }
     }
+    foreach my $table (qw/motif_feature_variation regulatory_feature_variation/) {
+      $dbc->do(qq{ALTER TABLE $table ENABLE KEYS;});
+    }
+
+
 }
 
 1;
