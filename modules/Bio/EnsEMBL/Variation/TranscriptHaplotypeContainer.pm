@@ -430,7 +430,11 @@ sub total_population_counts {
     my $default = $self->_default_ploidy();
     
     foreach my $sample(keys %$hash) {
-      $counts->{$_} += defined($ploidy->{$sample}) ? $ploidy->{$sample} : $default for keys %{$hash->{$sample}};
+      my $sample_ploidy = defined($ploidy->{$sample}) ? $ploidy->{$sample} : $default;
+      $counts->{$_} += $sample_ploidy for keys %{$hash->{$sample}};
+
+      # keep a count for a made-up "all" population
+      $counts->{_all} += $sample_ploidy;
     }
     
     $self->{total_population_counts} = $counts;
@@ -473,6 +477,59 @@ sub db {
   my $self = shift;
   $self->{_db} = shift if @_;
   return $self->{_db};
+}
+
+=head2 total_expected_frequency_delta
+
+  Example    : my $delta = $thc->total_expected_frequency_delta()
+  Description: Get the total expected frequency delta for all ProteinHaplotypes
+               in this container. Sum of absolute values from the
+               expected_frequency_delta() method
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub total_expected_frequency_delta {
+  my $self = shift;
+
+  if(!exists($self->{total_expected_frequency_delta})) {
+    $self->{total_expected_frequency_delta} += abs($_->expected_frequency_delta) for @{$self->get_all_ProteinHaplotypes};
+  }
+
+  return $self->{total_expected_frequency_delta};
+}
+
+=head2 get_all_total_expected_population_frequency_deltas
+
+  Example    : my $deltas = $thc->get_all_total_expected_population_frequency_deltas()
+  Description: Get all total expected frequency deltas for all observed
+               populations. See total_expected_frequency_delta()
+  Returntype : hashref
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_total_expected_population_frequency_deltas {
+  my $self = shift;
+
+  if(!exists($self->{total_expected_population_frequency_deltas})) {
+    my %totals = ();
+
+    foreach my $ph(@{$self->get_all_ProteinHaplotypes}) {
+      my $deltas = $ph->get_all_expected_population_frequency_deltas();
+
+      $totals{$_} += abs($deltas->{$_}) for keys %$deltas;
+    }
+
+    $self->{total_expected_population_frequency_deltas} = \%totals;
+  }
+
+  return $self->{total_expected_population_frequency_deltas};
 }
 
 
@@ -969,23 +1026,14 @@ sub _mutate_sequences {
   return $self->{_mutated_by_fingerprint}->{$fingerprint};
 }
 
-## gets an md5 hex for an samples VFs/genotypes combination
+## gets an md5 hex for a sample's VFs/genotypes combination
 ## this means we don't have to run _mutate_sequences more than
 ## once for essentially the same sequence
 sub _fingerprint_gts {
   my $self = shift;
   my $gts = shift;
   
-  my @raw;
-  
-  foreach my $gt(@$gts) {
-    my $s = $gt->genotype_string;
-    my $vf = $gt->variation_feature;
-    
-    my $v = $vf->dbID || $vf->{start}.'-'.$vf->{end};
-    
-    push @raw, sprintf('%s:%s', $v, $s);
-  }
+  my @raw = map {sprintf('%s:%s', $self->_vf_identifier($_->variation_feature), $_->genotype_string)} @$gts;
   
   return md5_hex(join('_', @raw));
 }
@@ -1041,11 +1089,174 @@ sub _get_prediction_matrices {
   return $self->{_prediction_matrices};
 }
 
+## gets frequencies for alternate amino acids at non-synonymous positions
+## used to get expected frequencies for protein haplotypes
+sub _protein_allele_frequencies {
+  my $self = shift;
 
+  if(!exists($self->{_protein_allele_frequencies})) {
+
+    # get TVs, limit to those that affect the peptide
+    my @tvs = grep {$_->affects_peptide} @{$self->_transcript_variations};
+
+    # now get frequencies, limit to those VFs from TVs to save time
+    my $vf_freqs = $self->_vf_frequencies([map {$_->base_variation_feature} @tvs]);
+
+    my $freqs = {};
+
+    foreach my $tv(@tvs) {
+
+      my $vf_id = $self->_vf_identifier($tv->base_variation_feature);
+      my $pos = $tv->translation_start;
+
+      $DB::single = 1 if $pos eq '899';
+      
+      # we do care about the reference for once!
+      foreach my $tva(@{$tv->get_all_TranscriptVariationAlleles}) {
+        my $vf_allele = $tva->variation_feature_seq;
+        my $prot_allele = $tva->peptide;
+
+        if(my $tmp_freqs = $vf_freqs->{$vf_id}->{$vf_allele}) {
+          $freqs->{$pos}->{$prot_allele} = $tmp_freqs;
+          $freqs->{$pos}->{REF} = $tmp_freqs if $tva->is_reference;
+        }
+      }
+    }
+
+    $self->{_protein_allele_frequencies} = $freqs;
+  }
+
+  return $self->{_protein_allele_frequencies};
+}
+
+## get all transcript variations for all variation features
+## used by _protein_allele_frequencies
+sub _transcript_variations {
+  my $self = shift;
+
+  if(!exists($self->{_transcript_variations})) {
+    my $tr = $self->transcript;
+    my $vfs = $self->_variation_features;
+
+    my @tvs = map {@{$_->get_all_TranscriptVariations([$tr])}} @$vfs;
+
+    $self->{_transcript_variations} = \@tvs;
+  }
+
+  return $self->{_transcript_variations};
+}
+
+## gets VF frequencies as a multi-level hash
+## give a listref of VFs to limit calculation to those VFs
+## used by _protein_allele_frequencies
+## hash looks like:
+# {
+#   vf_id1 => {
+#     allele1 => {
+#       pop1 => 0.1,
+#       pop2 => 0.2,
+#     },
+#     allele2 => {
+#       pop1 => 0.9,
+#       pop2 => 0.8,
+#     }
+#   }
+# }
+#
+# vf_id1 is a unique VF ID as given by _vf_identifier()
+sub _vf_frequencies {
+  my $self = shift;
+  my $vfs = shift;
+
+  if(!exists($self->{_vf_frequencies}) || $self->{_vf_frequencies_partial}) {
+    my $gts = $self->get_all_SampleGenotypeFeatures;
+
+    my $hash = $self->_get_sample_population_hash;
+    my $counts = {};
+    my $seen_samples = {};
+
+    # either we got passed a list of VFs to process, or default to doing all
+    if($vfs && scalar @$vfs) {
+
+      # this flag tells the API we must run the calculation again next time _vf_frequencies is called
+      $self->{_vf_frequencies_partial} = 1;
+    }
+    else {
+      $vfs = $self->_variation_features;
+
+      # setting the flag to 0 means next time _vf_frequencies is called just return the cached freqs
+      # as even if the user specifies a different list of VFs it will be a subset of all of them
+      $self->{_vf_frequencies_partial} = 0;
+    }
+
+    # create an include list to skip those we're not interested in
+    my %include = map {$self->_vf_identifier($_) => 1} @{$vfs};
+
+    # first we tot up counts observed in the genotypes
+    foreach my $gt(@{$gts}) {
+
+      # we use an internal ID to track VFs
+      my $vf_id = $self->_vf_identifier($gt->variation_feature);
+      next unless $include{$vf_id};
+
+      my $sample = $gt->sample->name;
+
+      foreach my $allele(@{$gt->genotype}) {
+        $counts->{$vf_id}->{$allele}->{$_}++ for keys %{$hash->{$sample}};
+
+        # track implicit "all" population
+        $counts->{$vf_id}->{$allele}->{_all}++;
+
+        # use seen_samples to track which samples have an observation at each VF
+        $seen_samples->{$vf_id}->{$sample} = 1;
+      }
+    }
+
+    # now add samples with reference genotypes
+    # as these by default are not fetched for speed
+    my $ploidy = $self->_sample_ploidy;
+
+    foreach my $vf(@$vfs) {
+      my $vf_id = $self->_vf_identifier($vf);
+      next unless $counts->{$vf_id};
+
+      my $allele = (split('/', $vf->allele_string))[0];
+
+      # we want all samples that have not had an observation at this VF
+      foreach my $sample(grep {!$seen_samples->{$vf_id}->{$_}} keys %$ploidy) {
+        my $this_ploidy = $ploidy->{$sample};
+
+        # use ploidy to increment the counts, this should be reliable for X/Y transcripts
+        $counts->{$vf_id}->{$allele}->{$_} += $this_ploidy for keys %{$hash->{$sample}};
+
+        $counts->{$vf_id}->{$allele}->{_all} += $this_ploidy;
+      }
+    }
+
+    # now use totals to calculate frequencies
+    my $totals = $self->total_population_counts;
+    my $freqs = {};
+
+    foreach my $vf_id(keys %$counts) {
+      foreach my $allele(keys %{$counts->{$vf_id}}) {
+        my $allele_counts = $counts->{$vf_id}->{$allele};
+        %{$freqs->{$vf_id}->{$allele}} = map {$_ => $allele_counts->{$_} / $totals->{$_}} keys %$allele_counts;
+      }
+    }
+
+    $self->{_vf_frequencies} = $freqs;
+  }
+
+  return $self->{_vf_frequencies};
+}
+
+## get a unique ID for a VF - usually this will be the dbID
+## but we allow for VFs not from the DB by potentially constructing an ID from the pos and alleles
 sub _vf_identifier {
   my $self = shift;
   my $vf = shift;
 
+  # cache the identifier on the VF itself
   if(!exists($vf->{_th_identifier})) {
     $vf->{_th_identifier} = $vf->dbID || join("_", $vf->{start}, $vf->{end}, $vf->{allele_string});
   }
@@ -1053,76 +1264,18 @@ sub _vf_identifier {
   return $vf->{_th_identifier};
 }
 
-## Generates TranscriptVariation objects representing consequences.
-## Only used when our VariationFeatures have been created from e.g. a VCF file
-sub _get_unique_VariationFeatures_with_consequences {
-  my $self = shift;
-  
-  my $tr = $self->transcript;
-  my $vfs = $self->_variation_features;
-  
-  # uniquify the VFs - this is because there will be multiple VFs with the same
-  # coords and alleles due to the way the VEP's VCF parser works
-  my %unique_vfs;
-  
-  foreach my $vf(@$vfs) {
-    my @alleles = split /\//, $vf->{allele_string};
-    my $ref_allele = shift @alleles;
-    
-    my ($s, $e) = ($vf->{start}, $vf->{end});
-    
-    my $key = join('-', $s, $e, $ref_allele);
-    
-    if(!defined($unique_vfs{$key})) {
-      my $vf_copy = { %$vf };
-      bless $vf_copy, ref($vf);
-      delete $vf_copy->{$_} for qw(_line phased sample genotype non_variant hom_ref);
-      $vf_copy->{ref_allele} = $ref_allele;
-      $unique_vfs{$key} = $vf_copy;
-    }
-    
-    $unique_vfs{$key}->{alleles}->{$_} = 1 for @alleles;
-  }
-  
-  # we only need a fake TVA
-  my $tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake;
-  
-  # merge VF alleles and get consequences
-  foreach my $vf(values %unique_vfs) {
-    $vf->{allele_string} = join("/", $vf->{ref_allele}, keys %{$vf->{alleles}});
-    $vf->{non_variant} = 1 unless scalar keys %{$vf->{alleles}};
-    delete $vf->{$_} for qw(alleles ref_allele);
-    
-    my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
-      -transcript        => $tr,
-      -variation_feature => $vf,
-      -adaptor           => $tva,
-      -no_ref_check      => 1,
-      -no_transfer       => 1
-    );
-    
-    # prefetching stuff here prevents doing loads at the
-    # end and makes progress reporting more useful
-    $tv->_prefetch_for_vep;
-    
-    $vf->add_TranscriptVariation($tv);
-  }
-  
-  return [sort {$a->{start} <=> $b->{start}} values %unique_vfs];
-}
-
 # map raw diff strings to variation features
 # NB not all diffs will have a single VF if there are compound effects
 # resolved to a single raw diff by the sequence alignment
-sub _get_raw_diff_to_VariationFeature_hash {
+sub _get_diff_to_VariationFeature_hash {
   my $self = shift;
   
-  if(!exists($self->{_raw_to_vf})) {
+  if(!exists($self->{_diff_to_vf})) {
     my $vfs = $self->_variation_features;
   
     my $tr_strand = $self->transcript->strand;
   
-    my %raw_to_vf = ();
+    my %diff_to_vf = ();
   
     foreach my $vf(@$vfs) {
       if(my $mapping = $vf->{_cds_mapping}) {
@@ -1139,28 +1292,28 @@ sub _get_raw_diff_to_VariationFeature_hash {
           if($ref eq '-') {
             reverse_comp(\$alt) if $tr_strand ne $vf_strand;
           
-            $raw_to_vf{$mapping->start.'ins'.$alt} = $vf;
+            $diff_to_vf{$mapping->start.'ins'.$alt} = $vf;
           }
         
           # deletion
           elsif($alt eq '-') {
-            $raw_to_vf{$mapping->start.'del'.$ref} = $vf;
+            $diff_to_vf{$mapping->start.'del'.$ref} = $vf;
           }
         
           # sub
           else {
             reverse_comp(\$alt) if $tr_strand ne $vf_strand;            
           
-            $raw_to_vf{$mapping->start.$ref.'>'.$alt} = $vf;
+            $diff_to_vf{$mapping->start.$ref.'>'.$alt} = $vf;
           }
         }
       }
     }
   
-    $self->{_raw_to_vf} = \%raw_to_vf;
+    $self->{_diff_to_vf} = \%diff_to_vf;
   }
   
-  return $self->{_raw_to_vf};
+  return $self->{_diff_to_vf};
 }
 
 ## Prefetches everything that would otherwise be lazy-loaded

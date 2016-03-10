@@ -123,6 +123,120 @@ sub reference_seq {
 }
 
 
+=head2 expected_frequency
+
+  Example    : my $f = $ph->expected_frequency
+  Description: Get the expected frequency of this haplotype. Calculated
+               by finding the product of the frequencies of the observed
+               alleles at each potentially non-synonymous position.
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub expected_frequency {
+  return $_[0]->{expected_frequency} ||= $_[0]->get_all_expected_population_frequencies->{_all};
+}
+
+
+=head2 expected_frequency_delta
+
+  Example    : my $d = $ph->expected_frequency_delta
+  Description: Get the difference between the observed and expected
+               frequencies of this haplotype. A positive delta indicates
+               this haplotype has been observed more times than would be
+               expected; negative indicates it has been observed fewer
+               times than would be expected.
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub expected_frequency_delta {
+  return $_[0]->{expected_frequency_delta} ||= $_[0]->frequency - $_[0]->expected_frequency;
+}
+
+
+=head2 get_all_expected_population_frequencies
+
+  Example    : my $freqs = $ph->get_all_expected_population_frequencies
+  Description: Get the all expected frequencies by population. See
+               expected_frequency().
+  Returntype : hashref
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_expected_population_frequencies {
+  my $self = shift;
+
+  if(!exists($self->{expected_population_frequencies})) {
+
+    my $container = $self->container;
+    my $prot_freqs = $container->_protein_allele_frequencies();
+    my @pops = map {$_->name} @{$container->get_all_Populations()};
+
+    my $freqs = {map {$_ => 1} (@pops, '_all')};
+
+    # get this haplotype's diffs by pos
+    my %diffs_by_pos = map {$_->{p} + 1 => $_->{a2}} @{$self->_get_raw_diffs};
+
+    foreach my $pos(keys %$prot_freqs) {
+      if(my $a = $diffs_by_pos{$pos}) {
+        if($prot_freqs->{$pos} && $prot_freqs->{$pos}->{$a}) {
+          foreach my $pop(keys %{$prot_freqs->{$pos}->{$a}}) {
+            $freqs->{$pop} *= $prot_freqs->{$pos}->{$a}->{$pop};
+          }  
+        }
+      }
+      elsif($prot_freqs->{$pos}) {
+        foreach my $pop(keys %{$prot_freqs->{$pos}->{REF}}) {
+          $freqs->{$pop} *= $prot_freqs->{$pos}->{REF}->{$pop};
+        }
+      }
+    }
+
+    $self->{expected_population_frequencies} = $freqs;
+  }
+
+  return $self->{expected_population_frequencies};
+}
+
+
+=head2 get_all_expected_population_frequency_deltas
+
+  Example    : my $deltas = $ph->get_all_expected_population_frequency_deltas
+  Description: Get the all expected frequency deltas by population. See
+               expected_frequency_delta().
+  Returntype : hashref
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_expected_population_frequency_deltas {
+  my $self = shift;
+
+  if(!exists($self->{expected_population_frequency_deltas})) {
+    my $ef = $self->get_all_expected_population_frequencies;
+    my $f  = $self->get_all_population_frequencies;
+
+    my %deltas = map {$_ => (($f->{$_} || 0) - $ef->{$_})} keys %$ef;
+
+    $self->{expected_population_frequency_deltas} = \%deltas;
+  }
+
+  return $self->{expected_population_frequency_deltas};
+}
+
+
 =head2 get_all_diffs
 
   Example    : my @diffs = @{$ph->get_all_diffs}
