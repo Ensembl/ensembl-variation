@@ -265,12 +265,7 @@ sub get_other_Haplotypes {
 
 sub count {
   my $self = shift;
-  
-  if(!exists($self->{count})) {
-    $self->{count} = $self->container->{_counts}->{$self->_hex};
-  }
-  
-  return $self->{count};
+  return $self->{count} ||= $self->container->{_counts}->{$self->_hex};
 }
 
 
@@ -288,14 +283,7 @@ sub count {
 
 sub frequency {
   my $self = shift;
-  
-  if(!exists($self->{frequency})) {
-    my $total = $self->container->total_haplotype_count;
-    my $count = $self->count;
-    $self->{frequency} = $count / $total;
-  }
-  
-  return $self->{frequency};
+  return $self->{frequency} ||= $self->count / $self->container->total_haplotype_count;
 }
 
 
@@ -319,7 +307,10 @@ sub get_all_population_counts {
     my $counts = {};
     
     foreach my $sample(keys %{$self->{samples}}) {
-      $counts->{$_} += $self->{samples}->{$sample} for keys %{$sample_pop_hash->{$sample}};
+      my $count = $self->{samples}->{$sample};
+
+      $counts->{$_} += $count for keys %{$sample_pop_hash->{$sample}};
+      $counts->{_all} += $count;
     }
     
     $self->{population_counts} = $counts;
@@ -559,9 +550,9 @@ sub _get_raw_diffs {
 sub _format_diff {
   my ($self, $hash) = @_;
 
-  my ($a1, $a2, $pp) = ($hash->{a1}, $hash->{a2}, $hash->{p});
-  
-  my $pos = ($pp - length($a1)) + 2;
+  my $pos = $self->_get_diff_pos($hash);
+
+  my ($a1, $a2) = ($hash->{a1}, $hash->{a2});
   
   # insertion
   if($a1 =~ /\-/) {
@@ -581,6 +572,13 @@ sub _format_diff {
   else {
     return $pos."$a1\>$a2";
   }
+}
+
+## gets the start pos of a diff
+sub _get_diff_pos {
+  my $self = shift;
+  my $hash = shift;
+  return ($hash->{p} - length($hash->{a1})) + 2;
 }
 
 ## Convert this object to a hash that can be written as JSON.
