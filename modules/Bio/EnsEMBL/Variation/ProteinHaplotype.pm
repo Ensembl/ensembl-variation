@@ -157,7 +157,7 @@ sub expected_frequency {
 =cut
 
 sub expected_frequency_delta {
-  return $_[0]->{expected_frequency_delta} ||= $_[0]->frequency - $_[0]->expected_frequency;
+  return $_[0]->{expected_frequency_delta} ||= ($_[0]->frequency - $_[0]->expected_frequency);
 }
 
 
@@ -180,26 +180,29 @@ sub get_all_expected_population_frequencies {
 
     my $container = $self->container;
     my $prot_freqs = $container->_protein_allele_frequencies();
-    my @pops = map {$_->name} @{$container->get_all_Populations()};
 
-    my $freqs = {map {$_ => 1} (@pops, '_all')};
+    # get all populations, add "_all"
+    my @pops = map {$_->name} @{$container->get_all_Populations()};
+    push @pops, '_all';
+
+    # initiate freqs for each pop at 1
+    my $freqs = {map {$_ => 1} @pops};
 
     # get this haplotype's diffs by pos
-    my %diffs_by_pos = map {$_->{p} + 1 => $_->{a2}} @{$self->_get_raw_diffs};
+    my %diffs_by_pos = map {$_->{p} => $_->{a2}} @{$self->_get_raw_diffs};
 
-    foreach my $pos(keys %$prot_freqs) {
-      if(my $a = $diffs_by_pos{$pos}) {
-        if($prot_freqs->{$pos} && $prot_freqs->{$pos}->{$a}) {
-          foreach my $pop(keys %{$prot_freqs->{$pos}->{$a}}) {
-            $freqs->{$pop} *= $prot_freqs->{$pos}->{$a}->{$pop};
-          }  
-        }
-      }
-      elsif($prot_freqs->{$pos}) {
-        foreach my $pop(keys %{$prot_freqs->{$pos}->{REF}}) {
-          $freqs->{$pop} *= $prot_freqs->{$pos}->{REF}->{$pop};
-        }
-      }
+    my $length = length($self->seq);
+
+    foreach my $pos(sort {$a <=> $b} keys %$prot_freqs) {
+
+      # don't consider anything beyond the end of this hap sequence?
+      last if $pos > $length;
+
+      # have we observed an alt in this haplotype?
+      # otherwise default to REF
+      my $a = $diffs_by_pos{$pos} || 'REF';
+
+      $freqs->{$_} *= $prot_freqs->{$pos}->{$a}->{$_} for keys %{$prot_freqs->{$pos}->{$a} || {}};
     }
 
     $self->{expected_population_frequencies} = $freqs;
