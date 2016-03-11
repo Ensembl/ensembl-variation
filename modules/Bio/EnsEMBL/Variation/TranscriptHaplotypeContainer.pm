@@ -549,6 +549,22 @@ sub _get_all_adjusted_deltas {
   return $self->{adjusted_deltas};
 }
 
+sub _get_all_mean_deltas {
+  my $self = shift;
+
+  if(!exists($self->{mean_deltas})) {
+
+    my $num_ph = scalar @{$self->get_all_ProteinHaplotypes};
+    my $deltas = $self->get_all_total_expected_population_frequency_deltas;
+
+    my %means = map {$_ => $deltas->{$_} / $num_ph} keys %$deltas;
+
+    $self->{mean_deltas} = \%means;
+  }
+
+  return $self->{mean_deltas};
+}
+
 sub _get_all_maximum_frequency_deltas {
   my $self = shift;
 
