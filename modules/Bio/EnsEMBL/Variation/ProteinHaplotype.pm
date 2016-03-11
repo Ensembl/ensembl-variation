@@ -185,8 +185,8 @@ sub get_all_expected_population_frequencies {
     my @pops = map {$_->name} @{$container->get_all_Populations()};
     push @pops, '_all';
 
-    # initiate freqs for each pop at 1
-    my $freqs = {map {$_ => 1} @pops};
+    # initiate expected freqs for each pop at 1
+    my $expected_freqs = {map {$_ => 1} @pops};
 
     # get this haplotype's diffs by pos
     my %diffs_by_pos = map {$_->{p} => $_->{a2}} @{$self->_get_raw_diffs};
@@ -202,10 +202,12 @@ sub get_all_expected_population_frequencies {
       # otherwise default to REF
       my $a = $diffs_by_pos{$pos} || 'REF';
 
-      $freqs->{$_} *= $prot_freqs->{$pos}->{$a}->{$_} for keys %{$prot_freqs->{$pos}->{$a} || {}};
+      # now cumulatively multiply the expected frequency by this allele's frequency
+      # this will be 0 if the allele has not been observed in the pop
+      $expected_freqs->{$_} *= ($prot_freqs->{$pos}->{$a}->{$_} || 0) for @pops;
     }
 
-    $self->{expected_population_frequencies} = $freqs;
+    $self->{expected_population_frequencies} = $expected_freqs;
   }
 
   return $self->{expected_population_frequencies};
