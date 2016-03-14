@@ -276,7 +276,7 @@ sub get_all_diffs {
       my $diff = { diff => $formatted };
       
       # extract change from raw diff
-      if(!$seen_indel && length($raw_diff->{a1}) == 1 && length($raw_diff->{a2}) == 1 && $raw_diff->{a2} ne '*') {
+      if(!$seen_indel && length($raw_diff->{a1}) == 1 && length($raw_diff->{a2}) == 1 && $raw_diff->{a2} =~ /[A-Z]/) {
         my $pos = $raw_diff->{p} + 1;
         my $aa  = $raw_diff->{a2};
 
