@@ -95,15 +95,16 @@ sub create_mtmp_evidence{
     $dbh->do(qq[update variation_feature set clinical_significance = NULL where clinical_significance = '';]);
 
     $dbh->do(qq[drop table if exists MTMP_evidence]);    
-    $dbh->do(qq[create table MTMP_evidence (
-              variation_id int(10) , 
-              evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP','Phenotype_or_Disease'), 
-              primary key( variation_id ) ) ])||die;
 
-    
-    my $evidence_id = get_evidence_id($dbh);
+    ## fetch current list of evidence types & database ids
+    my ($type_string, $evidence_id) = get_evidence($dbh);
 
-    
+    $dbh->do( qq[ create table MTMP_evidence (
+                  variation_id int(10), 
+                  evidence SET$type_string, 
+                  primary key( variation_id ) ) 
+                ] )||die;
+
     $filename = "$db_name\.dat" unless defined $filename;
     open my $out, ">$tmpdir/$filename"||die "Failed to open $filename to write evidence statuses : $!\n"; 
     
@@ -147,26 +148,32 @@ sub create_mtmp_evidence{
   }
 }
 
-sub get_evidence_id{
+sub get_evidence{
 
-    my $dbh = shift;
+  my $dbh = shift;
 
-    my %ids;
+  my %ids;
+  my $type_string = "(";
     
-    my $att_ext_sth  = $dbh->prepare(qq[ select attrib.attrib_id, attrib.value
+  my $att_ext_sth  = $dbh->prepare(qq[ select attrib.attrib_id, attrib.value
                                      from attrib, attrib_type
                                      where  attrib_type.code ='evidence'
                                      and attrib.attrib_type_id =attrib_type.attrib_type_id
                                     ]);
 
-    $att_ext_sth->execute()||die "Failed to get evidence attribs\n";
-    my $attdata = $att_ext_sth->fetchall_arrayref();
-    foreach my $l(@{$attdata}){
+  $att_ext_sth->execute()||die "Failed to get evidence attribs\n";
+  my $attdata = $att_ext_sth->fetchall_arrayref();
+  foreach my $l(@{$attdata}){
 
-        $ids{$l->[0]} = $l->[1];
-    }
+    ## save id => value mapping to convert between schemaa
+    $ids{$l->[0]} = $l->[1];
 
-    return \%ids;
+    ## build set
+    $type_string .= "'". $l->[1] . "'," 
+  }
+    $type_string =~ s/\,$/\)/;
+
+  return ($type_string, \%ids);
 }
 
 sub create_mtmp_population_genotype{
