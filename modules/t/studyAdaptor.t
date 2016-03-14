@@ -61,7 +61,33 @@ my $studies2 = $sta->fetch_all_by_dbID_list(\@study_IDs);
 ok($studies2->[0]->name() eq $name, "study by dbID list");
 
 # test fetch all by external reference
-my $studies = $sta->fetch_all_by_external_reference($external_ref);
-ok($studies->[0]->name() eq $name, "study by external reference");
+my $studies3 = $sta->fetch_all_by_external_reference($external_ref);
+ok($studies3->[0]->name() eq $name, "study by external reference");
+
+# store
+
+print "\n# Test - store\n";
+
+my $sa = $vdb->get_SourceAdaptor();
+
+my $source = Bio::EnsEMBL::Variation::Source->new( -data_types => ['variation'] );
+$source->name( 'test study source' );
+
+ok($sa->store($source), "store");
+
+$source = $sa->fetch_by_name('test study source');
+
+ok($source && $source->name eq 'test study source', "fetch stored source");
+
+my $study3 = Bio::EnsEMBL::Variation::Study->new();
+$study3->name('test study');
+$study3->source( $source );
+$study3->description( 'test study for study->store method' );
+
+ok($sta->store( $study3 ), "store");
+
+my $st = $sta->fetch_by_name('test study');
+
+ok($st && $st->name eq 'test study', "fetch stored study");
 
 done_testing();
