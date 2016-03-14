@@ -151,9 +151,23 @@ $sample = $sa->fetch_all_by_name('test_sample4')->[0];
 
 ok($sample->individual->name eq $sample->name, "Store a new sample object without providing information on an individual.");
 
+my $synonym = 'synonym_NA12891'; 
+$samples = $sa->fetch_by_synonym($synonym);
+ok(scalar @$samples == 1, 'fetch_by_synonym');
 
+$samples = $sa->fetch_by_synonym($synonym, 'dbSNP');
+ok(scalar @$samples == 1, 'fetch_by_synonym and source');
 
-=end
-=cut
+my $synonyms = $sa->fetch_synonyms(1592);
+ok(scalar @$synonyms == 1, 'fetch_synonyms');
+$synonyms = $sa->fetch_synonyms(1592, 'dbSNP');
+ok(scalar @$synonyms == 1, 'fetch_synonyms with source name');
+
+# _get_name_by_dbID
+my $name = $sa->_get_name_by_dbID(1592);
+ok($name eq 'NA12891', '_get_name_by_dbID');
+
+my $reference_strain = $sa->fetch_reference_strain();
+ok($reference_strain->name eq 'NA18635', 'fetch_reference_strain');
 
 done_testing();
