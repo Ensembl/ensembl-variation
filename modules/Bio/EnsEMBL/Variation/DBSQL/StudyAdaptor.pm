@@ -276,10 +276,9 @@ sub _objs_from_sth {
   return \@study;
 }
 
-
 sub store {
 
-  my ($self, $study) = @_;
+  my ($self, $study ) = @_;
      
   my $dbh = $self->dbc->db_handle;
      
@@ -295,17 +294,17 @@ sub store {
      });
      
   $sth->execute(
-		$study->{_source_id},
-		$study->name,
-		$study->description || undef,
-		$study->url || undef,
-		$study->external_reference || undef,
-		$study->type || undef
-	       );
+               $study->source->dbID(),
+               $study->name,
+               $study->description || undef,
+               $study->url || undef,
+               $study->external_reference || undef,
+               $study->type || undef
+              );
      
   $sth->finish;
      
-     # get dbID
+# get dbID
   my $dbID = $dbh->last_insert_id(undef, undef, 'study', 'study_id');
 
   $study->{dbID}    = $dbID;
