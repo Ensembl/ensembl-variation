@@ -56,6 +56,9 @@ foreach my $test (@$tests) {
   is($count, $test->{count}, "Number of returned individuals for $test->{name}");
 }
 
+$individuals = $ia->fetch_all_by_name_list(['1000GENOMES:phase_1:NA19660']);
+ok($individuals->[0]->name eq '1000GENOMES:phase_1:NA19660', 'fetch_all_by_name_list');
+
 # fetch_by_dbID
 $individual = $ia->fetch_by_dbID(8675);
 is($individual->name, 'NA19122', 'Fetch by dbID 8675');
@@ -69,6 +72,7 @@ foreach my $individual (@$individuals) {
 
 # fetch_all_by_parent_Individual
 my $parent = $ia->fetch_by_dbID(101961);
+my $mother = $ia->fetch_by_dbID(101960);
 is($parent->name, '1000GENOMES:phase_1:NA19661', "Parent name is 1000GENOMES:phase_1:NA19661");
 
 my $populations = $parent->get_all_Populations();
@@ -78,6 +82,10 @@ is($all,'1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_AMR,1000GENOMES:phase_1_MXL
 my $children = $ia->fetch_all_by_parent_Individual($parent);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
 is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA19661");
+
+$children = $ia->fetch_all_by_parent_Individual($mother);
+$all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
+is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA19660");
 
 # synonyms 
 my $ind =  $ia->fetch_synonyms(101101);
@@ -93,5 +101,8 @@ ok($ia->store($individual), "store");
 
 ($individual) = @{$ia->fetch_all_by_name('test')};
 ok($individual && $individual->name eq 'test', "fetch stored");
+
+my $individual_name = $ia->_get_name_by_dbID(101960);
+ok($individual_name eq '1000GENOMES:phase_1:NA19660', '_get_name_by_dbID');
 
 done_testing();
