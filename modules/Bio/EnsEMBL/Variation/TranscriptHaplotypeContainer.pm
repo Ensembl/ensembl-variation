@@ -914,7 +914,15 @@ sub _sample_ploidy {
     my $gts = $self->get_all_SampleGenotypeFeatures;
 
     if($gts && scalar @$gts) {
-      if(my $v = $gts->[0]->variation) {        
+      my ($i, $v);
+
+      while($gts->[$i++]) {
+        if($v = $gts->[$i]->variation) {
+          last if ($v->{class_SO_term} || '') eq 'SNV';
+        }
+      }
+
+      if($v) {        
         %{$self->{_sample_ploidy}} =
           map {$_->sample->name => scalar @{$_->genotype}}
           @{$v->get_all_SampleGenotypes};
