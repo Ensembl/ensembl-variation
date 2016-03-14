@@ -749,8 +749,30 @@ CREATE TABLE sample(
   KEY study_idx (study_id)
 );
 
+/**
+@table sample_synonym
 
+@colour #FF8500
+@desc Used to store alternative names for samples when data comes from multiple sources.
 
+@column synonym_id      Primary key, internal identifier.
+@column sample_id       Foreign key references to the @link sample table.
+@column source_id       Foreign key references to the @link source table.
+@column name            Name of the synonym.
+
+@see sample
+@see source
+*/
+
+CREATE TABLE sample_synonym (
+  synonym_id int(10) unsigned not null auto_increment,
+  sample_id int(10) unsigned not null,
+  source_id int(10) unsigned not null,
+  name varchar(255),
+  primary key(synonym_id),
+  key sample_idx (sample_id),
+  key (name, source_id)
+);
   
 /**
 @table sample_population
