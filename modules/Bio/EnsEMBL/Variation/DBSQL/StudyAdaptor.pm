@@ -276,5 +276,42 @@ sub _objs_from_sth {
   return \@study;
 }
 
+sub store {
+
+  my ($self, $study ) = @_;
+     
+  my $dbh = $self->dbc->db_handle;
+     
+  my $sth = $dbh->prepare(q{
+         INSERT INTO study (
+             source_id,
+             name,
+             description,
+             url,
+             external_reference,
+             study_type
+         ) VALUES (?,?,?,?,?,?)
+     });
+     
+  $sth->execute(
+               $study->source->dbID(),
+               $study->name,
+               $study->description || undef,
+               $study->url || undef,
+               $study->external_reference || undef,
+               $study->type || undef
+              );
+     
+  $sth->finish;
+     
+# get dbID
+  my $dbID = $dbh->last_insert_id(undef, undef, 'study', 'study_id');
+
+  $study->{dbID}    = $dbID;
+
+  $study->{adaptor} = $self;
+
+}
+
 
 1;
