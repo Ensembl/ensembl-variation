@@ -379,7 +379,7 @@ sub get_all_child_Individuals {
   my $self = shift;
 
   if (!$self->adaptor()) {
-    warning("Cannot retrieve child individuals without attached adaptor.");
+    throw("Cannot retrieve child individuals without attached adaptor.");
   }
   return $self->adaptor()->fetch_all_by_parent_Individual($self);
 }
