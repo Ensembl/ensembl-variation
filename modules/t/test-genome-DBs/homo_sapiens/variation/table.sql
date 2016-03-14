@@ -361,6 +361,16 @@ CREATE TABLE `sample_population` (
   KEY `sample_idx` (`sample_id`)
 ) ENGINE=MyISAM ;
 
+CREATE TABLE `sample_synonym` (
+  `synonym_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `sample_id` int(10) unsigned NOT NULL,
+  `source_id` int(10) unsigned NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`synonym_id`),
+  KEY `sample_idx` (`sample_id`),
+  KEY `name` (`name`,`source_id`)
+) ENGINE=MyISAM  ;
+
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL,
   `name` varchar(40) NOT NULL,
