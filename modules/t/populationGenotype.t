@@ -17,10 +17,10 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test::More;
-	plan tests => 12;
 }
 
-
+use Test::Exception;
+use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 use Bio::EnsEMBL::Variation::Variation;
@@ -45,6 +45,28 @@ my $ss = 1234;
 my $dbID = 1;
 
 my $freq = 0.76;
+throws_ok {
+  my $pop_gtype = Bio::EnsEMBL::Variation::PopulationGenotype->new(
+    -dbID => $dbID,
+    -genotype => $geno,
+    -variation => 'variation',
+    -population => $pop,
+    -frequency => $freq,
+    -subsnp => $ss
+  );
+} qr/Bio::EnsEMBL::Variation::Variation argument expected/, 'Throw on wrong argument for new';
+
+throws_ok {
+  my $pop_gtype = Bio::EnsEMBL::Variation::PopulationGenotype->new(
+    -dbID => $dbID,
+    -genotype => $geno,
+    -variation => $var,
+    -population => 'population',
+    -frequency => $freq,
+    -subsnp => $ss
+  );
+} qr/Bio::EnsEMBL::Variation::Population argument expected/, 'Throw on wrong argument for new';
+
 
 my $pop_gtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
   (-dbID => $dbID,
@@ -56,6 +78,7 @@ my $pop_gtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
 
 
 ok($pop_gtype->population()->name() eq $pop->name(), "population name" );
+throws_ok { $pop_gtype->population('population'); } qr/Bio::EnsEMBL::Variation::Population argument expected/, 'Throw on wrong argument for population';
 ok($pop_gtype->variation()->name()  eq $var->name(), "variation name");
 ok($pop_gtype->genotype() eq $geno, "genotype" );
 ok($pop_gtype->subsnp() eq "ss$ss", "ssubsnp_id");
