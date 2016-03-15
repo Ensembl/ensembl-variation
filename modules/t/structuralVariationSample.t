@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 use Data::Dumper;
+use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
@@ -123,5 +124,27 @@ ok($svs->structural_variation($sv), 'structural_variation object (using argument
 # test study object
 my $svs_study = $svs->study();
 ok($svs->study($svs_study), 'study object (using argument)');
+
+my $svs_hash = {
+  dbID                     => $dbID,
+  _structural_variation_id => $ssv->dbID,
+  _strain_id               => $ind->dbID,
+  sample                   => $sample,
+  study                    => $study,
+  adaptor                  => $svs_adaptor
+};
+$svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new_fast($svs_hash);
+ok($svs->dbID() eq $dbID, 'dbID');
+
+throws_ok { $svs->structural_variation('structural_variation'); } qr/SupportingStructuralVariation argument expected/, 'Throw on wrong argument structural_variation';
+throws_ok { $svs->study('study'); } qr/Study argument expected/, 'Throw on wrong argument study';
+
+my $individual = $svs->individual();
+ok($individual->name eq 'NA18635', 'get individual');
+
+throws_ok { $svs->strain('strain'); } qr/Individual argument expected/, 'Throw on wrong argument strain';
+
+my $strain = $svs->strain();
+ok($strain->name() eq 'NA18635', 'get strain');
 
 done_testing();
