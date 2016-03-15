@@ -618,7 +618,7 @@ sub fetch_all_by_Individual_list {
     FROM sample_population sp, population p
     LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
 		WHERE p.population_id = sp.population_id
-		AND sp.individual_id $id_str
+		AND sp.sample_id $id_str
 	});
 	$sth->execute();
 	my $populations = $self->_objs_from_sth($sth);
