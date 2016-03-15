@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -23,6 +24,10 @@ use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::SampleGenotype;
 use Bio::EnsEMBL::Variation::Variation;
 our $verbose = 0;
+
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
+my $sga = $vdba->get_SampleGenotypeAdaptor;
 
 # test constructor
 my $ind = Bio::EnsEMBL::Variation::Individual->new(
@@ -42,6 +47,24 @@ my $var = Bio::EnsEMBL::Variation::Variation->new(
 
 my $genotype = ['A','C'];
 my $subsnp   ='ss12';
+
+throws_ok { 
+  my $sample_gtype = Bio::EnsEMBL::Variation::SampleGenotype->new(
+    -genotype => $genotype,
+    -variation => 'variation',
+    -sample => $sample,
+    -subsnp => $subsnp  
+  );
+} qr/Bio::EnsEMBL::Variation::Variation argument expected/, 'Throw on wrong argument for new';
+
+throws_ok { 
+  my $sample_gtype = Bio::EnsEMBL::Variation::SampleGenotype->new(
+    -genotype => $genotype,
+    -variation => $var,
+    -sample => 'sample',
+    -subsnp => $subsnp  
+  );
+} qr/Bio::EnsEMBL::Variation::Sample argument expected/, 'Throw on wrong argument for new';
 
 my $sample_gtype = Bio::EnsEMBL::Variation::SampleGenotype->new(
   -genotype => $genotype,
@@ -89,5 +112,15 @@ my $var2 = Bio::EnsEMBL::Variation::Variation->new(
 ok(test_getter_setter($sample_gtype, 'sample', $sample2), "get/set sample");
 ok(test_getter_setter($sample_gtype, 'variation', $var2),  "get/set variation");
 
+throws_ok { $sample_gtype->sample('sample'); } qr/Bio::EnsEMBL::Variation::Sample argument expected/, 'Throw on wrong argument for sample';
 
+$sample_gtype = Bio::EnsEMBL::Variation::SampleGenotype->new(
+  -genotype => $genotype,
+  -variation => $var,
+  -subsnp => $subsnp,  
+  -adaptor => $sga
+);
+$sample_gtype->{sample_id} = 2105; 
+$sample = $sample_gtype->sample();
+ok($sample->name eq 'NA18635', 'get sample');
 done_testing();
