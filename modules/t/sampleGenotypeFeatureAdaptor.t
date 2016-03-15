@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -47,6 +48,11 @@ my $variation = $va->fetch_by_name($var_name);
 my $sgfs = $sgfa->fetch_all_by_Variation($variation, $sample);
 ok($sgfs->[0]->sample->name eq $sample_name, 'fetch_all_by_Variation - with sample');
 
+throws_ok { $sgfa->fetch_all_by_Variation('variation'); } qr/Bio::EnsEMBL::Variation::Variation argument expected/, 'Throw on wrong argument for fetch_all_by_Variation';
+warns_like {
+  $sgfa->fetch_all_by_Variation(Bio::EnsEMBL::Variation::Variation->new(-name => 'variation_name'));
+} qr/Cannot retrieve genotypes for variation without set dbID/, 'Warn if wrong argument for fetch_all_by_Variation';
+
 # fetch_all_by_Slice with Sample
 my $slice = $sa->fetch_by_region('chromosome','9',22124504,22124504);
 my $sgfs2 = $sgfa->fetch_all_by_Slice($slice, $sample);
@@ -56,5 +62,6 @@ ok($sgfs2->[0]->variation->name eq $var_name, 'fetch_all_by_Slice - with sample'
 my $sgfs3 = $sgfa->fetch_all_by_Slice($slice, $pop);
 my @sgf_sample = grep {$_->sample->name eq $sample_name} @$sgfs3;
 ok($sgf_sample[0]->sample->name eq $sample_name, 'fetch_all_by_Slice - with population');
+
 
 done_testing();
