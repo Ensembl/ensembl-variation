@@ -150,9 +150,9 @@ sub fetch_individual_by_synonym {
     my $sql;
     if (defined $source){
 	    $sql = qq{
-            SELECT is.individual_id 
-            FROM individual_synonym is, source s
-            WHERE is.name = ? and is.source_id = s.source_id AND s.name = "$source"};
+            SELECT isyn.individual_id 
+            FROM individual_synonym isyn, source s
+            WHERE isyn.name = ? and isyn.source_id = s.source_id AND s.name = "$source"};
     }
     else{
 	    $sql = qq{
@@ -197,7 +197,7 @@ sub fetch_synonyms{
 
     my $sql;
     if (defined $source){
-	    $sql = qq{SELECT is.name FROM individual_synonym is, source s WHERE is.individual_id = ? AND is.source_id = s.source_id AND s.name = "$source"}
+	    $sql = qq{SELECT isyn.name FROM individual_synonym isyn, source s WHERE isyn.individual_id = ? AND isyn.source_id = s.source_id AND s.name = "$source"}
     } else{
 	    $sql = qq{SELECT name FROM individual_synonym WHERE individual_id = ?};
     }
