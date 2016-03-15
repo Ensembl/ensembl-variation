@@ -15,6 +15,7 @@
 
 use strict;
 use warnings;
+use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -57,6 +58,10 @@ print "\n# Test using supporting structural variation object #\n";
 
 # test fetch all by StructuralVariation
 my $ssv = $ssva->fetch_by_name($ssv_name);
+
+throws_ok { $svsa->fetch_all_by_StructuralVariation('structural_variation'); } qr/SupportingStructuralVariation arg expected/, 'Throw on wrong argument for fetch_all_by_StructuralVariation';
+throws_ok { $svsa->fetch_all_by_StructuralVariation(Bio::EnsEMBL::Variation::StructuralVariation->new(-name => 'ssv')); } qr/StructuralVariation arg must have defined dbID/, 'Throw on wrong argument for fetch_all_by_StructuralVariation';
+
 $svs = ($svsa->fetch_all_by_StructuralVariation($ssv))->[0];
 
 ok($svs->sample->individual->name() eq $ind_name,              'individual name by sv sample id');
@@ -68,25 +73,41 @@ ok($svs->study->name() eq $study_name ,                        'study name by sv
 my $svs2 = $svsa->fetch_all_by_StructuralVariation_list([$ssv]);
 ok($svs2->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_StructuralVariation_list');
 
+throws_ok { $svsa->fetch_all_by_StructuralVariation_list(['structural_variation']); } qr/SupportingStructuralVariation arg expected/, 'Throw on wrong argument for fetch_all_by_StructuralVariation_list';
+throws_ok { $svsa->fetch_all_by_StructuralVariation_list([Bio::EnsEMBL::Variation::StructuralVariation->new(-name => 'ssv')]); } qr/StructuralVariation arg must have defined dbID/, 'Throw on wrong argument for fetch_all_by_StructuralVariation_list';
+
 # fetch all by StructuralVariationFeature list
 my $svfs = $svfa->fetch_all_by_StructuralVariation($ssv);
 my $svs3 = $svsa->fetch_all_by_StructuralVariationFeature_list($svfs);
 ok($svs3->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_StructuralVariationFeature_list');
 
+throws_ok { $svsa->fetch_all_by_StructuralVariationFeature_list(['structural_variation_feature']); } qr/StructuralVariationFeature arg expected/, 'Throw on wrong argument for fetch_all_by_StructuralVariationFeature_list';
+throws_ok { $svsa->fetch_all_by_StructuralVariationFeature_list([Bio::EnsEMBL::Variation::StructuralVariationFeature->new(-name => 'svf')]); } qr/VariationFeatures in list must have defined dbIDs/, 'Throw on wrong argument for fetch_all_by_StructuralVariationFeature_list';
+
 # fetch all by Study
 my $study4 = $sta->fetch_by_name($study_name);
 my $svs4 = $svsa->fetch_all_by_Study($study4);
 ok($svs4->[0]->sample->name() eq $sample_name, 'sv sample - fetch_all_by_Study');
+throws_ok { $svsa->fetch_all_by_Study('study'); } qr/Bio::EnsEMBL::Variation::Study arg expected/, 'Throw on wrong argument for fetch_all_by_Study';
+throws_ok { $svsa->fetch_all_by_Study(Bio::EnsEMBL::Variation::Study->new(-name => 'study')); } qr/Study arg must have defined dbID/, 'Throw on wrong argument for fetch_all_by_Study';
 
 # fetch all by Sample
 my $ind5 = $sna->fetch_all_by_name($sample_name);
 my $svs5 = $svsa->fetch_all_by_Sample($ind5->[0]);
 ok($svs5->[0]->structural_variation->variation_name() eq $ssv_name, 'sv sample - fetch_all_by_Sample');
+throws_ok { $svsa->fetch_all_by_Sample('sample'); } qr/Bio::EnsEMBL::Variation::Sample arg expected/, 'Throw on wrong argument for fetch_all_by_Sample';
 
 # fetch all by Individual 
 my $ssv_name_ind = 'essv5042318';
 my $ind6 = $ina->fetch_all_by_name('NA19122');
 my $svs6 = $svsa->fetch_all_by_Individual($ind6->[0]);
 ok($svs6->[0]->structural_variation->variation_name() eq $ssv_name_ind, 'sv sample - fetch_all_by_Individual');
+
+throws_ok { $svsa->fetch_all_by_Individual('individual'); } qr/Bio::EnsEMBL::Variation::Individual arg expected/, 'Throw on wrong argument for fetch_all_by_Individual';
+
+# fetch all by strain
+my $svs7 = $svsa->fetch_all_by_strain($ind6->[0]);
+ok($svs7->[0]->structural_variation->variation_name() eq $ssv_name_ind, 'sv sample - fetch_all_by_strain');
+
 
 done_testing();
