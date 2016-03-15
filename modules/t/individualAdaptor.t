@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -43,7 +44,10 @@ foreach my $test (@$tests) {
   my $size = scalar @$individuals;
   is($size, $test->{size}, "Individual count for $test->{population}");
 }
-
+throws_ok { $ia->fetch_all_by_Population('population'); } qr/Population arg expected/, 'Throw on wrong argument for fetch_all_by_Population';
+warns_like { 
+  $ia->fetch_all_by_Population(Bio::EnsEMBL::Variation::Population->new(-name => 'population_name'));
+} qr/Population does not have dbID/, 'Throw on wrong argument for fetch_all_by_Population';
 # fetch_all_by_name
 $tests = [
   { name => 'J. CRAIG VENTER', count => 1,},
@@ -58,6 +62,7 @@ foreach my $test (@$tests) {
 
 $individuals = $ia->fetch_all_by_name_list(['1000GENOMES:phase_1:NA19660']);
 ok($individuals->[0]->name eq '1000GENOMES:phase_1:NA19660', 'fetch_all_by_name_list');
+throws_ok { $ia->fetch_all_by_name_list('list'); } qr/list reference argument is required/, 'Throw on wrong argument';
 
 # fetch_by_dbID
 $individual = $ia->fetch_by_dbID(8675);
@@ -87,11 +92,38 @@ $children = $ia->fetch_all_by_parent_Individual($mother);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
 is($all, '1000GENOMES:phase_1:NA19685', "All children for 1000GENOMES:phase_1:NA19660");
 
+throws_ok { $ia->fetch_all_by_parent_Individual('individual'); } qr/Individual argument expected/, 'Throw on wrong argument for fetch_all_by_parent_Individual';
+warns_like { 
+  $ia->fetch_all_by_parent_Individual(Bio::EnsEMBL::Variation::Individual->new(-name => 'parent'));
+} qr/Cannot fetch child Individuals for parent without dbID/, 'Throw on wrong argument for fetch_all_by_parent_Individual';
+
+my $father_individual = Bio::EnsEMBL::Variation::Individual->new(-name => 'father', -description => 'father', -gender => 'Unknown');
+my $mother_individual = Bio::EnsEMBL::Variation::Individual->new(-name => 'mother', -description => 'mother', -gender => 'Unknown');
+my $father = $ia->store($father_individual);
+my $father_individual_id = $father->dbID;
+$mother = $ia->store($mother_individual);
+my $mother_individual_id = $mother->dbID;
+my $child = Bio::EnsEMBL::Variation::Individual->new(-name => 'child', -description => 'child', -father_individual_id => $father_individual_id, -mother_individual_id => $mother_individual_id,);
+$child->father_Individual($father);
+$child->mother_Individual($mother);
+$child = $ia->store($child);
+my $child_individual_id = $child->dbID;
+$children = $ia->fetch_all_by_parent_Individual($father);
+$all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$children);
+is($all, 'child', "fetch children by parent without specified gender");
+my $dbh = $ia->dbc->db_handle;
+$dbh->do(qq{DELETE FROM individual WHERE individual_id IN ($father_individual_id, $mother_individual_id, $child_individual_id);}) or die $dbh->errstr;
+
 # synonyms 
-my $ind =  $ia->fetch_synonyms(101101);
-ok( $ia->fetch_synonyms(101101)->[0] eq "fred", "fetch synonym") ;
+#my $ind =  $ia->fetch_synonyms(101101);
+ok( $ia->fetch_synonyms(101101)->[0] eq "fred", "fetch synonym");
+ok( $ia->fetch_synonyms(101101, 'dbSNP')->[0] eq "fred", "fetch synonym by dbID and source");
+
 $individuals = $ia->fetch_individual_by_synonym("fred");
 ok($individuals->[0]->name eq "1000GENOMES:phase_1:HG00114", "fetch by synonym");
+
+$individuals = $ia->fetch_individual_by_synonym("fred", 'dbSNP');
+ok($individuals->[0]->name eq "1000GENOMES:phase_1:HG00114", "fetch by synonym and source");
 
 # store
 $individual = $ia->fetch_by_dbID(8675);
