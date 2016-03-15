@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use FindBin qw($Bin);
 
@@ -26,7 +27,7 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
-
+my $va = $vdba->get_VariationAdaptor;
 my $pa = $vdba->get_PopulationAdaptor;
 my $ia = $vdba->get_IndividualAdaptor;
 my $sa = $vdba->get_SampleAdaptor;
@@ -62,6 +63,25 @@ my $list = [101082, 101083];
 $populations = $pa->fetch_all_by_dbID_list($list);
 $all = join(',', map{$_->name} sort {$a->name cmp $b->name} @$populations);
 is($all, '1000GENOMES:phase_1_AFR,1000GENOMES:phase_1_EUR', "Fetch by list");
+throws_ok { $pa->fetch_all_by_dbID_list('list'); } qr/list reference argument is required/, 'Throw on wrong argument for fetch_all_by_dbID_list';
+
+# fetch_all_by_Individual
+my $individual_id = 101495;
+my $individual = $ia->fetch_by_dbID($individual_id);
+$populations = $pa->fetch_all_by_Individual($individual);
+is(scalar @$populations, 3, "Number of populations for individual HG01625");
+$populations = $pa->fetch_all_by_Individual_list([$individual]);
+is(scalar @$populations, 3, "Number of populations for individual HG01625");
+
+throws_ok { $pa->fetch_all_by_Individual('individual'); } qr/Individual arg expected/, 'Throw on wrong argument for fetch_all_by_Individual';
+warns_like {
+  $pa->fetch_all_by_Individual(Bio::EnsEMBL::Variation::Individual->new(-name => 'individual_name'));
+} qr/Individual does not have dbID, cannot retrieve Individuals/, 'Throw on wrong argument for fetch_all_by_Individual';
+
+throws_ok { $pa->fetch_all_by_Individual_list('individual'); } qr/Listref of Bio::EnsEMBL::Variation::Individual arg expected/, 'Throw on wrong argument for fetch_all_by_Individual_list';
+warns_like {
+  $pa->fetch_all_by_Individual_list([Bio::EnsEMBL::Variation::Individual->new(-name => 'individual_name')]);
+} qr/First Individual does not have dbID, cannot retrieve Populations/, 'Throw on wrong argument for fetch_all_by_Individual_list';
 
 # fetch_all_by_Sample
 # 1000GENOMES:phase_1:HG01625 101495 -> 1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_EUR,1000GENOMES:phase_1_IBS
@@ -73,6 +93,17 @@ $populations = $pa->fetch_all_by_Sample($sample);
 
 is(scalar @$populations, 3, "Number of populations for sample HG01625");
 is($populations->[0]->display_group_name, '1000 Genomes Project Phase 1', "Display group name for sample HG01625's population");
+
+throws_ok { $pa->fetch_all_by_Sample('sample'); } qr/Sample arg expected/, 'Throw on wrong argument for fetch_all_by_Sample';
+warns_like {
+  $pa->fetch_all_by_Sample(Bio::EnsEMBL::Variation::Sample->new(-name => 'sample_name'));
+} qr/Sample does not have dbID, cannot retrieve Populations/, 'Throw on wrong argument for fetch_all_by_Sample';
+
+throws_ok { $pa->fetch_all_by_Sample_list('sample'); } qr/Listref of Bio::EnsEMBL::Variation::Sample arg expected/, 'Throw on wrong argument for fetch_all_by_Sample_list';
+warns_like {
+  $pa->fetch_all_by_Sample_list([Bio::EnsEMBL::Variation::Sample->new(-name => 'sample_name')]);
+} qr/First Sample does not have a dbID, cannot retrieve Populations/, 'Throw on wrong argument for fetch_all_by_Sample_list';
+
 
 # fetch_all_by_Sample_list
 my $samples = [];
@@ -97,11 +128,21 @@ $populations = $pa->fetch_all_by_sub_Population($population);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$populations);
 is($all, '1000GENOMES:phase_1_EUR', "Fetch by sub-population 1000GENOMES:phase_1_IBS");
 
+throws_ok { $pa->fetch_all_by_sub_Population('population'); } qr/Population argument expected/, 'Throw on wrong argument for fetch_all_by_sub_Population';
+warns_like {
+  $pa->fetch_all_by_sub_Population(Bio::EnsEMBL::Variation::Population->new(-name => 'population_name'));
+} qr/Cannot retrieve super populations for population without dbID/, 'Throw on wrong argument for fetch_all_by_sub_Population';
+
 # fetch_all_by_super_Population
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_EUR');
 # 1000GENOMES:phase_1_CEU,1000GENOMES:phase_1_FIN,1000GENOMES:phase_1_GBR,1000GENOMES:phase_1_IBS,1000GENOMES:phase_1_TSI
 $populations = $pa->fetch_all_by_super_Population($population);
 is(scalar @$populations, 5, "Fetch by super-population 1000GENOMES:phase_1_EUR");
+
+throws_ok { $pa->fetch_all_by_super_Population('population'); } qr/Population argument expected/, 'Throw on wrong argument for fetch_all_by_super_Population';
+warns_like {
+  $pa->fetch_all_by_super_Population(Bio::EnsEMBL::Variation::Population->new(-name => 'population_name'));
+} qr/Cannot retrieve sub populations for population without dbID/, 'Throw on wrong argument for fetch_all_by_super_Population';
 
 # fetch_population_by_synonym
 $populations = $pa->fetch_population_by_synonym(1372);
@@ -125,11 +166,22 @@ my $dbIDs = $pa->get_dbIDs_for_population_names([$pop_name]);
 my @pop_ids = map { $_ } grep {$dbIDs->{$_} eq $pop_name} keys(%$dbIDs);
 ok($pop_ids[0] == 101082, 'get_dbIDs_for_population_names');
 
-
 # fetch_tag_Population
-#my $v = $va->fetch_by_name('rs205621');
-#my $vfs = $vfa->fetch_all_by_Variation($v);
-#$populations = $pa->fetch_tag_Population($vfs->[0]);
+my $v = $va->fetch_by_name('rs2299222');
+my $vfs = $v->get_all_VariationFeatures;
+my $tag_populations = $pa->fetch_tag_Population($vfs->[0]);
+ok(scalar @$tag_populations == 0, 'fetch_tag_Populations');
+throws_ok { $pa->fetch_tag_Population('variation_feature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'Throw on wrong argument for fetch_tag_Population';
+warns_like {
+  $pa->fetch_tag_Population(Bio::EnsEMBL::Variation::VariationFeature->new());
+} qr/Variation feature does not have dbID, cannot retrieve tag populations/, 'Throw on wrong argument for fetch_tag_Population';
+
+my $tagged_populations = $pa->fetch_tagged_Population($vfs->[0]);
+ok(scalar @$tagged_populations == 0, 'fetch_tagged_Populations');
+throws_ok { $pa->fetch_tagged_Population('variation_feature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'Throw on wrong argument for fetch_tagged_Population';
+warns_like {
+  $pa->fetch_tagged_Population(Bio::EnsEMBL::Variation::VariationFeature->new());
+} qr/Variation feature does not have dbID, cannot retrieve tagged populations/, 'Throw on wrong argument for fetch_tagged_Population';
 
 # store
 $population = $pa->fetch_by_dbID(649);
