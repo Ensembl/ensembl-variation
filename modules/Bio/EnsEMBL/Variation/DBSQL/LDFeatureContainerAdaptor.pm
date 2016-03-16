@@ -196,6 +196,7 @@ sub fetch_by_Slice {
   if ($in_str eq '') {
     #there is no population, not a human specie or not passed as an argument, return the empy container
     my $empty_container = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+      '-adaptor' => $self,
       '-ldContainer'=> {},
       '-name' => $slice_objects[0]->name,
       '-variationFeatures' => {}
@@ -934,6 +935,7 @@ sub _ld_calc {
   }
   OUT:
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+    '-adaptor' => $self,
     '-ldContainer'=> \%feature_container,
     '-name' => '',
     '-pos2name' => $pos2name,
