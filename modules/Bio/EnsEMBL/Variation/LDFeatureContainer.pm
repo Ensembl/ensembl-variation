@@ -118,7 +118,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($ldContainer,$name,$pos2vf,$pos2name,$slices) =  rearrange([qw(LDCONTAINER NAME POS2VF POS2NAME SLICES)], @_);
+  my ($ldContainer,$name,$pos2vf,$pos2name,$slices,$adaptor) =  rearrange([qw(LDCONTAINER NAME POS2VF POS2NAME SLICES ADAPTOR)], @_);
   if (defined($ldContainer) && ref($ldContainer ne 'HASH')){
     throw("Reference to a hash object expected as a LDContainer");
   }
@@ -130,6 +130,7 @@ sub new {
     'ldContainer' => $ldContainer,
     'pos2name' => $pos2name,
     'slices' => $slices,
+    'adaptor' => $adaptor,
   }, $class;
 
   # only add these keys if it they are properly populated
@@ -497,12 +498,15 @@ sub _pos2name {
 ## lazy-loaded using slices if not populated on object creation
 sub _pos2vf {
   my $self = shift;
-
+  if (!$self->adaptor) {
+    throw('Adaptor is not available. Cannot fetch VariationFeatures.');
+  }
+  my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
   if(!exists($self->{pos2vf})) {
     my %pos2vf = ();
 
     foreach my $slice(@{$self->_slices}) {
-      my $vfs = $slice->get_all_VariationFeatures;
+      my $vfs = $vf_adaptor->fetch_all_by_Slice($slice);
       my $region_Slice = $slice->seq_region_Slice();
 
       my $pos2name = $self->_pos2name();

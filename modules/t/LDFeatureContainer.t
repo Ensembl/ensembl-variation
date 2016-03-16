@@ -20,13 +20,18 @@ use warnings;
 use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
-use Data::Dumper;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
+use Data::Dumper;
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::Variation;
 
 our $verbose = 0;
+
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdb = $multi->get_DBAdaptor('variation');
+my $ldfca = $vdb->get_LDFeatureContainerAdaptor;
 
 #test constructor
 my $v1 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs193', -source => 'dbSNP');
@@ -80,6 +85,7 @@ my $vf4 = Bio::EnsEMBL::Variation::VariationFeature->new(
 );
 
 my $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+  '-adaptor' => $ldfca,
 	'-name' => 'container_1',
 	'-ldContainer' => { 
 		'27686081-27689871' => { 
