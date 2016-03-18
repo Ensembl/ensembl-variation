@@ -30,7 +30,7 @@
 #include <inttypes.h>
 
 #define SIZE 500
-#define WINDOW_SIZE 100000
+#define WINDOW_SIZE 500000
 #define INITIAL_LIST_SIZE 256
 #define USER_ERROR 1
 #define SYSTEM_ERROR 2
