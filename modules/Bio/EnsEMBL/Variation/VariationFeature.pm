@@ -529,20 +529,21 @@ sub get_all_RegulatoryFeatureVariations {
   }
   
   if(!exists($self->{regulatory_feature_variations})) {
-    if ($self->dbID) {
+# for release/84 we need to compute data on the fly
+#    if ($self->dbID) {
       # This VariationFeature is from the database, so we can just fetch the
       # RegulatoryFeatureVariations from the database as well
-      if (my $db = $self->adaptor->db) {
-        my $rfva = $db->get_RegulatoryFeatureVariationAdaptor;
-        my $rfvs = $rfva->fetch_all_by_VariationFeatures([$self]);
-        map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
-      }
-    }
-    else {
+#      if (my $db = $self->adaptor->db) {
+#        my $rfva = $db->get_RegulatoryFeatureVariationAdaptor;
+#        my $rfvs = $rfva->fetch_all_by_VariationFeatures([$self]);
+#        map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
+#      }
+#    }
+#    else {
       # This VariationFeature is not in the database, so we have to build the
       # RegulatoryFeatureVariations ourselves
       $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
-    }
+#    }
     
     $self->{regulatory_feature_variations} ||= {};
   }
@@ -572,16 +573,17 @@ sub get_all_MotifFeatureVariations {
   }
   
   if(!exists($self->{motif_feature_variations})) {
-    if($self->dbID) {
-      if (my $db = $self->adaptor->db) {
-        my $mfva = $db->get_MotifFeatureVariationAdaptor;
-        my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
-        map {$self->add_MotifFeatureVariation($_)} @$mfvs;
-      }
-    }
-    else {
+# For release/84 we need to compute data on the fly
+#    if($self->dbID) {
+#      if (my $db = $self->adaptor->db) {
+#        my $mfva = $db->get_MotifFeatureVariationAdaptor;
+#        my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
+#        map {$self->add_MotifFeatureVariation($_)} @$mfvs;
+#      }
+#    }
+#    else {
       $self->_get_all_RegulationVariations('MotifFeature', @_);
-    }
+#    }
     
     $self->{motif_feature_variations} ||= {};
   }
