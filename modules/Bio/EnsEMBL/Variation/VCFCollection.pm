@@ -612,7 +612,7 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my $slice = shift;
   my $sample = shift;
   my $non_ref_only = shift;
-  
+
   return [] unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
@@ -634,6 +634,8 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my @sample_names = map {$_->{_raw_name}} @$samples;
   
   return [] unless scalar @$samples;
+
+  my $strict = $self->strict_name_match;
   
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
     my $start = $vcf->get_start;
@@ -645,6 +647,8 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
       foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
         $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
       }
+
+      $vf ||= $vfs_by_pos{$start}->[0] unless $strict;
     }
     
     # otherwise create a VariationFeature object
