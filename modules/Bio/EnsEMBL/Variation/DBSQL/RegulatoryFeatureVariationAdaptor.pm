@@ -131,8 +131,12 @@ sub store {
 =cut
 
 sub fetch_all_by_RegulatoryFeatures {
-    my ($self, $regulatory_features) = @_;
-    return $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, 'somatic = 0');
+  my ($self, $regulatory_features) = @_;
+  my $rfs = $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, 'somatic = 0');
+  if (scalar @$rfs == 0) {
+    return $self->_compute_on_the_fly($regulatory_features, 0, []);
+  }
+  return $rfs;  
 }
 
 =head2 fetch_all_somatic_by_RegulatoryFeatures
@@ -146,8 +150,12 @@ sub fetch_all_by_RegulatoryFeatures {
 =cut
 
 sub fetch_all_somatic_by_RegulatoryFeatures {
-    my ($self, $regulatory_features) = @_;
-    return $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, 'somatic = 1');
+  my ($self, $regulatory_features) = @_;
+  my $rfs = $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, 'somatic = 1');
+  if (scalar @$rfs == 0) {
+    return $self->_compute_on_the_fly($regulatory_features, 1, []);
+  }
+  return $rfs;  
 }
 
 =head2 fetch_all_by_RegulatoryFeatures_SO_terms
@@ -162,9 +170,15 @@ sub fetch_all_somatic_by_RegulatoryFeatures {
 =cut
 
 sub fetch_all_by_RegulatoryFeatures_SO_terms {
-    my ($self, $regulatory_features, $terms) = @_;
-    my $constraint = $self->_get_consequence_constraint($terms);
-    return $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, $constraint.' AND somatic = 0');
+  my ($self, $regulatory_features, $terms) = @_;
+  my $consequence_terms = join(',', @$terms);
+  my $constraint = "consequence_types IN ('$consequence_terms')";
+  #    my $constraint = $self->_get_consequence_constraint($terms);
+  my $rfs = $self->fetch_all_by_RegulatoryFeatures_with_constraint($regulatory_features, $constraint.' AND somatic = 0');
+  if (scalar @$rfs == 0) {
+    return $self->_compute_on_the_fly($regulatory_features, 0, $terms);
+  }
+  return $rfs;  
 }
 
 =head2 fetch_all_somatic_by_RegulatoryFeatures_SO_terms
@@ -196,12 +210,33 @@ sub fetch_all_somatic_by_RegulatoryFeatures_SO_terms {
 =cut
 
 sub fetch_all_by_VariationFeatures_SO_terms {
-    my ($self, $vfs, $regulatory_features, $terms, $without_children, $included_so) = @_;
-    my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
-    if (!$constraint) {
-      return [];
+  my ($self, $vfs, $regulatory_features, $terms, $without_children, $included_so) = @_;
+  my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
+  if (!$constraint) {
+    return [];
+  }
+  my $rfs = $self->SUPER::fetch_all_by_VariationFeatures_with_constraint($vfs, $regulatory_features, $constraint);
+
+  if (scalar @$rfs > 0 ) {
+    return $rfs;
+  } else {
+    my @rfs = ();  
+    my $rfa = $self->db()->get_db_adaptor('funcgen')->get_RegulatoryFeatureAdaptor();
+    foreach my $vf (@$vfs) {
+      my $slice = $vf->feature_Slice;
+      my @features = map { $_->transfer($vf->slice) } @{ $rfa->fetch_all_by_Slice($slice) };
+      foreach my $feature (@features) {
+        my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+            -regulatory_feature => $feature,
+            -variation_feature  => $vf,
+            -adaptor            => $self,
+            -disambiguate_single_nucleotide_alleles => 1,
+        );
+        push @rfs, $rfv; 
+      }
     }
-    return $self->SUPER::fetch_all_by_VariationFeatures_with_constraint($vfs, $regulatory_features, $constraint);
+    return \@rfs;
+  } 
 }
 
 =head2 count_all_by_VariationFeatures_SO_terms
@@ -216,17 +251,69 @@ sub fetch_all_by_VariationFeatures_SO_terms {
 =cut
 
 sub count_all_by_VariationFeatures_SO_terms {
-    my ($self, $vfs, $regulatory_features, $terms, $included_so) = @_;
-    my $constraint = $self->_get_consequence_constraint($terms, 1, $included_so);
-    if (!$constraint) {
-      return 0;
-    }
-    return $self->SUPER::count_all_by_VariationFeatures_with_constraint($vfs, $regulatory_features, $constraint);
+  my ($self, $vfs, $regulatory_features, $terms, $included_so) = @_;
+  my $constraint = $self->_get_consequence_constraint($terms, 1, $included_so);
+  if (!$constraint) {
+    return 0;
+  }
+  my $count = $self->SUPER::count_all_by_VariationFeatures_with_constraint($vfs, $regulatory_features, $constraint);
+  if ($count == 0) {
+    my $rfs = $self->fetch_all_by_VariationFeatures_SO_terms($vfs, $regulatory_features, $terms, $included_so); 
+    return scalar @$rfs;
+  } else {
+    return $count;
+  }
 }
 
 sub fetch_all_by_RegulatoryFeatures_with_constraint {
     my ($self, $regulatory_features, $constraint) = @_;
     return $self->SUPER::fetch_all_by_Features_with_constraint($regulatory_features, $constraint);
+}
+
+# just for release/84
+sub _compute_on_the_fly {
+  my ($self, $regulatory_features, $somatic, $included_so) = @_;  
+  my @rfs = ();
+  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
+  my $vfa = $self->db()->get_VariationFeatureAdaptor();
+  foreach my $regulatory_feature (@$regulatory_features) { 
+    my $slice = $sa->fetch_by_Feature($regulatory_feature) or die "Failed to get slice around RegulatoryFeature: " . $regulatory_feature->stable_id;
+    if ($somatic) {
+      for my $vf (@{ $vfa->fetch_all_somatic_by_Slice($slice)} ) {
+        my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+            -regulatory_feature => $regulatory_feature,
+            -variation_feature  => $vf,
+            -adaptor            => $self,
+            -disambiguate_single_nucleotide_alleles => 1,
+        );
+        push @rfs, $rfv;
+      }
+    } else {
+      for my $vf (@{ $vfa->fetch_all_by_Slice($slice)} ) {
+        my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+            -regulatory_feature => $regulatory_feature,
+            -variation_feature  => $vf,
+            -adaptor            => $self,
+            -disambiguate_single_nucleotide_alleles => 1,
+        );
+        push @rfs, $rfv;
+      }
+    }
+  }
+  if (scalar @$included_so) {
+    my @filtered_rfs = ();
+    foreach my $rfv (@rfs) {
+      foreach my $so_term (@$included_so) {
+        if (grep { $so_term eq $_ } @{$rfv->consequence_type}) {
+          push @filtered_rfs, $rfv;
+          last;
+        }
+      }
+    }        
+    return \@filtered_rfs;
+  }  
+
+  return \@rfs;
 }
 
 sub _objs_from_sth {
