@@ -16,7 +16,9 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Exception;
 use Data::Dumper;
+use JSON;
 
 
 use Bio::EnsEMBL::Test::TestUtils;
@@ -43,5 +45,23 @@ ok($collections && scalar @$collections == 1, "fetch_all count");
 # fetch by ID
 my $coll = $vca->fetch_by_id('1000genomes_phase1');
 ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id isa VCFCollection");
+
+## disallow duplicate IDs
+open IN, $dir.'/vcf_config.json';
+local $/ = undef;
+my $json_string = <IN>;
+close IN;
+my $config = JSON->new->decode($json_string);
+
+
+# create duplicate
+push @{$config->{collections}}, $config->{collections}->[0];
+
+delete($vca->{collections});
+
+delete $vdb->{vcf_config};
+$vdb->vcf_config($config);
+
+throws_ok {$vca->new($vdb)} qr/Duplicate VCF collection ID/, "duplicate collection ID";
 
 done_testing();

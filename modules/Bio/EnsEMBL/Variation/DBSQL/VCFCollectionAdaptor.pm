@@ -187,6 +187,9 @@ sub new {
   $self->{order} = [];
   
   foreach my $hash(@{$config->{collections}}) {
+
+    # no duplicates allowed
+    throw('Duplicate VCF collection ID '.$hash->{id}.' found') if $self->{collections}->{$hash->{id}};
     
     # check the species and assembly if we can
     if($self->db) {
