@@ -143,7 +143,7 @@ sub strain_ambiguity_code {
     my $alleles = shift;
 	
 	# return normal ambiguity code for a SNP
-	return ambiguity_code($alleles) if($alleles =~ /^[ACGT][\|\/\\][ACGT]$/);
+	return ambiguity_code($alleles) if($alleles =~ /^[ACGT]([\|\/\\][ACGT])*$/);
 	
 	# get alleles
 	my ($a1, $a2) = split /[\|\/\\]/, $alleles;
