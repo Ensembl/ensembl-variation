@@ -24,8 +24,11 @@ before_install:
     - unzip bioperl-release-1-2-3.zip
     - git clone --branch master --depth 1 https://github.com/samtools/htslib.git
     - cd htslib
-    - make install
+    - make
     - cd ..
+    - cd C_code/
+    - make
+    - cd ../
 
 
 install:
