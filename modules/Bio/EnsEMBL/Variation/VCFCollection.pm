@@ -959,13 +959,13 @@ sub _seek {
   # now seek
   $vcf->seek($c, $s, $e);
 
-  if($self->use_seq_region_synonyms && !defined($vcf->{iterator}) && (my @synonyms = @{$self->_get_synonyms_by_chr($c)})) {
-    while(!defined($vcf->{iterator}) && @synonyms) {
+  if($self->use_seq_region_synonyms && !defined($vcf->{iterator}->{_tabix_iter}) && (my @synonyms = @{$self->_get_synonyms_by_chr($c)})) {
+    while(!defined($vcf->{iterator}->{_tabix_iter}) && @synonyms) {
       $vcf->seek(shift @synonyms, $s, $e);
     }
   }
   
-  return $vcf->{iterator} ? $vcf : undef;
+  return $vcf->{iterator}->{_tabix_iter} ? $vcf : undef;
 }
 
 sub _seek_by_Slice {
