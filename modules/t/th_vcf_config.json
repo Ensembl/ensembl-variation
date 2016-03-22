@@ -7,6 +7,7 @@
       "type": "local",
       "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/th_test.vcf.gz",
       "chromosomes": [ "11" ],
+      "strict_name_match": "1",
       "source_name": "1000genomes",
       "source_version": "20141202",
       "source_url": "http://www.1000genomes.org",
