@@ -37,7 +37,7 @@ install:
     - cpanm -n Devel::Cover::Report::Coveralls
     - export HTSLIB_DIR=$PWD/htslib
     - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-2-3
-    - cpanm -v Bio::DB::HTS
+    - cpanm Bio::DB::HTS
     - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 
 script: "./travisci/harness.sh"
