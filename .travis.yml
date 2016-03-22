@@ -36,7 +36,7 @@ install:
     - cpanm -v --installdeps --notest .
     - cpanm -n Devel::Cover::Report::Coveralls
     - export HTSLIB_DIR=$HOME/htslib
-    - cpanm Bio::DB:HTS
+    - cpanm Bio::DB::HTS
     - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 
 script: "./travisci/harness.sh"
