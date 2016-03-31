@@ -148,6 +148,20 @@ ok($var_list{$isv->next()->name}, "iterator by VariationSet - 2");
 ok($var_list{$isv->next()->name}, "iterator by VariationSet - 3");
 ok($var_list{$isv->next()->name}, "iterator by VariationSet - 4");
 
+my $it2 = $va->fetch_Iterator;
+ok($it2 && $it2->isa('Bio::EnsEMBL::Utils::Iterator'), 'is Iterator');
+
+my $it3 = $va->fetch_Iterator_somatic;
+ok($it3 && $it3->isa('Bio::EnsEMBL::Utils::Iterator'), 'is Iterator');
+
+print "\nfetch\n";
+# fetch_all
+my $vars = $va->fetch_all;
+ok( scalar (grep { $_->name eq 'rs2255888' } @$vars) == 1, 'fetch_all');
+
+# fetch_all_somatic
+$vars = $va->fetch_all_somatic;
+ok(scalar @$vars == 1, 'fetch_all_somatic');
 
 # test fetch by stable_id
 print "\n# Test - fetch_by_stable_id\n";
@@ -158,6 +172,11 @@ ok($var2->name eq $var_name, "var by stable_id");
 print "\n# Test - fetch_all_by_source\n";
 my $var3 = $va->fetch_all_by_source('dbSNP');
 ok($var3->[0]->source_name eq 'dbSNP', "var by source");
+
+# test fetch all by source type
+print "\n# Test - fetch_all_by_source_type\n";
+my $var3a = $va->fetch_all_by_source_type('lsdb');
+ok($var3a->[0]->name eq 'rs121908760', "var by source type");
 
 # test fetch all by dbID list
 print "\n# Test - fetch_all_by_dbID_list\n";
@@ -185,7 +204,7 @@ ok($fs->[0] eq 'NNNNNNNNNNN', "get the flanking sequence");
 print "\n# Test - fetch_all_by_Population\n";
 my $pop = $pa->fetch_by_name('CSHL-HAPMAP:HAPMAP-ASW');
 my $var6 = $va->fetch_all_by_Population($pop);
-ok($var6->[0]->name eq 'rs2255888', "var by population");
+ok( scalar (grep { $_->name eq 'rs2255888' } @$var6) == 1, "var by population");
 
 # test fetch all by VariationSet
 print "\n# Test - fetch_all_by_VariationSet\n";
@@ -220,6 +239,5 @@ $upd_var->name($upd_name);
 $va->update($upd_var);
 $var = $va->fetch_by_name($upd_name);
 ok($var && $var->name eq $upd_name, "fetch updated");
-
 
 done_testing();
