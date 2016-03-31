@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use FindBin qw($Bin);
 
@@ -96,6 +97,14 @@ close FH;
 unlink($tmpfile);
 
 ok(scalar @lines == 1 && $lines[0] =~ /12345/, "check dumped data");
+
+# fetch_all
+throws_ok { $aa->fetch_all; } qr/fetch_all cannot be used for Allele objects/, 'Cannot use fetch_all on AlleleAdaptor';
+
+# fetch_all_by_subsnp_id
+my $al4 = $aa->fetch_all_by_subsnp_id('ss24191327');
+ok(scalar @$al4 == 24, 'fetch_all_by_subsnp_id');
+throws_ok { $aa->fetch_all_by_subsnp_id; } qr/name argument expected/, 'Throw on missing name argument';
 
 done_testing();
 
