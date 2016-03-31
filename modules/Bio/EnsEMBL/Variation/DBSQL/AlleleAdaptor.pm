@@ -197,17 +197,16 @@ sub fetch_all {
 =cut
 
 sub fetch_all_by_subsnp_id {
-    my $self = shift;
-    my $name = shift;
-  
-    $name =~ s/^ss//gi;
+  my $self = shift;
+  my $name = shift;
 
-    throw('name argument expected') if(!defined($name));
+  throw('name argument expected') if(!defined($name));
+  $name =~ s/^ss//gi;
 
-    # Add the constraint on the subsnp_id column and pass to generic_fetch
-    my $constraint = qq{ a.subsnp_id = $name };
+  # Add the constraint on the subsnp_id column and pass to generic_fetch
+  my $constraint = qq{ a.subsnp_id = $name };
 
-    return $self->generic_fetch($constraint);
+  return $self->generic_fetch($constraint);
 }
 
 
