@@ -122,7 +122,7 @@ sub _fetch_all_by_object {
   my $type   = shift;
   
   $type ||= (split '::', ref($object))[-1];
-  throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
+  throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined $type and defined($TYPES{$type});
   
   my $constraint = "pf.type = '".$type."' AND pf.object_id = '".$object->stable_id."'";
   
@@ -158,7 +158,7 @@ sub fetch_all_by_object_id {
   my $constraint = qq{ pf.object_id = '$id' };
   
   if(defined($type)) {
-    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined($TYPES{$type});
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined($TYPES{$type});
     $constraint .= qq{ AND pf.type = '$type' } if defined($type);
   }
   
