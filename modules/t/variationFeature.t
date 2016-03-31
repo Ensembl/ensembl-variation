@@ -144,8 +144,7 @@ my $var3 = $va->fetch_by_name('rs80359159');
 my $vf3 = $var3->get_all_VariationFeatures()->[0];
 my $vss = $vf3->get_all_VariationSets();
 my $vs_name = 'clinically associated';
-print scalar @$vss, "\n";
-ok($vss->[0]->name eq $vs_name, 'get all VariationSets');
+ok( scalar (grep { $_->name eq $vs_name } @$vss) == 1, 'get all VariationSets');
 
 # get all Alleles
 my $als = $vf3->get_all_Alleles();
