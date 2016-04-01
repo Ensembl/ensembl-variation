@@ -46,15 +46,40 @@ foreach (@$alleles) {
     $freq ||= 'No frequency';
     if (defined $population) {
         $hash->{$population->name}->{$allele} = $freq;
-        #print $population->name, ' ', $allele, ' ', $freq, "\n";
+#        print $population->name, ' ', $allele, ' ', $freq, "\n";
+
     }
 }
 is($hash->{'1000GENOMES:phase_1_LWK'}->{'T'}, 0.0103092783505155, 'allele freq for population');
 is($hash->{'1000GENOMES:phase_1_GBR'}->{'C'}, 1, 'allele freq for population');
 
-# store method
 my $pa = $vdba->get_PopulationAdaptor();
+my $population_name = '1000GENOMES:phase_1_AFR';
+my $population = $pa->fetch_by_name($population_name);
 
+$alleles = $aa->fetch_all_by_Variation($variation, $population);
+is(scalar @$alleles, 2, 'alleles for variation and population');
+
+$aa->{_cache} = undef;
+$alleles = $aa->fetch_all_by_Variation($variation, $population);
+is(scalar @$alleles, 2, 'alleles for variation and population');
+
+my $allele = $aa->fetch_by_dbID(104844866);
+$population = $pa->fetch_by_dbID(650);
+my $handle = $aa->get_subsnp_handle($allele, $population);
+ok($handle eq 'PERLEGEN', 'get_subsnp_handle');
+
+$allele = $aa->fetch_by_dbID(104845982);
+my $descriptions = $aa->get_all_failed_descriptions($allele);
+ok($descriptions->[0] eq 'Additional submitted allele data from dbSNP does not agree with the dbSNP refSNP alleles', 'get_all_failed_descriptions');
+
+my $allele_code = $aa->_allele_code('A');
+ok($allele_code == 2, '_allele_code');
+$aa->db->{_allele_codes} = undef;
+$allele_code = $aa->_allele_code('A');
+ok($allele_code == 2, '_allele_code');
+
+# store method
 my $al_hash = {
   allele     => 'A',
   frequency  => 0.12345,
@@ -67,7 +92,6 @@ my $al_hash = {
 my $al1 = Bio::EnsEMBL::Variation::Allele->new_fast($al_hash);
 
 ok($aa->store($al1), "store");
-
 $al_hash->{population} = $pa->fetch_by_name('1000GENOMES:phase_1_LWK');
 my $al2 = Bio::EnsEMBL::Variation::Allele->new_fast($al_hash);
 
@@ -105,6 +129,5 @@ throws_ok { $aa->fetch_all; } qr/fetch_all cannot be used for Allele objects/, '
 my $al4 = $aa->fetch_all_by_subsnp_id('ss24191327');
 ok(scalar @$al4 == 24, 'fetch_all_by_subsnp_id');
 throws_ok { $aa->fetch_all_by_subsnp_id; } qr/name argument expected/, 'Throw on missing name argument';
-
 done_testing();
 
