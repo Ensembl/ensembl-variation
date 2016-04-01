@@ -281,8 +281,14 @@ sub fetch_all_by_Variation {
     shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
   }
   
-  if(defined($population)) {
-    @$return = grep {$_->dbID eq $population->dbID} @{$cached};
+  if (defined($population)) {
+    my $population_id = $population->dbID;
+    foreach (@{$cached}) {
+      my $allele_population = $_->population;
+      if ($allele_population) {
+        push @$return, $_ if ($allele_population->dbID eq $population_id);
+      }
+    }
   }
   else {
     $return = $cached;
