@@ -269,6 +269,8 @@ foreach my $vf (@vfs) {
   $trv_ad->store($tv);
 }
 
+sleep(10);
+
 $sth->execute;
 my ($max_tv_id_after) = $sth->fetchrow_array;
 $sth->finish();
