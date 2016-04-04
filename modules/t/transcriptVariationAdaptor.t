@@ -40,7 +40,7 @@ my $var_ad = $vdb->get_VariationAdaptor();
 my $trv_ad = $vdb->get_TranscriptVariationAdaptor();
 my $tr_ad  = $db->get_TranscriptAdaptor;
 my $s_ad   = $db->get_SliceAdaptor();
-
+my $g_ad = $db->get_GeneAdaptor();
 
 ok($trv_ad && $trv_ad->isa('Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor'));
 
@@ -191,7 +191,7 @@ my $is_somatic = 0;
 
 
 my $sl = $s_ad->fetch_by_region('chromosome',$chr);
-my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+$vf = Bio::EnsEMBL::Variation::VariationFeature->new
   (-seq_region_name => $chr,
    -start => $end,
    -end   => $start,
@@ -247,8 +247,37 @@ foreach my $trans_varns (@{$trans_vars_ns}){
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset');
 }
 
+#store
+my $dbh = $vf_ad->dbc->db_handle;
+my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/); 
+$sth->execute;
+my ($max_tv_id_before) = $sth->fetchrow_array;
+$sth->finish();
 
+my $transcript_id_store = 'ENST00000470094';
+my $transcript_store = $tr_ad->fetch_by_stable_id($transcript_id_store);
+my $vf_store = $vf_ad->fetch_by_dbID(23700405);
+my @vfs = ($vf_store);
+foreach my $vf (@vfs) {
+  my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+    -transcript     => $transcript_store,
+    -variation_feature  => $vf,
+    -adaptor      => $trv_ad,
+    -disambiguate_single_nucleotide_alleles => 0,
+    -no_transfer    => 1,
+  );
+  $trv_ad->store($tv);
+}
 
+$sth->execute;
+my ($max_tv_id_after) = $sth->fetchrow_array;
+$sth->finish();
+
+ok($max_tv_id_after == $max_tv_id_before + 1, 'get max transcript_variation_id');
+
+my $tv_store = $trv_ad->fetch_by_dbID($max_tv_id_after);
+ok($tv_store->display_consequence eq 'missense_variant', 'test store');
+$dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$max_tv_id_after;}) or die $dbh->errstr;
 
 done_testing();
 
