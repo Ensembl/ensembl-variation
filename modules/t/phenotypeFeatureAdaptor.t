@@ -31,14 +31,16 @@ my $vdba = $multi->get_DBAdaptor('variation');
 my $pfa = $vdba->get_PhenotypeFeatureAdaptor();
 ok($pfa && $pfa->isa('Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor'), "get PhenotypeFeature adaptor");
 
+# Slice
+my $sla = $multi->get_DBAdaptor('core')->get_SliceAdaptor;
+my $sl  = $sla->fetch_by_region('chromosome', 7, 86442403, 86442405);
+
 # fetch_all_by_object_id
 my $pfs = $pfa->fetch_all_by_object_id('rs2299222');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id");
-throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a valid object type, valid types are/, 'Throw on wrong object type';
+throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a valid object type, valid types are/, ' > Throw on wrong object type';
 
 # fetch_all_by_Slice_type
-my $sla = $multi->get_DBAdaptor('core')->get_SliceAdaptor;
-my $sl  = $sla->fetch_by_region('chromosome', 7, 86442403, 86442405);
 $pfs = $pfa->fetch_all_by_Slice_type($sl, 'Variation');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Slice_type");
 
@@ -47,42 +49,49 @@ my $va = $vdba->get_VariationAdaptor();
 my $v  = $va->fetch_by_name('rs2299222');
 $pfs = $pfa->fetch_all_by_Variation($v);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Variation");
-throws_ok { $pfa->fetch_all_by_Variation('Variant'); } qr/Variation arg expected/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Variation('Variant'); } qr/Variation arg expected/, ' > Throw on wrong argument';
 
 
 # fetch_all_by_Variation_list
 $pfs = $pfa->fetch_all_by_Variation_list([$v]);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Variation_list");
-throws_ok { $pfa->fetch_all_by_Variation_list(['Variant']); } qr/Variation arg expected/, 'Throw on wrong argument';
-throws_ok { $pfa->fetch_all_by_Variation_list([Bio::EnsEMBL::Variation::Variation->new()]); } qr/Variation arg must have defined name/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Variation_list(['Variant']); } qr/Variation arg expected/, ' > Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Variation_list([Bio::EnsEMBL::Variation::Variation->new()]); } qr/Variation arg must have defined name/, ' > Throw on wrong argument';
 
 # fetch_all_by_StructuralVariation
 my $sva = $vdba->get_StructuralVariationAdaptor();
 my $sv  = $sva->fetch_by_name('esv2751608');
 $pfs = $pfa->fetch_all_by_StructuralVariation($sv);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'esv2751608', "fetch_all_by_StructuralVariation");
-throws_ok { $pfa->fetch_all_by_StructuralVariation('Variant'); } qr/BaseStructuralVariation arg expected/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_StructuralVariation('Variant'); } qr/BaseStructuralVariation arg expected/, ' > Throw on wrong argument';
 
 # fetch_all_by_Gene
 my $ga = $multi->get_DBAdaptor('core')->get_GeneAdaptor;
 my $g  = $ga->fetch_by_stable_id('ENSG00000176105');
 $pfs = $pfa->fetch_all_by_Gene($g);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'ENSG00000176105', "fetch_all_by_Gene");
-throws_ok { $pfa->fetch_all_by_Gene('gene'); } qr/Gene arg expected/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Gene('gene'); } qr/Gene arg expected/, ' > Throw on wrong argument';
 
 # fetch_all_by_VariationFeature_list
 $pfs = $pfa->fetch_all_by_VariationFeature_list($v->get_all_VariationFeatures);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_VariationFeature_list");
-throws_ok { $pfa->fetch_all_by_VariationFeature_list(['VariationFeature']); } qr/VariationFeature arg expected/, 'Throw on wrong argument';
-throws_ok { $pfa->fetch_all_by_VariationFeature_list([Bio::EnsEMBL::Variation::VariationFeature->new()]); } qr/VariationFeatures in list must have defined names/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_VariationFeature_list(['VariationFeature']); } qr/VariationFeature arg expected/, ' > Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_VariationFeature_list([Bio::EnsEMBL::Variation::VariationFeature->new()]); } qr/VariationFeatures in list must have defined names/, ' > Throw on wrong argument';
 
 # fetch_all_by_Study
 my $sa = $vdba->get_StudyAdaptor();
 my $s  = $sa->fetch_by_dbID(4237);
 $pfs = $pfa->fetch_all_by_Study($s);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_Study");
-throws_ok { $pfa->fetch_all_by_Study('Study'); } qr/Study arg expected/, 'Throw on wrong argument';
-throws_ok { $pfa->fetch_all_by_Study(Bio::EnsEMBL::Variation::Study->new()); } qr/Study arg must have defined dbID/, 'Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Study('Study'); } qr/Study arg expected/, ' > Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Study(Bio::EnsEMBL::Variation::Study->new()); } qr/Study arg must have defined dbID/, ' > Throw on wrong argument';
+
+# fetch_all_by_Slice_Study
+$pfs = $pfa->fetch_all_by_Slice_Study($sl,$s);
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_Slice_Study");
+throws_ok { $pfa->fetch_all_by_Slice_Study('Slice', $s); } qr/Slice arg expected/, ' > Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Slice_Study($sl,'Study'); } qr/Study arg expected/, ' > Throw on wrong argument';
+throws_ok { $pfa->fetch_all_by_Slice_Study($sl,Bio::EnsEMBL::Variation::Study->new()); } qr/Study arg must have defined dbID/, ' > Throw on wrong argument';
 
 # fetch_all_by_phenotype_name_source_name
 $pfs = $pfa->fetch_all_by_phenotype_name_source_name('ACH', 'dbSNP');
@@ -136,12 +145,12 @@ ok($pfa->store($pf), "store");
 $pfs = $pfa->fetch_all_by_object_id('test');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'test'} @$pfs), "fetch stored");
 
-my $count = $pfa->_check_gene_by_HGNC('YES1'); 
+$count = $pfa->_check_gene_by_HGNC('YES1'); 
 ok($count == 1, '_check_gene_by_HGNC');
 
 my $attribs = $pfa->_fetch_attribs_by_dbID(1);
 ok($attribs->{'associated_gene'} eq 'YES1', '_fetch_attribs_by_dbID');
-throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without dbID/, 'Throw on missing dbID';
+throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without dbID/, ' > Throw on missing dbID';
 
 done_testing();
 

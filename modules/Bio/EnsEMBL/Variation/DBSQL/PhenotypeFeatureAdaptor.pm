@@ -198,6 +198,46 @@ sub fetch_all_by_Slice_type {
 }
 
 
+=head2 fetch_all_by_Slice_Study
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : Bio::EnsEMBL:Variation::Study $study
+  Example    : my @pfs = @{$pfa->fetch_all_by_Slice_Study($slice, $study)};
+  Description: Retrieves all phenotype features in a slice that belong to a 
+               given study.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_Study {
+
+  my $self  = shift;
+  my $slice = shift;
+  my $study = shift;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if(!ref($study) || !$study->isa('Bio::EnsEMBL::Variation::Study')) {
+    throw('Bio::EnsEMBL::Variation::Study arg expected');
+  }
+  if(!defined($study->dbID())) {
+    throw("Study arg must have defined dbID");
+  }
+
+  # Add a constraint to only return PhenotypeFeatures belonging to the given study, within the given slice
+  my $constraint = "pf.study_id = ".$study->dbID;
+
+  # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
+  my $pfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+
+  return $pfs;
+}
+
+
 =head2 fetch_all_by_Variation
 
   Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
