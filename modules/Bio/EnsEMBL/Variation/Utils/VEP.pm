@@ -5311,7 +5311,7 @@ sub parse_variation {
   my $line = shift;
 
   my @cols = @{get_variation_columns($config)};
-  my $delim = defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' ? "\t" : " ";
+  my $delim = defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' ? "\t" : qr/ /;
   my @data = split $delim, $line;
 
   # assumption fix for old cache files
