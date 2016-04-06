@@ -347,7 +347,7 @@ our @VAR_CACHE_COLS = qw(
     phenotype_or_disease
 );
 
-our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length);
+our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length ensembl refseq);
 
 # don't assert refs
 $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
@@ -2223,6 +2223,8 @@ sub vf_to_consequences {
 # 3: biotype (protein coding favoured)
 # 4: consequence rank
 # 5: transcript length
+# 6: transcript from Ensembl?
+# 7: transcript from RefSeq?
 sub pick_worst_vfoa {
   my $config = shift;
   my $vfoas = shift;
@@ -2247,6 +2249,8 @@ sub pick_worst_vfoa {
       biotype => 1,
       tsl => 100,
       appris => 100,
+      ensembl => 1,
+      refseq => 1,
     };
 
     if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
@@ -2256,6 +2260,7 @@ sub pick_worst_vfoa {
       $info->{canonical} = $tr->is_canonical ? 0 : 1;
       $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
       $info->{ccds} = $tr->{_ccds} && $tr->{_ccds} ne '-' ? 0 : 1;
+      $info->{lc($tr->{_source_cache})} = 0 if exists($tr->{_source_cache});
 
       # "invert" length so longer is best
       $info->{length} = 0 - $tr->length();
