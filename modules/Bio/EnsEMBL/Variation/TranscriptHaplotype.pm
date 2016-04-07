@@ -310,7 +310,6 @@ sub get_all_population_counts {
       my $count = $self->{samples}->{$sample};
 
       $counts->{$_} += $count for keys %{$sample_pop_hash->{$sample}};
-      $counts->{_all} += $count;
     }
     
     $self->{population_counts} = $counts;

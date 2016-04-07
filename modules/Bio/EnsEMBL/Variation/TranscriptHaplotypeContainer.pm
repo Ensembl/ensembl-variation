@@ -432,9 +432,6 @@ sub total_population_counts {
     foreach my $sample(keys %$hash) {
       my $sample_ploidy = defined($ploidy->{$sample}) ? $ploidy->{$sample} : $default;
       $counts->{$_} += $sample_ploidy for keys %{$hash->{$sample}};
-
-      # keep a count for a made-up "all" population
-      $counts->{_all} += $sample_ploidy;
     }
     
     $self->{total_population_counts} = $counts;
@@ -637,7 +634,7 @@ sub _get_sample_population_hash {
     my $hash = {};
 
     foreach my $sample(@{$self->get_all_Samples}) {
-      $hash->{$sample->name}->{$_->name} = 1 for @{$sample->get_all_Populations};
+      $hash->{$sample->name}->{$_->{name}} = 1 for (@{$sample->get_all_Populations}, {name => '_all'});
     }
     
     $self->{_sample_population_hash} = $hash;
