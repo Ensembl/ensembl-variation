@@ -40,5 +40,28 @@ ok(scalar @$pairs == 1, 'get_all_Slice_Mapper_pairs');
 my $pair = $pairs->[0];
 my ($slice_mapped, $mapper) = @$pair;
 
+my $sgfa = $vdb->get_SampleGenotypeFeatureAdaptor;
+
+my $sample = $sample_adaptor->fetch_all_by_name('1000GENOMES:phase_1:HG00096')->[0];
+my $dir = $multi->curr_dir();
+ok($vdb->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
+
+my $vca = $vdb->get_VCFCollectionAdaptor();
+my $coll = $vca->fetch_by_id('1000genomes_phase1');
+# now we need to set the filename_template
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+
+$sgfa->db->use_vcf(2);
+
+$slice = $sa->fetch_by_region('chromosome', '2', 45401280, 45421006);
+
+my $genotypes = $sgfa->fetch_all_by_Slice($slice, $sample);
+$msc = Bio::EnsEMBL::MappedSliceContainer->new(-SLICE => $slice, -EXPANDED => 1);
+$mapped_slices = $strain_slice_adaptor->fetch_by_name($msc, '1000GENOMES:phase_1:HG00096');
+$mapped_slice = $mapped_slices->[0];
+my $seq = $mapped_slice->seq(1);
+ok( length $seq == 19727, 'mapped_slice length');
 
 done_testing();
