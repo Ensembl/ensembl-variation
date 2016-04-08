@@ -139,8 +139,8 @@ my $slice = $sa->fetch_by_region('chromosome', 2, 45401130, 45421130);
 ok($slice && $slice->isa('Bio::EnsEMBL::Slice'), "get slice");
 
 $gts = $coll->get_all_SampleGenotypeFeatures_by_Slice($slice);
-ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_Slice count 3");
-ok($gts->[0]->genotype_string eq 'T|T', "get_all_SampleGenotypeFeatures_by_Slice first genotype T|T");
+ok($gts && scalar @$gts == 1119, "get_all_SampleGenotypeFeatures_by_Slice count 1119");
+ok($gts->[0]->genotype_string eq 'C|C', "get_all_SampleGenotypeFeatures_by_Slice first genotype C|C");
 
 # fetch LD genotypes by slice
 my ($ld_gts, $pos2name) = @{$coll->_get_all_LD_genotypes_by_Slice($slice)};
