@@ -1926,8 +1926,7 @@ sub summary_as_hash {
   $summary_ref->{'consequence_type'} = $self->display_consequence;
   my @allele_list = split(/\//,$self->allele_string);
   $summary_ref->{'alleles'} = \@allele_list;
-  my @clinsig = @{$self->get_all_clinical_significance_states};
-  $summary_ref->{'clinical_significance'} = (@clinsig ?  \@{$self->get_all_clinical_significance_states} : '');
+  $summary_ref->{'clinical_significance'} = \@{$self->get_all_clinical_significance_states};
   return $summary_ref;
 }
 
