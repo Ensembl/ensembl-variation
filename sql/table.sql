@@ -227,11 +227,11 @@ create table variation_feature(
 @desc This table allows for a variation to have multiple IDs, generally given by multiple sources.
 
 @column variation_synonym_id	Primary key, internal identifier.
-@column variation_id					Foreign key references to the variation table.
-@column subsnp_id							Foreign key references to the subsnp_handle table.
-@column source_id							Foreign key references to the source table.
-@column name									Name of the synonym variation. e.g. 'rs1333049'. The corresponding variation ID of this variation is different from the one stored in the column variation_id.
-@column moltype								...
+@column variation_id		Foreign key references to the variation table.
+@column subsnp_id		Foreign key references to the subsnp_handle table.
+@column source_id		Foreign key references to the source table.
+@column name			Name of the synonym variation. e.g. 'rs1333049'. The corresponding variation ID of this variation is different from the one stored in the column variation_id.
+@column moltype			The type of molecule,  e.g. 'marker'.
 
 @see source
 @see variation
