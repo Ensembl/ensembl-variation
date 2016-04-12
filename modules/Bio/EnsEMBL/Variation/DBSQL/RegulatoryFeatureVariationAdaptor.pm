@@ -238,6 +238,11 @@ sub fetch_all_by_VariationFeatures_SO_terms {
     return \@rfs;
   } 
 }
+# bug fix for release 84
+sub fetch_all_by_VariationFeatures {
+  my ($self, $vfs, $regulatory_features) = @_;
+  return $self->fetch_all_by_VariationFeatures_SO_terms($vfs, $regulatory_features);
+}
 
 =head2 count_all_by_VariationFeatures_SO_terms
 
