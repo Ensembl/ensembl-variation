@@ -900,6 +900,14 @@ sub get_consequence_type {
     return $self->consequence_type;
 }
 
+# used by VEP - fills out the consequence type hash keys
+# so that the API doesn't try to go to the DB to fill them
+sub _finish_annotation {
+  my $self = shift;
+  $self->{$_.'_variations'} ||= {} for qw(transcript regulatoryfeature motiffeature);
+  $self->get_IntergenicVariation(1);
+}
+
 =head2 ambig_code
 
     Args         : int $strand (optional)
