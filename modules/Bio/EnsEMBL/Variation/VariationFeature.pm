@@ -841,7 +841,7 @@ sub get_all_OverlapConsequences {
 
         my %overlap_cons;
 
-        for my $vfo (@{ $self->get_all_TranscriptVariations }) {
+        for my $vfo (@{ $self->get_all_VariationFeatureOverlaps }) {
             for my $allele (@{ $vfo->get_all_alternate_VariationFeatureOverlapAlleles }) {
                 for my $cons (@{ $allele->get_all_OverlapConsequences }) {
                     $overlap_cons{$cons->SO_term} = $cons;

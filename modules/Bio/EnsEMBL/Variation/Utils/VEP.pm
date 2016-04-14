@@ -2090,6 +2090,13 @@ sub vf_to_consequences {
     $vf->{$_} ||= {} for map {$_.'_variations'} ('transcript', map {lc_rf_type($_)} @REG_FEAT_TYPES);
   }
 
+  my $vf_ref = ref($vf);
+
+  # prefetch intergenic variation
+  # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
+  # (to stay consistent with the rest of the VEP)
+  $vf->get_IntergenicVariation(1) if $vf_ref eq 'Bio::EnsEMBL::Variation::VariationFeature';
+
   # stats
   unless(defined($config->{no_stats})) {
 
@@ -2111,14 +2118,9 @@ sub vf_to_consequences {
   }
 
   # use a different method for SVs
-  return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature');
+  return svf_to_consequences($config, $vf) if $vf_ref eq 'Bio::EnsEMBL::Variation::StructuralVariationFeature';
 
   my @return = ();
-
-  # prefetch intergenic variation
-  # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
-  # (to stay consistent with the rest of the VEP)
-  $vf->get_IntergenicVariation(1);
   return \@return if defined($config->{no_intergenic}) && defined($vf->{intergenic_variation});
 
   # method name stub for getting *VariationAlleles
