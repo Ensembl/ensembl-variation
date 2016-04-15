@@ -138,9 +138,6 @@ use Scalar::Util qw(weaken);
   Arg [-EVIDENCE] :
     Listref of strings
 
-  Arg [-MOLTYPE] :
-    string - the moltype of this SNP
-
   Arg [-FIVE_PRIME_FLANKING_SEQ] :
     string - the five prime flanking nucleotide sequence
 
@@ -165,10 +162,10 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $class_so_term, $source_id, $source, $is_somatic, $flipped, $syns,
-      $ancestral_allele, $alleles, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
+      $ancestral_allele, $alleles, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
         rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES
-                      MOLTYPE FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
+                      FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
                       MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
 
   my $self = bless {
@@ -182,7 +179,6 @@ sub new {
     'flipped' => $flipped,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
-    'moltype' => $moltype,
     'five_prime_flanking_seq' => $five_seq,
     'three_prime_flanking_seq' => $three_seq,
     'flank_flag' => $flank_flag,
@@ -886,25 +882,6 @@ sub ancestral_allele {
   my $self = shift;
   return $self->{'ancestral_allele'} = shift if(@_);
   return $self->{'ancestral_allele'};
-}
-
-=head2 moltype
-
-  Arg [1]    : string $moltype (optional)
-               The new value to set the moltype attribute to
-  Example    : $moltype = v->moltype();
-  Description: Getter/Setter moltype associated with this variation
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub moltype {
-  my $self = shift;
-  return $self->{'moltype'} = shift if(@_);
-  return $self->{'moltype'};
 }
 
 

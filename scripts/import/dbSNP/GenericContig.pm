@@ -924,8 +924,7 @@ sub subsnp_synonyms{
    $stmt .= qq{
                  subsnp.subsnp_id , 
                  subsnplink.snp_id, 
-	         subsnplink.substrand_reversed_flag, 
-	         b.moltype
+	         subsnplink.substrand_reversed_flag
 	       FROM 
 	         SubSNP subsnp, 
 	         SNPSubSNPLink subsnplink, 
@@ -981,8 +980,8 @@ sub subsnp_synonyms{
 
     my $end = $offset + $interval;
 
-    $self->{'dbVar'}->do( qq{ insert into variation_synonym (variation_id, subsnp_id, source_id, name, moltype, substrand_reversed_flag) 
-               (SELECT  distinct v.variation_id, tv.subsnp_id, 1, CONCAT( 'ss', tv.subsnp_id), tv.moltype, tv.substrand_reversed_flag
+    $self->{'dbVar'}->do( qq{ insert into variation_synonym (variation_id, subsnp_id, source_id, name, substrand_reversed_flag) 
+               (SELECT  distinct v.variation_id, tv.subsnp_id, 1, CONCAT( 'ss', tv.subsnp_id), tv.substrand_reversed_flag
                FROM tmp_var_allele tv USE INDEX (subsnp_id_idx, refsnp_id_idx), 
                     variation v USE INDEX (snpidx)
                WHERE tv.subsnp_id BETWEEN $offset  AND $end 
@@ -1031,8 +1030,7 @@ sub dump_subSNPs {
 	          subsnplink.snp_id, 
 	          b.pop_id, 
 	          ov.pattern,
-	          subsnplink.substrand_reversed_flag, 
-	          b.moltype
+	          subsnplink.substrand_reversed_flag
                 FROM 
                   SubSNP subsnp, 
                   SNPSubSNPLink subsnplink, 

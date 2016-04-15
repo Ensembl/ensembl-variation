@@ -665,7 +665,6 @@ CREATE TABLE `variation_synonym` (
   `subsnp_id` int(15) unsigned DEFAULT NULL,
   `source_id` int(10) unsigned NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `moltype` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`variation_synonym_id`),
   UNIQUE KEY `name` (`name`,`source_id`),
   KEY `variation_idx` (`variation_id`),

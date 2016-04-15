@@ -230,8 +230,7 @@ create table variation_feature(
 @column variation_id					Foreign key references to the variation table.
 @column subsnp_id							Foreign key references to the subsnp_handle table.
 @column source_id							Foreign key references to the source table.
-@column name									Name of the synonym variation. e.g. 'rs1333049'. The corresponding variation ID of this variation is different from the one stored in the column variation_id.
-@column moltype								...
+@column name									Name of the synonym variation. e.g. 'rs1333049'.
 
 @see source
 @see variation
@@ -244,7 +243,6 @@ create table variation_synonym (
   subsnp_id int(15) unsigned ,
   source_id int(10) unsigned not null,
   name varchar(255),
-  moltype varchar(50),
 
   primary key(variation_synonym_id),
   key variation_idx (variation_id),
@@ -1779,6 +1777,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|create sample_synonym');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|drop column moltype from variation_synonym');
 
 
 /**
