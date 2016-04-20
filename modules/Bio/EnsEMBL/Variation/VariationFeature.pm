@@ -1927,6 +1927,11 @@ sub summary_as_hash {
   my @allele_list = split(/\//,$self->allele_string);
   $summary_ref->{'alleles'} = \@allele_list;
   $summary_ref->{'clinical_significance'} = \@{$self->get_all_clinical_significance_states};
+  $summary_ref->{'minor_allele'} = $self->minor_allele;
+  $summary_ref->{'minor_allele_frequency'} = $self->minor_allele_frequency;
+  $summary_ref->{'minor_allele_count'} = $self->minor_allele_count;
+  $summary_ref->{'var_class'} = $self->var_class;
+  $summary_ref->{'evidence_values'} = \@{$self->get_all_evidence_values};
   return $summary_ref;
 }
 
