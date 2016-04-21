@@ -48,6 +48,9 @@ GetOptions(
     'vcf_file=s',
     'species=s',
     'registry=s',
+    'host=s',
+    'user=s',
+    'port=i',
 
     'ancestral_allele|aa',
     'global_maf',
@@ -88,9 +91,16 @@ sub main {
 sub init_db_connections {
     my $config = shift;
     my $registry = 'Bio::EnsEMBL::Registry';
-    my $registry_file = $config->{registry};
-    die "Could not find registry_file $registry_file" unless (-e $registry_file);
-    $registry->load_all($registry_file);
+    if ($config->{registry}) {
+      my $registry_file = $config->{registry};
+      die "Could not find registry_file $registry_file" unless (-e $registry_file);
+      $registry->load_all($registry_file);
+    } else {
+      my $host = $config->{'host'} || 'ensembldb.ensembl.org';
+      my $user = $config->{'user'} || 'anonymous';
+      my $port = $config->{'port'} || 3306;
+      $registry->load_registry_from_db(-host => $host, -user => $user, -port => $port);
+    }
     my $vdba = $registry->get_DBAdaptor($config->{species}, 'variation');
     my $cdba = $registry->get_DBAdaptor($config->{species}, 'core');
     $config->{vdba} = $vdba;
