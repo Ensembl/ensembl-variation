@@ -367,7 +367,7 @@ sub get_all_ld_values {
           $i++;
         }  
         $ld_value{'variation1'} = $vf1;
-        $ld_value{'variation2'} = $vf3;
+        $ld_value{'variation2'} = $vf2;
         $DB::single = 1 unless $ld_value{'variation1'} && $ld_value{'variation2'};
       }
       $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
