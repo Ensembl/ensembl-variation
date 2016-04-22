@@ -355,6 +355,16 @@ sub get_all_ld_values {
       
       # add the information to the ld_value hash
       unless($names_only) {
+        my $vf1 = $pos2vf->{$vf1_pos};
+        my $vf2 = $pos2vf->{$vf2_pos};
+        my $i = 1;
+        foreach my $vf ($vf1, $vf2) {
+          my $summary = $vf->summary_as_hash;
+          while (my ($key, $value) = each %$summary) {
+            $ld_value{$key. $i} = $value;
+          }
+          $i++;
+        }  
         $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
         $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
         $DB::single = 1 unless $ld_value{'variation1'} && $ld_value{'variation2'};
