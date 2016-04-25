@@ -1,7 +1,7 @@
 {
   "collections": [
     {
-      "id": "1000genomes_phase3",
+      "id": "1000genomes_phase3_GRCh37",
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
@@ -14,7 +14,7 @@
       "sample_prefix": "1000GENOMES:phase_3:"
     },
     {
-      "id": "1000genomes_phase3",
+      "id": "1000genomes_phase3_GRCh38",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
