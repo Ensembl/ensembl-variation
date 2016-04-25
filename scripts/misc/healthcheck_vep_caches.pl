@@ -190,16 +190,18 @@ foreach my $host(split /\,/, $config->{host}) {
     $sth->finish;
 
     # get varfeat counts
-    $sth = $config->{current}->{vdb}->prepare(qq{
-      SELECT seq_region_id, COUNT(*)
-      FROM variation_feature
-      GROUP BY variation_feature_id;
-    });
-    $sth->execute();
+    if($has_var && $v) {
+      $sth = $config->{current}->{vdb}->prepare(qq{
+        SELECT seq_region_id, COUNT(*)
+        FROM variation_feature
+        GROUP BY variation_feature_id;
+      });
+      $sth->execute();
 
-    $sth->bind_columns(\$sr_id, \$count);
-    $counts{$sr_id} += $count while $sth->fetch;
-    $sth->finish;
+      $sth->bind_columns(\$sr_id, \$count);
+      $counts{$sr_id} += $count while $sth->fetch;
+      $sth->finish;
+    }
     
     foreach my $slice(@slices) {
       # printf("\r - checking chromosome dirs %i / %i", ++$i, scalar @slices);
