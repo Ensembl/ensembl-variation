@@ -2272,9 +2272,9 @@ sub pick_worst_vfoa {
         if($appris->value =~ m/([A-Za-z])(\d+)/) {
           my ($type, $grade) = ($1, $2);
 
-          # values are principal1, principal2, ..., alternate1, alternate2
+          # values are principal1, principal2, ..., alternative1, alternative2
           # so add 10 to grade if alternate
-          $grade += 10 if $type eq 'alternate';
+          $grade += 10 if substr($type, 0, 1) eq 'a';
 
           $info->{appris} = $grade if $grade;
         }
