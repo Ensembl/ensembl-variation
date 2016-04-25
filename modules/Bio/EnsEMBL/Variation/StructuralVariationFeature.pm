@@ -1165,4 +1165,13 @@ sub _sort_svos {
   $self->{structural_variation_overlaps} = \@svos;
 }
 
+# used by VEP - fills out the consequence type hash keys
+# so that the API doesn't try to go to the DB to fill them
+sub _finish_annotation {
+  my $self = shift;
+  $self->{$_.'_structural_variations'} ||= {} for qw(transcript regulation);
+  $self->{regulation_structural_variations}->{$_} ||= [] for qw(ExternalFeature MotifFeature RegulatoryFeature);
+  $self->get_IntergenicStructuralVariation(1);
+}
+
 1;
