@@ -51,6 +51,7 @@ GetOptions(
   
   'dir|d=s',                 
   'version|v=i',
+  'cache_version|c=i',
   'species|s=s',
   
   'host|h=s',                  # DB options
@@ -69,14 +70,15 @@ do { usage(); exit(0); } if $config->{help};
 $config->{reg} = 'Bio::EnsEMBL::Registry';
 $config->{reg}->no_version_check(1);
 
-$config->{dir}      ||= $ENV{HC_VEP_DIR}      || $ENV{HOME}.'/.vep/';
-$config->{version}  ||= $ENV{HC_VEP_VERSION}  || $config->{reg}->software_version;
-$config->{species}  ||= $ENV{HC_VEP_SPECIES}  || 'all';
-$config->{host}     ||= $ENV{HC_VEP_HOST}     || 'ens-staging1,ens-staging2';
-$config->{user}     ||= $ENV{HC_VEP_USER}     || 'ensro';
-$config->{port}     ||= $ENV{HC_VEP_PORT}     || 3306;
-$config->{no_fasta} ||= $ENV{HC_VEP_NO_FASTA} || undef;
-$config->{max_vars} ||= $ENV{HC_VEP_MAX_VARS} || 100;
+$config->{dir}           ||= $ENV{HC_VEP_DIR}           || $ENV{HOME}.'/.vep/';
+$config->{version}       ||= $ENV{HC_VEP_VERSION}       || $config->{reg}->software_version;
+$config->{cache_version} ||= $ENV{HC_VEP_CACHE_VERSION} || $config->{version};
+$config->{species}       ||= $ENV{HC_VEP_SPECIES}       || 'all';
+$config->{host}          ||= $ENV{HC_VEP_HOST}          || 'ens-staging1,ens-staging2';
+$config->{user}          ||= $ENV{HC_VEP_USER}          || 'ensro';
+$config->{port}          ||= $ENV{HC_VEP_PORT}          || 3306;
+$config->{no_fasta}      ||= $ENV{HC_VEP_NO_FASTA}      || undef;
+$config->{max_vars}      ||= $ENV{HC_VEP_MAX_VARS}      || 100;
 
 if(!defined($config->{random})) {
   if(defined($ENV{HC_VEP_RANDOM})) {
@@ -132,7 +134,7 @@ foreach my $host(split /\,/, $config->{host}) {
     my $has_var = has_variation($config, $sp);
     my $has_reg = has_regulation($config, $sp);
     
-    my $dir = $config->{dir}.'/'.$species.'/'.$config->{version}.($config->{version} >= 76 ? '_'.$assembly : '');
+    my $dir = $config->{dir}.'/'.$species.'/'.$config->{cache_version}.($config->{version} >= 76 ? '_'.$assembly : '');
     
     ok(-d $config->{dir}.'/'.$species, "\[$species\] species dir exists");
     ok(-d $dir, "\[$species\] version dir exists");
@@ -341,7 +343,7 @@ sub get_species_list {
     $connection_string, $config->{user}, $config->{password}
   );
   
-  my $version = $config->{version};
+  my $version = $config->{cache_version};
 
   my $sth = $config->{dbc}->prepare(qq{
     SHOW DATABASES LIKE '%\_core\_$version%'
@@ -450,7 +452,7 @@ sub get_species_list {
 sub has_variation {
   my ($config, $species) = @_;
   
-  my $version = $config->{version};
+  my $version = $config->{cache_version};
   
   my $sth = $config->{dbc}->prepare(qq{
     SHOW DATABASES LIKE '$species\_variation\_$version%'
@@ -468,7 +470,7 @@ sub has_variation {
 sub has_regulation {
   my ($config, $species) = @_;
   
-  my $version = $config->{version};
+  my $version = $config->{cache_version};
   
   my $sth = $config->{dbc}->prepare(qq{
     SHOW DATABASES LIKE '$species\_funcgen\_$version%'
@@ -702,9 +704,10 @@ Run this script to check VEP cache installations.
 
 Flags: (defaults follow in parentheses)
 
---dir | -d        Root directory of VEP caches (\$HOME/.vep/)
---version | -v    Version to check (current API version)
---species | -s    Species to check (all species found on hosts)
+--dir | -d           Root directory of VEP caches (\$HOME/.vep/)
+--version | -v       Version to check (current API version)
+--cache_version | -c Cache version, can be EG version (current API version)
+--species | -s       Species to check (all species found on hosts)
 
 --hosts | -h      Database host(s), comma-separated (ens-staging1,ens-staging2)
 --user | -u       Database username (ensro)
