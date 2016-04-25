@@ -1017,8 +1017,11 @@ sub _mutate_sequences {
   my $self = shift;
   my $gts = shift;
   my $sample_name = shift;
+
+  # get sample ploidy
+  my $ploidy = $self->_sample_ploidy()->{$sample_name} || $self->_default_ploidy();
   
-  my $fingerprint = $self->_fingerprint_gts($gts);
+  my $fingerprint = $self->_fingerprint_gts($gts, $ploidy);
   
   if(!exists($self->{_mutated_by_fingerprint}) || !exists($self->{_mutated_by_fingerprint}->{$fingerprint})) {
   
@@ -1036,9 +1039,6 @@ sub _mutate_sequences {
     }
   
     my $mutated = {};
-
-    # get sample ploidy
-    my $ploidy = $self->_sample_ploidy()->{$sample_name} || $self->_default_ploidy();
   
     for my $hap(0..($ploidy - 1)) {
       my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
@@ -1094,10 +1094,11 @@ sub _mutate_sequences {
 sub _fingerprint_gts {
   my $self = shift;
   my $gts = shift;
+  my $ploidy = shift;
   
   my @raw = map {sprintf('%s:%s', $self->_vf_identifier($_->variation_feature), $_->genotype_string)} @$gts;
   
-  return md5_hex(join('_', @raw));
+  return md5_hex(join('_', ($ploidy, @raw)));
 }
 
 ## Gets a translation - these are cached on $self by a hex of the seq to avoid
