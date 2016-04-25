@@ -401,7 +401,7 @@ sub _raw_allele_hashes {
 
     my @alleles = split /\//, $allele_string;
     
-    $ref_allele //= $alleles[0];
+    $ref_allele = $alleles[0] unless defined($ref_allele);
     $ref_allele = '-' unless $ref_allele;
     
     if ($disambiguate_sn_alleles) {
