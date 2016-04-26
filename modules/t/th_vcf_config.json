@@ -9,6 +9,7 @@
       "chromosomes": [ "11" ],
       "source_name": "1000genomes",
       "source_version": "20141202",
+      "strict_name_match": 1,
       "source_url": "http://www.1000genomes.org",
       "sample_prefix": "1000GENOMES:phase_3:",
       "population_prefix": "1000GENOMES:phase_3_",
