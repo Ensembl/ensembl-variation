@@ -161,9 +161,7 @@ is_deeply($counts, $exp, "total population counts");
 
 
 ## TranscriptHaplotype tests
-
-@h = @{$c->get_all_ProteinHaplotypes_by_Sample($s)};
-$h = $h[1];
+($h) = grep {$_->_hex eq 'dff67d1fb7b3812a10cf152d2d9528f7'} @{$c->get_all_ProteinHaplotypes_by_Sample($s)};
 
 is($h->container, $c, 'container');
 is($h->type, 'protein', 'type');
