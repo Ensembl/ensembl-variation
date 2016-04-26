@@ -1060,6 +1060,8 @@ sub _mutate_sequences {
       
         # remove del characters
         $genotype =~ s/\-//g;
+
+        next unless $genotype =~ /^[ACGT]*$/;
       
         # reverse complement sequence?
         reverse_comp(\$genotype) if $tr_strand ne $vf->strand;
