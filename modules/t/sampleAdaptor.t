@@ -60,6 +60,23 @@ foreach my $test (@$tests) {
 $sample = $sa->fetch_by_dbID(8675);
 is($sample->name, 'NA19122', 'Fetch by dbID 8675');
 
+
+# synonym test
+$sample = $sa->fetch_by_dbID(1592);
+my @synonyms = @{$sample->get_all_synonyms};
+my ($synonym) = grep {$_ eq 'synonym_NA12891'} @synonyms;
+is($synonym, 'synonym_NA12891', 'get_all_synonyms');
+
+@synonyms = @{$sample->get_all_synonyms('dbSNP')};
+($synonym) = grep {$_ eq 'synonym_NA12891'} @synonyms;
+is($synonym, 'synonym_NA12891', 'get_all_synonyms for a given source');
+
+my @synonym_sources = @{$sample->get_all_synonym_sources};
+my ($synonym_source) = grep {$_ eq 'dbSNP'} @synonym_sources;
+is($synonym_source, 'dbSNP', 'get_all_synonym_sources');
+
+$sample->add_synonym('synonym_NA12891_2', 'dbSNP');
+
 # fetch_all_by_dbID_list -- needed by web team..
 my $list = [101106];
 $samples = $sa->fetch_all_by_dbID_list($list);
@@ -117,9 +134,9 @@ $sample = Bio::EnsEMBL::Variation::Sample->new(
   -adaptor => $sa,
   -display => 'UNDISPLAYABLE',
   -individual => Bio::EnsEMBL::Variation::Individual->new(
-    -name => 'test_individual2',
-    -type_individual => 'outbred',
-    -adaptor         => $ia,
+  -name => 'test_individual2',
+  -type_individual => 'outbred',
+  -adaptor         => $ia,
   ),
 );
 
@@ -151,7 +168,7 @@ $sample = $sa->fetch_all_by_name('test_sample4')->[0];
 
 ok($sample->individual->name eq $sample->name, "Store a new sample object without providing information on an individual.");
 
-my $synonym = 'synonym_NA12891'; 
+$synonym = 'synonym_NA12891'; 
 $samples = $sa->fetch_by_synonym($synonym);
 ok(scalar @$samples == 1, 'fetch_by_synonym');
 
@@ -169,5 +186,22 @@ ok($name eq 'NA12891', '_get_name_by_dbID');
 
 my $reference_strain = $sa->fetch_reference_strain();
 ok($reference_strain->name eq 'NA18635', 'fetch_reference_strain');
+
+$sample = Bio::EnsEMBL::Variation::Sample->new(
+  -name => 'test_sample5',
+  -adaptor => $sa,
+  -display => 'UNDISPLAYABLE',
+  -individual_id => $individual_dbID,
+);
+
+$sample->add_synonym('dbSNP', 'synonym_test_sample5');
+
+$sa->store($sample);
+
+$sample = $sa->fetch_all_by_name('test_sample5')->[0];
+
+@synonyms = @{$sample->get_all_synonyms('dbSNP')};
+($synonym) = grep {$_ eq 'synonym_test_sample5'} @synonyms;
+is($synonym, 'synonym_test_sample5', 'get_all_synonyms after store');
 
 done_testing();
