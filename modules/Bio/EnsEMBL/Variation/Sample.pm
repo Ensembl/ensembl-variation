@@ -97,8 +97,9 @@ sub new {
     $desc,
     $study,
     $study_id,
+    $synonyms,
     $display_flag,
-    $has_coverage) = rearrange([qw(dbID adaptor individual individual_id name description study study_id display has_coverage)], @_);
+    $has_coverage) = rearrange([qw(dbID adaptor individual individual_id name description study study_id synonyms display has_coverage)], @_);
 
   $display_flag ||= 'UNDISPLAYABLE'; 
 
@@ -111,6 +112,7 @@ sub new {
     'description' => $desc,
     'study' => $study,
     'study_id' => $study_id,
+    'synonyms' => $synonyms || {},
     'display' => $display_flag,
     'has_coverage' => $has_coverage,
   }, $class;
@@ -138,6 +140,49 @@ sub name {
   return $self->{'name'} = shift if (@_);
   return $self->{'name'};
 }
+
+# get_all_synonyms
+sub get_all_synonyms {
+  my $self = shift;
+  my $source = shift;
+
+  if ($source) {
+    $source = [$source];
+  } else {
+    $source = $self->get_all_synonym_sources();
+  }
+
+  my @synonyms;
+  map { push ( @synonyms, keys ( %{$self->{synonyms}{$_} } ) ) } @{$source};
+
+  return \@synonyms;
+}
+
+# get_all_synonym_sources
+sub get_all_synonym_sources {
+  my $self = shift;
+  my @sources = keys %{$self->{'synonyms'}};
+  return \@sources;
+}
+
+# add_synonym
+
+sub add_synonym {
+  my $self = shift;
+  my $source = shift;
+  my $synonym = shift;
+
+  throw("source argument is required") if (!$source);
+  throw("synonym argument is required") if (!$synonym);
+
+  $self->{'synonyms'}{$source}{$synonym}++;
+
+  return;
+}
+
+
+
+
 
 =head2 description
   Arg [1]    : String $description (optional)
