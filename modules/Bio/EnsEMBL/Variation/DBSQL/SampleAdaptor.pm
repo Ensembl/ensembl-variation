@@ -136,9 +136,39 @@ sub store {
 			$population->dbID
 		);
 	}
-	
+
+	# store synonyms
+	$sth = $dbh->prepare(q{
+		INSERT INTO sample_synonym (
+			sample_id,
+      source_id,
+      name
+		) VALUES (?, ?, ?)
+	});
+
+  my $source_adaptor = $self->db->get_SourceAdaptor();
+
+  foreach my $source_name (keys %{$sample->{'synonyms'}}) {
+    my $source = $self->{'sources'}->{$source_name};
+    if (!$source) {
+      $source = $source_adaptor->fetch_by_name($source_name);
+      $self->{'sources'}->{$source_name} = $source;
+    }   
+    my $source_id = $source->dbID;
+    foreach my $synonym_name (keys %{$sample->{'synonyms'}->{$source_name}}) {
+		  $sth->execute(
+			  $sample->dbID,
+			  $source_id,
+        $synonym_name
+		  );
+    }
+  }
+
 	$sth->finish;
+
 }
+
+
 
 =head2 fetch_by_synonym
 
@@ -237,19 +267,13 @@ sub fetch_synonyms {
 sub fetch_all_by_name {
   my $self = shift;
   my $name = shift;
-
   defined($name) || throw("Name argument expected.");
 
-  my $sth = $self->prepare(q{
-    SELECT sample_id, individual_id, name, description, study_id, display, has_coverage
-    FROM   sample
-    WHERE  name = ?;});
+  my $constraint = qq{s.name = ?};
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+  my $result = $self->generic_fetch($constraint);
 
-  $sth->bind_param(1, $name, SQL_VARCHAR);
-  $sth->execute();
-  my $samples =  $self->_objs_from_sth($sth);
-  $sth->finish();
-  return $samples;
+  return $result;
 }
 
 =head2 fetch_all_by_name_list
@@ -465,47 +489,96 @@ sub fetch_reference_strain {
   return $strains->[0];
 }
 
-
-#
-# private method, constructs Samples from an executed statement handle
-# ordering of columns must be consistant
-#
-sub _objs_from_sth {
-  my $self = shift;
-  my $sth = shift;
-
-  my ($dbID, $individual_id, $name, $desc, $study_id, $display_flag, $has_coverage);
-  $sth->bind_columns(\$dbID, \$individual_id, \$name, \$desc, \$study_id, \$display_flag, \$has_coverage);
-
-  my %seen;
-  my @samples;
-
-  while ($sth->fetch()) {
-
-    my $sample = $seen{$dbID} ||= Bio::EnsEMBL::Variation::Sample->new(
-      -dbID          => $dbID,
-      -adaptor       => $self,
-      -individual_id => $individual_id,
-      -name          => $name,
-      -description   => $desc,
-      -study_id      => $study_id,
-      -display       => $display_flag,
-      -has_coverage  => $has_coverage,
-    );
-
-    $seen{$dbID} = $sample;
-    push @samples, $sample;
-  }
-
-  return \@samples;
-}
-
 sub _tables {
-  return (['sample', 's']);
+  my $self = shift;
+  
+  my @tables = (
+    ['sample', 's'],
+    ['sample_synonym', 'ss'],
+    ['source', 's1']
+  );
+
+  return @tables;
 }
 
 sub _columns {
-  return qw(s.sample_id s.individual_id s.name s.description s.study_id s.display s.has_coverage);
+  my $self = shift;
+  my @cols = (
+    's.sample_id',
+    's.individual_id',
+    's.name',
+    's.description',
+    's.study_id',
+    's.display',
+    's.has_coverage',
+    'ss.name AS synonym_name',
+    's1.name AS synonym_source_name',
+  );
+  return @cols;
+}
+
+sub _left_join {
+  my $self = shift;
+
+  my @left_join = (
+    ['sample_synonym', 's.sample_id = ss.sample_id'],
+    ['source s1', 'ss.source_id = s1.source_id']
+  );
+
+  return @left_join;
+}
+
+sub _objs_from_sth {
+  my ($self, $sth) = @_;
+
+  my %row;
+
+  # Create the row hash using column names as keys
+  $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));
+
+  while ($sth->fetch) {
+    # we don't actually store the returned object because
+    # the _obj_from_row method stores them in a temporary
+    # hash _temp_objs in $self
+    $self->_obj_from_row(\%row);
+  }
+
+  # Get the created objects from the temporary hash
+  my @objs = values %{ $self->{_temp_objs} };
+  delete $self->{_temp_objs};
+
+  # Return the created objects
+  return \@objs;
+}
+
+sub _obj_from_row {
+  my ($self, $row) = @_;
+
+  return undef unless $row->{sample_id};
+
+  # If the sample for this sample_id hasn't already been created, do that
+  my $obj = $self->{_temp_objs}{$row->{sample_id}};
+
+  unless (defined($obj)) {
+    # Create the variation object
+    $obj = Bio::EnsEMBL::Variation::Sample->new(
+      -adaptor => $self,
+      -dbID => $row->{sample_id},
+      -individual_id => $row->{individual_id},            
+      -name => $row->{name},
+      -description => $row->{description},
+      -study_id => $row->{study_id},
+      -display => $row->{display},
+      -has_coverage => $row->{has_coverage}
+    );
+    $self->{_temp_objs}{$row->{sample_id}} = $obj;
+  }
+
+  # Add a synonym if available
+  if (defined($row->{synonym_source_name}) && defined($row->{synonym_name})) {
+    $obj->add_synonym($row->{synonym_source_name}, $row->{synonym_name});
+  }
+
 }
 
 1;
