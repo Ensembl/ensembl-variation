@@ -165,64 +165,97 @@ sub store {
   }
 
 	$sth->finish;
-
 }
 
+sub update {
+  my ($self, $sample) = @_;
 
+  my $dbh = $self->dbc->db_handle;
+
+	# store synonyms
+  my $sth = $dbh->prepare(q{
+		INSERT INTO sample_synonym (
+			sample_id,
+      source_id,
+      name
+		) VALUES (?, ?, ?)
+	});
+
+  # update synonyms
+  my $source_adaptor = $self->db->get_SourceAdaptor();
+
+  foreach my $source_name (keys %{$sample->{'synonyms'}}) {
+    my $source = $self->{'sources'}->{$source_name};
+    if (!$source) {
+      $source = $source_adaptor->fetch_by_name($source_name);
+      $self->{'sources'}->{$source_name} = $source;
+    }   
+    my $source_id = $source->dbID;
+    foreach my $synonym_name (keys %{$sample->{'synonyms'}->{$source_name}}) {
+      my $already_in_db = $self->fetch_synonyms($sample->dbID, $source_name);
+      my ($synonym) = grep {$_ eq $synonym_name} @$already_in_db;
+      if (!$synonym) {
+		    $sth->execute(
+			    $sample->dbID,
+			    $source_id,
+          $synonym_name
+		    );
+      }
+    }
+  } 
+  $sth->finish;
+}
 
 =head2 fetch_by_synonym
 
-    Arg [1]              : String $sample_synonym
-    Arg [2]              : String $source (optional)
-    Example              : my $ind = $sample_adaptor->fetch_by_synonym($sample_synonym, $source);
-    Description          : Retrieves sample for the synonym given in the source. If no source is provided, retrieves all the synonyms
-    Returntype           : listref of Bio::EnsEMBL::Variation::Sample objects
-    Exceptions           : none
-    Caller               : general
-    Status               : At Risk
+  Arg [1]     : String $sample_synonym
+  Arg [2]     : String $source_name (optional)
+  Example     : my $sample = $sample_adaptor->fetch_by_synonym($sample_synonym, $source_name);
+  Description : Retrieves sample for the synonym and optional source name given. If no source is provided, retrieves all the synonyms
+  Returntype  : Listref of Bio::EnsEMBL::Variation::Sample objects
+  Exceptions  : Throws on missing synonym name and on wrong source name (Source name couldn't be found in database)
+  Caller      : General
+  Status      : Stable
 
 =cut
 
 sub fetch_by_synonym {
   my $self = shift;
   my $synonym_name = shift;
-  my $source = shift;
-  my ($samples, $sample_ids, $sample_id);
-  my $sql;
-  if (defined $source) {
-    $sql = qq{ SELECT syn.sample_id 
-               FROM sample_synonym syn, source s
-               WHERE syn.name = ? and syn.source_id = s.source_id AND s.name = "$source"};
+  my $source_name = shift;
+
+  if (!defined($synonym_name)) {
+    throw("Synonym name argument is required");
   }
-  else {
-    $sql = qq{ SELECT sample_id FROM sample_synonym WHERE name = ?};
-  }
-  my $sth = $self->prepare($sql);
-  $sth->bind_param(1, $synonym_name, SQL_VARCHAR);
-  $sth->execute();    
-  $sth->bind_columns(\$sample_id);
-  while ($sth->fetch()) {
-    push @{$sample_ids}, $sample_id;
+  my $constraint = '';
+  if ($synonym_name && $source_name) {
+    my $source_adaptor = $self->db->get_SourceAdaptor();
+    my $source = $source_adaptor->fetch_by_name($source_name);
+    throw("Source name could not be found in the database") if (!$source);
+    $constraint = qq{ss.name = ? AND ss.source_id = ?};
+    $self->bind_param_generic_fetch($synonym_name, SQL_VARCHAR);
+    $self->bind_param_generic_fetch($source->dbID, SQL_INTEGER);
+  } else {
+    $constraint = qq{ss.name = ?};
+    $self->bind_param_generic_fetch($synonym_name, SQL_VARCHAR);
   }
 
-  foreach my $sample_id (@{$sample_ids}) {
-    my $sample = $self->fetch_by_dbID($sample_id);
-    push @{$samples}, $sample;
-  }
-  return $samples;
+  my $result = $self->generic_fetch($constraint);
+
+  return $result;
 }
 
 =head2 fetch_synonyms
 
-    Arg [1]              : $sample_id
-    Arg [2] (optional)   : $source
-    Example              : my $dbSNP_synonyms = $sample_adaptor->fetch_synonyms($sample_id, $dbSNP);
-                           my $all_synonyms = $sample_adaptor->fetch_synonyms($sample_id);
-    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the sample_id
-    Returntype : listref of strings
-    Exceptions : none
-    Caller     : general
-    Status     : Stable
+  Arg [1]            : $sample_id
+  Arg [2] (optional) : $source
+  Example            : my $dbSNP_synonyms = $sample_adaptor->fetch_synonyms($sample_id, $dbSNP);
+                       my $all_synonyms = $sample_adaptor->fetch_synonyms($sample_id);
+  Description        : Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the sample_id
+  Returntype         : Listref of strings
+  Exceptions         : None
+  Caller             : General
+  Status             : Stable
 
 =cut
 
@@ -251,15 +284,15 @@ sub fetch_synonyms {
 
 =head2 fetch_all_by_name
 
-  Arg [1]    : string $name 
+  Arg [1]    : String $name 
                The name of the samples to retrieve.
   Example    : my @samples = @{$sample_adaptor->fetch_all_by_name('CEPH1332.05')};
   Description: Retrieves all samples with a specified name. Sample
                names may be non-unique which is why this method returns a
                reference to a list.
-  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
-  Exceptions : throw if no argument passed
-  Caller     : general
+  Returntype : Listref of Bio::EnsEMBL::Variation::Sample objects
+  Exceptions : Throw if no argument passed
+  Caller     : General
   Status     : Stable
 
 =cut
@@ -277,13 +310,12 @@ sub fetch_all_by_name {
 }
 
 =head2 fetch_all_by_name_list
-
-  Arg [1]    : listref of samples names
+  Arg [1]    : Listref of samples names
   Example    : $samples = $sample_adaptor->fetch_all_by_name_list(["NA12347", "NA12348"]);
   Description: Retrieves a listref of Sample objects via a list of names
-  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
-  Exceptions : throw if list argument is not defined
-  Caller     : general
+  Returntype : Listref of Bio::EnsEMBL::Variation::Sample objects
+  Exceptions : Throw if list argument is not defined
+  Caller     : General
   Status     : Stable
 
 =cut
@@ -300,7 +332,7 @@ sub fetch_all_by_name_list {
   
   my $id_str = (@$list > 1)  ? " IN (". join(',', map {'"'.$_.'"'} @$list).")" : ' = \''.$list->[0].'\'';
   
-  return $self->generic_fetch("name" . $id_str);
+  return $self->generic_fetch("s.name" . $id_str);
 }
 
 =head2 fetch_all_by_Population
@@ -311,10 +343,10 @@ sub fetch_all_by_name_list {
                  print $sample->name(), "\n";
                }
   Description: Retrieves all samples from a specified population 
-  Returntype : listref of Bio::EnsEMBL::Variation::Sample objects
-  Exceptions : throw if incorrect argument is passed
-               warning if provided Population does not have an dbID
-  Caller     : general
+  Returntype : Listref of Bio::EnsEMBL::Variation::Sample objects
+  Exceptions : Throw if incorrect argument is passed
+               Warning if provided Population does not have an dbID
+  Caller     : General
   Status     : Stable
 
 =cut
@@ -332,17 +364,20 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  my $sth = $self->prepare(q{
-    SELECT s.sample_id, s.individual_id, s.name, s.description, s.study_id, s.display, s.has_coverage 
-    FROM   sample s, sample_population sp
-    WHERE  s.sample_id = sp.sample_id
-    AND    sp.population_id = ?});
+  $self->{'_constrain_population'} = 1;
 
-  $sth->bind_param(1, $pop->dbID, SQL_INTEGER);
-  $sth->execute();
-  my $samples = $self->_objs_from_sth($sth);
-  $sth->finish();
-  return $samples;
+    # Add a constraint on the subsnp_id
+  my $constraint = qq{sp.population_id = ?};
+
+    # Bind the parameters
+  $self->bind_param_generic_fetch($pop->dbID, SQL_INTEGER);
+
+    # Get the results from generic fetch method
+  my $result = $self->generic_fetch($constraint);
+
+  delete($self->{'_constrain_population'});
+
+  return $result;
 }
 
 sub _get_name_by_dbID {
@@ -498,6 +533,8 @@ sub _tables {
     ['source', 's1']
   );
 
+  push(@tables, ['sample_population', 'sp']) if ($self->{'_constrain_population'});
+
   return @tables;
 }
 
@@ -524,6 +561,8 @@ sub _left_join {
     ['sample_synonym', 's.sample_id = ss.sample_id'],
     ['source s1', 'ss.source_id = s1.source_id']
   );
+
+  push (@left_join, ['sample_population', 's.sample_id = sp.sample_id']) if ($self->{'_constrain_population'});
 
   return @left_join;
 }
