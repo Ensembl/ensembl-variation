@@ -29,8 +29,6 @@ limitations under the License.
 
 #
 # Ensembl module for Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor
-#
-#
 
 =head1 NAME
 
@@ -204,6 +202,27 @@ sub update {
     }
   } 
   $sth->finish;
+
+  # update sample_population
+	$sth = $dbh->prepare(q{
+		INSERT INTO sample_population (
+			sample_id,
+			population_id
+		) VALUES (?,?)
+	});
+	
+	foreach my $population (@{$sample->{populations}}) {
+    my $samples = $self->fetch_all_by_Population($population);
+    my ($thisSample) = grep {$_->dbID eq $sample->dbID} @$samples;
+    if (!$thisSample) {
+		  $sth->execute(
+			  $sample->dbID,
+			  $population->dbID
+		  );
+    }
+	}
+  $sth->finish;
+
 }
 
 =head2 fetch_by_synonym
