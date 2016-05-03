@@ -181,9 +181,6 @@ sub add_synonym {
 }
 
 
-
-
-
 =head2 description
   Arg [1]    : String $description (optional)
                The new value to set the description attribute to
@@ -329,5 +326,26 @@ sub get_all_Populations {
   }
   return $self->{populations};
 }
+
+=head2 add_Population
+   Args        : Bio::EnsEMBL::Variation::Population
+   Example     : $sample->add_Population($population);
+   Description : Define populations to which the sample belongs
+   ReturnType  : None
+   Exceptions  : Throw on wrong argument
+   Caller      : General
+   Status      : Stable
+=cut
+
+sub add_Population {
+  my $self = shift;
+  my $population = shift;
+  if (!$population || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw("Bio::EnsEMBL::Variation::Population argument expected");
+  }
+  push @{$self->{populations}}, $population;
+  return;
+}
+
 
 1;
