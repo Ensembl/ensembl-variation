@@ -204,4 +204,13 @@ $sample = $sa->fetch_all_by_name('test_sample5')->[0];
 ($synonym) = grep {$_ eq 'synonym_test_sample5'} @synonyms;
 is($synonym, 'synonym_test_sample5', 'get_all_synonyms after store');
 
+$sample->add_synonym('dbSNP', 'synonym_test2_sample5');
+
+$sa->update($sample);
+
+$sample = $sa->fetch_all_by_name('test_sample5')->[0];
+@synonyms = @{$sample->get_all_synonyms('dbSNP')};
+($synonym) = grep {$_ eq 'synonym_test2_sample5'} @synonyms;
+is($synonym, 'synonym_test2_sample5', 'get_all_synonyms after update');
+
 done_testing();
