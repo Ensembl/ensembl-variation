@@ -213,4 +213,15 @@ $sample = $sa->fetch_all_by_name('test_sample5')->[0];
 ($synonym) = grep {$_ eq 'synonym_test2_sample5'} @synonyms;
 is($synonym, 'synonym_test2_sample5', 'get_all_synonyms after update');
 
+$sample = $sa->fetch_by_dbID(101549);
+my $populations = $sample->get_all_Populations;
+is(scalar @$populations, 3, 'count get_all_Populations');
+
+my $population = $pa->fetch_by_dbID(649);
+$sample->add_Population($population);
+$sa->update($sample);
+$sample = $sa->fetch_by_dbID(101549);
+$populations = $sample->get_all_Populations;
+is(scalar @$populations, 4, 'count get_all_Populations after update');
+
 done_testing();
