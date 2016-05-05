@@ -98,7 +98,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand); 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -1762,31 +1762,36 @@ sub _get_flank_seq{
   # Get the underlying slice and sequence
   my $ref_slice = $self->slice();
 
+  #### find flank size needed for checking
+  my $add_length = 100;  ## allow at least 100 for 3'shifting
   my @allele = split(/\//,$self->allele_string());
-  #### add flank at least as long as longest allele to allow checking 
-  my $add_length = 0;
-
-  foreach my $al(@allele){ ## may have >2 alleles
+  foreach my $al(@allele){ ## alleles be longer
     if(length($al) > $add_length){
       $add_length = length $al ;
     }
   }
-  $add_length++;
+ 
 
+  ## start of subseq is var pos minus required flank
+  my $seq_start =  $self->start() - $add_length;
+  my $seq_end   =  $self->end() + $add_length;
+
+  ## variant position relative to flank
   my $ref_start = $add_length ;
-  my $ref_end   = $add_length + ($self->end() - $self->start());
-  my $seq_start = ($self->start() - $ref_start);
+  my $ref_end   = $add_length + $self->end() - $self->start();
 
   # Should we be at the beginning of the sequence, adjust the coordinates to not cause an exception
   if ($seq_start < 0) {
+#    print "Adjusting negative start\n";
     $ref_start += $seq_start;
     $ref_end   += $seq_start;
     $seq_start  = 0;
   }
-
-  my $ss = $ref_slice->sub_Slice($seq_start +1 , $seq_start + $ref_end, 1);
-  my $flank_seq = $ss ? $ss->seq : $ref_slice->subseq($seq_start +1 , $seq_start + $ref_end, 1);
-
+# print "Getting sub slice $seq_start => $seq_start + $ref_end \n";
+#  my $ss = $ref_slice->sub_Slice($seq_start +1 , $seq_start + $ref_end, 1);
+#  my $flank_seq = $ss ? $ss->seq : $ref_slice->subseq($seq_start +1 , $seq_end, 1);
+  my $flank_seq = $ref_slice->subseq($seq_start +1, $seq_end, 1);
+#print "returning flank: $flank_seq, start: $seq_start, and: $seq_end  with length: ". length($flank_seq) . " var at $ref_start\n";
   return ($flank_seq, $ref_start, $ref_end );
 }
 
@@ -1823,17 +1828,22 @@ sub hgvs_genomic {
   my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
   my $use_allele       = shift;    ## optional single allele to check
 
+  $ref_feature  = $self unless defined $ref_feature;
   my %hgvs;
+
   ########set up sequence reference
   my $ref_slice;  #### need this for genomic notation
 
-  if ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
+  if ( $ref_feature && $ref_feature->isa('Bio::EnsEMBL::Slice')) {
     $ref_slice = $ref_feature;
   }
-  else {	
-    # get slice if not supplied
+  elsif($ref_feature) {
     $ref_slice = $ref_feature->feature_Slice;	    
   }         
+  else{
+    $ref_slice =  $self->slice;
+  }
+
 
   my $tr_vf = $self;
   my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
@@ -1855,11 +1865,13 @@ sub hgvs_genomic {
   $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && 
   $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
 
+  my $vf_strand = $self->strand();
+
   ##### get short flank sequence for duplication checking & adjusted variation coordinates
   my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);
 
   my @all_alleles = split(/\//,$tr_vf->allele_string());    
-  shift @all_alleles;  ## remove reference allele - not useful for HGVS
+  my $ref_allele = shift @all_alleles;  ## remove reference allele - not useful for HGVS
 
   foreach my $allele ( @all_alleles ) {
 
@@ -1871,26 +1883,71 @@ sub hgvs_genomic {
     # Skip if the allele contains weird characters
     next if $allele =~ m/[^ACGT\-]/ig;   
 
-    ##### vf strand is relative to slice - if transcript feature slice, may need complimenting
     my $check_allele = $allele;
+    ##### vf strand is relative to slice - if transcript feature slice, may need complimenting
+    my $flip_allele = 0;
     if(
-      $self->strand() <0 && $ref_slice->strand >0 ||
-      $self->strand() >0 && $ref_slice->strand < 0
+      $vf_strand <0 && $ref_slice->strand >0 ||
+      $vf_strand >0 && $ref_slice->strand < 0
     ){	    
-      reverse_comp(\$check_allele);
-      if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
+     # reverse_comp(\$check_allele);
+
+      $flip_allele = 1;
+      #if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
     }
 
     my $chr_start = $tr_vf->seq_region_start();
     my $chr_end   = $tr_vf->seq_region_end();
 
+    
+    ### Apply HGVS 3' shift if required
+    my $offset = 0;
+    my $var_class  =  $self->var_class();
+    $var_class  =~ s/somatic_//;
+
+    ##  only check insertions & deletions & don't move beyond transcript
+    if(
+      ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
+      (
+        defined $self->adaptor() && 
+        (
+          UNIVERSAL::can($self->adaptor, 'isa') ? 
+          $self->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
+          $Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
+        )
+      )
+    ) {
+
+      my $seq_to_check;
+      ## sequence to compare is the reference allele for deletion
+      $seq_to_check = $ref_allele  if $var_class eq 'deletion' ;
+
+      ## sequence to compare is the alt allele
+      $seq_to_check = $allele      if $var_class eq 'insertion';
+
+      reverse_comp(\$seq_to_check) if $flip_allele ==1;
+
+      ## 3' flanking sequence to check
+      my $downstream_seq = substr($ref_seq ,$ref_end);
+      my $three_prime_allele;
+
+      ($three_prime_allele, $offset ) = get_3prime_seq_offset($seq_to_check, $downstream_seq);
+
+      ##update alt allele if this is an insertion
+      $check_allele = ($var_class eq 'insertion'? $three_prime_allele : "-");
+
+   }
+    else{
+      reverse_comp(\$check_allele) if $flip_allele == 1 ; 
+    }
+
     my $hgvs_notation = hgvs_variant_notation(
       $check_allele,          ## alt allele in refseq strand orientation
       $ref_seq,               ## substring of slice for ref allele extraction
-      $ref_start,             ## start on substring of slice for ref allele extraction
-      $ref_end,
-      $chr_start,             ## start wrt seq region slice is on (eg. chrom)
-      $chr_end,   
+      $ref_start + $offset,   ## start on substring of slice for ref allele extraction
+      $ref_end + $offset,
+      $chr_start + $offset,   ## start wrt seq region slice is on (eg. chrom)
+      $chr_end + $offset,   
       $self->variation_name() ## for error message 
     );
 

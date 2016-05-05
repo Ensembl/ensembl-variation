@@ -240,4 +240,15 @@ $va->update($upd_var);
 $var = $va->fetch_by_name($upd_name);
 ok($var && $var->name eq $upd_name, "fetch updated");
 
+
+## attrib handling
+$var->update_attributes( {"co-located allele"  => "colo"} );
+ok($var->get_all_attributes()->{"co-located allele"}  eq "colo",  "attribute extraction");
+
+$va->store_attributes($var);
+my $var_up = $va->fetch_by_dbID($var->dbID);
+ok($var_up && $var_up->get_all_attributes()->{"co-located allele"} eq "colo", "fetch updated attribs");
+
+
+
 done_testing();

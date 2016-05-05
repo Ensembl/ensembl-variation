@@ -232,6 +232,35 @@ sub update {
     $sth->finish;
 }
 
+
+sub store_attributes{
+
+    my ($self, $var) = @_;
+
+    my $dbh = $self->dbc->db_handle;
+
+    my $sth = $dbh->prepare(q{
+        INSERT IGNORE INTO variation_attrib
+        ( variation_id, attrib_id, value)
+        VALUES (?,?,?)
+    });
+
+
+    foreach my $attrib ( keys %{$var->{attribs}}){
+
+        my $attrib_id = $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('var_att', $attrib);
+        throw("No ID found for attrib_type ", $attrib) unless defined($attrib_id);
+
+
+        $sth->execute(
+            $var->{dbID},
+            $attrib_id,
+            $var->{attribs}->{$attrib}
+        );
+    }
+    $sth->finish;
+}
+
 =head2 fetch_all
 
   Description: Returns a listref of all germline variations
@@ -1330,9 +1359,9 @@ sub _fetch_attribs_by_dbID {
     my ($key, $value);
 
     $sth->bind_columns(\$key, \$value);
-    $attribs->{$key} = $value while $sth->fetch;
+    $attribs->{$key} .= $value ."," while $sth->fetch;
     $sth->finish;
-
+    $attribs->{$key} =~ s/\,//;
     return $attribs;
 } 
 

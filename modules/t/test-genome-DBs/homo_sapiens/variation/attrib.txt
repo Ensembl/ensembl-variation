@@ -361,3 +361,4 @@
 364	11	not provided
 365	11	association
 366	11	risk factor
+436	508	co-located allele

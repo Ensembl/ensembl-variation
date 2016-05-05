@@ -1399,4 +1399,24 @@ sub get_all_attributes {
     return $self->{attribs};
 }
 
+=head2 update_attributes
+
+Example    : %attribs = $obj->update_attributes(\%attribs);
+Description: Updates the attributes of this Variation 
+             May add new types to pre-existing data; does not over-write
+Returntype : nono
+Exceptions : none
+Caller     : general
+Status     : Experimental
+                                                        
+=cut
+sub update_attributes{
+    my $self       = shift;
+    my $attributes = shift;
+
+    foreach my $attrib_type (keys %$attributes){
+        $self->{attribs}->{$attrib_type} = $attributes->{$attrib_type};
+    }
+}
+
 1;
