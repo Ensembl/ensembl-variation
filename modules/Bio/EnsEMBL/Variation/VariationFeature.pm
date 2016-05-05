@@ -1233,17 +1233,16 @@ sub is_somatic {
   ReturnType  : list of Bio::EnsEMBL::Variation::Population
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub is_tagged{
-    my $self = shift;
+  my $self = shift;
     
-    if ($self->adaptor()){
-	my $population_adaptor = $self->adaptor()->db()->get_PopulationAdaptor();
-	return $population_adaptor->fetch_tagged_Population($self);
-    }
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+    
+	return [];
 }
 
 =head2 is_tag
@@ -1255,17 +1254,16 @@ sub is_tagged{
   ReturnType  : list of Bio::EnsEMBL::Variation::Population
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub is_tag{
-    my $self = shift;
+  my $self = shift;
     
-    if ($self->adaptor()){
-	my $population_adaptor = $self->adaptor()->db()->get_PopulationAdaptor();
-	return $population_adaptor->fetch_tag_Population($self);
-    }
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+    
+	return [];
 }
 
 =head2 get_all_tagged_VariationFeatures
@@ -1277,12 +1275,15 @@ sub is_tag{
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub get_all_tagged_VariationFeatures {
-  return $_[0]->adaptor->fetch_all_tagged_by_VariationFeature(@_);
+
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+    
+	return [];
 }
 
 =head2 get_all_tag_VariationFeatures
@@ -1294,12 +1295,15 @@ sub get_all_tagged_VariationFeatures {
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub get_all_tag_VariationFeatures {
-  return $_[0]->adaptor->fetch_all_tags_by_VariationFeature(@_);
+
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+    
+	return [];
 }
 
 =head2 get_all_tag_and_tagged_VariationFeatures
@@ -1312,14 +1316,16 @@ sub get_all_tag_VariationFeatures {
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub get_all_tag_and_tagged_VariationFeatures {
-  return $_[0]->adaptor->fetch_all_tags_and_tagged_by_VariationFeature(@_);
-}
 
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+    
+	return [];
+}
 
 
 =head2 is_reference

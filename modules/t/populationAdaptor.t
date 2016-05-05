@@ -171,17 +171,9 @@ my $v = $va->fetch_by_name('rs2299222');
 my $vfs = $v->get_all_VariationFeatures;
 my $tag_populations = $pa->fetch_tag_Population($vfs->[0]);
 ok(scalar @$tag_populations == 0, 'fetch_tag_Populations');
-throws_ok { $pa->fetch_tag_Population('variation_feature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'Throw on wrong argument for fetch_tag_Population';
-warns_like {
-  $pa->fetch_tag_Population(Bio::EnsEMBL::Variation::VariationFeature->new());
-} qr/Variation feature does not have dbID, cannot retrieve tag populations/, 'Throw on wrong argument for fetch_tag_Population';
 
 my $tagged_populations = $pa->fetch_tagged_Population($vfs->[0]);
 ok(scalar @$tagged_populations == 0, 'fetch_tagged_Populations');
-throws_ok { $pa->fetch_tagged_Population('variation_feature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'Throw on wrong argument for fetch_tagged_Population';
-warns_like {
-  $pa->fetch_tagged_Population(Bio::EnsEMBL::Variation::VariationFeature->new());
-} qr/Variation feature does not have dbID, cannot retrieve tagged populations/, 'Throw on wrong argument for fetch_tagged_Population';
 
 # store
 $population = $pa->fetch_by_dbID(649);

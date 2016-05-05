@@ -90,7 +90,7 @@ use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Iterator;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code get_hgvs_alleles);
@@ -967,13 +967,16 @@ sub fetch_all_somatic_with_phenotype {
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub fetch_all_tagged_by_VariationFeature {
     my ($self, $vf, $pop) = @_;
-    return $self->_tag_fetch($vf, $pop, 'tagged');
+    
+    deprecate("This method is deprecated: there are no more tagged variation features in Ensembl Variation. This method will be removed in e89\n");
+    
+    return [];
 }
 
 
@@ -986,13 +989,16 @@ sub fetch_all_tagged_by_VariationFeature {
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub fetch_all_tags_by_VariationFeature {
     my ($self, $vf, $pop) = @_;
-    return $self->_tag_fetch($vf, $pop, 'tag');
+    
+    deprecate("This method is deprecated: there are no more tagged variation features in Ensembl Variation. This method will be removed in e89\n");
+    
+    return [];
 }
 
 
@@ -1006,39 +1012,17 @@ sub fetch_all_tags_by_VariationFeature {
   ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : none
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
   
 =cut
 
 sub fetch_all_tags_and_tagged_by_VariationFeature {
     my ($self, $vf, $pop) = @_;
-    my $return = $self->_tag_fetch($vf, $pop, 'tag');
-    push @$return, @{$self->_tag_fetch($vf, $pop, 'tagged')};
-    return $return;
+    
+    deprecate("This method is deprecated: there are no more tagged variation features in Ensembl Variation. This method will be removed in e89\n");
+    
+    return [];
 }
-
-sub _tag_fetch {
-    my ($self, $vf, $pop, $type) = @_;
-    
-    assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
-    assert_ref($pop, 'Bio::EnsEMBL::Variation::Population') if defined $pop;
-    
-    # set a flag to tell the query construction methods to include the tagged_variation_feature table
-    $self->{tag} = $type;
-    
-    # construct a constraint
-    my $opp_type = $type eq 'tag' ? 'tagged_' : '';
-    my $constraint = "tvf.".$opp_type."variation_feature_id = ".$vf->dbID;
-    $constraint .= ' AND tvf.population_id = '.$pop->dbID if defined $pop;
-    
-    # fetch features here so we can reset the tag flag
-    my $features = $self->generic_fetch($constraint);
-
-    delete $self->{tag};
-    
-    return $features;
-}
-
 
 
 =head2 fetch_all_by_Slice_SO_terms
@@ -1263,10 +1247,8 @@ sub _tables {
 		  [ 'source', 's']
 	  );
   }
-   # add bits for tagged variation feature
-   push @tables, ['tagged_variation_feature', 'tvf'] if defined $self->{tag};
 
-   return @tables;
+  return @tables;
 }
 
 
@@ -1274,13 +1256,6 @@ sub _default_where_clause {
   my $self = shift;
   
   my $clause = 'vf.source_id = s.source_id';
-  
-  # add bits for tagged variation feature
-  $clause .=
-    ' AND tvf.'.
-    ($self->{tag} eq 'tagged' ? $self->{tag}.'_' : '').
-    'variation_feature_id = vf.variation_feature_id'
-  if defined $self->{tag};
 
   $clause .= ' AND vf.display = 1 ' unless $self->db->include_failed_variations();
 

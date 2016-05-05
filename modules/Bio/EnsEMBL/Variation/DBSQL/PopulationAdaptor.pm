@@ -77,7 +77,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
 
 use Bio::EnsEMBL::Variation::Population;
@@ -682,35 +682,16 @@ sub fetch_all_by_Sample_list {
   Exceptions  : throw if incorrect argument is passed
                 warning if provided variation feature does not have a dbID
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
 
 =cut
 
 sub fetch_tagged_Population {
   my $self = shift;
-  my $variation_feature = shift;
-
-  if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
-  }
-
-  if (!$variation_feature->dbID()) {
-    warning("Variation feature does not have dbID, cannot retrieve tagged populations");
-    return [];
-  } 
-
-  my $sth = $self->prepare(qq{
-    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-    FROM tagged_variation_feature tvf, population p
-    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-    WHERE p.population_id = tvf.population_id
-    AND   tvf.tagged_variation_feature_id = ?
-  });
-  $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
-  $sth->execute();
-  my $populations = $self->_objs_from_sth($sth);
-  $sth->finish();
-  return $populations;
+  
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+  
+  return [];
 }
 
 =head2 fetch_tag_Population
@@ -726,35 +707,16 @@ sub fetch_tagged_Population {
   Exceptions  : throw if incorrect argument is passed
                 warning if provided variation feature does not have a dbID
   Caller      : general
-  Status      : At Risk
+  Status      : DEPRECATED
 
 =cut
 
 sub fetch_tag_Population {
   my $self = shift;
-  my $variation_feature = shift;
-
-  if (!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-    throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
-  }
-
-  if (!$variation_feature->dbID()) {
-    warning("Variation feature does not have dbID, cannot retrieve tag populations");
-    return [];
-  } 
-
-  my $sth = $self->prepare(qq{
-    SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
-    FROM tagged_variation_feature tvf, population p 
-    LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
-    WHERE p.population_id = tvf.population_id
-    AND   tvf.variation_feature_id = ?
-  });
-  $sth->bind_param(1, $variation_feature->dbID, SQL_INTEGER);
-  $sth->execute();
-  my $populations = $self->_objs_from_sth($sth);
-  $sth->finish();
-  return $populations;
+  
+  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
+  
+  return [];
 }
 
 =head2 get_dbIDs_for_population_names

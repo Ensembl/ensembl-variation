@@ -131,7 +131,6 @@ CREATE TABLE variation_attrib (
 @column display                Flags whether this variation should be displayed in browser tracks and returned by default by the API
 
 @see variation
-@see tagged_variation_feature
 @see transcript_variation
 @see seq_region
 @see attrib
@@ -554,30 +553,6 @@ CREATE TABLE coord_system (
 );
 
 
-/**
-@table tagged_variation_feature
-
-@desc This table lists variation feature IDs that are tagged by another variation feature ID. Tag pairs are defined as having an r<sup>2</sup> &gt; 0.99.
-
-@column variation_feature_id		Foreign key references to the @link variation_feature table.
-@column tagged_variation_feature_id	Foreign key references to the @link variation_feature table.
-@column population_id			    Foreign key references to the @link population table.
-
-@see variation_feature
-@see population
-*/
-
-CREATE TABLE tagged_variation_feature (
-  variation_feature_id int(10) unsigned NOT NULL,
-  tagged_variation_feature_id int(10) unsigned DEFAULT NULL,
-  population_id int(10) unsigned NOT NULL,
-  KEY tag_idx (variation_feature_id),
-  KEY tagged_idx (tagged_variation_feature_id),
-  KEY population_idx (population_id)
-);
-
-
-
 
 /**
 @header  Sample tables
@@ -606,7 +581,6 @@ CREATE TABLE tagged_variation_feature (
 @see population_structure
 @see population_genotype
 @see allele
-@see tagged_variation_feature
 @see display_group
 */
 
@@ -1779,6 +1753,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|create sample_synonym');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|drop column moltype from variation_synonym');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_d.sql|Making attrib_id auto_increment');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_e.sql|drop the table tagged_variation_feature');
 
 
 /**
