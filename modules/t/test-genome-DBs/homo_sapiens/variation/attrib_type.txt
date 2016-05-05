@@ -31,3 +31,5 @@
 423	based_on	Evidence type used for protein impact prediction	Evidence type used for a PolyPhen protein impact prediction
 424	conservation_score	Sift conservation score	Median conservation value in an alignment used to make a Sift prediction
 421	review_status	ClinVar review_status	ClinVar review_status for assertation
+508	var_att	variation_attrib	An attribute of a variation
+509	ontology_mapping	Ontology Mapping	Method used to link a description to an ontology term 

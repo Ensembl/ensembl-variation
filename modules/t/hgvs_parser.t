@@ -45,7 +45,7 @@ use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
 my $DEBUG = 0;
 
 
-##  DATA:  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description, 3'shifted_genomic] 
+##  DATA:  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description, shifted_genomic_allele] 
 
 my @test_input = (    
           ["2:g.46746465G>A",    
@@ -211,14 +211,6 @@ my @test_input = (
            "duplication, frameshift"
           ],
                
-          ["19:g.48836478_48836480delAGG", 
-           "-",
-           "ENST00000293261.2:c.1376_1378delCCT", 
-           "-",
-           "ENSP00000293261.2:p.Ser459del", 
-           "deletion, inframe codon loss"
-          ],       
-         
           ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
            "CAGGACGTGGGCGTG",
            "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
@@ -294,6 +286,13 @@ my @test_input2 = (
            "",
            "insertion, coding intron downstream"
           ],
+          ["19:g.48836478_48836480delAGG",  ## rs149734771
+           "-",
+           "ENST00000293261.2:c.1376_1378delCCT",
+           "-",
+           "ENSP00000293261.2:p.Ser459del",
+           "deletion, inframe codon loss"
+          ],
 
 #          ["3:g.10191476_10191484delACTCTGAAA",
 #           "ACTCTGAAA",
@@ -306,21 +305,21 @@ my @test_input2 = (
 
 ## results which change on left-shifting - shifted
 my @test_input3 = (    
-          ["X:g.131215393dupA",
+          ["X:g.131215392_131215393insA",
            "A",
            "ENST00000298542.4:c.905+998dupT", 
            "T",
            "",
            "duplication, intronic rc transcript",
-           "X:g.131215392_131215393insA",
+           "X:g.131215401dupA",
           ],    
-          ["11:g.32417913_32417914insCCTACGAGTACTACC",
-           "CCTACGAGTACTACC", 
+          ["11:g.32417910_32417911insACCCCTACGAGTACT",
+           "ACCCCTACGAGTACT", 
            "ENST00000530998.1:c.454_455insAGTACTCGTAGGGGT",
            "AGTACTCGTAGGGGT", 
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
            "insertion, stop gained [-1]",
-           "11:g.32417910_32417911insACCCCTACGAGTACT"      
+           "11:g.32417913_32417914insCCTACGAGTACTACC"
            ],
 
            ["13:g.51519667_51519668insG",
@@ -332,7 +331,7 @@ my @test_input3 = (
            "13:g.51519669dupG"
            ],
 
-          ["6:g.30558477_30558478insA",
+          ["6:g.30558478dupA",
            "A",
            "ENST00000396515.3:c.717dupA",
            "A",
@@ -341,13 +340,13 @@ my @test_input3 = (
            "6:g.30558478dupA"
           ],
 
-          ["1:g.154140413_154140415delTTA",
+          ["1:g.154140412_154140414delATT",  ##rs121964851
            "-", 
            "ENST00000368530.2:c.857_*1delAAT",
            "-",
            "",
            "deletion, stop loss unless shifted",
-           "1:g.154140412_154140414delATT"
+           "1:g.154140414_154140416delTAT"
           ],
 
           ["12:g.102061070_102061071insT",
@@ -357,6 +356,14 @@ my @test_input3 = (
            "",
            "insertion, coding intron downstream",
            "12:g.102061071dupT"
+          ],
+          ["19:g.48836480_48836482delGAG",  ## rs149734771
+           "-",
+           "ENST00000293261.2:c.1376_1378delCCT",
+           "-",
+           "ENSP00000293261.2:p.Ser459del",
+           "deletion, inframe codon loss",
+           "19:g.48836480_48836482delGAG"
           ],
          
     );
@@ -386,7 +393,7 @@ sub get_results{
     
     foreach my $line(@{$input}){
         
-        if($DEBUG==1){     print "\n\n\nStarting $line->[0]/ $line->[2] shift: $shift_it\n";}
+        if($DEBUG==1){     print "\n\n\nStarting $line->[0]/ $line->[2] is_shifted: $shift_it\n";}
         
         ## create variation feature from hgvs string
         
@@ -397,13 +404,11 @@ sub get_results{
             $variation_feature_g = $variationfeature_adaptor->fetch_by_hgvs_notation( $line->[0] );
         };
         unless($@ eq ""){print "fetch genomic error : $@\n";}
-        
-        test_output($variation_feature_g, "genomic", $line, $line->[1], $line->[0], $transcript_adaptor );
-        
-        
-        ## replace with shifted genomic position if needed for transcript/ protein checks
-        my $expected_genomic = $line->[0];
-        $expected_genomic = $line->[6] if defined  $line->[6];
+
+        ## use genomic with shifted position version where neccessary
+        my $expected_genomic = (defined  $line->[6] && $shift_it == 1) ? $line->[6] : $line->[0];
+
+        test_output($variation_feature_g, "genomic", $line, $line->[1], $expected_genomic, $transcript_adaptor );
         
         
         ### Some will have transcript nomenclature
@@ -441,7 +446,7 @@ sub test_output{
     my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
 
     ok(  $expected_genomic eq $hgvs_genomic->{$allele} , "$input_type -> genomic - $line->[5]  [ $expected_genomic] ");
-    if($DEBUG==1){print "TEMP: $line->[0] =>gen\t returns: $hgvs_genomic->{$allele} allele:$allele\n";}             
+    if($DEBUG==1){print "TEMP: $input_type =>gen; expected $expected_genomic\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";}             
 
     
     ##### transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference  
@@ -453,7 +458,7 @@ sub test_output{
       my $hgvs_coding      = $variation_feature->get_all_hgvs_notations($transcript, "c");
 
       ok( $line->[2] eq $hgvs_coding->{$allele} , "$input_type -> transcr - $line->[5] [$line->[2]]");
-      if($DEBUG==1){  print "TEMP: $line->[2] => trans\t returns: $hgvs_coding->{$allele} [allele:$allele]\n";}
+      if($DEBUG==1){  print "TEMP: $input_type => trans; expected $line->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
 
 
       if( $line->[4] =~/\w+/){
@@ -467,7 +472,7 @@ sub test_output{
         
           my $hgvs_protein  = $variation_feature->get_all_hgvs_notations($transcript,  "p",  $transcript_name,  "",  $transcript_variation  );
           ok( $line->[4] eq $hgvs_protein->{$allele} , "$input_type -> protein - $line->[5] [$line->[4]]");
-          if($DEBUG==1){   print "TEMP: $line->[4] => prot\t returns: $hgvs_protein->{$allele} allele:$allele\n";}
+          if($DEBUG==1){   print "TEMP: $input_type => prot; expected $line->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}
         }
       }
     }

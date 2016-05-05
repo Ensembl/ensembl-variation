@@ -72,7 +72,7 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string get_3prime_seq_offset);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within_intron stop_lost affects_start_codon frameshift stop_retained);
 
@@ -891,7 +891,7 @@ sub _hgvs_tva {
 
       ## run check
       my $allele;
-      ( $allele, $offset ) =  $self->_get_3prime_offset($post_seq, $seq_to_check);
+      ( $allele, $offset ) = get_3prime_seq_offset($seq_to_check, $post_seq );
       print "got allele & offset  $allele, $offset length checked:". length($post_seq) ."\n" if $DEBUG ==1;
       ## correct allele for strand
       reverse_comp(\$allele)   if $allele_flipped == 1;
@@ -1678,44 +1678,6 @@ sub _shift_3prime{
   
   return $hgvs_notation;
 }
-
-sub _get_3prime_offset{
-
-  my $self          = shift;
-  my $post_seq      = shift;
-  my $seq_to_check  = shift;;
-
-  my $offset = 0;
-
-  return ($seq_to_check, $offset)  unless defined  $post_seq;
-
-  ## get length of pattern to check 
-  my $deleted_length = (length $seq_to_check);
-
-  ## move along sequence after deletion looking for match to start of deletion
-  for (my $n = 0; $n<= (length($post_seq) - $deleted_length); $n++ ){
-
-    ## check each position in deletion/ following seq for match
-    my $check_next_al  = substr( $seq_to_check, 0, 1);
-    my $check_next_ref = substr( $post_seq, $n, 1);
-
-    if($check_next_al eq $check_next_ref){
-
-      ## move position of deletion along
-      $offset++;
-
-      ## modify deleted sequence - remove start & append to end
-      $seq_to_check = substr($seq_to_check,1);
-      $seq_to_check .= $check_next_ref;
-    }
-    else{
-      last;	    
-    }
-  }
-
-  return ($seq_to_check, $offset);
-}
-
 =head
 # We haven't implemented support for these methods yet
 
