@@ -1381,56 +1381,67 @@ sub parse_ddg2p {
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
   }
   
+  my %headers;
+  
   # Read through the file and parse out the desired fields
   while (<IN>) {
-    next if /^track/;
     chomp;
 
     my @data = split /\t/, $_;
+    foreach my $col (@data) {
+      $col =~ s/"//g;
+    }
+    
+    # header
+    if(/^"gene symbol"/) {
+      $headers{$data[$_]} = $_ for 0..$#data;
+    }
+    else {
 
-    # get coords
-    my ($c, $s, $e) = @data[0..2];
-    $c =~ s/chr//i;
+      my %content;
+      $content{$_} = $data[$headers{$_}] for keys %headers;
+      
+      # get data from the line
+      my $symbol  = $content{'gene symbol'};
+      my $allelic = $content{'allelic requirement'};
+      my $mode    = $content{'mutation consequence'};
+      my $phen    = $content{'disease name'};
+      my $id      = $content{'disease mim'};
 
-    # bed is 0-indexed
-    $s++;
+      if($symbol && $phen) {
+        $phen =~ s/\_/ /g;
 
-    # get phenotype details from BED column
-    my ($symbol,$allelic,$mode,$status,$phen,$id) = split /\|/, $data[3];
+        my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
 
-    if($symbol && $phen) {
-      $phen =~ s/\_/ /g;
+        # we don't want any LRG genes
+        @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
 
-      my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
+        # try restricting by name
+        if(scalar(@$genes) > 1) {
+          my @tmp = grep {$_->external_name eq $symbol} @$genes;
+          $genes = \@tmp if scalar @tmp;
+        }
 
-      # we don't want any LRG genes
-      @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+        if(scalar @$genes != 1) {
+          $DB::single = 1;
+          print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
+        }
 
-      # try restricting by name
-      if(scalar(@$genes) > 1) {
-        my @tmp = grep {$_->external_name eq $symbol} @$genes;
-        $genes = \@tmp if scalar @tmp;
-      }
+        next unless scalar @$genes;
 
-      if(scalar @$genes != 1) {
-        $DB::single = 1;
-        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
-      }
-
-      next unless scalar @$genes;
-
-      foreach my $gene(@$genes) {
-        push @phenotypes, {
-          'id' => $gene->stable_id,
-          'description' => $phen,
-          'external_id' => $id,
-          'seq_region_id' => $gene->slice->get_seq_region_id,
-          'seq_region_start' => $gene->seq_region_start,
-          'seq_region_end' => $gene->seq_region_end,
-          'seq_region_strand' => $gene->seq_region_strand,
-          'mutation_consequence' => $mode,
-          'inheritance_type' => $allelic,
-        };
+        foreach my $gene(@$genes) {
+          push @phenotypes, {
+            'id' => $gene->stable_id,
+            'description' => $phen,
+            'external_id' => $id,
+            'seq_region_id' => $gene->slice->get_seq_region_id,
+            'seq_region_start' => $gene->seq_region_start,
+            'seq_region_end' => $gene->seq_region_end,
+            'seq_region_strand' => $gene->seq_region_strand,
+            'mutation_consequence' => $mode,
+            'inheritance_type' => $allelic,
+          };
+        }
       }
     }
   }
