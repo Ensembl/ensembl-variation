@@ -199,10 +199,9 @@ sub run_variation_checks{
 
 
 
-  ##  Type 13 - non-nucleotide chars seen - flag variants & alleles as fails & don't run further checks
-
-  my $illegal_alleles = check_illegal_characters($expanded);
-  if(defined $illegal_alleles->[0] ) {
+    ##  Type 13 - non-nucleotide chars seen - flag variants & alleles as fails & don't run further checks
+    my $illegal_alleles = check_illegal_characters($expanded);
+    if(defined $illegal_alleles->[0] ) {
 
       ## named variants are given the SO term 'sequence alteration' on entry - do not fail these 
       next if $var->{class_attrib_id} eq 18;
@@ -212,23 +211,22 @@ sub run_variation_checks{
 
       foreach my $ill_al( @{$illegal_alleles} ){
          push @{$fail_varallele{ $var->{v_id} }{ $ill_al }},13;   ## unflipped allele failed throughout
+      }
+      next;  ## don't attempt to order variation_feature.allele_string or compliment
     }
-    next;  ## don't attempt to order variation_feature.allele_string or compliment
-  }
 
-  ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
-
+    ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
     my $is_ambiguous = check_for_ambiguous_alleles($expanded );
     if(defined $is_ambiguous){
-	$expanded = remove_ambiguous_alleles(\$expanded);
-	push @{$fail_variant{14}}, $var->{v_id};
-	$var->{variation_set_id} = $failed_set_id ;
+      $expanded = remove_ambiguous_alleles(\$expanded);
+      push @{$fail_variant{14}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
 
-        ## identify specific alleles to fail
-	my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
-	foreach my $amb_al( @{$ambiguous_alleles} ){
-          push @{$fail_varallele{ $var->{v_id} }{ $amb_al }},14; 
-	}
+      ## identify specific alleles to fail
+      my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
+      foreach my $amb_al( @{$ambiguous_alleles} ){
+        push @{$fail_varallele{ $var->{v_id} }{ $amb_al }},14; 
+      }
     }
 
     ## Check against reference only for variants with 1 reference genomic location
@@ -251,8 +249,6 @@ sub run_variation_checks{
       ### store variation_id to use when flipping alleles & allele stringfor multi-map flips
       $flip{$var->{v_id}} = 1;
       $allele_string{$var->{v_id}} = $var->{allele};
-
-
     }
 
   
@@ -284,22 +280,21 @@ sub run_variation_checks{
       my $ch = $al;
       expand(\$ch);  ## run ref check against ATATAT not (AT)3
       if($ch eq $ref_seq){
-          $var->{ref} = $al;
-          $match_coord_length = 1;
+        $var->{ref} = $al;
+        $match_coord_length = 1;
       }
       else{ 
-       ## is the length ok even if the base doesn't match?
-       my $size_ok = check_variant_size( $var->{start} , $var->{end} , $al);
-       $match_coord_length = 1 if $size_ok ==1;
-       ## save as alt allele if it doesn't match the reference
-       $var->{alt} .= "/" . $al;
-
+        ## is the length ok even if the base doesn't match?
+        my $size_ok = check_variant_size( $var->{start} , $var->{end} , $al);
+        $match_coord_length = 1 if $size_ok ==1;
+         ## save as alt allele if it doesn't match the reference
+         $var->{alt} .= "/" . $al;
       }
     }
 
     unless  ($match_coord_length == 1){
-	push @{$fail_variant{15}}, $var->{v_id};
-	$var->{variation_set_id} = $failed_set_id ;
+      push @{$fail_variant{15}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
     }
 
     ## lengths ok - is actual base in agreement?
@@ -313,13 +308,12 @@ sub run_variation_checks{
       $var->{variation_set_id} = $failed_set_id ;
 
     } 
-   ## save for allele checker if fully processed and possibly flipped
-   $allele_string{$var->{v_id}} = $var->{allele};
+    ## save for allele checker if fully processed and possibly flipped
+    $allele_string{$var->{v_id}} = $var->{allele};
 
   }
- 
 
-    return ($to_check, \%flip, \%allele_string, \%fail_variant, \%fail_varallele) ;
+  return ($to_check, \%flip, \%allele_string, \%fail_variant, \%fail_varallele) ;
 
 }
 
@@ -350,53 +344,49 @@ sub run_allele_checks {
    
    foreach my $var( keys %$var_data){
         
-     my %expected_alleles;
-     if (defined $allele_string->{$var} ){
-         my @expected_alleles = split/\//, $allele_string->{$var};
-         foreach my $exp(@expected_alleles){ 
-           $expected_alleles{$exp} = 1;
-         }
-     }
+      my %expected_alleles;
+      if (defined $allele_string->{$var} ){
+        my @expected_alleles = split/\//, $allele_string->{$var};
+        foreach my $exp(@expected_alleles){ 
+          $expected_alleles{$exp} = 1;
+        }
+      }
 
-       ## Apply QC checks
-       foreach my $submitted_data (@{$var_data->{$var}->{allele_data}}){      
-          ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.population_id, al.count, al.frequency_submitter_handle ]
+      ## Apply QC checks
+      foreach my $submitted_data (@{$var_data->{$var}->{allele_data}}){      
+        ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.population_id, al.count, al.frequency_submitter_handle ]
 
-	   if ($submitted_data->[2] =~ /NOVARIATION/){
-	       push @{$fail{4}}, $submitted_data->[0] ;
-	       next;  ## no further checking
-	   }
-	   if( defined $failed_varallele->{ $var }{ $submitted_data->[2] }->[0] ){
-	       foreach my $reason (@{ $failed_varallele->{ $var }{$submitted_data->[2] }}){
-		   push @{$fail{$reason}}, $submitted_data->[0] ;
-	       }
-	       
-	       next;  ## no further checking - must match ref
-	   }
+        if ($submitted_data->[2] =~ /NOVARIATION/){
+          push @{$fail{4}}, $submitted_data->[0] ;
+          next;  ## no further checking
+        }
+
+        if( defined $failed_varallele->{ $var }{ $submitted_data->[2] }->[0] ){
+          foreach my $reason (@{ $failed_varallele->{ $var }{$submitted_data->[2] }}){
+            push @{$fail{$reason}}, $submitted_data->[0] ;
+          }     
+          next;  ## no further checking - must match ref
+	 }
 
 	## only check if strand corrected (mapped) reference variation available
-        next unless defined $allele_string->{$var};
-     
+        next unless defined $allele_string->{$var};     
 
-	   unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ 
+        unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ 
 
-	   ## checking ss id here because of the way strains are handled in import
-	   if(defined $submitted_data->[4] && defined $submitted_data->[1] && $submitted_data->[1] >0  ){
-           ###fail whole experimental set if sample info supplied
-           $fail_all{$submitted_data->[1]}{$submitted_data->[4]} = 1; ## subsnp_id, sample_id
-         }
-         else{
-           ##Additional submitted allele data from dbSNP does not agree with the dbSNP refSNP alleles (on allele_id)
-           push @{$fail{11}}, $submitted_data->[0] ;       
-         }
-       }
+           ## checking ss id here because of the way strains are handled in import
+           if(defined $submitted_data->[4] && defined $submitted_data->[1] && $submitted_data->[1] >0  ){
+             ###fail whole experimental set if sample info supplied
+             $fail_all{$submitted_data->[1]}{$submitted_data->[4]} = 1; ## subsnp_id, sample_id
+           }
+           else{
+             ##Additional submitted allele data from dbSNP does not agree with the dbSNP refSNP alleles (on allele_id)
+             push @{$fail{11}}, $submitted_data->[0] ;       
+           }
+        }
      }
-   }
+  }
 
-   return ($var_data, \%fail, \%fail_all );
-
-
-
+  return ($var_data, \%fail, \%fail_all );
 }
 
 
@@ -460,45 +450,48 @@ sub export_data_adding_allele_string{
 
   foreach my $l(@{$variant_data}){
 
-      ## reporting all frequencies but store minor => skip any major
-      next if defined $l->[17]  && $l->[17] >0.5 ;
- 
-      if (defined $l->[19] &&  $l->[19] eq "0" && 
-	  (! $potentially_no_minor{$l->[2]} && $l->[17] ==0.5)){
-        ## if no minor allele, just take the second seen for displaying frequency
-        $potentially_no_minor{$l->[2]} = 1;
-        next; 
-      }
+    ## table holds all frequencies but need only minor => skip any major
+    next if defined $l->[17]  && $l->[17] >0.5 ;
 
-      ## some variants are assigned 2 minor alleles
-      next if defined $found_minor{$l->[2]} && $found_minor{$l->[2]} ==1;
-      $found_minor{$l->[2]} =1; 
+    ## some variants are assigned 2 minor alleles
+    next if defined $found_minor{$l->[2]};
 
-      my %save;
+    ## note the first instance of a 0.5 allele 
+    if($l->[17] ==0.5 && ! $potentially_no_minor{$l->[2]}){
+      $potentially_no_minor{$l->[2]} = 1;
+       next;
+    }
 
-      $save{v_id}           = $l->[0];
-      $save{name}           = $l->[1];
-      $save{vf_id}          = $l->[2];
-      $save{seqreg_id}      = $l->[3];
-      $save{start}          = $l->[4];
-      $save{end}            = $l->[5];
-      $save{strand}         = $l->[6];
-      
+    ## store the second instance of a 0.5 allele 
+    next if defined $l->[19] &&  $l->[19] eq "0" && ! $potentially_no_minor{$l->[2]};
 
-      $save{map}              = $l->[7]  || 0 ;   ## variants mapping only to haplotypes/patches have map_weight 0
-      $save{source_id}        = $l->[8];
-      $save{consequence_types}= $l->[9];
-      $save{variation_set_id} = $l->[10];
-      $save{somatic}          = $l->[11];
-      $save{class_attrib_id}  = $l->[12];
-      $save{seqreg_name}      = $l->[13];
-      $save{align_qual}       = $l->[14];
+    ## only take 1 if 2 are tagged as minor
+    $found_minor{$l->[2]} =1; 
 
-      $save{min_allele}    = $l->[16];
-      $save{min_af}        = $l->[17];
-      $save{min_al_count}  = $l->[18];
-      $save{flags}         = $l->[20];
-      $save{is_reference}  = $l->[21];
+    my %save;
+
+    $save{v_id}           = $l->[0];
+    $save{name}           = $l->[1];
+    $save{vf_id}          = $l->[2];
+    $save{seqreg_id}      = $l->[3];
+    $save{start}          = $l->[4];
+    $save{end}            = $l->[5];
+    $save{strand}         = $l->[6];   
+
+    $save{map}              = $l->[7]  || 0 ;   ## variants mapping only to haplotypes/patches have map_weight 0
+    $save{source_id}        = $l->[8];
+    $save{consequence_types}= $l->[9];
+    $save{variation_set_id} = $l->[10];
+    $save{somatic}          = $l->[11];
+    $save{class_attrib_id}  = $l->[12];
+    $save{seqreg_name}      = $l->[13];
+    $save{align_qual}       = $l->[14];
+
+    $save{min_allele}    = $l->[16];
+    $save{min_af}        = $l->[17];
+    $save{min_al_count}  = $l->[18];
+    $save{flags}         = $l->[20];
+    $save{is_reference}  = $l->[21];
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -518,7 +511,7 @@ sub export_data_adding_allele_string{
     ##   If strand summary == -1, flip all
     if($save{is_reference} ==1 ){ 
 
-     if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
+      if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
 	$strand_summary{$l->[0]} = 0;
       }
       else{
@@ -655,12 +648,13 @@ sub write_allele_fails{
 
   foreach my $reason (keys %{$allele_fails}){ 
 
-      foreach my $allele_id( @{ $allele_fails->{$reason} }  ){
+    foreach my $allele_id( @{ $allele_fails->{$reason} }  ){
       
-	  $fail_ins_sth->execute($allele_id, $reason)|| die "ERROR inserting allele fails info\n";
-      }
+      $fail_ins_sth->execute($allele_id, $reason)|| die "ERROR inserting allele fails info\n";
     }
+  }
 }
+
 =head2 write_variation_features
 
   Create new version of variation feature tables with alleles ordered ref/alt where possible and complimented where necessary
@@ -778,25 +772,31 @@ sub write_variation{
   my $data = $var_ext_sth->fetchall_arrayref();
   foreach my $v (@{$data} ){ 
 
-    
-
-    next if defined $v->[9] &&  $->[9] eq "0" && 
-	  (! $potentially_no_minor{$v->[0]} && $v->[7] !=0.5);
+    ## table holds all frequencies but need to store minor => skip any major
+    next if defined $v->[7]  && $v->[7] >0.5 ;    
 
     ## some variants are assigned 2 minor alleles
     next if defined $minor_allele{$v->[0]} ;
 
-    $potentially_no_minor{$v->[0]} = 1 if defined  $v->[7] && $v->[7] ==0.5;
-     
+
+    ## note the first instance of a 0.5 allele 
+    if($v->[7] ==0.5 && ! $potentially_no_minor{$v->[0]}){
+      $potentially_no_minor{$v->[0]} = 1;
+      next;
+    }
+
+    ## store the second instance of a 0.5 allele
+    next if defined $v->[9] &&  $->[9] eq "0" &&  !$potentially_no_minor{$v->[0]};
+
+    ## save minor allele for later checking & to avoid storing 2
+    $minor_allele{$v->[0]} = $v->[6] if defined $v->[6];
+ 
+
     $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]} ; ## update non-flipped with 0
 
+    ## set display status
+    my $display = ( defined $failed_var_ids->{$v->[0]} ? 0 : 1);
 
-    my $display = 1;
-    $display = 0 if defined $failed_var_ids->{$v->[0]};
-
-
-    ## save minor allele for later checking
-    $minor_allele{$v->[0]} = $v->[6] if defined $v->[6];
 
     my $evidence_attribs = join(",", @{$evidence->{$v->[0]}}) if defined $evidence->{$v->[0]};
 

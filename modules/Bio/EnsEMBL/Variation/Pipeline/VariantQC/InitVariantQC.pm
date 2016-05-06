@@ -69,14 +69,6 @@ sub fetch_input {
         create_map_weight_table($core_dba,$var_dba);
     }
 
-    if($self->required_param('species') =~ /human|homo/i){
-        ### create temp table of rs ids from 1KG project
-        $self->warning( 'Running 1KG');
-        $self->create_1KG_table();
-    }
-    else{
-        $self->warning( 'Not running 1KG for ' . $self->required_param('species') );
-    }
 
     ## look up variation_set_id for failed variants once
     my $failed_set_id = add_failed_variation_set( $var_dba );
@@ -259,10 +251,11 @@ sub add_failed_variation_set{
 
     my $var_dba = shift;
 
-    my $fail_attrib_ext_sth  = $var_dba->dbc->prepare(qq[ select attrib_id
-                                                          from attrib
-                                                          where attrib_type_id = 9
-                                                          and value = 'fail_all'
+    my $fail_attrib_ext_sth  = $var_dba->dbc->prepare(qq[ select at.attrib_id
+                                                          from attrib at, attrib_type att
+                                                          where att.code = 'short_name' 
+                                                          and att.attrib_type_id = at.attrib_type_id
+                                                          and at.value = 'fail_all'
                                                         ]);
  
     my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
@@ -346,38 +339,6 @@ sub create_map_weight_table{
 
 }
 
-=head2 create_1KG_table
-
- copy rs ids found by 1000 genomes project to local tmp table to allow joining
-
-=cut
-sub create_1KG_table{
-
-    my $self = shift;
-
-    my $int_dba ;
-    eval{ $int_dba = $self->get_adaptor('multi', 'intvar'); };
-
-    unless (defined $int_dba){
-        $self->warning('No internal database connection found extract 1KG variants '); 
-        return;
-    }
-
-    my $var_dba  = $self->get_species_adaptor('variation');
-    ## drop any pre-existing table and run clean new import
-    $var_dba->dbc->do(qq[ DROP TABLE IF EXISTS tmp_1kg_rsid ]);
-
-    my $export_stmt = qq[ select rs_id from tmp_1kg_rsid ];
-    dumpSQL($int_dba->dbc(), $export_stmt);
-
-
-    create_and_load( $var_dba->dbc(), "tmp_1kg_rsid", "rs_id int not_null");
-    
-    $var_dba->dbc->do(qq[ ALTER TABLE tmp_1kg_rsid ADD INDEX rsidx( rs_id )]);
-
-
-    
-}
 
 sub write_output {
     
