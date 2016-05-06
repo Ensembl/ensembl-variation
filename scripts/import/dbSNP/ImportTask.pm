@@ -683,10 +683,7 @@ sub calculate_gtype {
       ) JOIN 
       $shared_db.UniGty ug ON (
 	ug.unigty_id = ga.unigty_id
-      ) JOIN
-      SubmittedIndividual sind ON (
-	sind.submitted_ind_id = si.submitted_ind_id
-      )        
+      ) 
     WHERE
       si.submitted_ind_id BETWEEN $start AND $end AND
       ga.chr_num = 1

@@ -504,6 +504,7 @@ sub minor_allele_freq {
         SELECT  af.snp_id, a.allele, af.freq, af.count, af.is_minor_allele
         FROM    SNPAlleleFreq_TGP af, $shared\.Allele a
         WHERE   af.allele_id = a.allele_id
+        AND     af.freq <= 0.5 
     };
 
     dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
@@ -536,7 +537,8 @@ sub suspect_snps {
     #
     # XXX: If dbSNP change anything though this CREATE statement 
     # will need to be changed accordingly.
-    # 
+    #
+
     my $var_table_sql = qq{
         CREATE TABLE suspect (
             snp_id      INTEGER(10) NOT NULL DEFAULT 0,
@@ -569,8 +571,8 @@ sub suspect_snps {
     print $logh Progress::location();
     debug(localtime() . "\tFailing suspect variations");
 
-    $stmt = qq{
-        INSERT INTO failed_variation (variation_id, failed_description_id)
+    my $stmt = qq{
+        INSERT IGNORE INTO failed_variation (variation_id, failed_description_id)
         SELECT  v.variation_id, fd.failed_description_id
         FROM    suspect s, variation v, failed_description fd
         WHERE   fd.description = 'Flagged as suspect by dbSNP'
@@ -578,7 +580,7 @@ sub suspect_snps {
         AND     s.snp_id between ? and ?
     };
     my $fail_rs_ins_sth = $self->{'dbVar'}->prepare($stmt);
-   # $self->{'dbVar'}->do($stmt);
+    $self->{'dbVar'}->do($stmt);
 
     # also fail any variants with synonyms, use INSERT IGNORE because dbSNP
     # redundantly fail both the refsnp and the synonym sometimes, and we have
@@ -940,7 +942,7 @@ sub subsnp_synonyms{
 	         };
     }
    dumpSQL($self->{'dbSNP'},$stmt,  $self->{source_engine} ) ; 
-   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null", "refsnp_id v* not_null", "substrand_reversed_flag i", "moltype", "allele_id i");
+   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null", "refsnp_id v* not_null", "substrand_reversed_flag i", "allele_id i");
   
   print $logh Progress::location(); 
 
@@ -1214,8 +1216,10 @@ sub population_table {
 #
 # pre-e!70 samples were merged on dbSNP ind_id and a submitted name chosen at random
 # post-e!70 samples are only merged if they have the same name and ind_id
+# post e!85 samples are not merged
+
 # gender and ped info are held on the ind_id
-#  -  logic exists to select the correct parent name and avoid multiple conventions within the same family  
+
 sub individual_table {
     my $self = shift;
 
@@ -1248,12 +1252,11 @@ sub individual_table {
                          });
 
 
-    ## get pedigree info - held at dbSNP cluster level 
+    ## get pedigree info - held at dbSNP clustered Individual level 
     my $ped = $self->get_ped_data();
 
-    ## get individual names, submitters and dbSNPcluster info
-    ## merged hash is used to pick the right name format for parents when 2 name type for the same SunmittedInd are held [human only]
-    my ($individuals, $merged) = $self->get_ind_data();
+    ## get individual names, submitters and dbSNP clustered Individual info
+    my ($individuals, $samples) = $self->get_ind_data();
 
     ## get population ids for pre-loaded populations
     my $pop_ids = $self->get_pop_ids();
@@ -1261,123 +1264,77 @@ sub individual_table {
 
     ## prepare insert statements   
 
-    my $ind_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual 
-                                                    ( name, description, individual_type_id)
-                                                    values (?,?,?)]);
-
-    my $ind_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual 
-                                                    set  father_individual_id =?, mother_individual_id =?, gender =?
-                                                    where individual_id = ? ]);
+    my $ind_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual ( name, description, individual_type_id) values (?,?,?)]);
 
     my $tmp_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO tmp_ind (sample_id, submitted_ind_id) values (?,?)]);
 
-    my $pop_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample_population (sample_id, population_id)
-				                   values (?,?)
-                                                 ]);
+    my $pop_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample_population (sample_id, population_id) values (?,?)  ]);
 
     my $syn_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual_synonym (individual_id,source_id,name)  values (?,?,?)  ]);
 
+    my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample ( individual_id, name) values (?,?)]);
 
-    my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample
-                                                    ( individual_id, name)
-                                                    values (?,?)]);
+    my $ind_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual
+                                                    set  father_individual_id =?, mother_individual_id =?, gender =?
+                                                    where individual_id = ? ]);
 
 
-
-    ## insert individual data
+    ## insert sample & individual data
     my %individual_id;
-    my %done;
-    my $n = 1000000;
-    foreach my $ind (keys %$individuals){
-        my $sample_id; 
-        ## not all SubmittedIndividual are currated to dbSNP Individuals
-	$individuals->{$ind}{ind} = $n unless defined $individuals->{$ind}{ind} ; ## not clustered into Individual entry by dbSNP
-	$n++;
-	if (defined $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}} ){
-           ## currently lumping together - to be divided
-           $tmp_ins_sth->execute($done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}}, $ind);
+
+    foreach my $sam_id (keys %$samples){
+
+        ## insert individual if novel - using dbSNP id as name 
+        unless (defined $individual_id{ $samples->{$sam_id}->{ind}} ){
+            $ind_ins_sth->execute(  $samples->{$sam_id}->{ind}  , $individuals->{ $samples->{$sam_id}->{ind} }->{des}, $individual_type_id );
+            $individual_id{ $samples->{$sam_id}->{ind} } =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
+
+            ## insert dbSNP synonym 
+            $syn_ins_sth->execute( $individual_id{ $samples->{$sam_id}->{ind} }, 1, $samples->{$sam_id}->{ind} );
         }
-        else{
-           
-            ## insert individual
-	    $ind_ins_sth->execute( $individuals->{$ind}{name}, $individuals->{$ind}{des},$individual_type_id );
-	    my $individual_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
-
-            ## temp - to be de-merged
-            $sam_ins_sth->execute( $individual_id, $individuals->{$ind}{name});
-            ## save to attach to pop
-            $sample_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'sample', 'sample_id');
-
-            ## save temp look up table for genotype import
-            $tmp_ins_sth->execute($sample_id, $ind);
 
 
-            ## attach to population
-            if(defined $individuals->{$ind}{pid}){
+        ## add sample data 
+        $sam_ins_sth->execute( $individual_id{ $samples->{$sam_id}->{ind} }, $samples->{$sam_id}->{name});
 
-              if(defined $pop_ids->{$individuals->{$ind}{pid}}){
-                  $pop_ins_sth->execute( $sample_id , $pop_ids->{$individuals->{$ind}{pid}});
-              }
-              else{
-                  warn "No individual id for population id $individuals->{$ind}{pid} for individual $individuals->{$ind}{name}\n";
-              }
-            }
+        ## extract sample_id
+        my $ens_sample_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'sample', 'sample_id');
 
-	    if(defined $individuals->{$ind}{ind} && $individuals->{$ind}{ind} < 1000000){
-                 ## insert dbSNP synonym [not fakes]
-		$syn_ins_sth->execute( $individual_id, 1, $individuals->{$ind}{ind});
-	    }
+        ## save temp look up table of ensembl id => submitted_ind_id for genotype import
+        $tmp_ins_sth->execute($ens_sample_id, $sam_id);
 
-            ## save individual_id  based on name and dbSNP merged id  (merging only these on import) 
-	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $sample_id;
-
-	}
-        ## save individual ids for ped look up
-	$individual_id{$ind} = $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}};
-
+        ## attach the sample to a population if there is one
+        $pop_ins_sth->execute( $ens_sample_id , $pop_ids->{ $samples->{$sam_id}{pid} } )
+            if defined $samples->{$sam_id}{pid};
    }
 
    
-    ## insert individual data inc ped info
+    ## insert individual gender & ped info
 
-    my %ind_done;## entering once per merged individual
     foreach my $ind (keys %$individuals){
 
-	next if $ind_done{$individual_id{$ind}};
-
-	$ind_done{$individual_id{$ind}} = 1;
-
-	my $merged_id = $individuals->{$ind}{ind}; ## for readablity
-
-	my $gender;
-        if(defined $ped->{$merged_id}{gender} && $ped->{$merged_id}{gender} =~/ale/ ){
-	    $gender = $ped->{$merged_id}{gender};
-	}
-	else{
-	    $gender = "Unknown";
-	}
+	my $gender = "Unknown";
+        $gender = $ped->{$ind}{gender}
+          if defined $ped->{$ind}{gender} && $ped->{$ind}{gender} =~/ale/;
 
 
-	my $mother_id = '\\N';
-	my $father_id = '\\N';
+        my $mother_id = '\\N';
+        my $father_id = '\\N';
 
-        ## get submitted_ind_id and correct name from same population to link to (if available)
-	if(defined $ped->{$merged_id}{father} &&
-	   defined $merged->{ $ped->{$merged_id}{father} }{ $individuals->{$ind}{pid}}){
-	    my $father_submitted_id = $merged->{ $ped->{$merged_id}{father} }{ $individuals->{$ind}{pid}};
-	    if(defined $individual_id{$father_submitted_id}){
-		$father_id = $individual_id{$father_submitted_id};
+        ## get ensmebl individual ids for parents
+	if(defined $ped->{$ind}{father} ){
+            ## should have and ensembl individual id 
+	    if(defined $individual_id{ $ped->{$ind}{father}}){
+		$father_id = $individual_id{ $ped->{$ind}{father} };
 	    }else{
-		warn "No ensembl id found for father : $father_submitted_id from child name $individuals->{$ind}{name}\n";
+		warn "No ensembl id found for father : $ped->{$ind}{father} from child id $ind\n";
 	    }
 	}
-	if(defined $ped->{$merged_id}{mother} &&
-	   defined $merged->{ $ped->{$merged_id}{mother} }{ $individuals->{$ind}{pid}}){
-	    my $mother_submitted_id = $merged->{ $ped->{$merged_id}{mother} }{ $individuals->{$ind}{pid}};
-	    if(defined $individual_id{$mother_submitted_id}){
-		$mother_id = $individual_id{$mother_submitted_id};
+	if(defined $ped->{$ind}{mother} ){
+	    if(defined $individual_id{ $ped->{$ind}{mother} }){
+		$mother_id = $individual_id{ $ped->{$ind}{mother} };
 	    }else{
-		warn "No ensembl id found for mother : $mother_submitted_id from child name $individuals->{$ind}{name}\n";
+		warn "No ensembl id found for mother : $ped->{$ind}{mother} from child id $ind\n";
 	    }
 	}
 	next unless (defined $gender ||  $father_id =~ /\d+/ || $mother_id =~ /\d+/);
@@ -1386,7 +1343,6 @@ sub individual_table {
                                $gender,
                                $individual_id{$ind},
 	    );
-
     }
     
 
@@ -1400,7 +1356,7 @@ sub individual_table {
 }
 
 ## export family and gender info for individual
-## held at level of curate Individual rather than SubmittedIndividual
+## held at level of curated Individual rather than SubmittedIndividual
 sub get_ped_data{
 
     my $self = shift;
@@ -1437,8 +1393,8 @@ sub get_ind_data{
 
    my $self = shift;
 
+   my %samples;
    my %individuals;
-   my %merged;
 
    my $all_ind_sth = $self->{'dbSNP'}->prepare(qq[ SELECT si.submitted_ind_id,
                                                           si.loc_ind_id_upp,
@@ -1452,29 +1408,20 @@ sub get_ind_data{
    $all_ind_sth->execute()||die "ERROR executing: $DBI::errstr\n";
    my $inds = $all_ind_sth->fetchall_arrayref();
 
-
    foreach my $l(@{$inds}){
 
+       ## individual description is often not useful
+       $individuals{$l->[3]}{des}  = $l->[2]
+         if defined $l->[2] && $l->[2] !~ /unknown source|byPopDesc/i ;
 
-       $individuals{$l->[0]}{name} = $l->[1];
-       if( defined $l->[2] && $l->[2] !~ /unknown source|byPopDesc/i ){ 
-           ## save individual description if useful
-           $individuals{$l->[0]}{des}  = $l->[2];
-       }
-       if( defined $l->[3] ){ 
-           ## save dbSNP clustered individual id
-           $individuals{$l->[0]}{ind}  = $l->[3];
-       }
-       if( defined $l->[4]) { 
-           ## save population id
-           $individuals{$l->[0]}{pid}  = $l->[4];
-           
-           ## look up merged id/pop id => submitted_ind_id for ped linking
-           $merged{$l->[3]}{$l->[4]} = $l->[0]  if defined $l->[3] ;
-       }
+       ## sample info
+       $samples{$l->[0]}{name} = $l->[1];
+       $samples{$l->[0]}{ind}  = $l->[3] if defined $l->[3];
+       $samples{$l->[0]}{pid}  = $l->[4] if defined $l->[4];
+
    }
    
-   return (\%individuals, \%merged);
+   return (\%individuals, \%samples);
 }
 
 ## look up population_id for dbSNP pop_id to link individuals to pops
