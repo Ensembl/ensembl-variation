@@ -282,11 +282,6 @@ sub summarise_evidence{
     my $pubmed_variations = get_pubmed_variations($var_dbh, $first, $last);
 
 
-    ## get 1KG discovered variants (human only)
-    my $kg_variations =  get_KG_variations($var_dbh, $first, $last) 
-        if $species =~/Homo|Human/i ;
-
-
     foreach my $var(keys %$ss_variations ){
 
 	## dbSNP ss submissions
@@ -310,15 +305,15 @@ sub summarise_evidence{
 
  
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
-           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'KG'}) ;
+           if defined $ss_variations->{$var}->{'KG'} ;
 
       ## additional cow evidence
       push @{$evidence{$var}}, $evidence_ids->{'1000Bull_Genomes'}
-           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'1000_BULL_GENOMES'}) ;
+           if defined $ss_variations->{$var}->{'1000_BULL_GENOMES'} ;
      
       ## additional mouse evidence
       push @{$evidence{$var}}, $evidence_ids->{'WTSI_MGP'}
-           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'SC_MOUSE_GENOMES'}) ;
+           if defined $ss_variations->{$var}->{'SC_MOUSE_GENOMES'} ;
 
 
       ## pubmed citations - multi species
@@ -499,37 +494,6 @@ sub get_pubmed_variations{
     return \%pubmed_variations;
 
 }
-
-
-## human only - extact ids for variants found in 1000 genomes project
-
-sub get_KG_variations{
-
-
-  my $var_dbh = shift;
-  my $first   = shift;
-  my $last    = shift;
-    
-  my %kg_variations;
-
-  my $var_ext_sth  = $var_dbh->prepare(qq[ select variation.variation_id 
-                                           from variation, tmp_1kg_rsid 
-                                           where variation.snp_id =  tmp_1kg_rsid.rs_id 
-                                           and variation.variation_id  between ? and ?
-                                         ]);
-  $var_ext_sth->execute($first, $last);
-  my $data = $var_ext_sth->fetchall_arrayref();
- 
-  foreach my $l (@{$data}){
-      $kg_variations{$l->[0]} = 1;
-  }
-
-  return \%kg_variations;
-
-}
-
-
-
 
 
 sub count_rows{
