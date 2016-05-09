@@ -48,6 +48,7 @@ use_ok('Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect');
 
 
 ok( revcomp_tandem("(GT)17/(GT)19") eq "(AC)17/(AC)19", "Utils::Sequence revcomp_tandem" );
+ok( revcomp_tandem("(GT)17/GT") eq "(AC)17/AC", "Utils::Sequence revcomp_tandem 2" );
 
 ok( check_four_bases("A/T/G/G/C")   eq 1 ,              "Utils::QCUtils check_four_bases positive");
 ok( check_four_bases("A/T/-/AA/C")  eq 0 ,              "Utils::QCUtils check_four_bases negative");

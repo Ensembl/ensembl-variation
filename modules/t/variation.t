@@ -99,10 +99,13 @@ ok($v->source_version eq $source_version,               'source_version');
 ok($v->source_type eq $source_type,                     'source_type');
 ok($v->source_somatic_status eq $source_somatic_status, 'source_somatic_status');
 ok($v->has_somatic_source == 0,                         'has_somatic_source');
+ok($v->has_failed_alleles == 0,                         'has_failed_alleles');
 
 # test source object
 ok($v->source($source), 'source (using argument)');
 
+ok($v->five_prime_flanking_seq('ATGCCC') eq 'ATGCCC',    'get/set flank');
+ok($v->three_prime_flanking_seq('CTTGTA') eq 'CTTGTA',    'get/set flank');
 
 my $n = scalar @{$v->get_all_synonyms()};
 
@@ -256,5 +259,20 @@ ok($vf2->variation_name eq $var_name, 'get_VariationFeature_by_dbID');
 
 ## DEPRECATED ##
 ok($v->source_object->name() eq $source_name, 'DEPRECATED - source_object');
+
+my $hash = {dbID              => 123,
+            name              => $name,
+            source            => $source,
+            synonyms          => \%syonym,
+            alleles           => $alleles,
+            adaptor           => $variation_adaptor
+           };
+
+my $vfast =  Bio::EnsEMBL::Variation::Variation->new_fast($hash);
+
+ok($vfast->dbID() eq 123,             "fast - db ID");
+ok($vfast->name() eq $name,           "fast - name");
+ok(! $vfast->ancestral_allele()  , "no derived");
+
 
 done_testing();

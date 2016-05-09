@@ -69,6 +69,10 @@ ok( $trv->pep_allele_string() eq 'S/C',                     "pep_allele_string")
 ok( $trv->consequence_type()->[0] eq 'missense_variant',    "consequence");
 ok( $trv->variation_feature->variation_name() eq "rs80359157", "variation name ");
 ok( $trv->transcript->stable_id() eq "ENST00000470094",      "feature id" );
+ok( $trv->cdna_allele_string() eq 'C/G',                     "cdna_allele_string");
+ok( $trv->affects_peptide() eq '1',                          "affects_peptide");
+ok( $trv->hgvs_transcript()->{'G'} eq  'ENST00000470094.1:c.16C>G', "hgvs c");
+ok( $trv->hgvs_protein()->{'G'}    eq  'ENSP00000434898.1:p.Ser6Cys', "hgvs p");
 
 my $tvas = $trv->get_all_alternate_TranscriptVariationAlleles();
 ok( $tvas->[0]->sift_prediction eq 'deleterious',            "sift prediction");

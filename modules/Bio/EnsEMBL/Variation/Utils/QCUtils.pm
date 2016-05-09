@@ -406,7 +406,7 @@ sub get_ss_variations{
 
         #save submitter handle, population and ss id to try to discern independent submissions
         ## no longer useful for Human 2016/01 
-        unless ($species =~/Homo|Human/i){
+        unless (defined $species && $species =~/Homo|Human/i){
           push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
         }
 
