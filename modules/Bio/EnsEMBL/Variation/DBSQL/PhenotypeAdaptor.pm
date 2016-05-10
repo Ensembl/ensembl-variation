@@ -61,6 +61,7 @@ package Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Variation::Phenotype;
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
@@ -70,31 +71,108 @@ sub fetch_by_description {
     return $self->generic_fetch("p.description = '$desc'");
 }
 
+=head2 fetch_all_by_ontology_accession
+  Arg [1]    : string 
+  Example    : $phenotype = $pheno_adaptor->fetch_all_by_ontology_accession('EFO:0000712');
+  Description: Retrieves a list of Phenotype objects for an ontology accession
+               If no phenotype exists undef is returned.
+  Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
+  Exceptions : throw if dbID arg is not defined
+  Caller     : general
+  Status     : experimental
+=cut
+sub fetch_all_by_ontology_accession {
+  my $self = shift;
+  my $accession = shift;
+  return $self->generic_fetch("poa.accession = '$accession'");
+}
+
+=head2 fetch_by_OntologyTerm
+  Arg [1]    : Bio::EnsEMBL::OntologyTerm
+  Example    : $phenotype = $pheno_adaptor->fetch_by_OntologyTerm( $ontologyterm);
+  Description: Retrieves a Phenotype object via an OntologyTerm
+               If no phenotype exists undef is returned.
+  Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
+  Exceptions : throw if dbID arg is not defined
+  Caller     : general
+  Status     : experimental
+=cut
+sub fetch_by_OntologyTerm {
+  my $self = shift;
+  my $term = shift;
+
+  # Check an OntologyTerm is supplied
+  assert_ref($term,'Bio::EnsEMBL::OntologyTerm');
+
+  return $self->generic_fetch("poa.accession = '". $term->accession ."'");
+}
+
+
+
+sub _left_join {
+  my $self = shift;
+  
+  my @lj = ();
+  
+  push @lj, (
+    [ 'phenotype_ontology_accession', 'p.phenotype_id = poa.phenotype_id' ]
+  ) ;
+  
+  return @lj;
+}
+
 sub _tables {
-    return (['phenotype', 'p']);
+    return (['phenotype', 'p'],
+            ['phenotype_ontology_accession', 'poa'] );
 }
 
 sub _columns {
-    return qw(p.phenotype_id p.name p.description);
+    return qw(p.phenotype_id p.name p.description poa.accession poa.linked_by_attrib);
 }
 
 sub _objs_from_sth {
     my ($self, $sth) = @_;
     
-    my ($phenotype_id, $name, $description, @result);
+    my %row;
+
+    $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));
+   
+    ## deal with multiple rows due to multiple phenotype ontology terms 
+    while ($sth->fetch) {
+        $self->_obj_from_row(\%row);
+    }
+
+    # Get the created objects from the temporary hash
+    my @objs = values %{ $self->{_temp_objs} };
+    delete $self->{_temp_objs};
     
-    $sth->bind_columns(\$phenotype_id, \$name, \$description);
+    return \@objs;
+}
+
+sub _obj_from_row {
+
+    my ($self, $row) = @_;
     
-    push @result, Bio::EnsEMBL::Variation::Phenotype->new_fast({
-        dbID        => $phenotype_id,
-        name        => $name,
-        description => $description,
-        adaptor     => $self,
-    }) while $sth->fetch;
-    
-    $sth->finish;
-    
-    return \@result;
+    # If the object for this phenotype_id hasn't already been created, do that
+    my $obj = $self->{_temp_objs}{$row->{phenotype_id}}; 
+
+    unless (defined($obj)) {
+
+      $obj = Bio::EnsEMBL::Variation::Phenotype->new_fast({
+              dbID           => $row->{phenotype_id},
+              name           => $row->{name},
+              description    => $row->{description},
+              adaptor        => $self,
+            }); 
+
+      $self->{_temp_objs}{$row->{phenotype_id}} = $obj;
+
+    }
+
+    # Add a ontology accession if available
+    my $link_source = $self->db->get_AttributeAdaptor->attrib_value_for_id($row->{linked_by_attrib})
+      if $row->{linked_by_attrib};
+    $obj->add_ontology_accession($row->{accession}, $link_source ) if defined $row->{accession} ;
 }
 
 sub store{
@@ -121,8 +199,42 @@ sub store{
     $pheno->{dbID}    = $dbID;
     $pheno->{adaptor} = $self;
 
+    ## add ontology terms if available
+    $self->store_ontology_accessions($pheno) if $pheno->{_ontology_accessions};
 }
 
 
+
+sub store_ontology_accessions{
+
+   my ($self, $pheno) = @_;
+
+   my $dbh = $self->dbc->db_handle;
+
+   my $sth = $dbh->prepare(qq{
+        INSERT IGNORE INTO phenotype_ontology_accession (
+             phenotype_id,
+             accession,
+             linked_by_attrib
+        ) VALUES (?,?,?)
+    });
+
+  foreach my $link_info (@{$pheno->{_ontology_accessions}} ){
+
+    ## get attrib id for source of link - can this be mandatory?
+    my $attrib_id;
+    if($link_info->{source}){
+      $attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value( 'ontology_mapping', $link_info->{source});
+      warn "Source type " . $link_info->{source} . " not supported for linking ontology descriptions to accessions\n";
+    }
+
+    $sth->execute(
+        $pheno->{dbID},
+        $link_info->{accession},
+        $attrib_id
+    );
+   }
+    $sth->finish;
+}
 
 1;

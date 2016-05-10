@@ -361,3 +361,9 @@
 364	11	not provided
 365	11	association
 366	11	risk factor
+437	509	Data source
+438	509	OLS exact
+439	509	OLS partial
+440	509	EFO exact
+441	509	EFO partial
+442	509	Manual

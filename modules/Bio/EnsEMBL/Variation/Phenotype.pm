@@ -147,3 +147,59 @@ sub description {
     return $self->{'description'};
 }
 
+=head2 ontology_accessions_with_source
+
+  Example    : $ontology_accessions_source = $obj->ontology_accessions_with_source()
+  Description: Getter for the ontology_accessions attribute
+  Returntype : listref of hashes { source =>'OLS', accession => 'HP:00123'}
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub ontology_accessions_with_source {
+  my $self = shift;
+  return $self->{'_ontology_accessions'};
+}
+
+=head2 ontology_accessions
+
+  Example    : $ontology_accessions = $obj->ontology_accessions()
+  Description: Getter for the ontology_accessions attribute
+  Returntype : listref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub ontology_accessions {
+  my $self = shift;
+  my @accessions;
+  foreach my $h (@{$self->{'_ontology_accessions'}}){
+    push @accessions, $h->{accession};
+  }
+  return \@accessions;
+}
+
+=head2 add_ontology_accession
+
+  Example    : $obj->add_ontology_accessions('Orphanet:3197', 'Manual')
+  Description: Adds an ontology_accession & method of used to assign it
+  Returntype : 
+  Exceptions : none
+  Caller     : general
+  Status     : experimental
+
+=cut
+sub add_ontology_accession {
+  my $self      = shift;
+  my $accession = shift;
+  my $source    = shift;
+
+  push @{$self->{'_ontology_accessions'}}, {accession => $accession, source => $source};
+}
+
+
+1;
