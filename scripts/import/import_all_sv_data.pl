@@ -383,6 +383,8 @@ sub study_table{
     $study_id   = $rows->[0][0];
     $study_desc = $rows->[0][1];
     
+    $study_desc =~ s/'/\\'/g;
+
     remove_data($study_id) if (defined($replace_study) && defined($study_id) && !defined($study_done{$study}));
     
     # Checks the studies with different assemblies when the option "mapping" is selected.
@@ -409,8 +411,8 @@ sub study_table{
     $stmt = qq{ UPDATE $study_table SET 
                   description='$study_desc',
                   external_reference=$external_link,
-                  study_type='$study_type',
-                  url='$study_ftp'
+                  study_type="$study_type",
+                  url="$study_ftp"
                 WHERE study_id=$study_id
               };
     $dbVar->do($stmt);
