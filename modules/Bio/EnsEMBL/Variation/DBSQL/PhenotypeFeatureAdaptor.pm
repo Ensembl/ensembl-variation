@@ -486,6 +486,31 @@ sub fetch_all_by_phenotype_description_source_name {
   
 }
 
+=head2 fetch_all_by_Phenotype
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Phenotype
+  Example    : $pf = $pf_adaptor->fetch_all_by_Phenotype($phenotype_object);
+  Description: Retrieves a PhenotypeFeature object via its phenotype id/source name
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if phenotype argument is not supplied
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Phenotype {
+
+  my $self = shift;
+  my $phenotype  = shift;
+
+  if(!ref($phenotype) || !$phenotype->isa('Bio::EnsEMBL::Variation::Phenotype')) {
+    throw('Bio::EnsEMBL::Variation::Phenotype arg expected');
+  }
+
+  return $self->fetch_all_by_phenotype_id_source_name($phenotype->dbID());
+}
+
+
 =head2 fetch_all_by_phenotype_id_source_name
 
   Arg [1]    : integer $phenotype_id
@@ -619,6 +644,8 @@ sub count_all_by_associated_gene {
 
   return $result;
 }
+
+
 
 sub count_all_by_Phenotype {
   my $self = shift;

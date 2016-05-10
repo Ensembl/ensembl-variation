@@ -113,13 +113,18 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs22992
 $pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene_phenotype_description");
 
+# fetch_all_by_Phenotype
+my $pa = $vdba->get_PhenotypeAdaptor();
+my $p  = $pa->fetch_by_dbID(1);
+$pfs = $pfa->fetch_all_by_Phenotype($p);
+ok($pfs->[0]->object_id() eq 'rs2299222', "fetch_all_by_Phenotype") ;
+
+
 # count_all_by_associated_gene
 my $count = $pfa->count_all_by_associated_gene('YES1');
 ok($count && $count == 1, "count_all_by_associated_gene");
 
 # count_all_by_Phenotype
-my $pa = $vdba->get_PhenotypeAdaptor();
-my $p  = $pa->fetch_by_dbID(1);
 $count = $pfa->count_all_by_Phenotype($p);
 ok($count && $count == 4, "count_all_by_Phenotype");
 
