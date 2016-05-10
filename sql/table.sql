@@ -388,8 +388,23 @@ CREATE TABLE `phenotype` (
   KEY `stable_idx` (`stable_id`)
 );
 
+/**
+@table phenotype_ontology_accession
 
+@desc This table stores accessions of phenotype ontology terms which have been linked to phenotype.descriptions
 
+@column phenotype_id         Foreign key, references to the @link phenotype table.
+@column accession            The accession of an ontology term held in the ontology database (eg. EFO:0000378) 
+@column linked_by_attrib     The method used to annotate the phenotype.description with the ontology term
+
+@see phenotype
+*/
+CREATE TABLE `phenotype_ontology_accession` (
+  `phenotype_id` int(11) unsigned NOT NULL,
+  `accession` varchar(255) NOT NULL,
+  `linked_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
+  PRIMARY KEY (`phenotype_id`,`accession`)
+);
 
 /**
 @header  Other tables

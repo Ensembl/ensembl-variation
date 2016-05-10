@@ -201,6 +201,9 @@ sub store{
 
     ## add ontology terms if available
     $self->store_ontology_accessions($pheno) if $pheno->{_ontology_accessions};
+
+    ## maintain previous behaviour
+    return $self;
 }
 
 
