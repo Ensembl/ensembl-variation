@@ -96,7 +96,7 @@ my $default_pheno  = "ClinVar: phenotype not specified";
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
 
-## handle incomplete runs
+## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
 if (defined $done_file){
   open my $donelist, $done_file ||die "Unable to open list of variants already entered : $!\n";
@@ -119,9 +119,9 @@ while (my $set = $ref->get_record() ){
 	foreach my $acc(@{$set->{ReferenceClinVarAssertion}->{ClinVarAccession}}){
 	    next unless ref($acc) eq  'HASH';
 	    ### ClinVar reference accession 
-	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;;
+	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;
 	}
-
+        next if $done{$record{Acc}};
         ## clinical significance
 
         if ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description} =~/conflict/){       
@@ -223,7 +223,7 @@ while (my $set = $ref->get_record() ){
 	if( exists $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type} ){ 
 
 	    my $type = $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type};
- 	    	    	    
+ 	     
 	    my @traits; ### could be one or many
 
 	    if  (ref($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}) eq 'ARRAY'){
@@ -236,21 +236,22 @@ while (my $set = $ref->get_record() ){
 
 	    foreach my $trait (@traits){ 
 
-		######### trait names & name types
+		######### trait names, name types & ontology accessions
 		my @names;
+
 		if  (ref($trait->{Name}) eq 'ARRAY'){ @names = @{$trait->{Name}};}
 		else{ push @names, $trait->{Name};}	    
 		
 		foreach my $name ( @names ){
-		    next unless  $name->{ElementValue}->[1]->{Type} eq "Preferred";
-		    $record{disease} =  $name->{ElementValue}->[0];
 
+                    $record{disease} =  $name->{ElementValue}->[0] if $name->{ElementValue}->[1]->{Type} eq "Preferred";
+
+                    $record{ontology_accession} = $name->{XRef}->[1]->{ID} if $name->{XRef}->[1]->{DB} && 
+                                                                              $name->{XRef}->[1]->{DB} eq "Human Phenotype Ontology";
 
 		}
 	    }
 	}
-        
-
         if (defined $structvar ){ 
 	    if( defined $record{dbVar} && $record{dbVar} =~/\d+/ ){
                unless (defined $done{$record{Acc}} || defined $record{dbSNP}){
@@ -295,6 +296,8 @@ sub import{
     if(defined $record->{dbSNP}){
 	($feature_object,  $feat, $alt_allele) = get_variant($record);
         $type = 'Variation';
+        ## add synonym
+        add_synonyms($feature_object, $record->{Acc}) if defined $feature_object;
     }
     elsif(defined  $record->{dbVar}){
 	$type = 'StructuralVariation';
@@ -305,6 +308,7 @@ sub import{
     }
     return undef unless defined $feature_object && defined $feature_object->dbID(); 
 
+    #return if defined $record->{type} && $record->{type} eq "Allelic variant" ;
 
     ## deal with non-specified phenos
     $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -313,7 +317,7 @@ sub import{
 
 
     ## look for existing or enter new phenotype object
-    my $pheno = get_phenotype($record->{disease});
+    my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
 
   
 
@@ -352,7 +356,8 @@ sub import{
 =cut
 sub get_phenotype{
 
-    my $desc = shift;
+    my $desc      = shift;
+    my $accession = shift;
 
     $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
     $desc =~s /\'//g;            ## remove '
@@ -361,8 +366,14 @@ sub get_phenotype{
 
     unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
 
-        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc);
+        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc ); 
         $phenotype_adaptor->store($pheno);
+    }
+
+    if($accession){
+      #print "Got accession to add for $desc : $accession\n";
+      $pheno->add_ontology_accession($accession, 'Data source');
+      $phenotype_adaptor->store_ontology_accessions($pheno);
     }
 
     return $pheno;
@@ -522,6 +533,22 @@ sub get_source{
     return $source;
 }
 
+sub add_synonyms{
+
+  my $var               = shift;
+  my $clinvar_accession = shift;
+
+  $clinvar_accession =~ s/\.\d+$//; ##remove version for synonym
+
+  my $syn_ins_sth = $dba->dbc->prepare(qq[ insert ignore into variation_synonym  
+                                           (variation_id, source_id, name)  
+                                           values (?,?,?)
+                                          ]);
+
+  $syn_ins_sth->execute($var->dbID(), $source->dbID(), $clinvar_accession);
+
+
+}
 
 sub usage{
 

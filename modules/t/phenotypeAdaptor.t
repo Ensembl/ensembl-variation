@@ -24,7 +24,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use FileHandle;
-use Data::Dumper;
+
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
@@ -59,6 +59,9 @@ $p->add_ontology_accession('Orphanet:15', 'Manual');
 ok($p->ontology_accessions()->[0] eq 'Orphanet:15', "get ontology accession");
 ok($p->ontology_accessions_with_source()->[0]->{source}    eq 'Manual', "get ontology source");
 ok($p->ontology_accessions_with_source()->[0]->{accession} eq 'Orphanet:15', "get ontology accession 2");
+$pa->store_ontology_accessions($p);
+my $pbo1 = $pa->fetch_all_by_ontology_accession('Orphanet:15');
+ok($pbo1->[0]->description() eq 'test', "fetch by newly stored ontology accession");
 
 my $pbo = $pa->fetch_all_by_ontology_accession('Orphanet:130');
 
