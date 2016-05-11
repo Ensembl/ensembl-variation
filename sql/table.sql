@@ -1589,7 +1589,7 @@ create table source(
 	source_id int(10) unsigned not null auto_increment,
 	name varchar(24) not null,
 	version int,
-	description varchar(255),
+	description varchar(400),
 	url varchar(255),
 	type ENUM('chip','lsdb') DEFAULT NULL,
   somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
@@ -1769,6 +1769,8 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|drop column moltype from variation_synonym');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_d.sql|Making attrib_id auto_increment');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_e.sql|drop the table tagged_variation_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_f.sql|add phenotype_ontology_accession')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_g.sql|allow the column description to store more text in the source table');
 
 
 /**
