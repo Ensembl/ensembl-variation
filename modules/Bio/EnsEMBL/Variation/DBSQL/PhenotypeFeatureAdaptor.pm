@@ -548,6 +548,40 @@ sub fetch_all_by_phenotype_id_source_name {
   
 }
 
+=head2 fetch_all_by_phenotype_id_feature_type
+
+  Arg [1]    : integer $phenotype_id
+  Arg [2]    : string  feature type
+  Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_id_feature_type(999,'Gene');
+  Description: Retrieves a PhenotypeFeature object via its phenotype id and feature type
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if phenotype id argument is not defined or type not supported
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_phenotype_id_feature_type {
+
+  my $self = shift;
+  my $phenotype_id  = shift;
+  my $feature_type  = shift;
+
+  throw('phenotype_id argument expected') if(!defined($phenotype_id));
+
+  throw('feature_type not recognised') unless $TYPES{$feature_type};
+
+  my $extra_sql = sprintf('p.phenotype_id = %s ', $self->dbc->db_handle->quote( $phenotype_id, SQL_INTEGER ) );
+  $extra_sql .= sprintf(' AND pf.type = %s ', $self->dbc->db_handle->quote( $feature_type, SQL_VARCHAR ) );
+
+
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
+
+  return $self->generic_fetch("$extra_sql");
+
+}
+
 =head2 fetch_all_by_associated_gene_phenotype_description
 
   Arg [1]    : string $gene_name

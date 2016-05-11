@@ -38,6 +38,8 @@ my $sl  = $sla->fetch_by_region('chromosome', 7, 86442403, 86442405);
 # fetch_all_by_object_id
 my $pfs = $pfa->fetch_all_by_object_id('rs2299222');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id");
+$pfs =  $pfa->fetch_all_by_object_id('rs2299222', 'Variation');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id + type");
 throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a valid object type, valid types are/, ' > Throw on wrong object type';
 
 # fetch_all_by_Slice_type
@@ -105,6 +107,11 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && (grep {$_->object_id eq 'rs22992
 $pfs = $pfa->fetch_all_by_phenotype_id_source_name(1, 'dbSNP');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_phenotype_id_source_name");
 
+# fetch_all_by_phenotype_id_feature_type
+$pfs = $pfa->fetch_all_by_phenotype_id_feature_type(1, 'Gene');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'ENSG00000176105'} @$pfs), "fetch_all_by_phenotype_id_feature_type");
+
+
 # fetch_all_by_associated_gene
 $pfs = $pfa->fetch_all_by_associated_gene('YES1');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene");
@@ -118,7 +125,7 @@ my $pa = $vdba->get_PhenotypeAdaptor();
 my $p  = $pa->fetch_by_dbID(1);
 $pfs = $pfa->fetch_all_by_Phenotype($p);
 ok($pfs->[0]->object_id() eq 'rs2299222', "fetch_all_by_Phenotype") ;
-
+throws_ok { $pfa->fetch_all_by_Phenotype(); } qr/Phenotype arg expected/, ' > Throw on missing argument';
 
 # count_all_by_associated_gene
 my $count = $pfa->count_all_by_associated_gene('YES1');
