@@ -558,7 +558,7 @@ sub parse_nhgri {
   # Read through the file and parse out the desired fields
   while (<IN>) {
     chomp;
-    
+
     my @row_data = split(/\t/,$_);
     
     # header
@@ -580,6 +580,7 @@ sub parse_nhgri {
       my $pvalue         = ($content{'P-VALUE'} ne '') ? $content{'P-VALUE'} : '';
       my $ratio          = $content{'OR OR BETA'};
       my $ratio_info     = $content{'95% CI (TEXT)'};
+      my @accessions     = split/\,/, $content{'MAPPED_TRAIT_URI'};
 
       my $risk_frequency = '';
       if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\w+)\s*$/i) {
@@ -596,7 +597,8 @@ sub parse_nhgri {
         'risk_allele' => $rs_risk_allele,
         'risk_allele_freq_in_controls' => $risk_frequency,
         'p_value' => $pvalue,
-        'study_description' => $study
+        'study_description' => $study,
+        'accessions'   => \@accessions 
       );
    
     
@@ -883,7 +885,8 @@ sub parse_goa {
         'seq_region_start' => $gene->seq_region_start,
         'seq_region_end' => $gene->seq_region_end,
         'seq_region_strand' => $gene->seq_region_strand,
-        'xref_id' => $uniprot_ids
+        'xref_id' => $uniprot_ids,
+        'accessions' => [$external_id]
       );
       
       $data{'study'} = $pubmed_ids if ($pubmed_ids);
@@ -1350,6 +1353,7 @@ sub parse_orphanet {
               'id' => $gene->stable_id,
               'description' => $name,
               'external_id' => $orpha_number,
+              'accessions'  => [ 'Orphanet:' . $orpha_number],
               'seq_region_id' => $gene->slice->get_seq_region_id,
               'seq_region_start' => $gene->seq_region_start,
               'seq_region_end' => $gene->seq_region_end,
@@ -1387,7 +1391,7 @@ sub parse_ddg2p {
   while (<IN>) {
     chomp;
 
-    my @data = split /\t/, $_;
+    my @data = split /\,/, $_;
     foreach my $col (@data) {
       $col =~ s/"//g;
     }
@@ -1407,6 +1411,7 @@ sub parse_ddg2p {
       my $mode    = $content{'mutation consequence'};
       my $phen    = $content{'disease name'};
       my $id      = $content{'disease mim'};
+      my @accns   = split/\;/,$content{'phenotypes'};
 
       if($symbol && $phen) {
         $phen =~ s/\_/ /g;
@@ -1440,6 +1445,7 @@ sub parse_ddg2p {
             'seq_region_strand' => $gene->seq_region_strand,
             'mutation_consequence' => $mode,
             'inheritance_type' => $allelic,
+            'accessions' => \@accns,
           };
         }
       }
@@ -1906,7 +1912,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    
+    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
   
@@ -1950,6 +1956,7 @@ sub get_coords {
   my ($sr_id, $start, $end, $strand);
   
   foreach my $id(@$ids) {
+
     $sth->bind_param(1,$id,SQL_VARCHAR);
     $sth->execute();
     $sth->bind_columns(\$sr_id, \$start, \$end, \$strand);
@@ -2036,9 +2043,9 @@ sub add_phenotypes {
   my $source_id = shift;
   my $object_type = shift;
   my $db_adaptor = shift;
-  
+ 
   my $st_col = ($source =~ m/dbgap/i) ? 'name' : 'description';
-  
+
   # Prepared statements
   my $st_ins_stmt = qq{
     INSERT INTO study (
@@ -2163,12 +2170,30 @@ sub add_phenotypes {
     FROM attrib_type at
     WHERE at.code = ?
   };
-  
+
+  my $attrib_id_ext_stmt = qq{ 
+    SELECT attrib_id from attrib, attrib_type
+    WHERE attrib_type.code = 'ontology_mapping'
+    AND attrib.attrib_type_id = attrib_type.attrib_type_id
+    AND attrib.value ='Data source'};
+ 
+  my $onology_accession_ins_stmt = qq{
+    INSERT IGNORE INTO phenotype_ontology_accession
+    (phenotype_id, accession, linked_by_attrib)
+    values (?,?, ?)
+   };
+ 
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
   my $pf_check_sth   = $db_adaptor->dbc->prepare($pf_check_stmt);
   my $pf_ins_sth   = $db_adaptor->dbc->prepare($pf_ins_stmt);
   my $attrib_ins_sth = $db_adaptor->dbc->prepare($attrib_ins_stmt);
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
+  my $onology_accession_ins_sth = $db_adaptor->dbc->prepare($onology_accession_ins_stmt);
+
+  ## get the attrib id for the type of description to ontology term linking
+  my $attrib_id_ext_sth = $db_adaptor->dbc->prepare($attrib_id_ext_stmt);
+  $attrib_id_ext_sth->execute();
+  my $ont_attrib_type = $attrib_id_ext_sth->fetchall_arrayref();
 
   # First, sort the array according to the phenotype description
   my @sorted = sort {($a->{description} || $a->{name}) cmp ($b->{description} || $b->{name})} @{$phenotypes};
@@ -2182,13 +2207,11 @@ sub add_phenotypes {
     progress($i++, $total);
     
     $object_type = $phenotype->{type} if defined($phenotype->{type});
-    
+
     # If the rs could not be mapped to a variation id, skip it
     next if $object_type =~ /Variation/ && (!defined($variation_ids->{$phenotype->{"id"}}[0]));
-    
+
     # if we have no coords, skip it
-    next unless defined($coords->{$phenotype->{id}});
-    
     my $study_id;
     
     if(defined($phenotype->{study}) || defined($phenotype->{study_description}) || defined($phenotype->{study_type})) {
@@ -2241,7 +2264,13 @@ sub add_phenotypes {
     
     # get phenotype ID
     my $phenotype_id = get_phenotype_id($phenotype, $db_adaptor);
-    
+
+    foreach my $acc (@{$phenotype->{accessions}}){
+      $acc =~ s/\s+//g;
+      $acc = iri2acc($acc) if $acc =~ /^http/;
+      $onology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0] ) ||die "Failed to import phenotype accession\n";
+    }
+
     if ($phenotype->{"associated_gene"}) {
       $phenotype->{"associated_gene"} =~ s/\s//g;
       $phenotype->{"associated_gene"} =~ s/;/,/g;
@@ -2561,6 +2590,17 @@ sub progress {
   $prev_prog = $numblobs.'-'.$percent;
   
   printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
+}
+
+## format ontology accessions
+sub iri2acc{
+
+  my $iri = shift;
+  my @a = split/\//, $iri;
+  my $acc = pop @a;
+  $acc =~ s/\_/\:/;
+
+  return $acc;
 }
 
 # end progress bar
