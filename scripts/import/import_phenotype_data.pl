@@ -23,6 +23,7 @@ use ImportUtils;
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 use XML::LibXML;
+use Text::CSV;
 
 # set output autoflush for progress bars
 $| = 1;
@@ -1376,81 +1377,73 @@ sub parse_ddg2p {
   die("ERROR: Could not get gene adaptor") unless defined($ga);
   
   my @phenotypes;
+  my $fh;
   
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open $fh, "zcat $infile |" or die ("Could not open $infile for reading");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open($fh,'<',$infile) or die ("Could not open $infile for reading");
   }
   
   my %headers;
   
+  my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
+            or die "Cannot use CSV: ".Text::CSV->error_diag ();
+
+  # Get columns headers
+  $csv->column_names ($csv->getline ($fh));
+
   # Read through the file and parse out the desired fields
-  while (<IN>) {
-    chomp;
-
-    my @data = split /\,/, $_;
-    foreach my $col (@data) {
-      $col =~ s/"//g;
-    }
-    
-    # header
-    if(/^"gene symbol"/) {
-      $headers{$data[$_]} = $_ for 0..$#data;
-    }
-    else {
-
-      my %content;
-      $content{$_} = $data[$headers{$_}] for keys %headers;
+  while (my $content = $csv->getline_hr ($fh)) {
       
-      # get data from the line
-      my $symbol  = $content{'gene symbol'};
-      my $allelic = $content{'allelic requirement'};
-      my $mode    = $content{'mutation consequence'};
-      my $phen    = $content{'disease name'};
-      my $id      = $content{'disease mim'};
-      my @accns   = split/\;/,$content{'phenotypes'};
+    # get data from the line
+    my $symbol  = $content->{'gene symbol'};
+    my $allelic = $content->{'allelic requirement'};
+    my $mode    = $content->{'mutation consequence'};
+    my $phen    = $content->{'disease name'};
+    my $id      = $content->{'disease mim'};
+    my @accns   = split/\;/,$content->{'phenotypes'};
 
-      if($symbol && $phen) {
-        $phen =~ s/\_/ /g;
+    if ($symbol && $phen) {
+      $phen =~ s/\_/ /g;
 
-        my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
+      my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
 
-        # we don't want any LRG genes
-        @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+      # we don't want any LRG genes
+      @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
 
-        # try restricting by name
-        if(scalar(@$genes) > 1) {
-          my @tmp = grep {$_->external_name eq $symbol} @$genes;
-          $genes = \@tmp if scalar @tmp;
-        }
+      # try restricting by name
+      if (scalar(@$genes) > 1) {
+        my @tmp = grep {$_->external_name eq $symbol} @$genes;
+        $genes = \@tmp if scalar @tmp;
+      }
 
-        if(scalar @$genes != 1) {
-          $DB::single = 1;
-          print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
-        }
+      if (scalar @$genes != 1) {
+        $DB::single = 1;
+        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
+      }
 
-        next unless scalar @$genes;
+      next unless scalar @$genes;
 
-        foreach my $gene(@$genes) {
-          push @phenotypes, {
-            'id' => $gene->stable_id,
-            'description' => $phen,
-            'external_id' => $id,
-            'seq_region_id' => $gene->slice->get_seq_region_id,
-            'seq_region_start' => $gene->seq_region_start,
-            'seq_region_end' => $gene->seq_region_end,
-            'seq_region_strand' => $gene->seq_region_strand,
-            'mutation_consequence' => $mode,
-            'inheritance_type' => $allelic,
-            'accessions' => \@accns,
-          };
-        }
+      foreach my $gene(@$genes) {
+        push @phenotypes, {
+          'id' => $gene->stable_id,
+          'description' => $phen,
+          'external_id' => $id,
+          'seq_region_id' => $gene->slice->get_seq_region_id,
+          'seq_region_start' => $gene->seq_region_start,
+          'seq_region_end' => $gene->seq_region_end,
+          'seq_region_strand' => $gene->seq_region_strand,
+          'mutation_consequence' => $mode,
+          'inheritance_type' => $allelic,
+          'accessions' => \@accns,
+        };
       }
     }
   }
+  close($fh);
 
   return {'phenotypes' => \@phenotypes};
 }
