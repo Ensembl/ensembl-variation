@@ -402,7 +402,7 @@ CREATE TABLE `phenotype` (
 CREATE TABLE `phenotype_ontology_accession` (
   `phenotype_id` int(11) unsigned NOT NULL,
   `accession` varchar(255) NOT NULL,
-  `linked_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
+  `linked_by_attrib` set('437','438','439','440','441','442','443','444') DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`,`accession`)
 );
 
@@ -1769,7 +1769,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|drop column moltype from variation_synonym');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_d.sql|Making attrib_id auto_increment');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_e.sql|drop the table tagged_variation_feature');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_f.sql|add phenotype_ontology_accession')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_f.sql|add phenotype_ontology_accession');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_g.sql|allow the column description to store more text in the source table');
 
 
