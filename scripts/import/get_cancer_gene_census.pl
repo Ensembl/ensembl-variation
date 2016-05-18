@@ -72,7 +72,7 @@ while(<IN>) {
   my $type          = $json_hash->{'type'};
   my $gene_symbol   = $json_hash->{'unique_association_fields'}{'gene'};
   #my @pmids         = split(',',$json_hash->{'unique_association_fields'}{'publicationIDs'});
-  my $pmids         = parse_publications($json_hash->{'unique_association_fields'}{'publicationIDs'});
+  my $pmids         = parse_publications($json_hash->{'literature'}{'references'});
   my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_uri'};
   
   # Phenotype fetching and parsing
@@ -97,12 +97,10 @@ while(<IN>) {
 
   my %stable_ids;
   if (scalar @$genes != 1) {
-    my $gene_ids = $json_hash->{'target'}{'id'};
-    foreach my $gene_id (@$gene_ids) {
-      $gene_id =~ /(ENSG\d+)$/i;
-      if ($1) {
-        $stable_ids{$1} = 1;
-      }
+    my $gene_id = $json_hash->{'target'}{'id'};
+    $gene_id =~ /(ENSG\d+)$/i;
+    if ($1) {
+      $stable_ids{$1} = 1;
     }
     print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $gene_symbol\n";
   }
@@ -114,7 +112,7 @@ while(<IN>) {
     my $add_flag = 1;
     $add_flag = 0 if (%stable_ids && !$stable_ids{$gene_id});
     
-    print OUT "$gene_symbol\t$gene_id\t$type\t$source\t$phenotype\t$pmids\n" if ($add_flag == 1);
+    print OUT "$gene_symbol\t$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\n" if ($add_flag == 1);
   }
 }
 close(F);
@@ -140,8 +138,9 @@ sub parse_publications {
   my $pubs = shift;
   
   my @pmids;
-  foreach my $pub (split(';',$pubs)) {
-    $pub =~ /^http:\/\/europepmc.org\/abstract\/MED\/(\d+)$/i;
+  foreach my $pub (@$pubs) {
+    my $pub_id = $pub->{'lit_id'};
+    $pub_id=~ /^http:\/\/europepmc.org\/abstract\/MED\/(\d+)$/i;
     if ($1) {
       my $pmid = "PMID:$1";
       push @pmids,$pmid;

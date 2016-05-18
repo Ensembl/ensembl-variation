@@ -1472,9 +1472,10 @@ sub parse_cancer_gene_census {
     my @row_data = split(/\t/, $_);
 
     # get data
-    my $gene_id = $row_data[1];
-    my $phen    = $row_data[4];
-    my $pmids   = $row_data[5];
+    my $gene_id   = $row_data[1];
+    my $phen      = $row_data[4];
+    my $accession = $row_data[4];
+    my $pmids     = $row_data[6];
 
     my $gene = $ga->fetch_by_stable_id($gene_id);
 
