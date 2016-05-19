@@ -552,6 +552,7 @@ sub get_all_RegulatoryFeatureVariations {
   if ($regulatory_features) {
     return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
   } else {
+    return [] unless keys %{$self->{regulatory_feature_variations}};
     return [ map {$self->{regulatory_feature_variations}->{$_}} sort keys %{$self->{regulatory_feature_variations}} ];
   }
 }
@@ -591,6 +592,7 @@ sub get_all_MotifFeatureVariations {
   if ($motif_features) {
     return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
   } else {
+    return [] unless keys %{$self->{motif_feature_variations}};
     return [ map {$self->{motif_feature_variations}->{$_}} sort keys %{$self->{motif_feature_variations}} ];
   }
 }
@@ -904,7 +906,7 @@ sub get_consequence_type {
 # so that the API doesn't try to go to the DB to fill them
 sub _finish_annotation {
   my $self = shift;
-  $self->{$_.'_variations'} ||= {} for qw(transcript regulatoryfeature motiffeature);
+  $self->{$_.'_variations'} ||= {} for qw(transcript regulatory_feature motif_feature);
   $self->get_IntergenicVariation(1);
 }
 
