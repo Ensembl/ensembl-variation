@@ -61,7 +61,8 @@ sub new {
     
     $self->add_StructuralVariationOverlapAllele(
         Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-            structural_variation_overlap    => $self,
+            structural_variation_overlap => $self,
+            allele_number                => 1,  
         })
     );
 

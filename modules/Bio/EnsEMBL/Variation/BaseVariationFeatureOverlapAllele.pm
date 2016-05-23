@@ -207,6 +207,24 @@ sub is_reference {
     return $self->{is_reference};
 }
 
+=head2 allele_number
+
+  Description: Getter/setter for the allele number; represents the order of this allele
+               in the BaseVariationFeature's allele string
+  Returntype : int
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub allele_number {
+  my $self = shift;
+
+  $self->{allele_number} = shift if @_;
+
+  return $self->{allele_number};
+}
+
 =head2 get_all_OverlapConsequences
 
   Description: Get a list of all the OverlapConsequences of this allele, calculating them 
