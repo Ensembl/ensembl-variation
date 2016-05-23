@@ -762,6 +762,8 @@ sub _get_all_LD_genotypes_by_Slice {
       else {
         my %nums;
 
+        @$names = grep {$_ ne '.'} @$names;
+
         foreach my $name(@$names) {
           $name =~ /(\d+)/;
           $nums{$name} = $1;
