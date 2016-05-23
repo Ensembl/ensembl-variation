@@ -6012,7 +6012,7 @@ sub cache_custom_annotation {
                     if(defined($feature)) {
                         $got_features = 1;
 
-                        if(!defined($feature->{name}) || $custom->{coords}) {
+                        if(!defined($feature->{name}) || $feature->{name} eq '.' || $custom->{coords}) {
                             $feature->{name} = $feature->{chr}.":".$feature->{start}."-".$feature->{end};
                         }
 
