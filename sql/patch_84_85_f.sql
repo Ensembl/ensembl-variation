@@ -3,7 +3,7 @@
 CREATE TABLE `phenotype_ontology_accession` (
   `phenotype_id` int(11) unsigned NOT NULL,
   `accession` varchar(255) NOT NULL,
-  `linked_by_attrib` set('437','438','439','440','441','442',443,444) DEFAULT NULL,
+  `linked_by_attrib` set('437','438','439','440','441','442','443','444') DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`,`accession`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
