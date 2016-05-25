@@ -21,6 +21,8 @@ use warnings;
 #### This is gene-annotation dependant
 #### Exceptions should be reported when HGVS protein nomenclature cannot be reliably converted to genomic 
 
+#### HGVS requires sequence accessions and versions throughout 
+####   - we fail over to seq name where no acc/ver available; tested by X data here
 
 use Test::More;
 
@@ -48,7 +50,7 @@ my $DEBUG = 0;
 ##  DATA:  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description, shifted_genomic_allele] 
 
 my @test_input = (    
-          ["2:g.46746465G>A",    
+          ["NC_000002.11:g.46746465G>A",    
            "A", 
            "ENST00000522587.1:c.-101-6514C>T", 
            "T",
@@ -56,7 +58,7 @@ my @test_input = (
            "substitution, coding intron - downstream"
           ],           
 
-          ["2:g.46739156C>T",    
+          ["NC_000002.11:g.46739156C>T",    
            "T",
            "ENST00000306448.4:c.*14G>A",       
            "A",
@@ -64,7 +66,7 @@ my @test_input = (
            "substitution 3' UTR"
           ],
  
-          ["2:g.46746256G>A",    
+          ["NC_000002.11:g.46746256G>A",    
            "A", 
            "ENST00000306448.4:c.-274C>T",      
            "T",
@@ -72,56 +74,56 @@ my @test_input = (
            "substitution, 5' UTR" 
           ],  
 
-          ["2:g.46746507delCinsACAA",
+          ["NC_000002.11:g.46746507delCinsACAA",
            "ACAA",  
            "ENST00000524249.1:n.775+16445delGinsTTGT",   
            "TTGT",
            "", 
            "delins, non-coding "
           ],  
-          ["2:g.46739212C>G",    
+          ["NC_000002.11:g.46739212C>G",    
            "G", 
            "ENST00000522587.1:c.639G>C",  
            "C", 
            "ENSP00000428141.1:p.Met213Ile",      
            "substitution, non_syn"
           ],
-          ["2:g.46739488G>A",    
+          ["NC_000002.11:g.46739488G>A",    
            "A", 
            "ENST00000306448.4:c.363C>T",  
            "T", 
            "ENST00000306448.4:c.363C>T(p.=)",    
            "substitution, synonymous"
           ],
-          ["2:g.46731836A>G",    
+          ["NC_000002.11:g.46731836A>G",    
            "G",  
            "",                          
            "",
            "",
            "substitution, downstream" 
           ],          
-          ["2:g.46747460C>G",    
+          ["NC_000002.11:g.46747460C>G",    
            "G", 
            "",
            "",
            "",
            "substitution, upstream" 
           ], 
-          ["2:g.46732522G>A",    
+          ["NC_000002.11:g.46732522G>A",    
            "A", 
            "ENST00000524249.1:n.776-14552C>T", 
            "T",
            "",           
            "substitution, noncoding intron"
           ],
-          ["2:g.98275102C>T",
+          ["NC_000002.11:g.98275102C>T",
            "T",
            "ENST00000289228.5:c.445G>A",
            "A",
            "ENSP00000289228.5:p.Ala149Thr",
            "parseable protein change [-1]" 
           ],   
-          ["3:g.10191482_10191483insTTT",
+          ["NC_000003.11:g.10191482_10191483insTTT",
            "TTT",
            "ENST00000345392.2:c.352_353insTTT",
            "TTT",
@@ -129,7 +131,7 @@ my @test_input = (
            "del ins, stop_gained",
           ],
  
-          ["4:g.41993003G>A",    
+          ["NC_000004.11:g.41993003G>A",    
            "A", 
            "ENST00000264451.6:c.109+226G>A",   
            "A",
@@ -137,49 +139,49 @@ my @test_input = (
            "substitution, coding intron upstream"
           ],
 
-          ["4:g.130032945A>G",
+          ["NC_000004.11:g.130032945A>G",
            "G",
            "ENST00000281146.4:c.599A>G",
            "G",
            "ENSP00000281146.4:p.Ter200TrpextTer2",
            "substitution, stop lost"
           ], 
-          ["4:g.130032948A>C",
+          ["NC_000004.11:g.130032948A>C",
            "C",
            "ENST00000281146.4:c.*2A>C",
            "C",
            "",
            "substitution, after stop "
            ], 
-          ["5:g.96232565_96232566insCC",
+          ["NC_000005.9:g.96232565_96232566insCC",
            "CC",
            "ENST00000508077.1:c.488_489insCC",
            "CC",
            "",
            "insertion, partial codon"
           ],
-          ["6:g.6649978_6649980dupAGG",
+          ["NC_000006.11:g.6649978_6649980dupAGG",
            "AGG",
            "ENST00000230568.3:c.405+68_405+70dupAGG",
            "AGG",
            "",
            "duplication, intronic - long"
           ],
-          ["6:g.31997361delC",
+          ["NC_000006.11:g.31997361delC",
            "-",
            "ENST00000435363.2:c.3695delC",           
            "-",
            "ENSP00000415941.2:p.Ser1232Ter",
            "deletion, stop gained"
           ],    
-          ["7:g.143557504delT",  
+          ["NC_000007.13:g.143557504delT",  
            "-", 
            "ENST00000355951.2:c.1964delA", 
            "-",
            "ENSP00000348220.2:p.Gln655ArgfsTer17",  
            "deletion, frameshift"
           ],                     
-          ["7:g.7680048A>G",
+          ["NC_000007.13:g.7680048A>G",
            "G",
            "ENST00000223129.4:c.2T>C",
            "C",
@@ -187,7 +189,7 @@ my @test_input = (
            "substitution,  start loss"
           ],
 
-          ["7:g.143175210G>A",
+          ["NC_000007.13:g.143175210G>A",
            "A",
            "ENST00000408916.1:c.245G>A",
            "A",
@@ -195,7 +197,7 @@ my @test_input = (
            "parseable protein change"
           ],  
 
-          ["12:g.102056227G>A",
+          ["NC_000012.11:g.102056227G>A",
            "A",
            "ENST00000360610.2:c.2049G>A",
            "A",
@@ -203,7 +205,7 @@ my @test_input = (
            "substitution synonymous"
           ],          
        
-          ["13:g.51519667dupA",   #rs17857128
+          ["NC_000013.10:g.51519667dupA",   #rs17857128
            "A",
            "ENST00000336617.2:c.615dupA",
            "A",
@@ -211,28 +213,28 @@ my @test_input = (
            "duplication, frameshift"
           ],
                
-          ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
+          ["NC_000017.10:g.7123233_7123234insCAGGACGTGGGCGTG",
            "CAGGACGTGGGCGTG",
            "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
            "CAGGACGTGGGCGTG",  
            "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaTer",
            "insertion,  stop gained"
            ],
-           ["17:g.48452979_48452980insAGC",                  ##rs67225428
+           ["NC_000017.10:g.48452979_48452980insAGC",                  ##rs67225428
            "AGC",
            "ENST00000393271.1:c.410_411insAGC",
            "AGC",
             "ENSP00000376952.1:p.Lys137_Pro138insAla", 
             "insertion,  codon gained"
            ],          
-            ["19:g.7706085T>C",                                ## rs144546645
+           ["NC_000019.9:g.7706085T>C",                                ## rs144546645
            "C",
            "ENST00000320400.4:c.1186T>C",
            "C",
            "ENSP00000318233.4:p.Ter396GlnextTer?",
            "substitution, stop loss, no alt stop"
           ],
-          ["22:g.20920895_20920939dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
+          ["NC_000022.10:g.20920895_20920939dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
            "ENST00000292733.7:c.832_876dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
@@ -251,42 +253,42 @@ my @test_input2 = (
            "",
            "duplication, intronic rc transcript"
           ],    
-          ["11:g.32417913_32417914insCCTACGAGTACTACC",
+          ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
            "CCTACGAGTACTACC", 
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "GGTAGTACTCGTAGG", 
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
-           ["13:g.51519667_51519668insG",    ##rs17857128
+           ["NC_000013.10:g.51519667_51519668insG",    ##rs17857128
            "G",
            "ENST00000336617.2:c.615_616insG",
            "G",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
            ],
-          ["6:g.30558477_30558478insA",
+          ["NC_000006.11:g.30558477_30558478insA",
            "A",
            "ENST00000396515.3:c.716_717insA",
            "A",
            "ENST00000396515.3:c.716_717insA(p.=)",
            "insertion, stop retained"
           ],
-          ["1:g.154140413_154140415delTTA",
+          ["NC_000001.10:g.154140413_154140415delTTA",
            "-", 
            "ENST00000368530.2:c.856_858delTAA",
            "-",
            "ENSP00000357516.2:p.Ter286delextTer56",
             "deletion, stop loss"
           ],
-          ["12:g.102061070_102061071insT",
+          ["NC_000012.11:g.102061070_102061071insT",
            "T",
            "ENST00000360610.2:c.2336-440_2336-439insT", 
            "T",
            "",
            "insertion, coding intron downstream"
           ],
-          ["19:g.48836478_48836480delAGG",  ## rs149734771
+          ["NC_000019.9:g.48836478_48836480delAGG",  ## rs149734771
            "-",
            "ENST00000293261.2:c.1376_1378delCCT",
            "-",
@@ -313,57 +315,57 @@ my @test_input3 = (
            "duplication, intronic rc transcript",
            "X:g.131215401dupA",
           ],    
-          ["11:g.32417910_32417911insACCCCTACGAGTACT",
+          ["NC_000011.9:g.32417910_32417911insACCCCTACGAGTACT",
            "ACCCCTACGAGTACT", 
            "ENST00000530998.1:c.454_455insAGTACTCGTAGGGGT",
            "AGTACTCGTAGGGGT", 
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
            "insertion, stop gained [-1]",
-           "11:g.32417913_32417914insCCTACGAGTACTACC"
+           "NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC"
            ],
 
-           ["13:g.51519667_51519668insG",
+           ["NC_000013.10:g.51519667_51519668insG",
            "G",
            "ENST00000336617.2:c.616+1dupG",
            "G",
            "",
            "insertion, frameshift lost on 3'shift",
-           "13:g.51519669dupG"
+           "NC_000013.10:g.51519669dupG"
            ],
 
-          ["6:g.30558478dupA",
+          ["NC_000006.11:g.30558478dupA",
            "A",
            "ENST00000396515.3:c.717dupA",
            "A",
            "",
            "insertion, stop retained if not shifted",
-           "6:g.30558478dupA"
+           "NC_000006.11:g.30558478dupA"
           ],
 
-          ["1:g.154140412_154140414delATT",  ##rs121964851
+          ["NC_000001.10:g.154140412_154140414delATT",  ##rs121964851
            "-", 
            "ENST00000368530.2:c.857_*1delAAT",
            "-",
            "",
            "deletion, stop loss unless shifted",
-           "1:g.154140414_154140416delTAT"
+           "NC_000001.10:g.154140414_154140416delTAT"
           ],
 
-          ["12:g.102061070_102061071insT",
+          ["NC_000012.11:g.102061070_102061071insT",
            "T",
            "ENST00000360610.2:c.2336-439dupT", 
            "T",
            "",
            "insertion, coding intron downstream",
-           "12:g.102061071dupT"
+           "NC_000012.11:g.102061071dupT"
           ],
-          ["19:g.48836480_48836482delGAG",  ## rs149734771
+          ["NC_000019.9:g.48836480_48836482delGAG",  ## rs149734771
            "-",
            "ENST00000293261.2:c.1376_1378delCCT",
            "-",
            "ENSP00000293261.2:p.Ser459del",
            "deletion, inframe codon loss",
-           "19:g.48836480_48836482delGAG"
+           "NC_000019.9:g.48836480_48836482delGAG"
           ],
          
     );
