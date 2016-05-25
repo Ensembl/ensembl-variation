@@ -1865,8 +1865,13 @@ sub hgvs_genomic {
 
   #########   define reference sequence name ###################################
 
-  # If the reference is a slice, use the seq_region_name as identifier
-  $reference_name ||= $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
+  # If the reference is a slice, use the seqname.version where available or seq_region_name as identifier
+  if ( ! $reference_name && $ref_feature->isa('Bio::EnsEMBL::Slice')){
+
+    my $syn = $ref_feature->get_all_synonyms('RefSeq_genomic');
+
+    $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $ref_feature->seq_region_name ());
+  }
 
   # Use the feature's display id as reference name unless specified otherwise. 
   # If the feature is a transcript or translation, append the version number as well
