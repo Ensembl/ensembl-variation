@@ -396,8 +396,13 @@ sub get_ss_variations{
         $l->[2] = "N" unless defined $l->[2];
 
         ## human specific
-        $evidence{$l->[0]}{'KG'}    = 1 if $l->[1] =~/1000GENOMES/;
-        $evidence{$l->[0]}{'freq'}  = 1 if $l->[1] =~/1000GENOMES/;
+        $evidence{$l->[0]}{'KG'}    = 1 if $l->[1] =~/1000GENOMES/; 
+
+        $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]  =~/NHLBI-ESP/i;
+
+        $evidence{$l->[0]}{'ExAC'} = 1 if defined $l->[4] && $l->[4]  =~/EVA_EXAC/i;
+
+        $evidence{$l->[0]}{'freq'}  = 1 if $l->[1] =~/1000GENOMES|NHLBI-ESP|EVA_EXAC/;
 
         ## cow specific
         $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
@@ -416,12 +421,8 @@ sub get_ss_variations{
             ## flag if frequency data available
             $evidence{$l->[0]}{'freq'}  = 1;
 
-            ## special case for human only - flag specific submitters of frequency data
+            ## special case for HapMap - only flag if reported polymorphic
             $evidence{$l->[0]}{'HM'}  = 1  if defined $l->[4] && $l->[4]  =~/HapMap/i;
-
-            $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]  =~/NHLBI-ESP/i;
-
-            $evidence{$l->[0]}{'ExAC'} = 1 if defined $l->[4] && $l->[4]  =~/EVA_EXAC/i;
         }
     }
 
