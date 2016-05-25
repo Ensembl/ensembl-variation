@@ -27,12 +27,12 @@ CREATE TABLE `associate_study` (
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `attrib` (
-  `attrib_id` int(11) unsigned NOT NULL DEFAULT '0',
+  `attrib_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `attrib_type_id` smallint(5) unsigned NOT NULL DEFAULT '0',
   `value` text NOT NULL,
   PRIMARY KEY (`attrib_id`),
   UNIQUE KEY `type_val_idx` (`attrib_type_id`,`value`(40))
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `attrib_set` (
   `attrib_set_id` int(11) unsigned NOT NULL DEFAULT '0',
@@ -97,7 +97,7 @@ CREATE TABLE `failed_allele` (
   `failed_description_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`failed_allele_id`),
   UNIQUE KEY `allele_idx` (`allele_id`,`failed_description_id`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `failed_description` (
   `failed_description_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -233,6 +233,13 @@ CREATE TABLE `phenotype_feature_attrib` (
   `value` varchar(255) DEFAULT NULL,
   KEY `phenotype_feature_idx` (`phenotype_feature_id`),
   KEY `type_value_idx` (`attrib_type_id`,`value`)
+) ENGINE=MyISAM ;
+
+CREATE TABLE `phenotype_ontology_accession` (
+  `phenotype_id` int(11) unsigned NOT NULL,
+  `accession` varchar(255) NOT NULL,
+  `linked_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
+  PRIMARY KEY (`phenotype_id`,`accession`)
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `population` (
@@ -384,7 +391,7 @@ CREATE TABLE `source` (
   `source_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(24) NOT NULL,
   `version` int(11) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
+  `description` varchar(400) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
   `type` enum('chip','lsdb') DEFAULT NULL,
   `somatic_status` enum('germline','somatic','mixed') DEFAULT 'germline',
@@ -495,15 +502,6 @@ CREATE TABLE `subsnp_map` (
   `subsnp_id` int(11) unsigned NOT NULL,
   PRIMARY KEY (`variation_id`,`subsnp_id`),
   KEY `variation_idx` (`variation_id`)
-) ENGINE=MyISAM ;
-
-CREATE TABLE `tagged_variation_feature` (
-  `variation_feature_id` int(10) unsigned NOT NULL,
-  `tagged_variation_feature_id` int(10) unsigned DEFAULT NULL,
-  `population_id` int(10) unsigned NOT NULL,
-  KEY `tag_idx` (`variation_feature_id`),
-  KEY `tagged_idx` (`tagged_variation_feature_id`),
-  KEY `population_idx` (`population_id`)
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `tmp_individual_genotype_single_bp` (
@@ -671,12 +669,4 @@ CREATE TABLE `variation_synonym` (
   KEY `subsnp_idx` (`subsnp_id`),
   KEY `source_idx` (`source_id`)
 ) ENGINE=MyISAM  ;
-
-
-CREATE TABLE `phenotype_ontology_accession` (
-  `phenotype_id` int(11) unsigned NOT NULL,
-  `accession` varchar(255) NOT NULL,
-  `linked_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
-  PRIMARY KEY (`phenotype_id`,`accession`)
-) ENGINE=MyISAM ;
 
