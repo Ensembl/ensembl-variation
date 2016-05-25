@@ -163,4 +163,4 @@
 41072	5	NULL	SO:0001503	processed_transcript	"""A transcript for which no open reading frame has been identified and for which no other function has been determined."" [MGI:hdeen]"	0	0
 45078	5	NULL	SO:0001583	missense_variant	"A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved." [EBI:fc, EBI:gr, SO:ke]	0	0
 45119	5	NULL	SO:0001627	intron_variant	"A transcript variant occurring within an intron." [SO:ke]	0	0
-56655	7	NULL	Orphanet:130	Brugada syndrome	"Brugada syndrome (BrS) manifests with ST segment elevation in right precordial leads (V1 to V3), incomplete or complete right bundle branch block, and susceptibility to ventricular tachyarrhythmia and sudden death. BrS is an electrical disorder without overt myocardial abnormalities." []	0	0 
+56655	7	NULL	Orphanet:130	Brugada syndrome	"Brugada syndrome (BrS) manifests with ST segment elevation in right precordial leads (V1 to V3), incomplete or complete right bundle branch block, and susceptibility to ventricular tachyarrhythmia and sudden death. BrS is an electrical disorder without overt myocardial abnormalities." []	0	0
