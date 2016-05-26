@@ -56,6 +56,9 @@ ALTER TABLE genotype_code ADD FOREIGN KEY (allele_code_id) REFERENCES allele_cod
 ALTER TABLE sample ADD FOREIGN KEY (individual_id) REFERENCES individual(individual_id);
 ALTER TABLE sample ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 
+ALTER TABLE sample_synonym ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
+ALTER TABLE sample_synonym ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
+
 ALTER TABLE individual ADD FOREIGN KEY (father_individual_id) REFERENCES individual(individual_id);
 ALTER TABLE individual ADD FOREIGN KEY (mother_individual_id) REFERENCES individual(individual_id);
 ALTER TABLE individual ADD FOREIGN KEY (individual_type_id) REFERENCES individual_type(individual_type_id);
@@ -127,6 +130,8 @@ ALTER TABLE phenotype_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_reg
 
 ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (phenotype_feature_id) REFERENCES phenotype_feature(phenotype_feature_id);
 ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (attrib_type_id) REFERENCES attrib_type(attrib_type_id);
+
+ALTER TABLE phenotype_ontology_accession ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
 
 ALTER TABLE variation_citation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE variation_citation ADD FOREIGN KEY (publication_id) REFERENCES publication(publication_id);
