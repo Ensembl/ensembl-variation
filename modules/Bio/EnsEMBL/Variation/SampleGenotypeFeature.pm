@@ -141,5 +141,11 @@ sub variation_feature {
   return $self->{variation_feature};
 }
 
+sub differences {
+  my $self = shift;
+  $self->{differences} = shift if @_;
+  return $self->{differences};
+}
+
 
 1;
