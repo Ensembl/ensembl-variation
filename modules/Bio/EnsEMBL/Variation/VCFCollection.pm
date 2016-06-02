@@ -823,9 +823,8 @@ sub _create_SampleGenotypeFeatures {
   my @alleles;
 
   my $class_SO_term = $vf->class_SO_term();
-   
+  my $vcf = $self->_current();
   if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
-    my $vcf = $self->_current();
     @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
   }
  
