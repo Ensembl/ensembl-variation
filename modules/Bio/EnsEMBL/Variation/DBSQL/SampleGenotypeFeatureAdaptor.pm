@@ -205,7 +205,7 @@ sub fetch_all_by_Slice {
   Description: Retrieves all SampleGenotypeFeatures for a given slice that are unique
                for the given sample in the given population.
                The allowed samples and populations are restricted to data that comes from VCF files. 
-               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all($in_vcf) to retrieve all populations
+               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all_vcf_Populations to retrieve all populations
                that are represented in VCF files.
   Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotypeFeature
   Exceptions : throw on bad and missing argument
@@ -247,7 +247,7 @@ sub fetch_all_unique_by_Slice {
   Description: Retrieves all SampleGenotypeFeatures for a given slice and sample. It also stores genotypes for samples that differ
                from the given sample's genotype and are also different from the reference.
                The allowed samples and populations are restricted to data that comes from VCF files. 
-               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all($in_vcf) to retrieve all populations
+               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all_vcf_Populations to retrieve all populations
                that are represented in VCF files.
   Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotypeFeature
   Exceptions : throw on bad and missing argument
