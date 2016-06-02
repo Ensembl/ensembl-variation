@@ -66,7 +66,7 @@
       "id": "mouse_genome_project_indel",
       "species": "mus_musculus",
       "assembly": "GRCm38",
-      "type": "local",
+      "type": "remote",
       "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/mus_musculus/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
