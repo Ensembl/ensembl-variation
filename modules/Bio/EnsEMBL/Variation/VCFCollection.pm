@@ -851,19 +851,17 @@ sub _create_SampleGenotypeFeatures {
         $_ = substr($_, 1) || '-' for @bits;
       }
     }
-    $sample2genotype->{$sample->{name}}->{genotype} = [sort @bits];
-    $sample2genotype->{$sample->{name}}->{phased} = $phased;
-    $sample2genotype->{$sample->{name}}->{sample} = $sample;
+    if (!$cmp) {
+      my $sgf = $self->_create_SampleGenotypeFeature($sample, \@bits, $phased, $vf);
+      push @genotypes, $sgf;
+    } else { 
+      $sample2genotype->{$sample->{name}}->{genotype} = [sort @bits];
+      $sample2genotype->{$sample->{name}}->{phased} = $phased;
+      $sample2genotype->{$sample->{name}}->{sample} = $sample;
+    }
   } 
 
   if (!$cmp) {
-    foreach my $sample_name (keys %$sample2genotype) {
-      my $bits = $sample2genotype->{$sample_name}->{genotype};
-      my $phased = $sample2genotype->{$sample_name}->{phased};
-      my $sample = $sample2genotype->{$sample_name}->{sample};
-      my $sgf = $self->_create_SampleGenotypeFeature($sample, $bits, $phased, $vf);
-      push @genotypes, $sgf;
-    }
     return \@genotypes;
   }
   my $sample_cmp_name = $sample_cmp->name;
