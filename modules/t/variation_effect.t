@@ -1402,6 +1402,21 @@ $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
     }, 
 ];
 
+# a transcript with incomplete 5' CDS
+my $incomplete_cds_t = $ta->fetch_by_stable_id('ENST00000452863');
+$transcript_tests->{$incomplete_cds_t->stable_id}->{transcript} = $incomplete_cds_t;
+
+$transcript_tests->{$incomplete_cds_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with incomplete 5' CDS",
+        alleles => 'T',
+        start   =>  32456435,
+        end     =>  32456435,
+        effects => [qw(missense_variant)],
+    }, 
+];
+
+
 
 my $test_count = 1;
 
