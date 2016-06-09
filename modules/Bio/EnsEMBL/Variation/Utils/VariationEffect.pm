@@ -763,12 +763,12 @@ sub affects_start_codon {
         # default
         $cache->{affects_start_codon} = 0;
 
-        # incomplete 5' end means no standard start codon
-        return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
-
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         $bvf  ||= $bvfo->base_variation_feature;
+
+        # incomplete 5' end means no standard start codon
+        return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
         
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
