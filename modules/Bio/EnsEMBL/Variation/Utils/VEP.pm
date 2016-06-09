@@ -3757,6 +3757,11 @@ sub fetch_transcripts {
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
 
     foreach my $chr(keys %{$regions}) {
+      
+        ## hack to copy HGNC IDs
+        my %hgnc_ids = ();
+        my %refseq_stuff = ();
+
         foreach my $region(sort {(split '-', $a)[0] <=> (split '-', $b)[1]} @{$regions->{$chr}}) {
             progress($config, $counter++, $region_count);
 
@@ -3810,10 +3815,6 @@ sub fetch_transcripts {
 
                 $config->{loaded_tr}->{$chr}->{$region} = 1;
             }
-
-            ## hack to copy HGNC IDs
-            my %hgnc_ids = ();
-            my %refseq_stuff = ();
 
             # add loaded transcripts to main cache
             if(defined($tmp_cache->{$chr})) {
