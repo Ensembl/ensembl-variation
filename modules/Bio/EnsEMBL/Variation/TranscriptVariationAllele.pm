@@ -852,9 +852,8 @@ sub _hgvs_tva {
       ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
       $slice_start != $slice->length() &&
       (
-        defined $tv->adaptor() && $tv->adaptor->db &&
         (
-          UNIVERSAL::can($tv->adaptor, 'isa') ? 
+          defined $tv->adaptor() && UNIVERSAL::can($tv->adaptor, 'isa') && $tv->adaptor->db ? 
           $tv->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
           $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
         )
