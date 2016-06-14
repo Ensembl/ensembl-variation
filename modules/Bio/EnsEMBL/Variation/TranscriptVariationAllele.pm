@@ -852,7 +852,7 @@ sub _hgvs_tva {
       ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
       $slice_start != $slice->length() &&
       (
-        defined $tv->adaptor() && 
+        defined $tv->adaptor() && $tv->adaptor->db &&
         (
           UNIVERSAL::can($tv->adaptor, 'isa') ? 
           $tv->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
