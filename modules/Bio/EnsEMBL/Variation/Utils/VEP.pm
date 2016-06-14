@@ -1,6 +1,7 @@
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -3756,6 +3757,11 @@ sub fetch_transcripts {
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
 
     foreach my $chr(keys %{$regions}) {
+      
+        ## hack to copy HGNC IDs
+        my %hgnc_ids = ();
+        my %refseq_stuff = ();
+
         foreach my $region(sort {(split '-', $a)[0] <=> (split '-', $b)[1]} @{$regions->{$chr}}) {
             progress($config, $counter++, $region_count);
 
@@ -3809,10 +3815,6 @@ sub fetch_transcripts {
 
                 $config->{loaded_tr}->{$chr}->{$region} = 1;
             }
-
-            ## hack to copy HGNC IDs
-            my %hgnc_ids = ();
-            my %refseq_stuff = ();
 
             # add loaded transcripts to main cache
             if(defined($tmp_cache->{$chr})) {

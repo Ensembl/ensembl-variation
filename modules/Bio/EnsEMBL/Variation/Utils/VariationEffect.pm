@@ -1,6 +1,7 @@
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file excepst in compliance with the License.
@@ -765,9 +766,13 @@ sub affects_start_codon {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         $bvf  ||= $bvfo->base_variation_feature;
+
+        # incomplete 5' end means no standard start codon
+        return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
         
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
+
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
             return 0 unless $ref_pep;

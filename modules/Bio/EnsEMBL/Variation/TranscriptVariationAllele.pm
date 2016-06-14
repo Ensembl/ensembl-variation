@@ -1,6 +1,7 @@
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -851,9 +852,8 @@ sub _hgvs_tva {
       ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
       $slice_start != $slice->length() &&
       (
-        defined $tv->adaptor() && 
         (
-          UNIVERSAL::can($tv->adaptor, 'isa') ? 
+          defined $tv->adaptor() && UNIVERSAL::can($tv->adaptor, 'isa') && $tv->adaptor->db ? 
           $tv->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
           $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
         )

@@ -1,7 +1,8 @@
 
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -413,6 +414,28 @@ sub fetch_default_LDPopulation {
   } else {
     return undef;
   }
+}
+
+=head2 fetch_all_vcf_Populations
+
+    Example     : @populations = @{$pop_adaptor->fetch_all_vcf_Populations();
+    Description : Gets all populations that are represented in VCF files
+    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    Exceptions  : none
+    Caller      : general
+    Status      : stable
+
+=cut
+
+sub fetch_all_vcf_Populations {
+  my $self = shift;
+  my $use_vcf = $self->db->use_vcf();
+  if (!$use_vcf) {
+    warning('You need to set use_vcf: $sample_genotype_feature_adaptor->db->use_vcf(1)');
+    return [];
+  }
+  my @vcf_pops = map {@{$_->get_all_Populations}} @{$self->db->get_VCFCollectionAdaptor->fetch_all};
+  return \@vcf_pops;
 }
 
 

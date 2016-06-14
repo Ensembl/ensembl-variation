@@ -1,4 +1,5 @@
-# Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1000,19 +1001,19 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end,
         end     => $cds_end,
-        effects => [qw(start_lost)],
+        effects => [qw(missense_variant)],
     }, {
         alleles => 'G',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 1,
-        effects => [qw(start_lost)],
+        effects => [qw(missense_variant)],
     }, {
         alleles => 'C',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 2,
-        effects => [qw(start_lost)],
+        effects => [qw(missense_variant)],
     },  {
         alleles => 'G',
         strand  => -1,
@@ -1036,7 +1037,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(start_lost)],
+        effects => [qw(protein_altering_variant)],
     }, {
         alleles => '-',
         strand  => -1,
@@ -1401,6 +1402,21 @@ $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
     }, 
 ];
 
+# a transcript with incomplete 5' CDS
+my $incomplete_cds_t = $ta->fetch_by_stable_id('ENST00000452863');
+$transcript_tests->{$incomplete_cds_t->stable_id}->{transcript} = $incomplete_cds_t;
+
+$transcript_tests->{$incomplete_cds_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with incomplete 5' CDS",
+        alleles => 'T',
+        start   =>  32456435,
+        end     =>  32456435,
+        effects => [qw(missense_variant)],
+    }, 
+];
+
+
 
 my $test_count = 1;
 
@@ -1443,6 +1459,8 @@ for my $stable_id (keys %$transcript_tests) {
             -variation_feature  => $vf,
             -transcript         => $tran,
         );
+
+        $DB::single = 1 if $test_count == 145;
 
         warn "# alleles: $allele_string\n";
         warn '# codons: ', $tv->codons, "\n" if $tv->codons;

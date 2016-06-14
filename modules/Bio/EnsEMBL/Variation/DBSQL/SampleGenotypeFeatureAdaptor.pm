@@ -1,6 +1,7 @@
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -195,6 +196,90 @@ sub fetch_all_by_Slice {
     } 
   } 
   return \@results;
+}
+
+=head2 fetch_all_unique_by_Slice
+  Arg [1]    : Bio::EnsEMBL:Slice $slice
+  Arg [2]    : Bio::EnsEMBL::Variation::Sample $sample
+  Arg [3]    : Bio::EnsEMBL::Variation::Population $population
+  Example    : my @sample_genotype_features = @{$sgf_adaptor->fetch_all_unique_by_Slice($slice, $sample, $population)};
+  Description: Retrieves all SampleGenotypeFeatures for a given slice that are unique
+               for the given sample in the given population.
+               The allowed samples and populations are restricted to data that comes from VCF files. 
+               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all_vcf_Populations to retrieve all populations
+               that are represented in VCF files.
+  Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotypeFeature
+  Exceptions : throw on bad and missing argument
+  Caller     : general
+  Status     : Stable
+=cut
+
+sub fetch_all_unique_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  my $sample = shift;
+  my $population = shift;
+
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw("Bio::EnsEMBL::Slice arg expected");
+  }
+  if (!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+    throw("Bio::EnsEMBL::Variation::Sample arg expected");
+  }
+  if (!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw("Bio::EnsEMBL::Variation::Population arg expected");
+  }
+
+  my $use_vcf = $self->db->use_vcf();
+  if (!$use_vcf) {
+    warning('You need to set use_vcf: $sample_genotype_feature_adaptor->db->use_vcf(1)');
+    return [];
+  }
+  my $non_ref_only = 0;
+  my @features = map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($slice, $population, $non_ref_only, $sample, 'unique')}} @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+  return \@features;
+}
+
+=head2 fetch_all_differences_by_Slice
+  Arg [1]    : Bio::EnsEMBL:Slice $slice
+  Arg [2]    : Bio::EnsEMBL::Variation::Sample $sample
+  Arg [3]    : Bio::EnsEMBL::Variation::Population $population
+  Example    : my @sample_genotype_features = @{$sgf_adaptor->fetch_all_differences_by_Slice($slice, $sample, $population)};
+  Description: Retrieves all SampleGenotypeFeatures for a given slice and sample. It also stores genotypes for samples that differ
+               from the given sample's genotype and are also different from the reference.
+               The allowed samples and populations are restricted to data that comes from VCF files. 
+               Use the Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor::fetch_all_vcf_Populations to retrieve all populations
+               that are represented in VCF files.
+  Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotypeFeature
+  Exceptions : throw on bad and missing argument
+  Caller     : general
+  Status     : Stable
+=cut
+
+sub fetch_all_differences_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  my $sample = shift;
+  my $population = shift;
+
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw("Bio::EnsEMBL::Slice arg expected");
+  }
+  if (!ref($sample) || !$sample->isa('Bio::EnsEMBL::Variation::Sample')) {
+    throw("Bio::EnsEMBL::Variation::Sample arg expected");
+  }
+  if (!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw("Bio::EnsEMBL::Variation::Population arg expected");
+  }
+
+  my $use_vcf = $self->db->use_vcf();
+  if (!$use_vcf) {
+    warning('You need to set use_vcf: $sample_genotype_feature_adaptor->db->use_vcf(1)');
+    return [];
+  }
+  my $non_ref_only = 0;
+  my @features = map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($slice, $population, $non_ref_only, $sample, 'differences')}} @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+  return \@features;
 }
 
 sub _tables {
