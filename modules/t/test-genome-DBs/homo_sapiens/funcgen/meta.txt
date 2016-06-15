@@ -1,5 +1,4 @@
-534	\N	schema_version	84
-38	1	regbuild.version	12.1
+534	\N	schema_version	85
 80	\N	patch	patch_50_51_b.sql|multispecies
 83	\N	patch	patch_50_51_c.sql|associated_feature_type
 82	\N	patch	patch_50_51_a.sql|cell_type_description
@@ -98,8 +97,7 @@
 528	\N	patch	patch_66_67_b.sql|regulatory_attribute.attribute_feature_idx
 529	\N	patch	patch_66_67_d.sql|regulatory_feature.binary_string_500
 530	\N	patch	patch_66_67_c.sql|result_feature.remove_partitions
-532	1	regbuild.initial_release_date	2012-2
-533	1	regbuild.last_annotation_update	2012-2
+620	\N	patch	patch_84_85_v.sql|Move meta entries regarding regulatory build to the regulatory_build table
 535	\N	patch	patch_67_68_a.sql|schema_version
 536	\N	patch	patch_67_68_b.sql|input_subset.archive_id_display_url
 537	\N	patch	patch_67_68_c.sql|input_set_subset.replicate_is_control
@@ -160,3 +158,26 @@
 596	\N	patch	patch_83_84_d.sql|Add segmentation enum to result_set.feature_class
 597	\N	patch	patch_83_84_e.sql|Increase length of regbuild_string.name
 598	\N	patch	patch_83_84_f.sql|Change regulatory_feature has_evidence to activity
+599	\N	patch	patch_84_85_a.sql|schema_version
+600	\N	patch	patch_84_85_b.sql|rename cell_type table
+601	\N	patch	patch_84_85_c.sql|new epigenome table columns
+602	\N	patch	patch_84_85_d.sql|add columns to experiment table
+603	\N	patch	patch_84_85_e.sql|add/modify columns in input_subset table
+604	\N	patch	patch_84_85_f.sql|drop replicate column from result_set table
+605	\N	patch	patch_84_85_g.sql|update dbentry related tables
+606	\N	patch	patch_84_85_h.sql|Store file types along with the files.
+607	\N	patch	patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.
+608	\N	patch	patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.
+609	\N	patch	patch_84_85_k.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.
+610	\N	patch	patch_84_85_l.sql|Normalise regulatory feature table: Link up the regulatory attributes with the linking table.
+611	\N	patch	patch_84_85_m.sql|Normalise regulatory feature table: Clean up temporary columns and tables.
+612	\N	patch	patch_84_85_n.sql|Make activity an enum.
+613	\N	patch	patch_84_85_o.sql|Delete all MultiCell regulatory features feature set entries.
+614	\N	patch	patch_84_85_p.sql|Delete MultiCell feature_set and epigenome.
+615	\N	patch	patch_84_85_q.sql|Rename table regulatory_attribute to regulatory_evidence.
+616	\N	patch	patch_84_85_r.sql|Drop unused empty tables
+617	\N	patch	patch_84_85_s.sql|modify table_name column in result_set_input table
+618	\N	patch	patch_84_85_t.sql|Drop table regbuild_string
+619	\N	patch	patch_84_85_u.sql|Remove regulatory build entries from feature_set table, relink everything else.
+621	\N	patch	patch_84_85_w.sql|Extend the name length in the input_subset table
+622	\N	patch	patch_84_85_x.sql|Remove unused columns in the experiment table
