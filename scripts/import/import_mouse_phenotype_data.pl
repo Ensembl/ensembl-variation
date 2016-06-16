@@ -36,6 +36,7 @@ GetOptions(
   $config,
   'working_dir=s',
   'coord_file=s',
+  'phenotype_file=s',
   'registry=s',
   'host=s',
   'dbname=s',
@@ -61,13 +62,22 @@ die ("Database credentials or a registry file are required (try --help)") unless
 die ("Variation database credentials (--host, --dbname, --user, --pass, --port) are required") if (!$variation_credentials && !$registry);
 die ("Core database credentials (--chost, --cdbname, --cport) are required") if (!$core_credentials && !$registry);
 
+#http://www.informatics.jax.org/marker/MGI:101877
+$config->{urls} = {
+  impc => '/mi/impc/solr/genotype-phenotype',
+  mgi => '/mi/impc/solr/mgi-phenotype',
+};
+
 set_up_db_connections($config);
+pre_cleanup($config);
 get_version($config);
-get_data($config);
-clear_data_from_last_release($config); # update source version
-get_marker_coords($config);
-populate_phenotype_table($config);
-import_phenotype_features($config);
+foreach my $data_source (qw/mgi impc/) {
+  get_data($config, $data_source);
+  get_marker_coords($config, $data_source);
+  clear_data_from_last_release($config, $data_source); # update source version
+  populate_phenotype_table($config, $data_source);
+  import_phenotype_features($config, $data_source);
+}
 
 sub set_up_db_connections {
   my $config = shift;
@@ -120,13 +130,26 @@ sub set_up_db_connections {
   $config->{dbh} = $dbh;
 }
 
+sub pre_cleanup {
+  my $config = shift;
+  my $dbh = $config->{dbh};
+  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature;}) or die $dbh->errstr;
+  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature;}) or die $dbh->errstr;
+  $dbh->do(qq{INSERT INTO TMP_phenotype_feature SELECT * FROM phenotype_feature;}) or die $dbh->errstr;
+
+  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature_attrib LIKE phenotype_feature_attrib;}) or die $dbh->errstr;
+  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature_attrib;}) or die $dbh->errstr;
+  $dbh->do(qq{INSERT INTO TMP_phenotype_feature_attrib SELECT * FROM phenotype_feature_attrib;}) or die $dbh->errstr;
+}
+
 sub clear_data_from_last_release {
   my $config = shift;
+  my $data_source = shift;
   my $dbh = $config->{dbh};
   # create backup tables for: individual, phenotype_feature_attrib, phenotype, phenotype_feature --> not needed,
   # if something goes wrong, tables are available on ens-livemirror
 
-  my $phenotype_file = $config->{phenotype_file};
+  my $phenotype_file = $config->{"$data_source\_phenotype_file"};
   my $fh = FileHandle->new($phenotype_file, 'r');
   my $source_names = {};
   my $source_name2id = {};
@@ -137,7 +160,10 @@ sub clear_data_from_last_release {
     my $hash;
     foreach my $pair (@pairs) {
       my ($key, $value) = split('=', $pair);
-      if ($key eq 'resource_name') {
+      if ($key eq 'resource_name' && $data_source eq 'impc') {
+        $source_names->{$value} = 1;
+      }
+      if ($key eq 'project_name' && $data_source eq 'mgi') {
         $source_names->{$value} = 1;
       }
     }
@@ -161,14 +187,6 @@ sub clear_data_from_last_release {
   foreach my $source_name (keys %$source_names) {
     $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) or die $dbh->errstr;
   }
-
-  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature;}) or die $dbh->errstr;
-  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature;}) or die $dbh->errstr;
-  $dbh->do(qq{INSERT INTO TMP_phenotype_feature SELECT * FROM phenotype_feature;}) or die $dbh->errstr;
-
-  $dbh->do(qq{CREATE TABLE IF NOT EXISTS TMP_phenotype_feature_attrib LIKE phenotype_feature_attrib;}) or die $dbh->errstr;
-  $dbh->do(qq{TRUNCATE TABLE TMP_phenotype_feature_attrib;}) or die $dbh->errstr;
-  $dbh->do(qq{INSERT INTO TMP_phenotype_feature_attrib SELECT * FROM phenotype_feature_attrib;}) or die $dbh->errstr;
 
   my $source_ids = join(',', values %$source_name2id);
 
@@ -210,45 +228,45 @@ sub get_version {
   my $month_number = $months->{$month}; 
   die "month_number not defined\n" unless $month_number;
 
-  my $version = sprintf '%d%d%.2d', $year, $month_number, $date; 
+  my $version = sprintf '%d%02d%02d', $year, $month_number, $date; 
 
   $config->{version} = $version;
 
 }
 
-
 sub get_data {
   my $config = shift;
+  my $data_source = shift;
 
   my $working_dir = $config->{working_dir};
-  my $phenotype_file = "$working_dir/impc_phenotypes.txt"; 	
-  $config->{phenotype_file} = $phenotype_file;
-  my $fh = FileHandle->new($phenotype_file, 'w');
 
+  my $url = $config->{urls}->{$data_source};
+  my $phenotype_file = "$working_dir/$data_source\_phenotypes.txt"; 	
+  $config->{"$data_source\_phenotype_file"} = $phenotype_file;
+  my $fh = FileHandle->new($phenotype_file, 'w');
   my $http = HTTP::Tiny->new();
 
   my $i      = 0;
   my $rows   = 0;
   my $server = 'http://www.ebi.ac.uk';
-  my $ext     = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
+  my $ext     = "$url/select?q=*:*&rows=$i&wt=json";
 
   # get total number of rows
   while ($i == $rows) {
     $i += 1000;
-    $ext = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=$i&wt=json";
+    $ext = "$url/select?q=*:*&rows=$i&wt=json";
     my $response = $http->get($server.$ext, {
-        headers => { 'Content-type' => 'application/json' }
-        });
+      headers => { 'Content-type' => 'application/json' }
+    });
     my $hash = decode_json($response->{content});
     $rows = scalar @{$hash->{response}->{docs}};
   }
-  #print $rows, "\n";
   my $start = 0;
   while ($start <= $rows) {
-    $ext = "/mi/impc/solr/genotype-phenotype/select?q=*:*&rows=100&wt=json&start=$start";
+    $ext = "$url/select?q=*:*&rows=100&wt=json&start=$start";
     my $response = $http->get($server.$ext, {
-        headers => { 'Content-type' => 'application/json' }
-        });
+      headers => { 'Content-type' => 'application/json' }
+    });
 
     die "Failed!\n" unless $response->{success};
     if (length $response->{content}) {
@@ -270,9 +288,10 @@ sub get_data {
 
 sub populate_phenotype_table {
   my $config = shift;	
+  my $data_source = shift;
 
   # filter mp_term_ids from phenotype_file
-  my $phenotype_file = $config->{phenotype_file};
+  my $phenotype_file = $config->{"$data_source\_phenotype_file"};
 
   my $fh = FileHandle->new($phenotype_file, 'r');
   my $mp_term_names = {};
@@ -317,6 +336,7 @@ sub populate_phenotype_table {
 
 sub import_phenotype_features {
   my $config = shift;
+  my $data_source = shift;
 
   my $dbh                = $config->{dbh};
   my $individual_adaptor = $config->{individual_adaptor};
@@ -359,7 +379,7 @@ sub import_phenotype_features {
   my $attribs;
   my $already_inserted;
 
-  my $phenotype_file = $config->{phenotype_file};
+  my $phenotype_file = $config->{"$data_source\_phenotype_file"};
   my $fh = FileHandle->new($phenotype_file, 'r');
   while (<$fh>) {
     chomp; 
@@ -382,14 +402,21 @@ sub import_phenotype_features {
     my $phenotypes = $phenotype_adaptor->fetch_by_description($hash->{mp_term_name});
     my $phenotype = @{$phenotypes}[0];
     if (! $hash->{mp_term_name}) {
-      print STDERR "No mp_term_name: $_\n";
+      print STDERR "No mp_term_name:\n$_\n";
       next;  
     } 
     unless ($phenotype) {
       die("No phenotype description for term: ", $hash->{mp_term_name});
     }
     my $phenotype_id      = $phenotype->dbID();
-    my $source_id         = source($config, $hash->{resource_name}, $hash->{resource_fullname});
+
+    my $source_id;
+    if ($data_source eq 'impc') {
+      $source_id = source($config, $hash->{resource_name}, $hash->{resource_fullname});
+    } else {
+      $source_id = source($config, $hash->{project_name}, $hash->{project_fullname});
+    }
+
     my $pf_data           = $marker_coords->{$marker_accession_id};
     my $type              = $pf_data->{type};
     my $seq_region_id     = $pf_data->{seq_region_id};
@@ -398,12 +425,13 @@ sub import_phenotype_features {
     my $seq_region_strand = $pf_data->{seq_region_strand};
     my $strain_name       = $hash->{strain_name};
     my $gender            = $hash->{sex};
-    unless ($gender eq 'female' || $gender eq 'male') {
-      $gender = 'unknown';
+    if ($gender) {
+      unless ($gender eq 'female' || $gender eq 'male') {
+        $gender = 'unknown';
+      }
     }
     my $strain_id = 0;
     my $create_new_individual = 0;
-
     if ($strain_name) {
       # attribs
       my $p_value;
@@ -441,21 +469,25 @@ sub import_phenotype_features {
       }
     }
     $attribs->{associated_gene} = $hash->{marker_symbol};
-    $attribs->{strain_id}       = $strain_id;
-    $attribs->{p_value}         = convert_p_value($hash->{p_value});
-    $attribs->{external_id}     = $hash->{mp_term_id};
+    if ($strain_id) {
+      $attribs->{strain_id} = $strain_id;
+    }
+    if ($hash->{p_value}) {
+      $attribs->{p_value} = convert_p_value($hash->{p_value});
+    }
+    $attribs->{external_id} = $hash->{mp_term_id};
+
     my @object_ids = ();
     if ($pf_data->{object_id}) {
       @object_ids = split(';', $pf_data->{object_id});
       my $is_significant = 0;
-      if ($hash->{resource_name} eq 'MGP') {
+      if ($hash->{resource_name} && $hash->{resource_name} eq 'MGP') {
         $is_significant = 1;
       } else {
         if ($attribs->{p_value} && ($attribs->{p_value} <= 0.0001)) {
           $is_significant = 1;
         }
       } 
-
       foreach my $object_id (@object_ids) {
         my $key = join('-', ($phenotype_id, $source_id, $object_id, $strain_id));
         unless ($already_inserted->{$key}) {			
@@ -491,12 +523,11 @@ sub import_phenotype_features {
   $fh->close();
 }
 
-
 sub get_marker_coords {
   my $config = shift;
-
+  my $data_source = shift;
   my $gene_adaptor = $config->{gene_adaptor};
-  my $phenotype_file = $config->{phenotype_file};
+  my $phenotype_file = $config->{"$data_source\_phenotype_file"};
   my $markers;
   my $column_headers;
   # filter for marker accession ids (MGI)
@@ -517,7 +548,7 @@ sub get_marker_coords {
   my $coord_file = $config->{coord_file};	
   $fh = FileHandle->new($coord_file, 'r');
   my $header;
-  my $marker_coords = {};
+  my $marker_coords = $config->{marker_coords} || {};
   while (<$fh>) {
     chomp;
     # test column names are still the same
@@ -572,11 +603,8 @@ sub get_marker_coords {
   $config->{marker_coords} = $marker_coords;
 }
 
-
 sub convert_p_value {
-
   my $pval = shift;
-
   my $sci_pval = '';	
   # If a scientific format is not found, then ...
   if ($pval !~ /^\d+.*e.+$/i) {  
@@ -645,6 +673,10 @@ sub source {
     $source_id = $dbh->{'mysql_insertid'};
     $stmt->finish();
 
+    my $version = $config->{version};
+    if ($version) {
+      $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) or die $dbh->errstr;
+    }
     print STDERR "Added source for $source_name (source_id = $source_id)\n";
   }
   return $source_id;
