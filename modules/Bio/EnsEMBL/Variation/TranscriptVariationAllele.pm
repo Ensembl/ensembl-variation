@@ -258,11 +258,19 @@ sub peptide {
           ($tv_start, $tv_end) = ($tv_end, $tv_start) if $tv_start > $tv_end;
           
           # get all overlapping seqEdits
-          foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
+          SE: foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
             my ($se_start, $se_end, $alt) = ($se->start, $se->end, $se->alt_seq);
+            my $se_alt_seq_length = length($alt);
             
             # loop over each overlapping pos
             foreach my $tv_pos(grep {overlap($_, $_, $se_start, $se_end)} ($tv_start..$tv_end)) {
+
+              # in some cases, the sequence edit can shorten the protein
+              # this means our TV can fall outside the range of the edited protein
+              # therefore for safety jump out
+              if($tv_pos - $se_start >= $se_alt_seq_length) {
+                return $self->{peptide} = undef;
+              }
 
               # apply edit, adjusting for string position
               substr($pep, $tv_pos - $tv_start, 1) = substr($alt, $tv_pos - $se_start, 1);
