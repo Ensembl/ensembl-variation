@@ -78,13 +78,13 @@ sub fetch_input {
         # get all RegulatoryFeatures
         my @feature_ids = ();
         unless ($self->param('only_motif_feature')) {
-            my $it = $rfa->fetch_Iterator_by_Slice_FeatureSets($slice, [$regulatory_feature_set]);
-            while ($it->has_next()) {
-                my $rf = $it->next();
-                push @feature_ids, { feature_id => $rf->stable_id,
-                                     feature_type => 'regulatory_feature',
-                                     species => $species, };
-            }
+          my $it = $rfa->fetch_Iterator_by_Slice($slice);
+          while ($it->has_next()) {
+              my $rf = $it->next();
+              push @feature_ids, { feature_id => $rf->stable_id,
+                                   feature_type => 'regulatory_feature',
+                                   species => $species, };
+          }
         }
         # get all MotifFeatures
         unless ($self->param('only_regulatory_feature')) {
