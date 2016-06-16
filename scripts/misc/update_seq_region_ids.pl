@@ -55,7 +55,6 @@ foreach my $cdba (@$cdbas) {
   next if (!$vdbas->{$species});
   my $dbh = $cdba->dbc->db_handle;
   my $max_mapping_set_id = get_max_mapping_set_id($dbh, $dbname); 
-  $max_mapping_set_id;
   my $id_mapping = {};
   my $sth = $dbh->prepare("SELECT external_seq_region_id, internal_seq_region_id FROM seq_region_mapping WHERE mapping_set_id=$max_mapping_set_id;");
   $sth->execute();
