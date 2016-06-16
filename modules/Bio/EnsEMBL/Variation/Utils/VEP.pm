@@ -6449,6 +6449,22 @@ sub get_version_data {
       }
     }
 
+    if(defined($config->{refseq})) {
+      if(my $refseq_mca = $config->{reg}->get_adaptor($config->{species}, 'otherfeatures', 'metacontainer')) {
+        my $sth = $refseq_mca->db->dbc->prepare(qq{
+          SELECT CONCAT(db_version, ' - ', db_file) FROM analysis WHERE logic_name = 'refseq_import' 
+        });
+        $sth->execute;
+
+        my $version;
+        $sth->bind_columns(\$version);
+        $sth->fetch;
+        $sth->finish;
+
+        $version_data{refseq} = $version if defined($version);
+      }
+    }
+
     # funcgen versions
     if(defined($config->{regulatory})) {
       my $fg_mca = $config->{reg}->get_adaptor($config->{species}, 'funcgen', 'metacontainer');
