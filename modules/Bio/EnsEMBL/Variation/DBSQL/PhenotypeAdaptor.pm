@@ -69,6 +69,8 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_by_description {
     my $self = shift;
     my $desc = shift;
+    warn "You need to pass a description as argument for fetch_by_description\n" unless $desc;
+    return undef if(!$desc);
     $desc =~ s/'/\\'/g;
     return $self->generic_fetch("p.description = '$desc'");
 }
