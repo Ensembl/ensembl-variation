@@ -69,6 +69,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_by_description {
     my $self = shift;
     my $desc = shift;
+    $desc =~ s/'/\\'/g;
     return $self->generic_fetch("p.description = '$desc'");
 }
 
