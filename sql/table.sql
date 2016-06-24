@@ -716,6 +716,7 @@ with a study.
 @see individual
 @see study
 @see sample_population
+@see sample_synonym
 @see sample_genotype_multiple_bp
 @see read_coverage
 @see compressed_genotype_region
@@ -1581,6 +1582,7 @@ You can see the complete list, by species, <a href="/info/genome/variation/sourc
 @see individual_synonym
 @see phenotype_feature
 @see population_synonym
+@see sample_synonym
 @see structural_variation
 @see structural_variation_feature
 @see study
