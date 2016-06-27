@@ -144,6 +144,10 @@ ok($count && $count == 1, "count_all_by_Gene");
 $count = $pfa->count_all_by_phenotype_id(1);
 ok($count && $count == 4, "count_all_by_phenotype_id");
 
+# count_all_type_by_phenotype_id
+$count = $pfa->count_all_type_by_phenotype_id(1);
+ok($count && $count->{'Variation'} == 1 && $count->{'StructuralVariation'} == 2 && $count->{'Gene'} == 1, "count_all_type_by_phenotype_id");
+
 # fetch_all
 $pfs = $pfa->fetch_all();
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 5 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");

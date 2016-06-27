@@ -682,11 +682,34 @@ sub count_all_by_associated_gene {
 
 
 
+=head2 count_all_by_Phenotype
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Phenotype object
+  Example    : $count = $pf_adaptor->count_all_by_Phenotype($phe_object);
+  Description: Retrieves count of the phenotype_feature objects associated with a
+               given phenotype
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+
+=cut
+
 sub count_all_by_Phenotype {
   my $self = shift;
   return $self->count_all_by_phenotype_id($_[0]->dbID);
 }
 
+=head2 count_all_by_Gene
+
+  Arg [1]    : Bio::EnsEMBL:Gene object
+  Example    : $count = $pf_adaptor->count_all_by_Gene($gene_object);
+  Description: Retrieves count of the phenotype_feature objects associated with a
+               given gene
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+
+=cut
 sub count_all_by_Gene {
   my $self = shift;
   my $gene = shift;
@@ -699,6 +722,15 @@ sub count_all_by_Gene {
   return $self->generic_count($constraint);
 }
 
+
+=head2 count_all_by_phenotype_id
+
+  Description: Retrieves phenotype_feature counts for a given phenotype
+  Returntype : the phenotype_feature counts
+  Exceptions : none
+  Caller     : web
+
+=cut
 sub count_all_by_phenotype_id {
   my $self = shift;
   my $id = shift;
@@ -709,6 +741,43 @@ sub count_all_by_phenotype_id {
   $constraint = $self->_is_significant_constraint($constraint);
   
   return $self->generic_count($constraint);
+}
+
+=head2 count_all_type_by_phenotype_id
+
+  Description: Retrieves phenotype_feature counts by type
+               (e.g. Variation, StructuralVariation, Gene, QTL)
+  Returntype : a hash ref type => phenotype_feature counts
+  Exceptions : none
+  Caller     : web
+
+=cut
+sub count_all_type_by_phenotype_id {
+  my $self = shift;
+  my $id = shift;
+
+  my %count_by_type;
+
+  my $constraint = qq{pf.phenotype_id = ?};
+
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+
+  my $sth = $self->dbc->prepare(qq{
+    SELECT pf.type, count(*)
+    FROM phenotype_feature pf
+    WHERE $constraint
+    GROUP BY pf.type
+  });
+
+  $sth->execute($id);
+  my $counts = $sth->fetchall_arrayref();
+
+  foreach my $c (@{$counts}){
+    $count_by_type{$c->[0]} = $c->[1];
+  }
+
+  return \%count_by_type;
 }
 
 =head2 count_all_with_source_by_Phenotype
