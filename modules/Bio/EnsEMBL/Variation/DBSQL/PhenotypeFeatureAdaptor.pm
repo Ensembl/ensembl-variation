@@ -710,6 +710,38 @@ sub count_all_by_phenotype_id {
   return $self->generic_count($constraint);
 }
 
+=head2 count_all_with_source_by_Phenotype
+
+  Description: Retrieves phenotype_feature counts by source name
+  Returntype : a hash ref source name => phenotype_feature counts
+  Exceptions : none
+  Caller     : web
+
+=cut
+sub count_all_with_source_by_Phenotype {
+  my $self     = shift;
+  my $phenotype = shift;
+
+  my %count_by_source;
+
+  my $sth = $self->dbc->prepare(qq{
+    SELECT s.name, count(*)
+    FROM phenotype_feature pf, source s
+    where pf.phenotype_id = ?
+    and pf.source_id = s.source_id 
+    group by s.name
+   });
+
+  $sth->execute($phenotype->dbID);
+  my $counts = $sth->fetchall_arrayref();
+
+  foreach my $c (@{$counts}){
+    $count_by_source{$c->[0]} = $c->[1];
+  }
+
+  return \%count_by_source;
+
+}
 
 =head2 fetch_all
 
