@@ -57,40 +57,46 @@ usage() if ($help);
 
 
 ## Settings ##
-my %pops = ('1000 Genomes'                   => { 'order'      => 1,
-                                                  'species'    => 'Homo sapiens',
-                                                  'term'       => '1000GENOMES:phase_3%',
-                                                  'constraint' => 'size is not null',
-                                                  'url'        => 'http://www.1000genomes.org',
-                                                  'evidence'   => '1000Genomes'
-                                                },
-            'HapMap'                         => { 'order'    => 2,
-                                                  'species'  => 'Homo sapiens',
-                                                  'term'     => 'CSHL-HAPMAP:HAPMAP%',
-                                                  'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
-                                                  'evidence' => 'HapMap'
-                                                },
-            'Exome Sequencing Project (ESP)' => { 'order'    => 3,
-                                                  'species'  => 'Homo sapiens',
-                                                  'term'     => 'ESP6500:%',
-                                                  'url'      => 'http://evs.gs.washington.edu/EVS/',
-                                                  'evidence' => 'ESP'
-                                                },
-            'Mouse Genomes Project (MGP)'    => { 'order'    => 4,
-                                                  'species'  => 'Mus musculus',
-                                                  'term'     => 'Mouse Genomes Project',
-                                                  'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
-                                                },
-            'NextGen Project - Sheep'        => { 'order'    => 5,
-                                                  'species'  => 'Ovis aries',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
-            'NextGen Project - Cow'          => { 'order'    => 6,
-                                                  'species'  => 'Bos taurus',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
+my %pops = ('1000 Genomes Project'                => { 'order'      => 1,
+                                                       'species'    => 'Homo sapiens',
+                                                       'term'       => '1000GENOMES:phase_3%',
+                                                       'constraint' => 'size is not null',
+                                                       'url'        => 'http://www.1000genomes.org',
+                                                       'evidence'   => '1000Genomes'
+                                                     },
+            'HapMap Project'                      => { 'order'    => 2,
+                                                       'species'  => 'Homo sapiens',
+                                                       'term'     => 'CSHL-HAPMAP:HAPMAP%',
+                                                       'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
+                                                       'evidence' => 'HapMap'
+                                                     },
+            'Exome Sequencing Project (ESP)'      => { 'order'    => 3,
+                                                       'species'  => 'Homo sapiens',
+                                                       'term'     => 'ESP6500:%',
+                                                       'url'      => 'http://evs.gs.washington.edu/EVS/',
+                                                       'evidence' => 'ESP'
+                                                     },
+            'Exome Aggregation Consortium (ExAC)' => { 'order'    => 4,
+                                                       'species'  => 'Homo sapiens',
+                                                       'term'     => 'EVA_EXAC:ExAc_Aggregated_Populations',
+                                                       'url'      => 'http://exac.broadinstitute.org/',
+                                                       'evidence' => 'ExAC'
+                                                     },
+            'Mouse Genomes Project (MGP)'         => { 'order'    => 5,
+                                                       'species'  => 'Mus musculus',
+                                                       'term'     => 'Mouse Genomes Project',
+                                                       'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
+                                                     },
+            'NextGen Project - Sheep'             => { 'order'    => 6,
+                                                       'species'  => 'Ovis aries',
+                                                       'term'     => 'NextGen:%',
+                                                       'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                     },
+            'NextGen Project - Cow'               => { 'order'    => 7,
+                                                       'species'  => 'Bos taurus',
+                                                       'term'     => 'NextGen:%',
+                                                       'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                     },
            );
            
 my $server_name = 'http://static.ensembl.org';
@@ -166,7 +172,6 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my $term = $pops{$project}{'term'};
   my $spe  = $pops{$project}{'species'};
   my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
-  my $project_word = ($project =~ /project/i) ? '' : ' Project';
   my $url = $pops{$project}{'url'};
   my $evidence = $pops{$project}{'evidence'};
 
@@ -231,7 +236,7 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my $plural = (scalar(@$pop_list) > 1) ? 's' : '';
   $html_pop .= qq{
   <ul style="padding-left:1em;margin-left:2px">
-    <li><h3>Population$plural from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> (<i>$spe</i>)</h3></li>
+    <li><h3>Population$plural from the <a href="$url" target="_blank" style="text-decoration:none">$project</a> (<i>$spe</i>)</h3></li>
   </ul>
   $html_current_pop\n};
 
