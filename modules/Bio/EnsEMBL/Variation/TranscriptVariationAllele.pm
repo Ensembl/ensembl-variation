@@ -125,6 +125,21 @@ sub variation_feature {
     return $self->transcript_variation->variation_feature;
 }
 
+=head2 affects_peptide
+
+  Description: Check if this changes the resultant peptide sequence
+  Returntype : boolean
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub affects_peptide {
+  my $self = shift;
+  return scalar grep { $_->SO_term =~ /stop|missense|frameshift|inframe|initiator/ } @{$self->get_all_OverlapConsequences}; 
+}
+
 =head2 pep_allele_string
 
   Description: Return a '/' delimited string of the reference peptide and the 

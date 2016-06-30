@@ -101,4 +101,21 @@ $h = $tha->fetch_all_ProteinHaplotypes_by_Transcript($tr, $p);
 is(scalar @$h, 5, "fetch_all_ProteinHaplotypes_by_Transcript with population - count");
 ok($h->[0]->isa('Bio::EnsEMBL::Variation::ProteinHaplotype'), "fetch_all_ProteinHaplotypes_by_Transcript with population - isa");
 
+
+# check filtering works
+is(scalar @{$c->get_all_TranscriptHaplotypes}, 116, 'get_TranscriptHaplotypeContainer_by_Transcript - no frequency filter');
+is(scalar (grep {$_->name =~ /290P\>L/} @{$c->get_all_ProteinHaplotypes}), 1, 'no frequency filter check included');
+
+$c = $tha->get_TranscriptHaplotypeContainer_by_Transcript($tr, {frequency => {}});
+is(scalar @{$c->get_all_TranscriptHaplotypes}, 27, 'get_TranscriptHaplotypeContainer_by_Transcript - frequency filter count');
+is(scalar (grep {$_->name =~ /290P\>L/} @{$c->get_all_ProteinHaplotypes}), 0, 'frequency filter check excluded 1');
+is(scalar (grep {$_->name =~ /254R\>Q/} @{$c->get_all_ProteinHaplotypes}), 0, 'frequency filter check excluded 2');
+
+$c = $tha->get_TranscriptHaplotypeContainer_by_Transcript($tr, {frequency => {frequency => 0.005}});
+is(scalar @{$c->get_all_TranscriptHaplotypes}, 37, 'get_TranscriptHaplotypeContainer_by_Transcript - frequency filter count 0.005');
+is(scalar (grep {$_->name =~ /254R\>Q/} @{$c->get_all_ProteinHaplotypes}), 1, 'frequency filter 0.05 check included');
+
+$c = $tha->get_TranscriptHaplotypeContainer_by_Transcript($tr, {frequency => {population => '1000GENOMES:phase_3:AFR'}});
+is(scalar @{$c->get_all_TranscriptHaplotypes}, 35, 'get_TranscriptHaplotypeContainer_by_Transcript - frequency filter count AFR');
+
 done_testing();

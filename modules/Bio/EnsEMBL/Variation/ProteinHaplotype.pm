@@ -124,6 +124,69 @@ sub reference_seq {
 }
 
 
+=head2 get_all_VariationFeatures
+
+  Example    : my $vfs = $th->get_all_VariationFeatures()
+  Description: Get all VariationFeature objects that contribute
+               to this haplotype sequence
+  Returntype : arrayref of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_VariationFeatures {
+  my $self = shift;
+
+  if(!exists($self->{variation_features})) {
+
+    return $self->{variation_features} = [] unless $self->{_contributing_vfs};
+
+    my @filtered_vfs = ();
+    my $container = $self->container;
+
+    if($container->db) {
+      my $tvs_by_vfid = $container->_get_transcript_variations_hash;
+
+      foreach my $key(keys %{$self->{_contributing_vfs}}) {
+        my $allele = (split('_', $key))[0];
+        $allele ||= '-';
+
+        my $vf = $self->{_contributing_vfs}->{$key};
+
+        if(my $tv = $tvs_by_vfid->{$vf->dbID}) {
+          push @filtered_vfs, $vf if
+            grep {$_->affects_peptide}
+            grep {$_->feature_seq eq $allele}
+            @{$tv->get_all_alternate_TranscriptVariationAlleles};
+        }
+      }
+    }
+
+    # order them by position relative to the transcript sequence
+    if($self->transcript->strand > 0) {
+      @filtered_vfs =
+        map {$_->[0]}
+        sort {$a->[1] <=> $b->[1]}
+        map {[$_, $_->seq_region_start]}
+        @filtered_vfs;
+    }
+    else {
+      @filtered_vfs =
+        map {$_->[0]}
+        sort {$b->[1] <=> $a->[1]}
+        map {[$_, $_->seq_region_start]}
+        @filtered_vfs;
+    }
+
+    $self->{variation_features} = \@filtered_vfs;
+  }
+
+  return $self->{variation_features};
+}
+
+
 =head2 expected_frequency
 
   Example    : my $f = $ph->expected_frequency

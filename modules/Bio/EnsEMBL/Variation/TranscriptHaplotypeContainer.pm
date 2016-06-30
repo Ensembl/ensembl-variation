@@ -779,13 +779,13 @@ sub _init {
         my $haplotype = $self->_get_TranscriptHaplotype_by_hex($hex);
         
         # if it doesn't exist yet, create new object
-        if(!$haplotype) {          
+        if(!$haplotype) {        
           my %hash = (
             -container => $self,
             -type      => $type,
             -seq       => $seq,
             -hex       => $hex,
-            -indel     => $obj->{indel}->[$i]
+            -indel     => $obj->{indel}->[$i],
           );
           
           if($type eq 'cds') {
@@ -803,6 +803,9 @@ sub _init {
         # increment counts
         $haplotype->{samples}->{$sample}++;
         $self->{_counts}->{$hex}++;
+
+        # add/update contributing VFs
+        $haplotype->{_contributing_vfs}->{$_} = $obj->{vfs}->[$i]->{$_} for keys %{$obj->{vfs}->[$i]};
         
         # store mapping between hashes of cds and protein
         if($is_protein_coding) {
@@ -1049,6 +1052,9 @@ sub _mutate_sequences {
     
       # flag if indel observed, we need to align seqs later
       my $indel = 0;
+
+      # record which VFs contribute to this haplotype
+      my %contributing_vfs = ();
     
       # iterate through, they are already sorted into reverse order by sequence mapping
       foreach my $gt(@$gts) {
@@ -1057,20 +1063,29 @@ sub _mutate_sequences {
       
         my $mapping = $vf->{_cds_mapping};
       
-        my $genotype = $gt->genotype->[$hap];
+        my $allele = $gt->genotype->[$hap];
       
         # remove del characters
-        $genotype =~ s/\-//g;
+        $allele =~ s/\-//g;
 
-        next unless $genotype =~ /^[ACGT]*$/;
+        next unless $allele =~ /^[ACGT]*$/;
       
         # reverse complement sequence?
-        reverse_comp(\$genotype) if $tr_strand ne $vf->strand;
+        reverse_comp(\$allele) if $tr_strand ne $vf->strand;
       
         my $replace_len = ($mapping->end - $mapping->start) + 1;
-        $indel = 1 if length($genotype) != $replace_len;
-      
-        substr($seq, $mapping->start - 1, $replace_len, $genotype);
+        $indel = 1 if length($allele) != $replace_len;
+
+        # only do the edit if it is actually an edit
+        if(substr($seq, $mapping->start - 1, $replace_len) ne $allele) {
+
+          # do the edit
+          substr($seq, $mapping->start - 1, $replace_len, $allele);
+
+          # log VF as having contributed to the haplotype
+          # key on the allele so we can look up the correct TranscriptVariationAllele later
+          $contributing_vfs{$allele.'_'.$self->_vf_identifier($vf)} = $vf;
+        }
       }
     
       # now translate
@@ -1085,6 +1100,7 @@ sub _mutate_sequences {
       push @{$mutated->{cds}}, $seq;
       push @{$mutated->{protein}}, $protein if $protein;
       push @{$mutated->{indel}}, $indel;
+      push @{$mutated->{vfs}}, \%contributing_vfs;
     }
   
     $self->{_mutated_by_fingerprint}->{$fingerprint} = $mutated;
@@ -1155,6 +1171,28 @@ sub _get_prediction_matrices {
   }
   
   return $self->{_prediction_matrices};
+}
+
+## cache transcript variation objects
+## used by protein haplotypes to filter VariationFeatures that affect the peptide
+sub _get_transcript_variations_hash {
+  my $self = shift;
+
+  if(!exists($self->{_transcript_variations})) {
+    my $tvas = [];
+
+    if(my $db = $self->db) {
+      my $tva = $db->get_TranscriptVariationAdaptor;
+      $tvas = $tva->fetch_all_by_Transcripts([$self->transcript])
+    }
+
+    # todo non db fetch
+    # else {}
+
+    $self->{_transcript_variations} = {map {$_->{_variation_feature_id} => $_} @$tvas};
+  }
+
+  return $self->{_transcript_variations};
 }
 
 ## gets frequencies for alternate amino acids at non-synonymous positions

@@ -176,6 +176,47 @@ sub type {
 }
 
 
+=head2 get_all_VariationFeatures
+
+  Example    : my $vfs = $th->get_all_VariationFeatures()
+  Description: Get all VariationFeature objects that contribute
+               to this haplotype sequence
+  Returntype : arrayref of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_VariationFeatures {
+  my $self = shift;
+
+  if(!exists($self->{variation_features})) {
+    my @vfs = values %{$self->{_contributing_vfs} || {}};
+
+    # order them by position relative to the transcript sequence
+    if($self->transcript->strand > 0) {
+      @vfs =
+        map {$_->[0]}
+        sort {$a->[1] <=> $b->[1]}
+        map {[$_, $_->seq_region_start]}
+        @vfs;
+    }
+    else {
+      @vfs =
+        map {$_->[0]}
+        sort {$b->[1] <=> $a->[1]}
+        map {[$_, $_->seq_region_start]}
+        @vfs;
+    }
+
+    $self->{variation_features} = \@vfs;
+  }
+
+  return $self->{variation_features};
+}
+
+
 =head2 seq
 
   Arg [1]    : string $seq (optional)

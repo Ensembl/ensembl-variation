@@ -37,7 +37,7 @@ my ($populations, $population, $all);
 
 # fetch_all_1KG_Populations
 $populations = $pa->fetch_all_1KG_Populations;
-is(scalar @$populations, 22, "Number of 1000 genomes populations");
+is(scalar @$populations, 54, "Number of 1000 genomes populations");
 
 # fetch_all_HapMap_Populations
 $populations = $pa->fetch_all_HapMap_Populations;
@@ -45,7 +45,7 @@ is(scalar @$populations, 12, "Number of HapMap populations");
 
 # fetch_all_LD_Populations
 $populations = $pa->fetch_all_LD_Populations;
-is(scalar @$populations, 18, "Number of LD populations");
+is(scalar @$populations, 44, "Number of LD populations");
 
 # fetch_default_LDPopulation
 $population = $pa->fetch_default_LDPopulation;
@@ -121,7 +121,7 @@ is($population->display_group_name, '1000 Genomes Project Phase 1', "Display gro
 
 # fetch_all_by_name_search
 $populations = $pa->fetch_all_by_name_search('1000GENOMES');
-is(scalar @$populations, 22, "Number of populations for fetch by name search = 1000GENOMES");
+is(scalar @$populations, 54, "Number of populations for fetch by name search = 1000GENOMES");
 
 # fetch_all_by_sub_Population
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_IBS');
