@@ -264,6 +264,10 @@ sub fetch_by_VariationFeature {
   my $self = shift;
   my $vf  = shift;
   my $pop = shift;
+  if (!$vf->slice->is_reference) {
+    warning('Variation feature is not located on the reference sequence but either on a patch or haplotype region.');
+    return undef;
+  }
 
   if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
