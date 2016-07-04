@@ -668,6 +668,9 @@ sub hgvs_transcript {
     $var_name 
   );
 
+  ## check for the same bases in ref and alt strings before or after the variant
+  $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
+
   print "hgvs transcript type : " . $hgvs_notation->{'type'} . "\n" if $DEBUG == 1;    
   ### This should not happen
   unless($hgvs_notation->{'type'}){
@@ -1299,7 +1302,7 @@ sub _get_hgvs_peptides {
   return ($hgvs_notation);           
 }
 
-### HGVS:  remove common peptides from alt and ref strings & shift start/end accordingly 
+### HGVS:  remove common peptides/nucleotides from alt and ref strings & shift start/end accordingly 
 sub _clip_alleles {
     
   my $hgvs_notation = shift;
@@ -1320,7 +1323,8 @@ sub _clip_alleles {
     my $check_next_ref = substr( $check_ref, 0, 1);
     my $check_next_alt = substr( $check_alt, 0, 1);
     
-    if($check_next_ref eq  "*" && $check_next_alt eq "*"){
+    if( defined $hgvs_notation->{'numbering'} && $hgvs_notation->{'numbering'} eq 'p' && 
+        $check_next_ref eq  "*" && $check_next_alt eq "*"){
       ### stop re-created by variant - no protein change
       $hgvs_notation->{type} = "=";
 
@@ -1364,7 +1368,9 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
 
   ## no protein change - use transcript level annotation 
-  $hgvs_notation->{type} = "="   if($hgvs_notation->{alt} eq $hgvs_notation->{ref});      
+  $hgvs_notation->{type} = "="   if( defined $hgvs_notation->{'numbering'} && 
+                                     $hgvs_notation->{'numbering'} eq 'p' &&
+                                     $hgvs_notation->{alt} eq $hgvs_notation->{ref});      
 
   ### re-set as ins not delins    
   $hgvs_notation->{type} ="ins"  if(length ($check_ref) == 0 && length ($check_alt) >= 1);
