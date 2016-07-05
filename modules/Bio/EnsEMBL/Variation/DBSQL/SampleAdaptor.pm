@@ -325,7 +325,9 @@ sub fetch_all_by_name {
   my $constraint = qq{s.name = ?};
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
   my $result = $self->generic_fetch($constraint);
-
+  if (scalar @$result == 0) {
+    $result = $self->fetch_by_synonym($name);    
+  }
   return $result;
 }
 
@@ -352,7 +354,14 @@ sub fetch_all_by_name_list {
   
   my $id_str = (@$list > 1)  ? " IN (". join(',', map {'"'.$_.'"'} @$list).")" : ' = \''.$list->[0].'\'';
   
-  return $self->generic_fetch("s.name" . $id_str);
+  my $result = $self->generic_fetch("s.name" . $id_str);
+
+  if (scalar @$result == 0) {
+    foreach my $name (@$list) {
+      push @$result, @{$self->fetch_by_synonym($name)};
+    }
+  }
+  return $result;
 }
 
 =head2 fetch_all_by_Population
