@@ -76,6 +76,11 @@ my @synonym_sources = @{$sample->get_all_synonym_sources};
 my ($synonym_source) = grep {$_ eq 'dbSNP'} @synonym_sources;
 is($synonym_source, 'dbSNP', 'get_all_synonym_sources');
 
+$samples = $sa->fetch_all_by_name('synonym_NA12891');
+is($samples->[0]->name, 'NA12891', 'fetch_all_by_name with synonym');
+$samples = $sa->fetch_all_by_name_list(['synonym_NA12891']);
+is($samples->[0]->name, 'NA12891', 'fetch_all_by_name_list with synonym');
+
 $sample->add_synonym('synonym_NA12891_2', 'dbSNP');
 
 # fetch_all_by_dbID_list -- needed by web team..
