@@ -808,7 +808,7 @@ $cons = get_all_consequences($config, [$vf]);
 ($rf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'RegulatoryFeature'} @$cons;
 ($mf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'MotifFeature'} @$cons;
 
-is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "build - regulatory biotype");
+# is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "build - regulatory biotype");
 is($rf_con->{Feature}, 'ENSR00000672895', "build - regulatory ID");
 is($mf_con->{Feature}, 'MA0139.1', "build - motif ID");
 is_deeply(
