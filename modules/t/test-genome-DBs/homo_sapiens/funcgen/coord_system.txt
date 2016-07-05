@@ -163,3 +163,8 @@
 2468	chromosome	GRCh37	1	default_version	526_130114	2	1	1
 23	supercontig		2	default_version	526_130114	3	1	1
 2466	clone		3	default_version	526_130114	4	1	1
+2470	lrg		8	default_version	705_111803	1003	1	1
+2467	contig		4	default_version,sequence_level	705_111803	1	1	1
+2468	chromosome	GRCh37	1	default_version	705_111803	2	1	1
+23	supercontig		2	default_version	705_111803	3	1	1
+2466	clone		3	default_version	705_111803	4	1	1

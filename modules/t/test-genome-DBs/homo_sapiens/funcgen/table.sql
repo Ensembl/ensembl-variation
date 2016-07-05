@@ -1,9 +1,3 @@
--- MySQL dump 10.13  Distrib 5.5.20, for osx10.6 (i386)
---
--- Host: localhost    Database: anjathormann_test_db_homo_sapiens_funcgen_20160615_162753
--- ------------------------------------------------------
--- Server version	5.5.20
-
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -514,6 +508,28 @@ CREATE TABLE `external_feature` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `external_feature_file`
+--
+
+DROP TABLE IF EXISTS `external_feature_file`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `external_feature_file` (
+  `external_feature_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
+  `epigenome_id` int(10) unsigned DEFAULT NULL,
+  `feature_type_id` int(10) unsigned DEFAULT NULL,
+  `experiment_id` int(10) unsigned DEFAULT NULL,
+  `result_set_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`external_feature_file_id`),
+  UNIQUE KEY `name_idx` (`name`),
+  KEY `epigenome_idx` (`epigenome_id`),
+  KEY `analysis_idx` (`analysis_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `external_synonym`
 --
 
@@ -654,7 +670,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`(50)),
   KEY `species_value_idx` (`species_id`,`meta_value`(50))
-) ENGINE=MyISAM AUTO_INCREMENT=623 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=627 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -879,6 +895,21 @@ CREATE TABLE `regulatory_build` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `regulatory_build_epigenome`
+--
+
+DROP TABLE IF EXISTS `regulatory_build_epigenome`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `regulatory_build_epigenome` (
+  `regulatory_build_epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `regulatory_build_id` int(10) unsigned NOT NULL,
+  `epigenome_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`regulatory_build_epigenome_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `regulatory_evidence`
 --
 
@@ -983,6 +1014,26 @@ CREATE TABLE `segmentation_feature` (
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`,`seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `segmentation_file`
+--
+
+DROP TABLE IF EXISTS `segmentation_file`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `segmentation_file` (
+  `segmentation_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `regulatory_build_id` int(10) DEFAULT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
+  `epigenome_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`segmentation_file_id`),
+  UNIQUE KEY `name_idx` (`name`),
+  KEY `epigenome_idx` (`epigenome_id`),
+  KEY `analysis_idx` (`analysis_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1123,4 +1174,4 @@ CREATE TABLE `xref` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-06-15 16:33:35
+-- Dump completed on 2016-07-05 11:47:29

@@ -181,3 +181,7 @@
 619	\N	patch	patch_84_85_u.sql|Remove regulatory build entries from feature_set table, relink everything else.
 621	\N	patch	patch_84_85_w.sql|Extend the name length in the input_subset table
 622	\N	patch	patch_84_85_x.sql|Remove unused columns in the experiment table
+623	\N	patch	patch_84_85_y.sql|Table for storing epigenomes used in the regulatory build
+624	\N	patch	patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation_file table.
+625	\N	patch	patch_84_85_za.sql|Move entries provided by external sources from the result_set table into the new external_feature_file table.
+626	\N	patch	patch_84_85_zb.sql|Bugfix, the primary key was wrongly named.
