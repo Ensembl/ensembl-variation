@@ -142,6 +142,20 @@ sub variation_feature {
   return $self->{variation_feature};
 }
 
+=head2 differences
+  Arg [1]    : Hashref $differences (optional)
+  Example    : $differences = $sample_genotype_feature->differences();
+               while (my ($sample_name, $genotype_string) = each %$differences) {
+                 print "$sample_name $genotype_string\n";
+               }  
+  Description: Getter/Setter for Hashref of differences as computed in
+               Bio::EnsEMBL::Variation::DBSQL::SampleGenotypeFeatureAdaptor::fetch_all_differences_by_Slice.
+               Keys are the sample names and corresponding values are the genotype strings.
+  Returntype : Hashref
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
 sub differences {
   my $self = shift;
   $self->{differences} = shift if @_;
