@@ -2063,7 +2063,6 @@ sub numberify {
         numberify($ref->{$k});
       }
       else {
-        $DB::single = 1 if $k eq 'strand';
         $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $k ne 'seq_region_name' && $k ne 'id' && looks_like_number($ref->{$k});
       }
     }
@@ -5498,9 +5497,6 @@ sub freqs_from_vcf {
                   }}
                 ) {
                   unless(exists($freq_hash->{$pop}->{F}->{$allele})) {
-
-                    $DB::single = 1 if $freq_hash->{$pop}->{N} == 0;
-
                     $freq_hash->{$pop}->{F}->{$allele} = sprintf(
                       '%.4g',
                       $freq_hash->{$pop}->{C}->{$allele} / $freq_hash->{$pop}->{N}
@@ -5641,18 +5637,27 @@ sub cache_reg_feats {
 
                         my %cl;
 
-                        # get cell type by fetching all from stable ID
+
+
+                        # get cell type using regulatory_activity objects
                         if($type eq 'RegulatoryFeature') {
-                            %cl = map {
-                                $_->feature_set->cell_type->name => $_->feature_type->name
-                            } @{$rf->adaptor->fetch_all_by_stable_ID($rf->stable_id)};
+                          %cl =
+                            map {$_->[0] => $_->[1]}
+                            map {$_->[0] =~ s/ /\_/g; $_}
+                            map {[$_->epigenome->display_label, $_->activity]}
+                            grep {!$_->_is_multicell}
+                            @{$rf->regulatory_activity};
                         }
 
                         # get cell type by fetching regfeats that contain this MotifFeature
                         elsif($type eq 'MotifFeature') {
-                            %cl = map {
-                                $_->feature_set->cell_type->name => $_->feature_type->name
-                            } @{$config->{'RegulatoryFeature_adaptor'}->fetch_all_by_attribute_feature($rf)};
+                          %cl =
+                            map {$_->[0] => $_->[1]}
+                            map {$_->[0] =~ s/ /\_/g; $_}
+                            map {[$_->epigenome->display_label, $_->activity]}
+                            grep {!$_->_is_multicell}
+                            map {@{$_->regulatory_activity}}
+                            @{$config->{'RegulatoryFeature_adaptor'}->fetch_all_by_attribute_feature($rf)};
                         }
 
                         $rf->{cell_types} = \%cl;
@@ -5681,7 +5686,7 @@ sub cache_reg_feats {
 sub clean_reg_feat {
     my $rf = shift;
 
-    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set/) {
+    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set _regulatory_activity/) {
         delete $rf->{$key};
     }
 
@@ -6333,11 +6338,15 @@ sub write_cache_info {
   # cell types
   if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
 
-    my $aa = $config->{RegulatoryFeature_adaptor}->db->get_AnalysisAdaptor();
-    my $analysis = $aa->fetch_by_logic_name('Regulatory_Build');
-    my $fsa = $config->{RegulatoryFeature_adaptor}->db->get_FeatureSetAdaptor();
+    my $regulatory_build_adaptor = $config->{RegulatoryFeature_adaptor}->db->get_RegulatoryBuildAdaptor();
+    my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
+    my @cell_types = 
+      sort
+      map {s/ /\_/g; $_}
+      map {$_->display_label}
+      @{$regulatory_build->get_all_Epigenomes};
 
-    print OUT "cell_types\t".(join ",", map {$_->cell_type->name} @{$fsa->fetch_all_by_Analysis($analysis)});
+    print OUT "cell_types\t".(join ",", @cell_types);
     print OUT "\n";
   }
 
@@ -6473,6 +6482,21 @@ sub get_version_data {
         foreach my $meta_key(qw(regbuild.version)) {
           my $version = $fg_mca->list_value_by_key($meta_key);
           $version_data{$meta_key} = $version->[0] if defined($version) && scalar @$version;
+        }
+
+        # from 85 version is in regulatory_build table
+        unless($version_data{'regbuild.version'}) {
+          my $sth = $fg_mca->db->dbc->prepare(qq{
+            SELECT version FROM regulatory_build 
+          });
+          $sth->execute;
+
+          my $version;
+          $sth->bind_columns(\$version);
+          $sth->fetch;
+          $sth->finish;
+
+          $version_data{'regbuild.version'} = $version if defined($version);
         }
       }
     }
