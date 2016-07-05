@@ -194,6 +194,7 @@ sub init_data {
         'interchromosomal_translocation' => 'InterTL',
         'intrachromosomal_translocation' => 'IntraTL',
         'complex_substitution' => 'CS',
+        'Alu_insertion' => 'ALU_INS',
     };
 }
 
@@ -595,6 +596,7 @@ sub print_header {
             '##ALT=<ID=IntraTL,Description="intrachromosomal_translocation">',
             '##ALT=<ID=TL,Description="translocation">',
             '##ALT=<ID=CS,Description="complex_substitution">',
+            '##ALT=<ID=ALU_INS,Description="Alu_insertion">',
         )), "\n";
     }
 
