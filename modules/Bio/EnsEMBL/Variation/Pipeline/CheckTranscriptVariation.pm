@@ -312,7 +312,13 @@ sub update_internal_db{
     
 }
 
+=head2 count_results
 
+ This takes SQL statements to count the rows in a table or
+ count rows grouped by an attribute in the table.
+ It returns either the total number of rows in the table or 
+ a hash of attribute => row count depending on input.
+=cut
 sub count_results{
 
     my $dbc = shift;
