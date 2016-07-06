@@ -291,7 +291,7 @@ sub pipeline_analyses {
         @common_params
       },
       -wait_for      => ['dump_vep_highmem'],
-      -rc_name       => 'default',
+      -rc_name       => 'highmem',
       -analysis_capacity => 2,
       -can_be_empty   => 1,
     },
