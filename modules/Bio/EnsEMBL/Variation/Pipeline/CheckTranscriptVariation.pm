@@ -313,6 +313,13 @@ sub update_internal_db{
 }
 
 
+=head2 count_results
+
+Takes a DBC and a 'COUNT(*)' SQL query as input, and returns either the resulting
+count, or a hash of counts if the query contains a 'GROUP BY' clause (assuming the
+first column is the grouping column and second column is 'COUNT(*)').
+
+=cut
 sub count_results{
 
     my $dbc = shift;
