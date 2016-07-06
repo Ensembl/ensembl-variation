@@ -667,16 +667,17 @@ sub hgvs_transcript {
     "",
     $var_name 
   );
-
-  ## check for the same bases in ref and alt strings before or after the variant
-  $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
-
-  print "hgvs transcript type : " . $hgvs_notation->{'type'} . "\n" if $DEBUG == 1;    
+  
   ### This should not happen
   unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
     return undef;
   } 
+
+  ## check for the same bases in ref and alt strings before or after the variant
+  $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
+
+  print "hgvs transcript type : " . $hgvs_notation->{'type'} . "\n" if $DEBUG == 1;    
   print "Got type: " . $hgvs_notation->{'type'} ." $hgvs_notation->{'ref'} -> $hgvs_notation->{'alt'}\n" if $DEBUG == 1;
 
   ### create reference name - transcript name & seq version
