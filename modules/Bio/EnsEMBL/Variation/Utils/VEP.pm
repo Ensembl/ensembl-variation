@@ -62,17 +62,14 @@ use IO::Socket;
 use IO::Select;
 use Exporter;
 
-my $CAN_USE_TABIX_PM;
+my ($CAN_USE_TABIX_PM, $CAN_USE_TABIX_CL);
 
 BEGIN {
   if (eval { require Tabix; 1 }) {
     $CAN_USE_TABIX_PM = 1;
   }
-  else {
-    $CAN_USE_TABIX_PM = 0;
-
-    # test tabix
-    die "ERROR: tabix does not seem to be in your path\n" unless `which tabix 2>&1` =~ /tabix$/;
+  elsif (`which tabix 2>&1` =~ /tabix$/) {
+    $CAN_USE_TABIX_CL = 1;
   }
 
   # use Sereal
@@ -1423,8 +1420,11 @@ sub vf_list_to_cons {
         if($CAN_USE_TABIX_PM) {
           check_existing_tabix_pm($config, $listref);
         }
-        else {
+        elsif($CAN_USE_TABIX_CL) {
           check_existing_tabix($config, $listref);
+        }
+        else {
+          die("ERROR: tabix does not seem to be in your path\n");
         }
       }
       else {
