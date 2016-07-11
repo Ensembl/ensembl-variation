@@ -299,8 +299,8 @@ sub cdna_coords {
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
-        my $tran = $self->transcript; 
-        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->{start}, $vf->{end}, $tran->strand) ];
+        my $tran = $self->transcript;
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
@@ -323,7 +323,7 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->{start}, $vf->{end}, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_cds_coords};
@@ -346,7 +346,7 @@ sub translation_coords {
     unless ($self->{_translation_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript; 
-        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->{start}, $vf->{end}, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_translation_coords};
