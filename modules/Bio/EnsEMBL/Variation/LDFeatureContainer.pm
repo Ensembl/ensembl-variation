@@ -512,14 +512,23 @@ sub _pos2vf {
 
       my $pos2name = $self->_pos2name();
 
+      my %names = map {$_ => 1} values %$pos2name;
+      my @filtered_vfs = ();
+      foreach my $vf (@$vfs) {
+        if ($names{$vf->variation_name}) {
+          push @filtered_vfs, $vf;
+        }
+      }
       # the sort here "favours" variants from dbSNP since it is assumed dbSNP will have source_id = 1
       # otherwise we'd get co-located COSMIC IDs overwriting the dbSNP ones
+
       $pos2vf{$_->[1]} = $_->[0] for
         grep {$pos2name->{$_->[1]}}
         map {[$_, $_->start]}
         map {$_->transfer($region_Slice)}
         sort {$b->{_source_id} <=> $a->{_source_id}}
-        @{$vfs};
+        @filtered_vfs;
+
     }
 
     $self->{pos2vf} = \%pos2vf;
