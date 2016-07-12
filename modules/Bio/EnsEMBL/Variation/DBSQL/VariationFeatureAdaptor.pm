@@ -1820,7 +1820,7 @@ sub fetch_by_hgvs_notation {
   
   }
 
-   elsif($type =~ m/g/i) {
+   elsif($type =~ m/g|m/i) {
 
      ($start, $end) =  _parse_hgvs_genomic_position($description) ;  
       ## grab reference allele; second call after "||" allows for LRG regions to be fetched
