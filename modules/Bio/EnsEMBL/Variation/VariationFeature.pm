@@ -1654,6 +1654,7 @@ sub get_all_PopulationGenotypes{
   Arg [2]    : string (Optional)
 	       Indicate whether the HGVS notation should be reported in genomic coordinates or cDNA coordinates.
 	       'g' -> Genomic position numbering
+               'm' -> Mitochondrial position numbering
 	       'c' -> cDNA position numbering
 	       'p' -> protein position numbering
   Arg [3]    : string (Optional)
@@ -1971,7 +1972,7 @@ sub hgvs_genomic {
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
     # Add the position_numbering scheme
-    $hgvs_notation->{'numbering'} = 'g';     
+    $hgvs_notation->{'numbering'} = ($ref_feature->seq_region_name() eq 'MT' ? 'm' : 'g');     
 
     # Construct the HGVS notation from the data in the hash
     $hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);

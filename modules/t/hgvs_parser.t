@@ -242,7 +242,13 @@ my @test_input = (
            "ENSP00000292733.7:p.Pro278_Gln292dup",           
            "insertion, peptide duplication"
           ],
-               
+          ["MT:m.6721T>C",    ## rs199476127
+           "C",
+           "",
+           "C",
+           "",   
+           "mitochondrial"
+          ]
 );
 
 ## results which change on left-shifting - not shifted
