@@ -488,9 +488,7 @@ sub has_regulation {
   return 0 unless defined($db);
   
   my $v = $config->{dbc}->selectall_arrayref(qq{
-    SELECT meta_value
-    FROM $db.meta
-    WHERE meta_key = 'regbuild.version'
+    SELECT version FROM $db.regulatory_build
   })->[0]->[0];
   
   return defined($v) && $v > 0;
