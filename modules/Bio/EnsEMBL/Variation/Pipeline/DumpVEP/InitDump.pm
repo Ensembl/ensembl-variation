@@ -283,9 +283,7 @@ sub get_species_list {
       my $has_reg_db = $dbc->do("SHOW DATABASES LIKE '$reg_db_name';");
 
       my $has_reg_build = $dbc->do(qq{
-        SELECT meta_value
-        FROM $reg_db_name\.meta
-        WHERE meta_key = 'regbuild.version'
+        SELECT version FROM $reg_db_name\.regulatory_build
       }) if $has_reg_db == 1;
       
       foreach $species_id(keys %$species_ids) {
