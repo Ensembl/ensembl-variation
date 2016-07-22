@@ -232,6 +232,34 @@ sub phenotype {
 }
 
 
+=head2 phenotype_description
+
+  Example    : $desc = $pf->phenotype_description();
+  Description: Convenience method to get the phenotype description
+               associated with this annotation.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : experimental
+
+=cut
+
+sub phenotype_description {
+  my $self = shift;
+
+  return $self->{_phenotype_description} if $self->{_phenotype_description};
+
+  if(!defined($self->{phenotype}) && defined($self->{_phenotype_id})) {
+    my $pa = $self->adaptor->db->get_PhenotypeAdaptor();
+
+    $self->{phenotype} = $pa->fetch_by_dbID($self->{_phenotype_id});
+  }
+  $self->{_phenotype_description} =  $self->{phenotype}->description();
+
+  return $self->{_phenotype_description};
+}
+
+
 =head2 object
 
   Arg [1]    : (optional) Bio::EnsEMBL::* object $ph
@@ -459,6 +487,9 @@ sub source{
 
 sub source_name{
   my $self = shift;
+
+  return $self->{'_source_name'} if $self->{'_source_name'};
+
   my $source = $self->source;
   return unless defined $source;
   
@@ -744,7 +775,7 @@ sub associated_gene {
 sub risk_allele {
   my $self = shift;
   my $new  = shift;
-  
+
   $self->_set_attribute('risk_allele', $new) if defined($new);
   
   return defined($self->get_all_attributes->{'risk_allele'}) ? $self->get_all_attributes->{'risk_allele'} : undef;
@@ -765,7 +796,7 @@ sub risk_allele {
 sub p_value {
   my $self = shift;
   my $new  = shift;
-  
+
   $self->_set_attribute('p_value', $new) if defined($new);
   
   return defined($self->get_all_attributes->{'p_value'}) ? $self->get_all_attributes->{'p_value'} : undef;
@@ -785,7 +816,7 @@ sub p_value {
 sub clinical_significance {
   my $self = shift;
   my $new  = shift;
-  
+
   $self->_set_attribute('clinvar_clin_sig', $new) if defined($new);
   
   return defined($self->get_all_attributes->{'clinvar_clin_sig'}) ? $self->get_all_attributes->{'clinvar_clin_sig'} : undef;

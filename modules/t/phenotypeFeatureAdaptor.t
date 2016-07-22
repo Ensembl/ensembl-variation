@@ -112,6 +112,14 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && (grep {$_->object_id eq 'rs22992
 $pfs = $pfa->fetch_all_by_phenotype_id_feature_type(1, 'Gene');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'ENSG00000176105'} @$pfs), "fetch_all_by_phenotype_id_feature_type");
 
+# fetch_all_by_phenotype_ontology_accession
+$pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs), "fetch_all_by_phenotype_accession");
+
+# fetch_all_by_phenotype_ontology_accession + source
+$pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130', 'dbSNP');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 0 , "fetch_all_by_phenotype_accession + source");
+
 
 # fetch_all_by_associated_gene
 $pfs = $pfa->fetch_all_by_associated_gene('YES1');
@@ -150,7 +158,7 @@ ok($count && $count->{'Variation'} == 1 && $count->{'StructuralVariation'} == 2 
 
 # fetch_all
 $pfs = $pfa->fetch_all();
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 5 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 6 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
 
 # store
 my $pf = $pfs->[0];

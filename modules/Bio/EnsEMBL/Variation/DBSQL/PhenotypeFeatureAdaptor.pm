@@ -583,6 +583,45 @@ sub fetch_all_by_phenotype_id_feature_type {
 
 }
 
+=head2 fetch_all_by_phenotype_accession_source
+
+  Arg [1]    : string phenotype ontology_accession
+  Arg [2]    : string source name (optional)
+  Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_accession_source('EFO:0004330','ClinVar');
+  Description: Retrieves a PhenotypeFeature object via an ontology accession and optional source
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if phenotype ontology accession argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_phenotype_accession_source {
+
+  my $self      = shift;
+  my $accession = shift;
+  my $source    = shift;
+
+  throw('phenotype ontology accession argument expected') if(!defined($accession));
+ 
+  $self->_include_ontology(1);
+  $self->_include_attrib(1);
+
+  my $extra_sql = ' poa.accession = "' . $accession . '" ';
+  $extra_sql   .= ' and s.name = "' . $source . '" ' if $source;
+
+
+  my $result = $self->generic_fetch($extra_sql);
+
+  ## reset flags  
+  $self->_include_ontology(0);
+  $self->_include_attrib(0);
+
+  return $result;
+}
+
+
+    
 =head2 fetch_all_by_associated_gene_phenotype_description
 
   Arg [1]    : string $gene_name
@@ -907,6 +946,19 @@ sub _include_attrib {
   return $self->{_include_attrib};
 }
 
+sub _include_ontology {
+  my $self = shift;
+  
+  # default on first call
+  $self->{_include_ontology} = 0 unless defined($self->{_include_ontology});
+  
+  # update if given
+  $self->{_include_ontology} = shift if @_;
+  
+  # return
+  return $self->{_include_ontology};
+}
+
 # method used by superclass to construct SQL
 sub _tables {
   my $self = shift;
@@ -922,7 +974,12 @@ sub _tables {
     [ 'phenotype_feature_attrib', 'pfa', ],
     [ 'attrib_type', 'at' ]
   ) if $self->_include_attrib;
-  
+
+  # include ontology tables for search?
+  push @tables, (
+    [ 'phenotype_ontology_accession', 'poa', ],
+  ) if $self->_include_ontology;
+ 
   return @tables; 
 }
 
@@ -936,6 +993,10 @@ sub _left_join {
     [ 'phenotype_feature_attrib', 'pf.phenotype_feature_id = pfa.phenotype_feature_id' ],
     [ 'attrib_type', 'pfa.attrib_type_id = at.attrib_type_id' ]
   ) if $self->_include_attrib;
+
+  push @lj, (
+    [ 'phenotype_ontology_accession', 'pf.phenotype_id = poa.phenotype_id' ]
+  ) if $self->_include_ontology;
   
   return @lj;
 }
@@ -950,7 +1011,7 @@ sub _columns {
   return qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
-    pf.phenotype_id pf.source_id pf.study_id
+    pf.phenotype_id pf.source_id s.name pf.study_id p.description
   );
 }
 
@@ -988,13 +1049,13 @@ sub _objs_from_sth {
   my (
     $phenotype_feature_id, $object_id, $object_type, $is_significant,
     $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand,
-    $phenotype_id, $source_id, $study_id
+    $phenotype_id, $source_id, $source_name, $study_id, $phenotype_description
   );
   
   $sth->bind_columns(
     \$phenotype_feature_id, \$object_id, \$object_type, \$is_significant,
     \$seq_region_id, \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-    \$phenotype_id, \$source_id, \$study_id
+    \$phenotype_id, \$source_id, \$source_name, \$study_id, \$phenotype_description
   );
   
   my $sta = $self->db()->get_StudyAdaptor();
@@ -1072,9 +1133,11 @@ sub _objs_from_sth {
         '_object_id'     => $object_id,
         'type'           => $object_type,
         '_phenotype_id'  => $phenotype_id,
+        '_phenotype_description'  => $phenotype_description,
         'adaptor'        => $self,
         '_study_id'      => $study_id,
         '_source_id'     => $source_id,
+        '_source_name'   => $source_name, 
         'is_significant' => $is_significant,
       }
     );
