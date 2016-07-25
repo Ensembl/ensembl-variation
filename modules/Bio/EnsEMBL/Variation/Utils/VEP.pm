@@ -5056,7 +5056,7 @@ sub prefetch_transcript_data {
     if(defined($tr->translation)) {
         @entries = grep {$_->database eq 'Uniprot/SWISSPROT'} @{$tr->translation->get_all_DBEntries};
         if(scalar @entries) {
-            $tr->{_swissprot} = join ",", map {$_->display_id} @entries;
+            $tr->{_swissprot} = join ",", map {$_->primary_id} @entries;
         }
         else {
             $tr->{_swissprot} = '-';
@@ -5064,7 +5064,7 @@ sub prefetch_transcript_data {
 
         @entries = grep {$_->database eq 'Uniprot/SPTREMBL'} @{$tr->translation->get_all_DBEntries};
         if(scalar @entries) {
-            $tr->{_trembl} = join ",", map {$_->display_id} @entries;
+            $tr->{_trembl} = join ",", map {$_->primary_id} @entries;
         }
         else {
             $tr->{_trembl} = '-';
@@ -5072,7 +5072,7 @@ sub prefetch_transcript_data {
 
         @entries = grep {$_->database eq 'UniParc'} @{$tr->translation->get_all_DBEntries};
         if(scalar @entries) {
-            $tr->{_uniparc} = join ",", map {$_->display_id} @entries;
+            $tr->{_uniparc} = join ",", map {$_->primary_id} @entries;
         }
         else {
             $tr->{_uniparc} = '-';
