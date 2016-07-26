@@ -358,7 +358,7 @@ sub get_all_ld_values {
       unless($names_only) {
         $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
         $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
-        $DB::single = 1 unless $ld_value{'variation1'} && $ld_value{'variation2'};
+        # $DB::single = 1 unless $ld_value{'variation1'} && $ld_value{'variation2'};
         next unless $ld_value{'variation1'} && $ld_value{'variation2'};
       }
       $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
