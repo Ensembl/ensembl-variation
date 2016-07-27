@@ -92,6 +92,7 @@ use constant MAX_SNP_DISTANCE => 100_000;
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 #our $MAX_SNP_DISTANCE = 100000;
+our $VCF_BINARY_FILE  = '';
 our $BINARY_FILE      = '';
 our $TMP_PATH         = '';
 
@@ -109,6 +110,16 @@ sub executable {
     ($BINARY_FILE) = grep {-e $_} map {"$_/calc_genotypes"} split /:/,$ENV{'PATH'};
   }
   return $BINARY_FILE; 
+}
+
+sub vcf_executable {
+  my $self = shift;
+  $VCF_BINARY_FILE = shift if @_;
+  unless( $VCF_BINARY_FILE ) {
+    my $binary_name = 'ld_vcf';
+    ($VCF_BINARY_FILE) = grep {-e $_} map {"$_/ld_vcf"} split /:/,$ENV{'PATH'};
+  }
+  return $VCF_BINARY_FILE; 
 }
 
 sub temp_path {
@@ -137,11 +148,13 @@ sub fetch_by_Slice {
   my $slice = shift;
   my $population = shift;
 
-  if (!ref($slice)) {
+  if(!ref($slice)) {
     throw('Bio::EnsEMBL::Slice arg or listref of Bio::EnsEMBL::Slice expected');
   }
   
   my @slice_objects = ();
+  my $slice_name = "";
+  my $use_vcf = $self->db->use_vcf || 0;
 
   if (ref $slice eq 'ARRAY') {
     foreach (@$slice) {
@@ -149,68 +162,86 @@ sub fetch_by_Slice {
         throw('Bio::EnsEMBL::Slice arg expected');
       }
       push @slice_objects, $_;
+      $slice_name .= "_".$_->name;
     }
   } else {
     if (!$slice->isa('Bio::EnsEMBL::Slice')) {
       throw('Bio::EnsEMBL::Slice arg expected');
     }
     push @slice_objects, $slice;
+    $slice_name = $slice->name;
   }
 
+  # check cache
+  my $key = join("_",
+    $slice_name,
+    ($population ? $population->dbID : ""),
+    $use_vcf,
+    $self->{_vf_pos} || 0,
+    $self->{_pairwise} || 0
+  );
+  return $self->{_cached} if $self->{_cached_key} || '' eq $key && $self->{_cached};
+
   my @genotypes = ();
+  my $vcf_container;
 
   # use VCF?
-  if ($self->db->use_vcf) {
-    if (!defined($population)) {
-      foreach my $slice (@slice_objects) {
-        push @genotypes, $self->_fetch_by_Slice_VCF($slice);
-      }
-      if ($self->db->use_vcf > 1) {
-        my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
-        $ldFeatureContainer->name($slice_objects[0]->name());
-        return $ldFeatureContainer;
-      }
-    }
-    elsif (grep {$_} map {$_->has_Population($population)} @{$self->db->get_VCFCollectionAdaptor->fetch_all}) {
-      foreach my $slice (@slice_objects) {    
-        push @genotypes, $self->_fetch_by_Slice_VCF($slice, $population);
-      }
-      my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
-      $ldFeatureContainer->name($slice_objects[0]->name());
-      return $ldFeatureContainer;
+  if ($use_vcf) {
+    $vcf_container = $self->_fetch_by_Slice_VCF($slice, $population);
+
+    if($use_vcf > 1 || ($population && $vcf_container)) {
+
+      # cache before returning
+      $self->{_cached} = $vcf_container;
+      $self->{_cached_key} = $key;
+
+      return $vcf_container;
     }
   } 
   
   my $siblings = {};
   #when there is no population selected, return LD in the HapMap and PerlEgen populations
-  my $in_str = $self->_get_LD_populations($siblings);
+  my $in_str;
   
   #if a population is passed as an argument, select the LD in the region with the population
   if ($population) {
+
     if (!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
       throw('Bio::EnsEMBL::Variation::Population arg expected');
     }
     my $population_id = $population->dbID;
+
     $in_str = " = $population_id";
   }
+  else {
+    $in_str = $self->_get_LD_populations($siblings);
+  }
+
+  my $ldFeatureContainer;
 
   if ($in_str eq '') {
     #there is no population, not a human specie or not passed as an argument, return the empy container
-    my $empty_container = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+    $ldFeatureContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
       '-adaptor' => $self,
       '-ldContainer'=> {},
       '-name' => $slice_objects[0]->name,
       '-variationFeatures' => {}
     );
-    return $empty_container;
+  }
+  else {
+    foreach my $slice (@slice_objects) {
+      push @genotypes, $self->_fetch_by_Slice_DB($slice, $in_str, $siblings);
+    }
+    $ldFeatureContainer = $self->_ld_calc(\@genotypes);
+    $ldFeatureContainer->name($slice_objects[0]->name());
   }
 
-  foreach my $slice (@slice_objects) {
-    push @genotypes, $self->_fetch_by_Slice_DB($slice, $in_str, $siblings);
-  }
+  $ldFeatureContainer = $self->_merge_containers($vcf_container, $ldFeatureContainer) if $vcf_container;
 
-  my $ldFeatureContainer = $self->_ld_calc(\@genotypes);
-  $ldFeatureContainer->name($slice_objects[0]->name());
+  # cache
+  $self->{_cached} = $ldFeatureContainer;
+  $self->{_cached_key} = $key;
+
   return $ldFeatureContainer;
 }
 
@@ -495,52 +526,133 @@ sub _fetch_by_Slice_VCF {
   
   # fetch genotypes
   my $genotypes = {};
-    
-  # create hash giving populations for each sample
-  my %pops;
 
   # create hash mapping positions to variant names
   my %pos2name;
-  
-  foreach my $vc(@{$vca->fetch_all}) {
-    
-    # skip this collection if it doesn't have the population we want
-    if(defined($population)) {
-      next unless $vc->has_Population($population);
-    }
-    
-    # get "raw" genotypes; comes back as a hash like $hash->{$pos}->{$ind_name} = $gt
-    # doing this saves constructing objects we don't need e.g. Genotypes, VariationFeatures
-    my ($vc_genotypes, $vc_pos2name) = @{$vc->_get_all_LD_genotypes_by_Slice($slice, $population)};
- 
-   
-    # copy them to main $genotypes hash
-    foreach my $p(keys %$vc_genotypes) {
-      $genotypes->{$p}->{$_} = $vc_genotypes->{$p}->{$_} for keys %{$vc_genotypes->{$p}};
-    }
 
-    # and copy position map
-    $pos2name{$_} = $vc_pos2name->{$_} for keys %$vc_pos2name;
+  my $bin = $self->vcf_executable;
+  throw("Binary file not found. See ensembl-variation/C_code/README.txt\n") unless $bin;
+
+  my $container;
+  my $collections = $vca->fetch_all;
+
+  # get populations
+  my @populations = $population ? ($population) : map {@{$_->get_all_Populations}} @$collections;
+
+  foreach my $population(@populations) {
     
-    # get Population->Sample hash; we need to trim and transpose this
-    my $hash = $vc->_get_Population_Sample_hash();
-    
-    # copy hash before deleting from it
-    $hash = { %$hash };
-    
-    if(defined($population)) {
-      delete $hash->{$_} for grep {$_ != $population->dbID} keys %$hash;
-    }
-    
-    # get all samples
-    my %sample_dbID_name = map {$_->dbID => ($_->{_raw_name} || $_->name)} @{$vc->get_all_Samples()};
-    
-    # populate transposed hash
-    foreach my $pop_id(keys %$hash) {
-      $pops{$sample_dbID_name{$_}}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
+    foreach my $vc(@$collections) {
+      
+      my $sample_string = '';
+   
+      # skip this collection if it doesn't have the population we want
+      if(defined($population)) {
+        next unless $vc->has_Population($population);
+
+        my $prefix = $vc->sample_prefix();
+       
+        $sample_string = join(",",
+          map {$_ =~ s/^$prefix//; $_}
+          map {$_->name}
+          @{$population->get_all_Samples}
+        );
+      }
+
+      my $cmd;
+
+      # two slices
+      if(ref($slice) eq 'ARRAY') {
+        my $vcf_file_1 = $vc->_get_vcf_filename_by_chr($slice->[0]->seq_region_name);
+        my $vcf_file_2 = $vc->_get_vcf_filename_by_chr($slice->[1]->seq_region_name);
+
+        throw("ERROR: Can't get VCF file\n") unless $vcf_file_1;
+        throw("ERROR: Can't get VCF file\n") unless $vcf_file_2;
+
+        my $loc_string_1 = sprintf("%s:%i-%i", $slice->[0]->seq_region_name, $slice->[0]->start, $slice->[0]->end);
+        my $loc_string_2 = sprintf("%s:%i-%i", $slice->[1]->seq_region_name, $slice->[1]->start, $slice->[1]->end);
+
+        $cmd = "$bin -f $vcf_file_1 -r $loc_string_1 -g $vcf_file_2 -s $loc_string_2 -l $sample_string";
+      }
+      # one slice
+      else {
+        my $vcf_file = $vc->_get_vcf_filename_by_chr($slice->seq_region_name);
+
+        throw("ERROR: Can't get VCF file\n") unless $vcf_file;
+
+        my $loc_string = sprintf("%s:%i-%i", $slice->seq_region_name, $slice->start, $slice->end);
+
+        $cmd = "$bin -f $vcf_file -r $loc_string -l $sample_string";
+      }
+
+      # run LD binary and open as pipe
+      open LD, "$cmd |";
+
+      # print STDERR "$cmd\n";
+
+      # now create the container from the output of the LD binary
+      my %feature_container = ();
+
+      my $population_id = $population ? $population->dbID : 1;
+   
+      while(<LD>){
+        my %ld_values = ();
+
+        #get the ouput into the hashes
+        chomp;
+        my (
+          $null,
+          $ld_region_id,
+          $ld_region_start,
+          $id1,
+          $ld_region_end,
+          $id2,
+          $r2,
+          $d_prime,
+          $sample_count
+        ) = split /\s/;
+
+        # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
+        if (defined($self->{_vf_pos})) {
+          next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
+        }
+        # skip entries for pairwise computation that don't match input variation feature loactions
+        if (defined $self->{_pairwise}) {
+          next unless ($self->{_pairwise}->{$ld_region_start} && $self->{_pairwise}->{$ld_region_end});
+        } 
+
+        $ld_values{'d_prime'} = $d_prime;
+        $ld_values{'r2'} = $r2;
+        $ld_values{'sample_count'} = $sample_count;
+
+        $id1 =~ s/\;.+//;
+        $id2 =~ s/\;.+//;
+        $pos2name{$ld_region_start} = $id1;
+        $pos2name{$ld_region_end} = $id2;
+      
+        $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
+      }
+
+      my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+        '-adaptor' => $self,
+        '-ldContainer'=> \%feature_container,
+        '-name' => '',
+        '-slices' => [$slice],
+      );
+
+      $c->{'_pop_ids'} = {$population_id => 1};
+
+      if($container) {
+        $self->_merge_containers($container, $c);
+      }
+      else {
+        $container = $c;
+      }
     }
   }
-  return $self->_objs_from_sth_vcf($genotypes, $slice, \%pops, \%pos2name);
+
+  $container->{pos2name} = \%pos2name;
+
+  return $container;
 }
 
 sub _merge_containers {
@@ -549,13 +661,30 @@ sub _merge_containers {
   my $c2 = shift;
   
   # merge VFs
-  $c1->{variationFeatures}->{$_} ||= $c2->{variationFeatures}->{$_} for keys %{$c2->{variationFeatures}};
+  $c1->{variationFeatures}->{$_} ||= $c2->{variationFeatures}->{$_} for keys %{$c2->{variationFeatures} || {}};
   
   # merge pop IDs
-  $c1->{_pop_ids}->{$_} ||= $c2->{_pop_ids}->{$_} for keys %{$c2->{_pop_ids}};
+  $c1->{_pop_ids}->{$_} ||= $c2->{_pop_ids}->{$_} for keys %{$c2->{_pop_ids} || {}};
+
+  # merge pos2name
+  $c1->{pos2name}->{$_} ||= $c2->{pos2name}->{$_} for keys %{$c2->{pos2name} || {}};
+
+  # if both have pos2vf, merge
+  if($c1->{pos2vf} && $c2->{pos2vf}) {
+    $c1->{pos2vf}->{$_} ||= $c2->{pos2vf}->{$_} for keys %{$c2->{pos2vf} || {}};
+  }
+  # otherwise we have to delete and rely on the container to lazy load
+  elsif($c1->{pos2vf}) {
+    delete $c1->{pos2vf};
+  }
+  elsif($c2->{pos2vf}) {
+    delete $c2->{pos2vf};
+  }
+
+  # otherwise we have to remove it
   
   # merge ldContainer
-  foreach my $pair(keys %{$c2->{ldContainer}}) {
+  foreach my $pair(keys %{$c2->{ldContainer} || {}}) {
     if($c1->{ldContainer}->{$pair}) {
       $c1->{ldContainer}->{$pair}->{$_} ||= $c2->{ldContainer}->{$pair}->{$_} for keys %{$c2->{ldContainer}->{$pair}};
     }
@@ -563,7 +692,7 @@ sub _merge_containers {
       $c1->{ldContainer}->{$pair} = $c2->{ldContainer}->{$pair};
     }
   }
-  
+
   return $c1;
 }
 
@@ -732,51 +861,6 @@ sub _objs_from_sth {
     'alleles_variation' => \%alleles_variation,
     'sample_information' => \%sample_information,
     'slice' => $slice,
-  }; 
-}
-
-sub _objs_from_sth_vcf {
-  my $self = shift;
-  my $gts = shift;
-  my $slice = shift;
-  my $pops = shift;
-  my $pos2name = shift;
-  
-  my (%alleles_variation, %sample_information);
-  
-  # create an artificial numerical ID for samples
-  my $current_sample_id = 1;
-  my %sample_ids;
-  
-  foreach my $snp_start(keys %$gts) {
-    foreach my $sample(sort keys %{$gts->{$snp_start}}) {
-      next unless $gts->{$snp_start}->{$sample};
-      
-      my @gt = split(/\||\//, $gts->{$snp_start}->{$sample});
-
-      next unless scalar @gt == 2;
-      next unless grep {defined($_)} @gt;
-      
-      # get sample ID
-      if(!exists($sample_ids{$sample})) {
-        $sample_ids{$sample} = $current_sample_id++;
-      }
-      my $sample_id = $sample_ids{$sample};
-      
-      foreach my $pop_id(keys %{$pops->{$sample}}) {
-        $alleles_variation{$snp_start}->{$pop_id}->{$gt[0]}++;
-        $alleles_variation{$snp_start}->{$pop_id}->{$gt[1]}++;
-    
-        $sample_information{$pop_id}->{$snp_start}->{$sample_id}->{allele_1} = $gt[0];
-        $sample_information{$pop_id}->{$snp_start}->{$sample_id}->{allele_2} = $gt[1];
-      }
-    }
-  }
-  return {
-    'alleles_variation' => \%alleles_variation,
-    'sample_information' => \%sample_information,
-    'slice' => $slice,
-    'pos2name' => $pos2name,
   }; 
 }
 

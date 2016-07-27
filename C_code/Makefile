@@ -1,14 +1,21 @@
 CC = gcc
 
-all: calc_genotypes
+ifndef HTSLIB_DIR
+  $(error HTSLIB_DIR is undefined, see README for details)
+endif
+
+all: calc_genotypes ld_vcf
 
 install: calc_genotypes
 	mkdir -p ../bin
 	cp calc_genotypes ../bin/
+	cp ld_vcf ../bin/
 
 calc_genotypes: calc_genotypes.o
 	$(CC) -o calc_genotypes calc_genotypes.c
 calc_genotypes.o:
 	$(CC) -c calc_genotypes.c
+ld_vcf:
+	$(CC) -Wall ld_vcf.c -I $(HTSLIB_DIR)/htslib -o ld_vcf -L$(HTSLIB_DIR) -Wl,-rpath,$(HTSLIB_DIR) -lhts
 clean:
-	\rm -f *.o calc_genotypes
+	\rm -f *.o calc_genotypes ld_vcf
