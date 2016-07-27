@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
     file_line++;
     /* Check both are 'a' or 'A' */
     if ((genotype[0] | genotype[1] | 0x20) != 'a') {
-      fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n",&position,&personid);
+      fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n",position,personid);
       return USER_ERROR;
     }
 
