@@ -108,7 +108,7 @@ $somatic_study = 0;
 # Parsing
 parse_input($input_file);
 load_file_data();
-	
+  
 # Insertion
 structural_variation();
 failed_structural_variation();
@@ -167,9 +167,9 @@ sub load_file_data{
 sub source{
   debug(localtime()." Inserting into source table");
   
-	my $name = $source_name;
-	my $url  = 'http://decipher.sanger.ac.uk';
-	my $desc = 'Database of Chromosomal Imbalance and Phenotype in Humans Using Ensembl Resources';
+  my $name = $source_name;
+  my $url  = 'http://decipher.sanger.ac.uk';
+  my $desc = 'Database of Chromosomal Imbalance and Phenotype in Humans Using Ensembl Resources';
   # Check if the DGVa source already exists, else it create the entry
   if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$name';})) {
     $dbVar->do(qq{UPDATE IGNORE source SET description='$desc',url='$url',version=$version where name='$name';});
@@ -377,16 +377,16 @@ sub phenotype_feature {
       t.strand
     FROM
       $temp_table t,
-			seq_region q,
+      seq_region q,
       phenotype p
     WHERE 
-			q.name = t.chr AND
+      q.name = t.chr AND
       p.description=t.phenotype
   };
   $dbVar->do($stmt);
-	
-	# Phenotype feature attrib
-	$stmt = qq{
+  
+  # Phenotype feature attrib
+  $stmt = qq{
     INSERT IGNORE INTO 
     $pfa_table (
       phenotype_feature_id,
@@ -400,12 +400,12 @@ sub phenotype_feature {
     FROM
       $temp_table t, 
       $pf_table pf,
-			phenotype p
+      phenotype p
     WHERE 
-		  pf.source_id=$source_id AND
+      pf.source_id=$source_id AND
       pf.object_id=t.id AND
-			pf.phenotype_id=p.phenotype_id AND
-			p.description=t.phenotype
+      pf.phenotype_id=p.phenotype_id AND
+      p.description=t.phenotype
   };
   $dbVar->do($stmt);
 }  
@@ -438,15 +438,20 @@ sub parse_input {
   
   while(<IN>) {
     next if ($_ =~ /^#/);
-		
+
     my $current_line = $_;
     chomp ($current_line);
     
     my $info = parse_line($current_line);
             
-    my $data = generate_data_row($info);           
-    
-    print OUT (join "\t", @{$data})."\n";
+    my @phenotypes = split(/\|/,$info->{'phenotype'});
+
+    foreach my $phe (@phenotypes) {
+
+      $info->{'phenotype'} = $phe;
+      my $data = generate_data_row($info);
+      print OUT (join "\t", @{$data})."\n";
+    }
   }
   close IN;
   close OUT;
@@ -458,15 +463,15 @@ sub parse_line {
   my @data     = split(/\t/, $line);
   my $info;
   
-	$info->{subject}     = $data[0];
-  $info->{chr}         = $data[3];
+  $info->{subject}     = $data[0];
+  $info->{chr}         = $data[1];
   $info->{SO_term}     = ($data[4] > 0) ? 'duplication' : 'deletion';
-  $info->{start}       = $data[1];
-  $info->{end}         = $data[2];
+  $info->{start}       = $data[2];
+  $info->{end}         = $data[3];
   $info->{strand}      = 1;
-	$info->{inheritance} = $data[5];
-	$info->{phenotype}   = $data[6];
-	$info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
+  $info->{inheritance} = $data[5];
+  $info->{phenotype}   = $data[8];
+  $info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
 
   return $info;
 }
@@ -627,7 +632,7 @@ sub generate_data_row {
   my $info = shift;
  
   $info->{phenotype} = decode_text($info->{phenotype}); 
- 
+
   my @row = ($info->{ID},
              $info->{SO_term},
              $info->{chr}, 
@@ -639,9 +644,9 @@ sub generate_data_row {
              $info->{outer_end},
              $info->{strand}, 
              $info->{inheritance},
-						 $info->{phenotype},
-						 $info->{subject},
-						 $info->{is_failed}
+             $info->{phenotype},
+             $info->{subject},
+             $info->{is_failed}
             );
   return \@row;
 }

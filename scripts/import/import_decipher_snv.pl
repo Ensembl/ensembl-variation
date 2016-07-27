@@ -175,42 +175,46 @@ MAIN_LOOP : while(<$INPUT>) {
       
     if ($data->{phenotype} && $data->{phenotype} ne '') {
         
-      # Import Phenotype     
-      $select_phe_sth->execute($data->{phenotype});
-      my $phe_id = ($select_phe_sth->fetchrow_array)[0];
-      if (!$phe_id) {
-        $add_phe_sth->execute($data->{phenotype});
-        $phe_id = $dbh->last_insert_id(undef, undef, undef, undef);
-      }
-      
-      # Import Phenotype Feature
-      $find_existing_pf_sth->execute($data->{ID},$seq_region_id, $data->{start}, $data->{end}, $phe_id);
+      my @phenotypes = split(/\|/,$data->{phenotype});
+      foreach my $phe (@phenotypes) {
 
-      my $existing_pf = $find_existing_pf_sth->fetchrow_arrayref;
-      
-      if (!$existing_pf) {
-        $add_pf_sth->execute(
-          $seq_region_id,
-          $data->{start},
-          $data->{end},
-          $data->{strand},
-          $data->{ID},
-          $type,
-          $source_id,
-          $phe_id
-        );
+        # Import Phenotype
+        $select_phe_sth->execute($phe);
+        my $phe_id = ($select_phe_sth->fetchrow_array)[0];
+        if (!$phe_id) {
+          $add_phe_sth->execute($phe);
+          $phe_id = $dbh->last_insert_id(undef, undef, undef, undef);
+        }
+
+        # Import Phenotype Feature
+        $find_existing_pf_sth->execute($data->{ID},$seq_region_id, $data->{start}, $data->{end}, $phe_id);
+
+        my $existing_pf = $find_existing_pf_sth->fetchrow_arrayref;
         
-        # Import Phenotype Feature Attrib
-        if ($data->{inheritance} && $data->{inheritance} ne '') {
-          
-          $add_pfa_sth->execute(
-            $inheritance_attrib_type_id,
-            $data->{inheritance},
-            $source_id,
+        if (!$existing_pf) {
+          $add_pf_sth->execute(
+            $seq_region_id,
+            $data->{start},
+            $data->{end},
+            $data->{strand},
             $data->{ID},
             $type,
-			      $phe_id,
+            $source_id,
+            $phe_id
           );
+
+          # Import Phenotype Feature Attrib
+          if ($data->{inheritance} && $data->{inheritance} ne '') {
+
+            $add_pfa_sth->execute(
+              $inheritance_attrib_type_id,
+              $data->{inheritance},
+              $source_id,
+              $data->{ID},
+              $type,
+              $phe_id,
+            );
+          }
         }
       }
     }
@@ -235,9 +239,9 @@ sub get_SO_term_list {
 sub source{
   debug(localtime()." Inserting into source table");
   
-	my $name = $source_name;
-	my $url  = 'http://decipher.sanger.ac.uk';
-	my $desc = 'Database of Chromosomal Imbalance and Phenotype in Humans Using Ensembl Resources';
+  my $name = $source_name;
+  my $url  = 'http://decipher.sanger.ac.uk';
+  my $desc = 'Database of Chromosomal Imbalance and Phenotype in Humans Using Ensembl Resources';
   # Check if the DGVa source already exists, else it create the entry
   if ($dbh->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$name';})) {
     $dbh->do(qq{UPDATE IGNORE source SET description='$desc',url='$url',version=$version where name='$name';});
@@ -255,16 +259,16 @@ sub parse_line {
   my $info;
   
   # Extract data
-	$info->{subject}     = $data[0];
-  $info->{chr}         = $data[3];
-  $info->{start}       = $data[1];
-  $info->{end}         = $data[2];
+  $info->{subject}     = $data[0];
+  $info->{chr}         = $data[1];
+  $info->{start}       = $data[2];
+  $info->{end}         = $data[3];
   $info->{strand}      = 1;
   $info->{ref}         = $data[4];
   $info->{alt}         = $data[5];
-	$info->{inheritance} = $data[8];
-	$info->{phenotype}   = $data[9];
-	$info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
+  $info->{inheritance} = $data[8];
+  $info->{phenotype}   = $data[11];
+  $info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
   $info->{flipped}     = 0;
 
   # Strand / alleles
