@@ -2630,7 +2630,9 @@ sub population_genotypes {
                           PRIMARY KEY (population_genotype_id),
                           KEY variation_idx (variation_id),
                           KEY subsnp_idx (subsnp_id),
-                          KEY population_idx (population_id))]);
+                          KEY population_idx (population_id))
+                          engine=MyISAM
+                         ]);
 
 
     my $stmt;
