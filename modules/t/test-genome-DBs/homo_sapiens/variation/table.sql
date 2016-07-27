@@ -238,7 +238,8 @@ CREATE TABLE `phenotype_feature_attrib` (
 CREATE TABLE `phenotype_ontology_accession` (
   `phenotype_id` int(11) unsigned NOT NULL,
   `accession` varchar(255) NOT NULL,
-  `linked_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
+  `mapped_by_attrib` set('437','438','439','440','441','442') DEFAULT NULL,
+  `mapping_type` enum('is','involves'),
   PRIMARY KEY (`phenotype_id`,`accession`)
 ) ENGINE=MyISAM ;
 
