@@ -162,6 +162,7 @@ sub create_working_tables{
                         KEY variation_idx (variation_id),
                         KEY subsnp_idx (subsnp_id),
                         KEY population_idx (population_id))
+                        engine=MyISAM
                       });
   $var_dba->dbc->do(qq{ ALTER TABLE allele_working DISABLE KEYS});
   
@@ -203,7 +204,8 @@ sub create_working_tables{
                         KEY population_idx (population_id),
                         KEY variation_idx (variation_id),
                         KEY subsnp_idx (subsnp_id)
-                      )});
+                        )engine=MyISAM
+                      });
 
 
   ## temp table for assigning genotype ids
