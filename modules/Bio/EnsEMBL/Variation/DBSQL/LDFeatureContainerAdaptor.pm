@@ -178,9 +178,9 @@ sub fetch_by_Slice {
     ($population ? $population->dbID : ""),
     $use_vcf,
     $self->{_vf_pos} || 0,
-    $self->{_pairwise} || 0
+    join("-", sort {$a <=> $b} keys %{$self->{_pairwise} || {}})
   );
-  return $self->{_cached} if $self->{_cached_key} || '' eq $key && $self->{_cached};
+  return $self->{_cached} if $self->{_cached} && $self->{_cached_key} eq $key;
 
   my @genotypes = ();
   my $vcf_container;

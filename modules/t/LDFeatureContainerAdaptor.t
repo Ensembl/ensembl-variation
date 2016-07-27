@@ -64,6 +64,10 @@ my $ld_values;
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 15, "fetch_by_Slice - count LD values");
+is($ldfca->{_cached}, $ldContainer, "fetch_by_Slice - _cached");
+is($ldfca->{_cached_key}, "chromosome:GRCh37:9:22124503:22126503:1_102178_0_0_", "fetch_by_Slice - _cached_key");
+
+is($ldfca->fetch_by_Slice($slice, $p1), $ldContainer, "fetch_by_Slice - uses cache");
 
 # fetch_all_by_Variation
 my $variation = $va->fetch_by_name('rs4977575');
@@ -85,6 +89,7 @@ $ldContainer = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2]);
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 2, "fetch_by_VariationFeatures - count LD values");
+is($ldfca->{_cached_key}, "_chromosome:GRCh37:9:22124743:22124745:1_chromosome:GRCh37:9:22125912:22125914:1__0_0_22124744-22125913", "fetch_by_VariationFeatures - _cached_key");
 
 ## VCF
 my $dir = $multi->curr_dir();
