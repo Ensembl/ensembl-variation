@@ -150,9 +150,10 @@ sub description {
 
 =head2 ontology_accessions_with_source
 
-  Example    : $ontology_accessions_source = $obj->ontology_accessions_with_source()
+  Arg [1]    : string $mapping_type (optional) 
+  Example    : $ontology_accessions_source = $obj->ontology_accessions_with_source('is')
   Description: Getter for the ontology_accessions attribute
-  Returntype : listref of hashes { source =>'OLS', accession => 'HP:00123'}
+  Returntype : listref of hashes { mapping_source =>'OLS', accession => 'HP:00123', mapping_type => 'is'}
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -161,12 +162,23 @@ sub description {
 
 sub ontology_accessions_with_source {
   my $self = shift;
-  return $self->{'_ontology_accessions'};
+  my $type = shift;
+
+  return $self->{'_ontology_accessions'} unless $type;
+
+  ## else filter ontology mappings by is/involves type
+  my @accessions;
+  foreach my $mapping (@{$self->{'_ontology_accessions'}}){
+    next if defined $type && $mapping->{mapping_type} eq $type;
+    push @accessions, $mapping;
+  }
+  return \@accessions;
 }
 
 =head2 ontology_accessions
 
-  Example    : $ontology_accessions = $obj->ontology_accessions()
+  Arg [1]    : string $mapping_type (optional) 
+  Example    : $ontology_accessions = $obj->ontology_accessions('involves')
   Description: Getter for the ontology_accessions attribute
   Returntype : listref of strings
   Exceptions : none
@@ -177,29 +189,37 @@ sub ontology_accessions_with_source {
 
 sub ontology_accessions {
   my $self = shift;
+  my $type = shift;
+
   my @accessions;
   foreach my $h (@{$self->{'_ontology_accessions'}}){
+    next if defined $type && $type ne $h->{mapping_type};
     push @accessions, $h->{accession};
   }
   return \@accessions;
 }
 
 =head2 add_ontology_accession
-
-  Example    : $obj->add_ontology_accessions('Orphanet:3197', 'Manual')
-  Description: Adds an ontology_accession & method of used to assign it
-  Returntype : 
-  Exceptions : none
-  Caller     : general
+  Arg [1]    : A hash of mapping information
+  Example    : $obj->add_ontology_accession({ accession      => 'Orphanet:3197', 
+                                              mapping_source => 'Manual', 
+                                              mapping_type   =>'is'})
+  Description: Adds an ontology term accession, the method of used to assign it
+               and the type of mapping ('is' for the term matching the phenotype 
+               description or 'involves' for sub-phenotypes of a disease)
+  Returntype : none
+  Exceptions : Throws if no accession is supplied
+  Caller     : internal pipelines
   Status     : experimental
 
 =cut
 sub add_ontology_accession {
-  my $self      = shift;
-  my $accession = shift;
-  my $source    = shift;
+  my $self  = shift;
+  my $data  = shift;
 
-  push @{$self->{'_ontology_accessions'}}, {accession => $accession, source => $source};
+  throw('An accession must be supplied when updating')  unless $data->{accession};
+
+  push @{$self->{'_ontology_accessions'}}, $data;
 }
 
 

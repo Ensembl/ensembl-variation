@@ -76,8 +76,9 @@ sub fetch_by_description {
 }
 
 =head2 fetch_all_by_ontology_accession
-  Arg [1]    : string 
-  Example    : $phenotype = $pheno_adaptor->fetch_all_by_ontology_accession('EFO:0000712');
+  Arg [1]    : string ontology accession
+  Arg [2]    : string mapping type (is/involves)  optional
+  Example    : $phenotype = $pheno_adaptor->fetch_all_by_ontology_accession('EFO:0000712', 'is');
   Description: Retrieves a list of Phenotype objects for an ontology accession
                If no phenotype exists undef is returned.
   Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
@@ -88,12 +89,19 @@ sub fetch_by_description {
 sub fetch_all_by_ontology_accession {
   my $self = shift;
   my $accession = shift;
-  return $self->generic_fetch("poa.accession = '$accession'");
+  my $mapping_type = shift;
+
+  my $constraint = "poa.accession = '$accession'"; 
+  $constraint   .= " and mapping_type = '$mapping_type' " if defined $mapping_type;
+
+  return $self->generic_fetch($constraint);
+  #return $self->generic_fetch("poa.accession = '$accession'");
 }
 
 =head2 fetch_by_OntologyTerm
   Arg [1]    : Bio::EnsEMBL::OntologyTerm
-  Example    : $phenotype = $pheno_adaptor->fetch_by_OntologyTerm( $ontologyterm);
+  Arg [2]    : string mapping type (is/involves)  optional
+  Example    : $phenotype = $pheno_adaptor->fetch_by_OntologyTerm( $ontologyterm, 'involves');
   Description: Retrieves a Phenotype object via an OntologyTerm
                If no phenotype exists undef is returned.
   Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
@@ -102,13 +110,15 @@ sub fetch_all_by_ontology_accession {
   Status     : experimental
 =cut
 sub fetch_by_OntologyTerm {
+
   my $self = shift;
   my $term = shift;
+  my $mapping_type = shift;
 
   # Check an OntologyTerm is supplied
   assert_ref($term,'Bio::EnsEMBL::OntologyTerm');
 
-  return $self->generic_fetch("poa.accession = '". $term->accession ."'");
+  return $self->fetch_all_by_ontology_accession($term->accession(), $mapping_type);
 }
 
 
@@ -131,7 +141,7 @@ sub _tables {
 }
 
 sub _columns {
-    return qw(p.phenotype_id p.name p.description poa.accession poa.linked_by_attrib);
+    return qw(p.phenotype_id p.name p.description poa.accession poa.mapped_by_attrib poa.mapping_type);
 }
 
 sub _objs_from_sth {
@@ -174,9 +184,12 @@ sub _obj_from_row {
     }
 
     # Add a ontology accession if available
-    my $link_source = $self->db->get_AttributeAdaptor->attrib_value_for_id($row->{linked_by_attrib})
-      if $row->{linked_by_attrib};
-    $obj->add_ontology_accession($row->{accession}, $link_source ) if defined $row->{accession} ;
+    my $link_source = $self->db->get_AttributeAdaptor->attrib_value_for_id($row->{mapped_by_attrib})
+      if $row->{mapped_by_attrib};
+
+    $obj->add_ontology_accession({ accession      => $row->{accession}, 
+                                   mapping_source => $link_source,
+                                   mapping_type   => $row->{mapping_type} }) if defined $row->{accession} ;
 }
 
 sub store{
@@ -222,8 +235,9 @@ sub store_ontology_accessions{
         INSERT IGNORE INTO phenotype_ontology_accession (
              phenotype_id,
              accession,
-             linked_by_attrib
-        ) VALUES (?,?,?)
+             mapped_by_attrib,
+             mapping_type
+        ) VALUES (?,?,?,?)
     });
 
   foreach my $link_info (@{$pheno->{_ontology_accessions}} ){
@@ -238,7 +252,8 @@ sub store_ontology_accessions{
     $sth->execute(
         $pheno->{dbID},
         $link_info->{accession},
-        $attrib_id
+        $attrib_id,
+        $link_info->{type}
     );
    }
     $sth->finish;
