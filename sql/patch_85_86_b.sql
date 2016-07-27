@@ -6,4 +6,4 @@ ALTER TABLE phenotype_ontology_accession CHANGE column linked_by_attrib mapped_b
 
 ALTER TABLE phenotype_ontology_accession add column ( mapping_type enum('is','involves') default NULL ) ;
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|add qualifier & index to phenotype_onology_accession');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_b.sql|add qualifier & index to phenotype_onology_accession');
