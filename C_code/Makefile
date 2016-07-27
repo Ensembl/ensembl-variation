@@ -1,7 +1,7 @@
 CC = gcc
 
 ifndef HTSLIB_DIR
-  $(error HTSLIB_DIR is undefined, see README for details)
+  $(error HTSLIB_DIR is undefined, see README.txt for details)
 endif
 
 all: calc_genotypes ld_vcf
