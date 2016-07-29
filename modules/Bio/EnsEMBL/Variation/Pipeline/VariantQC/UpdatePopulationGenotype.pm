@@ -44,6 +44,8 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 This module migrates the population genotype table from old to new schema version
 It is run as a seperate independant process after the main variant QC 
+Reports back to hive db when processes complete in case of job time outs (the hive
+job may die, but the database process continue to completion 
 
 =cut
 
@@ -78,8 +80,10 @@ sub run {
                       SELECT t.genotype_code_id, ac.allele_code_id, 2, phased
                       FROM genotype_code_tmp t, allele_code ac
                       WHERE t.allele_2 = ac.allele ]);
+  $self->warning( 'UpdatePopulationGenotype: genotype_code updated');
 
   $var_dba->dbc->do(qq[ALTER TABLE genotype_code ORDER BY genotype_code_id, haplotype_id ASC]);
+  $self->warning( 'UpdatePopulationGenotype: genotype_code sorted');
 
   ## Create coded genotypes from Mart table in which minus-strand single-mapping variants have been flipped
   $var_dba->dbc->do(qq{ ALTER TABLE population_genotype_working DISABLE KEYS});
@@ -90,9 +94,9 @@ sub run {
                       from MTMP_population_genotype_working pg, genotype_code_tmp gc 
                       where pg.allele_1 = gc.allele_1 and pg.allele_2 = gc.allele_2 
                       and gc.phased =0 ]);
-   
-   $var_dba->dbc->do(qq{ ALTER TABLE population_genotype_working ENABLE KEYS});
+   $self->warning( 'UpdatePopulationGenotype: population_genotype_working populated');
 
+   $var_dba->dbc->do(qq{ ALTER TABLE population_genotype_working ENABLE KEYS});
 
 }
 

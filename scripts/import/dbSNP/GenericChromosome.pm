@@ -191,7 +191,7 @@ sub variation_feature{
 ## Type 3: DelOnCtg  Deletion on the contig: part of the snp flanking sequence including 
 ##                   the snp was absent on the contig sequence in the alignment
 
-     $stmt .= qq{ SELECT
+     $stmt = qq{ SELECT
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
 		   ctg.contig_gi,

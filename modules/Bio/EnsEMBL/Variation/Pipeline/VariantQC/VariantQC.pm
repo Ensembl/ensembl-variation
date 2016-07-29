@@ -145,15 +145,17 @@ sub run_variation_checks{
 
   my $var_dba = $self->get_species_adaptor('variation');
 
-  ## slice needed for ref check
-  my $core_dba = $self->get_species_adaptor('core');
-  my $slice_ad = $core_dba->get_SliceAdaptor;
-
+  ## slice needed for ref check if the sequence db is not being used
+  my $slice_ad;
+  unless( $self->param('use_seqdb')  == 1 ){
+    my $core_dba = $self->get_species_adaptor('core');
+    $slice_ad = $core_dba->get_SliceAdaptor;
+  }
 
   ## export current variation_feature data
   my ($to_check, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
 
-
+  ## get id for set of failed variants
   my $failed_set_id = find_failed_variation_set_id($var_dba);
   
 
