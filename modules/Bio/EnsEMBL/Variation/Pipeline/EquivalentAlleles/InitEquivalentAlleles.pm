@@ -51,6 +51,8 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 sub fetch_input {
    
   my $self = shift;
+
+  $self->delete_previous();
   
   my $core_dba = $self->get_species_adaptor('core');
 
@@ -84,6 +86,19 @@ sub fetch_input {
   $self->param('locations', \@locations);
 }
 
+## delete results of previous analysis
+sub delete_previous{
+
+  my $self = shift;
+
+  my $var_dba = $self->get_species_adaptor('variation');
+  $var_dba->dbc->do(qq[ delete from variation_attrib 
+                        where attrib_id in(
+                          select attrib_id from attrib where value ='co-located allele'
+                          )
+                       ]);
+
+}
 
 sub write_output {
     

@@ -117,4 +117,16 @@ sub _load_registry {
     return;
 }
 
+## use same date format for all pipelines 
+sub run_date{
+    my ($self) = @_;
+
+    my @dt = localtime();
+
+    $dt[5] += 1900;
+    $dt[4] +=1; 
+
+    return $dt[5] ."-". $dt[4] . "-". $dt[3] ;
+}
+
 1;

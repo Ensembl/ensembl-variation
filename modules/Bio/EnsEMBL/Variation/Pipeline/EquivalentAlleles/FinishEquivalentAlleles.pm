@@ -65,12 +65,33 @@ sub run {
   $count_attrib_ext_sth->execute();
    
   my $data = $count_attrib_ext_sth->fetchall_arrayref();
+  print $report "Attrib counts:\n";
   foreach my $l (@{$data}){
     print $report "$l->[0]\t$l->[1]\n";
   }
+
+  $self->update_meta();
+
 }
 
+## store the date the job is run
 
+sub update_meta{
+
+  my $self = shift;
+
+  my $var_dba  = $self->get_species_adaptor('variation');
+
+  my $var_dbh = $var_dba->dbc->db_handle;
+    
+  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta 
+                                              ( meta_key, meta_value) values (?,?)
+                                            ]);
+
+
+  $update_meta_sth->execute('EquivalentAlleles_run_date', $self->run_date() );
+
+}
 1; 
  
 
