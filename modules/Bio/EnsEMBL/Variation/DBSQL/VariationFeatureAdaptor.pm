@@ -1864,13 +1864,13 @@ sub fetch_by_hgvs_notation {
   else{              $refseq_allele = $slice->subseq($start, $end,  $strand);}
 
   # take reference allele from genomic reference & coordinates if not supplied in HGVS string for a deletion
-  $ref_allele = $refseq_allele  if( $type =~ m/g|c|n/ && $description =~ m/del$/ );
+  $ref_allele = $refseq_allele  if( $type =~ m/g|c|n|m/ && $description =~ m/del$/ );
 
   # If the reference allele was omitted, set it to undef
   $ref_allele = undef unless (defined($ref_allele) && length($ref_allele));      
   
   # take alternate allele from genomic reference & coordinates if not supplied in HGVS string for a duplication
-  $alt_allele = $refseq_allele if( $type =~ m/g|c|n/ && $description =~/dup$/);
+  $alt_allele = $refseq_allele if( $type =~ m/g|c|n|m/ && $description =~/dup$/);
 
   if($description =~ /dup/){ 
      ## special case: handle as insertion for ensembl object purposes 
