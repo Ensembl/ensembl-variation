@@ -66,6 +66,7 @@ my %class_mapping = ( 'Substitution' => 'SNV',
 my $default_strand = 1;
 my $somatic = 1;
 my $allele  = 'COSMIC_MUTATION';
+my $phe_suffix = 'tumor';
   
 $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
 $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
@@ -157,7 +158,9 @@ while (<IN>) {
   $cosmic_ins_sth->execute();
   
   foreach my $phenotype (@line) {
-    my $phenotype    = "COSMIC:tumour_site:$phenotype";
+    $phenotype =~ s/_/ /g;
+    $phenotype = ucfirst($phenotype)." $phe_suffix";
+
     my $phenotype_id = $phenotype_ids->{$phenotype};
     
     if (!$phenotype_id) {
