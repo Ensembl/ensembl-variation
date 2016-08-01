@@ -282,7 +282,10 @@ sub allele_string{
   my $strand = shift;
   
   if(defined($newval)) {
-	return $self->{'allele_string'} = $newval;
+	 $self->{allele_string} = $newval;
+   delete($self->{_ref_allele});
+   delete($self->{_alt_alleles});
+   return $self->{allele_string};
   }
   
   my $as = $self->{'allele_string'};
@@ -1538,11 +1541,43 @@ sub get_all_sources{
 
 =cut
 
-sub ref_allele_string{
-    my $self = shift;
+sub ref_allele_string {
+  my $self = shift;
 
-    my @alleles = split /[\|\\\/]/,$self->allele_string;
-    return $alleles[0];
+  $self->_get_alleles() unless exists $self->{_ref_allele};
+
+  return $self->{_ref_allele};
+}
+
+
+=head2 reference_allele
+  
+  Args       : none
+  Example    : print $vf->alternate_alleles(), "\n";
+  Description: Returns the alternate alleles for this VariationFeature.
+               This is all alleles beyond the first as returned by allele_string().
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub alt_alleles {
+  my $self = shift;
+
+  $self->_get_alleles() unless exists $self->{_alt_alleles};
+
+  return $self->{_alt_alleles};
+}
+
+## helper used by ref_allele_string and alt_alleles
+sub _get_alleles {
+  my $self = shift;
+
+  my @alleles = split(/[\|\\\/]/, $self->{allele_string});
+  $self->{_ref_allele} = shift @alleles;
+  $self->{_alt_alleles} = \@alleles;
 }
 
 

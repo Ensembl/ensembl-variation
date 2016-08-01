@@ -100,6 +100,7 @@ ok($vf->name() eq $vname,               "get name");
 ok($vf->map_weight() == $map_weight,    "get map_weight");
 ok($vf->allele_string() eq $allele_str, "get allele");
 ok($vf->ref_allele_string() eq 'A',     "get ref allele");
+is_deeply($vf->alt_alleles, ['T'],      "get alt alleles");
 ok($vf->display_id() eq $vname,         "display_name");
 ok($vf->source_name() eq $source_name,  "source");
 ok($vf->source_version() eq $source_version, "source version");
@@ -125,9 +126,16 @@ my $v2 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs12311',
 
 ok(test_getter_setter($vf, 'variation', $v2),            'set new variation object');
 ok(test_getter_setter($vf, 'map_weight', 4),             'set new map_weight');
-ok(test_getter_setter($vf, 'allele_string', 'T/G'),      'set new allele_string');
+ok(test_getter_setter($vf, 'allele_string', 'T/G'),    'set new allele_string');
 ok(test_getter_setter($vf, 'variation_name', 'rs21431'), 'set new variation name');
 ok(test_getter_setter($vf, 'flank_match', '1'),          'set new flank_match');
+
+
+my $bak = $vf->allele_string;
+$vf->allele_string('T/G/C');
+ok($vf->ref_allele_string() eq 'T',     "get ref allele after change");
+is_deeply($vf->alt_alleles, ['G', 'C'], "get alt alleles after change");
+$vf->allele_string($bak);
 
 
 # test ambiguity code
