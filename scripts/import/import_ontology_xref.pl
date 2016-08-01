@@ -17,7 +17,9 @@
 
 
 ## Import cross references between OMIM to phenotype and disease ontologies 
-## provided by Orphanet and HPO  
+## provided by Orphanet and HPO
+## Orphanet import requires OMIM data + studies to be available;
+
 
 use strict;
 use warnings;
@@ -66,7 +68,7 @@ else{
 
 ## take from OLS
 sub get_Orphanet{
-  get_ontol();
+   get_ontol();
 }
 
 ## Page through Orphanet data extracting OMIM xrefs
@@ -119,7 +121,7 @@ sub store_links{
 
     my ($orphanet, $omim) = @{$link};
     $omim =~ s/^O//;
-
+warn "Storing link $orphanet, $omim\n";
     ## OMIM id held in the study record 
     my $study = $study_adaptor->fetch_all_by_external_reference($omim);
     next unless defined $study->[0];
@@ -145,13 +147,16 @@ sub store_links{
 
     ## if only one phenotype attach Orphanet accession
     my $omim_pheno = $feats->[0]->phenotype();
-    $omim_pheno->add_ontology_accession( $orphanet, 'Orphanet' );   
+    $omim_pheno->add_ontology_accession( {accession      => $orphanet, 
+                                          mapping_source => 'Orphanet', 
+                                          mapping_type   => 'is'}
+                                        );   
     $pheno_adaptor->store_ontology_accessions($omim_pheno);
   }
 }
 
 
-## take xrefs from HP annotation file
+## take OMIM phenotype/disease descriptions and xrefs from HP annotation file
 sub get_HP {
 
   my $infile = shift;
@@ -187,14 +192,21 @@ sub store_HP{
   my $phenos = shift;
 
   foreach my $desc (keys %$phenos){
+    my $pheno;
+    eval{
+       $pheno = $pheno_adaptor->fetch_by_description($desc);
+    };
+    print "Error with $desc : $@\n" unless $@ eq '';
 
-    my $pheno = $pheno_adaptor->fetch_by_description($desc);
     next unless $pheno->[0];  ## we don't expect to hold them all
   
     print "$desc\t" . join(",",@{$phenos->{$desc}}) ."\t" . $pheno->[0]->description() . "\n";
   
     foreach my $acc(@{$phenos->{$desc}}){
-      $pheno->[0]->add_ontology_accession( $acc, 'HPO' );
+      $pheno->[0]->add_ontology_accession( {accession      => $acc, 
+                                            mapping_source => 'HPO',
+                                            mapping_type   => 'involves'}
+                                         );
     }
     $pheno_adaptor->store_ontology_accessions($pheno->[0]);
   }

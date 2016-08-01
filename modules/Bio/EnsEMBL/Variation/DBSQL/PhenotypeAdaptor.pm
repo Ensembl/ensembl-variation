@@ -244,16 +244,16 @@ sub store_ontology_accessions{
 
     ## get attrib id for source of link - can this be mandatory?
     my $attrib_id;
-    if($link_info->{source}){
-      $attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value( 'ontology_mapping', $link_info->{source}); 
-      warn "Source type " . $link_info->{source} . " not supported for linking ontology descriptions to accessions\n" unless $attrib_id;
+    if($link_info->{mapping_source}){
+      $attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value( 'ontology_mapping', $link_info->{mapping_source}); 
+      warn "Source type " . $link_info->{mapping_source} . " not supported for linking ontology descriptions to accessions\n" unless $attrib_id;
     }
 
     $sth->execute(
         $pheno->{dbID},
         $link_info->{accession},
         $attrib_id,
-        $link_info->{type}
+        $link_info->{mapping_type}
     );
    }
     $sth->finish;

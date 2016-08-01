@@ -600,7 +600,8 @@ sub parse_nhgri {
         'risk_allele_freq_in_controls' => $risk_frequency,
         'p_value' => $pvalue,
         'study_description' => $study,
-        'accessions'   => \@accessions 
+        'accessions'   => \@accessions,
+        ontology_mapping_type =>'is' 
       );
    
     
@@ -888,7 +889,8 @@ sub parse_goa {
         'seq_region_end' => $gene->seq_region_end,
         'seq_region_strand' => $gene->seq_region_strand,
         'xref_id' => $uniprot_ids,
-        'accessions' => [$external_id]
+        'accessions' => [$external_id],
+         ontology_mapping_type =>'is' 
       );
       
       $data{'study'} = $pubmed_ids if ($pubmed_ids);
@@ -1356,6 +1358,7 @@ sub parse_orphanet {
               'description' => $name,
               'external_id' => $orpha_number,
               'accessions'  => [ 'Orphanet:' . $orpha_number],
+               ontology_mapping_type =>'is', 
               'seq_region_id' => $gene->slice->get_seq_region_id,
               'seq_region_start' => $gene->seq_region_start,
               'seq_region_end' => $gene->seq_region_end,
@@ -1440,6 +1443,7 @@ sub parse_ddg2p {
           'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
           'accessions' => \@accns,
+          ontology_mapping_type =>'involves' 
         };
       }
     }
@@ -2038,7 +2042,7 @@ sub add_phenotypes {
   my $source_id = shift;
   my $object_type = shift;
   my $db_adaptor = shift;
- 
+
   my $st_col = ($source =~ m/dbgap/i) ? 'name' : 'description';
 
   # Prepared statements
@@ -2170,12 +2174,12 @@ sub add_phenotypes {
     SELECT attrib_id from attrib, attrib_type
     WHERE attrib_type.code = 'ontology_mapping'
     AND attrib.attrib_type_id = attrib_type.attrib_type_id
-    AND attrib.value ='Data source'};
+    AND attrib.value = ?};
  
   my $ontology_accession_ins_stmt = qq{
     INSERT IGNORE INTO phenotype_ontology_accession
-    (phenotype_id, accession, mapped_by_attrib)
-    values (?,?, ?)
+    (phenotype_id, accession, mapped_by_attrib, mapping_type)
+    values (?,?,?,?)
    };
  
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
@@ -2187,7 +2191,8 @@ sub add_phenotypes {
 
   ## get the attrib id for the type of description to ontology term linking
   my $attrib_id_ext_sth = $db_adaptor->dbc->prepare($attrib_id_ext_stmt);
-  $attrib_id_ext_sth->execute();
+  my $mapped_by = ($source eq 'Orphanet' ? 'Orphanet' : 'Data source');
+  $attrib_id_ext_sth->execute($mapped_by);
   my $ont_attrib_type = $attrib_id_ext_sth->fetchall_arrayref();
 
   # First, sort the array according to the phenotype description
@@ -2263,7 +2268,7 @@ sub add_phenotypes {
     foreach my $acc (@{$phenotype->{accessions}}){
       $acc =~ s/\s+//g;
       $acc = iri2acc($acc) if $acc =~ /^http/;
-      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0] ) ||die "Failed to import phenotype accession\n";
+      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0], $phenotype->{ontology_mapping_type} ) ||die "Failed to import phenotype accession\n";
     }
 
     if ($phenotype->{"associated_gene"}) {
@@ -2334,7 +2339,7 @@ sub add_phenotypes {
 sub get_phenotype_id {
   my $phenotype = shift;
   my $db_adaptor = shift;
-  
+
   my ($name, $description);
   $name = $phenotype->{name};
   $description = $phenotype->{description};
@@ -2409,7 +2414,8 @@ sub get_phenotype_id {
     # restore from backup before inserting
     $description = $description_bak;
   }
-  
+
+
   # finally if no match, do an insert
   my $sth = $db_adaptor->dbc->prepare(qq{
     INSERT INTO phenotype ( name, description ) VALUES ( ?,? )

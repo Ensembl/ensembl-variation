@@ -189,7 +189,10 @@ sub store_terms{
     my $pheno = $pheno_adaptor->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
-      $pheno->add_ontology_accession($accession, $terms->{$id}->{type});
+      $pheno->add_ontology_accession({ accession      => $accession, 
+                                       mapping_source => $terms->{$id}->{type},
+                                       mapping_type   => 'is'
+                                      });
     }
     $pheno_adaptor->store_ontology_accessions($pheno);
   }
@@ -224,7 +227,7 @@ sub get_all_phenos{
 =head get_termless_phenos
 
 Look up descriptions for phenotypes which don't have supplied or
-exact match terms. 
+exact match terms of 'is' type
 
 =cut
 sub get_termless_phenos{
@@ -233,7 +236,9 @@ sub get_termless_phenos{
 
   my $desc_ext_sth =   $dbh->prepare(qq [ select phenotype_id, description
                                           from phenotype
-                                          where phenotype.phenotype_id not in (select phenotype_id from phenotype_ontology_accession) 
+                                          where phenotype.phenotype_id not in 
+                                          (select phenotype_id from phenotype_ontology_accession where mapping_type_attrib ='is') 
+
                                         ]);
 
   $desc_ext_sth->execute()||die "Problem extracting termless phenotype descriptions\n";
