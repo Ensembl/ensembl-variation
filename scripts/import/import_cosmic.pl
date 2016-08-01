@@ -66,7 +66,7 @@ my %class_mapping = ( 'Substitution' => 'SNV',
 my $default_strand = 1;
 my $somatic = 1;
 my $allele  = 'COSMIC_MUTATION';
-my $phe_suffix = 'tumor';
+my $phe_suffix = 'tumour';
   
 $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
 $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
