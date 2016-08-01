@@ -2172,9 +2172,9 @@ sub add_phenotypes {
     AND attrib.attrib_type_id = attrib_type.attrib_type_id
     AND attrib.value ='Data source'};
  
-  my $onology_accession_ins_stmt = qq{
+  my $ontology_accession_ins_stmt = qq{
     INSERT IGNORE INTO phenotype_ontology_accession
-    (phenotype_id, accession, linked_by_attrib)
+    (phenotype_id, accession, mapped_by_attrib)
     values (?,?, ?)
    };
  
@@ -2183,7 +2183,7 @@ sub add_phenotypes {
   my $pf_ins_sth   = $db_adaptor->dbc->prepare($pf_ins_stmt);
   my $attrib_ins_sth = $db_adaptor->dbc->prepare($attrib_ins_stmt);
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
-  my $onology_accession_ins_sth = $db_adaptor->dbc->prepare($onology_accession_ins_stmt);
+  my $ontology_accession_ins_sth = $db_adaptor->dbc->prepare($ontology_accession_ins_stmt);
 
   ## get the attrib id for the type of description to ontology term linking
   my $attrib_id_ext_sth = $db_adaptor->dbc->prepare($attrib_id_ext_stmt);
@@ -2263,7 +2263,7 @@ sub add_phenotypes {
     foreach my $acc (@{$phenotype->{accessions}}){
       $acc =~ s/\s+//g;
       $acc = iri2acc($acc) if $acc =~ /^http/;
-      $onology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0] ) ||die "Failed to import phenotype accession\n";
+      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0] ) ||die "Failed to import phenotype accession\n";
     }
 
     if ($phenotype->{"associated_gene"}) {
