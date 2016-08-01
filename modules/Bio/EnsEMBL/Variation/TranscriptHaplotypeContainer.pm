@@ -84,7 +84,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($transcript, $gts, $samples, $db) = rearrange([qw(TRANSCRIPT GENOTYPES SAMPLES DB)], @_);
+  my ($transcript, $gts, $samples, $db, $filters) = rearrange([qw(TRANSCRIPT GENOTYPES SAMPLES DB FILTERS)], @_);
   
   # check what we've been given looks sensible
   assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
@@ -105,6 +105,7 @@ sub new {
     _sample_genotype_features => $gts || [],
     _db => $db,
     _samples => $samples,
+    _filters => $filters,
     transcript_id => $transcript->stable_id,
   };
   bless($self, $class);
@@ -731,6 +732,9 @@ sub _sample_counts_by_population {
 ## Creates all the TranscriptHaplotype objects for this container
 sub _init {
   my $self = shift;
+
+  # apply filters before anything else
+  $self->_pre_filter_genotypes();
   
   my $tr = $self->transcript;
   my $vfs = $self->_variation_features;
@@ -830,7 +834,6 @@ sub _add_reference_haplotypes {
   # get list of samples that have alt GTs
   my %have_alt_gts = map {$_->sample->name => 1} @{$self->get_all_SampleGenotypeFeatures};
 
-  # now get the remaining samples and assign them reference status
   my @ref_samples = grep {!$have_alt_gts{$_->name}} @{$self->get_all_Samples};
 
   if(scalar @ref_samples) {
@@ -903,6 +906,137 @@ sub _add_reference_haplotypes {
       }
     }
   }
+}
+
+## user may supply a set of filters to apply to genotypes before haplos are constructed
+## currently only supports filtering on frequency
+sub _pre_filter_genotypes {
+  my $self = shift;
+
+  my $filters = $self->{_filters};
+  return unless $filters;
+
+  my $gts = $self->get_all_SampleGenotypeFeatures;
+
+  my %by_var;
+  my @var_order;
+
+  # arrange genotypes into hash keyed on VF ID
+  foreach my $gt(@$gts) {
+    my $id = $gt->{_variation_feature_id} || $self->_vf_identifier($gt->variation_feature);
+    push @{$by_var{$id}}, $gt;
+    push @var_order, $id unless @var_order && $id == $var_order[-1];
+  }
+
+  # frequency filter
+  if(my $freq_filter = $filters->{frequency}) {
+    my $pop   = $freq_filter->{population} || '1000GENOMES:phase_3:ALL';
+    my $freq  = $freq_filter->{frequency}  || 0.01;
+    my $gt_lt = $freq_filter->{gt_lt}      || 'gt';
+
+    # get sample/pop hash to identify the samples in this pop
+    my $hash = $self->_get_sample_population_hash;
+
+    # we also need the total number of haplotypes (not samples, in case of mixed ploidy)
+    my $total = $self->total_population_counts->{$pop};
+    throw("ERROR: No count found\n") unless $total;
+
+    # and the ploidy of each sample
+    my $sample_ploidy  = $self->_sample_ploidy();
+
+    my @new_genotypes;
+    my @new_order;
+
+    foreach my $id(@var_order) {
+      my %counts = ();
+
+      my $this_genotypes = $by_var{$id};
+
+      # track samples we've logged to add ref ones after
+      my %remaining_samples = map {$_ => 1} grep {$hash->{$_}->{$pop}} keys %{$hash};
+
+      # add the counts from the genotypes we have
+      foreach my $gt(@$this_genotypes) {
+        my $sample_name = $gt->sample->name;
+
+        # only include sample if it belongs to our pop
+        next unless $hash->{$sample_name}->{$pop};
+
+        # track that we've seen this sample
+        delete $remaining_samples{$sample_name};
+        $counts{$_}++ for @{$gt->genotype};
+      }
+
+      # we need to include samples that have only the ref
+      # we don't have genotypes for these so need to fill them in implicitly
+      my $vf = $by_var{$id}->[0]->variation_feature;
+      my @vf_alleles = split('/', $vf->allele_string);
+      my $ref_allele = $vf_alleles[0];
+
+      # now add implicit reference counts from remaining samples
+      $counts{$ref_allele} += $sample_ploidy->{$_} for keys %remaining_samples;      
+
+      # find the rare alleles (or those we want to filter out)
+      my %filter_alleles;
+      if($gt_lt eq 'gt') {
+        %filter_alleles = map {$_ => 1} grep {$counts{$_} / $total < $freq} keys %counts;
+      }
+      else {
+        %filter_alleles = map {$_ => 1}  grep {$counts{$_} / $total >= $freq} keys %counts; 
+      }
+
+      # check if we actually need to filter
+      if(scalar keys %filter_alleles) {
+
+        my @filtered_genotypes = ();
+
+        # now "edit" filter alleles genotypes to ref in genotypes
+        foreach my $gt_obj(@$this_genotypes) {
+
+          my $has_non_ref = 0;
+          my @new_gt;
+
+          foreach my $allele(@{$gt_obj->genotype}) {
+            $allele = $ref_allele if $filter_alleles{$allele};
+            $has_non_ref = 1 if $allele ne $ref_allele;
+            push @new_gt, $allele;
+          }
+
+          # we only want to keep it if it still has any non-ref alleles
+          # code works faster if we dont include hom ref genotypes
+          if($has_non_ref) {
+
+            # update the genotype object and add it to the filtered set
+            $gt_obj->{genotype} = \@new_gt;
+            push @filtered_genotypes, $gt_obj;
+          }
+        }
+
+        # add filtered genotypes to send back
+        if(@filtered_genotypes) {
+          push @new_genotypes, @filtered_genotypes;
+          push @new_order, $id;
+        }
+        # otherwise delete from the hash so subsequent filters dont include them
+        else {
+          delete $by_var{$id};
+        }
+      }
+
+      # this is the else for if we didn't need to filter
+      else {
+        push @new_genotypes, @$this_genotypes;
+        push @new_order, $id;
+      }
+    }
+
+    # update refs
+    $gts = \@new_genotypes;
+    @var_order = @new_order;
+  }
+
+  # now update the gts ref on self so future methods use the filtered gt array
+  $self->{_sample_genotype_features} = $gts;
 }
 
 ## get the ploidy of each sample

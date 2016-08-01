@@ -184,16 +184,13 @@ sub get_TranscriptHaplotypeContainer_by_Transcript {
   my ($self, $tr, $filters) = @_;
 
   assert_ref($tr, 'Bio::EnsEMBL::Transcript');
+  assert_ref($filters, 'HASH') if $filters;
 
-  my $filter_key;
-  if($filters) {
-    assert_ref($filters, 'HASH');
-
-    # we need to reload if filters have changed
-    $filter_key = join("", sort %$filters);
-    delete $tr->{_transcript_haplotype_container} if !$tr->{_cached_th_filter_key} || ($tr->{_cached_th_filter_key} && $tr->{_cached_th_filter_key} ne $filter_key);
-  }
-
+  # THC gets cached on a transcript, but we want to update it if filters used have changed
+  my $filter_key = $filters ? join("", sort %$filters) : "";
+  delete $tr->{_transcript_haplotype_container} if $tr->{_cached_th_filter_key} && $tr->{_cached_th_filter_key} ne $filter_key;
+  $tr->{_cached_th_filter_key} = $filter_key;
+  
   # we cache the container on the transcript so we don't fetch it more than once
   if(!exists($tr->{_transcript_haplotype_container})) {
 
@@ -211,83 +208,17 @@ sub get_TranscriptHaplotypeContainer_by_Transcript {
     foreach my $exon(@{$tr->get_all_Exons}) {
       push @gts, map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($exon->feature_Slice, undef, 1)}} @{$vca->fetch_all};
     }
-
-    if($filters) {
-      @gts = @{$self->_filter_genotypes(\@gts, $filters)};
-      $tr->{_cached_th_filter_key} = $filter_key;
-    }
     
     $tr->{_transcript_haplotype_container} = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new(
       -transcript => $tr,
       -genotypes  => \@gts,
       -samples    => [map {@{$_->get_all_Samples}} @{$vca->fetch_all}],
-      -db         => $self->db
+      -db         => $self->db,
+      -filters    => $filters,
     );
   }
 
   return $tr->{_transcript_haplotype_container};
-}
-
-sub _filter_genotypes {
-  my ($self, $gts, $filters) = @_;
-
-  my %by_var;
-  my @var_order;
-
-  foreach my $gt(@$gts) {
-    my $id = $gt->{_variation_feature_id} || $gt->variation_feature->dbID;
-    push @{$by_var{$id}}, $gt;
-    push @var_order, $id unless @var_order && $id == $var_order[-1];
-  }
-
-  my @filtered;
-
-  # region TBD
-
-  # frequency
-  if(my $freq_filter = $filters->{frequency}) {
-    my $pop   = $freq_filter->{population} || '1000GENOMES:phase_3:ALL';
-    my $freq  = $freq_filter->{frequency}  || 0.01;
-    my $gt_lt = $freq_filter->{gt_lt}      || 'gt';
-
-    my $pop_obj = $self->db->get_PopulationAdaptor->fetch_by_name($pop);
-
-    foreach my $id(@var_order) {
-      my $vf = $by_var{$id}->[0]->variation_feature;
-      my @vf_alleles = split('/', $vf->allele_string);
-      my $ref_allele = $vf_alleles[0];
-
-      my $f;
-
-      if($pop eq '1000GENOMES:phase_3:ALL') {
-
-        my $minor_allele = $vf->minor_allele;
-
-        # bodge if minor allele is ref allele
-        $f = $minor_allele eq $ref_allele ? 1 - $vf->minor_allele_frequency : $vf->minor_allele_frequency;
-      }
-      else {
-        ($f) =
-          map {$_->frequency}
-          grep {$_->allele ne $ref_allele}
-          @{$vf->variation->get_all_Alleles($pop_obj)};
-      }
-
-      next unless defined($f);
-
-      if($gt_lt eq 'gt') {
-        push @filtered, @{$by_var{$id}} if $f >= $freq;
-      }
-      else {
-        push @filtered, @{$by_var{$id}} if $f < $freq;
-      }
-    }
-  }
-  else {
-    return $gts;
-  }
-
-  return \@filtered;
 }
 
 # sub fetch_all_by_transcript_stable_id {
