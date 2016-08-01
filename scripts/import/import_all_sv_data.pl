@@ -1406,8 +1406,10 @@ sub parse_9th_col {
     }
 
     # Breakpoint definition
-    $info->{_bp_detail} = $value if ($key eq 'Breakpoint_detail');
-    $info->{_bp_range}  = $value if ($key eq 'breakpoint_range');
+    if ($species =~ /^(homo|human)/i) {
+      $info->{_bp_detail} = $value if ($key =~ /Breakpoint_detail/i);
+      $info->{_bp_range}  = $value if ($key =~ /Breakpoint_range/i);
+    }
     
     # Phenotype
     $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description');
