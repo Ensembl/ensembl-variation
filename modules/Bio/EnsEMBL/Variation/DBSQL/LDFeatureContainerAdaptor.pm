@@ -340,6 +340,8 @@ sub fetch_by_VariationFeatures {
   my $self = shift;
   my $vfs  = shift;
   my $pop = shift;
+
+  $DB::single = 1;
   
   my @slice_objects = ();
   if (!ref($vfs)) {
@@ -650,7 +652,7 @@ sub _fetch_by_Slice_VCF {
     }
   }
 
-  $container->{pos2name} = \%pos2name;
+  $container->{pos2name} = \%pos2name if $container;
 
   return $container;
 }
