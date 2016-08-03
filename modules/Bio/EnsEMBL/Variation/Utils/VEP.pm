@@ -1810,7 +1810,7 @@ sub rejoin_variants {
           $val->base_variation_feature($original);
 
           # rename the key they're stored under
-          $original->{$type}->{$vf->{alt_allele}.'_'.$key} = $val;
+          $original->{$type}->{$vf->{allele_string}.'_'.$key} = $val;
         }
       }
 
