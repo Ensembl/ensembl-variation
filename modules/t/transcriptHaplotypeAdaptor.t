@@ -116,6 +116,6 @@ is(scalar @{$c->get_all_TranscriptHaplotypes}, 37, 'get_TranscriptHaplotypeConta
 is(scalar (grep {$_->name =~ /254R\>Q/} @{$c->get_all_ProteinHaplotypes}), 1, 'frequency filter 0.05 check included');
 
 $c = $tha->get_TranscriptHaplotypeContainer_by_Transcript($tr, {frequency => {population => '1000GENOMES:phase_3:AFR'}});
-is(scalar @{$c->get_all_TranscriptHaplotypes}, 35, 'get_TranscriptHaplotypeContainer_by_Transcript - frequency filter count AFR');
+is(scalar @{$c->get_all_TranscriptHaplotypes}, 82, 'get_TranscriptHaplotypeContainer_by_Transcript - frequency filter count AFR');
 
 done_testing();

@@ -187,9 +187,12 @@ sub get_TranscriptHaplotypeContainer_by_Transcript {
   assert_ref($filters, 'HASH') if $filters;
 
   # THC gets cached on a transcript, but we want to update it if filters used have changed
-  my $filter_key = $filters ? join("", sort %$filters) : "";
-  delete $tr->{_transcript_haplotype_container} if $tr->{_cached_th_filter_key} && $tr->{_cached_th_filter_key} ne $filter_key;
-  $tr->{_cached_th_filter_key} = $filter_key;
+  if($filters || $tr->{_cached_th_filter_key}) {
+    delete $tr->{_transcript_haplotype_container};
+    delete $tr->{_cached_th_filter_key};
+  }
+
+  $tr->{_cached_th_filter_key} = $filters ? 1 : 0;
   
   # we cache the container on the transcript so we don't fetch it more than once
   if(!exists($tr->{_transcript_haplotype_container})) {
