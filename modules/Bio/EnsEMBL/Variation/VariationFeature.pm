@@ -623,7 +623,7 @@ sub _get_all_RegulationVariations {
   }
   
   my $lc_type = lc($type).'_variations';
-  $lc_type =~ s/Feature/_feature/;
+  $lc_type =~ s/Feature/_feature/i;
 
   unless(exists($self->{$lc_type})) {
     
