@@ -379,8 +379,7 @@ sub get_ss_variations{
                                                         al.frequency,
                                                         p.name,
                                                         al.subsnp_id,
-                                                        al.count,
-                                                        p.size
+                                                        al.count 
                                                  from   subsnp_handle h, allele al
                                                  left outer join population p on ( p.population_id = al.population_id)
                                                  where  al.variation_id between ? and ?
@@ -416,9 +415,10 @@ sub get_ss_variations{
           push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
         }
 
-       ## Save frequency evidence for variant by variant id - ensure at least 2 chromosomes assayed and variant poly
-       ## only assign frequency status if population has more than 1 member.
-       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1 && defined $l->[7] && $l->[7] >1){
+       ## Save frequency evidence for variant by variant id - ensure the frequency is
+       ## not 0 or 1 and more than on individual assayed (only assign frequency status
+       ## if the allele count is greater than one for at least one allele).
+       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1 ){
             ## flag if frequency data available
             $evidence{$l->[0]}{'freq'}  = 1;
 
