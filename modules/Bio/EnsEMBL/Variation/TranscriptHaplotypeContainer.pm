@@ -951,6 +951,7 @@ sub _pre_filter_genotypes {
       my %counts = ();
 
       my $this_genotypes = $by_var{$id};
+      next unless $this_genotypes;
 
       # track samples we've logged to add ref ones after
       my %remaining_samples = map {$_ => 1} grep {$hash->{$_}->{$pop}} keys %{$hash};
