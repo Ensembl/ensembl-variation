@@ -40,6 +40,7 @@ use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 use ImportUtils qw(load);
 use FileHandle;
 use Fcntl qw(:flock SEEK_END);
+use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -115,29 +116,28 @@ sub run {
 
   print STDERR "Getting variation features\n" if $DEBUG;
 
+  my $vfa = $var_dba->get_VariationFeatureAdaptor();
+
   my @vfs = (
-    @{ $slice->get_all_VariationFeatures },
-    @{ $slice->get_all_somatic_VariationFeatures }
+    @{ $vfa->fetch_all_by_Slice_SO_terms($slice) },
+    @{ $vfa->fetch_all_somatic_by_Slice_SO_terms($slice) }
   );
+
+  my $table_files_dir = $self->get_table_files_prefix($gene_id);
+
+  print STDERR "STUB $table_files_dir\n";
 
   # write VFs to table file for web search indexes
   if($gene_name) {
     my $fh = FileHandle->new();
-    $fh->open(">>".$self->param('pipeline_dir')."/variation_genename.txt") or die "Cannot open dump file ".$self->param('pipeline_dir')."/variation_genename.txt: $!";
-
-    print STDERR "Getting flock for variation_hgvs\n" if $DEBUG;
-    flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
-    # and, in case someone appended while we were waiting...
-    seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-
-    print STDERR "Writing to variation_hgvs file\n" if $DEBUG;
+    $fh->open(">".$table_files_dir."_variation_genename.txt") or die "Cannot open dump file ".$table_files_dir."_variation_genename.txt: $!";
     print $fh "$_\t$gene_name\n" for map {$_->get_Variation_dbID()} @vfs;
-
-    print STDERR "Releasing variation_hgvs flock\n" if $DEBUG;
-    flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
-
     $fh->close();
   }
+
+  # get a fh for the hgvs file too
+  my $hgvs_fh = FileHandle->new();
+  $hgvs_fh->open(">".$table_files_dir."_variation_hgvs.txt") or die "Cannot open dump file ".$table_files_dir."_variation_hgvs.txt: $!";
 
 
   my @write_data;
@@ -236,7 +236,7 @@ sub run {
         # dump out these hashes periodically to stop memory exploding
         # will lead to more duplicates in the output file but better that than job failing
         if(++$var_count > 100000) {
-          $self->dump_hgvs_var($hgvs_by_var);
+          $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
           $var_count = 0;
         }
       }                       
@@ -267,7 +267,9 @@ sub run {
   ## end block
 
   # dump HGVS stubs to file for web index
-  $self->dump_hgvs_var($hgvs_by_var);
+  $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
+
+  $hgvs_fh->close();
 
   print STDERR "All done\n" if $DEBUG;
 
@@ -278,29 +280,26 @@ sub write_output {
   my $self = shift;
 }
 
+sub get_table_files_prefix {
+  my $self = shift;
+  my $id = shift;
+
+  my $dir = $self->required_param('pipeline_dir').'/table_files/'.substr(md5_hex($id), 0, 2);
+
+  unless(-d $dir) {
+    mkdir($dir) or die "ERROR: Could not make directory $dir\n";
+  }
+
+  return $dir.'/'.$id;
+}
+
 sub dump_hgvs_var {
-  my ($self, $hgvs_by_var) = @_;
+  my ($self, $hgvs_by_var, $fh) = @_;
 
   if($hgvs_by_var) {
-    my $fh = FileHandle->new();
-    $fh->open(">>".$self->param('pipeline_dir')."/variation_hgvs.txt") or die "Cannot open dump file ".$self->param('pipeline_dir')."/variation_hgvs.txt: $!";
-
-    print STDERR "Getting flock for variation_hgvs\n" if $DEBUG;
-    flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
-    # and, in case someone appended while we were waiting...
-    seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-
-    print STDERR "Writing to variation_hgvs file\n" if $DEBUG;
-
     for my $var_id(keys %$hgvs_by_var) {
       print $fh "$var_id\t$_\n" for keys %{$hgvs_by_var->{$var_id}};
     }
-
-    print STDERR "Releasing variation_hgvs flock\n" if $DEBUG;
-
-    flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
-
-    $fh->close();
   }
 
   $hgvs_by_var = {};

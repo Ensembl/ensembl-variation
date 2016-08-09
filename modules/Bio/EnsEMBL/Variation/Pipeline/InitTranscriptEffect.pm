@@ -35,7 +35,7 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
-use File::Path qw(mkpath);
+use File::Path qw(mkpath rmtree);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -65,7 +65,7 @@ sub fetch_input {
     my (@gene_output_ids, @big_gene_output_ids);    
     my $gene_count = 0;
 
-    my @genes;  
+    my @genes;
 
     if ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
@@ -136,8 +136,10 @@ sub fetch_input {
         unless(-d $dir) {
           mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
         }
-        unlink("$dir/variation_hgvs.txt");
-        unlink("$dir/variation_genename.txt");        
+
+        rmtree($dir.'/table_files');
+        mkdir($dir.'/table_files') or die "ERROR: Could not make directory $dir\/table_files\n";
+
 
         $self->param('gene_output_ids', \@gene_output_ids);
         $self->param('big_gene_output_ids', \@big_gene_output_ids);

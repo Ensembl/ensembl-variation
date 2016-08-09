@@ -33,6 +33,8 @@ use strict;
 use warnings;
 use ImportUtils qw(load);
 use Sys::Hostname;
+use FileHandle;
+use File::Path qw(rmtree);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -40,6 +42,8 @@ my $DEBUG = 0;
 
 sub run {
   my $self = shift;
+
+  $self->rejoin_table_files();
 
   my $dbc = $self->get_species_adaptor('variation')->dbc;
 
@@ -57,6 +61,7 @@ sub run {
         $dir, $file, $dir, $file
       )
     ) and die("ERROR: Failed to unique sort $file");
+    unlink("$dir/$file\.gz") if -e "$dir/$file\.gz";
     system("gzip $dir/$file");# unlink("$dir/$file");
   }
 
@@ -71,6 +76,35 @@ sub run {
   }
 
   return;
+}
+
+sub rejoin_table_files {
+  my $self = shift;
+
+  my $dir = $self->required_param('pipeline_dir');
+
+  my $gene_fh = FileHandle->new();
+  $gene_fh->open(">".$dir."/variation_genename.txt") or die $!;
+  my $hgvs_fh = FileHandle->new();
+  $hgvs_fh->open(">".$dir."/variation_hgvs.txt") or die $!;
+
+  opendir DIR, $dir."/table_files";
+  foreach my $hex_stub(grep {!/^\./} readdir DIR) {
+
+    opendir HEX, "$dir/table_files/$hex_stub";
+    foreach my $file(grep {!/^\./} readdir HEX) {
+
+      my $fh = $file =~ /hgvs/ ? $hgvs_fh : $gene_fh;
+
+      open IN, "$dir/table_files/$hex_stub/$file" or die $!;
+      while(<IN>) {
+        print $fh $_;
+      }
+      close IN;
+    }
+  }
+
+  rmtree($dir."/table_files");
 }
 
 1;
