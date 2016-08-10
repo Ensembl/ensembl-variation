@@ -127,7 +127,7 @@ sub default_options {
         # sort variation_feature before we start?
         # disable this if you are sure the table is already sorted
         # or if the table is sufficiently small that it won't make much difference
-        sort_variation_feature => 0,
+        sort_variation_feature => 1,
 
         # points to a FASTA file, much faster than using DB for sequence lookup if available
         fasta => undef,

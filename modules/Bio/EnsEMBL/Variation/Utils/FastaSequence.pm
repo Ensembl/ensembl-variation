@@ -132,6 +132,20 @@ BEGIN {
                     Bio::EnsEMBL::Slice->seq() method if a sequence name
                     is not found in the FASTA file.
 
+  Arg [-SYNONYMS] : (optional) hashref - two-level hashref of chromosome
+                    name synonyms e.g.
+
+                    {
+                      foo => {
+                        bar => 1,
+                        car => 1,
+                      }
+                      goo => {
+                        far => 1,
+                        star => 1,
+                      }
+                    }
+
   Example         :
     $fasta_db = setup_fasta(
       -fasta    => '/path/to/homo_sapiens.fa.gz',
@@ -153,13 +167,15 @@ sub setup_fasta {
     $assembly,
     $pars,
     $offline,
-    $type
+    $type,
+    $synonyms
   ) = rearrange([qw(
     FASTA
     ASSEMBLY
     PARS
     OFFLINE
     TYPE
+    SYNONYMS
   )], @_);
 
   throw("ERROR: No FASTA file specified\n") unless $fasta;
@@ -227,6 +243,7 @@ sub setup_fasta {
   $pars ||= $PARS{$assembly} if $assembly && defined($PARS{$assembly});
 
   $Bio::EnsEMBL::Slice::_fasta_PARs = $pars if $pars;
+  $Bio::EnsEMBL::Slice::_fasta_synonyms = $synonyms || {};
 
   return $fasta_db;
 }
@@ -247,6 +264,7 @@ sub revert_fasta {
 
   undef $Bio::EnsEMBL::Slice::fasta_db;
   undef $Bio::EnsEMBL::Slice::_fasta_PARs;
+  undef $Bio::EnsEMBL::Slice::_fasta_synonyms;
   clear_fasta_cache();
 
   $Bio::EnsEMBL::Slice::_fasta_redefined = 0;
@@ -339,10 +357,22 @@ sub _new_slice_seq {
     # indels
     return "" if $start > $end;
 
-    my $fa_length = $Bio::EnsEMBL::Slice::fasta_db->length($sr_name);
-    if(!($fa_length && $fa_length > 0) && $self->can('_fasta_old_db_seq')) {
-      print STDERR "USING DATABASE\n" if $DEBUG;
-      return $self->_fasta_old_db_seq();
+    my $fasta_db = $Bio::EnsEMBL::Slice::fasta_db;
+    my $fa_length = $fasta_db->length($sr_name);
+    unless($fa_length && $fa_length > 0) {
+
+      foreach my $alt(keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{$sr_name} || {}}) {
+        if($fa_length = $fasta_db->length($alt)) {
+          print STDERR "USING SYNOYM $alt FOR $sr_name\n" if $DEBUG;
+          $sr_name = $alt;
+          last;
+        }
+      }
+
+      if(!($fa_length && $fa_length > 0) && $self->can('_fasta_old_db_seq')) {
+        print STDERR "USING DATABASE\n" if $DEBUG;
+        return $self->_fasta_old_db_seq();
+      }
     }
 
     my $cache = $Bio::EnsEMBL::Slice::_fasta_sequence_cache->{$sr_name} ||= [];
@@ -534,7 +564,7 @@ sub _raw_seq {
 
     # FASTA file does not contain this chrom
     my $fa_length = $fasta_db->length($sr_name);
-    unless($fa_length && $fa_length) {
+    unless($fa_length && $fa_length > 0) {
       warning("WARNING: FASTA does not contain sequence for ".$sr_name."\n");
       return 'N' x (($end - $start) + 1);
     }

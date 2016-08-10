@@ -26,6 +26,8 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta clear_fasta_cache revert_fasta);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::CoordSystem;
+use Bio::EnsEMBL::Slice;
 
 my $gz_fasta = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test.fa.gz";
 my $fasta = $gz_fasta;
@@ -53,7 +55,7 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $cdb = $multi->get_DBAdaptor('core');
 my $sa = $cdb->get_SliceAdaptor();
 
-$db = setup_fasta($fasta);
+$db = setup_fasta(-FASTA => $fasta, -SYNONYMS => {foo => {21 => 1}});
 
 $slice1 = $sa->fetch_by_region('chromosome', 21, 25606454, 25606454);
 is($slice1->seq, 'G', "single bp slice");
@@ -90,6 +92,18 @@ is($slice1->expand(5, 5)->invert->seq, $seq1, "rev - expand single bp slice 5' a
 $slice1 = $sa->fetch_by_region('chromosome', 21, 1, 10);
 is($slice1->seq, 'N' x 10, "start of chrom");
 is($slice1->expand(10, 0)->seq, 'N' x 20, "expand beyond start of chrom");
+
+
+# test synonyms
+clear_fasta_cache();
+$slice1 = Bio::EnsEMBL::Slice->new(
+  -COORD_SYSTEM      => Bio::EnsEMBL::CoordSystem->new(-NAME => 'chromosome', -RANK => 1),
+  -START             => 25606454,
+  -END               => 25606454,
+  -SEQ_REGION_NAME   => 'foo',
+  -SEQ_REGION_LENGTH => $slice1->length
+);
+is($slice1->seq, 'G', "synonym");
 
 # remember to revert!!!
 revert_fasta();
