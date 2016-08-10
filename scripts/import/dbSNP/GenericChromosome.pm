@@ -210,7 +210,7 @@ sub variation_feature{
 		   THEN
 		     loc.phys_pos_from+1
 		   ELSE
-		     (loc.asn_to + ctg.contig_start+1 )
+		     (loc.phys_pos_from + 1 + loc.asn_to - loc.asn_from )
 		   END,
 		   CASE WHEN
 		     loc.orientation = 1
@@ -218,8 +218,15 @@ sub variation_feature{
 		     -1
 		   ELSE
 		     1
-		   END,
-                   loc.aln_quality
+		   END, 
+                   loc.aln_quality,
+                    CASE WHEN
+                     ctg.orient = 1
+                   THEN
+                     -1
+                   ELSE
+                     1
+                   END 
 		 FROM 
 		   $tablename1 loc JOIN 
 		   $tablename2 ctg ON (
@@ -237,7 +244,7 @@ sub variation_feature{
     
     debug(localtime() . "\tLoading SNPLoc data");
 
-     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
+     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d", "ctg_strand i");
   print Progress::location();
 
 
@@ -257,10 +264,10 @@ sub variation_feature{
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
 
-
+    ## take account of variant to contig and contig to reference orientation
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.start,tcl.end,
-                                      tcl.strand, v.name, v.source_id, tcl.aln_quality
+                                      (tcl.strand * tcl.ctg_strand), v.name, v.source_id, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
 				      AND tcl.start>2 
