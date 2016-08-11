@@ -1633,7 +1633,8 @@ CREATE TABLE study (
 	study_type varchar(255) DEFAULT NULL,
 	
 	primary key( study_id ),
-	key source_idx (source_id)
+	key source_idx (source_id),
+        key external_reference_idx(external_reference)
 );
 
 
@@ -1767,13 +1768,9 @@ CREATE TABLE meta (
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '84');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|create sample_synonym');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|drop column moltype from variation_synonym');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_d.sql|Making attrib_id auto_increment');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_e.sql|drop the table tagged_variation_feature');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_f.sql|add phenotype_ontology_accession');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_g.sql|allow the column description to store more text in the source table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_b.sql|add qualifier & index to phenotype_onology_accession');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_c.sql|add index on study.external_reference');
 
 
 /**
