@@ -5686,7 +5686,7 @@ sub cache_reg_feats {
 sub clean_reg_feat {
     my $rf = shift;
 
-    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set _regulatory_activity/) {
+    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set _regulatory_activity _regulatory_build/) {
         delete $rf->{$key};
     }
 
@@ -5728,6 +5728,8 @@ sub dump_reg_feat_cache {
     my $dump_file = get_dump_file_name($config, $chr, $region, 'reg');
 
     debug("Writing to $dump_file") unless defined($config->{quiet});
+
+    $DB::single = 1;
 
     serialize_to_file($config, $dump_file, $rf_cache);
 }
