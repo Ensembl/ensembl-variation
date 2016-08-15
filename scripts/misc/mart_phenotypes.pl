@@ -45,7 +45,9 @@ GetOptions(
 	'user|u=s',
 	'port|P=i',
 	'password|p=s',
+	'db|d=s',
 	'version|v=i',
+	'pattern=s',
 ) or die "ERROR: Could not parse command line options\n";
 
 # check options
@@ -53,7 +55,14 @@ for(qw(host user port tmpdir tmpfile)) {
 	die("ERROR: $_ not defined, use --$_\n") unless defined $config->{$_};
 }
 
-my @db_list = @{get_species_list($config, $config->{host})};
+my @db_list;
+
+if(!defined($config->{db})) {
+  @db_list = @{get_species_list($config, $config->{host})};
+}
+else {
+  push @db_list, $config->{db};
+}
 
 die "ERROR: no suitable databases found on host ".$config->{host}."\n" unless scalar @db_list;
 
