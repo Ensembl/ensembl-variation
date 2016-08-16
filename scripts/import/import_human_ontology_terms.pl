@@ -98,9 +98,13 @@ sub add_ols_matches{
 
     ## modify term if no exact match available
     if (defined $truncate && $truncate eq 'parent'){
+ 
+      $search_term =~ s/\s*\((\w+\s*)+\)\s*$//;        ## (one family) or (DDG2P abbreviation)
       $search_term =~ s/\s*SUSCEPTIBILITY TO\s*//i;
-      $search_term =~ s/\,//;
-      $search_term =~ s/\s+\d+\s*$//
+      $search_term =~ s/(\,(\s*\w+\s*)+)+\s*$//;       ## remove ", with other  condition" ", one family" type qualifiers
+      $search_term =~ s/\s+type\s+\d+\s*$//i;          ## remove " type 34"
+      $search_term =~ s/\s+\d+\s*$//;                  ## remove just numeric subtype
+
     }
 
     my $ontol_data = get_ols_terms( $search_term );
@@ -108,7 +112,7 @@ sub add_ols_matches{
 
     my @terms;
     foreach my $doc (@{$ontol_data->{response}->{docs}}){ 
-      next unless $doc->{ontology_prefix} =~/EFO|Orphanet|HP/;
+      next unless $doc->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
 
       push @terms, iri2acc($doc->{iri});
     }
@@ -143,31 +147,6 @@ sub add_zooma_matches{
       next;
     }
 
-    ## if no match remove sub type numbers & seek high quality matches
-    if ($desc =~ /\s+\d+$/){
-      my $truncated_desc = $desc;
-      $truncated_desc =~ s/\s+\d+$//;
-
-      my $terms = get_high_quality_zooma_terms($truncated_desc);
-
-      if( defined $terms){
-        $terms{$id}{terms} = $terms;
-        $terms{$id}{type} = "Zooma partial";
-        next;
-      }
-    }
-
-    my $truncated_desc = $desc;
-    $truncated_desc =~ s/\s+\d+$//;
-    ### check for exact matches to parent - to differentiate between sub types
-
-    my $exact_terms = get_exact_zooma_terms($truncated_desc);
-    if( defined $exact_terms){
-      $terms{$id}{terms} = $exact_terms;
-      $terms{$id}{type} = "Zooma partial";
-      next;
-    }
-
     ## if no high quality or exact match, use EVA curated match 
     my $eva_terms = get_eva_zooma_terms($desc);   
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
@@ -189,6 +168,8 @@ sub store_terms{
     my $pheno = $pheno_adaptor->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
+      print $out "$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n";
+
       $pheno->add_ontology_accession({ accession      => $accession, 
                                        mapping_source => $terms->{$id}->{type},
                                        mapping_type   => 'is'
@@ -237,8 +218,7 @@ sub get_termless_phenos{
   my $desc_ext_sth =   $dbh->prepare(qq [ select phenotype_id, description
                                           from phenotype
                                           where phenotype.phenotype_id not in 
-                                          (select phenotype_id from phenotype_ontology_accession where mapping_type_attrib ='is') 
-
+                                          (select phenotype_id from phenotype_ontology_accession where mapping_type ='is')  
                                         ]);
 
   $desc_ext_sth->execute()||die "Problem extracting termless phenotype descriptions\n";
@@ -269,7 +249,7 @@ sub get_high_quality_zooma_terms{
   foreach my $annot(@{$ontol_data}){
     next unless $annot->{confidence} eq 'HIGH';
     foreach my $term (@{$annot->{semanticTags}} ){
-      next unless $term =~ /EFO|Orphanet|HP/;       
+      next unless $term =~ /EFO|Orphanet|ORDO|HP/;       
       print $out "$term\t$annot->{confidence}\t$desc\n";
       push @terms, iri2acc($term) ;
     }
@@ -295,11 +275,11 @@ sub get_exact_zooma_terms{
 
     foreach my $term (@{$annot->{semanticTags}} ){
       ## filter ontologies 
-      next unless $term =~ /EFO|Orphanet|HP/;
+      next unless $term =~ /EFO|Orphanet|ORDO|HP/;
       ## check for exact matches
       next unless '\U$annot->{derivedFrom}->{annotatedProperty}->{propertyValue}' eq '\U$desc';
 
-      print $out "$term\t$annot->{confidence}\t$desc\t$annot->{derivedFrom}->{annotatedProperty}->{propertyValue} \n";
+      print $out "$term\t$annot->{confidence}\t$desc\t$annot->{derivedFrom}->{annotatedProperty}->{propertyValue} zooma exact\n";
       push @terms, iri2acc($term) ;
     }
   }
@@ -348,23 +328,22 @@ sub get_ols_terms{
   my $pheno = shift;
 
   $pheno =~ s/\(\w+\)//; ## for DDG2P
-  $pheno =~ s/\s+/\+/g;
+  $pheno =~ s/\s+/\%20/g;
 
   my $http = HTTP::Tiny->new();
   my $server = 'http://www.ebi.ac.uk/ols/api/search?q=';
   my $request  = $server . $pheno . "&queryFields=label,synonym&exact=1";
 
-    #warn "Looking for $request\n\n" ;
-    my $response = $http->get($request, {
+
+  my $response = $http->get($request, {
         headers => { 'Content-type' => 'application/xml' }
                               });
-    unless ($response->{success}){
+  unless ($response->{success}){
         warn "Failed request: $request :$!\n" ;
         return;
-    }
+  }
 
-   my $data =  JSON->new->decode($response->{content} );
-   return $data;
+  return JSON->new->decode($response->{content} );
 }
 
 =head get_zooma_terms
