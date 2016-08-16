@@ -130,7 +130,7 @@ use Scalar::Util qw(weaken);
     names and values are lists of identifiers from that db.
     e.g.: {'dbSNP' => ['ss1231', '1231'], 'TSC' => ['1452']}
 
-  Arg [-ANCESTRAL_ALLELES] :
+  Arg [-ANCESTRAL_ALLELE] :
     string - the ancestral allele of this SNP
 
   Arg [-ALLELES] :

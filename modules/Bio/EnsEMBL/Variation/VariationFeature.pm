@@ -138,12 +138,15 @@ our $DEBUG = 0;
   Arg [-SLICE] :
     see superclass constructor
 
+  Arg [-ALLELE_STRING] :
+    string - the different alleles found for this variant at this feature location
+
   Arg [-VARIATION_NAME] :
-    string - the name of the variation this feature is for (denormalisation
+    string - the name of the variant this feature is for (denormalisation
     from Variation object).
 
   Arg [-MAP_WEIGHT] :
-    int - the number of times that the variation associated with this feature
+    int - the number of times that the variant associated with this feature
     has hit the genome. If this was the only feature associated with this
     variation_feature the map_weight would be 1.
 
