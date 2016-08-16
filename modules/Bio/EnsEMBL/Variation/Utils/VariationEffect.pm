@@ -404,7 +404,7 @@ sub within_nmd_transcript {
 sub within_non_coding_gene {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
-    
+
     return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)) );
 }
 
@@ -443,17 +443,17 @@ sub within_mature_miRNA {
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
     $feat ||= $bvfo->feature;
-        
+
     return 0 unless ( ($feat->biotype eq 'miRNA') and within_transcript(@_) );
-        
+
     my ($attribute) = @{ $feat->get_all_Attributes('miRNA') };
-    
-    if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) { 
+
+    if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) {
         for my $coord ($bvfo->_mapper->cdna2genomic($1, $2, $feat->strand)) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if (overlap(
-                        $bvf->{start}, 
-                        $bvf->{end}, 
+                        $bvf->seq_region_start(), 
+                        $bvf->seq_region_end(), 
                         $coord->start, 
                         $coord->end) ) {
                     return 1;
@@ -461,7 +461,7 @@ sub within_mature_miRNA {
             }
         }
     }
-    
+
     return 0;
 }
 
