@@ -176,8 +176,10 @@ sub import_citations{
         ## looking up missing data from EPMC before redundancy check
         my $ref = get_publication_info_from_epmc($data, $pub, $error_log);
 	
-	next unless defined $ref->{resultList}->{result}->{title} || defined $data->{$pub}->{title};
-        
+        my $title = (defined $ref->{resultList}->{result}->{title} ? $ref->{resultList}->{result}->{title}  : $data->{$pub}->{title});
+        next unless defined $title;       
+        next if $title =~/Erratum/i; 
+ 
         ## save ids 
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
@@ -201,7 +203,7 @@ sub import_citations{
 
             ### create new object
             my $publication = Bio::EnsEMBL::Variation::Publication->new( 
-                -title    => $ref->{resultList}->{result}->{title}          || $data->{$pub}->{title},
+                -title    => $title,
                 -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
                 -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
                 -pmcid    => $ref->{resultList}->{result}->{pmcid}          || undef,
@@ -507,12 +509,18 @@ sub report_summary{
                                          and p1.pmid is null
                                        ]);
 
+    my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
+                                              where title is null
+                                             ]);
+
     $dup1_ext_sth->execute()||die;
     my $dup1 =  $dup1_ext_sth->fetchall_arrayref();
 
     $dup2_ext_sth->execute()||die;
     my $dup2 =  $dup2_ext_sth->fetchall_arrayref();
 
+    $fail_ext_sth->execute() ||die;
+    my $fail =  $fail_ext_sth->fetchall_arrayref();
 
     if (defined $dup1->[0]->[0] || defined $dup1->[0]->[0]){
         print $report "Duplicated publications:\n";
@@ -524,6 +532,9 @@ sub report_summary{
             print $report "$k->[0]\t$k->[1]\t$k->[2]\n";
         }   
     }
+
+    print $report "$fail->[0]->[0] publications without a title - to be deleted\n";
+
 }
 
 
