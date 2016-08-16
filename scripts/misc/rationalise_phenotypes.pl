@@ -36,6 +36,8 @@ my $config = {};
 my $table_phe_map = 'MTMP_tmp_phenotype_map';
 my $table_pf_bak  = 'MTMP_tmp_phenotype_feature_bak';
 my $table_phe_bak = 'MTMP_tmp_phenotype_bak';
+my $table_poa_bak = 'MTMP_tmp_phenotype_ontology_accession_bak';
+
 
 GetOptions(
   $config,
@@ -182,6 +184,21 @@ if($count) {
   });
   print "Backed up $a entries\n";
   
+  ## back up the ontology accessions
+  $dbc->do(qq{
+    CREATE TABLE IF NOT EXISTS `$table_poa_bak`
+    LIKE phenotype_ontology_accession
+  });
+  $a = $dbc->do(qq{
+    INSERT IGNORE INTO $table_poa_bak
+    SELECT poa.*
+    FROM phenotype_ontology_accession poa, $table_phe_map pm
+    WHERE pm.old_phenotype_id = poa.phenotype_id
+  });
+  print "Backed up $a phenotype_ontology_accession entries\n";
+  
+
+
   print "Updating entries in phenotype_feature\n";
 
   # alter the phenotype_feature entries
@@ -190,8 +207,29 @@ if($count) {
     SET pf.phenotype_id = pm.new_phenotype_id
     WHERE pf.phenotype_id = pm.old_phenotype_id
   });
-  print "Updated $a entries\n";
+  print "Updated $a phenotype_feature entries\n";
   
+  print "Updating entries in phenotype_ontology_accession\n";
+
+  # alter the phenotype_ontology_accession entries
+  # some will already by assigned to the same accessions so update will fail
+  $a = $dbc->do(qq{
+    UPDATE IGNORE phenotype_ontology_accession poa, $table_phe_map pm
+    SET poa.phenotype_id = pm.new_phenotype_id
+    WHERE poa.phenotype_id = pm.old_phenotype_id
+  });
+  print "Updated $a phenotype_ontology_accession entries\n";
+
+  print "Removing entries from phenotype_ontology_accession\n";
+
+  # delete from phenotype_ontology_accession
+  $a = $dbc->do(qq{
+    DELETE FROM poa
+    USING phenotype_ontology_accession poa, $table_phe_map pm
+    WHERE poa.phenotype_id = pm.old_phenotype_id
+  });
+
+
   print "Removing entries from phenotype\n";
 
   # delete from phenotype
