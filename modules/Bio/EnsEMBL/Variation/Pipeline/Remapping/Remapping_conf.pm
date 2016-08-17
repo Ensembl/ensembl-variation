@@ -46,9 +46,9 @@ sub default_options {
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
         hive_db_port            => 3306,
         hive_db_user            => 'ensadmin',
-        hive_db_host            => 'ens-variation',
+        hive_db_host            => 'ens-variation3',
         debug                   => 0,
-        run_variant_qc          => 0,
+        run_variant_qc          => 1,
         use_fasta_files         => 0,
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
@@ -56,7 +56,7 @@ sub default_options {
         use_prior_for_filtering => 1,
         map_to_chrom_only       => 1,
         entries_per_file        => 50000,
-        mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection, remap_svf_post_projection, remap_svf
+        mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection, remap_svf_post_projection, remap_svf, remap_qtls
         feature_table           => 'variation_feature',
         feature_table_failed_projection => 0, #'variation_feature_failed'
         feature_table_projection => 0, #'variation_feature_projection',

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,21 +56,30 @@ sub run {
 
   if ($mode eq 'remap_multi_map') {
     $self->dump_multi_map_features();
-  } elsif ($mode eq 'remap_alt_loci') {
+  } 
+  elsif ($mode eq 'remap_qtls') {
+    $self->dump_features();
+    $self->generate_remap_qtls_input();
+  }
+  elsif ($mode eq 'remap_alt_loci') {
     $self->dump_features_overlapping_alt_loci();
     $self->generate_mapping_input();
-  } elsif ($mode eq 'remap_read_coverage') {
+  } 
+  elsif ($mode eq 'remap_read_coverage') {
     if (!$self->param('use_fasta_files')) {
       $self->dump_read_coverage();
       $self->generate_remap_read_coverage_input();
     }
-  } elsif ($mode eq 'remap_svf') {
+  } 
+  elsif ($mode eq 'remap_svf') {
     $self->dump_features();
     $self->generate_svf_mapping_input();
-  } elsif ($mode eq 'remap_post_projection') {
+  } 
+  elsif ($mode eq 'remap_post_projection') {
     $self->dump_features();
     $self->generate_mapping_input();
-  } else {
+  } 
+  else {
     if (!$self->param('use_fasta_files')) {
       $self->dump_features();
       $self->generate_mapping_input();
@@ -131,6 +140,70 @@ sub write_output {
     }
   }
   $self->dataflow_output_id(\@jobs, 2);
+}
+
+sub generate_remap_qtls_input {
+  my $self = shift;
+
+  my $old_assembly_fasta_file_dir = $self->param('old_assembly_fasta_file_dir');
+  my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
+  $self->param('fasta_db', $fasta_db);
+
+  my $dump_features_dir = $self->param('dump_features_dir');
+  my $fasta_files_dir = $self->param('fasta_files_dir');
+
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $fh_report_non_ref_entries = FileHandle->new("$pipeline_dir/report_non_ref_entries.txt", 'w'); 
+
+  my $strand = 1;
+
+  my $file_count = 0;
+  opendir(DIR, $dump_features_dir) or die $!;
+  while (my $file = readdir(DIR)) {
+    if ($file =~ /^(.+)\.txt$/) {
+      my $file_number = $1;
+      $file_count++;
+      my $fh = FileHandle->new("$dump_features_dir/$file", 'r');
+      my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$file_number.fa", 'w');
+      while (<$fh>) {
+        chomp;
+        my $data = $self->read_line($_);
+        my $seq_region_name = $data->{seq_region_name},
+        my $start           = $data->{seq_region_start};
+        my $end             = $data->{seq_region_end};
+        my $entry           = $data->{entry};
+
+        unless ($seq_region_name =~ /^\d+$|^X$|^Y$|^MT$/) {
+          print $fh_report_non_ref_entries $_, "\n";
+        }
+        if ($start > $end) {
+          $self->warning("End smaller than start for $seq_region_name:$start-$end");
+          ($start, $end) = ($end, $start);
+        }
+
+        if (($end - $start + 1 ) > 1000) {
+          my $upstream_query_sequence   = $self->get_query_sequence($seq_region_name, $start, $start + 500, $strand);
+          print $fh_fasta_file ">$entry:upstream\n$upstream_query_sequence\n";
+          my $downstream_query_sequence = $self->get_query_sequence($seq_region_name, $end - 500, $end, $strand);
+          print $fh_fasta_file ">$entry:downstream\n$downstream_query_sequence\n";
+        } elsif (($end - $start) < 100) {
+          my $upstream_query_sequence = $self->get_query_sequence($seq_region_name, $start - 100, $start - 1, $strand);
+          my $read_sequence = $self->get_query_sequence($seq_region_name, $start, $end, $strand);
+          my $downstream_query_sequence = $self->get_query_sequence($seq_region_name, $end + 1, $end + 100, $strand);
+          my $read_length = $end - $start + 1; 
+          my $id = ">$entry:patched:100:$read_length:100";
+          my $sequence = $upstream_query_sequence . $read_sequence . $downstream_query_sequence;    
+          print $fh_fasta_file "$id\n$sequence\n";
+        } else {
+          my $query_sequence = $self->get_query_sequence($seq_region_name, $start, $end, $strand);
+          print $fh_fasta_file ">$entry:complete\n$query_sequence\n";
+        }
+      }
+      $fh->close();
+      $fh_fasta_file->close();
+    }
+  }
+  $fh_report_non_ref_entries->close();
 }
 
 sub generate_remap_read_coverage_input {
@@ -838,6 +911,9 @@ sub dump_features {
     push @tables, 'feature_table_failed_projection'
   }
 
+
+  my $entry = 1;
+
   foreach my $table (@tables) {
     my $feature_table = $self->param($table); 
     if (($mode eq 'remap_post_projection') && ($table eq 'feature_table')) {
@@ -859,6 +935,11 @@ sub dump_features {
           push @pairs, "$column_names[$i]=$values[$i]";
         }
         push @pairs, "seq_region_name=$seq_region_name";
+        if ($feature_table eq 'phenotype_feature') {
+          push @pairs, "entry=$entry";
+          $entry++;
+        }
+
         if ($count_entries >= $entries_per_file) {
           $fh->close();
           $file_count++;

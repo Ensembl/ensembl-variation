@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ use warnings;
 
 use FileHandle;
 use Bio::EnsEMBL::Registry;
+use Bio::DB::Fasta;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
 sub fetch_input {
@@ -64,7 +66,7 @@ sub run {
   my $feature_table = $self->param('feature_table');
   if ($self->param('mode') eq 'remap_post_projection') {
     $feature_table = "$feature_table\_post_projection";
-  }
+  } 
  
   my $sth = $dbh->prepare(qq{SELECT $column_concat FROM $feature_table}, {mysql_use_result => 1});
         
@@ -115,10 +117,8 @@ sub run {
       while (<$fh>) {
         chomp;
         my ($query_name, $type) = split /\t/;
-        # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
-        my @query_name_components = split('-', $query_name, 2);
-        my $snd_part = $query_name_components[1];
-        my $variation_name = (split(':', $snd_part))[5];
+        #my $query_name = '1973737-150-1-150-11:100527037:100527037:1:rs195834244';
+        my $variation_name = (split(':', $query_name))[4];
         $unmapped_variations->{"'$variation_name'"} = 1;
       }
       $fh->close();
@@ -128,10 +128,99 @@ sub run {
   my $variation_names_concat = join(',', keys %$unmapped_variations);
   $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT variation_id, $failed_description_id FROM variation WHERE name IN ($variation_names_concat);});
 
+
+
+  # None of the variant alleles match the reference allele
+
+my $fasta_db = Bio::DB::Fasta->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/assembly/', -reindex => 1);
+
+my $fh = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/flip_allele_strings.txt', 'w');
+my $fh_update = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/update_flip_allele_strings.txt', 'w');
+
+  $sth = $dbh->prepare(q{
+    SELECT vf.variation_feature_id, vf.seq_region_id, sr.name, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, vf.allele_string, vf.class_attrib_id, vf.variation_id
+    FROM variation_feature_mapping_results vf, seq_region sr
+    WHERE sr.seq_region_id = vf.seq_region_id
+    AND vf.map_weight=1;
+  }, {mysql_use_result => 1});
+
+  $sth->execute() or die $dbh->errstr;
+
+  while (my $row = $sth->fetchrow_arrayref) {
+    my @values = map { defined $_ ? $_ : '\N'} @$row;
+    my $vf_id = $values[0];
+    my $seq_name = $values[2];
+    my $start = $values[3];
+    my $end = $values[4];
+    my $allele_string = $values[6];
+    my $class = $values[7];
+    my $variation_id = $values[8];
+    print $fh join("\t", @values), "\n";
+    my @allele_string_init = sort split('/', $allele_string);
+    my @allele_string_rev_comp = sort split ('/', $allele_string);
+    foreach my $allele (@allele_string_rev_comp) {
+      reverse_comp(\$allele);
+    }
+    my $concat = join('/', @allele_string_rev_comp);
+
+  if (!($start > $end)) {
+      my $ref =  $fasta_db->seq("$seq_name:$start,$end");
+      my @new_allele_strings = ();
+      if ( grep( /^$ref$/, @allele_string_init ) ) {
+        push @new_allele_strings, $ref;
+        foreach my $allele (@allele_string_init) {
+          if ($allele ne $ref) {
+            push @new_allele_strings, $allele
+          }
+        }
+      } elsif ( grep( /^$ref$/, @allele_string_rev_comp) )  {
+        push @new_allele_strings, $ref;
+        foreach my $allele (@allele_string_rev_comp) {
+          if ($allele ne $ref) {
+            push @new_allele_strings, $allele
+          }
+        }
+      } else {
+        # 2 None of the variant alleles match the reference allele
+        print $fh_update "INSERT INTO failed_variation(variation_id, failed_description_id) values($variation_id, 2);\n";
+
+      }
+      if (scalar @new_allele_strings > 0) {
+        my $new_allele_string = join('/', @new_allele_strings);
+        print $fh_update "UPDATE variation_feature SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
+        print $fh_update "UPDATE variation_feature SET seq_region_strand=1 WHERE variation_feature_id=$vf_id;\n";
+      }
+    } else {
+      if ($allele_string =~ /^-/) {
+        print $fh_update "UPDATE variation_feature SET seq_region_strand=1 WHERE variation_feature_id=$vf_id;\n";
+      } else {
+        if ($allele_string =~ /-/) {
+          my @alleles = sort split('/', $allele_string);
+          my @new_alleles = ('-');
+          foreach my $allele (@alleles) {
+            if ($allele ne '-') {
+              push @new_alleles, $allele;
+            }
+          }
+          my $new_allele_string = join('/', @new_alleles);
+          print $fh_update "UPDATE variation_feature SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
+          print $fh_update "UPDATE variation_feature SET seq_region_strand=1 WHERE variation_feature_id=$vf_id;\n";
+        } else {
+          # Mapped position is not compatible with reported alleles 15
+          print $fh_update "INSERT INTO failed_variation(variation_id, failed_description_id) values($variation_id, 15);\n";
+        }
+      }
+    }
+  }
+
+
+$sth->finish();
+$fh->close();
+$fh_update->close();
   # update display column in variation and variation_feature tables
 
   # evidence_attribs: 371 = Cited
-  $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT variation_id, $failed_description_id FROM variation WHERE name IN ($variation_names_concat);});
+#  $dbh->do(qq{INSERT INTO failed_variation(variation_id, failed_description_id) SELECT variation_id, $failed_description_id FROM variation WHERE name IN ($variation_names_concat);});
 
   # reset display column, set all values to 1
   $dbh->do(qq{UPDATE variation SET display=1 WHERE display=0;});

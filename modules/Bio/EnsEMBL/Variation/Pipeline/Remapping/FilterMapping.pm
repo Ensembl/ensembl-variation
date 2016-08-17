@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -111,12 +111,17 @@ sub run {
   } elsif ($mode eq 'remap_svf') {
     $self->filter_svf_mapping_results();
     $self->join_svf_data();
+  } elsif ($mode eq 'remap_qtls') {
+    $self->report_failed_read_coverage_mappings();
+    $self->filter_read_coverage_mapping_results();
+    $self->join_qtl_data();
   } else {
     $self->report_failed_mappings();
     $self->filter_mapping_results();
     $self->join_feature_data();
   }
   $self->write_statistics();
+
 }
 
 sub write_output {
@@ -702,17 +707,22 @@ sub filter_read_coverage_mapping_results {
 
   my ($stats_failed, $stats_unique_map, $stats_multi_map);
 
+  my $fh = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/chicken/remapping_qtls/debug_filter_mappings', 'w');
+
   my $mapped = {};
   while (<$fh_mappings>) {
     chomp;
     #107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984   
     #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
-    my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score) = split("\t", $_); 
+    #5844:upstream   5       30870168        30870668        1       1       1       501M
+    my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score, $cigar) = split("\t", $_); 
 
     my ($id, $type) = split(':', $query_name);   
 
     $mapped->{$id}->{$type}->{$new_seq_name}->{"$new_start:$new_end:$new_strand"} = $algn_score;
+    print $fh "$id $type $new_seq_name $new_start $new_end $new_strand $algn_score\n";
   }
+  $fh->close;
   $fh_mappings->close();
 
   my $file_init_feature = $self->param('file_init_feature');
@@ -992,6 +1002,71 @@ sub join_svf_data {
       $data->{seq_region_id} = $seq_region_id || '\N';
     }
     my $line = $self->print_complete_feature_line($data);
+    print $fh_load_features $line, "\n"; 
+  }
+
+  $fh_mappings->close();
+  $fh_load_features->close();
+}
+
+sub join_qtl_data {
+  my $self = shift;
+
+  my $file_init_feature = $self->param('file_init_feature');
+  my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
+
+  my $feature_data = {};
+  my $key = '';
+  while (<$fh_init_feature>) {
+    chomp;
+    my $data = $self->read_data($_);
+    $key = $data->{entry};
+    $feature_data->{$key} = $data;
+  }
+  $fh_init_feature->close();
+
+  # get new seq_region_ids
+  my $seq_region_ids = {};
+  my $cdba = $self->param('cdba');
+  my $sa = $cdba->get_SliceAdaptor;
+  my $slices = $sa->fetch_all('toplevel', undef, 1);
+  foreach my $slice (@$slices) {
+    $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
+  }
+  # new map_weights
+  my $file_filtered_mappings = $self->param('file_filtered_mappings');
+  my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
+  my $map_weights = {};
+  while (<$fh_mappings>) {
+    chomp;
+    my ($query_id, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
+    $map_weights->{$query_id}++;
+  }
+  $fh_mappings->close();
+
+  # join feature data with mapping data:
+  my $file_load_features = $self->param('file_load_features');
+  my $fh_load_features = FileHandle->new($file_load_features, 'w');   
+  $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
+  my ($data, $variation_feature_id, $version, $variation_name);
+  while (<$fh_mappings>) {
+    chomp;
+    my ($query_id, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
+
+    my $seq_region_id = $seq_region_ids->{$seq_name};
+    my $map_weight = $map_weights->{$query_id};
+
+    $data = $feature_data->{$query_id};
+
+    $data->{seq_region_id} = $seq_region_id;
+    $data->{seq_region_start} = $start;
+    $data->{seq_region_end} = $end;
+    $data->{seq_region_strand} = $strand;
+    $data->{alignment_quality} = $score;
+    $data->{map_weight} = $map_weight;
+
+    my $line = $self->print_complete_feature_line($data);
+
     print $fh_load_features $line, "\n"; 
   }
 
