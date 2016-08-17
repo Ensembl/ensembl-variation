@@ -360,7 +360,7 @@ sub get_evidence_attribs{
       - check the number of independant observations
              - ie. different submitter handle or different population
       - check for any allele frequency information
-      - check for allele frequency information from Hapap if human
+      - check for allele frequency information from HapMap if human
 
 =cut
 
@@ -406,6 +406,10 @@ sub get_ss_variations{
 
         ## cow specific
         $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
+
+        ## cow, sheep (and goat) data from EVA  
+        $evidence{$l->[0]}{'freq'} = 1              if $l->[1] =~/EVA_LIVESTOCK/;
+
         ## mouse specific
         $evidence{$l->[0]}{'SC_MOUSE_GENOMES'}  = 1 if $l->[1] =~/SC_MOUSE_GENOMES/;
 
