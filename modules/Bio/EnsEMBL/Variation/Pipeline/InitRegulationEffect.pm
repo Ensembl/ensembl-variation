@@ -52,8 +52,8 @@ sub fetch_input {
         $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
     }
     unless ($self->param('only_motif_feature')) {
-        $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
-        $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
+#        $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
+#        $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
     }
 
     # get regulation object ids
@@ -71,16 +71,18 @@ sub fetch_input {
         push @$slices, $slice;
     }
 
-    my $regulatory_feature_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
-    my @external_feature_sets = @{$fsa->fetch_all_by_type('external')};
+#    my $regulatory_feature_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
+#    my @external_feature_sets = @{$fsa->fetch_all_by_type('external')};
 
     foreach my $slice (@$slices) {
         # get all RegulatoryFeatures
         my @feature_ids = ();
         unless ($self->param('only_motif_feature')) {
-          my $it = $rfa->fetch_Iterator_by_Slice($slice);
-          while ($it->has_next()) {
-              my $rf = $it->next();
+#          my $it = $rfa->fetch_Iterator_by_Slice($slice);
+          $self->warning($slice->seq_region_name);
+          my @rfs = @{$rfa->fetch_all_by_Slice($slice)};
+          $self->warning(scalar @rfs);
+          foreach my $rf (@rfs) {
               push @feature_ids, { feature_id => $rf->stable_id,
                                    feature_type => 'regulatory_feature',
                                    species => $species, };
@@ -88,6 +90,8 @@ sub fetch_input {
         }
         # get all MotifFeatures
         unless ($self->param('only_regulatory_feature')) {
+          $self->warning($slice->seq_region_name);
+
             my @mfs = @{$mfa->fetch_all_by_Slice($slice)};
             foreach my $mf (@mfs) {
                 push @feature_ids, { feature_id => $mf->dbID,
@@ -96,15 +100,15 @@ sub fetch_input {
             }
         }
         # get all ExternalFeatures
-        if ($self->param('include_external_features')) {
-            foreach my $external_fset (@external_feature_sets) {
-                my $feature_set = $fsa->fetch_by_name($external_fset->name);
-                foreach my $external_feature (@{$feature_set->get_Features_by_Slice($slice)}) {
-                    push @feature_ids, { feature_id => $external_feature->dbID,
-                                         feature_type => 'external_feature', };
-                }
-            }
-        }
+#        if ($self->param('include_external_features')) {
+#            foreach my $external_fset (@external_feature_sets) {
+#                my $feature_set = $fsa->fetch_by_name($external_fset->name);
+#                foreach my $external_feature (@{$feature_set->get_Features_by_Slice($slice)}) {
+#                    push @feature_ids, { feature_id => $external_feature->dbID,
+#                                         feature_type => 'external_feature', };
+#                }
+#            }
+#        }
         $self->dataflow_output_id(\@feature_ids, 2);
     }
 }
