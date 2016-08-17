@@ -464,10 +464,17 @@ sub source_table {
     foreach my $dt (@data_types) {
       $data_type_string .= qq{$spaces<div class="$dt_class">};
       
-      my $data_type_label = ucfirst($dt);
+      my $data_type_label = $dt;
+      $data_type_label =~ s/variation/variant/g;
       $data_type_label =~ s/_/ /g;
+      $data_type_label = ucfirst($data_type_label);
 
-      if ($dt eq 'phenotype_feature') {
+      next if ($dt eq 'study');
+
+      if ($dt eq 'variation') {
+        $data_type_string .= qq{\n$spaces  <div class="$type_class">$data_type_label</div>};
+      }
+      elsif ($dt eq 'phenotype_feature') {
         my $dt_phe_title = ($phe_types->{$dt}{$source_id}) ? "Provides ".$phe_types->{$dt}{$source_id}." phenotype association data" : $phe_title;
         $data_type_string .= qq{\n$spaces  <div  class="$type_class"><span class="_ht ht" title="$dt_phe_title">Phenotype</span></div>};
         $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$dt_phe_title" title="$dt_phe_title" />};
