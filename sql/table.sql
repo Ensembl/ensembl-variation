@@ -396,16 +396,19 @@ CREATE TABLE `phenotype` (
 
 @column phenotype_id         Foreign key, references to the @link phenotype table.
 @column accession            The accession of an ontology term held in the ontology database (eg. EFO:0000378) 
-@column linked_by_attrib     The method used to annotate the phenotype.description with the ontology term
+@column mapped_by_attrib     The method used to annotate the phenotype.description with the ontology term
+@column mapping_type         The relation defining the association between the ontology term and the phenotype.description
 
 @see phenotype
 */
 CREATE TABLE `phenotype_ontology_accession` (
   `phenotype_id` int(11) unsigned NOT NULL,
   `accession` varchar(255) NOT NULL,
-  `linked_by_attrib` set('437','438','439','440','441','442','443','444') DEFAULT NULL,
-  PRIMARY KEY (`phenotype_id`,`accession`)
-);
+  `mapped_by_attrib` set('437','438','439','440','441','442','443','444') DEFAULT NULL,
+  `mapping_type` enum('is','involves') DEFAULT NULL,
+  PRIMARY KEY (`phenotype_id`,`accession`),
+  KEY `accession_idx` (`accession`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @header  Other tables
@@ -1634,7 +1637,7 @@ CREATE TABLE study (
 	
 	primary key( study_id ),
 	key source_idx (source_id),
-        key external_reference_idx(external_reference)
+  key external_reference_idx(external_reference)
 );
 
 
