@@ -207,6 +207,7 @@ sub healthcheck_cache {
   $ENV{HC_VEP_HOST}     = $params->{host};
   $ENV{HC_VEP_PORT}     = $params->{port};
   $ENV{HC_VEP_USER}     = $params->{user};
+  $ENV{HC_VEP_PASS}     = $params->{pass};
   $ENV{HC_VEP_SPECIES}  = $params->{species}.($params->{refseq} ? '_refseq' : '');
   $ENV{HC_VEP_VERSION}  = $params->{version};
   $ENV{HC_VEP_DIR}      = $params->{dir};

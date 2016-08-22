@@ -78,6 +78,7 @@ $config->{species}       ||= $ENV{HC_VEP_SPECIES}       || 'all';
 $config->{host}          ||= $ENV{HC_VEP_HOST}          || 'ens-staging1,ens-staging2';
 $config->{user}          ||= $ENV{HC_VEP_USER}          || 'ensro';
 $config->{port}          ||= $ENV{HC_VEP_PORT}          || 3306;
+$config->{password}      ||= $ENV{HC_VEP_PASS}          || 3306;
 $config->{no_fasta}      ||= $ENV{HC_VEP_NO_FASTA}      || undef;
 $config->{max_vars}      ||= $ENV{HC_VEP_MAX_VARS}      || 100;
 
