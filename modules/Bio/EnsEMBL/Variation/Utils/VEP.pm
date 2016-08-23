@@ -5254,6 +5254,9 @@ sub dump_transcript_cache {
 
     debug("Writing to $dump_file") unless defined($config->{quiet});
 
+    $DB::single = 1 if $region eq '20000001-21000000';
+
+
     serialize_to_file($config, $dump_file, $tr_cache);
 }
 
@@ -5807,8 +5810,6 @@ sub dump_reg_feat_cache {
 
     debug("Writing to $dump_file") unless defined($config->{quiet});
 
-    $DB::single = 1;
-
     serialize_to_file($config, $dump_file, $rf_cache);
 }
 
@@ -6140,6 +6141,7 @@ sub build_full_cache {
   open SYN, ">".$config->{dir}."/chr_synonyms.txt" or die "ERROR: Could not write to synonyms file\n";
   foreach my $slice(@slices) {
     print SYN $slice->seq_region_name."\t".$_->name."\n" for @{$slice->get_all_synonyms};
+    delete($slice->{synonym});
   }
   close SYN;
 
