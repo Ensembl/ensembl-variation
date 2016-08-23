@@ -1269,7 +1269,7 @@ sub _columns {
              vf.allele_string vf.variation_name vf.map_weight vf.source_id vf.somatic 
              vf.consequence_types vf.class_attrib_id
              vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality 
-             vf.evidence_attribs vf.clinical_significance vf.display);
+             vf.evidence_attribs vf.clinical_significance vf.display s.name);
 }
 
 sub _objs_from_sth {
@@ -1297,7 +1297,7 @@ sub _objs_from_sth {
       $allele_string, $variation_name, $map_weight, $source_id,
       $is_somatic, $consequence_types, $class_attrib_id,
       $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,
-      $alignment_quality,$evidence_attribs,$clin_sig,$display );
+      $alignment_quality,$evidence_attribs,$clin_sig,$display, $source_name );
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
@@ -1305,7 +1305,7 @@ sub _objs_from_sth {
                      \$map_weight, \$source_id, \$is_somatic,
                      \$consequence_types, \$class_attrib_id,
                      \$minor_allele, \$minor_allele_freq, \$minor_allele_count,
-                     \$alignment_quality, \$evidence_attribs, \$clin_sig, \$display);
+                     \$alignment_quality, \$evidence_attribs, \$clin_sig, \$display, \$source_name);
 
     my $asm_cs;
     my $cmp_cs;
@@ -1441,6 +1441,7 @@ sub _objs_from_sth {
                 'dbID'     => $variation_feature_id,
                 'map_weight' => $map_weight,
                 '_source_id'   => $source_id,
+                '_source_name' => $source_name,
                 'is_somatic' => $is_somatic,
                 'overlap_consequences' => $overlap_consequences,
                 '_variation_id' => $variation_id,
