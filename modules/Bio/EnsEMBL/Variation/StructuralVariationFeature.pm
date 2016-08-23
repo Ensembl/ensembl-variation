@@ -526,44 +526,50 @@ sub get_all_TranscriptStructuralVariations {
   }
   
   elsif (not defined $self->{transcript_structural_variations}) {
-  # this VariationFeature is not in the database so we have to build the 
-  # TranscriptVariations ourselves
-  
-  unless ($transcripts) {
-    # if the caller didn't supply some transcripts fetch those around this VariationFeature
-    # get a slice around this transcript including the maximum distance up and down-stream
-    # that we still call consequences for
-    my $slice = $self->feature_Slice->expand(
-    MAX_DISTANCE_FROM_TRANSCRIPT, 
-    MAX_DISTANCE_FROM_TRANSCRIPT
-    );
+    # this VariationFeature is not in the database so we have to build the 
+    # TranscriptVariations ourselves
     
-    # fetch all transcripts on this slice 
-    $transcripts = $slice->get_all_Transcripts(1);
-  }
-  
-  my @unfetched_transcripts = grep { 
-    not exists $self->{transcript_structural_variations}->{$_->stable_id} 
-  } @$transcripts;
-  
-  for my $transcript (@unfetched_transcripts) {
-    $self->add_TranscriptStructuralVariation(
-    Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
-      -structural_variation_feature  => $self,
-      -transcript                    => $transcript,
-      -adaptor                       => undef,
-    )
-    );
-  }
+    unless ($transcripts) {
+      # if the caller didn't supply some transcripts fetch those around this VariationFeature
+      # get a slice around this transcript including the maximum distance up and down-stream
+      # that we still call consequences for
+      my $slice = $self->feature_Slice->expand(
+      MAX_DISTANCE_FROM_TRANSCRIPT, 
+      MAX_DISTANCE_FROM_TRANSCRIPT
+      );
+      
+      # fetch all transcripts on this slice 
+      $transcripts = $slice->get_all_Transcripts(1);
+    }
+    
+    my @unfetched_transcripts = grep { 
+      not exists $self->{transcript_structural_variations}->{$self->_get_transcript_key($_)}
+      and not exists $self->{transcript_structural_variations}->{$_->stable_id}
+    } @$transcripts;
+    
+    for my $transcript (@unfetched_transcripts) {
+      $self->add_TranscriptStructuralVariation(
+        Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
+          -structural_variation_feature  => $self,
+          -transcript                    => $transcript,
+          -adaptor                       => undef,
+        )
+      );
+    }
   }
   
   if ($transcripts) {
-  # just return TranscriptVariations for the requested Transcripts
-  return [ map { $self->{transcript_structural_variations}->{$_->stable_id} } @$transcripts ];
+    # just return TranscriptVariations for the requested Transcripts
+    return [
+      map {
+        $self->{transcript_structural_variations}->{$self->_get_transcript_key($_)} ||
+        $self->{transcript_structural_variations}->{$_->stable_id}
+      } @$transcripts
+    ];
   }
   else {
-  # return all TranscriptVariations
-  return [ map {$self->{transcript_structural_variations}->{$_}} sort keys %{$self->{transcript_structural_variations}} ];
+    # return all TranscriptVariations
+    return [ map {$self->{transcript_structural_variations}->{$_}} sort keys %{$self->{transcript_structural_variations}} ];
   }
 }
 
@@ -698,7 +704,21 @@ sub add_TranscriptStructuralVariation {
   assert_ref($tsv, 'Bio::EnsEMBL::Variation::TranscriptStructuralVariation');
   # we need to weaken the reference back to us to avoid a circular reference
   weaken($tsv->{base_variation_feature}) unless isweak($tsv->{base_variation_feature});
-  $self->{transcript_structural_variations}->{$tsv->transcript_stable_id} = $tsv;
+
+  # use a different method for speed
+  my $tr_stable_id;
+
+  # best for cache/VEP
+  if(my $tr = $tsv->transcript) {
+    $tr_stable_id = $self->_get_transcript_key($tr);
+  }
+
+  # best for API/DB
+  else {
+    $tr_stable_id = $tsv->transcript_stable_id;
+  }
+
+  $self->{transcript_structural_variations}->{$tr_stable_id} = $tsv;
 }
 
 

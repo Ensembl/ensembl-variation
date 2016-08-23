@@ -167,4 +167,17 @@ sub most_severe_OverlapConsequence {
     return $self->{_most_severe_consequence};
 }
 
+sub _get_transcript_key {
+  my $self = shift;
+  my $tr = shift;
+
+  my $key = $tr->stable_id;
+
+  if(my $dbID = $tr->dbID) {
+    $key .= '_'.$dbID;
+  }
+
+  return $key;
+}
+
 1;

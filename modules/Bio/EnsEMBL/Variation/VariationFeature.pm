@@ -496,7 +496,8 @@ sub get_all_TranscriptVariations {
         }
 
         my @unfetched_transcripts = grep { 
-            not exists $self->{transcript_variations}->{$_->stable_id} 
+            not exists $self->{transcript_variations}->{$self->_get_transcript_key($_)}
+            and not exists $self->{transcript_variations}->{$_->stable_id}
         } @$transcripts;
 
         for my $transcript (@unfetched_transcripts) {
@@ -512,7 +513,12 @@ sub get_all_TranscriptVariations {
 
     if ($transcripts) {
         # just return TranscriptVariations for the requested Transcripts
-        return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
+        return [
+          map {
+            $self->{transcript_variations}->{$self->_get_transcript_key($_)} ||
+            $self->{transcript_variations}->{$_->stable_id}
+          } @$transcripts
+        ];
     }
     else {
         # return all TranscriptVariations
@@ -741,7 +747,7 @@ sub add_TranscriptVariation {
 
     # best for cache/VEP
     if(my $tr = $tv->transcript) {
-      $tr_stable_id = $tr->stable_id;
+      $tr_stable_id = $self->_get_transcript_key($tr);
     }
 
     # best for API/DB
@@ -2110,4 +2116,5 @@ sub display {
   my $self = shift;
   return $self->{'display'} || '0';
 }
+
 1;
