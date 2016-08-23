@@ -3226,9 +3226,23 @@ sub validate_vf {
     # transform if necessary
     if(defined($config->{cache})) {
 
+      my $have_chr = 0;
       my $valid_chrs = get_cache_chromosomes($config);
 
-      if(!$valid_chrs->{$vf->{chr}}) {
+      if($valid_chrs->{$vf->{chr}}) {
+        $have_chr = 1;
+      }
+      elsif($config->{chromosome_synonyms}) {
+        foreach my $alt(keys %{$config->{chromosome_synonyms}->{$vf->{chr}} || {}}) {
+          if($valid_chrs->{$alt}) {
+            $have_chr = 1;
+            last;
+          }
+        }
+      }
+
+      # map to top level?  
+      unless($have_chr) {
 
         # slice adaptor required
         if(defined($config->{sa})) {
@@ -3389,8 +3403,10 @@ sub whole_genome_fetch {
 
     my (%vf_done, @finished_vfs, %seen_rfs);
 
-    if(defined($config->{offline}) && !-e $config->{dir}.'/'.$chr) {
-        debug("No cache found for chromsome $chr") unless defined($config->{quiet});
+    my $cache_chr = get_cache_chr_name($config, $chr);
+
+    if(defined($config->{offline}) && !-e $config->{dir}.'/'.$cache_chr) {
+        debug("No cache found for chromsome $cache_chr") unless defined($config->{quiet});
 
         foreach my $chunk(keys %{$vf_hash->{$chr}}) {
             foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
@@ -3405,7 +3421,7 @@ sub whole_genome_fetch {
     build_slice_cache($config, $config->{tr_cache}) unless defined($slice_cache->{$chr});
     build_slice_cache($config, $config->{rf_cache}) unless defined($slice_cache->{$chr});
 
-    debug("Analyzing chromosome $chr") unless defined($config->{quiet});
+    debug("Analyzing chromosome $chr".($cache_chr ne $chr ? " ($cache_chr)" : "")) unless defined($config->{quiet});
 
     # custom annotations
     whole_genome_fetch_custom($config, $vf_hash, $chr) if defined($config->{custom});
@@ -3760,6 +3776,8 @@ sub fetch_transcripts {
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
 
     foreach my $chr(keys %{$regions}) {
+
+        my $cache_chr = get_cache_chr_name($config, $chr);
       
         ## hack to copy HGNC IDs
         my %hgnc_ids = ();
@@ -3785,7 +3803,8 @@ sub fetch_transcripts {
                 #    load_dumped_transcript_cache_tabix($config, $chr, $region) :
                 #    load_dumped_transcript_cache($config, $chr, $region)
                 #);
-                $tmp_cache = load_dumped_transcript_cache($config, $chr, $region);
+                $tmp_cache = load_dumped_transcript_cache($config, $cache_chr, $region);
+                $tmp_cache->{$chr} = delete($tmp_cache->{$cache_chr}) if $cache_chr ne $chr && $tmp_cache->{$cache_chr};
                 $count_from_cache += scalar @{$tmp_cache->{$chr}} if defined($tmp_cache->{$chr});
                 $config->{loaded_tr}->{$chr}->{$region} = 1;
             }
@@ -3960,6 +3979,9 @@ sub fetch_regfeats {
     debug("Reading regulatory data from cache and/or database") unless defined($config->{quiet});
 
     foreach my $chr(keys %$regions) {
+
+        my $cache_chr = get_cache_chr_name($config, $chr);
+
         foreach my $region(sort {(split '-', $a)[0] cmp (split '-', $b)[1]} @{$regions->{$chr}}) {
             progress($config, $counter++, $region_count);
 
@@ -3976,6 +3998,8 @@ sub fetch_regfeats {
             my $tmp_cache;
             if(defined($config->{cache})) {
                 $tmp_cache = load_dumped_reg_feat_cache($config, $chr, $region);
+
+                $tmp_cache->{$chr} = delete($tmp_cache->{$cache_chr}) if $cache_chr ne $chr && $tmp_cache->{$cache_chr};
 
                 #$tmp_cache =
                 #    defined($config->{tabix}) ?
@@ -4117,6 +4141,8 @@ sub check_existing_hash {
 
     foreach my $chr(keys %{$vf_hash}) {
 
+        my $cache_chr = get_cache_chr_name($config, $chr);
+
         my %loaded_regions;
 
         foreach my $chunk(keys %{$vf_hash->{$chr}}) {
@@ -4139,7 +4165,8 @@ sub check_existing_hash {
                 foreach my $region(@{$converted_regions->{$chr}}) {
 
                     unless($loaded_regions{$region}) {
-                        my $tmp_cache = load_dumped_variation_cache($config, $chr, $region);
+                        my $tmp_cache = load_dumped_variation_cache($config, $cache_chr, $region);
+                        $tmp_cache->{$chr} = delete($tmp_cache->{$cache_chr}) if $cache_chr ne $chr && $tmp_cache->{$cache_chr};
 
                         # load from DB if not found in cache
                         if(!defined($tmp_cache->{$chr})) {
@@ -4230,14 +4257,16 @@ sub check_existing_tabix {
   foreach my $chr(keys %by_chr) {
     my $list = $by_chr{$chr};
 
+    my $cache_chr = get_cache_chr_name($config, $chr);
+
     while(scalar @$list) {
       my @tmp_list = sort {$a->{start} <=> $b->{start}} splice @$list, 0, $max;
       progress($config, $p, $total);
       $p += scalar @tmp_list;
 
-      my $region_string = join " ", map {$_->{chr}.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
+      my $region_string = join " ", map {$cache_chr.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
 
-      my $file = get_dump_file_name($config, $chr, "all", "vars");
+      my $file = get_dump_file_name($config, $cache_chr, "all", "vars");
       next unless -e $file;
       #die("ERROR: Could not read from file $file\n") unless -e $file;
 
@@ -4289,7 +4318,9 @@ sub check_existing_tabix_pm {
 
   foreach my $chr(keys %by_chr) {
 
-    my $file = get_dump_file_name($config, $chr, "all", "vars");
+    my $cache_chr = get_cache_chr_name($config, $chr);
+
+    my $file = get_dump_file_name($config, $cache_chr, "all", "vars");
     next unless -e $file;
     my $tabix_obj = $config->{_vf_tabix}->{$chr} ||= Tabix->new(-data => $file);
     next unless $tabix_obj;
@@ -4297,7 +4328,7 @@ sub check_existing_tabix_pm {
     foreach my $vf(@{$by_chr{$chr}}) {
       progress($config, $p++, $total);
 
-      my $iter = $tabix_obj->query($vf->{chr}, $vf->{start} - 1, $vf->{end} + 1);
+      my $iter = $tabix_obj->query($cache_chr, $vf->{start} - 1, $vf->{end} + 1);
       next unless $iter && $iter->{_};
 
       while(my $line = $tabix_obj->read($iter)) {
@@ -4375,6 +4406,8 @@ sub get_slice {
     my $otherfeatures = shift;
     my $use_db = shift;
     $otherfeatures ||= '';
+
+    $chr = get_cache_chr_name($config, $chr);
 
     return $config->{slice_cache}->{$chr} if defined($config->{slice_cache}) && defined($config->{slice_cache}->{$chr});
 
@@ -4676,6 +4709,51 @@ sub prune_min_max {
 
     undef $array;
     return \@new_cache;
+}
+
+sub get_cache_chr_name {
+  my $config = shift;
+  my $chr = shift;
+
+  my $chr_name_map = $config->{_chr_name_map} ||= {};
+
+  if(!exists($chr_name_map->{$chr})) {
+    my $mapped_name = $chr;
+
+    my $valid = get_cache_chromosomes($config);
+
+    unless($valid->{$chr}) {
+
+      # try synonyms first
+      my $synonyms = $config->{chromosome_synonyms} || {};
+
+      foreach my $syn(keys %{$synonyms->{$chr} || {}}) {
+        if($valid->{$syn}) {
+          $mapped_name = $syn;
+          last;
+        }
+      }
+
+      # still haven't got it
+      if($mapped_name eq $chr) {
+
+        # try adding/removing "chr"
+        if($chr =~ /^chr/i) {
+          my $tmp = $chr;
+          $tmp =~ s/^chr//i;
+
+          $mapped_name = $tmp if $valid->{$tmp};
+        }
+        elsif($valid->{'chr'.$chr}) {
+          $mapped_name = 'chr'.$chr;
+        }
+      }
+    }
+
+    $chr_name_map->{$chr} = $mapped_name;
+  }
+
+  return $chr_name_map->{$chr};
 }
 
 # get transcripts for slices
@@ -6053,9 +6131,17 @@ sub cache_custom_annotation {
 sub build_full_cache {
   my $config = shift;
 
+  mkpath($config->{dir}) if !-d $config->{dir};
+
   my @slices = @{$config->{sa}->fetch_all('toplevel')};
   push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
   push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
+
+  open SYN, ">".$config->{dir}."/chr_synonyms.txt" or die "ERROR: Could not write to synonyms file\n";
+  foreach my $slice(@slices) {
+    print SYN $slice->seq_region_name."\t".$_->name."\n" for @{$slice->get_all_synonyms};
+  }
+  close SYN;
 
   if(lc($config->{build}) ne 'all') {
     my @i;
@@ -6097,7 +6183,6 @@ sub build_full_cache {
   }
 
   # open build status file
-  mkpath($config->{dir}) if !-d $config->{dir};
   open DONE, '>> '.$config->{dir}.'/.build' or die("ERROR: Unable to open build status file\n");
 
   # given build range?
