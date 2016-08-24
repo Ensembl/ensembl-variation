@@ -134,8 +134,7 @@ sub get_vep_params {
      $params->{host}       = $meta_container->dbc->host();
      $params->{port}       = $meta_container->dbc->port();
      $params->{user}       = $meta_container->dbc->username();
-     $params->{pass}       = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
-
+     $params->{pass}       = $meta_container->dbc->password() ? $meta_container->dbc->password() : '';
      $meta_container->dbc()->disconnect_if_idle();
      
      $self->param('assembly', $params->{assembly});
@@ -147,7 +146,7 @@ sub get_vep_params {
      $params->{host}     = $self->required_param('host');
      $params->{port}     = $self->required_param('port');
      $params->{user}     = $self->required_param('user');
-     $params->{pass}     = $self->required_param('pass') ? '--pass '.$self->required_param('pass') : '';
+     $params->{pass}     = $self->required_param('pass') ? $self->required_param('pass') : '';
   }
 
   # species-specific
