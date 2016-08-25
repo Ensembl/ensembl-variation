@@ -349,6 +349,7 @@ sub get_all_diffs {
         if($pos <= $ref_length) {
           foreach my $tool(qw(sift polyphen)) {
             if(my $matrix = $matrices->{$tool}) {
+              next if ref($matrix) eq 'HASH';
               my ($pred, $score) = $matrix->get_prediction($pos, $aa);
               
               $diff->{$tool.'_score'}       = $score if defined($score);
