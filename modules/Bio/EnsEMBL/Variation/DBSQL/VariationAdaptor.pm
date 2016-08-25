@@ -249,7 +249,7 @@ sub store_attributes{
 
     foreach my $attrib ( keys %{$var->{attribs}}){
 
-        my $attrib_id = $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_code('var_att', $attrib);
+        my $attrib_id = $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('var_att', $attrib);
         throw("No ID found for attrib_type ", $attrib) unless defined($attrib_id);
 
 
