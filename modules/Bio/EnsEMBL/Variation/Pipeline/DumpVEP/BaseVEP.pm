@@ -209,6 +209,7 @@ sub healthcheck_cache {
   $ENV{HC_VEP_PASS}     = $params->{pass};
   $ENV{HC_VEP_SPECIES}  = $params->{species}.($params->{refseq} ? '_refseq' : '');
   $ENV{HC_VEP_VERSION}  = $params->{version};
+  $ENV{HC_VEP_CACHE_VERSION} = $params->{eg} ? $params->{eg_version} : undef;
   $ENV{HC_VEP_DIR}      = $params->{dir};
   $ENV{HC_VEP_NO_FASTA} = 1;
   $ENV{HC_VEP_MAX_VARS} = 100;

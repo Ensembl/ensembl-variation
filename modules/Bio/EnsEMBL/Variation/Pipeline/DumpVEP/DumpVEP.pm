@@ -1,4 +1,4 @@
-pa=head1 LICENSE
+=head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 Copyright [2016] EMBL-European Bioinformatics Institute
@@ -63,7 +63,7 @@ sub run {
     $params->{host},
     $params->{port},
     $params->{user},
-    $params->{pass} ? '--pass' . $params->{pass} : '',
+    $params->{pass} ? '--pass ' . $params->{pass} : '',
     
     $params->{species},
     $params->{assembly},
