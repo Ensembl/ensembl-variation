@@ -63,7 +63,7 @@ sub run {
     $params->{host},
     $params->{port},
     $params->{user},
-    $params->{pass},
+    $params->{pass} ? '--pass ' . $params->{pass} : '',
     
     $params->{species},
     $params->{assembly},
