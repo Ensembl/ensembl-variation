@@ -503,7 +503,7 @@ sub _mean_score {
 }
 
 sub _reference_name {
-  return $_[0]->transcript->translation->stable_id;
+  return $_[0]->transcript->translation->stable_id || $_[0]->transcript->stable_id.".p";
 }
 
 sub TO_JSON {
