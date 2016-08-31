@@ -42,9 +42,9 @@ SET storage_engine=MYISAM;
 @column flipped				         This is set to 1 if the variant is flipped from the negative to the positive strand during import.
 @column class_attrib_id		     Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column somatic                Flags whether this variation is known to be somatic or not
-@column minor_allele           The minor allele of this variant, as reported by dbSNP
-@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
-@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column minor_allele           The minor allele of this variant, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
+@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
+@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column evidence_attribs            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
@@ -122,9 +122,9 @@ CREATE TABLE variation_attrib (
 @column variation_set_id		   The variation feature can belong to a @link variation_set.
 @column class_attrib_id			   Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column somatic                Flags whether this variation_feature is somatic or germline
-@column minor_allele           The minor allele of this variant, as reported by dbSNP
-@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
-@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column minor_allele           The minor allele of this variant, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
+@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
+@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP. This minor allele actually corresponds to the second most frequent allele when there are more than 2 different alleles.
 @column alignment_quality      Quality of alignment for variants mapped by flanks rather than position justified.
 @column evidence_attribs       A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
