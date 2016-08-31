@@ -349,6 +349,7 @@ sub get_all_diffs {
         if($pos <= $ref_length) {
           foreach my $tool(qw(sift polyphen)) {
             if(my $matrix = $matrices->{$tool}) {
+              next if ref($matrix) eq 'HASH';
               my ($pred, $score) = $matrix->get_prediction($pos, $aa);
               
               $diff->{$tool.'_score'}       = $score if defined($score);
@@ -502,7 +503,7 @@ sub _mean_score {
 }
 
 sub _reference_name {
-  return $_[0]->transcript->translation->stable_id;
+  return $_[0]->transcript->translation->stable_id || $_[0]->transcript->stable_id.".p";
 }
 
 sub TO_JSON {

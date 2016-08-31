@@ -176,6 +176,22 @@ sub type {
 }
 
 
+=head2 is_reference
+
+  Example    : my $is_ref = $th->is_reference()
+  Description: Boolean indicating if this haplotype matches the reference
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub is_reference {
+  return scalar @{$_[0]->get_all_diffs} ? 0 : 1;
+}
+
+
 =head2 get_all_VariationFeatures
 
   Example    : my $vfs = $th->get_all_VariationFeatures()
@@ -326,6 +342,23 @@ sub count {
 sub frequency {
   my $self = shift;
   return $self->{frequency} ||= $self->count / $self->container->total_haplotype_count;
+}
+
+
+=head2 get_all_sample_counts
+
+  Example    : my %counts = %{$th->get_all_sample_counts()}
+  Description: Counts the number of times this haplotype has been observed
+               in each sample defined in the container
+  Returntype : hashref e.g. { $sample_name => $count }
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_sample_counts {
+  return $_[0]->{samples};
 }
 
 

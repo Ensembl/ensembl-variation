@@ -134,8 +134,7 @@ sub get_vep_params {
      $params->{host}       = $meta_container->dbc->host();
      $params->{port}       = $meta_container->dbc->port();
      $params->{user}       = $meta_container->dbc->username();
-     $params->{pass}       = $meta_container->dbc->password() ? '--pass '.$meta_container->dbc->password() : '';
-
+     $params->{pass}       = $meta_container->dbc->password() ? $meta_container->dbc->password() : '';
      $meta_container->dbc()->disconnect_if_idle();
      
      $self->param('assembly', $params->{assembly});
@@ -147,7 +146,7 @@ sub get_vep_params {
      $params->{host}     = $self->required_param('host');
      $params->{port}     = $self->required_param('port');
      $params->{user}     = $self->required_param('user');
-     $params->{pass}     = $self->required_param('pass') ? '--pass '.$self->required_param('pass') : '';
+     $params->{pass}     = $self->required_param('pass') ? $self->required_param('pass') : '';
   }
 
   # species-specific
@@ -207,8 +206,10 @@ sub healthcheck_cache {
   $ENV{HC_VEP_HOST}     = $params->{host};
   $ENV{HC_VEP_PORT}     = $params->{port};
   $ENV{HC_VEP_USER}     = $params->{user};
+  $ENV{HC_VEP_PASS}     = $params->{pass};
   $ENV{HC_VEP_SPECIES}  = $params->{species}.($params->{refseq} ? '_refseq' : '');
   $ENV{HC_VEP_VERSION}  = $params->{version};
+  $ENV{HC_VEP_CACHE_VERSION} = $params->{eg} ? $params->{eg_version} : undef;
   $ENV{HC_VEP_DIR}      = $params->{dir};
   $ENV{HC_VEP_NO_FASTA} = 1;
   $ENV{HC_VEP_MAX_VARS} = 100;

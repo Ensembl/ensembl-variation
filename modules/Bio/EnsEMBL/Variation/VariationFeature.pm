@@ -496,7 +496,8 @@ sub get_all_TranscriptVariations {
         }
 
         my @unfetched_transcripts = grep { 
-            not exists $self->{transcript_variations}->{$_->stable_id} 
+            not exists $self->{transcript_variations}->{$self->_get_transcript_key($_)}
+            and not exists $self->{transcript_variations}->{$_->stable_id}
         } @$transcripts;
 
         for my $transcript (@unfetched_transcripts) {
@@ -512,7 +513,12 @@ sub get_all_TranscriptVariations {
 
     if ($transcripts) {
         # just return TranscriptVariations for the requested Transcripts
-        return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
+        return [
+          map {
+            $self->{transcript_variations}->{$self->_get_transcript_key($_)} ||
+            $self->{transcript_variations}->{$_->stable_id}
+          } @$transcripts
+        ];
     }
     else {
         # return all TranscriptVariations
@@ -741,7 +747,7 @@ sub add_TranscriptVariation {
 
     # best for cache/VEP
     if(my $tr = $tv->transcript) {
-      $tr_stable_id = $tr->stable_id;
+      $tr_stable_id = $self->_get_transcript_key($tr);
     }
 
     # best for API/DB
@@ -1185,6 +1191,9 @@ sub source{
 
 sub source_name{
   my $self = shift;
+
+  return $self->{'_source_name'} if $self->{'_source_name'};
+
   my $source = $self->source;
   return unless defined $source;
   
@@ -2040,11 +2049,14 @@ sub length {
 
 sub summary_as_hash {
   my $self = shift;
+
   my $summary_ref = $self->SUPER::summary_as_hash;
   $summary_ref->{'consequence_type'} = $self->display_consequence;
   my @allele_list = split(/\//,$self->allele_string);
   $summary_ref->{'alleles'} = \@allele_list;
   $summary_ref->{'clinical_significance'} = \@{$self->get_all_clinical_significance_states};
+  $summary_ref->{'source'} = $self->source_name();
+
   return $summary_ref;
 }
 
@@ -2110,4 +2122,5 @@ sub display {
   my $self = shift;
   return $self->{'display'} || '0';
 }
+
 1;
