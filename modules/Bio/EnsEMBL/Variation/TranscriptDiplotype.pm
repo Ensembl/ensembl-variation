@@ -50,6 +50,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Digest::MD5 qw(md5_hex);
 
 =head2 new
 
@@ -287,6 +288,11 @@ sub get_all_population_frequencies {
   }
   
   return $self->{population_frequencies};
+}
+
+sub _hex {
+  my $self = shift;
+  return $self->{hex} ||= md5_hex(join("_", map {$_->_hex} @{$self->haplotypes}));
 }
 
 ## Convert this object to a hash that can be written as JSON.

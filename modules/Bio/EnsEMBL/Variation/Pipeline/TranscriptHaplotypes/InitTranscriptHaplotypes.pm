@@ -49,7 +49,7 @@ sub fetch_input {
   my $tr_count = 0;
 
   # my @transcripts = ($ta->fetch_by_stable_id('ENST00000304748'));
-  my @transcripts = @{ $ta->fetch_all };
+  my @transcripts = @{ $ta->fetch_all_by_biotype('protein_coding') };
 
   for my $tr (@transcripts) {
     next unless $tr->translation;
@@ -98,6 +98,8 @@ sub write_output {
   if (my $big_transcript_output_ids = $self->param('big_transcript_output_ids')) {
     $self->dataflow_output_id($big_transcript_output_ids, 2);
   }
+
+  $self->dataflow_output_id([{}], 3);
 
   return;
 }

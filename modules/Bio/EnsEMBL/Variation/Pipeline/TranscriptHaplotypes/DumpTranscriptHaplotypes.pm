@@ -131,7 +131,9 @@ sub _generic_dump_freqs {
 
     my $flags = $ph->can('get_all_flags') ? join(",", @{$ph->get_all_flags}) : '.';
 
-    printf OUT "%s\t%s\t%i\t%.3g\t%.3g\t%.3g\t%.3g\t%.3g\t%.3g",
+    printf OUT "%s\t%s\t%s\t%s\t%i\t%.3g\t%.3g\t%.3g\t%.3g\t%.3g\t%.3g",
+      $ph->_hex,
+      $tr_id,
       $ph->name,
       $flags || '.',
       $ph->count,

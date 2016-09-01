@@ -135,7 +135,6 @@ sub pipeline_analyses {
     species
     pipeline_dir
     json_config
-    filter_frequency
   );
    
   my @analyses = (
@@ -150,14 +149,16 @@ sub pipeline_analyses {
       -hive_capacity => 1,
       -flow_into     => {
         '1' => ['dump_transcript_haplotypes'],
-        '2' => ['dump_transcript_haplotypes_highmem']
+        '2' => ['dump_transcript_haplotypes_highmem'],
+        '3' => ['finish_transcript_haplotypes']
       },
     },
     {
       -logic_name    => 'dump_transcript_haplotypes',
       -module        => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptHaplotypes::DumpTranscriptHaplotypes',
       -parameters    => {
-        @common_params
+        @common_params,
+        'filter_frequency'
       },
       -rc_name       => 'default',
       -analysis_capacity => 30,
@@ -171,6 +172,16 @@ sub pipeline_analyses {
       -rc_name       => 'highmem',
       -analysis_capacity => 20,
       -can_be_empty   => 1,
+    },
+    {
+      -logic_name    => 'finish_transcript_haplotypes',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptHaplotypes::FinishTranscriptHaplotypes',
+      -parameters    => {
+        @common_params
+      },
+      -rc_name       => 'default',
+      -analysis_capacity => 1,
+      -wait_for      => ['dump_transcript_haplotypes', 'dump_transcript_haplotypes_highmem'],
     },
   );
 
