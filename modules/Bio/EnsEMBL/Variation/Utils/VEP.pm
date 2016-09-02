@@ -2505,7 +2505,7 @@ sub run_plugins {
                             }
                         }
                         else {
-                            warn "Plugin '".(ref $plugin)."' did not return a hashref, output ignored!\n";
+                            warning_msg($config, "Plugin '".(ref $plugin)."' did not return a hashref, output ignored!\n");
                         }
                     }
                     else {
@@ -2514,7 +2514,7 @@ sub run_plugins {
                     }
                 };
                 if ($@) {
-                    warn "Plugin '".(ref $plugin)."' went wrong: $@";
+                    warning_msg($config, "Plugin '".(ref $plugin)."' went wrong: $@");
                 }
 
                 # there's no point running any other plugins if we're filtering this line,
