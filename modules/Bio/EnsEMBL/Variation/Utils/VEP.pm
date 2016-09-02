@@ -5018,7 +5018,7 @@ sub prefetch_transcript_data {
         $tr->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
     };
     if($@) {
-        warn "Problem getting 3' UTR:".$@;
+        warning_msg($config, "Problem getting 3' UTR:".$@);
     }
 
     # peptide
