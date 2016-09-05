@@ -224,7 +224,8 @@ elsif ($species =~ m/zebrafish|danio/i ||
        $species =~ m/monodelphis_domestica/i  || 
        $species =~ m/macaca_mulatta/i   ||
        $species =~ m/ovis_aries/i       ||
-       $species =~ m/zebrafinch|taeniopygia_guttata/i 
+       $species =~ m/zebrafinch|taeniopygia_guttata/i ||
+       $species =~ m/cat|felis_catus/
     ) {
     $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
