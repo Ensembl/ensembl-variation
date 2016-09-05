@@ -1285,9 +1285,10 @@ sub individual_table {
 
     foreach my $sam_id (keys %$samples){
 
-        ## insert individual if novel - using dbSNP id as name 
+        ## insert individual if novel - using first sample name seen as name
+        ## a few species (eg human) have multiple sample names per individual; check later
         unless (defined $individual_id{ $samples->{$sam_id}->{ind}} ){
-            $ind_ins_sth->execute(  $samples->{$sam_id}->{ind}  , $individuals->{ $samples->{$sam_id}->{ind} }->{des}, $individual_type_id );
+            $ind_ins_sth->execute(  $samples->{$sam_id}->{name}  , $individuals->{ $samples->{$sam_id}->{name} }->{des}, $individual_type_id );
             $individual_id{ $samples->{$sam_id}->{ind} } =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
 
             ## insert dbSNP synonym 
