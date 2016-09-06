@@ -122,6 +122,72 @@ sub reference_seq {
   return $_[0]->transcript->{cds};
 }
 
+=head2 get_all_flags
+
+  Example    : my @flags = @{$ph->get_all_flags}
+  Description: Get a list of flags for this haplotype. Current possible
+               flags are: "deleterious_sift_or_polyphen", "stop_change",
+               "indel"
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_flags {
+  my $self = shift;
+
+  if(!exists($self->{flags})) {
+    my @flags;
+    for my $flag(qw(frameshift resolved_frameshift indel)) {
+      my $method = 'has_'.$flag;
+      push @flags, $flag if $self->$method;
+    }
+    $self->{flags} = \@flags;
+  }
+
+  return $self->{flags};
+}
+
+
+=head2 has_frameshift
+
+  Example    : my $has_frameshift = $th->has_frameshift()
+  Description: Flag indicating if this CDSHaplotype has an
+               unresolved frameshift mutation relative to the
+               reference
+  Returntype : bool
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub has_frameshift {
+  my $self = shift;
+  return $self->{frameshift} && ($self->{length_diff} % 3 != 0);
+}
+
+
+=head2 has_resolved_frameshift
+
+  Example    : my $has_resolved_frameshift = $th->has_resolved_frameshift()
+  Description: Flag indicating if this CDSHaplotype has a
+               resolved frameshift mutation relative to the
+               reference
+  Returntype : bool
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub has_resolved_frameshift {
+  my $self = shift;
+  return $self->{frameshift} && ($self->{length_diff} % 3 == 0);
+}
+
 
 =head2 get_all_diffs
 
