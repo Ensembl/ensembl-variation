@@ -52,6 +52,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::CDSHaplotype;
 use Bio::EnsEMBL::Variation::ProteinHaplotype;
 use Bio::EnsEMBL::Variation::TranscriptDiplotype;
+use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 use Digest::MD5 qw(md5_hex);
 use Scalar::Util qw(weaken);
@@ -766,39 +767,34 @@ sub _init {
   
   # do the transcript magic
   foreach my $sample(keys %by_sample) {
-    my $obj = $self->_mutate_sequences($self->_filter_and_sort_genotypes($by_sample{$sample}), $sample);
-    
-    # store unique alt seqs so we only align each once
-    foreach my $type(qw(cds protein)) {
+    foreach my $obj(@{$self->_mutate_sequences($self->_filter_and_sort_genotypes($by_sample{$sample}), $sample)}) {
 
-      next if $type eq 'protein' && !$is_protein_coding;
-      
-      # iterate over haplotypes
-      # usually there will be 2, though for e.g. male samples on an chrX transcript there will be 1
-      foreach my $i(0..$#{$obj->{$type}}) {
-        
-        my $seq = $obj->{$type}->[$i];
+      # skip things w/o protein seqs for now
+      next unless $obj->{protein};
+
+      foreach my $uc_type(qw(CDS Protein)) {
+        my $type = lc($uc_type);
+
+        my $seq = $obj->{$type};
         my $hex = md5_hex($seq);
-        
+          
         # try to fetch 
         my $haplotype = $self->_get_TranscriptHaplotype_by_hex($hex);
         
         # if it doesn't exist yet, create new object
         if(!$haplotype) {        
           my %hash = (
-            -container => $self,
-            -type      => $type,
-            -seq       => $seq,
-            -hex       => $hex,
-            -indel     => $obj->{indel}->[$i],
+            -container   => $self,
+            -type        => $type,
+            -seq         => $seq,
+            -hex         => $hex,
+            -indel       => $obj->{flags}->{indel} || 0,
+            -length_diff => $obj->{flags}->{length_diff} || 0,
+            -frameshift  => $obj->{flags}->{frameshift} || 0,
           );
-          
-          if($type eq 'cds') {
-            $haplotype = Bio::EnsEMBL::Variation::CDSHaplotype->new(%hash);
-          }
-          else {
-            $haplotype = Bio::EnsEMBL::Variation::ProteinHaplotype->new(%hash);
-          }
+
+          my $package = sprintf('Bio::EnsEMBL::Variation::%sHaplotype', $uc_type);
+          $haplotype = $package->new(%hash);
           
           $self->{$type.'_haplotypes'}->{$hex} = $haplotype;
           
@@ -810,12 +806,12 @@ sub _init {
         $self->{_counts}->{$hex}++;
 
         # add/update contributing VFs
-        $haplotype->{_contributing_vfs}->{$_} = $obj->{vfs}->[$i]->{$_} for keys %{$obj->{vfs}->[$i]};
+        $haplotype->{_contributing_vfs}->{$_} = $obj->{vfs}->{$_} for keys %{$obj->{vfs}};
         
         # store mapping between hashes of cds and protein
         if($is_protein_coding) {
           my $other_type = $type eq 'cds' ? 'protein' : 'cds';
-          my $other_hex  = md5_hex($obj->{$other_type}->[$i]);
+          my $other_hex  = md5_hex($obj->{$other_type});
           
           $haplotype->{other_hexes}->{$other_hex} = 1;
         }
@@ -850,11 +846,13 @@ sub _add_reference_haplotypes {
 
     if(!$ref_cds_haplotype) {
       $ref_cds_haplotype = Bio::EnsEMBL::Variation::CDSHaplotype->new(
-        -container => $self,
-        -type      => 'cds',
-        -seq       => $ref_cds_seq,
-        -hex       => $ref_cds_hex,
-        -indel     => 0
+        -container   => $self,
+        -type        => 'cds',
+        -seq         => $ref_cds_seq,
+        -hex         => $ref_cds_hex,
+        -indel       => 0,
+        -length_diff => 0,
+        -frameshift  => 0,
       );
 
       $self->{'cds_haplotypes'}->{$ref_cds_hex} = $ref_cds_haplotype;
@@ -874,11 +872,13 @@ sub _add_reference_haplotypes {
 
       if(!$ref_protein_haplotype) {
         $ref_protein_haplotype = Bio::EnsEMBL::Variation::ProteinHaplotype->new(
-          -container => $self,
-          -type      => 'protein',
-          -seq       => $ref_protein_seq,
-          -hex       => $ref_protein_hex,
-          -indel     => 0,
+          -container   => $self,
+          -type        => 'protein',
+          -seq         => $ref_protein_seq,
+          -hex         => $ref_protein_hex,
+          -indel       => 0,
+          -length_diff => 0,
+          -frameshift  => 0,
         );
 
         $self->{'protein_haplotypes'}->{$ref_protein_haplotype} = $ref_protein_haplotype;
@@ -1180,17 +1180,19 @@ sub _mutate_sequences {
       $codon_table = $attrib ? $attrib->value : 1;
     }
   
-    my $mutated = {};
+    my $mutated = [];
   
     for my $hap(0..($ploidy - 1)) {
       my $seq = $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
       my $ref_seq = $seq;
     
       # flag if indel observed, we need to align seqs later
-      my $indel = 0;
+      my %flags;
 
       # record which VFs contribute to this haplotype
       my %contributing_vfs = ();
+
+      my $obj = {};
     
       # iterate through, they are already sorted into reverse order by sequence mapping
       foreach my $gt(@$gts) {
@@ -1210,7 +1212,10 @@ sub _mutate_sequences {
         reverse_comp(\$allele) if $tr_strand ne $vf->strand;
       
         my $replace_len = ($mapping->end - $mapping->start) + 1;
-        $indel = 1 if length($allele) != $replace_len;
+        $flags{indel} = 1 if length($allele) != $replace_len;
+        my $length_diff = length($allele) - $replace_len;
+        $flags{length_diff} += $length_diff;
+        $flags{has_frameshift} = 1 if $length_diff % 3 != 0;
 
         # only do the edit if it is actually an edit
         if(substr($seq, $mapping->start - 1, $replace_len) ne $allele) {
@@ -1223,20 +1228,23 @@ sub _mutate_sequences {
           $contributing_vfs{$allele.'_'.$self->_vf_identifier($vf)} = $vf;
         }
       }
+
+      $obj = {
+        cds => $seq,
+        vfs => \%contributing_vfs,
+        flags => \%flags,
+      };
     
       # now translate
-      my $protein = $self->_get_translation($seq, $codon_table) if $tr->translation;
-    
-      # remove anything beyond a stop
-      $protein =~ s/\*.+/\*/;
+      if($tr->translation && (my $protein = $self->_get_translation($seq, $codon_table))) {
 
-      # remove stop
-      # $protein =~ s/\*$//;
-    
-      push @{$mutated->{cds}}, $seq;
-      push @{$mutated->{protein}}, $protein if $protein;
-      push @{$mutated->{indel}}, $indel;
-      push @{$mutated->{vfs}}, \%contributing_vfs;
+        # remove anything beyond a stop
+        $protein =~ s/\*.+/\*/;
+
+        $obj->{protein} = $protein;
+      }
+
+      push @$mutated, $obj;
     }
   
     $self->{_mutated_by_fingerprint}->{$fingerprint} = $mutated;
@@ -1315,20 +1323,29 @@ sub _get_transcript_variations_hash {
   my $self = shift;
 
   if(!exists($self->{_transcript_variations})) {
-    my $tvas = [];
+    my $vfs = $self->_variation_features();
 
-    if(my $db = $self->db) {
+    if((my $db = $self->db) && $vfs->[0]->{dbID}) {
       my $tva = $db->get_TranscriptVariationAdaptor;
-      $tvas = $tva->fetch_all_by_Transcripts([$self->transcript])
+      $self->{_transcript_variations} = {
+        map {$_->{_variation_feature_id} => $_}
+        @{$tva->fetch_all_by_Transcripts([$self->transcript])}
+      };
     }
 
-    # todo non db fetch
-    # else {}
-
-    $self->{_transcript_variations} = {map {$_->{_variation_feature_id} => $_} @$tvas};
+    # non db fetch
+    else {
+      foreach my $vf(@$vfs) {
+        $self->{_transcript_variations}->{$self->_vf_identifier($vf)} = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+          -transcript        => $self->transcript,
+          -variation_feature => $vf,
+          -no_ref_check      => 1
+        );
+      }
+    }
   }
 
-  return $self->{_transcript_variations};
+  return $self->{_transcript_variations} ||= [];
 }
 
 ## gets frequencies for alternate amino acids at non-synonymous positions
