@@ -96,12 +96,14 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($hex, $type, $seq, $indel, $container) = rearrange([qw(HEX TYPE SEQ INDEL CONTAINER)], @_);
+  my ($hex, $type, $seq, $indel, $length_diff, $frameshift, $container) = rearrange([qw(HEX TYPE SEQ INDEL LENGTH_DIFF FRAMESHIFT CONTAINER)], @_);
   
   my $self = {
     type => $type,
     seq => $seq,
     has_indel => $indel,
+    length_diff => $length_diff,
+    frameshift => $frameshift,
     hex => $hex,
     other_hexes => {},
     _container => $container
@@ -270,6 +272,23 @@ sub has_indel {
   my $self = shift;
   $self->{has_indel} = shift if @_;
   return $self->{has_indel};
+}
+
+
+=head2 length_diff
+
+  Example    : my $length_diff = $th->length_diff()
+  Description: Get the difference in length of this haplotype
+               relative to the reference
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub length_diff {
+  return $_[0]->{length_diff} || 0;
 }
 
 
