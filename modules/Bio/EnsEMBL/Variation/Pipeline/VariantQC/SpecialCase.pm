@@ -73,6 +73,7 @@ sub run {
 
   $self->add_chip_info();
 
+  $self->check_individual_names()
 }
 
 =head2 check_PAR_variants
@@ -302,7 +303,10 @@ sub add_chip_info{
 
     my $var_dba = $self->get_species_adaptor('variation');
 
-    my $attrib_ext_sth = $var_dba->prepare(qq[select attrib_id from attrib where value = ? and attrib_type_id = ?]);
+    my $attrib_ext_sth = $var_dba->prepare(qq[select attrib_id from attrib, attrib_type 
+                                              where attrib.value = ? 
+                                              and attrib.attrib_type_id = attrib_type.attrib_type_id  
+                                              and attrib_type.code = ?]);
 
     my $meta_ins_sth   = $var_dba->prepare(qq[insert into meta (species_id, meta_key, meta_value ) values (?,?,?) ]);
 
@@ -315,14 +319,15 @@ sub add_chip_info{
 
 
     ## set up default menus first
-    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#variation_feature_variation#variants");
-    $meta_ins_sth->execute('\N', "web_config", "source#dbSNP variants#variation_feature_variation_dbSNP#variants");
-    $meta_ins_sth->execute('\N', "web_config", "menu#Sequence variants#variants#");
-    $meta_ins_sth->execute('\N', "web_config", "menu#Failed variants#failed#");
+    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#All sequence variants#variation_feature_variation#var");
+    $meta_ins_sth->execute('\N', "web_config", "source#dbSNP variants#variation_feature_variation_dbSNP#var");
+    $meta_ins_sth->execute('\N', "web_config", "menu_sub#Sequence variants##var#variants");
+    $meta_ins_sth->execute('\N', "web_config", "set#All failed variants#All failed variants#variation_set_fail_all#failed");
+    $meta_ins_sth->execute('\N', "web_config", "menu#Failed variants##failed#");
 
 
     ## enter parent set 
-    $attrib_ext_sth->execute("all_chips", 9);
+    $attrib_ext_sth->execute("all_chips", "short_name");
     my $super_att = $attrib_ext_sth->fetchall_arrayref();
    
     return unless defined $super_att->[0]->[0];
@@ -335,10 +340,10 @@ sub add_chip_info{
 	|| die "no insert id for chip super set\n";
 
     $meta_ins_sth->execute('\N', "web_config", 
-			   "set#All variants on genotyping chips#variation_set_all_chips#var_other");
+			   "set#All variants on genotyping chips#All genotyping chips#variation_set_all_chips#var_other");
 
     $meta_ins_sth->execute('\N', "web_config", 
-			   "menu#Arrays and other#var_other#");
+			   "menu#Arrays and other##var_other#");
     
 
 
@@ -358,7 +363,7 @@ sub add_chip_info{
 
 	$setstr_ins_sth->execute( $super_set , $sub_set);
 
-	my $meta_string = "set#" . $chip->[0]. "#variation_set_" .  $chip->[1] . "#var_other";
+	my $meta_string = "set#" . $chip->[0]. "#" . $chip->[0]. "#variation_set_" .  $chip->[1] . "#var_other";
 	$meta_ins_sth->execute('\N', "web_config", $meta_string );
 
 	populate_set($var_dba, $int_dba, $chip->[1], $sub_set);
@@ -409,6 +414,30 @@ sub populate_set{
     }
 
 }
+## individuals do not have names in dbSNP, but samples do
+## individual name is populated by the first sample name seen
+## report and check any individuals with multiple names
+sub check_individual_names{
 
+    my $self = shift;
+
+    my $var_dba = $self->get_species_adaptor('variation');
+    my $name_ext_sth = $var_dba->prepare(qq[ select individual_id, name from sample]);
+   
+    $name_ext_sth->execute()||die;
+    my $dat = $name_ext_sth->fetchall_arrayref();
+
+    my %names;
+    foreach my $l (@{$dat}){
+        push @{$names{$l->[0]}}, $l->[1];
+    }
+
+    open my $ind_log, ">>individual_name_report.txt"|| die "Failed to open individual_name_report.txt: $!";
+    print $ind_log "Individuals with more than one sample name to choose from: \n\n";
+    foreach my $ind( keys %names){
+       next if @{$names{$ind}} ==1;
+       print $ind_log "$ind\t". join(",", @{$names{$ind}}) . "\n";
+    }    
+}
 
 1;

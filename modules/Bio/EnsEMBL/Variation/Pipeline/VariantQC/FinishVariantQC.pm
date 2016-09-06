@@ -479,6 +479,7 @@ sub check_flipping_allele{
   tables to check allele_strings have been flipped where expected.
       - don't check strings which are the same reverse complimented (eg. -/AT => -/AT)
       - don't check failed variants which may not have been flipped 
+      - check reference mappings only as the flipped status is based on the reference
 =cut
 sub check_flipping_variation_feature{
 
@@ -487,12 +488,14 @@ sub check_flipping_variation_feature{
   my $report  = shift;
 
   my $flip_check_stmt = qq[select distinct new.variation_name, old.allele_string, new.allele_string 
-                             from allele_string old, variation_feature_working new, variation_working v
+                             from allele_string old, variation_feature_working new, variation_working v, seq_region sr
                              where v.flipped = 1
                              and v.variation_id = old.variation_id 
                              and new.variation_id = v.variation_id
                              and new.variation_id not in (select variation_id from failed_variation_working)
                              and new.allele_string not like '%-%'
+                             and sr.seq_region_id = new.seq_region_id
+                             and sr.is_reference =1
                              limit 3000
                            ];
 
@@ -511,7 +514,7 @@ sub check_flipping_variation_feature{
   ## filter out G/C and A/T and sort alleles as switched to match reference
   my @cleaned_data;
   foreach my $l (@{$var_feat_flip_dat}){
-      next if $l->[1] =~/G\/C|A\/T|T\/A|C\/G|\(AT\)|\(GC\)|\(CG\)|\(TA\)/;
+      next if $l->[1] =~/G\/C|A\/T|T\/A|C\/G|AT|GC|CG|TA/;
       push @cleaned_data, [$l->[0], sort($l->[1]), sort ($l->[2])];  
   }
 
