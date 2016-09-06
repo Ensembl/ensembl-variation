@@ -41,9 +41,10 @@ use warnings;
 
 use base qw(Exporter);
 use Bio::DB::Fasta;
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 
-our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by count_for_statement get_evidence_attribs get_pubmed_variations get_ss_variations summarise_evidence);
+our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by count_for_statement get_evidence_attribs get_pubmed_variations get_ss_variations summarise_evidence run_vf_checks);
 
 
  
@@ -558,6 +559,168 @@ sub count_for_statement{
    my $count = $row_count_ext_sth->fetchall_arrayref();
   
    return $count->[0]->[0];
+
+}
+
+
+## Check a batch of allele strings and genomic mappings
+
+sub run_vf_checks{
+
+  my $to_check       = shift;
+  my $strand_summary = shift;
+  my $fasta_file     = shift;
+
+  my %fail_variant;   # hash of arrays of failed variation_ids
+  my %fail_varallele; # hash of arrays of arrays failed variation_ids & alleles
+  my %allele_string;  # hash of expected allele for each variation_id strings saved for allele checking
+
+
+  foreach my $var (@{$to_check}){
+
+    die "No allele string for $var->{name}\n" unless defined $var->{allele}; ## kill whole batch before any db updates
+    ## save initial value of allele string for allele checking incase multi-mapping
+    $allele_string{$var->{v_id}} = $var->{allele};
+
+   
+    ## Type 19 - fail variant if  >1 mapping seen
+  
+   if($var->{map} >1){       
+      push @{$fail_variant{19}}, $var->{v_id};
+    }
+
+
+    ## Type 20 - It is unlikely a variant at the first base of a reference sequence is a good call
+    if( $var->{start}  ==1){
+      push @{$fail_variant{20}}, $var->{v_id};
+    }
+
+
+    ## Type 4 - novariation fails - flag variants as fails & don't run further checks
+
+    if($var->{allele} =~ /NOVARIATION/){
+      push @{$fail_variant{4}}, $var->{v_id};
+      next;
+    }
+  
+    if($var->{allele} =~ /HGMD_MUTATION/){
+      ## only locations are available, so no further checking is possible.
+      next;
+    }
+
+    
+    # expand alleles if they contain brackets and numbers before other checks
+    my $expanded = $var->{allele};
+    expand(\$expanded);
+
+
+
+    ##  Type 13 - non-nucleotide chars seen - flag variants & alleles as fails & don't run further checks
+    my $illegal_alleles = check_illegal_characters($expanded);
+    if(defined $illegal_alleles->[0] ) {
+
+      ## named variants are given the SO term 'sequence alteration' on entry - do not fail these 
+      next if $var->{class_attrib_id} eq 18;
+
+      push @{$fail_variant{13}}, $var->{v_id};
+
+      foreach my $ill_al( @{$illegal_alleles} ){
+         push @{$fail_varallele{ $var->{v_id} }{ $ill_al }},13;   ## unflipped allele failed throughout
+      }
+      next;  ## don't attempt to order variation_feature.allele_string or compliment
+    }
+
+    ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
+    my $is_ambiguous = check_for_ambiguous_alleles($expanded );
+    if(defined $is_ambiguous){
+      $expanded = remove_ambiguous_alleles(\$expanded);
+      push @{$fail_variant{14}}, $var->{v_id};
+
+
+      ## identify specific alleles to fail
+      my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
+      foreach my $amb_al( @{$ambiguous_alleles} ){
+        push @{$fail_varallele{ $var->{v_id} }{ $amb_al }},14; 
+      }
+    }
+
+
+
+    ## Flip variants only if the reference locations are all reverse strand or there is only 1 reference genomic location
+    next if $var->{map} > 1 && $strand_summary->{ $var->{v_id} } ==0 ;
+
+
+    ## flip allele string if on reverse strand 
+    if( $var->{strand}  eq "-1"){ 
+
+      reverse_comp(\$expanded );          ## for ref check
+      if( $var->{allele}=~ /\(/){
+         $var->{allele} = revcomp_tandem($var->{allele});
+      }
+      else{
+          reverse_comp(\$var->{allele} );   ## for database storage
+      }
+      ## correct strand 
+      $var->{strand} = 1;
+      ## update stored reference allele string used in allele checking
+      $allele_string{$var->{v_id}} = $var->{allele};
+    }
+
+  
+    ## Reference match checks and re-ordering only run for variants with 1 genomic location
+    next if $var->{map} > 1 ;
+  
+    # Extract reference sequence to run ref checks
+    my $db = Bio::DB::Fasta->new($fasta_file );
+    my $ref_seq = get_reference_base($var, $db, "fasta_seq") ;
+
+    unless(defined $ref_seq){ 
+      ## don't check further if obvious coordinate error giving no sequence
+      push @{$fail_variant{15}}, $var->{v_id};
+      next;
+    }
+
+
+    my $match_coord_length = 0; ## is either allele of compatible length with given coordinates?
+  
+    my @alleles = split/\//, $var->{allele} ; 
+    foreach my $al(@alleles){
+      my $ch = $al;
+      expand(\$ch);  ## run ref check against ATATAT not (AT)3
+      if($ch eq $ref_seq){
+        $var->{ref} = $al;
+        $match_coord_length = 1;
+      }
+      else{ 
+        ## is the length ok even if the base doesn't match?
+        my $size_ok = check_variant_size( $var->{start} , $var->{end} , $al);
+        $match_coord_length = 1 if $size_ok ==1;
+         ## save as alt allele if it doesn't match the reference
+         $var->{alt} .= "/" . $al;
+      }
+    }
+
+    unless  ($match_coord_length == 1){
+      push @{$fail_variant{15}}, $var->{v_id};
+    }
+
+    ## lengths ok - is actual base in agreement?
+    if( defined $var->{ref}){
+      ## re-order the allele_string field with the reference allele first 
+      $var->{allele} = $var->{ref} . $var->{alt};            
+    }
+    else{
+      ##  Type 2 - flag variants as fails if neither allele matches the reference
+      push @{$fail_variant{2}}, $var->{v_id} ;
+
+
+    } 
+    ## save for allele checker if fully processed and possibly flipped
+    $allele_string{$var->{v_id}} = $var->{allele};
+
+  }
+
+  return ($to_check, \%allele_string, \%fail_variant, \%fail_varallele) ;
 
 }
 
