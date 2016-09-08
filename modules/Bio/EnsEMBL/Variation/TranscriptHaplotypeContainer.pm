@@ -782,7 +782,7 @@ sub _init {
         my $haplotype = $self->_get_TranscriptHaplotype_by_hex($hex);
         
         # if it doesn't exist yet, create new object
-        if(!$haplotype) {        
+        if(!$haplotype) {
           my %hash = (
             -container   => $self,
             -type        => $type,
@@ -1215,7 +1215,7 @@ sub _mutate_sequences {
         $flags{indel} = 1 if length($allele) != $replace_len;
         my $length_diff = length($allele) - $replace_len;
         $flags{length_diff} += $length_diff;
-        $flags{has_frameshift} = 1 if $length_diff % 3 != 0;
+        $flags{frameshift} = 1 if $length_diff % 3 != 0;
 
         # only do the edit if it is actually an edit
         if(substr($seq, $mapping->start - 1, $replace_len) ne $allele) {
