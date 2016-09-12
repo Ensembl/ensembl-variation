@@ -102,8 +102,8 @@ sub new {
     type => $type,
     seq => $seq,
     has_indel => $indel,
-    length_diff => $length_diff,
-    frameshift => $frameshift,
+    _length_diff => $length_diff,
+    _frameshift => $frameshift,
     hex => $hex,
     other_hexes => {},
     _container => $container
@@ -288,7 +288,7 @@ sub has_indel {
 =cut
 
 sub length_diff {
-  return $_[0]->{length_diff} || 0;
+  return $_[0]->{_length_diff} || 0;
 }
 
 

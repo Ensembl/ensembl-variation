@@ -166,7 +166,7 @@ sub get_all_flags {
 
 sub has_frameshift {
   my $self = shift;
-  return $self->{frameshift} && ($self->{length_diff} % 3 != 0);
+  return $self->{_frameshift} && ($self->{_length_diff} % 3 != 0);
 }
 
 
@@ -185,7 +185,7 @@ sub has_frameshift {
 
 sub has_resolved_frameshift {
   my $self = shift;
-  return $self->{frameshift} && ($self->{length_diff} % 3 == 0);
+  return $self->{_frameshift} && ($self->{_length_diff} % 3 == 0);
 }
 
 
