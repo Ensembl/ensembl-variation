@@ -162,12 +162,16 @@ sub pipeline_analyses {
       },
       -rc_name       => 'default',
       -analysis_capacity => 30,
+      -flow_into      => {
+        -1 => ['dump_transcript_haplotypes_highmem'],
+      }
     },
     {
       -logic_name    => 'dump_transcript_haplotypes_highmem',
       -module        => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptHaplotypes::DumpTranscriptHaplotypes',
       -parameters    => {
-        @common_params
+        @common_params,
+        'filter_frequency'
       },
       -rc_name       => 'highmem',
       -analysis_capacity => 20,
