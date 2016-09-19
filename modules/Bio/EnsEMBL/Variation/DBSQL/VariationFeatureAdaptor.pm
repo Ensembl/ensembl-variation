@@ -1720,14 +1720,15 @@ sub _parse_hgvs_transcript_position {
         if($start_direction eq "-"){ $start = $start - $start_offset; }
         if($end_direction   eq "-"){ $end   = $end   - $end_offset;   }
      }
-     elsif($strand  == -1 ){
-        if($start_direction eq "+"){ $start = $start - $start_offset;}
-        if($end_direction   eq "+"){ $end   = $end   - $end_offset;  }
-      
-        if($start_direction eq "-"){ $start = $start + $start_offset;}
-        if($end_direction   eq "-"){ $end   = $end   + $end_offset;  }
+      elsif($strand  == -1 ){
 
-        ($start, $end) = ($end,$start) ;
+        ## start & end swapped for rev strand features => apply offsets
+        if($end_direction   eq "+"){ $start = $start - $end_offset;}
+        if($start_direction eq "+"){ $end   = $end   - $start_offset;  }
+
+        if($end_direction   eq "-"){ $start = $start + $end_offset;}
+        if($start_direction eq "-"){ $end   = $end   + $start_offset;  }
+ 
      }
    }
 
