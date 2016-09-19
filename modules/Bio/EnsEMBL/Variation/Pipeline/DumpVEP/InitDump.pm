@@ -215,7 +215,12 @@ sub get_species_list {
         # do we have a variation DB?
         my $var_db_name = $current_db_name;
         $var_db_name =~ s/otherfeatures/variation/;
-        my $has_var_db = $dbc->do("SHOW DATABASES LIKE '$var_db_name';");
+        my $has_var_db;
+        $sth = $dbc->prepare("SHOW DATABASES LIKE '$var_db_name';");
+        $sth->execute();
+        $sth->bind_columns(\$has_var_db);
+        $sth->fetch;
+        $sth->finish;
         
         $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
         $current_db_name =~ s/\_otherfeatures$//;
@@ -226,10 +231,10 @@ sub get_species_list {
         $species_hash{species} = $current_db_name;
         $species_hash{assembly} = $assembly;
         $species_hash{species_refseq} = 1;
-        $species_hash{variation} = $has_var_db == 1 ? 1 : 0;
+        $species_hash{variation} = $has_var_db ? 1 : 0;
         
         # do we have SIFT or PolyPhen?
-        if($has_var_db == 1) {
+        if($has_var_db) {
           $sth = $dbc->prepare("SELECT meta_key, meta_value FROM $var_db_name\.meta WHERE meta_key in ('sift_version','polyphen_version')");
           $sth->execute();
           
@@ -246,14 +251,25 @@ sub get_species_list {
         # do we have a regulation DB?
         my $reg_db_name = $var_db_name;
         $reg_db_name =~ s/variation/funcgen/;
-        my $has_reg_db = $dbc->do("SHOW DATABASES LIKE '$reg_db_name';");
-  
-        my $has_reg_build = $dbc->do(qq{
-          SELECT meta_value
-          FROM $reg_db_name\.meta
-          WHERE meta_key = 'regbuild.version'
-        }) if $has_reg_db == 1;
-        $species_hash{regulatory} = 1 if $has_reg_build && $has_reg_build == 1;
+
+        my $has_reg_db;
+        $sth = $dbc->prepare("SHOW DATABASES LIKE '$reg_db_name';");
+        $sth->execute();
+        $sth->bind_columns(\$has_reg_db);
+        $sth->fetch;
+        $sth->finish;
+
+        if($has_reg_db) {
+          my $has_reg_build;
+
+          $sth = $dbc->prepare("SELECT version FROM $reg_db_name.regulatory_build");
+          $sth->execute();
+          $sth->bind_columns(\$has_reg_build);
+          $sth->fetch;
+          $sth->finish;
+
+          $species_hash{regulatory} = 1 if $has_reg_build;
+        }
 
         push @species, \%species_hash;
       }
@@ -275,16 +291,31 @@ sub get_species_list {
       # do we have a variation DB?
       my $var_db_name = $current_db_name;
       $var_db_name =~ s/core/variation/;
-      my $has_var_db = $dbc->do("SHOW DATABASES LIKE '$var_db_name';");
+      my $has_var_db;
+      $sth = $dbc->prepare("SHOW DATABASES LIKE '$var_db_name';");
+      $sth->execute();
+      $sth->bind_columns(\$has_var_db);
+      $sth->fetch;
+      $sth->finish;
       
       # do we have a regulation DB?
       my $reg_db_name = $var_db_name;
       $reg_db_name =~ s/variation/funcgen/;
-      my $has_reg_db = $dbc->do("SHOW DATABASES LIKE '$reg_db_name';");
+      my $has_reg_db;
+      $sth = $dbc->prepare("SHOW DATABASES LIKE '$reg_db_name';");
+      $sth->execute();
+      $sth->bind_columns(\$has_reg_db);
+      $sth->fetch;
+      $sth->finish;
+      my $has_reg_build;
 
-      my $has_reg_build = $dbc->do(qq{
-        SELECT version FROM $reg_db_name\.regulatory_build
-      }) if $has_reg_db == 1;
+      if($has_reg_db) {
+        $sth = $dbc->prepare("SELECT version FROM $reg_db_name.regulatory_build");
+        $sth->execute();
+        $sth->bind_columns(\$has_reg_build);
+        $sth->fetch;
+        $sth->finish;
+      }
       
       foreach $species_id(keys %$species_ids) {
         $sth = $dbc->prepare("SELECT version FROM ".$current_db_name.".coord_system WHERE species_id = ".$species_id." ORDER BY rank LIMIT 1;");
@@ -301,12 +332,12 @@ sub get_species_list {
         
         $species_hash{species} = $species_ids->{$species_id};
         $species_hash{assembly} = $assembly;
-        $species_hash{variation} = $has_var_db == 1 ? 1 : 0;
-        $species_hash{regulatory} = 1 if $has_reg_build && $has_reg_build == 1;
+        $species_hash{variation} = $has_var_db ? 1 : 0;
+        $species_hash{regulatory} = 1 if $has_reg_build;
         $sth->finish();
         
         # do we have SIFT or PolyPhen?
-        if($has_var_db == 1) {
+        if($has_var_db) {
           $sth = $dbc->prepare("SELECT meta_key, meta_value FROM $var_db_name\.meta WHERE meta_key in ('sift_version','polyphen_version') AND (species_id = $species_id OR species_id IS NULL)");
           $sth->execute();
           
