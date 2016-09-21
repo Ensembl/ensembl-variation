@@ -196,7 +196,7 @@ foreach my $host(split /\,/, $config->{host}) {
       $sth = $config->{current}->{vdb}->prepare(qq{
         SELECT seq_region_id, COUNT(*)
         FROM variation_feature
-        GROUP BY variation_feature_id;
+        GROUP BY seq_region_id;
       });
       $sth->execute();
 
@@ -648,8 +648,8 @@ sub check_tr {
   if($tr->{biotype} eq 'protein_coding') {
     $config->{current}->{found_protein_coding} = 1;
     
-    ok($tr->{_variation_effect_feature_cache}->{translateable_seq}, "tr has translateable_seq");
-    ok($tr->{_variation_effect_feature_cache}->{peptide}, "tr has peptide");
+    ok($tr->{_variation_effect_feature_cache}->{translateable_seq}, "tr has translateable_seq") or diag(Dumper $tr);
+    ok($tr->{_variation_effect_feature_cache}->{peptide}, "tr has peptide") or diag(Dumper $tr);
     
     if($tr->{_variation_effect_feature_cache}->{protein_function_predictions}) {
       $config->{current}->{'found_'.$_} = 1 for map {s/\_.+//g; $_} keys %{$tr->{_variation_effect_feature_cache}->{protein_function_predictions}};
