@@ -81,24 +81,48 @@ sub run {
     print STDERR "$cmd\n";
   }
   else {
-    open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
-    my @buffer;
-    while(<CMD>) {
-      $finished = 1 if /Finished/;
-      push @buffer, $_;
-      shift @buffer if scalar @buffer > 20;
+
+    my $hc_lock_file_name = $self->hc_lock_file_name($params);
+
+    unless(-e $hc_lock_file_name) {
+      open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
+      my @buffer;
+      while(<CMD>) {
+        $finished = 1 if /Finished/;
+        push @buffer, $_;
+        shift @buffer if scalar @buffer > 20;
+      }
+      close CMD;
+    
+      die "ERROR: Encountered an error running VEP\n".join("", @buffer)."\n" unless $finished;
     }
-    close CMD;
-  
-    die "ERROR: Encountered an error running VEP\n".join("", @buffer)."\n" unless $finished;
+
+    open OUT, $hc_lock_file_name;
+    print OUT "1\n";
+    close OUT;
   
     # healthcheck resultant cache
     $self->healthcheck_cache($params);
   
     $self->tar($self->param('species_refseq') ? 'refseq' : '');
+
+    unlink $hc_lock_file_name;
   }
   
   return;
+}
+
+sub hc_lock_file_name {
+  my $self = shift;
+  my $params = shift;
+
+  return sprintf(
+    "%s/%s_%s_%i.hc_lock",
+    $params->{dir},
+    $params->{species},
+    $params->{assembly},
+    $params->{eg_version} || $params->{version}
+  );
 }
 
 
