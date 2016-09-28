@@ -81,7 +81,7 @@ use vars qw(@ISA);
     Bio::EnsEMBL::Variation::Variation - The variation associated with this
     genotype
   Arg [-sample] :
-    Bio::EnsEMBL::Sample - The sample this genotype is for.
+    Bio::EnsEMBL::Variation::Sample - The sample this genotype is for.
   Example    : $sample_genotype = Bio:EnsEMBL::Variation::SampleGenotype->new(
 				-start      => 100,
 				-end        => 100,
