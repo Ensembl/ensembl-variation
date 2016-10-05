@@ -74,7 +74,7 @@ sub convert {
   
   # construct command
   my $cmd = sprintf(
-    '%s %s --species %s --version %s_%s --dir %s --remove',
+    '%s %s --species %s --version %s_%s --dir %s --remove --force',
     $perl,
     $con_cmd,
     
