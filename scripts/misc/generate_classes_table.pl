@@ -32,6 +32,7 @@
 use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::DBSQL::OntologyTermAdaptor;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
 use Getopt::Long;
 
@@ -56,8 +57,10 @@ usage ("Species, host, version and output_file must be specified") unless ($spec
 $registry->load_registry_from_db(
     -host => $host,
     -user => 'ensro',
-    -db_version => $db_version,
+    -db_version => $db_version
 );
+
+my $internal_link = '/i/16/internal_link.png';
 
 my %colour = (
     'copy_number_variation'          => '#8601AF',
@@ -83,14 +86,24 @@ my $default_colour = '#000000';
 
 
 my %type = (
-  '1' => 'Variant',
-  '2' => '<span class="_ht ht" title="Structural variant">SV</span>',
-  '3' => 'Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span>',
-  '4' => 'CNV probe',
+  '1' => { 'label' => 'Variant', 'type' => 'var'},
+  '2' => { 'label' => '<span class="_ht ht" title="Structural variant">SV</span>', 'type' => 'sv'},
+  '3' => { 'label' => 'Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span>',
+           'type'  => 'both'},
+  '4' => { 'label' => 'CNV probe', 'type' => 'sv'},
 );
+
+
+my %example_urls = (
+  'var' => qq{<a href="/Homo_sapiens/Variation/Explore?v=####NAME####" target="_blank" title="See a variant example"><img src="$internal_link" alt="Link"/></a>},
+  'sv'  => qq{<a href="/Homo_sapiens/StructuralVariation/Explore?sv=####NAME####" target="_blank" title="See a structural variant example"><img src="$internal_link" alt="Link"/></a>}
+);
+
 
 my $vdb = $registry->get_DBAdaptor($species,'variation');
 my $dbVar = $vdb->dbc->db_handle;
+
+my $odb = $registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
 my %var_class;
 my %sv_class;
@@ -98,32 +111,50 @@ my %both_class;
 my %cnv_probe_class;
 
 # Variation classes
-my $stmt1 = qq{ SELECT distinct a.value FROM variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
-my $sth1  = $dbVar->prepare($stmt1);
+my $stmt1  = qq{ SELECT distinct a.value FROM variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
+my $sth1   = $dbVar->prepare($stmt1);
+my $stmt1a = qq{ SELECT v.name FROM variation v, attrib a WHERE v.variation_id NOT IN (SELECT variation_id FROM failed_variation) AND a.attrib_id=v.class_attrib_id AND a.value=? LIMIT 1 };
+my $sth1a  = $dbVar->prepare($stmt1a);
 $sth1->execute;
 while(my $v_class = ($sth1->fetchrow_array)[0]) {
-  $var_class{$v_class} = $VARIATION_CLASSES{$v_class};
-} 
-$sth1->finish;
+  $var_class{$v_class}{'class'} = $VARIATION_CLASSES{$v_class};
+  
+  $sth1a->execute($v_class);
+  my $v_name = ($sth1a->fetchrow_array)[0];
+  $var_class{$v_class}{'example'} = $v_name if ($v_name);
+}
+$sth1->finish; 
+$sth1a->finish;
 
 
 # Structural variation classes + CNV probes
-my $stmt2 = qq{ SELECT distinct a.value FROM structural_variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
-my $sth2  = $dbVar->prepare($stmt2);
+my $stmt2  = qq{ SELECT distinct a.value FROM structural_variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
+my $sth2   = $dbVar->prepare($stmt2);
+my $stmt2a = qq{ SELECT v.variation_name FROM structural_variation v, attrib a WHERE v.structural_variation_id NOT IN (SELECT structural_variation_id FROM failed_structural_variation) AND a.attrib_id=v.class_attrib_id AND a.value=? LIMIT 1 };
+my $sth2a  = $dbVar->prepare($stmt2a);
 $sth2->execute;
 while(my $sv_class = ($sth2->fetchrow_array)[0]) {
+
+    $sth2a->execute($sv_class);
+    my $sv_name = ($sth2a->fetchrow_array)[0];
+
   if ($sv_class =~ /probe/) {
-    $cnv_probe_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
+    $cnv_probe_class{$sv_class}{'class'}   = $VARIATION_CLASSES{$sv_class};
+    $cnv_probe_class{$sv_class}{'example'} = $sv_name if ($sv_name);
     next;
   }
   if ($var_class{$sv_class}) {
-    $both_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
+    $both_class{$sv_class}{'class'} = $VARIATION_CLASSES{$sv_class};
+    $both_class{$sv_class}{'sv_example'} = $sv_name if ($sv_name);
+    $both_class{$sv_class}{'v_example'}  = $var_class{$sv_class}{'example'} if ($var_class{$sv_class}{'example'});
     delete($var_class{$sv_class});
     next;
   }
-  $sv_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
+  $sv_class{$sv_class}{'class'}   = $VARIATION_CLASSES{$sv_class};
+  $sv_class{$sv_class}{'example'} = $sv_name if ($sv_name);
 } 
 $sth2->finish;
+$sth2a->finish;
 
 
 
@@ -136,7 +167,7 @@ my $html = qq{
     <th>SO description</th>
     <th>SO accession</th>
     <th>Ensembl term</th>
-    <th>Called for</th>
+    <th colspan="2">Called for (e.g.)</th>
   </tr>
 };
 
@@ -167,16 +198,15 @@ $html .= qq{</table>\n};
 $html .= qq{
 <p>
 <b>*</b> Corresponding colours for the Ensembl web displays (only for Structural variants). 
-The colours are based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
+The colours were originally based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
 <p>
 };
 
-$html.= get_var_class_piechart();
+$html .= get_var_class_piechart();
 
 open  OUT, "> $output_file" or die $!;
 print OUT $html;
 close(OUT);
-
 
 
 sub print_line {
@@ -184,20 +214,21 @@ sub print_line {
   my $data    = shift;
   my $type_id = shift;
   
-  my $e_class  = $data->{display_term};
-  my $so_acc   = $data->{SO_accession};
-  my $som_term = $data->{somatic_display_term};
-  my $t_name   = $type{$type_id};
-  
+  my $e_class  = $data->{'class'}{display_term};
+  my $so_acc   = $data->{'class'}{SO_accession};
+  my $som_term = $data->{'class'}{somatic_display_term};
+  my $t_name   = $type{$type_id}{'label'};
+  my $examples = get_examples($type_id,$data);
+
   my $so_desc;
-  `wget http://www.sequenceontology.org/browser/current_release/export/term_only/csv_text/$so_acc`;
-  
-  
-  if (-e $so_acc) {
-    my $content = `grep -w $so_acc $so_acc`;
-    $so_desc = (split("\t",$content))[2];
-    `rm -f ./$so_acc`;
+  print STDERR "Class $so_term ... ";
+  my $oterm = $odb->fetch_by_accession($so_acc);
+  if ($oterm) {
+    my $desc = $oterm->definition;
+    $desc =~ /"(.+)"/;
+    $so_desc = $1;
   }
+  print STDERR "done\n";
   
   my $class_col = '';
   if ($colour{$so_term}) {
@@ -222,6 +253,7 @@ sub print_line {
         <li style="margin:0px">$t_name</li>
       </ul>
     </td>
+    <td$rowspan style="padding-left:0px;width:16px">$examples</td>
   </tr>};
   
   if ($so_term ne 'probe') {
@@ -233,6 +265,41 @@ sub print_line {
   
   if ($bg eq '') { $bg = ' class="bg2"'; }  
   else { $bg = ''; }
+}
+
+
+sub get_examples {
+  my $vtype = shift;
+  my $data  = shift;
+  
+  my $example_type = $type{$vtype}{'type'};
+  my $html = "";
+  if ($example_type eq 'both') {
+  
+    my $v_name = ($data->{'v_example'}) ? $data->{'v_example'} : '';
+    my $var_url = $example_urls{'var'};
+       $var_url =~ s/####NAME####/$v_name/;
+    $html .= qq{<div>$var_url</div>};
+    
+    my $sv_name = ($data->{'sv_example'}) ? $data->{'sv_example'} : '';
+    my $sv_url = $example_urls{'sv'};
+       $sv_url =~ s/####NAME####/$sv_name/;
+     $html .= qq{<div style="padding-top:1px">$sv_url</div>};
+  }
+  elsif ($example_type eq 'var') {
+    my $v_name = ($data->{'example'}) ? $data->{'example'} : '';
+    my $var_url = $example_urls{'var'};
+       $var_url =~ s/####NAME####/$v_name/;
+     $html .= qq{<div>$var_url</div>};
+  }
+  elsif ($example_type eq 'sv') {
+    my $sv_name = ($data->{'example'}) ? $data->{'example'} : '';
+    my $sv_url = $example_urls{'sv'};
+       $sv_url =~ s/####NAME####/$sv_name/;
+     $html .= qq{<div>$sv_url</div>};
+  }
+  
+  return $html;
 }
 
 sub get_var_class_piechart {
