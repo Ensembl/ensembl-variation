@@ -99,17 +99,17 @@ my $vdb = $multi->get_DBAdaptor('variation');
 
 ok(count_rows($vdb, "meta_coord") eq 6, "meta_coord count");
 
-my $attr = get_evidence_attribs($vdb); 
+my $attr = get_evidence_attribs($vdb->dbc()); 
 
 ok($attr->{"Frequency"} eq  '368', "attrib extraction - single");  
 ok(scalar( keys %$attr) eq  '6', "attrib extraction - total");  
 
-my $cit = get_pubmed_variations($vdb, 26469700, 26469702); 
+my $cit = get_pubmed_variations($vdb->dbc(), 26469700, 26469702); 
 
 ok($cit->{26469702} eq  '1', "citation extraction - single");  
 ok(scalar( keys %$cit) eq  '1', "citation extraction - total");  
 
-my $ev = get_ss_variations($vdb, 1748253,1748253);
+my $ev = get_ss_variations($vdb->dbc(), 1748253,1748253);
 ok($ev->{1748253}->{'freq'}  ==1, "evidence summary 1");
 ok($ev->{1748253}->{'count'} ==17, "evidence summary 2");
 
