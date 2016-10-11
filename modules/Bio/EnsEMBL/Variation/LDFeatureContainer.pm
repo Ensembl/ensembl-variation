@@ -507,6 +507,7 @@ sub _pos2vf {
     my %pos2vf = ();
 
     foreach my $slice(@{$self->_slices}) {
+      my $slice = $slice->[0];
       my $vfs = $vf_adaptor->fetch_all_by_Slice($slice);
       my $region_Slice = $slice->seq_region_Slice();
 
