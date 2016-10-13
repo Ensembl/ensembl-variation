@@ -33,6 +33,8 @@ use HTTP::Tiny;
 use Getopt::Long;
 use JSON;
 
+# Mean to parse the schema version 1.2.3
+
 our ($species, $input_file, $output_file, $registry_file, $help);
 
 GetOptions('species=s'     => \$species,
@@ -64,15 +66,22 @@ die("ERROR: Could not get ontology term adaptor") unless defined($ota);
 # Source: Cancer Gene Census (http://cancer.sanger.ac.uk/census/)
 
 open OUT, "> $output_file" || die $!;
-open IN, "< $input_file" || die $!;
+if($input_file =~ /gz$/) {
+  open IN, "zcat $input_file |" or die ("Could not open $input_file for reading");
+}
+else {
+  open(IN,'<',$input_file) or die ("Could not open $input_file for reading");
+}
+
 while(<IN>) {
   chomp $_;
   my $json_hash = decode_json($_);
   
-  my $source        = $json_hash->{'sourceID'};
+  my $source = $json_hash->{'sourceID'};
+  next unless ($source =~ /cancer_gene_census/);
+  
   my $type          = $json_hash->{'type'};
-  my $gene_symbol   = $json_hash->{'unique_association_fields'}{'gene'};
-  #my @pmids         = split(',',$json_hash->{'unique_association_fields'}{'publicationIDs'});
+  my $gene_symbol   = $json_hash->{'target'}{'gene_info'}{'symbol'};
   my $pmids         = parse_publications($json_hash->{'literature'}{'references'});
   my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_uri'};
   
