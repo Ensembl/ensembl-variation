@@ -53,6 +53,7 @@ usage('-input_file argument is required') if (!$input_file);
 usage('-output_file argument is required') if (!$output_file);
 
 my %efos;
+my %data;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 $registry->load_all( $registry_file );
@@ -65,7 +66,6 @@ die("ERROR: Could not get ontology term adaptor") unless defined($ota);
 
 # Source: Cancer Gene Census (http://cancer.sanger.ac.uk/census/)
 
-open OUT, "> $output_file" || die $!;
 if($input_file =~ /gz$/) {
   open IN, "zcat $input_file |" or die ("Could not open $input_file for reading");
 }
@@ -119,13 +119,33 @@ while(<IN>) {
 			
   foreach my $gene(@$genes) {
     my $gene_id = $gene->stable_id;
-    my $add_flag = 1;
-    $add_flag = 0 if (%stable_ids && !$stable_ids{$gene_id});
+    next if (%stable_ids && !$stable_ids{$gene_id});
     
-    print OUT "$gene_symbol\t$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\n" if ($add_flag == 1);
+    $data{$gene_symbol}{$gene_id}{$phenotype}{'type'} = $type;
+    $data{$gene_symbol}{$gene_id}{$phenotype}{'source'} = $source;
+    $data{$gene_symbol}{$gene_id}{$phenotype}{'phenotype_id'} = $phenotype_id;
+    foreach my $pmid (@$pmids) {
+      $data{$gene_symbol}{$gene_id}{$phenotype}{'pmids'}{$pmid} = 1; 
+    }
   }
 }
 close(F);
+
+
+
+open OUT, "> $output_file" || die $!;
+foreach my $gene_symbol (sort(keys(%data))) {
+  foreach my $gene_id (keys(%{$data{$gene_symbol}})) {
+    foreach my $phenotype (keys(%{$data{$gene_symbol}{$gene_id}})) {
+      my $type         = $data{$gene_symbol}{$gene_id}{$phenotype}{'type'};
+      my $source       = $data{$gene_symbol}{$gene_id}{$phenotype}{'source'};
+      my $phenotype_id = $data{$gene_symbol}{$gene_id}{$phenotype}{'phenotype_id'};
+      my $pmids = join(',', keys(%{$data{$gene_symbol}{$gene_id}{$phenotype}{'pmids'}}));
+      print OUT "$gene_symbol\t$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\n";
+    }
+  }
+}
+
 close(OUT);
 
 
@@ -147,7 +167,7 @@ sub get_phenotype_desc {
 sub parse_publications {
   my $pubs = shift;
   
-  my @pmids;
+  my @pmids = ();
   foreach my $pub (@$pubs) {
     my $pub_id = $pub->{'lit_id'};
     $pub_id=~ /^http:\/\/europepmc.org\/abstract\/MED\/(\d+)$/i;
@@ -156,7 +176,7 @@ sub parse_publications {
       push @pmids,$pmid;
     }
   }
-  return (@pmids) ? join(',',@pmids) : '';
+  return \@pmids;
 }
 
 sub usage {
