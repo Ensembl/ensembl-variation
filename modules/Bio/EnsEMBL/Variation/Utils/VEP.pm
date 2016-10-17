@@ -347,15 +347,6 @@ our @VAR_CACHE_COLS = qw(
 
 our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length ensembl refseq);
 
-# don't assert refs
-$Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
-
-# don't use rearrange
-$Bio::EnsEMBL::Utils::Argument::NO_REARRANGE = 1;
-
-# avoid using transfer
-$Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = 1;
-
 # parses a line of input, returns VF object(s)
 sub parse_line {
     my $config = shift;
@@ -1114,6 +1105,19 @@ sub get_all_consequences {
     my $config     = shift;
     my $listref    = shift;
 
+    # set some package variables to optimal values for speed
+    # don't assert refs
+    my $assertions_bak = $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+    $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0;
+
+    # don't use rearrange
+    my $no_rearrange_bak = $Bio::EnsEMBL::Utils::Argument::NO_REARRANGE;
+    $Bio::EnsEMBL::Utils::Argument::NO_REARRANGE = 1;
+
+    # avoid using transfer
+    my $no_transfer_bak = $Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER;
+    $Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = 1;
+
     if ($config->{extra}) {
         eval "use Plugin qw($config);"
     }
@@ -1394,6 +1398,11 @@ sub get_all_consequences {
     elsif(defined($test) && ref($test) eq 'HASH' && defined($test->{_order})) {
       @return = map {delete $_->{_order}; $_} sort {$a->{_order} cmp $b->{_order}} @return;
     }
+
+    # restore changed package variable values
+    $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = $assertions_bak;
+    $Bio::EnsEMBL::Utils::Argument::NO_REARRANGE = $no_rearrange_bak;
+    $Bio::EnsEMBL::Variation::TranscriptVariationAllele::NO_TRANSFER = $no_transfer_bak;
 
     return \@return;
 }
@@ -5253,9 +5262,6 @@ sub dump_transcript_cache {
     my $dump_file = get_dump_file_name($config, $chr, $region, 'transcript');
 
     debug("Writing to $dump_file") unless defined($config->{quiet});
-
-    $DB::single = 1 if $region eq '20000001-21000000';
-
 
     serialize_to_file($config, $dump_file, $tr_cache);
 }
