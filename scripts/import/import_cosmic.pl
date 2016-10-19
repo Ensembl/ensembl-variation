@@ -126,9 +126,16 @@ else {
 }
 
 # Read through the file and parse out the desired fields
+my $header = 1;
 while (<IN>) {
   chomp;
-  next if ($_ =~ /^chromosome/);
+  if ($header){
+    if ($_ =~ /^\s+\d+\s+\//) {
+      $header = 0;
+      next;
+    }
+  }
+  next if ($header);
   my @line = split(',',$_);
   
   my $chr = shift(@line);
