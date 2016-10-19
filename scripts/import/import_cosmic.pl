@@ -276,8 +276,12 @@ sub get_source_id {
 
 sub add_phenotype {
   my $phenotype = shift;
-  $dbVar->do(qq{INSERT INTO phenotype (description) VALUES ("$phenotype")});
+  $dbVar->do(qq{INSERT IGNORE INTO phenotype (description) VALUES ("$phenotype")});
   my $phenotype_id = $dbVar->selectrow_arrayref(qq{SELECT phenotype_id FROM phenotype WHERE description="$phenotype"});
+
+  # Update the list of phenotypes
+  $phenotype_ids->{$phenotype} = $phenotype_id->[0];
+
   return $phenotype_id->[0];
 }
 
