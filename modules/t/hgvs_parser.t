@@ -92,8 +92,9 @@ my @test_input = (
           ["NC_000002.11:g.46739488G>A",    
            "A", 
            "ENST00000306448.4:c.363C>T",  
-           "T", 
-           "ENST00000306448.4:c.363C>T(p.=)",    
+           "T",
+           "ENSP00000304891.4:p.Leu121=", 
+           #"ENST00000306448.4:c.363C>T(p.=)",    
            "substitution, synonymous"
           ],
           ["NC_000002.11:g.46731836A>G",    
@@ -202,7 +203,8 @@ my @test_input = (
            "A",
            "ENST00000360610.2:c.2049G>A",
            "A",
-           "ENST00000360610.2:c.2049G>A(p.=)",
+           #"ENST00000360610.2:c.2049G>A(p.=)",
+           "ENSP00000353822.2:p.Lys683=",
            "substitution synonymous"
           ],          
        
@@ -278,7 +280,8 @@ my @test_input2 = (
            "A",
            "ENST00000396515.3:c.716_717insA",
            "A",
-           "ENST00000396515.3:c.716_717insA(p.=)",
+           #"ENST00000396515.3:c.716_717insA(p.=)",
+           "ENSP00000379772.3:p.Ter239=",
            "insertion, stop retained"
           ],
           ["NC_000001.10:g.154140413_154140415delTTA",

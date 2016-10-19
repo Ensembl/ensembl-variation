@@ -767,7 +767,7 @@ sub hgvs_protein {
   ## HGVS requires the variant be located in as 3' position as possible
   ## create new tva so position can be changed without impacting ensembl consequence
   my $hgvs_tva = $self->_hgvs_tva();
- 
+
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva;
   
@@ -787,19 +787,16 @@ sub hgvs_protein {
     print "Exiting hgvs_protein - variant " . $hgvs_tva_vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
     return undef;
   }
-
-  if(stop_retained($self)) {
-    $self->{hgvs_protein} = $self->hgvs_transcript() . "(p.=)";
-    return $self->{hgvs_protein};
-  }
        
   print "proceeding with hgvs prot\n" if $DEBUG == 1;
   print "Checking translation start: " . $hgvs_tva_tv->translation_start() ."\n" if $DEBUG == 1;
-  ### get reference sequence [add seq version to transcript name]
-  my $stable_id = $tr->translation->display_id();
-  $stable_id .= "." . $tr->translation->version() 
-     unless ($stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG
-  $hgvs_notation->{ref_name} =  $stable_id;
+
+  ## checks complete - start building term
+
+  ### get reference sequence and add seq version unless LRG
+  $hgvs_notation->{ref_name} = $tr->translation->display_id();
+  $hgvs_notation->{ref_name} .= "." . $tr->translation->version() 
+    unless ($hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/);
 
   $hgvs_notation->{'numbering'} = 'p';
 
@@ -812,38 +809,28 @@ sub hgvs_protein {
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
   $hgvs_notation->{ref} = $hgvs_tva_tv->get_reference_TranscriptVariationAllele->peptide;    
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
-  if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref}){
+
+  
+  if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref} &&
+    ($hgvs_notation->{alt} ne  $hgvs_notation->{ref})){
     $hgvs_notation = _clip_alleles( $hgvs_notation);
   }
 
-  unless(defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "=") {
-    #### define type - types are different for protein numbering
-    $hgvs_notation  = $hgvs_tva->_get_hgvs_protein_type($hgvs_notation);
-    return undef unless defined $hgvs_notation->{type}; 
 
-    ##### Convert ref & alt peptides taking into account HGVS rules
-    $hgvs_notation = $hgvs_tva->_get_hgvs_peptides($hgvs_notation);
+  #### define type - types are different for protein numbering
+  $hgvs_notation  = $hgvs_tva->_get_hgvs_protein_type($hgvs_notation);
+  return undef unless defined $hgvs_notation->{type}; 
 
-    unless($hgvs_notation) {
-      $self->{hgvs_protein} = undef;
-      return undef;
-    }
-  }
-  print "Got protein type $hgvs_notation->{type} \n" if $DEBUG ==1;
+  ##### Convert ref & alt peptides taking into account HGVS rules
+  $hgvs_notation = $hgvs_tva->_get_hgvs_peptides($hgvs_notation);
 
-
-  ### no protein change - return transcript nomenclature with flag for neutral protein consequence
-  if(defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "=") {
-    return undef unless defined $self->hgvs_transcript();
-
-    $self->{hgvs_protein} = $self->hgvs_transcript() . "(p.=)";
-    return $self->{hgvs_protein};
+  unless($hgvs_notation) {
+    $self->{hgvs_protein} = undef;
+    return undef;
   }
 
   ##### String formatting
-  $self->{hgvs_protein}  =  $hgvs_tva->_get_hgvs_protein_format($hgvs_notation);
-  print "returning  $self->{hgvs_protein}\n" if $DEBUG ==1 ;
-  return $self->{hgvs_protein} ;   
+  return $hgvs_tva->_get_hgvs_protein_format($hgvs_notation);
 }
 
 sub _hgvs_tva {
@@ -1041,6 +1028,12 @@ sub _get_hgvs_protein_format {
 
   ### all start with refseq name & numbering type
   $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
+
+  ### New (v 15.11) way to describe synonymous changes
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}){
+    
+    return $hgvs_notation->{'hgvs'} . $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
+  }
 
   ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
   if(stop_lost($self)) {  ### if deletion of stop add extTer and number of new aa to alt
@@ -1891,7 +1884,10 @@ sub _get_cDNA_position {
       last; ## last exon checked
     }
   }
-  
+
+  ## this should not happen; potential refseq oddness
+  return undef unless $cdna_position; 
+ 
   # Shift the position to make it relative to the start & stop codons
   my $start_codon  =  $transcript->cdna_coding_start();
   my $stop_codon   =  $transcript->cdna_coding_end();
