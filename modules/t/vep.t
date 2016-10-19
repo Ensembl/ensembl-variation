@@ -541,7 +541,8 @@ $config = copy_config($base_config, {
 
 ($vf) = @{parse_line($config, '21 25606453 25606453 G/C +')};
 $cons = get_all_consequences($config, [$vf]);
-ok($cons && $cons->[0]->{transcript_consequences}->[2]->{hgvsp} eq 'ENST00000419219.1:c.276N>G(p.=)', "json HGVSp no escaping");
+
+ok($cons && $cons->[0]->{transcript_consequences}->[2]->{hgvsp} eq 'ENSP00000404426.1:p.Ala92=', "json HGVSp no escaping");
 
 
 # check
