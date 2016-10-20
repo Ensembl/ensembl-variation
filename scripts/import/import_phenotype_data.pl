@@ -35,6 +35,7 @@ my (
   $infile, $help,
   $host, $dbname, $user, $pass, $port,
   $chost, $cdbname, $cuser, $cpass, $cport,
+  $ontology_host, $ontology_dbname, $ontology_user, $ontology_port,
   $skip_synonyms, $skip_phenotypes, $skip_sets,
   $source, $source_version, $set, $assembly, $threshold,
   $global_phenotype_description, $mim2gene, $working_dir, $coord_file,
@@ -180,6 +181,10 @@ GetOptions(
     'cuser=s' => \$cuser,
     'cpass=s' => \$cpass,
     'cport=s' => \$cport,
+    'ontology_dbname=s' => \$ontology_dbname,
+    'ontology_host=s' => \$ontology_host,
+    'ontology_user=s' => \$ontology_user,
+    'ontology_port=s' => \$ontology_port,
     'assembly=s' => \$assembly,
     'threshold=s' => \$threshold,
     'phenotype=s' => \$global_phenotype_description,
@@ -198,6 +203,7 @@ GetOptions(
 usage() if ($help);
 
 die ("Database credentials (--host, --dbname, --user, --pass, --port) are required") unless (defined($host) && defined($dbname) && defined($user) && defined($pass));
+die ("Database credentials (--ontology_host, --ontology_dbname, --ontology_user, --ontology_port) are required for importing AnimalQTL data") unless (defined($ontology_host) && defined($ontology_dbname) && defined($ontology_user) && ($source =~ /animal.*qtl.*/i ));
 
 if (! ($source =~ m/^impc/i || ($source =~ m/^mgi/i) )) {
   die ("An input file (--infile) is required") unless (defined($infile));
@@ -270,6 +276,19 @@ if(defined($chost) && defined($cuser) && defined($cdbname)) {
   print STDOUT localtime() . "\tConnected to $cdbname on $chost:$cport\n" if ($verbose);
 }
 
+# connect to ontology DB for mapping CMO names to accessions for AnimalQTL import 
+my $ontology_db_adaptor;
+
+if(defined($ontology_host) && defined($ontology_user) && defined($ontology_dbname)) {
+  print STDOUT localtime() . "\tConnecting to database $ontology_dbname\n" if ($verbose);
+  $ontology_db_adaptor = new Bio::EnsEMBL::DBSQL::OntologyDBAdaptor(
+    -host => $ontology_host,
+    -user => $ontology_user,
+    -port => $ontology_port,
+    -dbname => $ontology_dbname
+  ) or die("Could not get a database adaptor for $ontology_dbname on $ontology_host:$ontology_port");
+  print STDOUT localtime() . "\tConnected to $ontology_dbname on $ontology_host:$ontology_port\n" if ($verbose);
+}
 
 # get attrib types
 our @attrib_types = @{get_attrib_types($db_adaptor)};
@@ -1005,7 +1024,8 @@ sub parse_omia {
 sub parse_animal_qtl {
   my $infile = shift;
   my $db_adaptor = shift;
-  
+ 
+  my $ontology_term_adaptor = $ontology_db_adaptor->get_OntologyTermAdaptor; 
   # get seq_region_ids
   my $seq_region_ids = get_seq_region_ids($db_adaptor);
   
@@ -1051,6 +1071,7 @@ sub parse_animal_qtl {
     }
 
     # create phenotype hash
+
     my $phenotype = {
       'id' => $extra->{QTL_ID},
       'description' => $extra->{Name},
@@ -1059,6 +1080,17 @@ sub parse_animal_qtl {
       'seq_region_end' => $data[4],
       'seq_region_strand' => 1
     };
+    my $CMO_name = $extra->{CMO_name};
+    
+    if ($CMO_name) {
+      my @accessions = ();
+      my $terms = $ontology_term_adaptor->fetch_all_by_name($CMO_name, 'CMO'); 
+      foreach my $term (@$terms) {
+        push @accessions, $term->accession;
+      }
+      $phenotype->{ontology_mapping_type} = 'is';
+      $phenotype->{accessions} = \@accessions;
+    }
     
     if ($phenotype->{'seq_region_start'} > $phenotype->{'seq_region_end'}) {
       my $tmp_end = $phenotype->{'seq_region_end'};
