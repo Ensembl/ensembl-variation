@@ -63,8 +63,16 @@ use warnings;
 package Bio::EnsEMBL::Variation::Source;
 
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+
+use overload qw("" to_string);
+
+sub to_string {
+  ## Deal with unwanted stringified perl object when $v->source is used instead of $v->source_name
+  deprecate("Use method 'source_name' instead of 'source', or call 'name' on the Source object.");
+  return $_[0]->name;
+}
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
