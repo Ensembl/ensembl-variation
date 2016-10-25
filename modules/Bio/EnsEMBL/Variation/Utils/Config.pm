@@ -227,6 +227,16 @@ our @VARIATION_CLASSES = (
         SO_term => 'complex_substitution',
         display_term => 'Complex substitution',
     },
+    {
+        SO_accession => 'SO:0002096',
+        SO_term => 'short_tandem_repeat_variation',
+        display_term => 'Short tandem repeat variation',
+    },
+    {
+        SO_accession => 'SO:0001786',
+        SO_term => 'loss_of_heterozygosity',
+        display_term => 'Loss of heterozygosity',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
