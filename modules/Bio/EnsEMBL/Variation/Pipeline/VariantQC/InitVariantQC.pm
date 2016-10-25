@@ -145,7 +145,10 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
   $var_dba->dbc->do(qq{ CREATE TABLE variation_feature_working like variation_feature });
   $var_dba->dbc->do(qq{ ALTER TABLE variation_feature_working DISABLE KEYS});
-  
+  ## new mysql version errors with empty not null columns
+  ## switched to null allowable for import then back to non null here 
+  $var_dba->dbc->do("alter table variation_feature_working modify column map_weight int not null");
+ 
 
   ## table to hold coded allele info after fliping 
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS allele_working});
