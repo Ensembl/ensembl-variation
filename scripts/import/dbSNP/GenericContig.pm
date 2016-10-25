@@ -1275,9 +1275,9 @@ sub individual_table {
 
     my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample ( individual_id, name) values (?,?)]);
 
-    my $ind_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual
-                                                    set  father_individual_id =?, mother_individual_id =?, gender =?
-                                                    where individual_id = ? ]);
+    my $ind_gen_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual set gender =? where individual_id = ? ]);
+    my $ind_par_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual set father_individual_id =?, mother_individual_id =?  where individual_id = ? ]);
+
 
 
     ## insert sample & individual data
@@ -1315,13 +1315,11 @@ sub individual_table {
 
     foreach my $ind (keys %$individuals){
 
-	my $gender = "Unknown";
-        $gender = $ped->{$ind}{gender}
-          if defined $ped->{$ind}{gender} && $ped->{$ind}{gender} =~/ale/;
+        $ind_gen_upd_sth->execute( $ped->{$ind}{gender}, $individual_id{$ind})
+          if defined $ped->{$ind}{gender} && $ped->{$ind}{gender} =~/ale/;;
 
-
-        my $mother_id = '\\N';
-        my $father_id = '\\N';
+        my $mother_id ;
+        my $father_id ;
 
         ## get ensmebl individual ids for parents
 	if(defined $ped->{$ind}{father} ){
@@ -1335,16 +1333,17 @@ sub individual_table {
 	if(defined $ped->{$ind}{mother} ){
 	    if(defined $individual_id{ $ped->{$ind}{mother} }){
 		$mother_id = $individual_id{ $ped->{$ind}{mother} };
-	    }else{
+	    }
+            else{
 		warn "No ensembl id found for mother : $ped->{$ind}{mother} from child id $ind\n";
 	    }
 	}
-	next unless (defined $gender ||  $father_id =~ /\d+/ || $mother_id =~ /\d+/);
-        $ind_upd_sth->execute( $father_id,
-                               $mother_id,
-                               $gender,
-                               $individual_id{$ind},
-	    );
+
+	next unless ($father_id =~ /\d+/ || $mother_id =~ /\d+/);
+        $ind_par_upd_sth->execute( $father_id,
+                                   $mother_id,
+                                   $individual_id{$ind}
+	                         );
     }
     
 
@@ -2061,6 +2060,10 @@ sub flanking_sequence_table {
 
 sub variation_feature {
   my $self = shift;
+
+  ## new mysql version errors with empty not null columns
+  ## switch to null allowable here then back to non null in QC process 
+  $self->{'dbVar'}->do("alter table variation_feature modify column map_weight int default null");
 
   #Put the log filehandle in a local variable
   my $logh = $self->{'log'};

@@ -45,6 +45,10 @@ use Progress;
 sub variation_feature{
     my $self = shift;
 
+    ## new mysql version errors with empty not null columns
+    ## switch to null allowable here then back to non null in QC process 
+    $self->{'dbVar'}->do("alter table variation_feature modify column map_weight int default null");
+
      debug(localtime() . "\tDumping seq_region data using GenericChromosome");
 
      #only take toplevel coordinates
