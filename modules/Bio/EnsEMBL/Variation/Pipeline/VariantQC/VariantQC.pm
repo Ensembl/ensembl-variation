@@ -428,7 +428,7 @@ sub export_allele_data{
 =head2 write_variant_fails
 
     Update failed_variation_working with all variation_id/reason combinations
-    Input: hash of var_id => array of fail description ids
+    Input: hash of failed description _id => array of variant ids
 
 =cut
 sub write_variant_fails{
@@ -443,12 +443,12 @@ sub write_variant_fails{
                                                ]);       
           
 
-  foreach my $var (keys %{$fail_list}){ 
+  foreach my $reason (keys %{$fail_list}){ 
 
     ## duplicates arise due to running on variation_features not variations
-    my @fails = unique(@{$fail_list->{$var}});    
+    my @fails = unique(@{$fail_list->{$reason}});    
 
-    foreach my $reason ( @fails  ){
+    foreach my $var ( @fails  ){
       $fail_ins_sth->execute($var, $reason)|| die "ERROR inserting variation fails info\n";
     }
   }

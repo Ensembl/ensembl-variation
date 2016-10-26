@@ -571,7 +571,7 @@ sub run_vf_checks{
   my $strand_summary = shift;
   my $fasta_file     = shift;
 
-  my %fail_variant;   # hash of arrays of failed variation_ids
+  my %fail_variant;   # hash of arrays of failed description ids => array of variation_ids
   my %fail_varallele; # hash of arrays of arrays failed variation_ids & alleles
   my %allele_string;  # hash of expected allele for each variation_id strings saved for allele checking
 
