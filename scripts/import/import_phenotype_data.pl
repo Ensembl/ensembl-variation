@@ -203,7 +203,10 @@ GetOptions(
 usage() if ($help);
 
 die ("Database credentials (--host, --dbname, --user, --pass, --port) are required") unless (defined($host) && defined($dbname) && defined($user) && defined($pass));
-die ("Database credentials (--ontology_host, --ontology_dbname, --ontology_user, --ontology_port) are required for importing AnimalQTL data") unless (defined($ontology_host) && defined($ontology_dbname) && defined($ontology_user) && ($source =~ /animal.*qtl.*/i ));
+
+if ($source =~ /animal.*qtl.*/i) {
+  die ("Database credentials (--ontology_host, --ontology_dbname, --ontology_user, --ontology_port) are required for importing AnimalQTL data") unless (defined($ontology_host) && defined($ontology_dbname) && defined($ontology_user));
+}
 
 if (! ($source =~ m/^impc/i || ($source =~ m/^mgi/i) )) {
   die ("An input file (--infile) is required") unless (defined($infile));
@@ -1558,7 +1561,7 @@ sub parse_cancer_gene_census {
     # get data
     my $gene_id   = $row_data[1];
     my $phen      = $row_data[4];
-    my $accession = $row_data[4];
+    my $accession = $row_data[5];
     my $pmids     = $row_data[6];
 
     my $gene = $ga->fetch_by_stable_id($gene_id);
@@ -1575,6 +1578,8 @@ sub parse_cancer_gene_census {
       'seq_region_start' => $gene->seq_region_start,
       'seq_region_end' => $gene->seq_region_end,
       'seq_region_strand' => $gene->seq_region_strand,
+      'accessions' => [$accession],
+      'ontology_mapping_type' => 'is'
     );
 
     $data{'study'} = $pmids if ($pmids);
