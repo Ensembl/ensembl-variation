@@ -220,16 +220,39 @@ sub new {
         );
     }
 
-    ## store population names if available
+    ## store populations if available
     my $populations;
     if( defined $hash->{populations}){
-      foreach my $pop_id (keys %{$hash->{populations}}){
- 
-        my $pop = Bio::EnsEMBL::Variation::Population->new
-          (-name        => $hash->{populations}->{$pop_id},
-           -dbID        => $pop_id,
-        );
-        push @{$populations}, $pop;
+      my $prefix = $hash->{population_prefix} || '';
+      my $display_group_data = $hash->{population_display_group} || {};
+
+      foreach my $pop_id (keys %{$hash->{populations}}) {
+
+        my $ref = $hash->{populations}->{$pop_id};
+        my $hashref;
+
+        if(ref($ref) eq 'HASH') {
+          $hashref = $ref;
+          
+          # we need a name at least
+          throw("ERROR: No name given in population from VCF config\n") unless $hashref->{name};
+
+          $hashref->{dbID} ||= $pop_id;
+        }
+        else {
+          $hashref = { name => $ref };
+        }
+
+        # add display group data
+        $hashref->{$_} = $display_group_data->{$_} for keys %{$display_group_data};
+
+        # add prefix
+        if($prefix && !exists($hashref->{_raw_name})) {
+          $hashref->{_raw_name} = $hashref->{name};
+          $hashref->{name} = $prefix.$hashref->{_raw_name};
+        }
+
+        push @{$populations}, Bio::EnsEMBL::Variation::Population->new_fast($hashref);
       }
     }
     

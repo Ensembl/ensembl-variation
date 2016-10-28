@@ -251,25 +251,44 @@ sub fetch_all_by_Variation {
   }
 
   if(!defined($cached)) {
-    
-    # Add a constraint on the variation_id column and pass to generic fetch
-    my $constraint = qq{ a.variation_id = $variation_id };
-    
-    # If required, add a constraint on the population id
-    if (defined($population)) {
-      my $population_id = $population->dbID();
-      $constraint .= qq{ AND a.population_id = $population_id };
-    }
-    
-    # Add the constraint for failed alleles
-    $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
-  
-    $cached = $self->generic_fetch($constraint);
-    
-    # If a population was specified, attach the population to the object
-    map {$_->population($population)} @{$cached} if (defined($population));
 
-    # add freqs from genotypes for human (1KG data)
+    my $use_vcf = $self->db->use_vcf() || 0;
+    my @from_vcf;
+
+    if($use_vcf) {
+      if(my $vfs = $variation->get_all_VariationFeatures) {
+        @from_vcf =
+          map {$_->{adaptor} = $self; $_}
+          map {@{$_->get_all_Alleles_by_VariationFeature($vfs->[0])}}
+          @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+      }
+    }
+
+    push @$cached, @from_vcf;
+    # return $cached;
+
+    # use_vcf == 2 specifies we don't want anything from the DB
+    unless($use_vcf == 2) {
+      
+      # Add a constraint on the variation_id column and pass to generic fetch
+      my $constraint = qq{ a.variation_id = $variation_id };
+      
+      # If required, add a constraint on the population id
+      if (defined($population)) {
+        my $population_id = $population->dbID();
+        $constraint .= qq{ AND a.population_id = $population_id };
+      }
+      
+      # Add the constraint for failed alleles
+      $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
+    
+      push @$cached, @{$self->generic_fetch($constraint)};
+      
+      # If a population was specified, attach the population to the object
+      map {$_->population($population)} @{$cached} if (defined($population));
+    }
+
+    # add freqs from genotypes for human (1KG data), could be from VCF so don't exclude here
     push @$cached, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
 		
     # don't store if population specified

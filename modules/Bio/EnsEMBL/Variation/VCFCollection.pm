@@ -461,6 +461,8 @@ sub use_db {
 sub get_all_Samples {
   my $self = shift;
   if(!defined($self->{samples})) {
+
+    my @samples;
     
     # we should only need to get samples from one chromosome's VCF
     my $chr = $self->list_chromosomes ? $self->list_chromosomes->[0] : '';
@@ -496,8 +498,10 @@ sub get_all_Samples {
         });
       # store the raw name to easily match to data returned from other methods
       $sample->{_raw_name} = $sample_name;
-      push @{$self->{samples}}, $sample;
+      push @samples, $sample;
     }
+
+    $self->{samples} = \@samples;
   }
   
   return $self->{samples};
@@ -588,6 +592,135 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
     $vcf->get_samples_genotypes(\@sample_names),
     $vf
   );
+}
+
+
+=head2 get_all_Alleles_by_VariationFeature
+
+  Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population
+  Example    : my $alleles = $collection->get_all_Alleles_by_VariationFeature($vf)
+  Description: Get all Alleles for a given VariationFeature object
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Allele
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_Alleles_by_VariationFeature {
+  my $self = shift;
+  my $vf = shift;
+  my $given_pop = shift;
+  
+  assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+  
+  # seek to record for VariationFeature
+  return [] unless $self->_seek_by_VariationFeature($vf);
+  
+  my $vcf = $self->_current();
+
+  my $info = $vcf->get_info;
+  my $ref = $vcf->get_reference;
+  my $alts = $vcf->get_alternatives;
+  my $start = $vcf->get_raw_start;
+
+  # find out if all the alts start with the same base
+  # ignore "*"-types
+  my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} ($ref, @$alts);
+
+  if(scalar keys %first_bases == 1) {
+    $ref = substr($ref, 1) || '-';
+    $start++;
+
+    my @new_alts;
+
+    foreach my $alt_allele(@$alts) {
+      $alt_allele = substr($alt_allele, 1) unless $alt_allele =~ /\*/;
+      $alt_allele = '-' if $alt_allele eq '';
+      push @new_alts, $alt_allele;
+    }
+
+    $alts = \@new_alts;
+  }
+
+  my @alleles;
+
+  my @pops = @{$self->get_all_Populations};
+  @pops = grep {$_->name eq $given_pop || ($_->{_raw_name} || '') eq $given_pop} @pops if $given_pop;
+
+  foreach my $pop(@pops) {
+
+    # this allows for an empty population name to be looked up as e.g. AF
+    my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
+    my $suffix = $raw_name ? '_'.$raw_name : '';
+
+    my %freqs;
+    my %counts;
+
+    # have AC and AN, prioritise as we get counts and freqs
+    if(my ($ac, $an) = ($info->{'AC'.$suffix}, $info->{'AN'.$suffix})) {
+      
+      # safety check against div by zero
+      next unless $an;
+
+      my $total = 0;
+      my @split = split(',', $ac);
+
+      # in ESP files, the last item is the reference
+      # so the number in @split won't match @$alts
+      $freqs{$ref} = sprintf('%.4g', pop(@split) / $an) if scalar @split > scalar @$alts;
+
+      for my $i(0..$#split) {
+        my $a = $alts->[$i];
+        my $c = $split[$i];
+        $total += $c;
+        $counts{$a} = $c;
+        $freqs{$a} = $c / $an;
+      }
+
+      # but in most cases ref isn't explicitly mentioned
+      unless(exists($freqs{$ref})) {
+        $counts{$ref} = $an - $total;
+        $freqs{$ref} = sprintf('%.4g', 1 - ($total / $an));
+      }
+    }
+
+    # otherwise check for AF
+    elsif(my $af = $info->{'AF'.$suffix}) {
+      my $total = 0;
+      my @split = split(',', $af);
+
+      # in ESP files, the last item is the reference
+      # so the number in @split won't match @$alts
+      $freqs{$ref} = pop(@split) if scalar @split > scalar @$alts;
+
+      for my $i(0..$#split) {
+        my $f = $split[$i];
+        $total += $f;
+        $freqs{$alts->[$i]} = $f;
+      }
+
+      # but in most cases ref isn't explicitly mentioned
+      unless(exists($freqs{$ref})) {
+        $freqs{$ref} = 1 - $total;
+      }
+    }
+
+    foreach my $a(keys %freqs) {
+      push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
+        allele     => $a,
+        count      => %counts ? ($counts{$a} || 0) : undef,
+        frequency  => $freqs{$a},
+        population => $pop,
+        variation  => $vf->variation,
+        adaptor    => $self,
+        subsnp     => undef,
+      })
+    }
+  }
+
+  return \@alleles;
 }
 
 
