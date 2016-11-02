@@ -84,5 +84,11 @@ ok($sa->store($source), "store");
 $source = $sa->fetch_by_name('test');
 ok($source && $source->name eq 'test', "fetch stored");
 
+$source->version(140);
+$sa->update_version($source);
+
+my $new_source = $sa->fetch_by_name($source->name());
+ok($new_source->version() eq 140, "update version");
+
 done_testing();
 

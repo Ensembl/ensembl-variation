@@ -61,13 +61,14 @@ use Bio::EnsEMBL::Registry;
 
 our $DEBUG = 0;
 
-my ($data_file, $registry_file, $assembly, $structvar, $done_file);
+my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean);
 
 GetOptions ("data_file=s"  => \$data_file,
             "registry=s"   => \$registry_file,
             "assembly=s"   => \$assembly,
             "structvar"    => \$structvar, 
             "done_file"    => \$done_file, 
+            "clean"        => \$clean 
             );
 
 usage() unless defined $data_file && defined $registry_file && defined $assembly;
@@ -89,7 +90,9 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
 ## fetch ClinVar source object
-my $source   =   get_source("ClinVar");
+my $source   =   get_source($data_file);
+
+clean_old_data() if defined $clean; 
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
@@ -311,11 +314,11 @@ sub import{
     }
     elsif(defined  $record->{dbVar}){
 	($feature_object, $feat) = get_structural_variant($record);
-        next unless defined $feature_object;
 
-        ## add phenotype_feature & attrib
-        import_phenotype_feature($record, $feature_object, 'StructuralVariation', $feat, $alt_allele);
-
+        if ( defined $feature_object){
+          ## add phenotype_feature & attrib
+          import_phenotype_feature($record, $feature_object, 'StructuralVariation', $feat, $alt_allele);
+        }
     }
     else{
 	warn "Can't import ". $record->{Acc} ." as no xref\n";
@@ -391,7 +394,10 @@ sub get_phenotype{
     }
 
     if($accession){
-      $pheno->add_ontology_accession($accession, 'Data source');
+      $pheno->add_ontology_accession({ accession      => $accession, 
+                                       mapping_source => 'Data source',
+                                       mapping_type   => 'is'
+                                       } );
       $phenotype_adaptor->store_ontology_accessions($pheno);
     }
 
@@ -532,11 +538,11 @@ sub get_structural_variant{
     my $record = shift;
 
     ## look for existing structural variation object
-    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{dbVar});
+    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{dbVar}->[0]);
 
-    unless (defined $struct_var_ob && ref($struct_var_ob) eq 'Bio::EnsEMBL::Variation::StructuralVariation' ){
+    unless (defined $struct_var_ob && $struct_var_ob ne ''){ 
 
-	print "Not entering SV: $record->{dbVar} as not in db \n";
+	print "Not entering SV: $record->{dbVar}->[0] as not in db \n";
 	return undef;
     }
     my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
@@ -544,18 +550,29 @@ sub get_structural_variant{
     return ($struct_var_ob, @features );
 }
 
+=head2 get_source
 
+  - retrieve source object
+  - update version number
+
+=cut
 sub get_source{
 
-    my $desc = shift;
+  my $file = shift;  ##ClinVarFullRelease_2016-10.xml 
 
-    my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
+  my $version = $file;
+  $version =~ s/\D+//g;
 
-    my $source = $source_adaptor->fetch_by_name( $desc );
+  my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
-    die "Source information not held for $desc\n" unless defined $source ;
+  my $source = $source_adaptor->fetch_by_name( 'ClinVar' );
 
-    return $source;
+  die "Source information not held for ClinVar\n" unless defined $source ;
+
+  $source->version($version);
+  $source_adaptor->update_version($source);
+
+  return $source;
 }
 
 sub add_synonyms{
@@ -577,11 +594,35 @@ sub add_synonyms{
 
 }
 
+## delete previous ClinVar data
+## a few entries are withdrawn each time
+
+sub clean_old_data{
+
+  print "Deleting old phenotype, synonym and clinical_significance data\n";
+
+  my $phenfeatat_del_sth = $dba->dbc->do(qq[ delete from phenotype_feature_attrib where phenotype_feature_id in
+                                             ( select phenotype_feature.phenotype_feature_id from phenotype_feature, source
+                                               where source.name ='ClinVar' 
+                                               and phenotype_feature.source_id = source.source_id)
+                                            ]);
+
+  my $phenfeat_del_sth   = $dba->dbc->do(qq[ delete from phenotype_feature where source_id in (select source_id from source where name ='ClinVar') ]);
+
+  my $synonym_del_sth    = $dba->dbc->do(qq[ delete from variation_synonym where source_id in (select source_id from source where name ='ClinVar') ]);
+
+  my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=\\N ]);
+
+
+}
+
+
 sub usage{
 
     die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]
 
 \t\toptions: -structvar  (only import ClinVar statuses for structural variations)
+\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, clinical_significance and synonym data)
 \n\n";
 
 }
