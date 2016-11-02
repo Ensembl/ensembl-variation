@@ -1030,28 +1030,23 @@ sub _get_hgvs_protein_format {
   $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
 
   ### New (v 15.11) way to describe synonymous changes
-  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}){
-    
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt} 
+       && $hgvs_notation->{type} ne "fs" && $hgvs_notation->{type} ne "ins"){
     return $hgvs_notation->{'hgvs'} . $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
   }
 
   ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
-  if(stop_lost($self)) {  ### if deletion of stop add extTer and number of new aa to alt
+  if(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
+    ### if deletion of stop add extTer and number of new aa to alt
 
     $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
+    print "stop loss check req for $hgvs_notation->{type}\n" if $DEBUG ==1;
 
-    if($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" ){
-      print "stop loss check req for $hgvs_notation->{type}\n" if $DEBUG ==1;
+    my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1 );
+    ### use ? to show new stop not predicted
+    $aa_til_stop = "?" unless defined $aa_til_stop ;
 
-      my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1 );
-      ### use ? to show new stop not predicted
-      $aa_til_stop = "?" unless defined $aa_til_stop ;
-
-      $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
-    }
-    else{
-      # warn "TVA: stop loss for type $hgvs_notation->{type}  not caught \n";
-    }
+    $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
     $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
   } 
 
@@ -1292,7 +1287,7 @@ sub _get_hgvs_peptides {
   ### 2012-08-31  - Ter now recommended in HGVS
   if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Xaa/Ter/g; }
   if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Xaa/Ter/g; }
-         
+
   return ($hgvs_notation);           
 }
 
@@ -1410,9 +1405,10 @@ sub _get_fs_peptides {
 
   #### get new translation
   my $alt_trans = $alt_cds->translate()->seq();
-  
+
   ### get changed end (currently in single letter AA coding)    
   my $ref_trans  = $self->transcript_variation->_peptide;
+
   $ref_trans    .= "*";   ## appending ref stop for checking purposes 
   
   $hgvs_notation->{start} = $self->transcript_variation->translation_start() ;
@@ -1492,8 +1488,10 @@ sub _get_alternate_cds{
   if($alt_allele && $vf->strand() != $tr->strand()){    
     reverse_comp(\$alt_allele) ;
   }
+
   ### build alternate seq
   my $alternate_seq  = $upstream_seq . $alt_allele . $downstream_seq ;
+  $alternate_seq  = $self->_trim_incomplete_codon($alternate_seq );
 
   ### create seq obj with alternative allele in the CDS sequence
   my $alt_cds =Bio::PrimarySeq->new(-seq => $alternate_seq,  -id => 'alt_cds', -alphabet => 'dna');
@@ -1564,7 +1562,7 @@ sub _stop_loss_extra_AA{
   
   ### get new translation
   my $alt_trans = $alt_cds->translate();
-  
+
   my $ref_temp  =  $self->transcript_variation->_peptide();
   my $ref_len = length($ref_temp);
   
@@ -1598,6 +1596,21 @@ sub _stop_loss_extra_AA{
     return undef;
   }
 }
+
+## doing this to stop final incomplete codons being guessed
+sub _trim_incomplete_codon{
+  my $self = shift;
+  my $seq  = shift;
+
+  return undef unless $seq;
+
+  my $full_length = length $seq;
+  my $keep_length = $full_length -  $full_length % 3;
+  return $seq if $full_length = $keep_length ;
+
+  return substr($seq, 0, $keep_length);
+}
+
 
 ## This is used for rare in-frame deletions removing an intron and part of both surrounding exons
 sub _get_del_peptides{
