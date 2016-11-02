@@ -255,4 +255,29 @@ sub store {
     $source->{adaptor} = $self;
 }
 
+=head2 update_version
+
+  Arg[1]      : source object
+  Example     : $sa->update_version( $source_object);
+  Description : Update the version for the source
+  ReturnType  : none
+  Exceptions  : none
+  Caller      : internal pipelines
+  Status      : Experimental
+
+=cut
+sub update_version{
+
+  my ($self, $source) = @_;
+
+  ## don't over-write to null
+  return unless $source->version();
+
+  my $dbh = $self->dbc->db_handle;
+  my $sth = $dbh->prepare(q[ update source set version = ? where source_id =?]);
+  
+  $sth->execute( $source->version(), $source->dbID() );
+
+}
+
 1;
