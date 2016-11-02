@@ -20,6 +20,7 @@ use Getopt::Long;
 use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::OntologyDBAdaptor;
 use ImportUtils;
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
