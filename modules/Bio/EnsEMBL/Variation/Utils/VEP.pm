@@ -3218,6 +3218,7 @@ sub validate_vf {
 
     # user specified chr skip list
     return 0 if defined($config->{chr}) && !$config->{chr}->{$vf->{chr}};
+    my $valid_chrs = get_cache_chromosomes($config);
     # fix inputs
     if(!$valid_chrs->{$vf->{chr}}) {
          $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i || $vf->{chr} =~ /^CHR\_/;
