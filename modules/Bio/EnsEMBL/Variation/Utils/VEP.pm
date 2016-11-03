@@ -3219,9 +3219,16 @@ sub validate_vf {
     # user specified chr skip list
     return 0 if defined($config->{chr}) && !$config->{chr}->{$vf->{chr}};
 
+    # check valid chromosomes
+    my $valid_chrs = $config->{cache} ? get_cache_chromosomes($config) : {};
+
+    # only try to modify chromosome name if it's not currently valid
+    unless($valid_chrs->{$vf->{chr}}) {      
+      $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i || $vf->{chr} =~ /^CHR\_/;
+      $vf->{chr} = 'MT' if $vf->{chr} eq 'M';
+    }
+
     # fix inputs
-    $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i || $vf->{chr} =~ /^CHR\_/;
-    $vf->{chr} = 'MT' if $vf->{chr} eq 'M';
     $vf->{strand} ||= 1;
     $vf->{strand} = ($vf->{strand} =~ /\-/ ? "-1" : "1");
 
@@ -3236,7 +3243,6 @@ sub validate_vf {
     if(defined($config->{cache})) {
 
       my $have_chr = 0;
-      my $valid_chrs = get_cache_chromosomes($config);
 
       if($valid_chrs->{$vf->{chr}}) {
         $have_chr = 1;
