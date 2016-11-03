@@ -13,10 +13,10 @@ use FileHandle;
 my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats);
 
 GetOptions(
-	'host=s'   => \$host,
-	'user=s'   => \$user,
-	'pass=s'   => \$pass,
-	'port=i'   => \$port,
+  'host=s'   => \$host,
+  'user=s'   => \$user,
+  'pass=s'   => \$pass,
+  'port=i'   => \$port,
   'version=i' => \$version,
   'species=s' => \$chosen_species,
   'dir=s'      => \$dir,
@@ -24,25 +24,25 @@ GetOptions(
 );
 
 if(defined($host) && $host =~ /staging|variation|livemirror/) {
-	$port ||= 3306;
-	$user ||= 'ensro';
-	$pass ||= '';
+  $port ||= 3306;
+  $user ||= 'ensro';
+  $pass ||= '';
 }
 
 else {
-	$host ||= 'ensembldb.ensembl.org';
-	$port ||= 5306;
-	$user ||= 'anonymous';
-	$pass ||= '';
+  $host ||= 'ensembldb.ensembl.org';
+  $port ||= 5306;
+  $user ||= 'anonymous';
+  $pass ||= '';
 }
 
 my $reg = 'Bio::EnsEMBL::Registry';
 
 $reg->load_registry_from_db(
-	-host       => $host,
-	-user       => $user,
-	-pass       => $pass,
-	-port       => $port,
+  -host       => $host,
+  -user       => $user,
+  -pass       => $pass,
+  -port       => $port,
   -db_version => $version,
 );
 
