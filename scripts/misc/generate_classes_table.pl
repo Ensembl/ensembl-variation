@@ -132,7 +132,7 @@ $sth1a->finish;
 # Structural variation classes + CNV probes
 my $stmt2  = qq{ SELECT distinct a.value FROM structural_variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
 my $sth2   = $dbVar->prepare($stmt2);
-my $stmt2a = qq{ SELECT v.variation_name FROM structural_variation v, attrib a WHERE v.structural_variation_id NOT IN (SELECT structural_variation_id FROM failed_structural_variation) AND a.attrib_id=v.class_attrib_id AND a.value=? LIMIT 1 };
+my $stmt2a = qq{ SELECT v.variation_name FROM structural_variation v, attrib a WHERE v.structural_variation_id NOT IN (SELECT structural_variation_id FROM failed_structural_variation) AND v.is_evidence=0 AND a.attrib_id=v.class_attrib_id AND a.value=? LIMIT 1 };
 my $sth2a  = $dbVar->prepare($stmt2a);
 $sth2->execute;
 while(my $sv_class = ($sth2->fetchrow_array)[0]) {
