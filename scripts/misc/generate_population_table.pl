@@ -55,6 +55,17 @@ if (!$user) {
 }
 usage() if ($help);
 
+my %exac_pops_list = (
+  'ExAC:ALL' => 'All ExAC individuals',
+  'AFR'      => 'African/African American',
+  'AMR'      => 'Latino',
+  'Adj'      => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
+  'EAS'      => 'East Asian',
+  'FIN'      => 'Finnish',
+  'NFE'      => 'Non-Finnish European',
+  'OTH'      => 'Other',
+  'SAS'      => 'South Asian'
+);
 
 ## Settings ##
 my %pops = ('1000 Genomes Project'                => { 'order'      => 1,
@@ -64,23 +75,23 @@ my %pops = ('1000 Genomes Project'                => { 'order'      => 1,
                                                        'url'        => 'http://www.1000genomes.org',
                                                        'evidence'   => '1000Genomes'
                                                      },
-            'HapMap Project'                      => { 'order'    => 2,
+            'Exome Aggregation Consortium (ExAC)' => { 'order'    => 2,
+                                                       'species'  => 'Homo sapiens',
+                                                       'list'     => \%exac_pops_list,
+                                                       'url'      => 'http://exac.broadinstitute.org/',
+                                                       'evidence' => 'ExAC'
+                                                     },
+            'HapMap Project'                      => { 'order'    => 3,
                                                        'species'  => 'Homo sapiens',
                                                        'term'     => 'CSHL-HAPMAP:HAPMAP%',
                                                        'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
                                                        'evidence' => 'HapMap'
                                                      },
-            'Exome Sequencing Project (ESP)'      => { 'order'    => 3,
+            'Exome Sequencing Project (ESP)'      => { 'order'    => 4,
                                                        'species'  => 'Homo sapiens',
                                                        'term'     => 'ESP6500:%',
                                                        'url'      => 'http://evs.gs.washington.edu/EVS/',
                                                        'evidence' => 'ESP'
-                                                     },
-            'Exome Aggregation Consortium (ExAC)' => { 'order'    => 4,
-                                                       'species'  => 'Homo sapiens',
-                                                       'term'     => 'EVA_EXAC:ExAc_Aggregated_Populations',
-                                                       'url'      => 'http://exac.broadinstitute.org/',
-                                                       'evidence' => 'ExAC'
                                                      },
             'Mouse Genomes Project (MGP)'         => { 'order'    => 5,
                                                        'species'  => 'Mus musculus',
@@ -170,8 +181,8 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   
   my $html_current_pop = '';
   my $term = $pops{$project}{'term'};
+  my $list = $pops{$project}{'list'};
   my $spe  = $pops{$project}{'species'};
-  my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
   my $url = $pops{$project}{'url'};
   my $evidence = $pops{$project}{'evidence'};
 
@@ -180,40 +191,57 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   $project_id = lc $project_id;
   $html_current_pop .= qq{<table id="$project_id" class="ss" style="margin-bottom:4px">\n  $pop_table_header\n};
 
-  my $dbname = $species_host{$spe}{'dbname'};
-  my $host   = $species_host{$spe}{'host'};
-  my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
-  my $sth  = get_connection_and_query($dbname, $host, $stmt, [$term]);
-  
   $bg = '';
   my %pop_data;
   my %pop_tree;
   my %sub_pops;
-  while(my @data = $sth->fetchrow_array) {
+  my $pop_list;
   
-    my @composed_name = split(':', $data[1]);
-       $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
-    my $pop_name = join(':',@composed_name);
-    $data[2] = '-' if (!$data[2]);
-    my $desc = parse_desc($data[3]);
-    my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0], $dbname, $host);
+  if ($term) {
+    my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
+    my $dbname = $species_host{$spe}{'dbname'};
+    my $host   = $species_host{$spe}{'host'};
+    my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
+    my $sth  = get_connection_and_query($dbname, $host, $stmt, [$term]);
+   
+    while(my @data = $sth->fetchrow_array) {
     
-    $pop_data{$data[1]} = {'id'    => $data[0],
-                           'label' => $pop_name,
-                           'desc'  => $desc,
-                           'size'  => $size
-                          };
-    # Super/sub populations                      
-    my $sth2 = get_connection_and_query($dbname, $host, $sql3, [$data[0]]);
-    while(my ($sub_pop) = $sth2->fetchrow_array) {
-      $sub_pops{$sub_pop} = 1;
-      $pop_tree{$data[1]}{$sub_pop} = 1; 
+      my @composed_name = split(':', $data[1]);
+         $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
+      my $pop_name = join(':',@composed_name);
+      $data[2] = '-' if (!$data[2]);
+      my $desc = parse_desc($data[3]);
+      my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0], $dbname, $host);
+      
+      $pop_data{$data[1]} = {'id'    => $data[0],
+                             'label' => $pop_name,
+                             'desc'  => $desc,
+                             'size'  => $size
+                            };
+      # Super/sub populations                      
+      my $sth2 = get_connection_and_query($dbname, $host, $sql3, [$data[0]]);
+      while(my ($sub_pop) = $sth2->fetchrow_array) {
+        $sub_pops{$sub_pop} = 1;
+        $pop_tree{$data[1]}{$sub_pop} = 1; 
+      }
+      $sth2->finish;
     }
-    $sth2->finish;
+    $sth->finish;
+    $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
   }
-  $sth->finish;
-  my $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
-
+  elsif ($list) {
+    foreach my $pname (keys(%$list)) {
+      my @composed_name = split(':', $pname);
+         $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
+      my $pop_name = join(':',@composed_name);
+      $pop_data{$pname} = {'label' => $pop_name,
+                           'desc'  => $list->{$pname},
+                           'size'  => '-'
+                          };
+    }
+    $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
+  }
+  
   foreach my $pop (@$pop_list) {
 
     my $new_bg = $bg;
