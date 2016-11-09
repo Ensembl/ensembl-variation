@@ -175,6 +175,9 @@ my %species_news;
 my %display_list;
 my %top_display;
 
+my $has_new_version = 0;
+my $has_new_source  = 0;
+
 my @new_status = ('version','source');
 
 my $cols_sql2  = 'source_id, name, version, description, url, type, somatic_status, data_types';
@@ -387,11 +390,16 @@ sub source_phen_table {
     my $s_new      = '';
     my $s_new_type = '';
     my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
+    
+    # New source
     if (!grep {$_ eq $source} @p_sources) {
-      $s_new_type = $new_status[1]; # New source
+      $s_new_type = $new_status[1]; 
+      $has_new_source = 1 if ($s_new_type);
     }
+    # New version
     elsif ($p_list->{$source} ne $s_version){
-      $s_new_type = $new_status[0]; # New version
+      $s_new_type = $new_status[0]; 
+      $has_new_version = 1 if ($s_new_type);
     }
    
     if ($s_new_type) {
@@ -548,10 +556,13 @@ sub create_menu {
   
   my $legend_div_id = 'legend';
 
+  if ($has_new_version) {
+    $html .= qq{    <div><span class="$v_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $v_label</small></div>};
+  }
+  if ($has_new_source) {
+    $html .= qq{    <div><span class="$s_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $s_label</small></div>};
+  }
   $html .= qq{
-    <span class="$v_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $v_label</small>
-    <br />
-    <span class="$s_colour vdoc_source_count" style="margin-left:5px">#</span><small> : $s_label</small>
   </div>
   <div id="$legend_div_id" class="vdoc_menu vdoc_menu_phen">
     <!-- Legend header -->
