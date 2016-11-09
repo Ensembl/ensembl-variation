@@ -2371,6 +2371,19 @@ sub add_phenotypes {
       AND pfa2.value = ?
     };
   }
+  elsif ($source =~ m/nhgri/i) {
+    $left_join = qq{
+      LEFT JOIN
+      (
+        phenotype_feature_attrib pfa
+        JOIN attrib_type at
+        ON pfa.attrib_type_id = at.attrib_type_id
+      )
+      ON pf.phenotype_feature_id = pfa.phenotype_feature_id
+    };
+    
+    $extra_cond = qq{ AND at.code = "p_value" AND pfa.value = ? };
+  }
   
   my $pf_check_stmt = qq{
     SELECT
@@ -2543,6 +2556,8 @@ sub add_phenotypes {
       $phenotype->{"associated_gene"} =~ s/;/,/g;
     }
 
+    $phenotype->{"p_value"} = convert_p_value($phenotype->{"p_value"}) if (defined($phenotype->{"p_value"}));
+
     # Check if this phenotype_feature already exists for this variation and source, in that case we probably want to skip it
     my $pf_id;
     $pf_check_sth->bind_param(1,$phenotype->{id},SQL_VARCHAR);
@@ -2554,8 +2569,12 @@ sub add_phenotypes {
     if ($source =~ m/uniprot/i) {
       $pf_check_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
     }
+    # For nhgri-ebi gwas data
+    elsif ($source =~ m/nhgri/i) {
+      $pf_check_sth->bind_param(6,$phenotype->{"p_value"},SQL_VARCHAR);
+    }
     # For omim data
-    if ($source =~ m/omim/i) {
+    elsif ($source =~ m/omim/i) {
       $pf_check_sth->bind_param(6,$phenotype->{"risk_allele"},SQL_VARCHAR);
       $pf_check_sth->bind_param(7,$phenotype->{"associated_gene"},SQL_VARCHAR);
     }
@@ -2564,8 +2583,6 @@ sub add_phenotypes {
     $pf_check_sth->bind_columns(\$pf_id);
     $pf_check_sth->fetch();
     next if (defined($pf_id));
-    
-    $phenotype->{"p_value"} = convert_p_value($phenotype->{"p_value"}) if (defined($phenotype->{"p_value"}));
     
     my $is_significant = defined($threshold) ? ($phenotype->{"p_value"} && $phenotype->{"p_value"} < $threshold ? 1 : 0) : 1;
     
