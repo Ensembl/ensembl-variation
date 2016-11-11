@@ -671,14 +671,12 @@ sub parse_nhgri {
         'p_value' => $pvalue,
         'study_description' => $study,
         'accessions'   => \@accessions,
-        ontology_mapping_type =>'is' 
+        'ontology_mapping_type' =>'is'
       );
    
     
       # Post process the ratio data
       if (defined($ratio)) {
-        $ratio =~ s/µ/micro/g;
-
         if ($ratio =~ /(\d+)?(\.\d+)$/) {
           my $pre  = $1;
           my $post = $2;
@@ -688,6 +686,7 @@ sub parse_nhgri {
           $ratio = undef;
         }
       }
+
       # Add ratio/coef
       if (defined($ratio)) {
         # Parse the ratio info column to extract the unit information (we are not interested in the confidence interval)
@@ -695,6 +694,7 @@ sub parse_nhgri {
           my $unit = $2;
              $unit =~ s/\(//g;
              $unit =~ s/\)//g;
+             $unit =~ s/µ/micro/g;
           if ($unit =~ /^\s+$/ || $ratio >= 1) {
             $data{'odds_ratio'} = $ratio;
           }
