@@ -449,7 +449,7 @@ sub within_mature_miRNA {
   foreach my $attribute(@{ $feat->get_all_Attributes('miRNA') }) {
 
     if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) {
-      for my $coord ($bvfo->_mapper->cdna2genomic($1, $2, $feat->strand)) {
+      for my $coord ($bvfo->_mapper->cdna2genomic($1, $2)) {
         if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
           if (overlap(
               $bvf->seq_region_start(), 
