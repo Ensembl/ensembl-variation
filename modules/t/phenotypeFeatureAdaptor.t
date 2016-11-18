@@ -120,6 +120,14 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs22992
 $pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130', 'dbSNP');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 0 , "fetch_all_by_phenotype_accession + source");
 
+# fetch_all_by_phenotype_ontology_accession & map type
+$pfs = $pfa->fetch_all_by_phenotype_accession_type_source('Orphanet:130', 'is');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs), "fetch_all_by_phenotype_accession_type_source");
+
+# fetch_all_by_phenotype_ontology_accession & map type
+$pfs = $pfa->fetch_all_by_phenotype_accession_type_source('Orphanet:130', 'involves');
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 0 , "fetch_all_by_phenotype_accession_type_source");
+
 
 # fetch_all_by_associated_gene
 $pfs = $pfa->fetch_all_by_associated_gene('YES1');

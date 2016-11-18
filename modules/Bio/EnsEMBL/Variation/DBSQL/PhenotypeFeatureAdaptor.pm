@@ -620,6 +620,46 @@ sub fetch_all_by_phenotype_accession_source {
   return $result;
 }
 
+=head2 fetch_all_by_phenotype_accession_type_source
+
+  Arg [1]    : string phenotype ontology_accession
+  Arg [2]    : mapping type - default 'is', option 'involves'
+  Arg [3]    : string source name (optional)
+  Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_accession_source('EFO:0004330','is', ClinVar');
+  Description: Retrieves a PhenotypeFeature object via an ontology accession mapping type and optional source
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if phenotype ontology accession argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_phenotype_accession_type_source {
+
+  my $self      = shift;
+  my $accession = shift;
+  my $map_type  = shift;
+  my $source    = shift;
+
+  throw('phenotype ontology accession argument expected') if(!defined($accession));
+  $map_type ||= 'is';
+
+  $self->_include_ontology(1);
+  $self->_include_attrib(1);
+
+  my $extra_sql = ' poa.accession = "' . $accession . '" ';
+  $extra_sql   .= ' and poa.mapping_type = "' . $map_type . '" ';
+  $extra_sql   .= ' and s.name = "' . $source . '" ' if $source;
+
+
+  my $result = $self->generic_fetch($extra_sql);
+
+  ## reset flags  
+  $self->_include_ontology(0);
+  $self->_include_attrib(0);
+
+  return $result;
+}
 
     
 =head2 fetch_all_by_associated_gene_phenotype_description
@@ -1008,82 +1048,116 @@ sub _default_where_clause {
 }
 
 sub _columns {
+  my $self = shift;
+
   return qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
     pf.phenotype_id pf.source_id s.name pf.study_id p.description
-  );
+    pfa.value at.code
+  ) if $self->_include_attrib;
+
+  return qw(
+    pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
+    pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
+    pf.phenotype_id pf.source_id s.name pf.study_id p.description
+  ) ;
+
 }
 
 
 
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
-  
-  # get required adaptors
-  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
-  my $aa = $self->db->get_AttributeAdaptor;
+   
+  my %row;
 
-  my (
-    @features, %slice_hash, %sr_name_hash, %sr_cs_hash,
-    $asm_cs, $cmp_cs, $asm_cs_vers, $asm_cs_name, $cmp_cs_vers, $cmp_cs_name,
-    $dest_slice_start, $dest_slice_end, $dest_slice_strand, $dest_slice_length
-  );
-  
-  if($mapper) {
-    $asm_cs = $mapper->assembled_CoordSystem();
-    $cmp_cs = $mapper->component_CoordSystem();
-    $asm_cs_name = $asm_cs->name();
-    $asm_cs_vers = $asm_cs->version();
-    $cmp_cs_name = $cmp_cs->name();
-    $cmp_cs_vers = $cmp_cs->version();
-  }
-  
-  if($dest_slice) {
-    $dest_slice_start  = $dest_slice->start();
-    $dest_slice_end    = $dest_slice->end();
-    $dest_slice_strand = $dest_slice->strand();
-    $dest_slice_length = $dest_slice->length();
-  }
-  
-  my (
-    $phenotype_feature_id, $object_id, $object_type, $is_significant,
-    $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand,
-    $phenotype_id, $source_id, $source_name, $study_id, $phenotype_description
-  );
-  
-  $sth->bind_columns(
-    \$phenotype_feature_id, \$object_id, \$object_type, \$is_significant,
-    \$seq_region_id, \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-    \$phenotype_id, \$source_id, \$source_name, \$study_id, \$phenotype_description
-  );
-  
-  my $sta = $self->db()->get_StudyAdaptor();
+  # Create the row hash using column names as keys
+  $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));
 
-  FEATURE: while($sth->fetch()) {
+  while ($sth->fetch) {
+
+      # we don't actually store the returned object because
+      # the _obj_from_row method stores them in a temporary
+      # hash _temp_objs in $self 
+
+      $self->_obj_from_row(\%row, $mapper, $dest_slice);
+  }
+
+  # Get the created objects from the temporary hash
+  my @objs = values %{ $self->{_temp_objs} };
+  delete $self->{_temp_objs};
+ 
+  # Return the created objects 
+  return \@objs;
+}
+
+
+sub _obj_from_row {
+
+  my ($self, $row, $mapper, $dest_slice) = @_;
+
+
+  my $obj = $self->{_temp_objs}{$row->{phenotype_feature_id}}; 
+    
+  unless (defined($obj)) {
+
+ 
+    # get required adaptors
+    my $sa = $self->db()->dnadb()->get_SliceAdaptor();
+    my $aa = $self->db->get_AttributeAdaptor;
+
+    my (
+      @features, %slice_hash, %sr_name_hash, %sr_cs_hash,
+      $asm_cs, $cmp_cs, $asm_cs_vers, $asm_cs_name, $cmp_cs_vers, $cmp_cs_name,
+      $dest_slice_start, $dest_slice_end, $dest_slice_strand, $dest_slice_length,
+      $sr_name
+    );
+
+    my $seq_region_start   = $row->{seq_region_start};
+    my $seq_region_end     = $row->{seq_region_end};
+    my $seq_region_strand  = $row->{seq_region_strand};
+
+    if($mapper) {
+      $asm_cs = $mapper->assembled_CoordSystem();
+      $cmp_cs = $mapper->component_CoordSystem();
+      $asm_cs_name = $asm_cs->name();
+      $asm_cs_vers = $asm_cs->version();
+      $cmp_cs_name = $cmp_cs->name();
+      $cmp_cs_vers = $cmp_cs->version();
+    }
+  
+    if($dest_slice) {
+      $dest_slice_start  = $dest_slice->start();
+      $dest_slice_end    = $dest_slice->end();
+      $dest_slice_strand = $dest_slice->strand();
+      $dest_slice_length = $dest_slice->length();
+    }
+  
+    my $sta = $self->db()->get_StudyAdaptor();
 
     # remap
-    my $slice = $slice_hash{"ID:".$seq_region_id};
+    my $slice = $slice_hash{"ID:".$row->{seq_region_id}};
     if(!$slice) {
-      $slice = $sa->fetch_by_seq_region_id($seq_region_id, undef, undef, undef, 1);
+      $slice = $sa->fetch_by_seq_region_id($row->{seq_region_id}, undef, undef, undef, 1);
       next unless $slice;
-      $slice_hash{"ID:".$seq_region_id} = $slice;
-      $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
-      $sr_cs_hash{$seq_region_id} = $slice->coord_system();
+      $slice_hash{"ID:".$row->{seq_region_id}} = $slice;
+      $sr_name_hash{$row->{seq_region_id}} = $slice->seq_region_name();
+      $sr_cs_hash{$row->{seq_region_id}} = $slice->coord_system();
     }
     
     # remap the feature coordinates to another coord system
     # if a mapper was provided
     if($mapper) {
-      my $sr_name = $sr_name_hash{$seq_region_id};
-      my $sr_cs   = $sr_cs_hash{$seq_region_id};
+      my $sr_name = $sr_name_hash{$row->{seq_region_id}};
+      my $sr_cs   = $sr_cs_hash{$row->{seq_region_id}};
       
       ($sr_name,$seq_region_start,$seq_region_end,$seq_region_strand) =
       $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end,
       $seq_region_strand, $sr_cs);
       
       #skip features that map to gaps or coord system boundaries
-      next FEATURE if(!defined($sr_name));
+      return if(!defined($sr_name));
       
       #get a slice in the coord system we just mapped to
       if($asm_cs == $sr_cs || ($cmp_cs != $sr_cs && $asm_cs->equals($sr_cs))) {
@@ -1117,34 +1191,36 @@ sub _objs_from_sth {
         
         #throw away features off the end of the requested slice
         if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
-          next FEATURE;
+          return;
         }
       }
       $slice = $dest_slice;
     }
-    
-    push @features, $self->_create_feature_fast(
+
+    my $obj = $self->_create_feature_fast(
       'Bio::EnsEMBL::Variation::PhenotypeFeature', {
-        'dbID'           => $phenotype_feature_id,
+        'dbID'           => $row->{phenotype_feature_id},
         'start'          => $seq_region_start,
         'end'            => $seq_region_end,
         'strand'         => $seq_region_strand,
         'slice'          => $slice,
-        '_object_id'     => $object_id,
-        'type'           => $object_type,
-        '_phenotype_id'  => $phenotype_id,
-        '_phenotype_description'  => $phenotype_description,
+        '_object_id'     => $row->{object_id},
+        'type'           => $row->{type},
+        '_phenotype_id'  => $row->{phenotype_id},
+        '_phenotype_description'  => $row->{description},
         'adaptor'        => $self,
-        '_study_id'      => $study_id,
-        '_source_id'     => $source_id,
-        '_source_name'   => $source_name, 
-        'is_significant' => $is_significant,
+        '_study_id'      => $row->{study_id},
+        '_source_id'     => $row->{source_id},
+        '_source_name'   => $row->{name}, 
+        'is_significant' => $row->{is_significant},
       }
     );
+
+    $self->{_temp_objs}{$row->{phenotype_feature_id}} = $obj;
   }
 
-  return \@features;
-
+  ## add attribs if extracted
+  $obj->{attribs}->{$row->{code}} = $row->{value} if $row->{code};
 }
 
 sub store{
