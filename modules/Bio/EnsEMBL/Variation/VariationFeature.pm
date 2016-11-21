@@ -1324,17 +1324,17 @@ sub convert_to_SNP{
     require Bio::EnsEMBL::SNP;  #for backwards compatibility. It will only be loaded if the function is called
 
     my $snp = Bio::EnsEMBL::SNP->new_fast({
-	        'dbID'       => $self->variation()->dbID(),
-		'_gsf_start'  => $self->start,
-		'_gsf_end'    => $self->end,
-		'_snp_strand' => $self->strand,
-		'_gsf_score'  => 1,
-		'_type'       => $self->var_class,
-		'_validated'  => $self->>get_all_evidence_values(),
-		'alleles'    => $self->allele_string,
-		'_ambiguity_code' => $self->ambig_code,
-		'_mapweight'  => $self->map_weight,
-		'_source' => $self->source
+      'dbID'        => $self->variation()->dbID(),
+      '_gsf_start'  => $self->start,
+      '_gsf_end'    => $self->end,
+      '_snp_strand' => $self->strand,
+      '_gsf_score'  => 1,
+      '_type'       => $self->var_class,
+      '_validated'  => $self->get_all_evidence_values(),
+      'alleles'     => $self->allele_string,
+      '_ambiguity_code' => $self->ambig_code,
+      '_mapweight'  => $self->map_weight,
+      '_source' => $self->source
 		});
     return $snp;
 }
