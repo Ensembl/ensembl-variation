@@ -508,47 +508,6 @@ sub get_all_evidence_values {
 }
 
 
-
-=head2 get_all_validation_states
-  Deprecated. Please use get_all_evidence_values() instead.
-  Arg [1]    : none
-  Example    : my @vstates = @{$v->get_all_validation_states()};
-  Description: Retrieves all validation states for this variation.  Current
-               possible validation statuses are 'cluster','freq','submitter',
-               'doublehit', 'hapmap'
-  Returntype : Listref of strings
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub get_all_validation_states {
-  my $self = shift;
-
-  deprecate("Please use get_all_evidence_values() instead. This method will be removed in e87\n");
-
-  return $self->get_all_evidence_values();
-}
-
-
-=head2 add_validation_state
-  Deprecated. The API doesn't store validation_state data anymore
-  Arg [1]    : string $state
-  Example    : $v->add_validation_state('cluster');
-  Description: Adds a validation state to this variation.
-  Returntype : none
-  Exceptions : warning if validation state is not a recognised type
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub add_validation_state {
-  deprecate("The API doesn't store validation_state data anymore. This method will be removed in e87\n");
-}
-
-
 =head2 add_evidence_value
 
   Arg [1]    : string $state
@@ -574,28 +533,6 @@ sub add_evidence_value {
     @{$self->{'evidence'}} = keys %unique;
 
     return $self->{'evidence'};    
-}
-
-
-=head2 source_object
-  Deprecated. Please use source() instead.
-  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
-               The new value to set the source attribute to
-  Example    : $source_obj = $v->source_object()
-  Description: Getter/Setter for the source object attribute
-  Returntype : Bio::EnsEMBL::Variation::Source
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub source_object {
-  my $self = shift;
-  
-  deprecate("Please use source() instead. This method will be removed in e87\n");
-
-  return $self->source();
 }
 
 

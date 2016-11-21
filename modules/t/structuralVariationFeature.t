@@ -179,9 +179,5 @@ my $svf3_new = $svf3_contig->transfer($slice);
 ok($svf3_new->seq_region_name eq $svf3_chr && $svf3_new->seq_region_start == $chr_start && $svf3_new->seq_region_end == $chr_end, 'transfert from contig to chr');
 
 
-# DEPRECATED - source
-ok($svf2->source_object->name() eq $source_name, "svf -> DEPRECATED 'source_object'");
-
-
 done_testing();
 

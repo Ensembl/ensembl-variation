@@ -230,28 +230,6 @@ sub type{
 }
 
 
-=head2 source_object
-  Deprecated. Please use source() instead.
-  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
-               The new value to set the source attribute to
-  Example    : $source_obj = $st->source_object()
-  Description: Getter/Setter for the source object attribute
-  Returntype : Bio::EnsEMBL::Variation::Source
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub source_object {
-  my $self = shift;
-  
-  deprecate("Please use source() instead. This method will be removed in e87\n");
-
-  return $self->source();
-}
-
-
 =head2 source
 
   Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)

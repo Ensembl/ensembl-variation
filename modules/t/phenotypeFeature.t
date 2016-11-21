@@ -187,8 +187,4 @@ ok($pf2->project_fullname eq $project, 'project_fullname & _set_attribute');
 ok($pf2->strain->name eq 'NA12891', 'strain');
 
 
-# DEPRECATED - source
-ok($pf2->source_object->name() eq $source_name, "svf -> DEPRECATED 'source_object'");
-
-
 done_testing();

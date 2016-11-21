@@ -190,8 +190,6 @@ ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVari
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
 
-# test source
-ok($vf->source_object->name eq 'dbSNP', "deprecated 'source_object'");
 # test add consequence type
 my $oc2 = Bio::EnsEMBL::Variation::OverlapConsequence->new(-SO_term => 'synonymous_variant');
 ok($vf->add_consequence_type($oc2), "deprecated 'add_consequence_type'");

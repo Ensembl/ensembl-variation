@@ -81,9 +81,4 @@ ok(test_getter_setter($study, 'description', 'new description'), "get/set descri
 ok(test_getter_setter($study, 'url', 'http://www.ebi.ac.uk/ega'), "get/set url");
 
 
-## Deprecated methods ##
-print "\n## Deprecated methods ##\n";
-ok($study->source_object->name() eq $source_name, "deprecated 'source_object'");
-
-
 done_testing();

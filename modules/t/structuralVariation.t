@@ -159,7 +159,6 @@ ok($sv2->summary_as_hash->{'display_id'} eq $name, 'sv-> summary');
 
 
 ## DEPRECATED ##
-ok($sv2->source_object->name() eq $source_name,                  "sv -> DEPRECATED 'source_object'");
 ok($sv2->clinical_significance eq join(',',@$clin_signs),        "sv -> DEPRECATED 'clinical_significance'");
 ok($sv2->get_all_validation_states()->[0] eq $validation_status, "sv -> DEPRECATED 'get_all_validation_states'");
 

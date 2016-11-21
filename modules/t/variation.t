@@ -258,9 +258,6 @@ my $vf2 = $var->get_VariationFeature_by_dbID(33303674);
 ok($vf2->variation_name eq $var_name, 'get_VariationFeature_by_dbID');
 
 
-## DEPRECATED ##
-ok($v->source_object->name() eq $source_name, 'DEPRECATED - source_object');
-
 my $hash = {dbID              => 123,
             name              => $name,
             source            => $source,

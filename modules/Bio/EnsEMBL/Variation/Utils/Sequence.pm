@@ -83,9 +83,6 @@ use vars qw(@ISA @EXPORT_OK);
     &SO_variation_class 
     &align_seqs 
     &strain_ambiguity_code
-    &get_all_validation_states
-    &get_validation_code
-    &add_validation_state
     &revcomp_tandem
     %EVIDENCE_VALUES
 );
@@ -899,12 +896,15 @@ sub align_seqs {
   ReturnType  : bitvalue that represents the combination of elements in the reference array specified in the given array
   Exceptions  : none
   Caller      : get_validation_code
+  Status      : DEPRECATED
 
 =cut
 
 sub array_to_bitval {
     my $arr = shift;
     my $ref = shift;
+    
+    deprecate("The API doesn't manage validation_state data anymore.  This method will be removed in e91\n");
     
     #Ensure that we have array references
     $arr = wrap_array($arr);
@@ -941,13 +941,16 @@ sub array_to_bitval {
                c.f. the SET datatype in MySQL
   Returntype : reference to list of strings
   Exceptions : none
-  Caller     : get_all_validation_states
+  Caller     : general
+  Status     : DEPRECATED
 
 =cut
 
 sub bitval_to_array {
     my $bitval = shift || 0;
     my $ref = shift;
+
+    deprecate("The API doesn't manage validation_state data anymore.  This method will be removed in e91\n");
 
     #Ensure that we have array references
     $ref = wrap_array($ref);
@@ -960,62 +963,6 @@ sub bitval_to_array {
 
     return \@arr;
 }
-
-
-=head2 add_validation_state
-  Deprecated. The API doesn't store validation_status data anymore
-  Arg [1]    : string $state
-  Example    : add_validation_state('cluster');
-  Description: Adds a validation state to this variation.
-  Returntype : none
-  Exceptions : warning if validation state is not a recognised type
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub add_validation_state {
-  my $obj = shift;
-  my $state = shift;
-
-  deprecate("The API doesn't store validation_status data anymore. This method will be removed in e87\n");
-
-  return;
-}
-
-=head2 get_all_validation_states
-  Deprecated. The API doesn't use validation_status data anymore
-  Arg [1]    : int $bitval
-  Example    : my @vstates = @{get_all_validation_states($var->{'validation_code'})};
-  Description: Retrieves all validation states for a specified bit value.
-  Returntype : reference to list of strings
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED
-
-=cut
-
-sub get_all_validation_states {
-    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e87\n");
-    return bitval_to_array(shift,\@VALIDATION_STATES);
-}
-
-=head2 get_validation_code
-  Deprecated. The API doesn't use validation_status data anymore
-  Arg [1]    : arrayref $validation_status
-  Example    : $var->{'validation_code'} = get_validation_code(['submitter','precious']);
-  Description: Retrieves the bit value for a combination of validation statuses.
-  Returntype : int
-  Exceptions : none
-  Caller     : Variation::new
-  Status     : DEPRECATED
-=cut
-
-sub get_validation_code {
-    deprecate("The API doesn't use validation_status data anymore. This method will be removed in e87\n");
-    return array_to_bitval(shift,\@VALIDATION_STATES);
-}
-
 
 
 =head2 revcomp_tandem
