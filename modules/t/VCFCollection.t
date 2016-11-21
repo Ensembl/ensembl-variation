@@ -248,4 +248,36 @@ $coll->use_seq_region_synonyms(1);
 $gts = $coll->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
 ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_VariationFeature with synonyms 3");
 
+
+
+## test exac info stuff
+
+# fetch by ID
+$coll = $vca->fetch_by_id('ExAC_0.3');
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
+
+# now we need to set the filename_template
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$coll->filename_template =~ /^$dir/;
+
+($vf) = @{$va->fetch_by_name('rs192076014')->get_all_VariationFeatures};
+my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+
+is(scalar @alleles, 18, 'get_all_Alleles_by_VariationFeature - count');
+
+my @adj = grep {$_->population->name eq 'ExAC:Adj'} @alleles;
+is(scalar @adj, 2, 'get_all_Alleles_by_VariationFeature - Adj count');
+
+is_deeply(
+  [map {'a:'.$_->allele.' f:'.$_->frequency.' c:'.$_->count} @adj],
+  [
+    'a:A f:0.000312711731901808 c:24',
+    'a:G f:0.9997 c:76724'
+  ],
+  'get_all_Alleles_by_VariationFeature - Adj freqs and counts'
+);
+
+
 done_testing();
