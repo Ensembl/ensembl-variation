@@ -5434,7 +5434,8 @@ sub parse_variation {
     push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
   }
 
-  my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
+  # this switcher is a bit of a hack, should fix cache generation really
+  my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..(@data > @cols ? $#cols : $#data));
 
   $v{$_} ||= 0 for qw(failed somatic phenotype_or_disease);
   $v{end}     ||= $v{start};
