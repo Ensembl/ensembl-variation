@@ -138,7 +138,7 @@ sub fetch_all_by_Variation {
   Example    : my @SampleGenotypesFeatures = @{$ca->fetch_all_by_Slice($slice)};
   Description: Retrieves all SampleGenotypeFeature features for a given slice for
                a certain sample (if provided). 
-  Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotype
+  Returntype : reference to list Bio::EnsEMBL::Variation::SampleGenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
   Status     : Stable
