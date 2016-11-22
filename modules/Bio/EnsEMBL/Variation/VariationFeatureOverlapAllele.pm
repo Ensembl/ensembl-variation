@@ -397,10 +397,10 @@ sub _convert_to_sara {
 # { s => $start, e => $end }
 # coords are 0-indexed
 sub _get_differing_regions {
-  my $self = shift;
+  my ($self, $bvfo) = @_;
 
   if(!exists($self->{_differing_regions})) {
-    my $bvfo = $self->base_variation_feature_overlap;
+    $bvfo ||= $self->base_variation_feature_overlap;
 
     my $pre = $self->_pre_consequence_predicates();
     my ($ref_length, $alt_length) = ($pre->{ref_length}, $pre->{alt_length});

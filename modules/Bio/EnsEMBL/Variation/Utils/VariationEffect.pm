@@ -471,7 +471,7 @@ sub donor_splice_site {
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $feat ||= $bvfo->feature;
 
-    my $ie = $bvfoa->_intron_effects;
+    my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
     
     return $feat->strand == 1 ? 
         $ie->{start_splice_site} :
@@ -483,7 +483,7 @@ sub acceptor_splice_site {
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $feat ||= $bvfo->feature;
 
-    my $ie = $bvfoa->_intron_effects;
+    my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
     
     return $feat->strand == 1 ? 
         $ie->{end_splice_site} :
@@ -502,14 +502,14 @@ sub splice_region {
     return 0 if acceptor_splice_site(@_);
     return 0 if essential_splice_site(@_);
 
-    return $bvfoa->_intron_effects->{splice_region};
+    return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{splice_region};
 }
 
 sub within_intron {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
-    return $bvfoa->_intron_effects->{intronic};
+    return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{intronic};
 }
 
 sub within_cds {
@@ -533,7 +533,7 @@ sub within_cds {
     # we also need to check if the vf is in a frameshift intron within the CDS
 
     if (defined $feat->translation &&
-        $bvfoa->_intron_effects->{within_frameshift_intron}) {
+        $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{within_frameshift_intron}) {
  
         return overlap(
             $bvf->{start}, 

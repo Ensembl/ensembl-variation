@@ -97,7 +97,7 @@ sub base_variation_feature {
 }
 
 sub _intron_effects {
-  my $self = shift;
+  my ($self, $feat, $tv, $vf) = @_;
 
   # internal method used by Bio::EnsEMBL::Variation::Utils::VariationEffect
   # when calculating various consequence types
@@ -110,11 +110,11 @@ sub _intron_effects {
     
     my $intron_effects = {};
 
-    my $tv = $self->base_variation_feature_overlap;
-    my $vf = $self->base_variation_feature;
+    $tv ||= $self->base_variation_feature_overlap;
+    $vf ||= $self->base_variation_feature;
     my $vf_start = $vf->{start};
     
-    foreach my $region(@{$self->_get_differing_regions}) {
+    foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
 
       my $insertion = $r_start == $r_end + 1;
