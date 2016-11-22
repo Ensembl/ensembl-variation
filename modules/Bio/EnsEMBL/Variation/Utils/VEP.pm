@@ -3220,7 +3220,16 @@ sub validate_vf {
     return 0 if defined($config->{chr}) && !$config->{chr}->{$vf->{chr}};
 
     # check valid chromosomes
-    my $valid_chrs = $config->{cache} ? get_cache_chromosomes($config) : {};
+    my $valid_chrs = {};
+
+    if($config->{cache}) {
+      my $synonyms = $config->{chromosome_synonyms} || {};
+
+      foreach my $cache_chr(keys %{get_cache_chromosomes($config)}) {
+        $valid_chrs->{$cache_chr} = 1;
+        $valid_chrs->{$_} = 1 for keys %{$synonyms->{$cache_chr} || {}};
+      }
+    }
 
     # only try to modify chromosome name if it's not currently valid
     unless($valid_chrs->{$vf->{chr}}) {      
@@ -3242,22 +3251,8 @@ sub validate_vf {
     # transform if necessary
     if(defined($config->{cache})) {
 
-      my $have_chr = 0;
-
-      if($valid_chrs->{$vf->{chr}}) {
-        $have_chr = 1;
-      }
-      elsif($config->{chromosome_synonyms}) {
-        foreach my $alt(keys %{$config->{chromosome_synonyms}->{$vf->{chr}} || {}}) {
-          if($valid_chrs->{$alt}) {
-            $have_chr = 1;
-            last;
-          }
-        }
-      }
-
       # map to top level?  
-      unless($have_chr) {
+      unless($valid_chrs->{$vf->{chr}}) {
 
         # slice adaptor required
         if(defined($config->{sa})) {
