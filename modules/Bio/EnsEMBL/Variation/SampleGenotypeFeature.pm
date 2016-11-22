@@ -136,7 +136,7 @@ sub variation_feature {
   my $self = shift;
 
   if(!defined($self->{variation_feature})) {
-    $self->{variation_feature} = (grep {$_->{start} == $self->{start} && $_->seq_region_name cmp $self->{sclice}->seq_region_name} @{$self->variation->get_all_VariationFeatures})[0];
+    $self->{variation_feature} = (grep {$_->{start} == $self->{start} && $_->seq_region_name cmp $self->{slice}->seq_region_name} @{$self->variation->get_all_VariationFeatures})[0];
   }
  
   return $self->{variation_feature};
