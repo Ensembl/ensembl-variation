@@ -395,14 +395,17 @@ sub _bvf_preds {
   my $pred_digest = '';
 
   my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});
+
+  $self->_update_preds($bvf_preds, 'complete_overlap', 1, \$pred_digest)
+    if $vf_start <= $feat->{start} && $vf_end >= $feat->{end};
   
-  my $class_SO_term = $bvf->class_SO_term;
   my $is_sv = $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') ? 1 : 0;
-  
   $self->_update_preds($bvf_preds, 'sv', $is_sv, \$pred_digest);
   
   # use SO term to determine class
   if($is_sv) {
+    my $class_SO_term = $bvf->class_SO_term;
+
     if($class_SO_term =~ /deletion/) {
       $self->_update_preds($bvf_preds, 'deletion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'decrease_length', 1, \$pred_digest);

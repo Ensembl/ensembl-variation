@@ -772,7 +772,8 @@ our %OVERLAP_CONSEQUENCES = (
 'transcript_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'deletion' => 1
+                 'deletion' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'mRNA',
   'description' => 'A feature ablation whereby the deleted region includes a transcript feature',
@@ -789,7 +790,8 @@ our %OVERLAP_CONSEQUENCES = (
 'transcript_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'increase_length' => 1
+                 'increase_length' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'mRNA',
   'description' => 'A feature amplification of a region containing a transcript',
@@ -806,7 +808,8 @@ our %OVERLAP_CONSEQUENCES = (
 'TFBS_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'deletion' => 1
+                 'deletion' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'TF_binding_site',
   'description' => 'A feature ablation whereby the deleted region includes a transcription factor binding site',
@@ -823,7 +826,8 @@ our %OVERLAP_CONSEQUENCES = (
 'TFBS_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'increase_length' => 1
+                 'increase_length' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'TF_binding_site',
   'description' => 'A feature amplification of a region containing a transcription factor binding site',
@@ -840,7 +844,8 @@ our %OVERLAP_CONSEQUENCES = (
 'regulatory_region_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'deletion' => 1
+                 'deletion' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'TF_binding_site',
   'description' => 'A feature ablation whereby the deleted region includes a regulatory region',
@@ -857,7 +862,8 @@ our %OVERLAP_CONSEQUENCES = (
 'regulatory_region_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'increase_length' => 1
+                 'increase_length' => 1,
+                 'complete_overlap' => 1,
                },
   'feature_SO_term' => 'TF_binding_site',
   'description' => 'A feature amplification of a region containing a regulatory region',
@@ -874,7 +880,8 @@ our %OVERLAP_CONSEQUENCES = (
 'feature_elongation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'increase_length' => 1
+                 'increase_length' => 1,
+                 'sv' => 1,
                },
   'feature_SO_term' => 'sequence_feature',
   'description' => 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
@@ -891,7 +898,8 @@ our %OVERLAP_CONSEQUENCES = (
 'feature_truncation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {
-                 'decrease_length' => 1
+                 'decrease_length' => 1,
+                 'sv' => 1,
                },
   'feature_SO_term' => 'sequence_feature',
   'description' => 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',

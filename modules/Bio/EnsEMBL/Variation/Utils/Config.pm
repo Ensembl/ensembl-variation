@@ -770,6 +770,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'HIGH',
         include => {
             deletion => 1,
+            complete_overlap => 1,
         }
     },
 #    {
@@ -798,6 +799,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'HIGH',
         include => {
             increase_length => 1,
+            complete_overlap => 1,
         },
     },
 #    {
@@ -826,6 +828,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODERATE',
         include => {
             deletion => 1,
+            complete_overlap => 1,
         }
     },
 #    {
@@ -854,6 +857,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             increase_length => 1,
+            complete_overlap => 1,
         },
     },
 #    {
@@ -882,6 +886,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODERATE',
         include => {
             deletion => 1,
+            complete_overlap => 1,
         }
     },
 #    {
@@ -910,6 +915,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             increase_length => 1,
+            complete_overlap => 1,
         },
     },
 #    {
@@ -938,6 +944,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             increase_length => 1,
+            sv => 1,
         },
     },
     {
@@ -954,6 +961,7 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
         include => {
             decrease_length => 1,
+            sv => 1,
         },
     },
     {
