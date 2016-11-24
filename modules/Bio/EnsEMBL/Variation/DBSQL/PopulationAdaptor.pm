@@ -793,7 +793,7 @@ sub _get_sample_population_hash {
 		throw("id_list list reference argument is required");
 	}
 	
-	return [] if (!@$id_list_ref);
+	return {} if (!@$id_list_ref);
 	
 	my %ip_hash;
 	my $max_size = 200;
