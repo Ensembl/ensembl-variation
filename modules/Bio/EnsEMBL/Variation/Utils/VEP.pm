@@ -1554,8 +1554,8 @@ sub vf_list_to_cons {
                 my $fieldname = $config->{vcf_info_field} || 'CSQ';
 
                 # nuke existing CSQ field
-                if($line->[7] =~ /$fieldname\=/ && !defined($config->{keep_csq})) {
-                  $line->[7] =~ s/$fieldname\=\S+?(\;|$)(\S|$)/$2/;
+                if($line->[7] =~ /(^|\;)$fieldname\=/ && !defined($config->{keep_csq})) {
+                  $line->[7] =~ s/(^|\;)$fieldname\=\S+?(\;|$)(\S|$)/$1$3/;
                 }
 
                 # get all the lines the normal way
