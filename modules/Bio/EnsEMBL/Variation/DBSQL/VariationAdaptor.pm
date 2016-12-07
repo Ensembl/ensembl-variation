@@ -1362,7 +1362,7 @@ sub _fetch_attribs_by_dbID {
     $sth->bind_columns(\$key, \$value);
     $attribs->{$key} .= $value ."," while $sth->fetch;
     $sth->finish;
-    $attribs->{$key} =~ s/\,$//;
+    $attribs->{$key} =~ s/\,$// if ($key);
     return $attribs;
 } 
 
