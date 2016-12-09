@@ -3933,12 +3933,29 @@ sub fetch_transcripts {
                 }
 
                 ## hack to copy HGNC IDs and RefSeq stuff
+                my %counts;
                 foreach my $tr(@{$tr_cache->{$chr}}) {
                   $tr->{_gene_hgnc_id} = $hgnc_ids{$tr->{_gene_symbol}} if defined($tr->{_gene_symbol}) && defined($hgnc_ids{$tr->{_gene_symbol}});
 
                   if(defined($config->{refseq}) || defined($config->{merged})) {
                     $tr->{$_} ||= $refseq_stuff{$tr->{_gene}->stable_id}->{$_} for qw(_gene_symbol _gene_symbol_source _gene_hgnc_id);
+                    $counts{$tr->{stable_id}}++
                   }
+                }
+
+                ## now a further hack to remove duplicates...
+                if(defined($config->{refseq}) || defined($config->{merged})) {
+                  my @new;
+                  foreach my $tr(@{$tr_cache->{$chr}}) {
+                    if($counts{$tr->{stable_id}} > 1) {
+                      push @new, $tr unless $tr->{source} eq 'ensembl';
+                    }
+                    else {
+                      push @new, $tr;
+                    }
+                  }
+
+                  $tr_cache->{$chr} = \@new;
                 }
             }
 
