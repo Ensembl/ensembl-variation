@@ -1569,7 +1569,7 @@ sub parallelized_allele_table {
       }
     }
     # If we still have subtasks that fail, this needs to be resolved before proceeding
-    die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
+    die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of alleles!") unless ($result->{'success'});
   }
 
 # $jobindex =  2606;  ##Put number of subfiles here if running on load_only
@@ -1697,7 +1697,7 @@ sub write_allele_task_file{
     #warn "Starting allele_task file \n";
     ### previously binning at 500,000, switched to 400,000
     my ($first, $previous,  $jobindex, $ssid);
-    debug(localtime() . "\tAt write_allele_task_file - starting");
+
    open(MGMT,'>',$task_manager_file) || die "Failed to open allele table task management file ($task_manager_file): $!\n";;
     my $stmt = "SELECT ";
     if ($limit) {
@@ -1713,7 +1713,7 @@ sub write_allele_task_file{
     $ss_extract_sth->execute() ||die "Error extracting ss ids for allele_table binning\n";
 
     $ss_extract_sth->bind_columns(\$ssid);
-    debug(localtime() . "\tAt write_allele_task_file - executed");
+
     while( $ss_extract_sth->fetchrow_arrayref()){
 	
 	$counter++;
@@ -2453,6 +2453,7 @@ sub parallelized_individual_genotypes {
     $merge_subtables .= ",$extra_table";
     
     $stmt = $ind_gty_stmt;
+    $stmt =~ s/ENGINE = MyISAM ;//;  
     $stmt .= " ENGINE=MERGE INSERT_METHOD=LAST UNION=($merge_subtables)";
   }
   else {
