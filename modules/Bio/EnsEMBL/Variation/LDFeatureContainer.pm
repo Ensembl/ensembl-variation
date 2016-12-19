@@ -136,7 +136,7 @@ sub new {
 
   # only add these keys if it they are properly populated
   # makes the lazy-load later easier
-  $self->{pos2vf} = $pos2vf if $pos2vf && scalar keys $pos2vf;
+  $self->{pos2vf} = $pos2vf if $pos2vf && scalar keys %$pos2vf;
 
   return $self;
 }
