@@ -62,11 +62,11 @@ sub default_options {
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
-        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
+        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
@@ -92,8 +92,8 @@ sub default_options {
         # connection details for the hive's own database
 
         pipeline_db => {
-            -host   => 'ens-variation3',
-            -port   => 3306,
+            -host   => 'mysql-ens-var-prod-1.ebi.ac.uk',
+            -port   => 4449,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
             -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
@@ -102,17 +102,17 @@ sub default_options {
         
         # configuration for the various resource options used in the pipeline
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-q long -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
 
         # location of the software
 
-        pph_dir                 => '/software/ensembl/variation/polyphen',
+        pph_dir                 => '/nfs/production/panda/ensembl/variation/software/polyphen-2.2.2',
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
@@ -150,17 +150,17 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/software/ensembl/variation/sift5.2.2',
+        sift_dir                => '/nfs/panda/ensemblgenomes/external/sift',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
         # the location of blastpgp etc.
 
-        ncbi_dir                => '/software/pubseq/bin/ncbi_blast+',
+        ncbi_dir                => '/nfs/panda/ensemblgenomes/external/ncbi-blast-2+/bin',
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.2.2/uniref90/uniref90.fasta',
+        blastdb                 => '/nfs/production/panda/ensembl/variation/data/sift5.2.2/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
