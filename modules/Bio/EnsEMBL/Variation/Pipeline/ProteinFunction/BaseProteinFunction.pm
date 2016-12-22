@@ -69,7 +69,7 @@ sub get_stable_id_for_md5 {
 
     my $var_dba = $self->get_species_adaptor('variation');
     
-    my $get_stable_id_sth = $var_dba->prepare(qq{
+    my $get_stable_id_sth = $var_dba->dbc->prepare(qq{
         SELECT  stable_id
         FROM    translation_mapping
         WHERE   md5 = ?

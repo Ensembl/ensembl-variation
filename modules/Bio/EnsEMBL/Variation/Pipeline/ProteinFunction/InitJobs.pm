@@ -89,11 +89,11 @@ sub fetch_input {
         )
     });
 
-    my $add_mapping_sth = $var_dba->prepare(qq{
+    my $add_mapping_sth = $var_dba->dbc->prepare(qq{
         INSERT IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
     });
 
-    my $add_md5_sth = $var_dba->prepare(qq{
+    my $add_md5_sth = $var_dba->dbc->prepare(qq{
         INSERT IGNORE INTO translation_md5 (translation_md5) VALUES (?)
     });
 
