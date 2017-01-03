@@ -318,6 +318,7 @@ sub fetch_by_VariationFeature {
   
   # delete the cached pos
   delete $self->{_vf_pos};
+  delete $self->{_vf_name};
   
   $ldFeatureContainer->name($vf->dbID);
   
