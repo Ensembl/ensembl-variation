@@ -310,6 +310,7 @@ sub fetch_by_VariationFeature {
   
   # cache the position so objs_from_sth picks it up later to filter
   $self->{_vf_pos} = $vf->seq_region_start;
+  $self->{_vf_name} = $vf->variation_name;
   
   # fetch by slice using expanded feature slice
   my $max_snp_distance = $self->{max_snp_distance} || MAX_SNP_DISTANCE;
@@ -618,6 +619,11 @@ sub _fetch_by_Slice_VCF {
         if (defined($self->{_vf_pos})) {
           next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
         }
+        # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature, exclude co-located variants with same location but different alleles: eg C/T and C/-
+        if (defined($self->{_vf_name})) {
+          next unless $id1 eq $self->{_vf_name} || $id2 eq $self->{_vf_name};
+        }
+
         # skip entries for pairwise computation that don't match input variation feature loactions
         if (defined $self->{_pairwise}) {
           next unless ($self->{_pairwise}->{$ld_region_start} && $self->{_pairwise}->{$ld_region_end});
