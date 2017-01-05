@@ -479,7 +479,7 @@ if(defined($phenotypes[0]->{seq_region_id})) {
 $coords ||= get_coords(\@ids, $object_type, $object_type eq 'Gene' ? $core_db_adaptor : $db_adaptor);
   
 # uniquify coords
-foreach my $id(keys %$coords) {
+foreach my $id (keys %$coords) {
   my %tmp = map {
     $_->{seq_region_id}."_".
     $_->{seq_region_start}."_".
@@ -2193,13 +2193,15 @@ sub get_coords {
   my $tables;
   my $where_clause;
   
+  my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
+
   if($type eq 'Variation') {
     $tables = 'variation_feature f, variation v';
     $where_clause = 'v.variation_id = f.variation_id AND v.name = ?';
   }
   elsif($type =~ /Structural/) {
     $tables = 'structural_variation_feature f, structural_variation v';
-    $where_clause = 'v.variation_id = f.variation_id AND v.name = ?';
+    $where_clause = 'v.structural_variation_id = f.structural_variation_id AND v.variation_name = ?';
   }
   elsif($type eq 'Gene') {
     $tables = 'gene f';
@@ -2221,8 +2223,7 @@ sub get_coords {
   my $coords = {};
   my ($sr_id, $start, $end, $strand);
   
-  foreach my $id(@$ids) {
-
+  foreach my $id (@object_ids) {
     $sth->bind_param(1,$id,SQL_VARCHAR);
     $sth->execute();
     $sth->bind_columns(\$sr_id, \$start, \$end, \$strand);
@@ -2463,7 +2464,7 @@ sub add_phenotypes {
    };
  
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
-  my $pf_check_sth   = $db_adaptor->dbc->prepare($pf_check_stmt);
+  my $pf_check_sth = $db_adaptor->dbc->prepare($pf_check_stmt);
   my $pf_ins_sth   = $db_adaptor->dbc->prepare($pf_ins_stmt);
   my $attrib_ins_sth = $db_adaptor->dbc->prepare($attrib_ins_stmt);
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
@@ -2485,11 +2486,15 @@ sub add_phenotypes {
   
   while (my $phenotype = shift(@sorted)) {
     progress($i++, $total);
-    
+
     $object_type = $phenotype->{type} if defined($phenotype->{type});
 
+    my $object_id = $phenotype->{"id"};
+
     # If the rs could not be mapped to a variation id, skip it
-    next if $object_type =~ /Variation/ && (!defined($variation_ids->{$phenotype->{"id"}}[0]));
+    next if $object_type =~ /Variation/ && (!defined($variation_ids->{$object_id}));
+
+    $object_id = $variation_ids->{$object_id}[1] if ($object_type eq 'Variation');
 
     # if we have no coords, skip it
     my $study_id;
@@ -2560,7 +2565,8 @@ sub add_phenotypes {
 
     # Check if this phenotype_feature already exists for this variation and source, in that case we probably want to skip it
     my $pf_id;
-    $pf_check_sth->bind_param(1,$phenotype->{id},SQL_VARCHAR);
+
+    $pf_check_sth->bind_param(1,$object_id,SQL_VARCHAR);
     $pf_check_sth->bind_param(2,$object_type,SQL_VARCHAR);
     $pf_check_sth->bind_param(3,$phenotype_id,SQL_INTEGER);
     $pf_check_sth->bind_param(4,$source_id,SQL_INTEGER);
@@ -2587,12 +2593,12 @@ sub add_phenotypes {
     my $is_significant = defined($threshold) ? ($phenotype->{"p_value"} && $phenotype->{"p_value"} < $threshold ? 1 : 0) : 1;
     
     # Else, insert this variation annotation
-    foreach my $coord(@{$coords->{$phenotype->{id}}}) {
+    foreach my $coord(@{$coords->{$object_id}}) {
       $pf_ins_sth->bind_param(1,$phenotype_id,SQL_INTEGER);
       $pf_ins_sth->bind_param(2,$source_id,SQL_INTEGER);
       $pf_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
       $pf_ins_sth->bind_param(4,$object_type,SQL_VARCHAR);
-      $pf_ins_sth->bind_param(5,$phenotype->{id},SQL_VARCHAR);
+      $pf_ins_sth->bind_param(5,$object_id,SQL_VARCHAR);
       $pf_ins_sth->bind_param(6,$is_significant,SQL_INTEGER);
       $pf_ins_sth->bind_param(7,$coord->{seq_region_id},SQL_INTEGER);
       $pf_ins_sth->bind_param(8,$coord->{seq_region_start},SQL_INTEGER);
