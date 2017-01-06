@@ -525,7 +525,7 @@ CREATE TABLE genotype_code (
 CREATE TABLE seq_region (
 
   seq_region_id               INT(10) UNSIGNED NOT NULL,
-  name                        VARCHAR(40) NOT NULL,
+  name                        VARCHAR(255) NOT NULL,
   coord_system_id             INT(10) UNSIGNED NOT NULL,
 
   PRIMARY KEY (seq_region_id),
@@ -1772,6 +1772,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_b.sql|seq_region_name_255');
 
 
 /**
