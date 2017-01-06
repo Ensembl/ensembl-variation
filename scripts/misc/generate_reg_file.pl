@@ -26,72 +26,76 @@
 
 =cut
 
-
 use strict;
 use warnings;
 
 use DBI;
+use FileHandle;
+use Getopt::Long;
 
-my $release = $ARGV[0] || die "Usage: $0 <release_num> <optional comma-separated list of server names>\n";
+my $config = {};
+GetOptions(
+  $config,
+  'release=i',
+  'server_file=s',
+  'servers=s',
+  'help!',
+) or die "Error: Failed to parse command line arguments\n";
 
-my @servers = qw(ens-staging ens-staging2);
+usage() if ($config->{help});
 
-if ($ARGV[1]) {
-    @servers =  map { s/(^\s+|\s+$)//g; $_ } split(',', $ARGV[1]);
-}
+$config->{server_file} ||= '/nfs/production/panda/ensembl/variation/server_file';
 
-my $default_port = 3306;
+die "Release number is required (-release)" unless ($config->{release});
+my $release = $config->{release};
+
 
 my $aliases = {
-    "Homo_sapiens"              => "human",
-    "Mus_musculus"              => "mouse",
-    "Danio_rerio"               => "zebrafish",
-    "Felis_catus"               => "cat",
-    "Bos_taurus"                => "cow",
-    "Canis_familiaris"          => "dog",
-    "Equus_caballus"            => "horse",
-    "Taeniopygia_guttata"       => "zebrafinch",
-    "Tetraodon_nigroviridis"    => "tetraodon",
-    "Monodelphis_domestica"     => "opossum",
-    "Sus_scrofa"                => "pig",
-    "Ornithorhynchus_anatinus"  => "platypus",
-    "Pan_troglodytes"           => "chimp",
-    "Pongo_abelii"              => "orangutan",
-    "Rattus_norvegicus"         => "rat",
-    "Gallus_gallus"             => "chicken",
-    "Drosophila_melanogaster"   => "fly",
-    "Saccharomyces_cerevisiae"  => "yeast",
-    "Macaca_mulatta"            => "macaque",
-    "Nomascus_leucogenys"       => "gibbon",
-    "Ovis_aries"                => "sheep",
-	"Meleagris_gallopavo"       => "turkey",
+  "Homo_sapiens"              => "human",
+  "Mus_musculus"              => "mouse",
+  "Danio_rerio"               => "zebrafish",
+  "Felis_catus"               => "cat",
+  "Bos_taurus"                => "cow",
+  "Canis_familiaris"          => "dog",
+  "Equus_caballus"            => "horse",
+  "Taeniopygia_guttata"       => "zebrafinch",
+  "Tetraodon_nigroviridis"    => "tetraodon",
+  "Monodelphis_domestica"     => "opossum",
+  "Sus_scrofa"                => "pig",
+  "Ornithorhynchus_anatinus"  => "platypus",
+  "Pan_troglodytes"           => "chimp",
+  "Pongo_abelii"              => "orangutan",
+  "Rattus_norvegicus"         => "rat",
+  "Gallus_gallus"             => "chicken",
+  "Drosophila_melanogaster"   => "fly",
+  "Saccharomyces_cerevisiae"  => "yeast",
+  "Macaca_mulatta"            => "macaque",
+  "Nomascus_leucogenys"       => "gibbon",
+  "Ovis_aries"                => "sheep",
+  "Meleagris_gallopavo"       => "turkey",
 };
 
-my $groups = {
+my $adaptors = {
     core => {
-        user    => 'ensro',
         adaptor => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
     },
     funcgen => {
-        user    => 'ensro',
         adaptor => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
     },
     variation => {
-        user    => 'ensadmin',
-        pass    => 'ensembl',
         adaptor => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor',
     },
 };
 
 my $fmt = q{
 %s->new(
-    '-species'  => '%s',
-    '-group'    => '%s',
-    '-port'     => %d,
-    '-host'     => '%s',
-    '-user'     => '%s',
-    '-pass'     => '%s',
-    '-dbname'   => '%s',
+  '-species' => '%s',
+  '-group'   => '%s',
+  '-port'    => %d,
+  '-host'    => '%s',
+  '-user'    => '%s',
+  '-pass'    => '%s',
+  '-dbname'  => '%s',
 );
 };
 
@@ -103,67 +107,108 @@ print <<END;
 #!/usr/bin/env perl
 use Bio::EnsEMBL::Registry;
 END
-
-for my $group (keys %$groups) {
-    print "use ".$groups->{$group}->{adaptor}.";\n";
+for my $group (keys %$adaptors) {
+  print "use " . $adaptors->{$group}->{adaptor} . ";\n";
 }
-
 print "\n";
 
 my $dbs;
 
+my $db_configs = {};
+my $fh = FileHandle->new($config->{server_file}, 'r');
+while (<$fh>) {
+  chomp;
+  my ($alias, $config_line) = split/\s/;
+  my @pairs = split(':', $config_line);
+  foreach my $pair (@pairs) {
+    my ($key, $value) = split/=/, $pair;
+    $db_configs->{$alias}->{$key} = $value;
+  }
+}
+
+my @servers = keys %$db_configs; # set default to all servers from the server_file
+@servers = split(',', $config->{servers}) if ($config->{servers});
+
+my $group_abbrev_mappings = {
+  'v' => 'variation',
+  'c' => 'core',
+  'f' => 'funcgen',
+};
+
 for my $server (@servers) {
+  my $db_config = $db_configs->{$server};
+  my $host = $db_config->{host};
+  my $password = $db_config->{password} || '';
+  my $user = $db_config->{user};
+  my $port = $db_config->{port};
+  my @groups = map { $group_abbrev_mappings->{$_} } split('', $db_config->{groups});
 
-    my $dbh = DBI->connect(
-        "DBI:mysql:host=$server;port=3306",
-        'ensro',
-        '',
-    );
-   
-    for my $group (keys %$groups) {
+  my $dbh = DBI->connect(
+    "DBI:mysql:host=$host;port=$port",
+    $user,
+    $password,
+  );
 
-        my $pattern = '%_'.$group.'_'.$release.'_%';
+  for my $group (@groups) {
 
-        my $sth = $dbh->prepare(qq{SHOW DATABASES like '$pattern'});
-        
-        $sth->execute;
+    my $pattern = '%_'.$group.'_'.$release.'_%';
 
-        while (my ($db) = $sth->fetchrow_array) {
-            next if $db =~ /master_schema/i;
-            my ($species) = $db =~ /(.+)_$group/;
-            $species =~ s/^(.)/uc($1)/e;
-            $dbs->{$species}->{$group}->{db} = $db;
-            $dbs->{$species}->{$group}->{server} = $server;
-        }
+    my $sth = $dbh->prepare(qq{SHOW DATABASES like '$pattern'});
+
+    $sth->execute;
+
+    while (my ($db) = $sth->fetchrow_array) {
+      next if $db =~ /master_schema/i;
+      my ($species) = $db =~ /(.+)_$group/;
+      $species =~ s/^(.)/uc($1)/e;
+      $dbs->{$species}->{$group}->{db} = $db;
+      $dbs->{$species}->{$group}->{server} = $host;
+      $dbs->{$species}->{$group}->{user} = $user;
+      $dbs->{$species}->{$group}->{pass} = $password;
+      $dbs->{$species}->{$group}->{port} = $port;
     }
+  }
 }
 
 for my $species (keys %$dbs) {
+  # we only care about species with variation databases!
+  next unless $dbs->{$species}->{variation};
 
-    # we only care about species with variation databases!
-    next unless $dbs->{$species}->{variation};
+  for my $group (keys %{ $dbs->{$species} }) {
+    printf $fmt,
+    $adaptors->{$group}->{adaptor},
+    $species,
+    $group,
+    $dbs->{$species}->{$group}->{port},
+    $dbs->{$species}->{$group}->{server},
+    $dbs->{$species}->{$group}->{user},
+    $dbs->{$species}->{$group}->{pass} || '',
+    $dbs->{$species}->{$group}->{db};
+  }
 
-    for my $group (keys %{ $dbs->{$species} }) {
-        printf $fmt,
-                $groups->{$group}->{adaptor},
-                $species,
-                $group,
-                $default_port,
-                $dbs->{$species}->{$group}->{server},
-                $groups->{$group}->{user},
-                $groups->{$group}->{pass} || '',
-                $dbs->{$species}->{$group}->{db};
-    }
-    
-    if (my $alias = $aliases->{$species}) {
-        printf $alias_fmt, $species, $alias;
-    }
-    else {
-        warn "No alias for species '$species'";
-    }
+  if (my $alias = $aliases->{$species}) {
+    printf $alias_fmt, $species, $alias;
+  }
+  else {
+    warn "No alias for species '$species'";
+  }
 }
 
 # registry files have to return a true value nowadays
 
 print "\n1;\n";
+
+
+sub usage {
+
+  print qq{
+  Print registry file for the specified servers.
+  perl print_reg_file.pl -release 88 -serers staging,v1 > ensembl.registry
+  Options:
+    -help           Print this message
+    -server_file    Default file is  /nfs/production/panda/ensembl/variation/server_file
+    -servers        Comma-separated list of server short cuts e.g. v1,v2,staging,staging37,f1,f2. If not specified all servers from the server file are used
+  } . "\n";
+  exit(0);
+}
 
