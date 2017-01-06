@@ -261,6 +261,19 @@ sub parse_gvf_file {
             'ancestral_allele' => 'AA',
         };
 
+        foreach my $population (qw/ASW CHB CHD GIH LWK MEX MKK TSI CEU HCB JPT YRI/) {
+          my $alt = "$population-ALT";
+          my $ref = "$population-REF";
+          my $freq = "$population-FREQ";
+          foreach my $key ($alt, $ref, $freq) {
+            if ($gvf_line->{$key}) {
+              add_info($vcf_line, $key, $gvf_line->{$key});
+            }
+          }
+        }
+        foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
+          add_info($vcf_line, $key, $gvf_line->{$key});
+        }
         while (my ($attribute, $key) = each %$attributes) {
             if (defined $gvf_line->{$attribute}) {
                 my $value = $gvf_line->{$attribute};
