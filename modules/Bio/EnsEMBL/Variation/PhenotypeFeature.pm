@@ -138,13 +138,13 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$attribs) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$attribs, $ontology_accessions) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
       SOURCE_NAME _SOURCE_ID SOURCE STUDY _STUDY_ID
       IS_SIGNIFICANT
-      ATTRIBS
+      ATTRIBS ONTOLOGY_ACCESSIONS
     )], @_);
 
   $self->{'dbID'} = $dbID;
@@ -186,9 +186,10 @@ sub new {
   }
 
 
-  $self->{type}           = $type;
-  $self->{is_significant} = $is_significant;
-  $self->{attribs}        = $attribs || {};
+  $self->{type}                = $type;
+  $self->{is_significant}      = $is_significant;
+  $self->{attribs}             = $attribs || {};
+  $self->{ontology_accessions} = $ontology_accessions || undef;
   
   return $self;
 }
@@ -678,6 +679,27 @@ sub get_all_attributes {
      if defined $self->{attribs}->{'clinvar_clin_sig'};
 
   return $self->{attribs};
+}
+
+
+=head2 get_all_ontology_accessions
+
+  Example    : @ontology_acc = @{$obj->get_all_ontology_accessions}
+  Description: Retrieves all ontology accessions linked to the phenotype entry of this PhenotypeFeature
+  Returntype : listref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_ontology_accessions {
+  my $self = shift;
+
+  if(!defined($self->{ontology_accessions})) {
+    $self->{ontology_accessions} = $self->phenotype->ontology_accessions;
+  }
+  return $self->{ontology_accessions};
 }
 
 

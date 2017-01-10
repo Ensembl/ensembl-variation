@@ -238,6 +238,44 @@ sub fetch_all_by_Slice_Study {
   return $pfs;
 }
 
+=head2 fetch_all_by_Slice_with_ontology_accession
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Arg [2]    : (optional) string $type
+  Example    : my @pfs = @{$pfa->fetch_all_by_Slice_with_ontology_accession($slice, 'Variation')};
+  Description: Retrieves all phenotype features of the given type (e.g. 'Variation','StructuralVariation','Gene','QTL')
+               on a slice with its phenotype ontology accession data.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_with_ontology_accession {
+  my $self  = shift;
+  my $slice = shift;
+  my $type  = shift;
+
+  my $constraint;
+  if ($type) {
+    throw("No valid object type given, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
+    $constraint .= qq{pf.type = '$type'};
+  }
+
+  $self->_include_ontology(1);
+
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+
+  my $result = $self->fetch_all_by_Slice_constraint($slice, $constraint);
+
+  ## reset flags
+  $self->_include_ontology(0);
+
+  return $result;
+}
+
 
 =head2 fetch_all_by_Variation
 
@@ -1050,19 +1088,15 @@ sub _default_where_clause {
 sub _columns {
   my $self = shift;
 
-  return qw(
-    pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
-    pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
-    pf.phenotype_id pf.source_id s.name pf.study_id p.description
-    pfa.value at.code
-  ) if $self->_include_attrib;
-
-  return qw(
+  my @cols = qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
     pf.phenotype_id pf.source_id s.name pf.study_id p.description
   ) ;
+  push @cols, ('pfa.value','at.code') if $self->_include_attrib;
+  push @cols, 'poa.accession'         if $self->_include_ontology;
 
+  return @cols;
 }
 
 
@@ -1101,11 +1135,9 @@ sub _obj_from_row {
   my $obj = $self->{_temp_objs}{$row->{phenotype_feature_id}}; 
     
   unless (defined($obj)) {
-
  
     # get required adaptors
     my $sa = $self->db()->dnadb()->get_SliceAdaptor();
-    my $aa = $self->db->get_AttributeAdaptor;
 
     my (
       @features, %slice_hash, %sr_name_hash, %sr_cs_hash,
@@ -1221,6 +1253,9 @@ sub _obj_from_row {
 
   ## add attribs if extracted
   $obj->{attribs}->{$row->{code}} = $row->{value} if $row->{code};
+
+  ## add ontology accession if extracted
+  push(@{$obj->{ontology_accessions}}, $row->{accession}) if $row->{accession};
 }
 
 sub store{

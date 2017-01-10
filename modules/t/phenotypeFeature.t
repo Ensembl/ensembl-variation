@@ -63,12 +63,12 @@ my $study = Bio::EnsEMBL::Variation::Study->new
 
 my $v_name = 'rs142276873';
 
-##need a feature
+## need a feature
 my $variation = Bio::EnsEMBL::Variation::Variation->new(-name   => $v_name,
                                                         -source => $source);
 
 
-##need a slice
+## need a slice
 my $sa = $db->get_SliceAdaptor();
 my $slice = $sa->fetch_by_region('chromosome', '18');
 
@@ -85,6 +85,7 @@ my $allele_symbol = 't_1';
 my $allele_accession = 't_1.1';
 my $var_name = "rs12345";
 my $external_ref = "RV123";
+my @ontology_accessions = ('EFO:00001');
 
 my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $desc);
 
@@ -111,6 +112,7 @@ my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       variation_names      => $var_name,
       external_reference   => $external_ref 
     },
+    -ontology_accessions => \@ontology_accessions,
     );
 
 
@@ -137,6 +139,7 @@ ok($pf->phenotype() eq $phenotype,                 "phenotype object");
 ok($pf->phenotype()->description eq $desc,         "phenotype");
 ok($pf->object()->name() eq $v_name,               "variation name");
 ok($pf->external_reference() eq $study_xref,       "external reference");
+ok($pf->get_all_ontology_accessions->[0] eq $ontology_accessions[0], "ontology accessions");
 
 # test source object
 my $pf_object = $pf->object();
