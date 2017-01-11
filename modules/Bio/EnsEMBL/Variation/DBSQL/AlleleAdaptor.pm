@@ -256,7 +256,9 @@ sub fetch_all_by_Variation {
     my @from_vcf;
 
     if($use_vcf) {
-      if(my $vfs = $variation->get_all_VariationFeatures) {
+      my $vfs = $variation->get_all_VariationFeatures;
+
+      if($vfs && @$vfs) {
         @from_vcf =
           map {$_->{adaptor} = $self; $_}
           map {@{$_->get_all_Alleles_by_VariationFeature($vfs->[0])}}
