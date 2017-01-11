@@ -472,7 +472,7 @@ sub fetch_all_by_phenotype_description_source_name {
 
   throw('phenotype_description argument expected') if(!defined($phenotype_description));
 
-  my $extra_sql = qq( p.description like '%$phenotype_description%' );
+  my $extra_sql = qq( p.description like "%$phenotype_description%" );
   if (defined $source_name ) {
     $extra_sql .= qq( AND s.name = '$source_name' );
   }
@@ -683,7 +683,7 @@ sub fetch_all_by_associated_gene_phenotype_description {
   throw('gene_name argument expected') if(!defined($gene_name));
   throw('phenotype argument expected') if(!defined($phenotype));
   
-  my $constraint = "p.description='$phenotype'";
+  my $constraint = qq( p.description="$phenotype" );
   
   return $self->fetch_all_by_associated_gene($gene_name,$constraint);
 }
