@@ -295,13 +295,14 @@ sub fetch_by_VariationFeature {
   my $self = shift;
   my $vf  = shift;
   my $pop = shift;
-  if (!$vf->slice->is_reference) {
-    warning('Variation feature is not located on the reference sequence but either on a patch or haplotype region.');
-    return undef;
-  }
 
   if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
+  }
+
+  if (!$vf->slice->is_reference) {
+    warning('Variation feature is not located on the reference sequence but either on a patch or haplotype region.');
+    return undef;
   }
 
   if(!defined($vf->dbID())) {
@@ -587,9 +588,12 @@ sub _fetch_by_Slice_VCF {
 
         $cmd = "$bin -f $vcf_file -r $loc_string -l $sample_string";
       }
+      if ($self->{_vf_name}) {
+        $cmd .= " -v " . $self->{_vf_name};
+      }
 
       # run LD binary and open as pipe
-      open LD, "$cmd |";
+      open LD, "$cmd |"  or die "$!";
 
       # print STDERR "$cmd\n";
 
@@ -658,6 +662,7 @@ sub _fetch_by_Slice_VCF {
       }
     }
   }
+  close LD;
 
   $container->{pos2name} = \%pos2name if $container;
 
