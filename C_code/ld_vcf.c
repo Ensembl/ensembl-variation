@@ -177,7 +177,7 @@ int by_person_id(const void *v1, const void *v2){
 }
 
 void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
-
+//  fprintf(stderr, "%d\n",  first->number_genotypes);
   int allele_counters[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   
   int nAB = 0, nab = 0, nAb = 0, naB = 0;
@@ -268,19 +268,21 @@ void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
   s->people = haplotypes.number_haplotypes;
 }
 
-void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh){
+void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh, char *variant){
   Locus_info *next, *head;
   Stats stats;
-
+  
   /* Doesn't look like it, but sets head and next to the first and
      second entries - I love C, sometimes */
 
   next = &ll->locus[ll->head];
   head = next++;
-
   int i;
   for (i = ll->head; i < ll->tail; i++, next++) {
-    /*Only calculate the LD when both SNPs are in the same population*/
+    if (variant[0] != 0) {
+      if ((strcmp(head->var_id, variant) != 0 ) && (strcmp(next->var_id, variant) != 0))
+        continue;
+    }
     if (head->population_id != next->population_id)
       continue;
     calculate_pairwise_stats(head, next, &stats);
@@ -311,6 +313,7 @@ int main(int argc, char *argv[]) {
   char *files[2];
   char *regions[2];
   char *samples_list;
+  char *variant = "";
   int numfiles = 0;
   int numregions = 0;
   int windowsize = WINDOW_SIZE;
@@ -323,13 +326,14 @@ int main(int argc, char *argv[]) {
       {"region2", required_argument, 0, 's'},
       {"samples", required_argument, 0, 'l'},
       {"window",  required_argument, 0, 'w'},
+      {"variant", required_argument, 0, 'v'},
       {0, 0, 0, 0}
     };
 
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:g:l:r:s:w:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:g:l:r:s:w:v:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -359,6 +363,10 @@ int main(int argc, char *argv[]) {
 
       case 'w':
         windowsize = atoi(optarg);
+
+      case 'v':
+        variant = optarg;
+        break;
 
       case '?':
         /* getopt_long already printed an error message. */
@@ -557,7 +565,9 @@ int main(int argc, char *argv[]) {
           (locus_list.tail >= locus_list.head) &&
           (abs(locus_list.locus[locus_list.head].position - position) > windowsize)
         ) {
-          calculate_ld(&locus_list, seq_region_id, fh);
+//          fprintf(stderr, "Calculate LD 1\n");
+
+          calculate_ld(&locus_list, seq_region_id, fh, variant);
           dequeue(locus_list);  
         }
         if (locus_list.tail < locus_list.head) {
@@ -568,7 +578,6 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // cleanup
     tbx_destroy(idx);
     tbx_itr_destroy(iter);
     bcf_hdr_destroy(hdr);
@@ -578,7 +587,8 @@ int main(int argc, char *argv[]) {
   l_tmp = &locus_list.locus[locus_list.tail];
 
   while(locus_list.tail >= locus_list.head){
-    calculate_ld(&locus_list, seq_region_id, fh);
+
+    calculate_ld(&locus_list, seq_region_id, fh, variant);
     dequeue(locus_list);
   }
 
