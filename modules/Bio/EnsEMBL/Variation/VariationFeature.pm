@@ -435,6 +435,70 @@ sub minor_allele_count {
 
 
 
+=head2 get_all_highest_frequency_minor_Alleles
+
+  Example    : my @hpmaf_alleles = @{$vf->get_all_highest_frequency_minor_Alleles()}
+  Description: Gets all Allele objects whose minor allele frequency is the
+               highest amongst all populations. The frequency of these Alleles
+               (though there will usually only be one) will be the HPMAF
+               (Highest Population Minor Allele Frequency).
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Allele
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_highest_frequency_minor_Alleles {
+  my $self = shift;
+
+  # cache it as there's a fair bit of API fetching, sorting etc
+  unless(exists($self->{hfm_alleles})) {
+
+    my @alleles = grep {defined($_->frequency) && $_->population} @{$self->variation->get_all_Alleles()};
+
+    # first try and filter down to just 1KG, ExAC and ESP
+    my @filtered = grep { $_->population->name =~ /^(ExAC|ESP6500\:|1000GENOMES\:phase_3\:)/ } @alleles;
+
+    my $max_af = 0;
+    my @max_alleles;
+
+    # now group by population, skipping ALL summary level populations
+    my %by_pop;
+    push @{$by_pop{$_->population->name}}, $_ for
+      grep {$_->population->name !~ /(\_|\:)(ALL|Adj)$/}
+      scalar @filtered ? @filtered : @alleles;
+
+    my $ref = $self->ref_allele_string;
+
+    foreach my $pop(sort keys %by_pop) {
+      
+      # we want the minor allele, which is by definition the second most frequent
+      # if there are more than one the same, we want the non-reference
+      my @sorted = sort {
+        $b->frequency <=> $a->frequency ||
+        ($a->allele ne $ref) <=> ($b->allele ne $ref)
+      } @{$by_pop{$pop}};
+      my $a = $sorted[1];
+      next unless $a;
+
+      if($a->frequency > $max_af) {
+        $max_af = $a->frequency;
+        @max_alleles = ($a);
+      }
+      elsif($a->frequency == $max_af) {
+        push @max_alleles, $a;
+      }
+    }
+
+    $self->{hfm_alleles} = \@max_alleles;
+  }
+
+  return $self->{hfm_alleles};
+}
+
+
+
 =head2 get_all_TranscriptVariations
 
   Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects

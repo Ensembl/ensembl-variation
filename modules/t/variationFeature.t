@@ -217,4 +217,24 @@ $vfa->db->use_vcf(0);
 @LD_populations = @{$vf7->get_all_LD_Populations};
 ok(scalar @LD_populations == 1, 'get_all_LD_Populations use_vcf = 0');
 
+
+# get_all_highest_frequency_minor_Alleles
+$vfa->db->use_vcf(1);
+my $hpmaf_alleles = $vf7->get_all_highest_frequency_minor_Alleles();
+is(scalar @$hpmaf_alleles, 2, 'get_all_highest_frequency_minor_Alleles - count');
+is(sprintf("%.4f", $hpmaf_alleles->[0]->frequency), 0.1148, 'get_all_highest_frequency_minor_Alleles - frequency');
+
+is_deeply(
+  [map {$_->allele} @$hpmaf_alleles],
+  [qw(C C)],
+  'get_all_highest_frequency_minor_Alleles - allele'
+);
+is_deeply(
+  [sort map {$_->population->name} @$hpmaf_alleles],
+  [qw(1000GENOMES:phase_1_AFR 1000GENOMES:phase_1_ASW)],
+  'get_all_highest_frequency_minor_Alleles - population'
+);
+
+$vfa->db->use_vcf(0);
+
 done_testing();
