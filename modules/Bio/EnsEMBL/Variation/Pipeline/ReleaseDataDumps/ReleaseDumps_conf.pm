@@ -51,8 +51,8 @@ sub default_options {
         hive_force_init      => 1,
         hive_use_param_stack => 1,
         hive_use_triggers    => 0,
-        hive_root_dir        => $ENV{'HOME'} . '/DEV/ensembl-hive', 
-        ensembl_cvs_root_dir => $ENV{'HOME'} . '/DEV',
+        hive_root_dir        => $ENV{'HOME'} . '/bin/ensembl-hive', 
+        ensembl_cvs_root_dir => $ENV{'HOME'} . '/bin',
         hive_no_init         => 0,
 
 
@@ -65,8 +65,8 @@ sub default_options {
 
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
-        gvf_validator      => '/nfs/users/nfs_a/at7/tools/gvf_validator',
-        so_file            => '/nfs/users/nfs_a/at7/obo/e' . $self->o('ensembl_release') . '/so.obo',
+        gvf_validator      => $self->o('gvf_validator'),
+        so_file            => $self->o('so_file'),
 
         tmp_dir           => $self->o('tmp_dir'),
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
@@ -80,10 +80,6 @@ sub default_options {
  
         only_finish_dumps => 0,
         human_population_dumps => 0,
-
-        hive_db_host    => 'ens-variation3',
-        hive_db_port    => 3306,
-        hive_db_user    => 'ensadmin',
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
@@ -111,7 +107,6 @@ sub pipeline_wide_parameters {
         gvf_readme       => $self->o('gvf_readme'), 
         vcf_readme       => $self->o('vcf_readme'),
         pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),        
-
         config_file => '/lustre/scratch110/ensembl/at7/release_83/dumps/data_dumps_config.json',
     };
 }
@@ -120,10 +115,10 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q normal -R"select[mem>3500] rusage[mem=3500]" -M3500'},
-        'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-        'highmem' => { 'LSF' => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
-        'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+        'default' => { 'LSF' => '-q production-rh7 -R"select[mem>3500] rusage[mem=3500]" -M3500'},
+        'urgent'  => { 'LSF' => '-q production-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+        'highmem' => { 'LSF' => '-q production-rh7 -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
+        'long'    => { 'LSF' => '-q production-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
     };
 }
 sub pipeline_analyses {
