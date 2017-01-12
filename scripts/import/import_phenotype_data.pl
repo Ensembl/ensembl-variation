@@ -425,7 +425,7 @@ elsif ($source =~ m/^impc/i || $source =~ m/^mgi/i) {
     $infile = get_mouse_phenotype_data($working_dir, $data_source, $url);
   }
   my $mouse_phenotype_source_ids = get_mouse_phenotype_data_source_ids($infile, $data_source);
-  update_mouse_phenotype_data_version($mouse_phenotype_source_ids); 
+  $source_version = update_mouse_phenotype_data_version($mouse_phenotype_source_ids); 
   clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids);
   my $marker_coords = get_marker_coords($infile, $coord_file);
   $result = parse_mouse_phenotype_data($infile, $marker_coords, $data_source, $mouse_phenotype_source_ids);
@@ -1945,7 +1945,7 @@ sub get_mouse_phenotype_data_source_ids {
     if (defined($source_id)) {
       $source_name2id->{$source_name} = $source_id;
     } else {
-      die "Could not fetch dbID for source name $source_name\n";
+      warn "Could not fetch dbID for source name $source_name\n";
     }
     $sth->finish();
   }
@@ -1997,6 +1997,10 @@ sub parse_mouse_phenotype_data {
     }
     my $marker_accession_id = $hash->{marker_accession_id};
     my $description = $hash->{mp_term_name};
+    if (!$description) {
+      warn "No description/mp_term_name for $_\n";
+      next;
+    }
     $data{description} = $description;
     $data{accession} = $hash->{mp_term_id};
 
@@ -2494,9 +2498,6 @@ sub add_phenotypes {
     $object_type = $phenotype->{type} if defined($phenotype->{type});
 
     my $object_id = $phenotype->{"id"};
-    foreach my $key (keys %$phenotype) {
-      print STDERR "$key ", $phenotype->{$key}, "\n";
-    }
     # If the rs could not be mapped to a variation id, skip it
     next if $object_type =~ /Variation/ && (!defined($variation_ids->{$object_id}));
 
@@ -2989,6 +2990,7 @@ sub update_mouse_phenotype_data_version {
   foreach my $source_name (keys %$source_name2ids) {
     $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) or die $dbh->errstr;
   }
+  return $version;
 }
 
 sub get_marker_coords {
