@@ -218,7 +218,7 @@ $port  ||= 3306;
 $cport ||= $port;
 $chost ||= $host;
 $cuser ||= $user;
-$cpass ||= $pass;
+#$cpass ||= $pass;
 
 my $result;
 my $source_name;
@@ -409,19 +409,22 @@ elsif ($source =~ m/^goa$/i) {
   $source_name = 'GOA';
 }
 elsif ($source =~ m/^impc/i || $source =~ m/^mgi/i) {
+  $skip_synonyms = 1;
   my ($data_source, $url);
   if ($source =~ m/^impc/i ) {
     $data_source = 'impc';
+    $source_name = 'IMPC';
     $url = '/mi/impc/solr/genotype-phenotype';
   } else {
     $data_source = 'mgi';
+    $source_name = 'MGI';
     $url = '/mi/impc/solr/mgi-phenotype';
   }
   die "Coord file is required: ftp://ftp.informatics.jax.org/pub/reports/MGI_MRK_Coord.rpt" if (!-f $coord_file);
   if (!$infile) {
     $infile = get_mouse_phenotype_data($working_dir, $data_source, $url);
   }
-  my $mouse_phenotype_source_ids = get_mouse_phenotype_data_source_ids($infile);
+  my $mouse_phenotype_source_ids = get_mouse_phenotype_data_source_ids($infile, $data_source);
   update_mouse_phenotype_data_version($mouse_phenotype_source_ids); 
   clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids);
   my $marker_coords = get_marker_coords($infile, $coord_file);
@@ -1953,7 +1956,7 @@ sub get_mouse_phenotype_data_source_ids {
 sub clear_mouse_phenotype_data_from_last_release {
   my $source_name2id = shift;
   my $dbh = $db_adaptor->dbc->db_handle;
-  my $source_ids = join(',', keys %$source_name2id);
+  my $source_ids = join(',', values %$source_name2id);
   $dbh->do(qq{ DELETE pfa FROM phenotype_feature_attrib pfa JOIN phenotype_feature pf ON pfa.phenotype_feature_id = pf.phenotype_feature_id AND pf.source_id IN ($source_ids);} );
   $dbh->do(qq{ DELETE FROM phenotype_feature WHERE source_id IN ($source_ids);} );
 }
@@ -1994,6 +1997,7 @@ sub parse_mouse_phenotype_data {
     }
     my $marker_accession_id = $hash->{marker_accession_id};
     my $description = $hash->{mp_term_name};
+    $data{description} = $description;
     $data{accession} = $hash->{mp_term_id};
 
     my $source = '';
@@ -2050,8 +2054,8 @@ sub parse_mouse_phenotype_data {
             -gender => $gender,
             -individual_type_id => 1,
         );
-#        $individual_adaptor->store($individual);
-#        $strain_id = $individual_adaptor->last_insert_id();
+        $individual_adaptor->store($individual);
+        $strain_id = $individual_adaptor->last_insert_id();
       }
     }
     $data{associated_gene} = $hash->{marker_symbol};
@@ -2490,7 +2494,9 @@ sub add_phenotypes {
     $object_type = $phenotype->{type} if defined($phenotype->{type});
 
     my $object_id = $phenotype->{"id"};
-
+    foreach my $key (keys %$phenotype) {
+      print STDERR "$key ", $phenotype->{$key}, "\n";
+    }
     # If the rs could not be mapped to a variation id, skip it
     next if $object_type =~ /Variation/ && (!defined($variation_ids->{$object_id}));
 
@@ -2638,7 +2644,7 @@ sub get_phenotype_id {
   $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
   $description =~ s/\n//g; # Remove 'new line' characters
   
-  die "ERROR: No description found for phenotype\n" if(!defined($description));
+  die "ERROR: No description found for phenotype $name\n" if(!defined($description));
 
   # Check phenotype description in the format "description; name"
   if (!defined($name) || $name eq '') {
