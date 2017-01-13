@@ -53,15 +53,15 @@ sub default_options {
 
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/EBI/bin/GIT',
-    hive_root_dir           => $ENV{'HOME'} . '/EBI/bin/GIT/ensembl-hive', 
+    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin/',
+    hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive', 
 
     pipeline_name           => 'equivalent_alleles',
 
     # a directory to keep hive output files and your registry file, you should
     # create this if it doesn't exist
 
-    pipeline_dir            => '/lustre/scratch110/ensembl/'. $login .'/'. $self->o('pipeline_name') . '/'.  $self->o('species'),
+    pipeline_dir            => '/gpfs/nobackup/ensembl/'. $login .'/'. $self->o('pipeline_name') . '/'.  $self->o('species'),
 
     # a directory where hive workers will dump STDOUT and STDERR for their jobs
         
@@ -101,8 +101,8 @@ sub default_options {
     # <username>_<pipeline_name>, and will drop any existing database with this
     # name
 
-    hive_db_host    => 'ens-variation2',
-    hive_db_port    => 3306,
+    hive_db_host    => 'mysql-ens-var-prod-1',
+    hive_db_port    => 4449,
     hive_db_user    => 'ensadmin',
 
     pipeline_db => {

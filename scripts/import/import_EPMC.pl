@@ -17,10 +17,6 @@
 
 ## script to read data export from Europe PMC & UCSC and import as variation_citations
 
-BEGIN{
-    $ENV{http_proxy} = 'http://wwwcache.sanger.ac.uk:3128'; 
-
-}
 use strict;
 use warnings;
 
