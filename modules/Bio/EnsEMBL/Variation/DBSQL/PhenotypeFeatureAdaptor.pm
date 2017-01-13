@@ -188,7 +188,7 @@ sub fetch_all_by_Slice_type {
   my $slice = shift;
   my $type  = shift;
   
-  throw("No valid object type given, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
+  throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined $type and defined($TYPES{$type});
   
   my $constraint = qq{pf.type = '$type'};
   
@@ -259,7 +259,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
 
   my $constraint;
   if ($type) {
-    throw("No valid object type given, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined $type and defined($TYPES{$type});
     $constraint .= qq{pf.type = '$type'};
   }
 
