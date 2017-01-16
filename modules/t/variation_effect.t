@@ -1307,7 +1307,7 @@ $transcript_tests->{$mirna->stable_id}->{tests} = [
     {
         start   => $t_start,
         end     => $t_start,
-        effects => [qw(non_coding_transcript_variant non_coding_transcript_exon_variant)],
+        effects => [qw(non_coding_transcript_exon_variant)],
     }, {
         start   => $t_start + 40,
         end     => $t_start + 40,

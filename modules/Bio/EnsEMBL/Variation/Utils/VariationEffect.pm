@@ -405,14 +405,14 @@ sub within_non_coding_gene {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
 
-    return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)) );
+    return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)) and (not non_coding_exon_variant(@_)) );
 }
 
 sub non_coding_exon_variant {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
-    return 0 unless within_non_coding_gene(@_);
+    return 0 if $feat->translation or within_mature_miRNA(@_);
     
     # get overlapped exons
     # this may include some non-overlapping ones in the case of transcripts with frameshift introns
