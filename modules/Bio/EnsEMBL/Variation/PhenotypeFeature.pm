@@ -261,6 +261,32 @@ sub phenotype_description {
 }
 
 
+=head2 phenotype_id
+
+  Example    : $id = $pf->phenotype_id();
+  Description: Convenience method to get the phenotype internal ID
+               associated with this annotation.
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+  Status     : experimental
+
+=cut
+
+sub phenotype_id {
+  my $self = shift;
+
+  return $self->{_phenotype_id} if $self->{_phenotype_id};
+  
+  if (defined($self->{phenotype})) {
+    if ($self->{phenotype}->dbID) {
+      $self->{_phenotype_id} = $self->{phenotype}->dbID;
+      return $self->{phenotype}->dbID;
+    }
+  }
+}
+
+
 =head2 object
 
   Arg [1]    : (optional) Bio::EnsEMBL::* object $ph

@@ -73,21 +73,22 @@ my $sa = $db->get_SliceAdaptor();
 my $slice = $sa->fetch_by_region('chromosome', '18');
 
 
-my $external_id = 12345;
-my $p_value     = 0.0000023;
-my $risk_allele = 'G';
-my $desc        = 'Tea Consumption';
-my $gene        = 'TEA1';
-my $clinsig     = 'protective';
-my $or          = 6;
-my $beta        = 2;
+my $external_id  = 12345;
+my $p_value      = 0.0000023;
+my $risk_allele  = 'G';
+my $phenotype_id = 1;
+my $desc         = 'Tea Consumption';
+my $gene         = 'TEA1';
+my $clinsig      = 'protective';
+my $or           = 6;
+my $beta         = 2;
 my $allele_symbol = 't_1';
 my $allele_accession = 't_1.1';
 my $var_name = "rs12345";
 my $external_ref = "RV123";
 my @ontology_accessions = ('EFO:00001');
 
-my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $desc);
+my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $desc, -dbID => $phenotype_id);
 
 my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
     -slice     => $slice,
@@ -136,6 +137,7 @@ ok($pf->study_url()  eq $study_url,                "study_url");
 ok($pf->study_description() eq $study_description, "study description");
 ok($pf->variation_names() eq $var_name,            "assoc var names");
 ok($pf->phenotype() eq $phenotype,                 "phenotype object");
+ok($pf->phenotype_id() eq $phenotype_id,           "phenotype ID");
 ok($pf->phenotype()->description eq $desc,         "phenotype");
 ok($pf->object()->name() eq $v_name,               "variation name");
 ok($pf->external_reference() eq $study_xref,       "external reference");
