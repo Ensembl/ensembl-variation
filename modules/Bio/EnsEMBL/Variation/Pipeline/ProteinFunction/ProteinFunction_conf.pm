@@ -102,11 +102,11 @@ sub default_options {
         
         # configuration for the various resource options used in the pipeline
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-q long -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-q production-rh7 -M  2000 -R "rusage[mem=2000]"',
+        medmem_lsf_options  => '-q production-rh7 -M  2000 -R "rusage[mem=4000]"',
+        urgent_lsf_options  => '-q production-rh7 -M  2000 -R "rusage[mem=2000]"',
+        highmem_lsf_options => '-q production-rh7 -M  2000 -R "rusage[mem=15000]"',
+        long_lsf_options    => '-q production-rh7 -M  2000 -R "rusage[mem=2000]"',
 
         # Polyphen specific parameters
 
