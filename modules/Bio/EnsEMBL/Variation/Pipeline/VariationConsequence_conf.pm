@@ -46,6 +46,9 @@ sub default_options {
     # these values, if you find you do need to then we should probably
     # make it an option here, contact the variation team to discuss
     # this - patches are welcome!
+    
+    my $login = `whoami`;
+    chomp $login;
 
     return {
 
@@ -58,8 +61,8 @@ sub default_options {
         hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
-        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive', 
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
+        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'variation_consequence',
@@ -67,7 +70,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/lustre/scratch109/ensembl/at7/release_77/human/' . $self->o('pipeline_name'),
+        pipeline_dir            => '/gpfs/nobackup/ensembl/' . $login . '/' . $self->o('pipeline_name') . '/' . $self->o('species'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -98,9 +101,9 @@ sub default_options {
         
         default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
         highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        long_lsf_options    => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species
@@ -151,8 +154,8 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'ens-variation2',
-        hive_db_port    => 3306,
+        hive_db_host    => 'mysql-ens-var-prod-1',
+        hive_db_port    => 4449,
         hive_db_user    => 'ensadmin',
 
         pipeline_db => {
