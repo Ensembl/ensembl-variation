@@ -366,7 +366,7 @@ sub check_attribs{
     my $self = shift;
 
     my $var_dba = $self->get_species_adaptor('variation');
-    my $attribs = get_evidence_attribs($var_dba);
+    my $attribs = get_evidence_attribs( $var_dba->dbc() );
 
     my $found_everything = 1;
     foreach my $ev ( "1000Genomes", "Cited", "ESP", "ExAC", "Frequency", "HapMap", "Multiple_observations","1000Bull_Genomes", "WTSI_MGP"){
