@@ -1406,7 +1406,7 @@ sub parse_9th_col {
     }
 
     # Breakpoint definition
-    if ($species =~ /^(homo|human)/i) {
+    if ($species =~ /^(homo|human)/i && $info->{is_somatic}) {
       $info->{_bp_detail} = $value if ($key =~ /Breakpoint_detail/i);
       $info->{_bp_range}  = $value if ($key =~ /Breakpoint_range/i);
     }
