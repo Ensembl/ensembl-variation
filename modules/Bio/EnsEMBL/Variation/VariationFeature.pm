@@ -1602,7 +1602,7 @@ sub _get_alleles {
     Example     : my @vs = @{$vf->get_all_VariationSets()};
     Description : returns a reference to a list of all the VariationSets this
                   VariationFeature is a member of
-    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSet objects
     Exceptions  : if no adaptor is attached to this object
     Caller      : general
     Status      : Stable
