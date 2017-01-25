@@ -245,13 +245,13 @@ sub variation_name{
 
 =head2 var_class
 
-    Args         : None
-    Example      : my $sv_class = $sv->var_class()
-    Description  : Getter/setter for the class of structural variant
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_class = $sv->var_class()
+    Description : Getter/setter for the class of structural variant
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -272,13 +272,13 @@ sub var_class {
 
 =head2 class_SO_term
 
-    Args         : None
-    Example      : my $sv_so_term = $svf->class_SO_term()
-    Description  : Getter for the class of structural variant, returning the SO term
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_so_term = $svf->class_SO_term()
+    Description : Getter for the class of structural variant, returning the SO term
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -291,13 +291,13 @@ sub class_SO_term {
 
 =head2 class_SO_accession
 
-    Args         : None
-    Example      : my $sv_so_accession = $svf->class_SO_accession()
-    Description  : Returns the SO accession corresponding to the structural variant class
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_so_accession = $svf->class_SO_accession()
+    Description : Returns the SO accession corresponding to the structural variant class
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 

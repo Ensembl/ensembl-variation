@@ -787,13 +787,13 @@ sub get_all_supporting_evidence_classes {
 
 =head2 var_class
 
-    Args         : None
-    Example      : my $sv_class = $svf->var_class()
-    Description  : Getter for the class of structural variation
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_class = $svf->var_class()
+    Description : Getter for the class of structural variation
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -814,13 +814,13 @@ sub var_class {
 
 =head2 class_SO_term
 
-    Args         : None
-    Example      : my $sv_so_term = $svf->class_SO_term()
-    Description  : Getter for the class of structural variation, returning the SO term
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_so_term = $svf->class_SO_term()
+    Description : Getter for the class of structural variation, returning the SO term
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 

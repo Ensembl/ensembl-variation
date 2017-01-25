@@ -964,13 +964,13 @@ sub add_PopulationGenotype{
 
 =head2 ambig_code
 
-    Args         : None
-    Example      : my $ambiguity_code = $v->ambig_code()
-    Description  : Returns the ambigutiy code for the alleles in the Variation
-    ReturnType   : String $ambiguity_code
-    Exceptions   : none    
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $ambiguity_code = $v->ambig_code()
+    Description : Returns the ambigutiy code for the alleles in the Variation
+    ReturnType  : String $ambiguity_code
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut 
 
@@ -1000,13 +1000,13 @@ sub ambig_code{
 
 =head2 var_class
 
-    Args         : None
-    Example      : my $variation_class = $vf->var_class()
-    Description  : returns the class for the variation, according to dbSNP classification
-    ReturnType   : String $variation_class
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $variation_class = $vf->var_class()
+    Description : returns the class for the variation, according to dbSNP classification
+    ReturnType  : String $variation_class
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
