@@ -1016,7 +1016,7 @@ sub ambig_code{
                   (used by the ensembl variation pipeline)
     Example     : my $variation_class = $vf->var_class
     Description : returns the Ensembl term for the class of this variation
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : throws if we can't find a corresponding display term for an SO term
     Caller      : General
     Status      : Stable
@@ -1049,7 +1049,7 @@ sub var_class {
                   (used by the ensembl variation pipeline)
     Example     : my $SO_variation_class = $vf->class_SO_term()
     Description : Get/set the SO term for the class of this variation
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : General
     Status      : Stable
@@ -1432,7 +1432,7 @@ sub get_all_LD_values {
   Args        : none
   Description : returns a list of populations that could produces LD values
                 for this VariationFeature
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : none
   Caller      : Web code snpview
   Status      : Stable

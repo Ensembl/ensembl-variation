@@ -1085,7 +1085,7 @@ sub study {
     Example     : my $seq = $svf->get_reference_sequence
     Description : returns a string containing the reference sequence for the region
                   covered by this StructuralVariationFeature
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : general
     Status      : At Risk

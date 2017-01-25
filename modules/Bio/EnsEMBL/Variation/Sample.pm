@@ -310,7 +310,7 @@ sub study {
    Example     : $populations = $sample->get_all_Populations();
    Description : Get all populations for this sample. Returns
                  empty list if there are none.
-   ReturnType  : listref of Bio::EnsEMBL::Population objetcs
+   ReturnType  : reference to list of Bio::EnsEMBL::Population objetcs
    Exceptions  : none
    Caller      : general
    Status      : Stable

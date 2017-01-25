@@ -413,7 +413,7 @@ sub _fetch_all_by_Variation_from_Genotypes {
                 }
 		
   Description : Gets the unique descriptions for the reasons why the supplied allele has failed.
-  ReturnType  : reference to a list of strings
+  ReturnType  : reference to list of strings
   Exceptions  : thrown on incorrect argument
   Caller      : general
   Status      : At Risk
@@ -448,7 +448,7 @@ sub get_all_failed_descriptions {
   Description : Gets the submitter handle for the specified allele
                 The initial observation and later allele frequencies may be submitted for the same ss record by different groups
                 supplying a population returns the submitter handle for data obtained within this population  
-  ReturnType  : string
+  ReturnType  : String
   Exceptions  : thrown on incorrect argument
   Caller      : general
   Status      : Stable

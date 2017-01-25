@@ -142,7 +142,7 @@ sub new {
     Arg [1]     : listref to Bio::EnsEMBL::Variation::AlleleFeature $allele_features
     Example     : my $new_list_allele_features = $strainSlice->_filter_af_by_coverage($allele_features);
     Description : For a list of allele features, gets a new list where they are filtered depending on coverage
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : none
     Caller      : internal function
 
@@ -183,7 +183,7 @@ sub _filter_af_by_coverage {
     Arg [1]     : (optional) string $strain_name
     Example     : my $strain_name = $strainSlice->strain_name();
     Description : Getter/Setter for the name of the strain
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : general
 
@@ -218,7 +218,7 @@ sub sample {
     Args        : none
     Example     : my $strain_name = $strainSlice->display_Slice_name();
     Description : Getter for the name of the strain
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : webteam
 
@@ -395,7 +395,7 @@ sub get_AlleleFeature {
     Example     : my $af = $strainSlice->get_all_AlleleFeatures_Slice()
     Description : Gets all AlleleFeatures between the StrainSlice object and the Slice is defined.
                   If argument $with_coverage set to 1, returns only AF if they have coverage information
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : none
     Caller      : general
 
@@ -429,7 +429,7 @@ sub get_all_AlleleFeatures_Slice {
     Arg[1]      : Bio::EnsEMBL::StrainSlice $ss
     Example     : my $differences = $strainSlice->get_all_differences_StrainSlice($ss)
     Description : Gets differences between 2 StrainSlice objects
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : thrown on bad argument
     Caller      : general
 
@@ -752,7 +752,7 @@ sub get_all_differences_Slice {
 
     Arg[1]      : int $with_coverage (optional)
     Description : returns all alleleFeatures features on this slice.
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : none
     Caller      : contigview, snpview
 

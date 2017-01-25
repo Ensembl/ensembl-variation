@@ -90,7 +90,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
                   my $features = $rca->fetch_all_by_Slice_Sample_depth($slice); 
     Description : Gets all the read coverage features for a given sample (or strain) in a certain level
                   in the provided slice
-    ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::ReadCoverage
     Exceptions  : thrown on bad arguments
     Caller      : general
     Status      : Stable
@@ -186,7 +186,7 @@ sub fetch_all_regions_covered {
     Args        : none
     Example     : my @coverage_levels = @{$rca->fetch_coverage_levels()};
     Description : Gets the read coverage depths calculated in the database
-    ReturnType  : listref of integer
+    ReturnType  : reference to list of int
     Exceptions  : none
     Caller      : general
     Status      : At Risk

@@ -379,7 +379,7 @@ sub _internal_get_failed_descriptions {
                 }
     
   Description : Gets the unique descriptions for the reasons why the supplied structural variant has failed.
-  ReturnType  : reference to a list of strings
+  ReturnType  : reference to list of strings
   Exceptions  : thrown on incorrect argument
   Caller      : general
   Status      : Stable

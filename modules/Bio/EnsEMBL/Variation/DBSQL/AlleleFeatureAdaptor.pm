@@ -87,7 +87,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
    Example     : my $afs = $afa->fetch_all_by_Slice($slice, $sample);   
    Description : Gets all AlleleFeatures in a certain Slice for a given
                  Sample (optional). Sample must be a designated strain.
-   ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+   ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
    Status      : Stable
