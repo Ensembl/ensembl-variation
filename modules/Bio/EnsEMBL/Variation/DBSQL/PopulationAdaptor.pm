@@ -420,7 +420,7 @@ sub fetch_default_LDPopulation {
 
     Example     : @populations = @{$pop_adaptor->fetch_all_vcf_Populations();
     Description : Gets all populations that are represented in VCF files
-    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
     Exceptions  : none
     Caller      : general
     Status      : stable
@@ -443,7 +443,7 @@ sub fetch_all_vcf_Populations {
 
     Example     : @populations = @{$pop_adaptor->fetch_all_LD Populations();
     Description : Gets all populations that can be used in the LD display
-    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
     Exceptions  : none
     Caller      : general
     Status      : At Risk
@@ -489,7 +489,7 @@ sub fetch_all_LD_Populations {
 
     Example     : @populations = @{$pop_adaptor->fetch_all_HapMap_populations();
     Description : Gets all populations from the HapMap project (human only!)
-    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
     Exceptions  : none
     Caller      : general
     Status      : At Risk
@@ -506,7 +506,7 @@ sub fetch_all_HapMap_Populations {
 
     Example     : @populations = @{$pop_adaptor->fetch_all_1KG_populations();
     Description : Gets all populations from the 1000 genomes project (human only!)
-    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
     Exceptions  : none
     Caller      : general
     Status      : At Risk
@@ -527,7 +527,7 @@ sub fetch_all_1KG_Populations{
 		          print $pop->name, "\n";
                 }
   Description : Retrieves all populations from a specified individual
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided individual does not have a dbID
   Caller      : general
@@ -571,7 +571,7 @@ sub fetch_all_by_Individual {
                   print $pop->name, "\n";
                 }
   Description : Retrieves all populations from a specified sample
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided sample does not have a dbID
   Caller      : general
@@ -613,7 +613,7 @@ sub fetch_all_by_Sample {
 		          print $pop->name,"\n";
                 }
   Description : Retrieves all populations from a specified individual
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided individual does not have a dbID
   Caller      : general
@@ -656,7 +656,7 @@ sub fetch_all_by_Individual_list {
                   print $pop->name,"\n";
                 }
   Description : Retrieves all populations from a list of samples 
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided samples do not have a dbIDs
   Caller      : general
@@ -701,7 +701,7 @@ sub fetch_all_by_Sample_list {
 		          print $pop->name, " has been tagged using a 0.99 r2 criteria\n";
                 }
   Description : Retrieves all populations from a specified variation feature that have been tagged
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided variation feature does not have a dbID
   Caller      : general
@@ -726,7 +726,7 @@ sub fetch_tagged_Population {
 		          print $pop->name, " has been tagged using a 0.99 r2 criteria\n";
                 }
   Description : Retrieves all populations in which the specified variation feature is a tag
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided variation feature does not have a dbID
   Caller      : general

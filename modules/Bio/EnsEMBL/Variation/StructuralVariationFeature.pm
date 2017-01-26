@@ -368,7 +368,7 @@ sub length{
     Example     : my @vs = @{$svf->get_all_VariationSets()};
     Description : returns a reference to a list of all the VariationSets this
                   StructuralVariationFeature is a member of
-    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSet objects
     Exceptions  : if no adaptor is attached to this object
     Caller      : general
     Status      : Stable
@@ -787,13 +787,13 @@ sub get_all_supporting_evidence_classes {
 
 =head2 var_class
 
-    Args         : None
-    Example      : my $sv_class = $svf->var_class()
-    Description  : Getter for the class of structural variation
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_class = $svf->var_class()
+    Description : Getter for the class of structural variation
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -814,13 +814,13 @@ sub var_class {
 
 =head2 class_SO_term
 
-    Args         : None
-    Example      : my $sv_so_term = $svf->class_SO_term()
-    Description  : Getter for the class of structural variation, returning the SO term
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args        : None
+    Example     : my $sv_so_term = $svf->class_SO_term()
+    Description : Getter for the class of structural variation, returning the SO term
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -1085,7 +1085,7 @@ sub study {
     Example     : my $seq = $svf->get_reference_sequence
     Description : returns a string containing the reference sequence for the region
                   covered by this StructuralVariationFeature
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : general
     Status      : At Risk

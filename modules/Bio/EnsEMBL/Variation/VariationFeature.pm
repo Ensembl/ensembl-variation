@@ -180,11 +180,11 @@ our $DEBUG = 0;
         -variation => $v
     );
 
-  Description: Constructor. Instantiates a new VariationFeature object.
-  Returntype : Bio::EnsEMBL::Variation::Variation
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Description : Constructor. Instantiates a new VariationFeature object.
+  Returntype  : Bio::EnsEMBL::Variation::Variation
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -264,18 +264,18 @@ sub new_fast {
 
 =head2 allele_string
 
-  Arg [1]    : string $newval (optional)
-               The new value to set the allele_string attribute to
-  Arg [2]    : int $strand (optional)
-               Strand on which to report alleles (default is $obj->strand)
-  Example    : $allele_string = $obj->allele_string()
-  Description: Getter/Setter for the allele_string attribute.
-               The allele_string is a '/' demimited string representing the
-               alleles associated with this features variation.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : string $newval (optional)
+                The new value to set the allele_string attribute to
+  Arg [2]     : int $strand (optional)
+                Strand on which to report alleles (default is $obj->strand)
+  Example     : $allele_string = $obj->allele_string()
+  Description : Getter/Setter for the allele_string attribute.
+                The allele_string is a '/' demimited string representing the
+                alleles associated with this features variation.
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -309,15 +309,15 @@ sub allele_string{
 
 =head2 display_id
 
-  Arg [1]    : none
-  Example    : print $vf->display_id(), "\n";
-  Description: Returns the 'display' identifier for this feature. For
-               VariationFeatures this is simply the name of the variation
-               it is associated with.
-  Returntype : string
-  Exceptions : none
-  Caller     : webcode
-  Status     : Stable
+  Arg [1]     : none
+  Example     : print $vf->display_id(), "\n";
+  Description : Returns the 'display' identifier for this feature. For
+                VariationFeatures this is simply the name of the variation
+                it is associated with.
+  Returntype  : string
+  Exceptions  : none
+  Caller      : webcode
+  Status      : Stable
 
 =cut
 
@@ -330,15 +330,15 @@ sub display_id {
 
 =head2 variation_name
 
-  Arg [1]    : string $newval (optional)
-               The new value to set the variation_name attribute to
-  Example    : $variation_name = $obj->variation_name()
-  Description: Getter/Setter for the variation_name attribute.  This is the
-               name of the variation associated with this feature.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : string $newval (optional)
+                The new value to set the variation_name attribute to
+  Example     : $variation_name = $obj->variation_name()
+  Description : Getter/Setter for the variation_name attribute.  This is the
+                name of the variation associated with this feature.
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -357,16 +357,16 @@ sub name{
 
 =head2 map_weight
 
-  Arg [1]    : int $newval (optional) 
-               The new value to set the map_weight attribute to
-  Example    : $map_weight = $obj->map_weight()
-  Description: Getter/Setter for the map_weight attribute. The map_weight
-               is the number of times this features variation was mapped to
-               the genome.
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : int $newval (optional) 
+                The new value to set the map_weight attribute to
+  Example     : $map_weight = $obj->map_weight()
+  Description : Getter/Setter for the map_weight attribute. The map_weight
+                is the number of times this features variation was mapped to
+                the genome.
+  Returntype  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -378,14 +378,14 @@ sub map_weight{
 
 =head2 minor_allele
 
-  Arg [1]    : string $minor_allele (optional)
-               The new minor allele string
-  Example    : $ma = $obj->minor_allele()
-  Description: Get/set the minor allele of this variation, as reported by dbSNP
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : string $minor_allele (optional)
+                The new minor allele string
+  Example     : $ma = $obj->minor_allele()
+  Description : Get/set the minor allele of this variation, as reported by dbSNP
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -397,14 +397,14 @@ sub minor_allele {
 
 =head2 minor_allele_frequency
 
-  Arg [1]    : float $minor_allele_frequency (optional)
-               The new minor allele frequency
-  Example    : $maf = $obj->minor_allele_frequency()
-  Description: Get/set the frequency of the minor allele of this variation, as reported by dbSNP
-  Returntype : float
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : float $minor_allele_frequency (optional)
+                The new minor allele frequency
+  Example     : $maf = $obj->minor_allele_frequency()
+  Description : Get/set the frequency of the minor allele of this variation, as reported by dbSNP
+  Returntype  : float
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -416,14 +416,14 @@ sub minor_allele_frequency {
 
 =head2 minor_allele_count
 
-  Arg [1]    : int $minor_allele_count (optional)
-               The new minor allele count
-  Example    : $maf_count = $obj->minor_allele_count()
-  Description: Get/set the sample count of the minor allele of this variation, as reported by dbSNP
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : int $minor_allele_count (optional)
+                The new minor allele count
+  Example     : $maf_count = $obj->minor_allele_count()
+  Description : Get/set the sample count of the minor allele of this variation, as reported by dbSNP
+  Returntype  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -437,15 +437,15 @@ sub minor_allele_count {
 
 =head2 get_all_highest_frequency_minor_Alleles
 
-  Example    : my @hpmaf_alleles = @{$vf->get_all_highest_frequency_minor_Alleles()}
-  Description: Gets all Allele objects whose minor allele frequency is the
-               highest amongst all populations. The frequency of these Alleles
-               (though there will usually only be one) will be the HPMAF
-               (Highest Population Minor Allele Frequency).
-  Returntype : arrayref of Bio::EnsEMBL::Variation::Allele
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Example     : my @hpmaf_alleles = @{$vf->get_all_highest_frequency_minor_Alleles()}
+  Description : Gets all Allele objects whose minor allele frequency is the
+                highest amongst all populations. The frequency of these Alleles
+                (though there will usually only be one) will be the HPMAF
+                (Highest Population Minor Allele Frequency).
+  Returntype  : arrayref of Bio::EnsEMBL::Variation::Allele
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -862,16 +862,16 @@ sub add_MotifFeatureVariation {
 
 =head2 variation
 
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Variation $variation
-  Example    : $v = $vf->variation();
-  Description: Getter/Setter for the variation associated with this feature.
-               If not set, and this VariationFeature has an associated adaptor
-               an attempt will be made to lazy-load the variation from the
-               database.
-  Returntype : Bio::EnsEMBL::Variation::Variation
-  Exceptions : throw on incorrect argument
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : (optional) Bio::EnsEMBL::Variation::Variation $variation
+  Example     : $v = $vf->variation();
+  Description : Getter/Setter for the variation associated with this feature.
+                If not set, and this VariationFeature has an associated adaptor
+                an attempt will be made to lazy-load the variation from the
+                database.
+  Returntype  : Bio::EnsEMBL::Variation::Variation
+  Exceptions  : throw on incorrect argument
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -902,11 +902,11 @@ sub variation {
 
 =head2 get_all_OverlapConsequences
 
-  Description: Get a list of all the unique OverlapConsequences of this VariationFeature, 
-               calculating them on the fly from the TranscriptVariations if necessary
-  Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
-  Exceptions : none
-  Status     : Stable
+  Description : Get a list of all the unique OverlapConsequences of this VariationFeature, 
+                calculating them on the fly from the TranscriptVariations if necessary
+  Returntype  : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions  : none
+  Status      : Stable
 
 =cut
 
@@ -941,11 +941,11 @@ sub get_all_OverlapConsequences {
 
 =head2 add_OverlapConsequence
 
-  Arg [1]    : Bio::EnsEMBL::Variation::OverlapConsequence instance
-  Description: Add an OverlapConsequence to this VariationFeature's list 
-  Returntype : none
-  Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Arg [1]     : Bio::EnsEMBL::Variation::OverlapConsequence instance
+  Description : Add an OverlapConsequence to this VariationFeature's list 
+  Returntype  : none
+  Exceptions  : throws if the argument is the wrong type
+  Status      : At Risk
 
 =cut
 
@@ -989,16 +989,17 @@ sub _finish_annotation {
 
 =head2 ambig_code
 
-    Args         : int $strand (optional)
-    Example      : my $ambiguity_code = $vf->ambig_code()
-    Description  : Returns the ambigutiy code for the alleles in the VariationFeature
-	               Specify a strand to give the ambiguity code on that genomic strand;
-				   use $strand = 1 to always give the ambiguity code on the forward
-				   strand.
-    ReturnType   : String $ambiguity_code
-    Exceptions   : none    
-    Caller       : General
-    Status       : Stable
+    Args        : int $strand (optional)
+    Example     : my $ambiguity_code = $vf->ambig_code()
+    Description : Returns the ambigutiy code for the alleles in the
+                  VariationFeature Specify a strand to give the
+                  ambiguity code on that genomic strand; use $strand =
+                  1 to always give the ambiguity code on the forward
+                  strand.
+    ReturnType  : String $ambiguity_code
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut 
 
@@ -1011,14 +1012,14 @@ sub ambig_code{
 
 =head2 var_class
 
-    Args[1]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
-                   (used by the ensembl variation pipeline)
-    Example      : my $variation_class = $vf->var_class
-    Description  : returns the Ensembl term for the class of this variation
-    ReturnType   : string
-    Exceptions   : throws if we can't find a corresponding display term for an SO term
-    Caller       : General
-    Status       : Stable
+    Args[1]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+                  (used by the ensembl variation pipeline)
+    Example     : my $variation_class = $vf->var_class
+    Description : returns the Ensembl term for the class of this variation
+    ReturnType  : String
+    Exceptions  : throws if we can't find a corresponding display term for an SO term
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -1043,15 +1044,15 @@ sub var_class {
 
 =head2 class_SO_term
 
-    Args[1]      : (optional) class_SO_term - the SO term for the class of this variation feature
-    Args[2]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
-                   (used by the ensembl variation pipeline)
-    Example      : my $SO_variation_class = $vf->class_SO_term()
-    Description  : Get/set the SO term for the class of this variation
-    ReturnType   : string
-    Exceptions   : none
-    Caller       : General
-    Status       : Stable
+    Args[1]     : (optional) class_SO_term - the SO term for the class of this variation feature
+    Args[2]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+                  (used by the ensembl variation pipeline)
+    Example     : my $SO_variation_class = $vf->class_SO_term()
+    Description : Get/set the SO term for the class of this variation
+    ReturnType  : String
+    Exceptions  : none
+    Caller      : General
+    Status      : Stable
 
 =cut
 
@@ -1069,15 +1070,15 @@ sub class_SO_term {
 
 =head2 get_all_evidence_values
 
-  Arg [1]    : none
-  Example    : my @vstates = @{$vf->get_all_evidence_values()};
-  Description: Retrieves all evidence values for this variationFeature.  Current
-               possible evidence values are 'Multiple_observations', 'Frequency',
-               'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease', 'ExAC'
-  Returntype : reference to list of strings
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
+  Arg [1]     : none
+  Example     : my @vstates = @{$vf->get_all_evidence_values()};
+  Description : Retrieves all evidence values for this variationFeature.  Current
+                possible evidence values are 'Multiple_observations', 'Frequency',
+                'HapMap', '1000Genomes', 'ESP', 'Cited', 'Phenotype_or_Disease', 'ExAC'
+  Returntype  : reference to list of strings
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -1089,24 +1090,24 @@ sub get_all_evidence_values {
 
 =head2 get_all_clinical_significance_states
 
-  Arg [1]    : none
-  Example    : my @csstates = @{$vf->get_all_clinical_significance_states()};
-  Description: Retrieves all clinical_significance states for this variation, as reported by dbSNP.
-               When available, this will contain one or more of the following strings:
-                unknown 
-                untested
-                non-pathogenic
-                probable-non-pathogenic
-                probable-pathogenic
-                pathogenic
-                drug-response
-                histocompatibility
-                other 
+  Arg [1]     : none
+  Example     : my @csstates = @{$vf->get_all_clinical_significance_states()};
+  Description : Retrieves all clinical_significance states for this variation, as reported by dbSNP.
+                When available, this will contain one or more of the following strings:
+                 unknown
+                 untested
+                 non-pathogenic
+                 probable-non-pathogenic
+                 probable-pathogenic
+                 pathogenic
+                 drug-response
+                 histocompatibility
+                 other
 
-  Returntype : reference to list of strings
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
+  Returntype  : reference to list of strings
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -1119,13 +1120,13 @@ sub get_all_clinical_significance_states {
 
 =head2 add_evidence_value
 
-  Arg [1]    : string $state
-  Example    : $v->add_evidence_value('Frequency');
-  Description: Adds an evidence value  to this variation.
-  Returntype : none
-  Exceptions : 
-  Caller     : general
-  Status     : At Risk
+  Arg [1]     : string $state
+  Example     : $v->add_evidence_value('Frequency');
+  Description : Adds an evidence value  to this variation.
+  Returntype  : none
+  Exceptions  : 
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -1147,14 +1148,14 @@ sub add_evidence_value {
 
 =head2 source
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
-               The new value to set the source attribute to
-  Example    : $source = $vf->source()
-  Description: Getter/Setter for the source object attribute
-  Returntype : Bio::EnsEMBL::Variation::Source
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : Bio::EnsEMBL::Variation::Source $src (optional)
+                The new value to set the source attribute to
+  Example     : $source = $vf->source()
+  Description : Getter/Setter for the source object attribute
+  Returntype  : Bio::EnsEMBL::Variation::Source
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1180,14 +1181,14 @@ sub source{
 
 =head2 source_name
 
-  Arg [1]    : string $source_name (optional)
-               The new value to set the source name attribute to
-  Example    : $source_name = $vf->source_name()
-  Description: Getter/Setter for the source name attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : string $source_name (optional)
+                The new value to set the source name attribute to
+  Example     : $source_name = $vf->source_name()
+  Description : Getter/Setter for the source name attribute
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1205,14 +1206,14 @@ sub source_name{
 
 =head2 source_version
 
-  Arg [1]    : string $source_version (optional)
-               The new value to set the source version attribute to
-  Example    : $source_version = $vf->source_version()
-  Description: Getter/Setter for the source version attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : string $source_version (optional)
+                The new value to set the source version attribute to
+  Example     : $source_version = $vf->source_version()
+  Description : Getter/Setter for the source version attribute
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1227,14 +1228,14 @@ sub source_version{
 
 =head2 is_somatic
 
-  Arg [1]    : boolean $is_somatic (optional)
-               The new value to set the is_somatic flag to
-  Example    : $is_somatic = $vf->is_somatic
-  Description: Getter/Setter for the is_somatic flag, which identifies this variation feature as either somatic or germline
-  Returntype : boolean
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Arg [1]     : boolean $is_somatic (optional)
+                The new value to set the is_somatic flag to
+  Example     : $is_somatic = $vf->is_somatic
+  Description : Getter/Setter for the is_somatic flag, which identifies this variation feature as either somatic or germline
+  Returntype  : boolean
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1349,12 +1350,12 @@ sub get_all_tag_and_tagged_VariationFeatures {
 
 
 =head2 is_reference
-  Arg        : none
-  Example    : my $reference = $vf->is_reference()
-  Description: Returns 1 if VF's slice is a reference slice else 0
-  Returntype : int
-  Caller     : general
-  Status     : At Risk
+  Arg         : none
+  Example     : my $reference = $vf->is_reference()
+  Description : Returns 1 if VF's slice is a reference slice else 0
+  Returntype  : int
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -1431,7 +1432,7 @@ sub get_all_LD_values {
   Args        : none
   Description : returns a list of populations that could produces LD values
                 for this VariationFeature
-  ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions  : none
   Caller      : Web code snpview
   Status      : Stable
@@ -1545,13 +1546,13 @@ sub get_all_sources{
 
 =head2 ref_allele_string
 
-  Args       : none
-  Example    : $reference_allele_string = $self->ref_allele_string()
-  Description: Getter for the reference allele_string, always the first.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Args        : none
+  Example     : $reference_allele_string = $self->ref_allele_string()
+  Description : Getter for the reference allele_string, always the first.
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1566,14 +1567,14 @@ sub ref_allele_string {
 
 =head2 reference_allele
   
-  Args       : none
-  Example    : print $vf->alternate_alleles(), "\n";
-  Description: Returns the alternate alleles for this VariationFeature.
-               This is all alleles beyond the first as returned by allele_string().
-  Returntype : arrayref of strings
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Args        : none
+  Example     : print $vf->alternate_alleles(), "\n";
+  Description : Returns the alternate alleles for this VariationFeature.
+                This is all alleles beyond the first as returned by allele_string().
+  Returntype  : arrayref of strings
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1601,7 +1602,7 @@ sub _get_alleles {
     Example     : my @vs = @{$vf->get_all_VariationSets()};
     Description : returns a reference to a list of all the VariationSets this
                   VariationFeature is a member of
-    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSet objects
     Exceptions  : if no adaptor is attached to this object
     Caller      : general
     Status      : Stable
@@ -1622,14 +1623,14 @@ sub get_all_VariationSets {
 
 =head2 get_all_Alleles
 
-  Args       : none
-  Example    : @alleles = @{$vf->get_all_Alleles}
-  Description: Gets all Allele objects from the underlying variation object,
-			   with reference alleles first.
-  Returntype : listref of Bio::EnsEMBL::Variation::Allele objects
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Args        : none
+  Example     : @alleles = @{$vf->get_all_Alleles}
+  Description : Gets all Allele objects from the underlying variation object,
+		with reference alleles first.
+  Returntype  : listref of Bio::EnsEMBL::Variation::Allele objects
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1659,14 +1660,14 @@ sub get_all_Alleles{
 
 =head2 get_all_PopulationGenotypes
 
-  Args       : none
-  Example    : @pop_gens = @{$vf->get_all_PopulationGenotypes}
-  Description: Gets all PopulationGenotype objects from the underlying variation
-			   object, with reference genotypes first.
-  Returntype : listref of Bio::EnsEMBL::Variation::PopulationGenotype objects
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Args        : none
+  Example     : @pop_gens = @{$vf->get_all_PopulationGenotypes}
+  Description : Gets all PopulationGenotype objects from the underlying variation
+	        object, with reference genotypes first.
+  Returntype  : listref of Bio::EnsEMBL::Variation::PopulationGenotype objects
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -1697,33 +1698,45 @@ sub get_all_PopulationGenotypes{
 
 =head2 get_all_hgvs_notations
 
-  Arg [1]    : Bio::EnsEMBL::Feature $ref_feature (optional)
-               Get the HGVS notation of this VariationFeature relative to the slice it is on. If an optional reference feature is supplied, returns the coordinates
-	       relative to this feature.
-  Arg [2]    : string (Optional)
-	       Indicate whether the HGVS notation should be reported in genomic coordinates or cDNA coordinates.
-	       'g' -> Genomic position numbering
-               'm' -> Mitochondrial position numbering
-	       'c' -> cDNA position numbering
-	       'p' -> protein position numbering
-  Arg [3]    : string (Optional)
-               A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used.
-  Arg [4]    : string (Optional)
-               Return just the HGVS notation corresponding to this allele
-	       
-  Example    : my $vf = $variation_feature_adaptor->fetch_by_dbID(565770);
-	       my $tr = $transcript_adaptor->fetch_by_stable_id('ENST00000335295');
-	       my $hgvs = $vf->get_all_hgvs_notations($tr,'p');
-	       while (my ($allele,$hgvs_str) = each(%{$hgvs})) {
-		print "Allele $allele :\t$hgvs_str\n"; # Will print 'Allele - : ENSP00000333994.3:p.Val34_Tyr36delinsAsp'
-	       }
-	       
-  Description: Returns a reference to a hash with the allele as key and a string with the HGVS notation of this VariationFeature as value. By default uses the
-               slice it is plcaed on as reference but a different reference feature can be supplied.
-  Returntype : Hash reference
-  Exceptions : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
-  Caller     : general
-  Status     : Experimental
+  Arg [1]     : Bio::EnsEMBL::Feature $ref_feature (optional) Get the
+                HGVS notation of this VariationFeature relative to the
+                slice it is on. If an optional reference feature is
+                supplied, returns the coordinates relative to this
+                feature.
+
+  Arg [2]     : string (Optional)
+                Indicate whether the HGVS notation should be reported
+                in genomic coordinates or cDNA coordinates.
+                 'g' -> Genomic position numbering
+                 'm' -> Mitochondrial position numbering
+                 'c' -> cDNA position numbering
+                 'p' -> protein position numbering
+  Arg [3]     : string (Optional)
+                A name to use for the reference can be supplied. By
+                default the name returned by the display_id() method
+                of the reference feature will be used.
+  Arg [4]     : string (Optional)
+                Return just the HGVS notation corresponding to this
+                allele
+
+  Example     : my $vf = $variation_feature_adaptor->fetch_by_dbID(565770);
+                my $tr = $transcript_adaptor->fetch_by_stable_id('ENST00000335295');
+                my $hgvs = $vf->get_all_hgvs_notations($tr,'p');
+                while (my ($allele,$hgvs_str) = each(%{$hgvs})) {
+                 print "Allele $allele :\t$hgvs_str\n"; # Will print 'Allele - : ENSP00000333994.3:p.Val34_Tyr36delinsAsp'
+                }
+
+  Description : Returns a reference to a hash with the allele as key
+                and a string with the HGVS notation of this
+                VariationFeature as value. By default uses the slice
+                it is plcaed on as reference but a different reference
+                feature can be supplied.
+  Returntype  : Hash reference
+  Exceptions  : Throws exception if VariationFeature can not be
+                described relative to the feature_Slice of the
+                supplied reference feature
+  Caller      : general
+  Status      : Experimental
 
 =cut
 sub get_all_hgvs_notations {
@@ -1862,22 +1875,20 @@ sub _get_flank_seq{
 
 =head2  hgvs_genomic
 
-  Arg [1]    : Bio::EnsEMBL::Feature $ref_feature (optional)
-               Get the HGVS notation of this VariationFeature relative to the slice it is on. If an optional reference feature is supplied, returns the coordinates
-	       relative to this feature.
-  Arg [2]    : string (Optional)
-               A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used.
-  Arg [4]    : string (Optional)
-               Return just the HGVS notation corresponding to this allele
-	       
-  
-	       
-  Description: Returns a reference to a hash with the allele as key and a string with the genomic HGVS notation of this VariationFeature as value. By default uses the
-               slice it is placed on as reference but a different reference feature can be supplied.
-  Returntype : Hash reference
-  Exceptions : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
-  Caller     : general
-  Status     : Experimental
+  Arg [1]     : Bio::EnsEMBL::Feature $ref_feature (optional)
+                Get the HGVS notation of this VariationFeature relative to the slice it is on. If an optional reference feature is supplied, returns the coordinates
+	        relative to this feature.
+  Arg [2]     : string (Optional)
+                A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used.
+  Arg [4]     : string (Optional)
+                Return just the HGVS notation corresponding to this allele
+
+  Description : Returns a reference to a hash with the allele as key and a string with the genomic HGVS notation of this VariationFeature as value. By default uses the
+                slice it is placed on as reference but a different reference feature can be supplied.
+  Returntype  : Hash reference
+  Exceptions  : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
+  Caller      : general
+  Status      : Experimental
 
 =cut
 sub hgvs_genomic {
@@ -2064,17 +2075,17 @@ sub summary_as_hash {
 
 =head2 flank_match
 
-  Arg [1]    : int $newval (optional)
-               The new value to set the flank_match attribute to
-  Example    : $flank_match = $obj->flank_match()
-  Description: Getter/Setter for the flank_match attribute.
-               Return values:
-               1 = submitted flank has perfect match to genomic reference (allowing for neighbouring variants)
-               0 = imperfect match
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
+  Arg [1]     : int $newval (optional)
+                The new value to set the flank_match attribute to
+  Example     : $flank_match = $obj->flank_match()
+  Description : Getter/Setter for the flank_match attribute.
+                Return values:
+                1 = submitted flank has perfect match to genomic reference (allowing for neighbouring variants)
+                0 = imperfect match
+  Returntype  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -2087,12 +2098,12 @@ sub flank_match{
 
 =head2 get_Variation_dbID
 
-  Example    : $var_id = $vf->get_Variation_dbID()
-  Description: Getter for the Variation (NOT VariationFeature) dbID attribute.
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Example     : $var_id = $vf->get_Variation_dbID()
+  Description : Getter for the Variation (NOT VariationFeature) dbID attribute.
+  Returntype  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
 
 =cut
 
@@ -2108,15 +2119,15 @@ sub get_Variation_dbID {
 
 =head2 display
 
-  Arg [1]    : none
-  Example    : print $vf->display(), "\n";
-  Description: Returns the display status for the VariationFeature. 
-               1 => returned by default, 
-               0 => returned only DBAdaptor::include_failed_variations() is set
-  Returntype : boolean
-  Exceptions : none
-  Caller     : TranscriptVariationAdaptor
-  Status     : Experimental
+  Arg [1]     : none
+  Example     : print $vf->display(), "\n";
+  Description : Returns the display status for the VariationFeature.
+                1 => returned by default,
+                0 => returned only DBAdaptor::include_failed_variations() is set
+  Returntype  : boolean
+  Exceptions  : none
+  Caller      : TranscriptVariationAdaptor
+  Status      : Experimental
 
 =cut
 

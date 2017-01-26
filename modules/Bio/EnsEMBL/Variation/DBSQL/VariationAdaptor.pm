@@ -1378,7 +1378,7 @@ sub _fetch_attribs_by_dbID {
                 }
 		
   Description : Gets the unique descriptions for the reasons why the supplied variation has failed.
-  ReturnType  : reference to a list of strings
+  ReturnType  : reference to list of strings
   Exceptions  : none
   Caller      : general
   Status      : Stable

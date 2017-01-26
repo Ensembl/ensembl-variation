@@ -422,7 +422,7 @@ sub get_all_d_prime_values {
     Example     : $populations = $obj->get_all_populations($vf1,$vf2);
     Description : If no arguments provided, returns ALL the populations present in the container. When 2 variation features provided, returns the 
     population/populations where these variation features occurs
-    ReturnType  : ref to an array of int
+    ReturnType  : reference to list of int
     Exceptions  : throw on incorrect arguments
     Caller      : general
     Status      : At Risk

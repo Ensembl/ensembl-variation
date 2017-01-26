@@ -610,7 +610,7 @@ sub hgvs_variant_notation {
   Arg[3]      : hash of hgvs information
   Example     : 
   Description : Creates HGVS formatted string from input hash                
-  ReturnType  : string in HGVS format
+  ReturnType  : String in HGVS format
   Exceptions  : 
   Caller      : 
 

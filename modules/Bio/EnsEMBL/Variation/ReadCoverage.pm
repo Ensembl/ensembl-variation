@@ -132,7 +132,7 @@ sub new {
     Example     : $depth = $obj->level();
     Description : Getter/Setter for the level attribute. The level is
                   the number of times this feature has been seen in the genome
-    ReturnType  : int 
+    ReturnType  : int
     Exceptions  : none
     Caller      : general
     Status      : Stable

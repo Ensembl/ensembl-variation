@@ -65,7 +65,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
                 print "The allele '" . $allele->allele() . "' of subsnp 'ss" . $allele->subsnp_id() . "' was submitted by '$handle'\n";
 		
   Description : Gets the submitter handle for the specified genotype
-  ReturnType  : string
+  ReturnType  : String
   Exceptions  : thrown on incorrect argument
   Caller      : general
   Status      : Stable

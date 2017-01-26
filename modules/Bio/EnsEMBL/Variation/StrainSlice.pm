@@ -142,7 +142,7 @@ sub new {
     Arg [1]     : listref to Bio::EnsEMBL::Variation::AlleleFeature $allele_features
     Example     : my $new_list_allele_features = $strainSlice->_filter_af_by_coverage($allele_features);
     Description : For a list of allele features, gets a new list where they are filtered depending on coverage
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : none
     Caller      : internal function
 
@@ -183,7 +183,7 @@ sub _filter_af_by_coverage {
     Arg [1]     : (optional) string $strain_name
     Example     : my $strain_name = $strainSlice->strain_name();
     Description : Getter/Setter for the name of the strain
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : general
 
@@ -218,7 +218,7 @@ sub sample {
     Args        : none
     Example     : my $strain_name = $strainSlice->display_Slice_name();
     Description : Getter for the name of the strain
-    ReturnType  : string
+    ReturnType  : String
     Exceptions  : none
     Caller      : webteam
 
@@ -231,14 +231,14 @@ sub display_Slice_name {
 
 =head2 seq
 
-  Arg [1]    : int $with_coverage (optional)
-  Example    : print "SEQUENCE = ", $strainSlice->seq();
-  Description: Returns the sequence of the region represented by this
-               slice formatted as a string in the strain. If flag with_coverage
-               is set to 1, returns sequence if there is coverage in the region
-  Returntype : string
-  Exceptions : none
-  Caller     : general
+  Arg [1]     : int $with_coverage (optional)
+  Example     : print "SEQUENCE = ", $strainSlice->seq();
+  Description : Returns the sequence of the region represented by this
+                slice formatted as a string in the strain. If flag with_coverage
+                is set to 1, returns sequence if there is coverage in the region
+  Returntype  : string
+  Exceptions  : none
+  Caller      : general
 
 =cut
 
@@ -395,7 +395,7 @@ sub get_AlleleFeature {
     Example     : my $af = $strainSlice->get_all_AlleleFeatures_Slice()
     Description : Gets all AlleleFeatures between the StrainSlice object and the Slice is defined.
                   If argument $with_coverage set to 1, returns only AF if they have coverage information
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : none
     Caller      : general
 
@@ -429,7 +429,7 @@ sub get_all_AlleleFeatures_Slice {
     Arg[1]      : Bio::EnsEMBL::StrainSlice $ss
     Example     : my $differences = $strainSlice->get_all_differences_StrainSlice($ss)
     Description : Gets differences between 2 StrainSlice objects
-    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
     Exceptions  : thrown on bad argument
     Caller      : general
 
@@ -523,22 +523,22 @@ sub _convert_difference {
 
 =head2 sub_Slice
 
-  Arg   1    : int $start
-  Arg   2    : int $end
-  Arge [3]   : int $strand
-  Example    : none
-  Description: Makes another StrainSlice that covers only part of this slice
-               with the appropriate differences to the reference Slice
-               If a slice is requested which lies outside of the boundaries
-               of this function will return undef.  This means that
-               behaviour will be consistant whether or not the slice is
-               attached to the database (i.e. if there is attached sequence
-               to the slice).  Alternatively the expand() method or the
-               SliceAdaptor::fetch_by_region method can be used instead.
-  Returntype : Bio::EnsEMBL::StrainSlice or undef if arguments are wrong
-  Exceptions : thrown when trying to get the subSlice in the middle of a
-               insertion
-  Caller     : general
+  Arg   1     : int $start
+  Arg   2     : int $end
+  Arge [3]    : int $strand
+  Example     : none
+  Description : Makes another StrainSlice that covers only part of this slice
+                with the appropriate differences to the reference Slice
+                If a slice is requested which lies outside of the boundaries
+                of this function will return undef.  This means that
+                behaviour will be consistant whether or not the slice is
+                attached to the database (i.e. if there is attached sequence
+                to the slice).  Alternatively the expand() method or the
+                SliceAdaptor::fetch_by_region method can be used instead.
+  Returntype  : Bio::EnsEMBL::StrainSlice or undef if arguments are wrong
+  Exceptions  : thrown when trying to get the subSlice in the middle of a
+                insertion
+  Caller      : general
 
 =cut
 
@@ -589,18 +589,18 @@ sub sub_Slice {
 
 =head2 ref_subseq
 
-  Arg  [1]   : int $startBasePair
-               relative to start of slice, which is 1.
-  Arg  [2]   : int $endBasePair
-               relative to start of slice.
-  Arg  [3]   : (optional) int $strand
-               The strand of the slice to obtain sequence from. Default
-               value is 1.
-  Description: returns string of dna from reference sequence
-  Returntype : txt
-  Exceptions : end should be at least as big as start
-               strand must be set
-  Caller     : general
+  Arg  [1]    : int $startBasePair
+                relative to start of slice, which is 1.
+  Arg  [2]    : int $endBasePair
+                relative to start of slice.
+  Arg  [3]    : (optional) int $strand
+                The strand of the slice to obtain sequence from. Default
+                value is 1.
+  Description : returns string of dna from reference sequence
+  Returntype  : txt
+  Exceptions  : end should be at least as big as start
+                strand must be set
+  Caller      : general
 
 =cut
 
@@ -634,18 +634,18 @@ sub ref_subseq {
 
 =head2 subseq
 
-  Arg  [1]   : int $startBasePair
-               relative to start of slice, which is 1.
-  Arg  [2]   : int $endBasePair
-               relative to start of slice.
-  Arg  [3]   : (optional) int $strand
-               The strand of the slice to obtain sequence from. Default
-               value is 1.
-  Description: returns string of dna sequence
-  Returntype : txt
-  Exceptions : end should be at least as big as start
-               strand must be set
-  Caller     : general
+  Arg  [1]    : int $startBasePair
+                relative to start of slice, which is 1.
+  Arg  [2]    : int $endBasePair
+                relative to start of slice.
+  Arg  [3]    : (optional) int $strand
+                The strand of the slice to obtain sequence from. Default
+                value is 1.
+  Description : returns string of dna sequence
+  Returntype  : txt
+  Exceptions  : end should be at least as big as start
+                strand must be set
+  Caller      : general
 
 =cut
 
@@ -750,11 +750,11 @@ sub get_all_differences_Slice {
 
 =head2 get_all_VariationFeatures
 
-    Arg[1]     : int $with_coverage (optional)
-    Description :returns all alleleFeatures features on this slice. 
-    ReturnType : listref of Bio::EnsEMBL::Variation::AlleleFeature
-    Exceptions : none
-    Caller     : contigview, snpview
+    Arg[1]      : int $with_coverage (optional)
+    Description : returns all alleleFeatures features on this slice.
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::AlleleFeature
+    Exceptions  : none
+    Caller      : contigview, snpview
 
 =cut
 
@@ -767,16 +767,16 @@ sub get_all_AlleleFeatures {
 
 =head2 get_original_seq_region_position
 
-  Arg  [1]   : int $position relative to start of slice, which is 1.
-  Description: Placeholder method - this method has no explicit use beyond
-               providiing compatibility with AlignSlice. To map positions
-               between the StrainSlice and the reference slice, use the
-               mapper and its methods.
-  Returntype : ($strainSlice, $seq_region_position), an array where the first
-               element is a Bio::EnsEMBL::StrainSlice and the second one is the
-               requested seq_region_position.
-  Exceptions : none
-  Caller     : general
+  Arg  [1]    : int $position relative to start of slice, which is 1.
+  Description : Placeholder method - this method has no explicit use beyond
+                providiing compatibility with AlignSlice. To map positions
+                between the StrainSlice and the reference slice, use the
+                mapper and its methods.
+  Returntype  : ($strainSlice, $seq_region_position), an array where the first
+                element is a Bio::EnsEMBL::StrainSlice and the second one is the
+                requested seq_region_position.
+  Exceptions  : none
+  Caller      : general
 
 =cut
 
