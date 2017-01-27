@@ -39,21 +39,23 @@ my $registry = 'Bio::EnsEMBL::Registry';
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($species, $host, $db_version, $output_file, $help);
+my ($species, $host, $port, $db_version, $output_file, $help);
 
 GetOptions(
   'v=i'         => \$db_version,
   'o=s'         => \$output_file,
   'host=s'      => \$host,
+  'port=i'      => \$port,
   'species|s=s' => \$species,
   'help!'       => \$help
 );
 
-usage ("Species, host, version and output_file must be specified") unless ($species && $host && $db_version && $output_file);
+usage ("Species, host, port, version and output_file must be specified") unless ($species && $host && $port && $db_version && $output_file);
 
 # Load the registry from db
 $registry->load_registry_from_db(
     -host => $host,
+    -port => $port,
     -user => 'ensro',
     -db_version => $db_version,
 );
@@ -243,6 +245,7 @@ sub usage {
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)
     -host           Host of the human database (Required)
+    -port           Human database port (Required)
     -species        Species name (Required)
   } . "\n";
   exit(0);

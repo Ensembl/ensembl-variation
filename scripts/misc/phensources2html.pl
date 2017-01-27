@@ -201,7 +201,7 @@ foreach my $hostname (@hostnames) {
   
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname =~ /^master_schema/);
+    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
     $db_found ++;
     print STDERR $dbname;
     $dbname =~ /^(.+)_variation/;
@@ -881,9 +881,9 @@ sub usage {
       
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)      
-    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
-    -hlist          The list of host names where the new databases are stored, separated by a coma,
-                    e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -phost          Host name (with port) where the previous databases are stored, e.g. ensembldb.ensembl.org:3306  (Required)
+    -hlist          The list of host names (with port) where the new databases are stored, separated by a coma,
+                    e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
     -skip_name      Flag to avoid the connection to the Core databases (use to retrieve the species display name, e.g. Human).
                     If the flag is used, the species name displayed will be the scientific name (e.g. Homo_sapiens).
     -site           The URL of the website (optional)

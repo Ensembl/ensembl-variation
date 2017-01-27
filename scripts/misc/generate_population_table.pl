@@ -21,7 +21,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$user,$port,$help);
+my ($e_version,$html_file,$hlist,$user,$help);
 ## EG options
 my ($site, $etype);
 
@@ -32,8 +32,7 @@ GetOptions(
      'o=s'       => \$html_file,
      'help!'     => \$help,
      'hlist=s'   => \$hlist,
-     'user=s'    => \$user,
-     'port=i'    => \$port
+     'user=s'    => \$user
 );
 
 ## Missing arguments ##
@@ -116,7 +115,6 @@ my @hostnames = split /,/, $hlist;
 my $database = "";
 my $pswd = "";
 my $db_type = 'variation';
-my $default_port = 3306;
 my $margin_bottom_max = '35px';
 my $size_max_width = '36px';
 
@@ -124,7 +122,6 @@ my $evidence_icon_prefix = '/i/val/evidence_';
 my $evidence_icon_suffix = '.png';
 my $evidence_doc_url  = '#evidence_status';
 
-$port ||= $default_port;
 $server_name = $site if ($site) ;
 
 my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
@@ -402,10 +399,9 @@ sub usage {
       
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)      
-    -hlist          The list of host names where the new databases are stored, separated by a coma,
-                    e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -hlist          The list of host names (with port) where the new databases are stored, separated by a coma,
+                    e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
     -user           MySQL user name (Required)
-    -port           MySQL port. 3306 by default (optional)
   } . "\n";
   exit(0);
 }

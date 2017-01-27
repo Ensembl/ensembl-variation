@@ -36,7 +36,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$phost,$user,$port,$help);
+my ($e_version,$html_file,$hlist,$phost,$user,$help);
 ## EG options
 my ($site, $etype);
 
@@ -49,7 +49,6 @@ GetOptions(
      'hlist=s' => \$hlist,
      'phost=s' => \$phost,
      'user=s'  => \$user,
-     'port=i'  => \$port,
      'site=s'  => \$site,
      'etype=s' => \$etype
 );
@@ -85,8 +84,6 @@ if ($site) {
 my $database = "";
 my $pswd = "";
 my $db_type = 'variation';
-my $default_port = 3306;
-$port ||= $default_port;
 my $p_version = $e_version-1;
 my $detailed_counts = 'species_detailed_counts.html';
 
@@ -503,11 +500,10 @@ sub usage {
       
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)      
-    -hlist          The list of host names where the new databases are stored, separated by a coma,
-                    e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
-    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
+    -hlist          The list of host names (with port) where the new databases are stored, separated by a coma,
+                    e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
+    -phost          Host name (with port) where the previous databases are stored, e.g. ensembldb.ensembl.org:3306  (Required)
     -user           MySQL user name (Required)
-    -port           MySQL port. 3306 by default (optional)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";

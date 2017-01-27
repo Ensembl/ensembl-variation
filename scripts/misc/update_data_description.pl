@@ -52,12 +52,11 @@ GetOptions(
 );
 
 usage("input and output files must be specified") unless ($input_file && $output_file);
-usage("Host and version must be specified") unless ($host && $version);
+usage("Host, port and version must be specified") unless ($host && $port && $version);
 usage("Hosts list, user must be specified") unless ($hlist && $user);
 usage("Previous host must be specified") unless ($phost);
 
 $species ||= 'Homo_sapiens';
-$port    ||= 3306;
 my $tmp_file    = 'data_desc_tmp.html';
 my $tmp_section = 'section_tmp.html';
 `cp $input_file $tmp_file`;
@@ -70,7 +69,7 @@ my ($content_before, $new_content, $content_after);
 $section = 'sources';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -port $port -phost $phost`;
+`perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -80,7 +79,7 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $section = 'classes';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_classes_table.pl -v $version -o $tmp_section -host $host -species $species`;
+`perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -175,12 +174,12 @@ sub usage {
     -i              Path to the data_description.html file (Required)
     -o              An HTML output file name (Required)
     -host           Host of the human database (Required)
+    -port           MySQL port of the human database (Required)
     -species        Species name. 'Homo_sapiens' by default (optional)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -user           MySQL user name (Required)
-    -port           MySQL port. 3306 by default (optional)
   } . "\n";
   exit(0);
 }
