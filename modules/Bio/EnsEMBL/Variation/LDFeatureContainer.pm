@@ -343,6 +343,7 @@ sub get_all_ld_values {
   # get these hashes for looking up names and VF objects
   my $pos2name = $self->_pos2name();
   my $pos2vf = $self->_pos2vf() unless $names_only;
+  my $vf_name = $self->{'_vf_name'};
 
   foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
 
@@ -356,13 +357,33 @@ sub get_all_ld_values {
       
       # add the information to the ld_value hash
       unless($names_only) {
-        $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
-        $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
+        if ($vf_name) {
+          if ($pos2vf->{$vf1_pos} && $pos2vf->{$vf1_pos}->{variation_name} eq $vf_name) {
+            $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
+            $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
+          } else {
+            $ld_value{'variation2'} = $pos2vf->{$vf1_pos};
+            $ld_value{'variation1'} = $pos2vf->{$vf2_pos};
+          }
+        } else {
+          $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
+          $ld_value{'variation2'} = $pos2vf->{$vf2_pos};
+        }
         # $DB::single = 1 unless $ld_value{'variation1'} && $ld_value{'variation2'};
         next unless $ld_value{'variation1'} && $ld_value{'variation2'};
       }
-      $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
-      $ld_value{'variation_name2'} = $pos2name->{$vf2_pos};
+      if ($vf_name) {
+        if ($pos2name->{$vf1_pos} eq $vf_name) {
+          $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
+          $ld_value{'variation_name2'} = $pos2name->{$vf2_pos};
+        } else {
+          $ld_value{'variation_name2'} = $pos2name->{$vf1_pos};
+          $ld_value{'variation_name1'} = $pos2name->{$vf2_pos};
+        }  
+      } else {
+        $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
+        $ld_value{'variation_name2'} = $pos2name->{$vf2_pos};
+      }
       next unless $ld_value{'variation_name1'} && $ld_value{'variation_name2'};
 
       $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
