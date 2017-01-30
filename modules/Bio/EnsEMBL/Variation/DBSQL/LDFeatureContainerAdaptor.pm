@@ -651,7 +651,7 @@ sub _fetch_by_Slice_VCF {
         '-name' => '',
         '-slices' => [$slice],
       );
-
+      $c->{'_vf_name'} = $self->{'_vf_name'};
       $c->{'_pop_ids'} = {$population_id => 1};
 
       if($container) {
@@ -1045,7 +1045,7 @@ sub _ld_calc {
     '-pos2vf' => $pos2vf,
     '-slices' => \@slices,
   );
-
+  $t->{'_vf_name'} = $self->{_vf_name};
   $t->{'_pop_ids'} =\%_pop_ids;
   delete $self->{_pairwise};
   
