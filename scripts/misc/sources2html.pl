@@ -251,6 +251,13 @@ foreach my $hostname (@hostnames) {
       $display_name = $sth_core->fetchrow_array;  
       $display_name =~ s/saccharomyces/S\./i;
     }
+    else {
+      my @display_name_part = split('_', $display_name);
+      if (@display_name_part > 2) {
+        shift @display_name_part;
+        $display_name = join("_", @display_name_part);
+      }
+    }
     
     if ($top_species{$s_name}) {
       $top_display{$display_name} = 1;
@@ -351,6 +358,10 @@ sub source_table {
   my $p_set_list   = shift;
 
   
+  my @name_parts = split('_', $name);
+  if (@name_parts > 2) {
+    $name = $display_name;
+  }
   my $s_name = ucfirst($name);
   my $species = $s_name;
      $species =~ s/_/ /;
