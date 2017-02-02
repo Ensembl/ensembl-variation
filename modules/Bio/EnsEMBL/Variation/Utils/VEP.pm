@@ -545,7 +545,13 @@ sub parse_vcf {
     $end += (length($ref) - 1);
 
     # structural variation
-    if((defined($data[7]) && $data[7] =~ /SVTYPE/) || $alt =~ /[\<|\[]^\*[\]\>]/) {
+    if(
+      $ref.$alt !~ /^[ACGT\,]+$/ &&
+      (
+        (defined($data[7]) && $data[7] =~ /SVTYPE/) ||
+        $alt =~ /[\<|\[]^\*[\]\>]/
+      )
+    ) {
 
         # parse INFO field
         my %info = ();
