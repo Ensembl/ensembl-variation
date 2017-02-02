@@ -39,7 +39,6 @@ GetOptions('output_dir=s' => \$output_dir,
            'species=s'    => \$species,
            'hlist=s'      => \$hlist,
            'user=s'       => \$user,
-           'port=i'       => \$port,
            'help!'        => \$help,
           );
 
@@ -71,8 +70,6 @@ my $database = "";
 my $pswd = "";
 my $db_core_type = 'core';
 my $db_var_type  = 'variation';
-my $default_port = 3306;
-$port ||= $default_port;
 my @hostnames = split /,/, $hlist;
 my %species_list;
 %species_list = map {$_ => 1} split /,/, $species if ($species);
@@ -309,10 +306,9 @@ sub usage {
 
       -v           Ensembl version, e.g. 82 (Required)
       -output_dir  Path to the output files. (Required)
-      -hlist       The list of host names where the new databases are stored, separated by a coma,
-                   e.g. ensembldb.ensembl.org1,ensembldb.ensembl.org2 (Required)
+      -hlist       The list of host names (with port) where the new databases are stored, separated by a coma,
+                    e.g. ensembldb.ensembl.org1:3334, ensembldb.ensembl.org2:1234 (Required)
       -user        MySQL user name (Required)
-      -port        MySQL port. 3306 by default (optional)
       -species     The list of species from which the GOA data will be retrieved, separated by a coma,
                    e.g. homo_sapiens,mus_musculus. By default the script retrieves GOA data from every species (optional)
   } . "\n";
