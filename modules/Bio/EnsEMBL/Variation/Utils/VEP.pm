@@ -949,7 +949,7 @@ sub convert_to_vcf {
             # default to N in case we can't get it
             my $prev_base = 'N';
 
-            if(defined($vf->slice) && UNIVERSAL::isa($vf->slice,'can')) {
+            if(defined($vf->slice) && ref($vf->slice) eq 'Bio::EnsEMBL::Slice') {
                 my $slice = $vf->slice->sub_Slice($vf->start - 1, $vf->start - 1);
                 $prev_base = $slice->seq if defined($slice);
             }
