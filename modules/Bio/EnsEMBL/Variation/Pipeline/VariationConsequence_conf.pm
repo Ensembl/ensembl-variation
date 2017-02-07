@@ -61,8 +61,8 @@ sub default_options {
         hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
-        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive', 
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
+        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'variation_consequence',
@@ -99,11 +99,11 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
-        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>4000] rusage[mem=4000]" -M4000',
+        urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is Sanger LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species
@@ -231,10 +231,9 @@ sub pipeline_analyses {
                 -input_ids      => [],
                 -hive_capacity  => $self->o('transcript_effect_capacity'),
                 -rc_name        => 'default',
-                -flow_into      => {},
-                # -flow_into      => {
-                #   -1 => ['transcript_effect_highmem'],
-                # }
+                -flow_into      => {
+                  -1 => ['transcript_effect_highmem'],
+                }
             },
 
             {   -logic_name     => 'transcript_effect_highmem',
@@ -249,7 +248,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_name        => 'medmem',
+                -rc_name        => 'highmem',
                 -can_be_empty   => 1,
             },
 
