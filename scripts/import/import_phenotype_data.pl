@@ -219,6 +219,7 @@ $cport ||= $port;
 $chost ||= $host;
 $cuser ||= $user;
 #$cpass ||= $pass;
+$cpass = '';
 
 my $result;
 my $source_name;
@@ -2715,7 +2716,7 @@ sub get_phenotype_id {
 
   # finally if no match, do an insert
   my $sth = $db_adaptor->dbc->prepare(qq{
-    INSERT INTO phenotype ( name, description ) VALUES ( ?,? )
+    INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
   });
   
   $sth->bind_param(1,$name,SQL_VARCHAR);
