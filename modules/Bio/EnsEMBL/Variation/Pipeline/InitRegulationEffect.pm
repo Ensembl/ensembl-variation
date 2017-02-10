@@ -80,7 +80,7 @@ sub fetch_input {
         unless ($self->param('only_motif_feature')) {
 #          my $it = $rfa->fetch_Iterator_by_Slice($slice);
           $self->warning($slice->seq_region_name);
-          my @rfs = @{$rfa->fetch_all_by_Slice($slice)};
+          my @rfs = @{$rfa->fetch_all_by_Slice($slice) || []};
           $self->warning(scalar @rfs);
           foreach my $rf (@rfs) {
               push @feature_ids, { feature_id => $rf->stable_id,
@@ -92,7 +92,7 @@ sub fetch_input {
         unless ($self->param('only_regulatory_feature')) {
           $self->warning($slice->seq_region_name);
 
-            my @mfs = @{$mfa->fetch_all_by_Slice($slice)};
+            my @mfs = @{$mfa->fetch_all_by_Slice($slice) || []};
             foreach my $mf (@mfs) {
                 push @feature_ids, { feature_id => $mf->dbID,
                                      feature_type => 'motif_feature',
