@@ -111,8 +111,8 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'ens-variation2',
-        hive_db_port    => 3306,
+        hive_db_host    => 'mysql-ens-var-prod-1',
+        hive_db_port    => 4449,
         hive_db_user    => 'ensadmin',
 
         pipeline_db => {
@@ -136,10 +136,10 @@ sub resource_classes {
     # requirements, queue parameters etc.) to suit your own data
 
     return {
-          'default' => { 'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000'},
-          'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-          'highmem' => { 'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000'},
-          'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+          'default' => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+          'urgent'  => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+          'highmem' => { 'LSF' => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000]" -M15000'},
+          'long'    => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
     };
 }
 
