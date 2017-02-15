@@ -176,7 +176,7 @@ sub pipeline_analyses {
             {   -logic_name => 'init_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
                 -hive_capacity => 1,
-                -rc_name => 'default',
+                -rc_name => 'highmem',
                 -input_ids => [{},],
                 -flow_into => {
                     '2->A' => ['regulation_effect'],
