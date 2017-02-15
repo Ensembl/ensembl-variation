@@ -94,15 +94,15 @@ sub default_options {
         disambiguate_single_nucleotide_alleles => 0,
 
         # configuration for the various resource options used in the pipeline
-        # EBI farm users should either change these here, or override them on the
-        # command line to suit the EBI farm. The names of each option hopefully
+        # Users of other farms should change these here, or override them on
+        # the command line to suit your farm. The names of each option hopefully
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
         default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>4000] rusage[mem=4000]" -M4000',
         urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
