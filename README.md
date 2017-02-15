@@ -12,14 +12,14 @@ Find more information (including the installation guide and a tutorial) on the E
 
 
 ## Download
-To clone the Ensembl Regulation API, use the following command:
+To clone the Ensembl Variation API, use the following command:
 
 ```
 git clone https://github.com/Ensembl/ensembl-variation.git
 ```
 
 ## API requirements
-In order to use the Regulation API, an installation of the same version of the Ensembl-core API is mandatory. A guide for installing all Ensembl APIs and their respective prerequisites is available here:
+In order to use the Ensembl Variation API, an installation of the same version of the "Ensembl Core" API is mandatory. A guide for installing all Ensembl APIs and their respective prerequisites is available here:
 http://www.ensembl.org/info/docs/api/api_installation.html
 
 ## API tutorial
