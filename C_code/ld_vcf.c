@@ -30,6 +30,7 @@
 #include <math.h>
 #include <inttypes.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include "tbx.h"
 #include "vcf.h"
@@ -438,7 +439,7 @@ int main(int argc, char *argv[]) {
         is_file = 0;
       }
 
-      if(bcf_hdr_set_samples(hdr, samples_list, is_file) < 0) {
+      if(access( samples_list, F_OK ) != -1  && bcf_hdr_set_samples(hdr, samples_list, is_file) < 0) {
         fprintf(stderr, "Failed to read or set samples\n");
         return USER_ERROR;
       }
@@ -540,7 +541,7 @@ int main(int argc, char *argv[]) {
             }
 
             // init locus using enqueue on first genotype
-            if(initialised == 0) {
+            if(i == 0 || initialised == 0) {
               enqueue(&locus_list, position, var_id, population_id, personid, genotype2int(genotype));
 
               // get l_tmp ref to use for subsequent genotypes
