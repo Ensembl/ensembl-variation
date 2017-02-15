@@ -107,7 +107,7 @@ sub executable {
   $BINARY_FILE = shift if @_;
   unless( $BINARY_FILE ) {
     my $binary_name = 'calc_genotypes';
-    ($BINARY_FILE) = grep {-e $_} map {"$_/calc_genotypes"} split /:/,$ENV{'PATH'};
+    ($BINARY_FILE) = grep {-e $_} map {"$_/$binary_name"} split /:/,$ENV{'PATH'};
   }
   return $BINARY_FILE; 
 }
@@ -117,7 +117,7 @@ sub vcf_executable {
   $VCF_BINARY_FILE = shift if @_;
   unless( $VCF_BINARY_FILE ) {
     my $binary_name = 'ld_vcf';
-    ($VCF_BINARY_FILE) = grep {-e $_} map {"$_/ld_vcf"} split /:/,$ENV{'PATH'};
+    ($VCF_BINARY_FILE) = grep {-e $_} map {"$_/$binary_name"} split /:/,$ENV{'PATH'};
   }
   return $VCF_BINARY_FILE; 
 }

@@ -792,7 +792,7 @@ sub get_all_Alleles {
     assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
     my $allele_adaptor = $self->adaptor->db->get_AlleleAdaptor();
       
-    $self->add_Allele($allele_adaptor->fetch_all_by_Variation($self));
+    $self->add_Allele($allele_adaptor->fetch_all_by_Variation($self, $pop));
   }
   
   if($pop && assert_ref($pop, 'Bio::EnsEMBL::Variation::Population')) {
@@ -926,7 +926,7 @@ sub get_all_PopulationGenotypes {
   if (!defined($self->{populationGenotypes}) && defined ($self->{'adaptor'})){
     my $pgtya = $self->adaptor->db()->get_PopulationGenotypeAdaptor();
   
-    $self->{populationGenotypes} = $pgtya->fetch_all_by_Variation($self);
+    $self->{populationGenotypes} = $pgtya->fetch_all_by_Variation($self, $pop);
   }
   
   if($pop && assert_ref($pop, 'Bio::EnsEMBL::Variation::Population')) {

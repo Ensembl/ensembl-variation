@@ -127,6 +127,7 @@ my $logfile = $options{'logfile'};
 my $ens_version = $options{'ensembl_version'};
 my $dbSNP_version = $options{'dbSNP_version'};
 my $source_engine = $options{'source_engine'} ||  'mysql';
+my $ploidy = $options{'ploidy'} || 2;
 
 my @skip_routines;
 @skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
@@ -262,6 +263,8 @@ my $meta_ins_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ INSERT ignore INTO
 my $meta_upd_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ UPDATE meta set meta_value = ? where  meta_key = ?]);
 
 $meta_ins_sth->execute('1', 'species.production_name', $dbm->dbVar()->species() ) ||die;
+$meta_ins_sth->execute('1', 'ploidy', $ploidy ) ||die;
+
 
 if (defined $ens_version){
     $meta_upd_sth->execute($ens_version, 'schema_version' ) ||die;
