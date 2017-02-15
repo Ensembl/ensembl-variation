@@ -100,6 +100,8 @@ sub run {
     my ($allele_fail)  = check_flipping_allele($var_dba,'allele',$report);
     my ($varfeat_fail) = check_flipping_variation_feature($var_dba,'variation_feature',$report);
 
+    ## report the number of variants with more than 25 mappings
+    my $multi_map = find_multi_mapping_var($var_dba, $report);
 
     ## check all statuses and exit if there is a problem
     if( $suspiciously_poor   ==1 ||   #  high failure rates
@@ -564,6 +566,25 @@ sub check_flipping{
 
 }
 
+## count variants with more than 25 genomic mappings
+sub find_multi_mapping_var{
+
+  my $var_dba = shift;
+  my $report  = shift;
+
+  my $map_check_stmt = qq[select count(distinct variation_id) from variation_feature_working where map_weight > 25];
+  my $map_check_sth = $var_dba->dbc->prepare($map_check_stmt);
+
+  $map_check_sth->execute()||die;
+  my $count_multi =  $map_check_sth->fetchall_arrayref()||die;
+
+  if ($count_multi->[0]->[0] > 0){
+    print $report "\nVariants with more than 25 mappings : $count_multi->[0]->[0]\n\n";
+  }
+  else{
+    print $report "\nNo variants with more than 25 mappings observed\n";
+  }
+}
 
 # enable indexes which were disabled for quicker loading
 sub rebuild_indexes{

@@ -218,7 +218,7 @@ sub add_synonym{
     my $var_adaptor = $var_dba->get_VariationAdaptor; 
     
     ## using ignore here to allow for re-runs of pipeline; could create new working table
-    my $synonym_ins_sth   = $var_dba->prepare(qq[ insert ignore into variation_synonym (variation_id, name, source_id) values (?,?,?) ]);  
+    my $synonym_ins_sth   = $var_dba->dbc->prepare(qq[ insert ignore into variation_synonym (variation_id, name, source_id) values (?,?,?) ]);
 
     my %source_data = ( "name"           => "Pig SNP Consortium",
 			"version"        =>  '\N',
@@ -250,8 +250,8 @@ sub get_source{
     my $var_dba     = shift;
     my $source_data = shift;
 
-    my $source_ins_sth    = $var_dba->prepare(qq[ insert into source (name, version, description) values (?,?,?) ]);
-    my $source_ext_sth    = $var_dba->prepare(qq[ select source_id from source where name = ? ]);
+    my $source_ins_sth    = $var_dba->dbc->prepare(qq[ insert into source (name, version, description) values (?,?,?) ]);
+    my $source_ext_sth    = $var_dba->dbc->prepare(qq[ select source_id from source where name = ? ]);
 
     $source_ext_sth->execute($source_data->{name})||die;
     my $id = $source_ext_sth->fetchall_arrayref();
@@ -273,7 +273,7 @@ sub get_synonym{
 
     my $int_dba  = $self->get_adaptor('multi', 'intvar');
 
-    my $synonym_ext_sth = $int_dba->prepare(qq[ select ss_name, synonym_name from pig_synonym ]);
+    my $synonym_ext_sth = $int_dba->dbc->prepare(qq[ select ss_name, synonym_name from pig_synonym ]);
 
     $synonym_ext_sth->execute();
     my $all_syn = $synonym_ext_sth->fetchall_arrayref();
@@ -288,10 +288,10 @@ sub add_chip_info{
 
     my $int_dba  = $self->get_adaptor('multi', 'intvar');
 
-    my $chip_ext_sth = $int_dba->prepare(qq[ select name, shortname, description 
-                                             from genotyping_chip
-                                             where species = ?
-                                              ]);
+    my $chip_ext_sth = $int_dba->dbc->prepare(qq[ select name, shortname, description
+                                                  from genotyping_chip
+                                                  where species = ?
+                                                 ]);
 
     $chip_ext_sth->execute( $self->required_param('species') );
     my $dat = $chip_ext_sth->fetchall_arrayref();
@@ -303,27 +303,27 @@ sub add_chip_info{
 
     my $var_dba = $self->get_species_adaptor('variation');
 
-    my $attrib_ext_sth = $var_dba->prepare(qq[select attrib_id from attrib, attrib_type 
+    my $attrib_ext_sth = $var_dba->dbc->prepare(qq[select attrib_id from attrib, attrib_type
                                               where attrib.value = ? 
                                               and attrib.attrib_type_id = attrib_type.attrib_type_id  
                                               and attrib_type.code = ?]);
 
-    my $meta_ins_sth   = $var_dba->prepare(qq[insert into meta (species_id, meta_key, meta_value ) values (?,?,?) ]);
+    my $meta_ins_sth   = $var_dba->dbc->prepare(qq[insert into meta (species_id, meta_key, meta_value ) values (?,?,?) ]);
 
-    my $set_ins_sth = $var_dba->prepare(qq[ insert into variation_set 
+    my $set_ins_sth = $var_dba->dbc->prepare(qq[ insert into variation_set
                                             ( name, description, short_name_attrib_id ) 
                                              values (?,?,?)]);
 
-    my $setstr_ins_sth = $var_dba->prepare(qq[ insert into variation_set_structure 
+    my $setstr_ins_sth = $var_dba->dbc->prepare(qq[ insert into variation_set_structure
                                                (variation_set_super,variation_set_sub) values (?,?)]);
 
 
     ## set up default menus first
-    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#All sequence variants#variation_feature_variation#var");
-    $meta_ins_sth->execute('\N', "web_config", "source#dbSNP variants#variation_feature_variation_dbSNP#var");
-    $meta_ins_sth->execute('\N', "web_config", "menu_sub#Sequence variants##var#variants");
-    $meta_ins_sth->execute('\N', "web_config", "set#All failed variants#All failed variants#variation_set_fail_all#failed");
-    $meta_ins_sth->execute('\N', "web_config", "menu#Failed variants##failed#");
+    $meta_ins_sth->execute( 1, "web_config", "source#Sequence variants (dbSNP and all other sources)#All sequence variants#variation_feature_variation#var");
+    $meta_ins_sth->execute( 1, "web_config", "source#dbSNP variants#variation_feature_variation_dbSNP#var");
+    $meta_ins_sth->execute( 1, "web_config", "menu_sub#Sequence variants##var#variants");
+    $meta_ins_sth->execute( 1, "web_config", "set#All failed variants#All failed variants#variation_set_fail_all#failed");
+    $meta_ins_sth->execute( 1, "web_config", "menu#Failed variants##failed#");
 
 
     ## enter parent set 
@@ -336,13 +336,13 @@ sub add_chip_info{
 			  "Variants which have assays on commercial chips held in ensembl",
 			  $super_att->[0]->[0] );
     
-    my $super_set =$var_dba->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
+    my $super_set =$var_dba->dbc->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
 	|| die "no insert id for chip super set\n";
 
-    $meta_ins_sth->execute('\N', "web_config", 
+    $meta_ins_sth->execute( 1, "web_config",
 			   "set#All variants on genotyping chips#All genotyping chips#variation_set_all_chips#var_other");
 
-    $meta_ins_sth->execute('\N', "web_config", 
+    $meta_ins_sth->execute( 1, "web_config",
 			   "menu#Arrays and other##var_other#");
     
 
@@ -358,13 +358,13 @@ sub add_chip_info{
 
 	$set_ins_sth->execute( $chip->[0], $chip->[2], $att->[0]->[0] );
     
-	my $sub_set =$var_dba->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
+	my $sub_set =$var_dba->dbc->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
 	    || die "no insert id for chip sub set\n";
 
 	$setstr_ins_sth->execute( $super_set , $sub_set);
 
 	my $meta_string = "set#" . $chip->[0]. "#" . $chip->[0]. "#variation_set_" .  $chip->[1] . "#var_other";
-	$meta_ins_sth->execute('\N', "web_config", $meta_string );
+	$meta_ins_sth->execute( 1, "web_config", $meta_string );
 
 	populate_set($var_dba, $int_dba, $chip->[1], $sub_set);
     }
@@ -382,7 +382,7 @@ sub populate_set{
 
 
     ### check the chip content is loaded 
-    my $check_avail = $int_dba->prepare(qq[show tables like '$chip_name']);
+    my $check_avail = $int_dba->dbc->prepare(qq[show tables like '$chip_name']);
     $check_avail->execute();
     my $avail =  $check_avail->fetchall_arrayref();
 
@@ -393,12 +393,12 @@ sub populate_set{
 
     my $v_adaptor = $var_dba->get_VariationAdaptor;
 
-    my $vset_ins_sth = $var_dba->prepare(qq[ insert into variation_set_variation 
+    my $vset_ins_sth = $var_dba->dbc->prepare(qq[ insert into variation_set_variation
                                              (variation_id, variation_set_id) values( ?,?)]); 
 
 
     ## extract info from production db
-    my $list_ext_sth =  $int_dba->prepare(qq[select name from  $chip_name]);
+    my $list_ext_sth =  $int_dba->dbc->prepare(qq[select name from  $chip_name]);
     $list_ext_sth->execute();
     while(my $var = $list_ext_sth->fetchrow_arrayref()){
 
@@ -422,7 +422,7 @@ sub check_individual_names{
     my $self = shift;
 
     my $var_dba = $self->get_species_adaptor('variation');
-    my $name_ext_sth = $var_dba->prepare(qq[ select individual_id, name from sample]);
+    my $name_ext_sth = $var_dba->dbc->prepare(qq[ select individual_id, name from sample]);
    
     $name_ext_sth->execute()||die;
     my $dat = $name_ext_sth->fetchall_arrayref();

@@ -1569,6 +1569,9 @@ sub parse_cancer_gene_census {
     my $accession = $row_data[5];
     my $pmids     = $row_data[6];
 
+    ## change accession format
+    $accession =~ s/\_/\:/;
+
     my $gene = $ga->fetch_by_stable_id($gene_id);
 
     if(!$gene) {
