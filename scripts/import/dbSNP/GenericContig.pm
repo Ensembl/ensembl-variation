@@ -189,9 +189,12 @@ sub dump_dbSNP{
 #   'flanking_sequence_table',
    'allele_string',
    'variation_feature',   
-    'cleanup'
+   'cleanup'
   );
-  
+
+  ## add refSeq HGVS as synonym for human only
+  push @subroutines, 'import_hgvs' if  $self->{'species'} eq 'homo_sapiens';
+ 
   #The GenericContig object has an array where routines that should be skipped can be specified. For now, add create_coredb and cleanup by default
   push(@{$self->{'skip_routines'}},('create_coredb',
 				    'cleanup'
@@ -506,6 +509,7 @@ sub minor_allele_freq {
         FROM    SNPAlleleFreq_TGP af, $shared\.Allele a
         WHERE   af.allele_id = a.allele_id
         AND     af.freq <= 0.5 
+        AND     af.is_minor_allele = 1
     };
 
     dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
@@ -1005,6 +1009,7 @@ sub subsnp_synonyms{
     $self->{'dbVar'}->do(qq[ CREATE TABLE subsnp_map
                             ( variation_id  int(11) unsigned NOT NULL,
                               subsnp_id     int(11) unsigned DEFAULT NULL)
+                            engine=MyISAM
                             ]);
 
     $self->{'dbVar'}->do( qq[ insert into subsnp_map (variation_id, subsnp_id)  select variation_id, subsnp_id from variation_synonym]);
@@ -1273,7 +1278,7 @@ sub individual_table {
 
     my $syn_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual_synonym (individual_id,source_id,name)  values (?,?,?)  ]);
 
-    my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample ( individual_id, name) values (?,?)]);
+    my $sam_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample ( individual_id, name, description) values (?,?,?)]);
 
     my $ind_gen_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual set gender =? where individual_id = ? ]);
     my $ind_par_upd_sth = $self->{'dbVar'}->prepare(qq[ update individual set father_individual_id =?, mother_individual_id =?  where individual_id = ? ]);
@@ -1288,7 +1293,7 @@ sub individual_table {
         ## insert individual if novel - using first sample name seen as name
         ## a few species (eg human) have multiple sample names per individual; check later
         unless (defined $individual_id{ $samples->{$sam_id}->{ind}} ){
-            $ind_ins_sth->execute(  $samples->{$sam_id}->{name}  , $individuals->{ $samples->{$sam_id}->{name} }->{des}, $individual_type_id );
+            $ind_ins_sth->execute(  $samples->{$sam_id}->{name}  , $individuals->{ $samples->{$sam_id}->{ind} }->{des}, $individual_type_id );
             $individual_id{ $samples->{$sam_id}->{ind} } =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'individual', 'individual_id');
 
             ## insert dbSNP synonym 
@@ -1297,7 +1302,7 @@ sub individual_table {
 
 
         ## add sample data 
-        $sam_ins_sth->execute( $individual_id{ $samples->{$sam_id}->{ind} }, $samples->{$sam_id}->{name});
+        $sam_ins_sth->execute( $individual_id{ $samples->{$sam_id}->{ind} }, $samples->{$sam_id}->{name}, $individuals->{ $samples->{$sam_id}->{ind} }->{des});
 
         ## extract sample_id
         my $ens_sample_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'sample', 'sample_id');
@@ -1339,7 +1344,7 @@ sub individual_table {
 	    }
 	}
 
-	next unless ($father_id =~ /\d+/ || $mother_id =~ /\d+/);
+	next unless (defined $father_id && $father_id =~ /\d+/ || defined $mother_id && $mother_id =~ /\d+/);
         $ind_par_upd_sth->execute( $father_id,
                                    $mother_id,
                                    $individual_id{$ind}
@@ -1413,7 +1418,7 @@ sub get_ind_data{
 
        ## individual description is often not useful
        $individuals{$l->[3]}{des}  = $l->[2]
-         if defined $l->[2] && $l->[2] !~ /unknown source|byPopDesc/i ;
+         if defined $l->[2] && $l->[2] !~ /^unknown|byPopDesc/i ;
 
        ## sample info
        $samples{$l->[0]}{name} = $l->[1];
@@ -2950,7 +2955,26 @@ sub cleanup {
     $self->{'dbVar'}->do('DROP TABLE tmp_var_allele');
 }
 
+## add dbSNP HGVS synonyms
+sub import_hgvs{
 
+  my $self = shift;
+  my $hgvs_extr_stmt = "select snp_id, hgvs_name from snp_hgvs where hgvs_name like 'NP%' or hgvs_name like 'NM%' ";
+
+  dumpSQL($self->{'dbSNP'}, $hgvs_extr_stmt , $self->{source_engine} ) ;
+
+  #load it to variation database in temp dbsnp_hgvs table
+  create_and_load( $self->{'dbVar'}, "dbsnp_hgvs", "snp_id * not_null", "hgvs_name * not_null") ;
+
+  my $get_source_sth = $self->{'dbVar'}->prepare(qq[select source_id from source where name ='dbSNP HGVS' ]);
+  my $synon_source = $get_source_sth->fetchall_arrayref();
+
+  $self->{'dbVar'}->do(qq[INSERT IGNORE INTO variation_synonym (variation_id,name,source_id)  (select variation.variation_id, dbsnp_hgvs.hgvs_name, $synon_source->[0]->[0]
+                          from variation, dbsnp_hgvs
+                          where variation.snp_id = dbsnp_hgvs.snp_id)
+                         ]);
+
+}
 
 sub sort_num{
 
