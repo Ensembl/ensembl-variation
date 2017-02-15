@@ -34,7 +34,7 @@
 #include "tbx.h"
 #include "vcf.h"
 
-#define SIZE 5000
+#define SIZE 1000000
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
 #define USER_ERROR 1
@@ -416,6 +416,7 @@ int main(int argc, char *argv[]) {
   init_locus_list(&locus_list);
 
   int f;
+  int initialised = 0;
   for(f=0; f<numfiles; f++) {
 
     // open htsFile and index
@@ -539,11 +540,13 @@ int main(int argc, char *argv[]) {
             }
 
             // init locus using enqueue on first genotype
-            if(i == 0) {
+            if(initialised == 0) {
               enqueue(&locus_list, position, var_id, population_id, personid, genotype2int(genotype));
 
               // get l_tmp ref to use for subsequent genotypes
               l_tmp = &locus_list.locus[locus_list.tail];
+
+              initialised = 1;
             }
 
             // subsequent genotypes get added to l_tmp
