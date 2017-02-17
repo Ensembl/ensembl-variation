@@ -110,8 +110,9 @@ void reallocate_locus_list(Locus_list *l) {
   l->locus = t;
 }
 
-/* dequeue is so simple, it's just a macro */
-#define dequeue(ll) ll.head++
+void dequeue(Locus_list *ll) {
+  ll->head++;
+}
 
 void enqueue(Locus_list *ll, int pos, char *var_id, int pop_id, int personid, uint8_t genotype) {
   Locus_info *l;
@@ -303,6 +304,134 @@ void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh, char *varia
   }
 }
 
+int get_genotypes(Locus_list *locus_list, int windowsize, char *variant, bcf_hdr_t *hdr, bcf1_t *line) {
+
+  Locus_info* l_tmp;
+  int ngt, *gt_arr = NULL, ngt_arr = 0, i = 0, j = 0, allele, personid;
+
+  // get position
+  // in htslib it's 0-indexed
+  // we also want to increment by one if it's not a SNP
+  // to account for the base added to REF and ALT in VCF format
+  int position = line->pos + (2 - bcf_is_snp(line));
+
+  // get variant id
+  // have to do a string copy otherwise the reference to the last one gets passed around indefinitely
+  bcf_unpack(line, 1);
+  bcf_dec_t *d = &line->d;      
+  char *var_id = malloc(strlen(d->id)+1);
+  strcpy(var_id, d->id);
+
+  // get genotypes
+  ngt = bcf_get_genotypes(hdr, line, &gt_arr, &ngt_arr);
+
+  if(ngt == 0) return 0;
+
+  // quickly scan through for non-ref alleles
+  // this way we can exclude non-variant sites before doing any analysis
+  int has_alt = 0;
+  for(i=0; i<ngt; i++) {
+    if(gt_arr[i] > 3) {
+      has_alt = 1;
+      break;
+    }
+  }
+  if(has_alt == 0) return 0;
+
+  // gt_arr is an array of alleles
+  // we need to break this down into per-sample sets to turn into genotypes
+  int alleles_per_gt = ngt / line->n_sample;
+
+  // for now skip unless ploidy == 2
+  if(alleles_per_gt != 2) return 0;
+
+  int initialised = 0;
+
+  // iterate over genotypes
+  for(i=0; i<line->n_sample; i++) {
+    genotype: personid = i + 1;
+
+    char genotype[2];
+
+    // iterate over alleles
+    for(j=0; j<alleles_per_gt; j++) {
+
+      // convert hts encoding to a plain int
+      // 0 = missing
+      // 1 = REF
+      // 2 = ALT1
+      // 3 = ALT2 etc
+      allele = gt_arr[(alleles_per_gt*i) + j]/2;
+
+      // for now we'll only deal with REF or ALT1
+      if(allele == 1) {
+        genotype[j] = 'A';
+      }
+      else if(allele == 2) {
+        genotype[j] = 'a';
+      }
+      // if any alleles are missing or ALT2+ just skip this whole variant
+      else {
+        i++;
+        if(i >= line->n_sample) return 0;
+        goto genotype;
+      }
+    }
+
+    /* Check both are 'a' or 'A' */
+    if ((genotype[0] | genotype[1] | 0x20) != 'a') {
+      fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n", position, personid);
+      return USER_ERROR;
+    }
+
+    /* Make all hets the same order */
+    if (genotype[0] == 'a' && genotype[1] == 'A') {
+      genotype[0] = 'A'; genotype[1] = 'a';
+    }
+
+    // init locus using enqueue on first genotype
+    if(initialised == 0) {
+      enqueue(locus_list, position, var_id, 1, personid, genotype2int(genotype));
+
+      // get l_tmp ref to use for subsequent genotypes
+      l_tmp = &locus_list->locus[locus_list->tail];
+
+      initialised = 1;
+    }
+
+    // subsequent genotypes get added to l_tmp
+    else {
+      l_tmp->genotypes[l_tmp->number_genotypes].person_id = personid;
+      l_tmp->genotypes[l_tmp->number_genotypes].genotype = genotype2int(genotype);
+      l_tmp->number_genotypes++;
+      if (l_tmp->number_genotypes == SIZE) {
+        fprintf(stderr, "Number of genotypes supported by the program (%d) exceeded\n", SIZE);
+        return SYSTEM_ERROR;
+      }
+    }
+  }
+
+  return position;
+}
+
+void process_window(Locus_list *locus_list, int windowsize, char *variant, FILE *fh, int position) {
+
+  /*check if the new position is farther than the limit.*/
+  /*if so, calculate the ld information for the values in the array*/
+  while(
+    (locus_list->tail >= locus_list->head) &&
+    (abs(locus_list->locus[locus_list->head].position - position) > windowsize)
+  ) {
+    calculate_ld(locus_list, 1, fh, variant);
+    dequeue(locus_list);  
+  }
+  if (locus_list->tail < locus_list->head) {
+    /* Can reset the queue to the beginning */
+    locus_list->head = 0;
+    locus_list->tail = -1;
+  }
+}
+
 void usage(char *prog) {
   fprintf(stderr, "Usage: %s -f [input.vcf.gz] -r [chr:start-end] -l [optional_sample_list] (-g [input_two.vcf.gz] -s [chr:start-end]) > output.txt\n", prog);
 }
@@ -402,26 +531,18 @@ int main(int argc, char *argv[]) {
   // init vars
   FILE *fh;
 
-  int position;
-  int personid;
-  int seq_region_id;
-  int population_id = 1;
-  char genotype[2];
-
   Locus_list locus_list;
-  Locus_info* l_tmp;
 
   // open output
   fh = stdout; // fopen("output.txt","w");
 
   init_locus_list(&locus_list);
+  int f, position;
 
-  int f;
   for(f=0; f<numfiles; f++) {
 
-    // open htsFile and index
+    // open htsFile
     htsFile *htsfile = hts_open(files[f], "rz");
-    tbx_t *idx = tbx_index_load(files[f]);
 
     // read header
     bcf_hdr_t *hdr = bcf_hdr_read(htsfile);
@@ -444,158 +565,67 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // query
-    hts_itr_t *iter = tbx_itr_querys(idx, regions[f]);
+    // get file format and act accordingly
+    enum htsExactFormat format = hts_get_format(htsfile)->format;
 
-    // dive out without iter
-    if(!iter) return 0;
+    if(format == vcf) {
+    
+      // open index
+      tbx_t *idx = tbx_index_load(files[f]);
 
-    // set up vars
-    kstring_t str = {0,0,0};
-    bcf1_t *line = bcf_init();
-    int ngt, *gt_arr = NULL, ngt_arr = 0, i = 0, j = 0, allele;
+      // query
+      hts_itr_t *itr = tbx_itr_querys(idx, regions[f]);
 
-    // iterate over file
-    vcf_line: while(tbx_itr_next(htsfile, idx, iter, &str) > 0) {
+      // dive out without iter
+      if(!itr) return 0;
 
-      // parse into vcf struct as line
-      if(vcf_parse(&str, hdr, line) == 0) {
+      // set up vars
+      kstring_t str = {0,0,0};
+      bcf1_t *line = bcf_init();
 
-        seq_region_id = (int) line->rid;
+      // iterate over file
+      while(tbx_itr_next(htsfile, idx, itr, &str) > 0) {
 
-        // get position
-        // in htslib it's 0-indexed
-        // we also want to increment by one if it's not a SNP
-        // to account for the base added to REF and ALT in VCF format
-        position = line->pos + (2 - bcf_is_snp(line));
-
-        // get variant id
-        // have to do a string copy otherwise the reference to the last one gets passed around indefinitely
-        bcf_unpack(line, 1);
-        bcf_dec_t *d = &line->d;      
-        char *var_id = malloc(strlen(d->id)+1);
-        strcpy(var_id, d->id);
-
-        // get genotypes
-        ngt = bcf_get_genotypes(hdr, line, &gt_arr, &ngt_arr);
-
-        if(ngt > 0) {
-
-          // quickly scan through for non-ref alleles
-          // this way we can exclude non-variant sites before doing any analysis
-          int has_alt = 0;
-          for(i=0; i<ngt; i++) {
-            if(gt_arr[i] > 3) {
-              has_alt = 1;
-              break;
-            }
-          }
-          if(has_alt == 0) goto vcf_line;
-
-          // gt_arr is an array of alleles
-          // we need to break this down into per-sample sets to turn into genotypes
-          int alleles_per_gt = ngt / line->n_sample;
-
-          // for now skip unless ploidy == 2
-          if(alleles_per_gt != 2) goto vcf_line;
-
-          int initialised = 0;
-
-          // iterate over genotypes
-          for(i=0; i<line->n_sample; i++) {
-            genotype: personid = i + 1;
-
-            // iterate over alleles
-            for(j=0; j<alleles_per_gt; j++) {
-
-              // convert hts encoding to a plain int
-              // 0 = missing
-              // 1 = REF
-              // 2 = ALT1
-              // 3 = ALT2 etc
-              allele = gt_arr[(alleles_per_gt*i) + j]/2;
-
-              // for now we'll only deal with REF or ALT1
-              if(allele == 1) {
-                genotype[j] = 'A';
-              }
-              else if(allele == 2) {
-                genotype[j] = 'a';
-              }
-              // if any alleles are missing or ALT2+ just skip this whole variant
-              else {
-                i++;
-                if(i >= line->n_sample) goto vcf_line;
-                goto genotype;
-              }
-            }
-
-            /* Check both are 'a' or 'A' */
-            if ((genotype[0] | genotype[1] | 0x20) != 'a') {
-              fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n", position, personid);
-              return USER_ERROR;
-            }
-
-            /* Make all hets the same order */
-            if (genotype[0] == 'a' && genotype[1] == 'A') {
-              genotype[0] = 'A'; genotype[1] = 'a';
-            }
-
-            // init locus using enqueue on first genotype
-            if(initialised == 0) {
-              enqueue(&locus_list, position, var_id, population_id, personid, genotype2int(genotype));
-
-              // get l_tmp ref to use for subsequent genotypes
-              l_tmp = &locus_list.locus[locus_list.tail];
-
-              initialised = 1;
-            }
-
-            // subsequent genotypes get added to l_tmp
-            else {
-              l_tmp->genotypes[l_tmp->number_genotypes].person_id = personid;
-              l_tmp->genotypes[l_tmp->number_genotypes].genotype = genotype2int(genotype);
-              l_tmp->number_genotypes++;
-              if (l_tmp->number_genotypes == SIZE) {
-                fprintf(stderr, "Number of genotypes supported by the program (%d) exceeded\n", SIZE);
-                return SYSTEM_ERROR;
-              }
-            }
-          }
-        }
-
-        /*check if the new position is farther than the limit.*/
-        /*if so, calculate the ld information for the values in the array*/
-        while(
-          (locus_list.tail >= locus_list.head) &&
-          (abs(locus_list.locus[locus_list.head].position - position) > windowsize)
-        ) {
-//          fprintf(stderr, "Calculate LD 1\n");
-
-          calculate_ld(&locus_list, seq_region_id, fh, variant);
-          dequeue(locus_list);  
-        }
-        if (locus_list.tail < locus_list.head) {
-          /* Can reset the queue to the beginning */
-          locus_list.head = 0;
-          locus_list.tail = -1;
+        // parse into vcf struct as line
+        if(vcf_parse(&str, hdr, line) == 0) {
+          position = get_genotypes(&locus_list, windowsize, variant, hdr, line);
+          if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
         }
       }
+
+      free(str.s);
+      tbx_destroy(idx);
+      tbx_itr_destroy(itr);
     }
 
-    tbx_destroy(idx);
-    tbx_itr_destroy(iter);
+    else if(format == bcf) {
+
+      // open index
+      hts_idx_t *idx = bcf_index_load(files[f]);
+
+      // query
+      hts_itr_t *itr = bcf_itr_querys(idx, hdr, regions[f]);
+
+      // dive out without iter
+      if(!itr) return 0;
+
+      bcf1_t *line = bcf_init();
+
+      while(bcf_itr_next(htsfile, itr, line) >= 0) {
+        position = get_genotypes(&locus_list, windowsize, variant, hdr, line);
+        if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
+      }
+
+      hts_idx_destroy(idx);
+      bcf_itr_destroy(itr);
+    }
+
     bcf_hdr_destroy(hdr);
     hts_close(htsfile);
   }
 
-  l_tmp = &locus_list.locus[locus_list.tail];
-
-  while(locus_list.tail >= locus_list.head){
-
-    calculate_ld(&locus_list, seq_region_id, fh, variant);
-    dequeue(locus_list);
-  }
+  // process any remaining buffer
+  process_window(&locus_list, 0, variant, fh, position);
 
   return 0;
 }
