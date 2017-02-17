@@ -38,7 +38,6 @@
 #define SIZE 1000000
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
-#define USER_ERROR 1
 #define SYSTEM_ERROR 2
 
 /* Macros for fetching particular haplotypes from the allele_counters */
@@ -381,7 +380,7 @@ int get_genotypes(Locus_list *locus_list, int windowsize, char *variant, bcf_hdr
     /* Check both are 'a' or 'A' */
     if ((genotype[0] | genotype[1] | 0x20) != 'a') {
       fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n", position, personid);
-      return USER_ERROR;
+      return EXIT_FAILURE;
     }
 
     /* Make all hets the same order */
@@ -510,32 +509,30 @@ int main(int argc, char *argv[]) {
   if(numfiles == 0) {
     fprintf(stderr, "No file(s) specified with -f/-g\n");
     usage(argv[0]);
-    return USER_ERROR;
+    return EXIT_FAILURE;
   }
 
   if(numregions == 0) {
     fprintf(stderr, "No region(s) specified with -r/-s\n");
     usage(argv[0]);
-    return USER_ERROR;
+    return EXIT_FAILURE;
   }
 
   if(numfiles != numregions) {
     fprintf(stderr, "Number of files does not match number of regions\n");
     usage(argv[0]);
-    return USER_ERROR;
+    return EXIT_FAILURE;
   }
   if(numfiles > 1) {
     windowsize = 1000000000;
   }
 
-  // init vars
-  FILE *fh;
-
-  Locus_list locus_list;
-
   // open output
+  FILE *fh;
   fh = stdout; // fopen("output.txt","w");
 
+  // init vars
+  Locus_list locus_list;
   init_locus_list(&locus_list);
   int f, position;
 
@@ -544,8 +541,18 @@ int main(int argc, char *argv[]) {
     // open htsFile
     htsFile *htsfile = hts_open(files[f], "rz");
 
+    if(!htsfile) {
+      fprintf(stderr, "Unable to open file %s\n", files[f]);
+      return EXIT_FAILURE;
+    }
+
     // read header
     bcf_hdr_t *hdr = bcf_hdr_read(htsfile);
+
+    if(!hdr) {
+      fprintf(stderr, "Unable to read header from file %s\n", files[f]);
+      return EXIT_FAILURE;
+    }
 
     // use sample list if provided
     // this speeds up VCF parsing
@@ -561,7 +568,7 @@ int main(int argc, char *argv[]) {
 
       if(access( samples_list, F_OK ) != -1  && bcf_hdr_set_samples(hdr, samples_list, is_file) < 0) {
         fprintf(stderr, "Failed to read or set samples\n");
-        return USER_ERROR;
+        return EXIT_FAILURE;
       }
     }
 
@@ -572,6 +579,11 @@ int main(int argc, char *argv[]) {
     
       // open index
       tbx_t *idx = tbx_index_load(files[f]);
+
+      if(!idx) {
+        fprintf(stderr, "Could not load .tbi/.csi index for file %s\n", files[f]);
+        return EXIT_FAILURE;
+      }
 
       // query
       hts_itr_t *itr = tbx_itr_querys(idx, regions[f]);
@@ -603,6 +615,11 @@ int main(int argc, char *argv[]) {
       // open index
       hts_idx_t *idx = bcf_index_load(files[f]);
 
+      if(!idx) {
+        fprintf(stderr, "Could not load .csi index for file %s\n", files[f]);
+        return EXIT_FAILURE;
+      }
+
       // query
       hts_itr_t *itr = bcf_itr_querys(idx, hdr, regions[f]);
 
@@ -620,8 +637,17 @@ int main(int argc, char *argv[]) {
       bcf_itr_destroy(itr);
     }
 
+    else {
+      fprintf(stderr, "Unsupported format for file %s\n", files[f]);
+      return EXIT_FAILURE;
+    }
+
     bcf_hdr_destroy(hdr);
-    hts_close(htsfile);
+
+    if ( hts_close(htsfile) ) {
+      fprintf(stderr, "hts_close returned non-zero status: %s\n", files[f]);
+      return EXIT_FAILURE;
+    }
   }
 
   // process any remaining buffer
