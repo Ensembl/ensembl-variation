@@ -435,6 +435,80 @@ void usage(char *prog) {
   fprintf(stderr, "Usage: %s -f [input.vcf.gz] -r [chr:start-end] -l [optional_sample_list] (-g [input_two.vcf.gz] -s [chr:start-end]) > output.txt\n", prog);
 }
 
+char** read_variants_file(char *variants_file) {
+  int lines_allocated = 128;
+  int max_line_len = 100;
+  char** include_variants = (char **)malloc(sizeof(char*)*lines_allocated);
+  if (include_variants==NULL) {
+    fprintf(stderr, "Out of memory.\n");
+    exit(SYSTEM_ERROR);
+  }
+
+  FILE *in;
+  if ((in = fopen(variants_file, "r"))==NULL) {
+    perror("Could not open input file");
+    exit(SYSTEM_ERROR);
+  }
+
+  int l;
+  for(l=0; 1; l++) {
+    int j;
+
+    // increase memory as required
+    if (l >= lines_allocated) {
+      int new_size;
+
+      /* Double our allocation and re-allocate */
+      new_size = lines_allocated*2;
+      include_variants = (char **)realloc(include_variants,sizeof(char*)*new_size);
+      if (include_variants==NULL) {
+        fprintf(stderr,"Out of memory.\n");
+        exit(SYSTEM_ERROR);
+      }
+      lines_allocated = new_size;
+    }
+
+    include_variants[l] = malloc(max_line_len);
+
+    if(include_variants[l]==NULL) {
+      fprintf(stderr,"Out of memory.\n");
+      exit(SYSTEM_ERROR);
+    }
+    if(fgets(include_variants[l], max_line_len-1, in)==NULL) break;
+
+    /* Get rid of CR or LF at end of line */
+    for(
+      j=strlen(include_variants[l])-1;
+      j>=0 && (include_variants[l][j]=='\n' || include_variants[l][j]=='\r');
+      j--
+    ) { 
+      include_variants[l][j]='\0';
+    }
+  }
+
+  fclose(in);
+
+  return include_variants;
+}
+
+int check_include_variants(bcf1_t *line, char** include_variants, char* variant) {
+  bcf_unpack(line, 1);
+  bcf_dec_t *d = &line->d;      
+  char *var_id = malloc(strlen(d->id)+1);
+  strcpy(var_id, d->id);
+
+  // could be the variant given with -v
+  if((variant[0] != 0) && strcmp(var_id, variant) == 0) return 1;
+
+  // or could be in the file given
+  int i;
+  for(i=0; include_variants[i][0] != '\0'; i++) {
+    if(strcmp(include_variants[i], var_id) == 0) return 1;
+  }
+
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
 
   // parse args
@@ -442,6 +516,7 @@ int main(int argc, char *argv[]) {
   char *files[2];
   char *regions[2];
   char *samples_list;
+  char *variants_file;
   char *variant = "";
   int numfiles = 0;
   int numregions = 0;
@@ -456,13 +531,14 @@ int main(int argc, char *argv[]) {
       {"samples", required_argument, 0, 'l'},
       {"window",  required_argument, 0, 'w'},
       {"variant", required_argument, 0, 'v'},
+      {"include_variants", required_argument, 0, 'n'},
       {0, 0, 0, 0}
     };
 
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:g:l:r:s:w:v:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:g:l:r:s:w:v:n:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -497,6 +573,10 @@ int main(int argc, char *argv[]) {
         variant = optarg;
         break;
 
+      case 'n':
+        variants_file = optarg;
+        break;
+
       case '?':
         /* getopt_long already printed an error message. */
         break;
@@ -525,6 +605,15 @@ int main(int argc, char *argv[]) {
   }
   if(numfiles > 1) {
     windowsize = 1000000000;
+  }
+
+  // variant list in file
+  char **include_variants;
+  int have_include_variants = 0;
+  // include_variants[0][0] = '\0';
+  if(access( variants_file, F_OK) != -1 ) {
+    include_variants = read_variants_file(variants_file);
+    have_include_variants = 1;
   }
 
   // open output
@@ -600,6 +689,10 @@ int main(int argc, char *argv[]) {
 
         // parse into vcf struct as line
         if(vcf_parse(&str, hdr, line) == 0) {
+
+          // check include_variants
+          if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) continue;
+
           position = get_genotypes(&locus_list, windowsize, variant, hdr, line);
           if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
         }
@@ -629,6 +722,10 @@ int main(int argc, char *argv[]) {
       bcf1_t *line = bcf_init();
 
       while(bcf_itr_next(htsfile, itr, line) >= 0) {
+
+        // check include_variants
+        if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) continue;
+
         position = get_genotypes(&locus_list, windowsize, variant, hdr, line);
         if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
       }
