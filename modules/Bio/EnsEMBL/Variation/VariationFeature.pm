@@ -1984,12 +1984,9 @@ sub hgvs_genomic {
     if(
       ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
       (
-        defined $self->adaptor() && 
-        (
-          UNIVERSAL::can($self->adaptor, 'isa') ? 
-          $self->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
-          $Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
-        )
+        defined $self->adaptor() && UNIVERSAL::can($self->adaptor, 'isa') && $self->adaptor->db ? 
+        $self->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
+        $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
       )
     ) {
 
