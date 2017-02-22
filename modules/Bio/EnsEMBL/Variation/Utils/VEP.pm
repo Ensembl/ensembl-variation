@@ -3191,9 +3191,10 @@ sub get_custom_annotation {
 
         # overlap type only needs to overlap, but we need to search the whole range
         elsif($custom->{type} eq 'overlap') {
+            ($s, $e) = ($e, $s) if $e < $s;
+
             foreach my $pos(keys %{$cache->{$chr}->{$custom->{name}}}) {
                 foreach my $feature(values %{$cache->{$chr}->{$custom->{name}}->{$pos}}) {
-
                     next unless
                         $feature->{chr}   eq $chr &&
                         $feature->{end}   >= $s &&
