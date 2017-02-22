@@ -2026,6 +2026,32 @@ sub hgvs_genomic {
     # Skip if e.g. allele is identical to the reference slice
     next if (!defined($hgvs_notation));
 
+    ## alleles may need trimming if the type is reported as a delins
+    if( $hgvs_notation->{type} eq 'delins'){
+
+      ## check the start
+      while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+             substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
+        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
+        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
+        $hgvs_notation->{start}++;
+      }
+
+      ## check the end
+      while($hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+            substr($hgvs_notation->{ref}, -1, 1) eq substr($hgvs_notation->{alt}, -1, 1)) {
+        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 0, length($hgvs_notation->{ref}) - 1);
+        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, length($hgvs_notation->{alt}) - 1);
+        $hgvs_notation->{end}--;
+      }
+
+      ## fix alleles and types if necessary
+      $hgvs_notation->{ref} ||= '-';
+      $hgvs_notation->{alt} ||= '-';
+      $hgvs_notation->{type} = 'del' if $hgvs_notation->{alt} eq '-';
+      $hgvs_notation->{type} = 'ins' if $hgvs_notation->{ref} eq '-';
+    }
+
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
     # Add the position_numbering scheme
