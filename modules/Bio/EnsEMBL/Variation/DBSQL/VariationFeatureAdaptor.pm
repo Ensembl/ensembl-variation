@@ -336,7 +336,10 @@ sub fetch_all_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
-        
+
+    # Add the constraint for failed variations
+    $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
+
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
