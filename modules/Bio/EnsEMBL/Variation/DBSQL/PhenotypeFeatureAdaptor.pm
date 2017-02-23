@@ -1049,13 +1049,13 @@ sub _tables {
   
   # include attrib tables?
   push @tables, (
-    [ 'phenotype_feature_attrib', 'pfa', ],
+    [ 'phenotype_feature_attrib', 'pfa' ],
     [ 'attrib_type', 'at' ]
   ) if $self->_include_attrib;
 
   # include ontology tables for search?
   push @tables, (
-    [ 'phenotype_ontology_accession', 'poa', ],
+    [ 'phenotype_ontology_accession', 'poa' ]
   ) if $self->_include_ontology;
  
   return @tables; 
@@ -1105,7 +1105,6 @@ sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
    
   my %row;
-
   # Create the row hash using column names as keys
   $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));
 
@@ -1114,7 +1113,6 @@ sub _objs_from_sth {
       # we don't actually store the returned object because
       # the _obj_from_row method stores them in a temporary
       # hash _temp_objs in $self 
-
       $self->_obj_from_row(\%row, $mapper, $dest_slice);
   }
 
@@ -1229,7 +1227,7 @@ sub _obj_from_row {
       $slice = $dest_slice;
     }
 
-    my $obj = $self->_create_feature_fast(
+    $obj = $self->_create_feature_fast(
       'Bio::EnsEMBL::Variation::PhenotypeFeature', {
         'dbID'           => $row->{phenotype_feature_id},
         'start'          => $seq_region_start,
@@ -1255,7 +1253,11 @@ sub _obj_from_row {
   $obj->{attribs}->{$row->{code}} = $row->{value} if $row->{code};
 
   ## add ontology accession if extracted
-  push(@{$obj->{ontology_accessions}}, $row->{accession}) if $row->{accession};
+  # Gets only the unique ontology accessions in a hash
+  $obj->{ontology_accessions_hash}->{$row->{accession}} = 1 if $row->{accession};
+  # Then we transform the hash into an array
+  my @accessions = keys(%{$obj->{ontology_accessions_hash}});
+  $obj->{ontology_accessions} = \@accessions;
 }
 
 sub store{
