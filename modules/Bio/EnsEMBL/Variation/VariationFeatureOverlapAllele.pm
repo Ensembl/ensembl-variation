@@ -131,25 +131,30 @@ sub new {
 
   my (
     $variation_feature_seq,
-    $allele_number
+    $allele_number,
+    $given_ref,
   );
 
   if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
     (
       $variation_feature_seq,
-      $allele_number
+      $allele_number,
+      $given_ref,
     ) = (
       $args{-variation_feature_seq},
       $args{-allele_number},
+      $args{-given_ref},
     );
   }
   else {
     (
       $variation_feature_seq,
-      $allele_number
+      $allele_number,
+      $given_ref,
     ) = rearrange([qw(
       VARIATION_FEATURE_SEQ
       ALLELE_NUMBER
+      GIVEN_REF
     )], %args);
   }
 
@@ -159,6 +164,7 @@ sub new {
 
   $self->{variation_feature_seq} = $variation_feature_seq;
   $self->{allele_number} = $allele_number;
+  $self->{given_ref} = $given_ref;
 
   return $self;
 }

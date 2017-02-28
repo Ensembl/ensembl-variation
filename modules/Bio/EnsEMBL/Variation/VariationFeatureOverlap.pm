@@ -123,6 +123,7 @@ sub new {
     $ref_feature, 
     $disambiguate_sn_alleles,
     $no_ref_check,
+    $use_feature_ref,
   );
 
   if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
@@ -131,11 +132,13 @@ sub new {
       $ref_feature, 
       $disambiguate_sn_alleles,
       $no_ref_check,
+      $use_feature_ref,
     ) = (
       $args{-adaptor},
       $args{-ref_feature},
       $args{-disambiguate_sn_alleles},
-      $args{-no_ref_check}
+      $args{-no_ref_check},
+      $args{-use_feature_ref},
     );
   }
   else {
@@ -144,11 +147,13 @@ sub new {
       $ref_feature, 
       $disambiguate_sn_alleles,
       $no_ref_check,
+      $use_feature_ref,
     ) = rearrange([qw(
       ADAPTOR 
       REF_FEATURE 
       DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
       NO_REF_CHECK
+      USE_FEATURE_REF
     )], %args);
   }
 
@@ -159,42 +164,15 @@ sub new {
 
   $self->{adaptor} = $adaptor;
 
-  my $ref_allele;
-  
-  # we take the reference allele sequence from the reference sequence, not from the allele string
-  unless($no_ref_check) {
-    $ref_feature ||= $variation_feature->slice;
-    $self->{ref_feature}  = $ref_feature;
-
-    my ($vf_start, $vf_end) = ($variation_feature->start, $variation_feature->end);
-
-    if($vf_start > $vf_end) {
-      $ref_allele = '-';
-    }
-    else {
-      my $ss = $ref_feature->sub_Slice(
-        $variation_feature->start, 
-        $variation_feature->end, 
-        $variation_feature->strand
-      );
-
-      $ss ||= $variation_feature->feature_Slice();
-
-      throw("Could not fetch sub_Slice for $vf_start\-$vf_end\:".$variation_feature->strand) unless $ss;
-
-      $ref_allele = $ss->seq;
-    }
-
-    # throw it away if it comes back "N"
-    undef $ref_allele if $ref_allele =~ /^N+$/;
-  }
+  my $ref_allele = $self->_get_ref_allele($ref_feature, $variation_feature, $no_ref_check, $use_feature_ref);
 
   # get raw allele hashes
   # we can do a lot of this just once per VF and cache it
   my $raw_allele_hashes = $self->_raw_allele_hashes(
     $variation_feature,
     $ref_allele,
-    $disambiguate_sn_alleles
+    $disambiguate_sn_alleles,
+    $use_feature_ref,
   );
 
   # then turn them in to VFOAs
@@ -382,15 +360,50 @@ sub _rearrange_alleles {
   $self->{reference_allele} = $self->{alt_alleles}->[0] if scalar keys %$keep_alleles == 1;
 }
 
+sub _get_ref_allele {
+  my ($self, $ref_feature, $vf, $no_ref_check, $use_feature_ref) = @_;
+
+  my $ref_allele;
+
+  unless($no_ref_check) {
+    $ref_feature ||= $vf->slice;
+    $self->{ref_feature} = $ref_feature;
+
+    my ($vf_start, $vf_end) = ($vf->start, $vf->end);
+
+    if($vf_start > $vf_end) {
+      $ref_allele = '-';
+    }
+    else {
+      my $ss = $ref_feature->sub_Slice(
+        $vf->start, 
+        $vf->end, 
+        $vf->strand
+      );
+
+      $ss ||= $vf->feature_Slice();
+
+      throw("Could not fetch sub_Slice for $vf_start\-$vf_end\:".$vf->strand) unless $ss;
+
+      $ref_allele = $ss->seq;
+    }
+
+    # throw it away if it comes back "N"
+    undef $ref_allele if $ref_allele =~ /^N+$/;
+  }
+
+  return $ref_allele;
+}
+
 # this method does the raw parsing of the VFs alleles
 # we cache it on VF so that we can reuse it
 # as it will give the same result every time we want to create a new VFO
 sub _raw_allele_hashes {
-  my ($self, $vf, $ref_allele, $disambiguate_sn_alleles) = @_;
+  my ($self, $vf, $ref_allele, $disambiguate_sn_alleles, $use_feature_ref) = @_;
 
   $vf ||= $self->base_variation_feature;
 
-  if(!exists($vf->{_raw_allele_hashes})) {
+  if(!exists($vf->{_raw_allele_hashes}) || $use_feature_ref) {
 
     my @raw_allele_hashes;
 
@@ -401,6 +414,9 @@ sub _raw_allele_hashes {
     expand(\$allele_string);
 
     my @alleles = split /\//, $allele_string;
+
+    my $vf_ref;
+    $vf_ref = shift @alleles if $use_feature_ref;
     
     $ref_allele = $alleles[0] unless defined($ref_allele);
     $ref_allele = '-' unless $ref_allele;
@@ -450,7 +466,8 @@ sub _raw_allele_hashes {
     push @raw_allele_hashes, {
       -variation_feature_seq => $ref_allele,
       -is_reference          => 1,
-      -allele_number         => 0
+      -allele_number         => 0,
+      -given_ref             => $vf_ref,
     };
 
     # create objects representing the alternate alleles
@@ -469,6 +486,8 @@ sub _raw_allele_hashes {
         -allele_number         => $allele_number
       };
     }
+
+    return \@raw_allele_hashes if $use_feature_ref;
 
     $vf->{_raw_allele_hashes} = \@raw_allele_hashes
   }

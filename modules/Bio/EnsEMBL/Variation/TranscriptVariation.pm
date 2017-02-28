@@ -64,6 +64,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 use Bio::EnsEMBL::Variation::BaseTranscriptVariation;
@@ -424,6 +425,34 @@ sub _prefetch_for_vep {
     $self->cds_coords;
     $self->translation_coords;
     $self->pep_allele_string;
+}
+
+sub _get_ref_allele {
+  my $self = shift;
+  my ($ref_feature, $vf, $no_ref_check, $use_feature_ref) = @_;
+
+  # this method is explicitly for retrieving the ref allele from the transcript sequence
+  # which may differ from the underlying slice
+  # if we don't want this, default to using the SUPER method
+  return $self->SUPER::_get_ref_allele(@_) unless $use_feature_ref;
+
+  # insertion
+  return '-' if $vf->{start} > $vf->{end};
+
+  # we only want to do this if the variant maps completely to the spliced cDNA
+  # we need to check the full mapping set retrieved from the TranscriptMapper
+  # in case the variant spans a whole intron, for example
+  my $cdna_coords = $self->cdna_coords();
+  my ($cdna_start, $cdna_end) = ($self->cdna_start, $self->cdna_end);
+
+  return $self->SUPER::_get_ref_allele(@_) unless scalar @$cdna_coords <= 2 && $cdna_start && $cdna_end;
+
+  my $tr = $self->transcript;
+  my $ref_allele = substr($tr->spliced_seq, $cdna_start - 1, ($cdna_end - $cdna_start) + 1);
+
+  reverse_comp($ref_allele) unless $vf->strand eq $tr->strand;
+
+  return $ref_allele;
 }
 
 
