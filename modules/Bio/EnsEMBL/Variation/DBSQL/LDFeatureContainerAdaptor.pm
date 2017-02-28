@@ -641,6 +641,8 @@ sub _fetch_by_Slice_VCF {
         $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
       }
 
+      close LD;
+
       my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
         '-adaptor' => $self,
         '-ldContainer'=> \%feature_container,
