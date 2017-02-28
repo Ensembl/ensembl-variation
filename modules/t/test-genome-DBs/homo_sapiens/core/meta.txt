@@ -1,5 +1,5 @@
 885	1	xref.timestamp	2010-12-02 16:01:38
-1	\N	schema_version	86
+1	\N	schema_version	88
 2	\N	patch	patch_52_53_a.sql|schema_version
 3	\N	patch	patch_52_53_b.sql|external_db_type_enum
 4	\N	patch	patch_52_53_c.sql|identity_xref_rename
@@ -203,3 +203,9 @@
 1003	\N	patch	patch_85_86_a.sql|schema_version
 1004	\N	patch	patch_85_86_b.sql|add dna_align_feature_attrib table
 1005	\N	patch	patch_85_86_c.sql|meta_case_insensitive
+1006	\N	patch	patch_86_87_a.sql|schema_version
+1007	\N	patch	patch_86_87_b.sql|meta_value_NOT_NULL
+1008	\N	patch	patch_86_87_c.sql|datetime_default_NULL
+1009	\N	patch	patch_87_88_a.sql|schema_version
+1010	\N	patch	patch_87_88_b.sql|seq_region_name_255
+1011	\N	patch	patch_87_88_c.sql|protein_featue_uniqueness
