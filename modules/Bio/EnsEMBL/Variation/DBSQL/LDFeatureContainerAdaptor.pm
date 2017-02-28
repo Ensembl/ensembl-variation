@@ -645,6 +645,10 @@ sub _fetch_by_Slice_VCF {
         $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
       }
 
+      # Close the file handle per iteration, don't reuse the
+      # glob without closing it.
+      close LD;
+
       my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
         '-adaptor' => $self,
         '-ldContainer'=> \%feature_container,
@@ -662,7 +666,6 @@ sub _fetch_by_Slice_VCF {
       }
     }
   }
-  close LD;
 
   $container->{pos2name} = \%pos2name if $container;
 
