@@ -65,7 +65,7 @@ while (<KEY>) {
     
     my ($table,$col,$ref_table,$ref_col) = $_ =~ m/^ALTER\s+TABLE\s+(\S+)\s+ADD\s+FOREIGN\s+KEY\s+\((\S+)\)\s+REFERENCES\s+([^\s\(]+)\s*\(([^\s\)]+)\)/i;
     next unless (defined($table) && defined($col) && defined($ref_table) && defined($ref_col));
-    
+ 
     $foreign_keys{$table} = [] unless (exists($foreign_keys{$table}));
     push(@{$foreign_keys{$table}},[$col,$ref_table,$ref_col]);
     
@@ -156,19 +156,40 @@ my $ins_stmt = qq{
         };
 my $ins_sth = $dest->dbc->prepare($ins_stmt);
 $ins_sth->execute();
-
+$ins_sth->finish();
 
 
 # Lastly, process all the foreign key relationships without recursion
 my $srcdb = $source->dbc->dbname();
 foreach my $table (keys(%foreign_keys)) {
-    
-    foreach my $row (@{$foreign_keys{$table}}) {
-        add_foreign_data($dest,$table,$row->[0],$row->[1],$row->[2],$srcdb,{}); 
-    } 
-                 
+  foreach my $row (@{$foreign_keys{$table}}) {
+    add_foreign_data($dest,$table,$row->[0],$row->[1],$row->[2],$srcdb,{}); 
+  }     
 }
 
+
+# Fill the phenotype_ontology_accession table
+# Get the columns of the foreign table
+my $poa_table = 'phenotype_ontology_accession';
+my $poa_cols = get_table_columns($dest,$poa_table);
+my $source_db = $source->dbc->dbname();    
+# Create the insert statement
+my $poa_ins_col_str = join(',',@{$poa_cols});
+my $poa_sel_col_str = 'src.' . join(', src.',@{$poa_cols});
+my $poa_ins_stmt = qq{
+  INSERT IGNORE INTO
+    $poa_table ($poa_ins_col_str)
+    SELECT
+      $poa_sel_col_str
+    FROM
+      phenotype dst,
+      $source_db\.$poa_table src
+    WHERE
+      src.phenotype_id = dst.phenotype_id
+};
+my $poa_ins_sth = $dest->dbc->prepare($poa_ins_stmt);
+$poa_ins_sth->execute();
+$poa_ins_sth->finish();
 
 
 ###########
@@ -269,10 +290,10 @@ sub add_foreign_data {
     # Get the columns of the foreign table
     my $cols = get_table_columns($dba,$foreign_table);
     
-    #ÊGet the join condition
+    # Get the join condition
     my $constraint = qq{src.$foreign_column = dst.$column};
     
-    #ÊCreate the insert statement
+    # Create the insert statement
     my $ins_col_str = join(',',@{$cols});
     my $sel_col_str = 'src.' . join(', src.',@{$cols});
     my $ins_stmt = qq{
