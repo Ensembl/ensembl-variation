@@ -516,7 +516,7 @@ int main(int argc, char *argv[]) {
   char *files[2];
   char *regions[2];
   char *samples_list;
-  char *variants_file;
+  char *variants_file = "";
   char *variant = "";
   int numfiles = 0;
   int numregions = 0;
