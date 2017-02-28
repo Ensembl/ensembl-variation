@@ -37,6 +37,8 @@ use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE
 
 use Digest::MD5 qw(md5_hex);
 
+use File::Path qw(make_path);
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub fetch_input {
@@ -166,6 +168,10 @@ sub fetch_input {
     my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s);
 
     my $fasta = $self->required_param('fasta_file');
+
+    my @dir = split('/', $fasta);
+    pop @dir;
+    make_path(join('/', @dir));
 
     open my $FASTA, ">$fasta" or die "Failed to open $fasta for writing";
 

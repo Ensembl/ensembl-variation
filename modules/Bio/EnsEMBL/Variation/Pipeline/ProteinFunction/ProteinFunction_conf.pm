@@ -265,7 +265,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -failed_job_tolerance => 10,
-            -max_retry_count => 0,
+            -max_retry_count => 5,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
