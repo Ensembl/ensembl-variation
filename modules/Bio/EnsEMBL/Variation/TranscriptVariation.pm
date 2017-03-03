@@ -450,7 +450,7 @@ sub _get_ref_allele {
   my $tr = $self->transcript;
   my $ref_allele = substr($tr->spliced_seq, $cdna_start - 1, ($cdna_end - $cdna_start) + 1);
 
-  reverse_comp($ref_allele) unless $vf->strand eq $tr->strand;
+  reverse_comp(\$ref_allele) unless $vf->strand eq $tr->strand;
 
   return $ref_allele;
 }
