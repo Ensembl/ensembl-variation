@@ -120,8 +120,7 @@ foreach my $hostname (@hostnames) {
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname =~ /^master_schema/);
-    next if ($dbname =~ /sample$/);
+    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/ || $dbname =~ /_variation_\d+_\d+_\w+$/ );
     
     print $dbname;
     $dbname =~ /^(.+)_variation/;

@@ -241,7 +241,7 @@ The colours were originally based on the <a rel="external" href="http://www.ncbi
 <p>
 };
 
-#$html .= get_var_class_piechart();
+$html .= get_var_class_piechart();
 
 open  OUT, "> $output_file" or die $!;
 print OUT $html;

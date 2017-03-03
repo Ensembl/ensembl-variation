@@ -89,7 +89,7 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $section = 'populations';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user -port $port`;
+`perl generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -99,7 +99,7 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $section = 'variation_sets';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_variation_set_table.pl -v $version -o $tmp_section -host $host -species $species`;
+`perl generate_variation_set_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -109,7 +109,7 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $section = 'clin_significance';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -species $species`;
+`perl generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -177,7 +177,7 @@ sub usage {
     -port           MySQL port of the human database (Required)
     -species        Species name. 'Homo_sapiens' by default (optional)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
-                    e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+                    e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -user           MySQL user name (Required)
   } . "\n";
