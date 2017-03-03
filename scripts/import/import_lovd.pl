@@ -115,7 +115,7 @@ my $find_existing_var_sth = $dbh->prepare(qq{
 });
 
 my $add_var_sth = $dbh->prepare(qq{
-    INSERT INTO variation (source_id, name, flipped, class_attrib_id) VALUES (?,?,?,?)
+    INSERT IGNORE INTO variation (source_id, name, flipped, class_attrib_id) VALUES (?,?,?,?)
 });
 
 my $add_vf_sth = $dbh->prepare(qq{

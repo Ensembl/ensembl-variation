@@ -44,7 +44,6 @@ usage('-species argument is required')    if (!$species);
 usage('-input_file argument is required') if (!$input_file);
 usage('-version argument is required')    if (!$version);
 
-
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
@@ -351,7 +350,7 @@ sub phenotype_feature {
     next if ($phenotype eq '');
     
     $phenotype =~ s/'/\\'/g;
-    $dbVar->do(qq{ INSERT INTO phenotype (description) VALUES ('$phenotype')});  
+    $dbVar->do(qq{ INSERT IGNORE INTO phenotype (description) VALUES ('$phenotype')});  
   }
     
   $stmt = qq{
@@ -446,9 +445,15 @@ sub parse_input {
             
     my @phenotypes = split(/\|/,$info->{'phenotype'});
 
-    foreach my $phe (@phenotypes) {
+    if (@phenotypes && scalar(@phenotypes) > 0) { 
+      foreach my $phe (@phenotypes) {
 
-      $info->{'phenotype'} = $phe;
+        $info->{'phenotype'} = $phe;
+        my $data = generate_data_row($info);
+        print OUT (join "\t", @{$data})."\n";
+      }
+    }
+    else {
       my $data = generate_data_row($info);
       print OUT (join "\t", @{$data})."\n";
     }
