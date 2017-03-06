@@ -372,17 +372,18 @@ sub study_table{
   
   my $assembly_desc = " [remapped from build $assembly]" if ($mapping and $assembly ne $target_assembly);
   
-  $stmt = qq{ SELECT st.study_id, st.description FROM study st, source s 
+  $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s 
               WHERE s.source_id=st.source_id AND s.name='DGVa' and st.name='$study'};
   my $rows = $dbVar->selectall_arrayref($stmt);    
-  my ($assembly_desc,);
   
+  my $assembly_desc;
   
     
   # UPDATE
   if (scalar (@$rows)) {
     $study_id   = $rows->[0][0];
     $study_desc = $rows->[0][1];
+    my $study_xref = $rows->[0][2];
     
     $study_desc =~ s/'/\\'/g;
 
@@ -407,11 +408,22 @@ sub study_table{
       $study_desc = $1;
     }
     
-    $external_link = ($external_link =~ /NULL/i) ? $external_link : "'$external_link'";
-    
+    my $external_link_sql;
+    if ($external_link =~ /NULL/i) {
+      if ($study_xref && $study_xref !~ /NULL/i && $study_xref ne '') {
+        $external_link_sql = '';
+      }
+      else {
+        $external_link_sql = "external_reference=$external_link,";
+      }
+    }
+    else {
+      $external_link_sql = "external_reference=$external_link,";
+    }
+
     $stmt = qq{ UPDATE $study_table SET 
                   description='$study_desc',
-                  external_reference=$external_link,
+                  $external_link_sql
                   study_type="$study_type",
                   url="$study_ftp"
                 WHERE study_id=$study_id
