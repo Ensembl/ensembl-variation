@@ -260,6 +260,15 @@ sub post_process {
 	
 	print STDOUT localtime() . "\tLoading table $mtmp_table_name from dumped data\n";
 	
+	# Some other post-processing "cleaning" queries (variation and variation_feature)
+	if (!$options{'sv'}) {
+	  foreach my $col ('evidence_attribs', 'clinical_significance') {
+            $dbVar->dbc->do(qq[update variation set $col = NULL where $col = '';]);
+            $dbVar->dbc->do(qq[update $VARIATION_FEATURE_TABLE set $col = NULL where $col = '';]);
+            print STDOUT localtime() . "\tCleaning column $col from the variation and $VARIATION_FEATURE_TABLE tables ..." unless ($quiet);
+          }
+        }
+
 	load($dbVar->dbc, $mtmp_table_name);
 	
     }
@@ -272,7 +281,7 @@ sub post_process {
     };
     $dbVar->dbc->do($stmt);
     print STDOUT "done!\n" unless ($quiet);
-    
+
     # And that's it
     print STDOUT localtime() . "\tPost-processing complete!\n" unless ($quiet);
 }

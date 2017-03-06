@@ -90,11 +90,6 @@ sub create_mtmp_evidence{
     
     my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef) || die "Failed to connect to $db_name\n";
 
-    $dbh->do(qq[update variation set evidence_attribs = NULL where evidence_attribs = '';]);
-    $dbh->do(qq[update variation_feature set evidence_attribs = NULL where evidence_attribs = '';]);
-    $dbh->do(qq[update variation set clinical_significance = NULL where clinical_significance = '';]);
-    $dbh->do(qq[update variation_feature set clinical_significance = NULL where clinical_significance = '';]);
-
     $dbh->do(qq[drop table if exists MTMP_evidence]);    
 
     ## fetch current list of evidence types & database ids
