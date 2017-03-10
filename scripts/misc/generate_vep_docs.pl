@@ -18,8 +18,9 @@ foreach my $file(@files) {
 
   while(<IN>) {
     if(/\<title\>/) {
-      s/title/h1"/g;
-      print;
+      # s/title/h1"/g;
+      # print;
+      next;
     }
 
     elsif(/\<\/?body\>/) {
