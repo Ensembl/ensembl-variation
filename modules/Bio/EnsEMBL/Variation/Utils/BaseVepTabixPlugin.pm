@@ -82,15 +82,16 @@ my $DEFAULT_CACHE_SIZE = 1;
 
 my $DEBUG = 0;
 
-my $CAN_USE_TABIX_PM;
+our ($CAN_USE_HTS_PM, $CAN_USE_TABIX_PM);
 
 BEGIN {
-  if (eval { require Tabix; 1 }) {
+  if (eval q{ require Bio::DB::HTS::Tabix; 1 }) {
+    $CAN_USE_HTS_PM = 1;
+  }
+  if (eval q{ require Tabix; 1 }) {
     $CAN_USE_TABIX_PM = 1;
   }
-  else {
-    $CAN_USE_TABIX_PM = 0;
-
+  unless($CAN_USE_TABIX_PM || $CAN_USE_HTS_PM) {
     # test tabix
     die "ERROR: tabix does not seem to be in your path\n" unless `which tabix 2>&1` =~ /tabix$/;
   }
@@ -306,7 +307,16 @@ sub identify_data {
 
 sub _get_data_uncached {
   my $self = shift;
-  return $CAN_USE_TABIX_PM ? $self->_get_data_pm(@_) : $self->_get_data_cl(@_)
+
+  if($CAN_USE_HTS_PM) {
+    return $self->_get_data_hts(@_);
+  }
+  elsif($CAN_USE_TABIX_PM) {
+    return $self->_get_data_pm(@_);
+  }
+  else {
+    return $self->_get_data_cl(@_);
+  }
 }
 
 sub _add_data_to_cache {
@@ -352,16 +362,44 @@ sub _filter_by_pos {
   return \@result;
 }
 
-sub _get_data_pm {
-  my $self = shift;
+sub _get_data_hts {
+  my ($self, $c, $s, $e) = @_;
 
   my @data;
 
   foreach my $file(@{$self->files}) {
+    my $hts_obj = $self->_hts_obj($file);
+    my $valids = $self->{_valids}->{$file} ||= $hts_obj->seqnames;
 
+    my $iter = $hts_obj->query(
+      sprintf(
+        "%s:%i-%i",
+        $self->_get_source_chr_name($c, $file, $valids),
+        $s, $e
+      )
+    );
+    next unless $iter;
+
+    while(my $line = $iter->next) {
+      my $parsed = $self->parse_data($line);
+
+      push @data, [$self->identify_data($line), $parsed] if $parsed;
+    }
+  }
+
+  return \@data;
+}
+
+sub _get_data_pm {
+  my ($self, $c, $s, $e) = @_;
+
+  my @data;
+
+  foreach my $file(@{$self->files}) {
     my $tabix_obj = $self->_tabix_obj($file);
+    my $valids = $self->{_valids}->{$file} ||= [$tabix_obj->getnames];
 
-    my $iter = $tabix_obj->query(@_);
+    my $iter = $tabix_obj->query($self->_get_source_chr_name($c, $file, $valids), $s, $e);
     next unless $iter && $iter->{_};
 
     while(my $line = $tabix_obj->read($iter)) {
@@ -380,8 +418,14 @@ sub _get_data_cl {
   my @data;
 
   foreach my $file(@{$self->files}) {
+    my $valids = $self->{_valids}->{$file} ||= [split("\n", `tabix -l $file`)];
 
-    open TABIX, sprintf("tabix -f %s %s:%i-%i |", $file, $c, $s, $e);
+    open TABIX, sprintf(
+      "tabix -f %s %s:%i-%i |",
+      $file,
+      $self->_get_source_chr_name($c, $file, $valids),
+      $s, $e
+    );
 
     while(<TABIX>) {
       chomp;
@@ -398,10 +442,52 @@ sub _get_data_cl {
   return \@data;
 }
 
+sub _hts_obj {
+  my ($self, $file) = @_;
+  return $self->{_tabix_obj}->{$file} ||= Bio::DB::HTS::Tabix->new(filename => $file);
+}
+
 sub _tabix_obj {
   my ($self, $file) = @_;
-  $self->{_tabix_obj}->{$file} ||= Tabix->new(-data => $file);
-  return $self->{_tabix_obj}->{$file};
+  return $self->{_tabix_obj}->{$file} ||= Tabix->new(-data => $file);
+}
+
+sub _get_source_chr_name {
+  my ($self, $chr, $set, $valids) = @_;
+
+  $set    ||= 'default';
+  $valids ||= [];
+
+  my $chr_name_map = $self->{_chr_name_map}->{$set} ||= {};
+
+  if(!exists($chr_name_map->{$chr})) {
+    my $mapped_name = $chr;
+
+    @$valids = @{$self->can('valid_chromosomes') ? $self->valid_chromosomes : []} unless @$valids;
+    my %valid = map {$_ => 1} @$valids;
+
+    unless($valid{$chr}) {
+
+      # still haven't got it
+      if($mapped_name eq $chr) {
+
+        # try adding/removing "chr"
+        if($chr =~ /^chr/i) {
+          my $tmp = $chr;
+          $tmp =~ s/^chr//i;
+
+          $mapped_name = $tmp if $valid{$tmp};
+        }
+        elsif($valid{'chr'.$chr}) {
+          $mapped_name = 'chr'.$chr;
+        }
+      }
+    }
+
+    $chr_name_map->{$chr} = $mapped_name;
+  }
+
+  return $chr_name_map->{$chr};
 }
 
 sub FREEZE {
