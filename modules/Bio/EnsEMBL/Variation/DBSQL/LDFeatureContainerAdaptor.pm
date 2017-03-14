@@ -181,7 +181,6 @@ sub fetch_by_Slice {
     join("-", sort {$a <=> $b} keys %{$self->{_pairwise} || {}})
   );
   return $self->{_cached} if $self->{_cached} && $self->{_cached_key} eq $key;
-
   my @genotypes = ();
   my $vcf_container;
 
@@ -591,11 +590,8 @@ sub _fetch_by_Slice_VCF {
       if ($self->{_vf_name}) {
         $cmd .= " -v " . $self->{_vf_name};
       }
-
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
-
-      # print STDERR "$cmd\n";
 
       # now create the container from the output of the LD binary
       my %feature_container = ();
@@ -641,7 +637,6 @@ sub _fetch_by_Slice_VCF {
         $id2 =~ s/\;.+//;
         $pos2name{$ld_region_start} = $id1;
         $pos2name{$ld_region_end} = $id2;
-      
         $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
       }
 
@@ -668,6 +663,7 @@ sub _fetch_by_Slice_VCF {
   }
 
   $container->{pos2name} = \%pos2name if $container;
+  delete $self->{_pairwise};
 
   return $container;
 }
@@ -891,7 +887,6 @@ sub _ld_calc {
   my $pos2vf = {};
   my @slices;
   my $vfa;
-
   # what we're doing here is copying data from component hashes to a merged hash
   # this is because we can receive more than one genotype hash
   foreach my $genotype_hash (@$genotype_hashes) { 
