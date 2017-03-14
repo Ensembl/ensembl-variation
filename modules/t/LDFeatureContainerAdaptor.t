@@ -1,4 +1,4 @@
-# Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
 # Copyright [2016-2017] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 use strict;
 use warnings;
 use Test::More;
-
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -104,21 +103,36 @@ $coll->filename_template($temp);
 
 # use just VCF
 my $p2 = $pa->fetch_by_name('1000GENOMES:phase_1_ASW');
+#rs1333047 1004334 rs4977575 3854101
+my $vf_a = $vfa->fetch_by_dbID(1004334);
+my $vf_b = $vfa->fetch_by_dbID(3854101);
 
 $ldfca->db->use_vcf(2);
-$ldContainer = $ldfca->fetch_by_Slice($slice, $p2);
 
+$ldContainer = $ldfca->fetch_by_Slice($slice, $p2);
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 14, "fetch_by_Slice - VCF only");
 
+$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf_a, $vf_b], $p2);
+print_container($ldContainer);
+$ld_values = count_ld_values($ldContainer);
+is($ld_values, 1, "fetch_by_VariationFeatures - VCF only");
+
 # use VCF and DB
+
 $ldfca->db->use_vcf(1);
 $ldContainer = $ldfca->fetch_by_Slice($slice);
 
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
 is($ld_values, 72, "fetch_by_Slice - VCF and DB");
+
+
+$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf_a, $vf_b], $p2);
+print_container($ldContainer);
+$ld_values = count_ld_values($ldContainer);
+is($ld_values, 1, "fetch_by_VariationFeatures - VCF and DB");
 
 done_testing();
 
@@ -134,7 +148,6 @@ sub count_ld_values {
 sub print_container {
   my $container = shift;
   return if(!$verbose);
-
   print STDERR "\nContainer name: ", $container->{'name'},"\n";
   foreach my $key (keys %{$container->{'ldContainer'}}) {
     my ($key1,$key2) = split /-/,$key;
