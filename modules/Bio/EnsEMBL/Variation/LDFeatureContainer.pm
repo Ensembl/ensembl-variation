@@ -344,9 +344,7 @@ sub get_all_ld_values {
   my $pos2name = $self->_pos2name();
   my $pos2vf = $self->_pos2vf() unless $names_only;
   my $vf_name = $self->{'_vf_name'};
-
   foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
-
     # contains a single ld value in the container {variation_feature variation_feature d_prime r2}
     my %ld_value;  
 
@@ -356,7 +354,7 @@ sub get_all_ld_values {
     if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}) {
       
       # add the information to the ld_value hash
-      unless($names_only) {
+      if (!$names_only) {
         if ($vf_name) {
           if ($pos2vf->{$vf1_pos} && $pos2vf->{$vf1_pos}->{variation_name} eq $vf_name) {
             $ld_value{'variation1'} = $pos2vf->{$vf1_pos};
@@ -384,6 +382,7 @@ sub get_all_ld_values {
         $ld_value{'variation_name1'} = $pos2name->{$vf1_pos};
         $ld_value{'variation_name2'} = $pos2name->{$vf2_pos};
       }
+
       next unless $ld_value{'variation_name1'} && $ld_value{'variation_name2'};
 
       $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
@@ -526,11 +525,17 @@ sub _pos2vf {
   my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
   if(!exists($self->{pos2vf})) {
     my %pos2vf = ();
-
-    foreach my $slice(@{$self->_slices}) {
+    my @slice_objects = ();
+    foreach my $slice (@{$self->_slices}) {
       if (ref($slice) eq 'ARRAY') {
-        $slice = $slice->[0];
+        foreach (@$slice) {
+          push @slice_objects, $_;
+        }
+      } else {
+        push @slice_objects, $slice;
       }
+    }
+    foreach my $slice (@slice_objects) {
       my $vfs = $vf_adaptor->fetch_all_by_Slice($slice);
       my $region_Slice = $slice->seq_region_Slice();
 
