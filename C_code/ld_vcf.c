@@ -662,8 +662,12 @@ int main(int argc, char *argv[]) {
       if(strstr(samples_list, ",") != NULL) {
         is_file = 0;
       }
+      else if(access( samples_list, F_OK ) < 0) {
+        fprintf(stderr, "Failed to read samples list %s\n", samples_list);
+        return EXIT_FAILURE;
+      }
 
-      if(access( samples_list, F_OK ) != -1  && bcf_hdr_set_samples(hdr, samples_list, is_file) < 0) {
+      if(bcf_hdr_set_samples(hdr, samples_list, is_file) < 0) {
         fprintf(stderr, "Failed to read or set samples\n");
         return EXIT_FAILURE;
       }
