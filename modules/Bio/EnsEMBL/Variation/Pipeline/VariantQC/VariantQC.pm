@@ -73,7 +73,7 @@ sub run {
   my $self = shift;
    
   ## variation_feature specific checks + return bad allele
-  my ($var_data, $strand_summary, $allele_string, $failed_variant, $failed_varallele) = $self->run_variation_checks();
+  my ($var_data, $strand_summary, $allele_string, $fail_classes, $failed_varallele) = $self->run_variation_checks();
 
   ## allele specific checks (return by allele id & ss/sample)
   my ($allele_data, $allele_fails, $failed_ss) = $self->run_allele_checks( $strand_summary, $failed_varallele, $allele_string);  
@@ -99,10 +99,10 @@ sub run {
   ## Database updates 
 
   ## write to new failed_variation table
-  write_variant_fails($var_dba, $failed_variant);
+  my $failed_variants = write_variant_fails($var_dba, $fail_classes);
 
   ## write to new variation featues 
-  write_variation_features($var_dba, $var_data, $evidence_attribs, $failed_variant ); 
+  write_variation_features($var_dba, $var_data, $evidence_attribs, $failed_variants );
  
   ## write to new allele table & look up additional allele ids for failed experiments
   my $final_allele_fails = $self->write_allele($var_dba, $allele_data, $allele_fails, $failed_ss );
@@ -112,7 +112,7 @@ sub run {
 
 
   ## write to new variation with evidence string & flip status
-  my $minor_allele = $self->write_variation(  $evidence_attribs , $strand_summary, $failed_variant );
+  my $minor_allele = $self->write_variation(  $evidence_attribs , $strand_summary, $failed_variants, $allele_string );
   
 
   ## check dbSNP MAF against variation_feature allele string
@@ -437,6 +437,8 @@ sub write_variant_fails{
   my $var_dba   = shift; 
   my $fail_list = shift;
 
+  my $failed_var;
+
   my $fail_ins_sth = $var_dba->dbc->prepare(qq[insert ignore into failed_variation_working
                                                (variation_id, failed_description_id)
                                                values (?,?)
@@ -450,8 +452,10 @@ sub write_variant_fails{
 
     foreach my $var ( @fails  ){
       $fail_ins_sth->execute($var, $reason)|| die "ERROR inserting variation fails info\n";
+      $failed_var->{$var} = 1;
     }
   }
+  return $failed_var;
 }
 
 
@@ -558,7 +562,8 @@ sub write_variation{
   my $evidence       = shift;
   my $flip           = shift;
   my $failed_variant = shift;
-        
+  my $allele_string  = shift; ## using this to see that variant has a variation feature; if not display =0
+
   my $var_dba = $self->get_species_adaptor('variation');
 
   my $first = $self->required_param('start_id');
@@ -629,8 +634,8 @@ sub write_variation{
     my $is_flipped = ($flip->{$v->[0]} eq "-1" ? 1 : 0);  ## flag if reference matches flipped
 
     ## set display status
-    my $display = ( exists $failed_variant->{$v->[0]} ? 0 : 1);
-
+    my $display = ( exists $failed_variant->{$v->[0]} ? 0 :
+                    exists $allele_string->{$v->[0]}  ? 1 : 0);
 
     my $evidence_attribs = join(",", @{$evidence->{$v->[0]}}) if defined $evidence->{$v->[0]};
 

@@ -103,6 +103,15 @@ sub run {
     ## report the number of variants with more than 25 mappings
     my $multi_map = find_multi_mapping_var($var_dba, $report);
 
+    ## do the undisplayable counts look correct?
+    my $var_display  = count_group_by($var_dba, 'variation_working', 'display');
+    my $varf_display = count_group_by($var_dba, 'variation_feature_working', 'display');
+    my $cited_var    = count_rows($var_dba, 'variation_citation', 'variation_id');
+
+    print $report $var_display->{0} . " variants with display status = 0\n";
+    print $report $varf_display->{0} . " variation_features with display status = 0\n";
+    print $report "$cited_var variants with citations\n";
+
     ## check all statuses and exit if there is a problem
     if( $suspiciously_poor   ==1 ||   #  high failure rates
         $popgen_fail         ==1 ||   #  flipping error in population_genotype_working
@@ -690,9 +699,10 @@ sub update_failed_variation_set{
 
         $var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
     }
-
-    my $check_num = scalar @{ $all_failed_var};
-    print $report "\n$check_num failed variants inserted into variation_set_variation table\n";
+    my %unique_failed_var;
+    map { $unique_failed_var{$_} = 1; } @{$all_failed_var};
+    my $check_num = scalar (keys %unique_failed_var);
+    print $report "\n$check_num failed variant reasons inserted into variation_set_variation table\n";
     
 }
 
