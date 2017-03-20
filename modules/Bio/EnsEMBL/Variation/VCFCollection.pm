@@ -476,15 +476,17 @@ sub get_all_Samples {
     
     my $sample_names = $vcf->get_samples();
     
-    # do a fetch_all_by_name_list
-    my %sample_objs;
-    %sample_objs = map {$_->name() => $_} @{$sample_adpt->fetch_all_by_name_list([map {$prefix.$_} @$sample_names])} if $self->use_db;
-    
-    # some may not be in DB
-    foreach my $sample_name(@$sample_names) {
-      # either use the DB one or create one
-      my $sample = $sample_objs{$prefix.$sample_name} ||
-        Bio::EnsEMBL::Variation::Sample->new_fast({
+    # Get sample objects from the DB or from the VCF 
+    foreach my $sample_name (@$sample_names) {
+      my $sample;
+      
+      # Fetch a sample from DB using a sample name or synonym
+      if ($self->use_db) {
+        ($sample) = @{ $sample_adpt->fetch_all_by_name( $prefix.$sample_name ) };
+      }
+      
+      # If not from the DB, create a new one
+      $sample //= Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
           adaptor         => $sample_adpt,
           display         => 'UNDISPLAYABLE',
