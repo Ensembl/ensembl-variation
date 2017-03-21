@@ -195,7 +195,21 @@ sub init_data {
         'intrachromosomal_translocation' => 'IntraTL',
         'complex_substitution' => 'CS',
         'Alu_insertion' => 'ALU_INS',
+        'short_tandem_repeat_variation' => 'short_tandem_repeat_variation',
+        'loss_of_heterozygosity' => 'loss_of_heterozygosity',
     };
+    my @vep_consequence_info =  qw/Allele Consequence Feature_type Feature/;
+    if ($config->{protein_coding_details}) {
+      push @vep_consequence_info, 'Amino_acids';
+    }
+    if ($config->{sift}) {
+      push @vep_consequence_info, 'SIFT';
+    }
+    if ($config->{polyhen}) {
+      push @vep_consequence_info, 'PolyPhen';
+    }
+
+    $config->{vep} = \@vep_consequence_info;
 }
 
 
@@ -252,25 +266,25 @@ sub parse_gvf_file {
         }
 
         my $attributes = {
-            'Variant_effect' => 'VE',
-            'variant_peptide' => 'VarPep',
-            'sift_prediction' => 'Sift',
-            'polyphen_prediction' => 'Polyphen',
-            'reference_peptide' => 'RefPep',
-            'Variant_freq' => 'AF',
-            'ancestral_allele' => 'AA',
-        };
+          'Variant_effect' => 'VE',
+          'variant_peptide' => 'VarPep',
+          'sift_prediction' => 'Sift',
+          'polyphen_prediction' => 'Polyphen',
+          'reference_peptide' => 'RefPep',
+          'Variant_freq' => 'AF',
+          'ancestral_allele' => 'AA',
+         };
 
-        foreach my $population (qw/ASW CHB CHD GIH LWK MEX MKK TSI CEU HCB JPT YRI/) {
-          my $alt = "$population-ALT";
-          my $ref = "$population-REF";
-          my $freq = "$population-FREQ";
-          foreach my $key ($alt, $ref, $freq) {
-            if ($gvf_line->{$key}) {
-              add_info($vcf_line, $key, $gvf_line->{$key});
-            }
-          }
-        }
+#        foreach my $population (qw/ASW CHB CHD GIH LWK MEX MKK TSI CEU HCB JPT YRI/) {
+#          my $alt = "$population-ALT";
+#          my $ref = "$population-REF";
+#          my $freq = "$population-FREQ";
+#          foreach my $key ($alt, $ref, $freq) {
+#            if ($gvf_line->{$key}) {
+#              add_info($vcf_line, $key, $gvf_line->{$key});
+#            }
+#          }
+#        }
         foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
           add_info($vcf_line, $key, $gvf_line->{$key});
         }
@@ -279,6 +293,10 @@ sub parse_gvf_file {
                 my $value = $gvf_line->{$attribute};
                 add_info($vcf_line, $key, $value);
             }
+        }
+
+        if ($config->{incl_consequences}) {
+          parse_consequence_info($gvf_line, $vcf_line); 
         }
         
         print_vcf_line($config, $vcf_line);
@@ -410,13 +428,119 @@ sub add_genotypes {
     $vcf_line->{SAMPLE} = $genotypes;
 }
 
+sub parse_consequence_info {
+  my $gvf_line = shift;
+  my $vcf_line = shift;
+
+  my @alleles = split(',', $gvf_line->{Variant_seq});  
+  my $id = $vcf_line->{ID};
+  my $allele2consequence = {};
+  my $is_intergenic = 0;
+  my @values = split(',', ($gvf_line->{Variant_effect} || ''));
+  #Format=Consequence|Index|Feature_type|Feature_id
+  if (@values) {
+    foreach my $value (@values) {
+      my @split_values = split(' ', $value);
+      if (scalar @split_values == 4) {
+        my ($consequence, $index, $feature_type, $feature_id) = @split_values;
+        my $allele = $alleles[$index];
+        $allele2consequence->{$allele}->{$feature_id}->{Consequence} = $consequence;
+        $allele2consequence->{$allele}->{$feature_id}->{Feature_type} = $feature_type;
+        $allele2consequence->{$allele}->{$feature_id}->{Allele} = $allele;
+        $allele2consequence->{$allele}->{$feature_id}->{Feature} = $feature_id;
+      } else {
+        print STDERR "4 values expected instead got: ", join(', ', @split_values), " for $id\n";
+      }
+    } 
+  } else {
+    $is_intergenic = 1;
+  } 
+   
+  @values = split(',', ($gvf_line->{sift_prediction} || ''));
+  #Format=Index|Sift_qualitative_prediction|Sift_numerical_value|Feature_id
+  #tolerated(0.15)
+
+  if (@values) {
+    foreach my $value (@values) {
+      my @split_values = split(' ', $value);
+      if (scalar @split_values == 4) {
+        my ($index, $prediction, $numerical_value, $feature_id) = @split_values;
+        my $allele = $alleles[$index];
+        $allele2consequence->{$allele}->{$feature_id}->{SIFT} = "$prediction($numerical_value)";
+      } else {
+        print STDERR "4 values expected instead got: ", join(', ', @split_values), " for $id\n";
+      }
+    }
+  }
+
+  @values = split(',', ($gvf_line->{polyphen_prediction} || ''));
+  if (@values) {
+    foreach my $value (@values) {
+      my @split_values = split(' ', $value);
+      if (scalar @split_values == 4) {
+        my ($index, $prediction, $numerical_value, $feature_id) = @split_values;
+        my $allele = $alleles[$index];
+        $allele2consequence->{$allele}->{$feature_id}->{PolyPhen} = "$prediction($numerical_value)";
+      } else {
+        print STDERR "4 values expected instead got: ", join(', ', @split_values), " for $id\n";
+      }
+    }
+  }
+  my $ref_pep = $gvf_line->{reference_peptide};
+  @values = split(',', ($gvf_line->{variant_peptide} || ''));
+  #Format=Index|Amino_acid|Feature_id
+  if (@values) {
+    foreach my $value (@values) {
+      my @split_values = split(' ', $value);
+      if (scalar @split_values == 3) {
+        my ($index, $amino_acid, $feature_id) = @split_values;
+        my $allele = $alleles[$index];
+        $allele2consequence->{$allele}->{$feature_id}->{Amino_acids} = "$ref_pep/$amino_acid";
+      } else {
+        print STDERR "3 values expected instead got: ", join(', ', @split_values), " for $id\n";
+      }
+    }
+  }
+  my @vep_consequence_info = @{$config->{vep}};
+  my @consequences = ();
+  if ($is_intergenic) {
+    foreach my $allele (@alleles) {
+      my @fields = ();
+      foreach my $info_field (@vep_consequence_info) {
+        if ($info_field eq 'Allele') {
+          push @fields, $allele;
+        } elsif ($info_field eq 'Consequence') {
+          push @fields, 'intergenic_variant';
+        } else {
+          push @fields, '';
+        }
+      }    
+      push @consequences, join('|', @fields);
+    }
+  } else {
+    foreach my $allele (keys %$allele2consequence) {
+      foreach my $feature_id (keys %{$allele2consequence->{$allele}}) {
+        my @fields = ();
+        foreach my $info_field (@vep_consequence_info) {
+          my $field_value = $allele2consequence->{$allele}->{$feature_id}->{$info_field} || '';
+          push @fields, $field_value;
+        }
+        push @consequences, join('|', @fields);
+      }
+    }
+  }
+  add_info($vcf_line, 'CSQ', join(',', @consequences));
+}
+
 sub add_info {
     my ($vcf_line, $key, $value) = @_;
-    if ($value =~ m/\s/) {
-        my $values = join( ',', map { join( '|', split(' ', $_) ) } split(',', $value) );
-        push @{$vcf_line->{INFO}}, "$key=$values";
-    } else {
-        push @{$vcf_line->{INFO}}, "$key=$value";
+    if ($value) {
+      if ($value =~ m/\s/) {
+          my $values = join( ',', map { join( '|', split(' ', $_) ) } split(',', $value) );
+          push @{$vcf_line->{INFO}}, "$key=$values";
+      } else {
+          push @{$vcf_line->{INFO}}, "$key=$value";
+      }
     }
 }
 
@@ -579,6 +703,12 @@ sub print_header {
         }
     }
 
+    if ($config->{incl_consequences}) { 
+      my @vep_fields = @{$config->{vep}};
+      my $format = join('|', @vep_fields);
+      print $fh "##INFO=<ID=CSQ,Number=.,Type=String,Description=\"Consequence annotations from Ensembl's Variant Effect Pipeline. Format=$format\">\n";
+    }
+
     if ($config->{population}) {
        print $fh '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">', "\n";
     }
@@ -610,6 +740,8 @@ sub print_header {
             '##ALT=<ID=TL,Description="translocation">',
             '##ALT=<ID=CS,Description="complex_substitution">',
             '##ALT=<ID=ALU_INS,Description="Alu_insertion">',
+            '##ALT=<ID=short_tandem_repeat_variation,Description="short_tandem_repeat_variation">',
+            '##ALT=<ID=loss_of_heterozygosity,Description="loss_of_heterozygosity">',
         )), "\n";
     }
 
