@@ -810,7 +810,8 @@ sub remove_indels {
 
 sub get_all_VariationFeatures {
   my $self = shift;
-  return $self->SUPER::get_all_VariationFeatures();
+  my $vf_adaptor = $self->adaptor->db->get_db_adaptor('variation')->get_VariationFeatureAdaptor();
+  return $vf_adaptor->fetch_all_by_Slice_SO_terms($self);
 }
 
 
