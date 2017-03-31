@@ -167,15 +167,6 @@ my $dbIDs = $pa->get_dbIDs_for_population_names([$pop_name]);
 my @pop_ids = map { $_ } grep {$dbIDs->{$_} eq $pop_name} keys(%$dbIDs);
 ok($pop_ids[0] == 101082, 'get_dbIDs_for_population_names');
 
-# fetch_tag_Population
-my $v = $va->fetch_by_name('rs2299222');
-my $vfs = $v->get_all_VariationFeatures;
-my $tag_populations = $pa->fetch_tag_Population($vfs->[0]);
-ok(scalar @$tag_populations == 0, 'fetch_tag_Populations');
-
-my $tagged_populations = $pa->fetch_tagged_Population($vfs->[0]);
-ok(scalar @$tagged_populations == 0, 'fetch_tagged_Populations');
-
 # store
 $population = $pa->fetch_by_dbID(649);
 delete $population->{$_} for qw(dbID name);

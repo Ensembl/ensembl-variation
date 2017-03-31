@@ -692,55 +692,6 @@ sub fetch_all_by_Sample_list {
 	return $populations;
 }
 
-=head2 fetch_tagged_Population
-
-  Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
-  Example     : my $vf = $vf_adaptor->fetch_by_name('rs205621');
-                my $populations_tagged = $vf->is_tagged();
-                foreach my $pop (@{$vf_adaptor->is_tagged}){
-		          print $pop->name, " has been tagged using a 0.99 r2 criteria\n";
-                }
-  Description : Retrieves all populations from a specified variation feature that have been tagged
-  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
-  Exceptions  : throw if incorrect argument is passed
-                warning if provided variation feature does not have a dbID
-  Caller      : general
-  Status      : DEPRECATED
-
-=cut
-
-sub fetch_tagged_Population {
-  my $self = shift;
-  
-  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
-  
-  return [];
-}
-
-=head2 fetch_tag_Population
-
-  Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
-  Example     : my $vf = $vf_adaptor->fetch_by_name('rs205621');
-                my $populations_is_tag = $vf->is_tag();
-                foreach my $pop (@{$vf_adaptor->is_tag}){
-		          print $pop->name, " has been tagged using a 0.99 r2 criteria\n";
-                }
-  Description : Retrieves all populations in which the specified variation feature is a tag
-  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
-  Exceptions  : throw if incorrect argument is passed
-                warning if provided variation feature does not have a dbID
-  Caller      : general
-  Status      : DEPRECATED
-
-=cut
-
-sub fetch_tag_Population {
-  my $self = shift;
-  
-  deprecate("This method is deprecated: there are no more tagged populations in Ensembl Variation. This method will be removed in e89\n");
-  
-  return [];
-}
 
 =head2 get_dbIDs_for_population_names
 

@@ -385,24 +385,5 @@ sub get_all_child_Individuals {
   return $self->adaptor()->fetch_all_by_parent_Individual($self);
 }
 
-=head2 display
-  Description: DEPRECATED. Use Bio::EnsEMBL::Variation::Sample::display instead
-=cut
-
-sub display {
-  my $self = shift;
-  deprecate("Please use Bio::EnsEMBL::Variation::Sample::display.\n");
-  return '';
-}
-
-=head2 has_coverage
-  Description: DEPRECATED. Use Bio::EnsEMBL::Variation::Sample::has_coverage instead
-=cut
-
-sub has_coverage {
-  my $self = shift;
-  deprecate("Please use Bio::EnsEMBL::Variation::Sample::has_coverage.\n");
-  return '';
-}
 
 1;

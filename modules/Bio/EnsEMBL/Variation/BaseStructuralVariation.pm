@@ -429,28 +429,6 @@ sub alias {
   return $self->{'alias'};
 }
 
-
-=head2 clinical_significance
-
-  Arg [1]    : string $clinical_significance (optional)
-  Example    : $clinical_significance = $sv->clinical_significance()
-  Description: Getter/Setter for the clinical significance associated with the
-               structural variant
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub clinical_significance {
-  my $self = shift;
-  deprecate("The 'clinical_significance' method should no longer be used, use the method 'get_all_clinical_significance_states' instead\n");
-  push @{$self->{clinical_significance}}, shift if(@_);
-  return defined($self->{clinical_significance}) ?  join ",", @{$self->{clinical_significance}} : undef;
-}
-
-
 =head2 get_all_clinical_significance_states
 
   Arg [1]    : none
@@ -469,28 +447,6 @@ sub get_all_clinical_significance_states {
     
     return $self->{'clinical_significance'};
 }
-
-
-=head2 get_all_validation_states
-
-  Arg [1]    : none
-  Example    : my @vstates = @{$v->get_all_validation_states()};
-  Description: Retrieves all validation states for this structural variation. Current
-               possible validation statuses are 'validated','not validated',
-               'high quality'
-  Returntype : reference to list of strings
-  Exceptions : none
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub get_all_validation_states {
-  my $self = shift;
-  deprecate('The use of this method is deprecated. Use the method "validation_status()" instead');
-  return $self->{'validation_status'} ? [$self->{'validation_status'}] : [];
-}
-
 
 =head2 validation_status
 

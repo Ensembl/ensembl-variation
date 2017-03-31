@@ -123,8 +123,6 @@ throws_ok { $ind3->get_all_child_Individuals(); } qr/Cannot retrieve child indiv
 my $individual = $ind_adaptor->fetch_by_dbID(101961);
 my $children = $individual->get_all_child_Individuals();
 ok($children->[0]->name eq '1000GENOMES:phase_1:NA19685', 'get_all_child_Individuals');
-ok($individual->display eq '', 'deprecated method');
-ok($individual->has_coverage eq '', 'deprecated method');
 
 done_testing();
 

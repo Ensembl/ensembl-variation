@@ -36,9 +36,11 @@ my $chr = '9';
 my $sa = $cdb->get_SliceAdaptor();
 my $slice = $sa->fetch_by_region('chromosome',$chr,22124503,22126503);
 
+my $strain_slice_adaptor = $vdb->get_StrainSliceAdaptor;
+
 my $strain_name = '1000GENOMES:phase_1:NA06984';
 
-my $strain_slice = $slice->get_by_strain($strain_name);
+my $strain_slice = $strain_slice_adaptor->get_by_strain_Slice($strain_name, $slice);
 my $seq = $strain_slice->seq();
 is(substr($seq, 1, 1), "W", "apply_edit (via sequence)");
 
