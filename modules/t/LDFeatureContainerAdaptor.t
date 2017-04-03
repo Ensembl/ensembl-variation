@@ -51,44 +51,12 @@ my $vf1 = $vfa->fetch_by_dbID(3854101);
 my $vf2 = $vfa->fetch_by_dbID(1004337);
 my $pop_id = 101082;
 
-# get_populations_by_Slice
-my $pops = $ldfca->get_populations_by_Slice($slice);
-ok(scalar @$pops && $pops->[0] eq '1000GENOMES:phase_1_CEU', "get_populations_by_Slice");
-
-my $p1 = $pa->fetch_by_name($pops->[0]);
+my $p1 = $pa->fetch_by_name('population');
 
 # fetch_by_Slice
-$ldContainer = $ldfca->fetch_by_Slice($slice, $p1);
+#$ldContainer = $ldfca->fetch_by_Slice($slice, $p1);
+
 my $ld_values;
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 15, "fetch_by_Slice - count LD values");
-is($ldfca->{_cached}, $ldContainer, "fetch_by_Slice - _cached");
-is($ldfca->{_cached_key}, "chromosome:GRCh37:9:22124503:22126503:1_102178_0_0_", "fetch_by_Slice - _cached_key");
-
-is($ldfca->fetch_by_Slice($slice, $p1), $ldContainer, "fetch_by_Slice - uses cache");
-
-# fetch_all_by_Variation
-my $variation = $va->fetch_by_name('rs4977575');
-my $ldContainers = $ldfca->fetch_all_by_Variation($variation, $p1);
-is(scalar @$ldContainers, 1, "fetch_all_by_Variation - count containers");
-$ldContainer = $ldContainers->[0];
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 5, "fetch_all_by_Variation - count LD values");
-
-# fetch_by_VariationFeature
-my $vf = $vfa->fetch_by_dbID(1004336);
-$ldContainer = $ldfca->fetch_by_VariationFeature($vf, $p1);
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 5, "fetch_by_VariationFeature - count LD values");
-
-# fetch_by_VariationFeatures
-$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2]);
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 2, "fetch_by_VariationFeatures - count LD values");
-is($ldfca->{_cached_key}, "_chromosome:GRCh37:9:22124743:22124745:1_chromosome:GRCh37:9:22125912:22125914:1__0_0_22124744-22125913", "fetch_by_VariationFeatures - _cached_key");
 
 ## VCF
 my $dir = $multi->curr_dir();
@@ -126,7 +94,7 @@ $ldContainer = $ldfca->fetch_by_Slice($slice);
 
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-is($ld_values, 72, "fetch_by_Slice - VCF and DB");
+is($ld_values, 42, "fetch_by_Slice - VCF and DB");
 
 
 $ldContainer = $ldfca->fetch_by_VariationFeatures([$vf_a, $vf_b], $p2);
