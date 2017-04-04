@@ -727,12 +727,20 @@ sub get_hgvs_alleles{
     $ref_allele = '-';
   }
   ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA)
-  elsif ($description =~ m/\[/i) {    
-  
+  elsif ($description =~ m/\[/i) {
+
     my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
+
     foreach my $n(1..$number){ $alt_allele .= $string;}
     $ref_allele = $string;
+
   }
+  # no change
+  elsif ($description =~ m/\=/i) {
+    ($ref_allele) = $description =~ m/([A-Z]*)\=$/i;
+     $alt_allele = $ref_allele;
+  }
+
   else {
     throw ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
   }
