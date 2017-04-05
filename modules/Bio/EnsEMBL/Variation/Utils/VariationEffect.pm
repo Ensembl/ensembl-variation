@@ -777,8 +777,13 @@ sub affects_start_codon {
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
             return 0 unless $ref_pep;
-        
-            $cache->{affects_start_codon} = ( ($bvfo->translation_start == 1) and (substr($ref_pep,0,1) ne substr($alt_pep,0,1)) );
+            
+            # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
+            $cache->{affects_start_codon} = (
+                ($bvfo->translation_start == 1) and
+                ($alt_pep !~ /\Q$ref_pep\E$/) and 
+                ($alt_pep !~ /^\Q$ref_pep\E/)
+            );
         }
         
         # structural variant

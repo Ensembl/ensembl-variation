@@ -596,6 +596,16 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_start+1,
         effects => [qw(start_lost)],
     }, {
+        alleles => 'CAT',
+        start   => $cds_start+2,
+        end     => $cds_start+1,
+        effects => [qw(inframe_insertion)],
+    }, {
+        alleles => 'GCA',
+        start   => $cds_start+2,
+        end     => $cds_start+1,
+        effects => [qw(inframe_insertion)],
+    }, {
         alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+5,
