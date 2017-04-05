@@ -271,9 +271,9 @@ my @adj = grep {$_->population->name eq 'ExAC:Adj'} @alleles;
 is(scalar @adj, 2, 'get_all_Alleles_by_VariationFeature - Adj count');
 
 is_deeply(
-  [map {'a:'.$_->allele.' f:'.$_->frequency.' c:'.$_->count} @adj],
+  [map {'a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count} @adj],
   [
-    'a:A f:0.000312711731901808 c:24',
+    'a:A f:0.0003 c:24',
     'a:G f:0.9997 c:76724'
   ],
   'get_all_Alleles_by_VariationFeature - Adj freqs and counts'

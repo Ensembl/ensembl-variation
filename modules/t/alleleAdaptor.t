@@ -51,7 +51,7 @@ foreach (@$alleles) {
 
     }
 }
-is($hash->{'1000GENOMES:phase_1_LWK'}->{'T'}, 0.0103092783505155, 'allele freq for population');
+is(sprintf("%.6f", $hash->{'1000GENOMES:phase_1_LWK'}->{'T'}), 0.010309, 'allele freq for population');
 is($hash->{'1000GENOMES:phase_1_GBR'}->{'C'}, 1, 'allele freq for population');
 
 my $pa = $vdba->get_PopulationAdaptor();
