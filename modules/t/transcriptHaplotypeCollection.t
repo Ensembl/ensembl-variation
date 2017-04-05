@@ -177,7 +177,7 @@ is($h->_hex, 'dff67d1fb7b3812a10cf152d2d9528f7', '_hex');
 is_deeply($h->_other_hexes, ['fbb87de3331ea4225df6847e8335d622'], '_other_hexes');
 is($h->transcript, $c->transcript, 'transcript');
 is($h->count, 47, 'count');
-is($h->frequency, 0.0110484250117536, 'frequency');
+is(sprintf("%.4f", $h->frequency), '0.0110', 'frequency');
 
 is_deeply($h->get_all_population_counts, {
   '_all' => 47,
@@ -194,21 +194,27 @@ is_deeply($h->get_all_population_counts, {
   '1000GENOMES:phase_3:AFR' => 43,
   '1000GENOMES:phase_3:AMR' => 4
 }, 'get_all_population_counts');
-is_deeply($h->get_all_population_frequencies, {
-  '_all' => '0.0110484250117536',
-  '1000GENOMES:phase_3:ALL' => '0.0110484250117536',
-  '1000GENOMES:phase_3:LWK' => '0.0404040404040404',
-  '1000GENOMES:phase_3:YRI' => '0.0277777777777778',
-  '1000GENOMES:phase_3:GWD' => '0.0446428571428571',
-  '1000GENOMES:phase_3:CLM' => '0.012987012987013',
-  '1000GENOMES:phase_3:PUR' => '0.0114942528735632',
-  '1000GENOMES:phase_3:ASW' => '0.0245901639344262',
-  '1000GENOMES:phase_3:MSL' => '0.00588235294117647',
-  '1000GENOMES:phase_3:ESN' => '0.0663265306122449',
-  '1000GENOMES:phase_3:ACB' => '0.0105263157894737',
-  '1000GENOMES:phase_3:AMR' => '0.0078740157480315',
-  '1000GENOMES:phase_3:AFR' => '0.0326747720364742'
-}, 'get_all_population_frequencies');
+
+my $freqs = $h->get_all_population_frequencies;
+is_deeply(
+  {map {$_ => sprintf("%.4f", $freqs->{$_})} keys %$freqs},
+  {
+    '_all' => '0.0110',
+    '1000GENOMES:phase_3:ALL' => '0.0110',
+    '1000GENOMES:phase_3:LWK' => '0.0404',
+    '1000GENOMES:phase_3:YRI' => '0.0278',
+    '1000GENOMES:phase_3:GWD' => '0.0446',
+    '1000GENOMES:phase_3:CLM' => '0.0130',
+    '1000GENOMES:phase_3:PUR' => '0.0115',
+    '1000GENOMES:phase_3:ASW' => '0.0246',
+    '1000GENOMES:phase_3:MSL' => '0.0059',
+    '1000GENOMES:phase_3:ESN' => '0.0663',
+    '1000GENOMES:phase_3:ACB' => '0.0105',
+    '1000GENOMES:phase_3:AMR' => '0.0079',
+    '1000GENOMES:phase_3:AFR' => '0.0327'
+  },
+  'get_all_population_frequencies'
+);
 
 $diffs = $h->get_all_diffs();
 is(scalar @$diffs, 6, "protein diffs - count");
@@ -269,7 +275,7 @@ my $dt = (sort {$b->count <=> $a->count} @$dts)[0];
 
 is($dt->name, "ENST00000502692:REF_1697G>A,1858T>C,2011T>C,2456A>G", "CDS diplotype name");
 is($dt->count, 636, "CDS diplotype count");
-is($dt->frequency, 0.29901269393512, "CDS diplotype freq");
+is(sprintf("%.4f", $dt->frequency), '0.2990', "CDS diplotype freq");
 is($dt->container, $c, "CDS diplotype container");
 is($dt->transcript, $tr, "CDS diplotype transcript");
 is($dt->type, 'cds', "CDS diplotype type");
@@ -308,42 +314,47 @@ is_deeply($dt->get_all_population_counts, {
   '1000GENOMES:phase_3:KHV' => 23,
   '1000GENOMES:phase_3:JPT' => 39
 }, "CDS diplotype pop counts");
-is_deeply($dt->get_all_population_frequencies, {
-  '_all' => '0.29901269393512',
-  '1000GENOMES:phase_3:ALL' => '0.29901269393512',
-  '1000GENOMES:phase_3:YRI' => '0.12037037037037',
-  '1000GENOMES:phase_3:GIH' => '0.3',
-  '1000GENOMES:phase_3:GWD' => '0.125',
-  '1000GENOMES:phase_3:PUR' => '0.471264367816092',
-  '1000GENOMES:phase_3:MSL' => '0.105882352941176',
-  '1000GENOMES:phase_3:ITU' => '0.259259259259259',
-  '1000GENOMES:phase_3:ESN' => '0.112244897959184',
-  '1000GENOMES:phase_3:ACB' => '0.136842105263158',
-  '1000GENOMES:phase_3:CEU' => '0.407407407407407',
-  '1000GENOMES:phase_3:PEL' => '0.439024390243902',
-  '1000GENOMES:phase_3:EAS' => '0.357142857142857',
-  '1000GENOMES:phase_3:AFR' => '0.126139817629179',
-  '1000GENOMES:phase_3:FIN' => '0.348837209302326',
-  '1000GENOMES:phase_3:CDX' => '0.292307692307692',
-  '1000GENOMES:phase_3:PJL' => '0.342105263157895',
-  '1000GENOMES:phase_3:LWK' => '0.0707070707070707',
-  '1000GENOMES:phase_3:STU' => '0.391891891891892',
-  '1000GENOMES:phase_3:IBS' => '0.388888888888889',
-  '1000GENOMES:phase_3:CLM' => '0.415584415584416',
-  '1000GENOMES:phase_3:SAS' => '0.331550802139037',
-  '1000GENOMES:phase_3:EUR' => '0.389548693586698',
-  '1000GENOMES:phase_3:ASW' => '0.262295081967213',
-  '1000GENOMES:phase_3:CHS' => '0.380434782608696',
-  '1000GENOMES:phase_3:TSI' => '0.33695652173913',
-  '1000GENOMES:phase_3:MXL' => '0.489795918367347',
-  '1000GENOMES:phase_3:GBR' => '0.486111111111111',
-  '1000GENOMES:phase_3:AMR' => '0.452755905511811',
-  '1000GENOMES:phase_3:BEB' => '0.380952380952381',
-  '1000GENOMES:phase_3:CHB' => '0.386363636363636',
-  '1000GENOMES:phase_3:JPT' => '0.443181818181818',
-  '1000GENOMES:phase_3:KHV' => '0.264367816091954'
-}, "CDS diplotype pop freqs");
 
+$freqs = $dt->get_all_population_frequencies;
+is_deeply(
+  {map {$_ => sprintf("%.4f", $freqs->{$_})} keys %$freqs}, 
+  {
+    '_all' => '0.2990',
+    '1000GENOMES:phase_3:ALL' => '0.2990',
+    '1000GENOMES:phase_3:YRI' => '0.1204',
+    '1000GENOMES:phase_3:GIH' => '0.3000',
+    '1000GENOMES:phase_3:GWD' => '0.1250',
+    '1000GENOMES:phase_3:PUR' => '0.4713',
+    '1000GENOMES:phase_3:MSL' => '0.1059',
+    '1000GENOMES:phase_3:ITU' => '0.2593',
+    '1000GENOMES:phase_3:ESN' => '0.1122',
+    '1000GENOMES:phase_3:ACB' => '0.1368',
+    '1000GENOMES:phase_3:CEU' => '0.4074',
+    '1000GENOMES:phase_3:PEL' => '0.4390',
+    '1000GENOMES:phase_3:EAS' => '0.3571',
+    '1000GENOMES:phase_3:AFR' => '0.1261',
+    '1000GENOMES:phase_3:FIN' => '0.3488',
+    '1000GENOMES:phase_3:CDX' => '0.2923',
+    '1000GENOMES:phase_3:PJL' => '0.3421',
+    '1000GENOMES:phase_3:LWK' => '0.0707',
+    '1000GENOMES:phase_3:STU' => '0.3919',
+    '1000GENOMES:phase_3:IBS' => '0.3889',
+    '1000GENOMES:phase_3:CLM' => '0.4156',
+    '1000GENOMES:phase_3:SAS' => '0.3316',
+    '1000GENOMES:phase_3:EUR' => '0.3895',
+    '1000GENOMES:phase_3:ASW' => '0.2623',
+    '1000GENOMES:phase_3:CHS' => '0.3804',
+    '1000GENOMES:phase_3:TSI' => '0.3370',
+    '1000GENOMES:phase_3:MXL' => '0.4898',
+    '1000GENOMES:phase_3:GBR' => '0.4861',
+    '1000GENOMES:phase_3:AMR' => '0.4528',
+    '1000GENOMES:phase_3:BEB' => '0.3810',
+    '1000GENOMES:phase_3:CHB' => '0.3864',
+    '1000GENOMES:phase_3:JPT' => '0.4432',
+    '1000GENOMES:phase_3:KHV' => '0.2644'
+  },
+  "CDS diplotype pop freqs"
+);
 
 $dts = $c->get_all_ProteinDiplotypes;
 
@@ -355,7 +366,7 @@ $DB::single = 1;
 
 is($dt->name, 'ENSP00000422007:621del{325}_566R>Q,620*>R,671C>R,819Q>R', "Protein diplotype name");
 is($dt->count, 676, "Protein diplotype count");
-is($dt->frequency, 0.31781852374236, "Protein diplotype freq");
+is(sprintf("%.4f", $dt->frequency), 0.3178, "Protein diplotype freq");
 is($dt->container, $c, "Protein diplotype container");
 is($dt->transcript, $tr, "Protein diplotype transcript");
 is($dt->type, 'protein', "Protein diplotype type");
@@ -394,40 +405,5 @@ is_deeply($dt->get_all_population_counts, {
   '1000GENOMES:phase_3:JPT' => 41,
   '1000GENOMES:phase_3:ALL' => 676,
 }, "Protein diplotype pop counts");
-is_deeply($dt->get_all_population_frequencies, {
-  '_all' => '0.31781852374236',
-  '1000GENOMES:phase_3:YRI' => '0.138888888888889',
-  '1000GENOMES:phase_3:GIH' => '0.3125',
-  '1000GENOMES:phase_3:GWD' => '0.133928571428571',
-  '1000GENOMES:phase_3:PUR' => '0.505747126436782',
-  '1000GENOMES:phase_3:MSL' => '0.129411764705882',
-  '1000GENOMES:phase_3:ITU' => '0.259259259259259',
-  '1000GENOMES:phase_3:ESN' => '0.153061224489796',
-  '1000GENOMES:phase_3:ACB' => '0.136842105263158',
-  '1000GENOMES:phase_3:CEU' => '0.407407407407407',
-  '1000GENOMES:phase_3:PEL' => '0.51219512195122',
-  '1000GENOMES:phase_3:EAS' => '0.380952380952381',
-  '1000GENOMES:phase_3:AFR' => '0.145896656534954',
-  '1000GENOMES:phase_3:FIN' => '0.348837209302326',
-  '1000GENOMES:phase_3:CDX' => '0.307692307692308',
-  '1000GENOMES:phase_3:PJL' => '0.368421052631579',
-  '1000GENOMES:phase_3:LWK' => '0.0909090909090909',
-  '1000GENOMES:phase_3:STU' => '0.405405405405405',
-  '1000GENOMES:phase_3:IBS' => '0.388888888888889',
-  '1000GENOMES:phase_3:CLM' => '0.441558441558442',
-  '1000GENOMES:phase_3:SAS' => '0.344919786096257',
-  '1000GENOMES:phase_3:EUR' => '0.39667458432304',
-  '1000GENOMES:phase_3:ASW' => '0.295081967213115',
-  '1000GENOMES:phase_3:CHS' => '0.41304347826087',
-  '1000GENOMES:phase_3:TSI' => '0.358695652173913',
-  '1000GENOMES:phase_3:MXL' => '0.510204081632653',
-  '1000GENOMES:phase_3:GBR' => '0.5',
-  '1000GENOMES:phase_3:AMR' => '0.488188976377953',
-  '1000GENOMES:phase_3:BEB' => '0.396825396825397',
-  '1000GENOMES:phase_3:CHB' => '0.420454545454545',
-  '1000GENOMES:phase_3:JPT' => '0.465909090909091',
-  '1000GENOMES:phase_3:KHV' => '0.275862068965517',
-  '1000GENOMES:phase_3:ALL' => '0.31781852374236',
-}, "Protein diplotype pop freqs");
 
 done_testing();
