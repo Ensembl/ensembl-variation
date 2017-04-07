@@ -88,9 +88,9 @@ is(
 my $sift_expected = <<SIFT;
 >QUERY/1-8
 ABCDEFGH
->S1/1-8
+>S1/1-5
 --ILMN-O
->S2/1-8
+>S2/1-4
 T----UVH
 SIFT
 
