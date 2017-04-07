@@ -35,7 +35,7 @@
 #include "tbx.h"
 #include "vcf.h"
 
-#define SIZE 1000000
+#define SIZE 5000
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
 #define SYSTEM_ERROR 2
