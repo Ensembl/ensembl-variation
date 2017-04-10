@@ -35,10 +35,12 @@
 #include "tbx.h"
 #include "vcf.h"
 
-#define SIZE 5000
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
 #define SYSTEM_ERROR 2
+#define MIN_GENOTYPES_LOCUS 40
+#define THETA_CONVERGENCE_THRESHOLD 0.0001
+#define MIN_R2 0.05
 
 /* Macros for fetching particular haplotypes from the allele_counters */
 #define AABB allele_counters[0x0000]
@@ -63,7 +65,7 @@ typedef struct{
   int position;
   char *var_id;
   int number_genotypes;
-  Genotype genotypes[SIZE];
+  Genotype * genotypes;
 } Locus_info;
 
 typedef struct{
@@ -84,7 +86,7 @@ typedef struct {
 
 typedef struct{
   int number_haplotypes;
-  uint8_t haplotype[SIZE];
+  uint8_t * haplotype;
 } Haplotype;
 
 void init_locus_list(Locus_list *l) {
@@ -112,7 +114,7 @@ void dequeue(Locus_list *ll) {
   ll->head++;
 }
 
-void enqueue(Locus_list *ll, int pos, char *var_id, int personid, uint8_t genotype) {
+Locus_info * next_locus(Locus_list *ll, int pos, char *var_id, int samples) {
   Locus_info *l;
 
   ll->tail++;
@@ -122,9 +124,9 @@ void enqueue(Locus_list *ll, int pos, char *var_id, int personid, uint8_t genoty
   l = &ll->locus[ll->tail];
   l->position = pos;
   l->var_id = var_id;
-  l->genotypes[0].person_id = personid;
-  l->genotypes[0].genotype = genotype;
-  l->number_genotypes = 1;
+  l->genotypes = calloc(samples, sizeof(Genotype));
+  l->number_genotypes = 0;
+  return l;
 }
 
 void major_freqs(const Haplotype * haplotypes, double *f_A, double *f_B){
@@ -175,38 +177,26 @@ int by_person_id(const void *v1, const void *v2){
   return 0;
 }
 
-void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
-  int allele_counters[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  
-  int nAB = 0, nab = 0, nAb = 0, naB = 0;
-  int N;
-  double theta = 0.5;
-  double thetaprev = 2.0;
-  double tmp;
-  double f_A, f_B;
-  double D,r2, Dmax = 0.0;
+void extract_locus_haplotypes(Locus_info *first, Locus_info *second, Haplotype * haplotypes, int * allele_counters) {
+
+  if (first->number_genotypes > second->number_genotypes)
+    haplotypes->haplotype = malloc(second->number_genotypes * sizeof(uint8_t));
+  else
+    haplotypes->haplotype = malloc(first->number_genotypes * sizeof(uint8_t));
+
   int i = 0;
   int j = 0;
   int z = 0;
-  Genotype *genotype;
-  uint8_t haplotype;
-
-  Haplotype haplotypes;
-
   while (i<first->number_genotypes && j<second->number_genotypes){
     if (first->genotypes[i].person_id == second->genotypes[j].person_id){
-      genotype = &second->genotypes[j];
+      Genotype * genotype = &second->genotypes[j++];
       /*the second locus has the same person_id*/
-      haplotype = first->genotypes[i].genotype << 2;
+      uint8_t haplotype = first->genotypes[i++].genotype << 2;
       haplotype |= genotype->genotype;
       
       allele_counters[haplotype]++;
       
-      haplotypes.haplotype[z] = haplotype;
-      haplotypes.number_haplotypes = z+1;
-      z++;
-      i++;
-      j++;
+      haplotypes->haplotype[z++] = haplotype;
     }    
     else{
       /*they have different, */
@@ -218,110 +208,118 @@ void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
       }
     }
   }
-
-  // fprintf(
-  //   stderr,
-  //   "AABB %i\nAABb %i\nAAbb %i\nAaBB %i\nAaBb %i\nAabb %i\naaBB %i\naaBb %i\naabb %i\n",
-  //   AABB, AABb, AAbb, AaBB, AaBb, Aabb, aaBB, aaBb, aabb
-  // );
-
-  nAB = 2*AABB + AaBB + AABb;
-  nab = 2*aabb + Aabb + aaBb;
-  nAb = 2*AAbb + Aabb + AABb;
-  naB = 2*aaBB + AaBB + aaBb;
-  
-  N = nAB + nab + nAb + naB + 2*AaBb;
-
-  /* Initialise stats variable */
-  bzero(s, sizeof(Stats));
-
-  if (N < 40){
-    /*not enough individuals, return */
-    s->N = N;
-    return;
-  }
-  while(fabs(theta-thetaprev) > 0.0001){
-    thetaprev = theta;
-    tmp = ((nAB + (1-theta)*AaBb)*(nab + (1-theta)*AaBb) + (nAb + theta*AaBb)*(naB + theta*AaBb));
-    theta = (tmp==0) ? 0.5 : ((nAb + theta*AaBb)*(naB + theta*AaBb))/ tmp;
-    // fprintf(stderr, "theta %f thetaprev %f\n", theta, thetaprev);
-  }
-
-  /*now calculate stats*/
-  major_freqs(&haplotypes,&f_A,&f_B);
-  // fprintf(stderr, "f_A %f\tf_B %f\n", f_A, f_B);
-  D = (nAB+(1-theta)*AaBb) / N - (f_A*f_B);
-
-  tmp = (f_A*f_B*(1-f_A)*(1-f_B));
-
-  r2 = (tmp==0) ? 0 : D*D/tmp;
-
-  if (D < 0){
-    if (f_A*f_B < ((1-f_A)*(1-f_B))) Dmax = f_A*f_B;
-    if (f_A*f_B >= ((1-f_A)*(1-f_B))) Dmax = (1-f_A)*(1-f_B);
-  }
-
-  if (D >0){
-    if (f_A*(1-f_B) < (1-f_A)*f_B) Dmax =  f_A*(1-f_B);
-    if (f_A*(1-f_B) >= (1-f_A)*f_B) Dmax = (1-f_A)*f_B;
-  }
-
-  s->D = D;
-  s->r2 = r2;
-  s->theta = theta;
-  s->N = N;
-  s->d_prime = (Dmax == 0) ? 0.0 : D/Dmax;
-  s->people = haplotypes.number_haplotypes;
+  haplotypes->number_haplotypes = z;
 }
 
-void calculate_ld(const Locus_list *ll, FILE *fh, char *variant, int windowsize){
-  Locus_info *next, *head;
+void calculate_pairwise_stats(Locus_info *first, Locus_info *second, FILE* fh){
   Stats stats;
-  
-  /* Doesn't look like it, but sets head and next to the first and
-     second entries - I love C, sometimes */
+  Haplotype haplotypes;
+  int allele_counters[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-  next = &ll->locus[ll->head];
-  head = next++;
-  int i;
-  for (i = ll->head; i < ll->tail; i++, next++) {
+  extract_locus_haplotypes(second, first, &haplotypes, allele_counters);
 
-    // skip if > windowsize
-    if(windowsize > 0 && abs(head->position - next->position) > windowsize)
-      continue;
+  int nAB = 2*AABB + AaBB + AABb;
+  int nab = 2*aabb + Aabb + aaBb;
+  int nAb = 2*AAbb + Aabb + AABb;
+  int naB = 2*aaBB + AaBB + aaBb;
+  int N = nAB + nab + nAb + naB + 2*AaBb;
 
-    // skip if user has provided variant and neither matches ID
-    if(variant[0] != 0 && strcmp(head->var_id, variant) != 0 && strcmp(next->var_id, variant) != 0)
-      continue;
+  if (N < MIN_GENOTYPES_LOCUS){
+    /*not enough individuals, return */
+    return;
+  }
 
-    calculate_pairwise_stats(head, next, &stats);
-    if ((float) stats.r2 < 0.05 || stats.N < 40 || (float) stats.r2 > 1 || (float) stats.d_prime > 1)
-      continue;
+  /*Calculate theta*/
+  double theta = 0.5;
+  double thetaprev = 2.0;
+  while(fabs(theta-thetaprev) > THETA_CONVERGENCE_THRESHOLD){
+    thetaprev = theta;
+    double tmp = ((nAB + (1-theta)*AaBb)*(nab + (1-theta)*AaBb) + (nAb + theta*AaBb)*(naB + theta*AaBb));
+    theta = (tmp==0) ? 0.5 : ((nAb + theta*AaBb)*(naB + theta*AaBb))/ tmp;
+  }
+
+  /*Calculate D*/
+  double f_A, f_B;
+  major_freqs(&haplotypes,&f_A,&f_B);
+  double D = (nAB+(1-theta)*AaBb) / N - (f_A*f_B);
+
+  /*Calculate r2*/
+  double tmp = (f_A*f_B*(1-f_A)*(1-f_B));
+  double r2 = (tmp==0) ? 0 : D*D/tmp;
+
+  double Dmax;
+  if (D < 0){
+    if (f_A*f_B < ((1-f_A)*(1-f_B))) 
+      Dmax = f_A*f_B;
+    if (f_A*f_B >= ((1-f_A)*(1-f_B)))
+      Dmax = (1-f_A)*(1-f_B);
+  } else if (D >0){
+    if (f_A*(1-f_B) < (1-f_A)*f_B) 
+      Dmax =  f_A*(1-f_B);
+    if (f_A*(1-f_B) >= (1-f_A)*f_B) 
+      Dmax = (1-f_A)*f_B;
+  } else {
+    Dmax = 0.0;
+  }
+
+  stats.N = N;
+  stats.D = D;
+  stats.r2 = r2;
+  stats.theta = theta;
+  stats.d_prime = (Dmax == 0) ? 0.0 : D/Dmax;
+  stats.people = haplotypes.number_haplotypes;
+
+  free(haplotypes.haplotype);
+
+  if ((float) stats.r2 < MIN_R2 || stats.N < MIN_GENOTYPES_LOCUS || (float) stats.r2 > 1 || (float) stats.d_prime > 1)
+    return;
+
+  if (second->position < first->position)
     fprintf(fh, "%d\t%d\t%d\t%s\t%d\t%s\t%f\t%f\t%d\n",
       1,   // this used to be population_id, but we're ignoring that now. Placeholder for file format compatiblity
       1,   // this used to be seq_region_id, but we're ignoring that now. Placeholder for file format compatiblity
-      head->position,
-      head->var_id,
-      next->position,
-      next->var_id,
+      second->position,
+      second->var_id,
+      first->position,
+      first->var_id,
       stats.r2,
       fabs(stats.d_prime),
       stats.N
     );
+  else 
+    fprintf(fh, "%d\t%d\t%d\t%s\t%d\t%s\t%f\t%f\t%d\n",
+      1,   // this used to be population_id, but we're ignoring that now. Placeholder for file format compatiblity
+      1,   // this used to be seq_region_id, but we're ignoring that now. Placeholder for file format compatiblity
+      first->position,
+      first->var_id,
+      second->position,
+      second->var_id,
+      stats.r2,
+      fabs(stats.d_prime),
+      stats.N
+    );
+}
+
+void calculate_ld(const Locus_list *ll, FILE *fh, int windowsize, int variant_index){
+  Locus_info * variant_locus = &ll->locus[variant_index];
+  Locus_info * first = &ll->locus[ll->head];
+  Locus_info * end= &ll->locus[ll->tail] + 1;
+  Locus_info * locus;
+  for (locus = first; locus != end; locus++) {
+    // Skip if same variant
+    if (locus == variant_locus)
+      continue;
+
+    // skip if > windowsize
+    if(windowsize > 0 && abs(variant_locus->position - locus->position) > windowsize) {
+      continue;
+    }
+
+    calculate_pairwise_stats(locus, variant_locus, fh);
   }
 }
 
-int get_genotypes(Locus_list *locus_list, char *variant, bcf_hdr_t *hdr, bcf1_t *line) {
-
-  Locus_info* l_tmp;
-  int ngt, *gt_arr = NULL, ngt_arr = 0, i = 0, j = 0, allele, personid;
-
-  // get position
-  // in htslib it's 0-indexed
-  // we also want to increment by one if it's not a SNP
-  // to account for the base added to REF and ALT in VCF format
-  int position = line->pos + (2 - bcf_is_snp(line));
-
+int get_genotypes(Locus_list *locus_list, bcf_hdr_t *hdr, bcf1_t *line, int position) {
   // get variant id
   // have to do a string copy otherwise the reference to the last one gets passed around indefinitely
   bcf_unpack(line, 1);
@@ -330,105 +328,89 @@ int get_genotypes(Locus_list *locus_list, char *variant, bcf_hdr_t *hdr, bcf1_t 
   strcpy(var_id, d->id);
 
   // get genotypes
-  ngt = bcf_get_genotypes(hdr, line, &gt_arr, &ngt_arr);
+  int * gt_arr = NULL;
+  int ngt_arr = 0;
+  int ngt = bcf_get_genotypes(hdr, line, &gt_arr, &ngt_arr);
 
-  if(ngt == 0) return 0;
+  if(ngt == 0)
+    return 0;
 
   // quickly scan through for non-ref alleles
   // this way we can exclude non-variant sites before doing any analysis
   int has_alt = 0;
-  for(i=0; i<ngt; i++) {
-    if(gt_arr[i] > 3) {
+  int genotype_id;
+  for(genotype_id=0; genotype_id<ngt; genotype_id++) {
+    if(gt_arr[genotype_id] > 3) {
       has_alt = 1;
       break;
     }
   }
-  if(has_alt == 0) return 0;
+  if(has_alt == 0) 
+    return 0;
 
   // gt_arr is an array of alleles
   // we need to break this down into per-sample sets to turn into genotypes
   int alleles_per_gt = ngt / line->n_sample;
 
   // for now skip unless ploidy == 2
-  if(alleles_per_gt != 2) return 0;
-
-  int initialised = 0;
+  if(alleles_per_gt != 2) 
+    return 0;
 
   // iterate over genotypes
-  for(i=0; i<line->n_sample; i++) {
-    genotype: personid = i + 1;
-
+  Locus_info * locus = next_locus(locus_list, position, var_id, line->n_sample);
+  int sample_id;
+  for(sample_id=0; sample_id<line->n_sample; sample_id++) {
+    int personid = sample_id + 1;
     char genotype[2];
 
     // iterate over alleles
-    for(j=0; j<alleles_per_gt; j++) {
+    int allele_id;
+    int bad_genotype = 0;
+    for(allele_id=0; allele_id<alleles_per_gt; allele_id++) {
 
       // convert hts encoding to a plain int
       // 0 = missing
       // 1 = REF
       // 2 = ALT1
       // 3 = ALT2 etc
-      allele = gt_arr[(alleles_per_gt*i) + j]/2;
+      int allele = gt_arr[(alleles_per_gt*sample_id) + allele_id]/2;
 
       // for now we'll only deal with REF or ALT1
-      if(allele == 1) {
-        genotype[j] = 'A';
-      }
-      else if(allele == 2) {
-        genotype[j] = 'a';
-      }
+      if (allele == 1)
+        genotype[allele_id] = 'A';
+      else if (allele == 2)
+        genotype[allele_id] = 'a';
       // if any alleles are missing or ALT2+ just skip this whole variant
       else {
-        i++;
-        if(i >= line->n_sample) return 0;
-        goto genotype;
+        bad_genotype = 1;
+	break;
       }
     }
 
-    /* Check both are 'a' or 'A' */
-    if ((genotype[0] | genotype[1] | 0x20) != 'a') {
-      fprintf(stderr, "Genotype must be AA, Aa or aa, not %d\t%d\n", position, personid);
-      return EXIT_FAILURE;
-    }
+    if (bad_genotype)
+      continue;
 
     /* Make all hets the same order */
     if (genotype[0] == 'a' && genotype[1] == 'A') {
-      genotype[0] = 'A'; genotype[1] = 'a';
+      genotype[0] = 'A'; 
+      genotype[1] = 'a';
     }
 
-    // init locus using enqueue on first genotype
-    if(initialised == 0) {
-      enqueue(locus_list, position, var_id, personid, genotype2int(genotype));
-
-      // get l_tmp ref to use for subsequent genotypes
-      l_tmp = &locus_list->locus[locus_list->tail];
-
-      initialised = 1;
-    }
-
-    // subsequent genotypes get added to l_tmp
-    else {
-      l_tmp->genotypes[l_tmp->number_genotypes].person_id = personid;
-      l_tmp->genotypes[l_tmp->number_genotypes].genotype = genotype2int(genotype);
-      l_tmp->number_genotypes++;
-      if (l_tmp->number_genotypes == SIZE) {
-        fprintf(stderr, "Number of genotypes supported by the program (%d) exceeded\n", SIZE);
-        return SYSTEM_ERROR;
-      }
-    }
+    locus->genotypes[locus->number_genotypes].person_id = personid;
+    locus->genotypes[locus->number_genotypes].genotype = genotype2int(genotype);
+    locus->number_genotypes++;
   }
-
-  return position;
+  return 1;
 }
 
-void process_window(Locus_list *locus_list, int windowsize, char *variant, FILE *fh, int position) {
+void process_window(Locus_list *locus_list, int windowsize, FILE *fh, int position) {
   /*check if the new position is farther than the limit.*/
   /*if so, calculate the ld information for the values in the array*/
   while(
     (locus_list->tail >= locus_list->head) &&
     (abs(locus_list->locus[locus_list->head].position - position) > windowsize)
   ) {
-    calculate_ld(locus_list, fh, variant, windowsize);
+    calculate_ld(locus_list, fh, windowsize, locus_list->head);
     dequeue(locus_list);  
   }
   if (locus_list->tail < locus_list->head) {
@@ -500,17 +482,15 @@ char** read_variants_file(char *variants_file) {
 
 int check_include_variants(bcf1_t *line, char** include_variants, char* variant) {
   bcf_unpack(line, 1);
-  bcf_dec_t *d = &line->d;      
-  char *var_id = malloc(strlen(d->id)+1);
-  strcpy(var_id, d->id);
+  char * id = line->d.id;      
 
   // could be the variant given with -v
-  if((variant[0] != '\0') && strcmp(var_id, variant) == 0) return 1;
+  if((variant[0] != '\0') && strcmp(id, variant) == 0) return 1;
 
   // or could be in the file given
   int i;
   for(i=0; include_variants[i][0] != '\0'; i++) {
-    if(strcmp(include_variants[i], var_id) == 0) return 1;
+    if(strcmp(include_variants[i], id) == 0) return 1;
   }
 
   return 0;
@@ -631,7 +611,9 @@ int main(int argc, char *argv[]) {
   // init vars
   Locus_list locus_list;
   init_locus_list(&locus_list);
-  int f, position;
+  int f;
+  int position;
+  int variant_index = -1;
 
   for(f=0; f<numfiles; f++) {
 
@@ -703,10 +685,20 @@ int main(int argc, char *argv[]) {
         if(vcf_parse(&str, hdr, line) == 0) {
 
           // check include_variants
-          if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) continue;
+          if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) 
+            continue;
 
-          position = get_genotypes(&locus_list, variant, hdr, line);
-          if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
+          position = line->pos + (2 - bcf_is_snp(line));
+	  if (windowsize && variant_index > 0 && abs(position - locus_list.locus[variant_index].position) > windowsize)
+	    continue;
+
+          if (get_genotypes(&locus_list, hdr, line, position)) {
+            if (!variant) {
+              process_window(&locus_list, windowsize, fh, position);
+            } else if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
+              variant_index = locus_list.tail;
+            }
+          }
         }
       }
 
@@ -734,12 +726,21 @@ int main(int argc, char *argv[]) {
       bcf1_t *line = bcf_init();
 
       while(bcf_itr_next(htsfile, itr, line) >= 0) {
-
         // check include_variants
-        if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) continue;
+        if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) 
+          continue;
 
-        position = get_genotypes(&locus_list, variant, hdr, line);
-        if(position > 0) process_window(&locus_list, windowsize, variant, fh, position);
+        position = line->pos + (2 - bcf_is_snp(line));
+        if (windowsize && variant_index > 0 && abs(position - locus_list.locus[variant_index].position) > windowsize)
+	  continue;
+
+        if (get_genotypes(&locus_list, hdr, line, position)) {
+          if (!variant) {
+            process_window(&locus_list, windowsize, fh, position);
+          } else if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
+            variant_index = locus_list.tail;
+          }
+        }
       }
 
       hts_idx_destroy(idx);
@@ -759,9 +760,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // process any remaining buffer
-  process_window(&locus_list, 0, variant, fh, position);
-
-  return 0;
+  if (!variant) {
+    // process any remaining buffer
+    process_window(&locus_list, windowsize, fh, position);
+  } else if (variant_index > 0) {
+    // Compute LD around variant of interest
+    calculate_ld(&locus_list, fh, windowsize, variant_index);
+  }
 }
-
