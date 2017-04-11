@@ -274,7 +274,7 @@ void calculate_pairwise_stats(Locus_info *first, Locus_info *second, FILE* fh){
   if ((float) stats.r2 < MIN_R2 || stats.N < MIN_GENOTYPES_LOCUS || (float) stats.r2 > 1 || (float) stats.d_prime > 1)
     return;
 
-  if (second->position < first->position)
+  if (second->position <= first->position)
     fprintf(fh, "%d\t%d\t%d\t%s\t%d\t%s\t%f\t%f\t%d\n",
       1,   // this used to be population_id, but we're ignoring that now. Placeholder for file format compatiblity
       1,   // this used to be seq_region_id, but we're ignoring that now. Placeholder for file format compatiblity
@@ -410,6 +410,7 @@ void process_window(Locus_list *locus_list, int windowsize, FILE *fh, int positi
     (locus_list->tail >= locus_list->head) &&
     (abs(locus_list->locus[locus_list->head].position - position) > windowsize)
   ) {
+
     calculate_ld(locus_list, fh, windowsize, locus_list->head);
     dequeue(locus_list);  
   }
@@ -485,7 +486,7 @@ int check_include_variants(bcf1_t *line, char** include_variants, char* variant)
   char * id = line->d.id;      
 
   // could be the variant given with -v
-  if((variant[0] != '\0') && strcmp(id, variant) == 0) return 1;
+  if(variant && strcmp(id, variant) == 0) return 1;
 
   // or could be in the file given
   int i;
@@ -502,9 +503,9 @@ int main(int argc, char *argv[]) {
   int c;
   char *files[2];
   char *regions[2];
-  char *samples_list;
+  char *samples_list = NULL;
   char *variants_file;
-  char *variant = "";
+  char *variant = NULL;
   int numfiles = 0;
   int numregions = 0;
   int windowsize = WINDOW_SIZE;
@@ -596,7 +597,7 @@ int main(int argc, char *argv[]) {
   }
 
   // variant list in file
-  char **include_variants;
+  char **include_variants = NULL;
   int have_include_variants = 0;
   // include_variants[0][0] = '\0';
   if(access( variants_file, F_OK) != -1 ) {
@@ -612,7 +613,7 @@ int main(int argc, char *argv[]) {
   Locus_list locus_list;
   init_locus_list(&locus_list);
   int f;
-  int position;
+  int position = 0;
   int variant_index = -1;
 
   for(f=0; f<numfiles; f++) {
@@ -762,7 +763,7 @@ int main(int argc, char *argv[]) {
 
   if (!variant) {
     // process any remaining buffer
-    process_window(&locus_list, windowsize, fh, position);
+    process_window(&locus_list, 0, fh, position);
   } else if (variant_index > 0) {
     // Compute LD around variant of interest
     calculate_ld(&locus_list, fh, windowsize, variant_index);
