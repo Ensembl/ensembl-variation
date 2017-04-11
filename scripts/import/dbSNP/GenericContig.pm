@@ -2967,6 +2967,7 @@ sub import_hgvs{
   create_and_load( $self->{'dbVar'}, "dbsnp_hgvs", "snp_id * not_null", "hgvs_name * not_null") ;
 
   my $get_source_sth = $self->{'dbVar'}->prepare(qq[select source_id from source where name ='dbSNP HGVS' ]);
+  $get_source_sth->execute()||die;
   my $synon_source = $get_source_sth->fetchall_arrayref();
 
   $self->{'dbVar'}->do(qq[INSERT IGNORE INTO variation_synonym (variation_id,name,source_id)  (select variation.variation_id, dbsnp_hgvs.hgvs_name, $synon_source->[0]->[0]
