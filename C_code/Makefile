@@ -16,6 +16,7 @@ calc_genotypes: calc_genotypes.o
 calc_genotypes.o:
 	$(CC) -c calc_genotypes.c
 ld_vcf:
-	$(CC) -Wall ld_vcf.c -I $(HTSLIB_DIR)/htslib -o ld_vcf -L$(HTSLIB_DIR) -Wl,-rpath,$(HTSLIB_DIR) -lhts
+	$(CC) -Wall -O3 ld_vcf.c -I $(HTSLIB_DIR)/htslib -o ld_vcf -L$(HTSLIB_DIR) -Wl,-rpath,$(HTSLIB_DIR) -lhts
+
 clean:
 	\rm -f *.o calc_genotypes ld_vcf
