@@ -492,13 +492,10 @@ sub get_all_Samples {
     # some may not be in DB
     foreach my $vcf_sample_name (@$vcf_sample_names) {
       # Use the main sample name to retrieve its metadata
-      my $sample_name = $vcf_sample_name;
-      if (exists $synonyms{ $vcf_sample_name }) {
-        $sample_name = $synonyms{ $vcf_sample_name };
-      }
+      my $sample_name = $synonyms{ $vcf_sample_name } || $vcf_sample_name;
       
       # either use the DB one or create one
-      my $sample = $sample_objs{ $prefix.$sample_name } //
+      my $sample = $sample_objs{ $prefix.$sample_name } ||
         Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
           adaptor         => $sample_adpt,
