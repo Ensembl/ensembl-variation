@@ -1175,8 +1175,10 @@ sub parse_rgd_qtl {
         next;
       }
       
-      my $description = $data{QTL_NAME};
-      $description =~ s/ ?QTL.*$//;
+      my $description = $data{TRAIT_NAME};
+      if ($description =~ /\(/) {
+        $description = (split(/\s\(/, $description))[0];
+      }
       
       my $phenotype = {
         id => $data{QTL_SYMBOL},
@@ -1279,6 +1281,10 @@ sub parse_rgd_gene {
 
       if ($data{'REFERENCES'} =~ /^(RGD\:\d+)\|/) {
         $phenotype->{external_id} = $1;
+      }
+
+      if ($data{'TERM_ACC_ID'} =~ /^MP\:\d+/) {
+        $phenotype->{accessions} = [ $data{'TERM_ACC_ID'} ];
       }
 
       push @phenotypes, $phenotype;
