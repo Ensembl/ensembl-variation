@@ -474,16 +474,28 @@ sub get_all_Samples {
     my $sample_adpt = $self->use_db ? $self->adaptor->db->get_SampleAdaptor() : undef;
     my $individual_adpt = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
     
-    my $sample_names = $vcf->get_samples();
+    my $vcf_sample_names = $vcf->get_samples();
     
     # do a fetch_all_by_name_list
     my %sample_objs;
-    %sample_objs = map {$_->name() => $_} @{$sample_adpt->fetch_all_by_name_list([map {$prefix.$_} @$sample_names])} if $self->use_db;
-    
+    %sample_objs = map {$_->name() => $_} @{$sample_adpt->fetch_all_by_name_list([map {$prefix.$_} @$vcf_sample_names])} if $self->use_db;
+   
+    # Get the list of sample synonyms
+    my %synonyms;
+    for my $sample_name (keys %sample_objs) {
+      my $sample = $sample_objs{$sample_name};
+      for my $syn ($sample->get_all_synonyms) {
+        $synonyms{$syn->[0]} = $sample->name;
+      }
+    }
+
     # some may not be in DB
-    foreach my $sample_name(@$sample_names) {
+    foreach my $vcf_sample_name (@$vcf_sample_names) {
+      # Use the main sample name to retrieve its metadata
+      my $sample_name = $synonyms{ $vcf_sample_name } || $vcf_sample_name;
+      
       # either use the DB one or create one
-      my $sample = $sample_objs{$prefix.$sample_name} ||
+      my $sample = $sample_objs{ $prefix.$sample_name } ||
         Bio::EnsEMBL::Variation::Sample->new_fast({
           name            => $prefix.$sample_name,
           adaptor         => $sample_adpt,
@@ -497,7 +509,7 @@ sub get_all_Samples {
           }),
         });
       # store the raw name to easily match to data returned from other methods
-      $sample->{_raw_name} = $sample_name;
+      $sample->{_raw_name} = $vcf_sample_name;
       push @samples, $sample;
     }
 
