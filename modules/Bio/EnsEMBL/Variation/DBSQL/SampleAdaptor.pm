@@ -354,14 +354,7 @@ sub fetch_all_by_name_list {
   
   my $id_str = (@$list > 1)  ? " IN (". join(',', map {'"'.$_.'"'} @$list).")" : ' = \''.$list->[0].'\'';
   
-  my $result = $self->generic_fetch("s.name" . $id_str);
-
-  if (scalar @$result == 0) {
-    foreach my $name (@$list) {
-      push @$result, @{$self->fetch_by_synonym($name)};
-    }
-  }
-  return $result;
+  return $self->generic_fetch("s.name" . $id_str . " OR ss.name" . $id_str);
 }
 
 =head2 fetch_all_by_Population
