@@ -13,9 +13,9 @@ install: calc_genotypes
 
 calc_genotypes: calc_genotypes.o
 	$(CC) -o calc_genotypes calc_genotypes.c
-calc_genotypes.o:
+calc_genotypes.o: calc_genotypes.c
 	$(CC) -c calc_genotypes.c
-ld_vcf:
+ld_vcf: ld_vcf.c
 	$(CC) -Wall -O3 ld_vcf.c -I $(HTSLIB_DIR)/htslib -o ld_vcf -L$(HTSLIB_DIR) -Wl,-rpath,$(HTSLIB_DIR) -lhts
 
 clean:
