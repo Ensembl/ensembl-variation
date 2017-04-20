@@ -17,10 +17,11 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Exception;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs));
+    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences));
 }
 
 
@@ -47,6 +48,64 @@ $s2 = 'CGTACGT';
 $aligned = align_seqs($s1, $s2);
 is($s1, $aligned->[0], "align_seqs - start del 1");
 is($aligned->[1], '-CGTACGT', "align_seqs - start del 2");
+
+
+
+## trim_sequences
+#################
+
+is_deeply(
+  trim_sequences(qw(A B)),
+  [qw(A B 0 0 0)],
+  'trim_sequences - no change'
+);
+
+is_deeply(
+  trim_sequences(qw(CA CB)),
+  [qw(A B 1 1 1)],
+  'trim_sequences - beginning'
+);
+
+is_deeply(
+  trim_sequences(qw(AC BC)),
+  [qw(A B 0 0 1)],
+  'trim_sequences - end'
+);
+
+is_deeply(
+  trim_sequences(qw(DAC DBC)),
+  [qw(A B 1 1 1)],
+  'trim_sequences - both'
+);
+
+is_deeply(
+  trim_sequences(qw(FOOABAR FOOBBAR)),
+  [qw(A B 3 3 1)],
+  'trim_sequences - both long'
+);
+
+is_deeply(
+  trim_sequences(qw(DAC DBC 10)),
+  [qw(A B 11 11 1)],
+  'trim_sequences - coords'
+);
+
+is_deeply(
+  trim_sequences(qw(ATTT AT 10)),
+  ['TT', '', 11, 12, 1],
+  'trim_sequences - trim from right first'
+);
+
+is_deeply(
+  trim_sequences(qw(ATTT AT 10 13 1)),
+  ['TT', '-', 11, 12, 1],
+  'trim_sequences - empty_to_dash'
+);
+
+throws_ok {trim_sequences(undef, 'A')} qr/Missing reference or alternate sequence/, 'trim_sequences - no ref';
+throws_ok {trim_sequences('A')} qr/Missing reference or alternate sequence/, 'trim_sequences - no alt';
+throws_ok {trim_sequences()} qr/Missing reference or alternate sequence/, 'trim_sequences - no both';
+
 
 
 ## sequence with ambiguity
