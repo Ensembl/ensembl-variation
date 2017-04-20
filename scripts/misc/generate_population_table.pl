@@ -57,14 +57,14 @@ usage() if ($help);
 
 my %exac_pops_list = (
   'ExAC:ALL' => 'All ExAC individuals',
-  'AFR'      => 'African/African American',
-  'AMR'      => 'Latino',
-  'Adj'      => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
-  'EAS'      => 'East Asian',
-  'FIN'      => 'Finnish',
-  'NFE'      => 'Non-Finnish European',
-  'OTH'      => 'Other',
-  'SAS'      => 'South Asian'
+  'ExAC:AFR' => 'African/African American',
+  'ExAC:AMR' => 'Latino',
+  'ExAC:Adj' => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
+  'ExAC:EAS' => 'East Asian',
+  'ExAC:FIN' => 'Finnish',
+  'ExAC:NFE' => 'Non-Finnish European',
+  'ExAC:OTH' => 'Other',
+  'ExAC:SAS' => 'South Asian'
 );
 
 ## Settings ##

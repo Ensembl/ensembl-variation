@@ -27,6 +27,118 @@
       "sample_prefix": "1000GENOMES:phase_3:"
     },
     {
+      "id": "ExAC_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "strict_name_match": 1,
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/homo_sapiens/ExAC.0.3.GRCh37.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "population_prefix": "ExAC:",
+      "population_display_group": {
+        "display_group_name": "Exome Aggregation Consortium (ExAC)",
+        "display_group_priority": 2
+      },
+      "populations": {
+        "9900000": {
+          "name": "ExAC:ALL",
+          "_raw_name": "",
+          "description": "All ExAC individuals"
+        },
+        "9900001": {
+          "name": "AFR",
+          "description": "African/African American"
+        },
+        "9900002": {
+          "name": "AMR",
+          "description": "Latino"
+        },
+        "9900003": {
+          "name": "Adj",
+          "description": "Adjusted (individuals with GQ >= 20 and DP >= 10)"
+        },
+        "9900004": {
+          "name": "EAS",
+          "description": "East Asian"
+        },
+        "9900005": {
+          "name": "FIN",
+          "description": "Finnish"
+        },
+        "9900006": {
+          "name": "NFE",
+          "description": "Non-Finnish European"
+        },
+        "9900007": {
+          "name": "OTH",
+          "description": "Other"
+        },
+        "9900008": {
+          "name": "SAS",
+          "description": "South Asian"
+        }
+      }
+    },
+    {
+      "id": "ExAC_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "strict_name_match": 1,
+      "filename_template": "ftp://ftp.ensembl.org/pub/variation_genotype/homo_sapiens/ExAC.0.3.GRCh38.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "population_prefix": "ExAC:",
+      "population_display_group": {
+        "display_group_name": "Exome Aggregation Consortium (ExAC)",
+        "display_group_priority": 2
+      },
+      "populations": {
+        "9900000": {
+          "name": "ExAC:ALL",
+          "_raw_name": "",
+          "description": "All ExAC individuals"
+        },
+        "9900001": {
+          "name": "AFR",
+          "description": "African/African American"
+        },
+        "9900002": {
+          "name": "AMR",
+          "description": "Latino"
+        },
+        "9900003": {
+          "name": "Adj",
+          "description": "Adjusted (individuals with GQ >= 20 and DP >= 10)"
+        },
+        "9900004": {
+          "name": "EAS",
+          "description": "East Asian"
+        },
+        "9900005": {
+          "name": "FIN",
+          "description": "Finnish"
+        },
+        "9900006": {
+          "name": "NFE",
+          "description": "Non-Finnish European"
+        },
+        "9900007": {
+          "name": "OTH",
+          "description": "Other"
+        },
+        "9900008": {
+          "name": "SAS",
+          "description": "South Asian"
+        }
+      }
+    },
+    {
       "id": "nextgen_cow_irbt",
       "species": "bos_taurus",
       "assembly": "UMD3.1",

@@ -128,8 +128,8 @@ sub variation_feature{
 	 $tablename2 = 'b' .  $tablename2 unless  $tablename2 =~/^b/;
      }
     ## hack for human multi-build support
-    $tablename1 = $tablename1 . "_107" if $self->{'group_label'} eq 'GRCh38.p2';
-    $tablename2 = $tablename2 . "_107" if $self->{'group_label'} eq 'GRCh38.p2';
+    $tablename1 = $tablename1 . "_108" if $self->{'group_label'} =~ /GRCh38/;
+    $tablename2 = $tablename2 . "_108" if $self->{'group_label'} =~ /GRCh38/;
 
     my $stmt;
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
@@ -265,6 +265,7 @@ sub variation_feature{
 	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM sample_genotype_multiple_bp});
 	print Progress::location();
     }
+
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
 
