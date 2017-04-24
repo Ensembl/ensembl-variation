@@ -416,7 +416,7 @@ sub _raw_allele_hashes {
     my @alleles = split /\//, $allele_string;
 
     my $vf_ref;
-    $vf_ref = shift @alleles if $use_feature_ref;
+    $vf_ref = $alleles[0] if $use_feature_ref;
     
     $ref_allele = $alleles[0] unless defined($ref_allele);
     $ref_allele = '-' unless $ref_allele;
