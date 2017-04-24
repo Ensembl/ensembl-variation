@@ -448,7 +448,8 @@ sub _get_ref_allele {
   return $self->SUPER::_get_ref_allele(@_) unless scalar @$cdna_coords <= 2 && $cdna_start && $cdna_end;
 
   my $tr = $self->transcript;
-  my $ref_allele = substr($tr->spliced_seq, $cdna_start - 1, ($cdna_end - $cdna_start) + 1);
+  my $tr_spliced_seq = $tr->{_variation_effect_feature_cache}->{spliced_seq} ||= $tr->spliced_seq;
+  my $ref_allele = substr($tr_spliced_seq, $cdna_start - 1, ($cdna_end - $cdna_start) + 1);
 
   reverse_comp(\$ref_allele) unless $vf->strand eq $tr->strand;
 
