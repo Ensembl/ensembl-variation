@@ -1878,23 +1878,6 @@ CREATE TABLE failed_structural_variation (
   UNIQUE KEY structural_variation_idx (structural_variation_id,failed_description_id)
 );
 
-
-#
-# strain_gtype_poly
-#
-# This table is populated for mouse and rat only for mart to use. Mart build need this table in both staging sever in master_schema_variation database
-#
-
-CREATE TABLE strain_gtype_poly (
-  variation_id int(10) unsigned NOT NULL,
-  sample_name varchar(100) DEFAULT NULL,
-  
-  PRIMARY KEY (variation_id)
-);
-
-
-
-
 /**
 @header  Attributes tables
 @desc    These tables define the variation attributes data.

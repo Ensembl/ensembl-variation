@@ -400,12 +400,6 @@ CREATE TABLE `source` (
   PRIMARY KEY (`source_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=27 DEFAULT CHARSET=latin1;
 
-CREATE TABLE `strain_gtype_poly` (
-  `variation_id` int(10) unsigned NOT NULL,
-  `sample_name` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`variation_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 CREATE TABLE `structural_variation` (
   `structural_variation_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `variation_name` varchar(255) DEFAULT NULL,
