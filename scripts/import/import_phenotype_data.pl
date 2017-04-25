@@ -1107,7 +1107,7 @@ sub parse_animal_qtl {
     }
     
     # add additional fields if found
-    $phenotype->{'study'} = $pubmed_prefix.$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'});
+    $phenotype->{'study'} = $pubmed_prefix.$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'} && $extra->{'PUBMED_ID'} =~ /^\d+$/);
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
     $phenotype->{'f_stat'} = $extra->{'F-stat'} if defined($extra->{'F-stat'});
     $phenotype->{'lod_score'} = $extra->{'LOD-score'} if defined($extra->{'LOD-score'});
