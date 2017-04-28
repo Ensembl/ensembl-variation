@@ -72,12 +72,14 @@ sub new_from_VCFVariationFeature {
   # get and check VF
   my $vf = shift;
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VCFVariationFeature');
+
+  my $meta_source = $vf->vcf_record->{metadata}->{source};
   
   my $v = Bio::EnsEMBL::Variation::Variation->new_fast({
     name => $vf->variation_name,
     source => Bio::EnsEMBL::Variation::Source->new_fast({
-      name => $vf->vcf_record->{metadata}->{source} || $vf->collection->id,
-      description => $vf->vcf_record->{metadata}->{source} || $vf->collection->id,
+      name => $meta_source || $vf->collection->id,
+      description => $meta_source || $vf->collection->description || $vf->collection->id,
     }),
   });
   
@@ -185,13 +187,13 @@ sub get_all_Alleles {
       ) {
         
         # find INFO keys that look like a frequency, e.g AMR_AF        
-        foreach my $af_key(grep {/\_AF$/} keys %$info) {
+        foreach my $af_key(grep {/\_AF$|^AF\_|^AF$/} keys %$info) {
           
           my $total = 0;
           my $i = 0;
           
           my $pop_name = $af_key;
-          $pop_name =~ s/\_AF$//;
+          $pop_name =~ s/\_AF$|^AF\_|^AF$//;
           
           # add an allele object for each frequency found
           foreach my $af(split(',', $info->{$af_key})) {
@@ -218,6 +220,8 @@ sub get_all_Alleles {
             frequency  => $self->_format_frequency(1 - $total),
             population => $self->collection->_create_Population($pop_name),
             variation  => $self,
+            subsnp_handle => undef,
+            frequency_subsnp_handle => undef,
           });
         }
       }
@@ -428,6 +432,10 @@ sub _allele_counts {
 
 sub _format_frequency {
   return sprintf("%.3g", $_[1] || 0);
+}
+
+sub get_all_attributes {
+  return {};
 }
 
 1;
