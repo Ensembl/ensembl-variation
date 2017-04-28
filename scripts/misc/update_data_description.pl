@@ -31,12 +31,13 @@
 
 use strict;
 use warnings;
+use DBI;
 use Getopt::Long;
 
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($version,$input_file,$output_file,$help,$host,$hlist,$user,$port,$phost,$species);
+my ($version,$input_file,$output_file,$help,$host,$hlist,$user,$port,$phost,$ohost,$species);
 
 GetOptions(
   'v=i'         => \$version,
@@ -48,6 +49,7 @@ GetOptions(
   'user=s'      => \$user,
   'port=i'      => \$port,
   'phost=s'     => \$phost,
+  'ohost=s'     => \$ohost,
   'species|s=s' => \$species
 );
 
@@ -55,12 +57,14 @@ usage("input and output files must be specified") unless ($input_file && $output
 usage("Host, port and version must be specified") unless ($host && $port && $version);
 usage("Hosts list, user must be specified") unless ($hlist && $user);
 usage("Previous host must be specified") unless ($phost);
+usage("Host providing the ontology database must be specified") unless ($ohost);
 
 $species ||= 'Homo_sapiens';
 my $tmp_file    = 'data_desc_tmp.html';
 my $tmp_section = 'section_tmp.html';
 `cp $input_file $tmp_file`;
 
+my @ontologies = ('efo', 'hpo');
 
 my $section;
 my ($content_before, $new_content, $content_after);
@@ -79,7 +83,7 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $section = 'classes';
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
+`perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -ohost $ohost -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -115,8 +119,26 @@ $new_content = `cat $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
 
+# Update the ontology versions
+my $sql_onto = qq{SELECT data_version FROM ontology WHERE name=? LIMIT 1};
+my $tmp_file_content = `cat $tmp_file`;
+foreach my $onto (@ontologies) {
+  my $sth = get_connection_and_query("ensembl_ontology_$version", $ohost, $sql_onto, [$onto]);
+  my $o_version = ($sth->fetchrow_array)[0];
+  $o_version =~ s/releases\///;
+  
+  $tmp_file_content =~ s/<span id="$onto\_version">(\d+(-|\.)?)+<\/span>/<span id="$onto\_version">$o_version<\/span>/i;  
+}
+print_into_tmp_file($tmp_file,$tmp_file_content,'','');
+
+
 `cp $tmp_file $output_file`;
 
+
+
+#---------#
+# Methods #
+#---------#
 
 sub get_content {
   my $section = shift;
@@ -158,6 +180,27 @@ sub print_into_tmp_file {
   print TMP  $after;
 }
 
+# Connects and execute a query
+sub get_connection_and_query {
+  my $dbname = shift;
+  my $host  = shift;
+  my $sql    = shift;
+  my $params = shift;
+
+  # DBI connection 
+  my $dsn = "DBI:mysql:$dbname:$host";
+  my $dbh = DBI->connect($dsn, $user, '') or die "Connection failed";
+
+  my $sth = $dbh->prepare($sql);
+  if ($params) {
+    $sth->execute(join(',',@$params));
+  }
+  else {
+    $sth->execute;
+  }
+  return $sth;
+}
+
 sub usage {
   my $msg = shift;
   print qq{
@@ -179,6 +222,7 @@ sub usage {
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
+    -ohost          Host name where the ontology database is stored, with the port, e.g. ensembldb.ensembl.org:1234 (Required)
     -user           MySQL user name (Required)
   } . "\n";
   exit(0);
