@@ -335,6 +335,8 @@ sub _fetch_all_by_VariationFeatures_no_DB {
   my @return;
   
   foreach my $f(@$features) {
+
+    my $f_slice = $f->slice;
     
     foreach my $vf(@$vfs) {
       my $vfo = Bio::EnsEMBL::Variation::TranscriptVariation->new(
@@ -342,7 +344,7 @@ sub _fetch_all_by_VariationFeatures_no_DB {
         -transcript         => $f,
         -adaptor            => $self,
         -no_ref_check      => 1,
-        -no_transfer       => ($vf->slice + 0) == ($f->slice + 0)
+        -no_transfer       => ($vf->slice + 0) == ($f_slice + 0)
       );
       
       $vf->add_TranscriptVariation($vfo);

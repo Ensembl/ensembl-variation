@@ -660,11 +660,41 @@ sub get_all_VariationFeatures_by_Slice {
   }
 
   unless($dont_fetch_vf_overlaps || !$self->use_db) {
-    my @trs = 
-      map {$_->transfer($slice)}
-      @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)};
 
-    $self->adaptor->db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures_SO_terms(\@vfs, \@trs);
+    ## we need to up-front fetch overlapping transcripts, regfeats and motiffeatures
+    ## this prevents the API loading them per-variant later at great cost in speed
+    ## not an easy way to do this generically in a loop, so done type-by-type
+    my $db = $self->adaptor->db;
+
+    # transcripts
+    $db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures_SO_terms(
+      \@vfs,
+      [
+        map {$_->transfer($slice)}
+        @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)}
+      ]
+    );
+
+    # funcgen types
+    foreach my $type(qw(RegulatoryFeature MotifFeature)) {
+      if(
+        my $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+          -species  => $db->species, 
+          -type     => $type,
+        )
+      ) {
+        my $get_adaptor_method = 'get_'.$type.'VariationAdaptor';
+
+        $db->$get_adaptor_method->fetch_all_by_VariationFeatures_SO_terms(
+          \@vfs,
+          [map {$_->transfer($slice)} @{$fg_adaptor->fetch_all_by_Slice($slice)}],
+        )
+      }
+    }
+
+    # this "fills in" the hashes that store e.g. TranscriptVariations
+    # so that the API doesn't go and try to fill them again later
+    $_->_finish_annotation() for @vfs;
   }
   
   return \@vfs;
