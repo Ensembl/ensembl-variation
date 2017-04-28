@@ -105,11 +105,8 @@ my %example_urls = (
   'sv'  => qq{<a href="/Homo_sapiens/StructuralVariation/Explore?sv=####NAME####" target="_blank" title="See a structural variant example"><img src="$internal_link" alt="Link"/></a>}
 );
 
-
 my $vdb = $registry->get_DBAdaptor($species,'variation');
-print STDERR "SPECIES: $species | $vdb\n";
 my $dbVar = $vdb->dbc->db_handle;
-
 
 my ($onto_host,$onto_port) = split(':',$ohost);
 $onto_registy->load_registry_from_db(
@@ -217,7 +214,6 @@ my $html = qq{
     <th>SO term</th>
     <th>SO description</th>
     <th>SO accession</th>
-    <th>Ensembl term</th>
     <th colspan="2">Called for (e.g.)</th>
   </tr>
 };
@@ -265,7 +261,6 @@ sub print_line {
   my $data    = shift;
   my $type_id = shift;
   
-  my $e_class  = $data->{'class'}{display_term};
   my $so_acc   = $data->{'class'}{SO_accession};
   my $som_term = $data->{'class'}{somatic_display_term};
   my $t_name   = $type{$type_id}{'label'};
@@ -298,7 +293,6 @@ sub print_line {
     <td$rowspan style="font-weight:bold">$so_term</td>
     <td$rowspan>$so_desc</td>
     <td$rowspan><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
-    <td>$e_class</td>
     <td$rowspan>
       <ul style="margin:0px;padding-left:1em">
         <li style="margin:0px">$t_name</li>
