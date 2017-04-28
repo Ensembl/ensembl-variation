@@ -96,6 +96,7 @@ my $MAX_OPEN_FILES = 2;
 =head2 new
 
   Arg [-ID]:                     string - identifier for this collection
+  Arg [-DESCRIPTION]:            string - description for this collection
   Arg [-TYPE]:                   string - "local" or "remote"
   Arg [-FILENAME_TEMPLATE]:      string
   Arg [-CHROMOSOMES]:            arrayref of strings
@@ -132,6 +133,7 @@ sub new {
 
   my (
     $id,
+    $description,
     $type,
     $filename_template,
     $chromosomes,
@@ -153,6 +155,7 @@ sub new {
   ) = rearrange(
     [qw(
       ID
+      DESCRIPTION
       TYPE
       FILENAME_TEMPLATE
       CHROMOSOMES
@@ -185,6 +188,7 @@ sub new {
   my %collection = (
     adaptor => $adaptor,
     id => $id,
+    description => $description,
     type => $type,
     sample_prefix => $sample_prefix,
     individual_prefix => $individual_prefix,
@@ -236,8 +240,7 @@ sub adaptor {
   Arg [1]    : string $id (optional)
                The new value to set the ID attribute to
   Example    : my $id = $collection->id()
-  Description: Getter/Setter for the observed count of this allele
-               within its associated population.
+  Description: Getter/Setter for the ID of this collection
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -249,6 +252,26 @@ sub id {
   my $self = shift;
   $self->{id} = shift if @_;
   return $self->{id};
+}
+
+
+=head2 description
+
+  Arg [1]    : string $description (optional)
+               The new value to set the description attribute to
+  Example    : my $description = $collection->description()
+  Description: Getter/Setter for the description of this collection
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub description {
+  my $self = shift;
+  $self->{description} = shift if @_;
+  return $self->{description};
 }
 
 

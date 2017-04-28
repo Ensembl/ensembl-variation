@@ -258,8 +258,9 @@ sub new {
     
     my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
+      -description => $hash->{description},
       -type => $hash->{type},
-      -filename_template => $root_dir.$hash->{filename_template},
+      -filename_template => $hash->{filename_template} =~ /nfs/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
@@ -280,7 +281,7 @@ sub new {
     $self->{collections}->{$collection->id} = $collection;
     push @{$self->{order}}, $collection->id;
   }
-  
+
   return $self;
 }
 
