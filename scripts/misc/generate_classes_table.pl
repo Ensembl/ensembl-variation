@@ -36,23 +36,25 @@ use Bio::EnsEMBL::DBSQL::OntologyTermAdaptor;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
 use Getopt::Long;
 
-my $registry = 'Bio::EnsEMBL::Registry';
+my $registry = my $onto_registy = 'Bio::EnsEMBL::Registry';
 
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($species, $host, $port, $db_version, $output_file, $help);
+my ($species, $host, $port, $ohost, $db_version, $output_file, $help);
 
 GetOptions(
   'v=i'         => \$db_version,
   'o=s'         => \$output_file,
   'host=s'      => \$host,
   'port=i'      => \$port,
+  'ohost=s'     => \$ohost,
   'species|s=s' => \$species,
   'help!'       => \$help
 );
 
 usage ("Species, host, port, version and output_file must be specified") unless ($species && $host && $port && $db_version && $output_file);
+usage("Host providing the ontology database must be specified") unless ($ohost);
 
 # Load the registry from db
 $registry->load_registry_from_db(
@@ -105,9 +107,19 @@ my %example_urls = (
 
 
 my $vdb = $registry->get_DBAdaptor($species,'variation');
+print STDERR "SPECIES: $species | $vdb\n";
 my $dbVar = $vdb->dbc->db_handle;
 
-my $odb = $registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
+
+my ($onto_host,$onto_port) = split(':',$ohost);
+$onto_registy->load_registry_from_db(
+    -host => $onto_host,
+    -port => $onto_port,
+    -user => 'ensro',
+    -db_version => $db_version
+);
+
+my $odb = $onto_registy->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
 my %var_class;
 my %sv_class;
@@ -412,6 +424,7 @@ sub usage {
     -o              An HTML output file name (Required)
     -host           Host of the human database (Required)
     -port           Human database port (Required)
+    -ohost          Host name where the ontology database is stored, with the port, e.g. ensembldb.ensembl.org:1234 (Required)
     -species        Species name (Required)
   } . "\n";
   exit(0);
