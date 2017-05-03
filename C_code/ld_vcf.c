@@ -764,7 +764,7 @@ int main(int argc, char *argv[]) {
   if (!variant) {
     // process any remaining buffer
     process_window(&locus_list, 0, fh, position);
-  } else if (variant_index >= 0) { // Variable initialised to -1, is set correctly, set to int >= 0
+  } else if (variant_index >= 0) { // Variable initialised to -1, if set correctly, set to int >= 0
     // Compute LD around variant of interest
     calculate_ld(&locus_list, fh, windowsize, variant_index);
   }
