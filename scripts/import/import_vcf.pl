@@ -1922,8 +1922,11 @@ sub variation {
 			name             => $var_id,
 			_source_id       => $config->{source_id},
 			is_somatic       => $config->{somatic},
-			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA})
 		});
+
+    if (defined $data->{info}->{AA}) {
+      $var->{ancestral_allele} = $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA});
+    }
 		
 		# add in some hacky stuff so flanking sequence gets written
 		$var->{seq_region_id}         = $config->{seq_region_ids}->{$vf->{chr}};
