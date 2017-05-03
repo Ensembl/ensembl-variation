@@ -197,6 +197,7 @@ sub init_data {
         'Alu_insertion' => 'ALU_INS',
         'short_tandem_repeat_variation' => 'short_tandem_repeat_variation',
         'loss_of_heterozygosity' => 'loss_of_heterozygosity',
+        'substitution' => 'substitution',
     };
     my @vep_consequence_info =  qw/Allele Consequence Feature_type Feature/;
     if ($config->{protein_coding_details}) {
@@ -316,10 +317,17 @@ sub get_gvf_line {
     $gvf_line->{start} = $start;
     $gvf_line->{end} = $end;
     $gvf_line->{strand} = $strand;
-    my %attributes = map { split('=', $_) } split(';', $attrib);
-    foreach my $key (keys %attributes) {
-        $gvf_line->{$key} = $attributes{$key};
+
+    foreach my $pair (split(';', $attrib)) {
+      my ($key, $value) = split('=', $pair);
+      if ($key && $value) {
+        $gvf_line->{$key} = $value;
+      }
     }
+#    my %attributes = map { split('=', $_) } split(';', $attrib);
+#    foreach my $key (keys %attributes) {
+#        $gvf_line->{$key} = $attributes{$key};
+#    }
     return $gvf_line;
 }
 
@@ -742,6 +750,7 @@ sub print_header {
             '##ALT=<ID=ALU_INS,Description="Alu_insertion">',
             '##ALT=<ID=short_tandem_repeat_variation,Description="short_tandem_repeat_variation">',
             '##ALT=<ID=loss_of_heterozygosity,Description="loss_of_heterozygosity">',
+            '##ALT=<ID=substitution,Description="substitution">',
         )), "\n";
     }
 
