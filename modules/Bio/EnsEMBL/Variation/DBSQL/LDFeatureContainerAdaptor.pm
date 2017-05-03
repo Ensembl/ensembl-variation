@@ -217,18 +217,13 @@ sub fetch_by_Slice {
     $in_str = $self->_get_LD_populations($siblings);
   }
 
-  my $ldFeatureContainer;
-
-  if ($in_str eq '') {
-    #there is no population, not a human specie or not passed as an argument, return the empy container
-    $ldFeatureContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+  my $ldFeatureContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
       '-adaptor' => $self,
       '-ldContainer'=> {},
       '-name' => $slice_objects[0]->name,
       '-variationFeatures' => {}
     );
-  }
-
+  
   $ldFeatureContainer = $self->_merge_containers($vcf_container, $ldFeatureContainer) if $vcf_container;
 
   # cache
