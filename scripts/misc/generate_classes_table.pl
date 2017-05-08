@@ -285,28 +285,20 @@ sub print_line {
   }
   my $border = ($class_col eq '') ? '' : ';border-top:1px solid #FFF';
   
-  my $rowspan = ($so_term eq 'probe') ? '' : ' rowspan="2"';
-  
   $html .= qq{
   <tr$bg>
-    <td$rowspan style="padding:0px;margin:0px;$class_col$border"></td>
-    <td$rowspan style="font-weight:bold">$so_term</td>
-    <td$rowspan>$so_desc</td>
-    <td$rowspan><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
-    <td$rowspan>
+    <td style="padding:0px;margin:0px;$class_col$border"></td>
+    <td style="font-weight:bold">$so_term</td>
+    <td>$so_desc</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
+    <td>
       <ul style="margin:0px;padding-left:1em">
         <li style="margin:0px">$t_name</li>
       </ul>
     </td>
-    <td$rowspan style="padding-left:0px;width:16px">$examples</td>
+    <td style="padding-left:0px;width:16px">$examples</td>
   </tr>};
   
-  if ($so_term ne 'probe') {
-    $html .= qq{
-  <tr$bg>
-    <td>$som_term</td>
-  </tr>\n};
-  }
   
   if ($bg eq '') { $bg = ' class="bg2"'; }  
   else { $bg = ''; }
