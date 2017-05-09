@@ -140,7 +140,7 @@ ok($svs->dbID() eq $dbID, 'dbID');
 throws_ok { $svs->structural_variation('structural_variation'); } qr/SupportingStructuralVariation argument expected/, 'Throw on wrong argument structural_variation';
 throws_ok { $svs->study('study'); } qr/Study argument expected/, 'Throw on wrong argument study';
 
-my $individual = $svs->individual();
+my $individual = $svs->strain();
 ok($individual->name eq 'NA18635', 'get individual');
 
 throws_ok { $svs->strain('strain'); } qr/Individual argument expected/, 'Throw on wrong argument strain';
