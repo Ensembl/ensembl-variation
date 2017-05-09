@@ -231,7 +231,7 @@ sub study {
 
 sub individual {
   my $self = shift;
-  deprecate("Please use Bio::EnsEMBL::Variation::StructuralVariationSample::sample.");   
+  deprecate("Please use Bio::EnsEMBL::Variation::StructuralVariationSample::strain.");
   return $self->strain(@_);
 }
 
