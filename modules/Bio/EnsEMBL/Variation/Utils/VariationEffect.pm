@@ -53,8 +53,6 @@ package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Utils::Sequence;
-
 use base qw(Exporter);
 
 our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
