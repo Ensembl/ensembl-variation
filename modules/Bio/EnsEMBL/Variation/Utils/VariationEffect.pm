@@ -53,6 +53,8 @@ package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::Utils::Sequence;
+
 use base qw(Exporter);
 
 our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
@@ -900,23 +902,13 @@ sub inframe_deletion {
         
         # simple string match
         return 1 if ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/);
-        
-        # try a more complex string match; matching part may be in the middle
-        # first trim matching bases from start of string
-        while($ref_codon && $alt_codon && substr($ref_codon, 0, 1) eq substr($alt_codon, 0, 1)) {
-          $ref_codon = substr($ref_codon, 1);
-          $alt_codon = substr($alt_codon, 1);
-        }
-        
-        # now trim ends
-        while($ref_codon && $alt_codon && substr($ref_codon, -1, 1) eq substr($alt_codon, -1, 1)) {
-          $ref_codon = substr($ref_codon, 0, length($ref_codon) - 1);
-          $alt_codon = substr($alt_codon, 0, length($alt_codon) - 1);
-        }
+
+        # check for internal match
+        ($ref_codon, $alt_codon) = @{Bio::EnsEMBL::Variation::Utils::Sequence::trim_sequences($ref_codon, $alt_codon)};
         
         # if nothing remains of $alt_codon,
         # then it fully matched a part in the middle of $ref_codon
-        return length($alt_codon) == 0;
+        return length($alt_codon) == 0 && length($ref_codon) % 3 == 0;
     }
     
     # structural variant
@@ -1091,7 +1083,18 @@ sub coding_unknown {
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
-        return (within_cds(@_) and ((not $bvfoa->peptide) or (not _get_peptide_alleles(@_)) or ($bvfoa->peptide =~ /X/)) and (not (frameshift(@_) or inframe_deletion(@_) or (protein_altering_variant(@_)) )) );
+        return (
+            within_cds(@_) and (
+                (not $bvfoa->peptide) or
+                (not _get_peptide_alleles(@_)) or
+                ($bvfoa->peptide =~ /X/) or
+                ((_get_peptide_alleles(@_))[0] =~ /X/)
+            ) and (
+                not (
+                    frameshift(@_) or inframe_deletion(@_) or protein_altering_variant(@_)
+                )
+            )
+        );
     }
     
     # structural variant
