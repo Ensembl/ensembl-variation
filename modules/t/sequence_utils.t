@@ -91,14 +91,20 @@ is_deeply(
 );
 
 is_deeply(
-  trim_sequences(qw(ATTT AT 10)),
+  trim_sequences(qw(ATTT AT 10 13 0 0)),
+  ['TT', '', 12, 13, 1],
+  'trim_sequences - trim from left first'
+);
+
+is_deeply(
+  trim_sequences(qw(ATTT AT 10 13 0 1)),
   ['TT', '', 11, 12, 1],
   'trim_sequences - trim from right first'
 );
 
 is_deeply(
   trim_sequences(qw(ATTT AT 10 13 1)),
-  ['TT', '-', 11, 12, 1],
+  ['TT', '-', 12, 13, 1],
   'trim_sequences - empty_to_dash'
 );
 
