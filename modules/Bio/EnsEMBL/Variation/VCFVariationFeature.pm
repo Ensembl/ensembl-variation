@@ -89,6 +89,8 @@ sub new_from_VariationFeature {
   
   $vf->{slice} = $slice->seq_region_Slice;
   my $transferred = $vf->transfer($slice);
+
+  $transferred->{variation_name} ||= $transferred->location_string.'_'.$transferred->allele_string;
   
   return $transferred;
 }
