@@ -502,8 +502,16 @@ sub report_summary{
                                          from publication p1, publication p2
                                          where p1.pmcid = p2.pmcid
                                          and p1.publication_id < p2.publication_id
-                                         and p1.pmid is null
                                        ]);
+
+   my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
+                                         from publication p1, publication p2
+                                         where p1.doi = p2.doi
+                                         and p1.publication_id < p2.publication_id
+                                       ]);
+
+
+
 
     my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
                                               where title is null
@@ -514,6 +522,9 @@ sub report_summary{
 
     $dup2_ext_sth->execute()||die;
     my $dup2 =  $dup2_ext_sth->fetchall_arrayref();
+
+    $dup3_ext_sth->execute()||die;
+    my $dup3 =  $dup3_ext_sth->fetchall_arrayref();
 
     $fail_ext_sth->execute() ||die;
     my $fail =  $fail_ext_sth->fetchall_arrayref();
@@ -527,6 +538,10 @@ sub report_summary{
         foreach my $k (@{$dup2}){
             print $report "$k->[0]\t$k->[1]\t$k->[2]\n";
         }   
+        foreach my $m (@{$dup3}){
+            print $report "$m->[0]\t$m->[1]\t$m->[2]\n";
+        }
+
     }
 
     print $report "$fail->[0]->[0] publications without a title - to be deleted\n";
