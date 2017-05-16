@@ -361,6 +361,7 @@ sub fetch_by_VariationFeatures {
   # cache positions
   foreach my $vf (@$vfs) {
     $self->{_pairwise}->{$vf->seq_region_start} = 1;
+    $self->{_pairwise_vf_name}->{$vf->variation_name} = 1;
   }  
  
   # fetch by slice using expanded feature slice
@@ -590,6 +591,10 @@ sub _fetch_by_Slice_VCF {
       if ($self->{_vf_name}) {
         $cmd .= " -v " . $self->{_vf_name};
       }
+
+      print "$cmd\n";
+
+
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
 
@@ -627,8 +632,8 @@ sub _fetch_by_Slice_VCF {
         # skip entries for pairwise computation that don't match input variation feature loactions
         if (defined $self->{_pairwise}) {
           next unless ($self->{_pairwise}->{$ld_region_start} && $self->{_pairwise}->{$ld_region_end});
+          next unless ($self->{_pairwise_vf_name}->{$id1} && $self->{_pairwise_vf_name}->{$id2});
         } 
-
         $ld_values{'d_prime'} = $d_prime;
         $ld_values{'r2'} = $r2;
         $ld_values{'sample_count'} = $sample_count;
@@ -664,6 +669,7 @@ sub _fetch_by_Slice_VCF {
 
   $container->{pos2name} = \%pos2name if $container;
   delete $self->{_pairwise};
+  delete $self->{_pairwise_vf_name};
 
   return $container;
 }
