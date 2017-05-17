@@ -38,7 +38,7 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 use constant GLOBAL_VF_COUNT => 5_000_000; # 5_000_000 1_000
 use constant MAX_VF_LOAD => 2_000_000; # 2_000_000 100
 use constant VF_PER_SLICE => 2_000_000; # 2_000_000 10_000
-my $max_length = 5e7;
+my $max_length = 1e7;
 my $overlap = 0;
 
 sub fetch_input {
@@ -50,6 +50,11 @@ sub fetch_input {
   my $release   = $self->param('release');
   my $output_dir = $self->param('pipeline_dir');
   my $job_type  = $self->param('job_type'); # parse or dump
+  my $debug = $self->param('debug');
+  my $fh;
+  if ($debug) {
+    $fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
+  }
 
   my $script_args = {};
   my $input; 
@@ -109,9 +114,25 @@ sub fetch_input {
   }
   if ($job_type eq 'dump' || $job_type eq 'dump_population') {  
     my $global_vf_count = $self->get_global_vf_count();
+    if ($debug) {
+      print $fh "Global VF count $global_vf_count\n";
+    }
     if ($global_vf_count > GLOBAL_VF_COUNT) {
       my $covered_seq_regions = $self->get_covered_seq_regions();
+      if ($debug) {
+        foreach my $key (keys %$covered_seq_regions) {
+          print $fh $key, ' ', $covered_seq_regions->{$key}, "\n";
+        }   
+      }
       my $vf_distributions = $self->get_vf_distributions($covered_seq_regions);
+      if ($debug) {
+        foreach my $distribution (@$vf_distributions) {
+          foreach my $key (keys %$distribution) {
+            print $fh $key, ' ', $distribution->{$key}, "\n";
+          }
+          print $fh "\n";
+        }
+      }
       $input = $self->get_input_gvf_dumps($script_args, $vf_distributions);
     } else {
       $input = $self->get_input_gvf_dumps($script_args);
@@ -121,7 +142,10 @@ sub fetch_input {
   } else {
     die "Job type must be parse or dump. $job_type is not recognised.";
   }
-
+  if ($debug) {
+    $fh->close;
+    die "Finished writing report";
+  }
   $self->param('input_for_submit_job', $input); 
 }
 
