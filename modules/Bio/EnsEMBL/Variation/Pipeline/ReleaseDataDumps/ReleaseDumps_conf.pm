@@ -108,6 +108,7 @@ sub pipeline_wide_parameters {
         vcf_readme       => $self->o('vcf_readme'),
         pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),        
         config_file => '/lustre/scratch110/ensembl/at7/release_83/dumps/data_dumps_config.json',
+        debug => 0,
     };
 }
 
