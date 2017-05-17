@@ -592,9 +592,6 @@ sub _fetch_by_Slice_VCF {
         $cmd .= " -v " . $self->{_vf_name};
       }
 
-      print "$cmd\n";
-
-
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
 
