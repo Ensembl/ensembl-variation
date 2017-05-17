@@ -145,8 +145,10 @@ sub lc_dir {
     my $lc_species = lc $species;
     foreach my $file_type (qw/gvf vcf/) {
       my $lc_dir = "$data_dir/$file_type/$lc_species/"; 
-      make_path($lc_dir) unless (-d $lc_dir);
-      system("mv $data_dir/$file_type/$species/* $lc_dir");
+      if (!-d $lc_dir) {      
+        make_path($lc_dir) unless (-d $lc_dir);
+        system("mv $data_dir/$file_type/$species/* $lc_dir");
+      }
     }
   }
 }
@@ -156,7 +158,12 @@ sub rm_uc_dir {
   foreach my $species (keys %$all_species) {
     foreach my $file_type (qw/gvf vcf/) {
       my $dir = "$data_dir/$file_type/$species/";
-      system("rm -r $dir");
+      opendir my $dh, $dir or die $!; 
+      my $count = grep { ! /^\.{1,2}/ } readdir $dh; # strips out . and 
+      closedir $dh;
+      if ($count == 0)  {
+        system("rm -r $dir");
+      }
     }
   }
 }
