@@ -143,7 +143,8 @@ sub configure {
 		'add_tables=s',
 		
 		'only_existing',
-    'no_merge',
+                'no_merge',
+                'no_merge_source=s@',
 		'skip_n',
 		'mart_genotypes',
 		
@@ -2019,13 +2020,23 @@ sub variation_feature {
 	my $added_synonym = 0;
 	
 	# check existing VFs
-	foreach my $existing_vf (sort {
+        VF_LOOP: foreach my $existing_vf (sort {
 		(count_common_alleles($vf->allele_string, $b->allele_string) <=> count_common_alleles($vf->allele_string, $a->allele_string)) ||
 		($a->map_weight <=> $b->map_weight) ||
 		($b->source_name eq 'dbSNP') <=> ($a->source_name eq 'dbSNP') ||
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
-		
+                
+                ##Don't merge into no_merge_sources (e.g. internal variation sources)
+                if ($config->{no_merge_source}){
+                    my @no_merge_sources = @{$config->{no_merge_source}};
+                    for my $no_merge_source (@no_merge_sources){
+                        if ($existing_vf->source_name eq $no_merge_source){
+                            next VF_LOOP;
+                        }
+                    }
+                }
+                                    
 		my @existing_alleles = split /\//, $existing_vf->allele_string;
     my @new_alleles_copy = @new_alleles;
     
