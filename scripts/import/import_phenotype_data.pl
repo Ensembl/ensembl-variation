@@ -310,6 +310,7 @@ my @ids;
 
 # Parse the input files into a hash
 if ($source =~ m/uniprot/i) {
+  $skip_phenotypes = 1;
   $result = parse_uniprot($infile);
   $source_name = 'Uniprot';
 }
@@ -445,7 +446,7 @@ $source_status      = $SOURCES{$source_name}->{status} if (defined($SOURCES{$sou
 my %synonym;
 my @phenotypes;
 if (exists($result->{'synonyms'})) {
-    %synonym = %{$result->{'synonyms'}};
+  %synonym = %{$result->{'synonyms'}};
   # To get all the ids of the source (Uniprot)
   @ids = keys(%synonym);
 }
@@ -518,9 +519,16 @@ unless ($skip_phenotypes) {
 
 # Add the variation sets if required
 unless ($skip_sets) {
-  print STDOUT "Adding variation sets\n" if ($verbose);
-  add_set($set,$source_id,$db_adaptor);
+  if (%synonym && !$skip_synonyms && $skip_phenotypes) {
+    print STDOUT "Adding variation sets for synonyms\n" if ($verbose);
+    add_set($set,$source_id,$db_adaptor,'synonym');
+  }
+  elsif (@phenotypes && !$skip_phenotypes) {
+    print STDOUT "Adding variation sets for phenotypes\n" if ($verbose);
+    add_set($set,$source_id,$db_adaptor,'phenotype');
+  }
 }
+
 
 
 # Loop over the remaining ids (the ones that could not be find in the db) and print them out
@@ -575,45 +583,46 @@ sub parse_uniprot {
       if ($rs_id ne '-') {
         push(@{$synonym{$rs_id}},$uniprot_id);
       }
-      else {
-        $rs_id = $uniprot_id;
-      }
+      #else {
+      #  $rs_id = $uniprot_id;
+      #}
       
-      $phenotype ||= '-';
+      #$phenotype ||= '-';
       
-      # Try to further split the phenotype into a short name, description and possibly MIM id
-      if ($phenotype ne '-') {
-        my $description;
-        my $name;
-        my $mim_id;
-        
-        ($description,$mim_id) = $phenotype =~ m/^([^\[]+)(?:\[(MIM\:.+?)\])?$/;
-        ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
-        
-        $mim_id &&= join(",MIM:",split(",",$mim_id));
-        $mim_id =~ s/\s//g if (defined($mim_id));
-
-        push(
-          @phenotypes,
-          {
-            "id"              => $rs_id,
-            "associated_gene" => $gene,
-            "description"     => $description,
-            "name"            => $name,
-            "variation_names" => $rs_id,
-            "study"           => $mim_id,
-            "study_type"      => 'GWAS'
-          }
-        );
-      }
+      ## Try to further split the phenotype into a short name, description and possibly MIM id
+      #if ($phenotype ne '-') {
+      #  my $description;
+      #  my $name;
+      #  my $mim_id;
+      #  
+      #  ($description,$mim_id) = $phenotype =~ m/^([^\[]+)(?:\[(MIM\:.+?)\])?$/;
+      #  ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
+      #  
+      #  $mim_id &&= join(",MIM:",split(",",$mim_id));
+      #  $mim_id =~ s/\s//g if (defined($mim_id));
+      #
+      #  push(
+      #    @phenotypes,
+      #    {
+      #      "id"              => $rs_id,
+      #      "associated_gene" => $gene,
+      #      "description"     => $description,
+      #      "name"            => $name,
+      #      "variation_names" => $rs_id,
+      #      "study"           => $mim_id,
+      #      "study_type"      => 'GWAS'
+      #    }
+      #  );
+      #}
     }
   }
   close(IN);
   
   print STDOUT "Parsed " . scalar(keys(%synonym)) . " rs-ids with Uniprot synonyms\n" if ($verbose);
-  print STDOUT scalar(@phenotypes) . " phenotype associations were found linked to rs-ids\n" if ($verbose);
+  #print STDOUT scalar(@phenotypes) . " phenotype associations were found linked to rs-ids\n" if ($verbose);
   
-  my %result = ('synonyms' => \%synonym, 'phenotypes' => \@phenotypes);
+  #my %result = ('synonyms' => \%synonym, 'phenotypes' => \@phenotypes);
+  my %result = ('synonyms' => \%synonym);
   return \%result;
 }
 
@@ -2796,9 +2805,11 @@ sub add_set {
   my $set = shift;
   my $source_id = shift;
   my $db_adaptor = shift;
+  my $set_from = shift;
   
   return if (!defined($set));
-  
+  return if (!defined($set_from) && ($set_from ne 'phenotype' || $set_from ne 'synonym')); 
+   
   my $variation_set_id;
   
   # Get variation_set_id
@@ -2816,14 +2827,26 @@ sub add_set {
   return if (!defined($variation_set_id));
   
   # Insert into variation_set_variation
-  my $insert_set_stmt = qq{ 
-  INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
-  SELECT distinct v.variation_id, ? 
-  FROM phenotype_feature pf, variation v WHERE 
-    v.name=pf.object_id AND
-    pf.type='Variation' AND
-    pf.source_id=?
+  my $insert_set_stmt = qq{
+    INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
+    SELECT distinct v.variation_id, ? 
   };
+  if ($set_from eq 'phenotype') {
+    $insert_set_stmt .= qq{ 
+      FROM phenotype_feature pf, variation v WHERE 
+        v.name=pf.object_id AND
+        pf.type='Variation' AND
+        pf.source_id=?
+    };
+  }
+  elsif ($set_from eq 'synonym') {
+    $insert_set_stmt .= qq{ 
+      FROM variation_synonym vs, variation v WHERE 
+        v.variation_id=vs.variation_id AND
+        vs.source_id=?
+    };
+  }
+  
   my $sth2 = $db_adaptor->dbc->prepare($insert_set_stmt);
   $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
