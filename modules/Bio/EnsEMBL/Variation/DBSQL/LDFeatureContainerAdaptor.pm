@@ -601,5 +601,26 @@ sub _get_LD_populations {
   return '' if (!defined $pops[0]);
 }
 
+sub get_populations_hash_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $pop_list = $self->_get_LD_populations();
+
+  my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
+
+  my %results;
+
+  my $sth = $self->prepare(qq{SELECT population_id, name FROM population WHERE population_id $pop_list;});
+  $sth->execute;
+
+  %results = map {$_->[0] => $_->[1]} @{$sth->fetchall_arrayref()};
+  return \%results;
+
+}
 
 1;
