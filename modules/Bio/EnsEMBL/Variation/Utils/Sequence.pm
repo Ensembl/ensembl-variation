@@ -569,7 +569,7 @@ sub hgvs_variant_notation {
 
       $notation{'start'} = ($display_end - $alt_length + 1);
       $notation{'type'} = 'dup';
-      $notation{'ref'} = $prev_str;
+
       # Return the notation
       return \%notation;
     }
@@ -640,7 +640,7 @@ sub format_hgvs_string{
     ### inversion of reference bases => list ref not alt
     ### deletion  of reference bases => list ref lost
     ### duplication  of reference bases (eg ref = GAAA alt = GAAAGAAA) => list duplicated ref (dupGAAA)
-    $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};      
+    $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'};
   }
 
   elsif( $hgvs_notation->{'type'} eq '>'){
@@ -649,7 +649,7 @@ sub format_hgvs_string{
   }
 
   elsif( $hgvs_notation->{'type'} eq 'delins'){
-    $hgvs_notation->{'hgvs'} .= $coordinates . 'del' . $hgvs_notation->{'ref'} . 'ins' . $hgvs_notation->{'alt'};
+    $hgvs_notation->{'hgvs'} .= $coordinates . 'delins' . $hgvs_notation->{'alt'};
   }   
 
   elsif($hgvs_notation->{'type'} eq 'ins'){
@@ -703,19 +703,22 @@ sub get_hgvs_alleles{
     ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;          
   }
     
-  # A deletion, the reference allele is optional
+  # A deletion, the alleles should be defined by position alone
+  # Previous HGVS versions listed the deleted sequence - captured here
   elsif ($description =~ m/del/i) {
     ($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
     $alt_allele = '-';
   }
     
-  # A duplication, the reference allele is optional
+  # A duplication, the alleles should be defined by position alone
+  # Previous HGVS versions listed the duplicated sequence - captured here
   elsif ($description =~ m/dup/i) {
     $ref_allele ="-";
     ($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
   }
     
-  # An inversion, the reference allele is optional
+  # An inversion, the the alleles should be defined by position alone
+  # Previous HGVS versions listed the duplicated sequence - captured here
   elsif ($description =~ m/inv/i) {
     ($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
     $alt_allele = $ref_allele;
