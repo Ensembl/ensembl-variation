@@ -47,447 +47,617 @@ use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
 
 my $DEBUG = 0;
 
+## 3 pairs of hashes of equivalent names (some correct, some not) and output annotation
+## Annotation format:  key =>  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description] 
 
-##  DATA:  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description, shifted_genomic_allele] 
-
-my @test_input = (    
-          ["NC_000002.11:g.46746465G>A",    
-           "A", 
+my %test_output = (
+     1 => ["NC_000002.11:g.46746465G>A",
+           "A",
            "ENST00000522587.1:c.-101-6514C>T", 
            "T",
-           "",           
+           "", 
            "substitution, coding intron - downstream"
-          ],           
+          ], 
 
-          ["NC_000002.11:g.46739156C>T",    
+     2 => ["NC_000002.11:g.46739156C>T", 
            "T",
-           "ENST00000306448.4:c.*14G>A",       
+           "ENST00000306448.4:c.*14G>A",
            "A",
-           "",           
+           "",
            "substitution 3' UTR"
           ],
- 
-          ["NC_000002.11:g.46746256G>A",    
-           "A", 
-           "ENST00000306448.4:c.-274C>T",      
-           "T",
-           "",           
-           "substitution, 5' UTR" 
-          ],  
 
-          ["NC_000002.11:g.46746507delCinsACAA",
-           "ACAA",  
-           "ENST00000524249.1:n.775+16445delGinsTTGT",   
+     3 => ["NC_000002.11:g.46746256G>A", 
+           "A",
+           "ENST00000306448.4:c.-274C>T", 
+           "T",
+           "",
+           "substitution, 5' UTR" 
+          ], 
+
+     4 => ["NC_000002.11:g.46746507delinsACAA",
+           "ACAA", 
+           "ENST00000524249.1:n.775+16445delinsTTGT", 
            "TTGT",
            "", 
            "delins, non-coding "
-          ],  
-          ["NC_000002.11:g.46739212C>G",    
-           "G", 
-           "ENST00000522587.1:c.639G>C",  
-           "C", 
-           "ENSP00000428141.1:p.Met213Ile",      
+          ], 
+     5 => ["NC_000002.11:g.46739212C>G", 
+           "G",
+           "ENST00000522587.1:c.639G>C", 
+           "C",
+           "ENSP00000428141.1:p.Met213Ile", 
            "substitution, non_syn"
           ],
-          ["NC_000002.11:g.46739488G>A",    
-           "A", 
-           "ENST00000306448.4:c.363C>T",  
+     6 => ["NC_000002.11:g.46739488G>A", 
+           "A",
+           "ENST00000306448.4:c.363C>T", 
            "T",
-           "ENSP00000304891.4:p.Leu121=", 
-           #"ENST00000306448.4:c.363C>T(p.=)",    
+           "ENSP00000304891.4:p.Leu121=",
            "substitution, synonymous"
           ],
-          ["NC_000002.11:g.46731836A>G",    
-           "G",  
-           "",                          
+     7 => ["NC_000002.11:g.46731836A>G",   
+           "G",
+           "",                         
            "",
            "",
            "substitution, downstream" 
-          ],          
-          ["NC_000002.11:g.46747460C>G",    
-           "G", 
+          ], 
+     8 => ["NC_000002.11:g.46747460C>G", 
+           "G",
            "",
            "",
            "",
            "substitution, upstream" 
           ], 
-          ["NC_000002.11:g.46732522G>A",    
-           "A", 
-           "ENST00000524249.1:n.776-14552C>T", 
+     9 => ["NC_000002.11:g.46732522G>A", 
+           "A",
+           "ENST00000524249.1:n.776-14552C>T",
            "T",
-           "",           
+           "",
            "substitution, noncoding intron"
           ],
-          ["NC_000002.11:g.98275102C>T",
-           "T",
-           "ENST00000289228.5:c.445G>A",
-           "A",
-           "ENSP00000289228.5:p.Ala149Thr",
-           "parseable protein change [-1]" 
-          ],   
-          ["NC_000003.11:g.10191482_10191483insTTT",
-           "TTT",
-           "ENST00000345392.2:c.352_353insTTT",
-           "TTT",
-           "ENSP00000344757.2:p.Lys118delinsIleTer",
-           "del ins, stop_gained",
-          ],
- 
-          ["NC_000004.11:g.41993003G>A",    
-           "A", 
-           "ENST00000264451.6:c.109+226G>A",   
-           "A",
-           "",           
-           "substitution, coding intron upstream"
-          ],
-
-          ["NC_000004.11:g.130032945A>G",
-           "G",
-           "ENST00000281146.4:c.599A>G",
-           "G",
-           "ENSP00000281146.4:p.Ter200TrpextTer2",
-           "substitution, stop lost"
-          ], 
-          ["NC_000004.11:g.130032948A>C",
-           "C",
-           "ENST00000281146.4:c.*2A>C",
-           "C",
-           "",
-           "substitution, after stop "
+     10 => ["NC_000002.11:g.98275102C>T",
+            "T",
+            "ENST00000289228.5:c.445G>A",
+            "A",
+            "ENSP00000289228.5:p.Ala149Thr",
+            "parseable protein change [-1]" 
            ], 
-          ["NC_000005.9:g.96232565_96232566insCC",
-           "CC",
-           "ENST00000508077.1:c.488_489insCC",
-           "CC",
-           "",
-           "insertion, partial codon"
-          ],
-          ["NC_000006.11:g.6649978_6649980dupAGG",
-           "AGG",
-           "ENST00000230568.3:c.405+68_405+70dupAGG",
-           "AGG",
-           "",
-           "duplication, intronic - long"
-          ],
-          ["NC_000006.11:g.31997361delC",
-           "-",
-           "ENST00000435363.2:c.3695delC",           
-           "-",
-           "ENSP00000415941.2:p.Ser1232Ter",
-           "deletion, stop gained"
-          ],    
-          ["NC_000007.13:g.143557504delT",  
-           "-", 
-           "ENST00000355951.2:c.1964delA", 
-           "-",
-           "ENSP00000348220.2:p.Gln655ArgfsTer17",  
-           "deletion, frameshift"
-          ],                     
-          ["NC_000007.13:g.7680048A>G",
-           "G",
-           "ENST00000223129.4:c.2T>C",
-           "C",
-           "ENSP00000223129.4:p.Met1?",
-           "substitution,  start loss"
-          ],
-
-          ["NC_000007.13:g.143175210G>A",
-           "A",
-           "ENST00000408916.1:c.245G>A",
-           "A",
-           "ENSP00000386201.1:p.Arg82Gln",
-           "parseable protein change"
-          ],  
-
-          ["NC_000012.11:g.102056227G>A",
-           "A",
-           "ENST00000360610.2:c.2049G>A",
-           "A",
-           #"ENST00000360610.2:c.2049G>A(p.=)",
-           "ENSP00000353822.2:p.Lys683=",
-           "substitution synonymous"
-          ],          
-       
-          ["NC_000013.10:g.51519667dupA",   #rs17857128
-           "A",
-           "ENST00000336617.2:c.615dupA",
-           "A",
-           "ENSP00000337623.2:p.Glu206ArgfsTer13",
-           "duplication, frameshift"
-          ],
-               
-          ["NC_000017.10:g.7123233_7123234insCAGGACGTGGGCGTG",
-           "CAGGACGTGGGCGTG",
-           "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
-           "CAGGACGTGGGCGTG",  
-           "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaTer",
-           "insertion,  stop gained"
+     11 => ["NC_000003.11:g.10191482_10191483insTTT",
+            "TTT",
+            "ENST00000345392.2:c.352_353insTTT",
+            "TTT",
+            "ENSP00000344757.2:p.Lys118delinsIleTer",
+            "del ins, stop_gained",
            ],
-           ["NC_000017.10:g.48452979_48452980insAGC",                  ##rs67225428
-           "AGC",
-           "ENST00000393271.1:c.410_411insAGC",
-           "AGC",
+ 
+     12 => ["NC_000004.11:g.41993003G>A", 
+            "A", 
+            "ENST00000264451.6:c.109+226G>A",   
+            "A",
+            "", 
+            "substitution, coding intron upstream"
+           ],
+
+     13 => ["NC_000004.11:g.130032945A>G",
+            "G",
+            "ENST00000281146.4:c.599A>G",
+            "G",
+            "ENSP00000281146.4:p.Ter200TrpextTer2",
+            "substitution, stop lost"
+           ], 
+     14 => ["NC_000004.11:g.130032948A>C",
+            "C",
+            "ENST00000281146.4:c.*2A>C",
+            "C",
+            "",
+            "substitution, after stop "
+            ], 
+     15 => ["NC_000005.9:g.96232565_96232566insCC",
+            "CC",
+            "ENST00000508077.1:c.488_489insCC",
+            "CC",
+            "",
+            "insertion, partial codon"
+           ],
+     16 => ["NC_000006.11:g.6649978_6649980dup",
+           "AGG",
+           "ENST00000230568.3:c.405+68_405+70dup",
+           "AGG",
+            "",
+            "duplication, intronic - long"
+           ],
+     17 =>  ["NC_000006.11:g.31997361del",
+            "-",
+            "ENST00000435363.2:c.3695del", 
+            "-",
+            "ENSP00000415941.2:p.Ser1232Ter",
+            "deletion, stop gained"
+           ], 
+     18 => ["NC_000007.13:g.143557504del", 
+            "-",
+            "ENST00000355951.2:c.1964del", 
+            "-",
+            "ENSP00000348220.2:p.Gln655ArgfsTer17", 
+            "deletion, frameshift"
+           ],
+     19 => ["NC_000007.13:g.7680048A>G",
+            "G",
+            "ENST00000223129.4:c.2T>C",
+            "C",
+            "ENSP00000223129.4:p.Met1?",
+            "substitution,  start loss"
+           ],
+
+     20 => ["NC_000007.13:g.143175210G>A",
+            "A",
+            "ENST00000408916.1:c.245G>A",
+            "A",
+            "ENSP00000386201.1:p.Arg82Gln",
+            "parseable protein change"
+           ], 
+
+     21 => ["NC_000012.11:g.102056227G>A",
+            "A",
+            "ENST00000360610.2:c.2049G>A",
+            "A",
+            "ENSP00000353822.2:p.Lys683=",
+            "substitution synonymous"
+           ], 
+ 
+     22 => ["NC_000013.10:g.51519667dup",   #rs17857128
+            "A",
+            "ENST00000336617.2:c.615dup",
+            "A",
+            "ENSP00000337623.2:p.Glu206ArgfsTer13",
+            "duplication, frameshift"
+           ],
+ 
+     23 =>  ["NC_000017.10:g.7123233_7123234insCAGGACGTGGGCGTG",
+            "CAGGACGTGGGCGTG",
+            "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
+            "CAGGACGTGGGCGTG",  
+            "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaTer",
+            "insertion,  stop gained"
+            ],
+
+     24 => ["NC_000017.10:g.48452979_48452980insAGC",             ##rs67225428
+            "AGC",
+            "ENST00000393271.1:c.410_411insAGC",
+            "AGC",
             "ENSP00000376952.1:p.Lys137_Pro138insAla", 
             "insertion,  codon gained"
-           ],          
-           ["NC_000019.9:g.7706085T>C",                                ## rs144546645
-           "C",
-           "ENST00000320400.4:c.1186T>C",
-           "C",
-           "ENSP00000318233.4:p.Ter396GlnextTer?",
-           "substitution, stop loss, no alt stop"
-          ],
-          ["NC_000022.10:g.20920895_20920939dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
-           "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
-           "ENST00000292733.7:c.832_876dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
-           "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
-           "ENSP00000292733.7:p.Pro278_Gln292dup",           
-           "insertion, peptide duplication"
-          ],
-          ["MT:m.6721T>C",    ## rs199476127
-           "C",
+            ], 
+
+     25 =>  ["NC_000019.9:g.7706085T>C",                       ## rs144546645
+            "C",
+            "ENST00000320400.4:c.1186T>C",
+            "C",
+            "ENSP00000318233.4:p.Ter396GlnextTer?",
+            "substitution, stop loss, no alt stop"
+           ],
+
+     26 => ["NC_000022.10:g.20920895_20920939dup",
+            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
+            "ENST00000292733.7:c.832_876dup",
+            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
+            "ENSP00000292733.7:p.Pro278_Gln292dup", 
+            "insertion, peptide duplication"
+           ],
+
+     27 => ["MT:m.6721T>C",    ## rs199476127
+            "C",
+            "",
+            "C",
+            "", 
+            "mitochondrial"
+           ],
+);
+
+my %test_output_shifted = (   
+     28 => ["X:g.131215401dup",
+            "A",
+            "ENST00000298542.4:c.905+998dup", 
+            "T",
+            "",
+            "duplication, intronic rc transcript",
+           ], 
+
+     29 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
+            "ACCCCTACGAGTACT", 
+            "ENST00000530998.1:c.454_455insAGTACTCGTAGGGGT",
+            "AGTACTCGTAGGGGT", 
+            "ENSP00000435307.1:p.Arg151_Ser152insTer",
+            "insertion, stop gained [-1]",
+            ],
+
+     30 => ["NC_000013.10:g.51519669dup",
+           "G",
+           "ENST00000336617.2:c.616+1dup",
+           "G",
            "",
-           "C",
-           "",   
-           "mitochondrial"
-          ]
+           "insertion, frameshift lost on 3'shift",
+           ],
+
+     31 => ["NC_000006.11:g.30558478dup",
+            "A",
+            "ENST00000396515.3:c.717dup",
+            "A",
+            "",
+            "insertion, stop retained if not shifted",
+           ],
+
+     32 => ["NC_000001.10:g.154140414_154140416del", 
+            "-", 
+            "ENST00000368530.2:c.857_*1del",
+            "-",
+            "",
+            "deletion, stop loss unless shifted",
+           ],
+
+     33 => ["NC_000012.11:g.102061071dup",
+            "T",
+            "ENST00000360610.2:c.2336-439dup",
+            "T",
+            "",
+            "insertion, coding intron downstream",
+            "NC_000012.11:g.102061071dup"
+           ],
+     34 => ["NC_000019.9:g.48836480_48836482del", 
+            "-",
+            "ENST00000293261.2:c.1376_1378del",
+            "-",
+            "ENSP00000293261.2:p.Ser459del",
+            "deletion, inframe codon loss",
+           ],
+
+);
+
+
+my %test_input = ( 
+     1 => ["NC_000002.11:g.46746465G>A", 
+           "ENST00000522587.1:c.-101-6514C>T", 
+          ], 
+
+     2 => ["NC_000002.11:g.46739156C>T",    
+           "ENST00000306448.4:c.*14G>A",       
+          ],
+ 
+     3 => ["NC_000002.11:g.46746256G>A",    
+           "ENST00000306448.4:c.-274C>T",      
+          ],  
+
+     4 => ["NC_000002.11:g.46746507delinsACAA",
+           "NC_000002.11:g.46746507delCinsACAA",
+           "ENST00000524249.1:n.775+16445delinsTTGT",
+           "ENST00000524249.1:n.775+16445delGinsTTGT" 
+          ], 
+     5 => ["NC_000002.11:g.46739212C>G", 
+           "ENST00000522587.1:c.639G>C",  
+           "ENSP00000428141.1:p.Met213Ile",      
+          ],
+     6 => ["NC_000002.11:g.46739488G>A",    
+           "ENST00000306448.4:c.363C>T",  
+           "ENSP00000304891.4:p.Leu121=", 
+           "ENST00000306448.4:c.363C>T(p.=)",    
+          ],
+     7 => ["NC_000002.11:g.46731836A>G",   
+          ],
+     8 => ["NC_000002.11:g.46747460C>G", 
+          ],
+     9 => ["NC_000002.11:g.46732522G>A", 
+           "ENST00000524249.1:n.776-14552C>T",
+          ],
+     10 => ["NC_000002.11:g.98275102C>T",
+            "ENST00000289228.5:c.445G>A",
+            "ENSP00000289228.5:p.Ala149Thr",
+           ],
+     11 => ["NC_000003.11:g.10191482_10191483insTTT",
+            "ENST00000345392.2:c.352_353insTTT",
+            "ENSP00000344757.2:p.Lys118delinsIleTer",
+           ],
+ 
+     12 => ["NC_000004.11:g.41993003G>A", 
+            "ENST00000264451.6:c.109+226G>A",   
+           ],
+
+     13 => ["NC_000004.11:g.130032945A>G",
+            "ENST00000281146.4:c.599A>G",
+            "ENSP00000281146.4:p.Ter200TrpextTer2",
+           ], 
+     14 => ["NC_000004.11:g.130032948A>C",
+            "ENST00000281146.4:c.*2A>C",
+           ], 
+     15 => ["NC_000005.9:g.96232565_96232566insCC",
+            "ENST00000508077.1:c.488_489insCC",
+           ],
+     16 => ["NC_000006.11:g.6649978_6649980dup",
+            "ENST00000230568.3:c.405+68_405+70dup",
+           ],
+     17 => ["NC_000006.11:g.31997361del",
+            "NC_000006.11:g.31997361delC",
+            "ENST00000435363.2:c.3695del",           
+            "ENST00000435363.2:c.3695delC",
+            "ENSP00000415941.2:p.Ser1232Ter",
+           ],    
+     18 => ["NC_000007.13:g.143557504del",
+            "NC_000007.13:g.143557504delT",   
+            "ENST00000355951.2:c.1964del", 
+            "ENST00000355951.2:c.1964delA",  
+            "ENSP00000348220.2:p.Gln655ArgfsTer17",  
+           ],                     
+     19 => ["NC_000007.13:g.7680048A>G",
+            "ENST00000223129.4:c.2T>C",
+            "ENSP00000223129.4:p.Met1?",
+           ],
+
+     20 => ["NC_000007.13:g.143175210G>A",
+            "ENST00000408916.1:c.245G>A",
+            "ENSP00000386201.1:p.Arg82Gln",
+           ],  
+
+     21 => ["NC_000012.11:g.102056227G>A",
+            "ENST00000360610.2:c.2049G>A",
+            "ENST00000360610.2:c.2049G>A(p.=)",
+            "ENSP00000353822.2:p.Lys683=",
+           ],          
+       
+     22 => ["NC_000013.10:g.51519667dup",  
+            "NC_000013.10:g.51519667dupA",
+            "ENST00000336617.2:c.615dup",
+            "ENST00000336617.2:c.615dupA",
+            "ENSP00000337623.2:p.Glu206ArgfsTer13",
+           ],
+               
+     23 => ["NC_000017.10:g.7123233_7123234insCAGGACGTGGGCGTG",
+            "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
+            "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaTer",
+           ],
+     24 => ["NC_000017.10:g.48452979_48452980insAGC",
+            "ENST00000393271.1:c.410_411insAGC",
+            "ENSP00000376952.1:p.Lys137_Pro138insAla", 
+           ],          
+     25 => ["NC_000019.9:g.7706085T>C",
+           ],
+
+);
+
+my %test_input_shifted = (
+     28 => ["X:g.131215392_131215393insA",
+            "ENST00000298542.4:c.905+998dup", 
+            "X:g.131215401dup",
+           ],    
+
+     29 => ["NC_000011.9:g.32417910_32417911insACCCCTACGAGTACT",
+            "ENST00000530998.1:c.454_455insAGTACTCGTAGGGGT",
+            "ENSP00000435307.1:p.Arg151_Ser152insTer",
+           ],
+
+     30 => ["NC_000013.10:g.51519667_51519668insG",
+           "ENST00000336617.2:c.616+1dup",
+           "NC_000013.10:g.51519669dup"
+           ],
+
+     31 => ["NC_000006.11:g.30558478dup",
+            "NC_000006.11:g.30558478dupA",
+            "ENST00000396515.3:c.717dup",
+            "ENST00000396515.3:c.717dupA"
+           ],
+
+     32 => ["NC_000001.10:g.154140412_154140414del", 
+            "ENST00000368530.2:c.857_*1del",
+            "NC_000001.10:g.154140414_154140416del"
+           ],
+
+     33 => ["NC_000012.11:g.102061070_102061071insT",
+            "NC_000012.11:g.102061071dupT",
+            "ENST00000360610.2:c.2336-439dup",
+            "ENST00000360610.2:c.2336-439dupT",
+            "NC_000012.11:g.102061071dup"
+           ],
+
+     34 => ["NC_000019.9:g.48836480_48836482del", 
+            "NC_000019.9:g.48836480_48836482delGAG",
+            "ENST00000293261.2:c.1376_1378del",
+            "ENST00000293261.2:c.1376_1378delCCT",
+            "ENSP00000293261.2:p.Ser459del",
+            "NC_000019.9:g.48836480_48836482del"
+           ]
 );
 
 ## results which change on left-shifting - not shifted
-my @test_input2 = ( 
-           ["X:g.131215393dupA",
+my %test_output_no_shift = ( 
+     1 => ["X:g.131215393dup",
            "A",
-           "ENST00000298542.4:c.905+997dupT", 
+           "ENST00000298542.4:c.905+997dup", 
            "T",
            "",
            "duplication, intronic rc transcript"
           ],    
-          ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
+     2 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
            "CCTACGAGTACTACC", 
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "GGTAGTACTCGTAGG", 
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
-           ["NC_000013.10:g.51519667_51519668insG",    ##rs17857128
+     3 =>  ["NC_000013.10:g.51519667_51519668insG",    ##rs17857128
            "G",
            "ENST00000336617.2:c.615_616insG",
            "G",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
            ],
-          ["NC_000006.11:g.30558477_30558478insA",
+     4 =>  ["NC_000006.11:g.30558477_30558478insA",
            "A",
            "ENST00000396515.3:c.716_717insA",
-           "A",
-           #"ENST00000396515.3:c.716_717insA(p.=)",
+           "A", 
            "ENSP00000379772.3:p.Ter239=",
            "insertion, stop retained"
           ],
-          ["NC_000001.10:g.154140413_154140415delTTA",
+     5 => ["NC_000001.10:g.154140413_154140415del",
            "-", 
-           "ENST00000368530.2:c.856_858delTAA",
+           "ENST00000368530.2:c.856_858del",
            "-",
            "ENSP00000357516.2:p.Ter286delextTer56",
             "deletion, stop loss"
           ],
-          ["NC_000012.11:g.102061070_102061071insT",
+     6 => ["NC_000012.11:g.102061070_102061071insT",
            "T",
            "ENST00000360610.2:c.2336-440_2336-439insT", 
            "T",
            "",
            "insertion, coding intron downstream"
           ],
-          ["NC_000019.9:g.48836478_48836480delAGG",  ## rs149734771
+     7 => ["NC_000019.9:g.48836478_48836480del",  ## rs149734771
            "-",
-           "ENST00000293261.2:c.1376_1378delCCT",
+           "ENST00000293261.2:c.1376_1378del",
            "-",
            "ENSP00000293261.2:p.Ser459del",
            "deletion, inframe codon loss"
           ],
-
-#          ["3:g.10191476_10191484delACTCTGAAA",
-#           "ACTCTGAAA",
-#           "ENST00000345392.2:c.346_354delACTCTGAAA",
-#           "ACTCTGAAA",
-#           "ENSP00000344757.2:p.Thr116_Lys118del",
-#           "inframe deletion - long"
-#          ],
     );
 
-## results which change on left-shifting - shifted
-my @test_input3 = (    
-          ["X:g.131215392_131215393insA",
-           "A",
-           "ENST00000298542.4:c.905+998dupT", 
-           "T",
-           "",
-           "duplication, intronic rc transcript",
-           "X:g.131215401dupA",
+
+
+my %test_input_no_shift = ( 
+     1 => ["X:g.131215393dup",
+           "ENST00000298542.4:c.905+997dup", 
           ],    
-          ["NC_000011.9:g.32417910_32417911insACCCCTACGAGTACT",
-           "ACCCCTACGAGTACT", 
-           "ENST00000530998.1:c.454_455insAGTACTCGTAGGGGT",
-           "AGTACTCGTAGGGGT", 
+     2 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
+           "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
-           "insertion, stop gained [-1]",
-           "NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC"
+          ],
+     3 => ["NC_000013.10:g.51519667_51519668insG", 
+           "ENST00000336617.2:c.615_616insG",
+           "ENSP00000337623.2:p.Glu206GlyfsTer13",
            ],
-
-           ["NC_000013.10:g.51519667_51519668insG",
-           "G",
-           "ENST00000336617.2:c.616+1dupG",
-           "G",
-           "",
-           "insertion, frameshift lost on 3'shift",
-           "NC_000013.10:g.51519669dupG"
-           ],
-
-          ["NC_000006.11:g.30558478dupA",
-           "A",
-           "ENST00000396515.3:c.717dupA",
-           "A",
-           "",
-           "insertion, stop retained if not shifted",
-           "NC_000006.11:g.30558478dupA"
+     4 => ["NC_000006.11:g.30558477_30558478insA",
+           "ENST00000396515.3:c.716_717insA",
+           "ENST00000396515.3:c.716_717insA(p.=)",
+           "ENSP00000379772.3:p.Ter239=",
           ],
-
-          ["NC_000001.10:g.154140412_154140414delATT",  ##rs121964851
-           "-", 
-           "ENST00000368530.2:c.857_*1delAAT",
-           "-",
-           "",
-           "deletion, stop loss unless shifted",
-           "NC_000001.10:g.154140414_154140416delTAT"
+     5 => ["NC_000001.10:g.154140413_154140415del",
+           "ENST00000368530.2:c.856_858del",
+           "ENSP00000357516.2:p.Ter286delextTer56",
           ],
-
-          ["NC_000012.11:g.102061070_102061071insT",
-           "T",
-           "ENST00000360610.2:c.2336-439dupT", 
-           "T",
-           "",
-           "insertion, coding intron downstream",
-           "NC_000012.11:g.102061071dupT"
+     6 => ["NC_000012.11:g.102061070_102061071insT",
+           "ENST00000360610.2:c.2336-440_2336-439insT", 
           ],
-          ["NC_000019.9:g.48836480_48836482delGAG",  ## rs149734771
-           "-",
+     7 => ["NC_000019.9:g.48836478_48836480del",
+           "NC_000019.9:g.48836478_48836480delAGG",
            "ENST00000293261.2:c.1376_1378delCCT",
-           "-",
            "ENSP00000293261.2:p.Ser459del",
-           "deletion, inframe codon loss",
-           "NC_000019.9:g.48836480_48836482delGAG"
-          ],
-         
-    );
+           "ENST00000293261.2:c.1376_1378del"
+          ]
+);
+
 
 ## default 3'shifted mode
-get_results(\@test_input, 1);
-get_results(\@test_input3, 1);
+foreach my $num (keys %test_input){
+  foreach my $desc ( @{$test_input{$num}}){
+    get_results($desc, \@{$test_output{$num}}, 1);
+  }
+}
+foreach my $num (keys %test_input_shifted){
+  foreach my $desc ( @{$test_input_shifted{$num}}){
+    get_results($desc, \@{$test_output_shifted{$num}}, 1);
+  }
+}
 
 print "\n\nTesting no  shift\n\n";
 ## non- 3' shifted mode
-get_results(\@test_input, 0);
-get_results(\@test_input2, 0);
+foreach my $num (keys %test_input){
+  foreach my $desc ( @{$test_input{$num}}){
+    get_results($desc, \@{$test_output{$num}}, 1);
+  }
+}
+foreach my $num (keys %test_input_no_shift){
+  foreach my $desc ( @{$test_input_no_shift{$num}}){
+    get_results($desc, \@{$test_output_no_shift{$num}}, 0);
+  }
+}
 
 
 sub get_results{
 
-    my $input    = shift;
-    my $shift_it = shift;
+  my $input    = shift;
+  my $output   = shift;
+  my $shift_it = shift;
 
-    my $variationfeature_adaptor    = $vdba->get_variationFeatureAdaptor;
-    my $transcript_adaptor          = $cdba->get_transcriptAdaptor;
-    my $transcript_variation_adaptor= $vdba->get_transcriptVariationAdaptor;
+  my $variationfeature_adaptor    = $vdba->get_variationFeatureAdaptor;
+  my $transcript_adaptor          = $cdba->get_transcriptAdaptor;
+  my $transcript_variation_adaptor= $vdba->get_transcriptVariationAdaptor;
 
-    $transcript_variation_adaptor->db->shift_hgvs_variants_3prime( $shift_it ) ;
-    
-    
-    
-    foreach my $line(@{$input}){
+  ## set flag if shifting not required
+  $transcript_variation_adaptor->db->shift_hgvs_variants_3prime( $shift_it ) ;
+ 
+ 
+  if($DEBUG==1){     print "\n\n\nStarting $input is_shifted: $shift_it\n";}
+ 
+  ## create variation feature from hgvs string
+  my $variation_feature ;
         
-        if($DEBUG==1){     print "\n\n\nStarting $line->[0]/ $line->[2] is_shifted: $shift_it\n";}
-        
-        ## create variation feature from hgvs string
-        
-        ### All will have genomic nomenclature
-        my $variation_feature_g ;
-        
-        eval{
-            $variation_feature_g = $variationfeature_adaptor->fetch_by_hgvs_notation( $line->[0] );
-        };
-        unless($@ eq ""){print "fetch genomic error : $@\n";}
+  eval{
+    $variation_feature = $variationfeature_adaptor->fetch_by_hgvs_notation( $input );
+  };
+  unless($@ eq ""){
+    print "fetch by hgvs error : $@\n" if $DEBUG ==1;
+    return;
+  }
 
-        ## use genomic with shifted position version where neccessary
-        my $expected_genomic = (defined  $line->[6] && $shift_it == 1) ? $line->[6] : $line->[0];
 
-        test_output($variation_feature_g, "genomic", $line, $line->[1], $expected_genomic, $transcript_adaptor );
-        
-        
-        ### Some will have transcript nomenclature
-        if( $line->[2] =~/\w+/){
-            my $variation_feature_c = $variationfeature_adaptor->fetch_by_hgvs_notation($line->[2] );    
-            test_output($variation_feature_c, "transcr" , $line, $line->[3], $expected_genomic,  $transcript_adaptor);
-        }
-        
-        ### Some will have protein nomenclature
-        if( $line->[4] =~/\w+/ && $line->[4] !~ /ext|dup|X|\?/){
-            my $variation_feature_p;
-            eval{
-                $variation_feature_p = $variationfeature_adaptor->fetch_by_hgvs_notation($line->[4] );    
-            };
-            if($@){
-                ## only non-ambiguous substitutions handled
-                # warn "Problem creating variation_feature for $line->[4] : $@\n";
-            }
-            else{
-                test_output($variation_feature_p, "protein" , $line, $line->[3], $expected_genomic,  $transcript_adaptor);
-            }
-        }
-    }
+  my $transcript ;
+  if( $output->[2] =~/\w+/){
+    my $name    = (split/\./, $output->[2])[0];
+    $transcript = $transcript_adaptor->fetch_by_stable_id( $name );
+  }
+
+  test_output($variation_feature, $input, $output, $transcript );
+
 }
+
 sub test_output{
 
-    my $variation_feature  = shift;
-    my $input_type         = shift;
-    my $line               = shift;
-    my $allele             = shift;
-    my $expected_genomic   = shift;
-    my $transcript_adaptor = shift;
+  my $variation_feature  = shift;
+  my $input              = shift;
+  my $output             = shift;
+  my $transcript         = shift;
 
-    ##### genomic
-    my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
+  ## may need to flip to transcript strand
 
-    ok(  $expected_genomic eq $hgvs_genomic->{$allele} , "$input_type -> genomic - $line->[5]  [ $expected_genomic] ");
-    if($DEBUG==1){print "TEMP: $input_type =>gen; expected $expected_genomic\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";}             
+  my $allele = $output->[3]; 
+  $allele = $output->[1] if  $input =~ /g\./ ; 
 
-    
-    ##### transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference  
-    if( $line->[2] =~/\w+/){
+  ## genomic level
+  my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
 
-      my $transcript_name = (split/\./, $line->[2])[0];
-      my $transcript      = $transcript_adaptor->fetch_by_stable_id( $transcript_name);   
-
-      my $hgvs_coding      = $variation_feature->get_all_hgvs_notations($transcript, "c");
-
-      ok( $line->[2] eq $hgvs_coding->{$allele} , "$input_type -> transcr - $line->[5] [$line->[2]]");
-      if($DEBUG==1){  print "TEMP: $input_type => trans; expected $line->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
+  ok(  $hgvs_genomic->{$allele} eq $output->[0], "$input genomic level $output->[0], $output->[5]" );
+  if($DEBUG==1){print "TEMP: $input => gen; expected $output->[0]\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";} 
 
 
-      if( $line->[4] =~/\w+/){
-      ##### protein level - transcript to be supplied as ref feature - alt allele may be complimented
-      
-        #my $transcript_variation = $transcript_variation_adaptor->fetch_all_by_VariationFeatures( [$variation_feature], [$transcript]);
-        my $transcript_variations = $variation_feature->get_all_TranscriptVariations();
-        foreach my $transcript_variation (@{$transcript_variations}){
+  ## transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference 
+  return unless defined $transcript;
 
-        if($transcript_variation->transcript->stable_id() eq $transcript_name){
-        
-          my $hgvs_protein  = $variation_feature->get_all_hgvs_notations($transcript,  "p",  $transcript_name,  "",  $transcript_variation  );
-          ok( $line->[4] eq $hgvs_protein->{$allele} , "$input_type -> protein - $line->[5] [$line->[4]]");
-          if($DEBUG==1){   print "TEMP: $input_type => prot; expected $line->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}
-        }
-      }
-    }
+  my $hgvs_coding  = $variation_feature->get_all_hgvs_notations($transcript, "c");
+
+  ok( $hgvs_coding->{$allele} eq $output->[2], "$input ->  transcript level $output->[2], $output->[5]");
+  if($DEBUG==1){  print "TEMP: $input => trans; expected $output->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
+
+
+  ## protein level - transcript to be supplied as ref feature - alt allele may be complimented
+  return unless $output->[4]; ## only look for protein level annotation if expected
+
+  my $transcript_variations = $variation_feature->get_all_TranscriptVariations();
+  foreach my $transcript_variation (@{$transcript_variations}){
+
+    next unless $transcript_variation->transcript->stable_id() eq $transcript->stable_id() ;
+
+    my $hgvs_protein  = $variation_feature->get_all_hgvs_notations($transcript,  "p",  $transcript->stable_id,  "",  $transcript_variation  );
+
+    ok( $hgvs_protein->{$allele} eq $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
+    if($DEBUG==1){   print "TEMP: $input => prot; expected $output->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}
   }
 }
 

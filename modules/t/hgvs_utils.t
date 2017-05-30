@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+## HGVS no longer requires the reference allele to be supplied for del, indel, dup, inv
+## We still support the parsing of the old format.
 
 use strict;
 use warnings;

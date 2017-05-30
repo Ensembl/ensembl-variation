@@ -1541,12 +1541,6 @@ sub _parse_hgvs_genomic_position {
   ## end information needed even if same as start
   unless ($end){$end = $start;}  
   unless ($end_offset){$end_offset = $start_offset;} 
-  if($description =~ /dup/){ 
-     ## handle as insertion for ensembl object purposes 
-     $start = $end; 
-     $start++;
-  }
-  if( $start_offset ||   $end_offset){ warn "ERROR: not expecting offsets for genomic location [$description]\n";}
 
   return ($start, $end);
 }
@@ -1753,7 +1747,7 @@ sub fetch_by_hgvs_notation {
       ($start, $end, $strand, $is_exonic) =  _parse_hgvs_transcript_position($description, $transcript) ; 
 
       $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());   
-      ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);  
+      ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);
   
   }
 
@@ -1801,19 +1795,20 @@ sub fetch_by_hgvs_notation {
   else{              $refseq_allele = $slice->subseq($start, $end,  $strand);}
 
   # take reference allele from genomic reference & coordinates if not supplied in HGVS string for a deletion
-  $ref_allele = $refseq_allele  if( $type =~ m/g|c|n|m/ && $description =~ m/del$/ );
+  $ref_allele = $refseq_allele  if( $type =~ m/g|c|n|m/ && $description =~ m/del/ );
 
   # If the reference allele was omitted, set it to undef
   $ref_allele = undef unless (defined($ref_allele) && length($ref_allele));      
   
   # take alternate allele from genomic reference & coordinates if not supplied in HGVS string for a duplication
-  $alt_allele = $refseq_allele if( $type =~ m/g|c|n|m/ && $description =~/dup$/);
-
   if($description =~ /dup/){ 
      ## special case: handle as insertion for ensembl object purposes 
      $start = $end ;
      if($strand  == 1){ $start++; }
      else{             $end--;   }
+
+    $ref_allele = "-" ;
+    $alt_allele = $refseq_allele;
   }
   
   elsif ($description =~ m/ins/i && $description !~ m/del/i) {
@@ -1831,10 +1826,7 @@ sub fetch_by_hgvs_notation {
   if (defined($ref_allele) && $ref_allele eq $alt_allele){         
      throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) matches alt allele given by HGVS notation $hgvs ($alt_allele)");
   }
-  
-  # Use the reference allele from the sequence if none was specified in the notation
-  $ref_allele ||= $refseq_allele;
-  
+
   
   ####################### Create objects #######################
 
