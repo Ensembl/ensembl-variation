@@ -24,6 +24,7 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
+use JSON;
 
 our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE,
      $version, $registry_file, $debug);
@@ -61,6 +62,8 @@ my $temp_table  = "temp_cnv$add";
 
 my $tmp_sv_col  = 'tmp_class_name';
   
+my $long_variant_type = 'CNV';
+  
 # connect to databases
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
@@ -70,6 +73,14 @@ my $dbVar = $vdb->dbc->db_handle;
 
 my $csa = Bio::EnsEMBL::Registry->get_adaptor($species, "core", "coordsystem");
 our $default_cs = $csa->fetch_by_name("chromosome");
+
+# Clinical significance
+my $cs_attr_type_sth = $dbVar->prepare(qq{ SELECT attrib_type_id FROM attrib_type WHERE code='clinvar_clin_sig'});
+$cs_attr_type_sth->execute;
+my $cs_attr_type_id = ($cs_attr_type_sth->fetchrow_array)[0];
+$cs_attr_type_sth->finish;
+die "No attribute type found for the entry 'clinvar_clin_sig'" if (!defined($cs_attr_type_id));
+my $clin_sign_types = get_attrib_list($cs_attr_type_id);
 
 # Inheritance type
 my $inheritance_attrib_type = 'inheritance_type';
@@ -119,7 +130,7 @@ debug(localtime()." Done!\n");
 
 ## Post processings ##
 
-# Post processing for mouse annotation (delete duplicated entries in structural_variation_sample)
+# Post processing (delete duplicated entries in structural_variation_sample)
 post_processing_feature();
 
 # Finishing methods
@@ -142,7 +153,7 @@ sub load_file_data{
   
   create_and_load(
   $dbVar, "$temp_table", "id *", "type", "chr *", "outer_start i", "start i", "inner_start i",
-  "inner_end i", "end i", "outer_end i", "strand i", "inheritance", "phenotype *", "sample *", "is_failed i");    
+  "inner_end i", "end i", "outer_end i", "strand i", "inheritance", "phenotype *", "sample *", "is_failed i", "clin_sign");    
   
   
   # fix nulls
@@ -191,20 +202,27 @@ sub structural_variation {
     $sv_table (
       variation_name,
       source_id,
+      study_id,
       class_attrib_id,
+      clinical_significance,
       $tmp_sv_col
     )
     SELECT
       DISTINCT
       t.id,
       $source_id,
+      $source_id,
       a1.attrib_id,
+      t.clin_sign,
       t.type
     FROM
       $temp_table t 
       LEFT JOIN attrib a1 ON (t.type=a1.value) 
   };
   $dbVar->do($stmt);
+  
+  my $pp_stmt =  qq{ UPDATE $sv_table SET clinical_significance=null where clinical_significance='' };
+  $dbVar->do($pp_stmt);
 }
 
   
@@ -249,7 +267,8 @@ sub structural_variation_feature {
       structural_variation_id,
       variation_name,
       class_attrib_id,
-      source_id
+      source_id,
+      study_id
     )
     SELECT
       DISTINCT
@@ -264,6 +283,7 @@ sub structural_variation_feature {
       sv.structural_variation_id,
       t.id,
       sv.class_attrib_id,
+      $source_id,
       $source_id
     FROM
       seq_region q,
@@ -436,16 +456,17 @@ sub parse_input {
   my $assembly;
   
   while(<IN>) {
-    next if ($_ =~ /^#/);
+    next if ($_ =~ /^track/);
 
     my $current_line = $_;
     chomp ($current_line);
     
     my $info = parse_line($current_line);
+    
+    if ($info->{'phenotype'}) {
             
-    my @phenotypes = split(/\|/,$info->{'phenotype'});
-
-    if (@phenotypes && scalar(@phenotypes) > 0) { 
+      my @phenotypes = keys(%{$info->{'phenotype'}});
+ 
       foreach my $phe (@phenotypes) {
 
         $info->{'phenotype'} = $phe;
@@ -468,15 +489,28 @@ sub parse_line {
   my @data     = split(/\t/, $line);
   my $info;
   
-  $info->{subject}     = $data[0];
-  $info->{chr}         = $data[1];
-  $info->{SO_term}     = ($data[4] > 0) ? 'duplication' : 'deletion';
-  $info->{start}       = $data[2];
-  $info->{end}         = $data[3];
-  $info->{strand}      = 1;
-  $info->{inheritance} = $data[5];
-  $info->{phenotype}   = $data[8];
+  $info->{chr}         = $data[0];
+  $info->{start}       = $data[1]+1;
+  $info->{end}         = $data[2];
+  $info->{subject}     = $data[3];
+  $info->{strand}      = ($data[5] eq '+') ? 1 : -1;
+  
+  $info->{chr} =~ s/chr//i;
+  $info->{chr} = 'MT' if ($info->{chr} eq 'M');
+  
+  my $json_text = decode_json($data[13]);
+  
+  return if ($json_text->{'variant_type'} ne $long_variant_type);
+  
+  $info->{SO_term}     = ($json_text->{'mean_ratio'} > 0) ? 'duplication' : 'deletion';
+  $info->{inheritance} = $json_text->{'inheritance'};
+  $info->{clin_sign}   = lc($json_text->{'pathogenicity'}) if ($json_text->{'pathogenicity'});
   $info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
+  
+  foreach my $phe (@{$json_text->{phenotypes}}) {
+    my $p_name = $phe->{name};
+    $info->{phenotype}{$p_name} = 1;
+  }
 
   return $info;
 }
@@ -651,9 +685,22 @@ sub generate_data_row {
              $info->{inheritance},
              $info->{phenotype},
              $info->{subject},
-             $info->{is_failed}
+             $info->{is_failed},
+             $info->{clin_sign}
             );
   return \@row;
+}
+
+
+sub get_attrib_list {
+  my $type_id = shift;
+  my %attrib_list;
+  my $attr_list_sth = $dbVar->prepare(qq{ SELECT attrib_id,value FROM attrib WHERE attrib_type_id=$type_id});
+  $attr_list_sth->execute;
+  while(my @row = $attr_list_sth->fetchrow_array) {
+   $attrib_list{$row[1]} = $row[0];
+  }
+  return \%attrib_list;
 }
 
 

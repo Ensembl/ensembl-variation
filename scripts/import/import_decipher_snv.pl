@@ -25,6 +25,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
+use JSON;
 
 our ($species, $input_file, $source_name, $version, $registry_file, $debug);
 
@@ -50,6 +51,7 @@ my $dbh = $registry->get_adaptor('human', 'variation_private', 'variation')->dbc
 my $source_id = source();
 
 my $type = 'Variation';
+my $short_variant_type = 'SNV';
 
 # SO terms
 my $attr_type_sth = $dbh->prepare(qq{ SELECT attrib_type_id FROM attrib_type WHERE code='SO_term'});
@@ -57,20 +59,27 @@ $attr_type_sth->execute;
 my $attr_type_id = ($attr_type_sth->fetchrow_array)[0];
 $attr_type_sth->finish;
 die "No attribute type found for the entry 'SO_term'" if (!defined($attr_type_id));
-my $SO_terms = get_SO_term_list($attr_type_id);
+my $SO_terms = get_attrib_list($attr_type_id);
+
+# Clinical significance
+my $cs_attr_type_sth = $dbh->prepare(qq{ SELECT attrib_type_id FROM attrib_type WHERE code='clinvar_clin_sig'});
+$cs_attr_type_sth->execute;
+my $cs_attr_type_id = ($cs_attr_type_sth->fetchrow_array)[0];
+$cs_attr_type_sth->finish;
+die "No attribute type found for the entry 'clinvar_clin_sig'" if (!defined($cs_attr_type_id));
+my $clin_sign_types = get_attrib_list($cs_attr_type_id);
 
 # Inheritance type
 my $inheritance_attrib_type = 'inheritance_type';
 my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$inheritance_attrib_type'};
 my $inheritance_attrib_type_id = ($dbh->selectall_arrayref($stmt))->[0][0];
 
-
 my $find_existing_var_sth = $dbh->prepare(qq{
     SELECT variation_id FROM variation WHERE name = ?
 });
 
 my $add_var_sth = $dbh->prepare(qq{
-    INSERT INTO variation (source_id, name, flipped, class_attrib_id) VALUES (?,?,?,?)
+    INSERT INTO variation (source_id, name, flipped, class_attrib_id, clinical_significance) VALUES (?,?,?,?,?)
 });
 
 my $find_existing_vf_sth = $dbh->prepare(qq{
@@ -81,8 +90,8 @@ my $find_existing_vf_sth = $dbh->prepare(qq{
 my $add_vf_sth = $dbh->prepare(qq{
     INSERT IGNORE INTO variation_feature (variation_id, seq_region_id, seq_region_start,
         seq_region_end, seq_region_strand, variation_name, allele_string, map_weight, 
-        source_id, class_attrib_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
+        source_id, class_attrib_id, clinical_significance)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
 });
 
 my $select_phe_sth = $dbh->prepare(qq{
@@ -122,15 +131,18 @@ open my $INPUT, "<$input_file" or die "Can't open '$input_file'";
 
 MAIN_LOOP : while(<$INPUT>) {
 
-  next if /^#/;
+  next if /^track/;
   chomp $_;
     
   my $data = parse_line($_);
     
+  next if !$data;
+  
   my $slice = $data->{slice};
     
   my $class_attrib_id = $SO_terms->{$data->{SO_term}};
   my $seq_region_id = $sa->get_seq_region_id($slice);
+  my $clin_sign = $data->{clin_sign} if ($clin_sign_types->{$data->{clin_sign}});
     
     
   # Import Variation
@@ -144,7 +156,7 @@ MAIN_LOOP : while(<$INPUT>) {
     $variation_id = $existing_var->[0];
   }
   else {
-    $add_var_sth->execute($source_id, $data->{ID}, $data->{flipped}, $class_attrib_id);
+    $add_var_sth->execute($source_id, $data->{ID}, $data->{flipped}, $class_attrib_id, $clin_sign);
 
     $variation_id = $dbh->last_insert_id(undef, undef, undef, undef);
   }
@@ -168,7 +180,8 @@ MAIN_LOOP : while(<$INPUT>) {
         $data->{ref}.'/'.$data->{alt},
         1,
         $source_id,
-        $class_attrib_id
+        $class_attrib_id,
+        $clin_sign
       );
     }
       
@@ -176,7 +189,7 @@ MAIN_LOOP : while(<$INPUT>) {
     if ($data->{phenotype} && $data->{phenotype} ne '') {
         
       my @phenotypes = split(/\|/,$data->{phenotype});
-      foreach my $phe (@phenotypes) {
+      foreach my $phe (keys(%{$data->{phenotype}})) {
 
         # Import Phenotype
         $select_phe_sth->execute($phe);
@@ -224,15 +237,15 @@ MAIN_LOOP : while(<$INPUT>) {
   }
 }
 
-sub get_SO_term_list {
+sub get_attrib_list {
   my $type_id = shift;
-  my %SO_list;
+  my %attrib_list;
   my $attr_list_sth = $dbh->prepare(qq{ SELECT attrib_id,value FROM attrib WHERE attrib_type_id=$type_id});
   $attr_list_sth->execute;
   while(my @row = $attr_list_sth->fetchrow_array) {
-   $SO_list{$row[1]} = $row[0];
+   $attrib_list{$row[1]} = $row[0];
   }
-  return \%SO_list;
+  return \%attrib_list;
 }
 
 
@@ -259,26 +272,39 @@ sub parse_line {
   my $info;
   
   # Extract data
-  $info->{subject}     = $data[0];
-  $info->{chr}         = $data[1];
-  $info->{start}       = $data[2];
-  $info->{end}         = $data[3];
-  $info->{strand}      = 1;
-  $info->{ref}         = $data[4];
-  $info->{alt}         = $data[5];
-  $info->{inheritance} = $data[8];
-  $info->{phenotype}   = $data[11];
+  $info->{chr}         = $data[0];
+  $info->{start}       = $data[1]+1;
+  $info->{end}         = $data[2];
+  $info->{subject}     = $data[3];
+  $info->{strand}      = ($data[5] eq '+') ? 1 : -1;
+  
+  $info->{chr} =~ s/chr//i;
+  $info->{chr} = 'MT' if ($info->{chr} eq 'M');
+  
+  my $json_text = decode_json($data[13]);
+  
+  return if ($json_text->{'variant_type'} ne $short_variant_type);
+  
+  $info->{ref}         = $json_text->{ref_allele};
+  $info->{alt}         = $json_text->{alt_allele};
+  $info->{inheritance} = $json_text->{inheritance};
+  $info->{clin_sign}   = lc($json_text->{pathogenicity}) if ($json_text->{pathogenicity});
+  foreach my $phe (@{$json_text->{phenotypes}}) {
+    my $p_name = $phe->{name};
+    $info->{phenotype}{$p_name} = 1;
+  }
   $info->{ID}          = "DEC".$info->{subject}."_".$info->{chr}."_".$info->{start}."_".$info->{end};
   $info->{flipped}     = 0;
 
+  
   # Strand / alleles
   my $slice = $sa->fetch_by_region('chromosome', $info->{chr},$info->{start},$info->{end},1);
   my $seq   = $slice->seq;
   my $ref   = $info->{ref};
   my $alt   = $info->{alt};
   
-  if ($seq ne $info->{ref}) {
-    if (length($ref) != length($info->{ref})) {
+  if ($seq ne $ref) {
+    if ($info->{strand} == 1) {
       $info->{failed} = 15; # Mapped position is not compatible with reported alleles
       print STDERR "Variant ".$info->{ID}.": Mapped position is not compatible with reported alleles\n";
     }
