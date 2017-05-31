@@ -774,16 +774,27 @@ sub affects_start_codon {
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
 
-            my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-        
-            return 0 unless $ref_pep;
+            # special case deletion, just check if it overlaps start codon at all
+            if(deletion(@_)) {
+                $cache->{affects_start_codon} = overlap(
+                    1, 1,
+                    $bvfo->translation_start || 0, $bvfo->translation_end || 0
+                );
+            }
+
+            else {
+
+                my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
             
-            # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
-            $cache->{affects_start_codon} = (
-                ($bvfo->translation_start == 1) and
-                ($alt_pep !~ /\Q$ref_pep\E$/) and 
-                ($alt_pep !~ /^\Q$ref_pep\E/)
-            );
+                return 0 unless $ref_pep;
+                
+                # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
+                $cache->{affects_start_codon} = (
+                    ($bvfo->translation_start == 1) and
+                    ($alt_pep !~ /\Q$ref_pep\E$/) and 
+                    ($alt_pep !~ /^\Q$ref_pep\E/)
+                );
+            }
         }
         
         # structural variant

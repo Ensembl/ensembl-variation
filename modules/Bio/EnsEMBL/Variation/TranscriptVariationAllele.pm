@@ -327,11 +327,16 @@ sub codon {
   
     my $tv = $self->base_variation_feature_overlap;
 
+    $DB::single = 1;
+
     my ($tv_tr_start, $tv_tr_end) = ($tv->translation_start, $tv->translation_end);
 
-    unless($tv_tr_start && $tv_tr_end && $self->seq_is_dna) {
+    unless(($tv_tr_start || $tv_tr_end) && $self->seq_is_dna) {
       return $self->{codon};
     }
+
+    $tv_tr_start ||= 1;
+    $tv_tr_end   ||= length($tv->_peptide);
   
     # try to calculate the codon sequence
     my $seq = $self->feature_seq;
@@ -339,11 +344,12 @@ sub codon {
     $seq = '' if $seq eq '-';
     
     # calculate necessary coords and lengths
+    my ($tv_cds_start, $tv_cds_end) = ($tv->cds_start || 1, $tv->cds_end || 1);
     
     my $codon_cds_start = $tv_tr_start * 3 - 2;
     my $codon_cds_end   = $tv_tr_end * 3;
     my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-    my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
+    my $vf_nt_len       = $tv_cds_end - $tv_cds_start + 1;
     my $allele_len      = $self->seq_length;
     
     my $cds;
@@ -364,7 +370,7 @@ sub codon {
       # splice the allele sequence into the CDS
       $cds = $tv->_translateable_seq;
     
-      substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
+      substr($cds, $tv_cds_start-1, $vf_nt_len) = $seq;
     }
 
     # and extract the codon sequence
