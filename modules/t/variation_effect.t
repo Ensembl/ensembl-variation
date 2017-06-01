@@ -547,7 +547,6 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         comment => 'long sequence var where middle is identical but overlaps splice site',
         alleles => 'ATGTACTGCCTATGTGTGCTGTGAGTATGATACGGTGGACT',
-        debug   => 1,
         start   => $intron_start - 20,
         end     => $intron_start + 20,
         effects => [qw(intron_variant coding_sequence_variant)],
@@ -1482,8 +1481,6 @@ for my $stable_id (keys %$transcript_tests) {
             -variation_feature  => $vf,
             -transcript         => $tran,
         );
-
-        $DB::single = 1 if $test_count == 145;
 
         warn "# alleles: $allele_string\n";
         warn '# codons: ', $tv->codons, "\n" if $tv->codons;
