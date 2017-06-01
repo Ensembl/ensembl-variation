@@ -597,11 +597,29 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_accession' => 'SO:0002012',
   'SO_term' => 'start_lost',
   'tier' => '3',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
   'label' => 'Start lost',
   'rank' => '7',
   'impact' => 'HIGH',
   'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
+),
+'start_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
+  'feature_SO_term' => 'mRNA',
+  'description' => 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+  'SO_accession' => 'SO:0002019',
+  'SO_term' => 'start_retained_variant',
+  'tier' => '3',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
+  'label' => 'Start retained',
+  'rank' => '15',
+  'impact' => 'LOW',
+  'display_term' => 'SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
 ),

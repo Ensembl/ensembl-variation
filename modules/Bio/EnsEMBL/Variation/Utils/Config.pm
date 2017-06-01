@@ -545,10 +545,27 @@ our @OVERLAP_CONSEQUENCES = (
         variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
         rank => '7',
         tier => '3',
-        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
         description => 'A codon variant that changes at least one base of the canonical start codon',
         label => 'Start lost',
         impact => 'HIGH',
+        include => {
+            coding => 1,
+        }
+    },
+    {
+        SO_accession => 'SO:0002019',
+        SO_term => 'start_retained_variant',
+        display_term => 'SYNONYMOUS_CODING',
+        feature_SO_term => 'mRNA',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+        rank => '15',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
+        description => 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+        label => 'Start retained variant',
+        impact => 'LOW',
         include => {
             coding => 1,
         }

@@ -55,7 +55,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -317,7 +317,7 @@ sub protein_altering_variant{
     return 0 if  $alt_pep =~/^\Q$ref_pep\E|\Q$ref_pep\E$/;   # inframe_insertion(@_);
 
     return 0 if inframe_deletion(@_);  
-    return 0 if affects_start_codon(@_);
+    return 0 if start_lost(@_);
     return 0 if frameshift(@_);
 
     return 1;
@@ -753,48 +753,37 @@ sub stop_retained {
     return $cache->{stop_retained};
 }
 
-sub affects_start_codon {
+sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-    unless(exists($cache->{affects_start_codon})) {
+    unless(exists($cache->{start_lost})) {
 
         # default
-        $cache->{affects_start_codon} = 0;
+        $cache->{start_lost} = 0;
+
+        return 0 unless _overlaps_start_codon(@_);
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         $bvf  ||= $bvfo->base_variation_feature;
-
-        # incomplete 5' end means no standard start codon
-        return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
         
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
+            return $cache->{start_lost} = 1 if _ins_del_start_altered(@_) && !(inframe_insertion(@_) || inframe_deletion(@_));
 
-            # special case deletion, just check if it overlaps start codon at all
-            if(deletion(@_)) {
-                $cache->{affects_start_codon} = overlap(
-                    1, 1,
-                    $bvfo->translation_start || 0, $bvfo->translation_end || 0
-                );
-            }
-
-            else {
-
-                my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+            my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        
+            return 0 unless $ref_pep;
             
-                return 0 unless $ref_pep;
-                
-                # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
-                $cache->{affects_start_codon} = (
-                    ($bvfo->translation_start == 1) and
-                    ($alt_pep !~ /\Q$ref_pep\E$/) and 
-                    ($alt_pep !~ /^\Q$ref_pep\E/)
-                );
-            }
+            # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
+            $cache->{start_lost} = (
+                ($bvfo->translation_start == 1) and
+                ($alt_pep !~ /\Q$ref_pep\E$/) and 
+                ($alt_pep !~ /^\Q$ref_pep\E/)
+            );
         }
         
         # structural variant
@@ -803,10 +792,10 @@ sub affects_start_codon {
             return 0 unless defined($tr_crs) && defined($tr_cre);
             
             if($feat->strand == 1) {
-                $cache->{affects_start_codon} = overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
+                $cache->{start_lost} = overlap($tr_crs, $tr_crs + 2, $bvf->{start}, $bvf->{end});
             }
             else {
-                $cache->{affects_start_codon} = overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
+                $cache->{start_lost} = overlap($tr_cre-2, $tr_cre, $bvf->{start}, $bvf->{end});
             }
         }
         
@@ -815,7 +804,75 @@ sub affects_start_codon {
         }
     }
 
-    return $cache->{affects_start_codon};
+    return $cache->{start_lost};
+}
+
+sub start_retained_variant {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $pre = $bvfoa->_pre_consequence_predicates;
+
+    return ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_start_codon(@_) && !_ins_del_start_altered(@_);
+}
+
+sub _overlaps_start_codon {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{overlaps_start_codon})) {
+        $cache->{overlaps_start_codon} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $feat ||= $bvfo->feature;
+        return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
+
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+        
+        $cache->{overlaps_start_codon} = overlap(
+            $cdna_start, $cdna_end,
+            $feat->cdna_coding_start, $feat->cdna_coding_start + 2
+        );
+    }
+
+    return $cache->{overlaps_start_codon};
+}
+
+sub _ins_del_start_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{ins_del_start_altered})) {
+        $cache->{ins_del_start_altered} = 0;
+
+        return 0 unless _overlaps_start_codon(@_);
+
+        my $pre = $bvfoa->_pre_consequence_predicates;
+        return 0 unless $pre->{increase_length} || $pre->{decrease_length};
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_five_prime_utr();
+        my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+
+        $cache->{ins_del_start_altered} = $translateable ne substr($utr_and_translateable, 0 - length($translateable));
+    }
+
+    return $cache->{ins_del_start_altered};
 }
 
 sub synonymous_variant {
@@ -831,7 +888,7 @@ sub missense_variant {
     
     return 0 unless defined $ref_pep;
     
-    return 0 if affects_start_codon(@_);
+    return 0 if start_lost(@_);
     return 0 if stop_lost(@_);
     return 0 if stop_gained(@_);
     return 0 if partial_codon(@_);
@@ -848,13 +905,17 @@ sub inframe_insertion {
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
         my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
 
-        return 0 if affects_start_codon(@_);
+        return 0 if start_lost(@_);
         return 0 unless defined $ref_codon;
         return 0 unless ( length($alt_codon) > length ($ref_codon) );
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         return 0 unless defined($ref_pep) && defined($alt_pep);
+
+        # not an inframe insertion if the inserted AA is before the start codon
+        # we can use start_retained to check this
+        return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
         # if we have a stop codon in the alt peptide
         # trim off everything after it
@@ -1100,7 +1161,7 @@ sub coding_unknown {
                 ((_get_peptide_alleles(@_))[0] =~ /X/)
             ) and (
                 not (
-                    frameshift(@_) or inframe_deletion(@_) or protein_altering_variant(@_)
+                    frameshift(@_) or inframe_deletion(@_) or protein_altering_variant(@_) or start_retained_variant(@_) or start_lost(@_)
                 )
             )
         );

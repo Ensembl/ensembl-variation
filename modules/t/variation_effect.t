@@ -401,12 +401,6 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_start-1,
         effects => [qw(5_prime_UTR_variant)],
     }, {
-        comment => 'DAVE deletion overlapping UTR and start site',
-        alleles => '-',
-        start   => $cds_start-1, 
-        end     => $cds_start+1,
-        effects => [qw(5_prime_UTR_variant)],
-    }, {
         comment => 'an insertion just after the cds end is UTR',
         alleles => 'A',
         start   => $cds_end+1, 
@@ -605,7 +599,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'CAT',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(inframe_insertion)],
+        effects => [qw(start_retained_variant)],
     }, {
         alleles => 'GCA',
         start   => $cds_start+2,
@@ -758,11 +752,24 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $intron_end+3,
         effects => [qw( splice_acceptor_variant coding_sequence_variant  intron_variant)],
     }, {
+        comment => 'deletion overlapping UTR and start site, start lost 1',
         alleles => '-',
         start   => $cds_start-3,
         end     => $cds_start+2,
-        effects => [qw( 5_prime_UTR_variant coding_sequence_variant)],
+        effects => [qw( 5_prime_UTR_variant start_lost)],
     },  {
+        comment => 'deletion overlapping UTR and start site, start lost 2',
+        alleles => '-',
+        start   => $cds_start-1, 
+        end     => $cds_start+1,
+        effects => [qw(5_prime_UTR_variant start_lost)],
+    }, {
+        comment => 'unbalanced sub overlapping UTR and start site, start retained',
+        alleles => '-',
+        start   => $cds_start-4,
+        end     => $cds_start,
+        effects => [qw(5_prime_UTR_variant start_retained_variant)],
+    }, {
         alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end+3,
@@ -775,662 +782,662 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
 
 # now do the same for a reverse strand transcript
 
-# my $tr = $ta->fetch_by_stable_id('ENST00000368312');
+my $tr = $ta->fetch_by_stable_id('ENST00000368312');
 
-# $transcript_tests->{$tr->stable_id}->{transcript} = $tr;
+$transcript_tests->{$tr->stable_id}->{transcript} = $tr;
 
-# $t_start = $tr->seq_region_start;
-# $t_end   = $tr->seq_region_end;
+$t_start = $tr->seq_region_start;
+$t_end   = $tr->seq_region_end;
 
-# $cds_start = $tr->coding_region_start;
-# $cds_end   = $tr->coding_region_end;
+$cds_start = $tr->coding_region_start;
+$cds_end   = $tr->coding_region_end;
 
-# $first_intron = $tr->get_all_Introns->[0];
+$first_intron = $tr->get_all_Introns->[0];
 
-# $intron_start = $first_intron->seq_region_start;
-# $intron_end   = $first_intron->seq_region_end;
+$intron_start = $first_intron->seq_region_start;
+$intron_end   = $first_intron->seq_region_end;
 
-# $transcript_tests->{$tr->stable_id}->{tests} = [
+$transcript_tests->{$tr->stable_id}->{tests} = [
         
-#     # check the boundaries of the upstream and downstream calls
+    # check the boundaries of the upstream and downstream calls
     
-#     {
-#         start   => $t_end + 5001,
-#         end     => $t_end + 5001,
-#         effects => [],
-#     }, {
-#         start   => $t_end + 5000,
-#         end     => $t_end + 5000,
-#         effects => [ qw(upstream_gene_variant) ],
-#     }, {
-#         start   => $t_end + 2001,
-#         end     => $t_end + 2001,
-#         effects => [ qw(upstream_gene_variant) ],
-#     }, {
-#         start   => $t_end + 2000,
-#         end     => $t_end + 2000,
-#         effects => [ qw(upstream_gene_variant) ],
-#     },{
-#         start   => $t_end + 1,
-#         end     => $t_end + 1,
-#         effects => [ qw(upstream_gene_variant) ],
-#     }, {
-#         comment => 'an insertion just before the start is upstream',
-#         alleles => 'A',
-#         start   => $t_end + 1,
-#         end     => $t_end,
-#         effects => [ qw(upstream_gene_variant) ],
-#     }, {
-#         comment => 'an insertion just after the end is downstream',
-#         alleles => 'A',
-#         start   => $t_start,
-#         end     => $t_start - 1,
-#         effects => [ qw(downstream_gene_variant) ],
-#     }, {
-#         start   => $t_start - 1,
-#         end     => $t_start - 1,
-#         effects => [ qw(downstream_gene_variant) ],
-#     }, {
-#         start   => $t_start - 500,
-#         end     => $t_start - 500,
-#         effects => [ qw(downstream_gene_variant) ],
-#     }, {
-#         start   => $t_start - 501,
-#         end     => $t_start - 501,
-#         effects => [ qw(downstream_gene_variant) ],
-#     }, {   
-#         start   => $t_start - 5000,
-#         end     => $t_start - 5000,
-#         effects => [ qw(downstream_gene_variant) ],
-#     }, {   
-#         start   => $t_start - 5001,
-#         end     => $t_start - 5001,
-#         effects => [],
-#     },
+    {
+        start   => $t_end + 5001,
+        end     => $t_end + 5001,
+        effects => [],
+    }, {
+        start   => $t_end + 5000,
+        end     => $t_end + 5000,
+        effects => [ qw(upstream_gene_variant) ],
+    }, {
+        start   => $t_end + 2001,
+        end     => $t_end + 2001,
+        effects => [ qw(upstream_gene_variant) ],
+    }, {
+        start   => $t_end + 2000,
+        end     => $t_end + 2000,
+        effects => [ qw(upstream_gene_variant) ],
+    },{
+        start   => $t_end + 1,
+        end     => $t_end + 1,
+        effects => [ qw(upstream_gene_variant) ],
+    }, {
+        comment => 'an insertion just before the start is upstream',
+        alleles => 'A',
+        start   => $t_end + 1,
+        end     => $t_end,
+        effects => [ qw(upstream_gene_variant) ],
+    }, {
+        comment => 'an insertion just after the end is downstream',
+        alleles => 'A',
+        start   => $t_start,
+        end     => $t_start - 1,
+        effects => [ qw(downstream_gene_variant) ],
+    }, {
+        start   => $t_start - 1,
+        end     => $t_start - 1,
+        effects => [ qw(downstream_gene_variant) ],
+    }, {
+        start   => $t_start - 500,
+        end     => $t_start - 500,
+        effects => [ qw(downstream_gene_variant) ],
+    }, {
+        start   => $t_start - 501,
+        end     => $t_start - 501,
+        effects => [ qw(downstream_gene_variant) ],
+    }, {   
+        start   => $t_start - 5000,
+        end     => $t_start - 5000,
+        effects => [ qw(downstream_gene_variant) ],
+    }, {   
+        start   => $t_start - 5001,
+        end     => $t_start - 5001,
+        effects => [],
+    },
 
-#     # check the UTR calls
+    # check the UTR calls
     
-#     {
-#         start   => $t_end,
-#         end     => $t_end,
-#         effects => [qw(5_prime_UTR_variant)],
-#     }, {
-#         comment => 'an insertion between the first 2 bases is UTR',
-#         alleles => 'A',
-#         start   => $t_end,
-#         end     => $t_end - 1,
-#         effects => [ qw(5_prime_UTR_variant) ],
-#     }, {
-#         start   => $cds_end + 1,
-#         end     => $cds_end + 1,
-#         effects => [qw(5_prime_UTR_variant)],
-#     }, {
-#         comment => 'an insertion just before the cds start is UTR',
-#         alleles => 'A',
-#         start   => $cds_end + 1, 
-#         end     => $cds_end,
-#         effects => [qw(5_prime_UTR_variant)],
-#     }, {
-#         comment => 'an insertion just after the cds end is UTR',
-#         alleles => 'A',
-#         start   => $cds_start, 
-#         end     => $cds_start - 1,
-#         effects => [qw(3_prime_UTR_variant)],
-#     }, {
-#         start   => $cds_start - 1,
-#         end     => $cds_start - 1,
-#         effects => [qw(3_prime_UTR_variant)],
-#     }, {
-#         start   => $t_start,
-#         end     => $t_start,
-#         effects => [qw(3_prime_UTR_variant)],
-#     },
+    {
+        start   => $t_end,
+        end     => $t_end,
+        effects => [qw(5_prime_UTR_variant)],
+    }, {
+        comment => 'an insertion between the first 2 bases is UTR',
+        alleles => 'A',
+        start   => $t_end,
+        end     => $t_end - 1,
+        effects => [ qw(5_prime_UTR_variant) ],
+    }, {
+        start   => $cds_end + 1,
+        end     => $cds_end + 1,
+        effects => [qw(5_prime_UTR_variant)],
+    }, {
+        comment => 'an insertion just before the cds start is UTR',
+        alleles => 'A',
+        start   => $cds_end + 1, 
+        end     => $cds_end,
+        effects => [qw(5_prime_UTR_variant)],
+    }, {
+        comment => 'an insertion just after the cds end is UTR',
+        alleles => 'A',
+        start   => $cds_start, 
+        end     => $cds_start - 1,
+        effects => [qw(3_prime_UTR_variant)],
+    }, {
+        start   => $cds_start - 1,
+        end     => $cds_start - 1,
+        effects => [qw(3_prime_UTR_variant)],
+    }, {
+        start   => $t_start,
+        end     => $t_start,
+        effects => [qw(3_prime_UTR_variant)],
+    },
 
-#     # check the introns & splice sites
+    # check the introns & splice sites
     
-#     {
-#         start   => $intron_end + 4,
-#         end     => $intron_end + 4,
-#         effects => [qw(synonymous_variant)],
-#     }, {
-#         start   => $intron_end + 3,
-#         end     => $intron_end + 3,
-#         effects => [qw(splice_region_variant missense_variant)],
-#     }, {
-#         start   => $intron_end,
-#         end     => $intron_end,
-#         effects => [qw(splice_donor_variant)],
-#     }, {
-#         start   => $intron_end - 1,
-#         end     => $intron_end - 1,
-#         effects => [qw(splice_donor_variant)],
-#     }, {
-#         start   => $intron_end - 2,
-#         end     => $intron_end - 2,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_end - 7,
-#         end     => $intron_end - 7,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_end - 8,
-#         end     => $intron_end - 8,
-#         effects => [qw(intron_variant)],
-#     }, {
-#         comment => 'an insertion between the last exon base and the first intron base is not essential',
-#         alleles => 'A',
-#         start   => $intron_end + 1,
-#         end     => $intron_end,
-#         effects => [qw(splice_region_variant frameshift_variant)],
-#     }, {
-#         comment => 'an insertion between the first two bases of an intron is in the donor',
-#         alleles => 'A',
-#         start   => $intron_end,
-#         end     => $intron_end - 1,
-#         effects => [qw(splice_donor_variant)],
-#     }, {
-#         comment => 'insertion between bases 2 & 3 of an intron is splice_region',
-#         alleles => 'A',
-#         start   => $intron_end - 1,
-#         end     => $intron_end - 2,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         comment => 'insertion between bases 7 & 8 is still splice_region',
-#         alleles => 'A',
-#         start   => $intron_end - 6,
-#         end     => $intron_end - 7,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         comment => 'insertion between bases 8 & 9 is just an intron_variant',
-#         alleles => 'A',
-#         start   => $intron_end - 7,
-#         end     => $intron_end - 8,
-#         effects => [qw(intron_variant)],
-#     }, {
-#         start   => $intron_start + 8,
-#         end     => $intron_start + 8,
-#         effects => [qw(intron_variant)],
-#     }, {
-#         start   => $intron_start + 7,
-#         end     => $intron_start + 7,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_start + 2,
-#         end     => $intron_start + 2,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_start + 1,
-#         end     => $intron_start + 1,
-#         effects => [qw(splice_acceptor_variant)],
-#     }, {
-#         start   => $intron_start,
-#         end     => $intron_start,
-#         effects => [qw(splice_acceptor_variant)],
-#     }, {
-#         start   => $intron_start - 1,
-#         end     => $intron_start - 1,
-#         effects => [qw(splice_region_variant missense_variant)],
-#     }, {
-#         start   => $intron_start - 3,
-#         end     => $intron_start - 3,
-#         effects => [qw(splice_region_variant missense_variant)],
-#     }, {
-#         start   => $intron_start - 4,
-#         end     => $intron_start - 4,
-#         effects => [qw(missense_variant)],
-#     }, {
-#         comment => 'an insertion between the last intron base and the first exon base is not essential',
-#         alleles => 'A',
-#         start   => $intron_start,
-#         end     => $intron_start - 1,
-#         effects => [qw(splice_region_variant frameshift_variant)],
-#     }, {
-#         comment => 'an insertion between the last two bases of an intron is in the acceptor',
-#         alleles => 'A',
-#         start   => $intron_start + 1,
-#         end     => $intron_start,
-#         effects => [qw(splice_acceptor_variant)],
-#     }, {
-#         comment => 'insertion between last bases 2 & 3 of an intron is splice_region',
-#         alleles => 'A',
-#         start   => $intron_start + 2,
-#         end     => $intron_start + 1,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         comment => 'insertion between last bases 7 & 8 is still splice_region',
-#         alleles => 'A',
-#         start   => $intron_start + 7,
-#         end     => $intron_start + 6,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         comment => 'insertion between last bases 8 & 9 is just an intron_variant',
-#         alleles => 'A',
-#         start   => $intron_start + 8,
-#         end     => $intron_start + 7,
-#         effects => [qw(intron_variant)],
-#     }, 
+    {
+        start   => $intron_end + 4,
+        end     => $intron_end + 4,
+        effects => [qw(synonymous_variant)],
+    }, {
+        start   => $intron_end + 3,
+        end     => $intron_end + 3,
+        effects => [qw(splice_region_variant missense_variant)],
+    }, {
+        start   => $intron_end,
+        end     => $intron_end,
+        effects => [qw(splice_donor_variant)],
+    }, {
+        start   => $intron_end - 1,
+        end     => $intron_end - 1,
+        effects => [qw(splice_donor_variant)],
+    }, {
+        start   => $intron_end - 2,
+        end     => $intron_end - 2,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_end - 7,
+        end     => $intron_end - 7,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_end - 8,
+        end     => $intron_end - 8,
+        effects => [qw(intron_variant)],
+    }, {
+        comment => 'an insertion between the last exon base and the first intron base is not essential',
+        alleles => 'A',
+        start   => $intron_end + 1,
+        end     => $intron_end,
+        effects => [qw(splice_region_variant frameshift_variant)],
+    }, {
+        comment => 'an insertion between the first two bases of an intron is in the donor',
+        alleles => 'A',
+        start   => $intron_end,
+        end     => $intron_end - 1,
+        effects => [qw(splice_donor_variant)],
+    }, {
+        comment => 'insertion between bases 2 & 3 of an intron is splice_region',
+        alleles => 'A',
+        start   => $intron_end - 1,
+        end     => $intron_end - 2,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        comment => 'insertion between bases 7 & 8 is still splice_region',
+        alleles => 'A',
+        start   => $intron_end - 6,
+        end     => $intron_end - 7,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        comment => 'insertion between bases 8 & 9 is just an intron_variant',
+        alleles => 'A',
+        start   => $intron_end - 7,
+        end     => $intron_end - 8,
+        effects => [qw(intron_variant)],
+    }, {
+        start   => $intron_start + 8,
+        end     => $intron_start + 8,
+        effects => [qw(intron_variant)],
+    }, {
+        start   => $intron_start + 7,
+        end     => $intron_start + 7,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_start + 2,
+        end     => $intron_start + 2,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_start + 1,
+        end     => $intron_start + 1,
+        effects => [qw(splice_acceptor_variant)],
+    }, {
+        start   => $intron_start,
+        end     => $intron_start,
+        effects => [qw(splice_acceptor_variant)],
+    }, {
+        start   => $intron_start - 1,
+        end     => $intron_start - 1,
+        effects => [qw(splice_region_variant missense_variant)],
+    }, {
+        start   => $intron_start - 3,
+        end     => $intron_start - 3,
+        effects => [qw(splice_region_variant missense_variant)],
+    }, {
+        start   => $intron_start - 4,
+        end     => $intron_start - 4,
+        effects => [qw(missense_variant)],
+    }, {
+        comment => 'an insertion between the last intron base and the first exon base is not essential',
+        alleles => 'A',
+        start   => $intron_start,
+        end     => $intron_start - 1,
+        effects => [qw(splice_region_variant frameshift_variant)],
+    }, {
+        comment => 'an insertion between the last two bases of an intron is in the acceptor',
+        alleles => 'A',
+        start   => $intron_start + 1,
+        end     => $intron_start,
+        effects => [qw(splice_acceptor_variant)],
+    }, {
+        comment => 'insertion between last bases 2 & 3 of an intron is splice_region',
+        alleles => 'A',
+        start   => $intron_start + 2,
+        end     => $intron_start + 1,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        comment => 'insertion between last bases 7 & 8 is still splice_region',
+        alleles => 'A',
+        start   => $intron_start + 7,
+        end     => $intron_start + 6,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        comment => 'insertion between last bases 8 & 9 is just an intron_variant',
+        alleles => 'A',
+        start   => $intron_start + 8,
+        end     => $intron_start + 7,
+        effects => [qw(intron_variant)],
+    }, 
 
-#     # check the CDS 
+    # check the CDS 
 
-#     {
-#         alleles => 'C',
-#         strand  => -1,
-#         start   => $cds_end,
-#         end     => $cds_end,
-#         effects => [qw(missense_variant)],
-#     }, {
-#         alleles => 'G',
-#         strand  => -1,
-#         start   => $cds_end - 1,
-#         end     => $cds_end - 1,
-#         effects => [qw(missense_variant)],
-#     }, {
-#         alleles => 'C',
-#         strand  => -1,
-#         start   => $cds_end - 2,
-#         end     => $cds_end - 2,
-#         effects => [qw(missense_variant)],
-#     },  {
-#         alleles => 'G',
-#         strand  => -1,
-#         start   => $cds_end - 3,
-#         end     => $cds_end - 3,
-#         effects => [qw(missense_variant)],
-#     }, {
-#         alleles => 'GGG',
-#         strand  => -1,
-#         start   => $cds_end - 2,
-#         end     => $cds_end - 3,
-#         effects => [qw(inframe_insertion)],
-#     }, {
-#         alleles => 'GGG',
-#         strand  => -1,
-#         start   => $cds_end - 1,
-#         end     => $cds_end - 2,
-#         effects => [qw(inframe_insertion)],
-#     }, {
-#         alleles => 'AGG',
-#         strand  => -1,
-#         start   => $cds_end - 1,
-#         end     => $cds_end - 2,
-#         effects => [qw(protein_altering_variant)],
-#     }, {
-#         alleles => '-',
-#         strand  => -1,
-#         start   => $cds_end - 5,
-#         end     => $cds_end - 3,
-#         effects => [qw(inframe_deletion)],
-#         pep_alleles => 'L/-',
-#     }, {
-#         alleles => 'CTT',
-#         strand  => -1,
-#         start   => $cds_end - 5,
-#         end     => $cds_end - 3,
-#         effects => [qw(synonymous_variant)],
-#         pep_alleles => 'L/L',
-#     }, {
-#         alleles => 'GATACA',
-#         strand  => -1,
-#         start   => $cds_end - 8,
-#         end     => $cds_end - 3,
-#         effects => [qw(missense_variant)],
-#         pep_alleles => 'LT/DT',
-#     }, {
-#         alleles => 'G',
-#         strand  => -1,
-#         start   => $cds_end - 3,
-#         end     => $cds_end - 4,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => 'GT',
-#         strand  => -1,
-#         start   => $cds_end - 3,
-#         end     => $cds_end - 4,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => 'GTAG',
-#         strand  => -1,
-#         start   => $cds_end - 3,
-#         end     => $cds_end - 4,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => '-',
-#         strand  => -1,
-#         start   => $cds_end - 3,
-#         end     => $cds_end - 3,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => '-',
-#         strand  => -1,
-#         start   => $cds_end - 4,
-#         end     => $cds_end - 3,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => '-',
-#         strand  => -1,
-#         start   => $cds_end - 6,
-#         end     => $cds_end - 3,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         alleles => 'G',
-#         strand  => -1,
-#         start   => $cds_start + 2,
-#         end     => $cds_start + 2,
-#         effects => [qw(stop_lost)],
-#     }, {
-#         alleles => 'A',
-#         strand  => -1,
-#         start   => $cds_start + 1,
-#         end     => $cds_start + 1,
-#         effects => [qw(stop_retained_variant)],
-#     }, {
-#         alleles => 'C',
-#         strand  => -1,
-#         start   => $cds_start,
-#         end     => $cds_start,
-#         effects => [qw(stop_lost)],
-#     }, {
-#         alleles => 'AAG',
-#         strand  => -1,
-#         start   => $cds_start + 2,
-#         end     => $cds_start + 1,
-#         effects => [qw(inframe_insertion stop_retained_variant)],
-#     }, {
-#         alleles => '-',
-#         strand  => -1,
-#         start   => $cds_start,
-#         end     => $cds_start + 2,
-#         effects => [qw(stop_lost inframe_deletion)],
-#     }, {
-#         alleles => 'TAA',
-#         strand  => -1,
-#         start   => $cds_start,
-#         end     => $cds_start + 2,
-#         effects => [qw(stop_retained_variant)],
-#     }, {
-#         alleles => 'GGG',
-#         strand  => -1,
-#         start   => $cds_start,
-#         end     => $cds_start + 2,
-#         effects => [qw(stop_lost)],
-#     }, {
-#         comment => 'a wierd allele string',
-#         alleles => 'HGMD_MUTATION',
-#         start   => $cds_start + 10,
-#         end     => $cds_start + 11,
-#         effects => [qw(coding_sequence_variant)],
-#     }, {
-#         comment => 'an ambiguous allele string',
-#         alleles => 'W',
-#         start   => $cds_start + 10,
-#         end     => $cds_start + 10,
-#         effects => [qw(coding_sequence_variant)],
-#     }, {
-#         comment => 'an ambiguous insertion',
-#         alleles => 'W',
-#         start   => $cds_start + 10,
-#         end     => $cds_start + 9,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         comment => 'a specified length insertion',
-#         alleles => '2 BP INSERTION',
-#         start   => $cds_start + 10,
-#         end     => $cds_start + 9,
-#         effects => [qw(frameshift_variant)],
-#     }, {
-#         comment => 'an inframe specified length insertion',
-#         alleles => '3 BP INSERTION',
-#         start   => $cds_start + 10,
-#         end     => $cds_start + 9,
-#         effects => [qw(coding_sequence_variant)],
-#     }, {
-#         comment => 'delete the last codon of an exon',
-#         alleles => '-',
-#         start   => $intron_end + 1,
-#         end     => $intron_end + 3,
-#         effects => [qw(inframe_deletion splice_region_variant)],
-#     }, 
+    {
+        alleles => 'C',
+        strand  => -1,
+        start   => $cds_end,
+        end     => $cds_end,
+        effects => [qw(missense_variant)],
+    }, {
+        alleles => 'G',
+        strand  => -1,
+        start   => $cds_end - 1,
+        end     => $cds_end - 1,
+        effects => [qw(missense_variant)],
+    }, {
+        alleles => 'C',
+        strand  => -1,
+        start   => $cds_end - 2,
+        end     => $cds_end - 2,
+        effects => [qw(missense_variant)],
+    },  {
+        alleles => 'G',
+        strand  => -1,
+        start   => $cds_end - 3,
+        end     => $cds_end - 3,
+        effects => [qw(missense_variant)],
+    }, {
+        alleles => 'GGG',
+        strand  => -1,
+        start   => $cds_end - 2,
+        end     => $cds_end - 3,
+        effects => [qw(inframe_insertion)],
+    }, {
+        alleles => 'GGG',
+        strand  => -1,
+        start   => $cds_end - 1,
+        end     => $cds_end - 2,
+        effects => [qw(inframe_insertion)],
+    }, {
+        alleles => 'AGG',
+        strand  => -1,
+        start   => $cds_end - 1,
+        end     => $cds_end - 2,
+        effects => [qw(protein_altering_variant)],
+    }, {
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_end - 5,
+        end     => $cds_end - 3,
+        effects => [qw(inframe_deletion)],
+        pep_alleles => 'L/-',
+    }, {
+        alleles => 'CTT',
+        strand  => -1,
+        start   => $cds_end - 5,
+        end     => $cds_end - 3,
+        effects => [qw(synonymous_variant)],
+        pep_alleles => 'L/L',
+    }, {
+        alleles => 'GATACA',
+        strand  => -1,
+        start   => $cds_end - 8,
+        end     => $cds_end - 3,
+        effects => [qw(missense_variant)],
+        pep_alleles => 'LT/DT',
+    }, {
+        alleles => 'G',
+        strand  => -1,
+        start   => $cds_end - 3,
+        end     => $cds_end - 4,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => 'GT',
+        strand  => -1,
+        start   => $cds_end - 3,
+        end     => $cds_end - 4,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => 'GTAG',
+        strand  => -1,
+        start   => $cds_end - 3,
+        end     => $cds_end - 4,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_end - 3,
+        end     => $cds_end - 3,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_end - 4,
+        end     => $cds_end - 3,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_end - 6,
+        end     => $cds_end - 3,
+        effects => [qw(frameshift_variant)],
+    }, {
+        alleles => 'G',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 2,
+        effects => [qw(stop_lost)],
+    }, {
+        alleles => 'A',
+        strand  => -1,
+        start   => $cds_start + 1,
+        end     => $cds_start + 1,
+        effects => [qw(stop_retained_variant)],
+    }, {
+        alleles => 'C',
+        strand  => -1,
+        start   => $cds_start,
+        end     => $cds_start,
+        effects => [qw(stop_lost)],
+    }, {
+        alleles => 'AAG',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
+    }, {
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_start,
+        end     => $cds_start + 2,
+        effects => [qw(stop_lost inframe_deletion)],
+    }, {
+        alleles => 'TAA',
+        strand  => -1,
+        start   => $cds_start,
+        end     => $cds_start + 2,
+        effects => [qw(stop_retained_variant)],
+    }, {
+        alleles => 'GGG',
+        strand  => -1,
+        start   => $cds_start,
+        end     => $cds_start + 2,
+        effects => [qw(stop_lost)],
+    }, {
+        comment => 'a wierd allele string',
+        alleles => 'HGMD_MUTATION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 11,
+        effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'an ambiguous allele string',
+        alleles => 'W',
+        start   => $cds_start + 10,
+        end     => $cds_start + 10,
+        effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'an ambiguous insertion',
+        alleles => 'W',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'a specified length insertion',
+        alleles => '2 BP INSERTION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'an inframe specified length insertion',
+        alleles => '3 BP INSERTION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'delete the last codon of an exon',
+        alleles => '-',
+        start   => $intron_end + 1,
+        end     => $intron_end + 3,
+        effects => [qw(inframe_deletion splice_region_variant)],
+    }, 
 
 
-#     # check the complex calls
+    # check the complex calls
     
-#     {
-#         alleles => '-',
-#         start   => $intron_end - 2,
-#         end     => $intron_end + 3,
-#         effects => [qw(splice_donor_variant coding_sequence_variant intron_variant)],
-#     }, {
-#         alleles => '-',
-#         start   => $intron_start - 3,
-#         end     => $intron_start + 2,
-#         effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
-#     }, {
-#         alleles => '-',
-#         start   => $cds_end - 2,
-#         end     => $cds_end + 3,
-#         effects => [qw( 5_prime_UTR_variant coding_sequence_variant)],
-#     },  {
-#         alleles => '-',
-#         start   => $cds_start - 3,
-#         end     => $cds_start + 2,
-#         effects => [qw( 3_prime_UTR_variant coding_sequence_variant)],
-#     },  
+    {
+        alleles => '-',
+        start   => $intron_end - 2,
+        end     => $intron_end + 3,
+        effects => [qw(splice_donor_variant coding_sequence_variant intron_variant)],
+    }, {
+        alleles => '-',
+        start   => $intron_start - 3,
+        end     => $intron_start + 2,
+        effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
+    }, {
+        alleles => '-',
+        start   => $cds_end - 2,
+        end     => $cds_end + 3,
+        effects => [qw( 5_prime_UTR_variant coding_sequence_variant)],
+    },  {
+        alleles => '-',
+        start   => $cds_start - 3,
+        end     => $cds_start + 2,
+        effects => [qw( 3_prime_UTR_variant coding_sequence_variant)],
+    },  
 
 
-# ];
+];
 
-# # a forward strand transcript with an intron in the UTR
+# a forward strand transcript with an intron in the UTR
 
-# my $t3 = $ta->fetch_by_stable_id('ENST00000530893');
+my $t3 = $ta->fetch_by_stable_id('ENST00000530893');
 
-# $transcript_tests->{$t3->stable_id}->{transcript} = $t3;
+$transcript_tests->{$t3->stable_id}->{transcript} = $t3;
 
-# $first_intron = $t3->get_all_Introns->[0];
+$first_intron = $t3->get_all_Introns->[0];
 
-# $intron_start = $first_intron->seq_region_start;
-# $intron_end   = $first_intron->seq_region_end;
+$intron_start = $first_intron->seq_region_start;
+$intron_end   = $first_intron->seq_region_end;
 
-# $cds_start = $t3->coding_region_start;
+$cds_start = $t3->coding_region_start;
 
-# $transcript_tests->{$t3->stable_id}->{tests} = [
-#     {
-#         start   => $intron_start - 1,
-#         end     => $intron_start - 1,
-#         effects => [qw(splice_region_variant 5_prime_UTR_variant)],
-#     }, {
-#         start   => $intron_start,
-#         end     => $intron_start,
-#         effects => [qw(splice_donor_variant)],
-#     }, {
-#         start   => $intron_start+1,
-#         end     => $intron_start+1,
-#         effects => [qw(splice_donor_variant)],
-#     }, {
-#         start   => $intron_start+2,
-#         end     => $intron_start+2,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_end - 2,
-#         end     => $intron_end - 2,
-#         effects => [qw(splice_region_variant intron_variant)],
-#     }, {
-#         start   => $intron_end - 1,
-#         end     => $intron_end - 1,
-#         effects => [qw(splice_acceptor_variant)],
-#     }, {
-#         start   => $intron_end,
-#         end     => $intron_end,
-#         effects => [qw(splice_acceptor_variant)],
-#     }, {
-#         start   => $intron_end + 1,
-#         end     => $intron_end + 1,
-#         effects => [qw(splice_region_variant 5_prime_UTR_variant)],
-#     }, {
-#         comment => 'a variation with an incorrect reference allele',
-#         ref     => 'G',
-#         alleles => 'T',
-#         start   => $cds_start + 3,
-#         end     => $cds_start + 3,
-#         effects => [qw(missense_variant missense_variant)],
-#     }, {
-#         comment => 'a TA(3) allele string',
-#         alleles => 'TA(3)',
-#         start   => $intron_start + 10,
-#         end     => $intron_start + 15,
-#         effects => [qw(intron_variant)],
-#     },
-# ];
+$transcript_tests->{$t3->stable_id}->{tests} = [
+    {
+        start   => $intron_start - 1,
+        end     => $intron_start - 1,
+        effects => [qw(splice_region_variant 5_prime_UTR_variant)],
+    }, {
+        start   => $intron_start,
+        end     => $intron_start,
+        effects => [qw(splice_donor_variant)],
+    }, {
+        start   => $intron_start+1,
+        end     => $intron_start+1,
+        effects => [qw(splice_donor_variant)],
+    }, {
+        start   => $intron_start+2,
+        end     => $intron_start+2,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_end - 2,
+        end     => $intron_end - 2,
+        effects => [qw(splice_region_variant intron_variant)],
+    }, {
+        start   => $intron_end - 1,
+        end     => $intron_end - 1,
+        effects => [qw(splice_acceptor_variant)],
+    }, {
+        start   => $intron_end,
+        end     => $intron_end,
+        effects => [qw(splice_acceptor_variant)],
+    }, {
+        start   => $intron_end + 1,
+        end     => $intron_end + 1,
+        effects => [qw(splice_region_variant 5_prime_UTR_variant)],
+    }, {
+        comment => 'a variation with an incorrect reference allele',
+        ref     => 'G',
+        alleles => 'T',
+        start   => $cds_start + 3,
+        end     => $cds_start + 3,
+        effects => [qw(missense_variant missense_variant)],
+    }, {
+        comment => 'a TA(3) allele string',
+        alleles => 'TA(3)',
+        start   => $intron_start + 10,
+        end     => $intron_start + 15,
+        effects => [qw(intron_variant)],
+    },
+];
 
-# # a forward strand NMD transcript with an intron in the 3 prime UTR
+# a forward strand NMD transcript with an intron in the 3 prime UTR
 
-# my $nmd_t = $ta->fetch_by_stable_id('ENST00000470094');
+my $nmd_t = $ta->fetch_by_stable_id('ENST00000470094');
 
-# $transcript_tests->{$nmd_t->stable_id}->{transcript} = $nmd_t;
+$transcript_tests->{$nmd_t->stable_id}->{transcript} = $nmd_t;
 
-# my @introns = @{ $nmd_t->get_all_Introns };
+my @introns = @{ $nmd_t->get_all_Introns };
 
-# my $last_intron = pop @introns;
+my $last_intron = pop @introns;
 
-# $intron_start = $last_intron->seq_region_start;
-# $intron_end   = $last_intron->seq_region_end;
+$intron_start = $last_intron->seq_region_start;
+$intron_end   = $last_intron->seq_region_end;
 
-# $transcript_tests->{$nmd_t->stable_id}->{tests} = [
-#     {
-#         start   => $intron_start - 1,
-#         end     => $intron_start - 1,
-#         effects => [qw(splice_region_variant 3_prime_UTR_variant NMD_transcript_variant)],
-#     }, {
-#         start   => $intron_start + 1,
-#         end     => $intron_start + 1,
-#         effects => [qw(splice_donor_variant NMD_transcript_variant)],
-#     }, {
-#         start   => $intron_end + 1,
-#         end     => $intron_end + 1,
-#         effects => [qw(splice_region_variant 3_prime_UTR_variant NMD_transcript_variant)],
-#     }, 
-# ];
+$transcript_tests->{$nmd_t->stable_id}->{tests} = [
+    {
+        start   => $intron_start - 1,
+        end     => $intron_start - 1,
+        effects => [qw(splice_region_variant 3_prime_UTR_variant NMD_transcript_variant)],
+    }, {
+        start   => $intron_start + 1,
+        end     => $intron_start + 1,
+        effects => [qw(splice_donor_variant NMD_transcript_variant)],
+    }, {
+        start   => $intron_end + 1,
+        end     => $intron_end + 1,
+        effects => [qw(splice_region_variant 3_prime_UTR_variant NMD_transcript_variant)],
+    }, 
+];
 
-# # a miRNA transcript
+# a miRNA transcript
 
-# my $mirna = $ta->fetch_by_stable_id('ENST00000408781');
+my $mirna = $ta->fetch_by_stable_id('ENST00000408781');
 
-# $transcript_tests->{$mirna->stable_id}->{transcript} = $mirna;
+$transcript_tests->{$mirna->stable_id}->{transcript} = $mirna;
 
-# $t_start = $mirna->seq_region_start;
-# $t_end   = $mirna->seq_region_end;
+$t_start = $mirna->seq_region_start;
+$t_end   = $mirna->seq_region_end;
 
-# $transcript_tests->{$mirna->stable_id}->{tests} = [
-#     {
-#         start   => $t_start,
-#         end     => $t_start,
-#         effects => [qw(non_coding_transcript_exon_variant)],
-#     }, {
-#         start   => $t_start + 40,
-#         end     => $t_start + 40,
-#         effects => [qw(mature_miRNA_variant)],
-#     }, 
-# ];
+$transcript_tests->{$mirna->stable_id}->{tests} = [
+    {
+        start   => $t_start,
+        end     => $t_start,
+        effects => [qw(non_coding_transcript_exon_variant)],
+    }, {
+        start   => $t_start + 40,
+        end     => $t_start + 40,
+        effects => [qw(mature_miRNA_variant)],
+    }, 
+];
 
-# # a forward strand transcript with a partial stop codon
+# a forward strand transcript with a partial stop codon
 
-# my $t4 = $ta->fetch_by_stable_id('ENST00000450073');
+my $t4 = $ta->fetch_by_stable_id('ENST00000450073');
 
-# $transcript_tests->{$t4->stable_id}->{transcript} = $t4;
+$transcript_tests->{$t4->stable_id}->{transcript} = $t4;
 
-# $cds_start = $t4->coding_region_start;
-# $cds_end   = $t4->coding_region_end;
+$cds_start = $t4->coding_region_start;
+$cds_end   = $t4->coding_region_end;
 
-# $transcript_tests->{$t4->stable_id}->{tests} = [
-#     {
-#         start   => $cds_end,
-#         end     => $cds_end,
-#         effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
-#     }, 
-#     {
-#         start   => $cds_end,
-#         end     => $cds_end,
-#         alleles => '-',
-#         effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
-#     }, 
-# ];
+$transcript_tests->{$t4->stable_id}->{tests} = [
+    {
+        start   => $cds_end,
+        end     => $cds_end,
+        effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
+    }, 
+    {
+        start   => $cds_end,
+        end     => $cds_end,
+        alleles => '-',
+        effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
+    }, 
+];
 
-# # transcripts with frameshift introns
+# transcripts with frameshift introns
 
-# # a non-coding pseudogene with a frameshift intron
-# my $nc_fs_t = $ta->fetch_by_stable_id('ENST00000438775');
+# a non-coding pseudogene with a frameshift intron
+my $nc_fs_t = $ta->fetch_by_stable_id('ENST00000438775');
 
-# $transcript_tests->{$nc_fs_t->stable_id}->{transcript} = $nc_fs_t;
+$transcript_tests->{$nc_fs_t->stable_id}->{transcript} = $nc_fs_t;
 
-# my $fs_intron_start = $nc_fs_t->get_all_Exons->[0]->end+1;
+my $fs_intron_start = $nc_fs_t->get_all_Exons->[0]->end+1;
 
-# $transcript_tests->{$nc_fs_t->stable_id}->{tests} = [
-#     {
-#         comment => "a non-coding transcript with a frameshift intron",
-#         start   => $fs_intron_start,
-#         end     => $fs_intron_start,
-#         effects => [qw(non_coding_transcript_variant)],
-#     }, 
-# ];
+$transcript_tests->{$nc_fs_t->stable_id}->{tests} = [
+    {
+        comment => "a non-coding transcript with a frameshift intron",
+        start   => $fs_intron_start,
+        end     => $fs_intron_start,
+        effects => [qw(non_coding_transcript_variant)],
+    }, 
+];
 
-# # a coding transcript with a frameshift intron in the CDS
-# my $c_fs_t = $ta->fetch_by_stable_id('ENST00000392535');
+# a coding transcript with a frameshift intron in the CDS
+my $c_fs_t = $ta->fetch_by_stable_id('ENST00000392535');
 
-# $transcript_tests->{$c_fs_t->stable_id}->{transcript} = $c_fs_t;
+$transcript_tests->{$c_fs_t->stable_id}->{transcript} = $c_fs_t;
 
-# $fs_intron_start = $c_fs_t->get_all_Exons->[0]->end+1;
+$fs_intron_start = $c_fs_t->get_all_Exons->[0]->end+1;
 
-# $transcript_tests->{$c_fs_t->stable_id}->{tests} = [
-#     {
-#         comment => "a transcript with a frameshift intron in the CDS",
-#         start   => $fs_intron_start,
-#         end     => $fs_intron_start,
-#         effects => [qw(coding_sequence_variant)],
-#     }, 
-# ];
+$transcript_tests->{$c_fs_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a frameshift intron in the CDS",
+        start   => $fs_intron_start,
+        end     => $fs_intron_start,
+        effects => [qw(coding_sequence_variant)],
+    }, 
+];
 
-# # a transcript with a selenocysteine edit
-# my $sc_se_t = $ta->fetch_by_stable_id('ENST00000380903');
+# a transcript with a selenocysteine edit
+my $sc_se_t = $ta->fetch_by_stable_id('ENST00000380903');
 
-# $transcript_tests->{$sc_se_t->stable_id}->{transcript} = $sc_se_t;
+$transcript_tests->{$sc_se_t->stable_id}->{transcript} = $sc_se_t;
 
-# $transcript_tests->{$sc_se_t->stable_id}->{tests} = [
-#     {
-#         comment => "a transcript with a selenocysteine seqEdit",
-#         alleles => 'C',
-#         start   => 50655788,
-#         end     => 50655788,
-#         effects => [qw(missense_variant)],
-#     }, 
-# ];
+$transcript_tests->{$sc_se_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a selenocysteine seqEdit",
+        alleles => 'C',
+        start   => 50655788,
+        end     => 50655788,
+        effects => [qw(missense_variant)],
+    }, 
+];
 
-# # a transcript with a misc amino acid edit
-# my $aa_se_t = $ta->fetch_by_stable_id('ENST00000295641');
+# a transcript with a misc amino acid edit
+my $aa_se_t = $ta->fetch_by_stable_id('ENST00000295641');
 
-# $transcript_tests->{$aa_se_t->stable_id}->{transcript} = $aa_se_t;
+$transcript_tests->{$aa_se_t->stable_id}->{transcript} = $aa_se_t;
 
-# $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
-#     {
-#         comment => "a transcript with a misc amino acid seqEdit",
-#         alleles => 'T',
-#         start   => 220462640,
-#         end     => 220462640,
-#         effects => [qw(synonymous_variant)],
-#     }, 
-# ];
+$transcript_tests->{$aa_se_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a misc amino acid seqEdit",
+        alleles => 'T',
+        start   => 220462640,
+        end     => 220462640,
+        effects => [qw(synonymous_variant)],
+    }, 
+];
 
-# # a transcript with incomplete 5' CDS
-# my $incomplete_cds_t = $ta->fetch_by_stable_id('ENST00000452863');
-# $transcript_tests->{$incomplete_cds_t->stable_id}->{transcript} = $incomplete_cds_t;
+# a transcript with incomplete 5' CDS
+my $incomplete_cds_t = $ta->fetch_by_stable_id('ENST00000452863');
+$transcript_tests->{$incomplete_cds_t->stable_id}->{transcript} = $incomplete_cds_t;
 
-# $transcript_tests->{$incomplete_cds_t->stable_id}->{tests} = [
-#     {
-#         comment => "a transcript with incomplete 5' CDS",
-#         alleles => 'T',
-#         start   =>  32456435,
-#         end     =>  32456435,
-#         effects => [qw(missense_variant)],
-#     }, 
-# ];
+$transcript_tests->{$incomplete_cds_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with incomplete 5' CDS",
+        alleles => 'T',
+        start   =>  32456435,
+        end     =>  32456435,
+        effects => [qw(missense_variant)],
+    }, 
+];
 
 
 
