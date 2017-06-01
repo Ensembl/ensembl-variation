@@ -880,19 +880,29 @@ sub _translateable_seq {
     
     return $tran_seq;
 }
+
+sub _five_prime_utr {
+  return $_[0]->_generic_utr('five');
+}
+
 sub _three_prime_utr {
-    my $self = shift;
+  return $_[0]->_generic_utr('three');
+}
+
+sub _generic_utr {
+    my ($self, $three_five) = @_;
     
     my $tran = $self->transcript;
-    
-    unless(exists($tran->{_variation_effect_feature_cache}->{three_prime_utr})) {
+    my $key = $three_five.'_prime_utr';
+
+    unless(exists($tran->{_variation_effect_feature_cache}->{$key})) {
         
         # transfer to feature slice so we don't subseq whole chromosome
         my $transferred = $tran->transfer($tran->feature_Slice());
-        $tran->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
+        $tran->{_variation_effect_feature_cache}->{$key} = $transferred->$key();
     }
     
-    return $tran->{_variation_effect_feature_cache}->{three_prime_utr};
+    return $tran->{_variation_effect_feature_cache}->{$key};
 }
   
 sub _peptide {
