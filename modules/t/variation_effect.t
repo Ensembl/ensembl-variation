@@ -769,10 +769,23 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_start,
         effects => [qw(5_prime_UTR_variant start_retained_variant)],
     }, {
+        comment => 'deletion overlapping STOP and 3\' UTR, stop retained',
         alleles => '-',
-        start   => $cds_end-2,
-        end     => $cds_end+3,
-        effects => [qw( 3_prime_UTR_variant coding_sequence_variant)],
+        start   => $cds_end-1,
+        end     => $cds_end+1,
+        effects => [qw( 3_prime_UTR_variant stop_retained_variant)],
+    }, {
+        comment => 'deletion overlapping STOP and 3\' UTR, stop retained, different codon',
+        alleles => '-',
+        start   => $cds_end-1,
+        end     => $cds_end+2,
+        effects => [qw( 3_prime_UTR_variant stop_retained_variant)],
+    }, {
+        comment => 'deletion overlapping STOP and 3\' UTR, stop lost',
+        alleles => 'C',
+        start   => $cds_end-1,
+        end     => $cds_end+2,
+        effects => [qw( 3_prime_UTR_variant stop_lost)],
     },  
 
 ];

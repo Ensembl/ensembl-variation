@@ -720,39 +720,6 @@ sub _get_alleles {
     return ($ref_allele, $alt_allele);
 }
 
-sub stop_retained {
-    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
-    # use cache for this method as it gets called a lot
-    my $cache = $bvfoa->{_predicate_cache} ||= {};
-
-    unless(exists($cache->{stop_retained})) {
-
-        $cache->{stop_retained} = 0;
-
-        $bvfo ||= $bvfoa->base_variation_feature_overlap;
-
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-        return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
-
-        ## handle inframe insertion of a stop just before the stop (no ref peptide)
-        if(
-          $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-          $bvfo->_peptide &&
-          $bvfo->translation_start() > length($bvfo->_peptide)
-        ) {
-          $cache->{stop_retained} = 1;
-        }
-        else {
-            return 0 unless $ref_pep;
-
-            $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
-        }
-    }
-
-    return $cache->{stop_retained};
-}
-
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
@@ -1049,10 +1016,13 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-            
-            return 0 unless defined $ref_pep;
-        
-            $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
+
+            if(defined($ref_pep) && defined($alt_pep)) {
+                $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
+            }
+            else {
+                $cache->{stop_lost} = _ins_del_stop_altered(@_);
+            }
         }
         
         # structural variant
@@ -1076,6 +1046,120 @@ sub stop_lost {
     }
 
     return $cache->{stop_lost};
+}
+
+sub stop_retained {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{stop_retained})) {
+
+        $cache->{stop_retained} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        my $pre = $bvfoa->_pre_consequence_predicates;
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+        if(defined($alt_pep) && $alt_pep ne '') {
+            return 0 unless $alt_pep =~/^\*/; 
+
+            ## handle inframe insertion of a stop just before the stop (no ref peptide)
+            if(
+              $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
+              $bvfo->_peptide &&
+              $bvfo->translation_start() > length($bvfo->_peptide)
+            ) {
+              $cache->{stop_retained} = 1;
+            }
+            else {
+                return 0 unless $ref_pep;
+
+                $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
+            }
+        }
+        else {
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
+        }
+    }
+
+    return $cache->{stop_retained};
+}
+
+sub _overlaps_stop_codon {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{overlaps_stop_codon})) {
+        $cache->{overlaps_stop_codon} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $feat ||= $bvfo->feature;
+        return 0 if grep {$_->code eq 'cds_end_NF'} @{$feat->get_all_Attributes()};
+
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+        
+        $cache->{overlaps_stop_codon} = overlap(
+            $cdna_start, $cdna_end,
+            $feat->cdna_coding_end - 2, $feat->cdna_coding_end
+        );
+    }
+
+    return $cache->{overlaps_stop_codon};
+}
+
+sub _ins_del_stop_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{ins_del_stop_altered})) {
+        $cache->{ins_del_stop_altered} = 0;
+
+        return 0 unless _overlaps_stop_codon(@_);
+
+        my $pre = $bvfoa->_pre_consequence_predicates;
+        return 0 unless $pre->{increase_length} || $pre->{decrease_length};
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords and CDS start
+        my ($cdna_start, $cdna_end, $cds_start) = ($bvfo->cdna_start, $bvfo->cdna_end, $bvfo->cds_start);
+        return 0 unless $cdna_start && $cdna_end && $cds_start;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_three_prime_utr();
+
+        my $utr_and_translateable = $translateable.($utr ? $utr->seq : '');
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        # use CDS start to anchor the edit
+        # and cDNA coords to get the length (could use VF, but have already retrieved cDNA coords)
+        substr($utr_and_translateable, $cds_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+
+        # now we need the codon from the new seq at the equivalent end pos from translateable
+        # and to translate it to check if it is still a stop
+        my $pep = Bio::Seq->new(
+            -seq        => substr($utr_and_translateable, length($translateable) - 3, 3),
+            -moltype    => 'dna',
+            -alphabet   => 'dna',
+        )->translate(
+            undef, undef, undef, $bvfo->_codon_table
+        )->seq;
+
+        $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');
+    }
+
+    return $cache->{ins_del_stop_altered};
 }
 
 sub frameshift {
@@ -1161,7 +1245,9 @@ sub coding_unknown {
                 ((_get_peptide_alleles(@_))[0] =~ /X/)
             ) and (
                 not (
-                    frameshift(@_) or inframe_deletion(@_) or protein_altering_variant(@_) or start_retained_variant(@_) or start_lost(@_)
+                    frameshift(@_) or inframe_deletion(@_) or protein_altering_variant(@_) or
+                    start_retained_variant(@_) or start_lost(@_) or
+                    stop_retained(@_) or stop_lost(@_)
                 )
             )
         );
