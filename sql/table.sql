@@ -190,7 +190,8 @@ create table variation_feature(
         'feature_truncation',
         'regulatory_region_variant',
         'TF_binding_site_variant',
-        'protein_altering_variant'
+        'protein_altering_variant',
+        'start_retained_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET (
             '1','2','3','4','5','6','7','8',
@@ -1408,7 +1409,8 @@ CREATE TABLE transcript_variation (
                                             'regulatory_region_translocation',
                                             'feature_elongation',
                                             'feature_truncation',
-                                            'protein_altering_variant'
+                                            'protein_altering_variant',
+                                            'start_retained_variant'
                                         ),
     cds_start                           int(11) unsigned,
     cds_end                             int(11) unsigned,
@@ -1768,12 +1770,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '89');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '90');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|Drop strain_gtype_poly table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_b.sql|add start_retained_variant to consequence_types in variation_feature and transcript_variation');
 
 /**
 @header  Failed tables
