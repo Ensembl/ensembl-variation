@@ -433,6 +433,10 @@ sub get_variant{
     ## not printing bulky error message        
     warn "Problem finding allele for $dbSNP\n" unless $@ eq '';
 
+    if ($ref_allele eq $alt_allele){
+      print "Alt allele not available for " . $record->{hgvs_g} . " \n";
+      return undef;
+    }
 
 
     ## look for existing variation object to return
