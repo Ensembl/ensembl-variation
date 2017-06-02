@@ -1399,14 +1399,6 @@ CREATE TABLE transcript_variation (
                                             'transcript_fusion',
                                             'transcript_amplification',
                                             'transcript_translocation',
-                                            'TFBS_ablation',
-                                            'TFBS_fusion',
-                                            'TFBS_amplification',
-                                            'TFBS_translocation',
-                                            'regulatory_region_ablation',
-                                            'regulatory_region_fusion',
-                                            'regulatory_region_amplification',
-                                            'regulatory_region_translocation',
                                             'feature_elongation',
                                             'feature_truncation',
                                             'protein_altering_variant',
@@ -1776,6 +1768,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_b.sql|add start_retained_variant to consequence_types in variation_feature and transcript_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_c.sql|remove regulatory and TFBS consequences from consequence_types in  transcript_variation');
 
 /**
 @header  Failed tables
