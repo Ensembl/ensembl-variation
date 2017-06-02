@@ -362,7 +362,9 @@ sub _new_slice_seq {
     unless($fa_length && $fa_length > 0) {
 
       foreach my $alt(keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{$sr_name} || {}}) {
-        if($fa_length = $fasta_db->length($alt)) {
+        $fa_length = $fasta_db->length($alt);
+
+        if($fa_length && $fa_length > 0) {
           print STDERR "USING SYNOYM $alt FOR $sr_name\n" if $DEBUG;
           $sr_name = $alt;
           last;
