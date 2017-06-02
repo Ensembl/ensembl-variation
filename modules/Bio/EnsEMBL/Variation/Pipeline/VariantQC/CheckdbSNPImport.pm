@@ -77,7 +77,7 @@ sub run {
     my $mean_al   = substr(( $allele_count / $variation_count),0,5);
     my $fail_rate = substr((100 * $fail_count / $variation_count),0,5);
 
-    my $var_no_ss_allele     = $self->count_no_ss_allele();
+#    my $var_no_ss_allele     = $self->count_no_ss_allele();
     my $var_no_allele_string = $self->count_no_allele_string();
 
     my $geno_no_sample       = $self->count_sampleless_geno(\@genotype_tables_to_check);
@@ -100,9 +100,12 @@ Total Allele:           $allele_count ( $mean_al per variation )
 
 Failed Variation:       $fail_count (failure rate: $fail_rate )
 
-Variations without ss alleles:      $var_no_ss_allele  
-Variations without allele_string:   $var_no_allele_string 
 
+Variations without allele_string:   $var_no_allele_string\n";
+
+#Variations without ss alleles:      $var_no_ss_allele
+
+print $report "
 Genotypes without samples:          $geno_no_sample
 Genotypes without real ss:          $geno_no_subsnp
 Genotypes without alleles:          $geno_no_allele
@@ -117,7 +120,7 @@ VariationFeature where end+1<start: $bad_position
 
     print $report "ERROR: $complimented_desc complimented descriptions found - to be fixed manually\n\n" if $complimented_desc >0;
 
-    if($var_no_ss_allele    > 0  || 
+    if(
        $var_no_allele_string > 0 || 
        $variation_count  == 0    ||
        $varfeat_count    == 0    ||
@@ -125,7 +128,6 @@ VariationFeature where end+1<start: $bad_position
        $geno_no_sample     >0    ||
        $varfeat_no_pos     >0    ||
        $varfeat_no_seqreg  >0    ||
-       $geno_no_subsnp     >0    ||
        $attribs_loaded   == 0
        ){
 
@@ -138,7 +140,7 @@ VariationFeature where end+1<start: $bad_position
 
 
 ## Checks for missing data
- 
+## No longer a fail criteria - only holding alleles with freq's for human
  sub count_no_ss_allele{
 
     my $self = shift;
@@ -297,7 +299,7 @@ sub count_geno_ss_problem{
 
     my $total_problem = 0;
 
-    my $max_subsnp_ext_sth      = $var_dba->dbc->prepare(qq[ select max(subsnp_id) from allele]);
+    my $max_subsnp_ext_sth      = $var_dba->dbc->prepare(qq[ select max(subsnp_id) from variation_synonym]);
     $max_subsnp_ext_sth->execute()||die "Failed to find max subsnp_id\n";
     my $max_subsnp = $max_subsnp_ext_sth->fetchall_arrayref();
     unless(defined  $max_subsnp->[0]->[0]){ die "Failed to find max subsnp_id\n";}

@@ -278,13 +278,14 @@ sub summarise_evidence{
     ## summarise ss information
     my $ss_variations =  get_ss_variations($var_dbh, $first, $last, $species);
 
+    my $submitter_info = get_submitters($var_dbh, $first, $last, $species);
 
     ## extract list of variants with pubmed citations
     ## not using this to not fail variants assuming it is quicker to fail then revert in bulk
     my $pubmed_variations = get_pubmed_variations($var_dbh, $first, $last);
 
 
-    foreach my $var(keys %$ss_variations ){
+    foreach my $var(keys %$ss_variations ){## all variants in here
 
 	## dbSNP ss submissions
 	push @{$evidence{$var}},  $evidence_ids->{Multiple_observations}  
@@ -294,35 +295,43 @@ sub summarise_evidence{
 	push @{$evidence{$var}}, $evidence_ids->{Frequency}            
            if defined $ss_variations->{$var}->{'freq'};
 
-
-      ## additional human evidence 
-      push @{$evidence{$var}}, $evidence_ids->{'HapMap'}
+        push @{$evidence{$var}}, $evidence_ids->{'HapMap'}
            if defined $ss_variations->{$var}->{'HM'}  ;
 
+
+        ## pubmed citations - multi species
+        push @{$evidence{$var}}, $evidence_ids->{Cited}
+            if defined $pubmed_variations->{$var};
+
+    }
+
+    foreach my $var(keys %$submitter_info){ ## only variants from trusted sets in here
+
+      push @{$evidence{$var}}, $evidence_ids->{Frequency}
+           if defined $submitter_info->{$var}->{'freq'};
+
+      ## additional human evidence
       push @{$evidence{$var}},  $evidence_ids->{ESP}
-           if defined $ss_variations->{$var}->{'ESP'} ;
+           if defined $submitter_info->{$var}->{'ESP'} ;
 
       push @{$evidence{$var}},  $evidence_ids->{ExAC}
-           if defined $ss_variations->{$var}->{'ExAC'} ;
-
+           if defined $submitter_info->{$var}->{'ExAC'} ;
  
+      push @{$evidence{$var}},  $evidence_ids->{TOPMED}
+           if defined $submitter_info->{$var}->{'TOPMED'} ;
+
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
-           if defined $ss_variations->{$var}->{'KG'} ;
+           if defined $submitter_info->{$var}->{'KG'} ;
 
       ## additional cow evidence
       push @{$evidence{$var}}, $evidence_ids->{'1000Bull_Genomes'}
-           if defined $ss_variations->{$var}->{'1000_BULL_GENOMES'} ;
+           if defined $submitter_info->{$var}->{'1000_BULL_GENOMES'} ;
      
       ## additional mouse evidence
       push @{$evidence{$var}}, $evidence_ids->{'WTSI_MGP'}
-           if defined $ss_variations->{$var}->{'SC_MOUSE_GENOMES'} ;
+           if defined $submitter_info->{$var}->{'SC_MOUSE_GENOMES'} ;
+    }
 
-
-      ## pubmed citations - multi species
-      push @{$evidence{$var}}, $evidence_ids->{Cited}               
-           if defined $pubmed_variations->{$var}; 
-	   
-    }    
     return \%evidence;
     
 }
@@ -367,76 +376,108 @@ sub get_evidence_attribs{
 
 sub get_ss_variations{
 
-    my $var_dbh = shift;
-    my $first   = shift;
-    my $last    = shift;
-    my $species = shift;
+  my $var_dbh = shift;
+  my $first   = shift;
+  my $last    = shift;
+  my $species = shift;
 
-    my %evidence;
+  my $obs_var_ext_sth  = $var_dbh->prepare(qq[ select al.variation_id,
+                                                      h.handle,
+                                                      al.population_id,
+                                                      al.frequency,
+                                                      p.name,
+                                                      al.subsnp_id,
+                                                      al.count
+                                               from   subsnp_handle h, allele al
+                                               left outer join population p on ( p.population_id = al.population_id)
+                                               where  al.variation_id between ? and ?
+                                               and    h.subsnp_id = al.subsnp_id ]);
 
-    my $obs_var_ext_sth  = $var_dbh->prepare(qq[ select al.variation_id,
-                                                        h.handle,
-                                                        al.population_id,
-                                                        al.frequency,
-                                                        p.name,
-                                                        al.subsnp_id,
-                                                        al.count 
-                                                 from   subsnp_handle h, allele al
-                                                 left outer join population p on ( p.population_id = al.population_id)
-                                                 where  al.variation_id between ? and ?
-                                                 and    h.subsnp_id = al.subsnp_id ]);
-    $obs_var_ext_sth->execute($first, $last );
-    my $dat = $obs_var_ext_sth->fetchall_arrayref();
+  $obs_var_ext_sth->execute($first, $last );
+  my $dat = $obs_var_ext_sth->fetchall_arrayref();
 
-    my %save_by_var; #  gather ss entries by variant
 
-    foreach my $l (@{$dat}){
+  my %evidence;
+  my %save_by_var;
 
-        $evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
+  foreach my $l (@{$dat}){
 
-        $l->[2] = "N" unless defined $l->[2];
+    $evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
 
-        ## human specific
-        $evidence{$l->[0]}{'KG'}    = 1 if $l->[1] =~/1000GENOMES/; 
+    $l->[2] = "N" unless defined $l->[2];
 
-        $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]  =~/NHLBI-ESP/i;
-
-        $evidence{$l->[0]}{'ExAC'} = 1 if defined $l->[4] && $l->[4]  =~/EVA_EXAC/i;
-
-        $evidence{$l->[0]}{'freq'}  = 1 if $l->[1] =~/1000GENOMES|NHLBI-ESP|EVA_EXAC/;
-
-        ## cow specific
-        $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
-
-        ## cow, sheep (and goat) data from EVA  
-        $evidence{$l->[0]}{'freq'} = 1              if $l->[1] =~/EVA_LIVESTOCK/;
-
-        ## mouse specific
-        $evidence{$l->[0]}{'SC_MOUSE_GENOMES'}  = 1 if $l->[1] =~/SC_MOUSE_GENOMES/;
-
-        #save submitter handle, population and ss id to try to discern independent submissions
-        ## no longer useful for Human 2016/01 
-        unless (defined $species && $species =~/Homo|Human/i){
-          push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
-        }
-
-       ## Save frequency evidence for variant by variant id - ensure the frequency is
-       ## not 0 or 1 and more than on individual assayed (only assign frequency status
-       ## if the allele count is greater than one for at least one allele).
-       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1 ){
-            ## flag if frequency data available
-            $evidence{$l->[0]}{'freq'}  = 1;
-
-            ## special case for HapMap - only flag if reported polymorphic
-            $evidence{$l->[0]}{'HM'}  = 1  if defined $l->[4] && $l->[4]  =~/HapMap/i;
-        }
+    # save submitter handle, population and ss id to try to discern independent submissions
+    # no longer useful for Human 2016/01
+    unless (defined $species && $species =~/Homo|Human/i){
+      push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
     }
 
+    ## Save frequency evidence for variant by variant id - ensure the frequency is
+    ## not 0 or 1 and more than on individual assayed (only assign frequency status
+    ## if the allele count is greater than one for at least one allele).
+    next unless  $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1;
 
-    foreach my $var (keys %save_by_var){
+    ## flag if frequency data available
+    $evidence{$l->[0]}{'freq'}  = 1;
 
-        $evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
-    }
+    ## special case for HapMap - only flag if reported polymorphic
+    $evidence{$l->[0]}{'HM'}  = 1  if defined $l->[4] && $l->[4]  =~/HapMap/i;
+  }
+
+  ## get multi-mapping information
+  foreach my $var (keys %save_by_var){
+    $evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
+  }
+
+  return \%evidence;
+}
+
+=head2  get_submitters
+
+  Extract dbSNP submitter handles to seek specific projects
+  regarded as being high standard and used as an evidence status
+
+=cut
+sub get_submitters{
+
+  my $var_dbh = shift;
+  my $first   = shift;
+  my $last    = shift;
+  my $species = shift;
+
+  my $handle_ext_sth  = $var_dbh->prepare(qq[ select variation_id, submitter_handle
+                                              from variation_synonym
+                                              where variation_id between ? and ?
+                                            ]);
+
+  $handle_ext_sth->execute($first, $last );
+  my $dat = $handle_ext_sth->fetchall_arrayref();
+
+
+  my %evidence;
+  foreach my $l (@{$dat}){
+
+    ## human specific
+    $evidence{$l->[0]}{'KG'}     = 1 if $l->[1] =~/1000GENOMES/;
+
+    $evidence{$l->[0]}{'ESP'}    = 1 if $l->[1]  =~/NHLBI-ESP/i;
+
+    $evidence{$l->[0]}{'ExAC'}   = 1 if $l->[1]  =~/EVA_EXAC/i;
+
+    $evidence{$l->[0]}{'TopMed'} = 1 if $l->[1]  =~/TOPMED/i;
+
+    $evidence{$l->[0]}{'freq'}   = 1 if $l->[1] =~/1000GENOMES|NHLBI-ESP|EVA_EXAC|TopMed/i;
+
+    ## cow specific
+    $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
+
+    ## cow, sheep (and goat) data from EVA
+    $evidence{$l->[0]}{'freq'} = 1              if $l->[1] =~/EVA_LIVESTOCK/;
+
+    ## mouse specific
+    $evidence{$l->[0]}{'SC_MOUSE_GENOMES'}  = 1 if $l->[1] =~/SC_MOUSE_GENOMES/;
+
+  }
     return \%evidence;
 }
 
