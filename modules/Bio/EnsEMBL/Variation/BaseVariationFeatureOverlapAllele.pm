@@ -283,7 +283,7 @@ sub get_all_OverlapConsequences {
 sub _get_oc_list {
   my ($self, $pre) = @_;
 
-  my $cache = $Bio::EnsEMBL::Variation::Utils::VariationEffect::_oc_cache ||= {};
+  my $cache = $main::_VEP_CACHE->{oc} ||= {};
   my $digest = $pre->{_digest};
 
   unless(exists($cache->{$digest})) {

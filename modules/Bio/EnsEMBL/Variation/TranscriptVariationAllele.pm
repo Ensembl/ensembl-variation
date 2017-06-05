@@ -238,6 +238,17 @@ sub peptide {
       # the codon method can set the peptide in some circumstances 
       # so check here before we try an (expensive) translation
       return $self->{peptide} if $self->{peptide};
+
+      my $tv = $self->base_variation_feature_overlap;
+
+      # for mithocondrial dna we need to to use a different codon table
+      my $codon_table = $tv->_codon_table;
+
+      # check the cache
+      my $pep_cache = $main::_VEP_CACHE->{pep}->{$codon_table} ||= {};
+      if(!($self->{is_reference} && scalar @{$tv->_seq_edits}) && ($self->{peptide} = $pep_cache->{$codon})) {
+        return $self->{peptide};
+      }
       
       # translate the codon sequence to establish the peptide allele
       
@@ -247,12 +258,8 @@ sub peptide {
       my $partial_codon = substr($codon, int(length($codon) / 3) * 3);
 
       my $pep = '';
-      my $tv = $self->base_variation_feature_overlap;
       
-      if($whole_codon) {
-          # for mithocondrial dna we need to to use a different codon table
-          my $codon_table = $tv->_codon_table;
-          
+      if($whole_codon) {          
           my $codon_seq = Bio::Seq->new(
             -seq        => $whole_codon,
             -moltype    => 'dna',
@@ -263,6 +270,8 @@ sub peptide {
         }
 
       # apply any seq edits?
+      my $have_edits = 0;
+
       if($self->{is_reference}) {
         my $seq_edits = $tv->_seq_edits;
         
@@ -276,6 +285,7 @@ sub peptide {
           SE: foreach my $se(grep {overlap($tv_start, $tv_end, $_->start, $_->end)} @$seq_edits) {
             my ($se_start, $se_end, $alt) = ($se->start, $se->end, $se->alt_seq);
             my $se_alt_seq_length = length($alt);
+            $have_edits = 1;
             
             # loop over each overlapping pos
             foreach my $tv_pos(grep {overlap($_, $_, $se_start, $se_end)} ($tv_start..$tv_end)) {
@@ -299,6 +309,8 @@ sub peptide {
       }
 
       $pep ||= '-';
+
+      $pep_cache->{$codon} = $pep if length($codon) <= 3 && !$have_edits;
 
       $self->{peptide} = $pep;
     }
