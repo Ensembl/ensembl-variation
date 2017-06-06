@@ -786,6 +786,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_end-1,
         end     => $cds_end+2,
         effects => [qw( 3_prime_UTR_variant stop_lost)],
+    }, {
+        comment => 'deletion overlapping STOP and beyond 3\' UTR, stop lost',
+        alleles => '-',
+        start   => $cds_end-1,
+        end     => $cds_end+97,
+        effects => [qw( 3_prime_UTR_variant stop_lost)],
     },  
 
 ];

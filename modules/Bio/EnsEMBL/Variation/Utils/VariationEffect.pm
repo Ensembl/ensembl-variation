@@ -836,6 +836,9 @@ sub _ins_del_start_altered {
 
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
 
+        # sequence shorter, we know it has been altered
+        return $cache->{ins_del_start_altered} = 1 if length($utr_and_translateable) < length($translateable);
+
         $cache->{ins_del_start_altered} = $translateable ne substr($utr_and_translateable, 0 - length($translateable));
     }
 
@@ -1145,6 +1148,9 @@ sub _ins_del_stop_altered {
         # use CDS start to anchor the edit
         # and cDNA coords to get the length (could use VF, but have already retrieved cDNA coords)
         substr($utr_and_translateable, $cds_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+
+        # new sequence shorter, we know it has been altered
+        return $cache->{ins_del_stop_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
         # now we need the codon from the new seq at the equivalent end pos from translateable
         # and to translate it to check if it is still a stop
