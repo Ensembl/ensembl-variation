@@ -78,7 +78,7 @@ my $dbc = DBI->connect(
 print "Getting phenotype descriptions\n";
 
 # get phenotype descriptions
-my $sth = $dbc->prepare("SELECT phenotype_id, description FROM phenotype");
+my $sth = $dbc->prepare("SELECT phenotype_id, LCASE(description) FROM phenotype");
 my ($id, $desc);
 $sth->execute();
 $sth->bind_columns(\$id, \$desc);
@@ -87,15 +87,27 @@ my %descs;
 $descs{$id} = $desc while($sth->fetch());
 $sth->finish();
 
+# get phenotype names
+$sth = $dbc->prepare("SELECT phenotype_id, LCASE(name) FROM phenotype WHERE name is not null AND name!=description");
+my ($id2, $name);
+$sth->execute();
+$sth->bind_columns(\$id2, \$name);
+
+my %names;
+$names{$id2} = $name while($sth->fetch());
+$sth->finish();
+
+
 # map a reverse of the hash
 my %id_by_desc = map {$descs{$_} => $_} keys %descs;
+my %id_by_name = map {$names{$_} => $_} keys %names;
 
 # store a "normalised version"
 my %normalised;
 my %denormalised;
 
 foreach my $string(keys %id_by_desc) {
-  my $normal = lc($string);
+  my $normal = $string;
   $normal =~ s/\W//g;
   
   $normalised{$string} = $normal;
@@ -120,86 +132,98 @@ my $count = 0;
 print "Finding semantic matches\n";
 
 foreach my $normal(keys %denormalised) {
-  if(scalar @{$denormalised{$normal}} > 1) {
-    
+
+  my $entry = (scalar @{$denormalised{$normal}} > 1) ? $normal : $denormalised{$normal}->[0];
+  if(scalar @{$denormalised{$normal}} > 1 && !$id_by_name{$entry}) {
     # create sort structure
     my @sort;
     
-    foreach my $string(@{$denormalised{$normal}}) {
-      my $c = $string =~ tr/[A-Z]/[A-Z]/;
-      
+    foreach my $string (@{$denormalised{$normal}}) {
       push @sort, {
-        uc => $c,
-        length => length($string),
-        string => $string
+        'length' => length($string),
+        'string' => $string
       };
     }
     
     # sort
-    @sort = map {$_->{string}} sort {$a->{uc} <=> $b->{uc} || $a->{length} <=> $b->{length}} @sort;
+    @sort = map {$_->{string}} sort {$a->{string} <=> $b->{string} || $a->{length} <=> $b->{length}} @sort;
     my $main = shift @sort;
     
     my $new_id = $id_by_desc{$main};
     
     for(@sort) {
       $count++;
-      $sth->execute($new_id, $id_by_desc{$_});
+      $sth->execute($id_by_desc{$_}, $new_id);
     }
+  }
+  # Case where the phenotype description is actually an abbreviation found in an other phenotype, e.g. BMI for Body Mass Index
+  elsif ($id_by_name{$entry}) {
+  
+    next if (!$id_by_desc{$entry});
+    
+    my $new_id = $id_by_name{$entry};
+    
+    $count++;
+    $sth->execute($id_by_desc{$entry}, $new_id);
   }
 }
 
 $sth->finish();
 
 if($count) {
-  my $a;
+  my $count_entries;
   
   print "\nFound $count semantic duplicate entries in phenotype\n";
   
-  print "Backing up phenotype_feature entries to $table_pf_bak\n";
-
+  print "Backing up phenotype data\n";
   # create backups of the entries we're going to change
+  
+  ## back up the phenotype feature entries
   $dbc->do(qq{
     CREATE TABLE IF NOT EXISTS `$table_pf_bak`
     LIKE phenotype_feature
   });
-  $a = $dbc->do(qq{
+  $dbc->do(qq{
     INSERT IGNORE INTO $table_pf_bak
     SELECT pf.*
     FROM phenotype_feature pf, $table_phe_map pm
     WHERE pm.old_phenotype_id = pf.phenotype_id
   });
-  print "Backed up $a entries\n";
+  $count_entries = count_entries($table_pf_bak);
+  print "\t>> Backed up $count_entries phenotype_feature entries to $table_pf_bak\n";
   
-  print "Backing up phenotype entries to $table_phe_bak\n";
-
+  ## back up the phenotype entries
   $dbc->do(qq{
     CREATE TABLE IF NOT EXISTS `$table_phe_bak`
     LIKE phenotype
   });
-  $a = $dbc->do(qq{
+  $dbc->do(qq{
     INSERT IGNORE INTO $table_phe_bak
     SELECT p.*
     FROM phenotype p, $table_phe_map pm
     WHERE pm.old_phenotype_id = p.phenotype_id
   });
-  print "Backed up $a entries\n";
+  $count_entries = count_entries($table_phe_bak);
+  print "\t>> Backed up $count_entries phenotype entries to $table_phe_bak\n";
   
   ## back up the ontology accessions
   $dbc->do(qq{
     CREATE TABLE IF NOT EXISTS `$table_poa_bak`
     LIKE phenotype_ontology_accession
   });
-  $a = $dbc->do(qq{
+  $dbc->do(qq{
     INSERT IGNORE INTO $table_poa_bak
     SELECT poa.*
     FROM phenotype_ontology_accession poa, $table_phe_map pm
     WHERE pm.old_phenotype_id = poa.phenotype_id
   });
-  print "Backed up $a phenotype_ontology_accession entries\n";
+  $count_entries = count_entries($table_poa_bak);
+  print "\t>> Backed up $count_entries phenotype_ontology_accession entries to $table_poa_bak\n";
   
 
-
-  print "Updating entries in phenotype_feature\n";
+  my $a;
+  
+  print "Updating entries\n";
 
   # alter the phenotype_feature entries
   $a = $dbc->do(qq{
@@ -207,9 +231,7 @@ if($count) {
     SET pf.phenotype_id = pm.new_phenotype_id
     WHERE pf.phenotype_id = pm.old_phenotype_id
   });
-  print "Updated $a phenotype_feature entries\n";
-  
-  print "Updating entries in phenotype_ontology_accession\n";
+  print "\t>> Updated $a phenotype_feature entries\n";
 
   # alter the phenotype_ontology_accession entries
   # some will already by assigned to the same accessions so update will fail
@@ -218,10 +240,10 @@ if($count) {
     SET poa.phenotype_id = pm.new_phenotype_id
     WHERE poa.phenotype_id = pm.old_phenotype_id
   });
-  print "Updated $a phenotype_ontology_accession entries\n";
+  print "\t>> Updated $a phenotype_ontology_accession entries\n";
+
 
   print "Removing entries from phenotype_ontology_accession\n";
-
   # delete from phenotype_ontology_accession
   $a = $dbc->do(qq{
     DELETE FROM poa
@@ -231,7 +253,6 @@ if($count) {
 
 
   print "Removing entries from phenotype\n";
-
   # delete from phenotype
   $a = $dbc->do(qq{
     DELETE FROM p
@@ -250,9 +271,21 @@ else {
 print "\nAll done!\n";
 
 
+sub count_entries {
+  my $table = shift;
+  
+  my $sthc = $dbc->prepare("SELECT count(*) FROM $table");
+  $sthc->execute();
+  my $count = ($sthc->fetchrow_array)[0];
+  $sthc->finish();
+  
+  return $count;
+}
+
 
 sub usage {
-  print qq{#---------------------------#
+  print qq{
+#---------------------------#
 # rationalise_phenotypes.pl #
 #---------------------------#
 
