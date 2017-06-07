@@ -690,7 +690,8 @@ sub _get_codon_alleles {
     my $alt_codon = $bvfoa->codon;
     
     return () unless defined $alt_codon;
-    
+
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;    
     my $ref_codon = $bvfo->get_reference_TranscriptVariationAllele->codon;
     
     return () unless defined $ref_codon;
@@ -815,6 +816,7 @@ sub _ins_del_start_altered {
     unless(exists($cache->{ins_del_start_altered})) {
         $cache->{ins_del_start_altered} = 0;
 
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
         return 0 unless _overlaps_start_codon(@_);
 
         my $pre = $bvfoa->_pre_consequence_predicates;
@@ -1125,6 +1127,7 @@ sub _ins_del_stop_altered {
     unless(exists($cache->{ins_del_stop_altered})) {
         $cache->{ins_del_stop_altered} = 0;
 
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
         return 0 unless _overlaps_stop_codon(@_);
 
         my $pre = $bvfoa->_pre_consequence_predicates;
