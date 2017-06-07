@@ -198,6 +198,7 @@ sub init_data {
         'short_tandem_repeat_variation' => 'short_tandem_repeat_variation',
         'loss_of_heterozygosity' => 'loss_of_heterozygosity',
         'substitution' => 'substitution',
+        'genetic_marker' => 'genetic_marker',
     };
     my @vep_consequence_info =  qw/Allele Consequence Feature_type Feature/;
     if ($config->{protein_coding_details}) {
@@ -751,6 +752,7 @@ sub print_header {
             '##ALT=<ID=short_tandem_repeat_variation,Description="short_tandem_repeat_variation">',
             '##ALT=<ID=loss_of_heterozygosity,Description="loss_of_heterozygosity">',
             '##ALT=<ID=substitution,Description="substitution">',
+            '##ALT=<ID=genetic_marker,Description="genetic_marker">',
         )), "\n";
     }
 
