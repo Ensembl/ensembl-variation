@@ -44,6 +44,9 @@ sub run {
   my $self = shift;
   my $file_type  = $self->param('file_type');	
 
+  # check registry file exists
+  # check tmp dir exists
+
   if ($file_type eq 'gvf') {
     foreach my $dir (qw/pipeline_dir script_dir/) {
       die "$dir doesn't exist" unless (-d $self->param($dir));
