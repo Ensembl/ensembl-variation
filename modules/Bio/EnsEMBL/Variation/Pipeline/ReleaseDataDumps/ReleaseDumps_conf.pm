@@ -72,6 +72,13 @@ sub default_options {
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
         vcf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF',
 
+        global_vf_count_in_species => 5_000_000, # if number of vf in a species exceeds this we need to split up dumps
+        max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
+        vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
+        max_split_slice_length => 500_000, 
+
+        debug => 1,
+
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
@@ -107,8 +114,11 @@ sub pipeline_wide_parameters {
         gvf_readme       => $self->o('gvf_readme'), 
         vcf_readme       => $self->o('vcf_readme'),
         pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),        
-        config_file => '/lustre/scratch110/ensembl/at7/release_83/dumps/data_dumps_config.json',
-        debug => 0,
+        debug => $self->o('debug'),
+        global_vf_count_in_species => $self->o('global_vf_count_in_species'),
+        max_vf_load => $self->o('max_vf_load'),
+        vf_per_slice => $self->o('vf_per_slice'),
+        max_split_slice_length => $self->o('max_split_slice_length'),
     };
 }
 
