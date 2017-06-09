@@ -32,7 +32,8 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::ParseMapping;
 use strict;
 use warnings;
 
-use Bio::DB::Sam;
+#use Bio::DB::Sam;
+use Bio::DB::HTS;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use FileHandle;
@@ -50,7 +51,7 @@ sub fetch_input {
   my $mapping_results_dir = $self->param('mapping_results_dir');
   my $compare_locations  = $self->param('compare_locations');
 
-  my $sam = Bio::DB::Sam->new( -bam => $bam_file, -fasta => $fasta_file,);	
+  my $sam = Bio::DB::HTS->new( -bam => $bam_file, -fasta => $fasta_file,);	
   $self->param('sam', $sam);	
 
   if ($self->param('mode') eq 'remap_read_coverage') {
