@@ -52,6 +52,7 @@ sub run {
   my $out = $self->param('out');
 
   my $cmd = "perl $script " . join(' ', @args); 
+  $self->warning($cmd);
   $self->run_cmd("$cmd 1>$out 2>$err");					
   return 1;
 }
