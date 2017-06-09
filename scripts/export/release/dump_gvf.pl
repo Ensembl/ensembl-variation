@@ -307,10 +307,25 @@ sub dump_data {
     my $max_length = 1e6;
     my $overlap = 0;
 
+    my $debug = $config->{debug}; 
+    if ($debug) {
+      $max_length = 1e3;
+    }
+    my $count = 0;
+
     foreach my $slice (@$slices) {
-        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
+        $count = 0;
+        print STDERR 'Dump GVF script: ', join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
         my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
         foreach my $slice_piece (@$slice_pieces) {
+          $count++;
+          if ($debug) {
+            if ($count == 2) {
+              last;
+            }
+            print STDERR '   Dump GVF script: ', join(' ', $slice->seq_region_name, $slice_piece->start, $slice_piece->end), "\n";
+          }
+
             if ($config->{individual}) { 
                 update_gts($config, $slice_piece);
             }
