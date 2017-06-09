@@ -69,6 +69,7 @@ GetOptions(
     'allele_string',
     'set_name',
     'somatic',
+    'debug',
 
 ) or die "Error: Failed to parse command-line args. Try --help for usage instructions\n";
 
@@ -287,8 +288,10 @@ sub parse_gvf_file {
 #            }
 #          }
 #        }
-        foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
-          add_info($vcf_line, $key, $gvf_line->{$key});
+        if (0) {
+          foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
+            add_info($vcf_line, $key, $gvf_line->{$key});
+          }
         }
         while (my ($attribute, $key) = each %$attributes) {
             if (defined $gvf_line->{$attribute}) {
