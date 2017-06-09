@@ -1,24 +1,16 @@
 =head1 LICENSE
-<<<<<<< HEAD
-
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 Copyright [2016-2017] EMBL-European Bioinformatics Institute
-
-=======
-Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2017] EMBL-European Bioinformatics Institute
->>>>>>> Speed up pipeline ENSVAR-283.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
+     http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 =cut
-
 
 =head1 CONTACT
 Please email comments or questions to the public Ensembl
@@ -35,11 +27,15 @@ use FileHandle;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
-use constant GLOBAL_VF_COUNT => 5_000_000; # 5_000_000 1_000
-use constant MAX_VF_LOAD => 2_000_000; # 2_000_000 100
-use constant VF_PER_SLICE => 2_000_000; # 2_000_000 10_000
-my $max_length = 1e7;
+my $global_vf_count_in_species = 5_000_000; # if number of vf in a species exceeds this we need to split up dumps
+my $max_vf_load = 2_000_000; # group slices together until the vf count exceeds max_vf_load
+my $vf_per_slice = 2_000_000; # if number of vf exceeds this we split the slice and dump for each split slice
+my $max_split_slice_length = 500_000;
+
 my $overlap = 0;
+my $debug = 0;
+
+my $debug_fh;
 
 sub fetch_input {
   my $self = shift;
@@ -50,10 +46,16 @@ sub fetch_input {
   my $release   = $self->param('release');
   my $output_dir = $self->param('pipeline_dir');
   my $job_type  = $self->param('job_type'); # parse or dump
-  my $debug = $self->param('debug');
-  my $fh;
+  $debug = $self->param('debug');
+
+
+  $global_vf_count_in_species = $self->param('global_vf_count_in_species') || $global_vf_count_in_species;
+  $max_vf_load = $self->param('max_vf_load') || $max_vf_load; # group slices together until the vf count exceeds max_vf_load
+  $vf_per_slice = $self->param('vf_per_slice') || $vf_per_slice; # if number of vf exceeds this we split the slice and dump for each split slice
+  $max_split_slice_length = $self->param('max_split_slice_length') || $max_split_slice_length;
+
   if ($debug) {
-    $fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
+    $debug_fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
   }
 
   my $script_args = {};
@@ -115,24 +117,24 @@ sub fetch_input {
   if ($job_type eq 'dump' || $job_type eq 'dump_population') {  
     my $global_vf_count = $self->get_global_vf_count();
     if ($debug) {
-      print $fh "Global VF count $global_vf_count\n";
+      print $debug_fh "GLOBAL_VF_COUNT\t$global_vf_count\n";
     }
-    if ($global_vf_count > GLOBAL_VF_COUNT) {
+    if ($global_vf_count > $global_vf_count_in_species) {
       my $covered_seq_regions = $self->get_covered_seq_regions();
-      if ($debug) {
-        foreach my $key (keys %$covered_seq_regions) {
-          print $fh $key, ' ', $covered_seq_regions->{$key}, "\n";
-        }   
-      }
+#      if ($debug) {
+#        foreach my $key (keys %$covered_seq_regions) {
+#          print $debug_fh "COVERED_SE"$key, ' ', $covered_seq_regions->{$key}, "\n";
+#        }   
+#      }
       my $vf_distributions = $self->get_vf_distributions($covered_seq_regions);
-      if ($debug) {
-        foreach my $distribution (@$vf_distributions) {
-          foreach my $key (keys %$distribution) {
-            print $fh $key, ' ', $distribution->{$key}, "\n";
-          }
-          print $fh "\n";
-        }
-      }
+#      if ($debug) {
+#        foreach my $distribution (@$vf_distributions) {
+#          foreach my $key (keys %$distribution) {
+#            print $fh $key, ' ', $distribution->{$key}, "\n";
+#          }
+#          print $fh "\n";
+#        }
+#      }
       $input = $self->get_input_gvf_dumps($script_args, $vf_distributions);
     } else {
       $input = $self->get_input_gvf_dumps($script_args);
@@ -142,16 +144,19 @@ sub fetch_input {
   } else {
     die "Job type must be parse or dump. $job_type is not recognised.";
   }
-  if ($debug) {
-    $fh->close;
-    die "Finished writing report";
-  }
+#  if ($debug) {
+#    $debug_fh->close;
+#    die "Finished writing report";
+#  }
   $self->param('input_for_submit_job', $input); 
 }
 
 sub get_input_gvf2vcf {
   my $self = shift;
   my $script_args = shift;
+
+
+
 
   my $file_type       = 'vcf';
   my $script_dir      = $self->param('script_dir');
@@ -171,6 +176,7 @@ sub get_input_gvf2vcf {
     next if ($gvf_file =~ m/failed/); # don't parse gvf files storing failed variants
     if ($gvf_file =~ m/\.gvf\.gz$/) {
       my $script_arg = $self->get_script_arg($gvf_file, $script_args);
+      $self->warning("$gvf_file $script_arg");
       my $params = {};
       my $file_name = $gvf_file;
       $file_name =~ s/\.gvf\.gz//;
@@ -197,11 +203,19 @@ sub get_script_arg {
   my $self = shift;
   my $file_name = shift;
   my $script_args = shift;
+  my $return_script_arg = '';
   while (my ($script_arg, $dump_type) = each %$script_args) {
+    $self->warning("get_script_arg $script_arg $dump_type");
     if ($file_name =~ /$dump_type/) {
-      return $script_arg;
+      $return_script_arg =  $script_arg;
     }    
   }
+  if ($return_script_arg) {
+    return $return_script_arg;
+  } else {
+    die "Could not find script arg for $file_name"; 
+  }
+
 }
 
 sub get_input_gvf_dumps {
@@ -216,20 +230,24 @@ sub get_input_gvf_dumps {
   my $connection_args = '--registry ' . $self->param('registry_file');
   my $species = $self->param('species');
   my @input = ();
+  my $run_in_debug_mode = $debug ? '--debug' : '';
   my $default_params = {
     'species' => $species,
     'script' => "$script_dir/$script",
     'connection_args' => $connection_args,
     'file_type' => $file_type,
     'output_dir' => $output_dir,
+    'debug' => $run_in_debug_mode,
   };
   
   if ($vf_distributions) {
     foreach my $script_arg (keys %$script_args) {
       my $file_name = $script_args->{$script_arg};
+      $self->warning("get_input_gvf_dumps $file_name $script_arg");
       foreach my $vf_distribution (@$vf_distributions) {   
         my $params = {};
         my $file_id = $vf_distribution->{file_id};
+        $self->warning("file_id $file_id");
         my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name-$file_id.$file_type";
         my $err = "$output_dir/$file_type/$species/$file_name-$file_id.err";
         my $out = "$output_dir/$file_type/$species/$file_name-$file_id.out";
@@ -269,6 +287,7 @@ sub get_input_gvf_dumps {
       push @input, $params;
     }
   }
+
   return \@input;
 }
 
@@ -283,12 +302,25 @@ sub get_vf_distributions {
   my @seq_region_ids = ();
 
   while (my ($seq_region_id, $vf_count) = each %$covered_seq_regions_counts) {
-    if ($vf_count > VF_PER_SLICE) {
-      push @vf_loads, @{$self->get_split_slices($seq_region_id)};
+    if ($debug) {
+      print $debug_fh "VF_PER_SLICE\t$seq_region_id\t$vf_count\n";
+    }
+    if ($vf_count > $vf_per_slice) {
+      my @split_slices = @{$self->get_split_slices($seq_region_id)};
+      if ($debug) {
+        print $debug_fh "SPLIT_SLICES\t$seq_region_id\t", scalar @split_slices, "\n";
+      }
+      push @vf_loads, @split_slices;
     } else {
-      if (($current_vf_load + $vf_count) > MAX_VF_LOAD) {
+     
+ 
+      if (($current_vf_load + $vf_count) > $max_vf_load) {
         push @seq_region_ids, $seq_region_id;
         push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
+        if ($debug) {
+          my $tmp_load = $current_vf_load + $vf_count; 
+          print $debug_fh "JOIN_SLICES\t", join(',', @seq_region_ids), "\t$tmp_load\n";  
+        } 
         @seq_region_ids = ();
         $current_vf_load = 0;
       } else {
@@ -300,6 +332,8 @@ sub get_vf_distributions {
 
   if (scalar @seq_region_ids > 0) {
     push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
+    print $debug_fh "JOIN_SLICES\t", join(',', @seq_region_ids), "\t$current_vf_load\n";  
+
   }
 
   return \@vf_loads;
@@ -333,7 +367,7 @@ sub get_split_slices {
   my @slice_piece_ids = ();
   my $slice = $sa->fetch_by_seq_region_id($seq_region_id);
   my $seq_region_name = $slice->seq_region_name;
-  my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
+  my $slice_pieces = split_Slices([$slice], $max_split_slice_length, $overlap);
   foreach my $slice_piece (@$slice_pieces) {
     my $start = $slice_piece->start;
     my $end = $slice_piece->end;
