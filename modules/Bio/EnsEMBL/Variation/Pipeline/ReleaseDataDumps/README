@@ -1,33 +1,122 @@
-To run the pipeline the following parameters need to be initialised:
+Running the pipeline creates GVF and VCF dumps for all species in ensembl with a variation database. The pipeline is run as part of the release cycle.
 
-Dump GVF and VCF files for all species in the registry file (no population allele frequency dumps:
-init_pipeline.pl ReleaseDumps_conf.pm
--ensembl_release
--hive_db_password
--pipeline_dir
--pipeline_name
--registry_file
--tmp_dir
+- 
+- read data from registry file
+- call scripts
+- deal with outputs
 
-Dump allele frequencies for popoulations (1000G, HAPMAP, ESP) for human:
-init_pipeline.pl ReleaseDumps_conf.pm
--ensembl_release
--hive_db_password
--pipeline_dir
--pipeline_name
--registry_file
--tmp_dir
--prefetched_frequencies
--human_population_dumps 1
+There are two versions ReleaseDumps_conf.pm and PopulationDumps_conf.pm:
+
+1) Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::ReleaseDumps_conf
+  - Dump the following data for each species if available:
+    - generic
+    - incl consequences
+    - somatic
+    - somatic incl consequences
+    - structural variation
+    - sets: phenotype, clin sign
+  - To run the pipeline the following parameters need to be initialised:
+    -pipeline_dir       directory that store all the data                 
+    -pipeline_name      used to create name for hive database
+    -hive_db_host       connection details for hive database
+    -hive_db_password   connection details for hive database
+    -hive_db_port       connection details for hive database
+    -hive_db_user       connection details for hive database
+    -registry_file      registry file with all species for which to create GVF and VCF dumps
+    -ensembl_release    ensembl release
+    -gvf_validator      GAL/bin/gvf_validator e.g from github
+    -so_file            SO-Ontologies/so.obo e.g. from github
+    -tmp_dir            tmp directory for storing validation results, err and out files  
 
 
-Finish data dumps (add readme file, compute checksums, create tabix for vcf files) for all species in the registry file:
-init_pipeline.pl ReleaseDumps_conf.pm
--ensembl_release
--hive_db_password
--pipeline_dir
--pipeline_name
--registry_file
--tmp_dir
--finish_dumps 1
+2) Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PopulationDumps_conf
+  - dump hapmap and ESP population allele frequencies from database
+  - extract frequencies from 1000 Genomes VCF files and map them by identifier to dump files
+
+
+
+Dataflow for pipeline 1):
+
+PreRunChecks
+  - file checks: 
+    - checks that registry file exists
+    - checks that directories exist: pipeline_dir script_dir tmp_dir
+    - checks that GVF validator and SO file exist
+    - checks that vcf-validator is defined
+    - creats species directory with species from input registry file
+    - checks that species directories for dumping files are empty before starting the pipeline
+
+Config
+  - collects all the data types that can be dumped for a species
+  - looks up in the database if the species has a certain data type: sift, ancestral allele, global maf, clinical significance, clinical_significance_svs, structural variants
+  - the attribs for human are hard coded: we dump more data for human: sets, somatic data 
+  - the data types are stored in json format in a file. the json file is read by subsequent modules.
+
+InitSubmitJob (dump gvf)
+  - Prepare all commands for dumping GVF files 
+  - Depending on the number of variants the species has we divide dumps into smaller portions
+  - global_vf_count_in_species => 5_000_000, # if number of vf in a species exceeds this we need to split up dumps. the value can be adjusted in the config file
+  - vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
+  - max_split_slice_length => 500_000, (can be modified)
+  - if the global vf count is exceeded we can dump per slice or if the number of vf on a slice exceeds vf per slice we can split up a slice into smaller pieces and dump for each split slice 
+
+  - it might be that the global count is exceeded and we dump all slices separately. however if the species has a large number of contigs with only a small vf count perl contig we can group slices and dump a group of slices. The number of vf grouped together is defined by max_vf_load 
+  - max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
+
+  - when we create split slices: files name is extended by "$seq_region_id\_$start\_$end",
+  - if we group multiple seq_regions we define the range in the file name e.g Rattus_norvegicus_incl_consequences-77391_77397.gvf
+
+  - we also define all the options required by the dump and parse scripts: data dump type, additional data to dump (sift, evidence, ...), input and output file, registry
+
+SubmitJob:
+  - creates a system command calling the dump_gvf script with all the options generated in the InitSubmitJob module
+
+JoinDump (join slice split): 
+  - join all split slices, creating a file for each slice
+
+Validate (gvf)
+  - for each GVF file create smaller file using the first 2500 lines for validation. use GVF validator
+
+SummariseValidation (gvf)
+  - summarise results in pipeline_dir/SummaryValidateGVF.txt
+  - 
+
+FileUtils (post_gvf_dump_cleanup):
+  - for each species:
+    - gzip all GVF files
+    - concat all validation reports into one file GVF_Validate_$species and move file to tmp directory
+    - concat all err and out files into one file GVF_$species and move file to tmp directory
+ 
+
+PreRunChecks (pre_run_checks_gvf2vcf):
+  -
+
+InitSubmitJob (parse gvf2vcf):
+  - generates all the options for each gvf file that are required by the gvf2vcf script
+
+SubmitJob (gvf2vcf):
+  - for each VCF file create smaller file using the first 2500 lines for validation. use vcf-validator
+
+Validate (vcf):
+
+
+InitJoinDump
+  - prepare final join dumps
+
+JoinDump
+  - final join for gvf and vcf files
+
+CleanUp
+  - post_join_dumps
+
+Finish:
+  - tabix for VCF
+  - checksums
+  - README files
+  - lc dir
+
+
+
+
+Dataflow for pipeline 2):
 
