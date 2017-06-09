@@ -42,11 +42,11 @@ sub default_options {
         hive_use_triggers       => 0,
         hive_auto_rebalance_semaphores => 0,  # do not attempt to rebalance semaphores periodically by default
         hive_no_init            => 0, # setting it to 1 will skip pipeline_create_commands (useful for topping up)
-        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
-        hive_db_port            => 3306,
+        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
+        hive_db_port            => 4521,
         hive_db_user            => 'ensadmin',
-        hive_db_host            => 'ens-variation3',
+        hive_db_host            => 'mysql-ens-var-prod-2.ebi.ac.uk',
         debug                   => 0,
         run_variant_qc          => 1,
         use_fasta_files         => 0,
@@ -55,7 +55,7 @@ sub default_options {
         max_map_weight          => 5,
         use_prior_for_filtering => 1,
         map_to_chrom_only       => 1,
-        entries_per_file        => 50000,
+        entries_per_file        => 200000,
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection, remap_svf_post_projection, remap_svf, remap_qtls
         feature_table           => 'variation_feature',
         feature_table_failed_projection => 0, #'variation_feature_failed'
