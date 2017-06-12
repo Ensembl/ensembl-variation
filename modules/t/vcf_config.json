@@ -66,6 +66,25 @@
           "description": "South Asian"
         }
       }
+    },
+    {
+      "id": "dbsnp",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/dbsnp.vcf.gz",
+      "chromosomes": [ "11" ],
+      "source_name": "dbSNP",
+      "is_remapped": "1",
+      "ref_freq_index": "0",
+      "populations": {
+        "9990000": {
+          "name": "TOPMED",
+          "_raw_name": "TOPMED",
+          "_af": "TOPMED",
+          "description": "TOPMED"
+        }
+      }
     }
   ]
 }

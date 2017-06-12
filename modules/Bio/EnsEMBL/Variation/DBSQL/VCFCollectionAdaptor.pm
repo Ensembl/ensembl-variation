@@ -274,6 +274,7 @@ sub new {
       -is_remapped => $hash->{is_remapped} ||0,
       -adaptor => $self,
       -tmpdir => $hash->{tmpdir} || $tmpdir,
+      -ref_freq_index => $hash->{ref_freq_index},
     );
     
     $self->{collections}->{$collection->id} = $collection;

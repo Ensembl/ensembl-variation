@@ -100,6 +100,7 @@ my $MAX_OPEN_FILES = 2;
   Arg [-POPULATION_PREFIX]:      string
   Arg [-SAMPLE_POPULATIONS]:     hashref - { 'sample1': ['pop1','pop2'] }
   Arg [-STRICT_NAME_MATCH]:      boolean
+  Arg [-REF_FREQ_INDEX]:         int - index position of ref frequency in INFO field, if given
   Arg [-USE_SEQ_REGION_SYNONYMS]:boolean
   Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
 
@@ -145,6 +146,7 @@ sub new {
     $adaptor,
     $use_seq_region_synonyms,
     $tmpdir,
+    $ref_freq_index,
   ) = rearrange(
     [qw(
       ID
@@ -165,6 +167,7 @@ sub new {
       ADAPTOR
       USE_SEQ_REGION_SYNONYMS
       TMPDIR
+      REF_FREQ_INDEX
     )],
     @_
   ); 
@@ -189,6 +192,7 @@ sub new {
     assembly  => $assembly,
     source => $source,
     strict_name_match => defined($strict) ? $strict : 0,
+    ref_freq_index => $ref_freq_index,
     created => $created,
     updated => $updated,
     is_remapped => $is_remapped,
@@ -292,6 +296,32 @@ sub strict_name_match {
   my $self = shift;
   $self->{strict_name_match} = shift if @_;
   return $self->{strict_name_match};
+}
+
+
+=head2 ref_freq_index
+
+  Arg [1]    : int $ref_freq_index (optional)
+               The new value to set the attribute to
+  Example    : my $ref_freq_index = $collection->ref_freq_index()
+  Description: Getter/Setter for the ref_freq_index parameter. Some VCF
+               files contain the reference (REF) allele frequency in those
+               listed in AF-type INFO fields. Some (ESP) give the reference
+               frequency last, others (dbSNP) give it as the first. Set this
+               to a defined value to extract the REF frequency from the
+               given indexed position in the list given in the INFO field
+               value. -1 may be used if the REF is the last.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub ref_freq_index {
+  my $self = shift;
+  $self->{ref_freq_index} = shift if @_;
+  return $self->{ref_freq_index};
 }
 
 
@@ -661,6 +691,8 @@ sub get_all_Alleles_by_VariationFeature {
   my @pops = @{$self->get_all_Populations};
   @pops = grep {$_->name eq $given_pop || ($_->{_raw_name} || '') eq $given_pop} @pops if $given_pop;
 
+  my $ref_freq_index = $self->ref_freq_index();
+
   foreach my $pop(@pops) {
 
     # this allows for an empty population name to be looked up as e.g. AF
@@ -671,7 +703,8 @@ sub get_all_Alleles_by_VariationFeature {
     my %counts;
 
     # have AC and AN, prioritise as we get counts and freqs
-    if(my ($ac, $an) = ($info->{'AC'.$suffix}, $info->{'AN'.$suffix})) {
+    if(defined($info->{'AC'.$suffix}) && defined($info->{'AN'.$suffix})) {
+      my ($ac, $an) = ($info->{'AC'.$suffix}, $info->{'AN'.$suffix});
       
       # safety check against div by zero
       next unless $an;
@@ -679,9 +712,10 @@ sub get_all_Alleles_by_VariationFeature {
       my $total = 0;
       my @split = split(',', $ac);
 
-      # in ESP files, the last item is the reference
-      # so the number in @split won't match @$alts
-      $freqs{$ref} = sprintf('%.4g', pop(@split) / $an) if scalar @split > scalar @$alts;
+      # is ref AC included? This may have been set as ref_freq_index()
+      # or we can auto-detect by comparing size of @split o @$alts
+      $freqs{$ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
+        if defined($ref_freq_index) || scalar @split > scalar @$alts;
 
       for my $i(0..$#split) {
         my $a = $alts->[$i];
@@ -699,13 +733,14 @@ sub get_all_Alleles_by_VariationFeature {
     }
 
     # otherwise check for AF
-    elsif(my $af = $info->{'AF'.$suffix}) {
+    elsif(my $af = $info->{$pop->{_af} || 'AF'.$suffix}) {
       my $total = 0;
       my @split = split(',', $af);
 
-      # in ESP files, the last item is the reference
-      # so the number in @split won't match @$alts
-      $freqs{$ref} = pop(@split) if scalar @split > scalar @$alts;
+      # is ref AC included? This may have been set as ref_freq_index()
+      # or we can auto-detect by comparing size of @split o @$alts
+      $freqs{$ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
+        if defined($ref_freq_index) || scalar @split > scalar @$alts;
 
       for my $i(0..$#split) {
         my $f = $split[$i];

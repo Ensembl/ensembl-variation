@@ -271,7 +271,7 @@ my @adj = grep {$_->population->name eq 'ExAC:Adj'} @alleles;
 is(scalar @adj, 2, 'get_all_Alleles_by_VariationFeature - Adj count');
 
 is_deeply(
-  [map {'a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count} @adj],
+  [map {'a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count} sort {$a->allele cmp $b->allele} @adj],
   [
     'a:A f:0.0003 c:24',
     'a:G f:0.9997 c:76724'
@@ -279,5 +279,24 @@ is_deeply(
   'get_all_Alleles_by_VariationFeature - Adj freqs and counts'
 );
 
+
+## test dbsnp which has ref freq included
+$coll = $vca->fetch_by_id('dbsnp');
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
+
+# now we need to set the filename_template
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$coll->filename_template =~ /^$dir/;
+
+is_deeply(
+  [map {'a:'.$_->allele.' f:'.$_->frequency} sort {$a->allele cmp $b->allele} @{$coll->get_all_Alleles_by_VariationFeature($vf)}],
+  [
+    'a:A f:0.00120201',
+    'a:G f:0.998798'
+  ],
+  'get_all_Alleles_by_VariationFeature - dbSNP uses ref_freq_index()'
+);
 
 done_testing();
