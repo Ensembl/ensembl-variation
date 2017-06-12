@@ -184,6 +184,11 @@ our @VARIATION_CLASSES = (
         display_term => 'Mobile element insertion',
     },
     {
+        SO_accession => 'SO:0002066',
+        SO_term => 'mobile_element_deletion',
+        display_term => 'Mobile element deletion',
+    },
+    {
         SO_accession => 'SO:0001873',
         SO_term => 'interchromosomal_breakpoint',
         display_term => 'Interchromosomal breakpoint',
