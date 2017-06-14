@@ -296,7 +296,7 @@ sub generate_mapping_input {
 
   my $variants_with_multi_map = {};
   my $mode = $self->param('mode');
-  my $dump_multi_map = ($mode eq 'remap_post_projection') ? 1 : 0;
+  my $dump_multi_map = ($mode eq 'remap_post_projection' || $self->param('dump_multi_map')) ? 1 : 0;
   my $file_count = 0;
   opendir(DIR, $dump_features_dir) or die $!;
   while (my $file = readdir(DIR)) {
