@@ -57,6 +57,7 @@ sub default_options {
         map_to_chrom_only       => 1,
         entries_per_file        => 200000,
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci, remap_read_coverage, remap_post_projection, remap_svf_post_projection, remap_svf, remap_qtls
+        dump_multi_map          => 1,
         feature_table           => 'variation_feature',
         feature_table_failed_projection => 0, #'variation_feature_failed'
         feature_table_projection => 0, #'variation_feature_projection',
@@ -115,6 +116,7 @@ sub pipeline_wide_parameters {
         map_to_chrom_only            => $self->o('map_to_chrom_only'),
         entries_per_file             => $self->o('entries_per_file'),
         debug                        => $self->o('debug'),
+        dump_multi_map               => $self->o('dump_multi_map'),
     };
 }
 
