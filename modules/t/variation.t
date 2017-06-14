@@ -120,6 +120,11 @@ ok($v->ambig_code() eq 'M', "ambig code");
 #test variation_class
 ok($v->var_class() eq 'SNP', "class");
 
+# test variation_class without alleles
+my $v2 = $variation_adaptor->fetch_by_dbID(112643842);
+delete($v2->{$_}) for qw(class_display_term class_SO_term);
+is($v2->var_class(), 'SNP', 'class via variation feature');
+
 
 # test getter/setters
 ok(test_getter_setter($v, 'name', 'newname'), "get/set name");

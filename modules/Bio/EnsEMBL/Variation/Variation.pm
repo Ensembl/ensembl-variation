@@ -1023,6 +1023,12 @@ sub var_class{
             map {$alleles{$_->allele}++} @{$alleles};
             my $allele_string = join '/',keys %alleles;
 
+            # if no allele objects, try to fetch from variation_feature
+            unless($allele_string || @$alleles) {
+              my ($vf) = @{$self->get_all_VariationFeatures};
+              $allele_string = $vf->allele_string() if $vf;
+            }
+
             $self->{class_SO_term} = SO_variation_class($allele_string);
         }
 
