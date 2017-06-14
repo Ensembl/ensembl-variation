@@ -86,8 +86,8 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/gpfs/nobackup/ensembl/' . $login . '/'.$self->o('pipeline_name') . '/'.  $self->o('species'),
-
+#        pipeline_dir            => '/gpfs/nobackup/ensembl/' . $login . '/'.$self->o('pipeline_name') . '/'.  $self->o('species'),
+        pipeline_dir => '/hps/nobackup/production/ensembl/anja/release_90/human/37/variant_qc/',
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
         # a good idea to keep it on lustre, or some other place where you have a 
@@ -131,11 +131,11 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-R"select[gpfs]" -R"select[mem>2000] rusage[mem=2000]" -M2000',       ## upped to 4G from 2G for mouse
-        urgent_lsf_options  => '-R"select[gpfs]" -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-R"select[gpfs]" -R"select[mem>15000] rusage[mem=15000]" -M15000', 
-        long_lsf_options    => '-R"select[gpfs]" -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medium_lsf_options  => '-R"select[gpfs]" -R"select[mem>5000] rusage[mem=5000]" -M5000', ## switched from 4->5 on moving to farm3
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',       ## upped to 4G from 2G for mouse
+        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000', 
+        long_lsf_options    => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medium_lsf_options  => '-R"select[mem>5000] rusage[mem=5000]" -M5000', ## switched from 4->5 on moving to farm3
 
         # options controlling the number of workers used for the parallelisable analyses
 
@@ -172,8 +172,8 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'mysql-ens-var-prod-1',
-        hive_db_port    => 4449,
+        hive_db_host    => 'mysql-ens-var-prod-2',
+        hive_db_port    => 4521,
         hive_db_user    => 'ensadmin',
 
         pipeline_db => {
