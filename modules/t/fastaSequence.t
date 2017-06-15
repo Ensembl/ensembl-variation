@@ -105,6 +105,15 @@ $slice1 = Bio::EnsEMBL::Slice->new(
 );
 is($slice1->seq, 'G', "synonym");
 
+$slice2 = Bio::EnsEMBL::Slice->new(
+  -COORD_SYSTEM      => Bio::EnsEMBL::CoordSystem->new(-NAME => 'chromosome', -RANK => 1),
+  -START             => 25606454,
+  -END               => 25606454,
+  -SEQ_REGION_NAME   => 'chrfoo',
+  -SEQ_REGION_LENGTH => $slice1->length
+);
+is($slice2->seq, 'G', "implied chr synonym");
+
 # remember to revert!!!
 revert_fasta();
 
