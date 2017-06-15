@@ -485,7 +485,7 @@ sub get_all_Samples {
     for my $sample_name (keys %sample_objs) {
       my $sample = $sample_objs{$sample_name};
       for my $syn (@{$sample->get_all_synonyms}) {
-        $synonyms{$syn->[0]} = $sample->name;
+        $synonyms{$syn} = $sample->name;
       }
     }
 
