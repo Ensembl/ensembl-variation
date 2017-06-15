@@ -360,8 +360,17 @@ sub _new_slice_seq {
     my $fasta_db = $Bio::EnsEMBL::Slice::fasta_db;
     my $fa_length = $fasta_db->length($sr_name);
     unless($fa_length && $fa_length > 0) {
-
-      foreach my $alt(keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{$sr_name} || {}}) {
+      foreach my $alt(
+        $sr_name =~ /^chr/i ?
+          (substr($sr_name, 3), keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{substr($sr_name, 3)} || {}}) :
+          (
+            'chr'.$sr_name,
+            'CHR'.$sr_name,
+            keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{'chr'.$sr_name} || {}},
+            keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{'CHR'.$sr_name} || {}}
+          ),
+        keys %{$Bio::EnsEMBL::Slice::_fasta_synonyms->{$sr_name} || {}}
+      ) {
         $fa_length = $fasta_db->length($alt);
 
         if($fa_length && $fa_length > 0) {
@@ -608,9 +617,10 @@ sub _raw_seq {
     if($fasta_db->isa('Bio::DB::HTS::Faidx')) {
       my $location_string = $sr_name.":".$start."-".$end ;
       ($seq, $length) = $fasta_db->get_sequence($location_string);
+      $seq = uc($seq);
     }
     elsif($fasta_db->isa('Bio::DB::Fasta')) {
-      $seq = $fasta_db->seq($sr_name, $start => $end);
+      $seq = uc($fasta_db->seq($sr_name, $start => $end));
     }
     else {
       throw("ERROR: Don't know how to fetch sequence from a ".ref($fasta_db)."\n");
