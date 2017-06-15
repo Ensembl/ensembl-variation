@@ -189,7 +189,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM population_genotype},
                                                          'label' => 'Variants with population genotype'
                                                        },
-                                           'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
+                                           'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>ExAC Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
                                          },
                    $prediction        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
