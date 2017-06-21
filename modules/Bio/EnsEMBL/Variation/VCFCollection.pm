@@ -98,6 +98,7 @@ my $MAX_OPEN_FILES = 2;
   Arg [-ID]:                     string - identifier for this collection
   Arg [-DESCRIPTION]:            string - description for this collection
   Arg [-TYPE]:                   string - "local" or "remote"
+  Arg [-USE_AS_SOURCE]:          boolean
   Arg [-FILENAME_TEMPLATE]:      string
   Arg [-CHROMOSOMES]:            arrayref of strings
   Arg [-SAMPLE_PREFIX]:          string
@@ -135,6 +136,7 @@ sub new {
     $id,
     $description,
     $type,
+    $use_as_source,
     $filename_template,
     $chromosomes,
     $sample_prefix,
@@ -157,6 +159,7 @@ sub new {
       ID
       DESCRIPTION
       TYPE
+      USE_AS_SOURCE
       FILENAME_TEMPLATE
       CHROMOSOMES
       SAMPLE_PREFIX
@@ -190,6 +193,7 @@ sub new {
     id => $id,
     description => $description,
     type => $type,
+    use_as_source => $use_as_source,
     sample_prefix => $sample_prefix,
     individual_prefix => $individual_prefix,
     population_prefix => $pop_prefix,
@@ -299,6 +303,28 @@ sub type {
   }
   
   return $self->{type};
+}
+
+
+=head2 use_as_source
+
+  Arg [1]    : bool $use_as_source (optional)
+               The new value to set the use_as_source attribute to
+  Example    : my $use_as_source = $collection->use_as_source()
+  Description: Getter/Setter for the use_as_source attribute of this
+               collection. Indicates to web code if we should treat
+               the variants in this collection as a source/track.
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_as_source {
+  my $self = shift;
+  $self->{use_as_source} = shift if @_;
+  return $self->{use_as_source};
 }
 
 

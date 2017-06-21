@@ -345,6 +345,7 @@ sub fetch_all_by_Slice_constraint {
     if($use_vcf) { # && !$constraint) {
       push @vfs,
         map {@{$_->get_all_VariationFeatures_by_Slice($slice, $no_cons)}}
+        grep {$_->use_as_source}
         @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
     }
     if($use_vcf <= 1) {

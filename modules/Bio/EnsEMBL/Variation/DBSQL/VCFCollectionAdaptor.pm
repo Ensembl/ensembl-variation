@@ -260,6 +260,7 @@ sub new {
       -id => $hash->{id},
       -description => $hash->{description},
       -type => $hash->{type},
+      -use_as_source => $hash->{use_as_source},
       -filename_template => $hash->{filename_template} =~ /nfs/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
@@ -315,6 +316,23 @@ sub fetch_by_id {
 
 sub fetch_all {
   return [values %{$_[0]->{collections} || {}}];
+}
+
+
+=head2 fetch_all_for_web
+
+  Example    : my $collections = $vca->fetch_all_for_web();
+  Description: Fetches all configured VCFCollections that can be used
+               as sources on the web
+  Returntype : Arrayref of Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_for_web {
+  return [grep {$_->use_as_source} @{$_[0]->fetch_all}];
 }
 
 1;
