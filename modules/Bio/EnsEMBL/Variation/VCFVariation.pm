@@ -163,7 +163,7 @@ sub get_all_Alleles {
           push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
             allele     => $_,
             count      => $counts{$_},
-            frequency  => $counts{$_} / $total,
+            frequency  => $self->_format_frequency($counts{$_} / $total),
             population => $pops_by_dbID{$pop_id},
             variation  => $self,
             subsnp_handle => undef,
@@ -431,7 +431,7 @@ sub _allele_counts {
 }
 
 sub _format_frequency {
-  return sprintf("%.3g", $_[1] || 0);
+  return sprintf("%.4g", $_[1] || 0);
 }
 
 sub get_all_attributes {
