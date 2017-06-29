@@ -172,6 +172,7 @@ sub generate_remap_qtls_input {
         my $start           = $data->{seq_region_start};
         my $end             = $data->{seq_region_end};
         my $entry           = $data->{entry};
+        my $strand = $data->{seq_region_strand};
 
         unless ($seq_region_name =~ /^\d+$|^X$|^Y$|^MT$/) {
           print $fh_report_non_ref_entries $_, "\n";
