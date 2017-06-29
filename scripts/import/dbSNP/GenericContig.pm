@@ -193,7 +193,7 @@ sub dump_dbSNP{
   );
 
   ## add refSeq HGVS as synonym for human only
-  push @subroutines, 'import_hgvs' if  $self->{'species'} eq 'homo_sapiens';
+  push @subroutines, 'import_hgvs' ;#if  $self->{'species'} eq 'human';
  
   #The GenericContig object has an array where routines that should be skipped can be specified. For now, add create_coredb and cleanup by default
   push(@{$self->{'skip_routines'}},('create_coredb',
@@ -423,7 +423,6 @@ sub create_coredb {
 sub source_table {
     my $self = shift;
     my $source_name = shift;
-    
    
     #get the version of the dbSNP release
     my $dbSNP_db_name = $self->{'snp_dbname'};
@@ -582,7 +581,6 @@ sub suspect_snps {
         FROM    suspect s, variation v, failed_description fd
         WHERE   fd.description = 'Flagged as suspect by dbSNP'
         AND     v.snp_id =  s.snp_id
-        AND     s.snp_id between ? and ?
     };
     my $fail_rs_ins_sth = $self->{'dbVar'}->prepare($stmt);
     $self->{'dbVar'}->do($stmt);
@@ -598,26 +596,12 @@ sub suspect_snps {
         FROM    suspect s, variation_synonym vs, failed_description fd
         WHERE   fd.description = 'Flagged as suspect by dbSNP'
         AND     vs.name = CONCAT('rs', s.snp_id)
-        AND     s.snp_id between ? and ?
     };
 
     my $fail_old_rs_ins_sth = $self->{'dbVar'}->prepare($stmt);
+    $fail_rs_ins_sth->execute()||die;
+    $fail_old_rs_ins_sth->execute()||die;
 
-    my $get_max_sth = $self->{'dbVar'}->prepare(qq[select  min(snp_id), max(snp_id) from suspect ]);
-    $get_max_sth->execute()||die;
-    my $range = $get_max_sth->fetchall_arrayref();
-
-    my $batch_size = 100000;
-    my $start      = $range->[0]->[0];
-    my $max        = $range->[0]->[1];
-
-
-    while ($start < $max){
-	my $end = $start + $batch_size;
-	$fail_rs_ins_sth->execute($start, $end)||die;
-	$fail_old_rs_ins_sth->execute($start, $end)||die;
-	$start = $end + 1;
-    }
     $self->{'dbVar'}->do(qq{DROP TABLE suspect});
 }
 
@@ -931,7 +915,8 @@ sub subsnp_synonyms{
    $stmt .= qq{
                  subsnp.subsnp_id , 
                  subsnplink.snp_id, 
-	         subsnplink.substrand_reversed_flag
+	         subsnplink.substrand_reversed_flag,
+                 b.handle
 	       FROM 
 	         SubSNP subsnp, 
 	         SNPSubSNPLink subsnplink, 
@@ -947,7 +932,7 @@ sub subsnp_synonyms{
 	         };
     }
    dumpSQL($self->{'dbSNP'},$stmt,  $self->{source_engine} ) ; 
-   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null", "refsnp_id v* not_null", "substrand_reversed_flag i", "allele_id i");
+   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null unsigned", "refsnp_id v* not_null", "substrand_reversed_flag i", "submitter_handle v* not_null");
   
   print $logh Progress::location(); 
 
@@ -982,14 +967,15 @@ sub subsnp_synonyms{
   $self->{'dbVar'}->do("ALTER TABLE variation_synonym disable keys ");
 
   $self->{'dbVar'}->do(qq{ALTER TABLE variation_synonym add column substrand_reversed_flag tinyint});
+  $self->{'dbVar'}->do(qq{ALTER TABLE variation_synonym add column submitter_handle varchar(25)});
 
   while ($offset < $max_id) {
 
     my $end = $offset + $interval;
 
-    $self->{'dbVar'}->do( qq{ insert into variation_synonym (variation_id, subsnp_id, source_id, name, substrand_reversed_flag) 
-               (SELECT  distinct v.variation_id, tv.subsnp_id, 1, CONCAT( 'ss', tv.subsnp_id), tv.substrand_reversed_flag
-               FROM tmp_var_allele tv USE INDEX (subsnp_id_idx, refsnp_id_idx), 
+    $self->{'dbVar'}->do( qq{ insert into variation_synonym (variation_id, subsnp_id, source_id, name, substrand_reversed_flag, submitter_handle)
+               (SELECT  distinct v.variation_id, tv.subsnp_id, 1, CONCAT( 'ss', tv.subsnp_id), tv.substrand_reversed_flag, tv.submitter_handle
+               FROM tmp_var_allele tv,
                     variation v USE INDEX (snpidx)
                WHERE tv.subsnp_id BETWEEN $offset  AND $end 
                AND v.snp_id = tv.refsnp_id
@@ -1019,73 +1005,6 @@ sub subsnp_synonyms{
   
     return;
 }
-
-#
-# dumps subSNPs 
-#
-sub dump_subSNPs {
-    my $self = shift;
-
-  #Put the log filehandle in a local variable
-  my $logh = $self->{'log'};
-  
-    my $stmt = "SELECT ";
-    if ($self->{'limit'}) {
-      $stmt .= "TOP $self->{'limit'} ";
-    }
-    $stmt .= qq{
-	          subsnp.subsnp_id AS sorting_id, 
-	          subsnplink.snp_id, 
-	          b.pop_id, 
-	          ov.pattern,
-	          subsnplink.substrand_reversed_flag
-                FROM 
-                  SubSNP subsnp, 
-                  SNPSubSNPLink subsnplink, 
-                  $self->{'dbSNP_share_db'}.ObsVariation ov, 
-                  Batch b
-                WHERE 
-                  subsnp.batch_id = b.batch_id AND
-                  subsnp.subsnp_id = subsnplink.subsnp_id AND   
-                  ov.var_id = subsnp.variation_id
-	       };
-    if ($self->{'limit'}) {
-      $stmt .= qq{    
-	          ORDER BY
-	            sorting_id ASC  
-	         };
-    }
-
-    my $sth = $self->{'dbSNP'}->prepare($stmt,{mysql_use_result => 1});
-    
-    $sth->execute();
-
-    open ( FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
-    
-  my ($row);
-  while($row = $sth->fetchrow_arrayref()) {
-    my $prefix;
-    my @alleles = split('/', $row->[3]);
-    if ($row->[3] =~ /^(\(.*\))\d+\/\d+/) {
-      $prefix = $1;
-    }
-    my @row = map {(defined($_)) ? $_ : '\N'} @$row;
-
-    # split alleles into multiple rows
-    foreach my $a (@alleles) {
-      if ($prefix and $a !~ /\(.*\)/) {#incase (CA)12/13/14 CHANGE TO (CA)12/(CA)13/(CA)14
-	$a = $prefix.$a;
-	#$prefix = "";
-      }
-      $row[3] = $a;
-      print FH join("\t", @row), "\n";
-    }
-  }
-
-  $sth->finish();
-  close FH;
-}
-
 
 #
 # loads the population table
@@ -1146,8 +1065,6 @@ sub population_table {
 	$concat_syntax = qq[ p.handle+':'+p.loc_pop_id ];
     }
     elsif($self->{source_engine} =~/postgreSQL/i){
-	warn "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
-	my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
 	$concat_syntax = qq[ p.handle || ':' || loc_pop_id ];
     }
     else{
@@ -2700,7 +2617,7 @@ sub population_genotypes {
 
      debug(localtime() . "\tloading population_genotype data");
 
-     create_and_load($self->{'dbVar'}, "tmp_pop_gty", 'subsnp_id i* not_null', 'pop_id i* not_null', 'freq','count','allele_1', 'allele_2');
+     create_and_load($self->{'dbVar'}, "tmp_pop_gty", 'subsnp_id i* not_null unsigned', 'pop_id i* not_null', 'freq','count','allele_1', 'allele_2');
   print $logh Progress::location();
 
    $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX pop_genotype_idx ON population_genotype(variation_id,subsnp_id,frequency,population_id,allele_1(5),allele_2(5))});

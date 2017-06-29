@@ -131,6 +131,9 @@ sub variation_feature{
     $tablename1 = $tablename1 . "_108" if $self->{'group_label'} =~ /GRCh38/;
     $tablename2 = $tablename2 . "_108" if $self->{'group_label'} =~ /GRCh38/;
 
+    $tablename1 = $tablename1 . "_105" if $self->{'group_label'} =~ /GRCh37/;
+    $tablename2 = $tablename2 . "_105" if $self->{'group_label'} =~ /GRCh37/;
+
     my $stmt;
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
@@ -263,9 +266,8 @@ sub variation_feature{
 	$self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
 	print Progress::location();
 	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM sample_genotype_multiple_bp});
-	print Progress::location();
+        print Progress::location();
     }
-
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
 
@@ -417,7 +419,7 @@ sub extract_haplotype_mappings{
 	$concat_syntax = qq[ ctg.genbank_acc ||  '.' || ctg.genbank_ver   ];
     }
     else{
-	$concat_syntax = qq[  CONCAT(ctg.genbank_acc, '.', ctg.genbank_ver  ];
+	$concat_syntax = qq[  CONCAT(ctg.genbank_acc, '.', ctg.genbank_ver)  ];
     }
     
 
@@ -426,20 +428,15 @@ sub extract_haplotype_mappings{
                              $concat_syntax,
                             loc.lc_ngbr+2, 
                             loc.rc_ngbr,                            
-                            CASE WHEN     loc.orientation = 1
-                            THEN          -1
-                            ELSE           1
+                            CASE WHEN loc.orientation = 1
+                            THEN   -1
+                            ELSE  1
                             END,
-                            loc.aln_quality
-                            FROM 
-                             $SNPContigLoc loc JOIN 
-                             $ContigInfo ctg ON (
-                             ctg.ctg_id = loc.ctg_id
-                            )
+                            loc.aln_quality FROM  $SNPContigLoc loc JOIN  $ContigInfo ctg ON ( ctg.ctg_id = loc.ctg_id )
                             WHERE  ctg.group_term !=   'Primary_Assembly' and ctg.group_term !=   'non-nuclear'
                             and ctg.group_label LIKE '$group_label'                
                            ];
-    
+
     
     dumpSQL($self->{'dbSNP'},$dat_ext_stmt);
         

@@ -80,7 +80,7 @@ sub allele_table_MYSQL {
   open my $output_file,'>',$loadfile ||die "ERROR opening loadfile : $!\n";
  
   print  Progress::location() . "\tImporting for SubSNP ids from $task_start to $task_end to output $loadfile\n";
-  
+
 
 ## Prepare id lookups and hashes to hold them in memory
 ## set key: 0 => value: NULL (0 is a replacement for NULL but since it's used 
@@ -207,14 +207,13 @@ sub allele_table {
   my $loadfile   = shift;
   my $task_start = shift;
   my $task_end   = shift;
-
   my $logh = $self->{'log'};
   my $dbm  = $self->{'db_manager'};
 
   open my $output_file,'>',$loadfile ||die "ERROR opening loadfile : $!\n";
  
   print  Progress::location() . "\tImporting for SubSNP ids from $task_start to $task_end to output $loadfile\n";
-  
+
 
 ## Prepare id lookups and hashes to hold them in memory
 ## set key: 0 => value: NULL (0 is a replacement for NULL but since it's used 
@@ -299,8 +298,11 @@ sub allele_table {
 
   print    Progress::location() . "Written allele with frequency data\n";
 
-  ########## Extract allele data without frequency info
+  ## no longer importing alleles without frequency data for human
+  return 1 if $self->{'dbm'}->dbCore()->species =~ /homo/i;
 
+
+  ########## Extract allele data without frequency info
 
   # Fetch all alleles and exclude those already written
   $dbm->dbSNP()->dbc->db_handle->begin_work()||die "Failed to begin work: $!\n";
@@ -341,6 +343,7 @@ sub allele_table {
   $dbm->dbSNP()->dbc->db_handle->rollback();
 
   print    Progress::location() . "Written no-freq data\n";
+
   print    Progress::location() . "Allele import $loadfile complete\n";
   # We're done, return success
   return 1;
