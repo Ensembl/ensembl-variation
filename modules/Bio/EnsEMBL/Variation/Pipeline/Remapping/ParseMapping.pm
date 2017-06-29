@@ -102,6 +102,11 @@ sub parse_read_location {
   foreach my $alignment (@alignments) {
     my $query_name = $alignment->query->name;
     my $seq_region_name = $alignment->seq_id;
+    if ($seq_region_name =~ m/:/) {
+      my @seq_id_parts = split(':', $seq_region_name);
+      $seq_region_name = $seq_id_parts[2];
+    }
+
     my $t_start = $alignment->start;
     my $t_end   = $alignment->end;
     my $q_start = $alignment->query->start;
@@ -170,7 +175,7 @@ sub parse_read_location {
 
 sub parse_variation_location {
   my $self = shift;
-
+  $self->warning("Parse variation location");
   my $sam                = $self->param('sam');
   my $fh_mappings        = $self->param('fh_mappings');
   my $fh_failed_mappings = $self->param('fh_failed_mappings');
@@ -236,7 +241,7 @@ sub parse_variation_location {
       my @seq_id_parts = split(':', $new_seq_id);
       $new_seq_id = $seq_id_parts[2];
     }
-    my $new_seq_info = join(" ", ($alignment->seq_id, $snp_t_start, $snp_t_end, $q_strand));
+    my $new_seq_info = join(" ", ($new_seq_id, $snp_t_start, $snp_t_end, $q_strand));
 
     my $cigar                 = $alignment->cigar_str;
     my $edit_distance         = $alignment->aux_get("NM");
