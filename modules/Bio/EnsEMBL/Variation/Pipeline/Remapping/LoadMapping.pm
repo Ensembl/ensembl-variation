@@ -48,7 +48,7 @@ sub run {
   if ($self->param('mode') eq 'remap_read_coverage') {
     $self->load_read_coverage();
   } elsif ($self->param('mode') eq 'remap_qtls') {
-
+    $self->load_qtl();
   } else {
     $self->load_features();
   }
@@ -66,11 +66,14 @@ sub load_read_coverage {
   my $dbc = $vdba->dbc;
 
   my $dbname = $vdba->dbc->dbname();
-  my $read_coverage_table = 'read_coverage';
-  my $result_table = "$read_coverage_table\_mapping_results";
+#  my $read_coverage_table = 'read_coverage';
+#  my $result_table = "$read_coverage_table\_mapping_results";
+  my $feature_table = $self->param('feature_table');
+  my $result_table = "$feature_table\_mapping_results";
+
 
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
-  $dbc->do(qq{ CREATE TABLE $result_table like $read_coverage_table });
+  $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
 
   my $dbh = $dbc->db_handle;
@@ -115,6 +118,55 @@ sub load_read_coverage {
   $dbh->disconnect;
 }
 
+sub load_qtl {
+  my $self = shift;
+
+  my $vdba = $self->param('vdba');
+  my $dbc  = $vdba->dbc;
+
+  my $load_features_dir = $self->param('load_features_dir');
+
+  my $dbname = $vdba->dbc->dbname();
+  my $feature_table = $self->param('feature_table');
+  my $result_table = "$feature_table\_mapping_results";
+  $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
+  $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
+  $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
+
+  my $dbh = $dbc->db_handle;
+  my $sth = $dbh->prepare(qq{
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = '$dbname'
+      AND TABLE_NAME = '$result_table';
+      });
+  $sth->execute();
+
+# QC that all necessary columns are there: e.g. seq_region_id, ...
+  my @column_names = ();
+  while (my @name = $sth->fetchrow_array) {
+    push @column_names, $name[0];
+  }
+  $sth->finish();
+  @column_names = sort @column_names;
+
+  my $column_names_concat = join(',', @column_names);
+
+  opendir(DIR, $load_features_dir) or die $!;
+  while (my $file = readdir(DIR)) {
+    if ($file =~ /^(.+)\.txt$/) {
+      my $file_number = $1;
+      $self->run_cmd("cp $load_features_dir/$file_number.txt $load_features_dir/load_$file_number.txt");
+      my $TMP_DIR = $load_features_dir;
+      my $tmp_file = "load_$file_number.txt";
+      $ImportUtils::TMP_DIR = $TMP_DIR;
+      $ImportUtils::TMP_FILE = $tmp_file;
+      load($dbc, ($result_table, $column_names_concat));
+    }
+  }
+  closedir(DIR);
+  $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
+  $dbh->disconnect;
+}
 sub load_features {
   my $self = shift;
 
