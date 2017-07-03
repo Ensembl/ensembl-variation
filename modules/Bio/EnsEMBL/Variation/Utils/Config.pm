@@ -108,16 +108,11 @@ our @VARIATION_CLASSES = (
         SO_accession => 'SO:0001483',
         SO_term => 'SNV',
         display_term => 'SNP',
-        somatic_display_term => 'somatic_SNV',
+        somatic_display_term => 'somatic SNV',
     },
     {
         SO_accession => 'SO:1000002',
         SO_term => 'substitution',
-    },
-    {
-        SO_accession => 'SO:0001019',
-        SO_term => 'copy_number_variation',
-        display_term => 'CNV',
     },
     {
         SO_accession => 'SO:0000667',
@@ -134,113 +129,141 @@ our @VARIATION_CLASSES = (
     {
         SO_accession => 'SO:0000705',
         SO_term => 'tandem_repeat',
+        display_term => 'tandem repeat',
     },
     {
         SO_accession => 'SO:0001059',
         SO_term => 'sequence_alteration',
+        display_term => 'sequence alteration',
     },
     {
         SO_accession => 'SO:0001645',
         SO_term => 'genetic_marker',
+        display_term => 'genetic marker',
     },
     # Structural variation classes
     {
         SO_accession => 'SO:0001537',
         SO_term => 'structural_variant',
         display_term => 'SV',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0001019',
+        SO_term => 'copy_number_variation',
+        display_term => 'CNV',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0000051',
         SO_term => 'probe',
         display_term => 'CNV_PROBE',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001742',
         SO_term => 'copy_number_gain',
-        display_term => 'Gain',
+        display_term => 'gain',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001743',
         SO_term => 'copy_number_loss',
-        display_term => 'Loss',
+        display_term => 'loss',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:1000036',
         SO_term => 'inversion',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001784',
         SO_term => 'complex_structural_alteration',
-        display_term => 'Complex',
+        display_term => 'complex alteration',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:1000173',
         SO_term => 'tandem_duplication',
-        display_term => 'Tandem duplication',
+        display_term => 'tandem duplication',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001837',
         SO_term => 'mobile_element_insertion',
-        display_term => 'Mobile element insertion',
+        display_term => 'mobile element insertion',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0002066',
         SO_term => 'mobile_element_deletion',
-        display_term => 'Mobile element deletion',
+        display_term => 'mobile element deletion',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001873',
         SO_term => 'interchromosomal_breakpoint',
-        display_term => 'Interchromosomal breakpoint',
+        display_term => 'interchromosomal breakpoint',
+        type => 'sv',
     },   
     {
         SO_accession => 'SO:0001874',
         SO_term => 'intrachromosomal_breakpoint',
-        display_term => 'Intrachromosomal breakpoint',
+        display_term => 'intrachromosomal breakpoint',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0000199',
         SO_term => 'translocation',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:1000035',
         SO_term => 'duplication',
-        display_term => 'Duplication',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001838',
         SO_term => 'novel_sequence_insertion',
-        display_term => 'Novel sequence insertion',
+        display_term => 'novel sequence insertion',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0002060',
         SO_term => 'interchromosomal_translocation',
-        display_term => 'Interchromosomal translocation',
+        display_term => 'interchromosomal translocation',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0002061',
         SO_term => 'intrachromosomal_translocation',
-        display_term => 'Intrachromosomal translocation',
+        display_term => 'intrachromosomal translocation',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0002063',
         SO_term => 'Alu_insertion',
-        display_term => 'Alu insertion',
+        display_term => 'Alu insertion', 
+        type => 'sv',
     },
     {
         SO_accession => 'SO:1000005',
         SO_term => 'complex_substitution',
-        display_term => 'Complex substitution',
+        display_term => 'complex substitution',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0002096',
         SO_term => 'short_tandem_repeat_variation',
-        display_term => 'Short tandem repeat variation',
+        display_term => 'short tandem repeat variation',
+        type => 'sv',
     },
     {
         SO_accession => 'SO:0001786',
         SO_term => 'loss_of_heterozygosity',
-        display_term => 'Loss of heterozygosity',
+        display_term => 'loss of heterozygosity',
+        type => 'sv',
     },
 );
 
@@ -252,7 +275,7 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '38',
         tier => '4',
         description => 'A sequence variant located in the intergenic region, between genes',
-        label => 'Intergenic variant',
+        label => 'intergenic variant',
         is_default => 1,
         impact => 'MODIFIER',
         include => {
@@ -270,7 +293,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
         description => 'A sequence variant located 5\' of a gene',
-        label => 'Upstream gene variant',
+        label => 'upstream gene variant',
         impact => 'MODIFIER',
         include => {
             within_feature => 0
@@ -287,7 +310,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
         description => 'A sequence variant located 3\' of a gene',
-        label => 'Downstream gene variant',
+        label => 'downstream gene variant',
         impact => 'MODIFIER',
         include => {
             within_feature => 0
@@ -305,7 +328,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
         description => 'A splice variant that changes the 2 base region at the 5\' end of an intron',
-        label => 'Splice donor variant',
+        label => 'splice donor variant',
         impact => 'HIGH',
         include => {
             intron_boundary => 1
@@ -323,7 +346,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
         description => 'A splice variant that changes the 2 base region at the 3\' end of an intron',
-        label => 'Splice acceptor variant',
+        label => 'splice acceptor variant',
         impact => 'HIGH',
         include => {
             intron_boundary => 1
@@ -340,7 +363,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
         description => 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
-        label => 'Splice region variant',
+        label => 'splice region variant',
         impact => 'LOW',
         include => {
             intron_boundary => 1
@@ -358,7 +381,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
         description => 'A transcript variant occurring within an intron',
-        label => 'Intron variant',
+        label => 'intron variant',
         impact => 'MODIFIER',
         include => {
             intron => 1,
@@ -402,19 +425,6 @@ our @OVERLAP_CONSEQUENCES = (
             exon => 1,
         }
     },
-#    {
-#        SO_accession => 'SO:0001577',
-#        SO_term => 'complex_change_in_transcript',
-#        display_term => 'COMPLEX_INDEL',
-#        feature_SO_term => 'primary_transcript',
-#        feature_class => 'Bio::EnsEMBL::Transcript',
-#        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
-#        rank => '4',
-#        tier => '3',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::complex_indel',
-#        description => 'Insertion or deletion that spans an exon/intron or coding sequence/UTR border',
-#        label => 'Complex change in transcript',
-#    },
     {
         SO_accession => 'SO:0001819',
         SO_term => 'synonymous_variant',
@@ -427,7 +437,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
         description => 'A sequence variant where there is no resulting change to the encoded amino acid',
-        label => 'Synonymous variant',
+        label => 'synonymous variant',
         impact => 'LOW',
         include => {
             coding => 1,
@@ -445,7 +455,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
         description => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
-        label => 'Missense variant',
+        label => 'missense variant',
         impact => 'MODERATE',
         include => {
             coding => 1,
@@ -464,7 +474,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
         description => 'An inframe non synonymous variant that inserts bases into in the coding sequence',
-        label => 'Inframe insertion',
+        label => 'inframe insertion',
         impact => 'MODERATE',
         include => {
             coding => 1,
@@ -482,7 +492,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
         description => 'An inframe non synonymous variant that deletes bases from the coding sequence',
-        label => 'Inframe deletion',
+        label => 'inframe deletion',
         impact => 'MODERATE',
         include => {
             coding => 1,
@@ -501,7 +511,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
         description => 'A sequence variant whereby at least one base of a codon is changed, resulting in a premature stop codon, leading to a shortened transcript',
-        label => 'Stop gained',
+        label => 'stop gained',
         impact => 'HIGH',
         include => {
             coding => 1,
@@ -518,7 +528,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
         description => 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
-        label => 'Stop lost',
+        label => 'stop lost',
         impact => 'HIGH',
         include => {
             coding => 1,
@@ -535,7 +545,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
         description => 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
-        label => 'Stop retained variant',
+        label => 'stop retained variant',
         impact => 'LOW',
         include => {
             coding => 1,
@@ -552,7 +562,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
         description => 'A codon variant that changes at least one base of the canonical start codon',
-        label => 'Start lost',
+        label => 'start lost',
         impact => 'HIGH',
         include => {
             coding => 1,
@@ -569,7 +579,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
         description => 'A sequence variant where at least one base in the start codon is changed, but the start remains',
-        label => 'Start retained variant',
+        label => 'start retained variant',
         impact => 'LOW',
         include => {
             coding => 1,
@@ -587,7 +597,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
         description => 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
-        label => 'Frameshift variant',
+        label => 'frameshift variant',
         impact => 'HIGH',
         include => {
             coding => 1,
@@ -605,7 +615,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
         description => 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
-        label => 'Incomplete terminal codon variant',
+        label => 'incomplete terminal codon variant',
         impact => 'LOW',
         include => {
             coding => 1,
@@ -640,7 +650,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
         description => 'A transcript variant of a non coding RNA gene',
-        label => 'Non coding transcript variant',
+        label => 'non coding transcript variant',
         impact => 'MODIFIER',
         include => {
             within_feature => 1,
@@ -658,7 +668,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
         description => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
-        label => 'Non coding transcript exon variant',
+        label => 'non coding transcript exon variant',
         impact => 'MODIFIER',
         include => {
             within_feature => 1,
@@ -677,7 +687,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '2',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
         description => 'A transcript variant located with the sequence of the mature miRNA',
-        label => 'Mature miRNA variant',
+        label => 'mature miRNA variant',
         impact => 'MODIFIER',
         include => {
             within_feature => 1,
@@ -696,7 +706,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
         description => 'A sequence variant that changes the coding sequence',
-        label => 'Coding sequence variant',
+        label => 'coding sequence variant',
         impact => 'MODIFIER',
         include => {
             coding => 1,
@@ -713,31 +723,9 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '2',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
         description => 'A sequence variant located within a regulatory region',
-        label => 'Regulatory region variant',
+        label => 'regulatory region variant',
         impact => 'MODIFIER',
     },
-#    {
-#        SO_accession => 'SO:X000005',
-#        SO_term => 'pre_miRNA_variant',
-#        display_term => 'WITHIN_NON_CODING_GENE',
-#        feature_SO_term => 'miRNA',
-#        feature_class => 'Bio::EnsEMBL::Transcript',
-#        rank => '13',
-#        tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA',
-#    },
-#    {
-#        SO_accession => 'SO:X000004',
-#        SO_term => 'miRNA_target_site_variant',
-#        display_term => 'REGULATORY_REGION',
-#        feature_SO_term => 'binding_site',
-#        feature_class => 'Bio::EnsEMBL::Funcgen::ExternalFeature',
-#        rank => '13',
-#        tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA_target_site',
-#        description => 'In regulatory region annotated by Ensembl',
-#        label => 'Regulatory region',
-#    },
     {
         SO_accession => 'SO:0001782',
         SO_term => 'TF_binding_site_variant',
@@ -753,27 +741,6 @@ our @OVERLAP_CONSEQUENCES = (
         impact => 'MODIFIER',
     },
 
-#    {
-#        SO_accession => 'SO:X000002',
-#        SO_term => 'decreased_binding_affinity',
-#        display_term => 'REGULATORY_REGION',
-#        feature_SO_term => 'binding_site',
-#        feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-#        rank => '47',
-#        tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::decreased_binding_affinity',
-#    },
-#    {
-#        SO_accession => 'SO:X000001',
-#        SO_term => 'increased_binding_affinity',
-#        display_term => 'REGULATORY_REGION',
-#        feature_SO_term => 'binding_site',
-#        feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-#        rank => '48',
-#        tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::increased_binding_affinity',
-#    },
-
 
     ## NEW FOR 68
     #############
@@ -788,12 +755,29 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '1',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
         description => 'A feature ablation whereby the deleted region includes a transcript feature',
-        label => 'Transcript ablation',
+        label => 'transcript ablation',
         impact => 'HIGH',
         include => {
             deletion => 1,
             complete_overlap => 1,
         }
+    },
+    {
+        SO_accession => 'SO:0001889',
+        SO_term => 'transcript_amplification',
+        feature_SO_term => 'mRNA',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+        rank => '8',
+        tier => '1',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
+        description => 'A feature amplification of a region containing a transcript',
+        label => 'transcript amplification',
+        impact => 'HIGH',
+        include => {
+            increase_length => 1,
+            complete_overlap => 1,
+        },
     },
 #    {
 #        SO_accession => 'SO:0001886',
@@ -805,25 +789,8 @@ our @OVERLAP_CONSEQUENCES = (
 #        tier => '2',
 #        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::transcript_fusion',
 #        description => 'A feature fusion where the deletion brings together transcript regions',
-#        label => 'Transcript fusion',
+#        label => 'transcript fusion',
 #    },
-    {
-        SO_accession => 'SO:0001889',
-        SO_term => 'transcript_amplification',
-        feature_SO_term => 'mRNA',
-        feature_class => 'Bio::EnsEMBL::Transcript',
-        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
-        rank => '8',
-        tier => '1',
-        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-        description => 'A feature amplification of a region containing a transcript',
-        label => 'Transcript amplification',
-        impact => 'HIGH',
-        include => {
-            increase_length => 1,
-            complete_overlap => 1,
-        },
-    },
 #    {
 #        SO_accession => 'SO:0001883',
 #        SO_term => 'transcript_translocation',
@@ -831,10 +798,10 @@ our @OVERLAP_CONSEQUENCES = (
 #        feature_class => 'Bio::EnsEMBL::Transcript',
 #        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
 #        rank => '9',
-        #tier => '2',
+#        tier => '2',
 #        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::transcript_translocation',
 #        description => 'A feature translocation where the region contains a transcript',
-#        label => 'Transcript translocation',
+#        label => 'transcript translocation',
 #    },
     {
         SO_accession => 'SO:0001895',
@@ -853,18 +820,6 @@ our @OVERLAP_CONSEQUENCES = (
             complete_overlap => 1,
         }
     },
-#    {
-#        SO_accession => 'SO:0001888',
-#        SO_term => 'TFBS_fusion',
-#        feature_SO_term => 'TF_binding_site',
-#        feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-#        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
-#        rank => '27',
-        #tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::motif_feature_fusion',
-#        description => 'A fusion where the deletion brings together transcription factor binding sites',
-#        label => 'TFBS fusion',
-#    },
     {
         SO_accession => 'SO:0001892',
         SO_term => 'TFBS_amplification',
@@ -883,13 +838,25 @@ our @OVERLAP_CONSEQUENCES = (
         },
     },
 #    {
+#        SO_accession => 'SO:0001888',
+#        SO_term => 'TFBS_fusion',
+#        feature_SO_term => 'TF_binding_site',
+#        feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
+#        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+#        rank => '27',
+#        tier => '2',
+#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::motif_feature_fusion',
+#        description => 'A fusion where the deletion brings together transcription factor binding sites',
+#        label => 'TFBS fusion',
+#    },
+#    {
 #        SO_accession => 'SO:0001885',
 #        SO_term => 'TFBS_translocation',
 #        feature_SO_term => 'TF_binding_site',
 #        feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
 #        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
 #        rank => '29',
-        #tier => '2',
+#        tier => '2',
 #        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::motif_feature_translocation',
 #        description => 'A feature translocation where the region contains a transcription factor binding site',
 #        label => 'TFBS translocation',
@@ -904,25 +871,13 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '2',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
         description => 'A feature ablation whereby the deleted region includes a regulatory region',
-        label => 'Regulatory region ablation',
+        label => 'regulatory region ablation',
         impact => 'MODERATE',
         include => {
             deletion => 1,
             complete_overlap => 1,
         }
     },
-#    {
-#        SO_accession => 'SO:0001887',
-#        SO_term => 'regulatory_region_fusion',
-#        feature_SO_term => 'TF_binding_site',
-#        feature_class => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
-#        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
-#        rank => '32',
-        #tier => '2',
-#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::regulatory_feature_fusion',
-#        description => 'A fusion where the deletion brings together regulatory regions',
-#        label => 'Regulatory region fusion',
-#    },
     {
         SO_accession => 'SO:0001891',
         SO_term => 'regulatory_region_amplification',
@@ -933,7 +888,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '2',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
         description => 'A feature amplification of a region containing a regulatory region',
-        label => 'Regulatory region amplification',
+        label => 'regulatory region amplification',
         impact => 'MODIFIER',
         include => {
             increase_length => 1,
@@ -941,16 +896,28 @@ our @OVERLAP_CONSEQUENCES = (
         },
     },
 #    {
+#        SO_accession => 'SO:0001887',
+#        SO_term => 'regulatory_region_fusion',
+#        feature_SO_term => 'TF_binding_site',
+#        feature_class => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
+#        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+#        rank => '32',
+#        tier => '2',
+#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::regulatory_feature_fusion',
+#        description => 'A fusion where the deletion brings together regulatory regions',
+#        label => 'regulatory region fusion',
+#    },
+#    {
 #        SO_accession => 'SO:0001884',
 #        SO_term => 'regulatory_region_translocation',
 #        feature_SO_term => 'TF_binding_site',
 #        feature_class => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
 #        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
 #        rank => '34',
-        #tier => '2',
+#        tier => '2',
 #        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::regulatory_feature_translocation',
 #        description => 'A feature translocation where the region contains a regulatory region',
-#        label => 'Regulatory region translocation',
+#        label => 'regulatory region translocation',
 #    },
     {
         SO_accession => 'SO:0001907',
@@ -962,7 +929,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
         description => 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
-        label => 'Feature elongation',
+        label => 'feature elongation',
         impact => 'MODIFIER',
         include => {
             increase_length => 1,
@@ -979,7 +946,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
         description => 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
-        label => 'Feature truncation',
+        label => 'feature truncation',
         impact => 'MODIFIER',
         include => {
             decrease_length => 1,
