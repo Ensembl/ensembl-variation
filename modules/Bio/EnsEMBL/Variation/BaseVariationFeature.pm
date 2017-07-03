@@ -180,4 +180,32 @@ sub _get_transcript_key {
   return $key;
 }
 
+
+=head2 _get_prev_base
+
+  Example    : $base = $bvf->get_prev_base();
+  Description: Get the base preceding the given variant's position. Will
+               use FASTA or database; returns "N" if sequence retrieval fails.
+  Returntype : string
+  Exceptions : none
+  Caller     : to_VCF_record(), 
+  Status     : Stable
+
+=cut
+
+sub _get_prev_base {
+  my $self = shift; 
+
+  # we need the ref base before the variation
+  # default to N in case we cant get it
+  my $prev_base = 'N';
+
+  if(my $slice = $self->{slice}) {
+    my $sub_slice = $slice->sub_Slice($self->start - 1, $self->start - 1);
+    $prev_base = $sub_slice->seq if defined($sub_slice);
+  }
+
+  return $prev_base;
+}
+
 1;

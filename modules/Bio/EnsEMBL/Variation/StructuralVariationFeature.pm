@@ -1128,6 +1128,43 @@ sub transfer {
 }
 
 
+=head2 to_VCF_record
+
+  Example    : $vcf_arrayref = $svf->to_VCF_record();
+  Description: Converts this StructuralVariationFeature object to an arrayref
+               representing the columns of a VCF line.
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : VEP
+  Status     : Stable
+
+=cut
+
+sub to_VCF_record {
+  my $self = shift;
+
+  # convert to SO term
+  my %terms = (
+    insertion => 'INS',
+    deletion => 'DEL',
+    tandem_duplication => 'TDUP',
+    duplication => 'DUP'
+  );
+
+  my $alt = '<'.($terms{$self->class_SO_term} || $self->class_SO_term).'>';
+
+  return [
+    $self->{chr} || $self->seq_region_name,
+    $self->start - 1,
+    $self->variation_name || '.',
+    $self->_get_prev_base(),
+    $alt,
+    '.', '.',
+    'END='.$self->end
+  ];
+}
+
+
 sub _fix_bounds {
   my $self = shift;
   my $old = shift;
