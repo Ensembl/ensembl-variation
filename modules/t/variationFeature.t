@@ -197,6 +197,36 @@ is_deeply(
   [$chr, $start - 1, $vname, 'NA', 'N,NG', '.', '.', '.'],
   'to_VCF_record - mixed'
 );
+
+
+$vf->allele_string('HGMD_MUTATION');
+$vf->{class_SO_term} = 'SNV';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'N', 'N', '.', '.', '.'],
+  'to_VCF_record - unknown alleles SNV'
+);
+
+$vf->{class_SO_term} = 'insertion';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'N', '<INS>', '.', '.', '.'],
+  'to_VCF_record - unknown alleles insertion'
+);
+
+$vf->{class_SO_term} = 'deletion';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'NN', 'N', '.', '.', '.'],
+  'to_VCF_record - unknown alleles deletion'
+);
+
+$vf->{class_SO_term} = 'sequence_alteration';
+is_deeply(
+  $vf->to_VCF_record(),
+  [],
+  'to_VCF_record - unknown alleles sequence_alteration'
+);
 $vf->allele_string($allele_str);
 
 # test convert to SNP
