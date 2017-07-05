@@ -162,7 +162,7 @@ my %SOURCES = (
   },
   "MGI" => {
     description => "Mouse Genome Informatics",
-    url => "http://http://www.informatics.jax.org/",
+    url => "http://www.informatics.jax.org/",
     type => "Gene",  
   },
 
