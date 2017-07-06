@@ -2098,7 +2098,7 @@ sub to_VCF_record {
   }
   else {
     @alleles = split '\/', $self->allele_string;
-    map {reverse_comp(\$_)} @alleles if $self->strand < 0;
+    map {reverse_comp(\$_)} grep {/^[ACGTN]+$/} @alleles if $self->strand < 0;
   }
 
   my $non_acgt = 0;
