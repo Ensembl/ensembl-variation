@@ -16,28 +16,18 @@
 # limitations under the License.
 
 
-=head
+=head1
 
 Seek ontology accessions for phenotype descriptions
 
-First pass: OLS exact match
+  First pass:  Seek Zooma mappings curated by EVA for all descriptions
+  Second pass: Seek OLS exact matches for all descriptions
+  Third pass:  If no mapping, trim descriptions and seek OLS exact matches
 
-
-If no mapping:
-
-    Remove 'susceptibility to' & subtype => seek OLS exact match
-    Zooma high confidence
-    Zooma exact match
-    Zooma extact match minus number at end
-    Zooma using EVA curated data
-
-Supported ontologies: EFO, ORDO, HPO, DOID
+  Supported ontologies: EFO, ORDO, HPO
 
 =cut
 
-BEGIN{
-    $ENV{http_proxy} = 'http://wwwcache.sanger.ac.uk:3128'; 
-}
 
 use strict;
 use warnings;
@@ -60,29 +50,28 @@ $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
 
 
+
 ## add exact matches where available for all phenotypes
 my $all_phenos = get_all_phenos($dba->dbc->db_handle );
-my $ols_terms  = add_ols_matches($all_phenos);
+
+my $zooma_terms  = add_zooma_matches($all_phenos);
+store_terms($reg, $zooma_terms);
+
+my $ols_terms = add_ols_matches($all_phenos);
 store_terms($reg, $ols_terms );
+
+
 
 ## seek matches for parent descriptions missing terms
 ## eg for 'Psoriasis 13' seek 'Psoriasis'
-my $non_matched_phenos1 = get_termless_phenos($dba->dbc->db_handle);
-my $ols_parent_terms   = add_ols_matches($non_matched_phenos1, 'parent');
+my $non_matched_phenos = get_termless_phenos($dba->dbc->db_handle);
+my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
 store_terms($reg, $ols_parent_terms );
 
 
-## seek matches for descriptions missing terms by using different quality level  
-my $non_matched_phenos2 = get_termless_phenos($dba->dbc->db_handle);
-my $zooma_terms         = add_zooma_matches($non_matched_phenos2 );
-store_terms($reg, $zooma_terms, 'Zooma exact');
+=head2 add_OLS_matches
 
-
-
-
-=head add_OLS_matches
-
-- find exact match terms from supported ontologies
+ find exact match terms from supported ontologies
 
 =cut
 
@@ -99,12 +88,18 @@ sub add_ols_matches{
     ## modify term if no exact match available
     if (defined $truncate && $truncate eq 'parent'){
  
-      $search_term =~ s/\s*\((\w+\s*)+\)\s*$//;        ## (one family) or (DDG2P abbreviation)
-      $search_term =~ s/\s*SUSCEPTIBILITY TO\s*//i;
-      $search_term =~ s/(\,(\s*\w+\s*)+)+\s*$//;       ## remove ", with other  condition" ", one family" type qualifiers
+      $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (DDG2P abbreviation)
+      $search_term =~ s/SUSCEPTIBILITY TO\s*|SUSCEPTIBILITY//i;
+      $search_term =~ s/(\,+(\s*\w+\s*)+)+\s*$//;      ## remove ", with other  condition" ", one family" type qualifiers
       $search_term =~ s/\s+type\s+\d+\s*$//i;          ## remove " type 34"
       $search_term =~ s/\s+\d+\s*$//;                  ## remove just numeric subtype
+      $search_term =~ s/\s+\d+\w\s*$//;                ## remove numeric+letter subtype 1c
+      $search_term =~ s/primary\s*//i;
+      $search_term =~ s/\s*\,\s*$//; 
+      $search_term =~ s/\s+/ /g;
 
+      next if length($search_term) == length($phenos->{$id});
+      print "Seeking $search_term from $phenos->{$id}\n";
     }
 
     my $ontol_data = get_ols_terms( $search_term );
@@ -122,11 +117,9 @@ sub add_ols_matches{
   return \%terms;
 }
 
-=head add_zooma_matches
+=head2 add_zooma_matches
 
-- add high quality matches
-- if none found, remove type number & retry
-- if none found use EVA curated matches & check for exact match
+  use EVA curated mappings
 =cut
 sub add_zooma_matches{
   
@@ -137,17 +130,7 @@ sub add_zooma_matches{
   foreach my $id (keys %{$phenos}){
     my $desc = $phenos->{$id};
     $desc =~ s/\s+\(\w+\)$//; ## remove DDG2P abbreviation 
-    ## search with full description to pull out high quality matches
 
-    my $terms = get_high_quality_zooma_terms($desc);
-    if( defined $terms){
-      $terms{$id}{terms} = $terms;
-      $terms{$id}{type} = "Zooma exact";
-
-      next;
-    }
-
-    ## if no high quality or exact match, use EVA curated match 
     my $eva_terms = get_eva_zooma_terms($desc);   
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
     $terms{$id}{type} = "Zooma exact";
@@ -168,6 +151,7 @@ sub store_terms{
     my $pheno = $pheno_adaptor->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
+      next if $accession =~ /UBERON|NCBITaxon|NCIT|CHEBI|PR|MPATH|MA|PATO/; ## filter out some EFO term types 
       print $out "$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n";
 
       $pheno->add_ontology_accession({ accession      => $accession, 
@@ -181,9 +165,9 @@ sub store_terms{
 
 
 
-=head get_all_phenos
+=head2 get_all_phenos
 
-Look up descriptions for all phenotypes to add exact matching terms
+look up descriptions for all phenotypes to add exact matching terms
 from the supported ontologies.
 
 =cut
@@ -196,18 +180,17 @@ sub get_all_phenos{
   $desc_ext_sth->execute()||die "Problem extracting all phenotype descriptions\n";
   my $data = $desc_ext_sth->fetchall_arrayref();
   my %pheno;
-  foreach my $l (@{$data}){
 
-   $l->[1] =~ s/\s\(\w+\)$//;
+  foreach my $l (@{$data}){
    $pheno{$l->[0]} = $l->[1];
   }
 
   return \%pheno;
 }
 
-=head get_termless_phenos
+=head2 get_termless_phenos
 
-Look up descriptions for phenotypes which don't have supplied or
+look up descriptions for phenotypes which don't have supplied or
 exact match terms of 'is' type
 
 =cut
@@ -231,7 +214,7 @@ sub get_termless_phenos{
   return \%pheno;
 }
 
-=head get_high_quality_zooma_terms
+=head2 get_high_quality_zooma_terms
 
 return only high quality matches for a phenotype description
 
@@ -257,39 +240,8 @@ sub get_high_quality_zooma_terms{
   @terms ? return \@terms : return undef;
 }
 
-=head get_exact_zooma_terms
 
-return terms where the input des matches the curated term
-
-=cut
-sub get_exact_zooma_terms{
-
-  my $desc = shift;
-
-  my $ontol_data = get_zooma_terms($desc);
-  return undef unless defined $ontol_data;
-
-  my @terms;
-
-  foreach my $annot(@{$ontol_data}){
-
-    foreach my $term (@{$annot->{semanticTags}} ){
-      ## filter ontologies 
-      next unless $term =~ /EFO|Orphanet|ORDO|HP/;
-      ## check for exact matches
-      next unless '\U$annot->{derivedFrom}->{annotatedProperty}->{propertyValue}' eq '\U$desc';
-
-      print $out "$term\t$annot->{confidence}\t$desc\t$annot->{derivedFrom}->{annotatedProperty}->{propertyValue} zooma exact\n";
-      push @terms, iri2acc($term) ;
-    }
-  }
-  return undef unless defined $terms[0];
-  return \@terms;
-}
-
-
-
-=head get_eva_zooma_terms
+=head2 get_eva_zooma_terms
 
 return only eva curated matches for a phenotype description
 
@@ -307,6 +259,8 @@ sub get_eva_zooma_terms{
   foreach my $annot(@{$ontol_data}){
     next unless $annot->{derivedFrom}->{provenance}->{source}->{name} eq 'eva-clinvar'; 
 
+    next unless $annot->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
+
     foreach my $term (@{$annot->{semanticTags}} ){
       print $out "$term\t$annot->{confidence}\t$desc\tEVA\n";
       push @terms, iri2acc($term) ;
@@ -317,7 +271,7 @@ sub get_eva_zooma_terms{
 }
 
 
-=head get_ols_terms
+=head2 get_ols_terms
 
 look up phenotype description in OLS seeking exact match
 
@@ -327,7 +281,6 @@ sub get_ols_terms{
 
   my $pheno = shift;
 
-  $pheno =~ s/\(\w+\)//; ## for DDG2P
   $pheno =~ s/\s+/\%20/g;
 
   my $http = HTTP::Tiny->new();
@@ -346,7 +299,7 @@ sub get_ols_terms{
   return JSON->new->decode($response->{content} );
 }
 
-=head get_zooma_terms
+=head2 get_zooma_terms
 
 look up phenotype description in zooma
 
