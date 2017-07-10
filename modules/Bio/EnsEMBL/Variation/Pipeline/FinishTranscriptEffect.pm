@@ -54,10 +54,10 @@ sub run {
 
   # do unique sort on command line, it's faster than relying on MySQL's unique index
   foreach my $file(grep {-e "$dir/$_"} qw(variation_hgvs.txt variation_genename.txt)) {
+    system("gzip -c $dir/$file > $dir/$file\_bak.gz");
     system(
       sprintf(
-        'sort %s -u %s/%s > %s/%s.unique',
-        (($host =~ /sanger/ || $host =~ /^bc/) ? '--parallel=4' : ''),
+        'sort --parallel=4 -u %s/%s > %s/%s.unique',
         $dir, $file, $dir, $file
       )
     ) and die("ERROR: Failed to unique sort $file");
