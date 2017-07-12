@@ -1410,6 +1410,18 @@ sub parse_orphanet {
   
   my @phenotypes;
   
+  my %orphanet_special_char = (
+    '\\\E7' => 'c',
+    '\\\C5' => 'A',
+    '\\\E8' => 'e',
+    '\\\E9' => 'e',
+    '\\\EB' => 'e',
+    '\\\F6' => 'o',
+    '\\\FC' => 'u',
+    '\\\ED' => 'i',
+    '\\\E4' => 'a',
+  );
+
   my $xml_parser   = XML::LibXML->new();
   my $orphanet_doc = $xml_parser->parse_file($infile);
   
@@ -1418,6 +1430,14 @@ sub parse_orphanet {
     my $orpha_number = $orpha_number_node->to_literal;
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;
+
+    # Replace special characters
+    if ($name =~ /\\/) {
+      foreach my $char (keys(%orphanet_special_char)) {
+        my $new_char = $special_characters{$char};
+        $name =~ s/$char/$new_char/g;
+      }
+    }
 
     my @gene_nodes = $disorder->findnodes('./DisorderGeneAssociationList/DisorderGeneAssociation/Gene');
     
