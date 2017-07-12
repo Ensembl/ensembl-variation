@@ -231,6 +231,15 @@ my $prev_prog;
 
 my $pubmed_prefix = 'PMID:';
 
+my %special_characters = (
+  'ö' => 'o',
+  'ü' => 'u',
+  'ä' => 'a',
+  'í' => 'i',
+);
+
+
+
 =head
 
     The parser subroutines parse the input file into a common data structure.
@@ -673,8 +682,9 @@ sub parse_nhgri {
         $risk_frequency = $content{'RISK ALLELE FREQUENCY'};
       }
       
-      $gene =~ s/ //g;
-      
+      $gene =~ s/\s+//g;
+      $gene =~ s/–/-/g;
+
       my %data = (
         'study_type' => 'GWAS',
         'description' => $phenotype,
@@ -2573,6 +2583,12 @@ sub add_phenotypes {
       }
     }
     
+    # Remove special characters from the phenotype description
+    foreach my $char (keys(%special_characters)) {
+      my $new_char = $special_characters{$char};
+      $phenotype->{description} =~ s/$char/$new_char/g;
+    }
+
     # get phenotype ID
     my $phenotype_id = get_phenotype_id($phenotype, $db_adaptor);
 
