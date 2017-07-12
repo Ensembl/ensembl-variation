@@ -707,7 +707,7 @@ sub filter_read_coverage_mapping_results {
 
   my ($stats_failed, $stats_unique_map, $stats_multi_map);
 
-  my $fh = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/chicken/remapping_qtls/debug_filter_mappings', 'w');
+  #my $fh = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/chicken/remapping_qtls/debug_filter_mappings', 'w');
 
   my $mapped = {};
   while (<$fh_mappings>) {
@@ -720,9 +720,9 @@ sub filter_read_coverage_mapping_results {
     my ($id, $type) = split(':', $query_name);   
 
     $mapped->{$id}->{$type}->{$new_seq_name}->{"$new_start:$new_end:$new_strand"} = $algn_score;
-    print $fh "$id $type $new_seq_name $new_start $new_end $new_strand $algn_score\n";
+   # print $fh "$id $type $new_seq_name $new_start $new_end $new_strand $algn_score\n";
   }
-  $fh->close;
+#  $fh->close;
   $fh_mappings->close();
 
   my $file_init_feature = $self->param('file_init_feature');
@@ -762,7 +762,14 @@ sub filter_read_coverage_mapping_results {
             my ($down_start, $down_end, $down_strand) = split(':', $downstream_mapping);
             my $mapping_diff = $down_end - $up_start + 1;
             my $diff_score = abs($mapping_diff - $diff);
-            $filtered->{$seq_name}->{"$up_start:$down_end"} = $diff_score;
+            if ($up_strand == $down_strand) {
+              if ($up_start > $down_end) {
+                ($up_start, $down_end) = ($down_end, $up_start);
+              }
+              $filtered->{$seq_name}->{"$up_start:$down_end:$down_strand"} = $diff_score;
+
+            }
+#            $filtered->{$seq_name}->{"$up_start:$down_end:$down_strand"} = $diff_score;
           }
         }
       }           
@@ -774,8 +781,9 @@ sub filter_read_coverage_mapping_results {
           my $score = $mappings->{$mapping};
           if ($score <= $threshold) {
             $count_out++;
-            my ($new_start, $new_end) = split(':', $mapping);
-            push @output_lines, "$id\t$old_chrom\t$new_start\t$new_end\t$score\n";
+            my ($new_start, $new_end, $new_strand) = split(':', $mapping);
+            
+            push @output_lines, "$id\t$old_chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
           }
         }
       } else {
@@ -803,13 +811,14 @@ sub filter_read_coverage_mapping_results {
             my $score = $mappings->{$mapping};
             if ($score <= $threshold) {
               $count_out++;
-              my ($new_start, $new_end) = split(':', $mapping);
-              push @output_lines, "$id\t$new_chrom\t$new_start\t$new_end\t$score\n";
+              my ($new_start, $new_end, $new_strand) = split(':', $mapping);
+              push @output_lines, "$id\t$new_chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
             }
           }
         }
       }
     } elsif ($types == 1) {
+      
       foreach my $type (keys %{$mapped->{$id}}) {
         my $mappings = {};
         if ($mapped->{$id}->{$type}->{$old_chrom}) {
@@ -829,8 +838,8 @@ sub filter_read_coverage_mapping_results {
           my $score = $mappings->{$mapping};
           if ($score <= $threshold) {
             $count_out++;
-            my ($chrom, $new_start, $new_end) = split(':', $mapping);
-            push @output_lines, "$id\t$chrom\t$new_start\t$new_end\t$score\n";
+            my ($chrom, $new_start, $new_end, $new_strand) = split(':', $mapping);
+            push @output_lines, "$id\t$chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
           }
         }
       }
@@ -1062,8 +1071,8 @@ sub join_qtl_data {
     $data->{seq_region_start} = $start;
     $data->{seq_region_end} = $end;
     $data->{seq_region_strand} = $strand;
-    $data->{alignment_quality} = $score;
-    $data->{map_weight} = $map_weight;
+#    $data->{alignment_quality} = $score;
+#    $data->{map_weight} = $map_weight;
 
     my $line = $self->print_complete_feature_line($data);
 
@@ -1188,9 +1197,16 @@ sub print_complete_feature_line {
   my $variation_feature_id = $data->{variation_feature_id};
   $data->{variation_feature_id_old} = $variation_feature_id;
   my @output = ();
+#  $self->warning(join(', ', keys %$data));
   foreach my $column_name (sort keys %$data) {
     unless ($column_name =~ /^variation_feature_id$/ || $column_name =~ /^seq_region_name$/) {
-      push @output, $data->{$column_name};
+      if ($self->param('mode') eq 'remap_qtls') {
+        unless ($column_name =~ /^entry$/ || $column_name =~ /^variation_feature_id_old$/) {
+          push @output, $data->{$column_name};
+        }
+      } else {
+        push @output, $data->{$column_name};
+      }
     }
   }
   my $line = join("\t", @output);

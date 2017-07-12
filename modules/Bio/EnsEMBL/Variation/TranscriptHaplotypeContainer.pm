@@ -1336,10 +1336,13 @@ sub _get_transcript_variations_hash {
     # non db fetch
     else {
       foreach my $vf(@$vfs) {
+        $vf->{slice} ||= $self->transcript->slice;
+
         $self->{_transcript_variations}->{$self->_vf_identifier($vf)} = Bio::EnsEMBL::Variation::TranscriptVariation->new(
           -transcript        => $self->transcript,
           -variation_feature => $vf,
-          -no_ref_check      => 1
+          -no_ref_check      => 1,
+          -no_transfer       => 1,
         );
       }
     }
@@ -1510,19 +1513,19 @@ sub TO_JSON {
   
   # make a hash copy of self
   my %copy = %{$self};
+  
+  # convert haplotype hashrefs to listrefs
+  $copy{'cds_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count || $a->_hex cmp $b->_hex} @{$self->get_all_CDSHaplotypes}];
+  $copy{'protein_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count || $a->_hex cmp $b->_hex} @{$self->get_all_ProteinHaplotypes}];
 
   delete $copy{$_} for keys %{$self->_dont_export};
   
   # delete keys starting with "_"
   delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
-  
-  # convert haplotype hashrefs to listrefs
-  $copy{'cds_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_CDSHaplotypes}];
-  $copy{'protein_haplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->get_all_ProteinHaplotypes}];
 
   # do diplotypes if they've been added
   foreach my $type(grep {$self->{'_'.$_.'_diplotypes'}} qw(CDS Protein)) {
-    $copy{lc($type).'_diplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count} @{$self->{'_'.$type.'_diplotypes'}}];
+    $copy{lc($type).'_diplotypes'} = [map {$_->TO_JSON} sort {$b->count <=> $a->count || $a->_hex cmp $b->_hex} @{$self->{'_'.$type.'_diplotypes'}}];
   }
   
   return \%copy;

@@ -35,14 +35,24 @@ sub run {
     my $look_up_file = "$new_assembly_fasta_file_dir/$new_assembly_fasta_file_name";
 
 #my $cmd = "$tool_dir/$bwa_dir/bwa mem -a $look_up_file $fasta_file";
-    my $cmd = "$tool_dir/$bwa_dir/bwa mem -a $look_up_file $fasta_file";
+#    my $cmd = "$tool_dir/$bwa_dir/bwa mem -a $look_up_file $fasta_file";
+    my $cmd = "/homes/anja/bin/bwa/bwa mem -a $look_up_file $fasta_file";
+
 
     $self->run_cmd("$cmd 1>$sam_file 2>$err_file");
 
     $cmd = "gzip $sam_file";
     $self->run_cmd($cmd);
 
-    $cmd = "$tool_dir/$samtools_dir/samtools view -uS $sam_file.gz | $tool_dir/$samtools_dir/samtools sort - $bam_files_dir/$file_number"; 
+#    $cmd = "$tool_dir/$samtools_dir/samtools view -uS $sam_file.gz | $tool_dir/$samtools_dir/samtools sort - $bam_files_dir/$file_number"; 
+    $cmd = "$samtools_dir view -uS $sam_file.gz | $samtools_dir sort -o $bam_files_dir/$file_number.bam -"; 
+
+#    $cmd = "$samtools_dir view -uS $sam_file.gz | $samtools_dir sort sort -T /tmp/aln.sorted -o aln.sorted.bam aln.bam       - $bam_files_dir/$file_number"; 
+
+#  $cmd = "$samtools_dir sort -O bam -l 0 -o $bam_files_dir/$file_number $sam_file.gz";
+
+
+
     $self->run_cmd("$cmd 1>$sam2bam_out 2>$sam2bam_err");
 
     return 1;

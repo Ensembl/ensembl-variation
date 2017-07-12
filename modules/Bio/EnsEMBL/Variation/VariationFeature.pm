@@ -2055,4 +2055,128 @@ sub display {
   return $self->{'display'} || '0';
 }
 
+
+=head2 to_VCF_record
+
+  Example    : $vcf_arrayref = $vf->to_VCF_record();
+  Description: Converts this VariationFeature object to an arrayref
+               representing the columns of a VCF line.
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : VEP
+  Status     : Stable
+
+=cut
+
+sub to_VCF_record {
+  my $self = shift;
+
+  my %allele_lengths;
+
+  # deal with HGMD_MUTATION and COSMIC_MUTATION
+  my $allele_string = $self->allele_string;
+  my @alleles;
+
+  if($allele_string eq 'COSMIC_MUTATION' || $allele_string eq 'HGMD_MUTATION') {
+    my $class = $self->class_SO_term();
+
+    if($class eq 'SNV') {
+      @alleles = ($self->_get_ref_seq(1), 'N');
+    }
+    elsif($class eq 'deletion') {
+      @alleles = ($self->_get_ref_seq(1), '-');
+    }
+    elsif($class eq 'insertion') {
+      @alleles = ('-', 'INS');
+    }
+    elsif($class eq 'indel') {
+      @alleles = ('-', $allele_string);
+    }
+    else {
+      return [];#@alleles = ($self->_get_ref_seq(1), '.');
+    }
+  }
+  else {
+    @alleles = split '\/', $self->allele_string;
+    map {reverse_comp(\$_)} grep {/^[ACGTN]+$/} @alleles if $self->strand < 0;
+  }
+
+  my $non_acgt = 0;
+  foreach my $allele(@alleles) {
+    $allele =~ s/\-//g;
+    $allele_lengths{CORE::length($allele)} = 1;
+    $non_acgt = 1 if $allele && $allele !~ /^[ACGTN\.]+$/;
+  }
+
+  # in/del/unbalanced
+  if($non_acgt || scalar keys %allele_lengths > 1) {
+
+    unshift @alleles, '-' if scalar @alleles == 1;
+
+    my $prev_base = $self->_get_prev_base(1);
+
+    for my $i(0..$#alleles) {
+      my $a = $alleles[$i];
+      $a =~ s/\-//g;
+
+      if($a eq '' || $a =~ /^[ACGTN]+$/) {
+        $alleles[$i] = $prev_base.$a;
+      }
+      else {
+        $alleles[$i] = '<'.$a.'>';
+      }
+    }
+
+    return [
+      $self->{chr} || $self->seq_region_name,
+      $self->start - 1,
+      $self->variation_name || '.',
+      shift @alleles,
+      (join ",", @alleles) || '.',
+      '.', '.', '.'
+    ];
+
+  }
+
+  # balanced sub
+  else {
+    return [
+      $self->{chr} || $self->seq_region_name,
+      $self->start,
+      $self->variation_name || '.',
+      shift @alleles,
+      (join ",", @alleles) || '.',
+      '.', '.', '.'
+    ];
+  }
+}
+
+=head2 _get_ref_seq
+  
+  Arg 1      : (optional) int $strand
+  Example    : $seq = $bvf->_get_ref_seq();
+  Description: Get the reference sequence for the span of this feature
+  Returntype : string
+  Exceptions : none
+  Caller     : to_VCF_record(), 
+  Status     : Stable
+
+=cut
+
+sub _get_ref_seq {
+  my $self = shift;
+  my $strand = shift;
+
+  # we need the ref base before the variation
+  # default to N in case we cant get it
+  my $seq = 'N' x $self->length;
+
+  if(my $slice = $self->{slice}) {
+    my $sub_slice = $slice->sub_Slice($self->start, $self->end, $strand);
+    $seq = $sub_slice->seq if defined($sub_slice);
+  }
+
+  return $seq;
+}
+
 1;

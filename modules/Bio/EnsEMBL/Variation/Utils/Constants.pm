@@ -51,7 +51,6 @@ use constant ATTRIB_TYPE_REVIEW_STATUS => 'review_status';
 
 use constant SO_TERM_SNV => 'SNV';
 use constant SO_TERM_SUBSTITUTION => 'substitution';
-use constant SO_TERM_COPY_NUMBER_VARIATION => 'copy_number_variation';
 use constant SO_TERM_INSERTION => 'insertion';
 use constant SO_TERM_DELETION => 'deletion';
 use constant SO_TERM_INDEL => 'indel';
@@ -59,6 +58,7 @@ use constant SO_TERM_TANDEM_REPEAT => 'tandem_repeat';
 use constant SO_TERM_SEQUENCE_ALTERATION => 'sequence_alteration';
 use constant SO_TERM_GENETIC_MARKER => 'genetic_marker';
 use constant SO_TERM_STRUCTURAL_VARIANT => 'structural_variant';
+use constant SO_TERM_COPY_NUMBER_VARIATION => 'copy_number_variation';
 use constant SO_TERM_PROBE => 'probe';
 use constant SO_TERM_COPY_NUMBER_GAIN => 'copy_number_gain';
 use constant SO_TERM_COPY_NUMBER_LOSS => 'copy_number_loss';
@@ -117,177 +117,198 @@ use constant SO_TERM_PROTEIN_ALTERING_VARIANT => 'protein_altering_variant';
 
 our %VARIATION_CLASSES = (
 'SNV' => {
-  'somatic_display_term' => 'somatic_SNV',
+  'somatic_display_term' => 'somatic SNV',
   'SO_accession' => 'SO:0001483',
   'display_term' => 'SNP'
 }
 ,
 'substitution' => {
-  'somatic_display_term' => 'somatic_substitution',
+  'somatic_display_term' => 'somatic substitution',
   'SO_accession' => 'SO:1000002',
   'display_term' => 'substitution'
 }
 ,
-'copy_number_variation' => {
-  'somatic_display_term' => 'somatic_CNV',
-  'SO_accession' => 'SO:0001019',
-  'display_term' => 'CNV'
-}
-,
 'insertion' => {
-  'somatic_display_term' => 'somatic_insertion',
+  'somatic_display_term' => 'somatic insertion',
   'SO_accession' => 'SO:0000667',
   'display_term' => 'insertion'
 }
 ,
 'deletion' => {
-  'somatic_display_term' => 'somatic_deletion',
+  'somatic_display_term' => 'somatic deletion',
   'SO_accession' => 'SO:0000159',
   'display_term' => 'deletion'
 }
 ,
 'indel' => {
-  'somatic_display_term' => 'somatic_indel',
+  'somatic_display_term' => 'somatic indel',
   'SO_accession' => 'SO:1000032',
   'display_term' => 'indel'
 }
 ,
 'tandem_repeat' => {
-  'somatic_display_term' => 'somatic_tandem_repeat',
+  'somatic_display_term' => 'somatic tandem repeat',
   'SO_accession' => 'SO:0000705',
-  'display_term' => 'tandem_repeat'
+  'display_term' => 'tandem repeat'
 }
 ,
 'sequence_alteration' => {
-  'somatic_display_term' => 'somatic_sequence_alteration',
+  'somatic_display_term' => 'somatic sequence alteration',
   'SO_accession' => 'SO:0001059',
-  'display_term' => 'sequence_alteration'
+  'display_term' => 'sequence alteration'
 }
 ,
 'genetic_marker' => {
-  'somatic_display_term' => 'somatic_genetic_marker',
+  'somatic_display_term' => 'somatic genetic marker',
   'SO_accession' => 'SO:0001645',
-  'display_term' => 'genetic_marker'
+  'display_term' => 'genetic marker'
 }
 ,
 'structural_variant' => {
-  'somatic_display_term' => 'somatic_SV',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic SV',
   'SO_accession' => 'SO:0001537',
   'display_term' => 'SV'
 }
 ,
+'copy_number_variation' => {
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic CNV',
+  'SO_accession' => 'SO:0001019',
+  'display_term' => 'CNV'
+}
+,
 'probe' => {
-  'somatic_display_term' => 'somatic_CNV_PROBE',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic CNV_PROBE',
   'SO_accession' => 'SO:0000051',
   'display_term' => 'CNV_PROBE'
 }
 ,
 'copy_number_gain' => {
-  'somatic_display_term' => 'somatic_Gain',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic gain',
   'SO_accession' => 'SO:0001742',
-  'display_term' => 'Gain'
+  'display_term' => 'gain'
 }
 ,
 'copy_number_loss' => {
-  'somatic_display_term' => 'somatic_Loss',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic loss',
   'SO_accession' => 'SO:0001743',
-  'display_term' => 'Loss'
+  'display_term' => 'loss'
 }
 ,
 'inversion' => {
-  'somatic_display_term' => 'somatic_inversion',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic inversion',
   'SO_accession' => 'SO:1000036',
   'display_term' => 'inversion'
 }
 ,
 'complex_structural_alteration' => {
-  'somatic_display_term' => 'somatic_Complex',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic complex alteration',
   'SO_accession' => 'SO:0001784',
-  'display_term' => 'Complex'
+  'display_term' => 'complex alteration'
 }
 ,
 'tandem_duplication' => {
-  'somatic_display_term' => 'somatic_Tandem duplication',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic tandem duplication',
   'SO_accession' => 'SO:1000173',
-  'display_term' => 'Tandem duplication'
+  'display_term' => 'tandem duplication'
 }
 ,
 'mobile_element_insertion' => {
-  'somatic_display_term' => 'somatic_Mobile element insertion',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic mobile element insertion',
   'SO_accession' => 'SO:0001837',
-  'display_term' => 'Mobile element insertion'
+  'display_term' => 'mobile element insertion'
 }
 ,
 'mobile_element_deletion' => {
-  'somatic_display_term' => 'somatic_Mobile element deletion',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic mobile element deletion',
   'SO_accession' => 'SO:0002066',
-  'display_term' => 'Mobile element deletion'
+  'display_term' => 'mobile element deletion'
 }
 ,
 'interchromosomal_breakpoint' => {
-  'somatic_display_term' => 'somatic_Interchromosomal breakpoint',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic interchromosomal breakpoint',
   'SO_accession' => 'SO:0001873',
-  'display_term' => 'Interchromosomal breakpoint'
+  'display_term' => 'interchromosomal breakpoint'
 }
 ,
 'intrachromosomal_breakpoint' => {
-  'somatic_display_term' => 'somatic_Intrachromosomal breakpoint',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic intrachromosomal breakpoint',
   'SO_accession' => 'SO:0001874',
-  'display_term' => 'Intrachromosomal breakpoint'
+  'display_term' => 'intrachromosomal breakpoint'
 }
 ,
 'translocation' => {
-  'somatic_display_term' => 'somatic_translocation',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic translocation',
   'SO_accession' => 'SO:0000199',
   'display_term' => 'translocation'
 }
 ,
 'duplication' => {
-  'somatic_display_term' => 'somatic_Duplication',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic duplication',
   'SO_accession' => 'SO:1000035',
-  'display_term' => 'Duplication'
+  'display_term' => 'duplication'
 }
 ,
 'novel_sequence_insertion' => {
-  'somatic_display_term' => 'somatic_Novel sequence insertion',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic novel sequence insertion',
   'SO_accession' => 'SO:0001838',
-  'display_term' => 'Novel sequence insertion'
+  'display_term' => 'novel sequence insertion'
 }
 ,
 'interchromosomal_translocation' => {
-  'somatic_display_term' => 'somatic_Interchromosomal translocation',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic interchromosomal translocation',
   'SO_accession' => 'SO:0002060',
-  'display_term' => 'Interchromosomal translocation'
+  'display_term' => 'interchromosomal translocation'
 }
 ,
 'intrachromosomal_translocation' => {
-  'somatic_display_term' => 'somatic_Intrachromosomal translocation',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic intrachromosomal translocation',
   'SO_accession' => 'SO:0002061',
-  'display_term' => 'Intrachromosomal translocation'
+  'display_term' => 'intrachromosomal translocation'
 }
 ,
 'Alu_insertion' => {
-  'somatic_display_term' => 'somatic_Alu insertion',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic alu insertion',
   'SO_accession' => 'SO:0002063',
   'display_term' => 'Alu insertion'
 }
 ,
 'complex_substitution' => {
-  'somatic_display_term' => 'somatic_Complex substitution',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic complex substitution',
   'SO_accession' => 'SO:1000005',
-  'display_term' => 'Complex substitution'
+  'display_term' => 'complex substitution'
 }
 ,
 'short_tandem_repeat_variation' => {
-  'somatic_display_term' => 'somatic_Short tandem repeat variation',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic short tandem repeat variation',
   'SO_accession' => 'SO:0002096',
-  'display_term' => 'Short tandem repeat variation'
+  'display_term' => 'short tandem repeat variation'
 }
 ,
 'loss_of_heterozygosity' => {
-  'somatic_display_term' => 'somatic_Loss of heterozygosity',
+  'type' => 'sv',
+  'somatic_display_term' => 'somatic loss of heterozygosity',
   'SO_accession' => 'SO:0001786',
-  'display_term' => 'Loss of heterozygosity'
+  'display_term' => 'loss of heterozygosity'
 }
 ,
 );
@@ -301,7 +322,7 @@ our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->
   'SO_accession' => 'SO:0001628',
   'SO_term' => 'intergenic_variant',
   'tier' => '4',
-  'label' => 'Intergenic variant',
+  'label' => 'intergenic variant',
   'rank' => '38',
   'impact' => 'MODIFIER',
   'display_term' => 'INTERGENIC'
@@ -322,7 +343,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'upstream_gene_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
-  'label' => 'Upstream gene variant',
+  'label' => 'upstream gene variant',
   'rank' => '24',
   'impact' => 'MODIFIER',
   'display_term' => 'UPSTREAM',
@@ -340,7 +361,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'downstream_gene_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
-  'label' => 'Downstream gene variant',
+  'label' => 'downstream gene variant',
   'rank' => '25',
   'impact' => 'MODIFIER',
   'display_term' => 'DOWNSTREAM',
@@ -359,7 +380,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'splice_donor_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
-  'label' => 'Splice donor variant',
+  'label' => 'splice donor variant',
   'rank' => '3',
   'impact' => 'HIGH',
   'display_term' => 'ESSENTIAL_SPLICE_SITE',
@@ -378,7 +399,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'splice_acceptor_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
-  'label' => 'Splice acceptor variant',
+  'label' => 'splice acceptor variant',
   'rank' => '3',
   'impact' => 'HIGH',
   'display_term' => 'ESSENTIAL_SPLICE_SITE',
@@ -396,7 +417,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'splice_region_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
-  'label' => 'Splice region variant',
+  'label' => 'splice region variant',
   'rank' => '13',
   'impact' => 'LOW',
   'display_term' => 'SPLICE_SITE',
@@ -415,7 +436,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'intron_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
-  'label' => 'Intron variant',
+  'label' => 'intron variant',
   'rank' => '21',
   'impact' => 'MODIFIER',
   'display_term' => 'INTRONIC',
@@ -474,7 +495,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'synonymous_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
-  'label' => 'Synonymous variant',
+  'label' => 'synonymous variant',
   'rank' => '15',
   'impact' => 'LOW',
   'display_term' => 'SYNONYMOUS_CODING',
@@ -495,7 +516,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'missense_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
-  'label' => 'Missense variant',
+  'label' => 'missense variant',
   'rank' => '12',
   'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
@@ -514,7 +535,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'inframe_insertion',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
-  'label' => 'Inframe insertion',
+  'label' => 'inframe insertion',
   'rank' => '10',
   'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
@@ -533,7 +554,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'inframe_deletion',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
-  'label' => 'Inframe deletion',
+  'label' => 'inframe deletion',
   'rank' => '11',
   'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
@@ -552,7 +573,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'stop_gained',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
-  'label' => 'Stop gained',
+  'label' => 'stop gained',
   'rank' => '4',
   'impact' => 'HIGH',
   'display_term' => 'STOP_GAINED',
@@ -570,7 +591,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'stop_lost',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
-  'label' => 'Stop lost',
+  'label' => 'stop lost',
   'rank' => '6',
   'impact' => 'HIGH',
   'display_term' => 'STOP_LOST',
@@ -588,7 +609,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'stop_retained_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
-  'label' => 'Stop retained variant',
+  'label' => 'stop retained variant',
   'rank' => '15',
   'impact' => 'LOW',
   'display_term' => 'SYNONYMOUS_CODING',
@@ -606,7 +627,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'start_lost',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
-  'label' => 'Start lost',
+  'label' => 'start lost',
   'rank' => '7',
   'impact' => 'HIGH',
   'display_term' => 'NON_SYNONYMOUS_CODING',
@@ -624,7 +645,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'start_retained_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
-  'label' => 'Start retained variant',
+  'label' => 'start retained variant',
   'rank' => '15',
   'impact' => 'LOW',
   'display_term' => 'SYNONYMOUS_CODING',
@@ -644,7 +665,7 @@ our %OVERLAP_CONSEQUENCES = (
   'tier' => '3',
   'SO_term' => 'frameshift_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
-  'label' => 'Frameshift variant',
+  'label' => 'frameshift variant',
   'rank' => '5',
   'impact' => 'HIGH',
   'display_term' => 'FRAMESHIFT_CODING',
@@ -662,7 +683,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'incomplete_terminal_codon_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
-  'label' => 'Incomplete terminal codon variant',
+  'label' => 'incomplete terminal codon variant',
   'rank' => '14',
   'impact' => 'LOW',
   'display_term' => 'PARTIAL_CODON',
@@ -700,7 +721,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'non_coding_transcript_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
-  'label' => 'Non coding transcript variant',
+  'label' => 'non coding transcript variant',
   'rank' => '23',
   'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_NON_CODING_GENE',
@@ -720,7 +741,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'non_coding_transcript_exon_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
-  'label' => 'Non coding transcript exon variant',
+  'label' => 'non coding transcript exon variant',
   'rank' => '20',
   'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_NON_CODING_GENE',
@@ -740,7 +761,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'mature_miRNA_variant',
   'tier' => '2',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
-  'label' => 'Mature miRNA variant',
+  'label' => 'mature miRNA variant',
   'rank' => '17',
   'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_MATURE_miRNA',
@@ -758,7 +779,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'coding_sequence_variant',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
-  'label' => 'Coding sequence variant',
+  'label' => 'coding sequence variant',
   'rank' => '16',
   'impact' => 'MODIFIER',
   'display_term' => 'CODING_UNKNOWN',
@@ -773,7 +794,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'regulatory_region_variant',
   'tier' => '2',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
-  'label' => 'Regulatory region variant',
+  'label' => 'regulatory region variant',
   'rank' => '36',
   'impact' => 'MODIFIER',
   'display_term' => 'REGULATORY_REGION',
@@ -807,7 +828,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'transcript_ablation',
   'tier' => '1',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'label' => 'Transcript ablation',
+  'label' => 'transcript ablation',
   'rank' => '1',
   'impact' => 'HIGH',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
@@ -825,7 +846,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'transcript_amplification',
   'tier' => '1',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'label' => 'Transcript amplification',
+  'label' => 'transcript amplification',
   'rank' => '8',
   'impact' => 'HIGH',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
@@ -879,7 +900,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'regulatory_region_ablation',
   'tier' => '2',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'label' => 'Regulatory region ablation',
+  'label' => 'regulatory region ablation',
   'rank' => '31',
   'impact' => 'MODERATE',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
@@ -897,7 +918,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'regulatory_region_amplification',
   'tier' => '2',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'label' => 'Regulatory region amplification',
+  'label' => 'regulatory region amplification',
   'rank' => '33',
   'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
@@ -915,7 +936,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'feature_elongation',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
-  'label' => 'Feature elongation',
+  'label' => 'feature elongation',
   'rank' => '36',
   'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Feature'
@@ -933,7 +954,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'feature_truncation',
   'tier' => '3',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
-  'label' => 'Feature truncation',
+  'label' => 'feature truncation',
   'rank' => '37',
   'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Feature'

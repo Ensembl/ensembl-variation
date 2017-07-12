@@ -48,6 +48,9 @@ sub run {
   my $pipeline_dir = $self->param_required('pipeline_dir');
   my $script_dir = $self->param_required('script_dir');
 
+  # check registry file exists
+  # check tmp dir exists
+
   if ($file_type eq 'gvf') {
     my $gvf_validator = $self->param('gvf_validator');
     my $so_file = $self->param('so_file');

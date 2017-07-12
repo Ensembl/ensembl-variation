@@ -84,6 +84,7 @@ my %colour = (
     'interchromosomal_translocation' => '#C3A4FF',
     'intrachromosomal_translocation' => '#C3A4FF',
     'deletion'                       => '#CC0000',
+    'mobile_element_deletion'        => '#CC0000',
     'duplication'                    => '#0000CC',
     'indel'                          => 'gold',
     'probe'                          => '#4682B4',

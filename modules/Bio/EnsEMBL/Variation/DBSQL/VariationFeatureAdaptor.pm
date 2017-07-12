@@ -94,7 +94,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Iterator;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_hgvs_alleles);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_hgvs_alleles trim_sequences);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -1810,7 +1810,10 @@ sub fetch_by_hgvs_notation {
     $ref_allele = "-" ;
     $alt_allele = $refseq_allele;
   }
-  
+  elsif ($description =~ m/ins/i && $description =~ m/del/i) {
+    ## check for malformed indels
+    ($ref_allele, $alt_allele,  $start, $end) = @{trim_sequences($ref_allele, $alt_allele,  $start, $end, 1)};
+  }
   elsif ($description =~ m/ins/i && $description !~ m/del/i) {
      # insertion: the start & end positions are inverted by convention
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   

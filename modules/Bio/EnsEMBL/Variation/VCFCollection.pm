@@ -702,12 +702,40 @@ sub get_all_Alleles_by_VariationFeature {
     my %freqs;
     my %counts;
 
-    # have AC and AN, prioritise as we get counts and freqs
-    if(defined($info->{'AC'.$suffix}) && defined($info->{'AN'.$suffix})) {
-      my ($ac, $an) = ($info->{'AC'.$suffix}, $info->{'AN'.$suffix});
-      
-      # safety check against div by zero
-      next unless $an;
+    no warnings 'uninitialized';
+    my ($ac, $an, $af) = (
+      $info->{'AC'.$suffix} // $info->{$pop->{_ac}},
+      $info->{'AN'.$suffix} // $info->{$pop->{_an}},
+      $info->{'AF'.$suffix} // $info->{$pop->{_af}},
+    );
+
+    # check for AF
+    if(defined($af)) {
+      my $total = 0;
+      my @split = split(',', $af);
+
+      # is ref AC included? This may have been set as ref_freq_index()
+      # or we can auto-detect by comparing size of @split o @$alts
+      $freqs{$ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
+        if defined($ref_freq_index) || scalar @split > scalar @$alts;
+
+      for my $i(0..$#split) {
+        my $f = $split[$i];
+        next if $f eq '.';
+        $total += $f;
+        $freqs{$alts->[$i]} = $f;
+        $counts{$alts->[$i]} = sprintf('%.0f', $f * $an) if $an;
+      }
+
+      # but in most cases ref isn't explicitly mentioned
+      unless(exists($freqs{$ref})) {
+        $freqs{$ref} = 1 - $total;
+        $counts{$ref} = sprintf('%.0f', (1 - $total) * $an) if $an;
+      }
+    }
+
+    # or have AC and AN (AN must be defined and non-zero)
+    elsif(defined($ac) && $an) {
 
       my $total = 0;
       my @split = split(',', $ac);
@@ -722,35 +750,13 @@ sub get_all_Alleles_by_VariationFeature {
         my $c = $split[$i];
         $total += $c;
         $counts{$a} = $c;
-        $freqs{$a} = $c / $an;
+        $freqs{$a} = sprintf('%.4g', $c / $an);
       }
 
       # but in most cases ref isn't explicitly mentioned
       unless(exists($freqs{$ref})) {
         $counts{$ref} = $an - $total;
         $freqs{$ref} = sprintf('%.4g', 1 - ($total / $an));
-      }
-    }
-
-    # otherwise check for AF
-    elsif(my $af = $info->{$pop->{_af} || 'AF'.$suffix}) {
-      my $total = 0;
-      my @split = split(',', $af);
-
-      # is ref AC included? This may have been set as ref_freq_index()
-      # or we can auto-detect by comparing size of @split o @$alts
-      $freqs{$ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
-        if defined($ref_freq_index) || scalar @split > scalar @$alts;
-
-      for my $i(0..$#split) {
-        my $f = $split[$i];
-        $total += $f;
-        $freqs{$alts->[$i]} = $f;
-      }
-
-      # but in most cases ref isn't explicitly mentioned
-      unless(exists($freqs{$ref})) {
-        $freqs{$ref} = 1 - $total;
       }
     }
 

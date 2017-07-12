@@ -88,6 +88,13 @@ sub default_options {
         # set this flag to include LRG translations in the analysis
 
         include_lrg             => 0,
+
+        # include RefSeq transcripts, and edit with accompanying BAM?
+        include_refseq          => 0,
+        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh38.p10_knownrefseq_alignments_2017-01-13.bam',
+
+        # GRCh37 bam
+        # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
         
         # connection details for the hive's own database
 
@@ -212,6 +219,9 @@ sub pipeline_analyses {
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
                 blastdb         => $self->o('blastdb'),
+                include_refseq  => $self->o('include_refseq'),
+                bam             => $self->o('bam'),
+                species_dir     => $self->o('species_dir'),
                 @common_params,
             },
             -input_ids  => [{}],

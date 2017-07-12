@@ -512,6 +512,8 @@ sub TO_JSON {
   # make a hash copy of self
   my %copy = %{$self};
 
+  $copy{contributing_variants} = [map {$_->variation_name} @{$self->get_all_VariationFeatures}];
+
   delete $copy{$_} for keys %{$self->container->_dont_export};
   
   # delete keys starting with _

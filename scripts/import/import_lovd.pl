@@ -284,7 +284,7 @@ MAIN_LOOP : while(<$INPUT>) {
     ####################################
     # Add tandem_duplication > 50 ???? #
     ####################################
-    if ($type eq 'inversion' || ($type eq 'deletion' && $stop-$start > 50)) {
+    if ($type !~ /insertion/i && $stop-$start > 50) {
       $prefix = $sv_prefix;
     }
 

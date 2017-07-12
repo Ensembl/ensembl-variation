@@ -132,10 +132,10 @@ sub run {
 
   # None of the variant alleles match the reference allele
 
-my $fasta_db = Bio::DB::Fasta->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/assembly/', -reindex => 1);
+my $fasta_db = Bio::DB::Fasta->new('/hps/nobackup/production/ensembl/anja/release_90/pig/remapping/assembly/', -reindex => 1);
 
-my $fh = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/flip_allele_strings.txt', 'w');
-my $fh_update = FileHandle->new('/lustre/scratch110/ensembl/at7/release_86/macaque/remapping/update_flip_allele_strings.txt', 'w');
+my $fh = FileHandle->new('/hps/nobackup/production/ensembl/anja/release_90/pig/remapping/flip_allele_strings.txt', 'w');
+my $fh_update = FileHandle->new('/hps/nobackup/production/ensembl/anja/release_90/pig/remapping/update_flip_allele_strings.txt', 'w');
 
   $sth = $dbh->prepare(q{
     SELECT vf.variation_feature_id, vf.seq_region_id, sr.name, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, vf.allele_string, vf.class_attrib_id, vf.variation_id

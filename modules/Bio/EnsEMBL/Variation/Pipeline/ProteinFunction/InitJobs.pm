@@ -78,6 +78,8 @@ sub fetch_input {
         }
     }
 
+    push @transcripts, @{$self->get_refseq_transcripts} if $self->param('include_refseq');
+
     # store a table mapping each translation stable ID to its corresponding MD5
 
     $var_dba->dbc->do(qq{DROP TABLE IF EXISTS translation_mapping});
@@ -248,6 +250,96 @@ sub write_output {
     unless ($self->param('sift_run_type') == NONE) {
         $self->dataflow_output_id($self->param('sift_output_ids'), 3);
     }
+}
+
+
+sub get_refseq_transcripts {
+    my $self = shift;
+
+    my $of_dba = $self->get_species_adaptor('otherfeatures');
+    my $sa = $of_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+    my $slices = $sa->fetch_all('toplevel', undef, 1, undef, ($self->param('include_lrg') ? 1 : undef));
+
+    my $vep_obj;
+    if(my $bam = $self->param('bam')) {
+        
+        die("ERROR: ensembl-vep and Bio::DB::HTS modules must be installed to add edited RefSeq transcripts\n") unless eval q{
+            use Bio::EnsEMBL::VEP::AnnotationSource::Cache::Transcript;
+            use Bio::EnsEMBL::VEP::Config;
+            use Bio::DB::HTS;
+            1;
+        };
+
+        $vep_obj = Bio::EnsEMBL::VEP::AnnotationSource::Cache::Transcript->new({
+            config      => Bio::EnsEMBL::VEP::Config->new(),
+            source_type => 'refseq',
+            bam         => $bam,
+            dir         => '/dev/null',
+            valid_chromosomes => [map {$_->seq_region_name} @$slices],
+        }) or die "Failed to get VEP AnnotationSource object";
+
+        # we need synonyms as BAM file won't have same chr names as DB
+        my $syn_file = $self->param('species_dir')."/chr_synonyms.txt" or die "Failed to write to synonyms file";
+        open SYN, ">$syn_file";
+
+        my $srsa = $of_dba->get_SeqRegionSynonymAdaptor() or die "Failed to get synonyms adaptor";
+
+        # synonyms can be indirect i.e. A <-> B <-> C
+        # and there may not be a direct link between A <-> C in the DB
+        # so let's allow for one level of indirection
+        my $tree = {};
+        foreach my $syn(@{$srsa->fetch_all}) {
+          my $syn_slice = $sa->fetch_by_seq_region_id($syn->seq_region_id);
+          next unless $syn_slice;
+          my ($a, $b) = sort ($syn_slice->seq_region_name, $syn->name);
+          $tree->{$a}->{$b} = 1;
+          $tree->{$_}->{$b} = 1 for keys %{$tree->{$a} || {}};
+          $tree->{$_}->{$a} = 1 for keys %{$tree->{$b} || {}};
+        }
+
+        # now create uniq A <-> B / B <-> A pairs
+        my %uniq;
+        foreach my $a(keys %$tree) {
+          foreach my $b(grep {$a ne $_} keys %{$tree->{$a}}) {
+            $uniq{join("\t", sort ($a, $b))} = 1;
+          }
+        }
+
+        print SYN "$_\n" for keys %uniq;
+        close SYN;
+
+        # now load them to the VEP obj
+        $vep_obj->chromosome_synonyms($syn_file);
+
+        $Bio::EnsEMBL::VEP::AnnotationType::Transcript::DEBUG = 1 if $self->param('debug_mode');
+    }
+
+    my @transcripts;
+    
+    my $ga = $of_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+    
+    if($self->param('debug_mode')) {    
+        @transcripts =
+            grep { $_->translation }
+            map {$vep_obj->apply_edits($_); $_}
+            @{ $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts };
+    }
+
+    else {
+        for my $slice (@{$slices}) {
+            for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
+                for my $transcript (grep {$_->stable_id =~ /^NM_/} @{ $gene->get_all_Transcripts }) {
+                    $vep_obj->apply_edits($transcript) if $vep_obj;
+
+                    if (my $translation = $transcript->translation) {
+                        push @transcripts, $transcript;
+                    }
+                }
+            }
+        }
+    }
+
+    return \@transcripts;
 }
 
 1;

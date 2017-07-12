@@ -100,7 +100,7 @@ ok($vf->consequence_type()->[0] eq 'NMD_transcript_variant', "var -> consequence
 
 my $cons = $vf->most_severe_OverlapConsequence();
 ok($cons->description() eq 'A transcript variant occurring within an intron', "consequence description");
-ok($cons->label() eq 'Intron variant',                                        "consequence label");
+ok($cons->label() eq 'intron variant',                                        "consequence label");
 ok($cons->SO_term() eq 'intron_variant',                                      "consequence SO_term"); 
 ok($cons->SO_accession() eq 'SO:0001627',                                     "consequence SO_accession"); 
 ok($cons->tier() eq '3',                                                      "consequence tier"); 

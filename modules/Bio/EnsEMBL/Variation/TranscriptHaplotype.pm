@@ -217,14 +217,14 @@ sub get_all_VariationFeatures {
       @vfs =
         map {$_->[0]}
         sort {$a->[1] <=> $b->[1]}
-        map {[$_, $_->seq_region_start]}
+        map {[$_, $_->{slice} ? $_->seq_region_start : $_->{start}]}
         @vfs;
     }
     else {
       @vfs =
         map {$_->[0]}
         sort {$b->[1] <=> $a->[1]}
-        map {[$_, $_->seq_region_start]}
+        map {[$_, $_->{slice} ? $_->seq_region_start : $_->{start}]}
         @vfs;
     }
 

@@ -162,7 +162,7 @@ my %SOURCES = (
   },
   "MGI" => {
     description => "Mouse Genome Informatics",
-    url => "http://http://www.informatics.jax.org/",
+    url => "http://www.informatics.jax.org/",
     type => "Gene",  
   },
 
@@ -230,6 +230,15 @@ my $object_type;
 my $prev_prog;
 
 my $pubmed_prefix = 'PMID:';
+
+my %special_characters = (
+  'ö' => 'o',
+  'ü' => 'u',
+  'ä' => 'a',
+  'í' => 'i',
+);
+
+
 
 =head
 
@@ -673,8 +682,9 @@ sub parse_nhgri {
         $risk_frequency = $content{'RISK ALLELE FREQUENCY'};
       }
       
-      $gene =~ s/ //g;
-      
+      $gene =~ s/\s+//g;
+      $gene =~ s/–/-/g;
+
       my %data = (
         'study_type' => 'GWAS',
         'description' => $phenotype,
@@ -1400,6 +1410,18 @@ sub parse_orphanet {
   
   my @phenotypes;
   
+  my %orphanet_special_char = (
+    '\\\E7' => 'c',
+    '\\\C5' => 'A',
+    '\\\E8' => 'e',
+    '\\\E9' => 'e',
+    '\\\EB' => 'e',
+    '\\\F6' => 'o',
+    '\\\FC' => 'u',
+    '\\\ED' => 'i',
+    '\\\E4' => 'a',
+  );
+
   my $xml_parser   = XML::LibXML->new();
   my $orphanet_doc = $xml_parser->parse_file($infile);
   
@@ -1408,6 +1430,14 @@ sub parse_orphanet {
     my $orpha_number = $orpha_number_node->to_literal;
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;
+
+    # Replace special characters
+    if ($name =~ /\\/) {
+      foreach my $char (keys(%orphanet_special_char)) {
+        my $new_char = $special_characters{$char};
+        $name =~ s/$char/$new_char/g;
+      }
+    }
 
     my @gene_nodes = $disorder->findnodes('./DisorderGeneAssociationList/DisorderGeneAssociation/Gene');
     
@@ -2573,6 +2603,12 @@ sub add_phenotypes {
       }
     }
     
+    # Remove special characters from the phenotype description
+    foreach my $char (keys(%special_characters)) {
+      my $new_char = $special_characters{$char};
+      $phenotype->{description} =~ s/$char/$new_char/g;
+    }
+
     # get phenotype ID
     my $phenotype_id = get_phenotype_id($phenotype, $db_adaptor);
 

@@ -32,7 +32,8 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::ParseMapping;
 use strict;
 use warnings;
 
-use Bio::DB::Sam;
+#use Bio::DB::Sam;
+use Bio::DB::HTS;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use FileHandle;
@@ -50,7 +51,7 @@ sub fetch_input {
   my $mapping_results_dir = $self->param('mapping_results_dir');
   my $compare_locations  = $self->param('compare_locations');
 
-  my $sam = Bio::DB::Sam->new( -bam => $bam_file, -fasta => $fasta_file,);	
+  my $sam = Bio::DB::HTS->new( -bam => $bam_file, -fasta => $fasta_file,);	
   $self->param('sam', $sam);	
 
   if ($self->param('mode') eq 'remap_read_coverage') {
@@ -101,6 +102,11 @@ sub parse_read_location {
   foreach my $alignment (@alignments) {
     my $query_name = $alignment->query->name;
     my $seq_region_name = $alignment->seq_id;
+    if ($seq_region_name =~ m/:/) {
+      my @seq_id_parts = split(':', $seq_region_name);
+      $seq_region_name = $seq_id_parts[2];
+    }
+
     my $t_start = $alignment->start;
     my $t_end   = $alignment->end;
     my $q_start = $alignment->query->start;
@@ -153,6 +159,7 @@ sub parse_read_location {
       next;
     } else {
       $relative_alignment_score = ($length_query_seq - ($clipped_nucleotides + $edit_distance)) / $length_query_seq;	
+      $relative_alignment_score = sprintf("%.5f", $relative_alignment_score);
     }
     if ($relative_alignment_score > 0.8) {
       print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $t_strand, $map_weight, $relative_alignment_score, $cigar_string), "\n";
@@ -168,7 +175,7 @@ sub parse_read_location {
 
 sub parse_variation_location {
   my $self = shift;
-
+  $self->warning("Parse variation location");
   my $sam                = $self->param('sam');
   my $fh_mappings        = $self->param('fh_mappings');
   my $fh_failed_mappings = $self->param('fh_failed_mappings');
@@ -229,7 +236,12 @@ sub parse_variation_location {
       $old_seq_info = join(" ", ($seq_region_name, $vf_start, $vf_end, $strand));
     }
     # new seq info	
-    my $new_seq_info = join(" ", ($alignment->seq_id, $snp_t_start, $snp_t_end, $q_strand));
+    my $new_seq_id = $alignment->seq_id;
+    if ($new_seq_id =~ m/:/) {
+      my @seq_id_parts = split(':', $new_seq_id);
+      $new_seq_id = $seq_id_parts[2];
+    }
+    my $new_seq_info = join(" ", ($new_seq_id, $snp_t_start, $snp_t_end, $q_strand));
 
     my $cigar                 = $alignment->cigar_str;
     my $edit_distance         = $alignment->aux_get("NM");
@@ -244,6 +256,7 @@ sub parse_variation_location {
       $flag_suspicious = 1;
     } else {
       $relative_alignment_score = ($length_query_seq - ($clipped_nucleotides + $edit_distance)) / $length_query_seq;	
+      $relative_alignment_score = sprintf("%.5f", $relative_alignment_score);
     }
 
     my $mapping_info = join("\t", (

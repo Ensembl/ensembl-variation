@@ -126,6 +126,19 @@ ok(test_getter_setter($svf, 'structural_variation', $v2), "get/set structural va
 ok(test_getter_setter($svf, 'variation_name', $var_name2), "get/set name");
 
 
+
+is_deeply(
+  Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
+    class_SO_term => 'deletion',
+    start => 11,
+    end => 20,
+    chr => 1,
+  })->to_VCF_record(),
+  [1, 10, '.', 'N', '<DEL>', '.', '.', 'END=20'],
+  'to_VCF_record'
+);
+
+
 ## Other ##
 
 my $svf_id = 4509635;

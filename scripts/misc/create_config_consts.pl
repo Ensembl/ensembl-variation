@@ -130,7 +130,12 @@ for my $class_set (@VARIATION_CLASSES) {
     delete $class_set->{SO_term};
 
     $class_set->{display_term} ||= $term;
-    $class_set->{somatic_display_term} ||= 'somatic_'.$class_set->{display_term};
+
+    my $display_term = $class_set->{display_term};
+    if ($display_term =~ /^[A-Z][a-z]+/) {
+      $display_term = lcfirst($display_term);
+    }
+    $class_set->{somatic_display_term} ||= 'somatic '.$display_term;
     
     $class_code .= "'$term' => ".Dumper($class_set).",\n";
 }

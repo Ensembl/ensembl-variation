@@ -263,6 +263,8 @@ sub pipeline_analyses {
                 -rc_name        => 'highmem',
                 -wait_for       => [ 'transcript_effect', 'transcript_effect_highmem' ],
                 -flow_into      => {},
+                -failed_job_tolerance => 0,
+                -max_retry_count => 0,
             },
 
             {   -logic_name     => 'rebuild_tv_indexes',

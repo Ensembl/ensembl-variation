@@ -144,6 +144,91 @@ ok($vf->ambig_code eq 'W', "ambiguity code");
 # test variation class
 ok($vf->var_class eq 'SNP', "var class");
 
+
+
+## VariationFeature_to_VCF_record
+#################################
+
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'A', 'T', '.', '.', '.'],
+  'to_VCF_record'
+);
+
+$vf->strand(-1);
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'T', 'A', '.', '.', '.'],
+  'to_VCF_record - rev strand'
+);
+$vf->strand($strand);
+
+$vf->allele_string('A/G/T');
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'A', 'G,T', '.', '.', '.'],
+  'to_VCF_record - multiple alts'
+);
+
+$vf->allele_string('AG/CT');
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'AG', 'CT', '.', '.', '.'],
+  'to_VCF_record - balanced non-SNP'
+);
+
+$vf->allele_string('A/-');
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'NA', 'N', '.', '.', '.'],
+  'to_VCF_record - deletion'
+);
+
+$vf->allele_string('-/A');
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'N', 'NA', '.', '.', '.'],
+  'to_VCF_record - insertion'
+);
+
+$vf->allele_string('A/-/G');
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'NA', 'N,NG', '.', '.', '.'],
+  'to_VCF_record - mixed'
+);
+
+
+$vf->allele_string('HGMD_MUTATION');
+$vf->{class_SO_term} = 'SNV';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start, $vname, 'N', 'N', '.', '.', '.'],
+  'to_VCF_record - unknown alleles SNV'
+);
+
+$vf->{class_SO_term} = 'insertion';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'N', '<INS>', '.', '.', '.'],
+  'to_VCF_record - unknown alleles insertion'
+);
+
+$vf->{class_SO_term} = 'deletion';
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $start - 1, $vname, 'NN', 'N', '.', '.', '.'],
+  'to_VCF_record - unknown alleles deletion'
+);
+
+$vf->{class_SO_term} = 'sequence_alteration';
+is_deeply(
+  $vf->to_VCF_record(),
+  [],
+  'to_VCF_record - unknown alleles sequence_alteration'
+);
+$vf->allele_string($allele_str);
+
 # test convert to SNP
 #ok($vf->convert_to_SNP, 'convert to SNP'); # Need the ensembl-external repository
 

@@ -241,15 +241,17 @@ sub create {
   my @col_names;
 
   foreach my $col (@cols) {
-     my ($name, $type, $nullable) = split(/\s+/,$col);
-
+    my ($name, $type, $nullable, $unsigned) = split(/\s+/,$col);
     push @col_names, $name;
 
     my $null ="";
     if (defined($nullable) && $nullable =~/not_null/){$null =" NOT NULL";}
 
-    if(defined($type) && $type =~ /i/) {
-      push @col_defs, "$name INT $null";
+    if(defined($type) && $type =~ /i/ && defined $unsigned ) {
+      push @col_defs, "$name INT unsigned $null";
+    }
+    elsif(defined($type) && $type =~ /i/) {
+      push @col_defs, "$name INT  $null";
     }
     elsif (defined($type) && $type =~ /f/) {
       push @col_defs, "$name FLOAT $null";
