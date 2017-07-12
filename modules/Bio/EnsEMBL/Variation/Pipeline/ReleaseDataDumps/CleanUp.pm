@@ -45,6 +45,12 @@ sub run {
 
   my $species = $self->param('species');
   my $mode = $self->param('mode');
+
+  my $species_division = $self->param('species_division');
+  if ($species_division)
+  {
+    $data_dump_dir = $data_dump_dir."/".$species_division;
+  }
   
   if ($mode eq 'post_gvf_dump') {
     my $working_dir = "$data_dump_dir/$file_type/$species";

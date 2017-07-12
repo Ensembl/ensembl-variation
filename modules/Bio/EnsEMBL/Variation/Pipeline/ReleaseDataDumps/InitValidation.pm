@@ -32,8 +32,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitValidation;
 use strict;
 use warnings;
 
-use FileHandle;
-
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
 sub run {
@@ -41,6 +39,12 @@ sub run {
   my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type    = $self->param('file_type');
   my $species      = $self->param('species');
+
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $pipeline_dir = $pipeline_dir."/".$species_division;
+  }
+
   my $working_dir = "$pipeline_dir/$file_type/$species/";
   my $files = get_files($working_dir);
   my @input = ();
@@ -69,7 +73,7 @@ sub get_files {
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id($self->param('input_for_validation'), 1);
+  $self->dataflow_output_id($self->param('input_for_validation'), 2);
   return;
 }
 
