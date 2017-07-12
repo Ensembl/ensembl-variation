@@ -53,6 +53,13 @@ sub run {
   my $species      = $self->param('species');
   my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type    = $self->param('file_type');	
+  my $config = $self->param('config');
+  my $division = $self->param('species_division');
+
+  if ($division) {
+    $pipeline_dir = $pipeline_dir."/".$division;
+  }
+
   my $working_dir = "$pipeline_dir/$file_type/$species/";
 
   my $mode = $self->param('mode'); 
@@ -60,6 +67,8 @@ sub run {
   if ($mode eq 'join_slice_split') {
     my $files = $self->get_slice_split_files($working_dir, $file_type);  
     $self->join_split_slice_files($working_dir, $files);
+    $self->dataflow_output_id({}, 2);
+    $self->dataflow_output_id({}, 1);
   } elsif ($mode eq 'final_join') {
     $self->final_join;
   } elsif ($mode eq 'no_join') {

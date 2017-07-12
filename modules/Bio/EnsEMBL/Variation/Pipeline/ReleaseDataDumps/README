@@ -8,6 +8,7 @@ init_pipeline.pl ReleaseDumps_conf.pm
 -pipeline_name
 -registry_file
 -tmp_dir
+-run_all 1
 
 Dump allele frequencies for popoulations (1000G, HAPMAP, ESP) for human:
 init_pipeline.pl ReleaseDumps_conf.pm
@@ -19,6 +20,7 @@ init_pipeline.pl ReleaseDumps_conf.pm
 -tmp_dir
 -prefetched_frequencies
 -human_population_dumps 1
+-run_all 1
 
 
 Finish data dumps (add readme file, compute checksums, create tabix for vcf files) for all species in the registry file:
@@ -30,4 +32,5 @@ init_pipeline.pl ReleaseDumps_conf.pm
 -registry_file
 -tmp_dir
 -finish_dumps 1
+-run_all 1
 

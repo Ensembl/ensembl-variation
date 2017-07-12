@@ -43,49 +43,66 @@ sub fetch_input {
 sub run {
   my $self = shift;
   my $file_type  = $self->param('file_type');	
+  my $species = $self->param('species');
+  my $division = $self->param('division');
+  my $pipeline_dir = $self->param_required('pipeline_dir');
+  my $script_dir = $self->param_required('script_dir');
 
   if ($file_type eq 'gvf') {
-    foreach my $dir (qw/pipeline_dir script_dir/) {
-      die "$dir doesn't exist" unless (-d $self->param($dir));
-    }
     my $gvf_validator = $self->param('gvf_validator');
     my $so_file = $self->param('so_file');
     die "gvf validator not defined" unless (defined $gvf_validator);
-    die "wrong location for gvf validator" unless (-f $gvf_validator);
+    my $gvf_validator_error = `which $gvf_validator 2>&1 1>/dev/null`;
+    die "$gvf_validator command not found: $gvf_validator_error" if $gvf_validator_error ne "";
     die "so file not defined" unless (defined $so_file);
     die "wrong location for so file" unless (-f $so_file);
   } elsif ($file_type eq 'vcf') {
-    my $location = `which vcf-validator`;
-    die "vcf-validator command not found" if ($location =~ m/Command not found/);				
+    my $vcf_validator = $self->param('vcf_validator');
+    my $vcf_validator_error = `which $vcf_validator 2>&1 1>/dev/null`;
+    die "$vcf_validator command not found: $vcf_validator_error" if $vcf_validator_error ne "";
+    my $vcf_sort = $self->param('vcf_sort');
+    my $vcf_sort_error = `which $vcf_sort 2>&1 1>/dev/null`;
+    die "$vcf_sort command not found: $vcf_sort_error" if $vcf_sort_error ne "";
   } else {
     die "File type: $file_type is not recognised. It must be gvf or vcf.";
   }
 
-  $self->create_species_dir_tree();
+  $self->create_species_dir_tree($species,$division,$pipeline_dir,$script_dir, $file_type);
 }
 
 sub write_output {
   my $self = shift;
+  $self->dataflow_output_id({}, 2);
+  $self->dataflow_output_id({}, 1);
 }
 
 sub create_species_dir_tree {
-  my $self = shift;
-  my $pipeline_dir = $self->param('pipeline_dir');
-  my $file_type = $self->param('file_type');
-  my $dump_dir = "$pipeline_dir/$file_type/";
-  make_path($dump_dir) unless (-d $dump_dir);	
+  my ($self,$species,$division, $pipeline_dir, $script_dir, $file_type) = @_;
+  my $dump_dir;
 
-  my $all_species = $self->get_all_species();
-
-  foreach my $species (keys %$all_species) {
-    if (-d "$dump_dir/$species") {
-      unless (is_empty("$dump_dir/$species")) {
-        die("$dump_dir/$species is not empty. Delete files before running the pipeline.");
+  if ($division) {
+    my @division = ( ref($division) eq 'ARRAY' ) ? @$division : ($division);
+    # If division is defined.
+    if ( scalar(@division) ) {
+      foreach my $division (@division) {
+        $pipeline_dir=$pipeline_dir."/".$division;
+        $dump_dir = "$pipeline_dir/$file_type/";
+        make_path($dump_dir) unless (-d $dump_dir);
       }
-    } else {
-      make_path("$dump_dir/$species") or die "Failed to create dir $dump_dir/$species $!";
-    }	
-  }					
+    }
+    else{
+      $dump_dir = "$pipeline_dir/$file_type/";
+      make_path($dump_dir) unless (-d $dump_dir);
+    }
+  }
+
+  if (-d "$dump_dir/$species") {
+    unless (is_empty("$dump_dir/$species")) {
+      die("$dump_dir/$species is not empty. Delete files before running the pipeline.");
+    }
+  } else {
+    make_path("$dump_dir/$species") or die "Failed to create dir $dump_dir/$species $!";
+  }
 }
 
 sub is_empty {

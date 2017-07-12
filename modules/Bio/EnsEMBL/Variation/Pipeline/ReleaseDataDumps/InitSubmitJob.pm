@@ -51,6 +51,11 @@ sub fetch_input {
   my $output_dir = $self->param('pipeline_dir');
   my $job_type  = $self->param('job_type'); # parse or dump
   my $debug = $self->param('debug');
+
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $output_dir = $output_dir."/".$species_division;
+  }
   my $fh;
   if ($debug) {
     $fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
@@ -157,16 +162,22 @@ sub get_input_gvf2vcf {
   my $script_dir      = $self->param('script_dir');
   my $script          = '/misc/release/gvf2vcf.pl';
   my $output_dir      = $self->param('pipeline_dir');
-  my $connection_args = '--registry ' . $self->param('registry_file');
+  my $connection_args = '--registry ' . $self->param('registry');
   my $species = $self->param('species');
   my @input = ();
+
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $output_dir = $output_dir."/".$species_division;
+  }
 
   # don't forget to parse Populations and Individuals
 
   my $gvf_dir = "$output_dir/gvf/$species/";
-  opendir(DIR, $gvf_dir) or die $!;
-
-  while (my $gvf_file = readdir(DIR)) {
+  opendir(my $dh, $gvf_dir) or die $!;
+  my @dir_content = readdir($dh);
+  closedir($dh);
+  foreach my $gvf_file (@dir_content) {
     next if ($gvf_file =~ m/^\./);
     next if ($gvf_file =~ m/failed/); # don't parse gvf files storing failed variants
     if ($gvf_file =~ m/\.gvf\.gz$/) {
@@ -189,14 +200,11 @@ sub get_input_gvf2vcf {
       push @input, $params;
     }
   }
-  closedir(DIR);
   return \@input;
 }
 
 sub get_script_arg {
-  my $self = shift;
-  my $file_name = shift;
-  my $script_args = shift;
+  my ($self, $file_name, $script_args) = @_;
   while (my ($script_arg, $dump_type) = each %$script_args) {
     if ($file_name =~ /$dump_type/) {
       return $script_arg;
@@ -213,8 +221,12 @@ sub get_input_gvf_dumps {
   my $script_dir      = $self->param('script_dir');
   my $script          = '/export/release/dump_gvf.pl';
   my $output_dir      = $self->param('pipeline_dir');
-  my $connection_args = '--registry ' . $self->param('registry_file');
+  my $connection_args = '--registry ' . $self->param('registry');
   my $species = $self->param('species');
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $output_dir = $output_dir."/".$species_division;
+  }
   my @input = ();
   my $default_params = {
     'species' => $species,
@@ -278,6 +290,11 @@ sub get_vf_distributions {
   my $output_dir = $self->param('pipeline_dir');
   my $species = $self->param('species');
   my @vf_loads = ();
+
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $output_dir = $output_dir."/".$species_division;
+  }
 
   my $current_vf_load = 0;
   my @seq_region_ids = ();
@@ -403,7 +420,7 @@ sub get_covered_seq_regions {
 sub write_output { 
   my $self = shift;
   my $dump_input_parameters = $self->param('input_for_submit_job');
-  $self->dataflow_output_id($dump_input_parameters, 1);
+  $self->dataflow_output_id($dump_input_parameters, 2);
   return;
 }
 

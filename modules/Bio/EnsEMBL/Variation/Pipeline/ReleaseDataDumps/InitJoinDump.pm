@@ -41,6 +41,11 @@ sub run {
   my $pipeline_dir = $self->param('pipeline_dir');
   my $species      = $self->param('species');
 
+  my $species_division = $self->param('species_division');
+  if ($species_division) {
+    $pipeline_dir = $pipeline_dir."/".$species_division;
+  }
+
   my @input = ();
  
   foreach my $file_type (qw/gvf vcf/) {
@@ -83,9 +88,9 @@ sub run {
 sub write_output {
   my $self = shift;
   if (scalar @{$self->param('input')} > 0) {
-    $self->dataflow_output_id($self->param('input'), 1);
+    $self->dataflow_output_id($self->param('input'), 2);
   } else {
-    $self->dataflow_output_id([{mode => 'no_join'}], 1);
+    $self->dataflow_output_id([{mode => 'no_join'}], 2);
   }
   return;
 }
