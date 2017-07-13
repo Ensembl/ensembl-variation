@@ -144,7 +144,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
     int - Length of the structural variant. Useful when the structural variant is an insertion with given length. 
 
   Arg [-STRUCTURAL_VARIATION] :
-    int - the structural variation object for this feature 
+    object ref - the structural variation object for this feature
 
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
@@ -153,7 +153,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-        -class_so_term => 'structural_variant'
+        -class_so_term => 'copy_number_variation'
        );
 
   Description: Constructor. Instantiates a new StructuralVariationFeature object.
