@@ -56,8 +56,6 @@ sub default_options {
         hive_root_dir        => $ENV{'HOME'} . '/bin/ensembl-hive', 
         ensembl_cvs_root_dir => $ENV{'HOME'} . '/bin',
         hive_no_init         => 0,
-
-
         ensembl_release    => $self->o('ensembl_release'),
 
         # include or exclude the following species from the dumps, run for a division or all the species on the server
@@ -90,7 +88,7 @@ sub default_options {
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 500_000, 
 
-        debug => 1,
+        debug => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
@@ -124,8 +122,6 @@ sub pipeline_wide_parameters {
         vcf_validator    => $self->o('vcf_validator'),
         vcf_sort         => $self->o('vcf_sort'),
         tmp_dir          => $self->o('tmp_dir'),
-        gvf_readme       => $self->o('gvf_readme'), 
-        vcf_readme       => $self->o('vcf_readme'),
         pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         debug => $self->o('debug'),
         global_vf_count_in_species => $self->o('global_vf_count_in_species'),
@@ -186,7 +182,7 @@ sub pipeline_analyses {
               1 => ['generate_config'],
           },
           -parameters => {
-              'file_type' => 'gvf',   
+              'file_type' => 'gvf',
           },
       },
       {   -logic_name => 'generate_config',
@@ -352,6 +348,10 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'finish_dumps',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+          -parameters => {
+              'gvf_readme' => $self->o('gvf_readme'),
+              'vcf_readme' => $self->o('vcf_readme'),
+          }
       },
   );
   return \@analyses;

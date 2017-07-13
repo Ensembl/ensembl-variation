@@ -37,20 +37,12 @@ use FileHandle;
 use File::Path qw(make_path);
 use File::Spec;
 
-sub fetch_input {
-  my $self = shift;
-}
-
 sub run {
   my $self = shift;
-  my $data_dump_dir = $self->param('pipeline_dir');
   my $species = $self->param('species');
   my $config = $self->param('config');
-  my $division = $self->param('species_division');
+  my $data_dump_dir = $self->data_dir($species);
 
-  if ($division){
-      $data_dump_dir=$data_dump_dir."/".$division;
-  }
 
   $self->delete_tmp_files($data_dump_dir, $species);
   $self->tabix_vcf_files($data_dump_dir, $species);
@@ -65,27 +57,29 @@ sub delete_tmp_files {
   my $tmp_dir = $self->param('tmp_dir');
   foreach my $file_type (qw/vcf gvf/) {
     my $working_dir = "$data_dir/$file_type/$species/";
-    opendir(DIR, $working_dir) or die $!;
-    while (my $file = readdir(DIR)) {
+    opendir(my $dh, $working_dir) or die $!;
+    my @dir_content = readdir($dh);
+    closedir($dh);
+    foreach my $file (@dir_content) {
       if ($file =~ m/_validate\.vcf.gz$|\.txt$/) {
         system("mv $working_dir/$file $tmp_dir");
         $self->warning($file);
       }
     }
-    closedir(DIR);
   }
 }
 
 sub tabix_vcf_files {
   my ($self, $data_dir, $species) = @_;
   my $working_dir = "$data_dir/vcf/$species/";
-  opendir(DIR, $working_dir) or die $!;
-  while (my $file = readdir(DIR)) {
+  opendir(my $dh, $working_dir) or die $!;
+  my @dir_content = readdir($dh);
+  closedir($dh);
+  foreach my $file (@dir_content) {
     if ($file =~ m/\.vcf.gz$/) {
       system("tabix -p vcf $working_dir/$file");
     }
   }
-  closedir(DIR);
 }
 
 sub add_readme {

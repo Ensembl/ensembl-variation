@@ -32,8 +32,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob;
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
 
-sub fetch_input {}
-
 sub run {
   my $self = shift;
   my @args = ();

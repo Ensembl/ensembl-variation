@@ -36,10 +36,6 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 
 use File::Path qw(make_path);
 
-sub fetch_input {
-  my $self = shift;
-}
-
 sub run {
   my $self = shift;
   my $file_type  = $self->param('file_type');	
@@ -47,6 +43,7 @@ sub run {
   my $division = $self->param('division');
   my $pipeline_dir = $self->param_required('pipeline_dir');
   my $script_dir = $self->param_required('script_dir');
+  my $tmp_dir = $self->param('tmp_dir');
 
   # check registry file exists
   # check tmp dir exists
@@ -68,6 +65,11 @@ sub run {
     die "$vcf_sort command not found: $vcf_sort_error" if $vcf_sort_error ne "";
   } else {
     die "File type: $file_type is not recognised. It must be gvf or vcf.";
+  }
+
+  # Create the tmp_dir
+  if (! -d "$tmp_dir") {
+    make_path("$tmp_dir") or die "Failed to create dir $tmp_dir $!";
   }
 
   $self->create_species_dir_tree($species,$division,$pipeline_dir,$script_dir, $file_type);
