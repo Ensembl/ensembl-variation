@@ -33,21 +33,13 @@ use strict;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
-sub fetch_input {
-  my $self = shift;
-}
-
 sub run {
   my $self = shift;
   my $mode = $self->param('mode');
-  my $data_dump_dir = $self->param('pipeline_dir');
   my $tmp_dir = $self->param('tmp_dir');
   my $species = $self->param('species');
-  my $species_division = $self->param('species_division');
-  if ($species_division)
-  {
-    $data_dump_dir = $data_dump_dir."/".$species_division;
-  }
+  my $data_dump_dir = $self->data_dir($species);
+
   $self->post_gvf_dump_cleanup($data_dump_dir,$tmp_dir,$species) if ($mode eq 'post_gvf_dump_cleanup');
   $self->post_gvf2vcf_cleanup($data_dump_dir,$tmp_dir,$species) if ($mode eq 'post_gvf2vcf_cleanup');
 }

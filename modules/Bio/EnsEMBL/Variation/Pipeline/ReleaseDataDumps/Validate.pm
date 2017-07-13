@@ -32,7 +32,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate;
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
 use File::Basename;
-sub fetch_input {}
 
 sub run {
   my $self = shift;

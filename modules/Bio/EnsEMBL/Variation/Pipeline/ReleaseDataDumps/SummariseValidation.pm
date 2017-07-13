@@ -36,10 +36,9 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 sub fetch_input {
   my $self = shift;
   my @input;
-  my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type   = $self->param('file_type');
   my $species = $self->param('species');
-  my $division = $self->param('species_division');
+  my $pipeline_dir = $self->data_dir($species);
 
   my $summary_file_name = '';
   if ($file_type eq 'gvf') {
@@ -54,12 +53,11 @@ sub fetch_input {
 
   my $failed_dumps = 0;
 
-  if ($division){
-    $pipeline_dir=$pipeline_dir."/".$division;
-  }
   my $path = "$pipeline_dir/$file_type/$species";
-  opendir(DIR, $path) or die $!;
-  while (my $file = readdir(DIR)) {
+  opendir(my $dh, $path) or die $!;
+  my @dir_content = readdir($dh);
+  closedir($dh);
+  foreach my $file (@dir_content) {
     if ($file =~ m/^Validate(.)*out$/) {
       if ($file_type eq 'gvf') {
         my $return_value = `grep 'No Errors found in this file' $path/$file`;
@@ -71,7 +69,6 @@ sub fetch_input {
       }
     }
   }
-  closedir(DIR);
   close $fh;
   $self->warning("For $species, $failed_dumps dumps report errors.") if ($failed_dumps > 0);
 }

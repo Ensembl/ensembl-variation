@@ -38,23 +38,21 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 
 sub run {
   my $self = shift;
-  my $pipeline_dir = $self->param('pipeline_dir');
   my $species      = $self->param('species');
+  my $pipeline_dir = $self->data_dir($species);
 
-  my $species_division = $self->param('species_division');
-  if ($species_division) {
-    $pipeline_dir = $pipeline_dir."/".$species_division;
-  }
 
   my @input = ();
  
   foreach my $file_type (qw/gvf vcf/) {
 
     my $dir = "$pipeline_dir/$file_type/$species/";
-    opendir(DIR, $dir) or die $!;
     my $files = {};
 
-    while (my $file = readdir(DIR)) {
+    opendir(my $dh, $dir) or die $!;
+    my @dir_content = readdir($dh);
+    closedir($dh);
+    foreach my $file (@dir_content) {
       next if ($file =~ m/^\./);
       if ($file =~ m/\.$file_type\.gz/) {
         my $file_name = $file;

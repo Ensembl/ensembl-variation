@@ -44,10 +44,9 @@ sub fetch_input {
   my $species   = $self->param('species');
   my $config    = $self->param('config');
   my $release   = $self->param('release');
-  my $output_dir = $self->param('pipeline_dir');
   my $job_type  = $self->param('job_type'); # parse or dump
   $debug = $self->param('debug');
-
+  my $output_dir = $self->data_dir($species);
 
   $global_vf_count_in_species = $self->param('global_vf_count_in_species') || $global_vf_count_in_species;
   $max_vf_load = $self->param('max_vf_load') || $max_vf_load; # group slices together until the vf count exceeds max_vf_load
@@ -131,7 +130,7 @@ sub fetch_input {
 #          print $debug_fh "COVERED_SE"$key, ' ', $covered_seq_regions->{$key}, "\n";
 #        }   
 #      }
-      my $vf_distributions = $self->get_vf_distributions($covered_seq_regions);
+      my $vf_distributions = $self->get_vf_distributions($covered_seq_regions,$species,$output_dir);
 #      if ($debug) {
 #        foreach my $distribution (@$vf_distributions) {
 #          foreach my $key (keys %$distribution) {
@@ -140,12 +139,12 @@ sub fetch_input {
 #          print $fh "\n";
 #        }
 #      }
-      $input = $self->get_input_gvf_dumps($script_args, $vf_distributions);
+      $input = $self->get_input_gvf_dumps($script_args,$species,$output_dir,$vf_distributions);
     } else {
-      $input = $self->get_input_gvf_dumps($script_args);
+      $input = $self->get_input_gvf_dumps($script_args,$species,$output_dir);
     }
   } elsif ($job_type eq 'parse') {
-    $input = $self->get_input_gvf2vcf($script_args); 
+    $input = $self->get_input_gvf2vcf($script_args,$species,$output_dir);
   } else {
     die "Job type must be parse or dump. $job_type is not recognised.";
   }
@@ -157,24 +156,14 @@ sub fetch_input {
 }
 
 sub get_input_gvf2vcf {
-  my $self = shift;
-  my $script_args = shift;
-
-
-
+  my ($self,$script_args,$species,$output_dir) = @_;
 
   my $file_type       = 'vcf';
   my $script_dir      = $self->param('script_dir');
   my $script          = '/misc/release/gvf2vcf.pl';
-  my $output_dir      = $self->param('pipeline_dir');
   my $connection_args = '--registry ' . $self->param('registry');
   my $species = $self->param('species');
   my @input = ();
-
-  my $species_division = $self->param('species_division');
-  if ($species_division) {
-    $output_dir = $output_dir."/".$species_division;
-  }
 
   # don't forget to parse Populations and Individuals
 
@@ -226,20 +215,13 @@ sub get_script_arg {
 }
 
 sub get_input_gvf_dumps {
-  my $self = shift;
-  my $script_args = shift;
-  my $vf_distributions = shift; 
+  my ($self,$script_args,$species,$output_dir,$vf_distributions) = @_;
 
   my $file_type       = 'gvf';
   my $script_dir      = $self->param('script_dir');
   my $script          = '/export/release/dump_gvf.pl';
-  my $output_dir      = $self->param('pipeline_dir');
   my $connection_args = '--registry ' . $self->param('registry');
-  my $species = $self->param('species');
-  my $species_division = $self->param('species_division');
-  if ($species_division) {
-    $output_dir = $output_dir."/".$species_division;
-  }
+
   my @input = ();
   my $run_in_debug_mode = $debug ? '--debug' : '';
   my $default_params = {
@@ -303,16 +285,8 @@ sub get_input_gvf_dumps {
 }
 
 sub get_vf_distributions {
-  my $self = shift;
-  my $covered_seq_regions_counts = shift;
-  my $output_dir = $self->param('pipeline_dir');
-  my $species = $self->param('species');
+  my ($self, $covered_seq_regions_counts,$species,$output_dir) = @_;
   my @vf_loads = ();
-
-  my $species_division = $self->param('species_division');
-  if ($species_division) {
-    $output_dir = $output_dir."/".$species_division;
-  }
 
   my $current_vf_load = 0;
   my @seq_region_ids = ();
@@ -328,15 +302,13 @@ sub get_vf_distributions {
       }
       push @vf_loads, @split_slices;
     } else {
-     
- 
       if (($current_vf_load + $vf_count) > $max_vf_load) {
         push @seq_region_ids, $seq_region_id;
         push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
         if ($debug) {
           my $tmp_load = $current_vf_load + $vf_count; 
           print $debug_fh "JOIN_SLICES\t", join(',', @seq_region_ids), "\t$tmp_load\n";  
-        } 
+        }
         @seq_region_ids = ();
         $current_vf_load = 0;
       } else {
@@ -358,9 +330,7 @@ sub get_vf_distributions {
 }
 
 sub get_seq_regions {
-  my $self = shift;
-  my $seq_region_ids = shift;
-  my $species_dir = shift;
+  my ($self, $seq_region_ids, $species_dir) = @_;
   my $seq_regions = $seq_region_ids->[0] . '_' . $seq_region_ids->[-1];
   my $seq_region_ids_file = "$species_dir/$seq_regions.txt";
   my $fh = FileHandle->new($seq_region_ids_file, 'w');
