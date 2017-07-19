@@ -57,16 +57,23 @@ if (!$user) {
 }
 usage() if ($help);
 
-my %exac_pops_list = (
-  'ExAC:ALL' => 'All ExAC individuals',
-  'ExAC:AFR' => 'African/African American',
-  'ExAC:AMR' => 'Latino',
-  'ExAC:Adj' => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
-  'ExAC:EAS' => 'East Asian',
-  'ExAC:FIN' => 'Finnish',
-  'ExAC:NFE' => 'Non-Finnish European',
-  'ExAC:OTH' => 'Other',
-  'ExAC:SAS' => 'South Asian'
+my %pops_list = (
+  'ExAC'   => {
+                'ExAC:ALL' => 'All ExAC individuals',
+                'ExAC:AFR' => 'African/African American',
+                'ExAC:AMR' => 'Latino',
+                'ExAC:Adj' => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
+                'ExAC:EAS' => 'East Asian',
+                'ExAC:FIN' => 'Finnish',
+                'ExAC:NFE' => 'Non-Finnish European',
+                'ExAC:OTH' => 'Other',
+                'ExAC:SAS' => 'South Asian'
+              },
+  'UK10K'  => { 
+                'ALSPAC'  => 'Avon Longitudinal Study of Parents and Children (ALSPAC) cohort.',
+                'TWINSUK' => 'Allele count in TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release.'
+              },
+  'TOPMed' => { 'TOPMed' => 'Trans-Omics for Precision Medicine (TOPMed) Program.' }
 );
 
 ## Settings ##
@@ -79,33 +86,43 @@ my %pops = ('1000 Genomes Project'                => { 'order'      => 1,
                                                      },
             'Exome Aggregation Consortium (ExAC)' => { 'order'    => 2,
                                                        'species'  => 'Homo sapiens',
-                                                       'list'     => \%exac_pops_list,
+                                                       'list'     => $pops_list{'ExAC'},
                                                        'url'      => 'http://exac.broadinstitute.org/',
                                                        'evidence' => 'ExAC'
                                                      },
-            'HapMap Project'                      => { 'order'    => 3,
+            'TOPMed'                              => { 'order'    => 3,
+                                                       'species'  => 'Homo sapiens',
+                                                       'list'     => $pops_list{'TOPMed'},
+                                                       'url'      => 'https://www.nhlbi.nih.gov/research/resources/nhlbi-precision-medicine-initiative/topmed'
+                                                     },
+            'UK10K'                               => { 'order'    => 4,
+                                                       'species'  => 'Homo sapiens',
+                                                       'list'     => $pops_list{'UK10K'},
+                                                       'url'      => 'https://www.uk10k.org/'
+                                                     },
+            'HapMap Project'                      => { 'order'    => 5,
                                                        'species'  => 'Homo sapiens',
                                                        'term'     => 'CSHL-HAPMAP:HAPMAP%',
                                                        'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
                                                        'evidence' => 'HapMap'
                                                      },
-            'Exome Sequencing Project (ESP)'      => { 'order'    => 4,
+            'Exome Sequencing Project (ESP)'      => { 'order'    => 6,
                                                        'species'  => 'Homo sapiens',
                                                        'term'     => 'ESP6500:%',
                                                        'url'      => 'http://evs.gs.washington.edu/EVS/',
                                                        'evidence' => 'ESP'
                                                      },
-            'Mouse Genomes Project (MGP)'         => { 'order'    => 5,
+            'Mouse Genomes Project (MGP)'         => { 'order'    => 7,
                                                        'species'  => 'Mus musculus',
                                                        'term'     => 'Mouse Genomes Project',
                                                        'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
                                                      },
-            'NextGen Project - Sheep'             => { 'order'    => 6,
+            'NextGen Project - Sheep'             => { 'order'    => 8,
                                                        'species'  => 'Ovis aries',
                                                        'term'     => 'NextGen:%',
                                                        'url'      => 'http://projects.ensembl.org/nextgen/'
                                                      },
-            'NextGen Project - Cow'               => { 'order'    => 7,
+            'NextGen Project - Cow'               => { 'order'    => 9,
                                                        'species'  => 'Bos taurus',
                                                        'term'     => 'NextGen:%',
                                                        'url'      => 'http://projects.ensembl.org/nextgen/'
