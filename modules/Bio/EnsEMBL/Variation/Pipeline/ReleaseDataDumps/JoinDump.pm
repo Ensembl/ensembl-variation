@@ -51,12 +51,8 @@ sub run {
   my $self = shift;
 
   my $species      = $self->param('species');
+  my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type    = $self->param('file_type');	
-  my $config = $self->param('config');
-  my $division = $self->param('species_division');
-
-  my $pipeline_dir = $self->data_dir($species);
-
   my $working_dir = "$pipeline_dir/$file_type/$species/";
 
   my $mode = $self->param('mode'); 
@@ -64,8 +60,6 @@ sub run {
   if ($mode eq 'join_slice_split') {
     my $files = $self->get_slice_split_files($working_dir, $file_type);  
     $self->join_split_slice_files($working_dir, $files);
-    $self->dataflow_output_id({}, 2);
-    $self->dataflow_output_id({}, 1);
   } elsif ($mode eq 'final_join') {
     $self->final_join;
   } elsif ($mode eq 'no_join') {
@@ -191,13 +185,13 @@ sub final_join_vcf {
 }
 
 sub get_slice_split_files {
-  my ($self, $working_dir, $file_type) = @_;
+  my $self = shift;
+  my $working_dir = shift;
+  my $file_type = shift;	
+  opendir(DIR, $working_dir) or die $!; 
   my $files = {};
   my ($split_slice_range, $file_name);
-  opendir(my $dh, $working_dir) or die $!;
-  my @dir_content = readdir($dh);
-  closedir($dh);
-  foreach my $file (@dir_content) {
+  while (my $file = readdir(DIR)) {
     next if ($file =~ m/^\./);
     if ($file =~ m/\.$file_type/) {
       $file =~ s/\.$file_type//g;
@@ -213,11 +207,14 @@ sub get_slice_split_files {
       } 
     } # else .err and .out files
   }
+  closedir(DIR);
   return $files;	
 }
 
 sub join_split_slice_files {
-  my ($self, $working_dir, $files) = @_;
+  my $self = shift;
+  my $working_dir = shift;
+  my $files = shift;
 
   my $tmp_dir = $self->param('tmp_dir');
 
@@ -252,7 +249,7 @@ sub join_split_slice_files {
         }
         $fh->close();
         `gzip $working_dir/$file_name`;
-        `mv $working_dir/$file_name.gz $tmp_dir`;
+        `rm -f $working_dir/$file_name.gz $tmp_dir`;
       }
       $fh_join->close();
     }
@@ -260,7 +257,8 @@ sub join_split_slice_files {
 }
 
 sub get_gvf_line {
-  my ($line, $id_count) = @_;
+  my $line = shift; 
+  my $id_count = shift;  
   my $gvf_line = {};
   my @header_names = qw/seq_id source type start end score strand phase/;
   my @header_values = split(/\t/, $line);
@@ -292,8 +290,15 @@ sub get_gvf_line {
   return "$line\t$attributes";
 }
 
+sub write_output {
+  my $self = shift;
+  $self->dataflow_output_id($self->param('input_for_validation'), 1);
+  return;
+}
+
 sub run_cmd {
-  my ($self ,$cmd) = @_;
+  my $self = shift;
+  my $cmd = shift;
   if (my $return_value = system($cmd)) {
     $return_value >>= 8;
     die "system($cmd) failed: $return_value";
@@ -362,12 +367,6 @@ sub get_covered_seq_regions {
   $sth->finish();
 
   return $counts;
-}
-
-sub write_output {
-  my $self = shift;
-  $self->dataflow_output_id($self->param('input_for_validation'), 1);
-  return;
 }
 
 

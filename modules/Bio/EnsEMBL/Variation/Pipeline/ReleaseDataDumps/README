@@ -1,5 +1,6 @@
 Running the pipeline creates GVF and VCF dumps for all species in ensembl with a variation database. The pipeline is run as part of the release cycle.
 
+- 
 - read data from registry file
 - call scripts
 - deal with outputs
@@ -15,19 +16,16 @@ There are two versions ReleaseDumps_conf.pm and PopulationDumps_conf.pm:
     - structural variation
     - sets: phenotype, clin sign
   - To run the pipeline the following parameters need to be initialised:
-    -run_all, division or species, antispecies  Used to know which species the pipeline should process
     -pipeline_dir       directory that store all the data                 
     -pipeline_name      used to create name for hive database
     -hive_db_host       connection details for hive database
     -hive_db_password   connection details for hive database
     -hive_db_port       connection details for hive database
     -hive_db_user       connection details for hive database
-    -registry      registry file with all species for which to create GVF and VCF dumps
+    -registry_file      registry file with all species for which to create GVF and VCF dumps
     -ensembl_release    ensembl release
-    -gvf_validator      location of the gvf_validator tool, e.g: GAL/bin/gvf_validator from github
-    -vcf-validator      location of the vcf-validator tool
-    -vcf-sort           location of the vcf-sort tool
-    -so_file            SO-Ontologies/so.obo e.g. from github.
+    -gvf_validator      GAL/bin/gvf_validator e.g from github
+    -so_file            SO-Ontologies/so.obo e.g. from github
     -tmp_dir            tmp directory for storing validation results, err and out files  
 
 
@@ -39,18 +37,12 @@ There are two versions ReleaseDumps_conf.pm and PopulationDumps_conf.pm:
 
 Dataflow for pipeline 1):
 
-SpeciesFactory
-  - Process value of run_all, division, antispecies or species parameters
-  - For run_all, the speciesFactory will load all the species defined in the registry file and flow back species with existing variation databases
-  - For division, the speciesFactory will process the division using the ensembl_production database and flow back all the variation databases associated with the species in this division
-  - For species, the speciesFactory will process the species, look for it in the registry and flow back the species if it has an existing variation database
-  - For antispecies, the speciesFactory will process a division or all the species from the registry, remove the species from antispecies and flow the variation databases.
-
 PreRunChecks
   - file checks: 
     - checks that registry file exists
-    - checks that directories exist: pipeline_dir script_dir tmp_dir. If not, it will create them.
+    - checks that directories exist: pipeline_dir script_dir tmp_dir
     - checks that GVF validator and SO file exist
+    - checks that vcf-validator is defined
     - creats species directory with species from input registry file
     - checks that species directories for dumping files are empty before starting the pipeline
 
@@ -58,7 +50,7 @@ Config
   - collects all the data types that can be dumped for a species
   - looks up in the database if the species has a certain data type: sift, ancestral allele, global maf, clinical significance, clinical_significance_svs, structural variants
   - the attribs for human are hard coded: we dump more data for human: sets, somatic data 
-  - the data types are stored in the config parameter. This is flow downstream to all the modules.
+  - the data types are stored in json format in a file. the json file is read by subsequent modules.
 
 InitSubmitJob (dump gvf)
   - Prepare all commands for dumping GVF files 
@@ -87,6 +79,7 @@ Validate (gvf)
 
 SummariseValidation (gvf)
   - summarise results in pipeline_dir/SummaryValidateGVF.txt
+  - 
 
 FileUtils (post_gvf_dump_cleanup):
   - for each species:
@@ -96,7 +89,7 @@ FileUtils (post_gvf_dump_cleanup):
  
 
 PreRunChecks (pre_run_checks_gvf2vcf):
-  - checks that vcf-validator and vcf-sort are defined and exists
+  -
 
 InitSubmitJob (parse gvf2vcf):
   - generates all the options for each gvf file that are required by the gvf2vcf script
@@ -105,8 +98,7 @@ SubmitJob (gvf2vcf):
   - for each VCF file create smaller file using the first 2500 lines for validation. use vcf-validator
 
 Validate (vcf):
-  - for each VCF file create smaller file using the first 2500 lines for validation. use VCF validator
-  - Sort and bgzip the VCF files
+
 
 InitJoinDump
   - prepare final join dumps
@@ -127,3 +119,4 @@ Finish:
 
 
 Dataflow for pipeline 2):
+

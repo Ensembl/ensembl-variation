@@ -32,9 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::ReleaseDumps_conf;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
- # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
-use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
+use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub default_options {
     my ($self) = @_;
@@ -56,28 +54,19 @@ sub default_options {
         hive_root_dir        => $ENV{'HOME'} . '/bin/ensembl-hive', 
         ensembl_cvs_root_dir => $ENV{'HOME'} . '/bin',
         hive_no_init         => 0,
+
+
         ensembl_release    => $self->o('ensembl_release'),
-
-        # include or exclude the following species from the dumps, run for a division or all the species on the server
-        species => [],
-        antispecies => [],
-        division    => [],
-        run_all     => 0,
-
         pipeline_name      => $self->o('pipeline_name'),
 
         pipeline_dir       => $self->o('pipeline_dir'),
         
-        registry      => $self->o('registry'),
+        registry_file      => $self->o('registry_file'),
 
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
-        gvf_validator      => 'gvf_validator',
-
-        vcf_validator      => 'vcf-validator',
-        vcf_sort           => 'vcf-sort',
-
-        so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
+        gvf_validator      => $self->o('gvf_validator'),
+        so_file            => $self->o('so_file'),
 
         tmp_dir           => $self->o('tmp_dir'),
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
@@ -88,7 +77,7 @@ sub default_options {
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 500_000, 
 
-        debug => 0,
+        debug => 1,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
@@ -115,30 +104,22 @@ sub pipeline_wide_parameters {
     return {
         %{$self->SUPER::pipeline_wide_parameters}, # here we inherit anything from the base class
         release          => $self->o('ensembl_release'),
+        registry_file    => $self->o('registry_file'),
+        output_path      => $self->o('pipeline_dir'),
         pipeline_dir     => $self->o('pipeline_dir'),
         script_dir       => $self->o('script_dir'), 
         so_file          => $self->o('so_file'),    
         gvf_validator    => $self->o('gvf_validator'),
-        vcf_validator    => $self->o('vcf_validator'),
-        vcf_sort         => $self->o('vcf_sort'),
         tmp_dir          => $self->o('tmp_dir'),
-        pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+        gvf_readme       => $self->o('gvf_readme'), 
+        vcf_readme       => $self->o('vcf_readme'),
+        pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),        
         debug => $self->o('debug'),
         global_vf_count_in_species => $self->o('global_vf_count_in_species'),
         max_vf_load => $self->o('max_vf_load'),
         vf_per_slice => $self->o('vf_per_slice'),
         max_split_slice_length => $self->o('max_split_slice_length'),
-        division => $self->o('division'),
-        registry => $self->o('registry')
     };
-}
-
-# Override the default method, to force an automatic loading of the registry in all workers
-sub beekeeper_extra_cmdline_options {
-  my ($self) = @_;
-  return
-      ' -reg_conf ' . $self->o('registry'),
-  ;
 }
 
 sub resource_classes {
@@ -154,206 +135,242 @@ sub resource_classes {
 sub pipeline_analyses {
   my ($self) = @_;
   my @analyses;
-  push @analyses, (
-      {
-         -logic_name    => 'species_factory',
-         -module         => 'Bio::EnsEMBL::Production::Pipeline::Common::SpeciesFactory',
-         -parameters    => {
-           species     => $self->o('species'),
-           antispecies => $self->o('antispecies'),
-           division    => $self->o('division'),
-           run_all     => $self->o('run_all'),
-          },
-         -input_ids     => [{}],
-         -rc_name       => 'default',
-         -hive_capacity => 1,
-         -max_retry_count => 0,
-         -flow_into     => {
-             4 => WHEN(
-              '#only_finish_dumps#' => 'finish_dumps',
-              ELSE 'pre_run_checks_gvf_dumps',
-            )
-          },
+  if ($self->o('only_finish_dumps')) {
+    push @analyses, (
+      { -logic_name => 'finish_dumps',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+        -input_ids => [{},],
       },
-      {   -logic_name => 'pre_run_checks_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 1,
-          -flow_into => {
-              1 => ['generate_config'],
-          },
-          -parameters => {
-              'file_type' => 'gvf',
-          },
-      },
-      {   -logic_name => 'generate_config',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
-          -max_retry_count => 1,
-          -rc_name => 'default',
-          -flow_into     => {
-          '2->A' => ['init_dump'],
-          'A->1' => ['join_split_slice'],
-        }
-      },
-      {   -logic_name => 'init_dump',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-          -max_retry_count => 1,
-          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -flow_into => {
-              2 => ['submit_job_gvf_dumps'],
-          },
-          -parameters => {
-              'file_type' => 'gvf',
-              'job_type'  => 'dump',
-          },
-          -rc_name => 'default',
-      },
-      {   -logic_name => 'submit_job_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 1,
-          -rc_name => 'default',
-      },
+    );
+  } else {
+    push @analyses, (
+        {   -logic_name => 'pre_run_checks_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+            -input_ids => [{},],
+            -max_retry_count => 1,
+            -flow_into => {
+                1 => ['export_config_file'],
+            },
+            -parameters => {
+                'file_type' => 'gvf',   
+            },
+        },
+        {   -logic_name => 'export_config_file',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
+            -max_retry_count => 1,
+            -rc_name => 'default',
+             -flow_into => {
+                1 => ['species_factory_gvf_dumps'],
+            },
+        },
+        {   -logic_name => 'species_factory_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+            -flow_into => {
+                '2->A' => ['init_dump'],
+                'A->1' => ['species_factory_join_split_slice'],
+             },
+        },
+        {   -logic_name => 'init_dump',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
+            -max_retry_count => 1,
+            -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+            -flow_into => {
+                1 => ['submit_job_gvf_dumps'],
+            },
+            -parameters => {
+                'file_type' => 'gvf',
+                'job_type'  => 'dump',
+            },
+            -rc_name => 'default',
+        },
+        {   -logic_name => 'submit_job_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+            -max_retry_count => 1,
+            -rc_name => 'default',
+        },
 
 
 # join split slice
-
-      { -logic_name => 'join_split_slice',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
-        -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-        -parameters => {
-            'mode' => 'join_slice_split',
-            'file_type' => 'gvf',
+        { -logic_name => 'species_factory_join_split_slice',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+          -flow_into => {
+            '2->A' => ['join_split_slice'],
+            'A->1' => ['species_factory_validate_gvf'],
           },
-        -flow_into => {
-          '2->A' => ['init_validate_gvf'],
-          'A->1' => ['summary_validate_gvf'],
         },
-      },
+        { -logic_name => 'join_split_slice',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+          -parameters => {
+              'mode' => 'join_slice_split',
+              'file_type' => 'gvf',
+            },
+        },
 
 
 # validate 
-      { -logic_name => 'init_validate_gvf',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitValidation',
-        -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-        -flow_into => {
-            2 => ['validate_gvf'],
+        { -logic_name => 'species_factory_validate_gvf',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+          -flow_into => {
+            '2->A' => ['init_validate_gvf'],
+            'A->1' => ['summary_validate_gvf']
           },
           -parameters => {
             'file_type' => 'gvf',
           },
-      },
-      { -logic_name => 'validate_gvf',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
-        -parameters => {
-          'file_type'     => 'gvf',
-          'so_file'       => $self->o('so_file'),
-          'gvf_validator' => $self->o('gvf_validator'),
         },
-      },
-      { -logic_name => 'summary_validate_gvf', # die if Error?
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
-        -parameters => {
-          'file_type' => 'gvf',
+        { -logic_name => 'init_validate_gvf',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitValidation',
+          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+          -flow_into => {
+              1 => ['validate_gvf'],
+            },
+            -parameters => {
+              'file_type' => 'gvf',
+            },
         },
-        -flow_into => {
-          1 => ['cleanup_gvf_dumps'],
+        { -logic_name => 'validate_gvf',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
+          -parameters => {
+            'file_type'     => 'gvf',
+            'so_file'       => $self->o('so_file'),
+            'gvf_validator' => $self->o('gvf_validator'),
+          },
         },
-      },
+        { -logic_name => 'summary_validate_gvf', # die if Error?
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
+          -parameters => {
+            'file_type' => 'gvf',
+          },
+          -flow_into => {
+            1 => ['species_factory_cleanup_gvf_dumps'],
+          },
+        },
 
 
 # cleanup gvf dumps
-      { -logic_name        => 'cleanup_gvf_dumps',
-        -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-        -module            => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FileUtils',
-        -parameters        => {
-          'mode'  => 'post_gvf_dump_cleanup',
+        {   -logic_name => 'species_factory_cleanup_gvf_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+            -flow_into => {
+             '2->A' => ['cleanup_gvf_dumps'],
+             'A->1' => ['pre_run_checks_gvf2vcf' ],
+            },
         },
-        -flow_into => {
-          1 => ['pre_run_checks_gvf2vcf'],
+        { -logic_name        => 'cleanup_gvf_dumps',
+          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+          -module            => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FileUtils',
+          -parameters        => {
+            'mode'  => 'post_gvf_dump_cleanup',
+          },
         },
-      },
 
 # gvf2vcf
-      {   -logic_name => 'pre_run_checks_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 1,
-          -flow_into => {
-              '2->A' => ['init_parse'],
-              'A->1' => ['summary_validate_vcf']
-           },
-          -parameters => {
-              'file_type' => 'vcf',
-          },
-      },
-      {   -logic_name => 'init_parse',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-          -flow_into => {
-              2 => ['submit_job_gvf2vcf'],
-          },
-          -parameters => {
-              'file_type' => 'vcf',
-              'job_type'  => 'parse',
-          },
-      },
-      {   -logic_name => 'submit_job_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -flow_into => {
-              2 => ['validate_vcf'],
-          },
-      },
-      {   -logic_name => 'validate_vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
-          -parameters => {
-              'file_type' => 'vcf',
-          },
-      },
-      { -logic_name => 'summary_validate_vcf',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
-          -parameters => {
-              'file_type' => 'vcf',
-          },
-          -flow_into => {
-              1 => ['cleanup_gvf2vcf'],
-          },
-      },
+        {   -logic_name => 'pre_run_checks_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+            -max_retry_count => 1,
+            -flow_into => {
+                1 => ['species_factory_gvf2vcf'],
+            },
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+        },
+        {   -logic_name => 'species_factory_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+            -analysis_capacity => 3,
+            -flow_into => {
+                '2->A' => ['init_parse'],
+                'A->1' => ['summary_validate_vcf']
+             },
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+        },
+        {   -logic_name => 'init_parse',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
+            -flow_into => {
+                1 => ['submit_job_gvf2vcf'],
+            },
+            -parameters => {
+                'file_type' => 'vcf',
+                'job_type'  => 'parse',
+            },
+        },
+        {   -logic_name => 'submit_job_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+            -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+            -flow_into => {
+                1 => ['validate_vcf'],
+            },
+        },
+        {   -logic_name => 'validate_vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+        },
+        { -logic_name => 'summary_validate_vcf',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation',
+            -parameters => {
+                'file_type' => 'vcf',
+            },
+            -flow_into => {
+              1 => ['species_factory_cleanup_gvf2vcf'],
+            },
+        },
 
-      {   -logic_name => 'cleanup_gvf2vcf',
-          -module     => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FileUtils',
-          -parameters => {
-            'mode'     => 'post_gvf2vcf_cleanup',
-          },
-          -flow_into => {
-              '2->A' => ['init_join_dumps'],
-              'A->1' => ['cleanup_dumps']
-           },
-      },
-     {   -logic_name => 'init_join_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitJoinDump',
-          -flow_into => {
-              2 => ['join_dumps'],
-          },
-      },
-      {   -logic_name => 'join_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
-      },
-      {   -logic_name => 'cleanup_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
-          -parameters => {
-            'mode' => 'post_join_dumps',
-          },
-          -flow_into => {
-              1 => ['finish_dumps'],
-          },
-      },
-      {   -logic_name => 'finish_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
-          -parameters => {
-              'gvf_readme' => $self->o('gvf_readme'),
-              'vcf_readme' => $self->o('vcf_readme'),
-          }
-      },
-  );
+        {   -logic_name => 'species_factory_cleanup_gvf2vcf',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory',
+            -analysis_capacity => 3,
+            -flow_into => {
+                '2->A' => ['cleanup_gvf2vcf'],
+                'A->1' => ['species_factory_join_dumps']
+             },
+        },
+        {   -logic_name => 'cleanup_gvf2vcf',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FileUtils',
+            -parameters => {
+              'mode'     => 'post_gvf2vcf_cleanup',
+            },
+        },
+        {   -logic_name => 'species_factory_join_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+            -flow_into => {
+                '2->A' => ['init_join_dumps'],
+                'A->1' => ['species_factory_cleanup_dumps']
+             },
+        },
+       {   -logic_name => 'init_join_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitJoinDump',
+            -flow_into => {
+                1 => ['join_dumps'],
+            },
+        },
+        {   -logic_name => 'join_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+        },
+        {   -logic_name => 'species_factory_cleanup_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+            -flow_into => {
+                '2->A' => ['cleanup_dumps'],
+                'A->1' => ['finish_dumps']
+             },
+        },
+        {   -logic_name => 'cleanup_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::CleanUp',
+            -parameters => {
+              'mode' => 'post_join_dumps',
+            },
+        },
+        {   -logic_name => 'finish_dumps',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Finish',
+        },
+    );
+  }
   return \@analyses;
 }
 1;
