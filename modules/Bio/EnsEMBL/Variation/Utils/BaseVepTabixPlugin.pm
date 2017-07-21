@@ -340,7 +340,7 @@ sub _add_result_to_cache {
   my $cache = $self->cache;
 
   $cache->{results}->{$pos_string} = $result;
-  push @{$cache->{results_order}}, $result;
+  push @{$cache->{results_order}}, $pos_string;
 
   if(scalar @{$cache->{results_order}} > $self->cache_size) {
     my $del = shift @{$cache->{results_order}};
