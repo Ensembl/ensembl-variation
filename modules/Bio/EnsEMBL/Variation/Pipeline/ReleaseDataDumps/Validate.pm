@@ -32,6 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate;
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
 use File::Basename;
+sub fetch_input {}
 
 sub run {
   my $self = shift;
@@ -59,15 +60,13 @@ sub validate_gvf {
   my $file = "$working_dir/$file_name.gvf";
   my $file_for_validation = "$working_dir/$file_name\_validate.gvf";
   $self->run_cmd("head -2500 $file > $file_for_validation");
-  my $cmd = "$gvf_validator --so_file $so_file $file_for_validation";
+  my $cmd = "perl $gvf_validator --so_file $so_file $file_for_validation";
   $self->run_cmd("$cmd 1>$out 2>$err");	
   $self->run_cmd("rm $file_for_validation");
 }
 
 sub validate_vcf {
   my $self = shift;
-  my $vcf_validator = $self->param('vcf_validator');
-  my $vcf_sort = $self->param('vcf_sort');
   my $vcf_file = $self->param('vcf_file');
   $vcf_file =~ s/--vcf_file //;
   my ($file_name, $working_dir, $suffix) = fileparse($vcf_file, qr/\.[^.]*/);
@@ -80,13 +79,13 @@ sub validate_vcf {
   $self->run_cmd("head -2500 $vcf_file > $file_for_validation");
 
   # sort and bgzip
-  my $cmd = "$vcf_sort < $vcf_file | bgzip > $vcf_file.gz";
+  my $cmd = "vcf-sort < $vcf_file | bgzip > $vcf_file.gz";
   $self->run_cmd($cmd);
-  $cmd = "$vcf_sort < $file_for_validation | bgzip > $file_for_validation.gz";
+  $cmd = "vcf-sort < $file_for_validation | bgzip > $file_for_validation.gz";
   $self->run_cmd($cmd);
 
   # validate
-  $cmd = "$vcf_validator $file_for_validation.gz";
+  $cmd = "vcf-validator $file_for_validation.gz";
   $self->run_cmd("$cmd 1>$out 2>$err");
   $self->run_cmd("rm $file_for_validation");
 }

@@ -30,7 +30,10 @@ Questions may also be sent to the Ensembl help desk at
 package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob;
 
 use strict;
+use FileHandle;
 use base ('Bio::EnsEMBL::Hive::Process');
+
+sub fetch_input {}
 
 sub run {
   my $self = shift;
@@ -56,8 +59,6 @@ sub run {
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id({}, 1);
-  $self->dataflow_output_id({}, 2);
 }
 
 sub run_cmd {

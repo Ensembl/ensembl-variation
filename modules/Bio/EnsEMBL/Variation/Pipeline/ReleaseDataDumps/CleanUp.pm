@@ -33,21 +33,23 @@ use strict;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
+sub fetch_input {
+  my $self = shift;
+}
+
 sub run {
   my $self = shift;
+  my $data_dump_dir = $self->param('pipeline_dir');
   my $tmp_dir = $self->param('tmp_dir');
   my $file_type = $self->param('file_type');
 
   my $species = $self->param('species');
   my $mode = $self->param('mode');
-  my $data_dump_dir = $self->data_dir($species);
-
+  
   if ($mode eq 'post_gvf_dump') {
     my $working_dir = "$data_dump_dir/$file_type/$species";
-    opendir(my $dh, $working_dir) or die $!;
-    my @dir_content = readdir($dh);
-    closedir($dh);
-    foreach my $file (@dir_content) {
+    opendir(DIR, $working_dir) or die $!;
+    while (my $file = readdir(DIR))	{
       if ($file =~ m/gvf$/) {
         `gzip $working_dir/$file`;
       } 
@@ -55,15 +57,14 @@ sub run {
         `mv $working_dir/$file $tmp_dir`;
       }
     }				
+    closedir(DIR);
   }
 
   if ($mode eq 'post_join_dumps') {
     foreach my $file_type (qw/vcf gvf/) {
       my $working_dir = "$data_dump_dir/$file_type/$species";
-      opendir(my $dh, $working_dir) or die $!;
-      my @dir_content = readdir($dh);
-      closedir($dh);
-      foreach my $file (@dir_content) {
+      opendir(DIR, $working_dir) or die $!;
+      while (my $file = readdir(DIR))	{
         if ($file =~ m/generic/) {
           my $file_name = $file;
           $file_name =~ s/_generic//;
@@ -76,8 +77,13 @@ sub run {
           `gzip $working_dir/$file`;
         }
       }				
+      closedir(DIR);
     }
   }
+}
+
+sub write_output {
+  my $self = shift;
 }
 
 1;

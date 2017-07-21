@@ -27,52 +27,30 @@ limitations under the License.
  <http://www.ensembl.org/Help/Contact>.
 
 =cut
-package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation;
+package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Report;
 
 use strict;
+use JSON;
 use FileHandle;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
 sub fetch_input {
   my $self = shift;
-  my @input;
   my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type   = $self->param('file_type');
-
-  my $summary_file_name = '';
-  if ($file_type eq 'gvf') {
-    $summary_file_name = 'SummaryValidateGVF.txt';
-  } elsif ($file_type eq 'vcf') {
-    $summary_file_name = 'SummaryValidateVCF.txt';
-  } else {
-    die "File type ($file_type) is not correct. It must be gvf of vcf";
-  }
-
+  my $report_name = $self->param('report_name');
   my $all_species = $self->get_all_species();
-
-  my $fh = FileHandle->new("$pipeline_dir/$summary_file_name", 'w');
-  my $failed_dumps = 0;
+  my $fh = FileHandle->new("$pipeline_dir/$report_name", 'w');
   foreach my $species (keys %$all_species) {
-    my $path = "$pipeline_dir/$file_type/$species";
-    opendir(DIR, $path) or die $!;			
+    opendir(DIR, "$pipeline_dir/$file_type/$species") or die $!;			
     while (my $file = readdir(DIR)) {
-      if ($file =~ m/^Validate(.)*out$/) {
-        if ($file_type eq 'gvf') {
-          my $return_value = `grep 'No Errors found in this file' $path/$file`;				
-          if (length($return_value) == 0) {
-            print $fh "GVF validator reports errors for $file\n";
-            $failed_dumps++;
-          }
-        } elsif ($file_type eq 'vcf') {
-
-        }
-      }
+      next if ($file =~ m/^\./);
+      print $fh $file, "\n";		
     }	
-    closedir(DIR);
   }
   $fh->close();
-  $self->warning("For $failed_dumps dumps report errors.") if ($failed_dumps > 0);
+  closedir(DIR);
 }
 
 1;

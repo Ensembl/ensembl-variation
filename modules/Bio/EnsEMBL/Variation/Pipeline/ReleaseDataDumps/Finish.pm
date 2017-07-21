@@ -37,53 +37,56 @@ use FileHandle;
 use File::Path qw(make_path);
 use File::Spec;
 
+sub fetch_input {
+  my $self = shift;
+}
+
 sub run {
   my $self = shift;
-  my $species = $self->param('species');
-  my $config = $self->param('config');
-  my $data_dump_dir = $self->data_dir($species);
-
-
-  $self->delete_tmp_files($data_dump_dir, $species);
-  $self->tabix_vcf_files($data_dump_dir, $species);
-  $self->add_readme($data_dump_dir, $species);
-  $self->compute_checksums($data_dump_dir, $species);
-  $self->lc_dir($data_dump_dir, $species);
-  $self->rm_uc_dir($data_dump_dir, $species);
+  my $data_dump_dir = $self->param('pipeline_dir');
+  my $all_species = $self->get_all_species();
+  $self->delete_tmp_files($data_dump_dir, $all_species);
+  tabix_vcf_files($data_dump_dir, $all_species);
+  $self->add_readme($data_dump_dir, $all_species);
+  compute_checksums($data_dump_dir, $all_species);
+  lc_dir($data_dump_dir, $all_species);
+  rm_uc_dir($data_dump_dir, $all_species);
 }
 
 sub delete_tmp_files {
-  my ($self, $data_dir, $species) = @_;
+  my ($self, $data_dir, $all_species) = @_;
   my $tmp_dir = $self->param('tmp_dir');
-  foreach my $file_type (qw/vcf gvf/) {
-    my $working_dir = "$data_dir/$file_type/$species/";
-    opendir(my $dh, $working_dir) or die $!;
-    my @dir_content = readdir($dh);
-    closedir($dh);
-    foreach my $file (@dir_content) {
-      if ($file =~ m/_validate\.vcf.gz$|\.txt$/) {
-        system("mv $working_dir/$file $tmp_dir");
-        $self->warning($file);
+  foreach my $species (keys %$all_species) {
+    foreach my $file_type (qw/vcf gvf/) {
+      my $working_dir = "$data_dir/$file_type/$species/"; 
+      opendir(DIR, $working_dir) or die $!;
+      while (my $file = readdir(DIR)) {
+        if ($file =~ m/_validate\.vcf.gz$|\.txt$/) {
+          system("mv $working_dir/$file $tmp_dir");
+          $self->warning($file); 
+        }
       }
+      closedir(DIR);    
     }
   }
 }
 
 sub tabix_vcf_files {
-  my ($self, $data_dir, $species) = @_;
-  my $working_dir = "$data_dir/vcf/$species/";
-  opendir(my $dh, $working_dir) or die $!;
-  my @dir_content = readdir($dh);
-  closedir($dh);
-  foreach my $file (@dir_content) {
-    if ($file =~ m/\.vcf.gz$/) {
-      system("tabix -p vcf $working_dir/$file");
+  my ($data_dir, $all_species) = @_;
+  foreach my $species (keys %$all_species) {
+    my $working_dir = "$data_dir/vcf/$species/"; 
+    opendir(DIR, $working_dir) or die $!;
+    while (my $file = readdir(DIR)) {
+      if ($file =~ m/\.vcf.gz$/) {
+        system("tabix -p vcf $working_dir/$file");
+      }
     }
+    closedir(DIR);    
   }
 }
 
 sub add_readme {
-  my ($self, $data_dir, $species) = @_;
+  my ($self, $data_dir, $all_species) = @_;
   foreach my $file_type (qw/gvf vcf/) {
     my $readme_file = $self->param("$file_type\_readme");
     my $fh = FileHandle->new($readme_file, 'r');
@@ -92,34 +95,39 @@ sub add_readme {
       local $/ = undef;
       $readme = <$fh>;
     }    
-    $fh->close();
-    open README, ">$data_dir/$file_type/$species/README" or die "Failed to create README file for species $species\n";
-    print README sprintf($readme, $species, $species, $species, $species), "\n";
-    close README;
+    $fh->close();    
+    foreach my $species (keys %$all_species) {
+      open README, ">$data_dir/$file_type/$species/README" or die "Failed to create README file for species $species\n";
+      print README sprintf($readme, $species, $species, $species, $species), "\n";
+      close README;
+    }
   }
 }
 
 sub compute_checksums {
-  my ($self, $data_dir, $species) = @_;
+  my ($data_dir, $all_species) = @_;  
+
   foreach my $file_type (qw/vcf gvf/) {
-    my $working_dir = "$data_dir/$file_type/$species/";
-    opendir(my $dh, $working_dir) or die "Cannot open directory $working_dir";
-    my @files = sort {$a cmp $b} readdir($dh);
-    closedir($dh) or die "Cannot close directory $working_dir";
-    my @checksums = ();
-    foreach my $file (@files) {
-      next if $file =~ /^\./;
-      next if $file =~ /^CHECKSUM/;
-      my $path = File::Spec->catfile($working_dir, $file);
-      my $checksum = checksum($path);
-      push(@checksums, [$checksum, $file]);
+    foreach my $species (keys %$all_species) {
+      my $working_dir = "$data_dir/$file_type/$species/";
+      opendir(my $dh, $working_dir) or die "Cannot open directory $working_dir";
+      my @files = sort {$a cmp $b} readdir($dh);
+      closedir($dh) or die "Cannot close directory $working_dir";
+      my @checksums = ();
+      foreach my $file (@files) {
+        next if $file =~ /^\./;
+        next if $file =~ /^CHECKSUM/;
+        my $path = File::Spec->catfile($working_dir, $file);
+        my $checksum = checksum($path);
+        push(@checksums, [$checksum, $file]);
+      }
+      my $fh = FileHandle->new("$working_dir/CHECKSUMS", 'w');
+      foreach my $entry (@checksums) {
+        my $line = join("\t", @{$entry});
+        print $fh $line, "\n";
+      }
+      $fh->close();            
     }
-    my $fh = FileHandle->new("$working_dir/CHECKSUMS", 'w');
-    foreach my $entry (@checksums) {
-      my $line = join("\t", @{$entry});
-      print $fh $line, "\n";
-    }
-    $fh->close();
   }
 }
 
@@ -132,26 +140,30 @@ sub checksum {
 }
 
 sub lc_dir {
-  my ($self, $data_dir, $species) = @_;
-  my $lc_species = lc $species;
-  foreach my $file_type (qw/gvf vcf/) {
-    my $lc_dir = "$data_dir/$file_type/$lc_species/";
-    if (!-d $lc_dir) {
-      make_path($lc_dir) unless (-d $lc_dir);
-      system("mv $data_dir/$file_type/$species/* $lc_dir");
+  my ($data_dir, $all_species) = @_;
+  foreach my $species (keys %$all_species) {
+    my $lc_species = lc $species;
+    foreach my $file_type (qw/gvf vcf/) {
+      my $lc_dir = "$data_dir/$file_type/$lc_species/"; 
+      if (!-d $lc_dir) {      
+        make_path($lc_dir) unless (-d $lc_dir);
+        system("mv $data_dir/$file_type/$species/* $lc_dir");
+      }
     }
   }
 }
 
 sub rm_uc_dir {
-  my ($self, $data_dir, $species) = @_;
-  foreach my $file_type (qw/gvf vcf/) {
-    my $dir = "$data_dir/$file_type/$species/";
-    opendir my $dh, $dir or die $!;
-    my $count = grep { ! /^\.{1,2}/ } readdir $dh; # strips out . and
-    closedir $dh;
-    if ($count == 0)  {
-      system("rm -r $dir");
+  my ($data_dir, $all_species) = @_;
+  foreach my $species (keys %$all_species) {
+    foreach my $file_type (qw/gvf vcf/) {
+      my $dir = "$data_dir/$file_type/$species/";
+      opendir my $dh, $dir or die $!; 
+      my $count = grep { ! /^\.{1,2}/ } readdir $dh; # strips out . and 
+      closedir $dh;
+      if ($count == 0)  {
+        system("rm -r $dir");
+      }
     }
   }
 }

@@ -37,22 +37,24 @@ use Bio::EnsEMBL::Registry;
 use FileHandle;
 use JSON;
 
+
+sub fetch_input {
+	my $self = shift;
+}
+
 sub run {
 	my $self = shift;
     $self->write_config_file();
 }
 
+sub write_output {
+	my $self = shift;
+    $self->dataflow_output_id({'config_file' => $self->param('config_file')}, 1);
+    return 1;
+}
 
 sub write_config_file {
     my $self = shift;
-    my $species = $self->param('species');
-    my $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
-    my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'variation');
-    my @input;
-    my $params = {};
-    my $division = $self->division($dba);
-
-
     # structural_variation svs
     # somatic
     # incl consequences: protein info: sift, polyphen
@@ -61,53 +63,57 @@ sub write_config_file {
     # individuals:
     # sets: phenotypes, clinically_associated
     my $config = {};
+    my $species_variation_data = $self->get_all_species();
 
-    $self->variation_data_survey($config,$species,$vdba);
+    $self->variation_data_survey($config);
 
-    my $species_config = {
-        failed => ['failed'],
-        generic => ['evidence', 'validation_status'],
-        incl_consequences => ['incl_consequences', 'protein_coding_details', 'evidence'],
-    };
-    foreach my $attribute (qw/ancestral_allele global_maf clinical_significance/) {
-        if ($config->{$species}->{$attribute}) {
-            push @{$species_config->{generic}}, $attribute;
-            push @{$species_config->{incl_consequences}}, $attribute;
+    foreach my $species (keys %$species_variation_data) {
+        my $species_config = {
+            failed => ['failed'],
+            generic => ['evidence', 'validation_status'],
+            incl_consequences => ['incl_consequences', 'protein_coding_details', 'evidence'],
+        };
+        foreach my $attribute (qw/ancestral_allele global_maf clinical_significance/) {
+            if ($config->{$species}->{$attribute}) {
+                push @{$species_config->{generic}}, $attribute;
+                push @{$species_config->{incl_consequences}}, $attribute;
+            }
+        } 
+        if ($config->{$species}->{sift}) {
+            push @{$species_config->{incl_consequences}}, 'sift';
         }
-    } 
-    if ($config->{$species}->{sift}) {
-        push @{$species_config->{incl_consequences}}, 'sift';
-    }
-    if ($config->{$species}->{svs}) {
-        $species_config->{structural_variations} = ['structural_variations'];
-        if ($config->{$species}->{clinical_significance_svs}) {
-            push @{$species_config->{structural_variations}}, 'clinical_significance';
+        if ($config->{$species}->{svs}) {
+            $species_config->{structural_variations} = ['structural_variations'];
+            if ($config->{$species}->{clinical_significance_svs}) {
+                push @{$species_config->{structural_variations}}, 'clinical_significance';
+            }
         }
+        if ($species eq 'Homo_sapiens') {
+            $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+            $species_config->{sets}->{phenotype_associated} =  ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+            $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+            $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+            $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+            $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'variation_id', 'allele_string'];
+        }
+        $config->{$species} = $species_config;
     }
-    if ($species eq 'Homo_sapiens') {
-        $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{sets}->{phenotype_associated} =  ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'variation_id', 'allele_string'];
-    }
-    $config->{$species} = $species_config;
-    
-    $params->{species} = $species;
-    $params->{config}  = $config->{$species};
-    if ($division ne '') {
-      $params->{species_division} = $division;
-    }
-    push @input, $params;
-    
-    $self->dataflow_output_id(\@input, 2);
-    $self->dataflow_output_id(\@input, 1);
+    my $pipeline_dir = $self->param('pipeline_dir');
+    my $config_file = "$pipeline_dir/data_dumps_config.json"; 
+    my $fh = FileHandle->new($config_file, 'w');
+    my $json = JSON->new->allow_nonref;
+    print $fh $json->encode($config);
+    $fh->close();
+    $self->param('config_file', $config_file);
 }
 
 sub variation_data_survey {
-    my ($self,$config,$species,$vdba)=@_;
-    my $vdbc = $vdba->dbc();
+    my $self = shift;
+    my $config = shift;
+    my $registry = 'Bio::EnsEMBL::Registry';
+    $registry->load_all($self->param('registry_file'));
+    my $vdbas = $registry->get_all_DBAdaptors(-group => 'variation');
+
     my $queries = {
         sift => 'select count(*) from protein_function_predictions;',
         ancestral_allele => 'select variation_id from variation where ancestral_allele is not null limit 1;',
@@ -118,27 +124,31 @@ sub variation_data_survey {
     };
 
     foreach my $data_type (keys %$queries) {
-        my $sth = $vdbc->prepare($queries->{$data_type});
+        my $sub_set_species = query_database($vdbas, $queries->{$data_type});
+        foreach my $species (keys %$sub_set_species) {
+            $config->{$species}->{$data_type} = 1;
+        }
+    }
+}
+
+sub query_database {
+    my $vdbas = shift;
+    my $query = shift;
+    my $species_names = {};
+    foreach my $vdba (@$vdbas) {
+        my $species_name = $vdba->species();
+        my $dbh = $vdba->dbc->db_handle;
+        my $sth = $dbh->prepare($query);
         $sth->execute();
         while (my @row = $sth->fetchrow_array) {
             my $count = $row[0];
             if ($count > 0) {
-              $config->{$species}->{$data_type} = 1;
+                $species_names->{$species_name} = 1;
             }
         }
         $sth->finish();
     }
-    $vdbc->disconnect_if_idle();
-}
-
-
-sub division {
-    my ($self, $dba) = @_;
-    my ($division) = @{$dba->get_MetaContainer()->list_value_by_key('species.division')};
-    return if ! $division;
-    $division =~ s/^Ensembl//;
-
-return lc($division);
+    return $species_names;
 }
 
 1;
