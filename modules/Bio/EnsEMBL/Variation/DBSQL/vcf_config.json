@@ -27,26 +27,26 @@
       "sample_prefix": "1000GENOMES:phase_3:"
     },
     {
-      "id": "ExAC_GRCh37",
+      "id": "gnomADg_GRCh37",
+      "description": "Genome Aggregation Database genomes v170228",
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "strict_name_match": 1,
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ExAC.0.3.GRCh37.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad.genomes.r2.0.1.sites.noVEP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
-        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
       ],
-      "population_prefix": "ExAC:",
+      "population_prefix": "gnomADg:",
       "population_display_group": {
-        "display_group_name": "Exome Aggregation Consortium (ExAC)",
-        "display_group_priority": 2
+        "display_group_name": "gnomAD genomes",
+        "display_group_priority": 1.5
       },
       "populations": {
         "9900000": {
-          "name": "ExAC:ALL",
+          "name": "gnomADg:ALL",
           "_raw_name": "",
-          "description": "All ExAC individuals"
+          "description": "All gnomAD genomes individuals"
         },
         "9900001": {
           "name": "AFR",
@@ -57,8 +57,8 @@
           "description": "Latino"
         },
         "9900003": {
-          "name": "Adj",
-          "description": "Adjusted (individuals with GQ >= 20 and DP >= 10)"
+          "name": "ASJ",
+          "description": "Ashkenazi Jewish"
         },
         "9900004": {
           "name": "EAS",
@@ -75,34 +75,86 @@
         "9900007": {
           "name": "OTH",
           "description": "Other"
+        }
+      }
+    },
+    {
+      "id": "gnomADe_GRCh37",
+      "description": "Genome Aggregation Database exomes v170228",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad.exomes.r2.0.1.sites.GRCh37.noVEP.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ],
+      "population_prefix": "gnomADe:",
+      "population_display_group": {
+        "display_group_name": "gnomAD exomes",
+        "display_group_priority": 1.4
+      },
+      "populations": {
+        "9900010": {
+          "name": "gnomADe:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD exomes individuals"
         },
-        "9900008": {
+        "9900011": {
+          "name": "AFR",
+          "description": "African/African American"
+        },
+        "9900012": {
+          "name": "AMR",
+          "description": "Latino"
+        },
+        "9900013": {
+          "name": "ASJ",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900014": {
+          "name": "EAS",
+          "description": "East Asian"
+        },
+        "9900015": {
+          "name": "FIN",
+          "description": "Finnish"
+        },
+        "9900016": {
+          "name": "NFE",
+          "description": "Non-Finnish European"
+        },
+        "9900017": {
+          "name": "OTH",
+          "description": "Other"
+        },
+        "9900018": {
           "name": "SAS",
           "description": "South Asian"
         }
       }
     },
     {
-      "id": "ExAC_GRCh38",
+      "id": "gnomADg_GRCh38",
+      "description": "Genome Aggregation Database genomes v170228",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "strict_name_match": 1,
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ExAC.0.3.GRCh38.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad.genomes.r2.0.1.sites.GRCh38.noVEP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
-        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
       ],
-      "population_prefix": "ExAC:",
+      "population_prefix": "gnomADg:",
       "population_display_group": {
-        "display_group_name": "Exome Aggregation Consortium (ExAC)",
-        "display_group_priority": 2
+        "display_group_name": "gnomAD genomes",
+        "display_group_priority": 1.5
       },
       "populations": {
         "9900000": {
-          "name": "ExAC:ALL",
+          "name": "gnomADg:ALL",
           "_raw_name": "",
-          "description": "All ExAC individuals"
+          "description": "All gnomAD genomes individuals"
         },
         "9900001": {
           "name": "AFR",
@@ -113,8 +165,8 @@
           "description": "Latino"
         },
         "9900003": {
-          "name": "Adj",
-          "description": "Adjusted (individuals with GQ >= 20 and DP >= 10)"
+          "name": "ASJ",
+          "description": "Ashkenazi Jewish"
         },
         "9900004": {
           "name": "EAS",
@@ -131,10 +183,168 @@
         "9900007": {
           "name": "OTH",
           "description": "Other"
+        }
+      }
+    },
+    {
+      "id": "gnomADe_GRCh38",
+      "description": "Genome Aggregation Database exomes v170228",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad.exomes.r2.0.1.sites.noVEP.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ],
+      "population_prefix": "gnomADe:",
+      "population_display_group": {
+        "display_group_name": "gnomAD exomes",
+        "display_group_priority": 1.4
+      },
+      "populations": {
+        "9900010": {
+          "name": "gnomADe:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD exomes individuals"
         },
-        "9900008": {
+        "9900011": {
+          "name": "AFR",
+          "description": "African/African American"
+        },
+        "9900012": {
+          "name": "AMR",
+          "description": "Latino"
+        },
+        "9900013": {
+          "name": "ASJ",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900014": {
+          "name": "EAS",
+          "description": "East Asian"
+        },
+        "9900015": {
+          "name": "FIN",
+          "description": "Finnish"
+        },
+        "9900016": {
+          "name": "NFE",
+          "description": "Non-Finnish European"
+        },
+        "9900017": {
+          "name": "OTH",
+          "description": "Other"
+        },
+        "9900018": {
           "name": "SAS",
           "description": "South Asian"
+        }
+      }
+    },
+    {
+      "id": "topmed_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/TOPMED_GRCh37.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "TOPMed",
+      "population_display_group": {
+        "display_group_name": "TOPMed",
+        "display_group_priority": 2.5
+      },
+      "populations": {
+        "9990000": {
+          "name": "TOPMed",
+          "_raw_name": "TOPMed",
+          "_af": "TOPMED",
+          "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
+        }
+      }
+    },
+    {
+      "id": "topmed_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/TOPMED_GRCh38.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "TOPMed",
+      "population_display_group": {
+        "display_group_name": "TOPMed",
+        "display_group_priority": 2.5
+      },
+      "populations": {
+        "9990000": {
+          "name": "TOPMed",
+          "_raw_name": "TOPMed",
+          "_af": "TOPMED",
+          "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
+        }
+      }
+    },
+    {
+      "id": "uk10k_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/UK10K_COHORT.20160215.sites.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "UK10K",
+      "population_prefix": "UK10K:",
+      "population_display_group": {
+        "display_group_name": "UK10K",
+        "display_group_priority": 2.6
+      },
+      "populations": {
+        "9999000": {
+          "name": "ALSPAC",
+          "_raw_name": "ALSPAC",
+          "description": "ALSPAC cohort"
+        },
+        "9999001": {
+          "name": "TWINSUK",
+          "_raw_name": "TWINSUK_NODUP",
+          "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
+        }
+      }
+    },
+    {
+      "id": "uk10k_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/UK10K_COHORT.20160215.sites.GRCh38.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "UK10K",
+      "population_prefix": "UK10K:",
+      "population_display_group": {
+        "display_group_name": "UK10K",
+        "display_group_priority": 2.6
+      },
+      "populations": {
+        "9999000": {
+          "name": "ALSPAC",
+          "_raw_name": "ALSPAC",
+          "description": "ALSPAC cohort"
+        },
+        "9999001": {
+          "name": "TWINSUK",
+          "_raw_name": "TWINSUK_NODUP",
+          "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
         }
       }
     },
