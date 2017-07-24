@@ -713,7 +713,7 @@ sub hgvs_transcript {
   $intron_end_offset   ||= 0;
   print "pre pos sort : $hgvs_notation->{start},$hgvs_notation->{end}\n" if $DEBUG ==1;
   ($hgvs_notation->{start},$hgvs_notation->{end}) = ($hgvs_notation->{end},$hgvs_notation->{start}) if (
-    (($exon_start_coord + $intron_start_offset) > ($exon_end_coord + $intron_end_offset)) &&
+    (($exon_start_coord  > $exon_end_coord) || ($exon_start_coord  == $exon_end_coord && $intron_start_offset > $intron_end_offset) ) &&
     $hgvs_notation->{end} !~/\*/
   );
   print "post pos sort: $hgvs_notation->{start},$hgvs_notation->{end}\n" if $DEBUG ==1;
