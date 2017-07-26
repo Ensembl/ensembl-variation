@@ -457,8 +457,8 @@ sub get_all_highest_frequency_minor_Alleles {
 
     my @alleles = grep {defined($_->frequency) && $_->population} @{$self->variation->get_all_Alleles()};
 
-    # first try and filter down to just 1KG, ExAC and ESP
-    my @filtered = grep { $_->population->name =~ /^(ExAC|ESP6500\:|1000GENOMES\:phase_3\:)/ } @alleles;
+    # first try and filter down to just 1KG, ExAC, gnomAD and ESP
+    my @filtered = grep { $_->population->name =~ /^(ExAC|gnomAD|ESP6500\:|1000GENOMES\:phase_3\:)/ } @alleles;
 
     my $max_af = 0;
     my @max_alleles;
