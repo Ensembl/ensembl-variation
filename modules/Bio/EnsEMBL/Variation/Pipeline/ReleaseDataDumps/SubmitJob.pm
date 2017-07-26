@@ -49,7 +49,7 @@ sub run {
   my $out = $self->param('out');
 
   my $hive_dbc = $self->dbc;
-  $hive_dbc->disconnect_if_idle();
+  $hive_dbc->disconnect_if_idle() if defined $hive_dbc;
 
   my $cmd = "perl $script " . join(' ', @args); 
   $self->warning($cmd);
