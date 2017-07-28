@@ -75,6 +75,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -1268,13 +1269,31 @@ sub _seek_by_VariationFeature {
     }
     
     # otherwise compare coords
-    last if !$strict && $vcf->get_start == $vf->seq_region_start;
+    last if !$strict && @{$self->_get_matched_alleles_VF_VCF($vf, $vcf)};
     
     # if we've gone too far, quit out
-    return 0 if $vcf->get_start > $vf->seq_region_start + 1;
+    return 0 if $vcf->get_start > $vf->seq_region_end + 1;
   }
   
   return defined($vcf->{record});
+}
+
+sub _get_matched_alleles_VF_VCF {
+  my ($self, $vf, $vcf) = @_;
+
+  return get_matched_variant_alleles(
+    {
+      ref    => $vf->ref_allele_string,
+      alts   => $vf->alt_alleles,
+      pos    => $vf->seq_region_start,
+      strand => $vf->strand
+    },
+    {
+      ref  => $vcf->get_reference,
+      alts => $vcf->get_alternatives,
+      pos  => $vcf->get_raw_start,
+    }
+  );
 }
 
 sub _get_Population_Sample_hash {
