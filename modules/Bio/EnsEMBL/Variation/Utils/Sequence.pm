@@ -64,7 +64,7 @@ package Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
-use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
+use Bio::EnsEMBL::Utils::Scalar qw(wrap_array assert_ref);
 use Exporter;
 
 use vars qw(@ISA @EXPORT_OK);
@@ -84,6 +84,7 @@ use vars qw(@ISA @EXPORT_OK);
     &align_seqs 
     &strain_ambiguity_code
     &revcomp_tandem
+    &get_matched_variant_alleles
     &trim_sequences
     %EVIDENCE_VALUES
 );
@@ -987,6 +988,166 @@ sub trim_sequences {
   }
 
   return [$ref, $alt, $start, $end, $changed];
+}
+
+
+=head2 get_matched_variant_alleles
+
+  Arg[1]      : hashref $var_a (see below for expected structure)
+  Arg[2]      : hashref $var_b
+  Example     : my @matches = @{get_matched_variant_alleles($var_a, $var_b)}
+  Description : Takes a pair of simplified variant hashes and finds alternate
+                alleles that match between the two.
+
+                $var = {
+
+                  # describe alleles as ref and alts
+                  ref  => 'A',
+                  alts => ['G', 'T'],
+
+                  # OR as "/"-separated allele string, ref first (marginally less efficient)
+                  allele_string => 'A/G/T',
+
+                  pos => 12345,
+                  strand => 1, # (optional, defaults to 1)
+                }
+
+                Within each variant, each reference (REF) and alternate (ALT)
+                allele pair is considered separately, with identical sequence
+                being trimmed from each end using trim_sequences(). Both
+                directions are tested (trim from start then end, then trim from
+                end then start).
+
+                Matching pairs of alleles are returned as a hashref indicating
+                the matched allele as it originally appeared as well as the index
+                position of the matched allele in the array of ALTs:
+  ReturnType  : arrayref of hashrefs:
+                [
+                  {
+                    a_allele => $matched_allele_from_var_a,
+                    a_index  => $index_of_matched_allele_in_b_alts,
+                    b_allele => $matched_allele_from_var_b,
+                    b_index  => $index_of_matched_allele_in_b_alts,
+                  }
+                ]
+  Exceptions  : throws if
+                - $var_a or $var_b are not hashrefs
+                - no ref, alt and/or pos key supplied for either $var_a or $var_b
+  Caller      : VEP, VCFCollection, DumpVEP pipeline
+
+=cut
+
+sub get_matched_variant_alleles {
+  my ($a, $b) = @_;
+
+  assert_ref($a, 'HASH');
+  assert_ref($b, 'HASH');
+
+  # convert allele_string key
+  foreach my $var($a, $b) {
+    if(my $as = $var->{allele_string}) {
+      my @alleles = split('/', $as);
+      $var->{ref}  ||= shift @alleles;
+      $var->{alts}   = \@alleles unless exists($var->{alts});
+    }
+  }
+
+  # check ref
+  throw("Missing ref key in first variant") unless exists($a->{ref});
+  throw("Missing ref key in second variant") unless exists($b->{ref});
+
+  # check alts
+  $a->{alts} ||= [$a->{alt}] if defined($a->{alt});
+  $b->{alts} ||= [$b->{alt}] if defined($b->{alt});
+  throw("Missing alt or alts key in first variant") unless exists($a->{alts});
+  throw("Missing alt or alts key in second variant") unless exists($b->{alts});
+
+  # check pos
+  throw("Missing pos key in first variant") unless $a->{pos};
+  throw("Missing pos key in second variant") unless $b->{pos};
+
+  # munge in strand
+  $a->{strand} = 1 unless exists($a->{strand});
+  $b->{strand} = 1 unless exists($b->{strand});
+
+  # reverse ref of $a if required
+  # do it this way as typical use case will be $a is a VF and $b is from a VCF (always fwd)
+  my $a_ref = $a->{ref};
+  reverse_comp(\$a_ref) if $a->{strand} != $b->{strand};
+
+  # we might need to minimise pairs of alleles if user has input weirdness
+  # so we're going to create keys for each minimised ref/alt pair
+  # also trim both ways in case?
+  my (%minimised_a_alleles, %a_indexes);
+  my $i = 0;
+
+  foreach my $orig_a_alt(@{$a->{alts}}) {
+    my $alt = $orig_a_alt;
+
+    # we store the index position of each alt so we can look it up and return it later
+    $a_indexes{$orig_a_alt} = $i++;
+
+    reverse_comp(\$alt) if $a->{strand} != $b->{strand};
+
+    # only need to trim both directions if length of either allele > 1
+    foreach my $direction(@{_get_trim_directions($a_ref, $orig_a_alt)}) {
+      my $pos = $a->{pos};
+      my $ref = $a_ref;
+      ($ref, $alt, $pos) = @{trim_sequences($ref, $alt, $pos, undef, 1, $direction)};
+
+      # store the original alt as when we come to report results
+      # we need to match back against the alt as it was in the user input
+      $minimised_a_alleles{"$ref\_$alt\_$pos"} = $orig_a_alt;
+    }    
+  }
+
+  # use these as backups as we might modify them
+  my $orig_b_pos = $b->{pos};
+  my $orig_b_ref = $b->{ref};
+
+  # we're going to return a list of hashrefs containing the matched allele indexes and alleles
+  my @matches;
+
+  $i = 0;
+  foreach my $orig_b_alt(@{$b->{alts}}) {
+
+    # we're going to minimise $b's alleles one by one and compare the pos and alleles to $a
+    # only need to trim both directions if length of either allele > 1
+    DIRECTION: foreach my $direction(@{_get_trim_directions($orig_b_ref, $orig_b_alt)}) {
+
+      # first make copies of everything
+      my $pos = $orig_b_pos;
+      my $ref = $orig_b_ref;
+      my $alt = $orig_b_alt;
+
+      ($ref, $alt, $pos) = @{trim_sequences($ref, $alt, $pos, undef, 1, $direction)};
+
+      if(my $orig_a_alt = $minimised_a_alleles{"$ref\_$alt\_$pos"}) {
+        push @matches, {
+          a_allele => $orig_a_alt,
+          a_index  => $a_indexes{$orig_a_alt},
+          b_allele => $orig_b_alt,
+          b_index  => $i
+        };
+        last DIRECTION;
+      }
+    }
+
+    $i++;
+  }
+
+  return \@matches;
+}
+
+# accessory method for get_matched_variant_alleles()
+sub _get_trim_directions {
+  my ($ref, $alt) = @_;
+  if(length($ref) > 1 || length($alt) > 1) {
+    return [0, 1];
+  }
+  else {
+    return [0];
+  }
 }
 
 
