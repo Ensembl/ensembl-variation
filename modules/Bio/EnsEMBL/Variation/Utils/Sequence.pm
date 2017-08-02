@@ -1082,23 +1082,24 @@ sub get_matched_variant_alleles {
   my $i = 0;
 
   foreach my $orig_a_alt(@{$a->{alts}}) {
-    my $alt = $orig_a_alt;
 
     # we store the index position of each alt so we can look it up and return it later
     $a_indexes{$orig_a_alt} = $i++;
 
-    reverse_comp(\$alt) if $a->{strand} != $b->{strand};
+    my $rev_alt = $orig_a_alt;
+    reverse_comp(\$rev_alt) if $a->{strand} != $b->{strand};
 
     # only need to trim both directions if length of either allele > 1
     foreach my $direction(@{_get_trim_directions($a_ref, $orig_a_alt)}) {
       my $pos = $a->{pos};
       my $ref = $a_ref;
+      my $alt = $rev_alt;
       ($ref, $alt, $pos) = @{trim_sequences($ref, $alt, $pos, undef, 1, $direction)};
 
       # store the original alt as when we come to report results
       # we need to match back against the alt as it was in the user input
       $minimised_a_alleles{"$ref\_$alt\_$pos"} = $orig_a_alt;
-    }    
+    }
   }
 
   # use these as backups as we might modify them

@@ -603,6 +603,25 @@ my @tests = (
     ],
     d => '-/TG/TGTG/TGTGTG vs TTGTGTG/TTGTGTGTGTG/TTGTG/TTGTGTGTG/TTG/TTGTGTGTGTGTG/T'
   },
+  {
+    a => {allele_string => 'A/AA/-', pos => 179117285},
+    b => {allele_string => 'TAA/TA/TAAA/TAAAA/T', pos => 179117284},
+    r => [
+      {
+        'a_index' => 1,
+        'a_allele' => '-',
+        'b_allele' => 'TA',
+        'b_index' => 0
+      },
+      {
+        'a_index' => 0,
+        'a_allele' => 'AA',
+        'b_allele' => 'TAAA',
+        'b_index' => 1
+      }
+    ],
+    d => 'A/AA/- vs TAA/TA/TAAA/TAAAA/T'
+  },
 );
 
 # run tests
