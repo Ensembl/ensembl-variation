@@ -253,6 +253,14 @@ my %test_output = (
             "", 
             "mitochondrial"
            ],
+
+     35 => ["NC_000003.11:g.10191479_10191483delinsTTTTT",
+            "TTTTT",
+            "ENST00000345392.2:c.349_353delinsTTTTT",
+            "TTTTT",
+            "ENSP00000344757.2:p.Leu117_Lys118delinsPheLeu",
+            "del ins if > 1 aa not a subs"
+           ]
 );
 
 my %test_output_shifted = (   
@@ -422,6 +430,12 @@ my %test_input = (
      25 => ["NC_000019.9:g.7706085T>C",
            ],
 
+     35 => ["NC_000003.11:g.10191479_10191483delinsTTTTT",
+            "NC_000003.11:g.10191478_10191483delinsTTTTTT",
+            "ENST00000345392.2:c.349_353delinsTTTTT",
+            "ENSP00000344757.2:p.Leu117_Lys118delinsPheLeu",
+            "ENSP00000344757.2:p.LeuLys117PheLeu"
+            ]
 );
 
 my %test_input_shifted = (

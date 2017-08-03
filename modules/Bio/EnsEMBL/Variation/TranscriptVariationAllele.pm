@@ -1187,8 +1187,9 @@ sub _get_hgvs_protein_type {
       $hgvs_notation->{type} = ">";
     }
     elsif(
-      (length($hgvs_notation->{alt}) >0 && length($hgvs_notation->{ref}) >0) &&
-      (length($hgvs_notation->{alt}) ne length($hgvs_notation->{ref}))
+      ((length($hgvs_notation->{alt}) >0 && length($hgvs_notation->{ref}) >0) &&
+      (length($hgvs_notation->{alt}) ne length($hgvs_notation->{ref})) )  ||
+      (length($hgvs_notation->{alt}) >1 && length($hgvs_notation->{ref}) >1)     ## not a substitution if >1 aa switched
     ) {
       $hgvs_notation->{type} = "delins";
     }
