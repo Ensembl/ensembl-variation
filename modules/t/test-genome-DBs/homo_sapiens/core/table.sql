@@ -295,7 +295,6 @@ CREATE TABLE `gene` (
   `seq_region_strand` tinyint(2) NOT NULL,
   `display_xref_id` int(10) unsigned DEFAULT NULL,
   `source` varchar(40) NOT NULL,
-  `status` enum('KNOWN','NOVEL','PUTATIVE','PREDICTED','KNOWN_BY_PROJECTION','UNKNOWN','ANNOTATED') DEFAULT NULL,
   `description` text,
   `is_current` tinyint(1) NOT NULL DEFAULT '1',
   `canonical_transcript_id` int(10) unsigned NOT NULL,
@@ -477,7 +476,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=1012 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1016 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) COLLATE latin1_bin NOT NULL DEFAULT '',
@@ -656,7 +655,7 @@ CREATE TABLE `protein_feature` (
   `seq_end` int(10) NOT NULL DEFAULT '0',
   `hit_start` int(10) NOT NULL DEFAULT '0',
   `hit_end` int(10) NOT NULL DEFAULT '0',
-  `hit_name` varchar(40) COLLATE latin1_bin NOT NULL DEFAULT '',
+  `hit_name` varchar(40) COLLATE latin1_bin NOT NULL,
   `analysis_id` int(10) unsigned NOT NULL DEFAULT '0',
   `score` double NOT NULL DEFAULT '0',
   `evalue` double DEFAULT NULL,
@@ -784,7 +783,6 @@ CREATE TABLE `transcript` (
   `display_xref_id` int(10) unsigned DEFAULT NULL,
   `source` varchar(40) NOT NULL DEFAULT 'ensembl',
   `biotype` varchar(40) NOT NULL,
-  `status` enum('KNOWN','NOVEL','PUTATIVE','PREDICTED','KNOWN_BY_PROJECTION','UNKNOWN','ANNOTATED') DEFAULT NULL,
   `description` text,
   `is_current` tinyint(1) NOT NULL DEFAULT '1',
   `canonical_translation_id` int(10) unsigned DEFAULT NULL,
