@@ -88,6 +88,17 @@ clear_fasta_cache();
 is($slice1->expand(5, 5)->invert->seq, $seq1, "rev - expand single bp slice 5' and 3' and invert after cache clear");
 
 
+# test subseq
+clear_fasta_cache();
+$slice1 = $sa->fetch_by_region('chromosome', 21, 25606450, 25606460);
+is($slice1->subseq, 'CATGGCACAAC', 'subseq - no params');
+is($slice1->subseq(1, 5), 'CATGG', 'subseq 1');
+is($slice1->subseq(3, 5), 'TGG', 'subseq 2');
+is($slice1->subseq(3, 5, -1), 'CCA', 'subseq rev');
+is($slice1->subseq(5, 4), '', 'subseq e > s');
+is($slice1->subseq(-1, 5), 'CGCATGG', "subseq overlap 5'");
+
+
 # test going off ends
 $slice1 = $sa->fetch_by_region('chromosome', 21, 1, 10);
 is($slice1->seq, 'N' x 10, "start of chrom");

@@ -214,16 +214,22 @@ sub setup_fasta {
   # dont re-redefine
   unless($Bio::EnsEMBL::Slice::_fasta_redefined) {
 
-    # "back up" the original seq method
+    # "back up" the original seq and subseq method
     # that way we can fall back to it later
     no warnings 'redefine';
     *Bio::EnsEMBL::Slice::_fasta_old_db_seq = \&Bio::EnsEMBL::Slice::seq unless $offline;
 
-    # redefine Slice's seq() method
+    no warnings 'redefine';
+    *Bio::EnsEMBL::Slice::_fasta_old_db_subseq = \&Bio::EnsEMBL::Slice::subseq unless $offline;
+
+    # redefine Slice's seq() and subseq() methods
     # to a new method that uses the FASTA sequence
     # and some nice caching
     no warnings 'redefine';
     *Bio::EnsEMBL::Slice::seq = _new_slice_seq();
+
+    no warnings 'redefine';
+    *Bio::EnsEMBL::Slice::subseq = _new_slice_seq();
 
     # this method does the actual fetching
     # separate so it can easily use Bio::DB::Fasta or Faidx
@@ -261,6 +267,9 @@ sub setup_fasta {
 sub revert_fasta {
   no warnings 'redefine';
   *Bio::EnsEMBL::Slice::seq = \&Bio::EnsEMBL::Slice::_fasta_old_db_seq;
+
+  no warnings 'redefine';
+  *Bio::EnsEMBL::Slice::subseq = \&Bio::EnsEMBL::Slice::_fasta_old_db_subseq;
 
   undef $Bio::EnsEMBL::Slice::fasta_db;
   undef $Bio::EnsEMBL::Slice::_fasta_PARs;
@@ -349,10 +358,13 @@ sub _get_fasta_db {
 # sequence is cached in 1MB range around the current slice
 sub _new_slice_seq {
   return sub {
-    my $self = shift;
+    my ($self, $start, $end, $strand) = @_;
     my ($seq, $length) = ('', 0);
 
-    my ($sr_name, $start, $end, $strand) = ($self->seq_region_name, $self->start, $self->end, $self->strand);
+    $start = $start ? ($self->start + $start) - 1 : $self->start;
+    $end   = $end   ? ($self->start + $end) - 1   : $self->end;
+    $strand = defined($strand) ? $strand * $self->strand : $self->strand;
+    my $sr_name = $self->seq_region_name;
 
     # indels
     return "" if $start > $end;
@@ -382,7 +394,10 @@ sub _new_slice_seq {
 
       if(!($fa_length && $fa_length > 0) && $self->can('_fasta_old_db_seq')) {
         print STDERR "USING DATABASE\n" if $DEBUG;
-        return $self->_fasta_old_db_seq();
+        return
+          defined($start) || defined($end) || defined($strand) ?
+          $self->_fasta_old_db_subseq($start, $end, $strand) :
+          $self->_fasta_old_db_seq();
       }
     }
 
