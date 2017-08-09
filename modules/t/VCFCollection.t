@@ -279,8 +279,21 @@ is_deeply(
   'get_all_Alleles_by_VariationFeature - Adj freqs and counts'
 );
 
+# test one which has an allele not found in dbSNP entry
+($vf) = @{$va->fetch_by_name('rs145769591')->get_all_VariationFeatures};
+is_deeply(
+  [
+    map {keys %{$_->{_missing_alleles}}}
+    grep {$_->population->name eq 'ExAC:AFR'}
+    @{$coll->get_all_Alleles_by_VariationFeature($vf)}
+  ],
+  ['GG', 'GG'],
+  'get_all_Alleles_by_VariationFeature - _missing_alleles'
+);
+
 
 ## test dbsnp which has ref freq included
+($vf) = @{$va->fetch_by_name('rs192076014')->get_all_VariationFeatures};
 $coll = $vca->fetch_by_id('dbsnp');
 ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
 
