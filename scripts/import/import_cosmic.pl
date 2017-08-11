@@ -126,16 +126,8 @@ else {
 }
 
 # Read through the file and parse out the desired fields
-my $header = 1;
 while (<IN>) {
   chomp;
-  if ($header){
-    if ($_ =~ /^\s+\d+\s+\//) {
-      $header = 0;
-      next;
-    }
-  }
-  next if ($header);
   my @line = split(',',$_);
   
   my $chr = shift(@line);
@@ -297,21 +289,8 @@ sub get_variation_set_id {
   }
 }
 
-sub get_allele_code_id {
-  my $allele = shift;
-  
-  # Check if the allele_code_id already exists, else it create the entry
-  if (!$dbVar->selectrow_arrayref(qq{SELECT allele_code_id FROM allele_code WHERE allele="$allele"})) {
-    $dbVar->do(qq{INSERT INTO allele_code (allele) VALUES ("$allele")});
-  }
-  my $allele_code_ids = $dbVar->selectrow_arrayref(qq{SELECT allele_code_id FROM allele_code WHERE allele="$allele"});
-  return $allele_code_ids->[0];
-}
-
 
 sub insert_cosmic_entries {
-  
-  my $allele_code_id = get_allele_code_id($allele);
   
   # Insert Var
   my $stmt_var = qq{INSERT IGNORE INTO variation (name, source_id, class_attrib_id, somatic)
@@ -340,11 +319,5 @@ sub insert_cosmic_entries {
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
   $sth_set->execute($variation_set_id, $source_id);
-  
-  # Insert Allele
-  my $stmt_al = qq{INSERT IGNORE INTO allele (variation_id, allele_code_id)
-                   SELECT variation_id, ? FROM variation WHERE source_id=?};
-  my $sth_al  = $dbh->prepare($stmt_al);
-  $sth_al->execute($allele_code_id, $source_id);
 }
 

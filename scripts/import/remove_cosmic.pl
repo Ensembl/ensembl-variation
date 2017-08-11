@@ -106,15 +106,6 @@ $dbh->do(qq{
     AND     v.source_id = $source_id
 });
 
-# allele - variation_id
-
-$dbh->do(qq{
-    DELETE  a
-    FROM    allele a, variation v
-    WHERE   a.variation_id = v.variation_id
-    AND     v.source_id = $source_id
-});
-
 # phenotype_feature_attrib - variation_id
 
 $dbh->do(qq{
