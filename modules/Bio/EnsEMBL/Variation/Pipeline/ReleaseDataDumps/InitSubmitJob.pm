@@ -162,7 +162,6 @@ sub get_input_gvf2vcf {
   my $script_dir      = $self->param('script_dir');
   my $script          = '/misc/release/gvf2vcf.pl';
   my $connection_args = '--registry ' . $self->param('registry');
-  my $species = $self->param('species');
   my @input = ();
 
   # don't forget to parse Populations and Individuals
@@ -200,6 +199,7 @@ sub get_input_gvf2vcf {
 
 sub get_script_arg {
   my ($self, $file_name, $script_args) = @_;
+  my $return_script_arg = '';
   while (my ($script_arg, $dump_type) = each %$script_args) {
     $self->warning("get_script_arg $script_arg $dump_type");
     if ($file_name =~ /$dump_type/) {
