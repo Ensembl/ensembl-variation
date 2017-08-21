@@ -200,6 +200,7 @@ sub init_data {
         'loss_of_heterozygosity' => 'loss_of_heterozygosity',
         'substitution' => 'substitution',
         'genetic_marker' => 'genetic_marker',
+        'mobile_element_deletion' => 'mobile_element_deletion',
     };
     my @vep_consequence_info =  qw/Allele Consequence Feature_type Feature/;
     if ($config->{protein_coding_details}) {
@@ -349,7 +350,7 @@ sub add_position_and_alleles {
         my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$start-$end");
         $ref = $slice->seq();
     }
-    my $pos;
+    my $pos = $start;
     my @alts = split(',', $alt);
 
     my @alleles = ();
@@ -367,18 +368,20 @@ sub add_position_and_alleles {
     my $look_up = ();
     if (scalar keys %allele_lengths > 1) {
         # we need ref base before the variation; default to N
-        my $prev_start = $start - 1;
-        my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$prev_start-$prev_start");
+        #print STDERR "$ref/$alt $seq_region_name $start $end ", $gvf_line->{Dbxref}, "\n";
+        if ($ref ne '-') {
+          $pos--;
+        }
+        my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$pos-$pos");
         my $prev_base = $slice->seq() || 'N';
         for my $i (0..$#alleles) {
             $alleles[$i] =~ s/\-//g;
             $look_up->{ $prev_base . $alleles[$i] } = $alleles[$i];
             $alleles[$i] = $prev_base . $alleles[$i];
         }
-        $pos = $start - 1;
         $ref = shift @alleles;
+        #print STDERR "$pos $ref ", join('/', @alleles), "\n";
     } else {
-        $pos = $start;
         shift @alleles;
     }
     $alt = join(',', @alleles);
@@ -756,6 +759,7 @@ sub print_header {
             '##ALT=<ID=loss_of_heterozygosity,Description="loss_of_heterozygosity">',
             '##ALT=<ID=substitution,Description="substitution">',
             '##ALT=<ID=genetic_marker,Description="genetic_marker">',
+            '##ALT=<ID=mobile_element_deletion,Description="mobile_element_deletion">',
         )), "\n";
     }
 
