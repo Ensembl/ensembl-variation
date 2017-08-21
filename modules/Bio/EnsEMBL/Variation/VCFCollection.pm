@@ -1265,7 +1265,8 @@ sub _seek_by_VariationFeature {
   # compare IDs
   my $count = 0;
   my $strict = $self->strict_name_match;
-  my @names = ($vf->variation_name, @{$vf->variation->get_all_synonyms});
+  my @names = ($vf->variation_name);
+  push @names, @{$vf->variation->get_all_synonyms} if ($vf->variation);
   
   RECORD: while($count++ < 10 && $vcf->next()) {
     last if !$vcf->{record};
