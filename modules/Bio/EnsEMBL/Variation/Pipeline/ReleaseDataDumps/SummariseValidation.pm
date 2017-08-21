@@ -30,15 +30,15 @@ limitations under the License.
 package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SummariseValidation;
 
 use strict;
-use FileHandle;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
 sub fetch_input {
   my $self = shift;
   my @input;
-  my $pipeline_dir = $self->param('pipeline_dir');
   my $file_type   = $self->param('file_type');
+  my $species = $self->param('species');
+  my $pipeline_dir = $self->data_dir($species);
 
   my $summary_file_name = '';
   if ($file_type eq 'gvf') {
@@ -49,30 +49,28 @@ sub fetch_input {
     die "File type ($file_type) is not correct. It must be gvf of vcf";
   }
 
-  my $all_species = $self->get_all_species();
+  open(my $fh, '>>', "$pipeline_dir/$summary_file_name") or die "Could not open file '$pipeline_dir/$summary_file_name' $!";
 
-  my $fh = FileHandle->new("$pipeline_dir/$summary_file_name", 'w');
   my $failed_dumps = 0;
-  foreach my $species (keys %$all_species) {
-    my $path = "$pipeline_dir/$file_type/$species";
-    opendir(DIR, $path) or die $!;			
-    while (my $file = readdir(DIR)) {
-      if ($file =~ m/^Validate(.)*out$/) {
-        if ($file_type eq 'gvf') {
-          my $return_value = `grep 'No Errors found in this file' $path/$file`;				
-          if (length($return_value) == 0) {
-            print $fh "GVF validator reports errors for $file\n";
-            $failed_dumps++;
-          }
-        } elsif ($file_type eq 'vcf') {
 
+  my $path = "$pipeline_dir/$file_type/$species";
+  opendir(my $dh, $path) or die $!;
+  my @dir_content = readdir($dh);
+  closedir($dh);
+  foreach my $file (@dir_content) {
+    if ($file =~ m/^Validate(.)*out$/) {
+      if ($file_type eq 'gvf') {
+        my $return_value = `grep 'No Errors found in this file' $path/$file`;
+        if (length($return_value) == 0) {
+          print $fh "GVF validator reports errors for $file\n";
+          $failed_dumps++;
         }
+      } elsif ($file_type eq 'vcf') {
       }
-    }	
-    closedir(DIR);
+    }
   }
-  $fh->close();
-  $self->warning("For $failed_dumps dumps report errors.") if ($failed_dumps > 0);
+  close $fh;
+  $self->warning("For $species, $failed_dumps dumps report errors.") if ($failed_dumps > 0);
 }
 
 1;

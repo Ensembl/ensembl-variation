@@ -30,10 +30,7 @@ Questions may also be sent to the Ensembl help desk at
 package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob;
 
 use strict;
-use FileHandle;
 use base ('Bio::EnsEMBL::Hive::Process');
-
-sub fetch_input {}
 
 sub run {
   my $self = shift;
@@ -51,6 +48,9 @@ sub run {
   my $err = $self->param('err');
   my $out = $self->param('out');
 
+  my $hive_dbc = $self->dbc;
+  $hive_dbc->disconnect_if_idle() if defined $hive_dbc;
+
   my $cmd = "perl $script " . join(' ', @args); 
   $self->warning($cmd);
   $self->run_cmd("$cmd 1>$out 2>$err");					
@@ -59,6 +59,8 @@ sub run {
 
 sub write_output {
   my $self = shift;
+  $self->dataflow_output_id({}, 1);
+  $self->dataflow_output_id({}, 2);
 }
 
 sub run_cmd {
