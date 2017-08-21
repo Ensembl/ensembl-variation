@@ -38,21 +38,18 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 
 sub run {
   my $self = shift;
+  my $pipeline_dir = $self->param('pipeline_dir');
   my $species      = $self->param('species');
-  my $pipeline_dir = $self->data_dir($species);
-
 
   my @input = ();
  
   foreach my $file_type (qw/gvf vcf/) {
 
     my $dir = "$pipeline_dir/$file_type/$species/";
+    opendir(DIR, $dir) or die $!;
     my $files = {};
 
-    opendir(my $dh, $dir) or die $!;
-    my @dir_content = readdir($dh);
-    closedir($dh);
-    foreach my $file (@dir_content) {
+    while (my $file = readdir(DIR)) {
       next if ($file =~ m/^\./);
       if ($file =~ m/\.$file_type\.gz/) {
         my $file_name = $file;
@@ -86,9 +83,9 @@ sub run {
 sub write_output {
   my $self = shift;
   if (scalar @{$self->param('input')} > 0) {
-    $self->dataflow_output_id($self->param('input'), 2);
+    $self->dataflow_output_id($self->param('input'), 1);
   } else {
-    $self->dataflow_output_id([{mode => 'no_join'}], 2);
+    $self->dataflow_output_id([{mode => 'no_join'}], 1);
   }
   return;
 }

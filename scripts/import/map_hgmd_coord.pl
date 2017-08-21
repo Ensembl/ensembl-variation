@@ -185,17 +185,10 @@ while (<IN>) {
 
       $data{region_id} = $slices_newdb_newasm[0]->get_seq_region_id;
 
-      # new feature spans start of first projection segment to end of last segment
-      #print "old_seq_region_name is ",$old_slice->get_seq_region_id," old_start is ",$feat->start," old_end is ",$feat->end," new_seq_region_name is ",$new_seq_region_id," new_start is ",$new_start," new_end is ",$new_end,"\n" if (@slices_newdb_newasm);
- 
       print_all_buffers(\%data);
-    
-      #print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$allele2) . "\n");
-      #print OUT join "\t",$slices_newdb_newasm[0]->get_seq_region_id,$new_start,$new_end,$slices_newdb_newasm[0]->strand,"$variation_id\t$allele_string\t$variation_name\t$map_weight\t$flags\t$source_id\t$validation_status\n";
-      }
+    }
     else {
       print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n") if $var_name;
-      #print ERR "$variation_id\t$seq_region_id\t$seq_region_start\t$seq_region_end\n";
     }
   }
   else {
@@ -217,8 +210,7 @@ print_buffered($buffer);
 
 debug("Loading mapping data...");
 
-foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_allele",
-                  "$TMP_DIR/$header\_variation_annotation","$TMP_DIR/$header\_error") {
+foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_variation_annotation","$TMP_DIR/$header\_error") {
   if (-e "$file") {
     system("mv $file  $TMP_DIR/$TMP_FILE") ;
     $file =~ s/$TMP_DIR\///;
@@ -227,9 +219,6 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_allel
     if (!$mapping_ref->[0][0]) {
       if ($file =~ /variation_feature/) {
         create_and_load ($dbVar2,"$file","seq_region_id i*","seq_region_start i","seq_region_end i","seq_region_strand i","variation_id i*","allele_string","variation_name","map_weight","flags","source_id i","validation_status","consequence_type");
-      }
-      elsif ($file =~ /allele/) {
-        create_and_load ($dbVar2,"$file","variation_id i*","allele");
       }
       elsif ($file =~ /variation_annotation/) {
         create_and_load ($dbVar2,"$file","variation_id i*","variation_name","associated_gene");
@@ -241,9 +230,6 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_allel
     else {
       if ($file =~ /variation_feature/) {
         load ($dbVar2,"$file","seq_region_id","seq_region_start","seq_region_end","seq_region_strand","variation_id","allele_string","variation_name","map_weight","flags","source_id","validation_status","consequence_type");
-      }
-      elsif ($file =~ /allele/) {
-        load ($dbVar2,"$file","variation_id","allele");
       }
       elsif ($file =~ /variation_annotation/) {
         load ($dbVar2,"$file","variation_id","variation_name","associated_gene");

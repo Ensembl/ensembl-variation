@@ -20,6 +20,7 @@ use DBI;
 use strict;
 use POSIX;
 use Getopt::Long;
+use JSON;
 
 ###############
 ### Options ###
@@ -57,76 +58,78 @@ if (!$user) {
 }
 usage() if ($help);
 
-my %pops_list = (
-  'ExAC'   => {
-                'ExAC:ALL' => 'All ExAC individuals',
-                'ExAC:AFR' => 'African/African American',
-                'ExAC:AMR' => 'Latino',
-                'ExAC:Adj' => 'Adjusted (individuals with GQ >= 20 and depth DP >= 10)',
-                'ExAC:EAS' => 'East Asian',
-                'ExAC:FIN' => 'Finnish',
-                'ExAC:NFE' => 'Non-Finnish European',
-                'ExAC:OTH' => 'Other',
-                'ExAC:SAS' => 'South Asian'
-              },
-  'UK10K'  => { 
-                'ALSPAC'  => 'Avon Longitudinal Study of Parents and Children (ALSPAC) cohort.',
-                'TWINSUK' => 'Allele count in TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release.'
-              },
-  'TOPMed' => { 'TOPMed' => 'Trans-Omics for Precision Medicine (TOPMed) Program.' }
-);
+my $vcf_config_file = '../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+
+# read config from JSON config file
+open IN, $vcf_config_file or throw("ERROR: Could not read from config file $vcf_config_file");
+local $/ = undef;
+my $json_string = <IN>;
+ close IN;
+    
+# parse JSON into hashref $config
+my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file");
+
+my %pops_list;
+
+my %projects_in_vcf = ('gnomADe_GRCh38' => 1, 'gnomADg_GRCh38' => 1, 'uk10k_GRCh38' => 1, 'topmed_GRCh38' => 1);
+
+get_project_populations(\%projects_in_vcf);
 
 ## Settings ##
-my %pops = ('1000 Genomes Project'                => { 'order'      => 1,
-                                                       'species'    => 'Homo sapiens',
-                                                       'term'       => '1000GENOMES:phase_3%',
-                                                       'constraint' => 'size is not null',
-                                                       'url'        => 'http://www.1000genomes.org',
-                                                       'evidence'   => '1000Genomes'
-                                                     },
-            'Exome Aggregation Consortium (ExAC)' => { 'order'    => 2,
-                                                       'species'  => 'Homo sapiens',
-                                                       'list'     => $pops_list{'ExAC'},
-                                                       'url'      => 'http://exac.broadinstitute.org/',
-                                                       'evidence' => 'ExAC'
-                                                     },
-            'TOPMed'                              => { 'order'    => 3,
-                                                       'species'  => 'Homo sapiens',
-                                                       'list'     => $pops_list{'TOPMed'},
-                                                       'url'      => 'https://www.nhlbi.nih.gov/research/resources/nhlbi-precision-medicine-initiative/topmed'
-                                                     },
-            'UK10K'                               => { 'order'    => 4,
-                                                       'species'  => 'Homo sapiens',
-                                                       'list'     => $pops_list{'UK10K'},
-                                                       'url'      => 'https://www.uk10k.org/'
-                                                     },
-            'HapMap Project'                      => { 'order'    => 5,
-                                                       'species'  => 'Homo sapiens',
-                                                       'term'     => 'CSHL-HAPMAP:HAPMAP%',
-                                                       'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
-                                                       'evidence' => 'HapMap'
-                                                     },
-            'Exome Sequencing Project (ESP)'      => { 'order'    => 6,
-                                                       'species'  => 'Homo sapiens',
-                                                       'term'     => 'ESP6500:%',
-                                                       'url'      => 'http://evs.gs.washington.edu/EVS/',
-                                                       'evidence' => 'ESP'
-                                                     },
-            'Mouse Genomes Project (MGP)'         => { 'order'    => 7,
-                                                       'species'  => 'Mus musculus',
-                                                       'term'     => 'Mouse Genomes Project',
-                                                       'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
-                                                     },
-            'NextGen Project - Sheep'             => { 'order'    => 8,
-                                                       'species'  => 'Ovis aries',
-                                                       'term'     => 'NextGen:%',
-                                                       'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                     },
-            'NextGen Project - Cow'               => { 'order'    => 9,
-                                                       'species'  => 'Bos taurus',
-                                                       'term'     => 'NextGen:%',
-                                                       'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                     },
+my %pops = ('1000 Genomes Project'           => { 'order'      => 1,
+                                                  'species'    => 'Homo sapiens',
+                                                  'term'       => '1000GENOMES:phase_3%',
+                                                  'constraint' => 'size is not null',
+                                                  'url'        => 'http://www.1000genomes.org',
+                                                  'evidence'   => '1000Genomes'
+                                                },
+            'gnomAD exomes'                  => { 'order'    => 2,
+                                                  'species'  => 'Homo sapiens',
+                                                  'list'     => $pops_list{'gnomADe_GRCh38'},
+                                                  'url'      => 'http://gnomad.broadinstitute.org/'
+                                                },
+            'gnomAD genomes'                 => { 'order'    => 3,
+                                                  'species'  => 'Homo sapiens',
+                                                  'list'     => $pops_list{'gnomADg_GRCh38'},
+                                                  'url'      => 'http://gnomad.broadinstitute.org/'
+                                                },
+            'TOPMed'                         => { 'order'    => 4,
+                                                  'species'  => 'Homo sapiens',
+                                                  'list'     => $pops_list{'topmed_GRCh38'},
+                                                  'url'      => 'https://www.nhlbi.nih.gov/research/resources/nhlbi-precision-medicine-initiative/topmed'
+                                                },
+            'UK10K'                          => { 'order'    => 5,
+                                                  'species'  => 'Homo sapiens',
+                                                  'list'     => $pops_list{'uk10k_GRCh38'},
+                                                  'url'      => 'https://www.uk10k.org/'
+                                                },
+            'HapMap Project'                 => { 'order'    => 6,
+                                                  'species'  => 'Homo sapiens',
+                                                  'term'     => 'CSHL-HAPMAP:HAPMAP%',
+                                                  'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
+                                                  'evidence' => 'HapMap'
+                                                },
+            'Exome Sequencing Project (ESP)' => { 'order'    => 7,
+                                                  'species'  => 'Homo sapiens',
+                                                  'term'     => 'ESP6500:%',
+                                                  'url'      => 'http://evs.gs.washington.edu/EVS/',
+                                                  'evidence' => 'ESP'
+                                                },
+            'Mouse Genomes Project (MGP)'    => { 'order'    => 8,
+                                                  'species'  => 'Mus musculus',
+                                                  'term'     => 'Mouse Genomes Project',
+                                                  'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
+                                                },
+            'NextGen Project - Sheep'        => { 'order'    => 9,
+                                                  'species'  => 'Ovis aries',
+                                                  'term'     => 'NextGen:%',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
+            'NextGen Project - Cow'          => { 'order'    => 10,
+                                                  'species'  => 'Bos taurus',
+                                                  'term'     => 'NextGen:%',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
            );
            
 my $server_name = 'http://static.ensembl.org';
@@ -404,6 +407,25 @@ sub parse_desc {
   my @desc = split(/\.,/, $content);
   $content = "$desc[0]. $desc[1]." if scalar(@desc > 1);
   return $content;
+}
+
+sub get_project_populations {
+  my $projects = shift;
+  
+  foreach my $project (@{$vcf_config->{'collections'}}) {
+    my $project_id = $project->{'id'};
+    my $project_prefix = ($project->{'population_prefix'}) ? $project->{'population_prefix'} : '';
+    if ($projects->{$project_id}) {
+      foreach my $pop (keys(%{$project->{'populations'}})) {
+        my $pop_name = $project->{'populations'}{$pop}{'name'};
+        if ($project_prefix && $pop_name !~ /$project_prefix/i) {
+          $pop_name = $project_prefix.$pop_name;
+        }
+        my $pop_desc = $project->{'populations'}{$pop}{'description'};
+        $pops_list{$project_id}{$pop_name} = $pop_desc;
+     }
+   }
+  }
 }
 
 sub usage {

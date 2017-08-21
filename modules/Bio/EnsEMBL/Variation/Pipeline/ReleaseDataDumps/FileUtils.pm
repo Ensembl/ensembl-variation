@@ -33,19 +33,23 @@ use strict;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
+sub fetch_input {
+  my $self = shift;
+}
+
 sub run {
   my $self = shift;
   my $mode = $self->param('mode');
-  my $tmp_dir = $self->param('tmp_dir');
-  my $species = $self->param('species');
-  my $data_dump_dir = $self->data_dir($species);
-
-  $self->post_gvf_dump_cleanup($data_dump_dir,$tmp_dir,$species) if ($mode eq 'post_gvf_dump_cleanup');
-  $self->post_gvf2vcf_cleanup($data_dump_dir,$tmp_dir,$species) if ($mode eq 'post_gvf2vcf_cleanup');
+  $self->post_gvf_dump_cleanup if ($mode eq 'post_gvf_dump_cleanup');
+  $self->post_gvf2vcf_cleanup if ($mode eq 'post_gvf2vcf_cleanup');
 }
 
 sub post_gvf_dump_cleanup {
-  my ($self,$data_dump_dir,$tmp_dir,$species) = @_;
+  my $self = shift;
+  my $data_dump_dir = $self->param('pipeline_dir');
+  my $tmp_dir = $self->param('tmp_dir');
+  my $species = $self->param('species');
+
   system("gzip $data_dump_dir/gvf/$species/*.gvf");
   system("cat $data_dump_dir/gvf/$species/Validate_* > $tmp_dir/GVF_Validate_$species");
   system("rm $data_dump_dir/gvf/$species/Validate_*");
@@ -54,7 +58,10 @@ sub post_gvf_dump_cleanup {
 }
 
 sub post_gvf2vcf_cleanup {
-  my ($self,$data_dump_dir,$tmp_dir,$species) = @_;
+  my $self = shift;
+  my $data_dump_dir = $self->param('pipeline_dir');
+  my $tmp_dir = $self->param('tmp_dir');
+  my $species = $self->param('species');
   system("cat $data_dump_dir/vcf/$species/Validate_* > $tmp_dir/VCF_Validate_$species");
   system("rm $data_dump_dir/vcf/$species/Validate_*");
   system("cat $data_dump_dir/vcf/$species/*.{err,out} > $tmp_dir/VCF_$species");
@@ -65,8 +72,6 @@ sub post_gvf2vcf_cleanup {
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id({}, 2);
-  $self->dataflow_output_id({}, 1);
 }
 
 1;

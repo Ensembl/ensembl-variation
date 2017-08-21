@@ -1336,6 +1336,7 @@ sub store{
    foreach my $attrib_type( keys %{$pf->{attribs}} ){
        my $attrib_type_id = $aa->attrib_id_for_type_code($attrib_type);
        throw("No attrib type ID found for attrib_type  ", $attrib_type) unless defined  $attrib_type_id;
+       $pf->{attribs}->{$attrib_type} =~ s/\s+$//;
        $pfa_sth->execute( $pf->{dbID}, $attrib_type_id, $pf->{attribs}->{$attrib_type} );
    }
    $pfa_sth->finish;

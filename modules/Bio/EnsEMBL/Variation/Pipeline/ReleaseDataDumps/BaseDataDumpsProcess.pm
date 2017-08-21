@@ -35,18 +35,6 @@ use base ('Bio::EnsEMBL::Hive::Process');
 
 use Bio::EnsEMBL::Registry;
 
-sub data_dir {
-  my ($self,$species) = @_;
-  my $data_dump_dir = $self->param('pipeline_dir');
-  my $species_division = $self->param('species_division');
-  # If division is defined append the pipeline_dir
-  if ($species_division)
-  {
-    $data_dump_dir = $data_dump_dir."/".$species_division;
-  }
-  return $data_dump_dir;
-}
-
 sub get_all_species {
     my $self = shift;
     my $registry = 'Bio::EnsEMBL::Registry';

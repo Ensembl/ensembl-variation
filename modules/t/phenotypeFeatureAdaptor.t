@@ -190,5 +190,33 @@ my $attribs = $pfa->_fetch_attribs_by_dbID(1);
 ok($attribs->{'associated_gene'} eq 'YES1', '_fetch_attribs_by_dbID');
 throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without dbID/, ' > Throw on missing dbID';
 
+
+### test trailing white space removal on attrib value
+my $padded_genename  = "gene name  ";
+my $clipped_genename = "gene name";
+my $v_name = 'rs_ws';
+my $variation = Bio::EnsEMBL::Variation::Variation->new(-name   => $v_name,
+                                                        -source => $pf->source);
+
+my $pf_ws = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+    -slice     => $sl,
+    -start     => 23821095,
+    -end       => 23821095,
+    -phenotype => $pf->phenotype(),
+    -type      => 'Variation',
+    -object    => $variation,
+    -source    => $pf->source(),
+    -is_significant =>1,
+    -attribs   => {
+      associated_gene => $padded_genename,
+    },
+);
+
+$pfa->store($pf_ws);
+my $pf_ws_ext = $pfa->fetch_all_by_object_id('rs_ws');
+ok($pf_ws_ext->[0]->associated_gene() eq $clipped_genename, "trailing white space removal" );
+
+
+
 done_testing();
 

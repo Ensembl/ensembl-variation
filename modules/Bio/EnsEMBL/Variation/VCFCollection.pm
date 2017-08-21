@@ -75,6 +75,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -662,29 +663,19 @@ sub get_all_Alleles_by_VariationFeature {
   
   my $vcf = $self->_current();
 
+  # get data from VF
+  my $vf_ref = $vf->ref_allele_string;
+  my $vf_alts = $vf->alt_alleles;
+
+  # and VCF entry
   my $info = $vcf->get_info;
-  my $ref = $vcf->get_reference;
-  my $alts = $vcf->get_alternatives;
-  my $start = $vcf->get_raw_start;
+  my $vcf_alts = $vcf->get_alternatives;
 
-  # find out if all the alts start with the same base
-  # ignore "*"-types
-  my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} ($ref, @$alts);
+  my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
 
-  if(scalar keys %first_bases == 1) {
-    $ref = substr($ref, 1) || '-';
-    $start++;
+  return [] unless @$matched;
 
-    my @new_alts;
-
-    foreach my $alt_allele(@$alts) {
-      $alt_allele = substr($alt_allele, 1) unless $alt_allele =~ /\*/;
-      $alt_allele = '-' if $alt_allele eq '';
-      push @new_alts, $alt_allele;
-    }
-
-    $alts = \@new_alts;
-  }
+  my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
 
   my @alleles;
 
@@ -692,6 +683,9 @@ sub get_all_Alleles_by_VariationFeature {
   @pops = grep {$_->name eq $given_pop || ($_->{_raw_name} || '') eq $given_pop} @pops if $given_pop;
 
   my $ref_freq_index = $self->ref_freq_index();
+
+  # log any alleles present in the VCF not present in the VF alleles
+  my $missing_alleles = {};
 
   foreach my $pop(@pops) {
 
@@ -715,22 +709,28 @@ sub get_all_Alleles_by_VariationFeature {
       my @split = split(',', $af);
 
       # is ref AC included? This may have been set as ref_freq_index()
-      # or we can auto-detect by comparing size of @split o @$alts
-      $freqs{$ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
-        if defined($ref_freq_index) || scalar @split > scalar @$alts;
+      # or we can auto-detect by comparing size of @split to @$vcf_alts
+      $freqs{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
+        if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
 
       for my $i(0..$#split) {
         my $f = $split[$i];
         next if $f eq '.';
         $total += $f;
-        $freqs{$alts->[$i]} = $f;
-        $counts{$alts->[$i]} = sprintf('%.0f', $f * $an) if $an;
+
+        if(my $allele = $allele_map{$i}) {
+          $freqs{$allele} = $f;
+          $counts{$allele} = sprintf('%.0f', $f * $an) if $an;
+        }
+        else {
+          $missing_alleles->{$pop->dbID}->{$vcf_alts->[$i]} = 1;
+        }
       }
 
       # but in most cases ref isn't explicitly mentioned
-      unless(exists($freqs{$ref})) {
-        $freqs{$ref} = 1 - $total;
-        $counts{$ref} = sprintf('%.0f', (1 - $total) * $an) if $an;
+      unless(exists($freqs{$vf_ref})) {
+        $freqs{$vf_ref} = 1 - $total;
+        $counts{$vf_ref} = sprintf('%.0f', (1 - $total) * $an) if $an;
       }
     }
 
@@ -741,22 +741,27 @@ sub get_all_Alleles_by_VariationFeature {
       my @split = split(',', $ac);
 
       # is ref AC included? This may have been set as ref_freq_index()
-      # or we can auto-detect by comparing size of @split o @$alts
-      $freqs{$ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
-        if defined($ref_freq_index) || scalar @split > scalar @$alts;
+      # or we can auto-detect by comparing size of @split to @$vcf_alts
+      $freqs{$vf_ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
+        if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
 
       for my $i(0..$#split) {
-        my $a = $alts->[$i];
         my $c = $split[$i];
         $total += $c;
-        $counts{$a} = $c;
-        $freqs{$a} = sprintf('%.4g', $c / $an);
+
+        if(my $allele = $allele_map{$i}) {
+          $counts{$allele} = $c;
+          $freqs{$allele} = sprintf('%.4g', $c / $an);
+        }
+        else {
+          $missing_alleles->{$pop->dbID}->{$vcf_alts->[$i]} = 1;
+        }
       }
 
       # but in most cases ref isn't explicitly mentioned
-      unless(exists($freqs{$ref})) {
-        $counts{$ref} = $an - $total;
-        $freqs{$ref} = sprintf('%.4g', 1 - ($total / $an));
+      unless(exists($freqs{$vf_ref})) {
+        $counts{$vf_ref} = $an - $total;
+        $freqs{$vf_ref} = sprintf('%.4g', 1 - ($total / $an));
       }
     }
 
@@ -769,6 +774,7 @@ sub get_all_Alleles_by_VariationFeature {
         variation  => $vf->variation,
         adaptor    => $self,
         subsnp     => undef,
+        _missing_alleles => $missing_alleles->{$pop->dbID} || {},
       })
     }
   }
@@ -1006,49 +1012,51 @@ sub _create_SampleGenotypeFeatures {
   
   $self->{_gta} ||= $self->use_db ? $self->adaptor->db->get_SampleGenotypeFeatureAdaptor : undef;
 
-  # we need the alleles unless this is a SNP
-  my @alleles;
-
-  my $class_SO_term = $vf->class_SO_term();
   my $vcf = $self->_current();
-  if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
-    @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
-  }
- 
+
+  my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
+  my %allele_map = map {$_->{b_allele} => $_->{a_allele}} @$matched;
+  $allele_map{$vcf->get_reference} = $vf->ref_allele_string;
+  my $missing_alleles = {};
+
   my $sample2genotype = {}; 
-  foreach my $sample(@$samples) {
+  SAMPLE: foreach my $sample(@$samples) {
     next unless defined($raw_gts->{$sample->{_raw_name}});
     
     my $raw_gt = $raw_gts->{$sample->{_raw_name}};
     my $phased = ($raw_gt =~ /\|/ ? 1 : 0);
     
-    my @bits = split(/\||\/|\\/, $raw_gt);
-    
-    # reverse complement alleles if VF is on -ve strand
-    if(($vf->{strand} || $vf->seq_region_strand || 1) < 0) {
-      reverse_comp(\$_) for @bits
-    }
-    
-    # adjust alleles for non-SNVs
-    if(defined($class_SO_term) && $class_SO_term ne 'SNV') {
-      my %first_char = map {substr($_, 0, 1) => 1} @alleles;
-      
-      # only do this if the first base is the same in all alleles
-      if(scalar keys %first_char == 1) {
-        $_ = substr($_, 1) || '-' for @bits;
+    my @vcf_bits = split(/\||\/|\\/, $raw_gt);
+
+    # map to VF
+    my @vf_bits;
+    my $missing = 0;
+    foreach my $bit(@vcf_bits) {
+      if(my $mapped_bit = $allele_map{$bit}) {
+        push @vf_bits, $mapped_bit;
+      }
+      else {
+        $missing_alleles->{$sample->dbID}->{$bit}++;
+        $missing = 1;
       }
     }
+
+    next SAMPLE unless @vf_bits && !$missing;
+
     if (!$cmp) {
-      my $sgf = $self->_create_SampleGenotypeFeature($sample, \@bits, $phased, $vf);
+      my $sgf = $self->_create_SampleGenotypeFeature($sample, \@vf_bits, $phased, $vf);
       push @genotypes, $sgf;
     } else { 
-      $sample2genotype->{$sample->{name}}->{genotype} = [sort @bits];
+      $sample2genotype->{$sample->{name}}->{genotype} = [sort @vf_bits];
       $sample2genotype->{$sample->{name}}->{phased} = $phased;
       $sample2genotype->{$sample->{name}}->{sample} = $sample;
     }
   } 
 
   if (!$cmp) {
+    # log the missing alleles on the first genotype object
+    # the adaptor object upstream will then find this
+    $genotypes[0]->{_missing_alleles} = $missing_alleles if scalar keys %$missing_alleles;
     return \@genotypes;
   }
   my $sample_cmp_name = $sample_cmp->name;
@@ -1257,7 +1265,8 @@ sub _seek_by_VariationFeature {
   # compare IDs
   my $count = 0;
   my $strict = $self->strict_name_match;
-  my @names = ($vf->variation_name, @{$vf->variation->get_all_synonyms});
+  my @names = ($vf->variation_name);
+  push @names, @{$vf->variation->get_all_synonyms} if ($vf->variation);
   
   RECORD: while($count++ < 10 && $vcf->next()) {
     last if !$vcf->{record};
@@ -1268,13 +1277,31 @@ sub _seek_by_VariationFeature {
     }
     
     # otherwise compare coords
-    last if !$strict && $vcf->get_start == $vf->seq_region_start;
+    last if !$strict && @{$self->_get_matched_alleles_VF_VCF($vf, $vcf)};
     
     # if we've gone too far, quit out
-    return 0 if $vcf->get_start > $vf->seq_region_start + 1;
+    return 0 if $vcf->get_start > $vf->seq_region_end + 1;
   }
   
   return defined($vcf->{record});
+}
+
+sub _get_matched_alleles_VF_VCF {
+  my ($self, $vf, $vcf) = @_;
+
+  return get_matched_variant_alleles(
+    {
+      ref    => $vf->ref_allele_string,
+      alts   => $vf->alt_alleles,
+      pos    => $vf->seq_region_start,
+      strand => $vf->strand
+    },
+    {
+      ref  => $vcf->get_reference,
+      alts => $vcf->get_alternatives,
+      pos  => $vcf->get_raw_start,
+    }
+  );
 }
 
 sub _get_Population_Sample_hash {

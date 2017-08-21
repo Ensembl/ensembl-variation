@@ -170,9 +170,9 @@ $html = qq{
 <table class="ss" style="width:auto">
   $html_content
 </table>
-<p>Further explanations about the clinical significance terms are available on the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/clinsig/" target="_blank">ClinVar website</a>.</p>
+<p>Further explanations about the clinical significance terms are available on the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/clinsig/">ClinVar website</a>.</p>
 <h3>ClinVar rating</h3>
-<p>We use the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/details/#interpretation" target="_blank">ClinVar "four-star" rating</a> system to indicate the quality of classification/validation of the variant:</p>
+<p>We use the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/details/#interpretation">ClinVar "four-star" rating</a> system to indicate the quality of classification/validation of the variant:</p>
 <table class="ss" style="width:auto">
   <tr><th>Rating</th><th>Description</th><th$border_left>Example</th></tr>
 $html_star_content
