@@ -151,6 +151,9 @@ sub fetch_input {
           my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
           my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
 
+          # drop existing MTMP
+          $dbc->do(qq{DROP TABLE $table});
+
           my $sth = $dbc->prepare(qq{
             SHOW CREATE TABLE $source_table
           });
@@ -163,7 +166,7 @@ sub fetch_input {
           $create_sth =~ s/^set/enum/;
 
           # rename table
-          $create_sth =~ s/TABLE \`$source_table\`/TABLE IF NOT EXISTS \`$table\`/;
+          $create_sth =~ s/TABLE \`$source_table\`/TABLE \`$table\`/;
 
           # filter out some columns
           $create_sth =~ s/\`?$_.+?,// for @exclude;
@@ -178,8 +181,7 @@ sub fetch_input {
           $create_sth =~ s/,(\s+\))/$1/;
 
           $dbc->do($create_sth);
-          $dbc->do('TRUNCATE TABLE MTMP_transcript_variation');
-          $dbc->do("ALTER TABLE MTMP_transcript_variation DISABLE KEYS");
+          $dbc->do("ALTER TABLE $table DISABLE KEYS");
 
           push @rebuild, $table;
         }

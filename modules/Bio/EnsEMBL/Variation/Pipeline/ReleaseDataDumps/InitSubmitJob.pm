@@ -27,12 +27,12 @@ use FileHandle;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
-my $global_vf_count_in_species = 5_000_000; # if number of vf in a species exceeds this we need to split up dumps
-my $max_vf_load = 2_000_000; # group slices together until the vf count exceeds max_vf_load
-my $vf_per_slice = 2_000_000; # if number of vf exceeds this we split the slice and dump for each split slice
-my $max_split_slice_length = 500_000;
+my $global_vf_count_in_species; #= 5_000_000; # if number of vf in a species exceeds this we need to split up dumps
+my $max_vf_load; #= 2_000_000; # group slices together until the vf count exceeds max_vf_load
+my $vf_per_slice; #= 2_000_000; # if number of vf exceeds this we split the slice and dump for each split slice
+my $max_split_slice_length; #= 500_000;
 
-my $overlap = 0;
+my $overlap = 1;
 my $debug = 0;
 
 my $debug_fh;
@@ -332,7 +332,9 @@ sub get_vf_distributions {
 
   if (scalar @seq_region_ids > 0) {
     push @vf_loads, $self->get_seq_regions(\@seq_region_ids, "$output_dir/gvf/$species/"); 
-    print $debug_fh "JOIN_SLICES\t", join(',', @seq_region_ids), "\t$current_vf_load\n";  
+    if ($debug) {
+      print $debug_fh "JOIN_SLICES\t", join(',', @seq_region_ids), "\t$current_vf_load\n";  
+    }
 
   }
 

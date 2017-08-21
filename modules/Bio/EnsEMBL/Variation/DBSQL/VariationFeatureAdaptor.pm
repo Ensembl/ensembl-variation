@@ -1725,42 +1725,57 @@ sub fetch_by_hgvs_notation {
     #Get the Transcript object to convert coordinates
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     my $transcript = $transcript_adaptor->fetch_by_stable_id($reference);
+
+    my @transcripts;
     
     #try and fetch via gene
     if(!defined($transcript)) {
-      my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-      my ($gene) = grep {($_->external_name || '') eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
-      
-      if($gene) {  
-        $transcript = $gene->canonical_transcript();
-        
-        if(!defined($transcript)) { 
-          foreach my $tr(@{$gene->get_all_Transcripts}) {
-            $transcript = $tr if grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
-          }
-        }
-      }
+      push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
+    }
+    else {
+      push @transcripts, $transcript;
     }
     
-    throw ("Could not get a Transcript object for '$reference'") if !defined($transcript);
+    throw ("Could not get a Transcript object for '$reference'") unless @transcripts;
 
-    my $is_exonic;
-    ($start, $end, $strand, $is_exonic) =  _parse_hgvs_transcript_position($description, $transcript) ; 
+    my @results;
+    my %errors;
 
-    $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());   
-    ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);
+    foreach my $transcript(@transcripts) {
+      my ($is_exonic, $result);
 
-    my $result = $self->_hgvs_from_components($hgvs, $reference, $type, $description, $slice, $ref_allele, $alt_allele, $start, $end, $strand);
-    return $multiple_ok ? [$result] : $result;
+      eval {        
+        ($start, $end, $strand, $is_exonic) = _parse_hgvs_transcript_position($description, $transcript) ; 
+
+        $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());   
+        ($ref_allele, $alt_allele) = get_hgvs_alleles($hgvs);
+
+        $result = $self->_hgvs_from_components(
+          $hgvs, $reference, $type, $description,
+          $slice, $ref_allele, $alt_allele, $start, $end, $strand
+        )
+      };
+
+      if($@) {
+        $errors{$@} = 1;
+      }
+      else {
+        push @results, $result;
+      }
+    }
+
+    throw(join("\n", keys %errors)) unless @results;
+
+    return $multiple_ok ? \@results : $results[0];
   }
 
   elsif($type =~ m/g|m/i) {
-    ($start, $end) =  _parse_hgvs_genomic_position($description) ;  
+    ($start, $end) = _parse_hgvs_genomic_position($description) ;  
     
     ## grab reference allele; second call after "||" allows for LRG regions to be fetched
     $slice = $slice_adaptor->fetch_by_region('chromosome', $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);    
     $strand =1; ## strand should be genome strand for HGVS genomic notation
-    ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);
+    ($ref_allele, $alt_allele) = get_hgvs_alleles($hgvs);
 
     my $result = $self->_hgvs_from_components($hgvs, $reference, $type, $description, $slice, $ref_allele, $alt_allele, $start, $end, $strand);
     return $multiple_ok ? [$result] : $result;
@@ -1772,24 +1787,55 @@ sub fetch_by_hgvs_notation {
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);
     
+    my @transcripts;
+
     #try and fetch via gene
     if(!defined($transcript)) {
-      my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-      my ($gene) = @{$gene_adaptor->fetch_all_by_external_name($reference)};
-      
-      $transcript = $self->_pick_likely_transcript($gene->get_all_Transcripts) if $gene;
-
-      print STDERR "Picked transcript ".$transcript->stable_id."\n" if $DEBUG==1;
+      push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
+    }
+    else {
+      push @transcripts, $transcript;
     }
     
-    throw ("Could not get a Transcript object for '$reference'") if !defined($transcript);
-    
-    my $possible_prot = _parse_hgvs_protein_position($description, $reference, $transcript);
-    throw("Could not uniquely determine nucleotide change from $hgvs") if scalar @$possible_prot > 1 && !$multiple_ok;
+    throw ("Could not get a Transcript object for '$reference'") unless @transcripts;
 
-    $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
+    my @results;
+    my %errors;
 
-    my @results = map {$self->_hgvs_from_components($hgvs, $reference, $type, $description, $slice, @$_)} @$possible_prot;
+    foreach my $transcript(@transcripts) {
+      
+      my $possible_prot;
+      eval {
+        $possible_prot = _parse_hgvs_protein_position($description, $reference, $transcript);
+        throw("Could not uniquely determine nucleotide change from $hgvs") if scalar @$possible_prot > 1 && !$multiple_ok;
+        $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(), $transcript->seq_region_name());
+      };
+      if($@) {
+        $errors{$@} = 1;
+        next;
+      }
+
+      foreach my $poss(@$possible_prot) {
+
+        my $result;
+
+        eval {
+          $result = $self->_hgvs_from_components(
+            $hgvs, $reference, $type, $description, $slice,
+            @$poss
+          )
+        };
+
+        if($@) {
+          $errors{$@} = 1;
+        }
+        else {
+          push @results, $result;
+        }
+      }
+    }
+
+    throw(join("\n", keys %errors)) unless @results;
 
     return $multiple_ok ? \@results : $results[0];
   }
@@ -1799,6 +1845,26 @@ sub fetch_by_hgvs_notation {
   }
 }
 
+sub _get_gene_transcripts {
+  my ($self, $transcript_adaptor, $reference, $multiple_ok) = @_;
+
+  my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
+  my ($gene) = grep {($_->external_name || '') eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
+  
+  my @transcripts;
+
+  if($gene) {
+    if($multiple_ok) {
+      push @transcripts, @{$gene->get_all_Transcripts};
+    }
+    else {
+      push @transcripts, $self->_pick_likely_transcript($gene->get_all_Transcripts);
+      print STDERR "Picked transcript ".$transcripts[0]->stable_id."\n" if $DEBUG==1;
+    }
+  }
+
+  return \@transcripts;
+}
 
 
 =head2 fetch_all_possible_by_hgvs_notation

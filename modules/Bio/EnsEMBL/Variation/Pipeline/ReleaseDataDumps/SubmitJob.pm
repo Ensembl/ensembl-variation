@@ -51,6 +51,9 @@ sub run {
   my $err = $self->param('err');
   my $out = $self->param('out');
 
+  my $hive_dbc = $self->dbc;
+  $hive_dbc->disconnect_if_idle() if defined $hive_dbc;
+
   my $cmd = "perl $script " . join(' ', @args); 
   $self->warning($cmd);
   $self->run_cmd("$cmd 1>$out 2>$err");					

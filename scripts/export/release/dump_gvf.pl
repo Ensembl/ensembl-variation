@@ -300,86 +300,81 @@ sub dump_svs_data {
 }
 
 sub dump_data {
-  my $config = shift;
-  my $vfa = $config->{vf_adaptor};
-  my $slice_adaptor = $config->{slice_adaptor};
-  my $slices = $config->{slices};
-  my $vf_it;
-  my $max_length = 1e5;
-  my $overlap = 1;
-  my $duplicated = {};
-  my $debug = $config->{debug}; 
-  if ($debug) {
-    $max_length = 1e3;
-  }
-  my $debug_count = 0;
+    my $config = shift;
+    my $vfa = $config->{vf_adaptor};
+    my $slice_adaptor = $config->{slice_adaptor};
+    my $slices = $config->{slices};
+    my $vf_it;
+    my $max_length = 1e6;
+    my $overlap = 1;
 
-  foreach my $slice (@$slices) {
-    # if slice length is split length don't split!
-    my $full_slice = $slice_adaptor->fetch_by_seq_region_id($slice->get_seq_region_id);
-    my $slice_end = $full_slice->seq_region_end;
-    my @slice_pieces = ();
-    my $diff = $max_length / $slice->length;
-    if ($diff < 1.2 && $diff > 0.8) {
-      @slice_pieces = ($slice);
-    } else {
-      @slice_pieces = @{split_Slices([$slice], $max_length, $overlap)};
-    }
-    foreach my $slice_piece (@slice_pieces) {
-      $debug_count++;
-      if ($debug) {
-        last if ($debug_count == 2);
-      }
-      if ($config->{individual}) { 
-        update_gts($config, $slice_piece);
-      }
-      if ($config->{somatic}) {
-        my $vfs = $vfa->fetch_all_somatic_by_Slice($slice_piece);
-        $vf_it = Bio::EnsEMBL::Utils::Iterator->new($vfs);
-      } elsif ($config->{set_name}) {
-        my $variation_set = $config->{variation_set};
-        my $vfs = $variation_set->get_all_VariationFeatures_by_Slice($slice_piece);
-        $vf_it = Bio::EnsEMBL::Utils::Iterator->new($vfs);
-      } else {
-        $vf_it = $vfa->fetch_Iterator_by_Slice($slice_piece);
-      }
+    foreach my $slice (@$slices) {
+      my $full_slice = $slice_adaptor->fetch_by_seq_region_id($slice->get_seq_region_id);
+      my $slice_end = $full_slice->seq_region_end;
 
-      my $slice_piece_start = $slice_piece->seq_region_start;
-      my $slice_piece_end = $slice_piece->seq_region_end;
-      my $count = 0;
-      my @vfs = ();
-      while (my $vf = $vf_it->next) {
-        my $vf_start = $vf->seq_region_start;
-        my $vf_end = $vf->seq_region_end;
-        if ($vf_end < $vf_start) {
-          ($vf_start, $vf_end) = ($vf_end, $vf_start);
-        }
-        if ($vf_start >= $slice_piece_start) {
-          next if ($vf_start == $slice_piece_end && $vf_end >= $slice_piece_end && $slice_piece_end != $slice_end);
-          push @vfs, $vf;
-          $count++;
-          if ((!$vf_it->peek) || $count == 1000) {
-            my $gvf_lines = {};
-            if ($config->{incl_consequences} || $config->{protein_coding_details}) {
-              $gvf_lines = add_variant_effect($config, \@vfs);
-              annotate_gvf_lines($config, $gvf_lines);
-            } elsif ($config->{population}) {
-              $gvf_lines = add_frequencies($config, \@vfs);
-              annotate_gvf_lines($config, $gvf_lines);
-            } else {
-              foreach my $vf_in_slice (@vfs) {
-                my $gvf_line = {};
-                annotate_vf($config, $gvf_line, $vf_in_slice);
-                print_gvf_line($config, $gvf_line) if ((scalar keys %$gvf_line) > 1);
-              }
+        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
+        my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
+        foreach my $slice_piece (@$slice_pieces) {
+          my $slice_piece_start = $slice_piece->seq_region_start;
+          my $slice_piece_end = $slice_piece->seq_region_end;
+            if ($config->{individual}) { 
+                update_gts($config, $slice_piece);
             }
-            @vfs = ();
-            $count = 0;
-          } 
-        }
-      } 
+            if ($config->{somatic}) {
+                my $vfs = $vfa->fetch_all_somatic_by_Slice($slice_piece);
+                $vf_it = Bio::EnsEMBL::Utils::Iterator->new($vfs);
+            } elsif ($config->{set_name}) {
+                my $variation_set = $config->{variation_set};
+                my $vfs = $variation_set->get_all_VariationFeatures_by_Slice($slice_piece);
+                $vf_it = Bio::EnsEMBL::Utils::Iterator->new($vfs);
+            } else {
+                $vf_it = $vfa->fetch_Iterator_by_Slice($slice_piece);
+            }
+
+            if ($config->{incl_consequences} || $config->{protein_coding_details}) {
+                my @vfs = ();
+                my $gvf_lines = {};
+                my $count = 0;
+                while (my $vf = $vf_it->next) {
+                  my $vf_start = $vf->seq_region_start;
+                  my $vf_end = $vf->seq_region_end;
+                  if ($vf_end < $vf_start) {
+                    ($vf_start, $vf_end) = ($vf_end, $vf_start);
+                  }
+
+#                    next if ($vf->seq_region_start <= $slice_piece->start); # avoid duplicated lines caused by vf overlapping two slice pieces
+                    next if ($vf_start == $slice_piece_end && $vf_end >= $slice_piece_end && $slice_piece_end != $slice_end);
+                    push @vfs, $vf;
+                    $count++;
+                    if ((!$vf_it->peek) || $count == 1000) {
+                        if ($config->{incl_consequences}) {
+                            $gvf_lines = add_variant_effect($config, \@vfs);
+                        } elsif ($config->{population}) {
+                            $gvf_lines = add_frequencies($config, \@vfs);
+                        }
+                        annotate_gvf_lines($config, $gvf_lines);
+                        @vfs = ();
+                        $count = 0;
+                    }
+                }
+            } else {
+                while (my $vf = $vf_it->next) {
+                  my $vf_start = $vf->seq_region_start;
+                  my $vf_end = $vf->seq_region_end;
+                  if ($vf_end < $vf_start) {
+                    ($vf_start, $vf_end) = ($vf_end, $vf_start);
+                  }
+
+#                    next if ($vf->seq_region_start <= $slice_piece->start); # avoid duplicated lines caused by vf overlapping two slice pieces
+                    next if ($vf_start == $slice_piece_end && $vf_end >= $slice_piece_end && $slice_piece_end != $slice_end);
+
+                    my $gvf_line = {};
+                    annotate_vf($config, $gvf_line, $vf);
+                    print_gvf_line($config, $gvf_line) if ((scalar keys %$gvf_line) > 1);
+                }
+            }
+        } 
     }
-  }
 }
 
 sub annotate_gvf_lines {

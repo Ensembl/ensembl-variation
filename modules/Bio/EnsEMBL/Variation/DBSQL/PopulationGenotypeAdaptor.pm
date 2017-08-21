@@ -330,29 +330,38 @@ sub _fetch_all_by_Variation_from_Genotypes {
   my $genotypes = $variation->get_all_SampleGenotypes();
   
   return [] unless scalar @$genotypes;
-	
+  
   # copy sample ID to save time later
-  $_->{_sample_id} ||= $_->sample->dbID for @$genotypes;
+  # also attempt to get hash of missing data, may have been added if retrieving data from VCF
+  my $missing = {};
+  my %sample_ids = ();
+  foreach my $gt(@$genotypes) {
+    $gt->{_sample_id} ||= $gt->sample->dbID;
+    $sample_ids{$gt->{_sample_id}} = 1;
+    $missing = $gt->{_missing_alleles} if defined($gt->{_missing_alleles});
+  }
+
+  $sample_ids{$_} = 1 for keys %$missing;
   
   # get populations for samples
-  my (@pop_list, %pop_hash);
+  my (@pop_list, $pop_hash);
   
   if(defined($population)) {
     @pop_list = ($population);
     my $pop_id = $population->dbID;
-    $pop_hash{$pop_id}{$_->dbID} = 1 for @{$population->get_all_Samples};
+    $pop_hash->{$pop_id}->{$_->dbID} = 1 for @{$population->get_all_Samples};
   }
   else {
     my $pa = $self->db->get_PopulationAdaptor();
-    %pop_hash = %{$pa->_get_sample_population_hash([map {$_->{_sample_id}} @$genotypes])};
-    return [] unless %pop_hash;
-	
-    @pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
+    $pop_hash = $pa->_get_sample_population_hash([keys %sample_ids]);
+    return [] unless scalar keys %$pop_hash;
+  
+    @pop_list = @{$pa->fetch_all_by_dbID_list([keys %$pop_hash])};
   }
   
-  return [] unless @pop_list and %pop_hash;
+  return [] unless @pop_list and scalar keys %$pop_hash;
 
-	
+  
   # organise the genotypes by subsnp
   my %by_ss = ();
   push @{$by_ss{$_->subsnp || ''}}, $_ for @$genotypes;
@@ -360,24 +369,27 @@ sub _fetch_all_by_Variation_from_Genotypes {
   my @objs;
   
   foreach my $pop(@pop_list) {
-	
+  
     next unless $pop->_freqs_from_gts;
     my $pop_id = $pop->dbID;
-		
+    
     foreach my $ss(keys %by_ss) {
       my (%counts, $total, @freqs);
       map {$counts{$_->genotype_string(1)}++}
-        grep {$pop_hash{$pop_id}{$_->{_sample_id}}}
+        grep {$pop_hash->{$pop_id}->{$_->{_sample_id}}}
         @{$by_ss{$ss}};
-	  
+    
       next unless %counts;
-	  
+    
       my @alleles = keys %counts;
       $total += $_ for values %counts;
+
+      # add missing
+      $total++ for grep {$missing->{$_}} keys %{$pop_hash->{$pop_id}};
       next unless $total;
-	  
+    
       @freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
-	  
+    
       for my $i(0..$#alleles) {
         push @objs, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
           genotype   => [split /\|/, $alleles[$i]],

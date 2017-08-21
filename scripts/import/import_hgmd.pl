@@ -40,7 +40,6 @@ my $species = 'human';
 
 my $var_table = 'HGMD_PUBLIC_variation';
 my $vf_table  = 'HGMD_PUBLIC_variation_feature';
-my $fs_table  = 'HGMD_PUBLIC_flanking_sequence';
 my $va_table  = 'HGMD_PUBLIC_variation_annotation';
 my $short_set = 'ph_hgmd_pub';
 
@@ -61,7 +60,6 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 # Main
 add_variation();
 add_variation_feature();
-add_allele();
 add_annotation(); # phenotype_feature & phenotype_feature_attrib
 update_features();
 add_attrib();
@@ -157,58 +155,6 @@ sub add_variation_feature {
   });
   $insert_vf_sth->execute($source_id);
 }
-
-
-sub add_allele {
-  my $insert_al_sth;
-  my $allele = 'HGMD_MUTATION';
-  
-  if ($dbh->do(qq{show columns from allele like 'allele';}) != 1){
-    my $select_ac_sth = $dbh->prepare(qq{
-      SELECT allele_code_id FROM allele_code WHERE allele=?;
-    });
-    $select_ac_sth->execute($allele);
-    my $ac_id = ($select_ac_sth->fetchrow_array)[0];
-    if (!defined($ac_id)) { 
-      $dbh->do(qq{INSERT INTO allele_code (allele) VALUES ('HGMD_MUTATION');});
-      $ac_id = $dbh->{'mysql_insertid'};
-    }
-    $insert_al_sth = $dbh->prepare(qq{
-      INSERT IGNORE INTO 
-        allele (
-          variation_id,
-          allele_code_id
-        ) 
-        SELECT DISTINCT
-          new_var_id,
-          $ac_id
-        FROM $var_table
-        WHERE NOT EXISTS ( SELECT * 
-                           FROM allele a
-                           WHERE a.variation_id=$var_table.new_var_id
-                         );
-    });
-  } else {
-
-    $insert_al_sth = $dbh->prepare(qq{
-      INSERT IGNORE INTO 
-        allele (
-          variation_id,
-          allele
-        ) 
-        SELECT DISTINCT
-          new_var_id,
-          "$allele"
-        FROM $var_table
-        WHERE NOT EXISTS ( SELECT * 
-                           FROM allele a
-                           WHERE a.variation_id=$var_table.new_var_id
-                         );
-    });
-  }
-  $insert_al_sth->execute();
-}
-
 
 sub add_annotation {
   
