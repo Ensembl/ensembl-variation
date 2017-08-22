@@ -395,7 +395,7 @@ sub _new_slice_seq {
       if(!($fa_length && $fa_length > 0) && $self->can('_fasta_old_db_seq')) {
         print STDERR "USING DATABASE\n" if $DEBUG;
         return
-          defined($start) || defined($end) || defined($strand) ?
+          scalar(@_) > 1 ?
           $self->_fasta_old_db_subseq($start, $end, $strand) :
           $self->_fasta_old_db_seq();
       }
