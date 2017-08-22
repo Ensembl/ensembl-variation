@@ -229,7 +229,7 @@ sub post_process {
 			variation_set_id int(11) unsigned NOT NULL,
 			KEY $VAR_COL ($VAR_COL),
 			KEY variation_set_id (variation_set_id)
-		);
+		) engine=MyISAM
 	};
     $dbVar->dbc->do($stmt);
 	
