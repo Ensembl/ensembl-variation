@@ -739,7 +739,9 @@ sub _init {
   
   my $tr = $self->transcript;
   my $vfs = $self->_variation_features;
-  delete $_->{_cds_mapping} for @$vfs;
+  foreach my $vf(@$vfs) {
+    delete $vf->{$_} for qw(_cds_mapping _cds_mapping_failed);
+  }
 
   my $is_protein_coding = $tr->translation ? 1 : 0;
 
