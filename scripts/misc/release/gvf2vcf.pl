@@ -93,11 +93,13 @@ sub init_db_connections {
     my $registry_file = $config->{registry};
     die "Could not find registry_file $registry_file" unless (-e $registry_file);
     $registry->load_all($registry_file);
+    my $ontology = $registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
     my $vdba = $registry->get_DBAdaptor($config->{species}, 'variation');
     my $cdba = $registry->get_DBAdaptor($config->{species}, 'core');
     $config->{vdba} = $vdba;
     $config->{cdba} = $cdba;
     $config->{slice_adaptor} = $cdba->get_SliceAdaptor;
+    $config->{ontology_adaptor} = $ontology if ($ontology); 
 }
 
 sub init_data {
@@ -119,6 +121,7 @@ sub init_data {
     $sth->bind_columns(\($source_name, $source_version, $source_desc));
     while ($sth->fetch) {
         my $source = ($source_version ? "$source_name\_$source_version" : $source_name);
+        $source_desc =~ s|<.+?>||g;
         $source_to_desc->{$source} = $source_desc;
     }
     $sth->finish(); 
@@ -175,33 +178,30 @@ sub init_data {
         'CLIN_association' => 'association',
         'CLIN_protective' => 'protective',
     };
-    $config->{svs_gvf2vcf} = {
-        'copy_number_loss' => 'CNV:LOSS',
-        'deletion' => 'DEL',
-        'sequence_alteration' => 'SA',
-        'complex_structural_alteration' => 'CSA',
-        'copy_number_gain' => 'CNV:GAIN',
-        'duplication' => 'DUP',
-        'tandem_duplication' => 'DUP:Tandem',
-        'copy_number_variation' => 'CNV',
-        'inversion' => 'INV',
-        'insertion' => 'INS',
-        'mobile_element_insertion' => 'MEI',
-        'novel_sequence_insertion' => 'NSI',
-        'indel' => 'INDEL',
-        'translocation' => 'TL',
-        'interchromosomal_breakpoint' => 'InterCB',
-        'intrachromosomal_breakpoint' => 'IntraCB',
-        'interchromosomal_translocation' => 'InterTL',
-        'intrachromosomal_translocation' => 'IntraTL',
-        'complex_substitution' => 'CS',
-        'Alu_insertion' => 'ALU_INS',
-        'short_tandem_repeat_variation' => 'short_tandem_repeat_variation',
-        'loss_of_heterozygosity' => 'loss_of_heterozygosity',
-        'substitution' => 'substitution',
-        'genetic_marker' => 'genetic_marker',
-        'mobile_element_deletion' => 'mobile_element_deletion',
-    };
+    $config->{svs_gvf2vcf} = {};
+    if ($config->{structural_variations}) {
+      my $sv_var_class_names = {};
+      my $sth = $dbh->prepare(qq/select distinct a.value from attrib a, structural_variation_feature svf where svf.class_attrib_id = a.attrib_id;/);
+      $sth->execute() or die $sth->errstr;
+      while (my $row = $sth->fetchrow_arrayref) {
+        $sv_var_class_names->{$row->[0]} = 1;
+      }
+      $sth->finish;
+      my $ontology = $config->{ontology_adaptor};
+      foreach my $name (keys %$sv_var_class_names) {
+        $config->{svs_gvf2vcf}->{$name} = $name;
+        my $definition = $name;
+        if ($ontology) {
+          my $terms = $ontology->fetch_all_by_name($name, 'SO');
+          foreach my $term (@$terms) {
+            $term->definition =~ m/^"(.*)\."\s\[.*\]$/;
+            $definition = $1; 
+          }
+        } 
+        $config->{header_sv_class}->{$name} = $definition;
+      }
+    }
+
     my @vep_consequence_info =  qw/Allele Consequence Feature_type Feature/;
     if ($config->{protein_coding_details}) {
       push @vep_consequence_info, 'Amino_acids';
@@ -279,16 +279,6 @@ sub parse_gvf_file {
           'ancestral_allele' => 'AA',
          };
 
-#        foreach my $population (qw/ASW CHB CHD GIH LWK MEX MKK TSI CEU HCB JPT YRI/) {
-#          my $alt = "$population-ALT";
-#          my $ref = "$population-REF";
-#          my $freq = "$population-FREQ";
-#          foreach my $key ($alt, $ref, $freq) {
-#            if ($gvf_line->{$key}) {
-#              add_info($vcf_line, $key, $gvf_line->{$key});
-#            }
-#          }
-#        }
         if (0) {
           foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
             add_info($vcf_line, $key, $gvf_line->{$key});
@@ -735,32 +725,11 @@ sub print_header {
             '##INFO=<ID=END,Number=1,Type=Integer,Description=“End position of the variant described in this record”>',
             '##INFO=<ID=ST_ACC,Number=.,Type=String,Description=“Study Accession. Study dbVar ID (estd or nstd)”>',
             '##INFO=<ID=Parent,Number=.,Type=String,Description=“The structural variant id. It identifies the region of variation.”>',
-            '##ALT=<ID=CNV:LOSS,Description="copy_number_loss">',
-            '##ALT=<ID=DEL,Description="deletion">',
-            '##ALT=<ID=INS,Description="insertion">',
-            '##ALT=<ID=SA,Description="sequence_alteration">',
-            '##ALT=<ID=CSA,Description="complex_structural_alteration">',
-            '##ALT=<ID=CNV:GAIN,Description="copy_number_gain">',
-            '##ALT=<ID=DUP,Description="duplication">',
-            '##ALT=<ID=DUP:TANDEM,Description="tandem_duplication">',
-            '##ALT=<ID=CNV,Description="copy_number_variation">',
-            '##ALT=<ID=INV,Description="inversion">',
-            '##ALT=<ID=MEI,Description="mobile_element_insertion">',
-            '##ALT=<ID=NSI,Description="novel_sequence_insertion">',
-            '##ALT=<ID=INDEL,Description="indel">',
-            '##ALT=<ID=InterCB,Description="interchromosomal_breakpoint">',
-            '##ALT=<ID=IntraCB,Description="intrachromosomal_breakpoint">',
-            '##ALT=<ID=InterTL,Description="interchromosomal_translocation">',
-            '##ALT=<ID=IntraTL,Description="intrachromosomal_translocation">',
-            '##ALT=<ID=TL,Description="translocation">',
-            '##ALT=<ID=CS,Description="complex_substitution">',
-            '##ALT=<ID=ALU_INS,Description="Alu_insertion">',
-            '##ALT=<ID=short_tandem_repeat_variation,Description="short_tandem_repeat_variation">',
-            '##ALT=<ID=loss_of_heterozygosity,Description="loss_of_heterozygosity">',
-            '##ALT=<ID=substitution,Description="substitution">',
-            '##ALT=<ID=genetic_marker,Description="genetic_marker">',
-            '##ALT=<ID=mobile_element_deletion,Description="mobile_element_deletion">',
         )), "\n";
+        foreach my $name (sort keys %{$config->{header_sv_class}}) {
+          my $definition = $config->{header_sv_class}->{$name};
+          print $fh "##ALT=<ID=$name,Description=\"$definition\">\n";
+        }
     }
 
     my @header = ('#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO');
