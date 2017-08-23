@@ -1211,7 +1211,7 @@ sub _fill_in_maf_data {
   my $self = shift;
 
   # only do this for vars with 1KG evidence code
-  return unless grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values};
+  return unless grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values || []};
 
   my (%counts, $total);
 
