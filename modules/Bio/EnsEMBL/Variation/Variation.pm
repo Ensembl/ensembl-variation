@@ -1159,6 +1159,7 @@ sub derived_allele {
 sub minor_allele {
     my ($self, $minor_allele) = @_;
     $self->{minor_allele} = $minor_allele if defined $minor_allele;
+    $self->_fill_in_maf_data unless defined($self->{minor_allele});
     return $self->{minor_allele}
 }
 
@@ -1178,6 +1179,7 @@ sub minor_allele {
 sub minor_allele_frequency {
     my ($self, $minor_allele_frequency) = @_;
     $self->{minor_allele_frequency} = $minor_allele_frequency if defined $minor_allele_frequency;
+    $self->_fill_in_maf_data unless defined($self->{minor_allele_frequency});
     return $self->{minor_allele_frequency}
 }
 
@@ -1197,7 +1199,37 @@ sub minor_allele_frequency {
 sub minor_allele_count {
     my ($self, $minor_allele_count) = @_;
     $self->{minor_allele_count} = $minor_allele_count if defined $minor_allele_count;
-    return $self->{minor_allele_count}
+    $self->_fill_in_maf_data unless defined($self->{minor_allele_count});
+    return $self->{minor_allele_count};
+}
+
+
+##############################################
+## HACK FIX FOR RELEASE 90 MISSING MAF DATA ##
+##############################################
+sub _fill_in_maf_data {
+  my $self = shift;
+
+  # only do this for vars with 1KG evidence code
+  return unless grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values};
+
+  my (%counts, $total);
+
+  foreach my $allele(grep {$_->population->name =~ /^1000GENOMES:[A-Z]{3}$/} @{$self->get_all_Alleles}) {
+    my $count = $allele->count;
+    $counts{$allele->allele} += $count;
+    $total += $count;
+  }
+
+  return unless $total;
+  return unless scalar keys %counts > 1;
+
+  # find the second most frequent allele
+  my @sorted = sort {$counts{$b} <=> $counts{$a}} keys %counts;
+
+  $self->{minor_allele} = $sorted[1];
+  $self->{minor_allele_count} = $counts{$sorted[1]};
+  $self->{minor_allele_frequency} = sprintf("%.4g", $counts{$sorted[1]} / $total);
 }
 
 
