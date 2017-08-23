@@ -240,7 +240,6 @@ sub get_input_gvf_dumps {
       foreach my $vf_distribution (@$vf_distributions) {   
         my $params = {};
         my $file_id = $vf_distribution->{file_id};
-        $self->warning("file_id $file_id");
         my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name-$file_id.$file_type";
         my $err = "$output_dir/$file_type/$species/$file_name-$file_id.err";
         my $out = "$output_dir/$file_type/$species/$file_name-$file_id.out";
