@@ -86,7 +86,7 @@ sub default_options {
         global_vf_count_in_species => 5_000_000, # if number of vf in a species exceeds this we need to split up dumps
         max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
-        max_split_slice_length => 500_000, 
+        max_split_slice_length => 1e7,
 
         debug => 0,
 
