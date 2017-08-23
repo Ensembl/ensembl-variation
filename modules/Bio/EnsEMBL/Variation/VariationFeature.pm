@@ -392,6 +392,7 @@ sub map_weight{
 sub minor_allele {
     my ($self, $minor_allele) = @_;
     $self->{minor_allele} = $minor_allele if defined $minor_allele;
+    $self->{minor_allele} = $self->variation->minor_allele if !defined($self->{minor_allele}) && grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values};
     return $self->{minor_allele}
 }
 
@@ -411,6 +412,7 @@ sub minor_allele {
 sub minor_allele_frequency {
     my ($self, $minor_allele_frequency) = @_;
     $self->{minor_allele_frequency} = $minor_allele_frequency if defined $minor_allele_frequency;
+    $self->{minor_allele_frequency} = $self->variation->minor_allele_frequency if !defined($self->{minor_allele_frequency}) && grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values};
     return $self->{minor_allele_frequency}
 }
 
@@ -430,6 +432,7 @@ sub minor_allele_frequency {
 sub minor_allele_count {
     my ($self, $minor_allele_count) = @_;
     $self->{minor_allele_count} = $minor_allele_count if defined $minor_allele_count;
+    $self->{minor_allele_count} = $self->variation->minor_allele_count if !defined($self->{minor_allele_count}) && grep {$_ eq '1000Genomes'} @{$self->get_all_evidence_values};
     return $self->{minor_allele_count}
 }
 
