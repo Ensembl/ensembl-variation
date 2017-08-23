@@ -64,6 +64,7 @@ $config,
   'slice_piece_start=s',
   'slice_piece_end=s',
   'is_slice_piece',
+  'slice_piece_size=s',
 
   'ancestral_allele|aa',
   'global_maf',
@@ -117,6 +118,7 @@ sub check_arguments {
     foreach my $arg (qw/registry species gvf_file/) {
         die "Argument --$arg required, try --help for usage instructions\n" unless $config->{$arg};
     } 
+  $config->{slice_piece_size} ||= 1e6;
 }
 
 sub init_db_connections {
@@ -305,14 +307,12 @@ sub dump_data {
     my $slice_adaptor = $config->{slice_adaptor};
     my $slices = $config->{slices};
     my $vf_it;
-    my $max_length = 1e6;
+    my $max_length = $config->{slice_piece_size};
     my $overlap = 1;
 
     foreach my $slice (@$slices) {
       my $full_slice = $slice_adaptor->fetch_by_seq_region_id($slice->get_seq_region_id);
       my $slice_end = $full_slice->seq_region_end;
-
-        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
         my $slice_pieces = split_Slices([$slice], $max_length, $overlap);
         foreach my $slice_piece (@$slice_pieces) {
           my $slice_piece_start = $slice_piece->seq_region_start;
@@ -341,9 +341,8 @@ sub dump_data {
                   if ($vf_end < $vf_start) {
                     ($vf_start, $vf_end) = ($vf_end, $vf_start);
                   }
-
-#                    next if ($vf->seq_region_start <= $slice_piece->start); # avoid duplicated lines caused by vf overlapping two slice pieces
                     next if ($vf_start == $slice_piece_end && $vf_end >= $slice_piece_end && $slice_piece_end != $slice_end);
+                    next if ($vf_end >= $slice_piece_end);
                     push @vfs, $vf;
                     $count++;
                     if ((!$vf_it->peek) || $count == 1000) {
@@ -361,13 +360,10 @@ sub dump_data {
                 while (my $vf = $vf_it->next) {
                   my $vf_start = $vf->seq_region_start;
                   my $vf_end = $vf->seq_region_end;
-                  if ($vf_end < $vf_start) {
-                    ($vf_start, $vf_end) = ($vf_end, $vf_start);
-                  }
-
-#                    next if ($vf->seq_region_start <= $slice_piece->start); # avoid duplicated lines caused by vf overlapping two slice pieces
+#                   slice_piece_start = 1 slice_piece_end = 5 vf is insertion vf_start = 5 vf_end = 4 -> not included in next slice_piece slice_piece_start = 5 slice_piece_end = 9  
+#                   slice_piece_start = 1 slice_piece_end = 5 vf is deletion vf_start = 4 vf_end = 5 -> included in next slice_piece slice_piece_start = 5 slice_piece_end = 9 -> need to be filtered out
                     next if ($vf_start == $slice_piece_end && $vf_end >= $slice_piece_end && $slice_piece_end != $slice_end);
-
+                    next if ($vf_end >= $slice_piece_end);
                     my $gvf_line = {};
                     annotate_vf($config, $gvf_line, $vf);
                     print_gvf_line($config, $gvf_line) if ((scalar keys %$gvf_line) > 1);
@@ -805,19 +801,4 @@ sub print_gvf_line {
     }
     print $fh $line, "\n";
 }
-
-=begin
-Dump logic:
-  - input: 
-    - chromosome: global vf count <= 40_000_000, structural variations?
-    - slice piece
-  
-
-=end
-=cut
-
-
-
-
-
 
