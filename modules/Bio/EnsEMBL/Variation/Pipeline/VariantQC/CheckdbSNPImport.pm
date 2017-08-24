@@ -92,6 +92,12 @@ sub run {
 
     my $attribs_loaded       = $self->check_attribs();
 
+    my $maf_loaded = 1;
+    if($self->required_param('species') =~/homo|human/){
+       $maf_loaded = $self->count_maf();
+    }
+
+
     print $report "Post-import preQC check
 
 Total Variation:        $variation_count
@@ -117,6 +123,7 @@ VariationFeature where end+1<start: $bad_position
 
     print $report "\nERROR: missing evidence attribs\n\n" if $attribs_loaded == 0;
 
+    print $report "\nERROR: missing MAF \n\n" if $maf_loaded == 0;
 
     print $report "ERROR: $complimented_desc complimented descriptions found - to be fixed manually\n\n" if $complimented_desc >0;
 
@@ -128,7 +135,8 @@ VariationFeature where end+1<start: $bad_position
        $geno_no_sample     >0    ||
        $varfeat_no_pos     >0    ||
        $varfeat_no_seqreg  >0    ||
-       $attribs_loaded   == 0
+       $attribs_loaded   == 0    ||
+       $maf_loaded       == 0
        ){
 
         print $report "Exiting - missing data to import\n"; 
@@ -376,5 +384,24 @@ sub check_attribs{
     }
     return $found_everything;
 }
+
+
+=head2 count_maf
+
+  Look low MAF counts in human (none loading or partial loading of 1KG table)
+
+=cut
+sub count_maf{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $maf_ext_stat  = (qq[ select count(*) from maf]);
+
+    my $maf =  count_for_statement( $var_dba, $maf_ext_stat );
+    $maf > 80000000 ? return 1 : return 0;
+}
+
+
 
 1;

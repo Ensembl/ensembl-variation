@@ -110,7 +110,11 @@ sub run {
 
     print $report $var_display->{0} . " variants with display status = 0\n";
     print $report $varf_display->{0} . " variation_features with display status = 0\n";
-    print $report "$cited_var variants with citations\n";
+    print $report "$cited_var variants with citations\n\n";
+
+    ## check the expected number of variants have 1KG MAF
+    my $v_maf_fail  = $self->check_maf( "variation", $report);
+    my $vf_maf_fail = $self->check_maf( "variation_feature", $report);
 
     ## check all statuses and exit if there is a problem
     if( $suspiciously_poor   ==1 ||   #  high failure rates
@@ -118,7 +122,9 @@ sub run {
         $allele_fail         ==1 ||   #  flipping error in allele_working
         $varfeat_fail        ==1 ||   #  flipping error in variation_feature_working
         $process_error       ==1 ||   #  not all rows processed into *working tables
-        $vf_consistancy_fail ==1      #  data missmatch between old and new variation_feature tables
+        $vf_consistancy_fail ==1 ||   #  data missmatch between old and new variation_feature tables
+        $v_maf_fail          ==1 ||   #  low variation MAF count
+        $vf_maf_fail         ==1      #  low variation_feature MAF count
        ){
         print $report "\n\nExiting due errors - not renaming tables or running updates\n"; 
         die;
@@ -594,6 +600,32 @@ sub find_multi_mapping_var{
     print $report "\nNo variants with more than 25 mappings observed\n";
   }
 }
+
+sub check_maf{
+  my $self   = shift;
+  my $table  = shift;
+  my $report = shift;
+
+  ## only relevant for human databases
+  return 0 unless $self->required_param('species') =~/homo|human/;
+
+  my $var_dba  = $self->get_species_adaptor('variation');
+
+  my $maf_check_stmt = qq[select count(*) from $table where minor_allele is not null];
+  my $maf_check_sth = $var_dba->dbc->prepare($maf_check_stmt);
+
+  $maf_check_sth->execute()||die;
+  my $count_maf =  $maf_check_sth->fetchall_arrayref()||die;
+
+  if ($count_maf->[0]->[0] < 80000000){
+    print $report "Error: only $count_maf->[0]->[0] variants with a MAF in $table\n";
+    return 1;
+  }
+
+  return 0;
+
+}
+
 
 # enable indexes which were disabled for quicker loading
 sub rebuild_indexes{
