@@ -49,13 +49,12 @@ sub default_options {
     # this - patches are welcome!
 
     return {
+        %{ $self->SUPER::default_options()
+        },    # inherit other stuff from the base class
+
         hive_auto_rebalance_semaphores => 1,
         hive_force_init      => 1,
         hive_use_param_stack => 1,
-        hive_use_triggers    => 0,
-        hive_root_dir        => $ENV{'HOME'} . '/bin/ensembl-hive', 
-        ensembl_cvs_root_dir => $ENV{'HOME'} . '/bin',
-        hive_no_init         => 0,
         ensembl_release    => $self->o('ensembl_release'),
 
         # include or exclude the following species from the dumps, run for a division or all the species on the server

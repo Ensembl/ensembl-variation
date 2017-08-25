@@ -53,10 +53,6 @@ sub fetch_input {
   $vf_per_slice = $self->param('vf_per_slice') || $vf_per_slice; # if number of vf exceeds this we split the slice and dump for each split slice
   $max_split_slice_length = $self->param('max_split_slice_length') || $max_split_slice_length;
 
-  my $species_division = $self->param('species_division');
-  if ($species_division) {
-    $output_dir = $output_dir."/".$species_division;
-  }
   my $fh;
   if ($debug) {
     $debug_fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
