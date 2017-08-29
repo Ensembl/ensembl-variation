@@ -371,82 +371,82 @@ sub to_array{
 
 sub import{
 
-    my $record = shift;
+  my $record = shift;
 
-    my $feature_object;
-    my $alt_allele; ## disease associated allele from HGVS
-    my $feat;       ## use stored *variation_features where possible
+  my $feature_object;
+  my $alt_allele; ## disease associated allele from HGVS
+  my $feat;       ## use stored *variation_features where possible
 
-    if(defined $record->{feature_info}->{dbSNP}){
-      foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){ 
+  if(defined $record->{feature_info}->{dbSNP}){
+    foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
 
-	($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
-        next unless defined $feature_object;
- 
-        ## add synonym
-        add_synonyms($feature_object, $record->{Acc}) if defined $feature_object;
-        ## add phenotype_feature & attrib (there may not be an alt_allele)
-        import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
-      }
+      ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
+      next unless defined $feature_object;
+
+      ## add synonym
+      add_synonyms($feature_object, $record->{Acc}) if defined $feature_object;
+      ## add phenotype_feature & attrib (there may not be an alt_allele)
+      import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
     }
-    elsif(defined  $record->{feature_info}->{dbVar}){
-	($feature_object, $feat) = get_structural_variant($record);
+  }
+  elsif(defined  $record->{feature_info}->{dbVar}){
+    ($feature_object, $feat) = get_structural_variant($record);
 
-        if ( defined $feature_object){
-          ## add phenotype_feature & attrib
-          import_phenotype_feature($record, $feature_object, 'StructuralVariation', $feat, $alt_allele);
-        }
+    if ( defined $feature_object){
+      ## add phenotype_feature & attrib
+      import_phenotype_feature($record, $feature_object, 'StructuralVariation', $feat, $alt_allele);
     }
-    else{
-	warn "Can't import ". $record->{Acc} ." as no xref\n";
-    }
+  }
+  else{
+      warn "Can't import ". $record->{Acc} ." as no xref\n";
+  }
 }
 
 sub import_phenotype_feature{
 
-    my $record         = shift;
-    my $feature_object = shift;
-    my $type           = shift;
-    my $feat           = shift;
-    my $alt_allele     = shift;
+  my $record         = shift;
+  my $feature_object = shift;
+  my $type           = shift;
+  my $feat           = shift;
+  my $alt_allele     = shift;
 
-    ## deal with non-specified phenos
-    $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
-    $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
-    $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
+  ## deal with non-specified phenos
+  $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
+  $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
+  $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
 
-    ## look for existing or enter new phenotype object
-    my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
+  ## look for existing or enter new phenotype object
+  my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
 
-    my %attribs;
-    $attribs{review_status}    = $record->{Status};
-    $attribs{external_id}      = $record->{Acc};
-    $attribs{clinvar_clin_sig} = $record->{Desc};
-    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
-    $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
-    $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
-    $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
+  my %attribs;
+  $attribs{review_status}    = $record->{Status};
+  $attribs{external_id}      = $record->{Acc};
+  $attribs{clinvar_clin_sig} = $record->{Desc};
+  $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
+  $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
+  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
+  $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
 
-    foreach my $feature (@{$feat}){
-	print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
-           if $DEBUG == 1;
+  foreach my $feature (@{$feat}){
+    print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
+      if $DEBUG == 1;
 
-    my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
-	-slice          => $feature->slice(),
-	-start          => $feature->seq_region_start(),
-	-strand         => $feature->seq_region_strand(),
-	-end            => $feature->seq_region_end(),
-	-phenotype      => $pheno,
-	-is_significant => 1,
-	-type           => $type,
-	-object         => $feature_object,
-	-source         => $source,
-	-attribs        => \%attribs
-	);
-        $pheno_feat_adaptor->store($phenofeat);
+  my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+      -slice          => $feature->slice(),
+      -start          => $feature->seq_region_start(),
+      -strand         => $feature->seq_region_strand(),
+      -end            => $feature->seq_region_end(),
+      -phenotype      => $pheno,
+      -is_significant => 1,
+      -type           => $type,
+      -object         => $feature_object,
+      -source         => $source,
+      -attribs        => \%attribs
+      );
+      $pheno_feat_adaptor->store($phenofeat);
 
-    }
+  }
 }
 
 =head2 get_phenotype
@@ -456,29 +456,29 @@ sub import_phenotype_feature{
 =cut
 sub get_phenotype{
 
-    my $desc      = shift;
-    my $accession = shift;
+  my $desc      = shift;
+  my $accession = shift;
 
-    $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
-    $desc =~s /\'//g;            ## remove '
+  $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
+  $desc =~s /\'//g;            ## remove '
 
-    my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
+  my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
 
-    unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
+  unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
 
-        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc ); 
-        $phenotype_adaptor->store($pheno);
-    }
+    $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
+    $phenotype_adaptor->store($pheno);
+  }
 
-    if($accession){
-      $pheno->add_ontology_accession({ accession      => $accession, 
-                                       mapping_source => 'Data source',
-                                       mapping_type   => 'is'
-                                       } );
-      $phenotype_adaptor->store_ontology_accessions($pheno);
-    }
+  if($accession){
+    $pheno->add_ontology_accession({ accession      => $accession,
+                                     mapping_source => 'Data source',
+                                     mapping_type   => 'is'
+                                     } );
+    $phenotype_adaptor->store_ontology_accessions($pheno);
+  }
 
-    return $pheno;
+  return $pheno;
 }
 
 
@@ -491,53 +491,52 @@ sub get_phenotype{
 =cut
 sub get_variant{
 
-    my $record = shift;
-    my $rs_id  = shift;
+  my $record = shift;
+  my $rs_id  = shift;
 
-    my $dbSNP  = "rs" . $rs_id; 
+  my $dbSNP  = "rs" . $rs_id;
 
-    print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
-    ## need alleles to input for standard variation & for risk allele attribute
-    ## take from HGVS string
-    defined $record->{feature_info}->{Chr} ? 
-      $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{Chr} . ":" . $record->{feature_info}->{hgvs_g} :
-      $record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g};
+  print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
+  ## need alleles to input for standard variation & for risk allele attribute
+  ## take from HGVS string
+  defined $record->{feature_info}->{Chr} ?
+    $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{Chr} . ":" . $record->{feature_info}->{hgvs_g} :
+    $record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g};
 
-    my ($ref_allele, $alt_allele);
-    eval{
-        ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} );
-        
-    };
-    ## not printing bulky error message        
-    warn "Problem finding allele for $dbSNP\n" unless $@ eq '';
+  my ($ref_allele, $alt_allele);
+  eval{
+    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} );
+  };
+  ## not printing bulky error message
+  warn "Problem finding allele for $dbSNP\n" unless $@ eq '';
 
-    unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
-      print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
-      return undef;
-    }
-
-
-    ## look for existing variation object to return
-    my $var_ob = $variation_adaptor->fetch_by_name($dbSNP);
-
-    if (defined $var_ob){
-        my @features = $var_ob->get_all_VariationFeatures();
-        return ($var_ob, @features , $alt_allele);
-    }
-    print "No record found for $dbSNP\n" if $DEBUG ==1;
+  unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
+    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
+    return undef;
+  }
 
 
+  ## look for existing variation object to return
+  my $var_ob = $variation_adaptor->fetch_by_name($dbSNP);
 
-    ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
+  if (defined $var_ob){
+    my @features = $var_ob->get_all_VariationFeatures();
+    return ($var_ob, @features , $alt_allele);
+  }
+  print "No record found for $dbSNP\n" if $DEBUG ==1;
 
-    if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr}  ){
-	warn "Not entering new refSNP: $rs_id as no HGVS available for alleles\n";
-	return undef;
-    }
 
-    ## enter new records
-    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP);
-    return ($new_var_ob,  $var_feat, $alt_allele) ; 
+
+  ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
+
+  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr}  ){
+    warn "Not entering new refSNP: $rs_id as no HGVS available for alleles\n";
+    return undef;
+  }
+
+  ## enter new records
+  my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP);
+  return ($new_var_ob,  $var_feat, $alt_allele);
 }
 
 =head2 enter_var
@@ -549,62 +548,61 @@ sub get_variant{
 =cut
 sub enter_var{
 
-    my $data       = shift;
-    my $ref_allele = shift;
-    my $alt_allele = shift;
-    my $dbSNP      = shift;
+  my $data       = shift;
+  my $ref_allele = shift;
+  my $alt_allele = shift;
+  my $dbSNP      = shift;
 
-     unless (defined $ref_allele && defined $alt_allele){
-	 warn "ERROR: missing alleles for $data->{hgvs_g} / $dbSNP\n";
-	 return undef;
-     }
+   unless (defined $ref_allele && defined $alt_allele){
+     warn "ERROR: missing alleles for $data->{hgvs_g} / $dbSNP\n";
+     return undef;
+   }
 
-      
-    my $var = Bio::EnsEMBL::Variation::Variation->new
-        ( -name              => $dbSNP,
-          -source            => $source,
-	  -is_somatic        => 0,
-          -adaptor           => $variation_adaptor,
-        );
-    $variation_adaptor->store($var);
     
+  my $var = Bio::EnsEMBL::Variation::Variation->new
+    ( -name              => $dbSNP,
+      -source            => $source,
+      -is_somatic        => 0,
+      -adaptor           => $variation_adaptor,
+    );
+  $variation_adaptor->store($var);
 
 
-    foreach my $allele ( $ref_allele, $alt_allele){
-        $allele =~s/\s+//;
-        my $al = Bio::EnsEMBL::Variation::Allele->new(
-            -variation_id   => $var->dbID(),
-            -allele         => $allele,
-            -adaptor        => $allele_adaptor,
-            );
-        $allele_adaptor->store($al);
-    }
+  foreach my $allele ( $ref_allele, $alt_allele){
+    $allele =~s/\s+//;
+    my $al = Bio::EnsEMBL::Variation::Allele->new
+      ( -variation_id   => $var->dbID(),
+        -allele         => $allele,
+        -adaptor        => $allele_adaptor,
+      );
+    $allele_adaptor->store($al);
+  }
 
 
-    my $allele_str = $ref_allele ."/". $alt_allele;
+  my $allele_str = $ref_allele ."/". $alt_allele;
 
-    ## get slice for new variationfeature
-    ## strand not reported - assumes forward
-    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
+  ## get slice for new variationfeature
+  ## strand not reported - assumes forward
+  my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
 
-    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
-        (-start           => $data->{feature_info}->{start},
-         -end             => $data->{feature_info}->{end},
-         -strand          => 1,
-         -slice           => $slice,
-         -variation_name  => $dbSNP,
-         -map_weight      => 1,
-         -allele_string   => $allele_str,
-         -variation       => $var,
-         -source          => $source,
-         -is_somatic      => 0,
-         -adaptor         => $var_feat_adaptor,
-        );
-    $var_feat_adaptor->store($vf);
-    
-    my @vf; #return vf to attach pheno feat to 
-    push @vf, $vf;
-    return ($var, \@vf);
+  my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+    (-start           => $data->{feature_info}->{start},
+     -end             => $data->{feature_info}->{end},
+     -strand          => 1,
+     -slice           => $slice,
+     -variation_name  => $dbSNP,
+     -map_weight      => 1,
+     -allele_string   => $allele_str,
+     -variation       => $var,
+     -source          => $source,
+     -is_somatic      => 0,
+     -adaptor         => $var_feat_adaptor,
+    );
+  $var_feat_adaptor->store($vf);
+
+  my @vf; #return vf to attach phenotype feature to
+  push @vf, $vf;
+  return ($var, \@vf);
 }
 
 
@@ -618,19 +616,19 @@ sub enter_var{
 =cut
 sub get_structural_variant{
 
-    my $record = shift;
+  my $record = shift;
 
-    ## look for existing structural variation object
-    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{feature_info}->{dbVar}->[0]);
+  ## look for existing structural variation object
+  my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{feature_info}->{dbVar}->[0]);
 
-    unless (defined $struct_var_ob && $struct_var_ob ne ''){ 
+  unless (defined $struct_var_ob && $struct_var_ob ne ''){
 
-	print "Not entering SV: $record->{dbVar}->[0] as not in db \n";
-	return undef;
-    }
-    my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
+    print "Not entering SV: $record->{dbVar}->[0] as not in db \n";
+    return undef;
+  }
+  my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
 
-    return ($struct_var_ob, @features );
+  return ($struct_var_ob, @features );
 }
 
 =head2 get_source
