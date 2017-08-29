@@ -92,13 +92,11 @@ my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 ## fetch ClinVar source object
 my $source   =   get_source($data_file);
 
+## remove old data
 clean_old_data() if defined $clean; 
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
-
-my $ref = XML::Records->new($data_file);
-$ref->set_records('ClinVarSet');
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -110,182 +108,261 @@ if (defined $done_file){
   }
 }
 
+## parse file
+my $ref = XML::Records->new($data_file);
+$ref->set_records('ClinVarSet');
+
 my @records;
 
 while (my $set = $ref->get_record() ){
-    
-    ## dump current structure on exit
-    my $current = Dumper $set;
+ 
+  ## dump current structure on exit
+  my $current = Dumper $set;
 
-    my %record;
-    eval{
+  my %record;
+  eval{
+    ## get accesion & version
+    $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
 
-	foreach my $acc(@{$set->{ReferenceClinVarAssertion}->{ClinVarAccession}}){
-	    next unless ref($acc) eq  'HASH';
-	    ### ClinVar reference accession 
-	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;
-	}
-        next if $done{$record{Acc}};
-        ## clinical significance
+    ## recover from partial loads with file of accessions already loaded
+    next if $done{$record{Acc}};
 
-        if ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description} =~/conflict/){       
-            ## if there are 2 conflicting statuses for a variant/trait combination
-            ## Description = 'conflicting data from submitters' - values in explanation
-            $record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Explanation}->[0]";
-            $record{Desc} =~ s/\(\d+\)//g; ## remove bracketed counts 
-            $record{Desc} =~ s/\;/\,/g;    ## switch to comma delimited for set 
-        }
-        else{
-            $record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description}";
-        }
-        ## confidence of assertation
-        $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus} ;
+    ## clinical significance
+    $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance});
 
-	my @measures;
-	if(ref($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}) eq 'ARRAY'){
-	    @measures = @{$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}};
-	}
-	else{
-	    push @measures, $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure};
-	}
+    ## confidence of assertation
+    $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus};
 
-	foreach my $measure(@measures){
-	    next unless(ref($measure) eq 'HASH');
+    ## trait info (using Acc for error logging)
+    ($record{disease}, $record{ontology_accession}) = get_disease($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}, $record{Acc});
 
-            ## Look for gene symbols - if it's a big variant, it could cover 2 genes
-            if(defined $measure->{MeasureRelationship}){
-                
-                if( ref( $measure->{MeasureRelationship})  eq 'HASH'){    
-                   $record{gene} = $measure->{MeasureRelationship}->{Symbol}->{ElementValue}->[0];
-                 }
-                 else{
-                    ## API doesn't handle 2 genes currently
-                    my @multi;
-                    foreach my $meas (@{$measure->{MeasureRelationship}}){
-                        push @multi, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
-                    } 
-                    $record{gene} = join(",", @multi);
-                 }
-  
-            }
+    ## extract arrayref of PMIDs for citations
+    $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
+
+    ## Variant name, HGVS, OMIM id and location
+    next unless $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant";
+    $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc});
 
 
-	    ### get dbSNP rs id  & OMIM id Xrefs, if available
-	    if(defined $measure->{XRef}){
-		foreach my $xref( @{$measure->{XRef}} ){
-		    
-		    next unless ref($xref) eq  'HASH';
-		    push@{$record{$xref->{DB}}}, $xref->{ID} ;
-		} 
-	    }
-
-
-	    ### get location(s)
-	    next unless defined $measure->{SequenceLocation};
-	    foreach my $loc(@{$measure->{SequenceLocation}}){
-
-		next unless ref($loc) eq  'HASH'; 
-		next unless $loc->{Assembly} eq $assembly;
-
-		$record{Chr}    = $loc->{Chr} ; 
-		$record{start}  = $loc->{start} ; 
-		$record{end}    = $loc->{stop} ; 
-	        ## default to positive strand as alleles come from HGVS 
-		$record{strand} = '1';
-		$record{Ass}    = $loc->{Assembly}; 
-
-
-	    }
-	    my @attrib_set;
-	    if(ref($measure->{AttributeSet}) eq 'ARRAY'){
-		@attrib_set = @{$measure->{AttributeSet}};
-	    }
-	    else{
-		push @attrib_set, $measure->{AttributeSet}
-	    }
-	    ### get HGVS name for allele string
-	    foreach my $attrib (@attrib_set){
-		
-		## Not all of them have a current top level genomic
-		next unless (defined $attrib->{Attribute}->[1]->{Type} &&
-                             $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top/ );
-		
-		$record{hgvs_g} =  $attrib->{Attribute}->[1]->{Change} 
-		if $attrib->{Attribute}->[1]->{Type} eq "HGVS, genomic, top level";
-
-		## this will pick up the previous hgvs string if none set
-		$record{hgvs_g} =  $attrib->{Attribute}->[1]->{Change} 
-		if !defined $record{hgvs_g} ;
-
-
-	    }
-
-	}
-
-	### Trait info
-	
-	if( exists $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type} ){ 
-
-	    my $type = $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type};
- 	     
-	    my @traits; ### could be one or many
-
-	    if  (ref($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}) eq 'ARRAY'){
-		@traits = @{$set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}};
-	    }
-	    else{
-		push @traits, $set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait};
-	    } 
-	    
-
-	    foreach my $trait (@traits){ 
-
-		######### trait names, name types & ontology accessions
-		my @names;
-
-		if  (ref($trait->{Name}) eq 'ARRAY'){ @names = @{$trait->{Name}};}
-		else{ push @names, $trait->{Name};}	    
-		
-		foreach my $name ( @names ){
-
-                    $record{disease} =  $name->{ElementValue}->[0] if $name->{ElementValue}->[1]->{Type} eq "Preferred";
-
-                    $record{ontology_accession} = $name->{XRef}->[1]->{ID} 
-                      if $name->{XRef}->[1]->{DB} && $name->{XRef}->[1]->{DB} eq "Human Phenotype Ontology";
-
-                    $record{ontology_accession} = 'Orphanet:' .$name->{XRef}->[1]->{ID}
-                      if $name->{XRef}->[1]->{DB} && $name->{XRef}->[1]->{DB} eq "Orphanet"; 
-		}
-	    }
-	}
-
-        if (defined $structvar ){ 
-	    if( defined $record{dbVar} && $record{dbVar} =~/\d+/ ){
-               unless (defined $done{$record{Acc}} || defined $record{dbSNP}){
-#	       	warn "Importing SV :  $record{dbVar}\n";
-		import( \%record);
-               }
-	    }
-	}
-        else{
-	    if( exists $record{dbSNP} && $record{dbSNP}->[0] =~/\d+/ ){  ## defined $record{Chr} ){
-		import( \%record);
-	    }
-	    else{
-		#  my $message =  "Not importing var: ";
-		#  $message .= " rs: $record{dbSNP} "        if defined $record{dbSNP} ;
-		#  $message .= " on chr: $record{Chr} "      if defined $record{Chr} ;
-		#  $message .= " with HGVS: $record{hgvs_g}" if defined $record{hgvs_g} ;
-		#  $message .= " due to missing data ($record{Acc})\n";
-		#  warn $message;
-	    }
-	}
-    };
-    if( $@ ne ''){
-	die "ERROR: $@\n$current\n\n";
+    if (defined $structvar ){
+      if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar} =~/\d+/ ){
+        warn "Importing SV :  $record{dbVar}\n";
+        import( \%record);
+      }
     }
-    
+    else{
+      if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
+    	import( \%record);
+      }
+      else{
+    	my $message =  "Not importing var: ";
+    	$message .= " rs: $record{feature_info}->{dbSNP} "        if defined $record{feature_info}->{dbSNP} ;
+    	$message .= " on chr: $record{feature_info}->{Chr} "      if defined $record{feature_info}->{Chr} ;
+    	$message .= " with HGVS: $record{feature_info}->{hgvs_g}" if defined $record{feature_info}->{hgvs_g} ;
+    	$message .= " due to missing data ($record{Acc})\n";
+    	warn $message if $DEBUG == 1;
+      }
+    }
+  };
+  if( $@ ne ''){
+      #die "ERROR: $@\n";
+      die "ERROR: $@\n$current\n\n";
+  } 
 }
+
+## get ClinVar accession & version
+##   - sometimes an array with an empty string as first value
+sub get_accession{
+
+  my $ClinVarAccession = shift;
+
+  my $accession;
+
+  foreach my $acc(@{$ClinVarAccession}){
+    my $accns = to_array($acc);
+    foreach my $element (@{$accns}){
+      next unless $element;
+      $accession =  $element->{Acc} .".".  $element->{Version} ;
+    }
+  }
+  return $accession;
+}
+
+## clean clinical significance
+sub get_clinsig{
+
+  my $ClinicalSignificance = shift;
+  my $desc;
+
+  if ($ClinicalSignificance->{Description} =~/conflict/){
+    ## Description = 'conflicting data from submitters' - the values are in the explanation
+    $desc = "\L$ClinicalSignificance->{Explanation}->[0]";
+    $desc =~ s/\(\d+\)//g; ## remove bracketed counts
+    $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
+  }
+  else{
+    $desc = "\L$ClinicalSignificance->{Description}";
+  }
+  return $desc;
+}
+
+=head2 get_feature
+
+- get variant/ structural variant info + location on required assembly
+- inlude OMIM ids and HGVS for short variants 
+=cut
+
+sub get_feature{
+
+  my $Measure   = shift;
+  my $accession = shift;
+
+  my %feature;
+
+  my $measures = to_array($Measure);
+  foreach my $measure(@{$measures}){
+
+#    next unless(ref($measure) eq 'HASH'); ##
+    if(ref($measure) ne 'HASH'){
+      warn "Multiple measures for $accession - not loading\n";
+      next;
+    } 
+
+    ## dbSNP/ dbVAR and OMIM ids
+    if(defined $measure->{XRef}){
+      foreach my $xref( @{$measure->{XRef}} ){
+  
+        next unless ref($xref) eq  'HASH';
+        push @{$feature{$xref->{DB}}}, $xref->{ID} ;
+      } 
+   }
+
+    ## position on required assembly
+    next unless defined $measure->{SequenceLocation};
+    foreach my $loc(@{$measure->{SequenceLocation}}){
+
+      next unless ref($loc) eq  'HASH'; 
+      next unless $loc->{Assembly} eq $assembly;
+
+      $feature{Chr}    = $loc->{Chr} ; 
+      $feature{start}  = $loc->{start} ; 
+      $feature{end}    = $loc->{stop} ; 
+    }
+
+
+    ## HGVS genomic - used for allele extraction for novel variants 
+    my $assembly_number  = $assembly; ## uses assembly without GRCh
+    $assembly_number     =~ s/\D+//;
+
+    my $attrib_set = to_array($measure->{AttributeSet});
+    foreach my $attrib (@{$attrib_set}){
+
+      next unless (defined $attrib->{Attribute}->[1]->{integerValue} &&
+                           $attrib->{Attribute}->[1]->{integerValue} == $assembly_number );	
+
+      next unless (defined $attrib->{Attribute}->[1]->{Type} &&
+                           $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top/ );
+	
+      $feature{hgvs_g} =  $attrib->{Attribute}->[1]->{Change}; 
+    }
+
+    ## find reported genes 
+    if(defined $measure->{MeasureRelationship}){
+      my @genes;          
+      my $meas_rels = to_array($measure->{MeasureRelationship});
+      foreach my $meas (@{$meas_rels}){
+        push @genes, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
+      }
+      $feature{gene} = join(",", @genes);
+    }
+  }
+  return \%feature;
+}
+
+=head2 get_disease
+
+- extract prefered disease name & ontology terms
+- only take first disease but report if more are present
+ 
+=cut
+sub get_disease{
+
+  my ($Trait, $accession) = @_;
+
+  my ($disease, $ontology_accession);
+
+  my $traits = to_array($Trait);
+  if(scalar(@{$traits}) > 1){ warn "Multiple traits for $accession\n";}
+
+  foreach my $trait (@{$traits}){
+
+    next if defined $disease; ## How should multi-disease assertions be handled? - log to monitor
+
+    my $names = to_array($trait->{Name});
+
+    foreach my $name ( @{$names} ){
+
+      next unless $name->{ElementValue}->[1]->{Type} eq "Preferred";
+ 
+      $disease =  $name->{ElementValue}->[0];
+
+      $ontology_accession = $name->{XRef}->[1]->{ID}
+        if $name->{XRef}->[1]->{DB} && $name->{XRef}->[1]->{DB} eq "Human Phenotype Ontology";
+
+      $ontology_accession = 'Orphanet:' .$name->{XRef}->[1]->{ID}
+           if $name->{XRef}->[1]->{DB} && $name->{XRef}->[1]->{DB} eq "Orphanet";
+     }
+  }
+  return ($disease, $ontology_accession);
+}
+
+=head2 get_citations
+
+- extract any pubmed ids supporting this ascertation
+ 
+=cut
+sub get_citations{
+
+  my $structure = shift;
+
+  my @citations;
+ 
+  my $observed_in = to_array($structure );
+  foreach my $observed_in (@{$observed_in}){
+
+    my $observed_data = to_array($observed_in->{ObservedData});
+    foreach my $obs( @{$observed_data} ){
+
+      if ($obs->{Citation}){
+        my $citations = to_array($obs->{Citation});
+        foreach my $cit(@{$citations}){
+          push @citations, $cit->{ID}->[0] if $cit->{ID}->[1]->{Source} eq 'PubMed';
+        }
+      }
+    }
+  }
+  return \@citations;
+}
+
+
+sub to_array{
+
+  my $structure = shift;
+
+  return undef unless defined $structure;
+
+  my @array;
+  if (ref($structure ) eq 'ARRAY'){
+    @array = @{$structure};
+  }
+  else{
+    push @array, $structure;
+  }
+  return \@array;
+}
+
+
+
 =head2  import
 
 - check all required info present & update db with a single ClinVar
@@ -300,8 +377,8 @@ sub import{
     my $alt_allele; ## disease associated allele from HGVS
     my $feat;       ## use stored *variation_features where possible
 
-    if(defined $record->{dbSNP}){
-      foreach my $rs (@{ $record->{dbSNP} }){ 
+    if(defined $record->{feature_info}->{dbSNP}){
+      foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){ 
 
 	($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
         next unless defined $feature_object;
@@ -312,7 +389,7 @@ sub import{
         import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
       }
     }
-    elsif(defined  $record->{dbVar}){
+    elsif(defined  $record->{feature_info}->{dbVar}){
 	($feature_object, $feat) = get_structural_variant($record);
 
         if ( defined $feature_object){
@@ -333,7 +410,6 @@ sub import_phenotype_feature{
     my $feat           = shift;
     my $alt_allele     = shift;
 
-
     ## deal with non-specified phenos
     $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
     $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
@@ -348,8 +424,9 @@ sub import_phenotype_feature{
     $attribs{external_id}      = $record->{Acc};
     $attribs{clinvar_clin_sig} = $record->{Desc};
     $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
-    $attribs{associated_gene}  = $record->{gene} if defined $record->{gene};
-    $attribs{MIM}              = (split/\./, $record->{OMIM}->[0])[0] if exists $record->{OMIM};
+    $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
+    $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
+    $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
 
     foreach my $feature (@{$feat}){
 	print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
@@ -419,22 +496,23 @@ sub get_variant{
 
     my $dbSNP  = "rs" . $rs_id; 
 
-
+    print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
     ## need alleles to input for standard variation & for risk allele attribute
     ## take from HGVS string
-    defined $record->{Chr} ? 
-      $record->{hgvs_g} = $record->{Chr} . ":" . $record->{hgvs_g} :
-      $record->{hgvs_g} = "unknown" . ":" . $record->{hgvs_g};
+    defined $record->{feature_info}->{Chr} ? 
+      $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{Chr} . ":" . $record->{feature_info}->{hgvs_g} :
+      $record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g};
 
     my ($ref_allele, $alt_allele);
     eval{
-        ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{hgvs_g} );
+        ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} );
+        
     };
     ## not printing bulky error message        
     warn "Problem finding allele for $dbSNP\n" unless $@ eq '';
 
-    if ($ref_allele eq $alt_allele){
-      print "Alt allele not available for " . $record->{hgvs_g} . " \n";
+    unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
+      print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
       return undef;
     }
 
@@ -452,7 +530,7 @@ sub get_variant{
 
     ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
 
-    if( !defined $record->{hgvs_g} || !defined $record->{Chr}  ){
+    if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr}  ){
 	warn "Not entering new refSNP: $rs_id as no HGVS available for alleles\n";
 	return undef;
     }
@@ -506,11 +584,12 @@ sub enter_var{
     my $allele_str = $ref_allele ."/". $alt_allele;
 
     ## get slice for new variationfeature
-    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr} );
+    ## strand not reported - assumes forward
+    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
 
     my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
-        (-start           => $data->{start},
-         -end             => $data->{end},
+        (-start           => $data->{feature_info}->{start},
+         -end             => $data->{feature_info}->{end},
          -strand          => 1,
          -slice           => $slice,
          -variation_name  => $dbSNP,
@@ -542,7 +621,7 @@ sub get_structural_variant{
     my $record = shift;
 
     ## look for existing structural variation object
-    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{dbVar}->[0]);
+    my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{feature_info}->{dbVar}->[0]);
 
     unless (defined $struct_var_ob && $struct_var_ob ne ''){ 
 
