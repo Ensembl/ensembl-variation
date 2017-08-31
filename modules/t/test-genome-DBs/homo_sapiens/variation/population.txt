@@ -73,35 +73,35 @@
 102189	1000GENOMES:phase_1_TSI	98	Toscani in Italy	0	1	LD	1
 102190	1000GENOMES:phase_1_PUR	55	Puerto Ricans from Puerto Rico	0	1	LD	1
 102191	1000GENOMES:phase_1_CHS	100	Southern Han Chinese	0	1	LD	1
-373508	1000GENOMES:phase_3:ACB	96	African Caribbean in Barbados	0	1	LD	1	\N	\N
-373509	1000GENOMES:phase_3:AFR	661	African	0	1	UNDISPLAYABLE	1	\N	\N
-373507	1000GENOMES:phase_3:ALL	2504	All phase 3 individuals	0	1	UNDISPLAYABLE	1	\N	\N
-373510	1000GENOMES:phase_3:AMR	347	American	0	1	UNDISPLAYABLE	1	\N	\N
-373511	1000GENOMES:phase_3:ASW	61	African Ancestry in Southwest US	0	1	LD	1	\N	\N
-373512	1000GENOMES:phase_3:BEB	86	Bengali in Bangladesh	0	1	LD	1	\N	\N
-373513	1000GENOMES:phase_3:CDX	93	Chinese Dai in Xishuangbanna, China	0	1	LD	1	\N	\N
-373514	1000GENOMES:phase_3:CEU	99	Utah residents with Northern and Western European ancestry	0	1	LD	1	\N	\N
-373515	1000GENOMES:phase_3:CHB	103	Han Chinese in Bejing, China	0	1	LD	1	\N	\N
-373516	1000GENOMES:phase_3:CHS	105	Southern Han Chinese, China	0	1	LD	1	\N	\N
-373517	1000GENOMES:phase_3:CLM	94	Colombian in Medellin, Colombia	0	1	LD	1	\N	\N
-373518	1000GENOMES:phase_3:EAS	504	East Asian	0	1	UNDISPLAYABLE	1	\N	\N
-373519	1000GENOMES:phase_3:ESN	99	Esan in Nigeria	0	1	LD	1	\N	\N
-373520	1000GENOMES:phase_3:EUR	503	European	0	1	UNDISPLAYABLE	1	\N	\N
-373521	1000GENOMES:phase_3:FIN	99	Finnish in Finland	0	1	LD	1	\N	\N
-373522	1000GENOMES:phase_3:GBR	91	British in England and Scotland	0	1	LD	1	\N	\N
-373523	1000GENOMES:phase_3:GIH	103	Gujarati Indian in Houston, TX	0	1	LD	1	\N	\N
-373529	1000GENOMES:phase_3:GWD	113	Gambian in Western Division, The Gambia	0	1	LD	1	\N	\N
-373524	1000GENOMES:phase_3:IBS	107	Iberian populations in Spain	0	1	LD	1	\N	\N
-373525	1000GENOMES:phase_3:ITU	102	Indian Telugu in the UK	0	1	LD	1	\N	\N
-373526	1000GENOMES:phase_3:JPT	104	Japanese in Tokyo, Japan	0	1	LD	1	\N	\N
-373527	1000GENOMES:phase_3:KHV	99	Kinh in Ho Chi Minh City, Vietnam	0	1	LD	1	\N	\N
-373528	1000GENOMES:phase_3:LWK	99	Luhya in Webuye, Kenya	0	1	LD	1	\N	\N
-373530	1000GENOMES:phase_3:MSL	85	Mende in Sierra Leone	0	1	LD	1	\N	\N
-373531	1000GENOMES:phase_3:MXL	64	Mexican Ancestry in Los Angeles, California	0	1	LD	1	\N	\N
-373532	1000GENOMES:phase_3:PEL	85	Peruvian in Lima, Peru	0	1	LD	1	\N	\N
-373533	1000GENOMES:phase_3:PJL	96	Punjabi in Lahore, Pakistan	0	1	LD	1	\N	\N
-373534	1000GENOMES:phase_3:PUR	104	Puerto Rican in Puerto Rico	0	1	LD	1	\N	\N
-373535	1000GENOMES:phase_3:SAS	489	South Asian	0	1	UNDISPLAYABLE	1	\N	\N
-373536	1000GENOMES:phase_3:STU	102	Sri Lankan Tamil in the UK	0	1	LD	1	\N	\N
-373537	1000GENOMES:phase_3:TSI	107	Toscani in Italy	0	1	LD	1	\N	\N
-373538	1000GENOMES:phase_3:YRI	108	Yoruba in Ibadan, Nigeria	0	1	LD	1	\N	\N
+373508	1000GENOMES:phase_3:ACB	96	African Caribbean in Barbados	0	1	LD	1
+373509	1000GENOMES:phase_3:AFR	661	African	0	1	UNDISPLAYABLE	1
+373507	1000GENOMES:phase_3:ALL	2504	All phase 3 individuals	0	1	UNDISPLAYABLE	1
+373510	1000GENOMES:phase_3:AMR	347	American	0	1	UNDISPLAYABLE	1
+373511	1000GENOMES:phase_3:ASW	61	African Ancestry in Southwest US	0	1	LD	1
+373512	1000GENOMES:phase_3:BEB	86	Bengali in Bangladesh	0	1	LD	1
+373513	1000GENOMES:phase_3:CDX	93	Chinese Dai in Xishuangbanna, China	0	1	LD	1
+373514	1000GENOMES:phase_3:CEU	99	Utah residents with Northern and Western European ancestry	0	1	LD	1
+373515	1000GENOMES:phase_3:CHB	103	Han Chinese in Bejing, China	0	1	LD	1
+373516	1000GENOMES:phase_3:CHS	105	Southern Han Chinese, China	0	1	LD	1
+373517	1000GENOMES:phase_3:CLM	94	Colombian in Medellin, Colombia	0	1	LD	1
+373518	1000GENOMES:phase_3:EAS	504	East Asian	0	1	UNDISPLAYABLE	1
+373519	1000GENOMES:phase_3:ESN	99	Esan in Nigeria	0	1	LD	1
+373520	1000GENOMES:phase_3:EUR	503	European	0	1	UNDISPLAYABLE	1
+373521	1000GENOMES:phase_3:FIN	99	Finnish in Finland	0	1	LD	1
+373522	1000GENOMES:phase_3:GBR	91	British in England and Scotland	0	1	LD	1
+373523	1000GENOMES:phase_3:GIH	103	Gujarati Indian in Houston, TX	0	1	LD	1
+373529	1000GENOMES:phase_3:GWD	113	Gambian in Western Division, The Gambia	0	1	LD	1
+373524	1000GENOMES:phase_3:IBS	107	Iberian populations in Spain	0	1	LD	1
+373525	1000GENOMES:phase_3:ITU	102	Indian Telugu in the UK	0	1	LD	1
+373526	1000GENOMES:phase_3:JPT	104	Japanese in Tokyo, Japan	0	1	LD	1
+373527	1000GENOMES:phase_3:KHV	99	Kinh in Ho Chi Minh City, Vietnam	0	1	LD	1
+373528	1000GENOMES:phase_3:LWK	99	Luhya in Webuye, Kenya	0	1	LD	1
+373530	1000GENOMES:phase_3:MSL	85	Mende in Sierra Leone	0	1	LD	1
+373531	1000GENOMES:phase_3:MXL	64	Mexican Ancestry in Los Angeles, California	0	1	LD	1
+373532	1000GENOMES:phase_3:PEL	85	Peruvian in Lima, Peru	0	1	LD	1
+373533	1000GENOMES:phase_3:PJL	96	Punjabi in Lahore, Pakistan	0	1	LD	1
+373534	1000GENOMES:phase_3:PUR	104	Puerto Rican in Puerto Rico	0	1	LD	1
+373535	1000GENOMES:phase_3:SAS	489	South Asian	0	1	UNDISPLAYABLE	1
+373536	1000GENOMES:phase_3:STU	102	Sri Lankan Tamil in the UK	0	1	LD	1
+373537	1000GENOMES:phase_3:TSI	107	Toscani in Italy	0	1	LD	1
+373538	1000GENOMES:phase_3:YRI	108	Yoruba in Ibadan, Nigeria	0	1	LD	1
