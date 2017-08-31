@@ -33,13 +33,7 @@ my $sna   = $vdb->get_SampleAdaptor();
 
 ok($svpfa && $svpfa->isa('Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor'), "isa sv population frequency adaptor");
 
-my $sample_name = 'NA18635'; 
-my $ind_name    = 'NA18635'; 
-my $ind_gender  = 'Male';
-my $sv_name     = 'esv3817090';
-my $study_name  = 'estd214';
-
-
+my $sv_name = 'esv3817090';
 
 my $sv = $sva->fetch_by_name($sv_name);
 

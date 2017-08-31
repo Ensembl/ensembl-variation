@@ -92,6 +92,9 @@ use vars qw(@ISA);
   Arg [-STUDY] :
     object ref - the study object describing where the annotated structural variant comes from.  
   
+  Arg [-ZYGOSITY] :
+   string - the zigosity of the allele for the sample.
+  
   Arg [_STRUCTURAL_VARIATION_ID] :
     int _ the internal id of the structural variant object associated with this
     identifier. TUsing this identifier the structural variant may be lazy-loaded from 
@@ -118,8 +121,14 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain_id,$strain,$study_id, $study) =
-    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY)],@_); 
+  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain_id,$strain,$study_id, $study, $zygosity) =
+    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY ZYGOSITY)],@_); 
+
+  if (defined($zygosity)) {
+    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
+      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    }
+  }
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
@@ -129,6 +138,7 @@ sub new {
   $self->{'strain'}                   = $strain;
   $self->{'_study_id'}                = $study_id;
   $self->{'study'}                    = $study;
+  $self->{'zygosity'}                 = $zygosity;
   
   return $self;
 }
@@ -283,6 +293,30 @@ sub strain {
   }
   
   return $self->{'strain'};
+}
+
+=head2 zygosity
+
+  Arg [1]    : string $zygosity (optional)
+  Example    : $gender = $svs->zygosity()
+  Description: Getter/Setter for the zygosity attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub zygosity {
+  my $self = shift;
+  if (@_) {
+    my $zygosity = lc(shift);
+    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
+      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    }
+    $self->{'zygosity'} = $zygosity;
+  }
+  return $self->{'zygosity'};
 }
 
 
