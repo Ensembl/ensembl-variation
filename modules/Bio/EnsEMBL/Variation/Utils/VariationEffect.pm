@@ -816,6 +816,7 @@ sub _ins_del_start_altered {
     unless(exists($cache->{ins_del_start_altered})) {
         $cache->{ins_del_start_altered} = 0;
 
+        return 0 if $bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation');
         return 0 unless $bvfoa->seq_is_unambiguous_dna();
         return 0 unless _overlaps_start_codon(@_);
 
@@ -1127,6 +1128,7 @@ sub _ins_del_stop_altered {
     unless(exists($cache->{ins_del_stop_altered})) {
         $cache->{ins_del_stop_altered} = 0;
 
+        return 0 if $bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation');
         return 0 unless $bvfoa->seq_is_unambiguous_dna();
         return 0 unless _overlaps_stop_codon(@_);
 
