@@ -7,6 +7,8 @@ env:
   - COVERALLS=true  DB=mysql
 
 sudo: false
+dist: trusty
+group: deprecated
 
 addons:
     apt:
