@@ -1273,7 +1273,7 @@ sub _seek_by_VariationFeature {
     
     # if it has an ID, we can use that
     foreach my $id(@{$vcf->get_IDs}) {
-      last RECORD if grep {$_ eq $id || $_ eq 'ss'.$id} @names;
+      last RECORD if grep {($_ eq $id && $id ne '.') || $_ eq 'ss'.$id} @names;
     }
     
     # otherwise compare coords
