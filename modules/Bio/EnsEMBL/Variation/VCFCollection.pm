@@ -1056,7 +1056,7 @@ sub _create_SampleGenotypeFeatures {
   if (!$cmp) {
     # log the missing alleles on the first genotype object
     # the adaptor object upstream will then find this
-    $genotypes[0]->{_missing_alleles} = $missing_alleles if scalar keys %$missing_alleles;
+    $genotypes[0]->{_missing_alleles} = $missing_alleles if scalar keys %$missing_alleles && @genotypes;
     return \@genotypes;
   }
   my $sample_cmp_name = $sample_cmp->name;
