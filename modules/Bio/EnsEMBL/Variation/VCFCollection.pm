@@ -69,6 +69,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
+use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
@@ -84,6 +85,7 @@ use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
 use Bio::EnsEMBL::Variation::VCFVariationFeature;
+use Bio::EnsEMBL::Variation::IntergenicVariation;
 
 our %TYPES = (
   'remote' => 1,
@@ -685,7 +687,20 @@ sub get_all_VariationFeatures_by_Slice {
     $vcf->next();
   }
 
-  unless($dont_fetch_vf_overlaps || !$self->use_db) {
+  if($dont_fetch_vf_overlaps || !$self->use_db) {
+    foreach my $vf(@vfs) {
+      $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
+        -variation_feature  => $vf,
+        -no_ref_check       => 1,
+      );
+      weaken($vf->{intergenic_variation}->{base_variation_feature});
+      $vf->{display_consequence} = 'intergenic_variation';
+
+      $vf->_finish_annotation();
+    }
+  }
+
+  else {
 
     ## we need to up-front fetch overlapping transcripts, regfeats and motiffeatures
     ## this prevents the API loading them per-variant later at great cost in speed
