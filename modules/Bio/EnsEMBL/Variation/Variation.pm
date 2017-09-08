@@ -1159,7 +1159,7 @@ sub derived_allele {
 sub minor_allele {
     my ($self, $minor_allele) = @_;
     $self->{minor_allele} = $minor_allele if defined $minor_allele;
-    $self->_fill_in_maf_data unless defined($self->{minor_allele});
+    #$self->_fill_in_maf_data unless defined($self->{minor_allele});
     return $self->{minor_allele}
 }
 
