@@ -86,6 +86,8 @@ my @trvs = @{$trv_ad->fetch_all_by_VariationFeatures($vf)};
 ok(@trvs == 5 ,      "count by slice & variation features" );
 
 
+is($trv_ad->fetch_by_dbID(938362444)->display_consequence, 'sequence_variant', 'empty consequence column');
+
 
 
 # test constructor

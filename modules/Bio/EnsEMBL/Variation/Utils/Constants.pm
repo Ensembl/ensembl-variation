@@ -332,6 +332,20 @@ our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->
 
 our %OVERLAP_CONSEQUENCES = (
 'intergenic_variant' => $DEFAULT_OVERLAP_CONSEQUENCE,
+'sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'include' => {
+                 'within_feature' => 0
+               },
+  'description' => 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+  'SO_accession' => 'SO:0001060',
+  'SO_term' => 'sequence_variant',
+  'tier' => '4',
+  'label' => 'sequence variant',
+  'rank' => '39',
+  'impact' => 'MODIFIER',
+  'display_term' => 'SEQUENCE_VARIANT',
+}
+),
 'upstream_gene_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
   'include' => {

@@ -306,6 +306,9 @@ ok($vfs16->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype
 my $vfs16a = $vfa->fetch_all_somatic_with_phenotype(undef, undef, undef, 'vf.seq_region_strand = 1') ;
 ok($vfs16a->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotype - using constraint");
 
+# test fetching VF with empty consequence type column
+is($vfa->fetch_by_dbID(997738282)->display_consequence, 'sequence_variant', 'empty consequence column');
+
 
 # test fetch Iterator
 print "\n# Test - fetch_Iterator\n";
