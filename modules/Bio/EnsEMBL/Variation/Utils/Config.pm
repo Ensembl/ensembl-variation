@@ -269,6 +269,19 @@ our @VARIATION_CLASSES = (
 
 our @OVERLAP_CONSEQUENCES = (
     {
+        SO_accession => 'SO:0001060',
+        SO_term => 'sequence_variant',
+        display_term => 'SEQUENCE_VARIANT',
+        rank => '39',
+        tier => '4',
+        description => 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+        label => 'sequence variant',
+        impact => 'MODIFIER',
+        include => {
+            within_feature => 0
+        },
+    },
+    {
         SO_accession => 'SO:0001628',
         SO_term => 'intergenic_variant',
         display_term => 'INTERGENIC',
