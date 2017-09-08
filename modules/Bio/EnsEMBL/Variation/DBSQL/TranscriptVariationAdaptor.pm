@@ -435,7 +435,7 @@ sub _objs_from_sth {
      
     #my $overlap_consequences = $self->_transcript_variation_consequences_for_set_number($consequence_types);
 
-    my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_types ];
+    my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, ($consequence_types || 'sequence_variant') ];
     
     my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
       is_reference        => 0,

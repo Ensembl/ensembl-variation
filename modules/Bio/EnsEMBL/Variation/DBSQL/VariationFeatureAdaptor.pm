@@ -1359,7 +1359,7 @@ sub _objs_from_sth {
 
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_types);
             
-            my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_types ];
+            my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, ($consequence_types || 'sequence_variant') ];
 
             $seq_region_start = $seq_region_end if $seq_region_start == $seq_region_end + 2;  ## patch problem fix
             # consequence_types
