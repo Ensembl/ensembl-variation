@@ -56,6 +56,10 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(raw_freqs_from_gts);
+
+use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
@@ -364,6 +368,81 @@ sub ploidy {
 	}
 	
 	return $self->{ploidy};
+}
+
+sub _generic_fetch_all_by_Variation_from_Genotypes {
+  my $self = shift;
+  my $variation = shift;
+  my $population = shift;
+  my $object_type = shift;
+  
+  # Make sure that we are passed a Variation object
+  assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+  
+  # If we got a population argument, make sure that it is a Population object
+  assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+
+  # object type must be "Allele" or "PopulationGenotype"
+  throw("Invalid object type \"$object_type\"") unless $object_type eq 'Allele' or $object_type eq 'PopulationGenotype';
+  
+  # fetch all genotypes
+  my $genotypes = $variation->get_all_SampleGenotypes();
+  
+  return [] unless scalar @$genotypes;
+  
+  # copy sample ID to save time later
+  # also attempt to get hash of missing data, may have been added if retrieving data from VCF
+  my $missing = {};
+  my %sample_ids = ();
+  foreach my $gt(@$genotypes) {
+    $gt->{_sample_id} ||= $gt->sample->dbID;
+    $sample_ids{$gt->{_sample_id}} = 1;
+    $missing = $gt->{_missing_alleles} if defined($gt->{_missing_alleles});
+  }
+
+  $sample_ids{$_} = 1 for keys %$missing;
+  
+  # get populations for samples
+  my (@pop_list, $pop_hash);
+  
+  if(defined($population)) {
+    @pop_list = ($population);
+    my $pop_id = $population->dbID;
+    $pop_hash->{$pop_id}->{$_->dbID} = 1 for @{$population->get_all_Samples};
+  }
+  else {
+    my $pa = $self->db->get_PopulationAdaptor();
+    $pop_hash = $pa->_get_sample_population_hash([keys %sample_ids]);
+    return [] unless scalar keys %$pop_hash;
+  
+    @pop_list = @{$pa->fetch_all_by_dbID_list([keys %$pop_hash])};
+  }
+  
+  return [] unless @pop_list and scalar keys %$pop_hash;
+  
+  my @objs;
+  my $class = 'Bio::EnsEMBL::Variation::'.$object_type;
+
+  foreach my $raw(
+    @{raw_freqs_from_gts(
+      $genotypes,
+      [grep {$_->_freqs_from_gts} @pop_list],
+      $pop_hash,
+      $missing
+    )->{$object_type}}
+  ) {
+    my $obj = $class->new_fast({
+      %$raw,
+      adaptor   => $self,
+      variation => $variation
+    });
+
+    weaken($obj->{variation});
+
+    push @objs, $obj;
+  }
+  
+  return \@objs;
 }
 
 1;
