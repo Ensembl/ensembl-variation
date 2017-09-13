@@ -2205,4 +2205,16 @@ sub location_string {
   return $self->{location_string};
 }
 
+sub location_identifier {
+  my $self = shift;
+
+  if(!exists($self->{location_identifier})) {
+    my $alleles = $self->allele_string;
+    $alleles =~ s/\//\_/g;
+    $self->{location_identifier} = join(':', $self->location_string, $alleles, $self->source_name);
+  }
+
+  return $self->{location_identifier};
+}
+
 1;

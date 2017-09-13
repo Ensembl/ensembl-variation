@@ -62,6 +62,7 @@ use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 use Bio::EnsEMBL::Variation::Source;
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(raw_freqs_from_gts);
 
 our @ISA = ('Bio::EnsEMBL::Variation::Variation');
 
@@ -126,111 +127,33 @@ sub get_all_Alleles {
   my $self = shift;
   
   if(!exists($self->{alleles})) {
-  
-    my @alleles;
-    
-    # get genotypes as a hash keyed on sample dbID
-    my %gt_hash = map {$_->sample->dbID() => $_} @{$self->get_all_SampleGenotypes()};
-    
-    ## fetch from genotypes
-    if(scalar keys %gt_hash) {
-      
-      # get pop/ind hash
-      # $hash->{$pop_dbID}->{$ind_dbID} => 1
-      my $pop_hash = $self->collection->_get_Population_Sample_hash();
-    
-      my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
-    
-      foreach my $pop_id(keys %$pop_hash) {
-      
-        # don't try and add data for a population we don't have
-        next unless $pops_by_dbID{$pop_id};
-      
-        # get counts
-        my %counts;
-        $counts{$_}++ for
-          map {@{$_->genotype}}
-          map {$gt_hash{$_}}
-          grep {$gt_hash{$_}}
-          keys %{$pop_hash->{$pop_id}};
-      
-        # get total
-        my $total = 0;
-        $total += $_ for values %counts;
-      
-        # don't want to divide by zero
-        if($total) {
-          push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
-            allele     => $_,
-            count      => $counts{$_},
-            frequency  => $self->_format_frequency($counts{$_} / $total),
-            population => $pops_by_dbID{$pop_id},
-            variation  => $self,
-            subsnp_handle => undef,
-            frequency_subsnp_handle => undef,
-          }) for keys %counts;
-        }
+
+    # try to fetch from INFO first
+    $self->{alleles} = [
+      map {weaken($_->{variation}); $_}
+      @{
+        $self->collection->get_all_Alleles_by_VariationFeature(
+          $self->variation_feature,
+          undef, #$_[0] || undef,
+          $self->vcf_record
+        )
       }
-    }
-    
-    ## fetch from info field
-    else {
-      my $vcf_record = $self->vcf_record();
-      my $info = $vcf_record->get_info();
-      my @alts = @{$vcf_record->get_alternatives};
-      my $ref = $vcf_record->get_reference;
-    
-      # check we have required fields before attempting
-      if(
-        $info && ref($info) eq 'HASH' &&
-        $ref && scalar @alts
-      ) {
-        
-        # find INFO keys that look like a frequency, e.g AMR_AF        
-        foreach my $af_key(grep {/\_AF$|^AF\_|^AF$/} keys %$info) {
-          
-          my $total = 0;
-          my $i = 0;
-          
-          my $pop_name = $af_key;
-          $pop_name =~ s/\_AF$|^AF\_|^AF$//;
-          
-          # add an allele object for each frequency found
-          foreach my $af(split(',', $info->{$af_key})) {
-            throw("ERROR: ALT allele count mismatch") unless $alts[$i];
-            
-            push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
-              allele     => $alts[$i],
-              count      => $info->{AN} ? sprintf("%.0f", $af * $info->{AN}) : undef,
-              frequency  => $self->_format_frequency($af),
-              population => $self->collection->_create_Population($pop_name),
-              variation  => $self,
-              subsnp_handle => undef,
-              frequency_subsnp_handle => undef,
-            });
-            
-            $total += $af;
-            $i++;
-          }
-          
-          # add reference allele
-          push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
-            allele     => $ref,
-            count      => $info->{AN} ? sprintf("%.0f", (1 - $total) * $info->{AN}) : undef,
-            frequency  => $self->_format_frequency(1 - $total),
-            population => $self->collection->_create_Population($pop_name),
-            variation  => $self,
-            subsnp_handle => undef,
-            frequency_subsnp_handle => undef,
-          });
+    ];
+
+    # revert to genotypes if that fetches nothing
+    if(!@{$self->{alleles}}) {
+      $self->{alleles} = [
+        map {weaken($_->{variation}); $_}
+        map {
+          Bio::EnsEMBL::Variation::Allele->new_fast({
+            %$_,
+            variation => $self,
+            frequency_subsnp_handle => ''
+          })
         }
-      }
+        @{$self->_raw_freq_objs_from_genotypes->{Allele}}
+      ];
     }
-    
-    # weaken ref back to self (variation)
-    weaken $_->{variation} for @alleles;
-    
-    $self->{alleles} = \@alleles;
   }
   
   return $self->{alleles};
@@ -240,55 +163,19 @@ sub get_all_PopulationGenotypes {
   my $self = shift;
   
   if(!exists($self->{population_genotypes})) {
-  
-    my @pgs;
-    
-    # get genotypes as a hash keyed on sample dbID
-    my %gt_hash = map {$_->sample->dbID() => $_} @{$self->get_all_SampleGenotypes()};
-    
-    ## fetch from genotypes
-    if(scalar keys %gt_hash) {
-      
-      # get pop/ind hash
-      # $hash->{$pop_dbID}->{$ind_dbID} => 1
-      my $pop_hash = $self->collection->_get_Population_Sample_hash();
-    
-      my %pops_by_dbID = map {$_->dbID() => $_} @{$self->collection->get_all_Populations};
-    
-      foreach my $pop_id(keys %$pop_hash) {
-      
-        # don't try and add data for a population we don't have
-        next unless $pops_by_dbID{$pop_id};
-      
-        # get counts
-        my %counts;
-        $counts{$_}++ for
-          map {$_->genotype_string}
-          map {$gt_hash{$_}}
-          grep {$gt_hash{$_}}
-          keys %{$pop_hash->{$pop_id}};
-      
-        # get total
-        my $total = 0;
-        $total += $_ for values %counts;
-      
-        # don't want to divide by zero
-        if($total) {
-          push @pgs, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
-            genotype   => [split(/\||\//, $_)],
-            count      => $counts{$_},
-            frequency  => $counts{$_} / $total,
-            population => $pops_by_dbID{$pop_id},
-            variation  => $self,
-          }) for keys %counts;
-        }
+
+    # population genotypes ATM can only be retrieved from genotypes
+    # some VCFs have genotype counts in INFO, perhaps investigate in future?
+    $self->{population_genotypes} = [
+      map {weaken($_->{variation}); $_}
+      map {
+        Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
+          %$_,
+          variation => $self
+        })
       }
-    }
-    
-    # weaken ref back to self (variation)
-    weaken $_->{variation} for @pgs;
-    
-    $self->{population_genotypes} = \@pgs;
+      @{$self->_raw_freq_objs_from_genotypes->{PopulationGenotype}}
+    ];
   }
   
   return $self->{population_genotypes};
@@ -299,24 +186,17 @@ sub get_all_SampleGenotypes {
   my $self = shift;
   
   if(!exists($self->{genotypes})) {
-    
-    # use method in VCFCollection to generate genotypes
-    my $collection = $self->collection();
-    my $inds = $collection->get_all_Samples;
-    
-    if(scalar @$inds) {
-      $self->{genotypes} = $collection->_create_SampleGenotypeFeatures(
-        $inds,
-        $self->vcf_record->get_samples_genotypes,
-        $self->variation_feature
-      );
-    
-      # weaken ref back to variation feature
-      weaken($_->{variation_feature}) for @{$self->{genotypes}};    
-    }
-    else {
-      $self->{genotypes} = [];
-    }
+
+    $self->{genotypes} = [
+      map {weaken($_->{variation}); $_}
+      @{
+        $self->collection->get_all_SampleGenotypeFeatures_by_VariationFeature(
+          $self->variation_feature,
+          undef, #$_[0] || undef,
+          $self->vcf_record
+        )
+      }
+    ];
   }
    
   return $self->{genotypes};
@@ -327,7 +207,7 @@ sub minor_allele {
   
   if(!exists($self->{minor_allele})) {
     my $counts = $self->_allele_counts;
-    $self->{minor_allele} = scalar keys %$counts ? (sort {$counts->{$a} <=> $counts->{$b}} keys %{$counts})[0] : undef;    
+    $self->{minor_allele} = scalar keys %$counts ? (sort {$counts->{$b} <=> $counts->{$a}} keys %{$counts})[1] : undef;    
   }
   
   return $self->{minor_allele};
@@ -428,6 +308,22 @@ sub _allele_counts {
   }
   
   return $self->{_allele_counts};
+}
+
+sub _raw_freq_objs_from_genotypes {
+  my $self = shift;
+
+  if(!exists($self->{_raw_freq_hashes})) {
+    my $collection = $self->collection;
+
+    $self->{_raw_freq_hashes} = raw_freqs_from_gts(
+      $self->get_all_SampleGenotypes,
+      $collection->get_all_Populations,
+      $collection->_get_Population_Sample_hash
+    );
+  }
+
+  return $self->{_raw_freq_hashes};
 }
 
 sub _format_frequency {

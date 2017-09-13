@@ -761,13 +761,18 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $sample = shift;
+  my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
-  # seek to record for VariationFeature
-  return [] unless $self->_seek_by_VariationFeature($vf);
-  
-  my $vcf = $self->_current();
+  if(!$vcf) {
+    # seek to record for VariationFeature
+    return [] unless $self->_seek_by_VariationFeature($vf); 
+    $vcf = $self->_current();
+  }
+  else {
+    $self->_current($vcf);
+  }
   
   my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
   my @sample_names = map {$_->{_raw_name}} @$samples;
@@ -799,12 +804,18 @@ sub get_all_Alleles_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $given_pop = shift;
+  my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
-  # seek to record for VariationFeature
-  return [] unless $self->_seek_by_VariationFeature($vf);  
-  my $vcf = $self->_current();
+  if(!$vcf) {
+    # seek to record for VariationFeature
+    return [] unless $self->_seek_by_VariationFeature($vf);    
+    $vcf = $self->_current();
+  }
+  else {
+    $self->_current($vcf);
+  }
 
   # get data from VF
   my $vf_ref = $vf->ref_allele_string;
@@ -919,6 +930,10 @@ sub get_all_Alleles_by_VariationFeature {
   # create the actual allele objects
   my @alleles;
 
+  # we need these to create allele objects
+  my $variation = $vf->variation;
+  my $allele_adaptor = $self->use_db ? $self->adaptor->db->get_AlleleAdaptor : undef;
+
   foreach my $pop(@pops) {
     my $pop_id = $pop->dbID;
 
@@ -953,8 +968,8 @@ sub get_all_Alleles_by_VariationFeature {
         count      => $counts && $counts->{$pop_id} ? ($counts->{$pop_id}->{$a} || 0) : undef,
         frequency  => $freqs->{$pop_id}->{$a},
         population => $pop,
-        variation  => $vf->variation,
-        adaptor    => $self,
+        variation  => $variation,
+        adaptor    => $allele_adaptor,
         subsnp     => undef,
         _missing_alleles => $missing_alleles->{$pop_id} || {},
       })
@@ -1228,6 +1243,7 @@ sub _create_SampleGenotypeFeature {
   my $vf = shift;
   return Bio::EnsEMBL::Variation::SampleGenotypeFeature->new_fast({
       _variation_id     => $vf->{_variation_id},
+      _sample_id        => $sample->dbID,
       variation_feature => $vf,
       sample            => $sample,
       genotype          => $bits,
@@ -1551,7 +1567,6 @@ sub _get_all_population_names {
   }
   return $self->{_population_names};
 }
-
 
 =head2 vcf_collection_close
 

@@ -119,8 +119,8 @@ sub variation {
   return $self->{variation};
 }
 
-sub get_all_IndividualGenotypes {
-  return $_[0]->variation->get_all_IndividualGenotypes;
+sub get_all_SampleGenotypes {
+  return $_[0]->variation->get_all_SampleGenotypes;
 }
 
 sub minor_allele {
