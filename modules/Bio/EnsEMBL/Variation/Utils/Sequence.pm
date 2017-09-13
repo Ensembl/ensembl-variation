@@ -1331,7 +1331,7 @@ sub raw_freqs_from_gts {
       my (%a_counts, $a_total, %g_counts, $g_total);
 
       # get all genotypes for samples in this population
-      foreach my $genotype(grep {$pop_sample_hash->{$pop_id}->{$_->{_sample_id}}} @{$by_ss{$ss}}) {
+      foreach my $genotype(grep {$pop_sample_hash->{$pop_id}->{$_->{_sample_id} ||= $_->sample->dbID}} @{$by_ss{$ss}}) {
 
         # count genotypes
         $g_total++;
