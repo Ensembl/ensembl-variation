@@ -2218,4 +2218,32 @@ sub _parse_hgvs_protein_position{
   #exit(0); 
 }
 
+
+sub fetch_all_by_location_identifier {
+  my $self = shift;
+  my $vl = shift;
+
+  my $sa = $self->db->dnadb->get_SliceAdaptor();
+  return [] unless $sa;
+
+  my $vfs;
+      
+  my ($chr, $start, $alleles, $vcf_id) = split(':', $vl);
+  my $slice = $sa->fetch_by_region(undef, $chr, $start, $start);
+
+  if($slice) {
+    $vfs = $self->fetch_all_by_Slice($slice);
+
+    # filter based on $alleles and $vcf_id
+    if($alleles) {
+      $alleles =~ s/\_/\//g;
+      @$vfs = grep {$_->allele_string eq $alleles} @$vfs if $alleles;
+    }
+
+    @$vfs = grep {$_->source_name eq $vcf_id} @$vfs if $vcf_id;
+  }
+
+  return $vfs;
+}
+
 1;

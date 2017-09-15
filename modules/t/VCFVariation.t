@@ -78,7 +78,7 @@ is($vf->variation_name, 'rs11125006', 'VCFVF - variation_name');
 
 is($vf->allele_string, 'T/C', 'VCFVF - allele_string');
 
-is($vf->location_identifier, '2:45406898-45406898:T_C:1000genomes_phase1', 'VCFVF - location_identifier');
+is($vf->location_identifier, '2:45406898:T_C:1000genomes_phase1', 'VCFVF - location_identifier');
 
 is_deeply($vf->slice, $slice, 'VCFVF - slice');
 
@@ -193,7 +193,7 @@ $slice = $sa->fetch_by_region('chromosome', 11, 66318824, 66318826);
 my $exac_vfs = $coll->get_all_VariationFeatures_by_Slice($slice);
 
 # check name generation
-is($exac_vfs->[0]->variation_name, '11:66318824-66318824_G/C', 'ExAC - name generation');
+is($exac_vfs->[0]->variation_name, '11:66318824:G_C:SelectVariants', 'ExAC - name generation');
 
 $vf = $exac_vfs->[1];
 

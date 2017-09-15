@@ -2132,7 +2132,7 @@ sub to_VCF_record {
 
     return [
       $self->{chr} || $self->seq_region_name,
-      $self->start - 1,
+      $self->seq_region_start - 1,
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
@@ -2145,7 +2145,7 @@ sub to_VCF_record {
   else {
     return [
       $self->{chr} || $self->seq_region_name,
-      $self->start,
+      $self->seq_region_start,
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
@@ -2183,11 +2183,12 @@ sub _get_ref_seq {
 }
 
 
-=head2 location_string
+=head2 location_identifier
 
   Arg [1]    : none
-  Example    : print $vf->location_string(), "\n";
-  Description: Returns the location string "chr:start-end" for this VariationFeature
+  Example    : print $vf->location_identifier(), "\n";
+  Description: Returns the location identifier "chr:start:alleles:source"
+               for this VariationFeature
   Returntype : string
   Exceptions : none
   Caller     : Web
@@ -2195,23 +2196,13 @@ sub _get_ref_seq {
 
 =cut
 
-sub location_string {
-  my $self = shift;
-  
-  if(!exists($self->{location_string})) {
-    $self->{location_string} = $self->seq_region_name.':'.$self->seq_region_start.'-'.$self->seq_region_end;
-  }
-  
-  return $self->{location_string};
-}
-
 sub location_identifier {
   my $self = shift;
 
   if(!exists($self->{location_identifier})) {
     my $alleles = $self->allele_string;
     $alleles =~ s/\//\_/g;
-    $self->{location_identifier} = join(':', $self->location_string, $alleles, $self->source_name);
+    $self->{location_identifier} = join(':', $self->seq_region_name, $self->seq_region_start, $alleles, $self->source_name);
   }
 
   return $self->{location_identifier};
