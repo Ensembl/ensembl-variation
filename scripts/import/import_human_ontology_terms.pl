@@ -87,7 +87,8 @@ sub add_ols_matches{
 
     ## modify term if no exact match available
     if (defined $truncate && $truncate eq 'parent'){
- 
+
+      $search_term = (split/\,/, $search_term)[0] if $search_term =~ /\,/;
       $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (DDG2P abbreviation)
       $search_term =~ s/SUSCEPTIBILITY TO\s*|SUSCEPTIBILITY//i;
       $search_term =~ s/(\,+(\s*\w+\s*)+)+\s*$//;      ## remove ", with other  condition" ", one family" type qualifiers
@@ -97,6 +98,7 @@ sub add_ols_matches{
       $search_term =~ s/primary\s*//i;
       $search_term =~ s/\s*\,\s*$//; 
       $search_term =~ s/\s+/ /g;
+      $search_term =~ s/nonsyndromic //i;
 
       next if length($search_term) == length($phenos->{$id});
       print "Seeking $search_term from $phenos->{$id}\n";
