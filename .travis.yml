@@ -42,12 +42,11 @@ install:
     - cpanm Bio::DB::HTS
     - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 
-script: "./travisci/harness.sh"
-
 # Add build stage to trigger dependent builds, run sequentially after all test jobs
 # specified by the build matrix expansion have completed successfully
 jobs:
   include:
+    - script: ./travisci/harness.sh # uses default stage name "test"
     - stage: trigger_dependent_builds
       script: ./travisci/trigger-dependent-build.sh
 
