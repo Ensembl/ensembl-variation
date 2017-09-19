@@ -44,7 +44,16 @@ install:
 
 script: "./travisci/harness.sh"
 
+# Add build stage to trigger dependent builds, run sequentially after all test jobs
+# specified by the build matrix expansion have completed successfully
+jobs:
+  include:
+    - stage: trigger_dependent_builds
+      script: ./travisci/trigger-dependent-build.sh
+
 notifications:
   email:
     on_success: always
     on_failure: always
+  slack:
+    secure: ddpvJ5UJ+rEcllroQYpPg381+5iPDIt5VDlu1Zeepwx9KeUofJpGWO0H4SJjp75+3uKubEhaSJWnh0No296Lv8rtbZkji3rwmK/qxX3OtzVu9LtMx5+7MRQymI54D6j9gzZ2QKR0DW+K3GwBYR31KqmyZIhnKd0UeTVbEXuaQqVk2Oe4LdzZJkezNgdphuz3cFsaqd2fg85PXNgbfGLwdbGRDl+39m6wQ1nWqzTDqO/NECCeheev1OYTYXdM49rd6NyfMeUMZujwuix+YLN6Ph7ePTyxuheE+PQSvJkoFCxpnsly9rxqo/594RwcDa8OsJPLm8cN6+5L8zmb4M5UfGtUFHsK9usp96DguaadAG3esnkwdQ6QI2w8x/+3l1IesvnPJFTNtwU6iY9MvGKq6Zgb6X5tNVhrOYxV0Ixo1AB24wjd32AQWrOg2rvVpB9bIYisSlSdJJG9ON0tEykbcIOtG73PRhrgZHUswSN5lZuTf0beVnhH2Q3Lo5qbIGfsrQqG0G6/P7LgagkQ89qfexpGTSd6YfzjSyMmqcQ7dBl8/D1MtysQdHOL+R2zJB6JdFM6BZh78AzSExpQHs/do/0rObmPRM/8JcsyFgHrpWx7Ntbpy/vPKp9fGH/jOrif3Ex4Qxs0+buYR+IQpsiSqiVaTex9GOIZlwg7kuLlXdA=
