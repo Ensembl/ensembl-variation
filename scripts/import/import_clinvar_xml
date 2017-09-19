@@ -133,6 +133,9 @@ while (my $set = $ref->get_record() ){
     ## confidence of assertation
     $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus};
 
+    ## check for somatic, Autosomal dominant, etc.
+    $record{inheritance_type} = get_inheritance($set->{ReferenceClinVarAssertion}->{AttributeSet});
+
     ## trait info (using Acc for error logging)
     ($record{disease}, $record{ontology_accession}) = get_disease($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}, $record{Acc});
 
@@ -204,6 +207,25 @@ sub get_clinsig{
     $desc = "\L$ClinicalSignificance->{Description}";
   }
   return $desc;
+}
+
+=head2 get_inheritance
+- mode of inheritance attribute holds somatic status
+=cut
+sub get_inheritance{
+
+  my $attribute_set = shift;
+
+  my $moi;
+
+  my $attributes = to_array($attribute_set);
+  foreach my $attribute(@{$attributes}){
+    next unless defined $attribute->{Attribute} &&
+                      $attribute->{Attribute}->[1]->{Type} eq 'ModeOfInheritance';
+
+    $moi = $attribute->{Attribute}->[0];
+  }
+  return $moi;
 }
 
 =head2 get_feature
@@ -427,6 +449,7 @@ sub import_phenotype_feature{
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
+  $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
 
   foreach my $feature (@{$feat}){
     print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
@@ -535,7 +558,7 @@ sub get_variant{
   }
 
   ## enter new records
-  my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP);
+  my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP, $record->{inheritance_type});
   return ($new_var_ob,  $var_feat, $alt_allele);
 }
 
@@ -552,17 +575,20 @@ sub enter_var{
   my $ref_allele = shift;
   my $alt_allele = shift;
   my $dbSNP      = shift;
+  my $inherit    = shift;
 
    unless (defined $ref_allele && defined $alt_allele){
      warn "ERROR: missing alleles for $data->{hgvs_g} / $dbSNP\n";
      return undef;
    }
 
+  my $somatic = 0;
+  $somatic = 1 if $inherit =~ /Somatic/i;
     
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
-      -is_somatic        => 0,
+      -is_somatic        => $somatic,
       -adaptor           => $variation_adaptor,
     );
   $variation_adaptor->store($var);
