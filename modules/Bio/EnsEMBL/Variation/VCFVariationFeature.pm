@@ -86,11 +86,23 @@ sub new_from_VariationFeature {
 
   # assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
   $vf->{adaptor} = $adaptor;
-  
+
+  # create source object
+  my $meta_source = $vcf_record->{metadata}->{source};
+  $vf->{source} = Bio::EnsEMBL::Variation::Source->new_fast({
+    name => $meta_source || $collection->id,
+    description => $meta_source || $collection->description || $collection->id,
+  });
+    
+  # remap to seq region slice
   $vf->{slice} = $slice->seq_region_Slice;
   my $transferred = $vf->transfer($slice);
 
-  $transferred->{variation_name} ||= $transferred->location_identifier;
+  my $li = $transferred->location_identifier;
+  $transferred->{dbID} = $li;
+
+  # generate name if missing
+  $transferred->{variation_name} ||= $li;
   
   return $transferred;
 }
@@ -133,18 +145,6 @@ sub minor_allele_count {
 
 sub minor_allele_frequency {
   return $_[0]->variation->minor_allele_frequency;
-}
-
-sub source_object {
-  return $_[0]->variation->source_object;
-}
-
-sub source_name {
-  return $_[0]->variation->source_name;
-}
-
-sub source_version {
-  return $_[0]->variation->source_version;
 }
 
 1;

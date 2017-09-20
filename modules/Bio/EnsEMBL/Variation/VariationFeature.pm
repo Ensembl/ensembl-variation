@@ -2074,6 +2074,9 @@ sub display {
 sub to_VCF_record {
   my $self = shift;
 
+  # shortcut out if created from VCF record
+  return [@{$self->{vcf_record}->{record}}[0..4]] if exists($self->{vcf_record});
+
   my %allele_lengths;
 
   # deal with HGMD_MUTATION and COSMIC_MUTATION
@@ -2206,6 +2209,16 @@ sub location_identifier {
   }
 
   return $self->{location_identifier};
+}
+
+sub reset_consequence_data {
+  my $self = shift;
+  delete $self->{$_} for qw(
+    intergenic_variation
+    consequence_types
+    overlap_consequences
+    _most_severe_consequence
+  );
 }
 
 1;

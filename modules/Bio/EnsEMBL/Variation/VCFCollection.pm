@@ -694,7 +694,6 @@ sub get_all_VariationFeatures_by_Slice {
         -no_ref_check       => 1,
       );
       weaken($vf->{intergenic_variation}->{base_variation_feature});
-      $vf->{display_consequence} = 'intergenic_variation';
 
       $vf->_finish_annotation();
     }
@@ -708,13 +707,14 @@ sub get_all_VariationFeatures_by_Slice {
     my $db = $self->adaptor->db;
 
     # transcripts
+    my @transcripts =
+      map {$_->transfer($slice)}
+      @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)};
+
     $db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures_SO_terms(
       \@vfs,
-      [
-        map {$_->transfer($slice)}
-        @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)}
-      ]
-    );
+      \@transcripts
+    ) if @transcripts;
 
     # funcgen types
     foreach my $type(qw(RegulatoryFeature MotifFeature)) {
@@ -725,11 +725,12 @@ sub get_all_VariationFeatures_by_Slice {
         )
       ) {
         my $get_adaptor_method = 'get_'.$type.'VariationAdaptor';
+        my @features = map {$_->transfer($slice)} @{$fg_adaptor->fetch_all_by_Slice($slice)};
 
         $db->$get_adaptor_method->fetch_all_by_VariationFeatures_SO_terms(
           \@vfs,
-          [map {$_->transfer($slice)} @{$fg_adaptor->fetch_all_by_Slice($slice)}],
-        )
+          \@features,
+        ) if @features;
       }
     }
 

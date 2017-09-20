@@ -73,15 +73,11 @@ sub new_from_VCFVariationFeature {
   # get and check VF
   my $vf = shift;
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VCFVariationFeature');
-
-  my $meta_source = $vf->vcf_record->{metadata}->{source};
   
   my $v = Bio::EnsEMBL::Variation::Variation->new_fast({
-    name => $vf->variation_name,
-    source => Bio::EnsEMBL::Variation::Source->new_fast({
-      name => $meta_source || $vf->collection->id,
-      description => $meta_source || $vf->collection->description || $vf->collection->id,
-    }),
+    name          => $vf->variation_name,
+    class_SO_term => $vf->class_SO_term,
+    source        => $vf->source,
   });
   
   bless $v, $class;

@@ -97,6 +97,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_hgvs_alleles trim_sequences);
 use Bio::SeqUtils;
+use Scalar::Util qw(looks_like_number);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -2216,6 +2217,21 @@ sub _parse_hgvs_protein_position{
   #warn Dumper \%paths; 
   #warn Dumper \%best_paths; 
   #exit(0); 
+}
+
+sub fetch_by_dbID {
+  my $self = shift;
+  my $id = shift;
+
+  throw("ERROR: No dbID given\n") unless $id;
+
+  if(looks_like_number($id)) {
+    return $self::SUPER->fetch_by_dbID($id);
+  }
+  else {
+    my $vfs = $self->fetch_all_by_location_identifier($id);
+    return @$vfs ? $vfs->[0] : undef;
+  }
 }
 
 

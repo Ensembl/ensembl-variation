@@ -49,6 +49,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
+use Scalar::Util qw(looks_like_number);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor);
 
@@ -124,6 +125,33 @@ sub fetch_all_by_Features_with_constraint {
 
 sub _func_all_by_Features_with_constraint {
     my ($self, $features, $constraint, $func) = @_;
+
+    my $use_vcf = $self->db->use_vcf();
+    my @vcf_vfos;
+
+    if($use_vcf) {
+      my $vca = $self->db->get_VCFCollectionAdaptor;
+      my @vcfs = grep {$_->use_as_source} @{$vca->fetch_all};
+
+      foreach my $f(@$features) {
+        my $expanded_slice = $f->feature_Slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT);
+        my $f_slice        = $f->slice;
+
+        my @vfs =
+          map {$_->transfer($f_slice)}
+          map {@{$_->get_all_VariationFeatures_by_Slice($expanded_slice, 1)}}
+          @vcfs;
+
+        my $strong_ref_copy;
+        push @vcf_vfos,
+          map {$strong_ref_copy = $_->{base_variation_feature}; $_->{base_variation_feature} = $strong_ref_copy; $_}
+          @{$self->_fetch_all_by_VariationFeatures_no_DB(\@vfs, [$f])};
+      }
+
+      if($use_vcf == 2) {
+        return $func eq 'count' ? scalar @vcf_vfos : \@vcf_vfos;
+      }
+    }
    
     my %feats_by_id = map { $_->stable_id => $_ } @$features;
     
@@ -135,7 +163,13 @@ sub _func_all_by_Features_with_constraint {
     my $method = "generic_" . $func;
     my $data = $self->$method($full_constraint);
 
-    return $data;
+    if($func eq 'count') {
+      return (scalar @vcf_vfos + $data);
+    }
+    else {
+      push @vcf_vfos, @$data;
+      return \@vcf_vfos;
+    }
 }
 
 sub count_all_by_Features_with_constraint {
@@ -186,10 +220,10 @@ sub count_all_by_VariationFeatures_with_constraint {
 sub _func_all_by_VariationFeatures_with_constraint {
     my ($self, $vfs, $features, $constraint, $func) = @_;
     
-    # split into those with dbID and those without
+    # split into those with a real dbID and those without
     my (@with_id, @no_id);
     foreach my $vf(@$vfs) {
-      if($vf->dbID) {
+      if(looks_like_number($vf->dbID)) {
         push @with_id, $vf;
       }
       else {
@@ -202,6 +236,7 @@ sub _func_all_by_VariationFeatures_with_constraint {
     # deal with those with no ID
     if(scalar @no_id) {
       my $method = '_'.$func.'_all_by_VariationFeatures_no_DB';
+      $_->reset_consequence_data for @no_id;
       my $data = $self->$method(\@no_id, $features, $constraint);
       push @alldata, ref($data) eq 'ARRAY' ? @$data : $data;
     }

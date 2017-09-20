@@ -279,7 +279,7 @@ sub _fetch_all_by_VariationFeatures_no_DB {
     if(
       my $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
         -species  => $self->db->species, 
-        -type     => 'RegulatoryFeature',
+        -type     => 'MotifFeature',
       )
     ) {
       @$features = map {@{$fg_adaptor->fetch_all_by_Slice($_)}} @$slices;
