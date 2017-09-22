@@ -247,6 +247,12 @@ sub _allele_counts {
     my $info = $vcf_record->get_info();
     my @alts = @{$vcf_record->get_alternatives};
     my $ref = $vcf_record->get_reference;
+
+    # convert REF/ALT to Ensembl style
+    my %first_bases = map {substr($_, 0, 1) => 1} ($ref, @alts);
+    if(scalar keys %first_bases == 1) {
+      ($ref, @alts) = map {$_ = substr($_, 1); $_ ||= '-'; $_} ($ref, @alts);
+    }
     
     # check we have required fields before attempting
     if(
