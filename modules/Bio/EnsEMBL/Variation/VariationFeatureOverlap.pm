@@ -259,7 +259,7 @@ sub _variation_feature_id {
   
   my $self = shift;
   
-  if (my $vf = $self->{variation_feature}) {
+  if (my $vf = $self->{variation_feature} || $self->{base_variation_feature}) {
     return $vf->dbID;
   }
   elsif (my $id = $self->{_variation_feature_id}) {
