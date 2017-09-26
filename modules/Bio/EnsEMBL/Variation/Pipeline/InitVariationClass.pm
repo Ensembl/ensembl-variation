@@ -100,6 +100,7 @@ sub fetch_input {
             variation_id_stop   => $stop,
             temp_var_table      => $temp_var_table,
             temp_var_feat_table => $temp_var_feat_table,
+            species             => $self->param('species'),
         };
       $start = $stop + 1;
     }
@@ -110,6 +111,7 @@ sub fetch_input {
         'finish_var_class', [{
             temp_var_table      => $temp_var_table,
             temp_var_feat_table => $temp_var_feat_table,
+            species             => $self->param('species'),
         }]
     );
 }

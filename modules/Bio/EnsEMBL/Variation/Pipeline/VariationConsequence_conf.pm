@@ -32,6 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_conf;
 
 use strict;
 use warnings;
+use File::Spec::Functions qw(catfile catdir);
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
@@ -51,6 +52,9 @@ sub default_options {
     chomp $login;
 
     return {
+      
+        # List of species to use
+        species => [],
 
         # general pipeline options that you should change to suit your environment
        
@@ -62,7 +66,7 @@ sub default_options {
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
-        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive', 
+        hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'variation_consequence',
@@ -70,21 +74,14 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $login . '/' . $self->o('pipeline_name') . '/' . $self->o('species'),
-
-        # a directory where hive workers will dump STDOUT and STDERR for their jobs
-        # if you use lots of workers this directory can get quite big, so it's
-        # a good idea to keep it on lustre, or some other place where you have a 
-        # healthy quota!
-        
-        output_dir              => $self->o('pipeline_dir').'/hive_output',
+        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $login . '/' . $self->o('pipeline_name'),
 
         # a standard ensembl registry file containing connection parameters
         # for your target database(s) (and also possibly aliases for your species
         # of interest that you can then supply to init_pipeline.pl with the -species
         # option)
         
-        reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
+        reg_file                => $self->o('pipeline_dir').'#species#/ensembl.registry',
 
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
@@ -133,7 +130,8 @@ sub default_options {
         sort_variation_feature => 1,
 
         # points to a FASTA file, much faster than using DB for sequence lookup if available
-        fasta => undef,
+        fasta_dir => undef,
+        fasta => $self->o('fasta_dir') ? catfile($self->o('fasta_dir'), '#species#', '#species#.fa') : undef,
 
         # sets the maximum distance to a transcript for which up/downstream consequences are assessed
         max_distance => undef,
@@ -163,7 +161,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_'.$self->o('species'),
+            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
             -driver => 'mysql',
         },
     };
@@ -181,15 +179,39 @@ sub resource_classes {
     };
 }
 
+sub beekeeper_extra_cmdline_options {
+    my $self = shift;
+    return "-reg_conf " . $self->o("reg_file");
+}
+
 sub pipeline_analyses {
     my ($self) = @_;
 
     my @common_params = (
         ensembl_registry    => $self->o('reg_file'),
-        species             => $self->o('species'),
+        pipeline_dir => catdir($self->o('pipeline_dir'), '#species#'),
     );
    
     my @analyses;
+    
+    push @analyses, (
+      {   -logic_name => 'species_factory',
+        -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
+        -parameters => {
+          db_types => [ 'variation' ],
+          species  => $self->o('species'),
+        },
+        -meadow_type       => 'LOCAL',
+        -input_ids  => [{}],
+        -rc_name    => 'default',
+        -flow_into  => {
+          2 => [
+            $self->o('run_transcript_effect') ? 'init_transcript_effect' : (),
+            $self->o('run_variation_class')   ? 'init_variation_class' : (),
+          ],
+        },
+      },
+    );
 
     if ($self->o('run_transcript_effect')) {
 
@@ -202,11 +224,10 @@ sub pipeline_analyses {
                     limit_biotypes => $self->o('limit_biotypes'),
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
                     sort_variation_feature => $self->o('sort_variation_feature'),
                     @common_params,
                 },
-                -input_ids  => [{}],
+                -input_ids  => [],
                 -rc_name    => 'long',
                 -flow_into  => {
                     2 => [ 'rebuild_tv_indexes' ],
@@ -224,7 +245,6 @@ sub pipeline_analyses {
                     disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
                     max_distance => $self->o('max_distance'),
                     @common_params,
                 },
@@ -242,7 +262,6 @@ sub pipeline_analyses {
                     disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
                     mtmp_table => $self->o('mtmp_table'),
                     fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
                     max_distance => $self->o('max_distance'),
                     @common_params,
                 },
@@ -255,7 +274,6 @@ sub pipeline_analyses {
             {   -logic_name     => 'finish_transcript_effect',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
                 -parameters     => {
-                    pipeline_dir => $self->o('pipeline_dir'),
                     @common_params,
                 },
                 -input_ids      => [],
@@ -282,7 +300,6 @@ sub pipeline_analyses {
             {   -logic_name     => 'check_transcript_variation',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
                 -parameters     => {
-                    pipeline_dir  => $self->o('pipeline_dir'),
                     @common_params,
                 },
                 -input_ids      => [],
@@ -318,7 +335,7 @@ sub pipeline_analyses {
                     
                     @common_params,
                 },
-                -input_ids      => [{}],
+                -input_ids      => [],
                 -hive_capacity  => 1,
                 -rc_name        => 'default',
                 -wait_for       => ( $self->o('run_transcript_effect') ? [ 'update_variation_feature' ] : [] ),

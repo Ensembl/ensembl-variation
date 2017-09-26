@@ -89,11 +89,13 @@ sub fetch_input {
         if($gene->length > 1e6) {
           push @big_gene_output_ids, {
             gene_stable_id  => $gene->stable_id,
+            species => $self->param('species'),
           };
         }
         else {
           push @gene_output_ids, {
             gene_stable_id  => $gene->stable_id,
+            species => $self->param('species'),
           };
         }
 
@@ -189,6 +191,7 @@ sub fetch_input {
         $self->param(
             'rebuild_indexes', [{
                 tables => \@rebuild,
+                species => $self->param('species'),
             }]
         );
 
@@ -196,11 +199,21 @@ sub fetch_input {
         # but it doesn't have any parameters we need to set here
 
         $self->param(
-            'update_vf', [{}]
+            'update_vf', [{
+                species => $self->param('species'),
+              }]
         );
 
         $self->param(
-            'finish_transcript_effect', [{}]
+            'finish_transcript_effect', [{
+                species => $self->param('species'),
+              }]
+        );
+
+        $self->param(
+            'check_transcript_variation', [{
+                species => $self->param('species'),
+              }]
         );
 
         # setup fasta
