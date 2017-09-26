@@ -71,6 +71,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 
 use vars qw(@ISA);
+use Scalar::Util qw(looks_like_number);
 
 @ISA = qw(Bio::EnsEMBL::Storable);
 
@@ -524,6 +525,10 @@ sub _pos2vf {
   }
   my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
   if(!exists($self->{pos2vf})) {
+    
+    # dont bother if there's nothing in the container
+    return $self->{pos2vf} = {} unless keys %{$self->{ldContainer}};
+
     my %pos2vf = ();
     my @slice_objects = ();
     foreach my $slice (@{$self->_slices}) {
@@ -537,6 +542,7 @@ sub _pos2vf {
     }
     foreach my $slice (@slice_objects) {
       my $vfs = $vf_adaptor->fetch_all_by_Slice($slice);
+      $_->display_consequence for grep {!looks_like_number($_->dbID)} @$vfs;
       my $region_Slice = $slice->seq_region_Slice();
 
       my $pos2name = $self->_pos2name();
@@ -555,7 +561,7 @@ sub _pos2vf {
         grep {$pos2name->{$_->[1]}}
         map {[$_, $_->start]}
         map {$_->transfer($region_Slice)}
-        sort {$b->{_source_id} <=> $a->{_source_id}}
+        sort {($b->{_source_id} || 1) <=> ($a->{_source_id} || 1)}
         @filtered_vfs;
 
     }
