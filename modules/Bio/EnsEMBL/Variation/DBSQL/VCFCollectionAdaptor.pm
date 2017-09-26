@@ -211,14 +211,12 @@ sub new {
     }
 
     ## create source object if source info available
-    my $source;
-    if( defined $hash->{source_name}){
-      $source = Bio::EnsEMBL::Variation::Source->new
-          (-name        => $hash->{source_name},
-           -version     => $hash->{source_version}, 
-           -url         => $hash->{source_url}
-        );
-    }
+    my $source = Bio::EnsEMBL::Variation::Source->new_fast({
+      name        => $hash->{source_name} || $hash->{id},
+      version     => $hash->{source_version}, 
+      url         => $hash->{source_url},
+      description => $hash->{description} || $hash->{id},
+    });
 
     ## store populations if available
     my $populations;

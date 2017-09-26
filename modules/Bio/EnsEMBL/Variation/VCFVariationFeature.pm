@@ -87,12 +87,8 @@ sub new_from_VariationFeature {
   # assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
   $vf->{adaptor} = $adaptor;
 
-  # create source object
-  my $meta_source = $vcf_record->{metadata}->{source};
-  $vf->{source} = Bio::EnsEMBL::Variation::Source->new_fast({
-    name => $meta_source || $collection->id,
-    description => $meta_source || $collection->description || $collection->id,
-  });
+  # add source object
+  $vf->{source} = $collection->source;
     
   # remap to seq region slice
   $vf->{slice} = $slice->seq_region_Slice;
