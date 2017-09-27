@@ -205,10 +205,11 @@ sub get_source{
 sub usage{
 
   die "\nUsage : import_variant_synonyms -registry [registry file] -source_name [name]
-\n\tOptions: -clean remove of data
-\t         -data_file [name of file to load]
-\t         -species   [species]      - defaults to human
-\t         -source_version [version]
-\t         -source_url [url]
-\t         -source_description [longer description]\n\n";
+\n\tOptions:
+\t         -data_file          [name of file to load]
+\t         -source_version     [version]
+\t         -source_url         [url]
+\t         -source_description [longer description]
+\t         -species            [species]      - defaults to human
+\t         -clean                             - remove old data\n\n";
 }

@@ -191,8 +191,10 @@ sub store_synonyms{
       my $source_adaptor = $self->db->get_SourceAdaptor();
       my $source = $source_adaptor->fetch_by_name($source_name);
 
+      throw("No source found for name $source_name") unless defined $source;
+
       foreach my $name (keys %{$var->{synonyms}->{$source_name}}){
-        $sth->execute($var->{dbID}, $name, $source->dbID()) ;
+        $sth->execute($var->dbID(), $name, $source->dbID()) ;
       }
     }
     return $var;

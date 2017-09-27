@@ -17,7 +17,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Data::Dumper;
+use Test::Exception;
 
 use Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor;
 use Bio::EnsEMBL::Test::TestUtils;
@@ -258,8 +258,9 @@ $va->store_synonyms($var);
 my $varup = $va->fetch_by_name($upd_name);
 ok($varup->get_all_synonyms('dbSNP')->[0] eq 'ss55331', "fetch updated synonym");
 
-
-
+## test bad synonym source
+$var->add_synonym('turnip', 'ss55331');
+throws_ok { $va->store_synonyms($var) } qr/No source found for name turnip/, 'Throw if source not found.';
 
 
 done_testing();
