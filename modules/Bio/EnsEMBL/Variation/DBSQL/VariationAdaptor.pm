@@ -165,6 +165,39 @@ sub store {
 	my $dbID = $dbh->last_insert_id(undef, undef, 'variation', 'variation_id');
     $var->{dbID}    = $dbID;
     $var->{adaptor} = $self;
+
+    if(defined $var->{synonyms}){
+        $self->store_synonyms($var);
+    }
+}
+
+
+sub store_synonyms{
+
+    my $self = shift;
+    my $var  = shift;
+
+    my $dbh = $self->dbc->db_handle;
+    my $sth = $dbh->prepare(q{
+        INSERT IGNORE INTO variation_synonym (
+        variation_id,
+        name,
+        source_id
+     ) VALUES (?,?,?)
+    });
+
+    foreach my $source_name (keys %{$var->{synonyms}} ){  ### update this to allow storage of id
+
+      my $source_adaptor = $self->db->get_SourceAdaptor();
+      my $source = $source_adaptor->fetch_by_name($source_name);
+
+      throw("No source found for name $source_name") unless defined $source;
+
+      foreach my $name (keys %{$var->{synonyms}->{$source_name}}){
+        $sth->execute($var->dbID(), $name, $source->dbID()) ;
+      }
+    }
+    return $var;
 }
 
 sub update {
