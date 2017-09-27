@@ -13,9 +13,9 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# extend the characters supported in the publication.authors column
-
-alter table publication modify authors varchar(255) CHARACTER SET latin2 ;  
+# update the schema_version entry in the meta table
+UPDATE meta SET meta_value = 91 WHERE meta_key = 'schema_version';
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_90_91_b.sql|extend the characters supported in the publication.authors column'); 
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_a.sql|schema version');
+
