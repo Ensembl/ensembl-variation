@@ -226,11 +226,12 @@ $var = $va->fetch_by_dbID($var_id);
 
 delete $var->{$_} for qw(dbID name);
 $var->name('test');
-
+$var->add_synonym('dbSNP', 'ss55331');
 ok($va->store($var), "store");
 
 $var = $va->fetch_by_name('test');
 ok($var && $var->name eq 'test', "fetch stored");
+ok($var->get_all_synonyms('dbSNP')->[0] eq 'ss55331', "fetch synonym stored with variant");
 
 # update
 print "\n# Test - update\n";
@@ -249,6 +250,15 @@ ok($var->get_all_attributes()->{"co-located allele"}  eq "colo",  "attribute ext
 $va->store_attributes($var);
 my $var_up = $va->fetch_by_dbID($var->dbID);
 ok($var_up && $var_up->get_all_attributes()->{"co-located allele"} eq "colo", "fetch updated attribs");
+
+## test synonyms
+$var->add_synonym('dbSNP', 'ss55331');
+$va->store_synonyms($var);
+
+my $varup = $va->fetch_by_name($upd_name);
+ok($varup->get_all_synonyms('dbSNP')->[0] eq 'ss55331', "fetch updated synonym");
+
+
 
 
 
