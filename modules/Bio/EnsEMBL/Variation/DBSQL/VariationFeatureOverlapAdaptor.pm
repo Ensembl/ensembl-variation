@@ -145,7 +145,7 @@ sub _func_all_by_Features_with_constraint {
         my $strong_ref_copy;
         push @vcf_vfos,
           map {$strong_ref_copy = $_->{base_variation_feature}; $_->{base_variation_feature} = $strong_ref_copy; $_}
-          @{$self->_fetch_all_by_VariationFeatures_no_DB(\@vfs, [$f])};
+          @{$self->_fetch_all_by_VariationFeatures_no_DB(\@vfs, [$f], undef, 1)};
       }
 
       if($use_vcf == 2) {
@@ -236,9 +236,39 @@ sub _func_all_by_VariationFeatures_with_constraint {
     # deal with those with no ID
     if(scalar @no_id) {
       my $method = '_'.$func.'_all_by_VariationFeatures_no_DB';
-      $_->reset_consequence_data for @no_id;
-      my $data = $self->$method(\@no_id, $features, $constraint);
-      push @alldata, ref($data) eq 'ARRAY' ? @$data : $data;
+
+      # try to fetch VFOs from VFs
+      # probably not reliable to do this unless we have $features
+      # it's only really going to be of benefit for Transcript lookups too
+      my $remaining = [];
+
+      if($features && @$features && ref($features->[0]) eq 'Bio::EnsEMBL::Transcript') {
+        while(my $vf = shift @no_id) {
+
+          if(my $vfo_hash = $vf->{transcript_variations}) {
+            my @tmp_vfos = map {$vfo_hash->{$vf->_get_transcript_key($_)}} @$features;
+
+            if(scalar @tmp_vfos == scalar @$features) {
+              push @alldata, $func eq 'count' ? scalar @tmp_vfos : @tmp_vfos;
+            }
+            else {
+              push @$remaining, $vf;
+            }
+          }
+          else {
+            push @$remaining, $vf;
+          }          
+        }
+      }
+      else {
+        $remaining = \@no_id;
+      }
+
+      if(@$remaining) {
+        $_->reset_consequence_data for @$remaining;
+        my $data = $self->$method($remaining, $features, $constraint);
+        push @alldata, ref($data) eq 'ARRAY' ? @$data : $data;
+      }
     }
 
     my %vfs_by_id = map { $_->dbID => $_ } grep {$_->dbID} @with_id;
