@@ -193,6 +193,7 @@ sub run {
     
     $vf_insert_sth->finish();
     $v_insert_sth->finish();
+    $dbc and $dbc->disconnect_if_idle();
 }
 
 sub assign_SO_variation_class {
@@ -213,6 +214,7 @@ sub assign_SO_variation_class {
             my $cdba = $self->get_species_adaptor('core');
             my $ma = $cdba->get_MarkerAdaptor;
             my $marker_list = $ma->fetch_all_by_synonym($allele_string);
+            $cdba->dbc and $cdba->dbc->disconnect_if_idle();
             if (scalar @$marker_list > 0) {
                 $so_term = $genetic_marker;
             }

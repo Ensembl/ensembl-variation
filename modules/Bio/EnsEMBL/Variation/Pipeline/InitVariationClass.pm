@@ -119,8 +119,8 @@ sub fetch_input {
 sub write_output {
     my $self = shift;
 
-    $self->dataflow_output_id($self->param('finish_var_class'), 1);
-    $self->dataflow_output_id($self->param('chunk_output_ids'), 2);
+    $self->dataflow_output_id($self->param('chunk_output_ids'), 1);
+    $self->dataflow_output_id($self->param('finish_var_class'), 2);
 }
 
 1;

@@ -35,6 +35,7 @@ use warnings;
 use File::Spec::Functions qw(catfile catdir);
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf qw(WHEN ELSE);
 
 sub default_options {
     my ($self) = @_;
@@ -184,195 +185,205 @@ sub beekeeper_extra_cmdline_options {
     return "-reg_conf " . $self->o("reg_file");
 }
 
+sub pipeline_wide_parameters {
+  my ($self) = @_;
+
+  return {
+    %{$self->SUPER::pipeline_wide_parameters},
+        run_transcript_effect   => $self->o('run_transcript_effect'),
+        run_variation_class     => $self->o('run_variation_class'),
+  };
+}
+                        
+
 sub pipeline_analyses {
-    my ($self) = @_;
+  my ($self) = @_;
 
-    my @common_params = (
-        ensembl_registry    => $self->o('reg_file'),
-        pipeline_dir => catdir($self->o('pipeline_dir'), '#species#'),
-    );
-   
-    my @analyses;
-    
-    push @analyses, (
-      {   -logic_name => 'species_factory',
-        -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
-        -parameters => {
-          db_types => [ 'variation' ],
-          species  => $self->o('species'),
-        },
-        -meadow_type       => 'LOCAL',
-        -input_ids  => [{}],
-        -rc_name    => 'default',
-        -flow_into  => {
-          2 => [
-            $self->o('run_transcript_effect') ? 'init_transcript_effect' : (),
-            $self->o('run_variation_class')   ? 'init_variation_class' : (),
-          ],
-        },
+  my @common_params = (
+    ensembl_registry    => $self->o('reg_file'),
+    pipeline_dir => catdir($self->o('pipeline_dir'), '#species#'),
+  );
+
+  my @rebuild_tables = qw(transcript_variation variation_hgvs variation_genename);
+  push @rebuild_tables, 'MTMP_transcript_variation' if $self->o('mtmp_table');
+
+  my @analyses;
+  push @analyses, (
+    {   -logic_name => 'species_factory',
+      -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
+      -parameters => {
+        db_types => [ 'variation' ],
+        species  => $self->o('species'),
       },
-    );
+      -meadow_type       => 'LOCAL',
+      -max_retry_count => 0,
+      -input_ids  => [{}],
+      -rc_name    => 'default',
+      -flow_into  => {
+        2 => WHEN('#run_transcript_effect#' => 'init_transcript_effect',
+             ELSE 'init_variation_class'),
+      },
+    },
+  );
 
-    if ($self->o('run_transcript_effect')) {
+  push @analyses, (
+    {   -logic_name => 'init_transcript_effect',
+      -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
+      -parameters => {
+        include_lrg => $self->o('include_lrg'),
+        limit_biotypes => $self->o('limit_biotypes'),
+        mtmp_table => $self->o('mtmp_table'),
+        fasta => $self->o('fasta'),
+        sort_variation_feature => $self->o('sort_variation_feature'),
+        @common_params,
+      },
+      -hive_capacity  => 5,
+      -max_retry_count => 0,
+      -input_ids  => [],
+      -rc_name    => 'long',
+      -flow_into  => {
+        '2->A' => [ 'transcript_effect' ],
+        '3->B' => [ 'transcript_effect_highmem' ],
+        'A->1' => [ 'finish_transcript_effect' ],
+        'B->1' => [ 'finish_transcript_effect' ],
+      },
+    },
+    {   -logic_name     => 'transcript_effect',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+      -parameters     => { 
+        disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+        mtmp_table => $self->o('mtmp_table'),
+        fasta => $self->o('fasta'),
+        max_distance => $self->o('max_distance'),
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => $self->o('transcript_effect_capacity'),
+      -rc_name        => 'default',
+      -flow_into      => {
+        -1 => ['transcript_effect_highmem'],
+      }
+    },
 
-        push @analyses, (
-            
-            {   -logic_name => 'init_transcript_effect',
-                -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
-                -parameters => {
-                    include_lrg => $self->o('include_lrg'),
-                    limit_biotypes => $self->o('limit_biotypes'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    sort_variation_feature => $self->o('sort_variation_feature'),
-                    @common_params,
-                },
-                -input_ids  => [],
-                -rc_name    => 'long',
-                -flow_into  => {
-                    2 => [ 'rebuild_tv_indexes' ],
-                    3 => [ 'update_variation_feature' ],
-                    4 => [ 'transcript_effect' ],
-                    5 => [ 'check_transcript_variation' ],
-                    6 => [ 'finish_transcript_effect' ],
-                    7 => [ 'transcript_effect_highmem' ],
-                },
-            },
+    {   -logic_name     => 'transcript_effect_highmem',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+      -parameters     => {
+        disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+        mtmp_table => $self->o('mtmp_table'),
+        fasta => $self->o('fasta'),
+        max_distance => $self->o('max_distance'),
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => $self->o('transcript_effect_capacity'),
+      -rc_name        => 'highmem',
+      -can_be_empty   => 1,
+    },
 
-            {   -logic_name     => 'transcript_effect',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-                -parameters     => { 
-                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    max_distance => $self->o('max_distance'),
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_name        => 'default',
-                -flow_into      => {
-                  -1 => ['transcript_effect_highmem'],
-                }
-            },
+    {   -logic_name     => 'finish_transcript_effect',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
+      -parameters     => {
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'highmem',
+      -flow_into      => {
+        1 => ['rebuild_tv_indexes'],
+      },
+    },
 
-            {   -logic_name     => 'transcript_effect_highmem',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-                -parameters     => {
-                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    max_distance => $self->o('max_distance'),
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_name        => 'highmem',
-                -can_be_empty   => 1,
-            },
+    {   -logic_name     => 'rebuild_tv_indexes',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
+      -parameters     => {
+        tables => \@rebuild_tables,
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'urgent',
+      -flow_into      => {
+        1 => ['check_transcript_variation', 'update_variation_feature'],
+      },
+    },
 
-            {   -logic_name     => 'finish_transcript_effect',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'highmem',
-                -wait_for       => [ 'transcript_effect', 'transcript_effect_highmem' ],
-                -flow_into      => {},
-                -failed_job_tolerance => 0,
-                -max_retry_count => 0,
-            },
+    {   -logic_name     => 'check_transcript_variation',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
+      -parameters     => {
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'default',
+      -flow_into      => {},
+    },
 
-            {   -logic_name     => 'rebuild_tv_indexes',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'urgent',
-                -wait_for       => [ 'finish_transcript_effect' ],
-                -flow_into      => {},
-            },
-        
-            {   -logic_name     => 'check_transcript_variation',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'default',
-                -wait_for       => [ 'rebuild_tv_indexes' ],
-                -flow_into      => {},
-            },
+    {   -logic_name     => 'update_variation_feature',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+      -parameters     => {
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'urgent',
+      -flow_into      => {
+        1 => WHEN('#run_variation_class#' => 'init_variation_class'),
+      },
+    }, 
+  );
 
-            {   -logic_name     => 'update_variation_feature',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'urgent',
-                -wait_for       => [ 'rebuild_tv_indexes' ],
-                -flow_into      => {},
-            }, 
+  push @analyses, (
+    {   -logic_name     => 'init_variation_class',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
+      -parameters     => {
+        num_chunks  => 50,
 
-        );
-    }
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'default',
+      -flow_into      => {
+        '1->A' => [ 'set_variation_class' ],
+        'A->2' => [ 'finish_variation_class' ],
+      },
+    },
 
-    if ($self->o('run_variation_class')) {
+    {   -logic_name     => 'set_variation_class',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
+      -parameters     => {
+        identify_marker_e => $self->o('identify_marker_e'), 
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => $self->o('set_variation_class_capacity'),
+      -rc_name        => 'default',
+      -flow_into      => {},
+    },
 
-        push @analyses, (
+    {   -logic_name     => 'finish_variation_class',
+      -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
+      -parameters     => {
+        @common_params,
+      },
+      -max_retry_count => 0,
+      -input_ids      => [],
+      -hive_capacity  => 5,
+      -rc_name        => 'urgent',
+      -flow_into      => {},
+    },
 
-            {   -logic_name     => 'init_variation_class',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
-                -parameters     => {
-                    num_chunks  => 50,
-                    
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'default',
-                -wait_for       => ( $self->o('run_transcript_effect') ? [ 'update_variation_feature' ] : [] ),
-                -flow_into      => {
-                    1 => [ 'finish_variation_class' ],
-                    2 => [ 'set_variation_class' ],
-                },
-            },
-            
-            {   -logic_name     => 'set_variation_class',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
-                -parameters     => {
-                    identify_marker_e => $self->o('identify_marker_e'), 
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('set_variation_class_capacity'),
-                -rc_name        => 'default',
-                -flow_into      => {},
-            },
+  );
 
-            {   -logic_name     => 'finish_variation_class',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'urgent',
-                -wait_for       => [ 'set_variation_class' ],
-                -flow_into      => {},
-            },
-
-        );
-    }
-
-    return \@analyses;
+  return \@analyses;
 }
 
 1;

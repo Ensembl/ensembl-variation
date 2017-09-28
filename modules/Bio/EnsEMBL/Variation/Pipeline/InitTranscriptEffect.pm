@@ -146,8 +146,6 @@ sub fetch_input {
         $self->param('gene_output_ids', \@gene_output_ids);
         $self->param('big_gene_output_ids', \@big_gene_output_ids);
 
-        my @rebuild = qw(transcript_variation variation_hgvs variation_genename);
-
         # set up MTMP table
         if($mtmp) {
           my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
@@ -184,37 +182,10 @@ sub fetch_input {
 
           $dbc->do($create_sth);
           $dbc->do("ALTER TABLE $table DISABLE KEYS");
-
-          push @rebuild, $table;
         }
-
-        $self->param(
-            'rebuild_indexes', [{
-                tables => \@rebuild,
-                species => $self->param('species'),
-            }]
-        );
 
         # we need to kick off the update_vf analysis as well, 
         # but it doesn't have any parameters we need to set here
-
-        $self->param(
-            'update_vf', [{
-                species => $self->param('species'),
-              }]
-        );
-
-        $self->param(
-            'finish_transcript_effect', [{
-                species => $self->param('species'),
-              }]
-        );
-
-        $self->param(
-            'check_transcript_variation', [{
-                species => $self->param('species'),
-              }]
-        );
 
         # setup fasta
         if(my $fasta = $self->param('fasta')) {
@@ -230,15 +201,11 @@ sub write_output {
   my $self = shift;
 
   if (my $gene_output_ids = $self->param('gene_output_ids')) {
-    $self->dataflow_output_id($self->param('rebuild_indexes'), 2);
-    $self->dataflow_output_id($self->param('update_vf'), 3);
-    $self->dataflow_output_id($gene_output_ids, 4);
-    $self->dataflow_output_id($self->param('check_transcript_variation'), 5);
-    $self->dataflow_output_id($self->param('finish_transcript_effect'), 6);
+    $self->dataflow_output_id($gene_output_ids, 2);
   }
 
   if (my $big_gene_output_ids = $self->param('big_gene_output_ids')) {
-    $self->dataflow_output_id($big_gene_output_ids, 7);
+    $self->dataflow_output_id($big_gene_output_ids, 3);
   }
 
   return;

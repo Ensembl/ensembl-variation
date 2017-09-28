@@ -281,6 +281,9 @@ sub run {
     load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
   }
   ## end block
+  
+  $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+  $core_dba->dbc and $core_dba->dbc->disconnect_if_idle();
 
   # dump HGVS stubs to file for web index
   $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
