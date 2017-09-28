@@ -711,7 +711,7 @@ sub get_all_VariationFeatures_by_Slice {
       map {$_->transfer($slice)}
       @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)};
 
-    $db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures_SO_terms(
+    $db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures(
       \@vfs,
       \@transcripts
     ) if @transcripts;
@@ -727,7 +727,7 @@ sub get_all_VariationFeatures_by_Slice {
         my $get_adaptor_method = 'get_'.$type.'VariationAdaptor';
         my @features = map {$_->transfer($slice)} @{$fg_adaptor->fetch_all_by_Slice($slice)};
 
-        $db->$get_adaptor_method->fetch_all_by_VariationFeatures_SO_terms(
+        $db->$get_adaptor_method->fetch_all_by_VariationFeatures(
           \@vfs,
           \@features,
         ) if @features;
