@@ -93,6 +93,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
+use Scalar::Util qw(weaken);
 
 our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 
@@ -324,8 +325,8 @@ sub fetch_all_by_Transcripts_with_constraint {
 }
 
 sub _fetch_all_by_VariationFeatures_no_DB {
-  my ($self, $vfs, $features) = @_;
-  
+  my ($self, $vfs, $features, $constraint, $dont_add_to_vf) = @_;
+
   # get features?
   if(!$features || !@$features) {
     my $slices = $self->_get_ranged_slices_from_VariationFeatures($vfs);
@@ -347,7 +348,8 @@ sub _fetch_all_by_VariationFeatures_no_DB {
         -no_transfer       => ($vf->slice + 0) == ($f_slice + 0)
       );
       
-      $vf->add_TranscriptVariation($vfo);
+      $vf->add_TranscriptVariation($vfo) unless $dont_add_to_vf;
+
       push @return, $vfo;
     }
   }
