@@ -229,6 +229,48 @@ is_deeply(
 );
 $vf->allele_string($allele_str);
 
+
+# test overridden methods
+my $sr_coord = $start + $start - 1;
+is($vf->seq_region_start, $sr_coord, 'seq_region_start');
+is($vf->{seq_region_start}, $sr_coord, 'seq_region_start cached');
+is($vf->seq_region_start(10), 10, 'seq_region_start set');
+
+is($vf->seq_region_end, $sr_coord, 'seq_region_end');
+is($vf->{seq_region_end}, $sr_coord, 'seq_region_end cached');
+is($vf->seq_region_end(10), 10, 'seq_region_end set');
+
+my $vf_transformed = $vf->transform('contig');
+ok(
+  (
+    !exists($vf->{seq_region_start}) &&
+    !exists($vf->{seq_region_end}) &&
+    !exists($vf_transformed->{seq_region_start}) &&
+    !exists($vf_transformed->{seq_region_end})
+  ),
+  'transform deletes seq_region_start and seq_region_end'
+);
+
+# repopulate cache
+$vf->seq_region_start;
+$vf->seq_region_end;
+is($vf->{seq_region_start}, $sr_coord, 'seq_region_start re-cached');
+is($vf->{seq_region_end}, $sr_coord, 'seq_region_end re-cached');
+
+my $exp_slice = $slice->expand(10, 10);
+my $vf_transferred = $vf->transfer($exp_slice);
+ok(
+  (
+    !exists($vf->{seq_region_start}) &&
+    !exists($vf->{seq_region_end}) &&
+    !exists($vf_transferred->{seq_region_start}) &&
+    !exists($vf_transferred->{seq_region_end})
+  ),
+  'transfer deletes seq_region_start and seq_region_end'
+);
+is($vf_transferred->seq_region_start, $vf->seq_region_start, 'seq_region_start after transfer');
+is($vf_transferred->seq_region_end, $vf->seq_region_end, 'seq_region_end after transfer');
+
 # test convert to SNP
 #ok($vf->convert_to_SNP, 'convert to SNP'); # Need the ensembl-external repository
 
