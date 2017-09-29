@@ -299,7 +299,7 @@ sub allele_table {
   print    Progress::location() . "Written allele with frequency data\n";
 
   ## no longer importing alleles without frequency data for human
-  return 1 if $self->{'dbm'}->dbCore()->species =~ /homo/i;
+  return 1 if $dbm->dbCore()->species =~ /homo/i;
 
 
   ########## Extract allele data without frequency info
