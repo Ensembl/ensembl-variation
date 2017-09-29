@@ -193,7 +193,7 @@ sub dump_dbSNP{
   );
 
   ## add refSeq HGVS as synonym for human only
-  push @subroutines, 'import_hgvs' ;#if  $self->{'species'} eq 'human';
+  push @subroutines, 'import_hgvs' if  $self->{'dbm'}->dbCore()->species eq 'human';
  
   #The GenericContig object has an array where routines that should be skipped can be specified. For now, add create_coredb and cleanup by default
   push(@{$self->{'skip_routines'}},('create_coredb',
