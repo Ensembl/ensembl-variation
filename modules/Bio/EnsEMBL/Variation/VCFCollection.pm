@@ -1014,12 +1014,15 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my %vfs_by_pos;
   my $use_db = $self->use_db;
   
-  if($use_db) {
+  if($use_db || $self->use_as_source) {
     my $vfa = $self->adaptor->db->get_VariationFeatureAdaptor();
 
-    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice)}) {
+    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice, 1)}) {
       push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
     }
+
+    # reset seek
+    $self->_seek_by_Slice($slice);
   }
   
   my @genotypes;
@@ -1036,12 +1039,20 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
     my $vf;
     
     # try to match this VCF record to VariationFeature at this position
-    if($use_db) {
-      foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
-        $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
-      }
+    if(scalar keys %vfs_by_pos) {
 
-      $vf ||= $vfs_by_pos{$start}->[0] unless $strict;
+      if($strict) {
+        foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+          $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
+          last if $vf;
+        }
+      }
+      else {
+        foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+          $vf = $tmp_vf if @{$self->_get_matched_alleles_VF_VCF($tmp_vf, $vcf)};
+          last if $vf;
+        }
+      }
     }
     
     # otherwise create a VariationFeature object
@@ -1055,7 +1066,7 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
     
     $vcf->next();
   }
-  
+
   return \@genotypes;
 }
 
