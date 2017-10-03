@@ -244,9 +244,8 @@ sub _func_all_by_VariationFeatures_with_constraint {
 
       if($features && @$features && ref($features->[0]) eq 'Bio::EnsEMBL::Transcript') {
         while(my $vf = shift @no_id) {
-
           if(my $vfo_hash = $vf->{transcript_variations}) {
-            my @tmp_vfos = map {$vfo_hash->{$vf->_get_transcript_key($_)}} @$features;
+            my @tmp_vfos = grep {defined($_)} map {$vfo_hash->{$vf->_get_transcript_key($_)}} @$features;
 
             if(scalar @tmp_vfos == scalar @$features) {
               push @alldata, $func eq 'count' ? scalar @tmp_vfos : @tmp_vfos;
