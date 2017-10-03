@@ -208,8 +208,23 @@ sub get_TranscriptHaplotypeContainer_by_Transcript {
     my @gts;
 
     # we don't want variants in introns
+    my $tr_slice = $tr->slice;
+
     foreach my $exon(@{$tr->get_all_Exons}) {
-      push @gts, map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($exon->feature_Slice, undef, 1)}} @{$vca->fetch_all};
+      push @gts,
+        map {@{$_->get_all_SampleGenotypeFeatures_by_Slice($exon->feature_Slice, undef, 1)}}
+        @{$vca->fetch_all};
+    }
+
+    # transfer attached VFs
+    # but only do it once per unique VF, otherwise we duplicate effort and get issues downstream
+    my %transferred_vfs;
+    foreach my $gt(@gts) {
+      my $vf = $gt->variation_feature;
+      my $vf_dbID = $vf->dbID;
+
+      my $tr_vf = $transferred_vfs{$vf_dbID} ||= $vf->transfer($tr_slice);
+      $gt->variation_feature($tr_vf);
     }
     
     $tr->{_transcript_haplotype_container} = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new(
