@@ -445,8 +445,8 @@ sub fetch_all_by_Slice {
 =cut
 
 sub fetch_all_somatic_by_Slice {
-  my ($self, $slice) = @_;
-  return $self->fetch_all_somatic_by_Slice_constraint($slice, '');
+  my ($self, $slice, $no_cons) = @_;
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, '', $no_cons);
 }
 
 =head2 fetch_all_somatic_by_Slice_Source
