@@ -594,6 +594,13 @@ foreach my $num (keys %test_input_no_shift){
   }
 }
 
+# test an input looking up ref
+is(
+  $vdba->get_variationFeatureAdaptor->fetch_by_hgvs_notation(-hgvs => 'NC_000002.11:g.46746465N>A', -replace_ref => 1)->allele_string,
+  'G/A',
+  'replace_ref'
+);
+
 
 sub get_results{
 
