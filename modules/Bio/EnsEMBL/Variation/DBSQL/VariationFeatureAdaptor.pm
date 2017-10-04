@@ -1947,15 +1947,16 @@ sub _hgvs_from_components {
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   
   }
  
-  else {
-    # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
+  else {    
+    if($DEBUG==1){print "Reference allele: $refseq_allele expected allele: $ref_allele\n";}
+    
     if($replace_ref && defined($ref_allele)) {
       $ref_allele = $refseq_allele;
     }
+    # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
     elsif (defined($ref_allele) && $ref_allele ne $refseq_allele){        
       throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation $hgvs ($ref_allele)");
     }
-    if($DEBUG==1){print "Reference allele: $refseq_allele expected allele: $ref_allele\n";}
   }
   if (defined($ref_allele) && $ref_allele eq $alt_allele){         
     throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) matches alt allele given by HGVS notation $hgvs ($alt_allele)");
