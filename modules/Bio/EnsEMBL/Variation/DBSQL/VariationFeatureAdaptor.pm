@@ -93,6 +93,7 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Iterator;
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_hgvs_alleles trim_sequences);
 use Bio::SeqUtils;
@@ -1682,10 +1683,14 @@ sub _parse_hgvs_transcript_position {
    
 sub fetch_by_hgvs_notation {
   my $self = shift;
-  my $hgvs = shift;
-  my $user_slice_adaptor = shift;
-  my $user_transcript_adaptor = shift;
-  my $multiple_ok = shift;
+
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $multiple_ok, $replace_ref) = rearrange([qw(
+    HGVS
+    SLICE_ADAPTOR
+    TRANSCRIPT_ADAPTOR
+    MULTIPLE_OK
+    REPLACE_REF
+  )], @_);
 
   if($DEBUG ==1){print "\nStarting fetch_by_hgvs_notation for $hgvs\n";}
 
@@ -1752,7 +1757,7 @@ sub fetch_by_hgvs_notation {
 
         $result = $self->_hgvs_from_components(
           $hgvs, $reference, $type, $description,
-          $slice, $ref_allele, $alt_allele, $start, $end, $strand
+          $slice, $ref_allele, $alt_allele, $start, $end, $strand, $replace_ref
         )
       };
 
@@ -1777,7 +1782,10 @@ sub fetch_by_hgvs_notation {
     $strand =1; ## strand should be genome strand for HGVS genomic notation
     ($ref_allele, $alt_allele) = get_hgvs_alleles($hgvs);
 
-    my $result = $self->_hgvs_from_components($hgvs, $reference, $type, $description, $slice, $ref_allele, $alt_allele, $start, $end, $strand);
+    my $result = $self->_hgvs_from_components(
+      $hgvs, $reference, $type, $description,
+      $slice, $ref_allele, $alt_allele, $start, $end, $strand, $replace_ref
+    );
     return $multiple_ok ? [$result] : $result;
   }
          
@@ -1822,7 +1830,7 @@ sub fetch_by_hgvs_notation {
         eval {
           $result = $self->_hgvs_from_components(
             $hgvs, $reference, $type, $description, $slice,
-            @$poss
+            @$poss, $replace_ref
           )
         };
 
@@ -1871,7 +1879,7 @@ sub _get_gene_transcripts {
 
     Arg[1]      : String $hgvs
     Example     : my $hgvs = 'ENSP00000284967.6:p.Glu2Asp';
-                  $vfs = $vf_adaptor->fetch_by_hgvs_notation($hgvs);
+                  $vfs = $vf_adaptor->fetch_all_possible_by_hgvs_notation($hgvs);
     Description : Parses an HGVS notation and tries to create VariationFeature objects.
                   Some protein (p.) notations may reverse translate to multiple
                   possible genomic changes; this method returns all possible
@@ -1886,12 +1894,26 @@ sub _get_gene_transcripts {
    
 sub fetch_all_possible_by_hgvs_notation {
   my $self = shift;
-  return $self->fetch_by_hgvs_notation(@_, 1);
+
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $replace_ref) = rearrange([qw(
+    HGVS
+    SLICE_ADAPTOR
+    TRANSCRIPT_ADAPTOR
+    REPLACE_REF
+  )], @_);
+
+  return $self->fetch_by_hgvs_notation(
+    -hgvs               => $hgvs,
+    -slice_adaptor      => $user_slice_adaptor,
+    -transcript_adaptor => $user_transcript_adaptor,
+    -replace_ref        => $replace_ref,
+    -multiple_ok        => 1
+  );
 }
 
 
 sub _hgvs_from_components {
-  my ($self, $hgvs, $reference, $type, $description, $slice, $ref_allele, $alt_allele, $start, $end, $strand) = @_;
+  my ($self, $hgvs, $reference, $type, $description, $slice, $ref_allele, $alt_allele, $start, $end, $strand, $replace_ref) = @_;
 
   #######################  check alleles  #######################
   
@@ -1925,12 +1947,16 @@ sub _hgvs_from_components {
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   
   }
  
-  else {
+  else {    
+    if($DEBUG==1){print "Reference allele: $refseq_allele expected allele: $ref_allele\n";}
+    
+    if($replace_ref && defined($ref_allele)) {
+      $ref_allele = $refseq_allele;
+    }
     # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
-    if (defined($ref_allele) && $ref_allele ne $refseq_allele){        
+    elsif (defined($ref_allele) && $ref_allele ne $refseq_allele){        
       throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation $hgvs ($ref_allele)");
     }
-    if($DEBUG==1){print "Reference allele: $refseq_allele expected allele: $ref_allele\n";}
   }
   if (defined($ref_allele) && $ref_allele eq $alt_allele){         
     throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) matches alt allele given by HGVS notation $hgvs ($alt_allele)");
