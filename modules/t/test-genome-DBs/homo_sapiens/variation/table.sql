@@ -168,7 +168,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=96 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=99 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE `protein_function_predictions_attrib` (
 CREATE TABLE `publication` (
   `publication_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) DEFAULT NULL,
-  `authors` varchar(255) DEFAULT NULL,
+  `authors` varchar(255) CHARACTER SET latin2 DEFAULT NULL,
   `pmid` int(10) DEFAULT NULL,
   `pmcid` varchar(255) DEFAULT NULL,
   `year` int(10) unsigned DEFAULT NULL,
@@ -462,6 +462,7 @@ CREATE TABLE `structural_variation_sample` (
   `structural_variation_sample_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `structural_variation_id` int(10) unsigned NOT NULL,
   `sample_id` int(10) unsigned DEFAULT NULL,
+  `zygosity` enum('homozygous','heterozygous') DEFAULT NULL,
   PRIMARY KEY (`structural_variation_sample_id`),
   KEY `structural_variation_idx` (`structural_variation_id`),
   KEY `sample_idx` (`sample_id`)
@@ -538,7 +539,7 @@ CREATE TABLE `transcript_variation` (
   KEY `variation_feature_idx` (`variation_feature_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `somatic_feature_idx` (`feature_stable_id`,`somatic`)
-) ENGINE=MyISAM AUTO_INCREMENT=331368050 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=938362445 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `translation_md5` (
   `translation_md5_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -609,7 +610,7 @@ CREATE TABLE `variation_feature` (
   KEY `variation_set_idx` (`variation_set_id`),
   KEY `consequence_type_idx` (`consequence_types`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=111657318 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=997738283 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `variation_genename` (
   `variation_id` int(10) unsigned NOT NULL,
