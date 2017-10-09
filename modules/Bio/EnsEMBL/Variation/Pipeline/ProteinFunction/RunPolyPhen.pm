@@ -206,6 +206,7 @@ sub write_output {
         $self->dataflow_output_id( [{
             translation_md5 => $self->param('translation_md5'),
             feature_file    => $feature_file,
+            species         => $self->param('species'),
         }], 2);
     }
 }
