@@ -659,122 +659,160 @@ sub get_all_Alleles_by_VariationFeature {
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
   # seek to record for VariationFeature
-  return [] unless $self->_seek_by_VariationFeature($vf);
-  
+  return [] unless $self->_seek_by_VariationFeature($vf);  
   my $vcf = $self->_current();
 
   # get data from VF
   my $vf_ref = $vf->ref_allele_string;
   my $vf_alts = $vf->alt_alleles;
 
-  # and VCF entry
-  my $info = $vcf->get_info;
-  my $vcf_alts = $vcf->get_alternatives;
-
+  # check initial VCF match
   my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
-
   return [] unless @$matched;
 
-  my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
-
-  my @alleles;
-
+  # get generic pop data and collection-specific param
   my @pops = @{$self->get_all_Populations};
   @pops = grep {$_->name eq $given_pop || ($_->{_raw_name} || '') eq $given_pop} @pops if $given_pop;
-
   my $ref_freq_index = $self->ref_freq_index();
 
   # log any alleles present in the VCF not present in the VF alleles
   my $missing_alleles = {};
+  my $freqs = {};
+  my $counts = {};
+  my $total_acs = {};
+  my $total_afs = {};
+  my $ans = {};
+
+  # loop over VCF as there may be more than one VCF line containing freq data for this VF
+  # e.g. VF is G/A/C
+  # VCF line 1 is G/A, line 2 is G/C
+  while(1) {
+
+    # get data from VCF entry
+    my $info = $vcf->get_info;
+    my $vcf_alts = $vcf->get_alternatives;
+    my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
+
+    foreach my $pop(@pops) {
+
+      # this allows for an empty population name to be looked up as e.g. AF
+      my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
+      my $suffix = $raw_name ? '_'.$raw_name : '';
+      my $pop_id = $pop->dbID;
+
+      no warnings 'uninitialized';
+      my ($ac, $an, $af) = (
+        $info->{'AC'.$suffix} // $info->{$pop->{_ac}},
+        $info->{'AN'.$suffix} // $info->{$pop->{_an}},
+        $info->{'AF'.$suffix} // $info->{$pop->{_af}},
+      );
+
+      # log AN for later use
+      $ans->{$pop_id} = $an if $an;
+
+      # check for AF
+      if(defined($af)) {
+        $total_afs->{$pop_id} ||= 0;
+        my @split = split(',', $af);
+
+        # is ref AC included? This may have been set as ref_freq_index()
+        # or we can auto-detect by comparing size of @split to @$vcf_alts
+        $freqs->{$pop_id}->{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
+          if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
+
+        for my $i(0..$#split) {
+          my $f = $split[$i];
+          next if $f eq '.';
+          $total_afs->{$pop_id} += $f;
+
+          if(my $allele = $allele_map{$i}) {
+            $freqs->{$pop_id}->{$allele} = $f;
+            $counts->{$pop_id}->{$allele} = sprintf('%.0f', $f * $an) if $an;
+          }
+          else {
+            $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+          }
+        }
+      }
+
+      # or have AC and AN (AN must be defined and non-zero)
+      elsif(defined($ac) && $an) {
+
+        $total_acs->{$pop_id} ||= 0;
+        my @split = split(',', $ac);
+
+        # is ref AC included? This may have been set as ref_freq_index()
+        # or we can auto-detect by comparing size of @split to @$vcf_alts
+        $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
+          if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
+
+        for my $i(0..$#split) {
+          my $c = $split[$i];
+          $total_acs->{$pop_id} += $c;
+
+          if(my $allele = $allele_map{$i}) {
+            $counts->{$pop_id}->{$allele} = $c;
+            $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
+          }
+          else {
+            $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+          }
+        }
+      }
+    }
+
+    # get next VCF entry
+    $vcf->next();
+
+    # check a record exists
+    last unless $vcf->{record};
+
+    # check matches current VF
+    $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
+    last unless @$matched;
+  }
+
+  # create the actual allele objects
+  my @alleles;
 
   foreach my $pop(@pops) {
+    my $pop_id = $pop->dbID;
 
-    # this allows for an empty population name to be looked up as e.g. AF
-    my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
-    my $suffix = $raw_name ? '_'.$raw_name : '';
+    # interpolate ref freq
+    unless(exists($freqs->{$pop_id}->{$vf_ref})) {
 
-    my %freqs;
-    my %counts;
+      no warnings 'uninitialized';
+      my ($ac, $an, $af) = (
+        $total_acs->{$pop_id},
+        $ans->{$pop_id},
+        $total_afs->{$pop_id}
+      );
 
-    no warnings 'uninitialized';
-    my ($ac, $an, $af) = (
-      $info->{'AC'.$suffix} // $info->{$pop->{_ac}},
-      $info->{'AN'.$suffix} // $info->{$pop->{_an}},
-      $info->{'AF'.$suffix} // $info->{$pop->{_af}},
-    );
-
-    # check for AF
-    if(defined($af)) {
-      my $total = 0;
-      my @split = split(',', $af);
-
-      # is ref AC included? This may have been set as ref_freq_index()
-      # or we can auto-detect by comparing size of @split to @$vcf_alts
-      $freqs{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
-        if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
-
-      for my $i(0..$#split) {
-        my $f = $split[$i];
-        next if $f eq '.';
-        $total += $f;
-
-        if(my $allele = $allele_map{$i}) {
-          $freqs{$allele} = $f;
-          $counts{$allele} = sprintf('%.0f', $f * $an) if $an;
-        }
-        else {
-          $missing_alleles->{$pop->dbID}->{$vcf_alts->[$i]} = 1;
-        }
+      # have AC and AN, can work out freq and count
+      if(defined($ac) && $an) {
+        $counts->{$pop_id}->{$vf_ref} = $an - $ac;
+        $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', 1 - ($ac / $an));
       }
 
-      # but in most cases ref isn't explicitly mentioned
-      unless(exists($freqs{$vf_ref})) {
-        $freqs{$vf_ref} = 1 - $total;
-        $counts{$vf_ref} = sprintf('%.0f', (1 - $total) * $an) if $an;
+      # only have AF
+      elsif(defined($af)) {
+        $freqs->{$pop_id}->{$vf_ref} = 1 - $af;
+
+        # if have AN can do counts too
+        $counts->{$pop_id}->{$vf_ref} = sprintf('%.0f', $an * (1 - $af)) if $an;
       }
     }
 
-    # or have AC and AN (AN must be defined and non-zero)
-    elsif(defined($ac) && $an) {
-
-      my $total = 0;
-      my @split = split(',', $ac);
-
-      # is ref AC included? This may have been set as ref_freq_index()
-      # or we can auto-detect by comparing size of @split to @$vcf_alts
-      $freqs{$vf_ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
-        if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
-
-      for my $i(0..$#split) {
-        my $c = $split[$i];
-        $total += $c;
-
-        if(my $allele = $allele_map{$i}) {
-          $counts{$allele} = $c;
-          $freqs{$allele} = sprintf('%.4g', $c / $an);
-        }
-        else {
-          $missing_alleles->{$pop->dbID}->{$vcf_alts->[$i]} = 1;
-        }
-      }
-
-      # but in most cases ref isn't explicitly mentioned
-      unless(exists($freqs{$vf_ref})) {
-        $counts{$vf_ref} = $an - $total;
-        $freqs{$vf_ref} = sprintf('%.4g', 1 - ($total / $an));
-      }
-    }
-
-    foreach my $a(keys %freqs) {
+    foreach my $a(keys %{$freqs->{$pop_id}}) {
       push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
         allele     => $a,
-        count      => %counts ? ($counts{$a} || 0) : undef,
-        frequency  => $freqs{$a},
+        count      => %$counts && %{$counts->{$pop_id}} ? ($counts->{$pop_id}->{$a} || 0) : undef,
+        frequency  => $freqs->{$pop_id}->{$a},
         population => $pop,
         variation  => $vf->variation,
         adaptor    => $self,
         subsnp     => undef,
-        _missing_alleles => $missing_alleles->{$pop->dbID} || {},
+        _missing_alleles => $missing_alleles->{$pop_id} || {},
       })
     }
   }
