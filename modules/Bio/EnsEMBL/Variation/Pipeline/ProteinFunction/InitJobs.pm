@@ -202,8 +202,8 @@ sub fetch_input {
 
     # set up our list of output ids
 
-    $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
-    $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
+    $self->param('pph_output_ids',  [ map { {translation_md5 => $_, species => $self->param('species')} } @pph_md5s ]);
+    $self->param('sift_output_ids', [ map { {translation_md5 => $_, species => $self->param('species')} } @sift_md5s ]);
 }
 
 ## hold code & protein database version in meta table if new complete run
