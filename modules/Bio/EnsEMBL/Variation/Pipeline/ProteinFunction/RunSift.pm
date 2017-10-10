@@ -84,6 +84,7 @@ sub run {
   # fetch our protein 
 
   my $peptide = $self->get_protein_sequence($translation_md5);
+  $self->dbc and $self->dbc->disconnect_if_idle();
 
   my $alignment_ok = 1;
 
@@ -263,6 +264,8 @@ sub run {
         or die "Failed to get matrix adaptor";
     
       $pfpma->store($pred_matrix);
+      $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+      $self->dbc and $self->dbc->disconnect_if_idle();
     }
   }
 
