@@ -258,6 +258,8 @@ sub run {
     if ($results_available == 1 ){  
       # avoid entering null matrices
       my $var_dba = $self->get_species_adaptor('variation');
+      $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+      $self->dbc and $self->dbc->disconnect_if_idle();
 
       my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
         or die "Failed to get matrix adaptor";
