@@ -57,8 +57,8 @@ sub run {
     system("gzip -c $dir/$file > $dir/$file\_bak.gz");
     system(
       sprintf(
-        'sort --parallel=4 -u %s/%s > %s/%s.unique',
-        $dir, $file, $dir, $file
+        'cat %s/%s | sort -T %s -u > %s/%s.unique',
+        $dir, $file, $dir, $dir, $file, 
       )
     ) and die("ERROR: Failed to unique sort $file");
     unlink("$dir/$file\.gz") if -e "$dir/$file\.gz";
