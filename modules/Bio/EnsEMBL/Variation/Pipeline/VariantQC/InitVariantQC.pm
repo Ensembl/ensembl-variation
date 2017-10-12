@@ -321,7 +321,9 @@ sub create_map_weight_table{
      $ref_ext_sth->execute()|| die "Failed to extract ref/non ref status for seq_regions\n";
      my $is_ref = $ref_ext_sth->fetchall_arrayref();
     
-    $var_dba->dbc->do(qq{alter table seq_region add column is_reference Tinyint(1) default 0});
+    if ($var_dba->dbc->do(qq{show columns from seq_region like 'is_reference';}) != 1) {
+      $var_dba->dbc->do(qq{alter table seq_region add column is_reference Tinyint(1) default 0});
+    }
     my $sr_status_sth = $var_dba->dbc->prepare(qq[update seq_region set is_reference = 1 where seq_region_id  =?]);
 
     foreach my $srid (@{$is_ref}){
