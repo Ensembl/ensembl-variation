@@ -152,7 +152,7 @@ sub fetch_input {
           my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
 
           # drop existing MTMP
-          $dbc->do(qq{DROP TABLE $table});
+          $dbc->do(qq{DROP TABLE IF EXISTS $table});
 
           my $sth = $dbc->prepare(qq{
             SHOW CREATE TABLE $source_table
