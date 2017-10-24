@@ -4,50 +4,50 @@ perl:
   - "5.14"
 
 env:
+  matrix:
   - COVERALLS=true  DB=mysql
+  global:
+    secure: ZwSYAjpbck/Aa8/5Njc1ZXJrLMERcpnwhDqrVs18dKiVfOcJASPbe9kSjsKH6y3maceG0MAZF9lq1bh7gQH/3eCgMt9PyaqnE2kbE4QaOV+jUk38CXw5hODuJ5aWzExqbuL9k3MucSf2HrciSaORlotsvdIhn4ItAnkbWXsewluS04Uui1vn1g8T2+fn9Vwvgoh7DS+H8h7OY0j/3oqH81QqIzrztzhgwyzqWQbPY1RX87k0b7GzJtxzG4sHJUgWcNCmoRgzV1ncqAXoKjdyzbZL1mMhHhNs2ioszdOZDRi1egCrxa2TBfR02An3zGzCsEc+GA83xpOkrJE5RhxmypPwuckvl2ChS22Kik6n1hxr7K7LkJPpVXzqBr29OD7HjQRyx1DqZujD7k3KfzC5+OBjo4GyHRjbETLs5hIKYBCMUCY8JtKeCq3h3B6Yjh+bYLl+McIYNHsTq/VVNEJvhF7SRnko+7vycWokovHJ0oCnSRCGKcQ2+G0yHchBvrfG9dq6PYgUc7p7DLGu0AD11iemP7i5LlojwktLtytdk2OvAQ3QLVbPuDuLK0nyUFJ2XE1gNBmPcxD/f682l6bp+oHQK5LxUAs89/yxeIyGj602p3oEF2KIIB70jvzL3kBNV2dU1PNsXNuyK4ffYUiMCuUS6LKxd2HuQUSc3uhpkM0=
 
 sudo: false
 dist: trusty
 group: deprecated
 
 addons:
-    apt:
-        packages:
-        - unzip
+  apt:
+    packages:
+      - unzip
 
 before_install:
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-io.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
-    - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-6-1.zip
-    - unzip bioperl-release-1-6-1.zip
-    - git clone --branch 1.3.2 --depth 1 https://github.com/samtools/htslib.git
-    - cd htslib
-    - make
-    - cd ..
-    - export HTSLIB_DIR=$PWD/htslib
-    - cd C_code/
-    - make
-    - cd ../
-
+  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
+  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
+  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
+  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-io.git
+  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
+  - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-6-1.zip
+  - unzip bioperl-release-1-6-1.zip
+  - git clone --branch 1.3.2 --depth 1 https://github.com/samtools/htslib.git
+  - cd htslib
+  - make
+  - cd ..
+  - export HTSLIB_DIR=$PWD/htslib
+  - cd C_code/
+  - make
+  - cd ../
 
 install:
-    - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
-    - cpanm -v --installdeps --notest .
-    - cpanm -n Devel::Cover::Report::Coveralls
-    - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
-    - cpanm Bio::DB::HTS
-    - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
+  - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
+  - cpanm -v --installdeps --notest .
+  - cpanm -n Devel::Cover::Report::Coveralls
+  - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
+  - cpanm Bio::DB::HTS
+  - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 
-# Add build stage to trigger dependent builds, run sequentially after all test jobs
-# specified by the build matrix expansion have completed successfully
 jobs:
   include:
-    - script: ./travisci/harness.sh # uses default stage name "test"
-    - stage: trigger_dependent_builds
-      script: ./travisci/trigger-dependent-build.sh
+  - script: "./travisci/harness.sh"
+  - stage: trigger_dependent_builds
+    script: "./travisci/trigger-dependent-build.sh"
 
 notifications:
   email:
