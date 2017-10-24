@@ -13,9 +13,12 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# extend the characters supported in the publication.authors column
+# Add new column zygosity in the table structural_variation_sample
+##################
 
-alter table publication modify authors varchar(255) CHARACTER SET latin2 ;  
+## TRANSCRIPT VARIATION
+ALTER TABLE structural_variation_sample ADD COLUMN zygosity ENUM ('homozygous', 'heterozygous') DEFAULT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_90_91_b.sql|extend the characters supported in the publication.authors column'); 
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_c.sql|Add new column zygosity in the table structural_variation_sample');
+

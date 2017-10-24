@@ -167,6 +167,137 @@ sub most_severe_OverlapConsequence {
     return $self->{_most_severe_consequence};
 }
 
+
+=head2 transfer
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               The slice to transfer this feature to
+  Example    : $vf = $vf->transfer($slice);
+               next if(!defined($feature));
+  Description: Returns a copy of this VariationFeature shifted onto
+               another slice.
+
+               If the new slice is in a different coordinate system the
+               feature is transformed first and then placed on the slice.
+               If the feature would be split across a coordinate system
+               boundary or mapped to a gap undef is returned instead.
+
+               If the feature cannot be placed on the provided slice because
+               it maps to an entirely different location, undef is returned
+               instead.
+
+  Returntype : Bio::EnsEMBL::BaseVariationFeature (or undef)
+  Exceptions : throw on incorrect argument
+               throw if feature does not have attached slice
+  Caller     : general, transform()
+  Status     : Stable
+
+=cut
+
+sub transfer {
+  my $self = shift;
+
+  # differ only from parent class's implementation in that
+  # cached values for seq_region_start, seq_region_end must be removed
+  delete $self->{$_} for qw(seq_region_start seq_region_end);
+
+  return $self->SUPER::transfer(@_);
+}
+
+
+=head2 transform
+
+  Arg [1]    : string $coord_system
+               The coord system to transform this feature to.
+  Arg [2]    : string $version (optional)
+               The version of the coord system to transform this feature to.
+  Arg [3]    : Bio::EnsEMBL::Slice (optional)
+               Specified when a projection may land on many overlapping slices
+               and disambiguation is required.
+  Example    : $vf = $vf->transform('contig');
+               next if(!defined($vf));
+  Description: Returns a copy of this feature, but converted to a different
+               coordinate system. The converted feature will be placed on a
+               slice which spans an entire sequence region of the new
+               coordinate system. If the requested coordinate system is the
+               same coordinate system it is simply placed on a slice which
+               spans the entire seq_region (as opposed to the original slice
+               which may have only partially covered the seq_region).
+
+               If a feature spans a boundary in the new coordinate system,
+               undef is returned instead.
+
+               For example, transforming an exon in contig coordinates to one 
+               in chromosomal coodinates will place the exon on a slice of an 
+               entire chromosome.
+  Returntype : Bio::EnsEMBL::BaseVariationFeature (or undef)
+  Exceptions : thrown if an invalid coordinate system is provided
+               warning if Feature is not attached to a slice
+  Caller     : general, transfer()
+  Status     : Stable
+
+=cut
+
+sub transform {
+  my $self = shift;
+
+  # differ only from parent class's implementation in that
+  # cached values for seq_region_start, seq_region_end must be removed
+  delete $self->{$_} for qw(seq_region_start seq_region_end);
+
+  return $self->SUPER::transform(@_);
+}
+
+
+=head2 seq_region_start
+
+  Arg [1]    : none
+  Example    : print $vf->seq_region_start();
+  Description: Convenience method which returns the absolute start of this
+               feature on the seq_region, as opposed to the relative (slice) 
+               position.
+
+               Returns undef if this feature is not on a slice or slice is
+               circular and cannot determine the position of the feature from
+               the db.
+  Returntype : int or undef
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub seq_region_start {
+  my ($self, $new_seq_region_start) = @_;
+  return $self->{seq_region_start} = $new_seq_region_start if $new_seq_region_start;
+  return $self->{seq_region_start} ||= $self->SUPER::seq_region_start;
+}
+
+
+=head2 seq_region_end
+
+  Arg [1]    : none
+  Example    : print $vf->seq_region_end();
+  Description: Convenience method which returns the absolute end of this
+               feature on the seq_region, as opposed to the relative (slice)
+               position.
+
+               Returns undef if this feature is not on a slice or slice is
+               circular and cannot determine the position of the feature from
+               the db.
+  Returntype : int or undef
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub seq_region_end {
+  my ($self, $new_seq_region_end) = @_;
+  return $self->{seq_region_end} = $new_seq_region_end if $new_seq_region_end;
+  return $self->{seq_region_end} ||= $self->SUPER::seq_region_end;
+}
+
 sub _get_transcript_key {
   my $self = shift;
   my $tr = shift;

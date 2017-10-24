@@ -267,16 +267,33 @@ my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
 
 is(scalar @alleles, 18, 'get_all_Alleles_by_VariationFeature - count');
 
-my @adj = grep {$_->population->name eq 'ExAC:Adj'} @alleles;
-is(scalar @adj, 2, 'get_all_Alleles_by_VariationFeature - Adj count');
-
 is_deeply(
-  [map {'a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count} sort {$a->allele cmp $b->allele} @adj],
   [
-    'a:A f:0.0003 c:24',
-    'a:G f:0.9997 c:76724'
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @alleles
   ],
-  'get_all_Alleles_by_VariationFeature - Adj freqs and counts'
+  [
+    'p:ExAC:AFR a:A f:0.0034 c:22',
+    'p:ExAC:AFR a:G f:0.9966 c:6436',
+    'p:ExAC:ALL a:A f:0.0002 c:24',
+    'p:ExAC:ALL a:G f:0.9998 c:121312',
+    'p:ExAC:AMR a:A f:0.0002 c:1',
+    'p:ExAC:AMR a:G f:0.9998 c:5837',
+    'p:ExAC:Adj a:A f:0.0003 c:24',
+    'p:ExAC:Adj a:G f:0.9997 c:76724',
+    'p:ExAC:EAS a:A f:0.0000 c:0',
+    'p:ExAC:EAS a:G f:1.0000 c:5244',
+    'p:ExAC:FIN a:A f:0.0000 c:0',
+    'p:ExAC:FIN a:G f:1.0000 c:4094',
+    'p:ExAC:NFE a:A f:0.0000 c:0',
+    'p:ExAC:NFE a:G f:1.0000 c:42906',
+    'p:ExAC:OTH a:A f:0.0016 c:1',
+    'p:ExAC:OTH a:G f:0.9984 c:619',
+    'p:ExAC:SAS a:A f:0.0000 c:0',
+    'p:ExAC:SAS a:G f:1.0000 c:11588'
+  ],
+  'get_all_Alleles_by_VariationFeature - freqs and counts'
 );
 
 # test one which has an allele not found in dbSNP entry
@@ -289,6 +306,47 @@ is_deeply(
   ],
   ['GG', 'GG'],
   'get_all_Alleles_by_VariationFeature - _missing_alleles'
+);
+
+# test one that merges across VCF lines
+($vf) = @{$va->fetch_by_name('rs547901734')->get_all_VariationFeatures};
+@alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @alleles
+  ],
+  [
+    'p:ExAC:AFR a:A f:0.0000 c:0',
+    'p:ExAC:AFR a:C f:0.0003 c:2',
+    'p:ExAC:AFR a:G f:0.9997 c:6220',
+    'p:ExAC:ALL a:A f:0.0001 c:12',
+    'p:ExAC:ALL a:C f:0.0000 c:2',
+    'p:ExAC:ALL a:G f:0.9999 c:121286',
+    'p:ExAC:AMR a:A f:0.0004 c:2',
+    'p:ExAC:AMR a:C f:0.0000 c:0',
+    'p:ExAC:AMR a:G f:0.9996 c:5416',
+    'p:ExAC:Adj a:A f:0.0001 c:11',
+    'p:ExAC:Adj a:C f:0.0000 c:2',
+    'p:ExAC:Adj a:G f:0.9998 c:73547',
+    'p:ExAC:EAS a:A f:0.0000 c:0',
+    'p:ExAC:EAS a:C f:0.0000 c:0',
+    'p:ExAC:EAS a:G f:1.0000 c:4964',
+    'p:ExAC:FIN a:A f:0.0000 c:0',
+    'p:ExAC:FIN a:C f:0.0000 c:0',
+    'p:ExAC:FIN a:G f:1.0000 c:3954',
+    'p:ExAC:NFE a:A f:0.0002 c:9',
+    'p:ExAC:NFE a:C f:0.0000 c:0',
+    'p:ExAC:NFE a:G f:0.9998 c:41113',
+    'p:ExAC:OTH a:A f:0.0000 c:0',
+    'p:ExAC:OTH a:C f:0.0000 c:0',
+    'p:ExAC:OTH a:G f:1.0000 c:600',
+    'p:ExAC:SAS a:A f:0.0000 c:0',
+    'p:ExAC:SAS a:C f:0.0000 c:0',
+    'p:ExAC:SAS a:G f:1.0000 c:11280'
+  ],
+  'get_all_Alleles_by_VariationFeature - merge across VCF lines'
 );
 
 

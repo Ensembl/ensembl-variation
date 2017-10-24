@@ -279,7 +279,7 @@
 41886671	27504	66318803	66318803	1	42882800	C/T	rs187286120	1	\N	1	synonymous_variant,NMD_transcript_variant,3_prime_UTR_variant	40,42,50,51,52,53,54	2	0	T	0.00119808	6	1		\N	1
 100241668	27504	66318809	66318809	1	101229237	C/T	rs566938186	1	\N	1	synonymous_variant,NMD_transcript_variant,3_prime_UTR_variant	42,50,51,52,53	2	0	T	0.000199681	1	1	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
 46674597	27504	66318811	66318811	1	47661861	G/A	rs192076014	1	\N	1	synonymous_variant,NMD_transcript_variant,3_prime_UTR_variant	40,42,50,51,52,53,54	2	0	A	0.000399361	2	1		\N	1
-81203668	27504	66318814	66318814	1	82192785	G/A	rs547901734	1	\N	1	synonymous_variant,NMD_transcript_variant,3_prime_UTR_variant		2	0	\N	\N	\N	1	\N	\N	1
+81203668	27504	66318814	66318814	1	82192785	G/A/C	rs547901734	1	\N	1	synonymous_variant,NMD_transcript_variant,3_prime_UTR_variant		2	0	\N	\N	\N	1	\N	\N	1
 30623402	27504	66318825	66318825	1	31633482	G/A	rs145769591	1	\N	1	splice_donor_variant,NMD_transcript_variant	2,15,40,42,50,51,52,53,54	2	0	A	0.000599042	3	1		\N	1
 65541552	27504	66318909	66318909	1	66531996	C/T	rs532240945	1	\N	1	NMD_transcript_variant,intron_variant		2	0	\N	\N	\N	1	\N	\N	1
 102612605	27504	66318910	66318910	1	103599994	G/A	rs569308943	1	\N	1	NMD_transcript_variant,intron_variant	42,50,51,52,53	2	0	A	0.000998403	5	1	not provided,likely pathogenic,pathogenic,drug response,other	\N	1
