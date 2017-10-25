@@ -219,7 +219,7 @@ sub pipeline_analyses {
 
     return [
         {   -logic_name => 'species_factory',
-            -module     => 'Bio::EnsEMBL::Production::Pipeline::SpeciesFactory',
+            -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
             -parameters => {
                 db_types => [ 'variation' ],
                 species  => $self->o('species'),
