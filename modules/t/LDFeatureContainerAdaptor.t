@@ -19,7 +19,7 @@ use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
-
+use Data::Dumper;
 our $verbose = 0;
 
 use_ok('Bio::EnsEMBL::Variation::LDFeatureContainer');
@@ -45,22 +45,10 @@ my $va = $vdb->get_VariationAdaptor();
 my $pa = $vdb->get_PopulationAdaptor();
 
 
-my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
-#rs4977575 and rs1333050
-my $vf1 = $vfa->fetch_by_dbID(3854101);
-my $vf2 = $vfa->fetch_by_dbID(1004337);
-my $pop_id = 101082;
-
-my $p1 = $pa->fetch_by_name('population');
-
-# fetch_by_Slice
-#$ldContainer = $ldfca->fetch_by_Slice($slice, $p1);
-
-my $ld_values;
-
-## VCF
 my $dir = $multi->curr_dir();
 ok($vdb->vcf_config_file($dir.'/ld_vcf_config.json') eq $dir.'/ld_vcf_config.json', "DBAdaptor vcf_config_file");
+
+
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $coll = $vca->fetch_by_id('ld');
 
@@ -69,59 +57,93 @@ my $temp = $coll->filename_template();
 $temp =~ s/###t\-root###/$dir/;
 $coll->filename_template($temp);
 
-# use just VCF
-my $p2 = $pa->fetch_by_name('1000GENOMES:phase_1_ASW');
-#rs1333047 1004334 rs4977575 3854101
-my $vf_a = $vfa->fetch_by_dbID(1004334);
-my $vf_b = $vfa->fetch_by_dbID(3854101);
-
-$ldfca->db->use_vcf(2);
-
-$ldContainer = $ldfca->fetch_by_Slice($slice, $p2);
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 14, "fetch_by_Slice - VCF only");
-
-$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf_a, $vf_b], $p2);
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 1, "fetch_by_VariationFeatures - VCF only");
-
-# use VCF and DB
-
 $ldfca->db->use_vcf(1);
-$ldContainer = $ldfca->fetch_by_Slice($slice);
 
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 42, "fetch_by_Slice - VCF and DB");
+# fetch_by_Slice
+my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
+my $population = $pa->fetch_by_name('1000GENOMES:phase_1_ASW');
 
+my $ldfc = $ldfca->fetch_by_Slice($slice, $population);
+my $ld_values = $ldfc->get_all_ld_values;
 
-$ldContainer = $ldfca->fetch_by_VariationFeatures([$vf_a, $vf_b], $p2);
-print_container($ldContainer);
-$ld_values = count_ld_values($ldContainer);
-is($ld_values, 1, "fetch_by_VariationFeatures - VCF and DB");
+my $results = [
+{ population_id => 102179, vf1_name => 'rs79944118', vf2_name => 'rs1333049', r2 => 0.087731, d_prime => 0.999965, test_name => 'ld_values for rs79944118 and rs1333049' },
+{ population_id => 102179, vf1_name => 'rs10757279', vf2_name => 'rs1333048', r2 => 0.630300, d_prime => 0.999998, test_name => 'ld_values for rs10757279 and rs1333048' },
+{ population_id => 102179, vf1_name => 'rs10757279', vf2_name => 'rs1333050', r2 => 0.402075, d_prime => 0.662126, test_name => 'ld_values for rs10757279 and rs1333050' },
+{ population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs1333049', r2 => 0.050071, d_prime => 0.999871, test_name => 'ld_values for rs1333047 and rs1333049' },
+{ population_id => 102179, vf1_name => 'rs1333048', vf2_name => 'rs1333050', r2 => 0.233557, d_prime => 0.635636, test_name => 'ld_values for rs1333048 and rs1333050' },
+{ population_id => 102179, vf1_name => 'rs1333048', vf2_name => 'rs1333049', r2 => 0.684916, d_prime => 0.999999, test_name => 'ld_values for rs1333048 and rs1333049' },
+{ population_id => 102179, vf1_name => 'rs10757279', vf2_name => 'rs1333049', r2 => 0.614303, d_prime => 0.817026, test_name => 'ld_values for rs10757279 and rs1333049' },
+{ population_id => 102179, vf1_name => 'rs79944118', vf2_name => 'rs1333048', r2 => 0.060082, d_prime => 0.999914, test_name => 'ld_values for rs79944118 and rs1333048' },
+{ population_id => 102179, vf1_name => 'rs4977575', vf2_name => 'rs1333049', r2 => 0.050071, d_prime => 0.999871, test_name => 'ld_values for rs4977575 and rs1333049' },
+{ population_id => 102179, vf1_name => 'rs4977575', vf2_name => 'rs72655407', r2 => 0.063754, d_prime => 0.999996, test_name => 'ld_values for rs4977575 and rs72655407' },
+{ population_id => 102179, vf1_name => 'rs79944118', vf2_name => 'rs186966498', r2 => 0.108295, d_prime => 0.46932, test_name => 'ld_values for rs79944118 and rs186966498' },
+{ population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs72655407', r2 => 0.063754, d_prime => 0.999996, test_name => 'ld_values for rs1333047 and rs72655407' },
+{ population_id => 102179, vf1_name => 'rs1333049', vf2_name => 'rs1333050', r2 => 0.354847, d_prime => 0.648413, test_name => 'ld_values for rs1333049 and rs1333050' },
+{ population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs4977575', r2 => 1, d_prime => 1, test_name => 'ld_values for rs1333047 and rs4977575' },
+];
+
+foreach my $result (@$results) {
+  my $vf1 = ($va->fetch_by_name($result->{vf1_name})->get_all_VariationFeatures)->[0];
+  my $vf2 = ($va->fetch_by_name($result->{vf2_name})->get_all_VariationFeatures)->[0];
+  my $population_id = $result->{population_id};
+  my $r2 = $result->{r2};
+  my $d_prime = $result->{d_prime};
+  my $test_name = $result->{test_name};  
+  cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', $r2, "$test_name r2");
+  cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', $d_prime, "$test_name d_prime");
+}
+
+#fetch_all_by_Variation
+my $v = $va->fetch_by_name('rs1333049');
+my $ldfcs = $ldfca->fetch_all_by_Variation($v, $population);
+isa_ok( $ldfcs, 'ARRAY', 'fetch_all_by_Variation returns array ref' );
+ok(scalar @$ldfcs == 1, 'fetch_all_by_Variation returns 1 ld feature container');
+
+$ldfc = $ldfcs->[0];
+ok($ldfc->isa('Bio::EnsEMBL::Variation::LDFeatureContainer'), "is LDFeatureContainer");
+
+$ld_values = $ldfc->get_all_ld_values;
+
+my $result = {
+  rs79944118 => { r2 => 0.087731, d_prime => 0.999965 },
+  rs1333047 =>  { r2 => 0.050071, d_prime => 0.999871 },
+  rs1333048 =>  { r2 => 0.684916, d_prime => 0.999999 },
+  rs10757279 => { r2 => 0.614303, d_prime => 0.817026 },
+  rs1333050 =>  { r2 => 0.354847, d_prime => 0.648413 },
+  rs4977575 =>  { r2 => 0.050071, d_prime => 0.999871 },
+};
+
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, " fetch_all_by_Variation r2 for $variation_name2 and rs1333049");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, " fetch_all_by_Variation d_prime for $variation_name2 and rs1333049");
+}
+
+#fetch_by_VariationFeature
+my $vf = ($v->get_all_VariationFeatures)->[0];
+$ldfc = $ldfca->fetch_by_VariationFeature($vf, $population);
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, " fetch_by_VariationFeature r2 for $variation_name2 and rs1333049");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, " fetch_by_VariationFeature d_prime for $variation_name2 and rs1333049");
+}
+
+#fetch_by_VariationFeatures
+#{ population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs72655407', r2 => 0.063754, d_prime => 0.999996 },
+
+my $vf1 = ($va->fetch_by_name('rs1333047')->get_all_VariationFeatures)->[0];
+my $vf2 = ($va->fetch_by_name('rs72655407')->get_all_VariationFeatures)->[0];
+my $population_id = $population->dbID;
+$ldfc = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2], $population);
+
+cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures r2");
+cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', 0.999996, "fetch_by_VariationFeatures d_prime");
+
 
 done_testing();
 
-sub count_ld_values {
-  my $container = shift;
-  my $ld_values = 0;
-  foreach my $key (keys %{$container->{'ldContainer'}}) {
-    $ld_values += keys %{$container->{'ldContainer'}->{$key}};
-  }
-  return $ld_values;
-}
-
-sub print_container {
-  my $container = shift;
-  return if(!$verbose);
-  print STDERR "\nContainer name: ", $container->{'name'},"\n";
-  foreach my $key (keys %{$container->{'ldContainer'}}) {
-    my ($key1,$key2) = split /-/,$key;
-    print STDERR "LD values for ", $container->{'variationFeatures'}->{$key1}->variation_name, " and ",$container->{'variationFeatures'}->{$key2}->variation_name;
-    foreach my $population (keys %{$container->{'ldContainer'}->{$key}}){
-      print STDERR " in population $population:\n d_prime - ",$container->{'ldContainer'}->{$key}->{$population}->{'d_prime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
-    }
-  }
-}
