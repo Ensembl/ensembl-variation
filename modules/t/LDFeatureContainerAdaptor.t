@@ -19,7 +19,6 @@ use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
-use Data::Dumper;
 our $verbose = 0;
 
 use_ok('Bio::EnsEMBL::Variation::LDFeatureContainer');
@@ -129,21 +128,48 @@ foreach my $ld_value (@$ld_values) {
   my $variation_name2 = $ld_value->{variation_name2};
   my $r2 = $ld_value->{r2};
   my $d_prime = $ld_value->{d_prime};
-  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, " fetch_by_VariationFeature r2 for $variation_name2 and rs1333049");
-  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, " fetch_by_VariationFeature d_prime for $variation_name2 and rs1333049");
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, "fetch_by_VariationFeature r2 for $variation_name2 and rs1333049");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_by_VariationFeature d_prime for $variation_name2 and rs1333049");
 }
 
-#fetch_by_VariationFeatures
-#{ population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs72655407', r2 => 0.063754, d_prime => 0.999996 },
+#fetch_by_VariationFeature, population is not defined
+$ldfc = $ldfca->fetch_by_VariationFeature($vf);
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, "fetch_by_VariationFeature population not defined r2 for $variation_name2 and rs1333049");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_by_VariationFeature population not defined d_prime for $variation_name2 and rs1333049");
+}
 
+# set max_snp_distance
+$ldfca->max_snp_distance(500);
+cmp_ok($ldfca->max_snp_distance, '==', 500, "set/get max_snp_distance");
+$ldfc = $ldfca->fetch_by_VariationFeature($vf);
+$ld_values = $ldfc->get_all_ld_values;
+cmp_ok(scalar @$ld_values, '==', 3, "Number of LD values after changing max_snp_distance");
+
+#fetch_by_VariationFeatures
 my $vf1 = ($va->fetch_by_name('rs1333047')->get_all_VariationFeatures)->[0];
 my $vf2 = ($va->fetch_by_name('rs72655407')->get_all_VariationFeatures)->[0];
 my $population_id = $population->dbID;
 $ldfc = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2], $population);
 
-cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures r2");
-cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', 0.999996, "fetch_by_VariationFeatures d_prime");
+cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures with 2 VFs r2");
+cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', 0.999996, "fetch_by_VariationFeatures with 2 VFs d_prime");
 
+my $vf3 = ($va->fetch_by_name('rs4977575')->get_all_VariationFeatures)->[0];
+$ldfc = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2, $vf3], $population);
+cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures with 3 VFs r2");
+cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', 0.999996, "fetch_by_VariationFeatures with 3 VFs d_prime");
+
+cmp_ok($ldfc->get_r_square($vf1, $vf3, $population_id), '==', 1.0, "fetch_by_VariationFeatures with 3 VFs r2");
+cmp_ok($ldfc->get_d_prime($vf1, $vf3, $population_id), '==', 1.0, "fetch_by_VariationFeatures with 3 VFs d_prime");
+
+cmp_ok($ldfc->get_r_square($vf2, $vf3, $population_id), '==', 0.063754, "fetch_by_VariationFeatures with 3 VFs r2");
+cmp_ok($ldfc->get_d_prime($vf2, $vf3, $population_id), '==', 0.999996, "fetch_by_VariationFeatures with 3 VFs d_prime");
+
+my $populations = $ldfca->get_populations_hash_by_Slice;
+cmp_ok(scalar keys %$populations, '==', 48, "Get number of LD populations");
 
 done_testing();
-
