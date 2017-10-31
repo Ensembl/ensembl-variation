@@ -260,7 +260,16 @@ my %test_output = (
             "TTTTT",
             "ENSP00000344757.2:p.Leu117_Lys118delinsPheLeu",
             "del ins if > 1 aa not a subs"
-           ]
+           ],
+     36 => ["NC_000019.9:g.7706085T>A",
+            "A",
+            "ENST00000320400.4:c.1186T>A",
+            "A",
+            "",
+            "convert single base inv to subs"
+           ],
+
+
 );
 
 my %test_output_shifted = (   
@@ -435,7 +444,12 @@ my %test_input = (
             "ENST00000345392.2:c.349_353delinsTTTTT",
             "ENSP00000344757.2:p.Leu117_Lys118delinsPheLeu",
             "ENSP00000344757.2:p.LeuLys117PheLeu"
-            ]
+            ],
+     36 => ["NC_000019.9:g.7706085invT",
+            "NC_000019.9:g.7706085T>A",
+            "ENST00000320400.4:c.1186T>A",
+           ],
+
 );
 
 my %test_input_shifted = (

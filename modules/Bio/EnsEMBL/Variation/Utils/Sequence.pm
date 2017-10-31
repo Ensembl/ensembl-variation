@@ -638,7 +638,12 @@ sub format_hgvs_string{
 
   ##### format rest of string according to type
 
-  if($hgvs_notation->{'type'} eq 'del' ||  $hgvs_notation->{'type'} eq 'inv' || $hgvs_notation->{'type'} eq 'dup'){
+  if( $hgvs_notation->{'type'} eq '>' || ($hgvs_notation->{'type'} eq 'inv' && length($hgvs_notation->{'ref'}) ==1)  ){
+    ### substitution - list both alleles
+    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'start'} . $hgvs_notation->{'ref'} . '>' . $hgvs_notation->{'alt'};
+  }
+
+  elsif($hgvs_notation->{'type'} eq 'del' ||  $hgvs_notation->{'type'} eq 'inv' || $hgvs_notation->{'type'} eq 'dup'){
     ### inversion of reference bases => list ref not alt
     ### deletion  of reference bases => list ref lost
     ### duplication  of reference bases (eg ref = GAAA alt = GAAAGAAA) => list duplicated ref (dupGAAA)
