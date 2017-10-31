@@ -650,11 +650,6 @@ sub format_hgvs_string{
     $hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'};
   }
 
-  elsif( $hgvs_notation->{'type'} eq '>'){
-    ### substitution - list both alleles
-    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'start'} . $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-  }
-
   elsif( $hgvs_notation->{'type'} eq 'delins'){
     $hgvs_notation->{'hgvs'} .= $coordinates . 'delins' . $hgvs_notation->{'alt'};
   }   
