@@ -501,12 +501,11 @@ int main(int argc, char *argv[]) {
 
   // parse args
   int c;
-  char *files[2];
-  char *regions[2];
+  char *filestr = NULL;
+  char *regionstr = NULL;
   char *samples_list = NULL;
-  char *variants_file;
+  char *variants_file = NULL;
   char *variant = NULL;
-  int numfiles = 0;
   int numregions = 0;
   int windowsize = WINDOW_SIZE;
 
@@ -514,8 +513,7 @@ int main(int argc, char *argv[]) {
     static struct option long_options[] = {
       {"file",    required_argument, 0, 'f'},
       {"region",  required_argument, 0, 'r'},
-      {"file2",   required_argument, 0, 'g'},
-      {"region2", required_argument, 0, 's'},
+      {"numregions", required_argument, 0, 's'},
       {"samples", required_argument, 0, 'l'},
       {"window",  required_argument, 0, 'w'},
       {"variant", required_argument, 0, 'v'},
@@ -526,7 +524,7 @@ int main(int argc, char *argv[]) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:g:l:r:s:w:v:n:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -535,19 +533,15 @@ int main(int argc, char *argv[]) {
     switch (c) {
 
       case 'f':
-        files[numfiles++] = optarg;
-        break;
-
-      case 'g':
-        files[numfiles++] = optarg;
+        filestr = optarg;
         break;
 
       case 'r':
-        regions[numregions++] = optarg;
+        regionstr = optarg;
         break;
 
       case 's':
-        regions[numregions++] = optarg;
+        numregions = (int) atoi(optarg);
         break;
 
       case 'l':
@@ -574,25 +568,44 @@ int main(int argc, char *argv[]) {
         abort ();
     }
   }
+  char *files[numregions];
+  int file_index = 0;
+  char *token = strtok(filestr, ",");
+  files[file_index++] = token;
+  // Keep printing tokens while one of the delimiters present in str[].
+  while (token != NULL) {
+    token = strtok(NULL, ",");
+    files[file_index++] = token;
+  }
 
-  if(numfiles == 0) {
-    fprintf(stderr, "No file(s) specified with -f/-g\n");
+  char *regions[numregions];
+  int region_index = 0;
+  token = strtok(regionstr, ",");
+  regions[region_index++] = token;
+  // Keep printing tokens while one of the delimiters present in str[].
+  while (token != NULL) {
+    token = strtok(NULL, ",");
+    regions[region_index++] = token;
+  }
+
+  if(file_index == 0) {
+    fprintf(stderr, "No file(s) specified with -f\n");
     usage(argv[0]);
     return EXIT_FAILURE;
   }
 
-  if(numregions == 0) {
-    fprintf(stderr, "No region(s) specified with -r/-s\n");
+  if(region_index == 0) {
+    fprintf(stderr, "No region(s) specified with -r\n");
     usage(argv[0]);
     return EXIT_FAILURE;
   }
 
-  if(numfiles != numregions) {
+  if(file_index != region_index) {
     fprintf(stderr, "Number of files does not match number of regions\n");
     usage(argv[0]);
     return EXIT_FAILURE;
   }
-  if(numfiles > 1) {
+  if(numregions > 1) {
     windowsize = 1000000000;
   }
 
@@ -616,7 +629,7 @@ int main(int argc, char *argv[]) {
   int position = 0;
   int variant_index = -1;
 
-  for(f=0; f<numfiles; f++) {
+  for(f=0; f<numregions; f++) {
 
     // open htsFile
     htsFile *htsfile = hts_open(files[f], "rz");
