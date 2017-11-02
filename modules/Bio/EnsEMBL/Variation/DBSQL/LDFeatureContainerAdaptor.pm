@@ -87,8 +87,8 @@ use POSIX;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use constant MAX_SNP_DISTANCE => 100_000;
-use constant R2 => 0.0;
-use constant D_PRIME => 0.0;
+use constant MIN_R2 => 0.0;
+use constant MIN_D_PRIME => 0.0;
 
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
@@ -102,42 +102,42 @@ sub max_snp_distance {
   return $self->{'max_snp_distance'};
 }
 
-=head2 r2
-  Arg [1]    : $r2 (optional)
-               The new value to set r2 to
-  Example    : $r2 = $ld_feature_container_adaptor->r2()
-  Description: Getter/Setter for r2 value
+=head2 min_r2
+  Arg [1]    : $min_r2 (optional)
+               The new value to set minimum r2 to. Only return results whose r2 is greater than or equal to min r2.
+  Example    : $min_r2 = $ld_feature_container_adaptor->min_r2()
+  Description: Getter/Setter for min r2 value
   Returntype : Floating point
   Exceptions : None
   Caller     : General
   Status     : Stable
 =cut
 
-sub r2 {
+sub min_r2 {
   my ($self, $r2) = @_;
   if (defined $r2) {
     $self->{'r2'} = $r2;
   }
-  return $self->{'r2'} || R2;
+  return $self->{'r2'} || MIN_R2;
 }
 
-=head2 d_prime
-  Arg [1]    : $d_prime (optional)
-               The new value to set d_prime to
-  Example    : $d_prime = $ld_feature_container_adaptor->d_prime()
-  Description: Getter/Setter for d_prime value
+=head2 min_d_prime
+  Arg [1]    : $min_d_prime (optional)
+               The new value to set minimum d_prime to. Only return results whose d_prime is greater than or equal to min d_prime.
+  Example    : $min_d_prime = $ld_feature_container_adaptor->min_d_prime()
+  Description: Getter/Setter for min d_prime value
   Returntype : Floating point
   Exceptions : None
   Caller     : General
   Status     : Stable
 =cut
 
-sub d_prime {
+sub min_d_prime {
   my ($self, $d_prime) = @_;
   if (defined $d_prime) {
     $self->{'d_prime'} = $d_prime;
   }
-  return $self->{'d_prime'} || D_PRIME;
+  return $self->{'d_prime'} || MIN_D_PRIME;
 }
 
 sub vcf_executable {
@@ -209,8 +209,8 @@ sub fetch_by_Slice {
     ($population ? $population->dbID : ""),
     $use_vcf,
     $self->{_vf_pos} || 0,
-    $self->r2,
-    $self->d_prime,
+    $self->min_r2,
+    $self->min_d_prime,
     join("-", sort {$a <=> $b} keys %{$self->{_pairwise} || {}})
   );
 
@@ -367,6 +367,8 @@ sub _fetch_by_Slice_VCF {
   my $bin = $self->vcf_executable;
   throw("Binary file not found. See ensembl-variation/C_code/README.txt\n") unless $bin;
 
+  my $min_r2 = $self->min_r2;
+  my $min_d_prime = $self->min_d_prime;
   my $container;
   my $collections = $vca->fetch_all;
 
@@ -436,7 +438,7 @@ sub _fetch_by_Slice_VCF {
         ) = split /\s/;
 
         # filter by r2 and d_prime values
-        next if ($r2 < $self->r2 || $d_prime < $self->d_prime);
+        next if ($r2 < $min_r2 || $d_prime < $min_d_prime);
         # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
         if (defined($self->{_vf_pos})) {
           next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
