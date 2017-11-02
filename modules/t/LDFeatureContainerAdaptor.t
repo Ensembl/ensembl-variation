@@ -150,15 +150,15 @@ $ldfc = $ldfca->fetch_by_VariationFeature($vf);
 $ld_values = $ldfc->get_all_ld_values;
 cmp_ok(scalar @$ld_values, '==', 3, "Number of LD values after changing max_snp_distance");
 
-my $r2 = $ldfca->r2;
-cmp_ok($r2, '==', 0.0, "set/get r2");
-$r2 = $ldfca->r2(0.5);
-cmp_ok($r2, '==', 0.5, "set/get r2");
+my $r2 = $ldfca->min_r2;
+cmp_ok($r2, '==', 0.0, "set/get min r2");
+$r2 = $ldfca->min_r2(0.5);
+cmp_ok($r2, '==', 0.5, "set/get min r2");
 
-my $d_prime = $ldfca->d_prime;
-cmp_ok($d_prime, '==', 0.0, "set/get d_prime");
-$d_prime = $ldfca->d_prime(0.9);
-cmp_ok($d_prime, '==', 0.9, "set/get d_prime");
+my $d_prime = $ldfca->min_d_prime;
+cmp_ok($d_prime, '==', 0.0, "set/get min d_prime");
+$d_prime = $ldfca->min_d_prime(0.9);
+cmp_ok($d_prime, '==', 0.9, "set/get min d_prime");
 
 $ldfc = $ldfca->fetch_by_VariationFeature($vf);
 $ld_values = $ldfc->get_all_ld_values;
@@ -166,11 +166,11 @@ $ld_values = $ldfc->get_all_ld_values;
 cmp_ok(scalar @$ld_values, '==', 1, "Number of LD values after changing r2 and d_prime values");
 
 # back to default
-$r2 = $ldfca->r2(0.0);
-cmp_ok($r2, '==', 0.0, "set/get r2");
+$r2 = $ldfca->min_r2(0.0);
+cmp_ok($r2, '==', 0.0, "set/get min r2");
 
-$d_prime = $ldfca->d_prime(0.0);
-cmp_ok($d_prime, '==', 0.0, "set/get d_prime");
+$d_prime = $ldfca->min_d_prime(0.0);
+cmp_ok($d_prime, '==', 0.0, "set/get min d_prime");
 
 #fetch_by_VariationFeatures
 my $vf1 = ($va->fetch_by_name('rs1333047')->get_all_VariationFeatures)->[0];
@@ -204,12 +204,5 @@ throws_ok { $ldfca->fetch_all_by_Variation('Variation'); } qr/Bio::EnsEMBL::Vari
 throws_ok { $ldfca->fetch_by_VariationFeature('VariationFeature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'fetch_by_VariationFeature Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_VariationFeatures(['VariationFeature']); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'fetch_by_VariationFeatures Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_VariationFeatures('VariationFeature'); } qr/Listref of Bio::EnsEMBL::Variation::VariationFeature args expected/, 'fetch_by_VariationFeatures Throw on wrong argument';
-
-
-
-
-
-
-
 
 done_testing();
