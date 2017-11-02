@@ -35,6 +35,7 @@
 #include "tbx.h"
 #include "vcf.h"
 
+#define MAX_REGIONS 100
 #define WINDOW_SIZE 100000
 #define INITIAL_LIST_SIZE 256
 #define SYSTEM_ERROR 2
@@ -506,7 +507,7 @@ int main(int argc, char *argv[]) {
   char *samples_list = NULL;
   char *variants_file = NULL;
   char *variant = NULL;
-  int numregions = 0;
+  int numregions = MAX_REGIONS;
   int windowsize = WINDOW_SIZE;
 
   while(1) {
@@ -568,6 +569,12 @@ int main(int argc, char *argv[]) {
         abort ();
     }
   }
+
+  if (numregions > MAX_REGIONS) {
+    fprintf(stderr, "Number of maximum allowed regions exceeded: %d.\n", numregions);
+    return EXIT_FAILURE;
+  }
+
   char *files[numregions];
   int file_index = 0;
   char *token = strtok(filestr, ",");
@@ -586,6 +593,11 @@ int main(int argc, char *argv[]) {
   while (token != NULL) {
     token = strtok(NULL, ",");
     regions[region_index++] = token;
+  }
+
+  if (file_index > MAX_REGIONS) {
+    fprintf(stderr, "Number of maximum allowed regions exceeded: %d.\n", file_index);
+    return EXIT_FAILURE;
   }
 
   if(file_index == 0) {
