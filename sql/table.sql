@@ -1677,7 +1677,7 @@ CREATE TABLE associate_study (
 CREATE TABLE publication(
   publication_id int(10) unsigned not null auto_increment, 
   title          varchar(255),
-  authors        varchar(255) CHARACTER SET latin2,
+  authors        varchar(255) CHARACTER SET utf8mb4,
   pmid           int(10),
   pmcid          varchar(255),
   year           int(10) unsigned,
