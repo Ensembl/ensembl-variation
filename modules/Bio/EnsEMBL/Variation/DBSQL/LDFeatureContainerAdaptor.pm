@@ -83,15 +83,15 @@ use vars qw(@ISA);
 use Data::Dumper;
 
 use POSIX;
-use FileHandle;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use constant MAX_SNP_DISTANCE => 100_000;
+use constant MIN_R2 => 0.0;
+use constant MIN_D_PRIME => 0.0;
 
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-#our $MAX_SNP_DISTANCE = 100000;
 our $VCF_BINARY_FILE  = '';
 our $BINARY_FILE      = '';
 our $TMP_PATH         = '';
@@ -102,14 +102,42 @@ sub max_snp_distance {
   return $self->{'max_snp_distance'};
 }
 
-sub executable {
-  my $self = shift;
-  $BINARY_FILE = shift if @_;
-  unless( $BINARY_FILE ) {
-    my $binary_name = 'calc_genotypes';
-    ($BINARY_FILE) = grep {-e $_} map {"$_/$binary_name"} split /:/,$ENV{'PATH'};
+=head2 min_r2
+  Arg [1]    : $min_r2 (optional)
+               The new value to set minimum r2 to. Only return results whose r2 is greater than or equal to min r2.
+  Example    : $min_r2 = $ld_feature_container_adaptor->min_r2()
+  Description: Getter/Setter for min r2 value
+  Returntype : Floating point
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
+
+sub min_r2 {
+  my ($self, $r2) = @_;
+  if (defined $r2) {
+    $self->{'r2'} = $r2;
   }
-  return $BINARY_FILE; 
+  return $self->{'r2'} || MIN_R2;
+}
+
+=head2 min_d_prime
+  Arg [1]    : $min_d_prime (optional)
+               The new value to set minimum d_prime to. Only return results whose d_prime is greater than or equal to min d_prime.
+  Example    : $min_d_prime = $ld_feature_container_adaptor->min_d_prime()
+  Description: Getter/Setter for min d_prime value
+  Returntype : Floating point
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+=cut
+
+sub min_d_prime {
+  my ($self, $d_prime) = @_;
+  if (defined $d_prime) {
+    $self->{'d_prime'} = $d_prime;
+  }
+  return $self->{'d_prime'} || MIN_D_PRIME;
 }
 
 sub vcf_executable {
@@ -132,6 +160,7 @@ sub temp_path {
 =head2 fetch_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
+               
                The slice to fetch genes on. Assuming it is always correct (in the top level)
   Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $population. Population where 
                 we want to select the LD information
@@ -152,10 +181,11 @@ sub fetch_by_Slice {
     throw('Bio::EnsEMBL::Slice arg or listref of Bio::EnsEMBL::Slice expected');
   }
   
+  my $use_vcf = $self->db->use_vcf;
+  throw("LD computation requires genotypes from VCF files. Set use_vcf to 1. See ensembl-variation/C_code/README.txt\n") unless $use_vcf;
+
   my @slice_objects = ();
   my $slice_name = "";
-  my $use_vcf = $self->db->use_vcf;
-  throw("LD computation requires genotypes from VCF files. Set use_vcf to 1 or 2. See ensembl-variation/C_code/README.txt\n") unless $use_vcf;
 
   if (ref $slice eq 'ARRAY') {
     foreach (@$slice) {
@@ -179,58 +209,19 @@ sub fetch_by_Slice {
     ($population ? $population->dbID : ""),
     $use_vcf,
     $self->{_vf_pos} || 0,
+    $self->min_r2,
+    $self->min_d_prime,
     join("-", sort {$a <=> $b} keys %{$self->{_pairwise} || {}})
   );
+
   return $self->{_cached} if $self->{_cached} && $self->{_cached_key} eq $key;
-  my @genotypes = ();
-  my $vcf_container;
 
-  # use VCF?
-  if ($use_vcf) {
-    $vcf_container = $self->_fetch_by_Slice_VCF($slice, $population);
-
-    if($use_vcf > 1 || ($population && $vcf_container)) {
-
-      # cache before returning
-      $self->{_cached} = $vcf_container;
-      $self->{_cached_key} = $key;
-
-      return $vcf_container;
-    }
-  } 
-  
-  my $siblings = {};
-  #when there is no population selected, return LD in the HapMap and PerlEgen populations
-  my $in_str;
-  
-  #if a population is passed as an argument, select the LD in the region with the population
-  if ($population) {
-
-    if (!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
-      throw('Bio::EnsEMBL::Variation::Population arg expected');
-    }
-    my $population_id = $population->dbID;
-
-    $in_str = " = $population_id";
-  }
-  else {
-    $in_str = $self->_get_LD_populations($siblings);
-  }
-
-  my $ldFeatureContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
-      '-adaptor' => $self,
-      '-ldContainer'=> {},
-      '-name' => $slice_objects[0]->name,
-      '-variationFeatures' => {}
-    );
-  
-  $ldFeatureContainer = $self->_merge_containers($vcf_container, $ldFeatureContainer) if $vcf_container;
-
-  # cache
-  $self->{_cached} = $ldFeatureContainer;
+  my $vcf_container = $self->_fetch_by_Slice_VCF($slice, $population);
+  # cache before returning
+  $self->{_cached} = $vcf_container;
   $self->{_cached_key} = $key;
 
-  return $ldFeatureContainer;
+  return $vcf_container;
 }
 
 =head2 fetch_all_by_Variation
@@ -249,7 +240,7 @@ sub fetch_by_Slice {
 sub fetch_all_by_Variation {
   my $self = shift;
   my $v = shift;
-  my $pop = shift;
+  my $population = shift;
 
   if (!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation')) {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
@@ -260,7 +251,7 @@ sub fetch_all_by_Variation {
 
   my @containers = ();
   foreach my $vf (@$vfs) {
-    my $ldfc = $self->fetch_by_VariationFeature($vf, $pop);
+    my $ldfc = $self->fetch_by_VariationFeature($vf, $population);
     push @containers, $ldfc;
   }
   return \@containers;
@@ -282,7 +273,7 @@ sub fetch_all_by_Variation {
 sub fetch_by_VariationFeature {
   my $self = shift;
   my $vf  = shift;
-  my $pop = shift;
+  my $population = shift;
 
   if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
@@ -302,8 +293,8 @@ sub fetch_by_VariationFeature {
   $self->{_vf_name} = $vf->variation_name;
   
   # fetch by slice using expanded feature slice
-  my $max_snp_distance = $self->{max_snp_distance} || MAX_SNP_DISTANCE;
-  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
+  my $max_snp_distance = $self->max_snp_distance || MAX_SNP_DISTANCE;
+  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $population);
   
   # delete the cached pos
   delete $self->{_vf_pos};
@@ -330,10 +321,10 @@ sub fetch_by_VariationFeature {
 sub fetch_by_VariationFeatures {
   my $self = shift;
   my $vfs  = shift;
-  my $pop = shift;
+  my $population = shift;
 
   $DB::single = 1;
-  
+
   my @slice_objects = ();
   if (!ref($vfs)) {
     throw('Listref of Bio::EnsEMBL::Variation::VariationFeature args expected');
@@ -354,7 +345,7 @@ sub fetch_by_VariationFeatures {
   }  
  
   # fetch by slice using expanded feature slice
-  my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $pop);
+  my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $population);
   
   $ldFeatureContainer->name($vfs->[0]->dbID);
   
@@ -376,24 +367,21 @@ sub _fetch_by_Slice_VCF {
   my $bin = $self->vcf_executable;
   throw("Binary file not found. See ensembl-variation/C_code/README.txt\n") unless $bin;
 
+  my $min_r2 = $self->min_r2;
+  my $min_d_prime = $self->min_d_prime;
   my $container;
   my $collections = $vca->fetch_all;
 
   # get populations
   my @populations = $population ? ($population) : map {@{$_->get_all_Populations}} @$collections;
 
-  foreach my $population(@populations) {
-    
-    foreach my $vc(@$collections) {
-      
+  foreach my $population (@populations) {
+    foreach my $vc (@$collections) {
       my $sample_string = '';
-   
       # skip this collection if it doesn't have the population we want
-      if(defined($population)) {
+      if (defined($population)) {
         next unless $vc->has_Population($population);
-
         my $prefix = $vc->sample_prefix();
-       
         $sample_string = join(",",
           map {$_ =~ s/^$prefix//; $_}
           map {$_->name}
@@ -402,30 +390,26 @@ sub _fetch_by_Slice_VCF {
       }
 
       my $cmd;
-
-      # two slices
-      if(ref($slice) eq 'ARRAY') {
-        my $vcf_file_1 = $vc->_get_vcf_filename_by_chr($slice->[0]->seq_region_name);
-        my $vcf_file_2 = $vc->_get_vcf_filename_by_chr($slice->[1]->seq_region_name);
-
-        throw("ERROR: Can't get VCF file\n") unless $vcf_file_1;
-        throw("ERROR: Can't get VCF file\n") unless $vcf_file_2;
-
-        my $loc_string_1 = sprintf("%s:%i-%i", $slice->[0]->seq_region_name, $slice->[0]->start, $slice->[0]->end);
-        my $loc_string_2 = sprintf("%s:%i-%i", $slice->[1]->seq_region_name, $slice->[1]->start, $slice->[1]->end);
-
-        $cmd = "$bin -f $vcf_file_1 -r $loc_string_1 -g $vcf_file_2 -s $loc_string_2 -l $sample_string";
+      my @files = ();
+      my @regions = ();
+      my @slices = ();
+      if (ref($slice) eq 'ARRAY') { 
+        push @slices, @$slice;
+      } else {
+        push @slices, $slice; 
       }
-      # one slice
-      else {
+      foreach my $slice (@slices) {
         my $vcf_file = $vc->_get_vcf_filename_by_chr($slice->seq_region_name);
-
         throw("ERROR: Can't get VCF file\n") unless $vcf_file;
-
+        push @files, $vcf_file;
         my $loc_string = sprintf("%s:%i-%i", $slice->seq_region_name, $slice->start, $slice->end);
-
-        $cmd = "$bin -f $vcf_file -r $loc_string -l $sample_string";
+        push @regions, $loc_string;
       }
+      my $files_arg = join(',', @files); 
+      my $regions_arg = join(',', @regions);
+      my $number_of_files = scalar @files;
+      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string";
+
       if ($self->{_vf_name}) {
         $cmd .= " -v " . $self->{_vf_name};
       }
@@ -439,7 +423,6 @@ sub _fetch_by_Slice_VCF {
    
       while(<LD>){
         my %ld_values = ();
-
         #get the ouput into the hashes
         chomp;
         my (
@@ -454,6 +437,8 @@ sub _fetch_by_Slice_VCF {
           $sample_count
         ) = split /\s/;
 
+        # filter by r2 and d_prime values
+        next if ($r2 < $min_r2 || $d_prime < $min_d_prime);
         # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
         if (defined($self->{_vf_pos})) {
           next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
@@ -513,7 +498,6 @@ sub _merge_containers {
   my $self = shift;
   my $c1 = shift;
   my $c2 = shift;
-  
   # merge VFs
   $c1->{variationFeatures}->{$_} ||= $c2->{variationFeatures}->{$_} for keys %{$c2->{variationFeatures} || {}};
   
@@ -550,77 +534,13 @@ sub _merge_containers {
   return $c1;
 }
 
-
-#for a given population, gets all samples that are children (have father or mother)
-sub _get_siblings {
-  my $self = shift;
-  my $population_id = shift;
-  my $siblings = shift;
-
-  my $sth_sample = $self->db->dbc->prepare(qq{
-    SELECT s.sample_id
-    FROM sample s, individual i, sample_population sp
-    WHERE sp.sample_id = s.sample_id
-    AND s.individual_id = i.individual_id
-    AND sp.population_id = ? 
-    AND i.father_individual_id IS NOT NULL
-    AND i.mother_individual_id IS NOT NULL
-  });
-  
-  my ($sample_id);
-  $sth_sample->execute($population_id);
-  $sth_sample->bind_columns(\$sample_id);
-  
-  while ($sth_sample->fetch){
-    # store population and sample since some samples are shared between populations
-    $siblings->{$population_id.'-'.$sample_id}++;
-  }
-}
-
-sub _get_LD_populations {
-  my $self = shift;
-  my $siblings = shift;
-  my ($pop_id,$population_name);
-  my $sth = $self->db->dbc->prepare(qq{SELECT population_id, name FROM population WHERE display = 'LD'});
-
-  $sth->execute();
-  $sth->bind_columns(\$pop_id,\$population_name);
-  
-  #get all the children that we do not want in the genotypes
-  my @pops;
-  while($sth->fetch){
-    if($population_name =~ /CEU|YRI|MEX/){
-      $self->_get_siblings($pop_id,$siblings);
-    }
-    push @pops, $pop_id;
-  }
-    
-  my $in_str = " IN (" . join(',', @pops). ")";
-	
-  return $in_str if (defined $pops[0]);
-  return '' if (!defined $pops[0]);
-}
-
 sub get_populations_hash_by_Slice {
   my $self = shift;
   my $slice = shift;
-
-  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-    throw('Bio::EnsEMBL::Slice arg expected');
-  }
-
-  my $pop_list = $self->_get_LD_populations();
-
-  my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
-
-  my %results;
-
-  my $sth = $self->prepare(qq{SELECT population_id, name FROM population WHERE population_id $pop_list;});
+  my $sth = $self->prepare(qq{SELECT population_id, name FROM population WHERE display = 'LD';});
   $sth->execute;
-
-  %results = map {$_->[0] => $_->[1]} @{$sth->fetchall_arrayref()};
+  my %results = map {$_->[0] => $_->[1]} @{$sth->fetchall_arrayref()};
   return \%results;
-
 }
 
 1;
