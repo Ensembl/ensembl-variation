@@ -304,7 +304,7 @@ CREATE TABLE `protein_function_predictions_attrib` (
 CREATE TABLE `publication` (
   `publication_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) DEFAULT NULL,
-  `authors` varchar(255) CHARACTER SET latin2 DEFAULT NULL,
+  `authors` varchar(255) CHARACTER SET utf8mb4 DEFAULT NULL,
   `pmid` int(10) DEFAULT NULL,
   `pmcid` varchar(255) DEFAULT NULL,
   `year` int(10) unsigned DEFAULT NULL,
