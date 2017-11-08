@@ -491,6 +491,10 @@ sub _fetch_by_Slice_VCF {
   delete $self->{_pairwise};
   delete $self->{_pairwise_vf_name};
 
+  if (!$container) {
+    warning('The population is not represented in the configured VCF file for fetching genotypes for LD computation.');
+    return  Bio::EnsEMBL::Variation::LDFeatureContainer->new('-adaptor' => $self, '-ldContainer' => {}, 'name' => '', '-slices' => []);
+  }
   return $container;
 }
 

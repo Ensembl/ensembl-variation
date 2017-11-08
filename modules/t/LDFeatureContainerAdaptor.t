@@ -17,6 +17,7 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Exception;
+use Test::Warnings qw(warning);
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -44,10 +45,8 @@ my $vfa = $vdb->get_VariationFeatureAdaptor();
 my $va = $vdb->get_VariationAdaptor();
 my $pa = $vdb->get_PopulationAdaptor();
 
-
 my $dir = $multi->curr_dir();
 ok($vdb->vcf_config_file($dir.'/ld_vcf_config.json') eq $dir.'/ld_vcf_config.json', "DBAdaptor vcf_config_file");
-
 
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $coll = $vca->fetch_by_id('ld');
@@ -62,9 +61,15 @@ $ldfca->db->use_vcf(1);
 # fetch_by_Slice
 my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
 my $population = $pa->fetch_by_name('1000GENOMES:phase_1_ASW');
+my $population_no_genotypes_in_vcf = $pa->fetch_by_name('PGA-UW-FHCRC:HSP_GENO_PANEL');
 
-my $ldfc = $ldfca->fetch_by_Slice($slice, $population);
+my $ldfc;
+warning { $ldfc = $ldfca->fetch_by_Slice($slice, $population_no_genotypes_in_vcf); };
 my $ld_values = $ldfc->get_all_ld_values;
+cmp_ok(scalar @$ld_values, '==', 0, "Return empty container if population is not present in any VCF file");
+
+$ldfc = $ldfca->fetch_by_Slice($slice, $population);
+$ld_values = $ldfc->get_all_ld_values;
 
 my $results = [
 { population_id => 102179, vf1_name => 'rs79944118', vf2_name => 'rs1333049', r2 => 0.087731, d_prime => 0.999965, test_name => 'ld_values for rs79944118 and rs1333049' },
