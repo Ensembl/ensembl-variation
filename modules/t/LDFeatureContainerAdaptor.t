@@ -65,7 +65,6 @@ my $population_no_genotypes_in_vcf = $pa->fetch_by_name('PGA-UW-FHCRC:HSP_GENO_P
 
 my $ldfc;
 warning { $ldfc = $ldfca->fetch_by_Slice($slice, $population_no_genotypes_in_vcf); };
-#like($warning, qr/^The population is not represented in the configured VCF file/, 'got a warning if population is not in a VCF file');
 my $ld_values = $ldfc->get_all_ld_values;
 cmp_ok(scalar @$ld_values, '==', 0, "Return empty container if population is not present in any VCF file");
 
