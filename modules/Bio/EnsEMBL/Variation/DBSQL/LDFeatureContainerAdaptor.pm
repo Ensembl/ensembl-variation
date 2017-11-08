@@ -491,7 +491,7 @@ sub _fetch_by_Slice_VCF {
   delete $self->{_pairwise};
   delete $self->{_pairwise_vf_name};
 
-  return $container;
+  return $container || Bio::EnsEMBL::Variation::LDFeatureContainer->new('-adaptor' => $self, '-ldContainer' => {}, 'name' => '', '-slices' => []);
 }
 
 sub _merge_containers {
