@@ -266,7 +266,7 @@ is_deeply($vf->$_, [], 'consequence - bypass - '.$_) for map {'get_all_'.$_.'Var
 
 # get for real
 $vf = $coll->get_all_VariationFeatures_by_Slice($slice)->[0];
-is_deeply([sort @{$vf->consequence_type}], ['3_prime_UTR_variant', 'NMD_transcript_variant', 'missense_variant'], 'consequence - consequence_type');
+is_deeply([sort @{$vf->consequence_type}], ['3_prime_UTR_variant', 'NMD_transcript_variant', 'synonymous_variant'], 'consequence - consequence_type');
 
 # do a multi fetch for thorough-ness
 $slice = $sa->fetch_by_region('chromosome', 11, 66318811, 66318825);
@@ -277,6 +277,8 @@ is_deeply(
   ],
   [
     '66318811 synonymous_variant',
+    '66318814 synonymous_variant',
+    '66318814 missense_variant',
     '66318815 missense_variant',
     '66318819 missense_variant',
     '66318824 missense_variant'
@@ -294,14 +296,14 @@ is($vfs->[1]->class_SO_term, 'deletion', 'var class - deletion');
 
 
 ## fetch via transcript
-my $tr = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000502692');
-my $tva = $vdb->get_TranscriptVariationAdaptor;
+# my $tr = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000502692');
+# my $tva = $vdb->get_TranscriptVariationAdaptor;
 
-# setup so TVAs get created from our VCF
-$coll->use_as_source(1);
-$vdb->use_vcf(2);
+# # setup so TVAs get created from our VCF
+# $coll->use_as_source(1);
+# $vdb->use_vcf(2);
 
-my $tvas = $tva->fetch_all_by_Transcripts_with_constraint([$tr]);
-$DB::single = 1;
+# my $tvas = $tva->fetch_all_by_Transcripts_with_constraint([$tr]);
+# $DB::single = 1;
 
 done_testing();
