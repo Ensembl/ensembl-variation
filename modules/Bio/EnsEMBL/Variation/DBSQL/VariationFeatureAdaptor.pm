@@ -2226,7 +2226,7 @@ sub fetch_by_dbID {
   throw("ERROR: No dbID given\n") unless $id;
 
   if(looks_like_number($id)) {
-    return $self::SUPER->fetch_by_dbID($id);
+    return $self->SUPER::fetch_by_dbID($id);
   }
   else {
     my $vfs = $self->fetch_all_by_location_identifier($id);
