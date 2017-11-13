@@ -808,6 +808,10 @@ sub get_all_Alleles_by_VariationFeature {
   my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+
+  # if given $vcf, we don't want to call next() on it
+  # as it is a frozen copy created in VCFVF object creation
+  my $next_ok = 1;
   
   if(!$vcf) {
     # seek to record for VariationFeature
@@ -816,6 +820,7 @@ sub get_all_Alleles_by_VariationFeature {
   }
   else {
     $self->_current($vcf);
+    $next_ok = 0;
   }
 
   # get data from VF
@@ -916,6 +921,8 @@ sub get_all_Alleles_by_VariationFeature {
         }
       }
     }
+
+    last unless $next_ok;
 
     # get next VCF entry
     $vcf->next();
