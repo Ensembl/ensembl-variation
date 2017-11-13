@@ -1453,7 +1453,7 @@ sub _get_matched_alleles_VF_VCF {
     {
       ref    => $vf->ref_allele_string,
       alts   => $vf->alt_alleles,
-      pos    => $vf->seq_region_start,
+      pos    => $vf->seq_region_start || $vf->start,
       strand => $vf->strand
     },
     {
