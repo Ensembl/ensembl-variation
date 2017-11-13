@@ -114,7 +114,7 @@ sub _tables {
 }
 
 sub _columns {
-  return qw( sv.structural_variation_id sp.population_id sv.class_attrib_id sp.sample_id );
+  return qw( sv.structural_variation_id sp.population_id sv.class_attrib_id sp.sample_id svs.zygosity );
 }
 
 # Add a left join to the failed_structural_variation table
@@ -162,10 +162,7 @@ sub _obj_from_row {
   my $aa  = $self->db->get_AttributeAdaptor;
 
   my $obj = $self->{_temp_objs}{$row->{population_id}}; 
-######## TEST ##### Waiting for DB patch to add this information######## 
-my $rd = int(rand(10));
-$row->{zygosity} = (0 == $rd % 2) ? 'homozygous' : 'heterozygous';
-########################################################################
+
   unless (defined($obj)) {
  
     my $pa = $self->db()->get_PopulationAdaptor();
