@@ -327,7 +327,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     {
         start   => $t_start - 5001,
         end     => $t_start - 5001,
-        effects => [],
+        effects => [ qw(intergenic_variant) ],
     }, {
         start   => $t_start - 5000,
         end     => $t_start - 5000,
@@ -375,7 +375,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {   
         start   => $t_end + 5001,
         end     => $t_end + 5001,
-        effects => [],
+        effects => [ qw(intergenic_variant) ],
     },
 
     # check the UTR calls
@@ -822,7 +822,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     {
         start   => $t_end + 5001,
         end     => $t_end + 5001,
-        effects => [],
+        effects => [ qw(intergenic_variant) ],
     }, {
         start   => $t_end + 5000,
         end     => $t_end + 5000,
@@ -870,7 +870,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {   
         start   => $t_start - 5001,
         end     => $t_start - 5001,
-        effects => [],
+        effects => [ qw(intergenic_variant) ],
     },
 
     # check the UTR calls
