@@ -500,7 +500,24 @@ sub use_seq_region_synonyms {
 =cut
 
 sub list_chromosomes {
-  return $_[0]->{chromosomes};
+  my $self = shift;
+
+  if(!defined($self->{chromosomes})) {
+
+    # if the collection only contains one file we can use tabix to get the chr list
+    # test this by passing a dummy value to get the filename
+    my $dummy_chr = $$.'_dummy_VCFCollection_chr';
+
+    my $fn = $self->_get_vcf_filename_by_chr($dummy_chr);
+
+    if($fn !~ /$dummy_chr/) {
+      $self->{chromosomes} = $self->_vcf_parser_obj($fn)->{tabix_file}->seqnames;
+    }
+    else {
+      $self->{chromosomes} = [];
+    }
+  }
+  return $self->{chromosomes};
 }
 
 
@@ -1325,18 +1342,8 @@ sub _get_vcf_by_chr {
         $self->{files}->{$close}->close();
         delete $self->{files}->{$close};
       }
-
-      # change dir
-      my $cwd = cwd();
-      chdir($self->tmpdir);
-
-      # open obect (remote indexes get downloaded)
-      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-
-      # change back
-      chdir($cwd);
     
-      $self->{files}->{$chr} = $obj;
+      $self->{files}->{$chr} = $self->_vcf_parser_obj($file);
 
       push @{$self->{_open_files}}, $chr;
     }
@@ -1373,6 +1380,22 @@ sub _get_vcf_filename_by_chr {
   my $file = $self->filename_template;
   $file =~ s/\#\#\#CHR\#\#\#/$chr/;
   return $file;
+}
+
+sub _vcf_parser_obj {
+  my ($self, $file) = @_;  
+
+  # change dir
+  my $cwd = cwd();
+  chdir($self->tmpdir);
+
+  # open obect (remote indexes get downloaded)
+  my $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+
+  # change back
+  chdir($cwd);
+
+  return $obj;
 }
 
 sub _current {
