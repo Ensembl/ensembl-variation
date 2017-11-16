@@ -20,6 +20,7 @@ use Test::Exception;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Data::Dumper;
 
 our $verbose = 0;
 
@@ -45,6 +46,50 @@ throws_ok { $svpfa->fetch_all_by_StructuralVariation(Bio::EnsEMBL::Variation::St
 
 my $svpfs = $svpfa->fetch_all_by_StructuralVariation($sv);
 
+my $sample_class_svpfs = {
+  'copy_number_loss' => {
+                         '19339' => 'heterozygous',
+                         '19757' => 'heterozygous',
+                         '19007' => 'heterozygous',
+                         '20105' => 'heterozygous',
+                         '19980' => 'heterozygous',
+                         '19298' => 'heterozygous',
+                         '19334' => 'heterozygous',
+                         '18708' => 'heterozygous',
+                         '19875' => 'heterozygous',
+                         '19226' => 'heterozygous',
+                         '19090' => 'heterozygous',
+                         '18932' => 'heterozygous',
+                         '19160' => 'heterozygous',
+                         '19131' => 'heterozygous',
+                         '19100' => 'heterozygous',
+                         '20032' => 'heterozygous',
+                         '19876' => 'heterozygous',
+                         '19289' => 'heterozygous',
+                         '19049' => 'heterozygous',
+                         '18293' => 'heterozygous',
+                         '19179' => 'heterozygous',
+                         '19171' => 'heterozygous',
+                         '20284' => 'heterozygous',
+                         '20033' => 'heterozygous',
+                         '19161' => 'heterozygous',
+                         '19154' => 'heterozygous',
+                         '19294' => 'heterozygous',
+                         '20160' => 'heterozygous',
+                         '18960' => 'heterozygous'
+                        },
+  'copy_number_gain' => {
+                         '18085' => 'heterozygous',
+                         '20129' => 'heterozygous',
+                         '18050' => 'heterozygous'
+                        }
+};
+
+is_deeply(
+  $svpfs->[0]->{'samples_class'}, 
+  $sample_class_svpfs,
+  'Compare the "samples_class" of the first SVPF object returned'
+);
 ok(scalar(@$svpfs) == 14, 'Count populations');
 
 

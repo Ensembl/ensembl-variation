@@ -73,12 +73,14 @@ ok($svpf->population->dbID() eq $pop_id, 'dbID');
 ok($svpf->name() eq $pop_name, 'population name');
 ok($svpf->description() eq $pop_desc, 'population description');
 ok($svpf->size() == $pop_size, 'population size');
-my $gfreqs = sprintf("%.5f",$svpf->freqs)."\n";
+my $gfreqs = sprintf("%.5f",$svpf->frequency)."\n";
 ok($gfreqs == 0.03846, 'count global frequency for this population');
 
-my $freqs = $svpf->freqs_by_class_SO_term();
-ok(scalar(keys(%$freqs)) == 2, 'count number of SO terms');
-my $SO_freq = sprintf("%.5f",$freqs->{'copy_number_loss'});
-ok(sprintf("%.5f",$freqs->{'copy_number_loss'}) == 0.02198, 'count frequency for SO term "copy_number_loss"');
+my $freqs = $svpf->frequencies_by_class_SO_term();
+is_deeply(
+  $freqs, 
+  {'copy_number_loss' => 0.021978021978021978, 'copy_number_gain' =>0.0164835164835164835},
+  'compare SO term frequencies'
+);
 
 done_testing();

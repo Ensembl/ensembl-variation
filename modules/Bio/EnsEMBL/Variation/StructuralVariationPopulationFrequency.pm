@@ -55,7 +55,7 @@ of a structural variant
 
     ...
 
-    print $svpf->name(), "-", $svpf->size(), '(', $svpf->freqs(), ')', "\n";
+    print $svpf->name(), "-", $svpf->size(), '(', $svpf->frequency(), ')', "\n";
     
 =head1 DESCRIPTION
 
@@ -72,6 +72,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariationPopulationFrequency;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 =head2 new
@@ -145,10 +146,10 @@ sub population {
   
   # set
   if (defined($population)) {
-    if (!$population->isa('Bio::EnsEMBL::Variation::Population')) {
-      throw("Bio::EnsEMBL::Variation::Population argument expected");
-    }
-    $self->{population} = $population if defined($population);
+    
+    assert_ref($population, 'Bio::EnsEMBL::Variation::Population');
+ 
+    $self->{population} = $population;
   }
   
   # get
@@ -166,7 +167,7 @@ sub population {
 
   Arg [1]    : String $name (optional)
                The new value to set the name attribute to
-  Example    : $name = $population->name()
+  Example    : $name = $svpf->name()
   Description: Getter/Setter for the name attribute
   Returntype : String
   Exceptions : None
@@ -185,7 +186,7 @@ sub name {
 
   Arg [1]    : String $description (optional) 
                The new value to set the description attribute to
-  Example    : $description = $population->description()
+  Example    : $description = $svpf->description()
   Description: Getter/Setter for the description attribute
   Returntype : String
   Exceptions : None
@@ -203,9 +204,9 @@ sub description {
 =head2 size
 
   Arg [1]    : int $size (optional) 
-               The new value to set the size attribute to
-  Example    : $size = $population->size()
-  Description: Getter/Setter for the size attribute
+               The new value to set the population size attribute to
+  Example    : $size = $svpf->size()
+  Description: Getter/Setter for the population size attribute
   Returntype : Int. Returns undef if information on size is not given.
   Exceptions : None
   Caller     : General
@@ -224,7 +225,7 @@ sub size {
 
   Arg [1]    : Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor $adaptor (optional)
                Set the adaptor for this StructuralVariationPopulationFrequency
-  Example    : my $adaptor = $collection->adaptor()
+  Example    : my $adaptor = $svpf->adaptor()
   Description: Getter/Setter for the adaptor.
   Returntype : Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor
   Exceptions : none
@@ -240,23 +241,23 @@ sub adaptor {
 }
 
 
-=head2 freqs
+=head2 frequency
 
-  Arg [1]    : String $freqs (optional)
-               The new value to set the frequence attribute to
-  Example    : $freqs = $population->freqs()
-  Description: Getter/Setter for the name attribute
-  Returntype : String
+  Arg [1]    : float $frequency (optional)
+               The new value to set the SV frequency attribute to
+  Example    : $frequency = $svpf->frequency()
+  Description: Getter/Setter for the SV frequency attribute
+  Returntype : float
   Exceptions : None
   Caller     : General
   Status     : Stable
 
 =cut
 
-sub freqs {
+sub frequency {
   my $self = shift;
   if (@_) {
-    $self->{freqs} = shift @_;
+    $self->{frequency} = shift @_;
   }
   elsif (scalar(keys(%{$self->{samples_class}})) && $self->{size}) {
     my $samples_count = 0;
@@ -267,19 +268,25 @@ sub freqs {
         $samples_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
       }
     }
-    $self->{freqs} = $samples_count / ($self->{size}*2); 
+    $self->{frequency} = $samples_count / ($self->{size}*2); 
   }
   
-  return $self->{freqs};
+  return $self->{frequency};
 }
 
 
-=head2 freqs_by_class_SO_term
+=head2 frequencies_by_class_SO_term
 
   Arg [1]    : String $class_SO_term (optional)
-               The new value to set the frequence attribute to
-  Example    : $freqs = $population->freqs()
-  Description: Getter/Setter for the name attribute
+               The new value to get the frequency by with the SO term attribute
+  Example    : $SO_term_frequencies = $svpf->frequencies_by_class_SO_term($class_SO_term)
+  Description: Getter for the frequencies by SO term
+               If a SO term is given as parameter, it returns an hashref with the corresponding frequency for the population, e.g.
+               $SO_term_frequencies = $svpf->frequencies_by_class_SO_term('copy_number_gain');
+               $SO_term_frequencies will contain {'copy_number_gain' => 0.02}
+               If no SO terms are given as parameter, it returns an hashref with all the associated SO terms - frequencies for the population, e.g.
+               $SO_term_frequencies = $svpf->frequencies_by_class_SO_term();
+               $SO_term_frequencies will contain {'copy_number_gain' => 0.02, 'copy_number_loss' => 0.05}
   Returntype : hashref
   Exceptions : None
   Caller     : General
@@ -287,7 +294,7 @@ sub freqs {
 
 =cut
 
-sub freqs_by_class_SO_term {
+sub frequencies_by_class_SO_term {
   my $self = shift;
   my $class_SO_term = shift;
   
@@ -327,7 +334,7 @@ sub freqs_by_class_SO_term {
 
   Arg [1]    : none
   Example    : @samples = @{$p->get_all_Samples()};
-  Description: Retrieves all Samples belonging to this Population.
+  Description: Retrieves all the Sample objects belonging to this Population and having information for the StructuralVariation.
   Returntype : reference to list of Bio::EnsEMBL::Variation::Sample objects
   Exceptions : none
   Caller     : general
@@ -363,9 +370,8 @@ sub structural_variation {
   my $self = shift;
 
   if(@_) {
-    if(!ref($_[0]) || (!$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation') &&
-                       !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
-    )) {
+  
+    unless (check_ref($_[0], 'Bio::EnsEMBL::Variation::StructuralVariation') || check_ref($_[0], 'Bio::EnsEMBL::Variation::SupportingStructuralVariation')) {
       throw("Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation argument expected");
     }
     $self->{'structural_variation'} = shift;

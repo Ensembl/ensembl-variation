@@ -62,10 +62,10 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor
     foreach my $SO_term (keys(%{$svpf->{samples_class}})) {
       $samples_count += scalar(@{$svpf->{samples_class}->{$SO_term}});
     }
-	  print $pop_name.">> Global frequency: ".sprintf("%.4f",$svpf->freqs)." (Samples: $samples_count | Pop size: ".$svpf->size.")\n";
+	  print $pop_name.">> Global frequency: ".sprintf("%.4f",$svpf->frequency)." (Samples: $samples_count | Pop size: ".$svpf->size.")\n";
 	  
 	  # Allele class frequency
-	  my $freqs_by_SO_term = $svpf->freqs_by_class_SO_term;
+	  my $freqs_by_SO_term = $svpf->frequencies_by_class_SO_term;
 	  foreach my $SO_term (keys(%$freqs_by_SO_term)) {
 	    print "> $SO_term: ".sprintf("%.4f",$freqs_by_SO_term->{$SO_term})."\n";
 	  }
@@ -147,7 +147,7 @@ sub _objs_from_sth {
   }
 
   # Get the created objects from the temporary hash
-  my @objs = values %{ $self->{_temp_objs} };
+  my @objs = sort { $a->population->dbID <=> $b->population->dbID} values %{ $self->{_temp_objs} };
   delete $self->{_temp_objs};
  
   # Return the created objects 
