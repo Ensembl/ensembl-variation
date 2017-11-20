@@ -94,6 +94,7 @@ use Cwd;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
@@ -188,9 +189,6 @@ sub new {
   $self->{order} = [];
   
   foreach my $hash(@{$config->{collections}}) {
-
-    # no duplicates allowed
-    throw('Duplicate VCF collection ID '.$hash->{id}.' found') if $self->{collections}->{$hash->{id}};
     
     # check the species and assembly if we can
     if($self->db) {
@@ -254,7 +252,7 @@ sub new {
       }
     }
     
-    my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
+    $self->add_VCFCollection(Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
       -description => $hash->{description},
       -type => $hash->{type},
@@ -275,10 +273,7 @@ sub new {
       -adaptor => $self,
       -tmpdir => $hash->{tmpdir} || $tmpdir,
       -ref_freq_index => $hash->{ref_freq_index},
-    );
-    
-    $self->{collections}->{$collection->id} = $collection;
-    push @{$self->{order}}, $collection->id;
+    ));
   }
 
   return $self;
@@ -313,7 +308,7 @@ sub fetch_by_id {
 =cut
 
 sub fetch_all {
-  return [values %{$_[0]->{collections} || {}}];
+  return [map {$_[0]->{collections}->{$_}} @{$_[0]->{order} || {}}];
 }
 
 
@@ -331,6 +326,60 @@ sub fetch_all {
 
 sub fetch_all_for_web {
   return [grep {$_->use_as_source} @{$_[0]->fetch_all}];
+}
+
+
+=head2 add_VCFCollection
+
+  Example    : $vca->add_VCFCollection($collection);
+  Description: Add a VCFCollection to the cached list on this adaptor
+  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : throw on invalid or missing collection
+               throw on attempt to add collection with duplicated ID
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub add_VCFCollection {
+  my $self = shift;
+  my $collection = shift;
+
+  # check class
+  assert_ref($collection, 'Bio::EnsEMBL::Variation::VCFCollection');
+
+  # check ID
+  my $id = $collection->id;
+  throw("ERROR: Collection with ID $id already exists\n") if $self->fetch_by_id($id);
+
+  $self->{collections}->{$id} = $collection;
+  push @{$self->{order}}, $id;
+
+  return $collection;
+}
+
+
+=head2 remove_VCFCollection_by_ID
+
+  Example    : $vca->remove_VCFCollection_by_ID($id);
+  Description: Remove a VCFCollection from the cached list on this adaptor
+  Returntype : bool (0 = ID does not exist; 1 = deleted OK)
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub remove_VCFCollection_by_ID {
+  my $self = shift;
+  my $id = shift;
+
+  return 0 unless $self->fetch_by_id($id);
+
+  delete $self->{collections}->{$id};
+  @{$self->{order}} = grep {$_ ne $id} @{$self->{order}};
+
+  return 1;
 }
 
 1;

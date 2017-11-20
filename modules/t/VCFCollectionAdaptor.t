@@ -47,6 +47,13 @@ ok($collections && scalar @$collections == 3, "fetch_all count");
 my $coll = $vca->fetch_by_id('1000genomes_phase1');
 ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id isa VCFCollection");
 
+# remove
+ok($vca->remove_VCFCollection_by_ID('1000genomes_phase1'), "remove_VCFCollection_by_ID");
+is($vca->fetch_by_id('1000genomes_phase1'), undef, 'fetch_by_id after remove');
+
+ok($vca->add_VCFCollection($coll), 'add_VCFCollection');
+is($vca->fetch_by_id('1000genomes_phase1') + 0, $coll + 0, 'fetch_by_id after add');
+
 ## disallow duplicate IDs
 open IN, $dir.'/vcf_config.json';
 local $/ = undef;
@@ -63,6 +70,6 @@ delete($vca->{collections});
 delete $vdb->{vcf_config};
 $vdb->vcf_config($config);
 
-throws_ok {$vca->new($vdb)} qr/Duplicate VCF collection ID/, "duplicate collection ID";
+throws_ok {$vca->new($vdb)} qr/Collection with ID .+ already exists/, "duplicate collection ID";
 
 done_testing();
