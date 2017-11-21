@@ -93,7 +93,8 @@ my $ssv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
    -source => $source
 );
 
-my $dbID = 6107305;
+my $dbID     = 6107305;
+my $zygosity = 'heterozygous';
 
 my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
   (-dbID                     => $dbID,
@@ -102,6 +103,7 @@ my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
    -strain                   => $ind,
    -sample                   => $sample,
    -study                    => $study,
+   -zygosity                 => $zygosity,
    -adaptor                  => $svs_adaptor
   );
 
@@ -117,6 +119,9 @@ ok($svs->sample->individual->gender() eq $ind_gender,         'individual gender
 ok($svs->sample->name() eq $sample_name,                      'sample name');
 # Study
 ok($svs->study->name() eq $study_name ,                       'study name' );
+# Zygosity
+ok($svs->zygosity() eq $zygosity ,                            'zygosity' );
+
 
 # test structural variation object
 my $sv = $svs->structural_variation();
@@ -132,6 +137,7 @@ my $svs_hash = {
   _strain_id               => $ind->dbID,
   sample                   => $sample,
   study                    => $study,
+  zygosity                 => $zygosity,
   adaptor                  => $svs_adaptor
 };
 $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new_fast($svs_hash);

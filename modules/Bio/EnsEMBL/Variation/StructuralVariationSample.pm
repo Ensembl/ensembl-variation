@@ -66,6 +66,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariationSample;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
+use Bio::EnsEMBL::Utils::Scalar qw(check_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
 use Bio::EnsEMBL::Storable;
@@ -91,6 +92,9 @@ use vars qw(@ISA);
   
   Arg [-STUDY] :
     object ref - the study object describing where the annotated structural variant comes from.  
+  
+  Arg [-ZYGOSITY] :
+   string - the zygosity of the allele for the sample.
   
   Arg [_STRUCTURAL_VARIATION_ID] :
     int _ the internal id of the structural variant object associated with this
@@ -118,8 +122,14 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain_id,$strain,$study_id, $study) =
-    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY)],@_); 
+  my ($dbID,$adaptor,$structural_variation_id,$sample,$strain_id,$strain,$study_id, $study, $zygosity) =
+    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY ZYGOSITY)],@_); 
+
+  if (defined($zygosity)) {
+    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
+      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    }
+  }
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
@@ -129,6 +139,7 @@ sub new {
   $self->{'strain'}                   = $strain;
   $self->{'_study_id'}                = $study_id;
   $self->{'study'}                    = $study;
+  $self->{'zygosity'}                 = $zygosity;
   
   return $self;
 }
@@ -201,7 +212,8 @@ sub study {
   
   # set
  if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Study')) {
+    
+    unless(check_ref($_[0], 'Bio::EnsEMBL::Variation::Study')) {
       throw("Bio::EnsEMBL::Variation::Study argument expected");
     }
     $self->{'study'} = shift;
@@ -270,7 +282,7 @@ sub strain {
   
   # set
   if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+    unless(check_ref($_[0],'Bio::EnsEMBL::Variation::Individual')) {
       throw("Bio::EnsEMBL::Variation::Individual argument expected");
     }
     $self->{'strain'} = shift;
@@ -283,6 +295,30 @@ sub strain {
   }
   
   return $self->{'strain'};
+}
+
+=head2 zygosity
+
+  Arg [1]    : string $zygosity (optional)
+  Example    : $gender = $svs->zygosity()
+  Description: Getter/Setter for the zygosity attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub zygosity {
+  my $self = shift;
+  my $zygosity = shift;
+  if ($zygosity) {
+    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
+      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    }
+    $self->{'zygosity'} = $zygosity;
+  }
+  return $self->{'zygosity'};
 }
 
 

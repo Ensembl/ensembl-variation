@@ -41,6 +41,7 @@ my $ind_name    = 'NA18635';
 my $ind_gender  = 'Male';
 my $ssv_name    = 'essv4067';
 my $study_name  = 'estd1';
+my $zygosity    = 'homozygous';
 
 
 # test fetch by dbID
@@ -52,6 +53,7 @@ ok($svs->sample->name() eq $sample_name,                       'individual name 
 ok($svs->sample->individual->gender() eq $ind_gender,          'individual gender by sv sample id');
 ok($svs->structural_variation->variation_name() eq $ssv_name , 'sv name by sv sample id' );
 ok($svs->study->name() eq $study_name ,                        'study name by sv sample id' );
+ok($svs->zygosity() eq $zygosity ,                             'zygosity by sv sample id' );
 
 
 ## test fetch by ssv object ##

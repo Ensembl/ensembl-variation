@@ -307,7 +307,7 @@ sub _default_where_clause {
 
 sub _columns {
   return qw( svs.structural_variation_sample_id svs.structural_variation_id 
-             sv.study_id s.sample_id s.individual_id
+             sv.study_id s.sample_id s.individual_id svs.zygosity
            );
 }
 
@@ -316,8 +316,8 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
 
   my @svas;
-  my ($structural_variation_sample_id,$svar_id,$study_id,$sample_id,$strain_id,$study,$sample,$strain);
-  $sth->bind_columns(\$structural_variation_sample_id,\$svar_id,\$study_id,\$sample_id,\$strain_id);
+  my ($structural_variation_sample_id,$svar_id,$study_id,$sample_id,$strain_id,$study,$sample,$strain,$zygosity);
+  $sth->bind_columns(\$structural_variation_sample_id,\$svar_id,\$study_id,\$sample_id,\$strain_id,\$zygosity);
 										 
 	my $sample_adapt = $self->db()->get_SampleAdaptor();
 	my $ind_adapt    = $self->db()->get_IndividualAdaptor();
@@ -333,6 +333,7 @@ sub _objs_from_sth {
       -_STRAIN_ID               => $strain_id,
       -ADAPTOR                  => $self,
       -_STUDY_ID                => $study_id,
+      -ZYGOSITY                 => $zygosity
     );
   }
 
