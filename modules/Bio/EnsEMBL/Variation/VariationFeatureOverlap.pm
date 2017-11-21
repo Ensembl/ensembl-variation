@@ -478,7 +478,7 @@ sub _raw_allele_hashes {
 
     for my $allele (@alleles) {
       
-      next if $allele eq $ref_allele;
+      next if $allele eq ($vf_ref || $ref_allele);
 
       $allele_number++;
       next if $allele eq '*' || $allele eq '<DEL:*>';
