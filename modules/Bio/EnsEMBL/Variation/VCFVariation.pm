@@ -1,6 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,14 +28,14 @@ limitations under the License.
 
 =cut
 
-# Ensembl module for Bio::EnsEMBL::Variation::VCFVariationFeature
+# Ensembl module for Bio::EnsEMBL::Variation::VCFVariation
 #
 #
 
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::BaseVariationFeature - Abstract base class for variation features
+Bio::EnsEMBL::Variation::VCFVariation - A Variation object derived from a VCF
 
 =head1 SYNOPSIS
 
@@ -42,8 +43,9 @@ None
 
 =head1 DESCRIPTION
 
-Abstract base class representing variation features. Should not be instantiated
-directly.
+A child class of Bio::EnsEMBL::Variation::Variation representing an object
+derived from a VCF file (via a VCFCollection). Overrides any methods from
+parent class that may access data not present in this representation.
 
 =head1 METHODS
 
@@ -65,6 +67,19 @@ use Bio::EnsEMBL::Variation::Source;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(raw_freqs_from_gts);
 
 our @ISA = ('Bio::EnsEMBL::Variation::Variation');
+
+
+=head2 new_from_VCFVariationFeature
+  
+  Arg [1]    : Bio::EnsEMBL::Variation::VCFVariationFeature $vf
+  Example    : my $v = Bio::EnsEMBL::Variation::VCFVariation->new_from_VCFVariationFeature($vf)
+  Description: Create a VCFVariation object from a VCFVariationFeature
+  Returntype : Bio::EnsEMBL::Variation::VCFVariation
+  Exceptions : throws if $vf is incorrect class
+  Caller     : Bio::EnsEMBL::Variation::VCFVariationFeature
+  Status     : stable
+
+=cut
 
 sub new_from_VCFVariationFeature {
   my $caller = shift;
@@ -88,6 +103,18 @@ sub new_from_VCFVariationFeature {
   return $v;
 }
 
+
+=head2 adaptor
+  
+  Example    : my $ad = $v->adaptor()
+  Description: Gets a database adaptor appropriate for the parent class
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub adaptor {
   my $self = shift;
   
@@ -98,26 +125,90 @@ sub adaptor {
   return $self->{adaptor};
 }
 
+
+=head2 variation_feature
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VCFVariationFeature $vf  
+  Example    : my $vf = $v->variation_feature()
+  Description: Get/set the associated VariationFeature object
+  Returntype : Bio::EnsEMBL::Variation::VCFVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub variation_feature {
   my $self = shift;
   $self->{variation_feature} = shift if @_;
   return $self->{variation_feature};
 }
 
+
+=head2 get_all_VariationFeatures
+
+  Example    : my @vfs = @{$v->get_all_VariationFeatures()}
+  Description: Get associated VariationFeature as a listref;
+               implemented for compatibility with parent class
+  Returntype : arrayref of Bio::EnsEMBL::Variation::VCFVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub get_all_VariationFeatures {
   my $self = shift;
   return [$self->variation_feature(@_)];
 }
+
+
+=head2 collection
+
+  Example    : my $coll = $v->collection
+  Description: Get the VCFCollection object used to generate this object
+  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
 
 sub collection {
   my $self = shift;
   return $self->variation_feature->collection(@_);
 }
 
+
+=head2 vcf_record
+
+  Example    : my $record = $v->vcf_record
+  Description: Get the VCF record used to generate this object as an
+               array of strings, one per VCF column
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub vcf_record {
   my $self = shift;
   return $self->variation_feature->vcf_record(@_);
 }
+
+=head2 get_all_Alleles
+
+  Example    : @alleles = @{$v->get_all_Alleles()};
+  Description: Retrieves all Alleles associated with this variation.
+               Alleles are derived from INFO field keys/values or genotypes
+               defined in the VCF record
+  Returntype : Listref of Bio::EnsEMBL::Variation::Allele objects
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub get_all_Alleles {
   my $self = shift;
@@ -155,6 +246,19 @@ sub get_all_Alleles {
   return $self->{alleles};
 }
 
+
+=head2 get_all_PopulationGenotypes
+
+  Example    : $pop_genotypes = $var->get_all_PopulationGenotypes()
+  Description: Getter for PopulationGenotypes for this Variation, returns empty list if 
+               there are none. 
+  Returntype : Listref of PopulationGenotypes
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_PopulationGenotypes {
   my $self = shift;
   
@@ -178,6 +282,19 @@ sub get_all_PopulationGenotypes {
 }
 
 
+=head2 get_all_SampleGenotypes
+
+  Args       : none
+  Example    : $sample_genotypes = $var->get_all_SampleGenotypes()
+  Description: Getter for SampleGenotypes for this Variation, returns empty list if 
+               there are none 
+  Returntype : Listref of SampleGenotypes
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_SampleGenotypes {
   my $self = shift;
   
@@ -198,6 +315,18 @@ sub get_all_SampleGenotypes {
   return $self->{genotypes};
 }
 
+
+=head2 minor_allele
+
+  Example    : $ma = $obj->minor_allele()
+  Description: Get the minor allele of this variation
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub minor_allele {
   my $self = shift;
   
@@ -209,6 +338,18 @@ sub minor_allele {
   return $self->{minor_allele};
 }
 
+
+=head2 minor_allele_count
+
+  Example    : $maf_count = $obj->minor_allele_count()
+  Description: Get the sample count of the minor allele of this variation
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub minor_allele_count {
   my $self = shift;
   
@@ -219,6 +360,18 @@ sub minor_allele_count {
   
   return $self->{minor_allele_count};
 }
+
+
+=head2 minor_allele_frequency
+
+  Example    : $maf = $obj->minor_allele_frequency()
+  Description: Get the frequency of the minor allele of this variation
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub minor_allele_frequency {
   my $self = shift;
@@ -235,6 +388,14 @@ sub minor_allele_frequency {
   return $self->{minor_allele_frequency};
 }
 
+
+## stub method for compatibility with parent class
+sub get_all_attributes {
+  return {};
+}
+
+
+## get allele count data from VCF INFO field
 sub _allele_counts {
   my $self = shift;
   
@@ -312,6 +473,9 @@ sub _allele_counts {
   return $self->{_allele_counts};
 }
 
+
+## gets intermediate hashrefs used to generate Allele and PopulationGenotype objects
+## uses raw_freqs_from_gts util method
 sub _raw_freq_objs_from_genotypes {
   my $self = shift;
 
@@ -328,12 +492,11 @@ sub _raw_freq_objs_from_genotypes {
   return $self->{_raw_freq_hashes};
 }
 
+
+## formats floats to 4dp
 sub _format_frequency {
   return sprintf("%.4g", $_[1] || 0);
 }
 
-sub get_all_attributes {
-  return {};
-}
 
 1;

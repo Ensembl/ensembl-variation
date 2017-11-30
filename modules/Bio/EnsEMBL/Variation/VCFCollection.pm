@@ -669,6 +669,25 @@ sub has_Population {
   return grep {$name eq $_} @{$self->_get_all_population_names};
 }
 
+
+=head2 get_all_VariationFeatures_by_Slice
+
+  Arg[1]     : Bio::EnsEMBL::Slice $slice
+  Arg[2]     : (optional) bool $dont_fetch_overlaps
+  Example    : my $vfs = $collection->get_all_VariationFeatures_by_Slice($slice)
+  Description: Get all VariationFeatures (actually VCFVariationFeatures) for this
+               slice. By default feature overlap objects are also generated for
+               any overlapping Transcripts, RegulatoryFeatures and MotifFeatures.
+               Set $dont_fetch_overlaps to a true value to disable this;
+               VariationFeatures in this scenario will have their consequence type
+               set to "intergenic".
+  Returntype : arrayref of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Caller     : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
+  Status     : Stable
+
+=cut
+
 sub get_all_VariationFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
@@ -808,7 +827,8 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
 =head2 get_all_Alleles_by_VariationFeature
 
   Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
-  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Arg[3]     : (optional) Bio::EnsEMBL::IO::Parser::VCF4Tabix $vcf
   Example    : my $alleles = $collection->get_all_Alleles_by_VariationFeature($vf)
   Description: Get all Alleles for a given VariationFeature object
   Returntype : arrayref of Bio::EnsEMBL::Variation::Allele

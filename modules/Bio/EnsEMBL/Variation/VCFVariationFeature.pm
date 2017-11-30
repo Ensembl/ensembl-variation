@@ -1,6 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,7 +35,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::BaseVariationFeature - Abstract base class for variation features
+Bio::EnsEMBL::Variation::VCFVariationFeature - A VariationFeature object derived from a VCF
 
 =head1 SYNOPSIS
 
@@ -42,8 +43,9 @@ None
 
 =head1 DESCRIPTION
 
-Abstract base class representing variation features. Should not be instantiated
-directly.
+A child class of Bio::EnsEMBL::Variation::VariationFeature representing an object
+derived from a VCF file (via a VCFCollection). Overrides any methods from
+parent class that may access data not present in this representation.
 
 =head1 METHODS
 
@@ -62,10 +64,49 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 
 our @ISA = ('Bio::EnsEMBL::Variation::VariationFeature');
 
-sub _new_from_VCF_line {
-    my $caller = shift;
-    my $class = ref($caller) || $caller;
-}
+# sub _new_from_VCF_line {
+#     my $caller = shift;
+#     my $class = ref($caller) || $caller;
+# }
+
+
+=head2 new_from_VCFVariationFeature
+  
+  Arg [-VARIATION_FEATURE] :
+    Bio::EnsEMBL::Variation::VariationFeature
+    Parent class object used to derive this object
+
+  Arg [-COLLECTION] :
+    Bio::EnsEMBL::Variation::VCFCollection
+    VCFCollection from which this object is generated
+
+  Arg [-VCF_RECORD] :
+    arrayref of strings
+    Reference to split string as read from VCF file
+
+  Arg [-SLICE] : 
+    Bio::EnsEMBL::Slice
+    Slice to which this variant maps
+
+  Arg [-ADAPTOR] :
+    Bio::EnsEMBL::Variation::DBSQL::VariationFeature
+    Adaptor providing database connectivity
+
+  Example    : my $vcf_vf = Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature(
+    -VARIATION_FEATURE => $vf,
+    -COLLECTION        => $coll,
+    -VCF_RECORD        => $record,
+    -SLICE             => $slice,
+    -ADAPTOR           => $vf_adaptor
+  );
+
+  Description: Create a VCFVariationFeature object from a VariationFeature
+  Returntype : Bio::EnsEMBL::Variation::VCFVariationFeature
+  Exceptions : throws if given VariationFeature is incorrect class
+  Caller     : Bio::EnsEMBL::Variation::VCFCollection
+  Status     : stable
+
+=cut
 
 sub new_from_VariationFeature {
   my $caller = shift;
@@ -103,17 +144,55 @@ sub new_from_VariationFeature {
   return $transferred;
 }
 
+
+=head2 collection
+
+  Example    : my $coll = $v->collection
+  Description: Get the VCFCollection object used to generate this object
+  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub collection {
   my $self = shift;
   $self->{collection} = shift if @_;
   return $self->{collection};
 }
 
+
+=head2 vcf_record
+
+  Example    : my $record = $v->vcf_record
+  Description: Get the VCF record used to generate this object as an
+               array of strings, one per VCF column
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
 sub vcf_record {
   my $self = shift;
   $self->{vcf_record} = shift if @_;
   return $self->{vcf_record};
 }
+
+
+=head2 variation
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VCFVariation $v
+  Example    : my $vf = $v->variation_feature()
+  Description: Get/set the associated Variation object
+  Returntype : Bio::EnsEMBL::Variation::VCFVariation
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
 
 sub variation {
   my $self = shift;
@@ -127,17 +206,67 @@ sub variation {
   return $self->{variation};
 }
 
+
+=head2 get_all_SampleGenotypes
+
+  Args       : none
+  Example    : $sample_genotypes = $var->get_all_SampleGenotypes()
+  Description: Getter for SampleGenotypes for this Variation, returns empty list if 
+               there are none 
+  Returntype : Listref of SampleGenotypes
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_SampleGenotypes {
   return $_[0]->variation->get_all_SampleGenotypes;
 }
+
+
+=head2 minor_allele
+
+  Example    : $ma = $obj->minor_allele()
+  Description: Get the minor allele of this variation
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub minor_allele {
   return $_[0]->variation->minor_allele;
 }
 
+
+=head2 minor_allele_count
+
+  Example    : $maf_count = $obj->minor_allele_count()
+  Description: Get the sample count of the minor allele of this variation
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub minor_allele_count {
   return $_[0]->variation->minor_allele_count;
 }
+
+
+=head2 minor_allele_frequency
+
+  Example    : $maf = $obj->minor_allele_frequency()
+  Description: Get the frequency of the minor allele of this variation
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub minor_allele_frequency {
   return $_[0]->variation->minor_allele_frequency;
