@@ -1092,6 +1092,11 @@ sub parse_animal_qtl {
       $extra->{$key} = $value;
     }
     
+    if ($extra->{'Map_Type'} eq 'Linkage' || $data[3] == 0) {
+      print STDERR "WARNING: Could not find a precise location for the QTL ".$extra->{QTL_ID}."\n";
+      next;
+    }
+
     if ($data[4] !~ /^\d+$/) {
       print STDERR "WARNING: Could not find a numeric seq_region_end for the QTL ".$extra->{QTL_ID}."\n";
       next;
