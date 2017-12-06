@@ -41,6 +41,7 @@ use ImportUtils qw(load);
 use FileHandle;
 use Fcntl qw(:flock SEEK_END);
 use Digest::MD5 qw(md5_hex);
+use File::Path qw(make_path);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -306,7 +307,7 @@ sub get_table_files_prefix {
   my $dir = $self->required_param('pipeline_dir').'/table_files/'.substr(md5_hex($id), 0, 2);
 
   unless(-d $dir) {
-    mkdir($dir) or die "ERROR: Could not make directory $dir\n";
+    make_path($dir) or die "ERROR: Could not make directory $dir\n";
   }
 
   return $dir.'/'.$id;
