@@ -95,6 +95,11 @@ sub run {
 
     setup_fasta(-FASTA => $fasta, -ASSEMBLY => $assembly);
   }
+  else {
+    # set seq cache size higher
+    my $seq_ad = $core_dba->get_SequenceAdaptor;
+    $seq_ad->_init_seq_instance($seq_ad->chunk_power + 2);
+  }
 
   print STDERR "Fetching gene $gene_id\n" if $DEBUG;
 
