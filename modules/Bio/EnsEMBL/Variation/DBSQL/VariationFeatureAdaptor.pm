@@ -531,7 +531,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
 	my $p_source = shift;
 	my $phenotype = shift;
 	my $constraint = shift;
-	
+
 	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 		throw('Bio::EnsEMBL::Slice arg expected');
 	}
@@ -571,7 +571,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
   my $cols = join ",", $self->_columns();
     
   my $sth = $self->prepare(qq{
-    SELECT $cols
+    SELECT DISTINCT $cols
     FROM (variation_feature vf, phenotype_feature pf,
         source s $extra_table) # need to link twice to source
     WHERE vf.seq_region_id = pf.seq_region_id
@@ -584,7 +584,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
     AND vf.seq_region_id = ?
     AND vf.seq_region_end >= ?
     AND vf.seq_region_start <= ?
-    GROUP BY vf.variation_feature_id
+    ORDER BY vf.variation_feature_id
   });
   
   $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
@@ -774,7 +774,7 @@ sub fetch_all_by_Slice_VariationSet{
 
 sub fetch_all_by_Slice_Population {
   my $self = shift;
-  
+ 
   my $slice = shift;
   
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
@@ -804,7 +804,7 @@ sub fetch_all_by_Slice_Population {
   my $cols = join ",", $self->_columns();
   
   my $sth = $self->prepare(qq{
-	SELECT $cols
+	SELECT DISTINCT $cols
 	FROM (variation_feature vf, source s, allele a)
 	WHERE vf.source_id = s.source_id
 	AND vf.variation_id = a.variation_id
@@ -813,7 +813,7 @@ sub fetch_all_by_Slice_Population {
 	AND vf.seq_region_id = ?
 	AND vf.seq_region_end >= ?
 	AND vf.seq_region_start <= ?
-    GROUP BY a.variation_id
+    ORDER BY a.variation_id
   });
   
   $sth->execute($pop->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
@@ -888,7 +888,7 @@ sub _internal_fetch_all_with_phenotype {
   my $cols = join ",", $self->_columns();
     
   my $sth = $self->prepare(qq{
-        SELECT $cols
+        SELECT DISTINCT $cols
         FROM (variation_feature vf, phenotype_feature pf,
         source s $extra_table) # need to link twice to source
         WHERE vf.source_id = s.source_id
@@ -897,7 +897,7 @@ sub _internal_fetch_all_with_phenotype {
 				AND vf.seq_region_end = pf.seq_region_end
 				AND vf.variation_name = pf.object_id
         $extra_sql
-        GROUP BY vf.variation_feature_id
+        ORDER BY vf.variation_feature_id
   });
     
   $sth->execute;
