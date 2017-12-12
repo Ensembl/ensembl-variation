@@ -160,7 +160,7 @@ sub run {
             FROM    allele a, allele_code ac
             WHERE   a.variation_id IN ($id_str)
             AND     a.allele_code_id = ac.allele_code_id
-            GROUP BY ac.allele
+            GROUP BY a.variation_id, ac.allele
         });
 
         $unmapped_sth->execute or die "Failed to fetch unmapped variation alleles for variation ids: $id_str";
