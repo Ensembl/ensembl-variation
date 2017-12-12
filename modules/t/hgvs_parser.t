@@ -48,7 +48,7 @@ use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
 my $DEBUG = 0;
 
 ## 3 pairs of hashes of equivalent names (some correct, some not) and output annotation
-## Annotation format:  key =>  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description] 
+## Annotation format:  key =>  [hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description, ref allele]
 
 my %test_output = (
      1 => ["NC_000002.11:g.46746465G>A",
@@ -80,7 +80,8 @@ my %test_output = (
            "ENST00000524249.1:n.775+16445delinsTTGT", 
            "TTGT",
            "", 
-           "delins, non-coding "
+           "delins, non-coding ",
+           "C"
           ], 
      5 => ["NC_000002.11:g.46739212C>G", 
            "G",
@@ -166,21 +167,24 @@ my %test_output = (
            "ENST00000230568.3:c.405+68_405+70dup",
            "AGG",
             "",
-            "duplication, intronic - long"
+            "duplication, intronic - long",
+            "AGG",
            ],
      17 =>  ["NC_000006.11:g.31997361del",
             "-",
             "ENST00000435363.2:c.3695del", 
             "-",
             "ENSP00000415941.2:p.Ser1232Ter",
-            "deletion, stop gained"
+            "deletion, stop gained",
+            "C"
            ], 
      18 => ["NC_000007.13:g.143557504del", 
             "-",
             "ENST00000355951.2:c.1964del", 
             "-",
             "ENSP00000348220.2:p.Gln655ArgfsTer17", 
-            "deletion, frameshift"
+            "deletion, frameshift",
+            "A"
            ],
      19 => ["NC_000007.13:g.7680048A>G",
             "G",
@@ -211,7 +215,8 @@ my %test_output = (
             "ENST00000336617.2:c.615dup",
             "A",
             "ENSP00000337623.2:p.Glu206ArgfsTer13",
-            "duplication, frameshift"
+            "duplication, frameshift",
+            "A"
            ],
  
      23 =>  ["NC_000017.10:g.7123233_7123234insCAGGACGTGGGCGTG",
@@ -243,7 +248,8 @@ my %test_output = (
             "ENST00000292733.7:c.832_876dup",
             "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
             "ENSP00000292733.7:p.Pro278_Gln292dup", 
-            "insertion, peptide duplication"
+            "insertion, peptide duplication",
+            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
            ],
 
      27 => ["MT:m.6721T>C",    ## rs199476127
@@ -259,7 +265,8 @@ my %test_output = (
             "ENST00000345392.2:c.349_353delinsTTTTT",
             "TTTTT",
             "ENSP00000344757.2:p.Leu117_Lys118delinsPheLeu",
-            "del ins if > 1 aa not a subs"
+            "del ins if > 1 aa not a subs",
+            "CTGAA"
            ],
      36 => ["NC_000019.9:g.7706085T>A",
             "A",
@@ -279,6 +286,7 @@ my %test_output_shifted = (
             "T",
             "",
             "duplication, intronic rc transcript",
+            "T",
            ], 
 
      29 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
@@ -295,6 +303,7 @@ my %test_output_shifted = (
            "G",
            "",
            "insertion, frameshift lost on 3'shift",
+           "G"
            ],
 
      31 => ["NC_000006.11:g.30558478dup",
@@ -303,6 +312,7 @@ my %test_output_shifted = (
             "A",
             "",
             "insertion, stop retained if not shifted",
+            "A"
            ],
 
      32 => ["NC_000001.10:g.154140414_154140416del", 
@@ -311,6 +321,7 @@ my %test_output_shifted = (
             "-",
             "",
             "deletion, stop loss unless shifted",
+            "AAT"
            ],
 
      33 => ["NC_000012.11:g.102061071dup",
@@ -319,7 +330,8 @@ my %test_output_shifted = (
             "T",
             "",
             "insertion, coding intron downstream",
-            "NC_000012.11:g.102061071dup"
+            "NC_000012.11:g.102061071dup",
+            "T"
            ],
      34 => ["NC_000019.9:g.48836480_48836482del", 
             "-",
@@ -327,6 +339,7 @@ my %test_output_shifted = (
             "-",
             "ENSP00000293261.2:p.Ser459del",
             "deletion, inframe codon loss",
+            "CCT"
            ],
 
 );
@@ -530,7 +543,8 @@ my %test_output_no_shift = (
            "ENST00000368530.2:c.856_858del",
            "-",
            "ENSP00000357516.2:p.Ter286delextTer56",
-            "deletion, stop loss"
+            "deletion, stop loss",
+            "TAA"
           ],
      6 => ["NC_000012.11:g.102061070_102061071insT",
            "T",
@@ -544,7 +558,8 @@ my %test_output_no_shift = (
            "ENST00000293261.2:c.1376_1378del",
            "-",
            "ENSP00000293261.2:p.Ser459del",
-           "deletion, inframe codon loss"
+           "deletion, inframe codon loss",
+           "CCT"
           ],
     );
 
@@ -678,9 +693,8 @@ sub test_output{
 
   my $hgvs_coding  = $variation_feature->get_all_hgvs_notations($transcript, "c");
 
-  ok( $hgvs_coding->{$allele} eq $output->[2], "$input ->  transcript level $output->[2], $output->[5]");
+  ok( $hgvs_coding->{$allele} eq $output->[2], "$input ->  transcript level from VF $output->[2], $output->[5]");
   if($DEBUG==1){  print "TEMP: $input => trans; expected $output->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
-
 
   ## protein level - transcript to be supplied as ref feature - alt allele may be complimented
   return unless $output->[4]; ## only look for protein level annotation if expected
@@ -691,6 +705,15 @@ sub test_output{
     next unless $transcript_variation->transcript->stable_id() eq $transcript->stable_id() ;
 
     my $hgvs_protein  = $variation_feature->get_all_hgvs_notations($transcript,  "p",  $transcript->stable_id,  "",  $transcript_variation  );
+
+    ##get from TVA too
+    my $tva = $transcript_variation->get_all_alternate_BaseVariationFeatureOverlapAlleles();
+    ok( $tva->[0]->hgvs_transcript() eq $output->[2], "$input ->  transcript level from TVA $output->[2], $output->[5]");
+
+    if (defined $output->[6]){ ## check reference sequence as used in HGVS is as expected
+      ok( $tva->[0]->hgvs_transcript_reference() eq $output->[6], "$input ->  transcript level correct ref,$output->[6] ");
+    }
+
 
     ok( $hgvs_protein->{$allele} eq $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
     if($DEBUG==1){   print "TEMP: $input => prot; expected $output->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}

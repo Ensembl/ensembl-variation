@@ -729,10 +729,30 @@ sub hgvs_transcript {
   ### generic formatting 
   print "pre-format $hgvs_notation->{alt}\n" if $DEBUG ==1;
   $self->{hgvs_transcript} = format_hgvs_string( $hgvs_notation);
-
   if($DEBUG ==1){ print "HGVS notation: " . $self->{hgvs_transcript} . " \n"; }
 
+  ## save the HGVS style reference sequence in case the other long form of HGVS is required
+  $self->{hgvs_t_ref} = ($hgvs_notation->{type} eq 'dup') ? $hgvs_notation->{alt} :  $hgvs_notation->{ref};
+
   return $self->{hgvs_transcript}; 
+}
+
+=head2 hgvs_transcript_reference
+
+  Description: Return a string representing the reference sequence as could be used in HGVS notation
+               Useful for deletions where the recommended format formerly used the reference sequence
+               but no longer does.
+  Returntype : string or undef if no reference allele is available.
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub hgvs_transcript_reference{
+
+  my $self = shift;
+  defined $self->{hgvs_t_ref} ? return $self->{hgvs_t_ref} : undef;
+
 }
 
 
