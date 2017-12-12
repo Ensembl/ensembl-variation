@@ -76,6 +76,11 @@ sub run {
     $max_distance = MAX_DISTANCE_FROM_TRANSCRIPT;
   }
 
+  # clear the registry here
+  # this hopefully prevents any sequence caching issues
+  # overhanging from previous jobs executed in the same hive process
+  Bio::EnsEMBL::Registry->clear();
+
   my $core_dba = $self->get_species_adaptor('core');
   my $var_dba = $self->get_species_adaptor('variation');
   
@@ -97,7 +102,13 @@ sub run {
   }
   else {
     # set seq cache size higher
+    # this prevents repeated DB lookups for sequence for HGVS e.g. in long introns
+    # to do this we fetch a sequence adaptor
     my $seq_ad = $core_dba->get_SequenceAdaptor;
+
+    # then reset its cache
+    # the first param passed to this method is the "chunk power"
+    # essentially the length in bp of cached sequence will be 2 ^ chunk_power
     $seq_ad->_init_seq_instance($seq_ad->chunk_power + 2);
   }
 
