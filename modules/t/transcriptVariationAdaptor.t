@@ -222,7 +222,8 @@ foreach my $trans_var (@{$trans_vars}){
 
   next unless $trans_var->transcript->stable_id() eq $trans_name;
   my $tvas_ts = $trans_var->get_all_alternate_TranscriptVariationAlleles();
- 
+
+  ok($tvas_ts->[0]->hgvs_transcript_reference() eq 'G', "hgvs_transcript_reference available without hgvs_transcript");
   ok($tvas_ts->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616+1dup', 'HGVS for shifted location');
   ok(scalar $tvas_ts->[0]->hgvs_offset() == 2, 'shifted offset');
 }
