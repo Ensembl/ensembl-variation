@@ -711,7 +711,7 @@ sub get_all_Alleles_by_VariationFeature {
       $ans->{$pop_id} = $an if $an;
 
       # check for AF
-      if(defined($af)) {
+      if(defined($af) && $af ne '.') {
         $total_afs->{$pop_id} ||= 0;
         my @split = split(',', $af);
 
@@ -736,7 +736,7 @@ sub get_all_Alleles_by_VariationFeature {
       }
 
       # or have AC and AN (AN must be defined and non-zero)
-      elsif(defined($ac) && $an) {
+      elsif(defined($ac) && $ac ne '.' && $an && $an ne '.') {
 
         $total_acs->{$pop_id} ||= 0;
         my @split = split(',', $ac);
@@ -806,7 +806,7 @@ sub get_all_Alleles_by_VariationFeature {
     foreach my $a(keys %{$freqs->{$pop_id}}) {
       push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
         allele     => $a,
-        count      => %$counts && %{$counts->{$pop_id}} ? ($counts->{$pop_id}->{$a} || 0) : undef,
+        count      => $counts && $counts->{$pop_id} ? ($counts->{$pop_id}->{$a} || 0) : undef,
         frequency  => $freqs->{$pop_id}->{$a},
         population => $pop,
         variation  => $vf->variation,
