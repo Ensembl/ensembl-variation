@@ -1099,7 +1099,7 @@ sub population_table {
     $self->{'dbVar'}->do(qq{INSERT INTO population (name, pop_id,description)
                  SELECT tp.name, tp.pop_id, GROUP_CONCAT(description ORDER BY tp.pop_class_id ASC, tp.line_num ASC)
                  FROM   tmp_pop tp
-                 GROUP BY tp.pop_id
+                 GROUP BY tp.name, tp.pop_id
                  });	#table size is small, so no need to change
   print $logh Progress::location();
 

@@ -17,7 +17,7 @@
 /**
 Use MyISAM storage engine
 */
-SET storage_engine=MYISAM;
+SET default_storage_engine=MYISAM;
 
 /**
 @header  Variation tables
