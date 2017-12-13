@@ -607,8 +607,13 @@ sub hgvs_transcript {
 
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
+
   ##### return if held 
   return $self->{hgvs_transcript}        if defined $self->{hgvs_transcript};
+
+  ## This is cached to allow long form HGVS to be created
+  ## Set as undefined here to avoid re-calling if hgvs_transcript annotation not possible
+  $self->{hgvs_t_ref} = undef;
 
   my $tv = $self->base_variation_feature_overlap;
 
@@ -751,7 +756,9 @@ sub hgvs_transcript {
 sub hgvs_transcript_reference{
 
   my $self = shift;
-  defined $self->{hgvs_t_ref} ? return $self->{hgvs_t_ref} : undef;
+
+  $self->hgvs_transcript() unless exists $self->{hgvs_t_ref};
+  return $self->{hgvs_t_ref};
 
 }
 
