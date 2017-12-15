@@ -102,6 +102,10 @@ sub store{
   my $var_dba  = $self->get_species_adaptor('variation');
   my $va       = $var_dba->get_VariationAdaptor();
 
+  ## Two multi-allelic variants may have multiple sets of matching HGVS currently
+  ## Enter attrib only once
+  my %done;
+
   foreach my $hgvs(keys %{$vars}){
     next if scalar @{$vars->{$hgvs}} == 1;
 
@@ -113,9 +117,15 @@ sub store{
       die "$name not found\n" unless defined $var; ## shouldn't happen
   
       foreach my $m(@u){
-        next if $m eq $name;
-        $var->update_attributes( {"co-located allele"  => $m }) ;
 
+        ## don't store the self matches
+        next if $m eq $name;
+
+        ## don't store same match twice
+        next if $done{$name}{$m};
+        $done{$name}{$m} = 1;
+
+        $var->update_attributes( {"co-located allele"  => $m }) ;
         $va->store_attributes($var);
       }
     }
