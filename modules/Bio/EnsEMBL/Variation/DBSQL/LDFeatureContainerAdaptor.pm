@@ -306,7 +306,7 @@ sub fetch_by_VariationFeature {
   delete $self->{_vf_pos};
   delete $self->{_vf_name};
   
-  $ldFeatureContainer->name($vf->dbID || $vf->location_string);
+  $ldFeatureContainer->name($vf->dbID);
   
   return $ldFeatureContainer;
 }

@@ -374,9 +374,9 @@ sub fetch_all_by_SO_terms {
 ## the idea is to create as small a number of slices as possible from
 ## an arrayref of VFs
 sub _get_ranged_slices_from_VariationFeatures {
-  my $self = shift;
-  my $vfs = shift;
-  my $range = shift;
+  my ($self, $vfs, $range_size) = @_;
+
+  return [] unless @$vfs;
 
   # quick check - do all the VFs have the same slice?
   my %slice_refs = map {$_->slice + 0 => 1} @$vfs;
@@ -384,19 +384,54 @@ sub _get_ranged_slices_from_VariationFeatures {
     return [$vfs->[0]->slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)];
   }
 
-  ## TO BE FINISHED
-  ## WRITE CODE TO FETCH RANGE SLICES FROM VFS
   # default range
-  $range ||= 1000;
+  $range_size ||= MAX_DISTANCE_FROM_TRANSCRIPT;
 
-  # this will store ranges by chromosome
-  my $ranges;
+  # create a set of non-overlapping ranges covering all variants
+  my @ranges;
+  my ($prev_start, $prev_chr);
 
-  foreach my $vf(@$vfs) {
-    my ($min, $max) = $vf->seq_region_start, $vf->seq_region_end;
+  foreach my $vf(
+    sort {
+      $_->seq_region_name cmp $_->seq_region_name ||
+      $_->seq_region_start <=> $_->seq_region_end
+    } @$vfs
+  ) {
+    my $vf_start = $vf->seq_region_start;
+    my $vf_chr   = $vf->seq_region_name;
+
+    # start a new range if new chromosome or variant beyond previous range
+    if(
+      !$prev_start || !$prev_chr ||
+      $prev_chr ne $vf_chr ||
+      $vf_start - $prev_start > $range_size
+    ) {
+      push @ranges, {
+        id => $vf->slice->get_seq_region_id,
+        s  => $vf_start - $range_size,
+        e  => $vf_start + $range_size,
+      };
+    }
+
+    # expand previous range if var falls within it
+    elsif(@ranges) {
+      $ranges[-1]->{e} = $vf_start + $range_size;
+    }
+
+    $prev_chr   = $vf_chr;
+    $prev_start = $vf_start;
   }
 
-  return [];
+  # convert ranges to slices and return
+  my $sa = $vfs->[0]->slice->adaptor;
+
+  return [
+    map {
+      $sa->fetch_by_seq_region_id(
+        $_->{id}, $_->{s}, $_->{e}
+      )
+    } @ranges
+  ];
 }
 
 
