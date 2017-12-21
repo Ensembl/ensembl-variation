@@ -2219,6 +2219,23 @@ sub _parse_hgvs_protein_position{
   #exit(0); 
 }
 
+
+=head2 fetch_by_dbID
+
+  Arg [1]    : string $id
+               The unique database identifier for the VariationFeature to be obtained
+  Example    : $vf = $adaptor->fetch_by_dbID(1234));
+  Description: Returns the feature created from the database defined by the
+               the id $id.  ID may be either a variation_feature_id or a
+               "location_identifier" chr:start:allele_string:source_name
+  Returntype : Bio::EnsEMBL::VariationFeature or undef
+  Exceptions : thrown if $id arg is not provided
+               does not exist
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub fetch_by_dbID {
   my $self = shift;
   my $id = shift;
@@ -2234,6 +2251,29 @@ sub fetch_by_dbID {
   }
 }
 
+
+=head2 fetch_all_by_location_identifier
+
+  Arg [1]    : string $location_identifier
+  Example    : $vf = $adaptor->fetch_by_dbID('1:230710048:A_G');
+  Description: Fetches VariationFeatures by location identifier.
+               Primarily used to fetch variants from VCFCollections
+               as optional 4th component is source_name or
+               VCFCollection name.
+
+               location_identifier format chr:start:allele_string:source_name
+
+               chr = chromosome name
+               start = start coordinate of variant
+               allele_string = "_"-separated allele string (optional)
+               source_name = source name or name of VCFCollection (optional)
+               
+  Returntype : listref of Bio::EnsEMBL::VariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub fetch_all_by_location_identifier {
   my $self = shift;
