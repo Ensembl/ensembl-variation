@@ -43,13 +43,13 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
   $sva   = $reg->get_adaptor("human","variation","structuralvariation");
-  $svpfa = $reg->get_adaptor("human","variation","structuralvariationpopulationfrequency");
+  $svpf_adaptor = $reg->get_adaptor("human","variation","structuralvariationpopulationfrequency");
   
   # Get a StructuralVariation by its internal identifier
   $sv = $sva->fetch_by_dbID(145);
 
   # Get a StructuralVariation by its name
-  $sv = $sva->fetch_by_name('esv1285');
+  $sv = $sva->fetch_by_name('esv3631253');
   
   # Get the StructuralVariationPopulationFrequency object from the StructuralVariation object
   my $svpfs = $svpf_adaptor->fetch_all_by_StructuralVariation($sv);
@@ -60,7 +60,7 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationPopulationFrequencyAdaptor
     
     # Global frequency
     foreach my $SO_term (keys(%{$svpf->{samples_class}})) {
-      $samples_count += scalar(@{$svpf->{samples_class}->{$SO_term}});
+      $samples_count += scalar(keys %{$svpf->{samples_class}->{$SO_term}});
     }
 	  print $pop_name.">> Global frequency: ".sprintf("%.4f",$svpf->frequency)." (Samples: $samples_count | Pop size: ".$svpf->size.")\n";
 	  
