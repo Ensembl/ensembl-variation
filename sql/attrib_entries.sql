@@ -471,7 +471,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (206, 470, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (207, 469, 'SO:1000036');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (208, 470, 'complex_structural_alteration');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (209, 469, 'SO:0001784');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (210, 471, 'Complex');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (210, 471, 'complex alteration');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (211, 470, 'tandem_duplication');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (212, 469, 'SO:1000173');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (213, 471, 'Tandem duplication');
