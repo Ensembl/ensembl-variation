@@ -1074,3 +1074,6 @@ INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 134, 562);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 135, 563);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 135, 564);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 135, 565);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 137, 582);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 137, 583);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 137, 584);
