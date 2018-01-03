@@ -309,6 +309,9 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 520,'proj_parent_g','projection parent gene','Stable identifier of the parent gene this gene was projected from (projection between different species and/or assemblies).');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 521,'MIM','MIM id','MIM id');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 522,'vectorbase_adar','VectorBase gene predictions','Number of prediction genes generated with MAKER, by VectorBase.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 523, '_transl_start', 'Translation start', 'The start position for translation within a transcript-level seq_edit.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 524, '_transl_end', 'Translation end', 'The end position for translation within a transcript-level seq_edit.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 525, 'submitter', 'submitter', 'A group submitting data to a major repository eg. ClinVar');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (3, 471, 'SNP');
