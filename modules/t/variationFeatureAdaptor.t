@@ -384,5 +384,8 @@ ok($vf_new && $vf_new->[0]->variation_name eq $upd_name, "fetch updated vf");
 $dbID = $vf_new->[0]->dbID;
 $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or die $dbh->errstr;
 
+print "\n# Test - fetch_by_hgvs_notation\n";
+my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
+throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
 done_testing();
 
