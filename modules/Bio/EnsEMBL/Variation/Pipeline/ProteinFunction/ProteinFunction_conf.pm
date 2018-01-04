@@ -247,8 +247,9 @@ sub pipeline_analyses {
             },
             -rc_name    => 'highmem',
             -flow_into  => {
-                2 => [ 'run_polyphen' ],
-                3 => [ 'run_sift' ],
+                '2->A' => [ 'run_polyphen' ],
+                '3->A' => [ 'run_sift' ],
+                'A->1' => [ 'cleanup' ],
             },
         },
 
@@ -318,6 +319,15 @@ sub pipeline_analyses {
             -rc_name        => 'highmem',
         },
 
+        {   -logic_name => 'cleanup',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Cleanup',
+            -parameters => {
+                @common_params,
+            },
+            -meadow_type       => 'LOCAL',
+            -max_retry_count => 0,
+            -rc_name    => 'default',
+        },
     ];
 }
 
