@@ -35,7 +35,7 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap);
-use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
+use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta revert_fasta);
 
 use ImportUtils qw(load);
 use FileHandle;
@@ -290,7 +290,10 @@ sub run {
   $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
 
   $hgvs_fh->close();
-
+  
+  # Because the next job might use a different fasta file, we need to forget this one
+  revert_fasta();
+  
   print STDERR "All done\n" if $DEBUG;
 
   return;
