@@ -47,8 +47,9 @@ of a structural variant
         -name               => "1000GENOMES:phase_3:GBR",
         -description        => "British in England and Scotland",
         -size               => 91,
-        -samples_class      => { 'copy_number_gain' => { '1000GENOMES:phase_3:HG00253' => 'homozygous', 
-                                                         '1000GENOMES:phase_3:HG00106' => 'heterozygous'}
+        -region_name        => 'X',
+        -samples_class      => { 'copy_number_gain' => { '1000GENOMES:phase_3:HG00253' => 2, 
+                                                         '1000GENOMES:phase_3:HG00106' => 1 }
                                }
                           
        );
@@ -81,6 +82,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
   Arg [-NAME]                     : string - name of the population
   Arg [-DESCRIPTION]              : string - description of the population
   Arg [-SIZE]                     : int - the size of the population
+  Arg [-REGION_NAME]              : string - region/chromosome where the structural variant is located
   Arg [-SAMPLES_CLASS]            : hashref of sample IDs by SO terms. This also contains the zygosity of each sample
   Arg [-_POPULATION_ID]           : int - the internal id of the population object associated with this identifier.
                                     This may be provided instead of a population object so that the population may be 
@@ -95,8 +97,9 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
                             -name               => "1000GENOMES:phase_3:GBR",
                             -description        => "British in England and Scotland",
                             -size               => 91,
-                            -samples_class      => { 'copy_number_gain' => { '1000GENOMES:phase_3:HG00253' => 'homozygous', 
-                                                                             '1000GENOMES:phase_3:HG00106' => 'heterozygous'}
+                            -region_name        => 'X',
+                            -samples_class      => { 'copy_number_gain' => { '1000GENOMES:phase_3:HG00253' => 2, 
+                                                                             '1000GENOMES:phase_3:HG00106' => 1 }
                                                    }
                           );
        );
@@ -112,8 +115,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($adaptor, $structural_variation_id, $population_id, $name, $desc, $size, $samples_class) = rearrange([
-    'ADAPTOR', '_STRUCTURAL_VARIATION_ID', '_POPULATION_ID', 'NAME', 'DESCRIPTION', 'SIZE', 'SAMPLES_CLASS'], @_);
+  my ($adaptor, $structural_variation_id, $population_id, $name, $desc, $size, $samples_class, $region_name) = rearrange([
+    'ADAPTOR', '_STRUCTURAL_VARIATION_ID', '_POPULATION_ID', 'NAME', 'DESCRIPTION', 'SIZE', 'SAMPLES_CLASS', 'REGION_NAME'], @_);
 
   return bless {
     'adaptor'                  => $adaptor,
@@ -123,6 +126,7 @@ sub new {
     'description'              => $desc,
     'size'                     => $size,
     'samples_class'            => $samples_class,
+    'region_name'              => $region_name
   }, $class;
 }
 
@@ -241,6 +245,186 @@ sub adaptor {
 }
 
 
+=head2 allele_count
+
+  Arg [1]    : int $count (optional)
+               The new value to set the SV allele count attribute to
+  Example    : $count = $svpf->allele_count()
+  Description: Getter/Setter for the SV allele count attribute
+  Returntype : Int
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub allele_count {
+  my $self = shift;
+  if (@_) {
+    $self->{allele_count} = shift @_;
+  }
+  elsif (scalar(keys(%{$self->{samples_class}}))) {
+    my $allele_count = 0;
+    # Loop over SO terms
+    foreach my $SO_term (keys(%{$self->{samples_class}})) {
+      # Loop over Sample IDs
+      my @sample_ids = keys(%{$self->{samples_class}{$SO_term}});
+      
+      # Get sample objects if the SV falls into a special chromosome
+      my $samples_list = ($self->{region_name} =~ /^(Y|X)$/) ? $self->get_Samples_by_dbID_list(\@sample_ids) : {};
+      
+      foreach my $sample_id (@sample_ids) {
+      
+        my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
+        
+        if ($self->{region_name} eq 'X') {
+          $allele_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
+        }
+        elsif ($self->{region_name} eq 'Y') {
+          $allele_count += 1 if ($sample->individual->gender eq 'Male');
+        }
+        else {
+          $allele_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
+        }
+      }
+    }
+    $self->{allele_count} = $allele_count; 
+  }
+  
+  return $self->{allele_count};
+}
+
+
+=head2 allele_count_by_class_SO_term
+
+  Arg [1]    : String $class_SO_term (optional)
+               The new value to get the allele count by with the SO term attribute
+  Example    : $SO_term_frequencies = $svpf->allele_count_by_class_SO_term($class_SO_term)
+  Description: Getter for the allele_count by SO term
+               If a SO term is given as parameter, it returns an hashref with the corresponding allele count for the population, e.g.
+               $SO_term_allele_count = $svpf->allele_count_by_class_SO_term('copy_number_gain');
+               $SO_term_allele_count will contain {'copy_number_gain' => 3}
+               If no SO terms are given as parameter, it returns an hashref with all the associated SO terms - allele count for the population, e.g.
+               $SO_term_allele_count = $svpf->allele_count_by_class_SO_term();
+               $SO_term_allele_count will contain {'copy_number_gain' => 3, 'copy_number_loss' => 7}
+  Returntype : hashref
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub allele_count_by_class_SO_term {
+  my $self = shift;
+  my $class_SO_term = shift;
+  
+  my %class_SO_term_allele_count;
+  
+  # Defined SO term
+  if ($class_SO_term) {
+    if ($self->{samples_class}->{$class_SO_term}) {
+      
+      my $allele_count = 0;
+      my @sample_ids = keys(%{$self->{samples_class}{$class_SO_term}});
+      
+      # Get sample objects if the SV falls into a special chromosome
+      my $samples_list = ($self->{region_name} =~ /^(Y|X)$/) ? $self->get_Samples_by_dbID_list(\@sample_ids) : {};
+      
+      foreach my $sample_id (@sample_ids) {
+        
+        my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
+          
+        if ($self->{region_name} eq 'X') {
+          $allele_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$class_SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
+        }
+        elsif ($self->{region_name} eq 'Y') {
+          $allele_count += 1 if ($sample->individual->gender eq 'Male');
+        }
+        else {
+          $allele_count += ($self->{samples_class}{$class_SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
+        }
+      }
+    }
+    else {
+      $class_SO_term_allele_count{$class_SO_term} = "No data found";
+    }
+  }
+  # Not defined SO term: returns the allele counts for each SO term available
+  elsif (scalar(keys(%{$self->{samples_class}}))) {
+    # Loop over SO terms
+    foreach my $SO_term (keys(%{$self->{samples_class}})) {
+    
+      my $allele_SO_count = 0;
+      my @sample_ids = keys(%{$self->{samples_class}->{$SO_term}});
+      
+      # Get sample objects if the SV falls into a special chromosome
+      my $samples_list = ($self->{region_name} =~ /^(Y|X)$/) ? $self->get_Samples_by_dbID_list(\@sample_ids) : {};
+      
+      # Loop over Sample IDs
+      foreach my $sample_id (@sample_ids) {
+          
+        my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
+        
+        if ($self->{region_name} eq 'X') {
+          $allele_SO_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
+        }
+        elsif ($self->{region_name} eq 'Y') {
+          $allele_SO_count += 1 if ($sample->individual->gender eq 'Male');
+        }
+        else {
+          $allele_SO_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
+        }
+      }
+
+      # Allele count by SO term
+      $class_SO_term_allele_count{$SO_term} = $allele_SO_count;
+    }
+  }
+  
+  return \%class_SO_term_allele_count;
+}
+
+
+=head2 get_individuals_allele_count
+
+  Arg [1]    : none
+  Example    : $allele_count = $svpf->get_individuals_allele_count();
+  Description: Retrieves all the total number of allele available in a population.
+               Normally this corresponds to the number of individuals x ploidy (e.g. in human: 91 individuals * 2 = 182 alleles).
+               However for human there are special cases with the chromosomes X and Y where the ploidy is not the same for male and female.
+  Returntype : Int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_individuals_allele_count {
+  my $self = shift;
+  
+  return $self->{individuals_allele_count} if ($self->{individuals_allele_count});
+  
+  # Specific to human
+  if ($self->{region_name} =~ /^(Y|X)$/) {
+    my $count = 0;
+    my $samples = $self->population->get_all_Samples();
+    foreach my $sample (@$samples) {
+      if ($self->{region_name} eq 'X') {
+        $count += ($sample->individual->gender eq 'Male') ? 1 : 2;
+      }
+      elsif ($self->{region_name} eq 'Y') {
+        $count += 1 if ($sample->individual->gender eq 'Male');
+      }
+    }
+     $self->{individuals_allele_count} = $count;
+  }
+  else {
+     $self->{individuals_allele_count} = $self->{size}*2; # Might need to replace the "2" by the ploidie of the species 
+  }
+  return $self->{individuals_allele_count};
+}
+
+
 =head2 frequency
 
   Arg [1]    : float $frequency (optional)
@@ -260,15 +444,12 @@ sub frequency {
     $self->{frequency} = shift @_;
   }
   elsif (scalar(keys(%{$self->{samples_class}})) && $self->{size}) {
-    my $samples_count = 0;
-    # Loop over SO terms
-    foreach my $SO_term (keys(%{$self->{samples_class}})) {
-      # Loop over Sample IDs
-      foreach my $sample_id (keys(%{$self->{samples_class}{$SO_term}})) {
-        $samples_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
-      }
-    }
-    $self->{frequency} = $samples_count / ($self->{size}*2); 
+    my $allele_count = $self->allele_count();
+    my $total_allele_count = $self->get_individuals_allele_count();
+
+    return 0 if ($total_allele_count == 0 || !$total_allele_count);
+
+    $self->{frequency} = $allele_count / $total_allele_count;
   }
   
   return $self->{frequency};
@@ -300,29 +481,21 @@ sub frequencies_by_class_SO_term {
   
   my %class_SO_term_freq;
   
+  my $total_allele_count = $self->get_individuals_allele_count();
+  
+  my $class_SO_term_count;
   if ($class_SO_term) {
-    if ($self->{samples_class}->{$class_SO_term}) {
-      my $samples_count = 0;
-      # Loop over Sample IDs
-      foreach my $sample_id (keys(%{$self->{samples_class}->{$class_SO_term}})) {
-        $samples_count += ($self->{samples_class}{$class_SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
-      }
-      $class_SO_term_freq{$class_SO_term} = $samples_count / ($self->{size}*2); 
-    }
-    else {
-      $class_SO_term_freq{$class_SO_term} = "No data found";
-    }
+    $class_SO_term_count = $self->allele_count_by_class_SO_term($class_SO_term);
   }
-  elsif (scalar(keys(%{$self->{samples_class}})) && $self->{size}) {
-    # Loop over SO terms
-    foreach my $SO_term (keys(%{$self->{samples_class}})) {
-      my $samples_SO_count = 0;
-      # Loop over Sample IDs
-      foreach my $sample_id (keys(%{$self->{samples_class}->{$SO_term}})) {
-        $samples_SO_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
-      }
-      # Frequency by SO term
-      $class_SO_term_freq{$SO_term} = $samples_SO_count / ($self->{size}*2);
+  else {
+    $class_SO_term_count = $self->allele_count_by_class_SO_term();
+  }
+  foreach my $SO_term (keys(%$class_SO_term_count)) {
+    if ($class_SO_term_count->{$SO_term} ne "No data found" && $total_allele_count) {
+    
+      my $count = $class_SO_term_count->{$SO_term};
+
+      $class_SO_term_freq{$SO_term} = $count / $total_allele_count;
     }
   }
   
@@ -330,22 +503,31 @@ sub frequencies_by_class_SO_term {
 }
 
 
-=head2 get_all_Samples
+=head2 get_Samples_by_dbID_list
 
   Arg [1]    : none
-  Example    : @samples = @{$p->get_all_Samples()};
+  Example    : @samples = @{$svpf->get_Samples_by_dbID_list()};
   Description: Retrieves all the Sample objects belonging to this Population and having information for the StructuralVariation.
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Sample objects
+  Returntype : hashref with sample ID as key and its corresponding Bio::EnsEMBL::Variation::Sample object as value
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub get_all_Samples {
+sub get_Samples_by_dbID_list {
   my $self = shift;
+  my $sample_ids = shift;
   my $sa = $self->adaptor->db->get_SampleAdaptor;
-  return (defined $sa ? $sa->fetch_all_by_dbID_list($self->{samples_class}) : []);
+  my %samples_list;
+  if ($sa) {
+    my $samples = $sa->fetch_all_by_dbID_list($sample_ids);
+    foreach my $sample (@$samples) {
+      my $sample_id = $sample->dbID;
+      $samples_list{$sample_id} = $sample;
+    }
+  }
+  return \%samples_list;
 }
 
 

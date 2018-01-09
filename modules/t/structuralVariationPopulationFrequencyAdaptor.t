@@ -42,6 +42,7 @@ my $sv = $sva->fetch_by_name($sv_name);
 # test fetch all by StructuralVariation
 
 throws_ok { $svpfa->fetch_all_by_StructuralVariation('structural_variation'); } qr/Bio::EnsEMBL::Variation::StructuralVariation arg expected/, 'Throw on wrong argument for fetch_all_by_StructuralVariation';
+
 throws_ok { $svpfa->fetch_all_by_StructuralVariation(Bio::EnsEMBL::Variation::StructuralVariation->new(-name => 'esv1')); } qr/StructuralVariation arg must have defined dbID/, 'Throw on wrong argument for fetch_all_by_StructuralVariation';
 
 my $svpfs = $svpfa->fetch_all_by_StructuralVariation($sv);

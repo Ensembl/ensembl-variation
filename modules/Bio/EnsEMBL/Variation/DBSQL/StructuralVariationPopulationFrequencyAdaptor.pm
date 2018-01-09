@@ -104,6 +104,8 @@ sub _tables {
     ['structural_variation', 'sv'],
     ['structural_variation_association', 'sva'],
     ['structural_variation_sample', 'svs'],
+    ['structural_variation_feature', 'svf'],
+    ['seq_region', 'seq'],
     ['sample_population', 'sp']
   );
   
@@ -114,7 +116,7 @@ sub _tables {
 }
 
 sub _columns {
-  return qw( sv.structural_variation_id sp.population_id sv.class_attrib_id sp.sample_id svs.zygosity );
+  return qw( sv.structural_variation_id sp.population_id sv.class_attrib_id sp.sample_id svs.zygosity seq.name );
 }
 
 # Add a left join to the failed_structural_variation table
@@ -128,7 +130,7 @@ sub _left_join {
 
 sub _default_where_clause {
   my $self = shift;
-  return 'sva.supporting_structural_variation_id=sv.structural_variation_id AND svs.sample_id=sp.sample_id AND svs.structural_variation_id=sva.supporting_structural_variation_id';
+  return 'sva.supporting_structural_variation_id=sv.structural_variation_id AND svs.sample_id=sp.sample_id AND svs.structural_variation_id=sva.supporting_structural_variation_id AND sv.structural_variation_id=svf.structural_variation_id AND svf.seq_region_id=seq.seq_region_id';
 }
 
 sub _objs_from_sth {
@@ -178,6 +180,7 @@ sub _obj_from_row {
          -name                     => $pop_name,
          -description              => $pop_desc,
          -size                     => $pop_size,
+         -region_name              => $row->{name}
     );
 
     $self->{_temp_objs}{$row->{population_id}} = $obj;

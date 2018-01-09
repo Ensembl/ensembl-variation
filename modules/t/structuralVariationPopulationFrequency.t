@@ -32,7 +32,8 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb  = $multi->get_DBAdaptor('variation');
 
-my $svpf_adaptor = $vdb->get_StructuralVariationSampleAdaptor;
+my $pop_adaptor  = $vdb->get_PopulationAdaptor;
+my $svpf_adaptor = $vdb->get_StructuralVariationPopulationFrequencyAdaptor;
 
 
 # test constructor
@@ -43,28 +44,32 @@ my $pop_name = '1000GENOMES:phase_3:GBR';
 my $pop_desc = 'British in England and Scotland';
 my $pop_size = 91;
 
-my $pop = Bio::EnsEMBL::Variation::Population->new
-  (-dbID        => $pop_id,
+my $pop = Bio::EnsEMBL::Variation::Population->new(
+   -adaptor     => $pop_adaptor,
+   -dbID        => $pop_id,
    -name        => $pop_name,
    -description => $pop_desc,
    -size        => $pop_size
 );
 
-my $dbID = 6107305;
+my $sv_dbID = 90344156;
 
 my $svpf = Bio::EnsEMBL::Variation::StructuralVariationPopulationFrequency->new(
-  -_population_id     => $pop_id,
-  -name               => $pop_name,
-  -description        => $pop_desc,
-  -size               => $pop_size,
-  -samples_class      => { 'copy_number_gain' => { '1000GENOMES:phase_3:HG00253' => 'homozygous', 
-                                                   '1000GENOMES:phase_3:HG00106' => 'heterozygous'
-                                                 },
-                           'copy_number_loss' => { '1000GENOMES:phase_3:HG02215' => 'homozygous', 
-                                                   '1000GENOMES:phase_3:HG01789' => 'heterozygous',
-                                                   '1000GENOMES:phase_3:HG00257' => 'heterozygous'
-                                                 }
-                         }
+  -adaptor                  => $svpf_adaptor,
+  -_structural_variation_id => $sv_dbID,
+  -_population_id           => $pop_id,
+  -name                     => $pop_name,
+  -description              => $pop_desc,
+  -size                     => $pop_size,
+  -region_name              => 'X',
+  -samples_class            => { 'copy_number_gain' => { '18085' => 'homozygous',   # 1000GENOMES:phase_3:HG00253
+                                                         '18003' => 'heterozygous'  # 1000GENOMES:phase_3:HG00106
+                                                       },
+                                 'copy_number_loss' => { '18832' => 'homozygous',   # 1000GENOMES:phase_3:HG02215
+                                                         '18609' => 'heterozygous', # 1000GENOMES:phase_3:HG01789
+                                                         '18089' => 'heterozygous'  # 1000GENOMES:phase_3:HG00257
+                                                       }
+                               }
 );
 
 $svpf->population($pop); # Bio::EnsEMBL::Population object
@@ -73,14 +78,23 @@ ok($svpf->population->dbID() eq $pop_id, 'dbID');
 ok($svpf->name() eq $pop_name, 'population name');
 ok($svpf->description() eq $pop_desc, 'population description');
 ok($svpf->size() == $pop_size, 'population size');
+
+# Frequency
 my $gfreqs = sprintf("%.5f",$svpf->frequency)."\n";
-ok($gfreqs == 0.03846, 'count global frequency for this population');
+ok($gfreqs == 0.05147, 'count global frequency for this population');
 
 my $freqs = $svpf->frequencies_by_class_SO_term();
 is_deeply(
   $freqs, 
-  {'copy_number_loss' => 0.021978021978021978, 'copy_number_gain' =>0.0164835164835164835},
+  {'copy_number_loss' => 0.0294117647058823529, 'copy_number_gain' => 0.0220588235294117647},
   'compare SO term frequencies'
 );
+
+# Allele count
+ok($svpf->allele_count == 7 , 'count global allele count for this population');
+
+my $counts = $svpf->allele_count_by_class_SO_term();
+ok($counts->{'copy_number_gain'} == 3 , 'count "copy_number_gain" allele count for this population');
+ok($counts->{'copy_number_loss'} == 4 , 'count "copy_number_loss" allele count for this population');
 
 done_testing();
