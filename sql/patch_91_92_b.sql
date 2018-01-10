@@ -14,7 +14,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-ALTER TABLE motif_feature_variation add index feature_stable_id_idx(feature_stable_id);
-ALTER TABLE regulatory_feature_variation add index feature_stable_id_idx(feature_stable_id);
+ALTER TABLE motif_feature_variation add index feature_stable_idx(feature_stable_id);
+ALTER TABLE regulatory_feature_variation add index feature_stable_idx(feature_stable_id);
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|Add index on feature_stable_id in regulatory_feature_variation and motif_feature_variation');
