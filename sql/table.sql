@@ -1505,6 +1505,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
 
     PRIMARY KEY                         (motif_feature_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
+    KEY feature_stable_idx              (feature_stable_id),
     KEY consequence_type_idx            (consequence_types),
     KEY somatic_feature_idx             (feature_stable_id, somatic)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1543,6 +1544,7 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
 
     PRIMARY KEY                         (regulatory_feature_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
+    KEY feature_stable_idx              (feature_stable_id),
     KEY consequence_type_idx            (consequence_types),
     KEY somatic_feature_idx             (feature_stable_id, somatic)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
