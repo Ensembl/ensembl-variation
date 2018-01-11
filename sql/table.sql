@@ -1212,7 +1212,7 @@ create table structural_variation_feature (
 @column structural_variation_sample_id  Primary key, internal identifier.
 @column structural_variation_id         Foreign key references to the @link structural_variation table.
 @column sample_id		                    Foreign key references to the @link sample table. Defines the individual or sample name.
-@column zygosity                        Define the zygosity of the structural variant for the sample (when available)
+@column zygosity                        Define the numeric zygosity of the structural variant for the sample, when available.
 
 @see structural_variation
 @see sample
@@ -1223,7 +1223,7 @@ CREATE TABLE structural_variation_sample (
 	structural_variation_sample_id int(10) unsigned NOT NULL auto_increment,
 	structural_variation_id int(10) unsigned NOT NULL,
 	sample_id int(10) unsigned DEFAULT NULL,
-	zygosity ENUM('homozygous', 'heterozygous') DEFAULT NULL,
+	zygosity TINYINT(1) DEFAULT NULL,
 	
 	primary key (structural_variation_sample_id),
 	key structural_variation_idx(structural_variation_id),
@@ -1772,6 +1772,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|Add index on feature_stable_id in regulatory_feature_variation and motif_feature_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_c.sql|Change the column zygosity in the table structural_variation_sample');
 
 /**
 @header  Failed tables
