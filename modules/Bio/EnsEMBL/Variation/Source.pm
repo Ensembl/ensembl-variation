@@ -130,6 +130,12 @@ sub new {
 	return bless $self, $class;
 }
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
+
 
 =head2 name
 

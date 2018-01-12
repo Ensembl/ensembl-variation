@@ -69,6 +69,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
+use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
@@ -76,12 +77,15 @@ use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
 use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Variation::VCFVariationFeature;
+use Bio::EnsEMBL::Variation::IntergenicVariation;
 
 our %TYPES = (
   'remote' => 1,
@@ -94,7 +98,9 @@ my $MAX_OPEN_FILES = 2;
 =head2 new
 
   Arg [-ID]:                     string - identifier for this collection
+  Arg [-DESCRIPTION]:            string - description for this collection
   Arg [-TYPE]:                   string - "local" or "remote"
+  Arg [-USE_AS_SOURCE]:          boolean
   Arg [-FILENAME_TEMPLATE]:      string
   Arg [-CHROMOSOMES]:            arrayref of strings
   Arg [-SAMPLE_PREFIX]:          string
@@ -130,7 +136,9 @@ sub new {
 
   my (
     $id,
+    $description,
     $type,
+    $use_as_source,
     $filename_template,
     $chromosomes,
     $sample_prefix,
@@ -151,7 +159,9 @@ sub new {
   ) = rearrange(
     [qw(
       ID
+      DESCRIPTION
       TYPE
+      USE_AS_SOURCE
       FILENAME_TEMPLATE
       CHROMOSOMES
       SAMPLE_PREFIX
@@ -183,7 +193,9 @@ sub new {
   my %collection = (
     adaptor => $adaptor,
     id => $id,
+    description => $description,
     type => $type,
+    use_as_source => $use_as_source,
     sample_prefix => $sample_prefix,
     individual_prefix => $individual_prefix,
     population_prefix => $pop_prefix,
@@ -234,8 +246,7 @@ sub adaptor {
   Arg [1]    : string $id (optional)
                The new value to set the ID attribute to
   Example    : my $id = $collection->id()
-  Description: Getter/Setter for the observed count of this allele
-               within its associated population.
+  Description: Getter/Setter for the ID of this collection
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -247,6 +258,26 @@ sub id {
   my $self = shift;
   $self->{id} = shift if @_;
   return $self->{id};
+}
+
+
+=head2 description
+
+  Arg [1]    : string $description (optional)
+               The new value to set the description attribute to
+  Example    : my $description = $collection->description()
+  Description: Getter/Setter for the description of this collection
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub description {
+  my $self = shift;
+  $self->{description} = shift if @_;
+  return $self->{description};
 }
 
 
@@ -274,6 +305,28 @@ sub type {
   }
   
   return $self->{type};
+}
+
+
+=head2 use_as_source
+
+  Arg [1]    : bool $use_as_source (optional)
+               The new value to set the use_as_source attribute to
+  Example    : my $use_as_source = $collection->use_as_source()
+  Description: Getter/Setter for the use_as_source attribute of this
+               collection. Indicates to web code if we should treat
+               the variants in this collection as a source/track.
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_as_source {
+  my $self = shift;
+  $self->{use_as_source} = shift if @_;
+  return $self->{use_as_source};
 }
 
 
@@ -447,7 +500,24 @@ sub use_seq_region_synonyms {
 =cut
 
 sub list_chromosomes {
-  return $_[0]->{chromosomes};
+  my $self = shift;
+
+  if(!defined($self->{chromosomes})) {
+
+    # if the collection only contains one file we can use tabix to get the chr list
+    # test this by passing a dummy value to get the filename
+    my $dummy_chr = $$.'_dummy_VCFCollection_chr';
+
+    my $fn = $self->_get_vcf_filename_by_chr($dummy_chr);
+
+    if($fn !~ /$dummy_chr/) {
+      $self->{chromosomes} = $self->_vcf_parser_obj($fn)->{tabix_file}->seqnames;
+    }
+    else {
+      $self->{chromosomes} = [];
+    }
+  }
+  return $self->{chromosomes};
 }
 
 
@@ -600,6 +670,115 @@ sub has_Population {
 }
 
 
+=head2 get_all_VariationFeatures_by_Slice
+
+  Arg[1]     : Bio::EnsEMBL::Slice $slice
+  Arg[2]     : (optional) bool $dont_fetch_overlaps
+  Example    : my $vfs = $collection->get_all_VariationFeatures_by_Slice($slice)
+  Description: Get all VariationFeatures (actually VCFVariationFeatures) for this
+               slice. By default feature overlap objects are also generated for
+               any overlapping Transcripts, RegulatoryFeatures and MotifFeatures.
+               Set $dont_fetch_overlaps to a true value to disable this;
+               VariationFeatures in this scenario will have their consequence type
+               set to "intergenic".
+  Returntype : arrayref of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Caller     : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
+  Status     : Stable
+
+=cut
+
+sub get_all_VariationFeatures_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  my $dont_fetch_vf_overlaps = shift;
+  
+  return [] unless $self->_seek_by_Slice($slice);
+  
+  my $vcf = $self->_current();
+  my $sr_slice = $slice->seq_region_Slice();
+  my $vfa = $self->use_db ? $self->adaptor->db->get_VariationFeatureAdaptor : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($self->species);
+  
+  my @vfs;
+  
+  while($vcf->{record} && $vcf->get_start <= $slice->end) {
+    
+    my $copy = $vcf->get_frozen_copy();
+    
+    foreach my $parsed_vf(@{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))}) {
+      next unless $parsed_vf->isa('Bio::EnsEMBL::Variation::VariationFeature');
+      delete $parsed_vf->{_line};
+      
+      my $vcf_vf = Bio::EnsEMBL::Variation::VCFVariationFeature->new_from_VariationFeature(
+        -variation_feature => $parsed_vf,
+        -collection => $self,
+        -vcf_record => $copy,
+        -slice => $slice,
+        -adaptor => $vfa
+      );
+      
+      push @vfs, $vcf_vf;
+    }
+    
+    $vcf->next();
+  }
+
+  if($dont_fetch_vf_overlaps || !$self->use_db) {
+    foreach my $vf(@vfs) {
+      $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
+        -variation_feature  => $vf,
+        -no_ref_check       => 1,
+      );
+      weaken($vf->{intergenic_variation}->{base_variation_feature});
+
+      $vf->_finish_annotation();
+    }
+  }
+
+  else {
+
+    ## we need to up-front fetch overlapping transcripts, regfeats and motiffeatures
+    ## this prevents the API loading them per-variant later at great cost in speed
+    ## not an easy way to do this generically in a loop, so done type-by-type
+    my $db = $self->adaptor->db;
+
+    # transcripts
+    my @transcripts =
+      map {$_->transfer($slice)}
+      @{$slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT)->get_all_Transcripts(1)};
+
+    $db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures(
+      \@vfs,
+      \@transcripts
+    ) if @transcripts;
+
+    # funcgen types
+    foreach my $type(qw(RegulatoryFeature MotifFeature)) {
+      if(
+        my $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+          -species  => $db->species, 
+          -type     => $type,
+        )
+      ) {
+        my $get_adaptor_method = 'get_'.$type.'VariationAdaptor';
+        my @features = map {$_->transfer($slice)} @{$fg_adaptor->fetch_all_by_Slice($slice)};
+
+        $db->$get_adaptor_method->fetch_all_by_VariationFeatures(
+          \@vfs,
+          \@features,
+        ) if @features;
+      }
+    }
+
+    # this "fills in" the hashes that store e.g. TranscriptVariations
+    # so that the API doesn't go and try to fill them again later
+    $_->_finish_annotation() for @vfs;
+  }
+  
+  return \@vfs;
+}
+
+
 =head2 get_all_SampleGenotypeFeatures_by_VariationFeature
 
   Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
@@ -619,17 +798,24 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $sample = shift;
+  my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   
-  # seek to record for VariationFeature
-  return [] unless $self->_seek_by_VariationFeature($vf);
-  
-  my $vcf = $self->_current();
+  if(!$vcf) {
+    # seek to record for VariationFeature
+    return [] unless $self->_seek_by_VariationFeature($vf); 
+    $vcf = $self->_current();
+  }
+  else {
+    $self->_current($vcf);
+  }
   
   my $samples = $self->_limit_Samples($self->get_all_Samples, $sample);
   my @sample_names = map {$_->{_raw_name}} @$samples;
   
+  return [] unless scalar @$samples;
+
   return $self->_create_SampleGenotypeFeatures(
     $samples,
     $vcf->get_samples_genotypes(\@sample_names),
@@ -641,7 +827,8 @@ sub get_all_SampleGenotypeFeatures_by_VariationFeature {
 =head2 get_all_Alleles_by_VariationFeature
 
   Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
-  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Arg[3]     : (optional) Bio::EnsEMBL::IO::Parser::VCF4Tabix $vcf
   Example    : my $alleles = $collection->get_all_Alleles_by_VariationFeature($vf)
   Description: Get all Alleles for a given VariationFeature object
   Returntype : arrayref of Bio::EnsEMBL::Variation::Allele
@@ -655,12 +842,23 @@ sub get_all_Alleles_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $given_pop = shift;
+  my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+
+  # if given $vcf, we don't want to call next() on it
+  # as it is a frozen copy created in VCFVF object creation
+  my $next_ok = 1;
   
-  # seek to record for VariationFeature
-  return [] unless $self->_seek_by_VariationFeature($vf);  
-  my $vcf = $self->_current();
+  if(!$vcf) {
+    # seek to record for VariationFeature
+    return [] unless $self->_seek_by_VariationFeature($vf);    
+    $vcf = $self->_current();
+  }
+  else {
+    $self->_current($vcf);
+    $next_ok = 0;
+  }
 
   # get data from VF
   my $vf_ref = $vf->ref_allele_string;
@@ -761,6 +959,8 @@ sub get_all_Alleles_by_VariationFeature {
       }
     }
 
+    last unless $next_ok;
+
     # get next VCF entry
     $vcf->next();
 
@@ -774,6 +974,10 @@ sub get_all_Alleles_by_VariationFeature {
 
   # create the actual allele objects
   my @alleles;
+
+  # we need these to create allele objects
+  my $variation = $vf->variation;
+  my $allele_adaptor = $self->use_db ? $self->adaptor->db->get_AlleleAdaptor : undef;
 
   foreach my $pop(@pops) {
     my $pop_id = $pop->dbID;
@@ -809,8 +1013,8 @@ sub get_all_Alleles_by_VariationFeature {
         count      => $counts && $counts->{$pop_id} ? ($counts->{$pop_id}->{$a} || 0) : undef,
         frequency  => $freqs->{$pop_id}->{$a},
         population => $pop,
-        variation  => $vf->variation,
-        adaptor    => $self,
+        variation  => $variation,
+        adaptor    => $allele_adaptor,
         subsnp     => undef,
         _missing_alleles => $missing_alleles->{$pop_id} || {},
       })
@@ -854,12 +1058,15 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   my %vfs_by_pos;
   my $use_db = $self->use_db;
   
-  if($use_db) {
+  if($use_db || $self->use_as_source) {
     my $vfa = $self->adaptor->db->get_VariationFeatureAdaptor();
 
-    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice)}) {
+    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice, 1)}) {
       push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
     }
+
+    # reset seek
+    $self->_seek_by_Slice($slice);
   }
   
   my @genotypes;
@@ -876,12 +1083,20 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
     my $vf;
     
     # try to match this VCF record to VariationFeature at this position
-    if($use_db) {
-      foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
-        $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
-      }
+    if(scalar keys %vfs_by_pos) {
 
-      $vf ||= $vfs_by_pos{$start}->[0] unless $strict;
+      if($strict) {
+        foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+          $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
+          last if $vf;
+        }
+      }
+      else {
+        foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+          $vf = $tmp_vf if @{$self->_get_matched_alleles_VF_VCF($tmp_vf, $vcf)};
+          last if $vf;
+        }
+      }
     }
     
     # otherwise create a VariationFeature object
@@ -895,7 +1110,7 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
     
     $vcf->next();
   }
-  
+
   return \@genotypes;
 }
 
@@ -1084,6 +1299,7 @@ sub _create_SampleGenotypeFeature {
   my $vf = shift;
   return Bio::EnsEMBL::Variation::SampleGenotypeFeature->new_fast({
       _variation_id     => $vf->{_variation_id},
+      _sample_id        => $sample->dbID,
       variation_feature => $vf,
       sample            => $sample,
       genotype          => $bits,
@@ -1137,8 +1353,7 @@ sub _get_vcf_by_chr {
     
     if($self->type eq 'local' && !-e $file) {
       $self->{files}->{chr} = undef;
-    }    
-    
+    }
     else {
 
       # close first opened handle to prevent going over max allowed connections
@@ -1147,18 +1362,8 @@ sub _get_vcf_by_chr {
         $self->{files}->{$close}->close();
         delete $self->{files}->{$close};
       }
-
-      # change dir
-      my $cwd = cwd();
-      chdir($self->tmpdir);
-
-      # open obect (remote indexes get downloaded)
-      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-
-      # change back
-      chdir($cwd);
     
-      $self->{files}->{$chr} = $obj;
+      $self->{files}->{$chr} = $self->_vcf_parser_obj($file);
 
       push @{$self->{_open_files}}, $chr;
     }
@@ -1195,6 +1400,22 @@ sub _get_vcf_filename_by_chr {
   my $file = $self->filename_template;
   $file =~ s/\#\#\#CHR\#\#\#/$chr/;
   return $file;
+}
+
+sub _vcf_parser_obj {
+  my ($self, $file) = @_;  
+
+  # change dir
+  my $cwd = cwd();
+  chdir($self->tmpdir);
+
+  # open obect (remote indexes get downloaded)
+  my $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+
+  # change back
+  chdir($cwd);
+
+  return $obj;
 }
 
 sub _current {
@@ -1275,7 +1496,7 @@ sub _get_matched_alleles_VF_VCF {
     {
       ref    => $vf->ref_allele_string,
       alts   => $vf->alt_alleles,
-      pos    => $vf->seq_region_start,
+      pos    => $vf->seq_region_start || $vf->start,
       strand => $vf->strand
     },
     {
@@ -1290,7 +1511,7 @@ sub _get_Population_Sample_hash {
   my $self = shift;
   
   if(!exists($self->{_population_hash})) {
-    my $hash;
+    my $hash = {};
     
     # populations defined in config?
     if(defined($self->{_raw_populations})) {
@@ -1365,6 +1586,26 @@ sub _add_Populations_to_Samples {
   }
 }
 
+sub _create_Population {
+  my $self = shift;
+  my $name = shift;
+
+  my $prefix = $self->population_prefix;
+  
+  my ($existing) = grep {($_->{_raw_name} && $_->{_raw_name} eq $name) || $_->{name} eq $name} @{$self->{populations} || []};
+  return $existing if $existing;
+  
+  my $pop = Bio::EnsEMBL::Variation::Population->new_fast({
+    name => $prefix.$name,
+    dbID => --($self->{_population_id}),
+    _raw_name => $name,
+  });
+  
+  push @{$self->{populations}}, $pop;
+  
+  return $pop;
+}
+
 sub _get_all_population_names {
   my $self = shift;
   
@@ -1388,7 +1629,6 @@ sub _get_all_population_names {
   }
   return $self->{_population_names};
 }
-
 
 =head2 vcf_collection_close
 

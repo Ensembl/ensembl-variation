@@ -1227,7 +1227,7 @@ sub _mutate_sequences {
 
           # log VF as having contributed to the haplotype
           # key on the allele so we can look up the correct TranscriptVariationAllele later
-          $contributing_vfs{$allele.'_'.$self->_vf_identifier($vf)} = $vf;
+          $contributing_vfs{($allele || '-').'|'.$self->_vf_identifier($vf)} = $vf;
         }
       }
 
@@ -1329,9 +1329,10 @@ sub _get_transcript_variations_hash {
 
     if((my $db = $self->db) && $vfs->[0]->{dbID}) {
       my $tva = $db->get_TranscriptVariationAdaptor;
+
       $self->{_transcript_variations} = {
-        map {$_->{_variation_feature_id} => $_}
-        @{$tva->fetch_all_by_Transcripts([$self->transcript])}
+        map {$_->_variation_feature_id => $_}
+        @{$tva->fetch_all_by_VariationFeatures($vfs, [$self->transcript])}
       };
     }
 

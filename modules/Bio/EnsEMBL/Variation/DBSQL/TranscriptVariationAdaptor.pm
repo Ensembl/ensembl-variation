@@ -93,6 +93,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
+use Scalar::Util qw(weaken);
 
 our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 
@@ -321,6 +322,39 @@ sub fetch_all_by_Transcripts_with_constraint {
   my ($self, $transcripts, $constraint) = @_;
   
   return $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
+}
+
+sub _fetch_all_by_VariationFeatures_no_DB {
+  my ($self, $vfs, $features, $constraint, $dont_add_to_vf) = @_;
+
+  # get features?
+  if(!$features || !@$features) {
+    my $slices = $self->_get_ranged_slices_from_VariationFeatures($vfs);
+    @$features = map {@{$_->get_all_Transcripts(1)}} @$slices;
+  }
+  
+  my @return;
+  
+  foreach my $f(@$features) {
+
+    my $f_slice = $f->slice;
+    
+    foreach my $vf(@$vfs) {
+      my $vfo = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+        -variation_feature  => $vf,
+        -transcript         => $f,
+        -adaptor            => $self,
+        -no_ref_check      => 1,
+        -no_transfer       => ($vf->slice + 0) == ($f_slice + 0)
+      );
+      
+      $vf->add_TranscriptVariation($vfo) unless $dont_add_to_vf;
+
+      push @return, $vfo;
+    }
+  }
+  
+  return \@return;
 }
 
 sub _objs_from_sth {

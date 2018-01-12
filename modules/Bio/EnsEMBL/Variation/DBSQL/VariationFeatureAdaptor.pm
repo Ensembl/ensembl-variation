@@ -97,6 +97,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_hgvs_alleles trim_sequences);
 use Bio::SeqUtils;
+use Scalar::Util qw(looks_like_number);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -327,7 +328,7 @@ sub fetch_all_somatic {
 =cut
 
 sub fetch_all_by_Slice_constraint {
-    my ($self, $slice, $constraint) = @_;
+    my ($self, $slice, $constraint, $no_cons) = @_;
     
     # by default, filter out somatic mutations
     my $somatic_constraint = 'vf.somatic = 0';
@@ -338,11 +339,21 @@ sub fetch_all_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
-
-    # Add the constraint for failed variations
-    $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
-
-    return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+    
+    my $use_vcf = $self->db->use_vcf();
+    my @vfs;
+    
+    if($use_vcf) { # && !$constraint) {
+      push @vfs,
+        map {@{$_->get_all_VariationFeatures_by_Slice($slice, $no_cons)}}
+        grep {$_->use_as_source}
+        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+    }
+    if($use_vcf <= 1) {
+      push @vfs, @{$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)};
+    }
+        
+    return \@vfs;
 }
 
 sub fetch_all_by_Slice_constraint_with_Variations {
@@ -416,8 +427,8 @@ sub fetch_all_somatic_by_Slice_constraint {
 =cut
 
 sub fetch_all_by_Slice {
-  my ($self, $slice) = @_;
-  return $self->fetch_all_by_Slice_constraint($slice, '');
+  my ($self, $slice, $no_cons) = @_;
+  return $self->fetch_all_by_Slice_constraint($slice, '', $no_cons);
 }
 
 =head2 fetch_all_somatic_by_Slice
@@ -434,8 +445,8 @@ sub fetch_all_by_Slice {
 =cut
 
 sub fetch_all_somatic_by_Slice {
-  my ($self, $slice) = @_;
-  return $self->fetch_all_somatic_by_Slice_constraint($slice, '');
+  my ($self, $slice, $no_cons) = @_;
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, '', $no_cons);
 }
 
 =head2 fetch_all_somatic_by_Slice_Source
@@ -2206,6 +2217,89 @@ sub _parse_hgvs_protein_position{
   #warn Dumper \%paths; 
   #warn Dumper \%best_paths; 
   #exit(0); 
+}
+
+
+=head2 fetch_by_dbID
+
+  Arg [1]    : string $id
+               The unique database identifier for the VariationFeature to be obtained
+  Example    : $vf = $adaptor->fetch_by_dbID(1234));
+  Description: Returns the feature created from the database defined by the
+               the id $id.  ID may be either a variation_feature_id or a
+               "location_identifier" chr:start:allele_string:source_name
+  Returntype : Bio::EnsEMBL::VariationFeature or undef
+  Exceptions : thrown if $id arg is not provided
+               does not exist
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_by_dbID {
+  my $self = shift;
+  my $id = shift;
+
+  throw("ERROR: No dbID given\n") unless $id;
+
+  if(looks_like_number($id)) {
+    return $self->SUPER::fetch_by_dbID($id);
+  }
+  else {
+    my $vfs = $self->fetch_all_by_location_identifier($id);
+    return @$vfs ? $vfs->[0] : undef;
+  }
+}
+
+
+=head2 fetch_all_by_location_identifier
+
+  Arg [1]    : string $location_identifier
+  Example    : $vf = $adaptor->fetch_by_dbID('1:230710048:A_G');
+  Description: Fetches VariationFeatures by location identifier.
+               Primarily used to fetch variants from VCFCollections
+               as optional 4th component is source_name or
+               VCFCollection name.
+
+               location_identifier format chr:start:allele_string:source_name
+
+               chr = chromosome name
+               start = start coordinate of variant
+               allele_string = "_"-separated allele string (optional)
+               source_name = source name or name of VCFCollection (optional)
+               
+  Returntype : listref of Bio::EnsEMBL::VariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_location_identifier {
+  my $self = shift;
+  my $vl = shift;
+
+  my $sa = $self->db->dnadb->get_SliceAdaptor();
+  return [] unless $sa;
+
+  my $vfs;
+      
+  my ($chr, $start, $alleles, $vcf_id) = split(':', $vl);
+  my $slice = $sa->fetch_by_region(undef, $chr, $start, $start);
+
+  if($slice) {
+    $vfs = $self->fetch_all_by_Slice($slice);
+
+    # filter based on $alleles and $vcf_id
+    if($alleles) {
+      $alleles =~ s/\_/\//g;
+      @$vfs = grep {$_->allele_string eq $alleles} @$vfs if $alleles;
+    }
+
+    @$vfs = grep {$_->source_name eq $vcf_id} @$vfs if $vcf_id;
+  }
+
+  return $vfs;
 }
 
 1;

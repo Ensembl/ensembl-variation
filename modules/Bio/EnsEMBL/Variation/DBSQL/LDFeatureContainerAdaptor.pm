@@ -228,8 +228,11 @@ sub fetch_by_Slice {
 
   Arg [1]    : Bio::EnsEMBL:Variation::Variation $v
   Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Arg [3]    : (optional) int $max_distance
   Example    : my $ldFeatureContainers = $ldFetureContainerAdaptor->fetch_all_by_Variation($v);
-  Description: Retrieves listref of LDFeatureContainers for a given variant. If optional population is supplied, values are only returned for that population.
+  Description: Retrieves listref of LDFeatureContainers for a given variant.
+               If optional population is supplied, values are only returned for that population.
+               $max_distance between variant pairs defaults to 100kb
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
@@ -240,7 +243,6 @@ sub fetch_by_Slice {
 sub fetch_all_by_Variation {
   my $self = shift;
   my $v = shift;
-  my $population = shift;
 
   if (!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation')) {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
@@ -251,7 +253,7 @@ sub fetch_all_by_Variation {
 
   my @containers = ();
   foreach my $vf (@$vfs) {
-    my $ldfc = $self->fetch_by_VariationFeature($vf, $population);
+    my $ldfc = $self->fetch_by_VariationFeature($vf, @_);
     push @containers, $ldfc;
   }
   return \@containers;
@@ -261,8 +263,11 @@ sub fetch_all_by_Variation {
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
   Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Arg [3]    : (optional) int $max_distance
   Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);
-  Description: Retrieves LDFeatureContainer for a given variation feature. If optional population is supplied, values are only returned for that population.
+  Description: Retrieves LDFeatureContainer for a given variation feature.
+               If optional population is supplied, values are only returned for that population.
+               $max_distance between variant pairs defaults to 100kb
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
@@ -273,7 +278,8 @@ sub fetch_all_by_Variation {
 sub fetch_by_VariationFeature {
   my $self = shift;
   my $vf  = shift;
-  my $population = shift;
+  my $pop = shift;
+  my $distance = shift;
 
   if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
@@ -284,7 +290,7 @@ sub fetch_by_VariationFeature {
     return undef;
   }
 
-  if(!defined($vf->dbID())) {
+  if(!defined($vf->dbID()) && !$vf->isa('Bio::EnsEMBL::Variation::VCFVariationFeature')) {
     throw("VariationFeature arg must have defined dbID");
   }
   
@@ -293,8 +299,8 @@ sub fetch_by_VariationFeature {
   $self->{_vf_name} = $vf->variation_name;
   
   # fetch by slice using expanded feature slice
-  my $max_snp_distance = $self->max_snp_distance || MAX_SNP_DISTANCE;
-  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $population);
+  my $max_snp_distance = $distance || $self->{max_snp_distance} || MAX_SNP_DISTANCE;
+  my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
   
   # delete the cached pos
   delete $self->{_vf_pos};

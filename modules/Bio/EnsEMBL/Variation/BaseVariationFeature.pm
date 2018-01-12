@@ -201,7 +201,11 @@ sub transfer {
   # cached values for seq_region_start, seq_region_end must be removed
   delete $self->{$_} for qw(seq_region_start seq_region_end);
 
-  return $self->SUPER::transfer(@_);
+  my $prev_strand = $self->strand;
+  my $tr = $self->SUPER::transfer(@_);
+  $tr->strand($prev_strand);
+
+  return $tr;
 }
 
 

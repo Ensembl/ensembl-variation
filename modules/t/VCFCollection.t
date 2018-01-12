@@ -181,6 +181,14 @@ $temp =~ s/###t\-root###/$dir/;
 $coll->filename_template($temp);
 $coll->filename_template =~ /^$dir/;
 
+# check list_chromosomes works with no "chromosomes" field in JSON
+delete $coll->{chromosomes};
+is_deeply(
+  $coll->list_chromosomes,
+  ["11"],
+  'list_chromosomes repopulates from tabix index'
+);
+
 ($vf) = @{$va->fetch_by_name('rs192076014')->get_all_VariationFeatures};
 my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
 

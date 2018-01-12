@@ -83,6 +83,7 @@ use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
@@ -228,6 +229,46 @@ sub count_all_by_VariationFeatures_SO_terms {
 sub fetch_all_by_RegulatoryFeatures_with_constraint {
     my ($self, $regulatory_features, $constraint) = @_;
     return $self->SUPER::fetch_all_by_Features_with_constraint($regulatory_features, $constraint);
+}
+
+sub _fetch_all_by_VariationFeatures_no_DB {
+  my ($self, $vfs, $features) = @_;
+  
+  # get features?
+  if(!$features || !@$features) {
+    my $slices = $self->_get_ranged_slices_from_VariationFeatures($vfs);
+
+    if(
+      my $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+        -species  => $self->db->species, 
+        -type     => 'RegulatoryFeature',
+      )
+    ) {
+      @$features = map {@{$fg_adaptor->fetch_all_by_Slice($_)}} @$slices;
+    }
+  }
+  
+  my @return;
+  
+  foreach my $f(@{$features || []}) {
+
+    my $f_slice = $f->slice;
+    
+    foreach my $vf(grep {overlap($f->{start}, $f->{end}, $_->{start}, $_->{end})} @$vfs) {
+      my $vfo = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+        -variation_feature => $vf,
+        -feature           => $f,
+        -adaptor           => $self,
+        -no_ref_check      => 1,
+        -no_transfer       => ($vf->slice + 0) == ($f_slice + 0)
+      );
+      
+      $vf->add_RegulatoryFeatureVariation($vfo);
+      push @return, $vfo;
+    }
+  }
+  
+  return \@return;
 }
 
 sub _objs_from_sth {

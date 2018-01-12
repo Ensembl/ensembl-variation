@@ -2074,6 +2074,9 @@ sub display {
 sub to_VCF_record {
   my $self = shift;
 
+  # shortcut out if created from VCF record
+  return [@{$self->{vcf_record}->{record}}[0..4]] if exists($self->{vcf_record});
+
   my %allele_lengths;
 
   # deal with HGMD_MUTATION and COSMIC_MUTATION
@@ -2132,7 +2135,7 @@ sub to_VCF_record {
 
     return [
       $self->{chr} || $self->seq_region_name,
-      $self->start - 1,
+      $self->seq_region_start - 1,
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
@@ -2145,7 +2148,7 @@ sub to_VCF_record {
   else {
     return [
       $self->{chr} || $self->seq_region_name,
-      $self->start,
+      $self->seq_region_start,
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
@@ -2180,6 +2183,42 @@ sub _get_ref_seq {
   }
 
   return $seq;
+}
+
+
+=head2 location_identifier
+
+  Arg [1]    : none
+  Example    : print $vf->location_identifier(), "\n";
+  Description: Returns the location identifier "chr:start:alleles:source"
+               for this VariationFeature
+  Returntype : string
+  Exceptions : none
+  Caller     : Web
+  Status     : Stable
+
+=cut
+
+sub location_identifier {
+  my $self = shift;
+
+  if(!exists($self->{location_identifier})) {
+    my $alleles = $self->allele_string;
+    $alleles =~ s/\//\_/g;
+    $self->{location_identifier} = join(':', $self->seq_region_name, $self->seq_region_start, $alleles, $self->source_name);
+  }
+
+  return $self->{location_identifier};
+}
+
+sub reset_consequence_data {
+  my $self = shift;
+  delete $self->{$_} for qw(
+    intergenic_variation
+    consequence_types
+    overlap_consequences
+    _most_severe_consequence
+  );
 }
 
 1;

@@ -149,7 +149,7 @@ sub get_all_VariationFeatures {
     my $tvs_by_vfid = $container->_get_transcript_variations_hash;
 
     foreach my $key(keys %{$self->{_contributing_vfs}}) {
-      my $allele = (split('_', $key))[0];
+      my $allele = (split('|', $key))[0];
       $allele ||= '-';
 
       my $vf = $self->{_contributing_vfs}->{$key};
@@ -158,7 +158,7 @@ sub get_all_VariationFeatures {
         push @filtered_vfs, $vf if
           grep {$_->affects_peptide}
           grep {$_->feature_seq eq $allele}
-          @{$tv->get_all_TranscriptVariationAlleles};
+          @{$tv->get_all_alternate_TranscriptVariationAlleles};
       }
     }
 

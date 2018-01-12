@@ -369,7 +369,7 @@ sub subsnp_handle{
     if(defined($handle)) {
         $self->{'subsnp_handle'} = $handle;
     }
-    elsif (!defined($self->{'subsnp_handle'})) {
+    elsif (!exists($self->{'subsnp_handle'})) {
 
         # Check that this allele has an adaptor attached
         assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
@@ -406,7 +406,7 @@ sub frequency_subsnp_handle{
     if(defined($handle)) {
         $self->{'frequency_subsnp_handle'} = $handle;
     }
-    elsif (!defined($self->{'frequency_subsnp_handle'})) {
+    elsif (!exists($self->{'frequency_subsnp_handle'})) {
 
         # Check that this allele has an adaptor attached
         assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');

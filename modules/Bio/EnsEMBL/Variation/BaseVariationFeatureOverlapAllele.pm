@@ -62,7 +62,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
-use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES $DEFAULT_OVERLAP_CONSEQUENCE);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Scalar::Util qw(weaken);
 
@@ -272,7 +272,9 @@ sub get_all_OverlapConsequences {
           $assigned_tier = $tier;
         }
       }
-    }      
+    }
+
+    $cons = [$DEFAULT_OVERLAP_CONSEQUENCE] unless @$cons;
 
     $self->{overlap_consequences} = $cons;
   }

@@ -503,8 +503,7 @@ sub add_synonym {
 
 sub get_all_evidence_values {
     my $self = shift;
-    return $self->{'evidence'};
-
+    return $self->{'evidence'} || [];
 }
 
 
@@ -725,7 +724,7 @@ sub source_somatic_status{
 
 sub has_somatic_source {
   my ($self, $has_somatic_source) = @_;
-  $self->{has_somatic_source} = (defined $has_somatic_source) ? $has_somatic_source : ($self->source_somatic_status eq 'somatic' ? 1 : 0);
+  $self->{has_somatic_source} = (defined $has_somatic_source) ? $has_somatic_source : ($self->source_somatic_status && $self->source_somatic_status eq 'somatic' ? 1 : 0);
   return $self->{has_somatic_source};
 }
 
@@ -1259,7 +1258,7 @@ sub _fill_in_maf_data {
 sub get_all_clinical_significance_states {
     my $self = shift;
 
-    return $self->{clinical_significance}
+    return $self->{clinical_significance} || [];
 }
 
     
