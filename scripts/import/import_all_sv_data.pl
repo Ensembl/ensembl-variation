@@ -91,7 +91,7 @@ my %study_to_skip =  ( 'nstd8'  => 1, # Human & chimp
 
 my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
                'outer_end','strand','parent','clinical','subject','sample','gender','is_ssv',
-               'is_failed','population','bp_order','is_somatic','status','alias','length','copy_number');
+               'is_failed','population','bp_order','is_somatic','status','alias','length','copy_number','zygosity');
 
 my %attribs_col = ('ID'          => 'id *',
                    'SO_term'     => 'type',
@@ -116,7 +116,8 @@ my %attribs_col = ('ID'          => 'id *',
                    'status'      => 'status',
                    'alias'       => 'alias',
                    'length'      => 'length i',
-                   'copy_number' => 'copy_number' # Not 'i' because we need to differenciate between "0 copy" and the "default value (0)"
+                   'copy_number' => 'copy_number', # Not 'i' because we need to differenciate between "0 copy" and the "default value (0)"
+                   'zygosity'    => 'zygosity i'
                   );
 
 
@@ -288,7 +289,7 @@ sub load_file_data{
   }
   
   
-  foreach my $col('clinic', 'sample', 'subject', 'status', 'alias', 'length', 'copy_number') {
+  foreach my $col('clinic', 'sample', 'subject', 'status', 'alias', 'length', 'copy_number', 'zygosity') {
     $dbVar->do(qq{UPDATE $temp_table SET $col = NULL WHERE $col = '';});
   }
   
@@ -414,11 +415,11 @@ sub study_table{
         $external_link_sql = '';
       }
       else {
-        $external_link_sql = "external_reference=$external_link,";
+        $external_link_sql = "external_reference='$external_link',";
       }
     }
     else {
-      $external_link_sql = "external_reference=$external_link,";
+      $external_link_sql = "external_reference='$external_link',";
     }
 
     $stmt = qq{ UPDATE $study_table SET 
@@ -889,11 +890,13 @@ sub structural_variation_sample {
     $stmt = qq{
       INSERT IGNORE INTO $svs_table (
         structural_variation_id,
-        sample_id
+        sample_id,
+        zygosity
       )
       SELECT DISTINCT
         sv.structural_variation_id,
-        s.sample_id
+        s.sample_id,
+        t.zygosity
       FROM
         $sv_table sv,
         $temp_table t
@@ -907,11 +910,13 @@ sub structural_variation_sample {
     $stmt = qq{
       INSERT IGNORE INTO $svs_table (
         structural_variation_id,
-        sample_id
+        sample_id,
+        zygosity
       )
       SELECT DISTINCT
         sv.structural_variation_id,
-        s.sample_id
+        s.sample_id,
+        t.zygosity
       FROM
         $sv_table sv,
         $temp_table t
@@ -1410,6 +1415,16 @@ sub parse_9th_col {
     $info->{alias}       = $value if ($key eq 'Alias' && $value !~ /^\d+$/);
     $info->{length}      = $value if ($key eq 'variant_call_length');
     
+    # Zygosity
+    if ($key eq 'Zygosity') {
+      if ($value eq 'heterozygous') {
+        $info->{zygosity} = 1;
+      }
+      elsif ($value eq 'homozygous') {
+        $info->{zygosity} = 2;
+      }
+    }
+    
     # Copy number
     if ($key eq 'copy_number') {
       my $copy = (split(/[-,\.\~]/,$value))[0];
@@ -1502,7 +1517,7 @@ sub pre_processing {
   
   # Prepare the structural_variation_sample table
   if ($dbVar->do(qq{SHOW KEYS FROM $svs_table WHERE Key_name='sv_id_key';}) < 1){
-    $dbVar->do(qq{ALTER TABLE $svs_table ADD CONSTRAINT  UNIQUE KEY `sv_id_key` (`structural_variation_id`,`sample_id`)});
+    $dbVar->do(qq{ALTER TABLE $svs_table ADD CONSTRAINT UNIQUE KEY `sv_id_key` (`structural_variation_id`,`sample_id`)});
   }
   
   # Prepare the individual table

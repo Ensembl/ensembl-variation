@@ -83,7 +83,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
   Arg [-DESCRIPTION]              : string - description of the population
   Arg [-SIZE]                     : int - the size of the population
   Arg [-REGION_NAME]              : string - region/chromosome where the structural variant is located
-  Arg [-SAMPLES_CLASS]            : hashref of sample IDs by SO terms. This also contains the zygosity of each sample
+  Arg [-SAMPLES_CLASS]            : hashref of sample IDs by SO terms. This also contains the numeric zygosity of each sample
   Arg [-_POPULATION_ID]           : int - the internal id of the population object associated with this identifier.
                                     This may be provided instead of a population object so that the population may be 
                                     lazy-loaded from the database on demand if we need more information about the population.
@@ -264,29 +264,11 @@ sub allele_count {
     $self->{allele_count} = shift @_;
   }
   elsif (scalar(keys(%{$self->{samples_class}}))) {
+    my $allele_count_by_class_SO_term = $self->allele_count_by_class_SO_term();
     my $allele_count = 0;
-    # Loop over SO terms
-    foreach my $SO_term (keys(%{$self->{samples_class}})) {
-      # Loop over Sample IDs
-      my @sample_ids = keys(%{$self->{samples_class}{$SO_term}});
-      
-      # Get sample objects if the SV falls into a special chromosome
-      my $samples_list = ($self->{region_name} =~ /^(Y|X)$/) ? $self->get_Samples_by_dbID_list(\@sample_ids) : {};
-      
-      foreach my $sample_id (@sample_ids) {
-      
-        my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
-        
-        if ($self->{region_name} eq 'X') {
-          $allele_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
-        }
-        elsif ($self->{region_name} eq 'Y') {
-          $allele_count += 1 if ($sample->individual->gender eq 'Male');
-        }
-        else {
-          $allele_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
-        }
-      }
+    # Loop over allele count by SO terms
+    foreach my $SO_term_allele_count (values(%{$allele_count_by_class_SO_term})) {
+      $allele_count += $SO_term_allele_count;
     }
     $self->{allele_count} = $allele_count; 
   }
@@ -335,13 +317,13 @@ sub allele_count_by_class_SO_term {
         my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
           
         if ($self->{region_name} eq 'X') {
-          $allele_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$class_SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
+          $allele_count += ($sample->individual->gender eq 'Male') ? 1 : $self->{samples_class}{$class_SO_term}{$sample_id};
         }
         elsif ($self->{region_name} eq 'Y') {
           $allele_count += 1 if ($sample->individual->gender eq 'Male');
         }
         else {
-          $allele_count += ($self->{samples_class}{$class_SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
+          $allele_count += $self->{samples_class}{$class_SO_term}{$sample_id};
         }
       }
     }
@@ -366,13 +348,13 @@ sub allele_count_by_class_SO_term {
         my $sample = ($samples_list) ? $samples_list->{$sample_id} : undef;
         
         if ($self->{region_name} eq 'X') {
-          $allele_SO_count += ($sample->individual->gender eq 'Male') ? 1 : (($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1);
+          $allele_SO_count += ($sample->individual->gender eq 'Male') ? 1 : $self->{samples_class}{$SO_term}{$sample_id};
         }
         elsif ($self->{region_name} eq 'Y') {
           $allele_SO_count += 1 if ($sample->individual->gender eq 'Male');
         }
         else {
-          $allele_SO_count += ($self->{samples_class}{$SO_term}{$sample_id} eq 'homozygous') ? 2 : 1;
+          $allele_SO_count += $self->{samples_class}{$SO_term}{$sample_id};
         }
       }
 
