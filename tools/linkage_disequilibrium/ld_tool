@@ -367,9 +367,9 @@ sub get_file_name {
 sub usage {
 
   my $usage =<<END;
-#----------------------------------#
-# ENSEMBL VARIANT EFFECT PREDICTOR #
-#----------------------------------#
+#-----------------------------------#
+# Linkage Disequilibrium Calculator #
+#-----------------------------------#
 Help: dev\@ensembl.org , helpdesk\@ensembl.org
 Usage:
 ./ld_tool [arguments]
