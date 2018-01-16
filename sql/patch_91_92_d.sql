@@ -22,4 +22,4 @@ CREATE TABLE submitter(
 );
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_90_91_d.sql|create table to store names of submitters to ClinVar etc');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_91_92_d.sql|create table to store names of submitters to ClinVar etc');
