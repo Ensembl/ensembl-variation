@@ -94,7 +94,7 @@ my $ssv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
 );
 
 my $dbID     = 6107305;
-my $zygosity = 'heterozygous';
+my $zygosity = 1;
 
 my $svs = Bio::EnsEMBL::Variation::StructuralVariationSample->new
   (-dbID                     => $dbID,
@@ -120,7 +120,7 @@ ok($svs->sample->name() eq $sample_name,                      'sample name');
 # Study
 ok($svs->study->name() eq $study_name ,                       'study name' );
 # Zygosity
-ok($svs->zygosity() eq $zygosity ,                            'zygosity' );
+ok($svs->zygosity() == $zygosity ,                            'zygosity' );
 
 
 # test structural variation object
