@@ -1005,9 +1005,19 @@ sub _fetch_attribs_by_dbID {
   my ($key, $value);
   
   $sth->bind_columns(\$key, \$value);
-  $attribs->{$key} = $value while $sth->fetch;
+  while ($sth->fetch){
+
+    if($key =~/submitter_id/){
+      ## expand the attrib ids stored in phenotype_feature_attrib to the full submitter names
+      foreach my $id(split/\,/,$value){
+        push @{ $attribs->{submitter_names}}, $self->_get_submitter_name($id);
+      }
+    }
+    else{
+      $attribs->{$key} = $value;
+    }
+  }
   $sth->finish;
-  
   return $attribs;
 }
 
@@ -1288,6 +1298,11 @@ sub store{
         unless (defined($pf->{source_id}) || defined ( $pf->source->dbID));
 
 
+    # look up submitter from projects such as ClinVar if supplied
+    if(defined $pf->{attribs}->{submitter_name} && !defined($pf->{attribs}->{submitter_id})) {
+        $pf->{attribs}->{submitter_id} = $self->_get_submitter_id($pf);
+    }
+
     my $sth = $dbh->prepare(q{
         INSERT INTO phenotype_feature (
             phenotype_id,
@@ -1334,14 +1349,82 @@ sub store{
     });
    
    foreach my $attrib_type( keys %{$pf->{attribs}} ){
+
+       ## we don't store these directly - the id is smaller
+       if ($attrib_type eq 'submitter_names'){
+         my @submitter_ids;
+         my $attrib_type_id = $aa->attrib_id_for_type_code("submitter_id");
+         foreach my $submittter_name(@{$pf->{attribs}->{$attrib_type}}){
+           my $submitter_id = $self->_get_submitter_id($submittter_name);
+
+           throw("No attrib type ID found for attrib_type submitter_id") unless defined  $attrib_type_id;
+            push @submitter_ids, $submitter_id;
+         }
+         my $sub_ids = join(",", @submitter_ids);
+         $pfa_sth->execute( $pf->{dbID},  $attrib_type_id, $sub_ids );
+
+         next;
+       }
        my $attrib_type_id = $aa->attrib_id_for_type_code($attrib_type);
-       throw("No attrib type ID found for attrib_type  ", $attrib_type) unless defined  $attrib_type_id;
+       throw("No attrib type ID found for attrib_type $attrib_type") unless defined  $attrib_type_id;
        $pf->{attribs}->{$attrib_type} =~ s/\s+$//;
        $pfa_sth->execute( $pf->{dbID}, $attrib_type_id, $pf->{attribs}->{$attrib_type} );
    }
    $pfa_sth->finish;
 }
 
+## Return the id of a submitter from a project such as ClinVar, given the name
+## Updates the database if the submitter name is new.
+sub _get_submitter_id{
 
+  my $self = shift;
+  my $submitter_name = shift;
+
+  my $dbh = $self->dbc->db_handle;
+
+  my $sth = $dbh->prepare(q{
+      SELECT submitter_id FROM submitter WHERE description = ?
+  });
+
+  $sth->execute($submitter_name);
+
+  my $submitter_id;
+  $sth->bind_columns(\$submitter_id);
+  $sth->fetch();
+  $sth->finish();
+
+  if (! defined $submitter_id){
+    ## if it is a new submitter description, enter it.
+
+    my $sth = $dbh->prepare(q{
+      INSERT INTO submitter (description) values (?)
+    });
+    $sth->execute($submitter_name);
+    $submitter_id = $dbh->last_insert_id(undef, undef, 'submitter', 'submitter_id');
+  }
+
+  return $submitter_id;
+}
+
+## Return a submitter name from project such as ClinVar, given the submitter id
+## Submitter name s and ids are cached on first access to speed up queries
+sub _get_submitter_name{
+  my $self         = shift;
+  my $submitter_id = shift;
+
+  #load all for speed in extracting a large number
+  unless( $self->{submitter_names_lookup}){
+
+    my $dbh = $self->dbc->db_handle;
+    my $sth = $dbh->prepare(qq{ SELECT submitter_id, description FROM submitter });
+    $sth->execute()||die;
+    my $names = $sth->fetchall_arrayref();
+    foreach my $n(@{$names}){
+      $self->{submitter_names_lookup}->{$n->[0]} = $n->[1];
+    }
+  }
+  return $self->{submitter_names_lookup}->{$submitter_id};
+
+}
 
 1;

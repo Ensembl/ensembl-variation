@@ -243,6 +243,13 @@ CREATE TABLE `phenotype_ontology_accession` (
   PRIMARY KEY (`phenotype_id`,`accession`)
 ) ENGINE=MyISAM ;
 
+CREATE TABLE submitter(
+  submitter_id int(10) unsigned not null auto_increment,
+  description          varchar(255),
+  PRIMARY KEY ( submitter_id )
+) ENGINE=MyISAM ;
+
+
 CREATE TABLE `population` (
   `population_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,

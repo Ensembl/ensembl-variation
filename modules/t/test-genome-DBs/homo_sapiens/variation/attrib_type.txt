@@ -32,4 +32,6 @@
 424	conservation_score	Sift conservation score	Median conservation value in an alignment used to make a Sift prediction
 421	review_status	ClinVar review_status	ClinVar review_status for assertation
 508	var_att	variation_attrib	An attribute of a variation
-509	ontology_mapping	Ontology Mapping	Method used to link a description to an ontology term 
+509	ontology_mapping	Ontology Mapping	Method used to link a description to an ontology term
+526	DateLastEvaluated	EvalDate	The most recent date on which evidence was evaluated and this conclusion drawn.
+527	submitter_id	Submitter_ID	ID for data submitter

@@ -190,7 +190,7 @@ sub new {
   $self->{is_significant}      = $is_significant;
   $self->{attribs}             = $attribs || {};
   $self->{ontology_accessions} = $ontology_accessions || undef;
-  
+
   return $self;
 }
 
@@ -696,9 +696,9 @@ sub associated_studies {
 
 sub get_all_attributes {
   my $self = shift;
-  
+
   if(!defined($self->{attribs})) {
-  $self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
+    $self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
   }
   ## standardise clinical significance terms to lowercase
   $self->{attribs}->{'clinvar_clin_sig'} = "\L$self->{attribs}->{'clinvar_clin_sig'}"
@@ -1105,6 +1105,39 @@ sub beta_coefficient {
   $self->_set_attribute('beta_coef', $new) if defined($new);
   
   return defined($self->get_all_attributes->{'beta_coef'}) ? $self->get_all_attributes->{'beta_coef'} : undef;
+}
+
+=head2 submitter_names
+
+  Example    : $names = $obj->submitter_names()
+  Description: Get all submitter_names. Eg submitters to ClinVar.
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub submitter_names {
+  my $self = shift;
+  return defined($self->get_all_attributes->{'submitter_names'}) ? $self->get_all_attributes->{'submitter_names'} : undef;
+}
+
+=head2 date_last_evaluated
+
+  Example    : $date = $obj->date_last_evaluated()
+  Description: Get the date evidence for the assertion was last evaluated. Eg for ClinVar.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub date_last_evaluated{
+  my $self = shift;
+
+  return defined($self->get_all_attributes->{'DateLastEvaluated'}) ? $self->get_all_attributes->{'DateLastEvaluated'} : undef;
 }
 
 

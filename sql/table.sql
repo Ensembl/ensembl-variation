@@ -1657,6 +1657,23 @@ CREATE TABLE associate_study (
 	primary key( study1_id,study2_id )
 );
 
+/**
+@table submitter
+
+@colour #7CFC00
+@desc This table contains descriptions of group submitting data to public repositories such as ClinVar
+
+@column submitter_id            Primary key
+@column description             Description of data submitter
+
+@see phenotype_feature_attrib
+*/
+CREATE TABLE submitter(
+  submitter_id int(10) unsigned not null auto_increment,
+  description          varchar(255),
+  PRIMARY KEY ( submitter_id )
+);
+
 
 /**
 @table publication
