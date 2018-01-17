@@ -1,6 +1,6 @@
 Linkage Disequilibrium (LD) Calculator
 =====================================
-The script calculats LD between variants using genotypes from a selected population. We only support LD calculation for variants for which we have genotypes from at least 40 samples in the selected population. At the moment we only have sufficient amounts of genotype data from the 1000 Genomes project for human.
+The script calculates LD between variants using genotypes from a selected population. We only support LD calculation for variants for which we have genotypes from at least 40 samples in the selected population. At the moment we only have sufficient amounts of genotype data from the 1000 Genomes project for human.
 
 There is a [web tool](http://www.ensembl.org/Multi/Tools/LD) version with an interface for easy parameter selection. 
 
@@ -31,9 +31,9 @@ The script wraps around the LD calculation code in the Ensembl Variation API. Be
 * `--population [population_name]` : List of population(s) for LD calculation
 * `--region [region]` : List of region(s) as input for region calculation. A region is defined as chromosome:start-end
 * `--variant [variant]` : List of variant(s) as input for either center or pairwise calculations
-* `--r2 [r2]` : Only include variants to the result whose r2 value is greater than or equal to the given value. r2 needs to be in the range of 0.0 and 1.0.
-* `--d_prime [d_prime]` : Only include variants to the result whose d_prime value is greater than or equal to the given value. d_prime needs to be in the range of 0.0 and 1.0.
-* `--add_variant_attribs` : Add variant attributes (evdidence values and consequence type) to the output
+* `--r2 [r2]` : Only include variants to the result whose r<sup>2</sup> value is greater than or equal to the given value. r<sup>2</sup> needs to be in the range of 0.0 and 1.0.
+* `--d_prime [d_prime]` : Only include variants to the result whose D<sup>'</sup> value is greater than or equal to the given value. D<sup>'</sup> needs to be in the range of 0.0 and 1.0.
+* `--add_variant_attribs` : Add variant attributes (evidence values and consequence type) to the output
 
 <a name="show_all_populations"></a>
 ### Show all populations
@@ -43,9 +43,9 @@ Show all populations that can be used for the given species.
 ```
 <a name="ld_calculations"></a>
 ### LD calculations
-The script supports three different types of caclulations.
+The script supports three different types of calculations.
 #### Center
-Compute all pairwise LD values for a given variant and all variants that are not further away from the given variant than the selected window size which centers around the input variant.
+Compute all pairwise LD values for a given variant with all variants within a window of the specified size, centered on the input variant.
 #### Pairwise
 Compute all pairwise LD values for a list of variants.
 #### Region
@@ -80,15 +80,15 @@ If `--add_variant_attributes` variant evidence and variant consequence are added
 ```txt
 first variant name
 first variant location
-first variant consequence
-first variant evidence
 second variant name
 second variant location
-second variant consequence
-second variant evidence
 r2
 d_prime
 population name
+first variant consequence
+first variant evidence
+second variant consequence
+second variant evidence
 ```
 <a name="examples"></a>
 ### Examples 
