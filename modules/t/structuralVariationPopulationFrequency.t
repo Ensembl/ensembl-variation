@@ -62,12 +62,12 @@ my $svpf = Bio::EnsEMBL::Variation::StructuralVariationPopulationFrequency->new(
   -description              => $pop_desc,
   -size                     => $pop_size,
   -region_name              => 'X',
-  -samples_class            => { 'copy_number_gain' => { '18085' => 'homozygous',   # 1000GENOMES:phase_3:HG00253
-                                                         '18003' => 'heterozygous'  # 1000GENOMES:phase_3:HG00106
+  -samples_class            => { 'copy_number_gain' => { '18085' => 2, # 1000GENOMES:phase_3:HG00253
+                                                         '18003' => 1  # 1000GENOMES:phase_3:HG00106
                                                        },
-                                 'copy_number_loss' => { '18832' => 'homozygous',   # 1000GENOMES:phase_3:HG02215
-                                                         '18609' => 'heterozygous', # 1000GENOMES:phase_3:HG01789
-                                                         '18089' => 'heterozygous'  # 1000GENOMES:phase_3:HG00257
+                                 'copy_number_loss' => { '18832' => 2, # 1000GENOMES:phase_3:HG02215
+                                                         '18609' => 1, # 1000GENOMES:phase_3:HG01789
+                                                         '18089' => 1  # 1000GENOMES:phase_3:HG00257
                                                        }
                                }
 );

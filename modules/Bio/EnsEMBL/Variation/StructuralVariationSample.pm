@@ -65,6 +65,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::StructuralVariationSample;
 
+use Scalar::Util qw(looks_like_number);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
@@ -126,8 +127,8 @@ sub new {
     rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID SAMPLE _STRAIN_ID STRAIN _STUDY_ID STUDY ZYGOSITY)],@_); 
 
   if (defined($zygosity)) {
-    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
-      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    unless (looks_like_number($zygosity)) {
+      throw('Zygosity must be a numeric value');
     }
   }
 
@@ -313,8 +314,8 @@ sub zygosity {
   my $self = shift;
   my $zygosity = shift;
   if ($zygosity) {
-    unless (grep $_ eq $zygosity, ('homozygous', 'heterozygous')) {
-      throw('Zygosity must be one of "homozygous" or "heterozygous"');
+    unless (looks_like_number($zygosity)) {
+      throw('Zygosity must be a numeric value');
     }
     $self->{'zygosity'} = $zygosity;
   }
