@@ -17,7 +17,7 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Exception;
-use Test::Warnings ':no_end_test';
+use Test::Warnings qw(warning :no_end_test);
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
