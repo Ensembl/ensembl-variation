@@ -80,7 +80,7 @@ sub init_files {
     if (!@variants && !@regions) {
       die "Input is missing. Either provide input data in a file with --input_file or use --variant [variant] or --region [region]. Use --help for more information.";
     }
-    $input_file = &get_file_name($config);
+    $input_file = get_file_name($config);
   }   
   foreach my $file (qw/output_file warnings_file/) {
     if ($config->{$file} && -e $config->{$file}) {
@@ -190,7 +190,7 @@ sub init_populations {
       if (grep {$population->name eq $_->name} @$ld_populations) {
         push @values, $population;
       } else {
-        &warnings_2_file($config, "Not a valid population ($population) for LD calculation.");
+        warnings_2_file($config, "Not a valid population ($population) for LD calculation.");
       }
     }
     die "None of the populations provide have sufficient genotype data for LD calculations. Use --show_all_populations to show valid populations\n" if (!@values);
@@ -207,7 +207,7 @@ sub pairwise {
     if ($vf) {
       push @vfs, $vf;
     } else {
-      &warnings_2_file($config, "Could not fetch a variant feature (location) for variant $variant.");
+      warnings_2_file($config, "Could not fetch a variant feature (location) for variant $variant.");
     }
   }
   my $vf_count = scalar @vfs;
@@ -223,7 +223,7 @@ sub pairwise {
       ld_feature_container_2_file($config, $ld_feature_container, $population);
     }
   } else {
-    &warnings_2_file($config, "There are not enough variants for pairwise LD calculations.");
+    warnings_2_file($config, "There are not enough variants for pairwise LD calculations.");
   }
 }
 
@@ -247,7 +247,7 @@ sub region {
         ld_feature_container_2_file($config, $ld_feature_container, $population);
       }
     } else {
-      &warnings_2_file($config, "Could not fetch region $region.");
+      warnings_2_file($config, "Could not fetch region $region.");
     }
   }
 }
@@ -270,7 +270,7 @@ sub center {
         ld_feature_container_2_file($config, $ld_feature_container, $population);
       }
     } else {
-      &warnings_2_file($config, "Could not run LD calculation for $variant. Possible reason could be that variant doesn't have a location?");
+      warnings_2_file($config, "Could not run LD calculation for $variant. Possible reason could be that variant doesn't have a location?");
     }
   }
 }
@@ -305,7 +305,7 @@ sub get_variation_feature {
 
   my $variation = $variation_adaptor->fetch_by_name($variant); 
   if (!$variation) {
-    &warnings_2_file($config, "Could not fetch variant for $variant.");
+    warnings_2_file($config, "Could not fetch variant for $variant.");
     return undef;
   }   
   my @variation_features = grep {$_->slice->is_reference} @{$variation->get_all_VariationFeatures};
@@ -315,7 +315,7 @@ sub get_variation_feature {
       my $chrom = $vf->seq_region_name; 
       my $start = $vf->seq_region_start; 
       my $end = $vf->seq_region_end;
-      &warnings_2_file($config, "Variation $variant has more than 1 mapping to the genome. Selected  $chrom:$start-$end as representative mapping.");
+      warnings_2_file($config, "Variation $variant has more than 1 mapping to the genome. Selected  $chrom:$start-$end as representative mapping.");
     }
     return $vf;
   }
