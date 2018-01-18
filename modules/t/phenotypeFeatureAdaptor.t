@@ -115,6 +115,7 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'ENSG000
 # fetch_all_by_Slice_with_ontology_accession
 my $sl_oa  = $sla->fetch_by_region('chromosome', 13, 86442400, 86442450);
 $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa, 'Variation');
+
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_Slice_with_ontology_accession");
 
 # fetch_all_by_phenotype_ontology_accession
@@ -195,6 +196,9 @@ throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without db
 my $padded_genename  = "gene name  ";
 my $clipped_genename = "gene name";
 my $v_name = 'rs_ws';
+my $submitter_name = 'lab name';
+my $last_eval_date = '2010-10-10';
+
 my $variation = Bio::EnsEMBL::Variation::Variation->new(-name   => $v_name,
                                                         -source => $pf->source);
 
@@ -208,15 +212,18 @@ my $pf_ws = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
     -source    => $pf->source(),
     -is_significant =>1,
     -attribs   => {
-      associated_gene => $padded_genename,
+      associated_gene   => $padded_genename,
+      submitter_names   => [$submitter_name],
+      DateLastEvaluated => $last_eval_date
     },
 );
+
 
 $pfa->store($pf_ws);
 my $pf_ws_ext = $pfa->fetch_all_by_object_id('rs_ws');
 ok($pf_ws_ext->[0]->associated_gene() eq $clipped_genename, "trailing white space removal" );
-
-
+ok($pf_ws_ext->[0]->submitter_names()->[0] eq $submitter_name, "submitter name stored & retrieved");
+ok($pf_ws_ext->[0]->date_last_evaluated() eq $last_eval_date, "last evaluation date stored & retrieved");
 
 done_testing();
 

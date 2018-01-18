@@ -92,6 +92,9 @@ my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 ## fetch ClinVar source object
 my $source   =   get_source($data_file);
 
+## pre-load submitter ids - shortcutting the API for speed
+my $submitters = get_submitter_ids($dba);
+
 ## remove old data
 clean_old_data() if defined $clean; 
 
@@ -133,6 +136,9 @@ while (my $set = $ref->get_record() ){
     ## confidence of assertation
     $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus};
 
+    ## date of assertion
+    $record{DateLastEvaluated} =  $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{DateLastEvaluated};
+
     ## check for somatic, Autosomal dominant, etc.
     $record{inheritance_type} = get_inheritance($set->{ReferenceClinVarAssertion}->{AttributeSet});
 
@@ -143,9 +149,11 @@ while (my $set = $ref->get_record() ){
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
-    next unless $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant";
+    next unless $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant";
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc});
 
+    $record{submitters} = get_submitters($set->{ClinVarAssertion});
 
     if (defined $structvar ){
       if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar} =~/\d+/ ){
@@ -358,7 +366,7 @@ sub get_citations{
       if ($obs->{Citation}){
         my $citations = to_array($obs->{Citation});
         foreach my $cit(@{$citations}){
-          push @citations, $cit->{ID}->[0] if $cit->{ID}->[1]->{Source} eq 'PubMed';
+          push @citations, $cit->{ID}->[0] if $cit->{ID}->[1]->{Source} && $cit->{ID}->[1]->{Source} eq 'PubMed';
         }
       }
     }
@@ -366,6 +374,24 @@ sub get_citations{
   return \@citations;
 }
 
+=head2 get_submitters
+
+- extract any submitters of assertations from the ClinVar release
+
+=cut
+sub get_submitters{
+
+  my $structure = shift;
+
+  my @submitters;
+
+  my $assertions = to_array($structure);
+  foreach my $assert(@{$assertions}){
+    push @submitters, $assert->{ClinVarSubmissionID}->[1]->{submitter};
+  }
+
+  return \@submitters;
+}
 
 sub to_array{
 
@@ -450,6 +476,17 @@ sub import_phenotype_feature{
   $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
+  $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
+  my %submitter_ids;
+  foreach my $sub (@{$record->{submitters}}){
+    ##enter submitter unless already available
+    unless ($submitters->{$sub}){
+      $submitters->{$sub} = add_submitter($sub);
+      warn "Added submitter $sub id " . $submitters->{$sub}  ." for sub\n";
+    }
+    $submitter_ids{ $submitters->{$sub} } = 1;
+  }
+  $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
   foreach my $feature (@{$feat}){
     print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
@@ -504,6 +541,49 @@ sub get_phenotype{
   return $pheno;
 }
 
+
+=head2 get_submitter_ids
+
+ - retrieve existing ids held for assertation submitters
+
+=cut
+sub get_submitter_ids{
+
+  my $dba = shift;
+
+  my %submitters;
+
+  my $submitter_ext_sth = $dba->dbc->prepare(qq[ select submitter_id, description from submitter]);
+  $submitter_ext_sth->execute()||die;
+
+  my $dat = $submitter_ext_sth->fetchall_arrayref();
+  foreach my $l (@{$dat}){
+    $submitters{$l->[1]} = $l->[0];
+  }
+
+  return \%submitters;
+}
+
+=head2 add_submitter
+
+ - add ids for new assertation submitters
+
+=cut
+
+sub add_submitter{
+
+  my $submitter_name = shift;
+
+  my $submitter_ins_sth = $dba->dbc->prepare(qq[ INSERT INTO submitter (description) values (?) ]);
+  $submitter_ins_sth->execute($submitter_name);
+
+  my $submitter_ext_sth = $dba->dbc->prepare(qq[ select submitter_id from submitter where description=?]);
+  $submitter_ext_sth->execute($submitter_name)||die;
+  my $dat = $submitter_ext_sth->fetchall_arrayref();
+  warn "added submitter : $submitter_name & $dat->[0]->[0]\n";
+  return $dat->[0]->[0];
+
+}
 
 
 =head2 get_variant 

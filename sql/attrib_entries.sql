@@ -312,6 +312,8 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 523, '_transl_start', 'Translation start', 'The start position for translation within a transcript-level seq_edit.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 524, '_transl_end', 'Translation end', 'The end position for translation within a transcript-level seq_edit.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 525, 'submitter', 'submitter', 'A group submitting data to a major repository eg. ClinVar');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 527, 'submitter_id','Submitter_ID','ID for data submitter');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 526, 'DateLastEvaluated','EvalDate','The most recent date on which evidence was evaluated and this conclusion drawn.');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (3, 471, 'SNP');
