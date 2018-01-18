@@ -326,7 +326,7 @@ sub warnings_2_file {
   my $config = shift;
   my $warnings = shift;
   my $warnings_file = $config->{warnings_file};
-  open(my $fh, '>>', $warnings_file) or die "Failed to open warnings file $warnings_file: $!";;
+  open(my $fh, '>>', $warnings_file) or die "Failed to open warnings file $warnings_file: $!";
   print $fh "$warnings\n";
   $fh->close;
 }
@@ -375,7 +375,7 @@ sub get_file_name {
   my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
   $year += 1900;
   $mon++;
-  my $file_time_stamp = join('_', $calculation, $year, $mon, $mday, $hour, $min);
+  my $file_time_stamp = sprintf("%s_%d_%02d_%02d_%02d_%02d", $calculation, $year, $mon, $mday, $hour, $min);
   return "$file_time_stamp";
 }
 
@@ -410,7 +410,7 @@ Examples
 ./ld_tool --show_populations --species human
 ./ld_tool --calculation region --region 20:35777017-35950562 --population 1000GENOMES:phase_3:AMR 1000GENOMES:phase_3:TSI
 ./ld_tool --calculation pairwise --variant rs80356768 rs9987289 --population 1000GENOMES:phase_3:AMR 1000GENOMES:phase_3:TSI
-./ld_tool --calculation center --variant rs878853059 --population 1000GENOMES:phase_3:CHS --r2 0.8
+./ld_tool --calculation center --variant rs2708377 --population 1000GENOMES:phase_3:PEL --r2 0.8
 
 END
   print $usage;
