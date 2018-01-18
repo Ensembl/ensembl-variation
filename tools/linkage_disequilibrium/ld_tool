@@ -48,24 +48,24 @@ GetOptions(
   'add_variant_attributes',      # add variant attributes: variant_evidence, variant_consequence  
 ) or die "ERROR: Failed to parse command-line flags\n";
 
-&usage && exit(0) if (!$arg_count) || $config->{help};
+usage() && exit(0) if (!$arg_count) || $config->{help};
 $config->{species} ||= $DEFAULT_SPECIES;
 $config->{assembly} ||= $DEFAULT_HUMAN_ASSEMBLY;
-&init_connections($config);
-&show_populations($config) && exit(0) if ($config->{show_populations});
+init_connections($config);
+show_populations($config) && exit(0) if ($config->{show_populations});
 
 die "Select at least one calculation: ./ld_tool --calculation [region|center|pairwise]. Or use --help for more information.\n" unless ($config->{calculation});
 
-&init_files($config);
-&init_populations($config);
+init_files($config);
+init_populations($config);
 
 my $calculation = $config->{calculation};
 if ($calculation eq 'center') {
-  &center($config);
+  center($config);
 } elsif ($calculation eq 'pairwise') {
-  &pairwise($config);
+  pairwise($config);
 } elsif ($calculation eq 'region') {
-  &region($config);
+  region($config);
 } else {
   die "Unsupported calculation. Use one of the following calculations: center, pairwise or region\n";
 }
