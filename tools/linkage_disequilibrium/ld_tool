@@ -265,7 +265,7 @@ sub center {
         try {
           $ld_feature_container = $ld_feature_container_adaptor->fetch_by_VariationFeature($vf, $population);
         } catch {
-          die "Error occurred during LD caclculation.";
+          die "Error occurred during LD calculation.";
         };
         ld_feature_container_2_file($config, $ld_feature_container, $population);
       }
