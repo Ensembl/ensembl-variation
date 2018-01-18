@@ -81,6 +81,10 @@ sub init_files {
       die "Input is missing. Either provide input data in a file with --input_file or use --variant [variant] or --region [region]. Use --help for more information.";
     }
     $input_file = get_file_name($config);
+  } else {
+    foreach my $file (qw/output_file warnings_file/) {
+      $config->{$file} ||= $input_file . '.' . $file_ending->{$file};
+    }
   }   
   foreach my $file (qw/output_file warnings_file/) {
     if ($config->{$file} && -e $config->{$file}) {
@@ -280,7 +284,7 @@ sub parse_input {
   my @input = ();
   my $file = $config->{input_file};
   if ($file) {
-    my $fh = FileHandle->new($file, 'r');
+    my $fh = FileHandle->new($file, 'r') or die "Failed to open input file $file: $!";
     while (<$fh>) {
       chomp;
       s/^\s+|(\s+|\R)$//g;
