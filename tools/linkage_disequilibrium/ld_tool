@@ -1,0 +1,422 @@
+#!/usr/bin/env perl
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+# http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Bio::EnsEMBL::Registry;
+use FileHandle;
+use List::Util qw(uniq);
+use Try::Tiny;
+
+my $DEFAULT_SPECIES = 'human';
+my $DEFAULT_HUMAN_ASSEMBLY = 'grch38';
+my $config = {};
+my $arg_count = scalar @ARGV;
+my @argv_copy = @ARGV;
+my @populations = ();
+my @regions = ();
+my @variants = ();
+GetOptions(
+  $config,
+  'help',                    # displays help message
+  'input_file|i=s',          # input file name
+  'output_file|o=s',         # default current directory date-time-calculation_type.out | inputfile_name.out
+  'warnings_file|w=s',       # write warnings to file
+  'species',                 # default human 
+  'population|p=s{1,}' => \@populations, # list all populations for LD computation: --populations population1 population2
+  'show_populations',            # show all available populations
+  'region=s{1,}' => \@regions,   # chromosome:start-end
+  'variant=s{1,}' => \@variants, # variant identifier  
+  'calculation|c=s',             # region, center, pairwise 
+  'assembly=s',                  # default human grch38
+  'r2=f',                        # value between 0 and 1
+  'd_prime=f',                   # value between 0 and 1
+  'add_variant_attributes',      # add variant attributes: variant_evidence, variant_consequence  
+) or die "ERROR: Failed to parse command-line flags\n";
+
+usage() && exit(0) if (!$arg_count) || $config->{help};
+$config->{species} ||= $DEFAULT_SPECIES;
+$config->{assembly} ||= $DEFAULT_HUMAN_ASSEMBLY;
+die "Input file ", $config->{input_file}, " does not exist." if ($config->{input_file} && !-e $config->{input_file});
+init_connections($config);
+show_populations($config) && exit(0) if ($config->{show_populations});
+
+die "Select at least one calculation: ./ld_tool --calculation [region|center|pairwise]. Or use --help for more information.\n" unless ($config->{calculation});
+
+init_files($config);
+init_populations($config);
+
+my $calculation = $config->{calculation};
+if ($calculation eq 'center') {
+  center($config);
+} elsif ($calculation eq 'pairwise') {
+  pairwise($config);
+} elsif ($calculation eq 'region') {
+  region($config);
+} else {
+  die "Unsupported calculation. Use one of the following calculations: center, pairwise or region\n";
+}
+
+sub init_files {
+  my $config = shift;
+  my $input_file = $config->{input_file};
+
+  my $file_ending = {output_file => 'out', warnings_file => 'warnings'};
+
+  if (!$input_file) {
+    if (!@variants && !@regions) {
+      die "Input is missing. Either provide input data in a file with --input_file or use --variant [variant] or --region [region]. Use --help for more information.";
+    }
+    $input_file = get_file_name($config);
+  } else {
+    foreach my $file (qw/output_file warnings_file/) {
+      $config->{$file} ||= $input_file . '.' . $file_ending->{$file};
+    }
+  }   
+  foreach my $file (qw/output_file warnings_file/) {
+    if ($config->{$file} && -e $config->{$file}) {
+      die "$file file already exists: ", $config->{$file};
+    } else {
+      $config->{$file} ||= $input_file . '.' . $file_ending->{$file};
+    }
+  }
+
+  if (@regions) {
+    if (!$config->{calculation} eq 'region') {
+      die "Region input must be used with --calculation region."; 
+    }
+  }
+
+  if (@variants) {
+    if (!($config->{calculation} eq 'center' || $config->{calculation} eq 'pairwise')) {
+      die "Variant input must be used with --calculation center or --calculation pairwise."; 
+    }
+  }
+
+}
+
+sub init_connections {
+  my $config = shift;
+  my $d_prime = $config->{'d_prime'};
+  if ($d_prime && ($d_prime < 0.0 || $d_prime > 1.0)) {
+    die "d_prime must be in the range of 0.0 <= d_prime <= 1.0";
+  }
+  my $r2 = $config->{'r2'};
+  if ($r2 && ($r2 < 0.0 || $r2 > 1.0)) {
+    die "r2 must be in the range of 0.0 <= r2 <= 1.0";
+  }
+
+  my $registry = 'Bio::EnsEMBL::Registry';
+  my $port = 3306;
+  my $assembly = lc $config->{assembly};
+  if ($assembly eq 'grch37') {
+    $port = 3337;
+  }
+  $registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org',
+    -user => 'anonymous',
+    -port => $port,
+  );
+
+  my $species = $config->{species};
+  my $population_adaptor = $registry->get_adaptor($species, 'variation', 'population');
+  my $variation_adaptor = $registry->get_adaptor($species, 'variation', 'variation');
+  my $ld_feature_container_adaptor = $registry->get_adaptor($species, 'variation', 'ldfeaturecontainer');
+  $ld_feature_container_adaptor->db->use_vcf(1);
+  $ld_feature_container_adaptor->min_d_prime($d_prime) if (defined $d_prime);
+  $ld_feature_container_adaptor->min_r2($r2) if (defined $r2);
+
+  my $slice_adaptor = $registry->get_adaptor($species, 'core', 'slice');
+ 
+  $config->{population_adaptor} = $population_adaptor;
+  $config->{variation_adaptor} = $variation_adaptor;
+  $config->{ld_feature_container_adaptor} = $ld_feature_container_adaptor; 
+  $config->{slice_adaptor} = $slice_adaptor;
+}
+
+sub show_populations {
+  my $config = shift;
+  my $population_adaptor = $config->{population_adaptor}; 
+  if ($config->{species} eq $DEFAULT_SPECIES) {
+    my @super_populations = qw/1000GENOMES:phase_3:AFR 1000GENOMES:phase_3:AMR 1000GENOMES:phase_3:EAS 1000GENOMES:phase_3:EUR 1000GENOMES:phase_3:SAS/;
+    print "Choose any of the populations for LD computation. If you choose a super population all sub populations will be included.\n";
+    foreach my $name (@super_populations) {
+      my $population = $population_adaptor->fetch_by_name($name);
+      print $population->name, ' ', $population->description, " (super population)\n"; 
+      foreach my $sub_population (sort {$a->name cmp $b->name} @{$population->get_all_sub_Populations}) {
+        print ' ', $sub_population->name, ' ', $sub_population->description, "\n";
+      }
+    }   
+  } else {
+    my $populations = $population_adaptor->fetch_all_LD_Populations;  
+    foreach my $population (sort {$a->name cmp $b->name} @$populations) {
+      print $population->name, ' ', $population->description, "\n";
+    }
+  }
+}
+
+sub init_populations {
+  my $config = shift;
+  my @population_objects = ();
+  my $unique_populations = {};
+  my $population_adaptor = $config->{population_adaptor}; 
+  my $ld_populations =  $population_adaptor->fetch_all_LD_Populations;  
+  if (!@populations) {
+    $config->{_populations} = $ld_populations;  
+  } else {
+    my $unique_populations = {};
+    foreach my $name (@populations) {
+      my $population = $population_adaptor->fetch_by_name($name);
+      my $sub_populations = $population->get_all_sub_Populations;
+      if (@$sub_populations) {
+        foreach my $sub_population (@$sub_populations) {
+          $unique_populations->{$sub_population->name} = $sub_population;
+        }
+      } else {
+        $unique_populations->{$population->name} = $population;
+      }   
+    }
+    my @values = ();
+    foreach my $population (values %$unique_populations) {
+      if (grep {$population->name eq $_->name} @$ld_populations) {
+        push @values, $population;
+      } else {
+        warnings_2_file($config, "Not a valid population ($population) for LD calculation.");
+      }
+    }
+    die "None of the populations provide have sufficient genotype data for LD calculations. Use --show_all_populations to show valid populations\n" if (!@values);
+    $config->{_populations} = \@values;  
+  } 
+}
+
+sub pairwise {
+  my $config = shift;
+  my @variants = @{parse_input($config)};
+  my @vfs = ();
+  foreach my $variant (@variants) {
+    my $vf = get_variation_feature($config, $variant);
+    if ($vf) {
+      push @vfs, $vf;
+    } else {
+      warnings_2_file($config, "Could not fetch a variant feature (location) for variant $variant.");
+    }
+  }
+  my $vf_count = scalar @vfs;
+  if ($vf_count > 1) {
+    my $ld_feature_container_adaptor = $config->{ld_feature_container_adaptor};
+    foreach my $population (@{$config->{_populations}}) {
+      my $ld_feature_container;
+      try {
+        $ld_feature_container = $ld_feature_container_adaptor->fetch_by_VariationFeatures(\@vfs, $population);
+      } catch {
+        die "Error occurred during LD calculation.";
+      };
+      ld_feature_container_2_file($config, $ld_feature_container, $population);
+    }
+  } else {
+    warnings_2_file($config, "There are not enough variants for pairwise LD calculations.");
+  }
+}
+
+sub region {
+  my $config = shift;
+  my $slice_adaptor = $config->{slice_adaptor};
+  my $ld_feature_container_adaptor = $config->{ld_feature_container_adaptor};
+  my @regions = @{parse_input($config)};
+  my @populations = @{$config->{_populations}};
+  foreach my $region (@regions) {
+    my ($chromosome, $start, $end) = split /\s+/, $region;
+    my $slice = $slice_adaptor->fetch_by_region('chromosome', $chromosome, $start, $end);
+    if ($slice) {
+      foreach my $population (@populations) {
+        my $ld_feature_container;
+        try {
+          $ld_feature_container = $ld_feature_container_adaptor->fetch_by_Slice($slice, $population);
+        } catch {
+          die "Error occurred during LD calculation: $_";
+        };
+        ld_feature_container_2_file($config, $ld_feature_container, $population);
+      }
+    } else {
+      warnings_2_file($config, "Could not fetch region $region.");
+    }
+  }
+}
+
+sub center {
+  my $config = shift;
+  my @variants = @{parse_input($config)};
+  my @populations = @{$config->{_populations}};
+  my $ld_feature_container_adaptor = $config->{ld_feature_container_adaptor};
+  foreach my $variant (@variants) {
+    my $vf = get_variation_feature($config, $variant);
+    if ($vf) {
+      foreach my $population (@populations) {
+        my $ld_feature_container;
+        try {
+          $ld_feature_container = $ld_feature_container_adaptor->fetch_by_VariationFeature($vf, $population);
+        } catch {
+          die "Error occurred during LD calculation.";
+        };
+        ld_feature_container_2_file($config, $ld_feature_container, $population);
+      }
+    } else {
+      warnings_2_file($config, "Could not run LD calculation for $variant. Possible reason could be that variant doesn't have a location?");
+    }
+  }
+}
+
+sub parse_input {
+  my $config = shift;
+  my @input = ();
+  my $file = $config->{input_file};
+  if ($file) {
+    my $fh = FileHandle->new($file, 'r') or die "Failed to open input file $file: $!";
+    while (<$fh>) {
+      chomp;
+      s/^\s+|(\s+|\R)$//g;
+      push @input, $_ if ($_ ne '');
+    }
+    $fh->close;
+  } else {
+    if ($config->{calculation} eq 'region') {
+      @input = map {s/:|-/ /g} @regions;
+    } else {
+      @input = @variants;
+    }
+  }
+  my @uniq_input = uniq @input;
+  return \@uniq_input;
+}
+
+sub get_variation_feature {
+  my $config = shift;
+  my $variant = shift; 
+  my $variation_adaptor = $config->{variation_adaptor};
+
+  my $variation = $variation_adaptor->fetch_by_name($variant); 
+  if (!$variation) {
+    warnings_2_file($config, "Could not fetch variant for $variant.");
+    return undef;
+  }   
+  my @variation_features = grep {$_->slice->is_reference} @{$variation->get_all_VariationFeatures};
+  if (@variation_features) {
+    my $vf = $variation_features[0];
+    if (scalar @variation_features > 1) {
+      my $chrom = $vf->seq_region_name; 
+      my $start = $vf->seq_region_start; 
+      my $end = $vf->seq_region_end;
+      warnings_2_file($config, "Variation $variant has more than 1 mapping to the genome. Selected  $chrom:$start-$end as representative mapping.");
+    }
+    return $vf;
+  }
+  return undef;
+}
+
+sub warnings_2_file {
+  my $config = shift;
+  my $warnings = shift;
+  my $warnings_file = $config->{warnings_file};
+  open(my $fh, '>>', $warnings_file) or die "Failed to open warnings file $warnings_file: $!";
+  print $fh "$warnings\n";
+  $fh->close;
+}
+
+sub ld_feature_container_2_file {
+  my $config = shift;
+  my $container = shift;
+  my $population = shift;
+  my $output_file = $config->{output_file};
+  my $add_vf_attribs = $config->{add_variant_attributes};
+  open(my $fh, '>>', $output_file) or die "Failed to open output file $output_file: $!";
+  my $population_name = $population->name;
+  foreach my $ld_hash (@{$container->get_all_ld_values($add_vf_attribs)}) {
+    my $d_prime = $ld_hash->{d_prime};
+    my $r2 = $ld_hash->{r2};
+    my $variation1 = $ld_hash->{variation_name1};
+    my $variation2 = $ld_hash->{variation_name2};
+    my $vf1 = $ld_hash->{variation1};
+    my $vf2 = $ld_hash->{variation2};
+    my $vf1_start = $vf1->seq_region_start;
+    my $vf1_end = $vf1->seq_region_end;
+    my $vf1_seq_region_name = $vf1->seq_region_name;
+    my $vf1_location = "$vf1_seq_region_name:$vf1_start";
+    $vf1_location .= "-$vf1_end" if ($vf1_start != $vf1_end);
+    my $vf2_start = $vf2->seq_region_start;
+    my $vf2_end = $vf2->seq_region_start;
+    my $vf2_seq_region_name = $vf2->seq_region_name;
+    my $vf2_location = "$vf2_seq_region_name:$vf2_start";
+    $vf2_location .= "-$vf2_end" if ($vf2_start != $vf2_end);
+    if ($add_vf_attribs) {
+      my $vf1_consequence = $vf1->display_consequence; 
+      my $vf1_evidence = join(',', @{$vf1->get_all_evidence_values});
+      my $vf2_consequence = $vf2->display_consequence;
+      my $vf2_evidence = join(',', @{$vf2->get_all_evidence_values});
+      print $fh join("\t", $variation1, $vf1_location, $variation2, $vf2_location, $r2, $d_prime, $population_name, $vf1_consequence, $vf1_evidence, $vf2_consequence, $vf2_evidence), "\n";
+    } else {
+      print $fh join("\t", $variation1, $vf1_location, $variation2, $vf2_location, $r2, $d_prime, $population_name), "\n";
+    }
+  }
+  close $fh;
+}
+
+sub get_file_name {
+  my $config = shift;
+  my $calculation = $config->{calculation};
+  my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
+  $year += 1900;
+  $mon++;
+  my $file_time_stamp = sprintf("%s_%d_%02d_%02d_%02d_%02d", $calculation, $year, $mon, $mday, $hour, $min);
+  return "$file_time_stamp";
+}
+
+#outputs usage message
+sub usage {
+
+  my $usage =<<END;
+#-----------------------------------#
+# Linkage Disequilibrium Calculator #
+#-----------------------------------#
+Help: dev\@ensembl.org , helpdesk\@ensembl.org
+Usage:
+./ld_tool [arguments]
+Basic options
+=============
+--help                                     Display this message and quit
+-i | --input_file                          Input file. Either provide an input file or define input values with --region or --variant
+-o | --output_file                         Output file. If not provided results will be stored in input_file.out or a file in the current directory is created following calculation_year_month_day_hour_minutes.out
+--warnings_file                            Warnings file. If not provided results will be stored in input_file.warnings or a file in the current directory is created following calculation_year_month_day_hour_minutes.warnings
+
+--species [species]                        Species to use [default: "human"]
+--calculation [center|pairwise|region]     Type of LD calculation                       
+--population [populations]                 Define populations to use for LD calculation
+--region [regions]                         List of region(s) as input for region calculation. A region is defined as chromosome:start-end
+--variant [variants]                       List of variant(s) as input for either center or pairwise calculations
+--show_populations                         List all population which can be used for LD calculation
+--d_prime                                  Only include variants to the result whose d_prime value is greater than or equal to the given value. d_prime needs to be in the range of 0.0 and 1.0.
+--r2                                       Only include variants to the result whose r2 value is greater than or equal to the given value. r2 needs to be in the range of 0.0 and 1.0.
+--add_variant_attribs                      Add variant attributes (evdidence values and consequence type) to the output
+
+Examples
+./ld_tool --show_populations --species human
+./ld_tool --calculation region --region 20:35777017-35950562 --population 1000GENOMES:phase_3:AMR 1000GENOMES:phase_3:TSI
+./ld_tool --calculation pairwise --variant rs80356768 rs9987289 --population 1000GENOMES:phase_3:AMR 1000GENOMES:phase_3:TSI
+./ld_tool --calculation center --variant rs2708377 --population 1000GENOMES:phase_3:PEL --r2 0.8
+
+END
+  print $usage;
+}
