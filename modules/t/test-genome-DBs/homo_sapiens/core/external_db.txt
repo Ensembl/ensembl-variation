@@ -139,7 +139,6 @@
 6690	Ens_Dm_gene	1	XREF	1	0	LIT	Ensembl FruitFly Gene	MISC	\N
 6720	Ens_Fr_gene	1	XREF	1	0	LIT	Ensembl Fugu Gene	MISC	\N
 6750	Ens_Pt_gene	1	XREF	1	0	LIT	Ensembl Chimpanzee Gene	MISC	\N
-6780	Ens_Rn_gene	1	XREF	1	0	LIT	Ensembl Rat Gene	MISC	\N
 6810	Ens_Tn_gene	1	XREF	1	0	LIT	Ensembl PufferFish Gene	MISC	\N
 6820	Ens_Tr_transcript	1	XREF	1	0		Ensembl Fugu Transcript	MISC	\N
 7120	Ens_Aa_translation	1	XREF	1	0		Ensembl Aedes Translation	MISC	\N
@@ -279,7 +278,6 @@
 20221	thaps_jgi_v2	1	KNOWNXREF	1	0		JGI ID (JGI 2.0)	PRIMARY_DB_SYNONYM	\N
 20222	thaps_jgi_v2_gene	1	KNOWNXREF	1	0		JGI Gene ID (JGI 2.0)	PRIMARY_DB_SYNONYM	\N
 20223	thaps_jgi_v2_bd_gene	1	KNOWNXREF	1	0		JGI Gene ID (JGI 2.0 unmapped sequence)	PRIMARY_DB_SYNONYM	\N
-20224	thaps_jgi_v2_gene	1	KNOWNXREF	1	0		JGI Gene ID (JGI 2.0)	PRIMARY_DB_SYNONYM	\N
 20225	thaps_jgi_v2_bd_transcript	1	KNOWNXREF	1	0		JGI transcript ID (JGI 2.0 unmapped sequence)	PRIMARY_DB_SYNONYM	\N
 20226	thaps_jgi_v2_transcript	1	KNOWNXREF	1	0		JGI transcript ID (JGI 2.0)	PRIMARY_DB_SYNONYM	\N
 20227	Diatom_EST_Cluster	1	XREF	1	0		ENS EST Cluster (Diatom ESTDB)	MISC	\N
@@ -333,7 +331,6 @@
 833	MitoDrome	1	KNOWNXREF	1	0	LIT	Nuclear genes encoding proteins targeted to the mitochondrion gene	MISC	\N
 212	VB_External_Description	1	PRED	1	0		VB External Description	MISC	\N
 213	VB_RNA_Description	1	PRED	1	0		VB RNA Description	MISC	\N
-214	VB_Community_Annotation	1	KNOWN	1	0		VB Community Annotation	MISC	\N
 250	ImmunoDB	1	KNOWN	1	0		ImmunoDB	MISC	\N
 50605	RFAM_gene_name		KNOWNXREF	1	0	LIT	RFAM gene name	MISC	\N
 50606	miRBase_gene_name		KNOWNXREF	1	0	LIT	miRBase gene name	MISC	\N
