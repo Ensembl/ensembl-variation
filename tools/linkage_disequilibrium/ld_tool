@@ -51,6 +51,7 @@ GetOptions(
 usage() && exit(0) if (!$arg_count) || $config->{help};
 $config->{species} ||= $DEFAULT_SPECIES;
 $config->{assembly} ||= $DEFAULT_HUMAN_ASSEMBLY;
+die "Input file ", $config->{input_file}, " does not exist." if ($config->{input_file} && !-e $config->{input_file});
 init_connections($config);
 show_populations($config) && exit(0) if ($config->{show_populations});
 
