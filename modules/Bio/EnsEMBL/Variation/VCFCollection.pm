@@ -75,7 +75,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
+use Bio::EnsEMBL::Variation::Utils::ParseLine qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 
@@ -704,7 +704,6 @@ sub get_all_VariationFeatures_by_Slice {
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
     
     my $copy = $vcf->get_frozen_copy();
-    
     foreach my $parsed_vf(@{parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))}) {
       next unless $parsed_vf->isa('Bio::EnsEMBL::Variation::VariationFeature');
       delete $parsed_vf->{_line};
