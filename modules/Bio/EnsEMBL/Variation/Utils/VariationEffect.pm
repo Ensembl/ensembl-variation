@@ -849,7 +849,7 @@ sub _ins_del_start_altered {
 
 sub _inv_start_altered {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $DB::single = 1;
+    
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
     unless(exists($cache->{inv_start_altered})) {
