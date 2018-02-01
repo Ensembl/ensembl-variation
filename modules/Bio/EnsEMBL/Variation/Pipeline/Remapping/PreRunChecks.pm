@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,32 +32,54 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
+use IPC::Cmd qw(can_run);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
-
 sub fetch_input {
   my $self = shift;
-  1;	
 }
 
 sub run {
   my $self = shift;
 
-  # 1. check all folders are created 
   my $pipeline_dir = $self->param('pipeline_dir');
   die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
-  foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir dump_mapped_features_dir/) {
+  foreach my $folder (qw/old_assembly_dir new_assembly_dir/) {
+    my $dir = $self->param($folder);
+    die "$dir for $folder doesn't exist" unless (-d "$dir");		
+  }
+
+  my $dir = $self->param('new_assembly_dir');
+  foreach my $file_type (('.fa.amb', '.fa.ann', '.fa.bwt', '.fa.pac', '.fa.sa')) {
+    unless ($self->count_files($dir, $file_type)) {
+      die("New assembly file is not indexed. $file_type is missing.");
+    }
+  }
+
+  foreach my $tool (qw/bwa samtools/) {
+    can_run($self->param($tool)) or die "$tool could not be found at location: ", $self->param($tool);
+  }
+
+  foreach my $file (qw/ensembl_regsitry_oldasm ensembl_regsitry_newasm/) {
+    "File $file is missing " if (! -f $self->param($file));
+  }
+
+  my @folders = qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir dump_mapped_features_dir/;
+  push @folders, (qw/qc_failure_reasons_dir qc_mapped_features_dir qc_update_features_dir/) if ($self->param('mode') eq 'remap_variation_feature');
+  foreach my $folder (@folders) {
     my $dir = $self->param($folder);
     if (-d $dir) {
       remove_tree($dir);
     }
     make_path($dir);
   } 
+  
   if (!$self->param('use_fasta_files')) {
     foreach my $folder (qw/dump_features_dir fasta_files_dir/) {
       my $dir = $self->param($folder);
@@ -84,36 +106,10 @@ sub run {
       $self->run_cmd("rm -f $dir/*.fai");
     }
   }
-
-  foreach my $folder (qw/old_assembly_fasta_file_dir new_assembly_fasta_file_dir/) {
-    my $dir = $self->param($folder);
-    die "$dir for $folder doesn't exist" unless (-d $dir);		
-  }
-
-  # 2. check new_assembly_fasta_file is indexed
-  my $dir = $self->param('new_assembly_fasta_file_dir');
-  foreach my $file_type (('.fa.amb', '.fa.ann', '.fa.bwt', '.fa.pac', '.fa.sa')) {
-    unless ($self->count_files($dir, $file_type)) {
-      die("New assembly file is not indexed. $file_type is missing.");
-    }
-  }
-  # 3. check bwa and samtools are working
-
-  1;
-}
-
-sub run_cmd {
-  my $self = shift;
-  my $cmd = shift;
-  if (my $return_value = system($cmd)) {
-    $return_value >>= 8;
-    die "system($cmd) failed: $return_value";
-  }
 }
 
 sub write_output {
   my $self = shift;
-  1;
 }
 
 1;

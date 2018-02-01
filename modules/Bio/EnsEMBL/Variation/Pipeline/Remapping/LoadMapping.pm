@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2018] EMBL-European Bioinformatics Institute
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 
 
 
@@ -33,21 +32,18 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use ImportUtils qw(load);
-use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
 sub fetch_input {
   my $self = shift;
-  my $registry = 'Bio::EnsEMBL::Registry';
-  $registry->load_all($self->param('registry_file_newasm'));
-  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
-  $self->param('vdba', $vdba);
+  $self->SUPER::fetch_input;
 }
 
 sub run {
   my $self = shift;
   if ($self->param('mode') eq 'remap_read_coverage') {
     $self->load_read_coverage();
-  } elsif ($self->param('mode') eq 'remap_qtls') {
+  } elsif ($self->param('mode') eq 'remap_QTL') {
     $self->load_qtl();
   } else {
     $self->load_features();
@@ -62,15 +58,12 @@ sub load_read_coverage {
   my $self = shift;
 
   my $load_features_dir = $self->param('load_features_dir');
-  my $vdba = $self->param('vdba');
+  my $vdba = $self->param('vdba_newasm');
   my $dbc = $vdba->dbc;
 
   my $dbname = $vdba->dbc->dbname();
-#  my $read_coverage_table = 'read_coverage';
-#  my $result_table = "$read_coverage_table\_mapping_results";
   my $feature_table = $self->param('feature_table');
   my $result_table = "$feature_table\_mapping_results";
-
 
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
@@ -121,7 +114,7 @@ sub load_read_coverage {
 sub load_qtl {
   my $self = shift;
 
-  my $vdba = $self->param('vdba');
+  my $vdba = $self->param('vdba_newasm');
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
@@ -141,7 +134,6 @@ sub load_qtl {
       });
   $sth->execute();
 
-# QC that all necessary columns are there: e.g. seq_region_id, ...
   my @column_names = ();
   while (my @name = $sth->fetchrow_array) {
     push @column_names, $name[0];
@@ -167,10 +159,11 @@ sub load_qtl {
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
   $dbh->disconnect;
 }
+
 sub load_features {
   my $self = shift;
 
-  my $vdba = $self->param('vdba');
+  my $vdba = $self->param('vdba_newasm');
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
@@ -178,15 +171,7 @@ sub load_features {
   my $dbname = $vdba->dbc->dbname();
   my $feature_table = $self->param('feature_table');
   my $result_table = "$feature_table\_mapping_results";
-  if ($self->param('mode') eq 'remap_multi_map') {
-    $result_table = "$feature_table\_multi_map_results";
-  }
-  if ($self->param('mode') eq 'remap_alt_loci') {
-    $result_table = "$feature_table\_map_alt_loci_results";
-  }
-  if ($self->param('mode') eq 'remap_post_projection') {
-    $result_table = "$feature_table\_post_projection";
-  }
+
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table ADD variation_feature_id_old int(10) unsigned});
@@ -200,7 +185,6 @@ sub load_features {
       });
   $sth->execute();
 
-# QC that all necessary columns are there: e.g. seq_region_id, ...
   my @column_names = ();
   while (my @name = $sth->fetchrow_array) {
     unless ($name[0] =~ /^variation_feature_id$/) {
@@ -226,37 +210,8 @@ sub load_features {
   }
   closedir(DIR);
 
-  if ($self->param('mode') eq 'remap_post_projection') {
-    my $feature_table_projection = $self->param('feature_table_projection');
-    my $sth = $dbh->prepare(qq{
-        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = '$dbname'
-        AND TABLE_NAME = '$feature_table_projection';
-        });
-    $sth->execute();
-
-# QC that all necessary columns are there: e.g. seq_region_id, ...
-    my @column_names = ();
-    while (my @name = $sth->fetchrow_array) {
-      unless ($name[0] =~ /^variation_feature_id$/) {
-        push @column_names, $name[0];
-      }
-    }
-    $sth->finish();
-    $column_names_concat = join(',' , @column_names);
-    $dbc->do(qq{ INSERT INTO $result_table($column_names_concat) SELECT $column_names_concat FROM $feature_table_projection;});
-  }
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
   $dbh->disconnect;
 }
-
-sub run_cmd {
-  my ($self, $cmd) = @_;
-  if (my $return_value = system($cmd)) {
-    $return_value >>= 8;
-    die "system($cmd) failed: $return_value";
-  }
-}
-
 
 1;

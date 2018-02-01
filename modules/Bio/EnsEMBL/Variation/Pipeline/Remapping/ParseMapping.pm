@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::ParseMapping;
 use strict;
 use warnings;
 
-#use Bio::DB::Sam;
 use Bio::DB::HTS;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
@@ -40,13 +39,14 @@ use FileHandle;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
+use Bio::EnsEMBL::Variation::Utils::RemappingUtils qw(map_variant);
 
 sub fetch_input {
   my $self = shift;
   my $file_number         = $self->param('file_number');
   my $bam_file            = $self->param('bam_file');
   my $fasta_file          = $self->param('fasta_file');
-  my $registry_file       = $self->param('registry_file');
+  my $registry_file       = $self->param('registry_file_oldasm');
   my $species             = $self->param('species');
   my $mapping_results_dir = $self->param('mapping_results_dir');
   my $compare_locations  = $self->param('compare_locations');
@@ -79,7 +79,7 @@ sub fetch_input {
 sub run {
   my $self = shift;
   my $mode = $self->param('mode');
-  if ($mode eq 'remap_read_coverage' || $mode eq 'remap_svf' || $mode eq 'remap_qtls') {
+  if ($mode eq 'remap_read_coverage' || $mode eq 'remap_svf' || $mode eq 'remap_QTL') {
     $self->parse_read_location();
   } else {
     $self->parse_variation_location();
@@ -151,7 +151,7 @@ sub parse_read_location {
       $query_seq = $query_sequences->{$query_name};
     }
 
-    my $length_query_seq      = length($query_seq);
+    my $length_query_seq = length($query_seq);
 
     my $relative_alignment_score = 0;
     if ($length_query_seq == 0) {
@@ -175,7 +175,6 @@ sub parse_read_location {
 
 sub parse_variation_location {
   my $self = shift;
-  $self->warning("Parse variation location");
   my $sam                = $self->param('sam');
   my $fh_mappings        = $self->param('fh_mappings');
   my $fh_failed_mappings = $self->param('fh_failed_mappings');
@@ -215,7 +214,7 @@ sub parse_variation_location {
     if ($query_sequences->{$query_name}) {
       $query_seq = $query_sequences->{$query_name};
     }
-    my $results = $self->map_variant($alignment, $length_before_var, $length_var);
+    my $results = map_variant($alignment, $length_before_var, $length_var);
     my ($snp_t_start, $snp_t_end, $indel_colocation, $flag_suspicious) = @$results;
     unless ($snp_t_start && $snp_t_end && $q_strand){
       $flag_suspicious = 1;
@@ -276,88 +275,6 @@ sub parse_variation_location {
 
   $fh_mappings->close();
   $fh_failed_mappings->close();
-}
-
-sub map_variant {
-  my $self = shift;
-  my $alignment         = shift;
-  my $length_before_var = shift;
-  my $length_var        = shift;
-
-  my $indel_colocation = 0;
-  my $flag_suspicious  = 0;
-  my @cigar_string = @{$alignment->cigar_array};
-
-  my $q_start = $alignment->query->start;
-  my $q_end   = $alignment->query->end;
-  my $t_start = $alignment->start;
-  my $t_end   = $alignment->end;
-  my ($snp_t_start, $snp_t_end);
-  if ($q_start && $q_end && $t_start && $t_end) {
-    $t_start = $t_start - $q_start + 1;
-    $q_start = 1;	 
-  } else {
-    # warn
-    #        next;
-    # return
-  }	
-  my $snp_q_pos = $length_before_var;			
-
-  while (my $sub_string = shift @cigar_string) {
-    my $operation = $sub_string->[0];
-    my $count     = $sub_string->[1];
-    my ($query_match_length, $target_match_length, $new_q_start, $new_t_start);
-    if ($operation eq 'M' || $operation eq 'H' || $operation eq 'S') {
-      $query_match_length  = $count;
-      $target_match_length = $count;	
-      $operation           = 'M';
-    } elsif ($operation eq 'I')	{
-      $query_match_length  = $count;
-      $target_match_length = 0;
-    } elsif ($operation eq 'D') {		
-      $query_match_length  = 0;
-      $target_match_length = $count;
-    }
-
-    $new_q_start = $q_start + $query_match_length - 1 if ($operation eq 'M');
-    $new_q_start = $q_start + $query_match_length if ($operation eq 'D' || $operation eq 'I');	
-
-    $new_t_start = $t_start + $target_match_length - 1 if ($operation eq 'M');
-    $new_t_start = $t_start + $target_match_length if ($operation eq 'D' || $operation eq 'I');
-
-
-    if (($q_start <= $snp_q_pos and $snp_q_pos < $new_q_start) or 
-        ($new_q_start < $snp_q_pos and $snp_q_pos <= $q_start)) {
-      if ($operation eq 'M') {
-        if ($length_var == 0) {
-          $snp_t_start = $t_start + abs($snp_q_pos - $q_start);
-          $snp_t_end = $snp_t_start + 1;
-          ($snp_t_start, $snp_t_end) = ($snp_t_end, $snp_t_start);
-        } else {
-          $snp_t_start = $t_start + abs($snp_q_pos - $q_start + 1);
-          $snp_t_end = $snp_t_start + $length_var - 1;
-        }	
-      } else { 
-        if ($operation eq 'I' && ($new_q_start > $snp_q_pos)) {
-          $indel_colocation = 1;
-        }
-        if ($length_var == 0) {
-          $snp_t_start = $new_t_start;
-          $snp_t_end = $snp_t_start + 1;
-          ($snp_t_start, $snp_t_end) = ($snp_t_end, $snp_t_start);
-        } else {
-          $snp_t_start = $new_t_start + 1;
-          $snp_t_end = $snp_t_start + $length_var - 1;
-        }
-      } 
-    }
-    if ($snp_t_start && $snp_t_end) {
-      last;		
-    }
-    $q_start = $new_q_start;
-    $t_start = $new_t_start;	
-  } # end while
-  return [$snp_t_start, $snp_t_end, $indel_colocation, $flag_suspicious];
 }
 
 sub test_all_variants_are_mapped {
