@@ -57,7 +57,7 @@ sub write_output {
 sub generate_svf_mapping_input {
   my $self = shift;
 
-  my $old_assembly_fasta_file_dir = $self->param('old_assembly_fasta_file_dir');
+  my $old_assembly_fasta_file_dir = $self->param('old_assembly_dir');
   my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
   $self->param('fasta_db', $fasta_db);
 
