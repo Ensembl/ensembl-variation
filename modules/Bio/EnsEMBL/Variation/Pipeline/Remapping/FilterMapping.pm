@@ -172,6 +172,7 @@ sub print_complete_feature_line {
 }
 
 sub best_mapping {
+  my $self = shift;
   my $threshold = shift;
   my $prev_location = shift;
   my $new_mappings = shift;
@@ -192,6 +193,7 @@ sub best_mapping {
 }
 
 sub coords_are_in_order {
+  my $self = shift;
   my $order = shift;
   my $mappings = shift;
 
@@ -210,6 +212,7 @@ sub coords_are_in_order {
 }
 
 sub get_start {
+  my $self = shift;
   my $coord = shift;
   if ($coord) {
     my @keys = keys %$coord;
@@ -219,6 +222,7 @@ sub get_start {
 }
 
 sub overlap {
+  my $self = shift;
   my $a = shift;
   my $b = shift;
   return (scalar @$a == scalar @$b);
