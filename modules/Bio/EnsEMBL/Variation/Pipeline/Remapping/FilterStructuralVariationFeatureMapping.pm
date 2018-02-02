@@ -108,7 +108,7 @@ sub filter_svf_mapping_results {
 
       if ($count_exceed_threshold > 1) {
         my $prev_mapping = $lookup->{$id}->{$coord_type};
-        my $mapped_location = best_mapping($algn_score_threshold, $prev_mapping, $mappings);
+        my $mapped_location = $self->best_mapping($algn_score_threshold, $prev_mapping, $mappings);
         $filtered_mappings->{$id}->{$coord_type}->{$mapped_location} = $mappings->{$mapped_location};
       } else {
         foreach my $coord (@coord_2_scores) {
@@ -126,18 +126,18 @@ sub filter_svf_mapping_results {
   foreach my $id (keys %$lookup) {
     my @prev_coord_types = grep {$_ ne 'seq_region_name'} keys %{$lookup->{$id}};
     my @new_coord_types =  keys %{$filtered_mappings->{$id}};
-    if (overlap(\@prev_coord_types, \@new_coord_types)) {
+    if ($self->overlap(\@prev_coord_types, \@new_coord_types)) {
       my @start_order = qw/outer_start seq_region_start inner_start/;
       my @end_order = qw/inner_end seq_region_end outer_end/;
-      my $start_coords_in_order = coords_are_in_order(\@start_order, $filtered_mappings->{$id});
-      my $end_coords_in_order = coords_are_in_order(\@end_order, $filtered_mappings->{$id});
+      my $start_coords_in_order = $self->coords_are_in_order(\@start_order, $filtered_mappings->{$id});
+      my $end_coords_in_order = $self->coords_are_in_order(\@end_order, $filtered_mappings->{$id});
       if (!($start_coords_in_order && $end_coords_in_order)) {
         $failed_mappings->{$id} = 'Coords not in order';
         next;
       }
       # check start coords are smaller that end coords
-      my $start = get_start($filtered_mappings->{$id}->{seq_region_start});
-      my $end = get_start($filtered_mappings->{$id}->{seq_region_end});
+      my $start = $self->get_start($filtered_mappings->{$id}->{seq_region_start});
+      my $end = $self->get_start($filtered_mappings->{$id}->{seq_region_end});
       if ($end < $start) {
         my $swap_map = {
           'outer_start'      => 'inner_end',
@@ -151,12 +151,12 @@ sub filter_svf_mapping_results {
         my @order = qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/;
         my $after_swap_mappings = {};
         foreach my $c (@order) {
-          $final_mappings->{$id}->{$c} = get_start($filtered_mappings->{$id}->{$swap_map->{$c}});
+          $final_mappings->{$id}->{$c} = $self->get_start($filtered_mappings->{$id}->{$swap_map->{$c}});
         }
         next;
       }
       foreach my $c (@new_coord_types) {
-        my $start = get_start($filtered_mappings->{$id}->{$c});
+        my $start = $self->get_start($filtered_mappings->{$id}->{$c});
         $final_mappings->{$id}->{$c} = $start;
       }
     } else {
@@ -200,7 +200,7 @@ sub join_svf_data {
 
   # get new seq_region_ids
   my $seq_region_ids = {};
-  my $cdba = $self->param('cdba');
+  my $cdba = $self->param('cdba_newasm');
   my $sa = $cdba->get_SliceAdaptor;
   my $slices = $sa->fetch_all('toplevel', undef, 1);
   foreach my $slice (@$slices) {
