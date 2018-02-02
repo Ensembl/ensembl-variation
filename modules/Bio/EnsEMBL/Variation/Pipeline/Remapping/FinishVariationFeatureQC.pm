@@ -54,8 +54,8 @@ sub run {
   $self->flip_features();
 
   my $failed_variations_after_remapping = $self->failed_variations_after_remapping($qc_failure_reasons_dir);
-  my $previous_unmapped_variants = $self->previous_unmapped_variants();
-  my $unmapped_variants = $self->unmapped_variants();
+  my $previous_unmapped_variants = $self->previous_unmapped_variants(); # did not map in previous assembly
+  my $unmapped_variants = $self->unmapped_variants($feature_table); # couldn't be mapped to new assembly
 
   foreach my $variant_id (keys %$unmapped_variants) {
     if ($previous_unmapped_variants->{$variant_id}) {
@@ -205,7 +205,7 @@ sub failed_alleles {
   return $failed_alleles;
 }
 
-sub failed_variations_after_remapping {
+sub failed_variations {
   my $self = shift;
   my $feature_table = shift;
   my $failed_variations = {};
@@ -409,7 +409,7 @@ sub column_exists {
   return 0;
 }
 
-sub failed_variants {
+sub failed_variations_after_remapping {
   my $self = shift;
   my $qc_failure_reasons_dir = shift;
   my $failed_variants = {};
@@ -447,16 +447,15 @@ sub previous_unmapped_variants {
 
 sub unmapped_variants {
   my $self = shift;
+  my $feature_table_mapping_results = shift;
   my $vdba = $self->param('vdba_newasm');
   my $dbh = $vdba->dbc->db_handle;
-  my $feature_table = $self->param('feature_table');
-  my $feature_table_mapping_results = $self->param('feature_table') . '_mapping_results';
 
   my $unmapped_variants = {};
   my $sth = $dbh->prepare(qq{
-  SELECT ft.variation_id
-  FROM $feature_table ft
-  LEFT JOIN $feature_table_mapping_results ftmr ON ft.variation_id = ftmr.variation_id
+  SELECT v.variation_id
+  FROM variation v
+  LEFT JOIN $feature_table_mapping_results ftmr ON v.variation_id = ftmr.variation_id
   WHERE ftmr.variation_id IS NULL;
   }, {mysql_use_result => 1});
   $sth->execute();
@@ -513,13 +512,14 @@ sub update_variation_set_variation {
 
 sub update_display {
   my $self = shift;
+  my $feature_table = shift;
   my $vdba = $self->param('vdba_newasm');
   my $dbh = $vdba->dbc->db_handle;
 
   $dbh->do("UPDATE variation SET display=1;") or die $!;
   $dbh->do("UPDATE variation v, failed_variation fv SET v.display = 0 WHERE fv.variation_id = v.variation_id;") or die $!;
   $dbh->do("UPDATE variation v, variation_citation vc SET v.display = 1 WHERE vc.variation_id = v.variation_id;") or die $!;
-  $dbh->do("UPDATE variation v, variation_feature vf SET vf.display = v.display WHERE v.variation_id = vf.variation_id;") or die $!;
+  $dbh->do("UPDATE variation v, $feature_table vf SET vf.display = v.display WHERE v.variation_id = vf.variation_id;") or die $!;
 }
 
 sub cleanup_mapped_feature_table {
