@@ -184,6 +184,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
+      -max_retry_count => 0,
     },
     ); 
   } else {
