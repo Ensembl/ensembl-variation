@@ -5757,8 +5757,7 @@ sub cache_reg_feats {
                           %cl =
                             map {$_->[0] => $_->[1]}
                             map {$_->[0] =~ s/ /\_/g; $_}
-                            map {[$_->epigenome->display_label, $_->activity]}
-                            grep {!$_->_is_multicell}
+                            map {[$_->get_Epigenome->display_label, $_->activity]}
                             @{$rf->regulatory_activity};
                         }
 
@@ -5767,8 +5766,7 @@ sub cache_reg_feats {
                           %cl =
                             map {$_->[0] => $_->[1]}
                             map {$_->[0] =~ s/ /\_/g; $_}
-                            map {[$_->epigenome->display_label, $_->activity]}
-                            grep {!$_->_is_multicell}
+                            map {[$_->get_Epigenome->display_label, $_->activity]}
                             map {@{$_->regulatory_activity}}
                             @{$config->{'RegulatoryFeature_adaptor'}->fetch_all_by_attribute_feature($rf)};
                         }
