@@ -2748,24 +2748,50 @@ sub get_phenotype_id {
       
       # we only want the best match
       my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
+      print STDERR "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n";
       
-      # if distance is 0, return
-      return $phenotype_cache{$mapped{$best}} if adist($description, $best) == 0;
-      
+      my $skip = 0;
+
+      # Assuming a perfect match check has been done in the previous lines, e.g. if ($phenotype_cache{$description})
+      $skip = 1 if (adist($description, $best) == 0);
+
       # find characters that differ
       my $diff = diff([split(//,$description)], [split(//,$best)]);
       
-      my $skip = 0;
-      
       # skip if mismatch is anything word-like
+      my $diff_string = '';
+      my $previous_diff_pos;
       foreach(map {@$_} @$diff) {
-        $skip = 1 if $_->[2] =~ /\w/i;
+        my $diff_pos  = $_->[1];
+        my $diff_char = $_->[2];
+
+        $skip = 1 if $diff_char =~ /\w/i;
+
+        if (!$previous_diff_pos) {
+          $diff_string .= "[$diff_char";
+        }
+        elsif ($diff_pos == $previous_diff_pos) {
+          $diff_string .= "/$diff_char]";
+        }
+        elsif ($diff_pos == ($previous_diff_pos+1)) {
+          $diff_string .= $diff_char;
+        }
+        else {
+          $diff_string .= "] [$diff_char";
+        }
+        $previous_diff_pos = $diff_pos;
       }
-      
+      if ( $diff_string ne '') {
+        $diff_string .= ']' if ($diff_string !~ /\]$/);
+        print STDERR "\tDIFFERENCE(S): $diff_string\n" if ( $diff_string ne '');
+      }
+
       # cache this match so we don't have to fuzz again
       $phenotype_cache{$description_bak} = $phenotype_cache{$mapped{$best}};
-      
-      return $phenotype_cache{$mapped{$best}} unless $skip;
+      unless ($skip) {
+        print STDERR "\tUSED (with diff): $best\n";
+        return $phenotype_cache{$mapped{$best}};
+      }
     }
     
     # restore from backup before inserting
@@ -2915,7 +2941,6 @@ sub convert_p_value {
     elsif ($pval =~ /^\w+/) {
       $sci_pval = "NULL";
     }
-    
   }
   else {
     $pval =~ tr/E/e/;
