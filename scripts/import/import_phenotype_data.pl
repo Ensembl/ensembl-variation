@@ -2752,7 +2752,7 @@ sub get_phenotype_id {
       
       my $skip = 0;
 
-      # Assuming a perfet match check has been done in the previous lines, e.g. if ($phenotype_cache{$description}) 
+      # Assuming a perfect match check has been done in the previous lines, e.g. if ($phenotype_cache{$description})
       $skip = 1 if (adist($description, $best) == 0);
 
       # find characters that differ
