@@ -18,8 +18,9 @@
 CREATE TABLE submitter(
   submitter_id int(10) unsigned not null auto_increment,
   description          varchar(255),
-  PRIMARY KEY ( submitter_id )
-);
+  PRIMARY KEY ( submitter_id ))
+  ENGINE = MyISAM
+;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_91_92_d.sql|create table to store names of submitters to ClinVar etc');
