@@ -63,6 +63,7 @@ my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine",
 		     "sus_scrofa"      =>   [ "sus scrofa", "pig", "porcine" ],
 		     "ovis_aries"      =>   [ "ovis aries", "sheep", "ovine"],
                      "equus_caballus"  =>   [ "equus caballus", "horse", "equine"],
+                     "capra_hircus"    =>   [ "capra hircus", "goat", "caprine"],
     );
 
 our $species_string = join "|", @{$check_species{$species}} if defined $check_species{$species};
@@ -167,8 +168,13 @@ sub import_citations{
             else{
                 no warnings ;
                 ### write file of variants not found in this species to use as input file for next
-                print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
-                use warnings ;
+                if($type eq "EPMC"){
+                  print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
+                }
+                elsif($type eq "UCSC") {
+                  print $error_log $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
+               }
+               use warnings ;
             }
         }
 
