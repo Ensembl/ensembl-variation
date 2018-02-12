@@ -32,6 +32,7 @@ use Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
+use Bio::EnsEMBL::Variation::Utils::Date qw( run_date log_time);
 
 our $DEBUG = 0;
 
@@ -83,7 +84,6 @@ my $dbSNP_data = check_dbSNP($dba) unless defined $check_dbSNP && $check_dbSNP =
 ## check production db for suspected errors
 my $avoid_list = get_avoid_list($reg);
 
-
 ## parse input data
 my $file_data;
 
@@ -92,7 +92,7 @@ if( $type eq "EPMC"){
     ## read ePMC file, ommitting suspected errors
     $file_data = parse_EPMC_file($data_file, $avoid_list);
 
-    ##import ny new publications & citations 
+    ##import any new publications & citations
     import_citations($reg, $file_data);
 
     ## update variations & variation_features to have Cited status
@@ -107,7 +107,7 @@ elsif($type eq "UCSC"){
     $file_data = parse_UCSC_file($data_file, $avoid_list);
 
     ##import any new publications & citations 
-    import_citations($reg, $file_data);
+    import_citations($reg, $file_data, $type);
 
     ## update variations & variation_features to have Cited status
     update_evidence($dba) unless defined $no_evidence;
@@ -127,16 +127,25 @@ else{
 ## create report on curent status
 report_summary($dba, $species);
 
+## add run date to meta table
+update_meta($dba, $type);
+
 sub import_citations{
 
     my $reg            = shift;
     my $data           = shift;
+    my $type           = shift;
 
-    open my $error_log, ">>$species\.log"|| die "Failed to open log file: $!\n";
+    ## store variants not from this species
+    open my $error_log, ">>$species\_$type\_notfound_" . log_time() . "\.log"|| die "Failed to open log file: $!\n";
 
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
+
+    # get list of citations already in the db
+    my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
+    my $done_list = get_current_citations($dba);
 
     
     foreach my $pub(keys %$data){
@@ -147,6 +156,9 @@ sub import_citations{
         my @var_id = unique(@{$data->{$pub}->{rsid}});
 
         foreach my $rsid ( @var_id ){  
+
+            ## skip citations already in the database
+            next if defined $data->{$pub}->{pmid} && $done_list->{$rsid}{$data->{$pub}->{pmid}};
 
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
@@ -238,16 +250,16 @@ sub get_publication_info_from_epmc{
     ### get data on publication from ePMC
 
     if( defined $data->{$pub}->{pmid} ){
-        $ref   = get_epmc_data( "search/query=ext_id:$data->{$pub}->{pmid}%20src:med" );
+        $ref   = get_epmc_data( "search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
     }
     elsif( defined $data->{$pub}->{doi} ){
-        $ref   = get_epmc_data( "search/query=$data->{$pub}->{doi}" );
+        $ref   = get_epmc_data( "search?query=$data->{$pub}->{doi}" );
         ## check results of full text query
          return undef unless defined  $data->{$pub}->{doi} &&
 	     $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
     }
     elsif(defined $data->{$pub}->{pmcid}){
-        $ref   = get_epmc_data( "search/query=$data->{$pub}->{pmcid}" );
+        $ref   = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
         ## check results of full text query
          return undef unless defined $data->{$pub}->{pmcid} &&
 	     $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
@@ -277,7 +289,7 @@ sub get_epmc_data{
     return undef unless defined $id && $id =~/\d+/;
 
     my $xs   = XML::Simple->new();
-    my $server = 'http://www.ebi.ac.uk/europepmc/webservices/rest/';
+    my $server = 'https://www.ebi.ac.uk/europepmc/webservices/rest/';
     my $request  = $server . $id;
 
     my %data;
@@ -344,7 +356,7 @@ sub parse_EPMC_file{
 
         ## remove known errors
          if ($avoid_list->{$rs}->{$pmcid} || $avoid_list->{$rs}->{$pmid}){
-            warn "Removing suspected error : $rs in $pmcid\n";  
+            print "Removing suspected error : $rs in $pmcid\n";
             next;
         }
         ## Group by publication; may have pmid, pmcid or both
@@ -390,7 +402,7 @@ sub check_dbSNP{
    
     my $dba       = shift;
 
-    open my $error_log, ">>$species\_file.log"|| die "Failed to open log file:$!\n";
+    open my $error_log, ">>$species\_dbSNP.log"|| die "Failed to open log file:$!\n";
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
@@ -415,7 +427,7 @@ sub check_dbSNP{
     foreach my $l (@{$dat}){ 
 
         my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
-        my $ref   = get_epmc_data("search/query=ext_id:$l->[1]%20src:med");
+        my $ref   = get_epmc_data("search?query=ext_id:$l->[1]%20src:med");
         unless(defined $mined && defined $ref){
             print $error_log "NO EPMC data for PMID:$l->[1] - skipping\n";
             next;
@@ -438,6 +450,8 @@ sub check_dbSNP{
     close $error_log;  
 }
 
+## citation is one form of evidence used to support a variant
+## add this evidence attrib to the variation & variation_feature records
 sub update_evidence{
 
     my $dba = shift;
@@ -460,9 +474,11 @@ sub update_evidence{
     my $dat =  $ev_ext_sth->fetchall_arrayref();
 
     my $n = scalar @{$dat};
-    warn "$n variant evidence statuses to update\n";
+    print "\n$n variants with citation evidence\n";
 
     foreach my $l (@{$dat}){
+
+        next if defined $l->[1] && $l->[1] =~ /$attrib->[0]->[0]/;
 
         my $evidence;
         if(defined $l->[1] && $l->[1] =~ /\w+/){
@@ -483,7 +499,7 @@ sub report_summary{
     my $dba     = shift;
     my $species = shift;
 
-    open my $report, ">import_EPMC_$species\.txt" ||die "Failed to open report file to write: $!\n";
+    open my $report, ">import_EPMC_$species\_"  . log_time() . ".txt" ||die "Failed to open report file to write: $!\n";
 
     my $publication_count = count_rows($dba, 'publication');
     my $citation_count    = count_rows($dba, 'variation_citation');
@@ -548,7 +564,21 @@ sub report_summary{
 
 }
 
+## store rundate in meta table for each source 
+sub update_meta{
 
+    my $dba  = shift;
+    my $type = shift;
+
+    my $meta_ins_sth = $dba->dbc->prepare(qq[ insert ignore into meta
+                                              ( meta_key, meta_value) values (?,?)
+                                            ]);
+
+
+    $meta_ins_sth->execute("$type citation_update", run_date() );
+}
+
+## export current snapshot from database
 sub get_current_UCSC_data{
 
     my $filename = "UCSC_export";
@@ -602,7 +632,7 @@ sub parse_UCSC_file{
 
         ## remove known errors
          if ( $avoid_list->{$rs}->{$pmid}){
-            warn "Removing suspected error : $rs in $pmid\n";  
+            print "Removing suspected error : $rs in $pmid\n";
             next;
         }
 
@@ -766,6 +796,29 @@ sub find_disease_max{
     }
 
     
+}
+
+## find current citation in db
+## and skip these lines in the file.
+sub get_current_citations{
+
+    my $dba = shift;
+
+    my $cit_ext_sth = $dba->dbc()->prepare(qq[ select variation.name, publication.pmid
+                                               from publication, variation, variation_citation
+                                               where publication.publication_id = variation_citation.publication_id
+                                               and variation_citation.variation_id = variation.variation_id
+                                              ]);
+
+    my %citations;
+
+    $cit_ext_sth->execute()||die;
+    my $data =  $cit_ext_sth->fetchall_arrayref();
+    foreach my $l(@{$data}){
+        $citations{$l->[0]}{$l->[1]} = 1 if defined $l->[1];
+    }
+
+    return \%citations;
 }
 
 sub usage {
