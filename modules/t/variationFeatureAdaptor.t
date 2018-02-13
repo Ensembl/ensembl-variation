@@ -128,6 +128,16 @@ throws_ok { $vfa->fetch_all_by_Variation(Bio::EnsEMBL::Variation::Variation->new
 
 my $vf2_name = 'rs2299222';
 
+# test fetch_all_by_Slice inc failed
+print "\n# Test fetch all by Slice including failed flag\n";
+my $slice1 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
+my $vfs_slice = $vfa->fetch_all_by_Slice($slice1);
+$vfa->db->include_failed_variations(1);
+ok(scalar @$vfs_slice == 446, "slice (+failed) -> vf count ");
+$vfa->db->include_failed_variations(0);
+$vfs_slice = $vfa->fetch_all_by_Slice($slice1);
+ok(scalar @$vfs_slice == 444, "slice (-failed) -> vf count ");
+
 # test fetch all
 print "\n# Test - fetch_all\n";
 my $vfs2 = $vfa->fetch_all();
