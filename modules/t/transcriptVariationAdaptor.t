@@ -74,8 +74,8 @@ ok( $trv->cdna_allele_string() eq 'C/G',                     "cdna_allele_string
 ok( $trv->affects_peptide() eq '1',                          "affects_peptide");
 ok( $trv->hgvs_transcript()->{'G'} eq  'ENST00000470094.1:c.16C>G', "hgvs c");
 ok( $trv->hgvs_protein()->{'G'}    eq  'ENSP00000434898.1:p.Ser6Cys', "hgvs p");
-
 my $tvas = $trv->get_all_alternate_TranscriptVariationAlleles();
+
 ok( $tvas->[0]->sift_prediction eq 'deleterious',            "sift prediction");
 
 
@@ -222,9 +222,13 @@ foreach my $trans_var (@{$trans_vars}){
 
   next unless $trans_var->transcript->stable_id() eq $trans_name;
   my $tvas_ts = $trans_var->get_all_alternate_TranscriptVariationAlleles();
-
+	
   ok($tvas_ts->[0]->hgvs_transcript_reference() eq 'G', "hgvs_transcript_reference available without hgvs_transcript");
   ok($tvas_ts->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616+1dup', 'HGVS for shifted location');
+  ok($tvas_ts->[0]->hgvs_intron_start_offset == 1, 'hgvs_intron_start_offset');
+  ok($tvas_ts->[0]->hgvs_exon_start_coordinate == 616, 'hgvs_exon_start_coordinate');
+  ok($tvas_ts->[0]->hgvs_intron_end_offset == 1, 'hgvs_intron_end_offset');
+  ok($tvas_ts->[0]->hgvs_exon_end_coordinate == 616, 'hgvs_exon_end_coordinate');
   ok(scalar $tvas_ts->[0]->hgvs_offset() == 2, 'shifted offset');
 }
 

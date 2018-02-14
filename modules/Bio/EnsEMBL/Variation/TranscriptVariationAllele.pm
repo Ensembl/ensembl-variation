@@ -1024,7 +1024,7 @@ sub hgvs_offset {
   Status     : At risk
 
 =cut
-sub hgvs_exon_start_position {
+sub hgvs_exon_start_coordinate {
   my $self = shift;
   return $self->{_hgvs_exon_start_coordinate};
 }
@@ -1050,7 +1050,7 @@ sub hgvs_intron_start_offset {
   Status     : At risk
 
 =cut
-sub hgvs_exon_end_position {
+sub hgvs_exon_end_coordinate {
   my $self = shift;
   return $self->{_hgvs_exon_end_coordinate};
 }
