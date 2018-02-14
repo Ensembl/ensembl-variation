@@ -656,6 +656,7 @@ sub _get_peptide_alleles {
 
     unless(exists($cache->{_get_peptide_alleles})) {
         my @alleles = ();
+
         #return () if frameshift(@_);
 
         if(
@@ -736,14 +737,13 @@ sub start_lost {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         $bvf  ||= $bvfo->base_variation_feature;
-
+        
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
             return $cache->{start_lost} = 1 if _ins_del_start_altered(@_) && !(inframe_insertion(@_) || inframe_deletion(@_));
-            return $cache->{start_lost} = 1 if _inv_start_altered(@_);
 
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-
+        
             return 0 unless $ref_pep;
             
             # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
@@ -812,6 +812,7 @@ sub _ins_del_start_altered {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
+
     unless(exists($cache->{ins_del_start_altered})) {
         $cache->{ins_del_start_altered} = 0;
 
@@ -845,41 +846,6 @@ sub _ins_del_start_altered {
     }
 
     return $cache->{ins_del_start_altered};
-}
-
-sub _inv_start_altered {
-    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
-    # use cache for this method as it gets called a lot
-    my $cache = $bvfoa->{_predicate_cache} ||= {};
-    unless(exists($cache->{inv_start_altered})) {
-        $cache->{inv_start_altered} = 0;
-
-        return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
-        return 0 unless $bvfoa->seq_is_unambiguous_dna();
-        return 0 unless _overlaps_start_codon(@_);
-
-        $bvfo ||= $bvfoa->base_variation_feature_overlap;
-
-        # get cDNA coords
-        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
-        return 0 unless $cdna_start && $cdna_end;
-
-        # make and edit UTR + translateable seq
-        my $translateable = $bvfo->_translateable_seq();
-        my $utr = $bvfo->_five_prime_utr();
-        my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
-        my $vf_feature_seq = $bvfoa->feature_seq;
-        $vf_feature_seq = '' if $vf_feature_seq eq '-';
-        my $atg_start = length($utr->seq);
-        
-        substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
-        my $new_sc = substr($utr_and_translateable, $atg_start, 3);
-
-        return $cache->{inv_start_altered} = 1 if substr($utr_and_translateable, $atg_start, 3) ne 'ATG';
-    }
-
-    return $cache->{inv_start_altered};
 }
 
 sub synonymous_variant {
