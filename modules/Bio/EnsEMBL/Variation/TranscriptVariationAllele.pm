@@ -723,6 +723,12 @@ sub hgvs_transcript {
   );
   print "post pos sort: $hgvs_notation->{start},$hgvs_notation->{end}\n" if $DEBUG ==1;
 
+  # save these to be able to report exon coordinates and intron distances
+  $self->{_hgvs_exon_start_coordinate} = $exon_start_coord;
+  $self->{_hgvs_intron_start_offset} = $intron_start_offset;
+  $self->{_hgvs_exon_end_coordinate} = $exon_end_coord;
+  $self->{_hgvs_intron_end_offset} = $intron_end_offset;
+
 
   if($tr->cdna_coding_start()){
     $hgvs_notation->{'numbering'} = "c";  ### set 'c' if transcript is coding 
@@ -1009,6 +1015,59 @@ sub hgvs_offset {
   my $self = shift;
   return $self->{_hgvs_offset};
 }
+
+=head2 hgvs_exon_start_coordinate
+
+  Description: Return the HGVS exon start coordinate
+  Returntype : int or undef if HGVS has not been calculated
+  Exceptions : none
+  Status     : At risk
+
+=cut
+sub hgvs_exon_start_coordinate {
+  my $self = shift;
+  return $self->{_hgvs_exon_start_coordinate};
+}
+
+=head2 hgvs_intron_start_offset
+
+  Description: Return the HGVS intron start offset
+  Returntype : int or undef if HGVS has not been calculated
+  Exceptions : none
+  Status     : At risk
+
+=cut
+sub hgvs_intron_start_offset {
+  my $self = shift;
+  return $self->{_hgvs_intron_start_offset};
+}
+
+=head2 hgvs_exon_end_coordinate
+
+  Description: Return the HGVS exon end coordinate
+  Returntype : int or undef if HGVS has not been calculated
+  Exceptions : none
+  Status     : At risk
+
+=cut
+sub hgvs_exon_end_coordinate {
+  my $self = shift;
+  return $self->{_hgvs_exon_end_coordinate};
+}
+
+=head2 hgvs_intron_end_offset
+
+  Description: Return the HGVS intron end offset
+  Returntype : int or undef if HGVS has not been calculated
+  Exceptions : none
+  Status     : At risk
+
+=cut
+sub hgvs_intron_end_offset {
+  my $self = shift;
+  return $self->{_hgvs_intron_end_offset};
+}
+
 
 
 sub _make_hgvs_tva {
