@@ -313,8 +313,8 @@ sub update_variant_citation {
     my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id) values ( ?,?) ]);   
     
     ## ensure any variations with citations are displayed in browser tracks/ returned by default
-    my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =?  ]);
-    my $vfdisplay_upt_sth = $dbh->prepare(qq[ update variation_feature set display =? where  variation_id =?  ]);
+    my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =? and display =?]);
+    my $vfdisplay_upt_sth = $dbh->prepare(qq[ update variation_feature set display =? where  variation_id =? and display =? ]);
 
     my $varfeat_ext_sth   = $dbh->prepare(qq[ select variation_feature_id  
                                               from variation_feature
@@ -322,7 +322,7 @@ sub update_variant_citation {
  
     my $tvdisplay_upt_sth = $dbh->prepare(qq[ update transcript_variation 
                                               set display =? 
-                                              where  variation_feature_id =?
+                                              where  variation_feature_id =? and display =?
                                            ]);
 
     my @var_objects ;
@@ -352,14 +352,14 @@ sub update_variant_citation {
 
         $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
 
-	## set cited variants to be displayable
-	$vdisplay_upt_sth->execute( 1,  $var_obj->dbID());
-        $vfdisplay_upt_sth->execute( 1,  $var_obj->dbID());
+	## set cited variants to be displayable, if not already displayable
+	$vdisplay_upt_sth->execute( 1,  $var_obj->dbID(), 0);
+        $vfdisplay_upt_sth->execute( 1,  $var_obj->dbID(), 0);
         ## don't join TV & VF in update
         $varfeat_ext_sth->execute($var_obj->dbID());
         my $vf_ids = $varfeat_ext_sth->fetchall_arrayref();
         foreach my $vf_id (@{$vf_ids}){
-            $tvdisplay_upt_sth->execute( 1,  $vf_id->[0]);
+            $tvdisplay_upt_sth->execute( 1,  $vf_id->[0], 0);
         }
     }
 }
