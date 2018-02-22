@@ -365,12 +365,50 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype//IROA.population_sites.OARv3_1.20140307.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
       ],
       "population_prefix": "NextGen:"
+    },
+    {
+      "id": "nextgen_sheep_mooa",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "sheep_genome_consortium",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT"
+      ],
+      "population_prefix": "ISGC:",
+      "sample_prefix": "ISGC:"
+    },
+    {
+      "id": "nextgen_goat",
+      "species": "capra_hircus",
+      "assembly": "ARS1",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
+      ],
+      "population_prefix": "NextGen:",
+      "sample_prefix": "NextGen:"
     },
     {
       "id": "mouse_genome_project_snp",
