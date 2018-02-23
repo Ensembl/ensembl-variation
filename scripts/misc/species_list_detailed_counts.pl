@@ -352,7 +352,8 @@ foreach my $type (@sql_order) {
     my $sp = $display_list{$display_name};
     my $label = $species_list{$sp}{'label'};
     my $uc_sp = ucfirst($sp);      
-    my $img_src = "/i/species/48/$uc_sp.png";
+    my $img_src = "/i/species/$uc_sp.png";
+    my $img_class = "badge-32";
     my $display_name = $species_list{$sp}{'name'};
     my $a_count = $species_list{$sp}{'a'};
     my $b_count = $species_list{$sp}{'b'};
@@ -379,10 +380,10 @@ foreach my $type (@sql_order) {
         <div>
           <div style="float:left">
             <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
-              <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:28px;height:28px" />
+              <img src="$img_src" alt="$label" class="$img_class" style="vertical-align:middle" />
             </a>
            </div>
-           <div style="float:left;margin-left:4px">
+           <div style="float:left;margin-left:6px;padding-top:2px">
              <div class="bigtext">$display_name</div>
              <div class="small" style="font-style:italic">$label</div>
            </div>

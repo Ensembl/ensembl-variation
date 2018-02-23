@@ -91,6 +91,10 @@ my $database = "";
 my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
+
+my $img_class    = "badge-48";
+my $img_class_sm = "badge-16";
+
 my %colours = ( 'version'     => '#090',
                 'source'      => '#00F'
               );
@@ -378,7 +382,7 @@ sub source_table {
   if ($is_new) {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
-      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
+      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
@@ -386,7 +390,7 @@ sub source_table {
   else {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
-      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/48/$s_name.png" alt="$display_name" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:4px;vertical-align:middle" /></a>
       <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"> ($species)</span</h2>
     </div>
     };
@@ -885,7 +889,7 @@ sub menu_list {
   return qq{
   <div style="margin:0px 4px 5px">
     <div class="vdoc_menu_left">
-      <img src="/i/species/16/$s_name.png" alt="$display" style="margin-right:4px;vertical-align:middle" />
+      <img src="/i/species/$s_name.png" alt="$display" class="$img_class_sm" style="margin-right:4px;vertical-align:middle" />
       <a href="#$anchor" style="margin-right:3px;text-decoration:none;vertical-align:middle" title="$name">$display</a>
     </div>
     <div class="vdoc_menu_right">  
