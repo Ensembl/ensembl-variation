@@ -58,7 +58,7 @@ Genome Biology. 2010;11(8):R88 PMID: 20796305
 
 and:
 
-http://www.sequenceontology.org/gvf.html
+https://github.com/The-Sequence-Ontology/Specifications/blob/master/gvf.md
 
 Questions about these files can be addressed to the Ensembl helpdesk:
 helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.
