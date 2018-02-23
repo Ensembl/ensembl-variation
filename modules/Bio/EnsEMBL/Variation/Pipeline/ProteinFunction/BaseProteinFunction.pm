@@ -50,7 +50,7 @@ sub get_protein_sequence {
         $fasta = $tfa->get_translation_fasta($md5);
 
         unless (length($fasta) > 34) {
-            die "$md5 looks wierdly short!";
+            die "$md5 looks weirdly short!";
         }
     }
 
