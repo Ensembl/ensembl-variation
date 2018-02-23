@@ -294,6 +294,8 @@ sub update {
 sub fetch_all {
     my $self = shift;
     my $constraint = 'vf.somatic = 0';
+    # Add the constraint for failed variations
+    $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
     return $self->generic_fetch($constraint);
 }
 
@@ -308,6 +310,8 @@ sub fetch_all {
 sub fetch_all_somatic {
     my $self = shift;
     my $constraint = 'vf.somatic = 1';
+    # Add the constraint for failed variations
+    $constraint .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
     return $self->generic_fetch($constraint);
 }
 
