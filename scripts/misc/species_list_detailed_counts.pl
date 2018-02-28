@@ -159,6 +159,9 @@ my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', '
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 
+my @genotype_projects = ('1000 Genomes', 'ExAC', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
+my $genotypes_list = qq{<ul><li>}.join(' Project</li><li>',@genotype_projects).qq{ Project</li></ul>};
+
 my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
                                                                       WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name="DGVa"},
                                                          'label' => 'Structural variant'
@@ -189,7 +192,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM population_genotype},
                                                          'label' => 'Variants with population genotype'
                                                        },
-                                           'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>ExAC Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
+                                           'extra'  => qq{This doesn't include the genotypes from projects such as:$genotypes_list because they are fetched directly from VCF files.}
                                          },
                    $prediction        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
@@ -402,7 +405,7 @@ foreach my $type (@sql_order) {
 
   $html .= qq{\n  <h2 id="$anchor" style="margin-top:40px">$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
-  $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the variation databases in Ensembl:</p>\n};
+  $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the Ensembl Variation databases:</p>\n};
   $html .= $html_content;
 }
 
