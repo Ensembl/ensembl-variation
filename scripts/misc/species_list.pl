@@ -120,7 +120,8 @@ foreach my $hostname (@hostnames) {
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/ || $dbname =~ /_variation_\d+_\d+_\w+$/ );
+    next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
     $dbname =~ /^(.+)_variation/;
@@ -234,7 +235,8 @@ foreach my $display_name (sort keys(%display_list)) {
   my $sp = $display_list{$display_name};
   my $label = $species_list{$sp}{'label'};
   my $uc_sp = ucfirst($sp);      
-  my $img_src = "/i/species/48/$uc_sp.png";
+  my $img_src = "/i/species/$uc_sp.png";
+  my $img_class = "badge-32";
   my $display_name = $species_list{$sp}{'name'};
   my $var_count = $species_list{$sp}{'count'};
   my $var_p_count = $species_list{$sp}{'p_count'};
@@ -251,10 +253,10 @@ foreach my $display_name (sort keys(%display_list)) {
       <div>
         <div style="float:left">
           <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
-            <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:28px;height:28px" />
+            <img src="$img_src" alt="$label" class="$img_class" style="vertical-align:middle" />
           </a>
          </div>
-         <div style="float:left;margin-left:4px">
+         <div style="float:left;margin-left:6px;padding-top:2px">
            <div class="bigtext">$display_name</div>
            <div class="small" style="font-style:italic">$label</div>
          </div>

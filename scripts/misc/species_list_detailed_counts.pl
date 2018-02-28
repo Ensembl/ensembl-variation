@@ -159,6 +159,9 @@ my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', '
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 
+my @genotype_projects = ('1000 Genomes', 'ExAC', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
+my $genotypes_list = qq{<ul><li>}.join(' Project</li><li>',@genotype_projects).qq{ Project</li></ul>};
+
 my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
                                                                       WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name="DGVa"},
                                                          'label' => 'Structural variant'
@@ -189,7 +192,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM population_genotype},
                                                          'label' => 'Variants with population genotype'
                                                        },
-                                           'extra'  => q{This doesn't include the genotypes from projects such as <b>1000 Genomes Project</b>, <b>ExAC Project</b>, <b>Mouse Genomes Project</b> and <b>NextGen Project</b> because they are fetched directly from VCF files.}
+                                           'extra'  => qq{This doesn't include the genotypes from projects such as:$genotypes_list because they are fetched directly from VCF files.}
                                          },
                    $prediction        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
@@ -253,7 +256,8 @@ foreach my $type (@sql_order) {
 
     # loop over databases
     while (my ($dbname) = $sth->fetchrow_array) {
-      next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/ || $dbname =~ /_variation_\d+_\d+_\w+$/ );
+      next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+      next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
       
       print $dbname;
       $dbname =~ /^(.+)_variation/;
@@ -352,7 +356,8 @@ foreach my $type (@sql_order) {
     my $sp = $display_list{$display_name};
     my $label = $species_list{$sp}{'label'};
     my $uc_sp = ucfirst($sp);      
-    my $img_src = "/i/species/48/$uc_sp.png";
+    my $img_src = "/i/species/$uc_sp.png";
+    my $img_class = "badge-32";
     my $display_name = $species_list{$sp}{'name'};
     my $a_count = $species_list{$sp}{'a'};
     my $b_count = $species_list{$sp}{'b'};
@@ -379,10 +384,10 @@ foreach my $type (@sql_order) {
         <div>
           <div style="float:left">
             <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
-              <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:28px;height:28px" />
+              <img src="$img_src" alt="$label" class="$img_class" style="vertical-align:middle" />
             </a>
            </div>
-           <div style="float:left;margin-left:4px">
+           <div style="float:left;margin-left:6px;padding-top:2px">
              <div class="bigtext">$display_name</div>
              <div class="small" style="font-style:italic">$label</div>
            </div>
@@ -400,7 +405,7 @@ foreach my $type (@sql_order) {
 
   $html .= qq{\n  <h2 id="$anchor" style="margin-top:40px">$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
-  $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the variation databases in Ensembl:</p>\n};
+  $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the Ensembl Variation databases:</p>\n};
   $html .= $html_content;
 }
 
