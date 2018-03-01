@@ -16,7 +16,7 @@ addons:
 before_install:
 - git clone --branch release/92 --depth 1 https://github.com/Ensembl/ensembl-test.git
 - git clone --branch release/92 --depth 1 https://github.com/Ensembl/ensembl.git
-- git clone --branch release/92 --depth 1 https://github.com/Ensembl/ensembl-hive.git
+- git clone --branch master     --depth 1 https://github.com/Ensembl/ensembl-hive.git
 - git clone --branch release/92 --depth 1 https://github.com/Ensembl/ensembl-io.git
 - git clone --branch release/92 --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
 - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-6-1.zip
