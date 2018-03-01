@@ -1303,8 +1303,9 @@ sub parse_rgd_gene {
         seq_region_strand => $rgd_coords{$symbol}{'strand'},
       };
 
-      if ($data{'REFERENCES'} =~ /^(RGD\:\d+)\|/) {
+      if ($data{'REFERENCES'} =~ /^(RGD\:\d+)\|(PMID\:\d+)/) {
         $phenotype->{external_id} = $1;
+        $phenotype->{pubmed_id} = $2;
       }
 
       if ($data{'TERM_ACC_ID'} =~ /^MP\:\d+/) {
