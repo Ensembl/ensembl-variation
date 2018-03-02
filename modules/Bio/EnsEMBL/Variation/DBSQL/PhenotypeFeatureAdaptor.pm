@@ -527,7 +527,7 @@ sub fetch_all_by_phenotype_description_source_name {
 
 =head2 fetch_all_by_Phenotype
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Phenotype
+  Arg [1]    : Bio::EnsEMBL::Variation::Phenotype $phenotype_object
   Example    : $pf = $pf_adaptor->fetch_all_by_Phenotype($phenotype_object);
   Description: Retrieves a PhenotypeFeature object via its phenotype id/source name
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
@@ -623,8 +623,8 @@ sub fetch_all_by_phenotype_id_feature_type {
 
 =head2 fetch_all_by_phenotype_accession_source
 
-  Arg [1]    : string phenotype ontology_accession
-  Arg [2]    : string source name (optional)
+  Arg [1]    : string $phenotype_ontology_accession
+  Arg [2]    : (optional) string $source_name
   Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_accession_source('EFO:0004330','ClinVar');
   Description: Retrieves a PhenotypeFeature object via an ontology accession and optional source
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
@@ -660,9 +660,9 @@ sub fetch_all_by_phenotype_accession_source {
 
 =head2 fetch_all_by_phenotype_accession_type_source
 
-  Arg [1]    : string phenotype ontology_accession
-  Arg [2]    : mapping type - default 'is', option 'involves'
-  Arg [3]    : string source name (optional)
+  Arg [1]    : string $phenotype_ontology_accession
+  Arg [2]    : string $mapping_type - default 'is', option 'involves'
+  Arg [3]    : (optional) string $source_name
   Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_accession_source('EFO:0004330','is', ClinVar');
   Description: Retrieves a PhenotypeFeature object via an ontology accession mapping type and optional source
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
@@ -743,8 +743,8 @@ sub fetch_all_by_associated_gene {
   my $self = shift;
   my $gene_name  = shift;
   my $constraint = shift;
-
-  throw('gene_name argument expected') if(!defined($gene_name));
+  #Check that the gene_name is defined and not an object
+  throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
 
   $self->_include_attrib(1);
 
@@ -765,8 +765,10 @@ sub fetch_all_by_associated_gene {
 
 =head2 count_all_by_associated_gene
 
+  Arg [1]    : string $gene_name
+  Example    : $pf = $pf_adaptor->count_all_by_associated_gene('CAV3');
   Description: Retrieves count of variation_annotation objects associated with a
-               given gene
+               given gene name
   Returntype : integer
   Exceptions : none
   Caller     : general
@@ -777,8 +779,8 @@ sub count_all_by_associated_gene {
 
   my $self = shift;
   my $gene_name  = shift;
-
-  throw('gene_name argument expected') if(!defined($gene_name));
+  #Check that the gene_name is defined and not an object
+  throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
   
   $self->_include_attrib(1);
 
@@ -801,8 +803,8 @@ sub count_all_by_associated_gene {
 
 =head2 count_all_by_Phenotype
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Phenotype object
-  Example    : $count = $pf_adaptor->count_all_by_Phenotype($phe_object);
+  Arg [1]    : Bio::EnsEMBL:Variation::Phenotype $phenotype_object
+  Example    : $count = $pf_adaptor->count_all_by_Phenotype($phenotype_object);
   Description: Retrieves count of the phenotype_feature objects associated with a
                given phenotype
   Returntype : integer
@@ -818,7 +820,7 @@ sub count_all_by_Phenotype {
 
 =head2 count_all_by_Gene
 
-  Arg [1]    : Bio::EnsEMBL:Gene object
+  Arg [1]    : Bio::EnsEMBL:Gene $gene_object
   Example    : $count = $pf_adaptor->count_all_by_Gene($gene_object);
   Description: Retrieves count of the phenotype_feature objects associated with a
                given gene
@@ -842,6 +844,7 @@ sub count_all_by_Gene {
 
 =head2 count_all_by_phenotype_id
 
+  Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts for a given phenotype
   Returntype : the phenotype_feature counts
   Exceptions : none
@@ -862,6 +865,7 @@ sub count_all_by_phenotype_id {
 
 =head2 count_all_type_by_phenotype_id
 
+  Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts by type
                (e.g. Variation, StructuralVariation, Gene, QTL)
   Returntype : a hash ref type => phenotype_feature counts
@@ -899,6 +903,7 @@ sub count_all_type_by_phenotype_id {
 
 =head2 count_all_with_source_by_Phenotype
 
+  Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts by source name
   Returntype : a hash ref source name => phenotype_feature counts
   Exceptions : none
