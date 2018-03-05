@@ -201,8 +201,8 @@ sub fetch_all_by_Slice_type {
 
 =head2 fetch_all_by_Slice_Study
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
-  Arg [2]    : Bio::EnsEMBL:Variation::Study $study
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Arg [2]    : Bio::EnsEMBL::Variation::Study $study
   Example    : my @pfs = @{$pfa->fetch_all_by_Slice_Study($slice, $study)};
   Description: Retrieves all phenotype features in a slice that belong to a 
                given study.
@@ -422,7 +422,7 @@ sub fetch_all_by_VariationFeature_list {
 
 =head2 fetch_all_by_Study
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Study $study
+  Arg [1]    : Bio::EnsEMBL::Variation::Study $study
   Example    : my @studies = @{$studya->fetch_all_by_Study($study)};
   Description: Retrieves all PhenotypeFeatures for a given study.
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
@@ -590,7 +590,7 @@ sub fetch_all_by_phenotype_id_source_name {
 =head2 fetch_all_by_phenotype_id_feature_type
 
   Arg [1]    : integer $phenotype_id
-  Arg [2]    : string  feature type
+  Arg [2]    : string  $feature_type
   Example    : $pf = $pf_adaptor->fetch_all_by_phenotype_id_feature_type(999,'Gene');
   Description: Retrieves a PhenotypeFeature object via its phenotype id and feature type
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
@@ -707,7 +707,7 @@ sub fetch_all_by_phenotype_accession_type_source {
   Example    : $pf = $pf_adaptor->fetch_all_by_associated_gene_phenotype_description('HFE','Blood pressure');
   Description: Retrieves the PhenotypeFeature objects via which are associated with the gene, for a given phenotype.
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
-  Exceptions : throw if the gene_name and the phenotype arguments are not defined
+  Exceptions : throw if the $gene_name and the $phenotype arguments are not defined
   Caller     : general
   Status     : Stable
 
@@ -803,7 +803,7 @@ sub count_all_by_associated_gene {
 
 =head2 count_all_by_Phenotype
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Phenotype $phenotype_object
+  Arg [1]    : Bio::EnsEMBL::Variation::Phenotype $phenotype_object
   Example    : $count = $pf_adaptor->count_all_by_Phenotype($phenotype_object);
   Description: Retrieves count of the phenotype_feature objects associated with a
                given phenotype
@@ -820,10 +820,10 @@ sub count_all_by_Phenotype {
 
 =head2 count_all_by_Gene
 
-  Arg [1]    : Bio::EnsEMBL:Gene $gene_object
+  Arg [1]    : Bio::EnsEMBL::Gene $gene_object
   Example    : $count = $pf_adaptor->count_all_by_Gene($gene_object);
   Description: Retrieves count of the phenotype_feature objects associated with a
-               given gene
+               given gene object
   Returntype : integer
   Exceptions : none
   Caller     : general
@@ -846,7 +846,7 @@ sub count_all_by_Gene {
 
   Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts for a given phenotype
-  Returntype : the phenotype_feature counts
+  Returntype : integer
   Exceptions : none
   Caller     : web
 
@@ -868,7 +868,7 @@ sub count_all_by_phenotype_id {
   Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts by type
                (e.g. Variation, StructuralVariation, Gene, QTL)
-  Returntype : a hash ref type => phenotype_feature counts
+  Returntype : hashref of array of types => phenotype_feature count
   Exceptions : none
   Caller     : web
 
@@ -905,7 +905,7 @@ sub count_all_type_by_phenotype_id {
 
   Arg [1]    : string $phenotype_id
   Description: Retrieves phenotype_feature counts by source name
-  Returntype : a hash ref source name => phenotype_feature counts
+  Returntype : hashref source name => phenotype_feature counts
   Exceptions : none
   Caller     : web
 
