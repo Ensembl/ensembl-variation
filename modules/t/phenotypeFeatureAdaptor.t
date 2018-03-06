@@ -137,7 +137,9 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 0 , "fetch_all_by_phenotype_accession
 
 # fetch_all_by_associated_gene
 $pfs = $pfa->fetch_all_by_associated_gene('YES1');
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene - gene_name");
+my $g2  = $ga->fetch_by_stable_id('ENSG00000176105');
+throws_ok { $pfa->fetch_all_by_associated_gene($g2); } qr/gene_name argument expected/, 'fetch_all_by_associated_gene - gene_object > Throw wrong wrong object type';
 
 # fetch_all_by_associated_gene_phenotype_description
 $pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
@@ -152,7 +154,8 @@ throws_ok { $pfa->fetch_all_by_Phenotype(); } qr/Phenotype arg expected/, ' > Th
 
 # count_all_by_associated_gene
 my $count = $pfa->count_all_by_associated_gene('YES1');
-ok($count && $count == 1, "count_all_by_associated_gene");
+ok($count && $count == 1, "count_all_by_associated_gene - gene name");
+throws_ok { $pfa->count_all_by_associated_gene($g2); } qr/gene_name argument expected/, 'count_all_by_associated_gene - gene object > Throw wrong object type';
 
 # count_all_by_Phenotype
 $count = $pfa->count_all_by_Phenotype($p);
