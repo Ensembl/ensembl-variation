@@ -45,7 +45,6 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
-  my $mode = $self->param('mode');
   $self->SUPER::dump_features();
   $self->generate_mapping_input();
 }
