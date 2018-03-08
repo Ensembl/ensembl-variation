@@ -51,8 +51,8 @@ sub fetch_input {
   my $mapping_results_dir = $self->param('mapping_results_dir');
   my $compare_locations  = $self->param('compare_locations');
 
-  my $sam = Bio::DB::HTS->new( -bam => $bam_file, -fasta => $fasta_file,);	
-  $self->param('sam', $sam);	
+  my $bam = Bio::DB::HTS->new( -bam => $bam_file, -fasta => $fasta_file,);	
+  $self->param('bam', $bam);	
 
   if ($self->param('mode') eq 'remap_read_coverage') {
     my $individual_id = $self->param('individual_id');
@@ -88,12 +88,12 @@ sub run {
 
 sub parse_read_location {
   my $self = shift;
-  my $sam                = $self->param('sam');
+  my $bam                = $self->param('bam');
   my $fh_mappings        = $self->param('fh_mappings');
   my $fh_failed_mappings = $self->param('fh_failed_mappings');
   my $fasta_file         = $self->param('fasta_file');
 
-  my @alignments = $sam->features();
+  my @alignments = $bam->features();
 
   my $map_weights = $self->get_map_weights(\@alignments);
   $self->test_all_variants_are_mapped($fasta_file, $map_weights);
@@ -175,7 +175,7 @@ sub parse_read_location {
 
 sub parse_variation_location {
   my $self = shift;
-  my $sam                = $self->param('sam');
+  my $bam                = $self->param('bam');
   my $fh_mappings        = $self->param('fh_mappings');
   my $fh_failed_mappings = $self->param('fh_failed_mappings');
   my $vfa                = $self->param('vfa');
@@ -184,7 +184,7 @@ sub parse_variation_location {
 
   my ($variation_name, $vf_id, $length_before, $length_var, $length_after);	
 
-  my @alignments = $sam->features();
+  my @alignments = $bam->features();
 
   my $map_weights = $self->get_map_weights(\@alignments);
   $self->test_all_variants_are_mapped($fasta_file, $map_weights);
