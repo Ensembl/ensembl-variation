@@ -92,9 +92,8 @@ sub map_variant {
     $t_start = $t_start - $q_start + 1;
     $q_start = 1;  
   } else {
-    # warn
-    #        next;
-    # return
+    $flag_suspicious = 1;    
+    return [undef, undef, 0, $flag_suspicious];
   } 
   my $snp_q_pos = $length_before_var;     
 
