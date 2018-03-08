@@ -25,8 +25,8 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::Remapping_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
-
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 sub default_options {
     my ($self) = @_;
 
@@ -39,6 +39,8 @@ sub default_options {
 # make it an option here, contact the variation team to discuss
 # this - patches are welcome!
     return {
+      %{ $self->SUPER::default_options()
+        },    
         hive_force_init         => 1,
         hive_use_param_stack    => 0,
         hive_use_triggers       => 0,
@@ -46,9 +48,6 @@ sub default_options {
         hive_no_init            => 0, # setting it to 1 will skip pipeline_create_commands (useful for topping up)
         hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
-        hive_db_port            => 4521,
-        hive_db_user            => 'ensadmin',
-        hive_db_host            => 'mysql-ens-var-prod-2.ebi.ac.uk',
         debug                   => 0,
         run_variant_qc          => 1,
         use_fasta_files         => 0,
