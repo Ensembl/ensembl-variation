@@ -128,10 +128,37 @@ throws_ok { $vfa->fetch_all_by_Variation(Bio::EnsEMBL::Variation::Variation->new
 
 my $vf2_name = 'rs2299222';
 
-# test fetch all
-print "\n# Test - fetch_all\n";
-my $vfs2 = $vfa->fetch_all();
-ok($vfs2->[0]->variation_name() eq $vf2_name, "vf by all");
+# test fetch_all_by_Slice +/- inc failed
+{
+  print "\n# Test fetch all by Slice including failed flag\n";
+  my $slice1 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
+  $vfa->db->include_failed_variations(1);
+  my $vfs_slice = $vfa->fetch_all_by_Slice($slice1);
+  cmp_ok(scalar @$vfs_slice, "==", 446, "slice (+failed) -> vf count ");
+  $vfa->db->include_failed_variations(0);
+  my $slice2 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
+  $vfs_slice = $vfa->fetch_all_by_Slice($slice2);
+  cmp_ok(scalar @$vfs_slice,"==", 444, "slice new object (-failed) -> vf count ");
+  my $slice3 = $sa->fetch_by_region('chromosome','11',6303492,66324362);
+  $vfs_slice = $vfa->fetch_all_by_Slice($slice3);
+  cmp_ok(scalar @$vfs_slice,"==", 444, "diffrent slice (-failed) -> vf count ");
+}
+
+# test fetch all +/- inc failed
+{
+  print "\n# Test - fetch_all +/- inc failed\n";
+  my $vf2_name = 'rs2299222';
+  $vfa->db->include_failed_variations(0);
+  my $vfs2 = $vfa->fetch_all();
+  cmp_ok(scalar @$vfs2, "==", 1288, "vf by all - count (-failed)");
+  cmp_ok($vfs2->[0]->variation_name(), "eq", $vf2_name, "vf by all - check first variation name");
+
+  #test fetch all with inc failed my $vf_nameF='rs111067473';
+  $vfa->db->include_failed_variations(1);
+  my $vfs = $vfa->fetch_all();
+  cmp_ok(scalar @$vfs, "==", 1295, "vf by all - count (+failed)");
+}
+
 
 # test fetch all somatic
 print "\n# Test - fetch_all_somatic\n";
