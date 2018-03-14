@@ -1200,13 +1200,22 @@ sub parse_rgd_qtl {
       }
       
       my $description = $data{TRAIT_NAME};
-      if ($description =~ /\(/) {
-        $description = (split(/\s\(/, $description))[0];
+      my @description_acc;
+      if ($description =~ /(.*)\s\((VT:.*)\)/) {
+        $description = $1;
+        push(@description_acc, $2);
       }
       
+      my $pubmed_id = $data{CURATED_REF_PUBMED_ID};
+      $pubmed_id =~ s/;/,/g;
+
       my $phenotype = {
         id => $data{QTL_SYMBOL},
         description => $description,
+        accessions => \@description_acc,
+        ontology_mapping_type => 'is',
+        pubmed_id => $pubmed_id,
+        external_id => $data{QTL_RGD_ID},
         seq_region_id => $seq_region_ids->{$chr},
         seq_region_start => $data{$assembly.'_MAP_POS_START'},
         seq_region_end => $data{$assembly.'_MAP_POS_STOP'},
@@ -2515,10 +2524,10 @@ sub add_phenotypes {
   };
 
   my $attrib_id_ext_stmt = qq{ 
-    SELECT attrib_id from attrib, attrib_type
+    SELECT attrib_id, value from attrib, attrib_type
     WHERE attrib_type.code = 'ontology_mapping'
     AND attrib.attrib_type_id = attrib_type.attrib_type_id
-    AND attrib.value = ?};
+  };
  
   my $ontology_accession_ins_stmt = qq{
     INSERT IGNORE INTO phenotype_ontology_accession
@@ -2535,9 +2544,16 @@ sub add_phenotypes {
 
   ## get the attrib id for the type of description to ontology term linking
   my $attrib_id_ext_sth = $db_adaptor->dbc->prepare($attrib_id_ext_stmt);
-  my $mapped_by = ($source eq 'Orphanet' ? 'Orphanet' : 'Data source');
-  $attrib_id_ext_sth->execute($mapped_by);
-  my $ont_attrib_type = $attrib_id_ext_sth->fetchall_arrayref();
+  $attrib_id_ext_sth->execute();
+  my $ont_attrib_type = $attrib_id_ext_sth->fetchall_hashref("value");
+
+  if ($source_name eq 'RGD'){
+    $source_name = 'Rat Genome Database';
+  }
+  my $mapped_by = 'Data source';
+  if (exists $ont_attrib_type->{$source_name}){
+    $mapped_by = $source_name;
+  }
 
   # First, sort the array according to the phenotype description
   my @sorted = sort {($a->{description} || $a->{name}) cmp ($b->{description} || $b->{name})} @{$phenotypes};
@@ -2621,7 +2637,7 @@ sub add_phenotypes {
     foreach my $acc (@{$phenotype->{accessions}}){
       $acc =~ s/\s+//g;
       $acc = iri2acc($acc) if $acc =~ /^http/;
-      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->[0]->[0], $phenotype->{ontology_mapping_type} ) ||die "Failed to import phenotype accession\n";
+      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->{$mapped_by}->{'attrib_id'}, $phenotype->{ontology_mapping_type} ) ||die "Failed to import phenotype accession\n";
     }
 
     if ($phenotype->{"associated_gene"}) {
