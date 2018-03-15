@@ -814,6 +814,14 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (583, 469, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (584, 471, 'mobile element deletion');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (585, 497, 'gnomAD');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (586, 477, 'gnomAD');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (587, 477, 'GoatSNP50');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (588, 509, 'Rat Genome Database');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (589, 509, 'Animal_QTLdb');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (590, 509, 'ClinVar');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (591, 509, 'DDG2P');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (592, 509, 'NHGRI-EBI GWAS catalog');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (593, 509, 'MGP');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (594, 509, 'IMPC');
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 3);
