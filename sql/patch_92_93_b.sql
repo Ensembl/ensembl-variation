@@ -19,4 +19,4 @@ CHANGE mapped_by_attrib
 mapped_by_attrib SET('437','438','439','440','441','442','443','444','588', '589','590','591','592','593','594');
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|phenotype_ontology_accession');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|Extend phenotype_ontology_accession mapped_by_attrib predefined set');
