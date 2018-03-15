@@ -127,7 +127,6 @@ sub fetch_by_name {
   my $self = shift;
   my $container = shift;
   my $name = shift;
-
   # argueent check
   unless ($container and ref($container) and $container->isa('Bio::EnsEMBL::MappedSliceContainer')) {
     throw("Need a MappedSliceContainer.");
@@ -172,7 +171,6 @@ sub fetch_by_name {
   
   # get allele features with coverage info
   my $afs = $strain_slice->get_all_AlleleFeatures_Slice(1);
-  
   # check we got some data
   #warning("No strain genotype data available for slice ".$slice->name." and strain ".$sample->name) if ! defined $afs[0];
   
@@ -181,95 +179,107 @@ sub fetch_by_name {
   my $sr_name = $slice->seq_region_name;
   #my $sr_name = 'ref_slice';
   my ($end_slice, $end_strain, $allele_length);
-  
   my $indel_flag = 0;
   my $total_length_diff = 0;
-  
   # check for AFs
   if (defined($afs) && scalar @$afs) {
 
     # go through each AF
     foreach my $af(@$afs) {
-      # find out if it changes the length
       if ($af->length_diff != 0) {
         $indel_flag = 1;
-        $total_length_diff += $af->length_diff;
+        $total_length_diff += $af->length_diff if ($af->length_diff > 0);
         # get the allele length
         $allele_length = $af->length + $af->length_diff();
         $end_slice = $slice->start + $af->start() - 2;
-
         if ($end_slice >= $start_slice){
           $end_strain = $end_slice - $start_slice + $start_strain;
           #add the sequence that maps
-          $mapper->add_map_coordinates('mapped_slice', $start_strain, $end_strain, 1, $sr_name, $start_slice, $end_slice);
-          #add the indel
-          $mapper->add_indel_coordinates('mapped_slice', $end_strain+1, $end_strain+$allele_length, 1, $sr_name,$end_slice+1,$end_slice + $af->length);
+          $mapper->add_map_coordinates(
+            'mapped_slice',
+            $start_strain,
+            $end_strain,
+            1,
+            $sr_name,
+            $start_slice,
+            $end_slice);
+          $mapper->add_indel_coordinates(
+            'mapped_slice',
+            $end_strain + 1,
+            $end_strain + $allele_length,
+            1,
+            $sr_name,
+            $end_slice + 1,
+            $end_slice + $af->length);
           $start_strain = $end_strain + $allele_length + 1;
+          $start_slice = $end_slice + $af->length + 1;
         } else {
           #add the indel
-          $mapper->add_indel_coordinates('mapped_slice', $end_strain+1,$end_strain + $allele_length, 1, $sr_name,$end_slice+1,$end_slice + $af->length);
+          $mapper->add_indel_coordinates(
+            'mapped_slice',
+            $end_strain + 1,
+            $end_strain + $allele_length,
+            1,
+            $sr_name,
+            $end_slice + 1,
+            $end_slice + $af->length);
           $start_strain += $allele_length;
+          $start_slice = $end_slice + $af->length + 1;
         }
-        $start_slice = $end_slice + $af->length+ 1;
       }
     } 
   }
   
   # add the remaining coordinates (or the whole length if no indels found)
-  $mapper->add_map_coordinates('mapped_slice', $start_strain, $start_strain + ($slice->end - $start_slice), 1, $sr_name, $start_slice, $slice->end);
-  
-  # add the slice/mapper pair
-  $mapped_slice->add_Slice_Mapper_pair($strain_slice, $mapper);  
+  $mapper->add_map_coordinates(
+    'mapped_slice',
+    $start_strain,
+    $start_strain + ($slice->end - $start_slice),
+    1,
+    $sr_name,
+    $start_slice,
+    $slice->end);
+    # add the slice/mapper pair
+    $mapped_slice->add_Slice_Mapper_pair($strain_slice, $mapper);  
   
   ## MAP REF_SLICE TO CONTAINER SLICE
   ###################################
   
   if($total_length_diff > 0) {
-  
     # create a new mapper
     my $new_mapper = Bio::EnsEMBL::Mapper->new('ref_slice', 'container');
-    
     # get existing pairs
     my @existing_pairs = $container->mapper->list_pairs('container', 1, $container->container_slice->length, 'container');
-    my @new_pairs = $mapper->list_pairs('mapped_slice', 1, $strain_slice->length(), 'mapped_slice');
-    
+    my @new_pairs      = $mapper->list_pairs('mapped_slice', 1, $strain_slice->length(), 'mapped_slice');
     # we need a list of indels (specifically inserts)
     my @indels;
-    
     # go through existing first
     foreach my $pair(@existing_pairs) {
-      
       if($pair->from->end - $pair->from->start != $pair->to->end - $pair->to->start) {
         my $indel;
         $indel->{'length_diff'} = ($pair->to->end - $pair->to->start) - ($pair->from->end - $pair->from->start);
-        
         # we're only interested in inserts here, not deletions
         next unless $indel->{'length_diff'} > 0;
-        
         $indel->{'ref_start'} = $pair->from->start;
         $indel->{'ref_end'} = $pair->from->end;
-        $indel->{'length'} = $pair->to->end - $pair->to->start;
-        
+        $indel->{'length'} = $pair->from->end - $pair->from->start + 1;
         push @indels, $indel;
       }
     }
     
     # now new ones
-    foreach my $pair(@new_pairs) {
-
+    foreach my $pair (@new_pairs) {
       if ($pair->from->end - $pair->from->start != $pair->to->end - $pair->to->start) {
         my $indel;
-        $indel->{'length_diff'} = ($pair->from->end - $pair->from->start) - ($pair->to->end - $pair->to->start);
+        $indel->{'length_diff'} =  (($pair->from->end - $pair->from->start) - ($pair->to->end - $pair->to->start));
         # we're only interested in inserts here, not deletions
         next unless $indel->{'length_diff'} > 0;
-
         $indel->{'ref_start'} = $pair->to->start;
         $indel->{'ref_end'} = $pair->to->end;
-        $indel->{'length'} = $pair->from->end - $pair->from->start;
+        $indel->{'length'} = $pair->to->end - $pair->to->start + 1;
         push @indels, $indel;
       }
     }
-
     # sort them
     @indels = sort {
       $a->{'ref_start'} <=> $b->{'ref_start'} ||  # by position
@@ -283,7 +293,6 @@ sub fetch_by_name {
 
     for my $i(1..$#indels) {
       my $c = $indels[$i];
-
       if ($c->{'ref_start'} != $p->{'ref_start'} && $c->{'ref_end'} != $p->{'ref_end'}) {
         push @new_indels, $c;
         $p = $c;
@@ -293,28 +302,44 @@ sub fetch_by_name {
     $start_slice = $slice->start;
     $start_strain = 1;
     $sr_name = $slice->seq_region_name;
-    #$sr_name = 'ref_slice';
-
     foreach my $indel(@new_indels) {
-      $end_slice = $indel->{'ref_end'};
+      $end_slice = $indel->{'ref_start'} - 1;
       $end_strain = $start_strain + ($end_slice - $start_slice);
-
       $allele_length = $indel->{'length'} + $indel->{'length_diff'};
-
-      $new_mapper->add_map_coordinates($sr_name, $start_slice, $end_slice, 1, 'container', $start_strain, $end_strain);
-
-      $new_mapper->add_indel_coordinates($sr_name,$end_slice+1,$end_slice + $indel->{'length'}, 1, 'container', $end_strain+1, $end_strain+$allele_length);
-
+      $new_mapper->add_map_coordinates(
+        $sr_name,
+        $start_slice,
+        $end_slice,
+        1,
+        'container',
+        $start_strain,
+        $end_strain);
+      $new_mapper->add_indel_coordinates(
+        $sr_name,
+        $end_slice + 1,
+        $end_slice + $indel->{'length'},
+        1,
+        'container',
+        $end_strain + 1,
+        $end_strain + $allele_length);
       $start_strain = $end_strain + $allele_length + 1;
       $start_slice = $end_slice + $indel->{'length'} + 1;
     }
 
-    $new_mapper->add_map_coordinates($sr_name, $start_slice, $slice->end, 1, 'container', $start_strain, $start_strain + ($slice->end - $start_slice));
+    $new_mapper->add_map_coordinates(
+      $sr_name,
+      $start_slice,
+      $slice->end,
+      1,
+      'container',
+      $start_strain,
+      $start_strain + ($slice->end - $start_slice));
 
     # replace the mapper with the new mapper
     $container->mapper($new_mapper);
 
     # change the container slice's length according to length diff
+    $total_length_diff = abs $total_length_diff;
     $container->container_slice($container->container_slice->expand(undef, $total_length_diff, 1));
   }
   
