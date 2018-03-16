@@ -2956,8 +2956,8 @@ sub convert_p_value {
     #$sci_pval = sprintf("%.2e",$pval); # e.g. 0.002 => 2,30e-3
     }
     # If a less than format is found (e.g. <0.05)
-    elsif ($pval =~ /^<(\d+.*)/){
-      $sci_pval = $1; # '<0.05' => 0.05
+    elsif ($pval =~ /^<\s*(\d+.*)/){
+      $sci_pval = $1; # e.g. '<0.05' => 0.05 '< 2.3e-3' => 2.3e-3
     }
     elsif ($pval =~ /^\w+/) {
       $sci_pval = "NULL";
