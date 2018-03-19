@@ -796,6 +796,7 @@ sub _inv_start_altered {
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
         my $utr = $bvfo->_five_prime_utr();
+	return 0 if $utr;
         my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
