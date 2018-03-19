@@ -163,12 +163,11 @@ my $vf2_name = 'rs2299222';
   my $vfs_slice = $vfa->fetch_all_by_Slice($slice1); #will be saved in the cache
   cmp_ok(scalar @$vfs_slice, "==", 446, "slice (+failed, default cache) -> vf count ");
   my $slice2 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
-  $vfa->db->include_failed_variations(0); # failed flag will be ignored as the cache is in place
+  $vfa->db->include_failed_variations(0); # failed flag will be ignored unless the cache is cleared
   $vfa->clear_cache(); # feature cache is cleared
   $vfs_slice = $vfa->fetch_all_by_Slice($slice2);
   cmp_ok(scalar @$vfs_slice,"==", 444, "slice (-failed, no cache) -> vf count ");
 }
-
 
 # test fetch all +/- inc failed
 {
