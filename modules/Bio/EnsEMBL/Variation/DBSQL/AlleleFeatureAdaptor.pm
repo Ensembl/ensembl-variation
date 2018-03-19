@@ -76,7 +76,6 @@ use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
-
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 
@@ -121,22 +120,21 @@ sub fetch_all_by_Slice {
   
   # merge AlleleFeatures with genotypes
   foreach my $af (@{$afs}) {
-    
     # get valid alleles from allele_string
-    my %valid_alleles = map {$_ => 1} split('/', $af->{allele_string});
+    my %valid_alleles = map {$_ => 1} split('/', $af->{_vf_allele_string});
     
     # get the variation ID of this AF
     my $af_variation_id = $af->{_variation_id} || $af->variation->dbID;
     
     # get all genotypes that have this var id
-    foreach my $gt(grep {$_->{_variation_id} == $af_variation_id} @$genotypes) {
+    foreach my $gt (grep {$_->{_variation_id} == $af_variation_id} @$genotypes) {
       
       # skip genotypes whose alleles are not found in allele string
       my $skip = 0;
       foreach my $allele(@{$gt->genotype}) {
         $skip = 1 unless exists($valid_alleles{$allele});
       }
-      #next if $skip;
+      next if $skip;
       
       # create a clone of the AF
       my $new_af = { %$af };
@@ -147,7 +145,6 @@ sub fetch_all_by_Slice {
       
       # add the sample
       $new_af->sample($gt->sample);
-      
       push @new_afs, $new_af;
     }
   }
@@ -301,7 +298,7 @@ sub _objs_from_sth {
 			'end'      => $seq_region_end,
 			'strand'   => $seq_region_strand,
 			'slice'    => $slice,
-			'allele_string' => '',
+			'allele_string' => $allele_string,
 			'overlap_consequences' => $overlap_consequences,
 			'variation_name' => $variation_name,
 			'adaptor'  => $self,

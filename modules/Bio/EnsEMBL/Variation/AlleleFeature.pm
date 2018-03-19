@@ -198,10 +198,14 @@ sub allele_string{
   my $self = shift;
   return $self->{'allele_string'} = shift if $_[0];
   return $self->{'allele_string'} if ($self->{'_half_genotype'}); #for half genotypes
-  return join('|',split (//,unambiguity_code($self->{'allele_string'}))); #for heterozygous alleles
+  my $allele_string = unambiguity_code($self->{'allele_string'});   #for heterozygous alleles
+  if ($allele_string) {
+    return join('|',split (//, $allele_string)); 
+  } else {
+    $allele_string = $self->{'allele_string'};
+    return ("$allele_string|$allele_string");
+  }
 }
-
-
 
 =head2 consequence_type
 
@@ -542,14 +546,10 @@ sub apply_edit  {
 =cut
 
 sub length_diff  {
-
   my $self = shift;
-
   return 0 if(!defined($self->{'end'}) || !defined($self->{'start'}));
-
   return length($self->{'allele_string'}) - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} ne '-'); 
   return 0 - ($self->{'end'} - $self->{'start'} +1) if ($self->{'allele_string'} eq '-'); #do we need the +1 in the distance ??
-
 }
 
 
