@@ -2951,8 +2951,8 @@ sub convert_p_value {
       $sci_pval = "1.00e$1"; # e.g 10^-2 > p > 10^-3 => 1.00e-2
     }
     # If a decimal format is found (e.g. 0.0023)
-    elsif ($pval =~ /^\d+/){
-      $sci_pval = $pval;
+    elsif ($pval =~ /(\d+.*)/){
+      $sci_pval = $1;
     #$sci_pval = sprintf("%.2e",$pval); # e.g. 0.002 => 2,30e-3
     }
     elsif ($pval =~ /^\w+/) {
