@@ -80,7 +80,6 @@ ok($vf->map_weight() == 1,                 "vf_id -> map weight");
 ok($vf->slice()->name() eq $slice->name(), "vf_id -> slice name");
 ok($vf->display() ==1,                     "vf_id -> display=1");
 
-print scalar @$vfs, "\n";
 $vf = $vfs->[1];
 
 ok($vf->dbID() == $vf_id,                  "var -> vf id");
@@ -175,13 +174,13 @@ my $vf2_name = 'rs2299222';
   my $vf2_name = 'rs2299222';
   $vfa->db->include_failed_variations(0);
   my $vfs2 = $vfa->fetch_all();
-  cmp_ok(scalar @$vfs2, "==", 1289, "vf by all - count (-failed)");
+  cmp_ok(scalar @$vfs2, "==", 1288, "vf by all - count (-failed)");
   cmp_ok($vfs2->[0]->variation_name(), "eq", $vf2_name, "vf by all - check first variation name");
 
   #test fetch all with inc failed my $vf_nameF='rs111067473';
   $vfa->db->include_failed_variations(1);
   my $vfs = $vfa->fetch_all();
-  cmp_ok(scalar @$vfs, "==", 1296, "vf by all - count (+failed)");
+  cmp_ok(scalar @$vfs, "==", 1295, "vf by all - count (+failed)");
 }
 
 # test fetch all somatic

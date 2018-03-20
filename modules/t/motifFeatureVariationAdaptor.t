@@ -42,6 +42,8 @@ my $sa = $cdb->get_SliceAdaptor();
 my $rfa = $fdb->get_RegulatoryFeatureAdaptor();
 my $mfa = $fdb->get_MotifFeatureAdaptor();
 
+$multi->hide('variation', 'variation_feature'); #make a backup of the current variation_feature table
+
 my $slice = $sa->fetch_by_region('chromosome', '7');
 my $v = Bio::EnsEMBL::Variation::Variation->new(
   -name => 'rs140471675_mf_test',
@@ -110,5 +112,7 @@ my $vf4 = $vfa->fetch_all_by_Variation($var4)->[0];
 
 #my $count = $mfva->count_all_by_VariationFeatures_SO_terms([$vf4], [$motif_feature], ['sequence_variant']);
 #ok($count == 0, 'count_all_by_VariationFeatures_SO_terms');
+
+$multi->restore('variation', 'variation_feature'); #restore the previous table
 
 done_testing();
