@@ -1,9 +1,15 @@
 language: perl
+
+os:
+  - linux
+
 perl:
 - '5.14'
+- '5.26'
 env:
   matrix:
   - COVERALLS=true  DB=mysql
+  - COVERALLS=false  DB=mysql
   global:
     secure: O28fOP56ZKwOl8ftpEaL+6DUxyD7JHAg4KIA7nrOUXR1cHr9F2q0+EFtZWJb9gzhfpr5wALSfHwXfSZslCp9mX61BAzHMQxUT1ArLibJWsjA8r7/6lcm2RP4WgfH8nEIF/83gaAJrxs6Qmt4dmtDHA7qhk+X/xDCYqbtUU3sldw=
 sudo: false
@@ -19,8 +25,7 @@ before_install:
 - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
 - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-io.git
 - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
-- wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-6-1.zip
-- unzip bioperl-release-1-6-1.zip
+- git clone -b bioperl-release-1-6-1 --depth 1 https://github.com/bioperl/bioperl-live.git
 - git clone --branch 1.3.2 --depth 1 https://github.com/samtools/htslib.git
 - cd htslib
 - make
@@ -36,6 +41,14 @@ install:
 - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
 - cpanm Bio::DB::HTS
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
+matrix:
+  exclude:
+    - perl: '5.14'
+    env: COVERALLS=false DB=mysql
+    - perl: '5.26'
+    env: COVERALLS=false DB=mysql
+    - perl: '5.26'
+    env: COVERALLS=true  DB=mysql
 jobs:
   include:
   - script: ./travisci/harness.sh
