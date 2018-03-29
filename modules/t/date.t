@@ -33,4 +33,4 @@ ok($log_time =~ /\d{4}\-\d+\-\d+_\d{6}/, "time format");
 
 ok ($log_time =~/^$run_date/, "dates match");
 
-done_testing()
+done_testing();
