@@ -33,7 +33,6 @@ limitations under the License.
 
 veplotyper.pl
 
-by Will McLaren (wm2@ebi.ac.uk)
 =cut
 
 use strict;
@@ -614,7 +613,6 @@ sub usage {
 # veplotyper.pl #
 #---------------#
 
-By Will McLaren (wm2\@ebi.ac.uk)
 
 Usage:
 perl veplotyper.pl [arguments]

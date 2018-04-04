@@ -30,7 +30,6 @@
 import_vcf_compress.pl - imports genotypes directly into
 compressed_genotype_single_bp from a VCF file
 
-by Will McLaren (wm2@ebi.ac.uk)
 =cut
 
 use strict;

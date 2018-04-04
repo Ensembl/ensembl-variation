@@ -30,7 +30,6 @@
 =head1 NAME
 import_vcf.pl - imports variations from a VCF file into an Ensembl variation DB
 
-by Will McLaren (wm2@ebi.ac.uk)
 =cut
 
 use strict;
