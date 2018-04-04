@@ -22,7 +22,7 @@
   developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
-  <helpdesk.org>.
+  <http://www.ensembl.org/Help/Contact>.
 
 =cut
 
@@ -30,7 +30,6 @@
 =head1 NAME
 import_vcf.pl - imports variations from a VCF file into an Ensembl variation DB
 
-by Will McLaren (wm2@ebi.ac.uk)
 =cut
 
 use strict;
