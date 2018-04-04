@@ -4,12 +4,12 @@ os:
   - linux
 
 perl:
-- '5.14'
-- '5.26'
+  - '5.14'
+  - '5.26'
 env:
   matrix:
   - COVERALLS=true  DB=mysql
-  - COVERALLS=false  DB=mysql
+  - COVERALLS=false DB=mysql
   global:
     secure: O28fOP56ZKwOl8ftpEaL+6DUxyD7JHAg4KIA7nrOUXR1cHr9F2q0+EFtZWJb9gzhfpr5wALSfHwXfSZslCp9mX61BAzHMQxUT1ArLibJWsjA8r7/6lcm2RP4WgfH8nEIF/83gaAJrxs6Qmt4dmtDHA7qhk+X/xDCYqbtUU3sldw=
 sudo: false
@@ -41,17 +41,18 @@ install:
 - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
 - cpanm Bio::DB::HTS
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
+
 matrix:
   exclude:
-    - perl: '5.14'
+  - perl: '5.14'
     env: COVERALLS=false DB=mysql
-    - perl: '5.26'
-    env: COVERALLS=false DB=mysql
-    - perl: '5.26'
+  - perl: '5.26'
     env: COVERALLS=true  DB=mysql
+
+script: ./travisci/harness.sh
+
 jobs:
   include:
-  - script: ./travisci/harness.sh
   - stage: trigger_dependent_builds
     script: ./travisci/trigger-dependent-build.sh
 notifications:
