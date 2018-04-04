@@ -149,7 +149,8 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs22992
 my $pa = $vdba->get_PhenotypeAdaptor();
 my $p  = $pa->fetch_by_dbID(1);
 $pfs = $pfa->fetch_all_by_Phenotype($p);
-ok($pfs->[0]->object_id() eq 'rs2299222', "fetch_all_by_Phenotype") ;
+
+ok( scalar (grep { $_->object_id eq 'rs2299222' } @$pfs) == 1, 'fetch_all_by_Phenotype');
 throws_ok { $pfa->fetch_all_by_Phenotype(); } qr/Phenotype arg expected/, ' > Throw on missing argument';
 
 # count_all_by_associated_gene

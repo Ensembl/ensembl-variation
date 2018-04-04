@@ -340,7 +340,7 @@ $config = copy_config($base_config, {
   process_ref_homs => 1,
 });
 @vfs = @{parse_line($config, qq{21 25587758 rs116645811 G A . . . GT 1|1 0|0})};
-ok(@vfs && $vfs[1]->{individual} eq 'B', "vcf format - individual data process ref homs");
+ok( scalar (grep { $_->{individual} eq 'B' } @vfs) >= 1, 'vcf format - individual data process ref homs"');
 
 # vcf GP
 $config = copy_config($base_config, { gp => 1 });
