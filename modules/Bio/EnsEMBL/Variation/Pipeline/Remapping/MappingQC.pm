@@ -20,15 +20,25 @@ limitations under the License.
  <http://www.ensembl.org/Help/Contact>.
 =cut
 
-package Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishParseMapping;
-
 use strict;
+use warnings;
 
-use base ('Bio::EnsEMBL::Hive::Process');
+package Bio::EnsEMBL::Variation::Pipeline::Remapping::MappingQC;
+
+use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
+
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
+use Bio::EnsEMBL::Variation::Utils::RemappingUtils qw(qc_mapped_vf);
+use FileHandle;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
+  $self->SUPER::fetch_input;
 }
 
+sub run {
+  my $self = shift;
+}
 
 1;
