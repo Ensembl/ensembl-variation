@@ -21,7 +21,7 @@
   developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
-  <helpdesk.org>.
+  <http://www.ensembl.org/Help/Contact>.
 
 =cut
 
