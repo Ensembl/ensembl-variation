@@ -63,7 +63,7 @@ use IO::Socket;
 use IO::Select;
 use Exporter;
 
-my ($CAN_USE_TABIX_PM, $CAN_USE_TABIX_CL);
+my ($CAN_USE_TABIX_PM, $CAN_USE_TABIX_CL, $CAN_USE_CGI);
 
 BEGIN {
   if (eval { require Tabix; 1 }) {
@@ -75,6 +75,9 @@ BEGIN {
 
   # use Sereal
   eval q{ use Sereal; 1; };
+  if (eval { require CGI; 1 }) {
+    $CAN_USE_CGI = 1;
+  }
 }
 
 use Bio::EnsEMBL::Registry;
@@ -1620,9 +1623,6 @@ sub vf_list_to_cons {
 
             # XML output for Solr
             elsif(defined($config->{solr})) {
-                eval q{
-                  use CGI qw(escape);
-                };
 
                 foreach my $con(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
                     my $line = "<doc>\n";
@@ -1661,7 +1661,11 @@ sub vf_list_to_cons {
                           }
 
                           else {
-                            $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col, escape($data)) if defined($data);
+                            if ($CAN_USE_CGI) {
+                              $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col, CGI::escape($data)) if defined($data);
+                            } else {
+                              $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col, $data) if defined($data);
+                            }
                           }
                         }
                     }
