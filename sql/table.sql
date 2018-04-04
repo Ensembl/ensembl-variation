@@ -22,13 +22,14 @@ SET default_storage_engine=MYISAM;
 /**
 @header  Variation tables
 @desc    These tables define the central variation data.
-@colour  #000
+@colour  #B22222
 */
 
 
 /**
 @table variation
 
+@colour #B22222
 @desc This is the schema's generic representation of a variation, defined as a genetic feature that varies between individuals of the same species. 
       The most common type is the single nucleotide variation (SNP) though the schema also accommodates copy number variations (CNVs) and structural variations (SVs).<br />
 			In Ensembl, a variation is defined by its flanking sequence rather than its mapped location on a chromosome; a variation may in fact have multiple mappings across a genome, 
@@ -83,6 +84,7 @@ create table variation (
 /**
 @table variation_attrib
 
+@colour #B22222
 @desc This table stores miscellaneous attributes associated with a variation entry.
 
 @column variation_id     Foreign key references @link variation table
@@ -105,6 +107,7 @@ CREATE TABLE variation_attrib (
 /**
 @table variation_feature
 
+@colour #B22222
 @desc This table represents mappings of variations to genomic locations. It stores an allele string representing the different possible alleles that are found at that locus e.g. "A/T" for a SNP, as well as a "worst case" consequence of the mutation. It also acts as part of the relationship between variations and transcripts.
 
 @column variation_feature_id	 Primary key, internal identifier.
@@ -225,6 +228,7 @@ create table variation_feature(
 /**
 @table variation_synonym
 
+@colour #B22222
 @desc This table allows for a variation to have multiple IDs, generally given by multiple sources.
 
 @column variation_synonym_id	Primary key, internal identifier.
@@ -256,6 +260,7 @@ create table variation_synonym (
 /**
 @table allele
 
+@colour #B22222
 @desc This table stores information about each of a variation's alleles, along with population frequencies.
 
 @column allele_id		   Primary key, internal identifier.
@@ -296,12 +301,13 @@ CREATE TABLE allele (
 /**
 @header  Phenotype tables
 @desc    These tables store information linking entities (variants, genes, QTLs) with phenotypes and other annotations.
-@colour  #22949b
+@colour  #22949B
 */
 
 
 /**
 @table phenotype_feature
+@colour  #22949B
 
 @desc This table stores information linking entities (variants, genes, QTLs) and phenotypes.
 
@@ -346,6 +352,7 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature` (
 
 /**
 @table phenotype_feature_attrib
+@colour  #22949B
 
 @desc This table stores additional information on a given phenotype/object association. It is styled as an attrib table to allow for a variety of fields to be populated across different object types.
 
@@ -368,6 +375,7 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
 
 /**
 @table phenotype
+@colour  #22949B
 
 @desc This table stores details of the phenotypes associated with phenotype_features.
 
@@ -392,6 +400,7 @@ CREATE TABLE `phenotype` (
 
 /**
 @table phenotype_ontology_accession
+@colour  #22949B
 
 @desc This table stores accessions of phenotype ontology terms which have been linked to phenotype.descriptions
 
@@ -414,13 +423,14 @@ CREATE TABLE `phenotype_ontology_accession` (
 /**
 @header  Other tables
 @desc    These tables define the other data associated with a variation.
-@colour  #000
+@colour  #98BFDA
 */
 
 
 /**
 @table subsnp_handle
 
+@colour #98BFDA
 @desc This table contains the SubSNP(ss) ID and the name of the submitter handle of dbSNP.
 
 @column subsnp_id	Primary key. It corresponds to the subsnp identifier (ssID) from dbSNP.<br />This ssID is stored in this table without the "ss" prefix. e.g. "120258606" instead of "ss120258606".
@@ -444,6 +454,7 @@ create table subsnp_handle (
 /**
 @table submitter_handle
 
+@colour #98BFDA
 @desc This table holds a short string to distinguish data submitters
 
 @column handle_id	Primary key, internal identifier.
@@ -463,6 +474,7 @@ create table submitter_handle (
 /**
 @table allele_code
 
+@colour #98BFDA
 @desc This table stores the relationship between the internal allele identifiers and the alleles themselves.
 
 @column allele_code_id	Primary key, internal identifier.
@@ -487,6 +499,7 @@ CREATE TABLE allele_code (
 /**
 @table genotype_code
 
+@colour #98BFDA
 @desc This table stores genotype codes as multiple rows of allele_code identifiers, linked by genotype_code_id and ordered by haplotype_id.
 
 @column genotype_code_id	Internal identifier.
@@ -512,6 +525,7 @@ CREATE TABLE genotype_code (
 /**
 @table seq_region
 
+@colour #98BFDA
 @desc This table stores the relationship between Ensembl's internal coordinate system identifiers and traditional chromosome names.
 
 @column seq_region_id	   Primary key. Foreign key references seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
@@ -540,6 +554,8 @@ CREATE TABLE seq_region (
 
 /**
 @table coord_system
+
+@colour #98BFDA
 @desc Stores information about the available co-ordinate systems for the species identified through the species_id field.
 Note that for each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level".
 
@@ -577,14 +593,14 @@ CREATE TABLE coord_system (
 /**
 @header  Sample tables
 @desc    These tables define the sample, individual and population information.
-@colour  #FF8500
+@colour  #F08080
 */
 
 
 /**
 @table population
 
-@colour #FF8500
+@colour #F08080
 @desc Stores information about a population. A population may be an ethnic group (e.g. Caucasian, Hispanic), assay group (e.g. 24 Europeans), phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
 
 @column population_id     Primary key, internal identifier.
@@ -622,7 +638,7 @@ CREATE TABLE population(
 /**
 @table population_structure
 
-@colour #FF8500
+@colour #F08080
 @desc This table stores hierarchical relationships between populations by relating them as populations and sub-populations.
 
 @column super_population_id    Foreign key references to the population table.
@@ -642,7 +658,7 @@ create table population_structure (
 /**
 @table individual
 
-@colour #FF8500
+@colour #F08080
 @desc Stores information about an identifiable individual, including gender and the identifiers of the individual's parents (if known).
 
 @column individual_id           Primary key, internal identifier.
@@ -674,7 +690,7 @@ create table individual(
 /**
 @table individual_type
 
-@colour #FF8500
+@colour #F08080
 @desc This table gives a detailed description for each of the possible individual types: fully_inbred, partly_inbred, outbred, mutant  
 @column individual_type_id	Primary key, internal identifier.
 @column name				Short name of the individual type. e.g. "fully_inbred","mutant".
@@ -704,7 +720,7 @@ INSERT INTO individual_type (name,description) VALUES ('mutant','a single or mul
 /**
 @table sample
 
-@colour #FF8500
+@colour #F08080
 @desc Stores information about a sample. A sample belongs to an individual. An individual can have multiple samples. A sample can belong only to one individual. A sample can be associated
 with a study. 
 
@@ -745,7 +761,7 @@ CREATE TABLE sample(
 /**
 @table sample_synonym
 
-@colour #FF8500
+@colour #F08080
 @desc Used to store alternative names for samples when data comes from multiple sources.
 
 @column synonym_id      Primary key, internal identifier.
@@ -770,7 +786,7 @@ CREATE TABLE sample_synonym (
 /**
 @table sample_population
 
-@colour #FF8500
+@colour #F08080
 @desc This table resolves the many-to-many relationship between the sample and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of sample and population identifiers.
 
 @column sample_id	Foreign key references to the @link sample table.
@@ -792,7 +808,7 @@ create table sample_population (
 /**
 @table individual_synonym
 
-@colour #FF8500
+@colour #F08080
 @desc Used to store alternative names for individuals when data comes from multiple sources.
 
 @column synonym_id       Primary key, internal identifier.
@@ -818,7 +834,7 @@ CREATE TABLE individual_synonym (
 /**
 @table population_synonym
 
-@colour #FF8500
+@colour #F08080
 @desc Used to store alternative names for populations when data comes from multiple sources.
 
 @column synonym_id       Primary key, internal identifier.
@@ -844,7 +860,7 @@ CREATE TABLE population_synonym (
 /**
 @table display_group
 
-@colour #FF8500
+@colour #F08080
 @desc Used to store groups of populations displayed separately on the Population Genetics page
 
 @column display_group_id     Primary key, internal identifier.
@@ -1054,14 +1070,14 @@ CREATE TABLE read_coverage (
 /**
 @header  Structural variation tables
 @desc    These tables define the structural variation data.
-@colour  #01D4F7
+@colour  #01C3E3
 */
 
 
 /**
 @table structural_variation
 
-@colour #01D4F7
+@colour #01C3E3
 @desc This table stores information about structural variation.
 
 @column structural_variation_id	Primary key, internal identifier.
@@ -1107,7 +1123,7 @@ CREATE TABLE structural_variation (
 /**
 @table structural_variation_association
 
-@colour #01D4F7
+@colour #01C3E3
 @desc This table stores the associations between structural variations and their supporting evidences.
 
 @column structural_variation_id	            Primary key. Foreign key references to the @link structural_variation table.
@@ -1129,7 +1145,7 @@ CREATE TABLE structural_variation_association (
 /**
 @table structural_variation_feature
 
-@colour #01D4F7
+@colour #01C3E3
 @desc This table stores information about structural variation features (i.e. mappings of structural variations to genomic locations).
 
 @column structural_variation_feature_id	 Primary key, internal identifier.
@@ -1206,7 +1222,7 @@ create table structural_variation_feature (
 /**
 @table structural_variation_sample
 
-@colour #01D4F7
+@colour #01C3E3
 @desc This table stores sample and strain information for structural variants and their supporting evidences.
 
 @column structural_variation_sample_id  Primary key, internal identifier.
@@ -1554,14 +1570,14 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
 /**
 @header  Source/study tables
 @desc    These tables define the variation source and study information.
-@colour  #7CFC00
+@colour  #72E800
 */
 
 
 /**
 @table source
 
-@colour #7CFC00
+@colour #72E800
 @desc This table contains details of the source from which a variation is derived. Most commonly this is NCBI's dbSNP; other sources include SNPs called by Ensembl.<br />
 You can see the complete list, by species, <a href="/info/genome/variation/sources_documentation.html">here</a>.
 
@@ -1606,7 +1622,7 @@ create table source(
 /**
 @table study
 
-@colour #7CFC00
+@colour #72E800
 @desc This table contains details of the studies.
 			The studies information can come from internal studies (DGVa, EGA) or from external studies (UniProt, NHGRI, ...).
 
@@ -1642,7 +1658,7 @@ CREATE TABLE study (
 /**
 @table associate_study
 
-@colour #7CFC00
+@colour #72E800
 @desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same PubMed identifier).
 
 @column study1_id		Primary key. Foreign key references to the @link study table.
@@ -1660,7 +1676,7 @@ CREATE TABLE associate_study (
 /**
 @table submitter
 
-@colour #7CFC00
+@colour #72E800
 @desc This table contains descriptions of group submitting data to public repositories such as ClinVar
 
 @column submitter_id            Primary key
@@ -1677,7 +1693,7 @@ CREATE TABLE submitter(
 
 /**
 @table publication
-@colour #7CFC00
+@colour #72E800
 @desc This table contains details of publications citing variations.
       This information comes from dbSNP, UCSC and Europe PMC.
 
@@ -1709,7 +1725,7 @@ CREATE TABLE publication(
 
 /**
 @table variation_citation
-@colour #7CFC00
+@colour #72E800
 @desc This table links a variation to a publication
 
 @column publication_id       Primary key, internal identifier.
@@ -1783,7 +1799,7 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '92');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '93');
 
 
 # Patch IDs for new release
@@ -2054,15 +2070,17 @@ CREATE TABLE protein_function_predictions_attrib (
 
 /**
 @legend #FF8500 Tables containing sample, individual, population and genotype data
-@legend #01D4F7	Tables containing structural variation data
+@legend #01C3E3	Tables containing structural variation data
 @legend #FFD700	Tables containing sets of variations
-@legend #7CFC00	Tables containing source and study data
+@legend #72E800	Tables containing source and study data
 @legend #BC5CEC	Tables containing metadata
-@legend #3CB371	Tables containing "failed" data
+@legend #3CB371	Tables containing "failed/flagged" data
 @legend #FF0000	Tables containing attribute data
 @legend #1E90FF	Tables concerning protein data
 @legend #FF4DC8 Tables concerning the prediction of variation effect(s) in different Ensembl features
-@legend #22949b Tables concerning data linked to phenotype
+@legend #22949B Tables concerning data linked to phenotype
+@legend #B22222 Tables concerning data linked to variation
+@legend #98BFDA Other tables from the Variation schema
 */
 
 #possible values in the failed_description table
