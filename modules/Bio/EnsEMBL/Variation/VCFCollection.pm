@@ -1025,6 +1025,58 @@ sub get_all_Alleles_by_VariationFeature {
 }
 
 
+=head2 get_location_to_name_map
+
+  Arg[1]     : Bio::EnsEMBL::Slice $slice
+  Example    : my $location_to_name = $collection->get_location_to_name($slice);
+  Description: Match variation name from a variation database to entry
+               in the VCF file by location and alleles.
+  Returntype : hashref
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_location_to_name_map {
+  my $self = shift;
+  my $slice = shift;
+
+  return {} unless $self->_seek_by_Slice($slice);
+  
+  my $vcf = $self->_current();
+  
+  # get VariationFeatures if using DB
+  my %vfs_by_pos;
+  my $use_db = $self->use_db;
+  my %location_to_name; 
+  if($use_db || $self->use_as_source) {
+    my $vfa = $self->adaptor->db->get_VariationFeatureAdaptor();
+    foreach my $vf(@{$vfa->fetch_all_by_Slice($slice, 1)}) {
+      push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
+    }
+    # reset seek
+    $self->_seek_by_Slice($slice);
+  }
+  
+  while($vcf->{record} && $vcf->get_start <= $slice->end) {
+    my $start = $vcf->get_start;
+    my $vf;
+    # try to match this VCF record to VariationFeature at this position
+    if(scalar keys %vfs_by_pos) {
+      foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+        if (@{$self->_get_matched_alleles_VF_VCF($tmp_vf, $vcf)}) {
+          $location_to_name{$vcf->get_raw_start} = $tmp_vf->variation_name;
+          last;
+        }
+      }
+    }
+    $vcf->next();
+  }
+
+  return \%location_to_name;
+}
+
 =head2 get_all_SampleGenotypeFeatures_by_Slice
 
   Arg[1]     : Bio::EnsEMBL::Slice $slice

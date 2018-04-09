@@ -39,6 +39,7 @@ my $ldfca = $vdb->get_LDFeatureContainerAdaptor();
 my $ldContainer;
 
 ok($ldfca && $ldfca->isa('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor'), "get adaptor");
+$ldfca->db->use_vcf(1);
 
 my $sa = $db->get_SliceAdaptor();
 my $vfa = $vdb->get_VariationFeatureAdaptor();
@@ -50,13 +51,10 @@ ok($vdb->vcf_config_file($dir.'/ld_vcf_config.json') eq $dir.'/ld_vcf_config.jso
 
 my $vca = $vdb->get_VCFCollectionAdaptor();
 my $coll = $vca->fetch_by_id('ld');
-
 # now we need to set the filename_template
 my $temp = $coll->filename_template();
 $temp =~ s/###t\-root###/$dir/;
 $coll->filename_template($temp);
-
-$ldfca->db->use_vcf(1);
 
 # fetch_by_Slice
 my $slice = $sa->fetch_by_region('chromosome', '9', 22124503, 22126503);
@@ -71,7 +69,7 @@ cmp_ok(scalar @$ld_values, '==', 0, "Return empty container if population is not
 $ldfc = $ldfca->fetch_by_Slice($slice, $population);
 $ld_values = $ldfc->get_all_ld_values;
 
-my $results = [
+my $results_fetch_by_Slice = [
 { population_id => 102179, vf1_name => 'rs79944118', vf2_name => 'rs1333049', r2 => 0.087731, d_prime => 0.999965, test_name => 'ld_values for rs79944118 and rs1333049' },
 { population_id => 102179, vf1_name => 'rs10757279', vf2_name => 'rs1333048', r2 => 0.630300, d_prime => 0.999998, test_name => 'ld_values for rs10757279 and rs1333048' },
 { population_id => 102179, vf1_name => 'rs10757279', vf2_name => 'rs1333050', r2 => 0.402075, d_prime => 0.662126, test_name => 'ld_values for rs10757279 and rs1333050' },
@@ -88,7 +86,7 @@ my $results = [
 { population_id => 102179, vf1_name => 'rs1333047', vf2_name => 'rs4977575', r2 => 1, d_prime => 1, test_name => 'ld_values for rs1333047 and rs4977575' },
 ];
 
-foreach my $result (@$results) {
+foreach my $result (@$results_fetch_by_Slice) {
   my $vf1 = ($va->fetch_by_name($result->{vf1_name})->get_all_VariationFeatures)->[0];
   my $vf2 = ($va->fetch_by_name($result->{vf2_name})->get_all_VariationFeatures)->[0];
   my $population_id = $result->{population_id};
@@ -200,7 +198,6 @@ cmp_ok($ldfc->get_d_prime($vf2, $vf3, $population_id), '==', 0.999996, "fetch_by
 my $populations = $ldfca->get_populations_hash_by_Slice;
 cmp_ok(scalar keys %$populations, '==', 48, "Get number of LD populations");
 
-
 throws_ok { $ldfca->fetch_by_Slice('Slice'); } qr/Bio::EnsEMBL::Slice arg or listref of Bio::EnsEMBL::Slice expected/, 'fetch_all_by_Slice Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_Slice(['Slice']); } qr/Bio::EnsEMBL::Slice arg expected/, 'fetch_all_by_Slice Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_Slice([$vf1]); } qr/Bio::EnsEMBL::Slice arg expected/, 'fetch_all_by_Slice Throw on wrong argument';
@@ -209,5 +206,125 @@ throws_ok { $ldfca->fetch_all_by_Variation('Variation'); } qr/Bio::EnsEMBL::Vari
 throws_ok { $ldfca->fetch_by_VariationFeature('VariationFeature'); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'fetch_by_VariationFeature Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_VariationFeatures(['VariationFeature']); } qr/Bio::EnsEMBL::Variation::VariationFeature arg expected/, 'fetch_by_VariationFeatures Throw on wrong argument';
 throws_ok { $ldfca->fetch_by_VariationFeatures('VariationFeature'); } qr/Listref of Bio::EnsEMBL::Variation::VariationFeature args expected/, 'fetch_by_VariationFeatures Throw on wrong argument';
+
+# Test for matching data from VCF file by location and allele instead of variant name
+
+ok($vdb->vcf_config_file($dir.'/ld_no_id_vcf_config.json') eq $dir.'/ld_no_id_vcf_config.json', "DBAdaptor ld_no_id_vcf_config file");
+$vca = $vdb->get_VCFCollectionAdaptor();
+$coll = $vca->fetch_by_id('ld');
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$ldfca->db->use_vcf(1);
+
+$ldfc = $ldfca->fetch_by_Slice($slice, $population);
+$ld_values = $ldfc->get_all_ld_values;
+
+foreach my $result (@$results_fetch_by_Slice) {
+  my $vf1 = ($va->fetch_by_name($result->{vf1_name})->get_all_VariationFeatures)->[0];
+  my $vf2 = ($va->fetch_by_name($result->{vf2_name})->get_all_VariationFeatures)->[0];
+  my $population_id = $result->{population_id};
+  my $r2 = $result->{r2};
+  my $d_prime = $result->{d_prime};
+  my $test_name = $result->{test_name};  
+  cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', $r2, "$test_name r2 no_id_in_vcf");
+  cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', $d_prime, "$test_name d_prime no_id_in_vcf");
+}
+
+#fetch_all_by_Variation
+$v = $va->fetch_by_name('rs1333049');
+$ldfcs = $ldfca->fetch_all_by_Variation($v, $population);
+isa_ok( $ldfcs, 'ARRAY', 'fetch_all_by_Variation returns array ref' );
+ok(scalar @$ldfcs == 1, 'fetch_all_by_Variation returns 1 ld feature container');
+
+$ldfc = $ldfcs->[0];
+ok($ldfc->isa('Bio::EnsEMBL::Variation::LDFeatureContainer'), "is LDFeatureContainer");
+
+$ld_values = $ldfc->get_all_ld_values;
+
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, "fetch_all_by_Variation r2 for $variation_name2 and rs1333049 no_id_in_vcf");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_all_by_Variation d_prime for $variation_name2 and rs1333049 no_id_in_vcf");
+}
+
+#fetch_by_VariationFeature
+$vf = ($v->get_all_VariationFeatures)->[0];
+$ldfc = $ldfca->fetch_by_VariationFeature($vf, $population);
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, "fetch_by_VariationFeature r2 for $variation_name2 and rs1333049 no_id_in_vcf");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_by_VariationFeature d_prime for $variation_name2 and rs1333049 no_id_in_vcf");
+}
+
+#fetch_by_VariationFeature, population is not defined
+$ldfc = $ldfca->fetch_by_VariationFeature($vf);
+foreach my $ld_value (@$ld_values) {
+  my $variation_name2 = $ld_value->{variation_name2};
+  my $r2 = $ld_value->{r2};
+  my $d_prime = $ld_value->{d_prime};
+  cmp_ok($result->{$variation_name2}->{r2}, '==', $r2, "fetch_by_VariationFeature population not defined r2 for $variation_name2 and rs1333049 no_id_in_vcf");
+  cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_by_VariationFeature population not defined d_prime for $variation_name2 and rs1333049 no_id_in_vcf");
+}
+
+my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
+-id =>  'ld_without_rs_in_vcf_strict_name_match',
+-species => 'homo_sapiens',
+-assembly => 'GRCh37',
+-type =>  'local',
+-strict_name_match => 1,
+-filename_template => $dir.'/test-genome-DBs/homo_sapiens/variation/ld_no_rs_in_vcf.vcf.gz',
+-chromosomes => [9],
+-sample_prefix => '1000GENOMES:phase_1:',
+-adaptor => $vca
+);
+
+$vca->remove_VCFCollection_by_ID('ld');
+$vca->add_VCFCollection($c);
+$ldfc = $ldfca->fetch_by_Slice($slice, $population);
+$ld_values = $ldfc->get_all_ld_values;
+
+cmp_ok(scalar @{$ldfc->get_all_ld_values(0)}, '==', 0, "ld_without_rs_in_vcf_strict_name_match match variation feature by name");
+cmp_ok(scalar @{$ldfc->get_all_ld_values(1)}, '==', 14, "ld_without_rs_in_vcf_strict_name_match do not match variation feature by name");
+
+my $ld_hash = $ldfc->get_all_ld_values(1)->[0];
+my $variation1 = $ld_hash->{variation_name1};
+my $variation2 = $ld_hash->{variation_name2};
+ok($variation1 eq '.' && $variation2 eq '.', 'return name from vcf file');
+
+$c = Bio::EnsEMBL::Variation::VCFCollection->new(
+-id =>  'ld_without_rs_in_vcf',
+-species => 'homo_sapiens',
+-assembly => 'GRCh37',
+-type =>  'local',
+-filename_template => $dir.'/test-genome-DBs/homo_sapiens/variation/ld_no_rs_in_vcf.vcf.gz',
+-chromosomes => [9],
+-sample_prefix => '1000GENOMES:phase_1:',
+-adaptor => $vca
+);
+
+$vca->remove_VCFCollection_by_ID('ld_without_rs_in_vcf_strict_name_match');
+$vca->add_VCFCollection($c);
+delete $ldfca->{_cached};
+$ldfc = $ldfca->fetch_by_Slice($slice, $population);
+$ld_values = $ldfc->get_all_ld_values;
+
+cmp_ok(scalar @{$ldfc->get_all_ld_values(1)}, '==', 14, "ld_without_rs_in_vcf do not match variation feature by name");
+cmp_ok(scalar @{$ldfc->get_all_ld_values(0)}, '==', 14, "ld_without_rs_in_vcf match variation feature by name");
+
+foreach my $result (@$results_fetch_by_Slice) {
+  my $vf1 = ($va->fetch_by_name($result->{vf1_name})->get_all_VariationFeatures)->[0];
+  my $vf2 = ($va->fetch_by_name($result->{vf2_name})->get_all_VariationFeatures)->[0];
+  my $population_id = $result->{population_id};
+  my $r2 = $result->{r2};
+  my $d_prime = $result->{d_prime};
+  my $test_name = $result->{test_name};  
+  cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', $r2, "$test_name ld_without_rs_in_vcf r2");
+  cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', $d_prime, "$test_name ld_without_rs_in_vcf d_prime");
+}
 
 done_testing();

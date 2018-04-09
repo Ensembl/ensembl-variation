@@ -293,7 +293,7 @@ sub fetch_by_VariationFeature {
   if(!defined($vf->dbID()) && !$vf->isa('Bio::EnsEMBL::Variation::VCFVariationFeature')) {
     throw("VariationFeature arg must have defined dbID");
   }
-  
+
   # cache the position so objs_from_sth picks it up later to filter
   $self->{_vf_pos} = $vf->seq_region_start;
   $self->{_vf_name} = $vf->variation_name;
@@ -363,7 +363,7 @@ sub _fetch_by_Slice_VCF {
   my $slice = shift;
   my $population = shift;
   my $vca = $self->db->get_VCFCollectionAdaptor();
-  
+ 
   # fetch genotypes
   my $genotypes = {};
 
@@ -378,11 +378,28 @@ sub _fetch_by_Slice_VCF {
   my $container;
   my $collections = $vca->fetch_all;
 
+  my @slices = ();
+  if (ref($slice) eq 'ARRAY') { 
+    push @slices, @$slice;
+  } else {
+    push @slices, $slice; 
+  }
+
   # get populations
   my @populations = $population ? ($population) : map {@{$_->get_all_Populations}} @$collections;
-
   foreach my $population (@populations) {
+    my %location_to_name;
+    my $strict_name_match = 0;
     foreach my $vc (@$collections) {
+      $strict_name_match = $vc->strict_name_match;
+      # if we cannot match variants from VCF by name
+      if (!$strict_name_match) {
+        foreach my $slice (@slices) {
+          my %location_to_name_for_slice =  %{$vc->get_location_to_name_map($slice)};
+          %location_to_name = (%location_to_name, %location_to_name_for_slice);
+        }
+      }
+
       my $sample_string = '';
       # skip this collection if it doesn't have the population we want
       if (defined($population)) {
@@ -398,12 +415,6 @@ sub _fetch_by_Slice_VCF {
       my $cmd;
       my @files = ();
       my @regions = ();
-      my @slices = ();
-      if (ref($slice) eq 'ARRAY') { 
-        push @slices, @$slice;
-      } else {
-        push @slices, $slice; 
-      }
       foreach my $slice (@slices) {
         my $vcf_file = $vc->_get_vcf_filename_by_chr($slice->seq_region_name);
         throw("ERROR: Can't get VCF file\n") unless $vcf_file;
@@ -417,7 +428,13 @@ sub _fetch_by_Slice_VCF {
       $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string";
 
       if ($self->{_vf_name}) {
-        $cmd .= " -v " . $self->{_vf_name};
+        # if strict_name_match we can match by the given variant identifier
+        # else we need to match by position
+        if ($strict_name_match) {
+          $cmd .= " -v " . $self->{_vf_name};
+        } else {
+          $cmd .= " -p " . $self->{_vf_pos};
+        }
       }
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
@@ -451,13 +468,17 @@ sub _fetch_by_Slice_VCF {
         }
         # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature, exclude co-located variants with same location but different alleles: eg C/T and C/-
         if (defined($self->{_vf_name})) {
-          next unless $id1 eq $self->{_vf_name} || $id2 eq $self->{_vf_name};
+          if ($strict_name_match) {
+            next unless $id1 eq $self->{_vf_name} || $id2 eq $self->{_vf_name};
+          }
         }
 
         # skip entries for pairwise computation that don't match input variation feature loactions
         if (defined $self->{_pairwise}) {
           next unless ($self->{_pairwise}->{$ld_region_start} && $self->{_pairwise}->{$ld_region_end});
-          next unless ($self->{_pairwise_vf_name}->{$id1} && $self->{_pairwise_vf_name}->{$id2});
+          if ($strict_name_match) {
+            next unless ($self->{_pairwise_vf_name}->{$id1} && $self->{_pairwise_vf_name}->{$id2});
+          }
         } 
 
         $ld_values{'d_prime'} = $d_prime;
@@ -466,8 +487,15 @@ sub _fetch_by_Slice_VCF {
 
         $id1 =~ s/\;.+//;
         $id2 =~ s/\;.+//;
-        $pos2name{$ld_region_start} = $id1;
-        $pos2name{$ld_region_end} = $id2;
+        # if not strict_name_match we get variant identifier from database stored in location_to_name
+        if ($strict_name_match) {
+          $pos2name{$ld_region_start} = $id1;
+          $pos2name{$ld_region_end} = $id2;
+        } else {
+          next if (!$location_to_name{$ld_region_start} || !$location_to_name{$ld_region_end});
+          $pos2name{$ld_region_start} = $location_to_name{$ld_region_start};
+          $pos2name{$ld_region_end} = $location_to_name{$ld_region_end};
+        }
         $feature_container{$ld_region_start . '-' . $ld_region_end}->{$population_id} = \%ld_values;
       }
 
