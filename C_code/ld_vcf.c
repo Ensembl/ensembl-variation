@@ -509,6 +509,7 @@ int main(int argc, char *argv[]) {
   char *variant = NULL;
   int numregions = MAX_REGIONS;
   int windowsize = WINDOW_SIZE;
+  int var_position = 0;
 
   while(1) {
     static struct option long_options[] = {
@@ -518,6 +519,7 @@ int main(int argc, char *argv[]) {
       {"samples", required_argument, 0, 'l'},
       {"window",  required_argument, 0, 'w'},
       {"variant", required_argument, 0, 'v'},
+      {"var_position", required_argument, 0, 'p'},
       {"include_variants", required_argument, 0, 'n'},
       {0, 0, 0, 0}
     };
@@ -525,7 +527,7 @@ int main(int argc, char *argv[]) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:p:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -555,6 +557,10 @@ int main(int argc, char *argv[]) {
 
       case 'v':
         variant = optarg;
+        break;
+
+      case 'p':
+        var_position = (int) atoi(optarg);
         break;
 
       case 'n':
@@ -712,17 +718,23 @@ int main(int argc, char *argv[]) {
 
           // check include_variants
           if(have_include_variants && check_include_variants(line, include_variants, variant) == 0) 
-            continue;
+          continue;
 
           position = line->pos + (2 - bcf_is_snp(line));
-	  if (windowsize && variant_index > 0 && abs(position - locus_list.locus[variant_index].position) > windowsize)
-	    continue;
+          if (windowsize && variant_index > 0 && abs(position - locus_list.locus[variant_index].position) > windowsize)
+          continue;
 
           if (get_genotypes(&locus_list, hdr, line, position)) {
-            if (!variant) {
+            if (!variant && !var_position) {
               process_window(&locus_list, windowsize, fh, position);
-            } else if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
-              variant_index = locus_list.tail;
+            } else if (variant) {
+              if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
+                variant_index = locus_list.tail;
+              }
+            } else if (var_position) {
+              if (var_position == locus_list.locus[locus_list.tail].position) {
+                variant_index = locus_list.tail;
+              }
             }
           }
         }
@@ -761,10 +773,16 @@ int main(int argc, char *argv[]) {
 	  continue;
 
         if (get_genotypes(&locus_list, hdr, line, position)) {
-          if (!variant) {
+          if (!variant && !var_position) {
             process_window(&locus_list, windowsize, fh, position);
-          } else if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
-            variant_index = locus_list.tail;
+          } else if (variant) {
+            if (!strcmp(variant, locus_list.locus[locus_list.tail].var_id)) {
+              variant_index = locus_list.tail;
+            }
+          } else if (var_position) {
+            if (var_position == locus_list.locus[locus_list.tail].position) {
+              variant_index = locus_list.tail;
+            }
           }
         }
       }
