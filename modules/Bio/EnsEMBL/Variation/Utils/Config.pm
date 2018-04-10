@@ -101,7 +101,7 @@ our @evidence_statuses = (
     'ESP',
     'Phenotype_or_Disease',
     'ExAC',
-    'TOPMED',
+    'TOPMed',
     'gnomAD'
 );
 
