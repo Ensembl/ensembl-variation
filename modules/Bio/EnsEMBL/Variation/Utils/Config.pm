@@ -100,7 +100,9 @@ our @evidence_statuses = (
     'Cited',
     'ESP',
     'Phenotype_or_Disease',
-    'ExAC'
+    'ExAC',
+    'TOPMed',
+    'gnomAD'
 );
 
 our @VARIATION_CLASSES = (
