@@ -460,7 +460,7 @@ sub polyphen_prediction {
     
     $self->{$analysis}->{prediction} = $polyphen_prediction if $polyphen_prediction;
     
-    unless ($self->{$analysis}->{prediction}) {
+    unless (defined $self->{$analysis}->{prediction}) {
         my ($prediction, $score) = $self->_protein_function_prediction($analysis);
         $self->{$analysis}->{score} = $score;
         $self->{$analysis}->{prediction} = $prediction;
@@ -490,7 +490,7 @@ sub polyphen_score {
     
     $self->{$analysis}->{score} = $polyphen_score if defined $polyphen_score;
 
-    unless ($self->{$analysis}->{score}) {
+    unless (defined $self->{$analysis}->{score}) {
         my ($prediction, $score) = $self->_protein_function_prediction($analysis);
         $self->{$analysis}->{score} = $score;
         $self->{$analysis}->{prediction} = $prediction;
@@ -516,7 +516,7 @@ sub sift_prediction {
     
     $self->{sift_prediction} = $sift_prediction if $sift_prediction;
     
-    unless ($self->{sift_prediction}) {
+    unless (defined $self->{sift_prediction}) {
         my ($prediction, $score) = $self->_protein_function_prediction('sift');
         $self->{sift_score} = $score;
         $self->{sift_prediction} = $prediction unless $self->{sift_prediction};
@@ -541,7 +541,7 @@ sub sift_score {
 
     $self->{sift_score} = $sift_score if defined $sift_score;
 
-    unless ($self->{sift_score}) {
+    unless (defined $self->{sift_score}) {
         my ($prediction, $score) = $self->_protein_function_prediction('sift');
         $self->{sift_score} = $score;
         $self->{sift_prediction} = $prediction;
