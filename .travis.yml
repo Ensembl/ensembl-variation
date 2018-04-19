@@ -38,7 +38,7 @@ install:
 - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
 - cpanm -v --installdeps --notest .
 - cpanm -n Devel::Cover::Report::Coveralls
-- export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
+- export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-924
 - cpanm Bio::DB::HTS
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 
