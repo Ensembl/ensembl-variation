@@ -912,7 +912,7 @@ sub _peptide {
     
     my $peptide = $tran->{_variation_effect_feature_cache}->{peptide};
     
-    unless ($peptide) {
+    if (!$peptide && ref($tran) eq 'Bio::EnsEMBL::Transcript') {
         my $translation = $tran->translate;
         $peptide = $translation ? $translation->seq : undef;
         $tran->{_variation_effect_feature_cache}->{peptide} = $peptide;
