@@ -34,7 +34,7 @@ install:
 - cpanm -v --installdeps --notest .
 - cpanm -n Devel::Cover::Report::Coveralls
 - export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-1
-- cpanm Ensembl/Bio-DB-HTS-2.9.tar.gz
+- cpanm https://cpan.metacpan.org/authors/id/R/RI/RISHIDEV/Bio-DB-HTS-2.9.tar.gz
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 jobs:
   include:
