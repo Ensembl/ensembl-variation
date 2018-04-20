@@ -39,10 +39,10 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 
 my ($registry_file);
-my $default_specie = 'homo_sapiens';
-my $specie = $default_specie; #default
+my $default_species = 'homo_sapiens';
+my $species = $default_species; #default
 GetOptions ( "registry=s"   => \$registry_file,
-             "specie=s"    => \$specie);
+             "species=s"    => \$species);
 
 die "Error registry file needed\n" unless defined $registry_file;
 
@@ -50,20 +50,20 @@ open my $out, ">import_phenotype_accessions.log" || die "Failed to open log file
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-my $dba = $reg->get_DBAdaptor($specie,'variation');
+my $dba = $reg->get_DBAdaptor($species,'variation');
 
 
 
 ## add exact matches where available for all phenotypes
 my $all_phenos = get_all_phenos($dba->dbc->db_handle );
 
-if ($specie eq $default_specie) {
+if ($species eq $default_species) {
   my $zooma_terms  = add_zooma_matches($all_phenos);
-  store_terms($reg, $specie, $zooma_terms);
+  store_terms($reg, $species, $zooma_terms);
 }
 
 my $ols_terms = add_ols_matches($all_phenos);
-store_terms($reg, $specie, $ols_terms );
+store_terms($reg, $species, $ols_terms );
 
 
 
@@ -71,7 +71,7 @@ store_terms($reg, $specie, $ols_terms );
 ## eg for 'Psoriasis 13' seek 'Psoriasis'
 my $non_matched_phenos = get_termless_phenos($dba->dbc->db_handle);
 my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
-store_terms($reg, $specie, $ols_parent_terms );
+store_terms($reg, $species, $ols_parent_terms );
 
 
 =head2 add_OLS_matches
@@ -114,9 +114,9 @@ sub add_ols_matches{
 
     my @terms;
     foreach my $doc (@{$ontol_data->{response}->{docs}}){ 
-      if ($specie eq $default_specie) {
+      if ($species eq $default_species) {
         next unless $doc->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
-      } elsif($specie ne $default_specie) {
+      } elsif($species ne $default_species) {
         next unless $doc->{ontology_prefix} =~/VT/;
       }
 
@@ -153,16 +153,16 @@ sub add_zooma_matches{
 
 sub store_terms{
 
-  my ($reg, $specie, $terms)   = @_;
+  my ($reg, $species, $terms)   = @_;
 
-  my $pheno_adaptor = $reg->get_adaptor($specie,'variation', 'Phenotype');
+  my $pheno_adaptor = $reg->get_adaptor($species,'variation', 'Phenotype');
 
   foreach my $id (keys %{$terms}){
 
     my $pheno = $pheno_adaptor->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
-      if ($specie eq $default_specie) {
+      if ($species eq $default_species) {
         next if $accession =~ /UBERON|NCBITaxon|NCIT|CHEBI|PR|MPATH|MA|PATO/; ## filter out some EFO term types
       }
       print $out "$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n";
