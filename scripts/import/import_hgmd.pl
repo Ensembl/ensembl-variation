@@ -166,7 +166,7 @@ sub add_annotation {
   my $phenotype_id = ($select_phe_sth->fetchrow_array)[0];
   if (!defined($phenotype_id)) {
     $dbh->do(qq{INSERT INTO phenotype (name,description) 
-                VALUES ('HGMD_MUTATION','Annotated by HGMD but no phenotype description is publicly available')
+                VALUES ('HGMD_MUTATION','Annotated by HGMD')
                });
     $phenotype_id = $dbh->{'mysql_insertid'};
   }
