@@ -385,7 +385,7 @@ sub source_table {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:1px">
       <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"> ($species)</span></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
   }
@@ -393,7 +393,7 @@ sub source_table {
     $html .= qq{
     <div style="padding-left:0px;padding-bottom:3px">
       <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:4px;vertical-align:middle" /></a>
-      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"> ($species)</span</h2>
+      <h2 id="$s_name_id" style="display:inline;color:#333">$display_name<span class="small vdoc_species_sci_name"> ($species)</span></h2>
     </div>
     };
   }
