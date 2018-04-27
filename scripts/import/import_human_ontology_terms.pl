@@ -39,26 +39,31 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 
 my ($registry_file);
-GetOptions ( "registry=s"   => \$registry_file  );
+my $default_species = 'homo_sapiens';
+my $species = $default_species; #default
+GetOptions ( "registry=s"   => \$registry_file,
+             "species=s"    => \$species);
 
 die "Error registry file needed\n" unless defined $registry_file;
 
-open my $out, ">import_phenotype_accessions.log" ||die "Failed to open log file :$!\n";
+open my $out, ">import_phenotype_accessions.log" || die "Failed to open log file :$!\n";
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
+my $dba = $reg->get_DBAdaptor($species,'variation');
 
 
 
 ## add exact matches where available for all phenotypes
 my $all_phenos = get_all_phenos($dba->dbc->db_handle );
 
-my $zooma_terms  = add_zooma_matches($all_phenos);
-store_terms($reg, $zooma_terms);
+if ($species eq $default_species) {
+  my $zooma_terms  = add_zooma_matches($all_phenos);
+  store_terms($reg, $species, $zooma_terms);
+}
 
 my $ols_terms = add_ols_matches($all_phenos);
-store_terms($reg, $ols_terms );
+store_terms($reg, $species, $ols_terms );
 
 
 
@@ -66,7 +71,7 @@ store_terms($reg, $ols_terms );
 ## eg for 'Psoriasis 13' seek 'Psoriasis'
 my $non_matched_phenos = get_termless_phenos($dba->dbc->db_handle);
 my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
-store_terms($reg, $ols_parent_terms );
+store_terms($reg, $species, $ols_parent_terms );
 
 
 =head2 add_OLS_matches
@@ -109,10 +114,15 @@ sub add_ols_matches{
 
     my @terms;
     foreach my $doc (@{$ontol_data->{response}->{docs}}){ 
-      next unless $doc->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
+      if ($species eq $default_species) {
+        next unless $doc->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
+      } elsif($species ne $default_species) {
+        next unless $doc->{ontology_prefix} =~/VT/;
+      }
 
       push @terms, iri2acc($doc->{iri});
     }
+    next unless scalar(@terms) > 0;
     $terms{$id}{terms} = \@terms;
     $terms{$id}{type} = (defined $truncate ? 'OLS partial' : 'OLS exact');
   }
@@ -135,7 +145,7 @@ sub add_zooma_matches{
 
     my $eva_terms = get_eva_zooma_terms($desc);   
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
-    $terms{$id}{type} = "Zooma exact";
+    $terms{$id}{type} = "Zooma exact" if defined $eva_terms;
   }
   return \%terms;
 }
@@ -143,17 +153,18 @@ sub add_zooma_matches{
 
 sub store_terms{
 
-  my $reg   = shift;
-  my $terms = shift;
+  my ($reg, $species, $terms)   = @_;
 
-  my $pheno_adaptor = $reg->get_adaptor('homo_sapiens','variation', 'Phenotype');
+  my $pheno_adaptor = $reg->get_adaptor($species,'variation', 'Phenotype');
 
   foreach my $id (keys %{$terms}){
 
     my $pheno = $pheno_adaptor->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
-      next if $accession =~ /UBERON|NCBITaxon|NCIT|CHEBI|PR|MPATH|MA|PATO/; ## filter out some EFO term types 
+      if ($species eq $default_species) {
+        next if $accession =~ /UBERON|NCBITaxon|NCIT|CHEBI|PR|MPATH|MA|PATO/; ## filter out some EFO term types
+      }
       print $out "$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n";
 
       $pheno->add_ontology_accession({ accession      => $accession, 
@@ -234,7 +245,7 @@ sub get_high_quality_zooma_terms{
   foreach my $annot(@{$ontol_data}){
     next unless $annot->{confidence} eq 'HIGH';
     foreach my $term (@{$annot->{semanticTags}} ){
-      next unless $term =~ /EFO|Orphanet|ORDO|HP/;       
+      next unless $term =~ /EFO|Orphanet|ORDO|HP/;
       print $out "$term\t$annot->{confidence}\t$desc\n";
       push @terms, iri2acc($term) ;
     }
@@ -259,9 +270,9 @@ sub get_eva_zooma_terms{
   my @terms;
 
   foreach my $annot(@{$ontol_data}){
-    next unless $annot->{derivedFrom}->{provenance}->{source}->{name} eq 'eva-clinvar'; 
+    next unless $annot->{derivedFrom}->{provenance}->{source}->{name} eq 'eva-clinvar';
 
-    next unless $annot->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
+    next unless grep(/EFO|Orphanet|ORDO|HP/, @{$annot->{semanticTags}});
 
     foreach my $term (@{$annot->{semanticTags}} ){
       print $out "$term\t$annot->{confidence}\t$desc\tEVA\n";
@@ -283,10 +294,10 @@ sub get_ols_terms{
 
   my $pheno = shift;
 
-  $pheno =~ s/\s+/\%20/g;
+  $pheno =~ s/\s+/+/g;
 
   my $http = HTTP::Tiny->new();
-  my $server = 'http://www.ebi.ac.uk/ols/api/search?q=';
+  my $server = 'https://www.ebi.ac.uk/ols/api/search?q=';
   my $request  = $server . $pheno . "&queryFields=label,synonym&exact=1";
 
 
@@ -314,8 +325,8 @@ sub get_zooma_terms{
   $pheno =~ s/\s+/\+/g;
 
   my $http = HTTP::Tiny->new();
-  my $server = 'http://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=';
-  my $request  = $server . '"'. $pheno .'"' ;
+  my $server = 'https://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=';
+  my $request  = $server . $pheno  ;
 
   #warn "Looking for $request\n\n" ;
   my $response = $http->get($request, {
