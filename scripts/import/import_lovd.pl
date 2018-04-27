@@ -148,7 +148,8 @@ my $sv_prefix = 'structural_';
 
 MAIN_LOOP : while(<$INPUT>) {
 
-    next unless /^chr/;
+    next unless /^\w+/;
+    next if /^track/;
   
     my $line = $_;
     
@@ -161,7 +162,9 @@ MAIN_LOOP : while(<$INPUT>) {
         $description
     ) = split "\t", $_;
 
-    $chr = (split('r',$chr))[1];
+    if ($chr =~ /chr/) {
+      $chr = (split('r',$chr))[1];
+    }
     $accession =~ s/ //g;
       
     $start ++; # Conversion from BED file
