@@ -65,9 +65,14 @@ sub fetch_input {
         @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
     }
     else {
-        my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+        my $sa  = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+        my $vfa = $var_dba->get_VariationFeatureAdaptor or die "Failed to get variation feature adaptor";
         
         for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
+            # Is there even a variation on this slice?
+            my $slice_iter = $vfa->fetch_Iterator_by_Slice($slice);
+            next if not $slice_iter->next;
+            
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
                     if (my $translation = $transcript->translation) {
