@@ -156,8 +156,8 @@ while (my $set = $ref->get_record() ){
     $record{submitters} = get_submitters($set->{ClinVarAssertion});
 
     if (defined $structvar ){
-      if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar} =~/\d+/ ){
-        warn "Importing SV :  $record{dbVar}\n";
+      if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar}->[0] =~/\d+/ ){
+        #warn "Importing SV :  $record{feature_info}->{dbVar}->[0]\n";
         import( \%record);
       }
     }
@@ -723,12 +723,16 @@ sub get_structural_variant{
 
   my $record = shift;
 
+  ## sort to get struct var not genotype
+  my @ids = sort @{$record->{feature_info}->{dbVar}};
+  my $dbvar = pop @ids;
+
   ## look for existing structural variation object
-  my $struct_var_ob = $structvar_adaptor->fetch_by_name($record->{feature_info}->{dbVar}->[0]);
+  my $struct_var_ob = $structvar_adaptor->fetch_by_name($dbvar);
 
   unless (defined $struct_var_ob && $struct_var_ob ne ''){
 
-    print "Not entering SV: $record->{dbVar}->[0] as not in db \n";
+    print "Not entering SV: $record->{feature_info}->{dbVar}->[0] as not in db \n";
     return undef;
   }
   my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
