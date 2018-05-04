@@ -93,7 +93,7 @@ sub run {
   # we need to include failed variations
   $tva->db->include_failed_variations(1);
 
-  if((my $fasta = $self->param('fasta')) && !$Bio::EnsEMBL::Slice::_fasta_redefined && !$Bio::EnsEMBL::Slice::fasta_db) {
+  if((my $fasta = $self->param('fasta_file')) && !$Bio::EnsEMBL::Slice::_fasta_redefined && !$Bio::EnsEMBL::Slice::fasta_db) {
 
     # we need to find the assembly version to tell it about PARs
     my ($highest_cs) = @{$core_dba->get_CoordSystemAdaptor->fetch_all()};

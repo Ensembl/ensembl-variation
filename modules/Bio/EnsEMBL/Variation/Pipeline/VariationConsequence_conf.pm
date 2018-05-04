@@ -132,7 +132,7 @@ sub default_options {
 
         # points to a FASTA file, much faster than using DB for sequence lookup if available
         fasta_dir => undef,
-        fasta => $self->o('fasta_dir') ? catfile($self->o('fasta_dir'), '#species#', '#species#.fa') : undef,
+        fasta_file => $self->o('fasta_dir') ? catfile($self->o('fasta_dir'), '#species#', '#species#.fa') : undef,
 
         # sets the maximum distance to a transcript for which up/downstream consequences are assessed
         max_distance => undef,
@@ -202,6 +202,7 @@ sub pipeline_analyses {
   my @common_params = (
     ensembl_registry    => $self->o('reg_file'),
     pipeline_dir => catdir($self->o('pipeline_dir'), '#species#'),
+    fasta_file => $self->o('fasta_file'),
   );
 
   my @rebuild_tables = qw(transcript_variation variation_hgvs variation_genename);
@@ -233,7 +234,6 @@ sub pipeline_analyses {
         include_lrg => $self->o('include_lrg'),
         limit_biotypes => $self->o('limit_biotypes'),
         mtmp_table => $self->o('mtmp_table'),
-        fasta => $self->o('fasta'),
         sort_variation_feature => $self->o('sort_variation_feature'),
         @common_params,
       },
@@ -253,7 +253,6 @@ sub pipeline_analyses {
       -parameters     => { 
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         mtmp_table => $self->o('mtmp_table'),
-        fasta => $self->o('fasta'),
         max_distance => $self->o('max_distance'),
         @common_params,
       },
@@ -271,7 +270,6 @@ sub pipeline_analyses {
       -parameters     => {
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         mtmp_table => $self->o('mtmp_table'),
-        fasta => $self->o('fasta'),
         max_distance => $self->o('max_distance'),
         @common_params,
       },

@@ -188,7 +188,7 @@ sub fetch_input {
         # but it doesn't have any parameters we need to set here
 
         # setup fasta
-        if(my $fasta = $self->param('fasta')) {
+        if(my $fasta = $self->param('fasta_file')) {
 
           # run this here as it generates the index
           # don't want competing jobs writing to it
