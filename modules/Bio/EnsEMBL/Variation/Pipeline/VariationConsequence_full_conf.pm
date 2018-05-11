@@ -343,14 +343,14 @@ sub pipeline_analyses {
                 use_compara     => $self->o('sift_use_compara'),
                 @common_params,
             },
-            -failed_job_tolerance => 10,
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
             -flow_into      => {
+               2 => 'error_registry',
               -1 => ['run_sift_highmem'],
-            }
+            },
         },
 
         {   -logic_name     => 'run_sift_highmem',
@@ -363,8 +363,23 @@ sub pipeline_analyses {
                 use_compara     => $self->o('sift_use_compara'),
                 @common_params,
             },
+            -flow_into      => {
+              2 => 'error_registry',
+            },
             -input_ids      => [],
             -rc_name        => 'highmem',
+        },
+        
+        {   -logic_name => 'error_registry',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -meadow_type       => 'LOCAL',
+          -max_retry_count => 0,
+          -batch_size => 50,
+          -analysis_capacity => 1,
+          -rc_name    => 'default',
+          -flow_into  => {
+              1 => '?accu_name=acceptable_errors&accu_address={error}[]&accu_input_variable=name',
+          },
         },
 
         {   -logic_name => 'protein_function_cleanup',
