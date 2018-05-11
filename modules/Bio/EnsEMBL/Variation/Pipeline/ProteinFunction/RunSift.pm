@@ -84,6 +84,7 @@ sub run {
   # fetch our protein 
 
   my $peptide = $self->get_protein_sequence($translation_md5);
+  $self->dbc and $self->dbc->disconnect_if_idle();
 
   my $alignment_ok = 1;
 
@@ -136,6 +137,24 @@ sub run {
         $alignment_ok = 1;
       }
       else {
+        # If we just did not find enough hits, that's ok, just skip this
+        my $error_file = $fasta_file . ".query.globalX.error";
+        if (-s $error_file) {
+          open my $error_fh, "<", $error_file or die $!;
+          my $error_msg = <$error_fh>;
+          close $error_fh;
+          chomp $error_msg;
+          if ($error_msg =~ /Not enough sequences \(only \d\) found by the PSI-BLAST search!|PSI-BLAST found no hits/) {
+            $self->param('acceptable_error', '"Not enough sequences found by PSI-BLAST" via file .query.globalX.error');
+            return;
+          }
+          die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
+        }
+        # Fail because of known Segfault: skip
+        elsif ($flat_cmd =~ /ensembl_seqs_chosen_via_median_info.csh/ and $stderr =~ /stack smashing detected/) {
+            $self->param('acceptable_error', '"stack smashing detected" via ensembl_seqs_chosen_via_median_info.csh');
+            return;
+        }
         # the alignment failed for some reason, what to do?
         die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
         $alignment_ok = 0;
@@ -176,7 +195,29 @@ sub run {
     my $cmd = "$sift_dir/bin/info_on_seqs $aln_file $subs_file $res_file";
     my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command($cmd);
 
-    die("Failed to run $flat_cmd: $stderr\n") unless $exit_code == 0;
+    if ($exit_code != 0) {
+      # If there was not enough sequences selected, skip it
+      my $error_file = "protein.alignedfasta.error";
+      if (-s $error_file) {
+        open my $error_fh, "<", $error_file or die $!;
+        my $error_msg = <$error_fh>;
+        close $error_fh;
+        chomp $error_msg;
+        if ($error_msg =~ /\d sequence\(s\) were chosen\. Less than the minimum number of sequences required/) {
+          $self->param('acceptable_error', '"Less than the minimum number of sequences required" via the file protein.alignedfasta.error');
+          return;
+        }
+        die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
+      }
+      elsif ($flat_cmd =~ /info_on_seqs/ and $stderr =~ /The following sequences have been removed because they  were found to be over 100% identical with your protein query:  /) {
+        # This is just a warning? Don't log as error
+        #$self->param('acceptable_error', '"The following sequences have been removed because they  were found to be over 100% identical with your protein query:" via info_on_seqs');
+        return;
+      }
+      
+      # Otherwise die with a reason
+      die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");
+    }
 
     $self->dbc->disconnect_when_inactive(0);
 
@@ -235,6 +276,8 @@ sub run {
         or die "Failed to get matrix adaptor";
     
       $pfpma->store($pred_matrix);
+      $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+      $self->dbc and $self->dbc->disconnect_if_idle();
     }
   }
 
@@ -245,3 +288,16 @@ sub run {
   
   die "Failed to create $output_dir/$tarball: $stderr" unless $exit_code == 0;
 }
+
+sub write_output {
+    my $self = shift;
+    
+    my $error = $self->param('acceptable_error');
+    my $name = $self->param('species') . "_" . $self->param('translation_md5');
+    if ($error) {
+      $self->dataflow_output_id({ error => $error, name => $name }, 2);
+    }
+}
+
+1;
+

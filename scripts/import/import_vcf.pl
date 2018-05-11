@@ -124,6 +124,7 @@ sub configure {
 		'source=s',
 		'source_desc=s',
 		'population|pop=s',
+		'pop_from_source',
 		'pedigree=s',
 		'panel=s',
 		'gmaf=s',
@@ -565,7 +566,7 @@ sub main {
 	
 	# get population object
 	if($config->{tables}->{population}) {
-		die("ERROR: no population specified\n") unless defined $config->{population} || defined $config->{panel};
+		die("ERROR: no population specified\n") unless defined ($config->{population} // $config->{panel} // $config->{pop_from_source});
 		$config->{populations} = population($config);
 	}
 	
@@ -1683,7 +1684,17 @@ sub get_source_id{
 	return $source_id;
 }
 
-
+sub pop_from_source {
+  my ($config) = @_;
+  
+  # First get the source_id
+  my $source_name = $config->{source};
+  my $query = "SELECT population.name FROM population LEFT JOIN sample_population USING(population_id) LEFT JOIN sample_synonym USING(sample_id) LEFT JOIN source USING(source_id) WHERE source.name=? group by population.name";
+  my $dbh = $config->{dbVar};
+  my $population_names = $dbh->selectcol_arrayref($query, undef, $source_name);
+  
+  return $population_names;
+}
 
 # gets population objects - retrieves if already exists, otherwise inserts relevant entries
 sub population{
@@ -1728,7 +1739,9 @@ sub population{
 	
 	elsif(defined $config->{population}) {
 		push @pops, $config->{pop_prefix}.$config->{population};
-	}
+	} elsif (defined $config->{pop_from_source}) {
+		push @pops, @{ pop_from_source($config) };
+  }
 	
 	die "ERROR: Population name not specified - use --population [population] or --panel [panel_file]\n" unless scalar @pops;
 	
@@ -1807,6 +1820,7 @@ sub samples {
 	# get sample and individual adaptor
 	my $sample_adpt = $config->{sample_adaptor};
   my $ia = $config->{individual_adaptor};	
+  
 	# populate %ind_pops hash if it doesn't exist (this will happen when using --population but no panel file)
 	if(!exists($config->{sample_pops})) {
 		my %sample_pops = map { $config->{sample_prefix}.$_ => {$config->{pop_prefix}.$config->{population} => 1} } @$split_ref;
@@ -2843,14 +2857,16 @@ Options
 --species             Species to use [default: "human"]
 --source              Name of source [required]
 --source_description  Description of source [optional]
+
+Population, either of those 3:
 --population          Name of population for all samples in file
---panel               Panel file containing sample population membership. One or
-                      more of --population or --panel is required. Frequencies are
-                      calculated for each population specified. Samples may belong
-                      to more than one population
+--panel               Panel file containing sample population membership.
+--pop_from_source     Use the source to get the populations straight from the db
+NB: Frequencies are calculated for each population specified. Samples may belong to 
+                      more than one population
+                      
 --pedigree            Pedigree file containing family relationships and sample
                       genders
-					  
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
                       samples in the file; specifying any other population name
                       will use the selected population for the GMAF.

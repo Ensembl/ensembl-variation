@@ -65,9 +65,14 @@ sub fetch_input {
         @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
     }
     else {
-        my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+        my $sa  = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+        my $vfa = $var_dba->get_VariationFeatureAdaptor or die "Failed to get variation feature adaptor";
         
         for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
+            # Is there even a variation on this slice?
+            my $slice_iter = $vfa->fetch_Iterator_by_Slice($slice);
+            next if not $slice_iter->next;
+            
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
                     if (my $translation = $transcript->translation) {
@@ -81,7 +86,6 @@ sub fetch_input {
     push @transcripts, @{$self->get_refseq_transcripts} if $self->param('include_refseq');
 
     # store a table mapping each translation stable ID to its corresponding MD5
-
     $var_dba->dbc->do(qq{DROP TABLE IF EXISTS translation_mapping});
 
     $var_dba->dbc->do(qq{
@@ -92,6 +96,12 @@ sub fetch_input {
             KEY md5_idx (md5)
         )
     });
+  
+    # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
+    if ($sift_run_type == FULL) {
+      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions/);
+      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions_attrib/);
+    }
 
     my $add_mapping_sth = $var_dba->dbc->prepare(qq{
         INSERT IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
@@ -197,8 +207,8 @@ sub fetch_input {
 
     # set up our list of output ids
 
-    $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
-    $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
+    $self->param('pph_output_ids',  [ map { {translation_md5 => $_, species => $self->param('species')} } @pph_md5s ]);
+    $self->param('sift_output_ids', [ map { {translation_md5 => $_, species => $self->param('species')} } @sift_md5s ]);
 }
 
 ## hold code & protein database version in meta table if new complete run

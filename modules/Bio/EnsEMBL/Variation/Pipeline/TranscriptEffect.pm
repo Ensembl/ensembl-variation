@@ -35,12 +35,13 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap);
-use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
+use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta revert_fasta);
 
 use ImportUtils qw(load);
 use FileHandle;
 use Fcntl qw(:flock SEEK_END);
 use Digest::MD5 qw(md5_hex);
+use File::Path qw(make_path);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -92,7 +93,7 @@ sub run {
   # we need to include failed variations
   $tva->db->include_failed_variations(1);
 
-  if((my $fasta = $self->param('fasta')) && !$Bio::EnsEMBL::Slice::_fasta_redefined && !$Bio::EnsEMBL::Slice::fasta_db) {
+  if((my $fasta = $self->param('fasta_file')) && !$Bio::EnsEMBL::Slice::_fasta_redefined && !$Bio::EnsEMBL::Slice::fasta_db) {
 
     # we need to find the assembly version to tell it about PARs
     my ($highest_cs) = @{$core_dba->get_CoordSystemAdaptor->fetch_all()};
@@ -281,12 +282,18 @@ sub run {
     load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
   }
   ## end block
+  
+  $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+  $core_dba->dbc and $core_dba->dbc->disconnect_if_idle();
 
   # dump HGVS stubs to file for web index
   $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
 
   $hgvs_fh->close();
-
+  
+  # Because the next job might use a different fasta file, we need to forget this one
+  revert_fasta();
+  
   print STDERR "All done\n" if $DEBUG;
 
   return;
@@ -303,7 +310,7 @@ sub get_table_files_prefix {
   my $dir = $self->required_param('pipeline_dir').'/table_files/'.substr(md5_hex($id), 0, 2);
 
   unless(-d $dir) {
-    mkdir($dir) or die "ERROR: Could not make directory $dir\n";
+    make_path($dir) or die "ERROR: Could not make directory $dir\n";
   }
 
   return $dir.'/'.$id;

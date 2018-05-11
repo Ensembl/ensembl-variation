@@ -59,6 +59,9 @@ sub default_options {
         hive_no_init => 0,
 
         debug_mode              => 0,
+        
+        # The species to analyse
+        species => [],
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
@@ -68,7 +71,7 @@ sub default_options {
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
-        species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
+        species_dir             => $self->o('pipeline_dir').'/#species#',
         
         # directory used for the hive's own output files
 
@@ -83,7 +86,7 @@ sub default_options {
 
         # peptide sequences for all unique translations for this species will be dumped to this file
 
-        fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
+        fasta_file              => $self->o('species_dir').'/#species#_translations.fa',
         
         # set this flag to include LRG translations in the analysis
 
@@ -103,7 +106,7 @@ sub default_options {
             -port   => 4449,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
-            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
+            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name') .'_hive',
             -driver => 'mysql',
         },
         
@@ -199,17 +202,35 @@ sub resource_classes {
     };
 }
 
+sub beekeeper_extra_cmdline_options {
+    my $self = shift;
+    # Required by the species factory
+    return "-reg_conf " . $self->o("ensembl_registry");
+}
+
 sub pipeline_analyses {
     my ($self) = @_;
     
     my @common_params = (
         fasta_file          => $self->o('fasta_file'),
         ensembl_registry    => $self->o('ensembl_registry'),
-        species             => $self->o('species'),
         debug_mode          => $self->o('debug_mode'),
     );
 
     return [
+        {   -logic_name => 'species_factory',
+            -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
+            -parameters => {
+                db_types => [ 'variation' ],
+                species  => $self->o('species'),
+            },
+            -meadow_type       => 'LOCAL',
+            -input_ids  => [{}],
+            -rc_name    => 'default',
+            -flow_into  => {
+                2 => [ 'init_jobs' ],
+            },
+        },
         {   -logic_name => 'init_jobs',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs',
             -parameters => {
@@ -224,11 +245,11 @@ sub pipeline_analyses {
                 species_dir     => $self->o('species_dir'),
                 @common_params,
             },
-            -input_ids  => [{}],
             -rc_name    => 'highmem',
             -flow_into  => {
-                2 => [ 'run_polyphen' ],
-                3 => [ 'run_sift' ],
+                '2->A' => [ 'run_polyphen' ],
+                '3->A' => [ 'run_sift' ],
+                'A->1' => [ 'cleanup' ],
             },
         },
 
@@ -275,7 +296,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -failed_job_tolerance => 10,
-            -max_retry_count => 5,
+            -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
@@ -298,6 +319,15 @@ sub pipeline_analyses {
             -rc_name        => 'highmem',
         },
 
+        {   -logic_name => 'cleanup',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Cleanup',
+            -parameters => {
+                @common_params,
+            },
+            -meadow_type       => 'LOCAL',
+            -max_retry_count => 0,
+            -rc_name    => 'default',
+        },
     ];
 }
 

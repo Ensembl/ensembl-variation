@@ -28,7 +28,7 @@ limitations under the License.
 
 =cut
 
-package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_conf;
+package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_full_conf;
 
 use strict;
 use warnings;
@@ -36,6 +36,7 @@ use File::Spec::Functions qw(catfile catdir);
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf qw(WHEN ELSE);
+use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
 
 sub default_options {
     my ($self) = @_;
@@ -48,9 +49,6 @@ sub default_options {
     # these values, if you find you do need to then we should probably
     # make it an option here, contact the variation team to discuss
     # this - patches are welcome!
-    
-    my $login = `whoami`;
-    chomp $login;
 
     return {
       
@@ -66,16 +64,21 @@ sub default_options {
         hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
+        debug_mode              => 0,
+        
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
         hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
-        pipeline_name           => 'variation_consequence',
+        pipeline_name           => 'variation_consequence_all',
 
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $login . '/' . $self->o('pipeline_name'),
+        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $ENV{USER} . '/' . $self->o('pipeline_name'),
+        
+        species_dir             => $self->o('pipeline_dir').'/#species#',
+        output_dir              => $self->o('species_dir').'/hive_output',
 
         # a standard ensembl registry file containing connection parameters
         # for your target database(s) (and also possibly aliases for your species
@@ -83,6 +86,10 @@ sub default_options {
         # option)
         
         reg_file                => $self->o('pipeline_dir').'#species#/ensembl.registry',
+
+        # points to a FASTA file, much faster than using DB for sequence lookup if available
+        fasta_dir => undef,
+        fasta_file => $self->o('fasta_dir') ? catfile($self->o('fasta_dir'), '#species#', '#species#.fa') : undef,
 
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
@@ -128,11 +135,7 @@ sub default_options {
         # sort variation_feature before we start?
         # disable this if you are sure the table is already sorted
         # or if the table is sufficiently small that it won't make much difference
-        sort_variation_feature => 1,
-
-        # points to a FASTA file, much faster than using DB for sequence lookup if available
-        fasta_dir => undef,
-        fasta_file => $self->o('fasta_dir') ? catfile($self->o('fasta_dir'), '#species#', '#species#.fa') : undef,
+        sort_variation_feature => 0,
 
         # sets the maximum distance to a transcript for which up/downstream consequences are assessed
         max_distance => undef,
@@ -165,9 +168,61 @@ sub default_options {
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
             -driver => 'mysql',
         },
+        
+        # PROTEIN FEATURES PART
+        # set this flag to include LRG translations in the analysis
+        include_lrg             => 0,
+
+        # include RefSeq transcripts, and edit with accompanying BAM?
+        include_refseq          => 0,
+        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh38.p10_knownrefseq_alignments_2017-01-13.bam',
+        
+        # Polyphen specific parameters
+        # location of the software
+        pph_dir                 => '/nfs/production/panda/ensembl/variation/software/polyphen-2.2.2',
+
+        # where we will keep polyphen's working files etc. as the pipeline runs
+        pph_working             => $self->o('species_dir').'/polyphen_working',
+        
+        # specify the Weka classifier models here, if you don't want predictions from 
+        # one of the classifier models set the value to the empty string
+        humdiv_model            => $self->o('pph_dir').'/models/HumDiv.UniRef100.NBd.f11.model',
+        humvar_model            => $self->o('pph_dir').'/models/HumVar.UniRef100.NBd.f11.model',
+
+        # the run type for polyphen (& sift) can be one of FULL to run predictions for
+        # all translations regardless of whether we already have predictions in the
+        # database, NONE to exclude this analysis, or UPDATE to run predictions for any
+        # new or changed translations in the database. The variation database specified 
+        # in the registry above is used to identify translations we already have 
+        # predictions for.
+        pph_run_type            => NONE,
+
+        # set this flag to use compara protein families as the alignments rather than
+        # polyphen's own alignment pipeline
+        pph_use_compara         => 0,
+
+        # the maximum number of workers to run in parallel for polyphen and weka. Weka 
+        # runs much faster then polyphen so you don't need as many workers.
+        pph_max_workers         => 500,
+        weka_max_workers        => 20,
+
+        # Sift specific parameters
+        # location of the software
+        sift_dir                => '/nfs/panda/ensemblgenomes/external/sift',
+        sift_working            => $self->o('species_dir').'/sift_working',
+        
+        # the location of blastpgp etc.
+        ncbi_dir                => '/nfs/panda/ensemblgenomes/external/ncbi-blast-2+/bin',
+        
+        # the protein database used to build alignments if you're not using compara
+        blastdb                 => '/nfs/production/panda/ensembl/variation/data/sift5.2.2/uniref90/uniref90.fasta',
+
+        # the following parameters mean the same as for polyphen
+        sift_run_type           => UPDATE,
+        sift_use_compara        => 0,
+        sift_max_workers        => 500,
     };
 }
-
 
 sub resource_classes {
     my ($self) = @_;
@@ -202,7 +257,8 @@ sub pipeline_analyses {
   my @common_params = (
     ensembl_registry    => $self->o('reg_file'),
     pipeline_dir => catdir($self->o('pipeline_dir'), '#species#'),
-    fasta_file => $self->o('fasta_file'),
+    fasta_file          => $self->o('fasta_file'),
+    debug_mode          => $self->o('debug_mode'),
   );
 
   my @rebuild_tables = qw(transcript_variation variation_hgvs variation_genename);
@@ -210,18 +266,144 @@ sub pipeline_analyses {
 
   my @analyses;
   push @analyses, (
-    {   -logic_name => 'species_factory',
-      -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
-      -parameters => {
-        db_types => [ 'variation' ],
-        species  => $self->o('species'),
-      },
+        {   -logic_name => 'species_factory',
+            -module     => 'Bio::EnsEMBL::Production::Pipeline::Production::SpeciesFactory',
+            -parameters => {
+                db_types => [ 'variation' ],
+                species  => $self->o('species'),
+            },
+            -meadow_type       => 'LOCAL',
+            -input_ids  => [{}],
+            -rc_name    => 'default',
+            -flow_into  => {
+                2 => [ 'init_jobs' ],
+            },
+        },
+        {   -logic_name => 'init_jobs',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs',
+            -parameters => {
+                sift_run_type   => $self->o('sift_run_type'),
+                pph_run_type    => $self->o('pph_run_type'),
+                include_lrg     => $self->o('include_lrg'),
+                polyphen_dir    => $self->o('pph_dir'),
+                sift_dir        => $self->o('sift_dir'),                
+                blastdb         => $self->o('blastdb'),
+                include_refseq  => $self->o('include_refseq'),
+                bam             => $self->o('bam'),
+                species_dir     => $self->o('species_dir'),
+                @common_params,
+            },
+            -rc_name    => 'highmem',
+            -flow_into  => {
+                '2->A' => [ 'run_polyphen' ],
+                '3->A' => [ 'run_sift' ],
+                'A->1' => [ 'protein_function_cleanup' ],
+            },
+        },
+
+        {   -logic_name     => 'run_polyphen',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunPolyPhen',
+            -parameters     => {
+                pph_dir     => $self->o('pph_dir'),
+                pph_working => $self->o('pph_working'),
+                use_compara => $self->o('pph_use_compara'),
+                @common_params,
+            },
+            -max_retry_count => 0,
+            -input_ids      => [],
+            -hive_capacity  => $self->o('pph_max_workers'),
+            -rc_name        => 'highmem',
+            -flow_into      => {
+                2   => [ 'run_weka' ],
+            },
+        },
+        
+        {   -logic_name     => 'run_weka',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunWeka',
+            -parameters     => { 
+                pph_dir         => $self->o('pph_dir'),
+                humdiv_model    => $self->o('humdiv_model'),
+                humvar_model    => $self->o('humvar_model'),
+                @common_params,
+            },
+            -max_retry_count => 0,
+            -input_ids      => [],
+            -hive_capacity  => $self->o('weka_max_workers'),
+            -rc_name        => 'default',
+            -flow_into      => {},
+        },
+        
+        {   -logic_name     => 'run_sift',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift',
+            -parameters     => {
+                sift_dir        => $self->o('sift_dir'),
+                sift_working    => $self->o('sift_working'),
+                ncbi_dir        => $self->o('ncbi_dir'),
+                blastdb         => $self->o('blastdb'),
+                use_compara     => $self->o('sift_use_compara'),
+                @common_params,
+            },
+            -max_retry_count => 0,
+            -input_ids      => [],
+            -hive_capacity  => $self->o('sift_max_workers'),
+            -rc_name        => 'medmem',
+            -flow_into      => {
+               2 => 'error_registry',
+              -1 => ['run_sift_highmem'],
+            },
+        },
+
+        {   -logic_name     => 'run_sift_highmem',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift',
+            -parameters     => {
+                sift_dir        => $self->o('sift_dir'),
+                sift_working    => $self->o('sift_working'),
+                ncbi_dir        => $self->o('ncbi_dir'),
+                blastdb         => $self->o('blastdb'),
+                use_compara     => $self->o('sift_use_compara'),
+                @common_params,
+            },
+            -flow_into      => {
+              2 => 'error_registry',
+            },
+            -input_ids      => [],
+            -rc_name        => 'highmem',
+        },
+        
+        {   -logic_name => 'error_registry',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -meadow_type       => 'LOCAL',
+          -max_retry_count => 0,
+          -batch_size => 50,
+          -analysis_capacity => 1,
+          -rc_name    => 'default',
+          -flow_into  => {
+              1 => '?accu_name=acceptable_errors&accu_address={error}[]&accu_input_variable=name',
+          },
+        },
+
+        {   -logic_name => 'protein_function_cleanup',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Cleanup',
+            -parameters => {
+                @common_params,
+            },
+            -meadow_type       => 'LOCAL',
+            -max_retry_count => 0,
+            -rc_name    => 'default',
+            -flow_into      => {
+              1 => ['transcript_effect_start'],
+            }
+        },
+      );
+      
+  push @analyses, (
+    {   -logic_name => 'transcript_effect_start',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       -meadow_type       => 'LOCAL',
       -max_retry_count => 0,
-      -input_ids  => [{}],
       -rc_name    => 'default',
       -flow_into  => {
-        2 => WHEN('#run_transcript_effect#' => 'init_transcript_effect',
+        1 => WHEN('#run_transcript_effect#' => 'init_transcript_effect',
              ELSE 'init_variation_class'),
       },
     },
