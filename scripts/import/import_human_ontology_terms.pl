@@ -52,26 +52,23 @@ my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species,'variation');
 
-
-
 ## add exact matches where available for all phenotypes
 my $all_phenos = get_all_phenos($dba->dbc->db_handle );
 
-if ($species eq $default_species) {
-  my $zooma_terms  = add_zooma_matches($all_phenos);
-  store_terms($reg, $species, $zooma_terms);
-}
-
 my $ols_terms = add_ols_matches($all_phenos);
 store_terms($reg, $species, $ols_terms );
-
-
 
 ## seek matches for parent descriptions missing terms
 ## eg for 'Psoriasis 13' seek 'Psoriasis'
 my $non_matched_phenos = get_termless_phenos($dba->dbc->db_handle);
 my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
 store_terms($reg, $species, $ols_parent_terms );
+
+if ($species eq $default_species) {
+  my $non_matched_phenos = get_termless_phenos($dba->dbc->db_handle);
+  my $zooma_terms  = add_zooma_matches($non_matched_phenos);
+  store_terms($reg, $species, $zooma_terms);
+}
 
 
 =head2 add_OLS_matches
@@ -97,7 +94,7 @@ sub add_ols_matches{
       $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (DDG2P abbreviation)
       $search_term =~ s/SUSCEPTIBILITY TO\s*|SUSCEPTIBILITY//i;
       $search_term =~ s/(\,+(\s*\w+\s*)+)+\s*$//;      ## remove ", with other  condition" ", one family" type qualifiers
-      $search_term =~ s/\s+type\s+\d+\s*$//i;          ## remove " type 34"
+      $search_term =~ s/\s+type\s*\w*\s*$//i;          ## remove " type 34"
       $search_term =~ s/\s+\d+\s*$//;                  ## remove just numeric subtype
       $search_term =~ s/\s+\d+\w\s*$//;                ## remove numeric+letter subtype 1c
       $search_term =~ s/primary\s*//i;
@@ -143,7 +140,7 @@ sub add_zooma_matches{
     my $desc = $phenos->{$id};
     $desc =~ s/\s+\(\w+\)$//; ## remove DDG2P abbreviation 
 
-    my $eva_terms = get_eva_zooma_terms($desc);   
+    my $eva_terms = get_eva_zooma_terms($desc, 'HIGH');
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
     $terms{$id}{type} = "Zooma exact" if defined $eva_terms;
   }
@@ -263,6 +260,7 @@ return only eva curated matches for a phenotype description
 sub get_eva_zooma_terms{
 
   my $desc = shift;
+  my $confLevel = shift;
 
   my $ontol_data = get_zooma_terms($desc);
   return undef unless defined $ontol_data;
@@ -272,6 +270,9 @@ sub get_eva_zooma_terms{
   foreach my $annot(@{$ontol_data}){
     next unless $annot->{derivedFrom}->{provenance}->{source}->{name} eq 'eva-clinvar';
 
+    if (defined $confLevel) {
+      next unless $annot->{confidence} eq $confLevel;
+    }
     next unless grep(/EFO|Orphanet|ORDO|HP/, @{$annot->{semanticTags}});
 
     foreach my $term (@{$annot->{semanticTags}} ){
