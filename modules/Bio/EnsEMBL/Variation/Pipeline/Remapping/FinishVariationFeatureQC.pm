@@ -249,6 +249,14 @@ sub flip_alleles {
   }
   $sth->finish();
 
+  $sth = $dbh->prepare(qq{
+    SELECT MAX(allele_code_id) FROM allele_code;
+  }, {mysql_use_result => 1});
+  $sth->execute();
+  my $row = $sth->fetchrow_arrayref;
+  my $max_allele_code_id = $row->[0];
+  $sth->finish();
+
   my $fh = FileHandle->new($dumped_features_file, 'r');
   while (<$fh>) {
     chomp;
@@ -261,9 +269,14 @@ sub flip_alleles {
     my $rev_comp_allele = reverse_comp_allele_string($allele);
     if (contained_in_allele_string($allele_string, $rev_comp_allele)) {
       my $new_allele_code = $allele_string_2_id->{$rev_comp_allele};
-      print $fh_out "UPDATE allele set allele_code_id = $new_allele_code WHERE allele_id = $allele_id;\n";
       if (!$new_allele_code) {
-        print $fh_err "No new allele code id for $rev_comp_allele\n";
+        $max_allele_code_id++;
+        $allele_string_2_id->{$rev_comp_allele} = $max_allele_code_id;
+        print $fh_out "UPDATE allele set allele_code_id = $max_allele_code_id WHERE allele_id = $allele_id;\n";
+        print $fh_out "INSERT INTO allele_code(allele_code_id, allele) VALUES($max_allele_code_id, '$rev_comp_allele');\n";
+        print $fh_err "Inserted new allele code id ($max_allele_code_id) for $rev_comp_allele\n";
+      } else {
+        print $fh_out "UPDATE allele set allele_code_id = $new_allele_code WHERE allele_id = $allele_id;\n";
       }
     }
   }
