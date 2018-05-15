@@ -1112,16 +1112,29 @@ sub parse_animal_qtl {
       'seq_region_end' => $data[4],
       'seq_region_strand' => 1
     };
-    my $CMO_name = $extra->{CMO_name};
     
+    my @accessions = ();
+    # CM ontology
+    my $CMO_name = $extra->{CMO_name};
     if ($CMO_name) {
-      my @accessions = ();
       my $terms = $ontology_term_adaptor->fetch_all_by_name($CMO_name, 'CMO'); 
       foreach my $term (@$terms) {
         push @accessions, $term->accession;
       }
-      $phenotype->{ontology_mapping_type} = 'is';
+    }
+    
+    # VT ontology
+    my $VTO_name = $extra->{VTO_name};
+    if ($VTO_name) {
+      my $terms = $ontology_term_adaptor->fetch_all_by_name($VTO_name, 'VT'); 
+      foreach my $term (@$terms) {
+        push @accessions, $term->accession;
+      }
+    }
+    # Ontology
+    if (scalar(@accessions) > 0) {
       $phenotype->{accessions} = \@accessions;
+      $phenotype->{ontology_mapping_type} = 'is';
     }
     
     if ($phenotype->{'seq_region_start'} > $phenotype->{'seq_region_end'}) {
