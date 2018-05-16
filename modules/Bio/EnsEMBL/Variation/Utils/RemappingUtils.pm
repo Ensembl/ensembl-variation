@@ -304,9 +304,13 @@ sub qc_mapped_vf {
   my @ids      = $fasta_db->get_all_primary_ids;
   my $sequence_name_2_id = {};
   foreach my $id (@ids) {
-    my @components = split/:/, $id;
-    my $sequence_name = $components[2];
-    $sequence_name_2_id->{$sequence_name} = $id;
+    if ($id =~ /:/) {
+      my @components = split/:/, $id;
+      my $sequence_name = $components[2];
+      $sequence_name_2_id->{$sequence_name} = $id;
+    } else {
+      $sequence_name_2_id->{$id} = $id;
+    }
   }
 
   my $fh = FileHandle->new($mapped_features_file, 'r');
@@ -345,9 +349,6 @@ sub qc_mapped_vf {
     }
     if ($map_weight > 1) {
       $failed_variants_newasm->{$variation_id}->{19} = 1;
-    }
-    if ($alignment_quality == 1 && $seq_region_strand == 1) {
-      next;
     }
     if ($seq_region_strand == -1) {
       print $fh_update "UPDATE $feature_table SET seq_region_strand=1 WHERE variation_feature_id=$vf_id;\n";
@@ -390,21 +391,19 @@ sub qc_mapped_vf {
         }
       }
     } else {
-      if ($allele_string !~ /-/) {
-        if ($allele_string =~ /-/) {
-          # resort order of alleles with dash first
-          my @new_allele_strings = ('-');
-          foreach my $allele (split/\//, $allele_string) {
-            if ($allele ne '-') {
-              push @new_allele_strings, $allele;
-            }
+      if ($allele_string =~ /-/) {
+        # resort order of alleles with dash first
+        my @new_allele_strings = ('-');
+        foreach my $allele (split/\//, $allele_string) {
+          if ($allele ne '-') {
+            push @new_allele_strings, $allele;
           }
-          my $new_allele_string = join('/', @new_allele_strings);
-          print $fh_update "UPDATE $feature_table SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
-        } else {
-          # Mapped position is not compatible with reported alleles 15
-          $failed_variants_newasm->{$variation_id}->{15} = 1;
         }
+        my $new_allele_string = join('/', @new_allele_strings);
+        print $fh_update "UPDATE $feature_table SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
+      } else {
+        # Mapped position is not compatible with reported alleles 15
+        $failed_variants_newasm->{$variation_id}->{15} = 1;
       }
     }
   }
@@ -435,7 +434,7 @@ sub failed_variations {
   my $dbh = $vdba->dbc->db_handle;
   my $failed_variations = {};
   my $sth = $dbh->prepare(qq{
-    SELECT variation_id, failed_description_id FROM failed_variation WHERE failed_description_id = 5;
+    SELECT variation_id, failed_description_id FROM failed_variation WHERE failed_description_id not in (1, 2, 15, 17, 19);
   }, {mysql_use_result => 1});
   $sth->execute();
   while (my $row = $sth->fetchrow_arrayref) {
