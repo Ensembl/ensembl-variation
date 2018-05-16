@@ -81,7 +81,6 @@ sub fetch_input {
     push @transcripts, @{$self->get_refseq_transcripts} if $self->param('include_refseq');
 
     # store a table mapping each translation stable ID to its corresponding MD5
-
     $var_dba->dbc->do(qq{DROP TABLE IF EXISTS translation_mapping});
 
     $var_dba->dbc->do(qq{
@@ -92,6 +91,12 @@ sub fetch_input {
             KEY md5_idx (md5)
         )
     });
+  
+    # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
+    if ($sift_run_type == FULL) {
+      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions/);
+      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions_attrib/);
+    }
 
     my $add_mapping_sth = $var_dba->dbc->prepare(qq{
         INSERT IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
