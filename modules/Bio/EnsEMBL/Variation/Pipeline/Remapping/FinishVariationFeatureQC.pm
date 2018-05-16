@@ -110,10 +110,6 @@ sub init_flip_features {
   open my $fh, ">$pipeline_dir/update_flip_features.txt" or die $!;
   open my $fh_err, ">$pipeline_dir/errors_update_flip_features.txt" or die $!;
 
-  # append new content to file
-  open $fh, ">>$pipeline_dir/update_flip_features.txt" or die $!;
-  open $fh_err, ">>$pipeline_dir/errors_update_flip_features.txt" or die $!;
-
   $self->dump_features_for_flipping(qq{
   SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, vf.variation_id, vf.variation_name, vf.allele_string, vf.map_weight, a.allele_id, a.allele_code_id
   FROM $feature_table vf
@@ -272,8 +268,8 @@ sub flip_alleles {
       if (!$new_allele_code) {
         $max_allele_code_id++;
         $allele_string_2_id->{$rev_comp_allele} = $max_allele_code_id;
-        print $fh_out "UPDATE allele set allele_code_id = $max_allele_code_id WHERE allele_id = $allele_id;\n";
         print $fh_out "INSERT INTO allele_code(allele_code_id, allele) VALUES($max_allele_code_id, '$rev_comp_allele');\n";
+        print $fh_out "UPDATE allele set allele_code_id = $max_allele_code_id WHERE allele_id = $allele_id;\n";
         print $fh_err "Inserted new allele code id ($max_allele_code_id) for $rev_comp_allele\n";
       } else {
         print $fh_out "UPDATE allele set allele_code_id = $new_allele_code WHERE allele_id = $allele_id;\n";
