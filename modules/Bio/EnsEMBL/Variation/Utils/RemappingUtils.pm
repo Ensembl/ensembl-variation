@@ -350,9 +350,6 @@ sub qc_mapped_vf {
     if ($map_weight > 1) {
       $failed_variants_newasm->{$variation_id}->{19} = 1;
     }
-    if ($alignment_quality == 1 && $seq_region_strand == 1) {
-      next;
-    }
     if ($seq_region_strand == -1) {
       print $fh_update "UPDATE $feature_table SET seq_region_strand=1 WHERE variation_feature_id=$vf_id;\n";
     }
