@@ -143,7 +143,7 @@ throws_ok { $pfa->fetch_all_by_associated_gene($g2); } qr/gene_name argument exp
 
 # fetch_all_by_associated_gene check ontology accession
 my $pfs_accessions = $pfs->[0]->get_all_ontology_accessions;
-ok(ref($pfs_accessions) eq 'ARRAY' && scalar @$pfs_accessions == 1 && (grep {$_ eq 'Orphanet:15'} @$pfs_accessions), "fetch_all_by_associated_gene - gene_name - get ontology_accessions");
+ok(ref($pfs_accessions) eq 'ARRAY' && scalar @$pfs_accessions == 1 && (grep {$_ eq 'Orphanet:157'} @$pfs_accessions), "fetch_all_by_associated_gene - gene_name - get ontology_accessions");
 
 # fetch_all_by_associated_gene_phenotype_description
 $pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
