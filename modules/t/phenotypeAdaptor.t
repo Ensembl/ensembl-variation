@@ -61,10 +61,10 @@ my $map_data = { accession      => 'Orphanet:15',
                };
 $p->add_ontology_accession($map_data);
 
-ok($p->ontology_accessions()->[0] eq 'Orphanet:15', "get ontology accession");
-ok($p->ontology_accessions_with_source()->[0]->{mapping_source} eq 'Manual', "get ontology source");
-ok($p->ontology_accessions_with_source()->[0]->{accession}      eq 'Orphanet:15', "get ontology accession 2");
-ok($p->ontology_accessions_with_source()->[0]->{mapping_type}   eq 'is', "get ontology mapping type");
+ok($p->ontology_accessions()->[1] eq 'Orphanet:15', "get ontology accession");
+ok($p->ontology_accessions_with_source()->[1]->{mapping_source} eq 'Manual', "get ontology source");
+ok($p->ontology_accessions_with_source()->[1]->{accession}      eq 'Orphanet:15', "get ontology accession 2");
+ok($p->ontology_accessions_with_source()->[1]->{mapping_type}   eq 'is', "get ontology mapping type");
 
 ## check retrieving ontology accessions with type filter
 ok(scalar @{$p->ontology_accessions('involves')} == 0, "get ontology accession & mapping type");
