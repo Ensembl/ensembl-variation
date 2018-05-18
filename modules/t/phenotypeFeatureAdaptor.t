@@ -141,6 +141,10 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs22992
 my $g2  = $ga->fetch_by_stable_id('ENSG00000176105');
 throws_ok { $pfa->fetch_all_by_associated_gene($g2); } qr/gene_name argument expected/, 'fetch_all_by_associated_gene - gene_object > Throw wrong wrong object type';
 
+# fetch_all_by_associated_gene check ontology accession
+my $pfs_accessions = $pfs->[0]->get_all_ontology_accessions;
+ok(ref($pfs_accessions) eq 'ARRAY' && scalar @$pfs_accessions == 1 && (grep {$_ eq 'Orphanet:157'} @$pfs_accessions), "fetch_all_by_associated_gene - gene_name - get ontology_accessions");
+
 # fetch_all_by_associated_gene_phenotype_description
 $pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene_phenotype_description");

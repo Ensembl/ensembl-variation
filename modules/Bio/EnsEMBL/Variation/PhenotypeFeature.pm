@@ -722,7 +722,7 @@ sub get_all_attributes {
 sub get_all_ontology_accessions {
   my $self = shift;
 
-  if(!defined($self->{ontology_accessions})) {
+  if(!defined($self->{ontology_accessions}) || scalar(@{$self->{ontology_accessions}}) == 0) {
     $self->{ontology_accessions} = $self->phenotype->ontology_accessions;
   }
   return $self->{ontology_accessions};
