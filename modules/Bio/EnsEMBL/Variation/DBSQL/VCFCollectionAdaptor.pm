@@ -257,7 +257,7 @@ sub new {
       -description => $hash->{description},
       -type => $hash->{type},
       -use_as_source => $hash->{use_as_source},
-      -filename_template => $hash->{filename_template} =~ /nfs/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template},
+      -filename_template => $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
