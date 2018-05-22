@@ -52,6 +52,7 @@ use Digest::MD5 qw(md5_hex);
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
@@ -139,7 +140,6 @@ sub cdna_start {
     
     unless (exists $self->{cdna_start}) {
         my $cdna_coords = $self->cdna_coords;
-        
         my ($first, $last) = ($cdna_coords->[0], $cdna_coords->[-1]);
         
         $self->{cdna_start} = $first->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $first->start;
@@ -301,8 +301,10 @@ sub cdna_coords {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
         $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        #$self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ] unless $vf->{shifted_flag};
+        #$self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ] if $vf->{shifted_flag};
     }
-    
+
     return $self->{_cdna_coords};
 }
 
@@ -323,7 +325,8 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ] unless $vf->{shifted_flag};
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ] if $vf->{shifted_flag};
     }
     
     return $self->{_cds_coords};
