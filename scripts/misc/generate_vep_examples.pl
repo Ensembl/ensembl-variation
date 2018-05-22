@@ -144,6 +144,10 @@ SPECIES: foreach my $species(@all_species) {
     $b->length <=> $a->length} @{$sa->fetch_all('toplevel')
   };
   
+  # special address of bacteria species due to:
+  # a) undef seq_region_start/end issue unless explicitely defined in variationFeature and
+  # b) VariationFeature with seq_region_start/end defined for non-bacteria species returning differnet results than with them left out
+  # c) transcriptVariation consequence apprearing intergenic when missense expected possibly due to real/fake adaptors mix
   if ($div_bacteria) {
     my ($slice, $trs);
 
@@ -161,6 +165,7 @@ SPECIES: foreach my $species(@all_species) {
     my @tmp_alts = sort {rand() <=> rand()} grep {$_ ne $ref_seq} @alts;
     my $alt = shift @tmp_alts;
 
+    #VariationFeature objects for bacteria have to be created explicitly specifying seq_region_start,seq_region_end, this will prevent these two being undef in subsequent uses, this is known in eg bacteria
     my $tmp_vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
       start          => $pos,
       end            => $pos,
