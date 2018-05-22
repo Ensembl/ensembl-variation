@@ -102,6 +102,8 @@ SPECIES: foreach my $species(@all_species) {
   my $vfa = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($species);
   my $real_vfa = $reg->get_adaptor($species, 'variation', 'variationfeature');
   
+  my $div_bacteria = $sa->dbc->dbname() =~ /^bacteria.*/ ? 1 : 0;
+
   print STDERR "Doing $species, assembly $assembly\n";
   
   if($real_vfa && $doing_id) {
@@ -142,6 +144,58 @@ SPECIES: foreach my $species(@all_species) {
     $b->length <=> $a->length} @{$sa->fetch_all('toplevel')
   };
   
+  if ($div_bacteria) {
+    my ($slice, $trs);
+
+    # create a missense
+    my $tr = undef;
+    while(!defined($tr)) {
+      next SPECIES unless scalar @slices;
+      ($slice, $trs) = @{select_slice(\@slices)};
+      $tr = select_transcript($trs, $div_bacteria);
+    }
+    my $pos = $tr->coding_region_start + 3;
+    my $sub_slice = $slice->sub_Slice($pos, $pos);
+    my $ref_seq = $sub_slice->seq;
+
+    my @tmp_alts = sort {rand() <=> rand()} grep {$_ ne $ref_seq} @alts;
+    my $alt = shift @tmp_alts;
+
+    my $tmp_vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos,
+      end            => $pos,
+      allele_string  => $ref_seq.'/'.$alt,
+      strand         => 1,
+      map_weight     => 1,
+      adaptor        => $vfa,
+      slice          => $slice,
+      seq_region_start => $slice->seq_region_start,
+      seq_region_end   => $slice->seq_region_end
+    });
+    dump_vf($tmp_vf, \%files, \%web_data);
+
+    # create a frameshift
+    $tr = undef;
+    while(!defined($tr)) {
+      $tr = select_transcript($trs,$div_bacteria);
+    }
+    $pos = $tr->coding_region_start + 3;
+    $sub_slice = $slice->sub_Slice($pos, $pos);
+    $ref_seq = $sub_slice->seq;
+    $tmp_vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos,
+      end            => $pos,
+      allele_string  => $ref_seq.'/-',
+      strand         => 1,
+      map_weight     => 1,
+      adaptor        => $vfa,
+      slice          => $slice,
+      seq_region_start => $slice->seq_region_start,
+      seq_region_end   => $slice->seq_region_end
+    });
+
+    dump_vf($tmp_vf, \%files, \%web_data);
+  } else {
   SLICE:
   my ($slice, $trs);
   
@@ -264,6 +318,7 @@ SPECIES: foreach my $species(@all_species) {
   }
   close OUT;
   # exit 0;
+  }
 }
 
 sub dump_vf {
@@ -286,10 +341,11 @@ sub dump_vf {
 
 sub select_transcript {
   my $trs = shift;
+  my $div_bacteria = shift;
   
   # we want a transcript on the fwd strand with an intron that's protein coding
   my $biotype = '';
-  my $intron_count = 0;
+  my $intron_count = ($div_bacteria == 1 ? 1 :0 );
   my $strand = 0;
   my $crs = undef;
   my $tr;
@@ -301,7 +357,7 @@ sub select_transcript {
     $biotype = $tr->biotype;
     $strand = $tr->seq_region_strand;
     $crs = $tr->coding_region_start;
-    $intron_count = scalar @{$tr->get_all_Introns};
+    $intron_count = ($div_bacteria == 1 ? 1 : scalar @{$tr->get_all_Introns});
   }
   
   print STDERR "Chose transcript ".$tr->stable_id."\n";
