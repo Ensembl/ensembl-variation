@@ -79,6 +79,7 @@ BEGIN {
 # these two methods are perl implementations of the above Inline C
 sub overlap_perl {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
+   
     return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
 }
 
