@@ -145,8 +145,8 @@ SPECIES: foreach my $species(@all_species) {
   };
   
   # special address of bacteria species due to:
-  # a) undef seq_region_start/end issue unless explicitely defined in variationFeature and
-  # b) VariationFeature with seq_region_start/end defined for non-bacteria species returning differnet results than with them left out
+  # a) undef seq_region_start/end issue unless explicitly defined in variationFeature and
+  # b) VariationFeature with seq_region_start/end defined for non-bacteria species returning different results than with them left out
   # c) transcriptVariation consequence apprearing intergenic when missense expected possibly due to real/fake adaptors mix
   if ($div_bacteria) {
     my ($slice, $trs);
