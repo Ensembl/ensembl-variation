@@ -78,7 +78,6 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within_intron stop_lost start_lost frameshift stop_retained);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
-use Data::Dumper;
 
 our $DEBUG = 0;
 our $NO_TRANSFER = 0;
@@ -1005,7 +1004,7 @@ sub hgvs_genomic {
 }
 
 
-=head2 ipt
+=head2 hgvs_transcript
     
   Description: Return a string representing the CDS-level effect of this allele in HGVS format
   Returntype : string or undef if this allele is not in the CDS
@@ -1017,8 +1016,8 @@ sub hgvs_genomic {
     
 sub hgvs_transcript {
   my $self = shift;
-  my $notation = shift;   
-  $DB::single = 1;
+  my $notation = shift;
+  
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
 
@@ -1071,9 +1070,8 @@ sub hgvs_transcript {
   ## create new transcript variation object as position may be different
   ## for most variants (SNPs etc) this will actually just return $self
   ## logic is neater this way though
-  my $hgvs_tva = $self;#->_hgvs_tva($tr, $tv, $vf);
+  my $hgvs_tva = $self;
   my $variation_feature_sequence;
-    $DB::single = 1;
   if($tr->strand() > 0)
   {
     $hgvs_tva->_return_3prime(1); #unless $self->variation_feature->{shifted_flag};
@@ -1096,26 +1094,11 @@ sub hgvs_transcript {
   	return undef;
   }
   ## this may be different to the input one for insertions/deletions
-  #my $variation_feature_sequence = defined($self->{hgvs_allele_string}) ? $self->{hgvs_allele_string} : $hgvs_tva->variation_feature_seq();#$self->base_variation_feature->{variant_allele};
-  #$self->base_variation_feature->{variant_allele};
-  #print "vfs: $variation_feature_sequence \t hgvs_allele_string: ", $self->{hgvs_allele_string}, " strand: ", $tr->strand(), "\n"; 
-  #my $variation_feature_sequence = defined($hgvs_tva->{hgvs_allele_string}) ? $hgvs_tva->{hgvs_allele_string} : $hgvs_tva->variation_feature_seq();
-  #print $variation_feature_sequence, "\n";
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
   if($variation_feature_sequence && $vf->strand() != $refseq_strand) {    
     reverse_comp(\$variation_feature_sequence) ;
   };
   
-  #my $allele_flipped = 0;
-  ## switch allele to transcript strand if necessary
-  #if(
-  #  ($vf->strand() < 0 && $tr->strand() > 0) ||
-  #  ($vf->strand() > 0 && $tr->strand() < 0)
-  #) {
-    ####reverse_comp(\$variation_feature_sequence);
-  #  $allele_flipped = 1;
-  #}
-#print Dumper $allele_flipped;
   ### decide event type from HGVS nomenclature   
   print "Shift length ", $self->{shift_length}, "\n";
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
@@ -1138,12 +1121,6 @@ sub hgvs_transcript {
     "",
     $var_name 
   );
-  print Dumper $hgvs_notation;
-  print Dumper $variation_feature_sequence;
-  print Dumper $hgvs_notation_debug;
-  print Dumper $hgvs_tva_debug->variation_feature_seq();
-  print Dumper $hgvs_tva->variation_feature_seq();
-  print "####################";
   ### This should not happen
   unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
@@ -1382,7 +1359,6 @@ sub _hgvs_tva {
 
       my $ref_allele =  $tv->get_reference_TranscriptVariationAllele->variation_feature_seq();
       my $alt_allele =  $self->variation_feature_seq();    
-      print "Hiya", $alt_allele;
       my $seq_to_check;
       ## sequence to compare is the reference allele for deletion
       $seq_to_check = $ref_allele 	   if $var_class eq 'deletion' ;
@@ -1410,7 +1386,6 @@ sub _hgvs_tva {
       ## run check
       my $allele;
       ( $allele, $offset ) = get_3prime_seq_offset($seq_to_check, $post_seq );
-      #print "\t", $seq_to_check, "\t", $post_seq, "\t", $from, "\t", $allele, "\t", $offset, "\t", $tr->strand(), "\n";
       print "got allele & offset  $allele, $offset length checked:". length($post_seq) ."\n" if $DEBUG ==1;
       ## correct allele for strand
       reverse_comp(\$allele)   if $allele_flipped == 1;
@@ -1542,10 +1517,8 @@ sub _make_hgvs_tva {
 
   my $start     = $vf->start() + $offset;
   my $end       = $vf->end() + $offset;
-$DEBUG = 1;
   print "Starting make hgvs tva - vf at $start - $end  $allele_string\n" if $DEBUG ==1;
   print "previous pos :".  $vf->start() ."-" . $vf->end() ."\n" if $DEBUG ==1;
-$DEBUG = 0;
   my $moved_vf =  Bio::EnsEMBL::Variation::VariationFeature->new_fast({
     start          => $start,
     end            => $end,
