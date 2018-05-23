@@ -158,18 +158,18 @@ SPECIES: foreach my $species(@all_species) {
       ($slice, $trs) = @{select_slice(\@slices)};
       $tr = select_transcript($trs, $div_bacteria);
     }
-    my $pos = $tr->coding_region_start + 3;
-    my $sub_slice = $slice->sub_Slice($pos, $pos);
-    my $ref_seq = $sub_slice->seq;
+    my $pos_snp = $tr->coding_region_start + 3;
+    my $sub_slice_snp = $slice->sub_Slice($pos_snp, $pos_snp);
+    my $ref_seq_snp = $sub_slice_snp->seq;
 
-    my @tmp_alts = sort {rand() <=> rand()} grep {$_ ne $ref_seq} @alts;
+    my @tmp_alts = sort {rand() <=> rand()} grep {$_ ne $ref_seq_snp} @alts;
     my $alt = shift @tmp_alts;
 
     #VariationFeature objects for bacteria have to be created explicitly specifying seq_region_start,seq_region_end, this will prevent these two being undef in subsequent uses, this is known in eg bacteria
-    my $tmp_vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-      start          => $pos,
-      end            => $pos,
-      allele_string  => $ref_seq.'/'.$alt,
+    my $tmp_vf_snp = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos_snp,
+      end            => $pos_snp,
+      allele_string  => $ref_seq_snp.'/'.$alt,
       strand         => 1,
       map_weight     => 1,
       adaptor        => $vfa,
@@ -177,20 +177,20 @@ SPECIES: foreach my $species(@all_species) {
       seq_region_start => $slice->seq_region_start,
       seq_region_end   => $slice->seq_region_end
     });
-    dump_vf($tmp_vf, \%files, \%web_data);
+    dump_vf($tmp_vf_snp, \%files, \%web_data);
 
-    # create a frameshift
+    # create a frameshift in a different transcript on the same slice (for bacteria most of the time there is one single top level slice)
     $tr = undef;
     while(!defined($tr)) {
       $tr = select_transcript($trs,$div_bacteria);
     }
-    $pos = $tr->coding_region_start + 3;
-    $sub_slice = $slice->sub_Slice($pos, $pos);
-    $ref_seq = $sub_slice->seq;
-    $tmp_vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-      start          => $pos,
-      end            => $pos,
-      allele_string  => $ref_seq.'/-',
+    my $pos_fs = $tr->coding_region_start + 3;
+    my $sub_slice_fs = $slice->sub_Slice($pos_fs, $pos_fs);
+    my $ref_seq_fs = $sub_slice_fs->seq;
+    my $tmp_vf_fs = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos_fs,
+      end            => $pos_fs,
+      allele_string  => $ref_seq_fs.'/-',
       strand         => 1,
       map_weight     => 1,
       adaptor        => $vfa,
@@ -199,7 +199,7 @@ SPECIES: foreach my $species(@all_species) {
       seq_region_end   => $slice->seq_region_end
     });
 
-    dump_vf($tmp_vf, \%files, \%web_data);
+    dump_vf($tmp_vf_fs, \%files, \%web_data);
   } else {
   SLICE:
   my ($slice, $trs);
