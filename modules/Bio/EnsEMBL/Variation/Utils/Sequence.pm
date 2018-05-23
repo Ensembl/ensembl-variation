@@ -1081,6 +1081,7 @@ sub get_matched_variant_alleles {
   # also trim both ways in case?
   my (%minimised_a_alleles, %a_indexes);
   my $i = 0;
+
   foreach my $orig_a_alt(@{$a->{alts}}) {
 
     # we store the index position of each alt so we can look it up and return it later
