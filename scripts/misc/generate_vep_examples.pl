@@ -102,6 +102,8 @@ SPECIES: foreach my $species(@all_species) {
   my $vfa = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($species);
   my $real_vfa = $reg->get_adaptor($species, 'variation', 'variationfeature');
   
+  my $div_bacteria = $sa->dbc->dbname() =~ /^bacteria.*/ ? 1 : 0;
+
   print STDERR "Doing $species, assembly $assembly\n";
   
   if($real_vfa && $doing_id) {
@@ -142,6 +144,63 @@ SPECIES: foreach my $species(@all_species) {
     $b->length <=> $a->length} @{$sa->fetch_all('toplevel')
   };
   
+  # special address of bacteria species due to:
+  # a) undef seq_region_start/end issue unless explicitly defined in variationFeature and
+  # b) VariationFeature with seq_region_start/end defined for non-bacteria species returning different results than with them left out
+  # c) transcriptVariation consequence apprearing intergenic when missense expected possibly due to real/fake adaptors mix
+  if ($div_bacteria) {
+    my ($slice, $trs);
+
+    # create a missense
+    my $tr = undef;
+    while(!defined($tr)) {
+      next SPECIES unless scalar @slices;
+      ($slice, $trs) = @{select_slice(\@slices)};
+      $tr = select_transcript($trs, $div_bacteria);
+    }
+    my $pos_snp = $tr->coding_region_start + 3;
+    my $sub_slice_snp = $slice->sub_Slice($pos_snp, $pos_snp);
+    my $ref_seq_snp = $sub_slice_snp->seq;
+
+    my @tmp_alts = sort {rand() <=> rand()} grep {$_ ne $ref_seq_snp} @alts;
+    my $alt = shift @tmp_alts;
+
+    #VariationFeature objects for bacteria have to be created explicitly specifying seq_region_start,seq_region_end, this will prevent these two being undef in subsequent uses, this is known in eg bacteria
+    my $tmp_vf_snp = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos_snp,
+      end            => $pos_snp,
+      allele_string  => $ref_seq_snp.'/'.$alt,
+      strand         => 1,
+      map_weight     => 1,
+      adaptor        => $vfa,
+      slice          => $slice,
+      seq_region_start => $slice->seq_region_start,
+      seq_region_end   => $slice->seq_region_end
+    });
+    dump_vf($tmp_vf_snp, \%files, \%web_data);
+
+    # create a frameshift in a different transcript on the same slice (for bacteria most of the time there is one single top level slice)
+    $tr = undef;
+    while(!defined($tr)) {
+      $tr = select_transcript($trs,$div_bacteria);
+    }
+    my $pos_fs = $tr->coding_region_start + 3;
+    my $sub_slice_fs = $slice->sub_Slice($pos_fs, $pos_fs);
+    my $ref_seq_fs = $sub_slice_fs->seq;
+    my $tmp_vf_fs = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+      start          => $pos_fs,
+      end            => $pos_fs,
+      allele_string  => $ref_seq_fs.'/-',
+      strand         => 1,
+      map_weight     => 1,
+      adaptor        => $vfa,
+      slice          => $slice,
+      seq_region_start => $slice->seq_region_start,
+      seq_region_end   => $slice->seq_region_end
+    });
+
+    dump_vf($tmp_vf_fs, \%files, \%web_data);
+  } else {
   SLICE:
   my ($slice, $trs);
   
@@ -264,6 +323,7 @@ SPECIES: foreach my $species(@all_species) {
   }
   close OUT;
   # exit 0;
+  }
 }
 
 sub dump_vf {
@@ -286,10 +346,11 @@ sub dump_vf {
 
 sub select_transcript {
   my $trs = shift;
+  my $div_bacteria = shift;
   
   # we want a transcript on the fwd strand with an intron that's protein coding
   my $biotype = '';
-  my $intron_count = 0;
+  my $intron_count = ($div_bacteria == 1 ? 1 :0 );
   my $strand = 0;
   my $crs = undef;
   my $tr;
@@ -301,7 +362,7 @@ sub select_transcript {
     $biotype = $tr->biotype;
     $strand = $tr->seq_region_strand;
     $crs = $tr->coding_region_start;
-    $intron_count = scalar @{$tr->get_all_Introns};
+    $intron_count = ($div_bacteria == 1 ? 1 : scalar @{$tr->get_all_Introns});
   }
   
   print STDERR "Chose transcript ".$tr->stable_id."\n";
