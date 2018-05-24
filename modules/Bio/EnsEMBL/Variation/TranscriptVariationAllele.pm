@@ -96,52 +96,54 @@ sub new_fast {
 }
 
 sub _return_3prime {
-  #my ($self, $tv, $anythingElse) = @_;
   my $self = shift;
   my $hgvs_only = shift;
   my $tv = $self->transcript_variation;
   
   my $hgvs_notation;
-  #$tv ||= $self->base_variation_feature_overlap;
+
   my $vf ||= $tv->base_variation_feature;
+
   return 0 if $vf->{shifted_flag} && !$hgvs_only;
-  return 0 unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion');
+  return 0 unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
   my $tr ||= $tv->transcript;
 
   # work out if indel
   my $seq_to_check;
   my @split;
-  #if( $tv->{pre_consequence_predicates}->{insertion}){
-  #  @split = split('/', $tv->allele_string);
-  #  $seq_to_check = $split[1];
-  #}
-  #elsif ($tv->{pre_consequence_predicates}->{deletion}){
-  #  @split = split('/', $tv->allele_string);
-  #  $seq_to_check = $split[0];
-  #}
-  #else{
-  #  return $self;
-  #}
+
   my @allele_string = split('/', $tv->{base_variation_feature}->{allele_string});
   my $ref = '-' if $allele_string[0] eq '-';
   my $alt = '-' if $allele_string[1] eq '-';
   my $type;
-  #$self->{hgvs_allele_string} = $allele_string[1];
-  if($allele_string[0] eq '-' || length($allele_string[0]) < length($allele_string[1]) ) {
-    $seq_to_check = $allele_string[1];
-    $type = 'ins';
+  if ($vf->var_class eq 'indel')
+  {
+    if($allele_string[0] eq '-' || length($allele_string[0]) < length($allele_string[1]) ) {
+      $seq_to_check = $allele_string[1];
+      $type = 'ins';
+    }
+    elsif ($allele_string[1] eq '-' || length($allele_string[0]) > length($allele_string[1])) {
+      $seq_to_check = $allele_string[0];
+      $type = 'del';
+    }
+    else{
+      return $self;
+    }
   }
-  elsif ($allele_string[1] eq '-' || length($allele_string[0]) > length($allele_string[1])) {
+  elsif ($vf->var_class eq 'deletion')
+  {
     $seq_to_check = $allele_string[0];
     $type = 'del';
   }
-  else{
-    return $self;
+  elsif ($vf->var_class eq 'insertion') #Has to be an insertion, could probably remove but I'm in a rare defensive mood
+  {
+    $seq_to_check = $allele_string[1];
+    $type = 'ins';
   }
+  ## return if nothing to check
+  return 0 unless defined $tv && defined $seq_to_check;
 
   ## check peptides after deletion 
-  
-  #my ($slice_start, $slice_end, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   my $area_to_search = 1000;
@@ -149,26 +151,18 @@ sub _return_3prime {
   my $orig_start = $var_start;
   my $orig_end = $var_end;
   #Not sure whether I should create a new slice for speed or not, might want this later
-  my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - 1000), 0 - ($slice_end - $var_end - 1000));
+  my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
   $new_slice = $new_slice->constrain_to_seq_region();
   my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-  #my $post_pos = $self->_get_cDNA_position;
-  #my $post_seq = $self->_get_surrounding_peptides(
-  #  $post_pos,
-  #  $split[0]
-  #);
-  ## return if nothing to check
-  return $self unless defined $tv && defined $seq_to_check;
-  
-  ## get length of pattern to check 
-  my $deleted_length = (length $seq_to_check);
-  
-  # warn "Checking $seq_to_check v $post_seq\n";
-  ## move along sequence after deletion looking for match to start of deletion
-  my $shift_length = 0;
-  for (my $n = 0; $n<= (length($post_seq) - $deleted_length); $n++ ){
 
-    ## check each position in deletion/ following seq for match
+  ## get length of pattern to check 
+  my $indel_length = (length $seq_to_check);
+  
+  ## move along sequence after indel looking for match to start of indel
+  my $shift_length = 0;
+  for (my $n = 0; $n<= (length($post_seq) - $indel_length); $n++ ){
+
+    ## check each position in indel/ following seq for match
     my $check_next_del  = substr( $seq_to_check, 0, 1);
     my $check_next_post = substr( $post_seq, $n, 1);
 
@@ -179,7 +173,7 @@ sub _return_3prime {
       $var_end++;
   	  $shift_length++;
 
-      ## modify deleted sequence - remove start & append to end
+      ## modify sequence - remove start & append to end
       $seq_to_check = substr($seq_to_check,1);
       $seq_to_check .= $check_next_del;
     }
@@ -187,15 +181,28 @@ sub _return_3prime {
       last;	    
     }
   }
+  my $offset_for_hgvs = $tr->strand() ? $shift_length : 0 - $shift_length;
+  $tv ||= $self->base_variation_feature_overlap;
+  $vf ||= $tv->base_variation_feature;
+  $tr ||= $tv->transcript;
+  $DB::single = 1;
+  my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
   ## set new HGVS string
-  #$self->{hgvs_allele_string} = $allele_string[1];
+  if($slice_start2)
+  {
   $self->{hgvs_allele_string} = $seq_to_check;
-  $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
-  $self->{shift_length} = $shift_length;
+    $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
+    $self->{shift_length} = $shift_length;
+    ## save this to be able to report when HGVS is shifted 
+    $self->{_hgvs_offset} = $shift_length;
+    ## add cache of seq/ pos required by c, n and p 
+    $self->{_slice_start} = $slice_start2;
+    $self->{_slice_end}   = $slice_end2;
+    $self->{_slice}       = $slice;
+  }
   ##Somehow need to change the object to reflect these new positions
   unless($hgvs_only)
   {
-
     $self->transcript_variation->{base_variation_feature}->{seq_region_start} = $var_start;
     $self->transcript_variation->{base_variation_feature}->{seq_region_end} = $var_end;
     $self->transcript_variation->{base_variation_feature}->{unshifted_allele_string} = $tv->{base_variation_feature}->{allele_string};
@@ -219,13 +226,6 @@ sub _return_3prime {
     $self->base_variation_feature->{variant_allele} = $seq_to_check if ($type eq 'ins');
     $self->base_variation_feature->{variant_allele} = $alt if ($type eq 'del');
   }  
-    #$self->base_variation_feature->{variation_name} = 'POTATO';
-
-  #$hgvs_notation->{alt} = $seq_to_check if $hgvs_notation->{type} eq 'ins';
-  #$hgvs_notation->{ref} = $seq_to_check if $hgvs_notation->{type} eq 'del';
-  
-  #return $hgvs_notation;
-  
   
   return 0;
 }
@@ -313,6 +313,21 @@ sub _hgvs_3prime_reverse_strand {
         last;	    
       }
     }
+    my $offset_for_hgvs = $tr->strand() ? $shift_length : 0 - $shift_length;
+    $tv ||= $self->base_variation_feature_overlap;
+    $vf ||= $tv->base_variation_feature;
+    $tr ||= $tv->transcript;
+    my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
+    ## set new HGVS string
+    $self->{hgvs_allele_string} = $seq_to_check;
+    $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
+    $self->{shift_length} = $shift_length;
+    ## save this to be able to report when HGVS is shifted 
+    $self->{_hgvs_offset} = $shift_length;
+    ## add cache of seq/ pos required by c, n and p 
+    $self->{_slice_start} = $slice_start2;# + $offset_for_hgvs;
+    $self->{_slice_end}   = $slice_end2;# + $offset_for_hgvs;
+    $self->{_slice}       = $slice;
     ## set new HGVS string
     $self->{hgvs_allele_string} = $vf->var_class eq 'insertion' ? $seq_to_check : '-';
     $self->variation_feature->{hgvs_allele_string} = $vf->var_class eq 'insertion' ? $seq_to_check : '-';
@@ -1017,7 +1032,7 @@ sub hgvs_genomic {
 sub hgvs_transcript {
   my $self = shift;
   my $notation = shift;
-  
+  $DB::single = 1;
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
 
@@ -1085,7 +1100,7 @@ sub hgvs_transcript {
 
   $variation_feature_sequence = $self->variation_feature_seq();
   $variation_feature_sequence = $self->variation_feature->{hgvs_allele_string} if $vf->var_class() eq 'insertion';
-  my $hgvs_tva_debug = $self->_hgvs_tva($tr, $tv, $vf);
+  #my $hgvs_tva_debug = $self->_hgvs_tva($tr, $tv, $vf);
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva && defined $hgvs_tva->base_variation_feature_overlap;
 
@@ -1100,7 +1115,6 @@ sub hgvs_transcript {
   };
   
   ### decide event type from HGVS nomenclature   
-  print "Shift length ", $self->{shift_length}, "\n";
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
@@ -1112,15 +1126,15 @@ sub hgvs_transcript {
     $var_name 
   );
   
-  my $hgvs_notation_debug = hgvs_variant_notation(
-    $hgvs_tva_debug->variation_feature_seq(),    ### alt_allele,
-    $self->{_slice}->seq(),                             ### using this to extract ref allele
-    $self->{_slice_start},
-    $self->{_slice_end},
-    "",
-    "",
-    $var_name 
-  );
+  #my $hgvs_notation_debug = hgvs_variant_notation(
+  #  $hgvs_tva_debug->variation_feature_seq(),    ### alt_allele,
+  #  $self->{_slice}->seq(),                             ### using this to extract ref allele
+  #  $self->{_slice_start},
+  #  $self->{_slice_end},
+  #  "",
+  #  "",
+  #  $var_name 
+  #);
   ### This should not happen
   unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
@@ -1247,7 +1261,7 @@ sub hgvs_protein {
 
   ## HGVS requires the variant be located in as 3' position as possible
   ## create new tva so position can be changed without impacting ensembl consequence
-  my $hgvs_tva = $self->_hgvs_tva();
+  my $hgvs_tva = $self;#->_hgvs_tva();
 
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva;
@@ -1314,7 +1328,7 @@ sub hgvs_protein {
   return $hgvs_tva->_get_hgvs_protein_format($hgvs_notation);
 }
 
-sub _hgvs_tva {
+=sub _hgvs_tva {
   my ($self, $tr, $tv, $vf) = @_;
 
   # return self if we've worked out we didn't need to create a new one
@@ -1330,7 +1344,8 @@ sub _hgvs_tva {
 
     ## need to get ref seq from transcript slice
     my ($slice_start, $slice_end, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
-
+    print $slice_start, "\t";
+    print $slice_end, "\n";
     ## no annotation possible if variant outside transcript
     unless ($slice_start) {
       print "couldn't get slice pos for " .$vf->variation_name() . " " . $tr->display_id() . "\n" if $DEBUG ==1; 
