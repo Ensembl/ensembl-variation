@@ -111,8 +111,10 @@ sub _return_3prime {
   # work out if indel
   my $seq_to_check;
   my @split;
-
-  my @allele_string = split('/', $tv->{base_variation_feature}->{allele_string});
+  $DB::single = 1;
+  my $unshifted_allele_string = defined($tv->{base_variation_feature}->{unshifted_allele_string}) ? $self->transcript_variation->{base_variation_feature}->{unshifted_allele_string} : $tv->{base_variation_feature}->{allele_string};
+  #my @allele_string = split('/', $tv->{base_variation_feature}->{allele_string});
+  my @allele_string = split('/', $unshifted_allele_string);
   my $ref = '-' if $allele_string[0] eq '-';
   my $alt = '-' if $allele_string[1] eq '-';
   my $type;
@@ -160,6 +162,7 @@ sub _return_3prime {
   
   ## move along sequence after indel looking for match to start of indel
   my $shift_length = 0;
+  
   for (my $n = 0; $n<= (length($post_seq) - $indel_length); $n++ ){
 
     ## check each position in indel/ following seq for match
@@ -181,10 +184,8 @@ sub _return_3prime {
       last;	    
     }
   }
+  print "Shift length = $shift_length", "\n";
   my $offset_for_hgvs = $tr->strand() ? $shift_length : 0 - $shift_length;
-  $tv ||= $self->base_variation_feature_overlap;
-  $vf ||= $tv->base_variation_feature;
-  $tr ||= $tv->transcript;
 
   my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
   ## set new HGVS string
@@ -193,27 +194,29 @@ sub _return_3prime {
   $self->{hgvs_allele_string} = $seq_to_check;
     $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
     $self->{shift_length} = $shift_length;
+    
     ## save this to be able to report when HGVS is shifted 
     $self->{_hgvs_offset} = $shift_length;
     ## add cache of seq/ pos required by c, n and p 
-    $self->{_slice_start} = $slice_start2;
-    $self->{_slice_end}   = $slice_end2;
+    $self->{_slice_start} = $slice_start2;# + $offset_for_hgvs;
+    $self->{_slice_end}   = $slice_end2;# + $offset_for_hgvs;
     $self->{_slice}       = $slice;
   }
   ##Somehow need to change the object to reflect these new positions
   unless($hgvs_only)
   {
-    $self->transcript_variation->{base_variation_feature}->{seq_region_start} = $var_start;
-    $self->transcript_variation->{base_variation_feature}->{seq_region_end} = $var_end;
+    #$self->transcript_variation->{base_variation_feature}->{seq_region_start} = $var_start;
+    #$self->transcript_variation->{base_variation_feature}->{seq_region_end} = $var_end;
     $self->transcript_variation->{base_variation_feature}->{unshifted_allele_string} = $tv->{base_variation_feature}->{allele_string};
     $self->transcript_variation->{base_variation_feature}->{shifted_allele_string} = $allele_string[1];
     $self->{variation_feature_seq} = $allele_string[1];
 
-    $self->transcript_variation->{base_variation_feature}->{allele_string} = $ref . '/' . $seq_to_check if ($type eq 'ins');
-    $self->transcript_variation->{base_variation_feature}->{allele_string} = $seq_to_check . '/' . $alt if ($type eq 'del');
+    #$self->transcript_variation->{base_variation_feature}->{allele_string} = $ref . '/' . $seq_to_check if ($type eq 'ins');
+    #$self->transcript_variation->{base_variation_feature}->{allele_string} = $seq_to_check . '/' . $alt if ($type eq 'del');
     
-    $self->base_variation_feature->{seq_region_start} = $var_start;
-    $self->base_variation_feature->{seq_region_end} = $var_end;
+    #$self->base_variation_feature->{seq_region_start} = $var_start;
+    #$self->base_variation_feature->{seq_region_end} = $var_end;
+    $self->base_variation_feature->{shift_length} = $shift_length;
     $self->base_variation_feature->{start} = $var_start;
     $self->base_variation_feature->{end} = $var_end;
     $self->variation_feature->{start} = $var_start;
@@ -221,8 +224,8 @@ sub _return_3prime {
     $self->variation_feature->{unshifted_start} = $orig_start;
     $self->variation_feature->{unshifted_end} = $orig_end;
     $self->variation_feature->{shifted_flag} = $orig_start ne $var_start ? 1 : 0;
-    $self->base_variation_feature->{allele_string} = $ref . '/' . $seq_to_check if ($type eq 'ins');
-    $self->base_variation_feature->{allele_string} = $seq_to_check . '/' . $alt if ($type eq 'del');
+    #$self->base_variation_feature->{allele_string} = $ref . '/' . $seq_to_check if ($type eq 'ins');
+    #$self->base_variation_feature->{allele_string} = $seq_to_check . '/' . $alt if ($type eq 'del');
     $self->base_variation_feature->{variant_allele} = $seq_to_check if ($type eq 'ins');
     $self->base_variation_feature->{variant_allele} = $alt if ($type eq 'del');
   }  
@@ -314,9 +317,6 @@ sub _hgvs_3prime_reverse_strand {
       }
     }
     my $offset_for_hgvs = $tr->strand() ? $shift_length : 0 - $shift_length;
-    $tv ||= $self->base_variation_feature_overlap;
-    $vf ||= $tv->base_variation_feature;
-    $tr ||= $tv->transcript;
     my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
     ## set new HGVS string
     $self->{hgvs_allele_string} = $seq_to_check;
@@ -332,8 +332,6 @@ sub _hgvs_3prime_reverse_strand {
     $self->{hgvs_allele_string} = $vf->var_class eq 'insertion' ? $seq_to_check : '-';
     $self->variation_feature->{hgvs_allele_string} = $vf->var_class eq 'insertion' ? $seq_to_check : '-';
     $self->{shift_length} = $shift_length;
-
-print "\nShift length: $shift_length \n";
     
     return 0;
   
@@ -846,8 +844,11 @@ sub hgvs_genomic {
     
     
 sub hgvs_transcript {
+
   my $self = shift;
   my $notation = shift;
+  my $no_shift = shift;
+    $DB::single = 1;
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
 
@@ -915,6 +916,7 @@ sub hgvs_transcript {
 
   $variation_feature_sequence = $self->variation_feature_seq();
   $variation_feature_sequence = $self->variation_feature->{hgvs_allele_string} if $vf->var_class() eq 'insertion';
+  #my $hgvs_tva_debug = $self->_hgvs_tva($tr, $tv, $vf);
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva && defined $hgvs_tva->base_variation_feature_overlap;
 
@@ -927,14 +929,15 @@ sub hgvs_transcript {
   if($variation_feature_sequence && $vf->strand() != $refseq_strand) {    
     reverse_comp(\$variation_feature_sequence) ;
   };
-  
+  my $offset_to_add = $self->{_hgvs_offset};# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
+  print $offset_to_add, "\n";
   ### decide event type from HGVS nomenclature   
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
-    $self->{_slice_start},
-    $self->{_slice_end},
+    $self->{_slice_start} + $offset_to_add,
+    $self->{_slice_end} + $offset_to_add,
     "",
     "",
     $var_name 
@@ -1133,6 +1136,128 @@ sub hgvs_protein {
   return $hgvs_tva->_get_hgvs_protein_format($hgvs_notation);
 }
 
+=sub _hgvs_tva {
+  my ($self, $tr, $tv, $vf) = @_;
+
+  # return self if we've worked out we didn't need to create a new one
+  return $self if $self->{_hgvs_tva_is_self};
+
+  if(!exists($self->{_hgvs_tva})) {
+
+    $tv ||= $self->base_variation_feature_overlap;
+    $vf ||= $tv->base_variation_feature;
+    $tr ||= $tv->transcript;
+
+    my $offset = 0;
+
+    ## need to get ref seq from transcript slice
+    my ($slice_start, $slice_end, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
+    print $slice_start, "\t";
+    print $slice_end, "\n";
+    ## no annotation possible if variant outside transcript
+    unless ($slice_start) {
+      print "couldn't get slice pos for " .$vf->variation_name() . " " . $tr->display_id() . "\n" if $DEBUG ==1; 
+      $self->{_hgvs_tva} = undef;
+      return $self->{_hgvs_tva};
+    }
+    
+    ## for readability
+    my $var_class  =  $vf->var_class();
+    $var_class  =~ s/somatic_//;
+
+    ##  only check insertions & deletions & don't move beyond transcript
+    if(
+      ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
+      $slice_start != $slice->length() &&
+      (
+        (
+          defined $tv->adaptor() && UNIVERSAL::can($tv->adaptor, 'isa') && $tv->adaptor->db ? 
+          $tv->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
+          $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
+        )
+      )
+    ) {
+
+      print "checking position for $var_class, transcript strand is : ".  $tr->strand() ."\n" if $DEBUG ==1;
+
+      my $ref_allele =  $tv->get_reference_TranscriptVariationAllele->variation_feature_seq();
+      my $alt_allele =  $self->variation_feature_seq();    
+      my $seq_to_check;
+      ## sequence to compare is the reference allele for deletion
+      $seq_to_check = $ref_allele 	   if $var_class eq 'deletion' ;
+
+      ## sequence to compare is the alt allele
+      $seq_to_check = $alt_allele	   if $var_class eq 'insertion';
+
+
+      my $allele_flipped = 0;
+      ## switch allele to transcript strand if necessary
+      if(
+        ($vf->strand() < 0 && $tr->strand() > 0) ||
+        ($vf->strand() > 0 && $tr->strand() < 0)
+      ) {
+        reverse_comp(\$seq_to_check);
+        $allele_flipped = 1;
+      }
+
+     	## get reference sequence 3' of variant (slice in transcript strand orientation
+      my $from = $slice_end;	    
+      my $post_seq = substr($slice->seq(), $from); 
+      my $checking_seq = substr( $post_seq , 0,20 );
+      print "getting seq: $from to transcript end ($checking_seq )\n" if $DEBUG ==1;
+
+      ## run check
+      my $allele;
+      ( $allele, $offset ) = get_3prime_seq_offset($seq_to_check, $post_seq );
+      print "got allele & offset  $allele, $offset length checked:". length($post_seq) ."\n" if $DEBUG ==1;
+      ## correct allele for strand
+      reverse_comp(\$allele)   if $allele_flipped == 1;
+
+      if($offset == length($post_seq) ){ ## moved beyond transcript - no annotation	    
+        $self->{_hgvs_tva} = undef;
+        return $self->{_hgvs_tva};
+      }
+      elsif($offset > 0 ){
+        ## need to move - create new objects with correct position & alleles
+        print "moving tva ($allele) by $offset for $var_class, seq checked was length " . length($post_seq) . "\n" if $DEBUG ==1;	  
+        print "adding offset $offset to slice pos: $slice_start &  $slice_end\n" if $DEBUG ==1;
+        ## increment these & save later - offset positive as slice in transcript orientation
+        $slice_start  =  $slice_start + $offset;
+        $slice_end    =  $slice_end   + $offset;
+
+        ##  define alleles for variation_feature
+        $ref_allele = "-"       if $var_class eq 'insertion';
+        $alt_allele = $allele   if $var_class eq 'insertion';	    
+        $ref_allele = $allele   if $var_class eq 'deletion';	    
+        $alt_allele = "-"       if $var_class eq 'deletion';
+
+        ## make offset negative if rev strand
+        $offset = 0 - $offset    if   $tr->strand() <0 ;
+        print "sending $ref_allele/$alt_allele & offset:$offset to make_hgvs for $var_class\n" if $DEBUG == 1;
+
+        $self->{_hgvs_tva} = $self->_make_hgvs_tva($ref_allele, $alt_allele, $offset)
+      }
+      else{
+        print "leaving position as input for $var_class after checking \n" if $DEBUG ==1;
+        $self->{_hgvs_tva_is_self} = 1;
+      }
+    }
+    
+    else {
+      print "leaving position as input for $var_class  \n" if $DEBUG ==1;
+      $self->{_hgvs_tva_is_self} = 1;
+    }
+
+    ## save this to be able to report when HGVS is shifted 
+    $self->{_hgvs_offset} = $offset;
+    ## add cache of seq/ pos required by c, n and p 
+    $self->{_slice_start} = $slice_start;
+    $self->{_slice_end}   = $slice_end;
+    $self->{_slice}       = $slice;
+  }
+
+  return $self->{_hgvs_tva_is_self} ? $self : $self->{_hgvs_tva};
+}
 
 =head2 hgvs_offset
 
