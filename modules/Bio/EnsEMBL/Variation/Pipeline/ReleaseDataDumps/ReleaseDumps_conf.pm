@@ -58,7 +58,7 @@ sub default_options {
         ensembl_release    => $self->o('ensembl_release'),
 
         # include or exclude the following species from the dumps, run for a division or all the species on the server
-        species => [],
+        species => ['homo_sapiens'],
         antispecies => [],
         division    => [],
         run_all     => 0,
@@ -85,9 +85,9 @@ sub default_options {
         global_vf_count_in_species => 5_000_000, # if number of vf in a species exceeds this we need to split up dumps
         max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
-        max_split_slice_length => 1e7,
+        max_split_slice_length => 5e6, # 1e7
 
-        debug => 0,
+        debug => 1,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
@@ -178,7 +178,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'pre_run_checks_gvf_dumps',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 1,
+          -max_retry_count => 0,
           -flow_into => {
               1 => ['generate_config'],
           },
@@ -188,7 +188,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'generate_config',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
-          -max_retry_count => 1,
+          -max_retry_count => 0,
           -rc_name => 'default',
           -flow_into     => {
           '2->A' => ['init_dump'],
@@ -197,7 +197,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'init_dump',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
-          -max_retry_count => 1,
+          -max_retry_count => 0,
           -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
           -flow_into => {
               2 => ['submit_job_gvf_dumps'],
@@ -211,7 +211,7 @@ sub pipeline_analyses {
       {   -logic_name => 'submit_job_gvf_dumps',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 1,
+          -max_retry_count => 0,
           -rc_name => 'default',
       },
 
@@ -277,7 +277,7 @@ sub pipeline_analyses {
 # gvf2vcf
       {   -logic_name => 'pre_run_checks_gvf2vcf',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 1,
+          -max_retry_count => 0,
           -flow_into => {
               '2->A' => ['init_parse'],
               'A->1' => ['summary_validate_vcf']

@@ -67,7 +67,8 @@ sub run {
     $self->dataflow_output_id({}, 2);
     $self->dataflow_output_id({}, 1);
   } elsif ($mode eq 'final_join') {
-    $self->final_join;
+    $self->warning('No final join');  
+#    $self->final_join;
   } elsif ($mode eq 'no_join') {
     $self->warning('No final join required');  
   } else {
