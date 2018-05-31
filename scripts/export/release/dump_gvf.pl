@@ -759,7 +759,21 @@ sub print_header {
     my $schema_version = $mca->get_schema_version;
     my $species_name = $mca->get_scientific_name;
     $species_name =~ s/ /_/g;
-    my $url = 'http://e'.$schema_version.'.ensembl.org/'.$species_name;
+
+    # create url for ensembl genomes species
+    my ($division) = @{$mca->list_value_by_key('species.division')};
+    my $url = '';
+    if (!$division) {
+      $url = 'http://www.ensembl.org';
+    }
+    elsif ($division eq 'Ensembl') {
+      $url = 'http://e'.$schema_version.'.ensembl.org/'.$species_name;
+    } else {
+      $division =~ s/^Ensembl//;
+      $division = lc $division;
+      $url = 'http://'.$division.'.ensembl.org/'.$species_name;
+    }
+
     my $gvf_header = "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283\n"
     . "##data-source Source=ensembl;version=$schema_version;url=$url\n"
     . "##file-version $schema_version\n";
