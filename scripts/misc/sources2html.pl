@@ -98,12 +98,13 @@ my $img_class_sm = "badge-16";
 my %colours = ( 'version'     => '#090',
                 'source'      => '#00F'
               );
-my %colour_class = ( 'version'     => 'vdoc_new_version',
-                     'source'      => 'vdoc_new_source',
-                     'lot_million' => 'vdoc_million_1',
-                     'few_million' => 'vdoc_million_2',
-                     'thousand'    => 'vdoc_thousand', 
-                     'hundred'     => 'vdoc_hundred'
+my %colour_class = ( 'version'         => 'vdoc_new_version',
+                     'source'          => 'vdoc_new_source',
+                     'hundred_million' => 'vdoc_million_0',
+                     'lot_million'     => 'vdoc_million_1',
+                     'few_million'     => 'vdoc_million_2',
+                     'thousand'        => 'vdoc_thousand',
+                     'hundred'         => 'vdoc_hundred'
                    );              
 
 my $phen_icon = '/i/val/var_phenotype_data_small.png';
@@ -167,7 +168,7 @@ my $html_header = q{
 
 my $html_title = qq{
   <div style="float:left;width:75%">
-    <h1 style="margin-top:15px">Ensembl Variation - Sources Documentation</h1>
+    <h1 style="margin-top:15px">Ensembl Variation - Data sources</h1>
 
     <h2>List of variant sources for each species - $ecaption $e_version</h2>
 
@@ -331,7 +332,7 @@ my $html_menu = create_menu();
 if ($html_content ne '') {
   $html_top_content .= qq{
     <div style="background-color:#F0F0F0;margin:50px 0px 25px;padding:5px;border-top:2px solid #336;border-bottom:1px solid #336">
-      <h2 style="display:inline;color:#000">Others species</h2>
+      <h2 style="display:inline;color:#000">Other species</h2>
     </div>
   };
 }
@@ -743,6 +744,7 @@ sub create_menu {
   }
   my $v_colour  = $colour_class{'version'};
   my $s_colour  = $colour_class{'source'};
+  my $hm_colour = $colour_class{'hundred_million'};
   my $lm_colour = $colour_class{'lot_million'};
   my $fm_colour = $colour_class{'few_million'};
   my $t_colour  = $colour_class{'thousand'};
@@ -813,9 +815,15 @@ sub create_menu {
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
+            <span class="vdoc_count_legend $hm_colour"></span>
+          </td>
+          <td style="padding-top:4px">greater than 100 million</td>
+        </tr>
+        <tr>
+          <td style="padding-top:4px;text-align:center">
             <span class="vdoc_count_legend $lm_colour"></span>
           </td>
-          <td style="padding-top:4px">greater than 10 million</td>
+          <td style="padding-top:4px">from 10 to 99.9 million</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
@@ -1062,7 +1070,6 @@ sub get_species_set_count {
 
 sub get_count {
   my $count = shift;
-  my $symbol = '+';
   
   my $count_label;
   my $count_display;
@@ -1071,24 +1078,33 @@ sub get_count {
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
-    $count = "$number million";
-    $count_label = "Over $count $end_label";
-    $count_display = "$count$symbol";
+    $count = "$number M";
+    $count_label = "Over $number million $end_label";
+    $count_display = $count;
     $bg_class = $colour_class{'few_million'};
   }
-  # From 10 million
-  elsif ($count =~ /^(\d+)\d{6}$/) {
+  # From 10 to 99.9 million
+  elsif ($count =~ /^(\d{2})\d{6}$/) {
     my $number = $1;
-    $count = "$number million";
-    $count_label = "Over $count $end_label";
-    $count_display = "$count$symbol";
+    $count = "$number M";
+    $count_label = "Over $number million $end_label";
+    $count_display = $count;
     $bg_class = $colour_class{'lot_million'};
+  }
+  # From 100 million
+  elsif ($count =~ /^(\d{3}\d*)\d{6}$/) {
+    my $number = $1;
+    $count = "$number M";
+    $count_label = "Over $number million $end_label";
+    $count_display = $count;
+    $bg_class = $colour_class{'hundred_million'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
-    $count = "$1,000";
-    $count_label = "Over $count $end_label";
-    $count_display = "$count$symbol";
+    my $number = $1;
+    $count = "$number K";
+    $count_label = "Over $number,000 $end_label";
+    $count_display = $count;
     $bg_class = $colour_class{'thousand'};
   }
   # From 1 to 999
