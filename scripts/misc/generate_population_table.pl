@@ -106,7 +106,7 @@ my %pops = ('1000 Genomes Project'           => { 'order'      => 1,
             'HapMap Project'                 => { 'order'    => 6,
                                                   'species'  => 'Homo sapiens',
                                                   'term'     => 'CSHL-HAPMAP:HAPMAP%',
-                                                  'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
+                                                  'url'      => 'https://www.genome.gov/10001688/international-hapmap-project/',
                                                   'evidence' => 'HapMap'
                                                 },
             'Exome Sequencing Project (ESP)' => { 'order'    => 7,
@@ -125,10 +125,25 @@ my %pops = ('1000 Genomes Project'           => { 'order'      => 1,
                                                   'term'     => 'NextGen:%',
                                                   'url'      => 'http://projects.ensembl.org/nextgen/'
                                                 },
-            'NextGen Project - Cow'          => { 'order'    => 10,
+            'NextGen Project - Sheep'        => { 'order'    => 10,
+                                                  'species'  => 'Ovis aries',
+                                                  'term'     => 'NextGen:%',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
+            'NextGen Project - Cow'          => { 'order'    => 11,
                                                   'species'  => 'Bos taurus',
                                                   'term'     => 'NextGen:%',
                                                   'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
+            'NextGen Project - Goat'          => { 'order'   => 12,
+                                                  'species'  => 'Capra hircus',
+                                                  'term'     => 'NextGen:%',
+                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
+                                                },
+            'EVA study PRJEB24066 - Dog'     => { 'order'    => 13,
+                                                  'species'  => 'Canis familiaris',
+                                                  'term'     => 'PRJEB24066%',
+                                                  'url'      => 'https://www.ebi.ac.uk/eva/?eva-study=PRJEB24066'
                                                 },
            );
            
@@ -143,7 +158,7 @@ my $size_max_width = '36px';
 
 my $evidence_icon_prefix = '/i/val/evidence_';
 my $evidence_icon_suffix = '.png';
-my $evidence_doc_url  = '#evidence_status';
+my $evidence_doc_url  = './variant_quality.html#evidence_status';
 
 $server_name = $site if ($site) ;
 
@@ -406,6 +421,11 @@ sub parse_desc {
   $content = '-' if (!$content);
   my @desc = split(/\.,/, $content);
   $content = "$desc[0]. $desc[1]." if scalar(@desc > 1);
+  
+  if ($content =~ /(45 unrelated Han Chinese in Beijing, China, representing one of the populations studied in the International HapMap project)/) {
+    $content = "$1.";
+  }
+  
   return $content;
 }
 

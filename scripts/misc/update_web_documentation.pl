@@ -37,12 +37,12 @@ use Getopt::Long;
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($version,$input_file,$output_file,$help,$host,$hlist,$user,$port,$phost,$ohost,$species);
+my ($version,$input_dir,$output_dir,$help,$host,$hlist,$user,$port,$phost,$ohost,$species);
 
 GetOptions(
   'v=i'         => \$version,
-  'i=s'         => \$input_file,
-  'o=s'         => \$output_file,
+  'i=s'         => \$input_dir,
+  'o=s'         => \$output_dir,
   'help!'       => \$help,
   'host=s'      => \$host,
   'hlist=s'     => \$hlist,
@@ -53,24 +53,31 @@ GetOptions(
   'species|s=s' => \$species
 );
 
-usage("input and output files must be specified") unless ($input_file && $output_file);
+usage("input and output directories must be specified") unless ($input_dir && $output_dir);
 usage("Host, port and version must be specified") unless ($host && $port && $version);
 usage("Hosts list, user must be specified") unless ($hlist && $user);
 usage("Previous host must be specified") unless ($phost);
 usage("Host providing the ontology database must be specified") unless ($ohost);
 
 $species ||= 'Homo_sapiens';
-my $tmp_file    = 'data_desc_tmp.html';
-my $tmp_section = 'section_tmp.html';
-`cp $input_file $tmp_file`;
+
+my $section;
+my ($tmp_file, $tmp_section, $file_name);
+my ($content_before, $new_content, $content_after);
 
 my @ontologies = ('efo', 'hpo');
 
-my $section;
-my ($content_before, $new_content, $content_after);
 
-# Generates the "List of species" table documentation
+#### Generates the "List of species" table documentation
+
+# Settings
 $section = 'sources';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "species_data_types.html";
+
+print STDOUT "# Start species list...\n";
+`cp $input_dir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
@@ -78,9 +85,20 @@ $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Species list finished\n";
 
-# Generates the "Variation classes" table documentation
+
+#### Generates the "Variation classes" table documentation
+
+# Settings
 $section = 'classes';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "classification.html";
+
+print STDOUT "# Start variant classes ...\n";
+`cp $input_dir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -ohost $ohost -species $species`;
@@ -88,9 +106,20 @@ $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Variant classes finished\n";
 
-# Generates the "Populations" table documentation
+
+#### Generates the "Populations" table documentation
+
+# Settings
 $section = 'populations';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "populations.html";
+
+print STDOUT "# Start populations ...\n";
+`cp $input_dir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
@@ -98,19 +127,41 @@ $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Populations finished\n";
 
-# Generates the "Variation sets" table documentation
+
+#### Generates the "Variation sets" table documentation
+
+# Settings
 $section = 'variation_sets';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "sets.html";
+
+print STDOUT "# Start variant sets ...\n";
+`cp $input_dir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_variation_set_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
+`perl generate_variation_set_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Variant sets finished\n";
 
-# Generates the "Clinical significance" tables documentation
+
+#### Generates the "Clinical significance" tables documentation
+
+# Settings
 $section = 'clin_significance';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "phenotype_association.html";
+
+print STDOUT "# Start clinical significance ...\n";
+`cp $input_dir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
@@ -118,8 +169,19 @@ $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Clinical significance finished\n";
 
-# Update the ontology versions
+
+#### Update the ontology versions
+
+# Settings
+$tmp_file    = "data_desc_ontology.html";
+$file_name   = "phenotype_association.html";
+
+print STDOUT "# Start phenotype ontology ...\n";
+`cp $input_dir/$file_name $tmp_file`;
+
 my $sql_onto = qq{SELECT data_version FROM ontology WHERE name=? LIMIT 1};
 my $tmp_file_content = `cat $tmp_file`;
 foreach my $onto (@ontologies) {
@@ -131,9 +193,10 @@ foreach my $onto (@ontologies) {
 }
 print_into_tmp_file($tmp_file,$tmp_file_content,'','');
 
+`cp $tmp_file $output_dir/$file_name`;
+print STDOUT "> Phenotype ontology finished\n";
 
-`cp $tmp_file $output_file`;
-
+print STDOUT "\n>>> End of script\n";
 
 
 #---------#
@@ -214,8 +277,8 @@ sub usage {
     -help           Print this message
       
     -v              Ensembl version, e.g. 65 (Required)
-    -i              Path to the data_description.html file (Required)
-    -o              An HTML output file name (Required)
+    -i              Path to the input directory (Required)
+    -o              Path to the output directory (Required)
     -host           Host of the human database (Required)
     -port           MySQL port of the human database (Required)
     -species        Species name. 'Homo_sapiens' by default (optional)

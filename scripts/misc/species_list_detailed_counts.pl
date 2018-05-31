@@ -150,11 +150,12 @@ my $html_footer = q{
 
 my $prediction = 'Prediction';
    
-my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 million'},
-                'few_million' => { 'order' => 2, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9.9 million'},
-                'thousand'    => { 'order' => 3, 'colour' => 'vdoc_thousand',  'legend' => 'From 1,000 to 999,999'},
-                'hundred'     => { 'order' => 4, 'colour' => 'vdoc_hundred',   'legend' => 'From 1 to 999'},
-                'zero'        => { 'order' => 5, 'colour' => 'vdoc_zero',      'legend' => 'No data'}
+my %colours = ( 'hundred_million' => { 'order' => 1, 'colour' => 'vdoc_million_0', 'legend' => 'From 100 million'},
+                'lot_million'     => { 'order' => 2, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 to 99.9 million'},
+                'few_million'     => { 'order' => 3, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9.9 million'},
+                'thousand'        => { 'order' => 4, 'colour' => 'vdoc_thousand',  'legend' => 'From 1,000 to 999,999'},
+                'hundred'         => { 'order' => 5, 'colour' => 'vdoc_hundred',   'legend' => 'From 1 to 999'},
+                'zero'            => { 'order' => 6, 'colour' => 'vdoc_zero',      'legend' => 'No data'}
               );  
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
@@ -468,7 +469,6 @@ sub round_count {
   my $type = shift;
      $type ||= 'variant';
      $type .= 's' if ($type !~ /data$/);
-  my $symbol = '+';
   
   my $count_label;
   my $count_display;
@@ -476,24 +476,33 @@ sub round_count {
   # From 1 to 9.9 million
   if ($count =~ /^(\d)(\d)\d{5}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
-    $count = "$number million";
-    $count_label = "Over $count $type";
-    $count_display = "$count$symbol";
+    $count = "$number M";
+    $count_label = "Over $number million $type";
+    $count_display = $count;
     $bg_class = $colours{'few_million'}{'colour'};
   }
-  # From 10 million
-  elsif ($count =~ /^(\d+)\d{6}$/) {
+  # From 10 tp 99.9 million
+  elsif ($count =~ /^(\d{2})\d{6}$/) {
     my $number = $1;
-    $count = "$number million";
-    $count_label = "Over $count $type";
-    $count_display = "$count$symbol";
+    $count = "$number M";
+    $count_label = "Over $number million $type";
+    $count_display = $count;
     $bg_class = $colours{'lot_million'}{'colour'};
+  }
+  # From 100 million
+  elsif ($count =~ /^(\d{3}\d*)\d{6}$/) {
+    my $number = $1;
+    $count = "$number M";
+    $count_label = "Over $number million $type";
+    $count_display = $count;
+    $bg_class = $colours{'hundred_million'}{'colour'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
-    $count = "$1,000";
-    $count_label = "Over $count $type";
-    $count_display = "$count$symbol";
+    my $number = $1;
+    $count = "$number K";
+    $count_label = "Over $number,000 $type";
+    $count_display = $count;
     $bg_class = $colours{'thousand'}{'colour'};
   }
   # From 1 to 999
