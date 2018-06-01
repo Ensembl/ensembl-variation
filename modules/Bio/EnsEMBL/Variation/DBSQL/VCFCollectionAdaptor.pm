@@ -91,6 +91,8 @@ package Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor;
 
 use JSON;
 use Cwd;
+use Net::FTP;
+use URI;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
@@ -208,6 +210,15 @@ sub new {
       }
     }
 
+    # Check that the remote/local VCF file exists before creating a corresponding VCFCollection object
+    my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
+
+    my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
+    if (!$file_exists) {
+      warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
+      next;
+    }
+
     ## create source object if source info available
     my $source = Bio::EnsEMBL::Variation::Source->new_fast({
       name        => $hash->{source_name} || $hash->{id},
@@ -251,13 +262,13 @@ sub new {
         push @{$populations}, Bio::EnsEMBL::Variation::Population->new_fast($hashref);
       }
     }
-    
+
     $self->add_VCFCollection(Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
       -description => $hash->{description},
       -type => $hash->{type},
       -use_as_source => $hash->{use_as_source},
-      -filename_template => $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template},
+      -filename_template => $filename_template,
       -chromosomes => $hash->{chromosomes},
       -sample_prefix => $hash->{sample_prefix},
       -population_prefix => $hash->{population_prefix},
@@ -275,8 +286,20 @@ sub new {
       -ref_freq_index => $hash->{ref_freq_index},
     ));
   }
-
   return $self;
+}
+
+# Internal method checking if a remote VCF file exists
+sub _ftp_file_exists {
+  my $self = shift;
+  my $uri = URI->new(shift);
+
+  my $ftp = Net::FTP->new($uri->host) or die "Connection error($uri): $@";
+  $ftp->login('anonymous', 'guest') or die "Login error", $ftp->message;
+  my $exists = defined $ftp->size($uri->path);
+  $ftp->quit;
+
+  return $exists;
 }
 
 
