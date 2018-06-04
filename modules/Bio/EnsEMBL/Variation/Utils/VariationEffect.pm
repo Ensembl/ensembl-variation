@@ -723,7 +723,6 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -831,8 +830,9 @@ sub _overlaps_start_codon {
         return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        $cdna_start += $bvfo->variation_feature->{shift_length} if $bvfo->variation_feature->{shifted_flag};
+        $cdna_end += $bvfo->variation_feature->{shift_length} if $bvfo->variation_feature->{shifted_flag};
         return 0 unless $cdna_start && $cdna_end;
-        
         $cache->{overlaps_start_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_start, $feat->cdna_coding_start + 2
