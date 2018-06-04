@@ -59,7 +59,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-our $DEBUG = 0;
+our $DEBUG = 1;
 
 my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean);
 
@@ -157,12 +157,13 @@ while (my $set = $ref->get_record() ){
 
     if (defined $structvar ){
       if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar}->[0] =~/\d+/ ){
-        #warn "Importing SV :  $record{feature_info}->{dbVar}->[0]\n";
+        warn "Importing SV :  $record{feature_info}->{dbVar}->[0]\n" if $DEBUG == 1;
         import( \%record);
       }
     }
     else{
       if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
+        warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
     	import( \%record);
       }
       else{
@@ -263,7 +264,11 @@ sub get_feature{
       foreach my $xref( @{$measure->{XRef}} ){
   
         next unless ref($xref) eq  'HASH';
-        push @{$feature{$xref->{DB}}}, $xref->{ID} ;
+        if ($xref->{DB} eq 'OMIM'){
+          push @{$feature{$xref->{DB}}{$xref->{Type}}}, $xref->{ID};
+        } else {
+          push @{$feature{$xref->{DB}}}, $xref->{ID} ;
+        }
       } 
    }
 
@@ -432,7 +437,19 @@ sub import{
       next unless defined $feature_object;
 
       ## add synonym
-      add_synonyms($feature_object, $record->{Acc}) if defined $feature_object;
+      add_synonyms($feature_object, $record->{Acc}, $source) if defined $feature_object;
+      if (grep(/^OMIM/, @{$record->{submitters}})) {
+        foreach my $omimSyn (@{$record->{feature_info}{'OMIM'}{'Allelic variant'}}) {
+          add_synonyms($feature_object, $omimSyn,"OMIM") if defined $feature_object; #&& exists $record->{feature_info}{'OMIM'}{'Allelic variant'}
+        }
+
+        print "rsID ($rs): omim-allele ", join(",", @{$record->{feature_info}{'OMIM'}{'Allelic variant'}}), "\n" if $DEBUG == 1 && scalar(@{$record->{feature_info}{'OMIM'}{'Allelic variant'}} > 1);
+        if ($DEBUG == 1 && !exists $record->{feature_info}{'OMIM'}{'Allelic variant'}){
+          warn "submitter-omim: ".join(",",  @{$record->{submitters}}). " for ". $record->{Acc}."(no allelic variant)"."\n";
+        }
+      } elsif ($DEBUG == 1 && exists $record->{feature_info}{'OMIM'}{'Allelic variant'}){
+        warn "submitter: ". join(",",  @{$record->{submitters}}). " for ". $record->{Acc}."(".$record->{feature_info}{'OMIM'}{'Allelic variant'}.")"."\n";
+      }
       ## add phenotype_feature & attrib (there may not be an alt_allele)
       import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
     }
@@ -473,7 +490,7 @@ sub import_phenotype_feature{
   $attribs{clinvar_clin_sig} = $record->{Desc};
   $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
-  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->[0])[0] if exists $record->{feature_info}->{OMIM};
+  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->{'Allelic variant'})[0] if exists $record->{feature_info}->{OMIM} && exists $record->{feature_info}->{OMIM}->{'Allelic variant'};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
@@ -599,6 +616,7 @@ sub get_variant{
 
   my $dbSNP  = "rs" . $rs_id;
 
+  $record->{feature_info}->{hgvs_g} |= "";
   print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
   ## need alleles to input for standard variation & for risk allele attribute
   ## take from HGVS string
@@ -608,7 +626,7 @@ sub get_variant{
 
   my ($ref_allele, $alt_allele);
   eval{
-    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} );
+    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
   };
   ## not printing bulky error message
   warn "Problem finding allele for $dbSNP\n" unless $@ eq '';
@@ -768,9 +786,16 @@ sub get_source{
 sub add_synonyms{
 
   my $var               = shift;
-  my $clinvar_accession = shift;
+  my $synonym_accession = shift;
+  my $synonym_source    = shift;
 
-  $clinvar_accession =~ s/\.\d+$//; ##remove version for synonym
+  if (ref($synonym_source) ne 'Bio::EnsEMBL::Variation::Source'){
+    my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
+    $synonym_source = $source_adaptor->fetch_by_name( $synonym_source );
+  }
+  if ($synonym_source->name eq 'ClinVar') {
+    $synonym_accession =~ s/\.\d+$//; ##remove version for synonym
+  }
 
   ## multiple rs id can be attached to the same ClinVar id - usually identical duplicates
   ## but we cannot support 2 variants with the same synonym/source
@@ -779,7 +804,7 @@ sub add_synonyms{
                                            values (?,?,?)
                                           ]);
 
-  $syn_ins_sth->execute($var->dbID(), $source->dbID(), $clinvar_accession);
+  $syn_ins_sth->execute($var->dbID(), $synonym_source->dbID(), $synonym_accession);
 
 
 }
