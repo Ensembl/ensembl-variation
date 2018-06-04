@@ -213,10 +213,12 @@ sub new {
     # Check that the remote/local VCF file exists before creating a corresponding VCFCollection object
     my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
 
-    my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
-    if (!$file_exists) {
-      warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
-      next;
+    if ($filename_template !~ /[#]+[^#]+[#]+/) {
+      my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
+      if (!$file_exists) {
+        warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
+        next;
+      }
     }
 
     ## create source object if source info available
