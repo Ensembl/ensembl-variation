@@ -156,13 +156,13 @@ sub _return_3prime {
   my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
   $new_slice = $new_slice->constrain_to_seq_region();
   my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-
+  my $pre_seq =  $slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
-  
+
   ## move along sequence after indel looking for match to start of indel
   my $shift_length = 0;
-  
+  if($tr->strand() > 0){
   for (my $n = 0; $n<= (length($post_seq) - $indel_length); $n++ ){
 
     ## check each position in indel/ following seq for match
@@ -184,11 +184,40 @@ sub _return_3prime {
       last;	    
     }
   }
+}
+  elsif($tr->strand() <= 0){
+  for (my $n = 1; $n<= (length($pre_seq) - $indel_length) + 1; $n++ ){
+
+    ## check each position in deletion/ following seq for match
+    my $check_next_del  = substr( $seq_to_check, length($seq_to_check) -1, 1);
+    my $check_next_pre = substr( $pre_seq, length($pre_seq) - $n, 1);
+    if($check_next_del eq $check_next_pre){
+
+      ## move position of deletion along
+      $var_start--;
+      $var_end--;
+      $shift_length--;
+      ## modify deleted sequence - remove start & append to end
+
+      #$seq_to_check = substr($seq_to_check,1);
+      #$seq_to_check .= $check_next_del;
+      $seq_to_check = substr($seq_to_check, 0, length($seq_to_check) -1);
+      $seq_to_check = $check_next_del . $seq_to_check;
+    }
+    else{
+      last;	    
+    }
+  }
+}
+  
   print "Shift length = $shift_length", "\n";
   my $offset_for_hgvs = $tr->strand() ? $shift_length : 0 - $shift_length;
 
   my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
   ## set new HGVS string
+  my $adaptor_shifting_flag = 1;
+  $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if defined($vf->adaptor);
+  return 0 if ($adaptor_shifting_flag == 0);
   if($slice_start2)
   {
   $self->{hgvs_allele_string} = $seq_to_check;
