@@ -508,7 +508,6 @@ sub splice_region {
 sub within_intron {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-
     return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{intronic};
 }
 
