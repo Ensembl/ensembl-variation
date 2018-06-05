@@ -158,7 +158,7 @@ my $size_max_width = '36px';
 
 my $evidence_icon_prefix = '/i/val/evidence_';
 my $evidence_icon_suffix = '.png';
-my $evidence_doc_url  = './variant_quality.html#evidence_status';
+my $evidence_doc_url  = '../prediction/variant_quality.html#evidence_status';
 
 $server_name = $site if ($site) ;
 
