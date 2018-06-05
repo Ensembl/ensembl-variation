@@ -551,17 +551,16 @@ sub within_cdna {
     $feat ||= $bvfo->feature;
     
     my $cdna_coords = $bvfo->cdna_coords;
-    
+    my $shift_length = $bvf->{shifted_flag} ? $feat->strand * $bvf->{shift_length} : 0;
     if (@$cdna_coords > 0) {
         for my $coord (@$cdna_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-                if ($coord->end > 0 && $coord->start <= $feat->length) {
+                if ($coord->end + $shift_length > 0 && $coord->start + $shift_length <= $feat->length) {
                     return 1;
                 }
             }
         }
     }
-    
     # we also need to check if the vf is in a frameshift intron within the cDNA
 
     if ($bvfoa->_intron_effects->{within_frameshift_intron}) {
