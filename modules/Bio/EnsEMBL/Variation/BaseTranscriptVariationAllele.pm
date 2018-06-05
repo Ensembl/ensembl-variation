@@ -116,6 +116,8 @@ sub _intron_effects {
     
     foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
+      my ($r_start_unshifted, $r_end_unshifted) = ($r_start, $r_end); 
+      ($r_start_unshifted, $r_end_unshifted) = ($vf->{unshifted_start} + $region->{s}, $vf->{unshifted_start} + $region->{e}) if defined($vf->{unshifted_start});
 
       my $insertion = $r_start == $r_end + 1;
       
@@ -135,9 +137,11 @@ sub _intron_effects {
         }
 
         if (
-          overlap($r_start, $r_end, $intron_start+2, $intron_end-2) or 
-          ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
-        ) {
+        overlap($r_start, $r_end, $intron_start+2, $intron_end-2) or 
+        ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
+       || overlap($r_start_unshifted, $r_end_unshifted, $intron_start+2, $intron_end-2) or 
+      ($insertion && ($r_start_unshifted == $intron_start+2 || $r_end_unshifted == $intron_end-2))
+    ) {
           $intron_effects->{intronic} = 1;
         }
       }

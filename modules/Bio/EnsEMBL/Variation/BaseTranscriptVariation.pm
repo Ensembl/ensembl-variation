@@ -367,7 +367,6 @@ sub translation_coords {
           my $new_trans_coords = [ $self->_mapper->genomic2pep($vf->{start}, $vf->{end}, $tran->strand) ] if $vf->{shifted_flag};
           if(!$new_trans_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'))
           {
-            $DB::single = 1;
             $self->{_translation_coords} = $new_trans_coords;
             $self->{_boundary_shift} = 1;
           }
