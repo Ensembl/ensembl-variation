@@ -396,7 +396,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion just before the cds start is UTR',
-        alleles => 'A',
+        alleles => 'T',
         start   => $cds_start, 
         end     => $cds_start-1,
         effects => [qw(5_prime_UTR_variant)],
@@ -522,7 +522,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(splice_acceptor_variant)],
     }, {
         comment => 'insertion between last bases 2 & 3 of an intron is splice_region',
-        alleles => 'A',
+        alleles => 'T',
         start   => $intron_end-1,
         end     => $intron_end-2,
         effects => [qw(splice_region_variant intron_variant)],
@@ -847,10 +847,11 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
-        alleles => 'A',
+        alleles => 'T',
         start   => $t_end + 1,
         end     => $t_end,
         effects => [ qw(upstream_gene_variant) ],
+        strand  => -1,
     }, {
         comment => 'an insertion just after the end is downstream',
         alleles => 'A',
@@ -890,7 +891,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => 'A',
         start   => $t_end,
         end     => $t_end - 1,
-        effects => [ qw(5_prime_UTR_variant) ],
+        effects => [ qw(5_prime_UTR_variant) ], 
     }, {
         start   => $cds_end + 1,
         end     => $cds_end + 1,
@@ -955,13 +956,13 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [qw(splice_region_variant frameshift_variant)],
     }, {
         comment => 'an insertion between the first two bases of an intron is in the donor',
-        alleles => 'A',
+        alleles => 'T',
         start   => $intron_end,
         end     => $intron_end - 1,
         effects => [qw(splice_donor_variant)],
     }, {
         comment => 'insertion between bases 2 & 3 of an intron is splice_region',
-        alleles => 'A',
+        alleles => 'T',
         start   => $intron_end - 1,
         end     => $intron_end - 2,
         effects => [qw(splice_region_variant intron_variant)],
