@@ -361,7 +361,7 @@ sub translation_coords {
         $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ] unless $vf->{shifted_flag};
         $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ] if $vf->{shifted_flag};
         
-        if($defined($self->{_translation_coords}->[0]) && self->{_translation_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
+        if(defined($self->{_translation_coords}->[0]) && $self->{_translation_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
         {
           my $new_trans_coords = [ $self->_mapper->genomic2pep($vf->{start}, $vf->{end}, $tran->strand) ] if $vf->{shifted_flag};
           if(!$new_trans_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'))
