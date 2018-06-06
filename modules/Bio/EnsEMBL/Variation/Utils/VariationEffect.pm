@@ -508,6 +508,7 @@ sub splice_region {
 sub within_intron {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    
     return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{intronic};
 }
 
@@ -721,6 +722,7 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
