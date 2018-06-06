@@ -245,6 +245,7 @@ sub variation_feature {
 
 sub feature_seq {
     my $self = shift;
+    
     unless ($self->{feature_seq}) {
         
         # check if we need to reverse complement the variation_feature_seq

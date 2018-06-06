@@ -258,6 +258,7 @@ sub get_all_OverlapConsequences {
     my $feat = $bvfo->feature;
     
     my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
+    
     # loop over all the consequences determined for this pre hash
     OC: for my $oc (@{$self->_get_oc_list($pre)}) {
 
@@ -435,7 +436,6 @@ sub _bvfo_preds {
   my $pred_digest = '';
 
   my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});
-  #($vf_start, $vf_end) = ($bvf->{unshifted_start}, $bvf->{unshifted_end}) if (defined($bvf->{shifted_flag}) && $bvf->{shifted_flag} eq 1);
   my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
   
   # within feature
