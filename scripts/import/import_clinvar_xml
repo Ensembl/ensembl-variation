@@ -150,10 +150,11 @@ while (my $set = $ref->get_record() ){
 
     ## Variant name, HGVS, OMIM id and location
     next unless $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
-                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant";
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Haplotype";
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc});
 
-    $record{submitters} = get_submitters($set->{ClinVarAssertion});
+    $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
 
     if (defined $structvar ){
       if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar}->[0] =~/\d+/ ){
@@ -264,12 +265,18 @@ sub get_feature{
       foreach my $xref( @{$measure->{XRef}} ){
   
         next unless ref($xref) eq  'HASH';
-        if ($xref->{DB} eq 'OMIM'){
-          push @{$feature{$xref->{DB}}{$xref->{Type}}}, $xref->{ID};
-        } else {
-          push @{$feature{$xref->{DB}}}, $xref->{ID} ;
+        push @{$feature{measureXrefs}{$measure->{ID}}{$xref->{DB}}{$xref->{Type}} }, $xref->{ID} ;
+      }
+      if (defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'} &&
+      defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'}){
+        my %tmpAllelicID;
+        foreach my $allele (@{$feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'}}){
+          foreach my $tmpRS (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
+            push @{$tmpAllelicID{$allele}}, $tmpRS;
+          }
         }
-      } 
+        $feature{measureXrefs}{$measure->{ID}}{alleleHash} = \%tmpAllelicID;
+      }
    }
 
     ## position on required assembly
@@ -387,12 +394,36 @@ sub get_citations{
 sub get_submitters{
 
   my $structure = shift;
+  my $mainXrefs = shift;
 
   my @submitters;
 
   my $assertions = to_array($structure);
   foreach my $assert(@{$assertions}){
-    push @submitters, $assert->{ClinVarSubmissionID}->[1]->{submitter};
+    push @submitters, $assert->{ClinVarSubmissionID}->[1]->{submitter}; # 1 as 0 is an empty entry, and 1 is the hash with submitter details
+    # if submitter OMIM then get OMIM allelic variant ID and corresponding rsID from reference record
+    if ($assert->{ClinVarSubmissionID}->[1]->{submitter} eq 'OMIM'){
+      if (defined $assert->{ExternalID} && $assert->{ExternalID}->[1]->{DB} eq 'OMIM') {
+        my $omimAlleleID = $assert->{ExternalID}->[1]->{ID};
+        foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
+          if (defined $mainXrefs->{'measureXrefs'}{$tmpMeasure} &&
+            defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'} &&
+            defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} &&
+            scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}} > 1 ) {
+            warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, ", join(",", $assert->{ExternalID}), "& saving first one!";
+          }
+          $mainXrefs->{'OMIM'} = $omimAlleleID unless defined $mainXrefs->{'OMIM'}; #look for improved ways of doing this
+          $mainXrefs->{'dbSNP'} = $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} unless defined $mainXrefs->{'dbSNP'};
+        }
+      }
+    }
+  }
+
+  #if no OMIM submitter than make sure rsID from dbSNP is at upper hash level
+  if (! defined $mainXrefs->{'dbSNP'}){
+    foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
+      push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'};
+    }
   }
 
   return \@submitters;
@@ -438,18 +469,8 @@ sub import{
 
       ## add synonym
       add_synonyms($feature_object, $record->{Acc}, $source) if defined $feature_object;
-      if (grep(/^OMIM/, @{$record->{submitters}})) {
-        foreach my $omimSyn (@{$record->{feature_info}{'OMIM'}{'Allelic variant'}}) {
-          add_synonyms($feature_object, $omimSyn,"OMIM") if defined $feature_object; #&& exists $record->{feature_info}{'OMIM'}{'Allelic variant'}
-        }
+      add_synonyms($feature_object, $record->{feature_info}{'OMIM'}, "OMIM") if defined $feature_object && defined $record->{feature_info}{'OMIM'};
 
-        print "rsID ($rs): omim-allele ", join(",", @{$record->{feature_info}{'OMIM'}{'Allelic variant'}}), "\n" if $DEBUG == 1 && scalar(@{$record->{feature_info}{'OMIM'}{'Allelic variant'}} > 1);
-        if ($DEBUG == 1 && !exists $record->{feature_info}{'OMIM'}{'Allelic variant'}){
-          warn "submitter-omim: ".join(",",  @{$record->{submitters}}). " for ". $record->{Acc}."(no allelic variant)"."\n";
-        }
-      } elsif ($DEBUG == 1 && exists $record->{feature_info}{'OMIM'}{'Allelic variant'}){
-        warn "submitter: ". join(",",  @{$record->{submitters}}). " for ". $record->{Acc}."(".$record->{feature_info}{'OMIM'}{'Allelic variant'}.")"."\n";
-      }
       ## add phenotype_feature & attrib (there may not be an alt_allele)
       import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
     }
@@ -490,7 +511,7 @@ sub import_phenotype_feature{
   $attribs{clinvar_clin_sig} = $record->{Desc};
   $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
-  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM}->{'Allelic variant'})[0] if exists $record->{feature_info}->{OMIM} && exists $record->{feature_info}->{OMIM}->{'Allelic variant'};
+  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM})[0] if exists $record->{feature_info}->{OMIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
