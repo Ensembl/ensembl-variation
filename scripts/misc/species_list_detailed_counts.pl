@@ -185,7 +185,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(phenotype_feature_id) FROM phenotype_feature},
                                                          'label' => 'Phenotype association'
                                                        },
-                                           'extra'  => q{The list of phenotype/disease/trait association sources by species is available in the page <a href="sources_phenotype_documentation.html">Phenotype sources</a>.}
+                                           'extra'  => q{The list of phenotype/disease/trait association sources by species is available in the page <a href="../phenotype/sources_phenotype_documentation.html">Phenotype sources</a>.}
                                          },
                    "Genotype"         => { 'sqla'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM compressed_genotype_var},
                                                          'label' => 'Variants with sample genotype'

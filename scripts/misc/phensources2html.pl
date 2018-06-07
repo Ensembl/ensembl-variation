@@ -127,7 +127,7 @@ my %data_type_example = ('sql'       => qq{SELECT object_id, type, phenotype_id 
 my $html_header = q{
 <html>
 <head>
-  <title>Phenotype Sources</title>
+  <title>Phenotype sources</title>
   <script type="text/javascript">
     window.onload = function() {
       $('._ht').helptip({'track': true});
@@ -151,7 +151,7 @@ my $html_title = qq{
     <h2>List of sources providing phenotype/disease/trait associations for each species - $ecaption $e_version</h2>
 
     <div style="margin-bottom:20px">
-      <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
+      <a href="../species/sources_documentation.html">See documentation for all the variant data sources &rarr;</a>
     </div>
 };
 

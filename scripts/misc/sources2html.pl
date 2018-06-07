@@ -153,7 +153,7 @@ my %data_type_example = (
 my $html_header = q{
 <html>
 <head>
-  <title>Variant Sources</title>
+  <title>Data sources</title>
   <script type="text/javascript">
     window.onload = function() {
       $('._ht').helptip({'track': true});
@@ -170,10 +170,10 @@ my $html_title = qq{
   <div style="float:left;width:75%">
     <h1 style="margin-top:15px">Ensembl Variation - Data sources</h1>
 
-    <h2>List of variant sources for each species - $ecaption $e_version</h2>
+    <h2>List of data sources for each species - $ecaption $e_version</h2>
 
     <div style="margin-bottom:20px">
-      <a href="sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
+      <a href="../prediction/sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
     </div>
 };
 
