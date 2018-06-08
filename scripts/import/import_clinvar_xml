@@ -67,7 +67,7 @@ GetOptions ("data_file=s"  => \$data_file,
             "registry=s"   => \$registry_file,
             "assembly=s"   => \$assembly,
             "structvar"    => \$structvar, 
-            "done_file"    => \$done_file, 
+            "done_file=s"  => \$done_file,
             "clean"        => \$clean 
             );
 
@@ -149,10 +149,11 @@ while (my $set = $ref->get_record() ){
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
-    next unless $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
+    next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Haplotype";
-    $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc});
+    $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
     $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
 
@@ -209,7 +210,9 @@ sub get_clinsig{
 
   if ($ClinicalSignificance->{Description} =~/conflict/){
     ## Description = 'conflicting data from submitters' - the values are in the explanation
-    $desc = "\L$ClinicalSignificance->{Explanation}->[0]";
+    $desc = "\L$ClinicalSignificance->{Explanation}->[0]" if defined $ClinicalSignificance->{Explanation};
+    warn "warining: conflicing ClinicalSignificance but no Explanation " if ! defined $ClinicalSignificance->{Explanation};
+    $desc |='';
     $desc =~ s/\(\d+\)//g; ## remove bracketed counts
     $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
   }
@@ -248,6 +251,7 @@ sub get_feature{
 
   my $Measure   = shift;
   my $accession = shift;
+  my $type      = shift;
 
   my %feature;
 
@@ -265,18 +269,25 @@ sub get_feature{
       foreach my $xref( @{$measure->{XRef}} ){
   
         next unless ref($xref) eq  'HASH';
-        push @{$feature{measureXrefs}{$measure->{ID}}{$xref->{DB}}{$xref->{Type}} }, $xref->{ID} ;
+        if (defined $xref->{Type}) {
+          push @{$feature{measureXrefs}{$measure->{ID}}{$xref->{DB}}{$xref->{Type}} }, $xref->{ID} ;
+        } else {
+          push @{$feature{measureXrefs}{$measure->{ID}}{$xref->{DB}} }, $xref->{ID} ;
+        }
       }
       if (defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'} &&
-      defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'}){
+      defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'} &&
+      defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}){
         my %tmpAllelicID;
         foreach my $allele (@{$feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'}}){
           foreach my $tmpRS (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
             push @{$tmpAllelicID{$allele}}, $tmpRS;
           }
         }
-        $feature{measureXrefs}{$measure->{ID}}{alleleHash} = \%tmpAllelicID;
+        # for haplotype entries: allelic variant ids are not real synonyms & this will result in them not being saved
+        $feature{measureXrefs}{$measure->{ID}}{alleleHash} = \%tmpAllelicID unless $type eq 'Haplotype';
       }
+      push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq 'Haplotype' && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
    }
 
     ## position on required assembly
@@ -316,6 +327,24 @@ sub get_feature{
         push @genes, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
       }
       $feature{gene} = join(",", @genes);
+    }
+  }
+
+  # if haplotype present then save corresponding rsIDs for phenotype_feature_attrib entry
+  if ($type eq 'Haplotype' && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
+    my @rsIDs = @{$feature{haplo}{rs}};
+    # only if more than 1 rsID present make them phenotype_feature_attribs
+    if( scalar @rsIDs >1){
+      my %index;
+      @index{@rsIDs} = (0..$#rsIDs);
+      foreach my $rs (@{$feature{haplo}{rs}}){
+        foreach my $rs2 (@{$feature{haplo}{rs}}){
+          next if $rs eq $rs2;
+          push @{$feature{haplo}{'rs'.$rs}}, 'rs'.$rs2;
+        }
+      }
+    } else {
+      delete $feature{haplo};
     }
   }
   return \%feature;
@@ -405,16 +434,20 @@ sub get_submitters{
     if ($assert->{ClinVarSubmissionID}->[1]->{submitter} eq 'OMIM'){
       if (defined $assert->{ExternalID} && $assert->{ExternalID}->[1]->{DB} eq 'OMIM') {
         my $omimAlleleID = $assert->{ExternalID}->[1]->{ID};
+        warn "OMIM submitter with ExternalID BUT not for variation type, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") id type(",$assert->{ExternalID}->[1]->{Type} ,")!! " if $DEBUG == 1 &&  $assert->{ExternalID}->[1]->{Type} ne 'Allelic variant';
         foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
           if (defined $mainXrefs->{'measureXrefs'}{$tmpMeasure} &&
-            defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'} &&
-            defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} &&
-            scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}} > 1 ) {
-            warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, ", join(",", $assert->{ExternalID}), "& saving first one!";
+              defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'} &&
+              defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}) {
+            if (scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}} > 1) {
+              warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, ", join(",", @{$assert->{ExternalID}}), "& saving first one!";
+            }
+            $mainXrefs->{'OMIM'} = $omimAlleleID unless defined $mainXrefs->{'OMIM'}; #look for improved ways of doing this
+            $mainXrefs->{'dbSNP'} = $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} unless defined $mainXrefs->{'dbSNP'};
           }
-          $mainXrefs->{'OMIM'} = $omimAlleleID unless defined $mainXrefs->{'OMIM'}; #look for improved ways of doing this
-          $mainXrefs->{'dbSNP'} = $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} unless defined $mainXrefs->{'dbSNP'};
         }
+      } elsif ($DEBUG == 1){
+        warn "OMIM submitter but no ExternalID, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") gene(",$mainXrefs->{gene} ,")!! ";
       }
     }
   }
@@ -515,6 +548,7 @@ sub import_phenotype_feature{
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
+  $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo};
   my %submitter_ids;
   foreach my $sub (@{$record->{submitters}}){
     ##enter submitter unless already available
