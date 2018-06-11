@@ -52,7 +52,6 @@ sub run {
   $hive_dbc->disconnect_if_idle() if defined $hive_dbc;
 
   my $cmd = "perl $script " . join(' ', @args); 
-  $self->warning("$cmd 1>$out 2>$err");					
   $self->run_cmd("$cmd 1>$out 2>$err");					
 
   return 1;
