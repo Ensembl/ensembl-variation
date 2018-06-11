@@ -296,7 +296,6 @@ sub dump_svs_data {
             # normal variations
             $gvf_line->{attributes}->{ID} = ++$id_count;
             print_gvf_line($config, $gvf_line);
-            return;
             $prev_svs->{$svf->variation_name} = $coords if $gvf_line;
         }
     }
@@ -353,7 +352,6 @@ sub dump_data {
                             $gvf_lines = add_frequencies($config, \@vfs);
                         }
                         annotate_gvf_lines($config, $gvf_lines);
-                        return;
                         @vfs = ();
                         $count = 0;
                     }
@@ -369,7 +367,6 @@ sub dump_data {
                     my $gvf_line = {};
                     annotate_vf($config, $gvf_line, $vf);
                     print_gvf_line($config, $gvf_line) if ((scalar keys %$gvf_line) > 1);
-                    return;
                 }
             }
         } 
