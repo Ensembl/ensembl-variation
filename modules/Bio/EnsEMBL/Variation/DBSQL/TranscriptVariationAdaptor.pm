@@ -324,6 +324,32 @@ sub fetch_all_by_Transcripts_with_constraint {
   return $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
 }
 
+=head2 count_all_by_Transcript
+
+  Arg [1]    : A Bio::EnsEMBL::Transcript
+  Description: Fetch the number of TranscriptVariation records associated with a
+               given Transcript
+  Returntype : int
+  Caller:    : Web code
+  Status     : At risk
+
+=cut
+
+sub count_all_by_Transcript{
+
+  my $self       = shift;
+  my $transcript = shift;
+
+  if (!ref($transcript) || !$transcript->isa('Bio::EnsEMBL::Transcript')) {
+    throw('Bio::EnsEMBL::Transcript arg expected');
+  }
+
+  my $constraint = "feature_stable_id = '" . $transcript->stable_id() . "'";
+
+  return $self->generic_count($constraint);
+}
+
+
 sub _fetch_all_by_VariationFeatures_no_DB {
   my ($self, $vfs, $features, $constraint, $dont_add_to_vf) = @_;
 
