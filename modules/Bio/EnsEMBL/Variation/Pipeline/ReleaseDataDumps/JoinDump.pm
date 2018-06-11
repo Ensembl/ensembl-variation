@@ -67,8 +67,7 @@ sub run {
     $self->dataflow_output_id({}, 2);
     $self->dataflow_output_id({}, 1);
   } elsif ($mode eq 'final_join') {
-    $self->warning('No final join');  
-#    $self->final_join;
+    $self->final_join;
   } elsif ($mode eq 'no_join') {
     $self->warning('No final join required');  
   } else {
@@ -92,6 +91,8 @@ sub final_join_gvf {
   my $file_name = $self->param('file_name');
   my $dump_type = $self->param('dump_type');
   my @input_ids = sort @{$self->param('input_ids')};
+  my $tmp_dir = $self->param('tmp_dir');
+
  
   my $covered_seq_region_ids = $self->get_covered_seq_regions; 
   my $species = $self->param('species');
@@ -108,6 +109,7 @@ sub final_join_gvf {
   }
 
   my $first_file_id = $input_ids[0];
+  $self->warning("first_file_id $first_file_id");
   
   my $fh_join = FileHandle->new("$dir/$file_name.gvf", 'w');
 
@@ -128,7 +130,9 @@ sub final_join_gvf {
   `gzip $dir/$dump_type-$first_file_id.gvf`; 
 
   foreach my $sequence_region (@sequence_regions) {
-    print $fh_join join(' ', '##sequence-region', $sequence_region->{name}, $sequence_region->{start}, $sequence_region->{end}), "\n";
+    if ($sequence_region->{name} && $sequence_region->{start} && $sequence_region->{end}) {
+      print $fh_join join(' ', '##sequence-region', $sequence_region->{name}, $sequence_region->{start}, $sequence_region->{end}), "\n";
+    }
   }
 
   my $id_count = 1; 
@@ -145,7 +149,9 @@ sub final_join_gvf {
       $id_count++;
     }
     $fh->close();
-    `rm $dir/$dump_type-$file_id.gvf`;
+    `gzip $dir/$dump_type-$file_id.gvf`;
+    `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
+
   }
   $fh_join->close();
 }
@@ -220,13 +226,41 @@ sub get_slice_split_files {
 sub join_split_slice_files {
   my ($self, $working_dir, $files) = @_;
 
-  my $tmp_dir = $self->param('tmp_dir');
+  my $species = $self->param('species');
 
+  my $seq_region_id2name = {};
+  my $sequence_regions = {};
+  if ($species eq 'homo_sapiens') {
+    my $cdba = $self->get_species_adaptor($species, 'core');
+    my $sa = $cdba->get_SliceAdaptor;
+    my $slices = $sa->fetch_all('chromosome');
+    foreach my $slice (@$slices) {
+      $seq_region_id2name->{$slice->get_seq_region_id} = $slice->seq_region_name;
+      my $seq_region_id = $slice->get_seq_region_id;
+      $sequence_regions->{$seq_region_id}->{start} = $slice->start;
+      $sequence_regions->{$seq_region_id}->{end} = $slice->end;
+      $sequence_regions->{$seq_region_id}->{name} = $slice->seq_region_name;
+    }
+  }
+
+  my $tmp_dir = $self->param('tmp_dir');
   foreach my $file_type (keys %$files) {
     foreach my $seq_region_id (keys %{$files->{$file_type}}) {
       my $id_count = 1;
       my @start_positions = sort keys %{$files->{$file_type}->{$seq_region_id}};
-      my $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
+      my $fh_join;
+      if ($species eq 'homo_sapiens') {
+        my $seq_region_name = $seq_region_id2name->{$seq_region_id};
+        if ($seq_region_name) {
+          $fh_join = FileHandle->new("$working_dir/$file_type-chr$seq_region_name.gvf", 'w');
+        } else {
+          $self->warning("No seq_region_name for $seq_region_id"); 
+          $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
+        }
+      } else {
+        $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
+      }
+
       my $first_start_position = $start_positions[0];
       my $file_name = $files->{$file_type}->{$seq_region_id}->{$first_start_position};
       my $fh = FileHandle->new("$working_dir/$file_name", 'r');
@@ -238,6 +272,12 @@ sub join_split_slice_files {
           print $fh_join $line, "\n";
         }
       }  
+      my $name = $sequence_regions->{$seq_region_id}->{name};
+      my $start = $sequence_regions->{$seq_region_id}->{start};
+      my $end = $sequence_regions->{$seq_region_id}->{end};
+
+      print $fh_join join(' ', '##sequence-region', $name, $start, $end), "\n";
+
       $fh->close();
 
       foreach my $start_position (@start_positions) {
