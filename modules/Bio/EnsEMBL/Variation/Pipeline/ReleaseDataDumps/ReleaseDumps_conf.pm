@@ -87,7 +87,7 @@ sub default_options {
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 5e6, # 1e7
 
-        debug => 1,
+        debug => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
