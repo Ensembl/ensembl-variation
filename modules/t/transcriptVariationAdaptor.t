@@ -17,7 +17,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Data::Dumper;
+use Test::Exception;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Registry;
@@ -167,8 +167,10 @@ ok(scalar @$tvs8 == 0, 'fetch_all_by_translation_id_SO_terms');
 my $tvs9 = $trv_ad->fetch_all_somatic_by_translation_id_SO_terms($translation_stable_id, ['sequence_variant']);
 ok(scalar @$tvs9 == 0, 'fetch_all_somatic_by_translation_id_SO_terms');
 
+my $count10 = $trv_ad->count_all_by_Transcript( $transcript );
+ok( $count10 == 10, 'count_all_by_Transcript');
 
-
+throws_ok { $trv_ad->count_all_by_Transcript(); } qr/Bio::EnsEMBL::Transcript arg expected/, "count missing transcript";
 
 #### check HGVS shifting
 
