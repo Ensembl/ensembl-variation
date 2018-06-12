@@ -78,6 +78,7 @@ $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
 ## only merging records by name, so include fails
 $dba->include_failed_variations(1);
+my $dbh = $dba->dbc;
 
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
@@ -97,6 +98,10 @@ my $submitters = get_submitter_ids($dba);
 
 ## remove old data
 clean_old_data() if defined $clean; 
+
+## OMIM set id
+my $omim_set_id   = get_set($dbh, 'ph_omim');
+my %omimVarSet;
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
@@ -182,6 +187,62 @@ while (my $set = $ref->get_record() ){
       #die "ERROR: $@\n";
       die "ERROR: $@\n$current\n\n";
   } 
+}
+
+## find old set id ( and remove linked variants)
+##  or enter new one
+sub get_set{
+
+  my $dbh = shift;
+  my $set = shift; ## short attrib name for set
+
+  ## info on sets
+  my $data =      {
+    'clin_assoc' => {
+	    'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
+	    'name' => 'Clinically associated'},
+    'ClinVar'    => {
+	    'desc' => 'Variants with ClinVar annotation',
+	    'name' => 'All ClinVar'},
+    'ph_omim'           => {
+      'desc' => 'Variants linked to entries in the Online Mendelian Inheritance in Man (OMIM) database',
+      'name' => 'OMIM phenotype variants'},
+  };
+
+  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
+                                       where value = ? and attrib_type_id = 477]);
+
+  my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id
+                                      from variation_set, attrib
+                                      where variation_set.short_name_attrib_id = attrib.attrib_id
+                                      and attrib.value =? ]);
+
+  my $set_ins_sth = $dbh->prepare(qq[ insert into variation_set
+                                     (name, description, short_name_attrib_id)
+                                      values ( ?,?,?  ) ]);
+
+  my $set_del_sth = $dbh->prepare(qq[ delete from variation_set_variation where variation_set_id = ?]);
+
+  ### look for old set record
+  $set_ext_sth->execute( $set);
+  my $set_id = $set_ext_sth->fetchall_arrayref();
+
+  if (defined $set_id->[0]->[0] ){
+    ## remove old set content
+    $set_del_sth->execute($set_id->[0]->[0]);
+    return $set_id->[0]->[0] ;
+  }
+
+  ### enter new set record
+  $attrib_ext_sth->execute( $set);
+  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
+  die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
+
+  $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] );
+  $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
+
+  return $set_id;
+
 }
 
 ## get ClinVar accession & version
@@ -440,12 +501,14 @@ sub get_submitters{
               defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'} &&
               defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}) {
             if (scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}} > 1) {
-              warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, ", join(",", @{$assert->{ExternalID}}), "& saving first one!";
+              warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, rs:", join(",", @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID}}), "!";
             }
             $mainXrefs->{'OMIM'} = $omimAlleleID unless defined $mainXrefs->{'OMIM'}; #look for improved ways of doing this
+            $mainXrefs->{'MIM'} = (split/\./, $omimAlleleID)[0] unless defined $mainXrefs->{'MIM'};
             $mainXrefs->{'dbSNP'} = $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'alleleHash'}{$omimAlleleID} unless defined $mainXrefs->{'dbSNP'};
           }
         }
+        $mainXrefs->{'MIM'} = (split/\./, $omimAlleleID)[0] unless defined $mainXrefs->{'MIM'};
       } elsif ($DEBUG == 1){
         warn "OMIM submitter but no ExternalID, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") gene(",$mainXrefs->{gene} ,")!! ";
       }
@@ -492,7 +555,7 @@ sub import{
 
   my $feature_object;
   my $alt_allele; ## disease associated allele from HGVS
-  my $feat;       ## use stored *variation_features where possible
+  my $feat;       ## use stored *variation_features / phenotype_features where possible
 
   if(defined $record->{feature_info}->{dbSNP}){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
@@ -544,7 +607,7 @@ sub import_phenotype_feature{
   $attribs{clinvar_clin_sig} = $record->{Desc};
   $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
-  $attribs{MIM}              = (split/\./, $record->{feature_info}->{OMIM})[0] if exists $record->{feature_info}->{OMIM};
+  $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
@@ -559,8 +622,11 @@ sub import_phenotype_feature{
     $submitter_ids{ $submitters->{$sub} } = 1;
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
+#TODO: clean variation_set_variation table for variation_set 'OMIM set' -> add if submitter_id 1, expect 21,907
 
-  foreach my $feature (@{$feat}){
+  update_variation_set($feature_object->dbID()) if exists $submitter_ids{1} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+
+  foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
     print "entering phenofeat type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
       if $DEBUG == 1;
 
@@ -579,6 +645,22 @@ sub import_phenotype_feature{
       $pheno_feat_adaptor->store($phenofeat);
 
   }
+}
+
+
+=head2 update_variation_set
+- update variation set variation ph_omim for the new variation
+=cut
+
+sub update_variation_set{
+  my $variation_id      = shift;
+
+  my $vsv_ins_sth = $dbh->prepare(qq[ insert into variation_set_variation
+                                     (variation_id, variation_set_id)
+                                      values (?,?)] );
+  $vsv_ins_sth->execute( $variation_id, $omim_set_id );
+  $omimVarSet{$variation_id} =1;
+
 }
 
 =head2 get_phenotype
