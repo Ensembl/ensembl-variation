@@ -11,27 +11,6 @@ This directory contains gzip compressed GVF (Genome Variation Format) files:
         All consequences of the variations on the Ensembl transcriptome,
         as called by the variation consequence pipeline
 
-For human only:
-    Homo_sapiens_somatic.gvf.gz
-        All somatic mutations from the current Ensembl release.
-    Homo_sapiens_somatic_incl_consequences.gvf.gz
-        All consequences of somatic mutations on the Ensembl transcriptome,
-        as called by the variation consequence pipeline
-    Homo_sapiens_phenotype_associated.gvf.gz
-        All variations from the current Ensembl release that have been
-        associated with a phenotype
-    Homo_sapiens_clinically_associated.gvf.gz
-        All variations from the current Ensembl release that have been
-        described by ClinVar as being probable-pathogenic, pathogenic,
-        drug-response or histocompatibility
-
-Additionally, we provide for human:
-    - files with germline variations observed in the Watson and Venter
-      genomes along with their genotypes
-    - files containing allele frequencies from several of the HapMap,
-      1000 genomes phase 3 populations and from populations from the
-      Exome Sequencing Project
-
 If available for this species, the file includes information on:
     - ancestral_allele
     - evidence
@@ -39,11 +18,6 @@ If available for this species, the file includes information on:
     - global minor allele, frequency and count
 Incl_consequences files include sift (if available for this species)
 and polyphen (human only) predictions.
-
-
-Please note that depending on the amount of variation data available for this
-species the uncompressed file may be very large (e.g. the entire germline file
-for human is ~3GB and the file including consequences is ~10GB).
 
 The data contained in these files is presented in GVF format, this is a
 simple tab-delimited format derived from GFF3 which shows the location of

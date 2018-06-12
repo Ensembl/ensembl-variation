@@ -85,7 +85,7 @@ sub tabix_vcf_files {
 sub add_readme {
   my ($self, $data_dir, $species) = @_;
   foreach my $file_type (qw/gvf vcf/) {
-    my $readme_file = $self->param("$file_type\_readme");
+    my $readme_file = ($species eq 'homo_sapiens') ? $self->param("$file_type\_readme_human") : $self->param("$file_type\_readme");
     my $fh = FileHandle->new($readme_file, 'r');
     my $readme;
     {
@@ -94,7 +94,11 @@ sub add_readme {
     }    
     $fh->close();
     open README, ">$data_dir/$file_type/$species/README" or die "Failed to create README file for species $species\n";
+    if ($species eq 'homo_sapiens') {
+      print README $readme, "\n";
+    } else {
     print README sprintf($readme, $species, $species, $species, $species), "\n";
+    }
     close README;
   }
 }

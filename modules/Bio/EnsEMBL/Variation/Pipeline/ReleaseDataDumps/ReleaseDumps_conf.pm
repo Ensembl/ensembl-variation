@@ -80,7 +80,10 @@ sub default_options {
 
         tmp_dir           => $self->o('tmp_dir'),
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
+        gvf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF_human',
+
         vcf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF',
+        vcf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF_human',
 
         global_vf_count_in_species => 5_000_000, # if number of vf in a species exceeds this we need to split up dumps
         max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
