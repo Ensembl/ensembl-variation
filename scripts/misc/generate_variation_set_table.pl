@@ -27,7 +27,7 @@
 =cut
 
 
-#ÊScript to dump out a table of variation sets that can be used in the documentation
+#ÃŠScript to dump out a table of variation sets that can be used in the documentation
 
 use strict;
 use warnings;
@@ -64,11 +64,19 @@ if (!$user) {
 }
 
 
-my $table_header = qq{
+my $table_header_1 = qq{
   <tr>
     <th>Name</th>
     <th>Short name</th>
     <th>Description</th>
+  </tr>
+};
+my $table_header_2 = qq{
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
   </tr>
 };
 
@@ -81,13 +89,27 @@ my $pswd = "";
 my $db_type = 'variation';
 my $img_class = "badge-48";
 my $top_species = 'human';
+my $expand = 50;
 my %display_list;
 my %species_list;
+my %set_dbs;
 my $com_sets;
 my $sets;
 
-my $sql      = qq{SHOW DATABASES LIKE '%$db_type\_$db_version%'};
-my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
+my $sql         = qq{SHOW DATABASES LIKE '%$db_type\_$db_version%'};
+my $sql_core    = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
+my $sql_example = qq{
+  SELECT vf.variation_name,s.name,vf.seq_region_start,vf.seq_region_end 
+  FROM variation_feature vf, seq_region s, variation_set vs, attrib a 
+  WHERE s.seq_region_id=vf.seq_region_id 
+    AND FIND_IN_SET(vs.variation_set_id, vf.variation_set_id) 
+    AND a.attrib_id=vs.short_name_attrib_id 
+    AND a.value=? LIMIT 1
+};
+
+my $internal_link = '/i/16/internal_link.png';
+my $example_track_url = qq{<a href="/####SPECIES####/Location/View?contigviewbottom=variation_set_####SET####=normal;r=####LOCATION####;v=####VARIANT####" target="_blank" title="See a track example"><img src="$internal_link" style="vertical-align:middle" alt="Link"/> track</a>};
+my $example_var_url = qq{<a href="/####SPECIES####/Variation/Explore?v=####VARIANT####" target="_blank" title="See a variant example"><img src="$internal_link" style="vertical-align:middle" alt="Link"/> variant</a>};
 
 foreach my $hostname (@hostnames) {
   
@@ -143,7 +165,10 @@ foreach my $hostname (@hostnames) {
       if (!$is_com) {
         $sets->{$s_name}{$top_vs->short_name} = $top_vs;
         $display_list{$display_name} = $s_name;
+        $set_dbs{$s_name}{'host'} = $hostname;
+        $set_dbs{$s_name}{'db'}   = $dbname;
       }
+      
     }
     print " ... done\n";
   }
@@ -156,18 +181,18 @@ $html .= qq{
   <h2 id="commom_set">Variant sets common to all species</h2>
   <div style="margin:6px 0px 30px">
     <table id=\"variation_set_table\" class=\"ss\">
-    $table_header
+    $table_header_1
 };
-
 foreach my $com_set_name (sort {lc $sets->{$a}->name cmp lc $sets->{$b}->name} keys(%$com_sets)) {
   my $com_rowcount = 0;
-  $html .= print_set($com_sets->{$com_set_name},\$com_rowcount);
+  $html .= print_set($com_sets->{$com_set_name},'',\$com_rowcount);
 }
 $html .= qq{    </table>\n  </div>\n};
 
-
+# Print the species tables
 foreach my $display_name (sort { $a !~ /$top_species/i cmp $b !~ /$top_species/i || $a cmp $b } keys(%display_list)) {
   my $species = $display_list{$display_name};
+
   ## Print the species table headers;
   my $species_label = $species_list{$species}{'label'};
   my $id_species = ucfirst($species);
@@ -178,11 +203,11 @@ foreach my $display_name (sort { $a !~ /$top_species/i cmp $b !~ /$top_species/i
     </div>
     <div style="margin:6px 0px 30px">
       <table class="ss">
-      $table_header};
+      $table_header_2};
 
   my $rowcount  = 0;
   foreach my $set_name (sort {lc $sets->{$species}->{$a}->name cmp lc $sets->{$species}->{$b}->name } keys(%{$sets->{$species}})) {
-    $html .= print_set($sets->{$species}->{$set_name},\$rowcount);
+    $html .= print_set($sets->{$species}->{$set_name},$species,\$rowcount);
   }
   $html .= qq{      </table>\n    </div>\n};
   if ($display_name =~ /$top_species/i) {
@@ -202,6 +227,7 @@ close(OUT);
 # We define a function that will help us recurse over the set hierarchy and print the data   
 sub print_set {
   my $set = shift;
+  my $species = shift;
   my $rowcount = shift;
   my $indent = shift || 0;
   
@@ -226,10 +252,17 @@ sub print_set {
   # Print the set attributes
   my $short_name = ($set->short_name())  ? $set->short_name()  : '-';
   my $set_desc   = ($set->description()) ? $set->description() : '-';
+  
+  my $set_url_examples = '-</td><td>-';
+  if ($short_name ne '-' && $species ne '') {
+    $set_url_examples = get_example_urls($species,$short_name);
+  }
+  
   $html_set .= "  <tr$rowclass>\n";
   $html_set .= "    <td>$bullet_open$label$bullet_close</td>\n";
   $html_set .= "    <td>$short_name</td>\n";
   $html_set .= "    <td>$set_desc</td>\n";
+  $html_set .= "    <td>$set_url_examples</td>\n" if ($species ne '');
   $html_set .= "  </tr>\n";
   
   # Get the subsets that have the current set as immediate parent
@@ -241,9 +274,39 @@ sub print_set {
     $ssets->{$sub_vs->name} = $sub_vs;
   }
   foreach my $sset_name (sort {$a cmp $b} keys(%$ssets)) {
-    $html_set .= print_set($ssets->{$sset_name},$rowcount,$indent+1);
+    $html_set .= print_set($ssets->{$sset_name},$species,$rowcount,$indent+1);
   }
   return $html_set;
+}
+
+sub get_example_urls {
+  my $species    = shift;
+  my $short_name = shift;
+  
+  my $host = $set_dbs{$species}{'host'};
+  my $db   = $set_dbs{$species}{'db'};
+  
+  my $sth_ex = get_connection_and_query($db, $host, $sql_example,[$short_name]);
+  my ($var_id,$chr,$start,$end) = $sth_ex->fetchrow_array;
+  $sth_ex->finish();
+  
+  $start -= $expand;
+  $end   += $expand;
+  $start = 1 if ($start < 1);
+  
+  $species = ucfirst($species);
+  
+  my $ex_track_url =  $example_track_url;
+     $ex_track_url =~ s/####SPECIES####/$species/;
+     $ex_track_url =~ s/####SET####/$short_name/;
+     $ex_track_url =~ s/####LOCATION####/$chr:$start-$end/;
+     $ex_track_url =~ s/####VARIANT####/$var_id/;
+     
+  my $ex_var_url =  $example_var_url;
+     $ex_var_url =~ s/####SPECIES####/$species/;
+     $ex_var_url =~ s/####VARIANT####/$var_id/;
+     
+  return $ex_track_url."</td><td>".$ex_var_url;
 }
 
 
@@ -252,6 +315,7 @@ sub get_connection_and_query {
   my $dbname = shift;
   my $hname  = shift;
   my $sql    = shift;
+  my $params = shift;
   
   my ($host, $port) = split /\:/, $hname;
   
@@ -260,7 +324,12 @@ sub get_connection_and_query {
   my $dbh = DBI->connect($dsn, $user, $pswd) or die "Connection failed";
 
   my $sth = $dbh->prepare($sql);
-  $sth->execute;
+  if ($params) {
+    $sth->execute(join(',',@$params));
+  }
+  else {
+    $sth->execute;
+  }
   return $sth;
 }
 
