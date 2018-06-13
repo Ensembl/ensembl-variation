@@ -86,6 +86,9 @@ my $allele_symbol = 't_1';
 my $allele_accession = 't_1.1';
 my $var_name = "rs12345";
 my $external_ref = "RV123";
+my $pubmed_ids = '15680456,15680457,15680455,15726496';
+my $review_status = 'criteria provided, multiple submitters, no conflicts';
+my $mim_id = '609007';
 my @ontology_accessions = ('EFO:00001');
 
 my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $desc, -dbID => $phenotype_id);
@@ -107,6 +110,9 @@ my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       external_id     => $external_id,
       risk_allele     => $risk_allele,
       associated_gene => $gene, 
+      pubmed_id       => $pubmed_ids,
+      review_status   => $review_status,
+      MIM             => $mim_id,
       clinvar_clin_sig     => $clinsig,
       allele_symbol        => $allele_symbol,     
       allele_accession_id  => $allele_accession,
@@ -141,6 +147,9 @@ ok($pf->phenotype_id() eq $phenotype_id,           "phenotype ID");
 ok($pf->phenotype()->description eq $desc,         "phenotype");
 ok($pf->object()->name() eq $v_name,               "variation name");
 ok($pf->external_reference() eq $study_xref,       "external reference");
+ok($pf->pubmed_id() eq $pubmed_ids,                "pubmed ID");
+ok($pf->review_status() eq $review_status,         "review_status");
+ok($pf->mim_id() eq $mim_id,                       "MIM ID");
 ok($pf->get_all_ontology_accessions->[0] eq $ontology_accessions[0], "ontology accessions");
 
 # test source object

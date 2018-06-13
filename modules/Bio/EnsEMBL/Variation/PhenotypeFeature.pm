@@ -686,7 +686,7 @@ sub associated_studies {
   Description: Retrieves attributes of this PhenotypeFeature as a hash reference
                containing key-value pairs e.g. "p_value" => 0.0000012
                Here is a list of the keys used: associated_gene, beta_coef, clinvar_clin_sig, external_id,
-               inheritance_type, odds_ratio, p_value, review_status, risk_allele, variation_names
+               inheritance_type, odds_ratio, p_value, review_status, risk_allele, variation_names, MIM, pubmed_id, submitter_names
   Returntype : hashref
   Exceptions : none
   Caller     : general
@@ -1121,6 +1121,54 @@ sub beta_coefficient {
 sub submitter_names {
   my $self = shift;
   return defined($self->get_all_attributes->{'submitter_names'}) ? $self->get_all_attributes->{'submitter_names'} : undef;
+}
+
+=head2 pubmed_id
+
+  Example    : $names = $obj->pubmed_id()
+  Description: Get all pubmed_id. Eg pubmed ids for phenotype feature.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub pubmed_id {
+  my $self = shift;
+  return defined($self->get_all_attributes->{'pubmed_id'}) ? $self->get_all_attributes->{'pubmed_id'} : undef;
+}
+
+=head2 review_status
+
+  Example    : $names = $obj->review_status()
+  Description: Get all review_status. Eg review_status in ClinVar.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub review_status {
+  my $self = shift;
+  return defined($self->get_all_attributes->{'review_status'}) ? $self->get_all_attributes->{'review_status'} : undef;
+}
+
+=head2 mim_id
+
+  Example    : $names = $obj->mim_id()
+  Description: Get all mim_ids. Eg mim_id in ClinVar.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub mim_id {
+  my $self = shift;
+  return defined($self->get_all_attributes->{'MIM'}) ? $self->get_all_attributes->{'MIM'} : undef;
 }
 
 =head2 date_last_evaluated
