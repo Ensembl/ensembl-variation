@@ -58,7 +58,7 @@ sub default_options {
         ensembl_release    => $self->o('ensembl_release'),
 
         # include or exclude the following species from the dumps, run for a division or all the species on the server
-        species => ['homo_sapiens'],
+        species => [],
         antispecies => [],
         division    => [],
         run_all     => 0,
