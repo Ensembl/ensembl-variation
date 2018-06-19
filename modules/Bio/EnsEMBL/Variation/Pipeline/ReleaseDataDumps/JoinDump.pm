@@ -109,7 +109,6 @@ sub final_join_gvf {
   }
 
   my $first_file_id = $input_ids[0];
-  $self->warning("first_file_id $first_file_id");
   
   my $fh_join = FileHandle->new("$dir/$file_name.gvf", 'w');
 
