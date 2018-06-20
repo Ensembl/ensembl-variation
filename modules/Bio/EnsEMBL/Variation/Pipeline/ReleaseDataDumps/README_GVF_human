@@ -1,15 +1,34 @@
 This directory contains gzip compressed GVF (Genome Variation Format) files: 
 
-    %s.gvf.gz 
+    From release/93 we dump data per chromosome (1-22, MT, X, Y) for:
+    homo_sapiens-chr*.gvf.gz 
         All germline variations from the current Ensembl release for this
         species
-    %s_structural_variations.gvf.gz
-        All structural variations (if available for this species)
-    %s_failed.gvf.gz
-        Any variations that have been failed by the Ensembl QC checks
-    %s_incl_consequences.gvf.gz
+    homo_sapiens_incl_consequences-chr*.gvf.gz
         All consequences of the variations on the Ensembl transcriptome,
         as called by the variation consequence pipeline
+
+    homo_sapiens_structural_variations.gvf.gz
+        All structural variations (if available for this species)
+    homo_sapiens_failed.gvf.gz
+        Any variations that have been failed by the Ensembl QC checks
+    homo_sapiens_somatic.gvf.gz
+        All somatic mutations from the current Ensembl release.
+    homo_sapiens_somatic_incl_consequences.gvf.gz
+        All consequences of somatic mutations on the Ensembl transcriptome,
+        as called by the variation consequence pipeline
+    homo_sapiens_phenotype_associated.gvf.gz
+        All variations from the current Ensembl release that have been
+        associated with a phenotype
+    homo_sapiens_clinically_associated.gvf.gz
+        All variations from the current Ensembl release that have been
+        described by ClinVar as being probable-pathogenic, pathogenic,
+        drug-response or histocompatibility
+
+Additionally, we provide for human:
+    - files containing allele frequencies from several of the HapMap,
+      1000 genomes phase 3 populations and from populations from the
+      Exome Sequencing Project
 
 If available for this species, the file includes information on:
     - ancestral_allele
@@ -18,6 +37,7 @@ If available for this species, the file includes information on:
     - global minor allele, frequency and count
 Incl_consequences files include sift (if available for this species)
 and polyphen (human only) predictions.
+
 
 The data contained in these files is presented in GVF format, this is a
 simple tab-delimited format derived from GFF3 which shows the location of
@@ -59,3 +79,4 @@ Example content from the human germline GVF dump is shown below:
 8       dbSNP   SNV     60323   60323   .       +       .       ID=7;Variant_seq=G;Dbxref=dbSNP_138:rs199540500;Reference_seq=C
 8       dbSNP   SNV     60341   60341   .       +       .       ID=8;Variant_seq=G;evidence_values=Multiple_observations;Dbxref=dbSNP_138:rs201908809;Reference_seq=C
 8       dbSNP   SNV     60346   60346   .       +       .       ID=9;Variant_seq=G;Dbxref=dbSNP_138:rs78893626;Reference_seq=A
+

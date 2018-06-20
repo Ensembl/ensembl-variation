@@ -136,6 +136,8 @@ sub init_data {
         'E_Cited' => 'Cited',
         'E_ESP' => 'ESP',
         'E_Phenotype_or_Disease' => 'Phenotype_or_Disease', 
+        'E_TOPMed' => 'TOPMed',
+        'E_gnomAD' => 'gnomAD',
         'E_ExAC' => 'ExAC',
     };
     $config->{evidence_value_to_abbr} = {
@@ -146,6 +148,8 @@ sub init_data {
         'Cited' => 'E_Cited',
         'ESP' => 'E_ESP',
         'Phenotype_or_Disease' => 'E_Phenotype_or_Disease',
+        'TOPMed' => 'E_TOPMed',
+        'gnomAD' => 'E_gnomAD',
         'ExAC' => 'E_ExAC',
     };
     $config->{clin_significance_to_abbr} = {

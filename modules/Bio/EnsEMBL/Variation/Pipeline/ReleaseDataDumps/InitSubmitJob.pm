@@ -96,7 +96,9 @@ sub fetch_input {
     }
     if ($dump_type eq 'sets') {
       foreach my $set_name (keys %{$config->{sets}}) {
-        my $script_arg = "--set_name $set_name $generic_script_arg";
+        my @arguments = map {'--' . $_} @{$config->{sets}->{$set_name}};
+        my $script_arg = join(' ', @arguments);
+        $script_arg = "--set_name $set_name $script_arg";
         my $file_name = "$species\_$set_name";
         $script_args->{$script_arg} = $file_name;
       }
@@ -275,7 +277,6 @@ sub get_input_gvf_dumps {
       push @input, $params;
     }
   }
-
   return \@input;
 }
 
@@ -290,7 +291,7 @@ sub get_vf_distributions {
     if ($debug) {
       print $debug_fh "VF_PER_SLICE\t$seq_region_id\t$vf_count\n";
     }
-    if ($vf_count > $vf_per_slice) {
+    if ($vf_count > $vf_per_slice || $species eq 'homo_sapiens') {
       my @split_slices = @{$self->get_split_slices($seq_region_id)};
       if ($debug) {
         print $debug_fh "SPLIT_SLICES\t$seq_region_id\t", scalar @split_slices, "\n";
