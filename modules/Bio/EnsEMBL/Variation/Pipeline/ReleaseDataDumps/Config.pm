@@ -84,7 +84,7 @@ sub write_config_file {
             push @{$species_config->{structural_variations}}, 'clinical_significance';
         }
     }
-    if ($species eq 'Homo_sapiens') {
+    if ($species eq 'homo_sapiens') {
         $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{sets}->{phenotype_associated} =  ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];

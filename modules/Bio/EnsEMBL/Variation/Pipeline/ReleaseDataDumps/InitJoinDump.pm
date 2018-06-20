@@ -64,6 +64,7 @@ sub run {
 
     foreach my $dump_type (keys %$files) {
       my $file_name = $dump_type;
+      next if ($dump_type eq 'homo_sapiens_generic' || $dump_type eq 'homo_sapiens_incl_consequences');
       if ($dump_type =~ /_generic/) {
         $file_name =~ s/_generic//;
       }
