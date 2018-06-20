@@ -845,6 +845,7 @@ sub get_all_Alleles_by_VariationFeature {
   my $vcf = shift;
   
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+  assert_ref($given_pop,'Bio::EnsEMBL::Variation::Population') if (defined($given_pop));
 
   # if given $vcf, we don't want to call next() on it
   # as it is a frozen copy created in VCFVF object creation
@@ -870,7 +871,7 @@ sub get_all_Alleles_by_VariationFeature {
 
   # get generic pop data and collection-specific param
   my @pops = @{$self->get_all_Populations};
-  @pops = grep {$_->name eq $given_pop || ($_->{_raw_name} || '') eq $given_pop} @pops if $given_pop;
+  @pops = grep {$_->name eq $given_pop->name || ($_->{_raw_name} || '') eq $given_pop->name} @pops if $given_pop;
   my $ref_freq_index = $self->ref_freq_index();
 
   # log any alleles present in the VCF not present in the VF alleles
