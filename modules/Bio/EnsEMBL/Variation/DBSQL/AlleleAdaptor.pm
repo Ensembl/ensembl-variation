@@ -240,7 +240,7 @@ sub fetch_all_by_Variation {
   my $cached;
   my $return = [];
 
-  if(defined($self->{_cache})) {
+  if(defined($self->{_cache}) && !defined($population)) {
     foreach my $stored(@{$self->{_cache}}) {
       my @keys = keys %{$stored};
       $cached = $stored->{$keys[0]} if $keys[0] eq $variation_id;
@@ -259,7 +259,7 @@ sub fetch_all_by_Variation {
       if($vfs && @$vfs) {
         @from_vcf =
           map {$_->{adaptor} = $self; $_}
-          map {@{$_->get_all_Alleles_by_VariationFeature($vfs->[0])}}
+          map {@{$_->get_all_Alleles_by_VariationFeature($vfs->[0], $population)}}
           @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
       }
     }
@@ -281,24 +281,23 @@ sub fetch_all_by_Variation {
       
       # Add the constraint for failed alleles
       $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
-    
-      push @$cached, @{$self->generic_fetch($constraint)};
+      my @from_database =  @{$self->generic_fetch($constraint)};
       
       # If a population was specified, attach the population to the object
-      map {$_->population($population)} @{$cached} if (defined($population));
+      map {$_->population($population)} @from_database if (defined($population));
+      push @$cached, @from_database;
     }
 
     # add freqs from genotypes for human (1KG data), could be from VCF so don't exclude here
     push @$cached, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
 		
-    # don't store if population specified
-    return $cached if defined($population);
-    
     # add genotypes for this variant to the cache
-    push @{$self->{_cache}}, {$variation_id => $cached};
-	
-    # shift off first element to keep cache within size limit
-    shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
+    # don't store if population specified
+    if (!defined($population)) {
+      push @{$self->{_cache}}, {$variation_id => $cached};
+      # shift off first element to keep cache within size limit
+      shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
+    }
   }
   
   if (defined($population)) {
