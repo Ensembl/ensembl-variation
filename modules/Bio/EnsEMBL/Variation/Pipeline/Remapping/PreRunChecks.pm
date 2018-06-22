@@ -48,10 +48,12 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
+  # we need at least bioperl version 1.006924
   my $bioperl_version = Bio::Perl->VERSION;  
   $self->warning($bioperl_version);
   die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
 
+  # load new seq_region IDs
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all($self->param('registry_file_newasm'));
   my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
@@ -129,14 +131,6 @@ sub run {
       $self->run_cmd("rm -f $dir/*.fai");
     }
   }
-
-  # check new seq_region table is up-to-date
- 
-  # new core db
-  # new variation db
-
-
-
 }
 
 sub write_output {
