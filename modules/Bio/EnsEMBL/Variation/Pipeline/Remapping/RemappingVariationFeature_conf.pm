@@ -97,6 +97,7 @@ sub pipeline_analyses {
       -logic_name => 'pre_run_checks',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks',
       -input_ids  => [{},],
+      -max_retry_count => 0,
       -flow_into  => {
         1 => ['init_mapping']
       },
