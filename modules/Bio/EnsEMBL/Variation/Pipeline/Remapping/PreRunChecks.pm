@@ -37,6 +37,7 @@ use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 use IPC::Cmd qw(can_run);
+use Bio::Perl;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
@@ -46,6 +47,9 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
+
+  my $bioperl_version = Bio::Perl->VERSION;  
+  die "At least Bio::Perl 1.006924 required" if ($bioper_version < 1.006924);
 
   my $pipeline_dir = $self->param('pipeline_dir');
   die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
@@ -106,6 +110,15 @@ sub run {
       $self->run_cmd("rm -f $dir/*.fai");
     }
   }
+
+  # check new seq_region table is up-to-date
+ 
+  # new core db
+  # new variation db
+
+ 
+
+
 }
 
 sub write_output {
