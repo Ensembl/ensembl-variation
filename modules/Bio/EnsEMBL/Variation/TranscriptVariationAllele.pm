@@ -102,7 +102,7 @@ sub _return_3prime {
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
   my $hgvs_notation;
-  
+
   return $self if $vf->{shifted_flag} && !$hgvs_only;
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
   my $tr ||= $tv->transcript;
@@ -154,16 +154,23 @@ sub _return_3prime {
   my $orig_start = $var_start;
   my $orig_end = $var_end;
   
-  #my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
-  #$new_slice = $new_slice->constrain_to_seq_region();
-  #my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-  #my $pre_seq =  $slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
-  my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $slice_to_shrink->end);
-  my $pre_seq =  $slice_to_shrink->subseq($slice_to_shrink->start, $var_start - 1);
+  my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
+  $new_slice = $new_slice->constrain_to_seq_region();
+
+  #my $new_slice_start = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($var_start - $slice_start));
+  #$new_slice_start = $new_slice->constrain_to_seq_region();
+  #my $new_pre_seq = $new_slice_start->seq;
+  #my $new_slice_end = $slice_to_shrink->expand(0 - ($var_end - $slice_end), 0 - ($var_end - $slice_end + $area_to_search));
+  #$new_slice_end = $new_slice->constrain_to_seq_region();
+  #my $new_post_seq = $new_slice_end->seq;
+  
+  my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
+  my $pre_seq =  $slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
+  #my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $slice_to_shrink->end);
+  #my $pre_seq =  $slice_to_shrink->subseq($slice_to_shrink->start, $var_start - 1);
   
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
-
   ## move along sequence after indel looking for match to start of indel
   my $shift_length = 0;
   if($tr->strand() > 0){
@@ -224,12 +231,17 @@ sub _return_3prime {
   if($slice_start2) {
     
     $self->{hgvs_allele_string} = $seq_to_check;
-    $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
     $self->{shift_length} = $shift_length;
     $self->{_hgvs_offset} = $shift_length;
     $self->{_slice_start} = $slice_start2;
     $self->{_slice_end}   = $slice_end2;
     $self->{_slice}       = $slice;
+    $self->variation_feature->{hgvs_allele_string} = $seq_to_check;
+    $self->variation_feature->{shift_length} = $shift_length;
+    $self->variation_feature->{_hgvs_offset} = $shift_length;
+    $self->variation_feature->{_slice_start} = $slice_start2;
+    $self->variation_feature->{_slice_end}   = $slice_end2;
+    $self->variation_feature->{_slice}       = $slice;
   }
   
   ## set new HGVS string
@@ -1317,7 +1329,6 @@ sub hgvs_protein {
 
   my $hgvs_tva_vf = $hgvs_tva_tv->base_variation_feature;
   my $tr          = $hgvs_tva_tv->transcript;
-  $DB::single = 1;
   my $pre         = $hgvs_tva->_pre_consequence_predicates;
 
   ### no HGVS protein annotation for variants outside translated region 
@@ -1349,7 +1360,6 @@ sub hgvs_protein {
 
   ## get default reference & alt peptides  [changed later to hgvs format]
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
-  $DB::single = 1;
   $hgvs_notation->{ref} = $hgvs_tva_tv->get_reference_TranscriptVariationAllele->peptide;    
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
 
