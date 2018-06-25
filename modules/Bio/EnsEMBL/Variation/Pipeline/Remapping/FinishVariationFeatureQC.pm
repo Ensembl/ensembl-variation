@@ -47,9 +47,6 @@ sub run {
   $self->run_qc_updates($qc_update_features_dir);
   $self->backup_tables(['allele', 'population_genotype', 'tmp_sample_genotype_single_bp', 'failed_variation']);
 
-  $self->init_flip_features($feature_table);
-  $self->flip_features();
-
   my $failed_variations_after_remapping = $self->failed_variations_after_remapping($qc_failure_reasons_dir);
   my $previous_unmapped_variants = $self->previous_unmapped_variants(); # did not map in previous assembly
   my $unmapped_variants = $self->unmapped_variants($feature_table); # couldn't be mapped to new assembly
@@ -63,6 +60,10 @@ sub run {
   }
   $self->cleanup_failed_variants($feature_table);
   $self->load_failed_variants($failed_variations_after_remapping);
+
+  $self->init_flip_features($feature_table);
+  $self->flip_features();
+
   $self->update_variation_set_variation;
   $self->update_display($feature_table);
   $self->cleanup_mapped_feature_table;
@@ -258,8 +259,8 @@ sub flip_alleles {
     chomp;
     my ($seq_region_id, $start, $end, $strand, $variation_id, $variation_name, $allele_string, $map_weight, $allele_id, $allele_code_id) = split/\t/;
     # next if failed_allele
-    next if ($failed_alleles->{$variation_id}->{$allele_id}); # only for certain failed_descriptions
-    next if ($failed_variations->{$variation_id}); # only for certain failed_descriptions
+    next if ($failed_alleles->{$variation_id}->{$allele_id}); # don't bother with previously failed alleles
+    next if ($failed_variations->{$variation_id}); # don't bother with previousely failed variations
     my $allele = $allele_id_2_string->{$allele_code_id};
     next if (contained_in_allele_string($allele_string, $allele));
     my $rev_comp_allele = reverse_comp_allele_string($allele);
