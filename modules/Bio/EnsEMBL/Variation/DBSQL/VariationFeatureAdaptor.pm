@@ -484,7 +484,7 @@ sub fetch_all_somatic_by_Slice_Source {
 
 =head2 fetch_all_by_Slice_Source
   Arg [1]    : Bio::EnsEMBL::Slice $slice the slice from which to obtain features
-  Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return somatic mutations for the given source
+  Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return variation features for the given source
   Example    : my $vfs = $vfa->fetch_all_by_Slice_Source($slice, $source);
   Description: Retrieves a list of variation features on the given Slice for a given source.
   Returntype : listref of Bio::EnsEMBL::VariationFeatures
