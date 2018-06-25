@@ -282,6 +282,9 @@ throws_ok { $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set, 'variatio
 my $vfs8c = $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set, $vs);
 ok( scalar ( grep { $_->variation_name() eq 'rs2255888' } @$vfs8c) == 1, "vf by slice & variation set");
 
+my $vfs8d = $vfa->fetch_all_by_Slice_Source($slice_set, $source);
+ok(scalar @$vfs8d == 2, "fetch_all_by_Slice_Source");
+
 ## Slice Somatic ##
 
 # test fetch all somatic by Slice constraint
