@@ -629,7 +629,6 @@ sub print_header {
     my $vcf_file_date = sprintf "%4d%02d%02d", $year, $mon, $mday;
     my $url = '';
     my ($division) = @{$mca->list_value_by_key('species.division')};
-    my $url = '';
     if (!$division) {
       $url = 'http://www.ensembl.org';
     }
