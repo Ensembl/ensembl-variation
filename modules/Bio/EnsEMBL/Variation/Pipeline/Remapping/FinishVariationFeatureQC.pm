@@ -231,50 +231,22 @@ sub flip_alleles {
   my $fh_out = shift;
   my $fh_err = shift;
   my $vdba = $self->param('vdba_newasm');
-  my $dbh = $vdba->dbc->db_handle;
-  my $allele_id_2_string = {};
-  my $allele_string_2_id = {};
-
-  my $sth = $dbh->prepare(qq{
-    SELECT allele_code_id, allele FROM allele_code
-  }, {mysql_use_result => 1});
-  $sth->execute();
-  while (my $row = $sth->fetchrow_arrayref) {
-    my ($allele_code_id, $allele) = @$row;
-    $allele_id_2_string->{$allele_code_id} = $allele;
-    $allele_string_2_id->{$allele} = $allele_code_id;
-  }
-  $sth->finish();
-
-  $sth = $dbh->prepare(qq{
-    SELECT MAX(allele_code_id) FROM allele_code;
-  }, {mysql_use_result => 1});
-  $sth->execute();
-  my $row = $sth->fetchrow_arrayref;
-  my $max_allele_code_id = $row->[0];
-  $sth->finish();
-
+  my $allele_adaptor = $vdba->get_AlleleAdaptor;
+  my %allele_id_2_string = reverse %{$allele_adaptor->_cache_allele_codes};
   my $fh = FileHandle->new($dumped_features_file, 'r');
+
   while (<$fh>) {
     chomp;
     my ($seq_region_id, $start, $end, $strand, $variation_id, $variation_name, $allele_string, $map_weight, $allele_id, $allele_code_id) = split/\t/;
     # next if failed_allele
     next if ($failed_alleles->{$variation_id}->{$allele_id}); # don't bother with previously failed alleles
     next if ($failed_variations->{$variation_id}); # don't bother with previousely failed variations
-    my $allele = $allele_id_2_string->{$allele_code_id};
+    my $allele = $allele_id_2_string{$allele_code_id};
     next if (contained_in_allele_string($allele_string, $allele));
     my $rev_comp_allele = reverse_comp_allele_string($allele);
     if (contained_in_allele_string($allele_string, $rev_comp_allele)) {
-      my $new_allele_code = $allele_string_2_id->{$rev_comp_allele};
-      if (!$new_allele_code) {
-        $max_allele_code_id++;
-        $allele_string_2_id->{$rev_comp_allele} = $max_allele_code_id;
-        print $fh_out "INSERT INTO allele_code(allele_code_id, allele) VALUES($max_allele_code_id, '$rev_comp_allele');\n";
-        print $fh_out "UPDATE allele set allele_code_id = $max_allele_code_id WHERE allele_id = $allele_id;\n";
-        print $fh_err "Inserted new allele code id ($max_allele_code_id) for $rev_comp_allele\n";
-      } else {
-        print $fh_out "UPDATE allele set allele_code_id = $new_allele_code WHERE allele_id = $allele_id;\n";
-      }
+      my $allele_code_id = $allele_adaptor->_allele_code($rev_comp_allele);
+      print $fh_out "UPDATE allele set allele_code_id = $allele_code_id WHERE allele_id = $allele_id;\n";
     }
   }
   $fh->close;
@@ -286,19 +258,15 @@ sub flip_population_genotypes {
   my $fh_out = shift;
   my $fh_err = shift;
   my $vdba = $self->param('vdba_newasm');
+  my $sgta = $vdba->get_SampleGenotypeAdaptor;
   my $gtca = $vdba->get_GenotypeCodeAdaptor;
   my $gtcs = $gtca->fetch_all;
-
   my $gtc_id_2_string = {};
-  my $gtc_string_2_id = {};
-
   foreach my $gtc (@$gtcs) {
     my $gtc_dbID = $gtc->dbID;
     my $alleles = join('/', @{$gtc->genotype});
     $gtc_id_2_string->{$gtc_dbID} = $alleles;
-    $gtc_string_2_id->{$alleles} = $gtc_dbID;
   }
-
   my $fh = FileHandle->new("$dumped_features_file", 'r');
   while (<$fh>) {
     chomp;
@@ -307,11 +275,8 @@ sub flip_population_genotypes {
     next if (contained_in_allele_string($allele_string, $genotype_string));
     my $rev_comp_genotype_string = reverse_comp_allele_string($genotype_string);
     if (contained_in_allele_string($allele_string, $rev_comp_genotype_string)) {
-      my $new_genotype_code_id = $gtc_string_2_id->{$rev_comp_genotype_string};
-      print $fh_out "UPDATE population_genotype SET genotype_code_id = $new_genotype_code_id WHERE population_genotype_id = $population_genotype_id;\n ";
-      if (!$new_genotype_code_id) {
-        print $fh_err "No new genotype code id for $rev_comp_genotype_string\n";
-      }
+      my $genotype_code_id = $sgta->_genotype_code([split('/', $rev_comp_genotype_string)]);
+      print $fh_out "UPDATE population_genotype SET genotype_code_id = $genotype_code_id WHERE population_genotype_id = $population_genotype_id;\n ";
     }
   }
   $fh->close();
@@ -545,6 +510,5 @@ sub cleanup_mapped_feature_table {
     }
   }
 }
-
 
 1;
