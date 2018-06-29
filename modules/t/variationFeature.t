@@ -118,6 +118,7 @@ my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(-SO_term => 'missense_
 ok($vf->add_OverlapConsequence($oc), 'add_OverlapConsequence');
 ok($vf->get_all_evidence_values()->[0] eq 'Cited', 'get_all_evidence_values');
 ok($vf->get_all_clinical_significance_states()->[0] eq $clin_sign->[0], 'get_all_clinical_significance_states');
+is($vf->feature_so_acc, 'SO:0001060', 'VariationFeature feature SO acc is correct (sequence variant)');
 
 # test getter/setters
 
