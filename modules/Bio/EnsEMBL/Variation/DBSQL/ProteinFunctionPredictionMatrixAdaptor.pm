@@ -165,7 +165,6 @@ sub fetch_by_analysis_translation_md5 {
     
     $self->bind_param_generic_fetch($translation_md5, SQL_VARCHAR);
     $self->bind_param_generic_fetch($analysis, SQL_VARCHAR);
-
     my ($matrix) = @{ $self->generic_fetch($constraint) };
     
     return $matrix;
@@ -286,8 +285,12 @@ sub _objs_from_sth {
 
     while ($sth->fetch) {
         if ($matrix) {
-            my ($super_analysis, $sub_analysis) = split /_/, $analysis;
-            
+            my ($super_analysis, $sub_analysis);
+            if ($analysis =~ /^dbnsfp/) {
+              $super_analysis = $analysis;
+            } else {
+              ($super_analysis, $sub_analysis) = split /_/, $analysis;
+            }
            my $matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
                 -translation_md5    => $md5,
                 -analysis           => $super_analysis,
