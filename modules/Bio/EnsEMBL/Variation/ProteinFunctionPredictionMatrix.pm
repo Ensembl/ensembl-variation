@@ -112,13 +112,29 @@ my $PREDICTION_TO_VAL = {
         'benign'            => 2,
         'unknown'           => 3,
     },
-
     sift => {
         'tolerated'     => 0,
         'deleterious'   => 1,
         'tolerated - low confidence'    => 2, 
         'deleterious - low confidence'   => 3, 
-
+    },
+    dbnsfp_cadd => {
+        'simulated' => 0,
+        'observed'  => 1,
+    },
+    dbnsfp_revel => {
+        'likely_disease_causing'     => 0,
+        'likely_not_disease_causing' => 1,
+    },
+    dbnsfp_meta_svm => {
+        'tolerated'  => 0,
+        'damaging'   => 1,
+    },
+    dbnsfp_mutation_assessor => {
+        'high'    => 0,
+        'medium'  => 1,
+        'low'     => 2,
+        'neutral' => 3,
     },
 };
 
