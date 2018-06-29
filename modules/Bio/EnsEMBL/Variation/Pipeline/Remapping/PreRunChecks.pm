@@ -37,6 +37,7 @@ use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 use IPC::Cmd qw(can_run);
+use Bio::Perl;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
@@ -46,6 +47,30 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
+
+  # we need at least bioperl version 1.006924
+  my $bioperl_version = Bio::Perl->VERSION;  
+  $self->warning($bioperl_version);
+  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
+
+  # load new seq_region IDs
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_all($self->param('registry_file_newasm'));
+  my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
+  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation'); 
+  my $variation_host = $vdba->dbc->host;
+  my $core_host = $cdba->dbc->host;
+  die "New core database and new variation database need to be on the same host" unless ($variation_host eq $core_host);
+
+  my $core_dbname = $cdba->dbc->dbname;
+  $vdba->dbc()->sql_helper()->execute_update(-SQL => "DELETE FROM seq_region;", -PARAMS => [] );
+  my $sql = "INSERT INTO seq_region(seq_region_id, name)"
+    . "SELECT sr.seq_region_id, sr.name "
+    . "FROM $core_dbname.seq_region_attrib sra, $core_dbname.attrib_type at, $core_dbname.seq_region sr "
+    . "WHERE sra.attrib_type_id=at.attrib_type_id "
+    . "AND at.code='toplevel' " 
+    . "AND sr.seq_region_id = sra.seq_region_id; ";
+  $vdba->dbc()->sql_helper()->execute_update(-SQL => $sql, -PARAMS => [] );
 
   my $pipeline_dir = $self->param('pipeline_dir');
   die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
