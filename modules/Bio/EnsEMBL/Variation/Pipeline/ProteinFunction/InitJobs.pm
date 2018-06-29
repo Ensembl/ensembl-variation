@@ -47,6 +47,7 @@ sub fetch_input {
     
     my $sift_run_type   = $self->required_param('sift_run_type');
     my $pph_run_type    = $self->required_param('pph_run_type');
+    my $dbnsfp_run_type = $self->required_param('dbnsfp_run_type');
     my $include_lrg     = $self->param('include_lrg');
     
     $self->update_meta ;
@@ -61,12 +62,10 @@ sub fetch_input {
 
     if ($self->param('debug_mode')) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-        
         @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
     }
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
-        
         for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
@@ -92,10 +91,13 @@ sub fetch_input {
         )
     });
   
+    if ($dbnsfp_run_type == FULL ) {
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_svm', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
+    }
     # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
     if ($sift_run_type == FULL) {
-      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions/);
-      $var_dba->dbc->do(qq/TRUNCATE protein_function_predictions_attrib/);
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'sift'/);
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'sift'/);
     }
 
     my $add_mapping_sth = $var_dba->dbc->prepare(qq{
@@ -130,11 +132,13 @@ sub fetch_input {
     
     my @sift_md5s;
     my @pph_md5s;
+    my @dbnsfp_md5s;
 
     # if we're doing full runs, then we just use all the translations
 
-    @sift_md5s = @translation_md5s if $sift_run_type == FULL;
-    @pph_md5s  = @translation_md5s if $pph_run_type == FULL;
+    @sift_md5s    = @translation_md5s if $sift_run_type == FULL;
+    @pph_md5s     = @translation_md5s if $pph_run_type == FULL;
+    @dbnsfp_md5s  = @translation_md5s if $dbnsfp_run_type == FULL;
 
     # if we're updating we need to check which translations already have predictions
         
@@ -175,35 +179,37 @@ sub fetch_input {
     my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s);
 
     my $fasta = $self->required_param('fasta_file');
+    if ($sift_run_type ne 'NONE' || $pph_run_type ne 'NONE') {
+      my @dir = split('/', $fasta);
+      pop @dir;
+      make_path(join('/', @dir));
 
-    my @dir = split('/', $fasta);
-    pop @dir;
-    make_path(join('/', @dir));
+      open my $FASTA, ">$fasta" or die "Failed to open $fasta for writing";
 
-    open my $FASTA, ">$fasta" or die "Failed to open $fasta for writing";
+      # get rid of any existing index file
 
-    # get rid of any existing index file
+      if (-e "$fasta.fai") {
+          unlink "$fasta.fai" or die "Failed to delete fasta index file";
+      }
+      
+      # dump out each peptide sequence
 
-    if (-e "$fasta.fai") {
-        unlink "$fasta.fai" or die "Failed to delete fasta index file";
+      for my $md5 (keys %required_md5s) {
+          my $seq = $unique_translations{$md5};
+          $seq =~ s/(.{80})/$1\n/g;
+          # get rid of any trailing newline
+          chomp $seq;
+          print $FASTA ">$md5\n$seq\n";
+      }
+
+      close $FASTA;
     }
-    
-    # dump out each peptide sequence
-
-    for my $md5 (keys %required_md5s) {
-        my $seq = $unique_translations{$md5};
-        $seq =~ s/(.{80})/$1\n/g;
-        # get rid of any trailing newline
-        chomp $seq;
-        print $FASTA ">$md5\n$seq\n";
-    }
-
-    close $FASTA;
-
     # set up our list of output ids
 
     $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
     $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
+    $self->param('dbnsfp_output_ids', [ map { {translation_md5 => $_} } @dbnsfp_md5s ]);
+
 }
 
 ## hold code & protein database version in meta table if new complete run
@@ -255,6 +261,11 @@ sub write_output {
     unless ($self->param('sift_run_type') == NONE) {
         $self->dataflow_output_id($self->param('sift_output_ids'), 3);
     }
+
+    unless ($self->param('dbnsfp_run_type') == NONE) {
+        $self->dataflow_output_id($self->param('dbnsfp_output_ids'), 4);
+    }
+
 }
 
 
