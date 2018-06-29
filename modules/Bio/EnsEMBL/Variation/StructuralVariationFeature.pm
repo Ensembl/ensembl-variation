@@ -86,6 +86,8 @@ use Bio::EnsEMBL::Variation::IntergenicStructuralVariation;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
+use constant SO_ACC => 'SO:0001537';
+
 =head2 new
 
   Arg [-dbID] :

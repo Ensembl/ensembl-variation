@@ -118,6 +118,8 @@ use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
+use constant SO_ACC => 'SO:0001060';
+
 our $DEBUG = 0;
 =head2 new
 
