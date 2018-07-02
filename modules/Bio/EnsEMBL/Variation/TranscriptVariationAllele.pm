@@ -444,7 +444,7 @@ sub display_codon {
                (Note that we currently only have PolyPhen predictions for variants that 
                result in single amino acid substitutions in human)
   Returntype : string (one of 'probably damaging', 'possibly damaging', 'benign', 'unknown')
-               if this is a non-synonymous mutation and a prediction is available, undef
+               if this is a missense change and a prediction is available, undef
                otherwise
   Exceptions : none
   Status     : At Risk
@@ -474,7 +474,7 @@ sub polyphen_prediction {
   Description: Return the PolyPhen-2 probability that this allele is deleterious (Note that we 
                currently only have PolyPhen predictions for variants that result in single 
                amino acid substitutions in human)
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -504,8 +504,8 @@ sub polyphen_score {
   Description: Return the qualitative SIFT prediction for the effect of this allele.
                (Note that we currently only have SIFT predictions for variants that 
                result in single amino acid substitutions in human)
-  Returntype : string (one of 'tolerated', 'deleterious') if this is a non-synonymous 
-               mutation and a prediction is available, undef otherwise
+  Returntype : string (one of 'tolerated', 'deleterious') if this is a missense 
+               change and a prediction is available, undef otherwise
   Exceptions : none
   Status     : At Risk
 
@@ -529,7 +529,7 @@ sub sift_prediction {
 
   Description: Return the SIFT score for this allele (Note that we currently only have SIFT 
                predictions for variants that result in single amino acid substitutions in human)
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -555,8 +555,8 @@ sub sift_score {
   Description: Return the qualitative CADD prediction for the effect of this allele.
                (Note that we currently only have predictions for variants that 
                result in single amino acid substitutions in human)
-  Returntype : string (one of 'observed', 'simulated') if this is a non-synonymous 
-               mutation and a prediction is available, undef otherwise. Predictions
+  Returntype : string (one of 'observed', 'simulated') if this is a missense 
+               change and a prediction is available, undef otherwise. Predictions
                are assigned based on the raw CADD scores. "Raw" CADD scores come
                straight from the model, and are interpretable as the extent to which
                the annotation profile for a given variant suggests that that variant
@@ -577,8 +577,8 @@ sub dbnsfp_cadd_prediction {
                (Note that we currently only have predictions for variants that 
                result in single amino acid substitutions in human)
   Returntype : string (one of 'likely_disease_causing', 'likely_not_disease_causing')
-               if this is a non-synonymous mutation and a prediction is available, undef otherwise.
-               We chose 0.5 as the threshold to assigne the predictions. From the REVEL paper:
+               if this is a missense change and a prediction is available, undef otherwise.
+               We chose 0.5 as the threshold to assign the predictions. From the REVEL paper:
                For example, 75.4% of disease mutations but only 10.9% of neutral variants
                have a REVEL score above 0.5, corresponding to a sensitivity of 0.754 and
                specificity of 0.891. 
@@ -656,9 +656,9 @@ sub _prediction {
                "Raw" CADD scores come straight from the model, and are interpretable as the
                extent to which the annotation profile for a given variant suggests that that
                variant is likely to be "observed" (negative values) vs "simulated" (positive values).
-               (Note that we currently only have SIFT predictions for variants that result in
+               (Note that we currently only have CADD predictions for variants that result in
                single amino acid substitutions in human)
-  Returntype : float if this is a non-synonymous mutation and a prediction is available, undef otherwise
+  Returntype : float if this is a missense change and a prediction is available, undef otherwise
   Exceptions : none
   Status     : At Risk
 
@@ -673,7 +673,7 @@ sub dbnsfp_cadd_score {
 
   Description: Return the REVEL score for this allele. The score is retrieved from dbNSFP. (We only
                have predictions for variants that result in single amino acid substitutions in human)
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -689,7 +689,7 @@ sub dbnsfp_revel_score {
 
   Description: Return the MetaSVM score for this allele. The score is retrieved from dbNSFP. (We only
                have predictions for variants that result in single amino acid substitutions in human)
-  Returntype : float if this is a non-synonymous mutation and a prediction is 
+  Returntype : float if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -705,7 +705,7 @@ sub dbnsfp_meta_svm_score {
 
   Description: Return the MutationAssessor score for this allele. The score is retrieved from dbNSFP. (We only
                have predictions for variants that result in single amino acid substitutions in human)
-  Returntype : float if this is a non-synonymous mutation and a prediction is 
+  Returntype : float if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
