@@ -1207,10 +1207,14 @@ sub summary_as_hash {
   $summary_ref->{'source'} = $self->source_name;
   $summary_ref->{'location'} = $self->seq_region_name.":".$self->seq_region_start."-".$self->seq_region_end;
 
-  $summary_ref->{'attributes'} =  $self->get_all_attributes;
+  $summary_ref->{'external_reference'} = $self->external_reference  if $self->external_reference;
+  $summary_ref->{'associated_gene'} = $self->associated_gene        if $self->associated_gene;
+
+  my $attributes = $self->get_all_attributes;
+  $summary_ref->{'attributes'} =  $attributes                       if ( defined $attributes && scalar(keys %$attributes) );
 
   my $ontology_accessions = $self->get_all_ontology_accessions();
-  $summary_ref->{ontology_accessions} = $ontology_accessions              if ( defined $ontology_accessions && scalar(@$ontology_accessions));
+  $summary_ref->{ontology_accessions} = $ontology_accessions        if ( defined $ontology_accessions && scalar(@$ontology_accessions));
 
   return $summary_ref;
 }
