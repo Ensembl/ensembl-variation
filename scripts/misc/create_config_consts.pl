@@ -68,6 +68,7 @@ our @VARIATION_CLASSES;
 our @OVERLAP_CONSEQUENCES; 
 our @FEATURE_TYPES;
 our $OVERLAP_CONSEQUENCE_CLASS;
+our %SO_ACC_MAPPER;
 
 eval {
     $config->import(qw(
@@ -75,6 +76,7 @@ eval {
         @VARIATION_CLASSES
         @OVERLAP_CONSEQUENCES 
         @FEATURE_TYPES
+        %SO_ACC_MAPPER
         $OVERLAP_CONSEQUENCE_CLASS
     ));
 };
@@ -171,6 +173,11 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 $cons_code = $default_consequence_code. "\n". "\n" . $cons_code .");\n";
 
+
+
+my $feat_so_acc = "our \$SO_ACC_MAPPER = " . Dumper(\%SO_ACC_MAPPER) . ";\n";
+
+
 # avoid any duplicate exports by putting all constants to export into a single hash
 
 my $all_to_export;
@@ -181,7 +188,7 @@ for my $type (keys %$to_export) {
     }
 }
 
-$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE '.(join ' ', keys %$all_to_export).');';
+$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE $SO_ACC_MAPPER '.(join ' ', keys %$all_to_export).');';
 
 $hdr .= "\n\n";
 
@@ -195,4 +202,4 @@ $hdr .= " );\n\n";
 
 $hdr .= "use $OVERLAP_CONSEQUENCE_CLASS;\n";
 
-print $hdr, "\n", $code, "\n", $class_code, "\n", $cons_code, "\n1;\n";
+print $hdr, "\n", $code, "\n", $class_code, "\n", $cons_code, "\n", $feat_so_acc, "\n1;\n";
