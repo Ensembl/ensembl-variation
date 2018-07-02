@@ -78,7 +78,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES $SO_ACC_MAPPER);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
@@ -86,7 +86,6 @@ use Bio::EnsEMBL::Variation::IntergenicStructuralVariation;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
-use constant SO_ACC => 'SO:0001537';
 
 =head2 new
 
@@ -1210,6 +1209,29 @@ sub _finish_annotation {
   $self->{$_.'_structural_variations'} ||= {} for qw(transcript regulation);
   $self->{regulation_structural_variations}->{$_} ||= [] for qw(ExternalFeature MotifFeature RegulatoryFeature);
   $self->get_IntergenicStructuralVariation(1);
+}
+
+
+=head2 feature_so_acc
+
+  Example     : $feat = $feat->feature_so_acc;
+  Description : This method returns a string containing the SO accession number of the VariationFeature.
+                Overrides Bio::EnsEMBL::Feature::feature_so_acc
+  Returns     : string (Sequence Ontology accession number)
+  Exceptions  : Thrown if caller feature SO acc is undefined in $SO_ACC_MAPPER constant
+=cut
+
+sub feature_so_acc {
+  my ($self) = @_;
+
+  my $ref = ref $self;
+  my $so_acc = $SO_ACC_MAPPER->{$ref};
+
+  unless ($so_acc ) {
+    throw( "SO acc for ${ref} is not defined. Please update %SO_ACC_MAPPER in Bio::EnsEMBL::Variation::Utils::Config");
+  }
+
+  return $so_acc;
 }
 
 1;

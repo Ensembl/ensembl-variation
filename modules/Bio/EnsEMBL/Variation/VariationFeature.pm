@@ -103,7 +103,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_nota
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
-use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES $SO_ACC_MAPPER);
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
@@ -118,7 +118,6 @@ use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
-use constant SO_ACC => 'SO:0001060';
 
 our $DEBUG = 0;
 =head2 new
@@ -2221,6 +2220,29 @@ sub reset_consequence_data {
     overlap_consequences
     _most_severe_consequence
   );
+}
+
+
+=head2 feature_so_acc
+
+  Example     : $feat = $feat->feature_so_acc;
+  Description : This method returns a string containing the SO accession number of the VariationFeature.
+                Overrides Bio::EnsEMBL::Feature::feature_so_acc
+  Returns     : string (Sequence Ontology accession number)
+  Exceptions  : Thrown if caller feature SO acc is undefined in $SO_ACC_MAPPER constant
+=cut
+
+sub feature_so_acc {
+  my ($self) = @_;
+
+  my $ref = ref $self;
+  my $so_acc = $SO_ACC_MAPPER->{$ref};
+
+  unless ($so_acc ) {
+    throw( "SO acc for ${ref} is not defined. Please update %SO_ACC_MAPPER in Bio::EnsEMBL::Variation::Utils::Config");
+  }
+
+  return $so_acc;
 }
 
 1;
