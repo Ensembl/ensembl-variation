@@ -1188,5 +1188,46 @@ sub date_last_evaluated{
   return defined($self->get_all_attributes->{'DateLastEvaluated'}) ? $self->get_all_attributes->{'DateLastEvaluated'} : undef;
 }
 
+=head2 summary_as_hash
+
+  Example       : $feature_summary = $feature->summary_as_hash();
+  Description   : Extends Feature::summary_as_hash
+                  Retrieves a summary of this PhenotypeFeature object.
+
+  Returns       : hashref of descriptive strings
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+
+  my $summary_ref = $self->SUPER::summary_as_hash;
+  $summary_ref->{$self->type()} = $self->object_id;
+  $summary_ref->{'description'} = $self->phenotype->description;
+  $summary_ref->{'source'} = $self->source_name;
+  $summary_ref->{'location'} = $self->seq_region_name.":".$self->seq_region_start."-".$self->seq_region_end;
+
+  my %attribs;
+  $attribs{'risk_allele'} = $self->risk_allele                            if defined $self->risk_allele;
+  $attribs{'clinical_significance'} = $self->clinical_significance        if defined $self->clinical_significance;
+  $attribs{'external_reference'} = $self->external_reference              if defined $self->external_reference;
+  $attribs{'external_id'} = $self->external_id                            if defined $self->external_id;
+  $attribs{'p_value'} = $self->p_value                                    if defined $self->p_value;
+  $attribs{'odds_ratio'} = $self->p_value                                 if defined $self->odds_ratio;
+  $attribs{'beta_coefficient'} = $self->beta_coefficient                  if defined $self->beta_coefficient;
+  $attribs{'associated_gene'} = $self->associated_gene                    if defined $self->associated_gene;
+  $attribs{'mim'} = $self->mim_id                                         if defined $self->mim_id;
+  $attribs{'associated_gene'} = $self->associated_gene                    if defined $self->associated_gene;
+  $attribs{'external_reference'} = $self->external_reference              if defined $self->external_reference;
+  $attribs{'pubmed_id'} = $self->pubmed_id                                if defined $self->pubmed_id;
+  $attribs{'review_status'} = $self->review_status                        if defined $self->review_status;
+  $attribs{'submitter_names'} = $self->submitter_names                    if defined $self->submitter_names;
+  $summary_ref->{'attributes'} = \%attribs;
+
+  my $ontology_accessions = $self->get_all_ontology_accessions();
+  $summary_ref->{ontology_accessions} = $ontology_accessions              if ( defined $ontology_accessions && scalar(@$ontology_accessions));
+
+  return $summary_ref;
+}
 
 1;
