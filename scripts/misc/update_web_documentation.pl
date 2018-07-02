@@ -77,7 +77,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "species_data_types.html";
 
 print STDOUT "# Start species list...\n";
-`cp $input_dir/$file_name $tmp_file`;
+`cp $input_dir/species/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
@@ -98,7 +98,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "classification.html";
 
 print STDOUT "# Start variant classes ...\n";
-`cp $input_dir/$file_name $tmp_file`;
+`cp $input_dir/prediction/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -ohost $ohost -species $species`;
@@ -119,7 +119,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "populations.html";
 
 print STDOUT "# Start populations ...\n";
-`cp $input_dir/$file_name $tmp_file`;
+`cp $input_dir/species/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
@@ -140,7 +140,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "sets.html";
 
 print STDOUT "# Start variant sets ...\n";
-`cp $input_dir/$file_name $tmp_file`;
+`cp $input_dir/species/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_variation_set_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
@@ -161,7 +161,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "phenotype_association.html";
 
 print STDOUT "# Start clinical significance ...\n";
-`cp $input_dir/$file_name $tmp_file`;
+`cp $input_dir/phenotype/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
@@ -177,10 +177,11 @@ print STDOUT "> Clinical significance finished\n";
 
 # Settings
 $tmp_file    = "data_desc_ontology.html";
-$file_name   = "phenotype_association.html";
+$file_name   = "phenotype_annotation.html";
 
 print STDOUT "# Start phenotype ontology ...\n";
-`cp $input_dir/$file_name $tmp_file`;
+# Use output file from the clinical significance update
+`cp $output_dir/$file_name $tmp_file`;
 
 my $sql_onto = qq{SELECT data_version FROM ontology WHERE name=? LIMIT 1};
 my $tmp_file_content = `cat $tmp_file`;
@@ -188,6 +189,9 @@ foreach my $onto (@ontologies) {
   my $sth = get_connection_and_query("ensembl_ontology_$version", $ohost, $sql_onto, [$onto]);
   my $o_version = ($sth->fetchrow_array)[0];
   $o_version =~ s/releases\///;
+  if ($o_version =~ /^(\d+):(\d+):(\d+)\s/) {
+    $o_version = "$3-$2-$1";
+  }
   
   $tmp_file_content =~ s/<span id="$onto\_version">(\d+(-|\.)?)+<\/span>/<span id="$onto\_version">$o_version<\/span>/i;  
 }

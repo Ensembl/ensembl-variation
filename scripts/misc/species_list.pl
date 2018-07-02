@@ -361,7 +361,7 @@ sub round_count {
   elsif ($count =~ /^(\d{3}\d*)\d{6}$/) {
     my $number = $1;
     $count = "$number M";
-    $count_label = "Over $count $type";
+    $count_label = "Over $number million $type";
     $count_display = $count;
     $bg_class = $colours{'hundred_million'}{'colour'};
   }
