@@ -161,6 +161,7 @@ my $expected_summary = {
           'description' => 'Tea Consumption',
           'end' => 23821095,
           'seq_region_name' => '18',
+          'associated_gene' => 'TEA1',
           'strand' => undef,
           'id' => '',
           'attributes' => {
@@ -179,6 +180,7 @@ my $expected_summary = {
                             'beta_coef' => 2,
                             'pubmed_id' => '15680456,15680457,15680455,15726496',
                           },
+          'external_reference' => 'pubmed/10000',
           'start' => 23821095
         };
 is_deeply($pf->summary_as_hash(), $expected_summary, "summary_as_hash");
