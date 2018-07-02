@@ -444,7 +444,7 @@ sub display_codon {
                (Note that we currently only have PolyPhen predictions for variants that 
                result in single amino acid substitutions in human)
   Returntype : string (one of 'probably damaging', 'possibly damaging', 'benign', 'unknown')
-               if this is a non-synonymous mutation and a prediction is available, undef
+               if this is a missense change and a prediction is available, undef
                otherwise
   Exceptions : none
   Status     : At Risk
@@ -474,7 +474,7 @@ sub polyphen_prediction {
   Description: Return the PolyPhen-2 probability that this allele is deleterious (Note that we 
                currently only have PolyPhen predictions for variants that result in single 
                amino acid substitutions in human)
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -504,8 +504,8 @@ sub polyphen_score {
   Description: Return the qualitative SIFT prediction for the effect of this allele.
                (Note that we currently only have SIFT predictions for variants that 
                result in single amino acid substitutions in human)
-  Returntype : string (one of 'tolerated', 'deleterious') if this is a non-synonymous 
-               mutation and a prediction is available, undef otherwise
+  Returntype : string (one of 'tolerated', 'deleterious') if this is a missense 
+               change and a prediction is available, undef otherwise
   Exceptions : none
   Status     : At Risk
 
@@ -529,7 +529,7 @@ sub sift_prediction {
 
   Description: Return the SIFT score for this allele (Note that we currently only have SIFT 
                predictions for variants that result in single amino acid substitutions in human)
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
                available, undef otherwise
   Exceptions : none
   Status     : At Risk
@@ -550,6 +550,198 @@ sub sift_score {
     return $self->{sift_score};
 }
 
+=head2 dbnsfp_cadd_prediction
+
+  Description: Return the qualitative CADD prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'observed', 'simulated') if this is a missense 
+               change and a prediction is available, undef otherwise. Predictions
+               are assigned based on the raw CADD scores. "Raw" CADD scores come
+               straight from the model, and are interpretable as the extent to which
+               the annotation profile for a given variant suggests that that variant
+               is likely to be "observed" (negative values) vs "simulated" (positive values). 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_cadd_prediction {
+  my ($self, $dbnsfp_cadd_prediction) = @_;
+  return $self->_prediction('dbnsfp_cadd_prediction', $dbnsfp_cadd_prediction);
+}
+
+=head2 dbnsfp_revel_prediction
+
+  Description: Return the qualitative REVEL prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'likely_disease_causing', 'likely_not_disease_causing')
+               if this is a missense change and a prediction is available, undef otherwise.
+               We chose 0.5 as the threshold to assign the predictions. From the REVEL paper:
+               For example, 75.4% of disease mutations but only 10.9% of neutral variants
+               have a REVEL score above 0.5, corresponding to a sensitivity of 0.754 and
+               specificity of 0.891. 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_revel_prediction {
+  my ($self, $dbnsfp_revel_prediction) = @_;
+  return $self->_prediction('dbnsfp_revel_prediction', $dbnsfp_revel_prediction);
+}
+
+=head2 dbnsfp_meta_svm_prediction
+
+  Description: Return the qualitative MetaSVM prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'tolerated', 'damaging').
+               The score cutoff between "D" and "T" is 0.
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_meta_svm_prediction {
+  my ($self, $dbnsfp_meta_svm_prediction) = @_;
+  return $self->_prediction('dbnsfp_meta_svm_prediction', $dbnsfp_meta_svm_prediction);
+}
+
+=head2 dbnsfp_mutation_assessor_prediction
+
+  Description: Return the qualitative MutationAssessor prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'high', 'medium', 'low', 'neutral').
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_mutation_assessor_prediction {
+  my ($self, $dbnsfp_mutation_assessor_prediction) = @_;
+  return $self->_prediction('dbnsfp_mutation_assessor_prediction', $dbnsfp_mutation_assessor_prediction);
+}
+
+=head2 _prediction
+
+  Description: Return prediction for specified score type.
+  Returntype : float 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub _prediction {
+  my ($self, $prediction_type, $prediction) = @_;
+  $self->{$prediction_type} = $prediction if $prediction;
+
+  unless (defined $self->{$prediction_type}) {
+    my $analysis = $prediction_type;
+    $analysis =~ s/_prediction//;
+    my ($prediction, $score) = $self->_protein_function_prediction($analysis);
+    my $score_type = $prediction_type;
+    $score_type =~ s/_prediction/_score/;
+    $self->{$score_type} = $score;
+    $self->{$prediction_type} = $prediction;
+  }
+  return $self->{$prediction_type};
+}
+
+=head2 dbnsfp_cadd_score
+
+  Description: Return the raw CADD score for this allele. The score is retrieved from dbNSFP.
+               "Raw" CADD scores come straight from the model, and are interpretable as the
+               extent to which the annotation profile for a given variant suggests that that
+               variant is likely to be "observed" (negative values) vs "simulated" (positive values).
+               (Note that we currently only have CADD predictions for variants that result in
+               single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_cadd_score {
+  my ($self, $dbnsfp_cadd_score) = @_;
+  return $self->_score('dbnsfp_cadd_score');
+}
+
+=head2 dbnsfp_revel_score
+
+  Description: Return the REVEL score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float between 0 and 1 if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_revel_score {
+  my ($self, $dbnsfp_revel_score) = @_;
+  return $self->_score('dbnsfp_revel_score');
+}
+
+=head2 dbnsfp_meta_svm_score
+
+  Description: Return the MetaSVM score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_meta_svm_score {
+  my ($self, $dbnsfp_meta_svm_score) = @_;
+  return $self->_score('dbnsfp_meta_svm_score', $dbnsfp_meta_svm_score);
+}
+
+=head2 dbnsfp_mutation_assessor_score
+
+  Description: Return the MutationAssessor score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_mutation_assessor_score {
+  my ($self, $dbnsfp_mutation_assessor_score) = @_;
+  return $self->_score('dbnsfp_mutation_assessor_score', $dbnsfp_mutation_assessor_score);
+}
+
+
+=head2 _score
+
+  Description: Return score for specified score type.
+  Returntype : float 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub _score {
+  my ($self, $score_type, $score) = @_; 
+  $self->{$score_type} = $score if defined $score;
+
+  unless (defined $self->{$score_type}) {
+      my $analysis = $score_type;
+      $analysis =~ s/_score//;
+      my ($prediction, $score) = $self->_protein_function_prediction($analysis);
+      my $prediction_type = $score_type;
+      $prediction_type =~ s/_score/_prediction/;
+      $self->{$score_type} = $score;
+      $self->{$prediction_type} = $prediction;
+  }
+  return $self->{$score_type};
+}
 
 sub _protein_function_prediction {
     my ($self, $analysis) = @_;
@@ -558,7 +750,6 @@ sub _protein_function_prediction {
     # so check the peptide allele string first
 
     if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/ && defined $AA_LOOKUP->{$self->peptide}) {
-        
         if (my $matrix = $self->transcript_variation->_protein_function_predictions($analysis)) {
           
             # temporary fix - check $matrix is not an empty hashref

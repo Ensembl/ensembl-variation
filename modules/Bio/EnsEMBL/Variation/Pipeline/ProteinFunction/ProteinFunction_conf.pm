@@ -67,9 +67,7 @@ sub default_options {
         
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
-        
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
-        
         # directory used for the hive's own output files
 
         output_dir              => $self->o('species_dir').'/hive_output',
@@ -84,7 +82,6 @@ sub default_options {
         # peptide sequences for all unique translations for this species will be dumped to this file
 
         fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
-        
         # set this flag to include LRG translations in the analysis
 
         include_lrg             => 0,
@@ -99,8 +96,8 @@ sub default_options {
         # connection details for the hive's own database
 
         pipeline_db => {
-            -host   => 'mysql-ens-var-prod-1.ebi.ac.uk',
-            -port   => 4449,
+            -host   => 'mysql-ens-var-prod-2.ebi.ac.uk',
+            -port   => 4521,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
             -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
@@ -176,6 +173,11 @@ sub default_options {
         sift_use_compara        => 0,
 
         sift_max_workers        => 500,
+
+        dbnsfp_run_type         => NONE,
+        dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
+        dbnsfp_file             => '/nfs/production/panda/ensembl/variation/data/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
+
     };
 }
 
@@ -215,6 +217,7 @@ sub pipeline_analyses {
             -parameters => {
                 sift_run_type   => $self->o('sift_run_type'),
                 pph_run_type    => $self->o('pph_run_type'),
+                dbnsfp_run_type => $self->o('dbnsfp_run_type'),
                 include_lrg     => $self->o('include_lrg'),
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
@@ -226,9 +229,11 @@ sub pipeline_analyses {
             },
             -input_ids  => [{}],
             -rc_name    => 'highmem',
+            -max_retry_count => 0,
             -flow_into  => {
                 2 => [ 'run_polyphen' ],
                 3 => [ 'run_sift' ],
+                4 => [ 'run_dbnsfp' ],
             },
         },
 
@@ -296,6 +301,20 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -rc_name        => 'highmem',
+        },
+
+        {   -logic_name     => 'run_dbnsfp',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunDbNSFP',
+            -parameters     => {
+                dbnsfp_working => $self->o('dbnsfp_working'),
+                dbnsfp_file    => $self->o('dbnsfp_file'),
+                @common_params,
+            },
+            -failed_job_tolerance => 0,
+            -max_retry_count => 0,
+            -input_ids      => [],
+            -hive_capacity  => $self->o('sift_max_workers'),
+            -rc_name        => 'medmem',
         },
 
     ];
