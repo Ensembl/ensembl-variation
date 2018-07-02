@@ -17,7 +17,6 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Deep;
-use Data::Dumper;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use Bio::EnsEMBL::Variation::Source;
@@ -166,16 +165,19 @@ my $expected_summary = {
           'id' => '',
           'attributes' => {
                             'p_value' => '2.3e-06',
+                            'allele_symbol' => 't_1',
                             'review_status' => 'criteria provided, multiple submitters, no conflicts',
                             'risk_allele' => 'G',
-                            'clinical_significance' => 'protective',
-                            'odds_ratio' => '2.3e-06',
+                            'allele_accession_id' => 't_1.1',
+                            'clinvar_clin_sig' => 'protective',
+                            'odds_ratio' => 6,
+                            'MIM' => '609007',
                             'external_id' => 12345,
+                            'variation_names' => 'rs12345',
                             'associated_gene' => 'TEA1',
-                            'mim' => '609007',
-                            'beta_coefficient' => 2,
+                            'external_reference' => 'RV123',
+                            'beta_coef' => 2,
                             'pubmed_id' => '15680456,15680457,15680455,15726496',
-                            'external_reference' => 'pubmed/10000'
                           },
           'start' => 23821095
         };
