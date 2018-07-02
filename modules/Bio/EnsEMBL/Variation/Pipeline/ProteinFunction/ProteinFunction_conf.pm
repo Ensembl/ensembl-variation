@@ -168,13 +168,13 @@ sub default_options {
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => NONE,
+        sift_run_type           => UPDATE,
 
         sift_use_compara        => 0,
 
         sift_max_workers        => 500,
 
-        dbnsfp_run_type         => FULL,
+        dbnsfp_run_type         => NONE,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_file             => '/nfs/production/panda/ensembl/variation/data/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
 
