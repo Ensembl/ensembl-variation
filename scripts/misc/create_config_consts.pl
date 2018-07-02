@@ -39,6 +39,7 @@ use Getopt::Long;
 use Data::Dumper;
 
 $Data::Dumper::Terse = 1;
+$Data::Dumper::Sortkeys = 1;
 
 my $config;
 my $help;
