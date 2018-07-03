@@ -56,6 +56,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::BaseVariationFeature;
 
 use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Variation::Utils::Constants qw($SO_ACC_MAPPER);
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -345,6 +346,29 @@ sub _get_prev_base {
   }
 
   return $prev_base;
+}
+
+
+=head2 feature_so_acc
+
+  Example     : $feat = $feat->feature_so_acc;
+  Description : This method returns a string containing the SO accession number of the feature class.
+                Overrides Bio::EnsEMBL::Feature::feature_so_acc
+  Returns     : string (Sequence Ontology accession number)
+  Exceptions  : Thrown if caller feature SO acc is undefined in $SO_ACC_MAPPER constant
+=cut
+
+sub feature_so_acc {
+  my ($self) = @_;
+
+  my $ref = ref $self;
+  my $so_acc = $SO_ACC_MAPPER->{$ref};
+
+  unless ($so_acc ) {
+    throw( "SO acc for ${ref} is not defined. Please update %SO_ACC_MAPPER in Bio::EnsEMBL::Variation::Utils::Config");
+  }
+
+  return $so_acc;
 }
 
 1;

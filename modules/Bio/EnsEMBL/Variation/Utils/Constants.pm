@@ -995,8 +995,8 @@ our %OVERLAP_CONSEQUENCES = (
 );
 
 our $SO_ACC_MAPPER = {
-  'Bio::EnsEMBL::Variation::StructuralVariationFeature' => 'SO:0001060',
-  'Bio::EnsEMBL::Variation::VariationFeature' => 'SO:0001537'
+  'Bio::EnsEMBL::Variation::StructuralVariationFeature' => 'SO:0001537',
+  'Bio::EnsEMBL::Variation::VariationFeature' => 'SO:0001060'
 }
 ;
 

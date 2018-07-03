@@ -1245,8 +1245,8 @@ our @ATTRIB_SETS = (
 
 # Used for the feature_so_acc functionality implemented by Bio::EnsEMBL::Feature
 our %SO_ACC_MAPPER = (
-  'Bio::EnsEMBL::Variation::VariationFeature'           => "SO:0001537",
-  'Bio::EnsEMBL::Variation::StructuralVariationFeature' => "SO:0001060"
+  'Bio::EnsEMBL::Variation::VariationFeature'           => "SO:0001060",
+  'Bio::EnsEMBL::Variation::StructuralVariationFeature' => "SO:0001537"
 );
 
 
