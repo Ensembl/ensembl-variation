@@ -78,7 +78,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;

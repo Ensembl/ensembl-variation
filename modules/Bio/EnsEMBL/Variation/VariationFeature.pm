@@ -103,7 +103,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_nota
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
-use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES);
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;

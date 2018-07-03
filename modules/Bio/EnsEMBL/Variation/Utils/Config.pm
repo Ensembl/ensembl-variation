@@ -30,6 +30,7 @@ our @EXPORT_OK = qw(
     @FEATURE_TYPES 
     $OVERLAP_CONSEQUENCE_CLASS
     $MAX_ATTRIB_CODE_LENGTH
+    %SO_ACC_MAPPER
 );
 
 our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
@@ -1241,5 +1242,12 @@ our @ATTRIB_SETS = (
     @OVERLAP_CONSEQUENCES,
     @FEATURE_TYPES
 );
+
+# Used for the feature_so_acc functionality implemented by Bio::EnsEMBL::Feature
+our %SO_ACC_MAPPER = (
+  'Bio::EnsEMBL::Variation::VariationFeature'           => "SO:0001060",
+  'Bio::EnsEMBL::Variation::StructuralVariationFeature' => "SO:0001537"
+);
+
 
 1;
