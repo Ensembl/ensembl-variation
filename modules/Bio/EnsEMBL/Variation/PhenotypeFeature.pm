@@ -1188,6 +1188,27 @@ sub date_last_evaluated{
   return defined($self->get_all_attributes->{'DateLastEvaluated'}) ? $self->get_all_attributes->{'DateLastEvaluated'} : undef;
 }
 
+=head2 display_id
+  Arg [1]    : none
+  Example    : print $pf->display_id();
+  Description: This method returns a string that is considered to be
+               the 'display' identifier.  It is overridden by subclasses to
+               return an appropriate value for objects of that particular
+               class.  If no appropriate display id is available an empty
+               string is returned instead.
+               Returns the 'display' identifier for this feature. For
+               PhenotypeFeatures this is the name of the object it is associated with.
+  Returntype : string
+  Exceptions : none
+  Caller     : webcode
+  Status     : Stable
+=cut
+
+sub display_id {
+  my $self = shift;
+  return $self->object_id || '';
+}
+
 =head2 summary_as_hash
 
   Example       : $feature_summary = $feature->summary_as_hash();
@@ -1203,7 +1224,6 @@ sub summary_as_hash {
 
   my $summary_ref = $self->SUPER::summary_as_hash;
   $summary_ref->{$self->type()} = $self->object_id;
-  $summary_ref->{'display_id'} = $self->object_id;
   $summary_ref->{'description'} = $self->phenotype->description;
   $summary_ref->{'source'} = $self->source_name;
   $summary_ref->{'location'} = $self->seq_region_name.":".$self->seq_region_start."-".$self->seq_region_end;
