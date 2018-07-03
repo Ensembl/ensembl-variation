@@ -16,7 +16,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Data::Dumper;
+use Test::Deep;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use Bio::EnsEMBL::Variation::Source;
@@ -151,6 +151,39 @@ ok($pf->pubmed_id() eq $pubmed_ids,                "pubmed ID");
 ok($pf->review_status() eq $review_status,         "review_status");
 ok($pf->mim_id() eq $mim_id,                       "MIM ID");
 ok($pf->get_all_ontology_accessions->[0] eq $ontology_accessions[0], "ontology accessions");
+
+#test summary as hash
+my $expected_summary = {
+          'source' => 'dbSNP',
+          'ontology_accessions' => ['EFO:00001'],
+          'Variation' => $v_name,
+          'location' => '18:23821095-23821095',
+          'description' => 'Tea Consumption',
+          'end' => 23821095,
+          'seq_region_name' => '18',
+          'associated_gene' => 'TEA1',
+          'strand' => undef,
+          'id' => $v_name,
+          'attributes' => {
+                            'p_value' => '2.3e-06',
+                            'allele_symbol' => 't_1',
+                            'review_status' => 'criteria provided, multiple submitters, no conflicts',
+                            'risk_allele' => 'G',
+                            'allele_accession_id' => 't_1.1',
+                            'clinvar_clin_sig' => 'protective',
+                            'odds_ratio' => 6,
+                            'MIM' => '609007',
+                            'external_id' => 12345,
+                            'variation_names' => 'rs12345',
+                            'associated_gene' => 'TEA1',
+                            'external_reference' => 'RV123',
+                            'beta_coef' => 2,
+                            'pubmed_id' => '15680456,15680457,15680455,15726496',
+                          },
+          'external_reference' => 'pubmed/10000',
+          'start' => 23821095
+        };
+is_deeply($pf->summary_as_hash(), $expected_summary, "summary_as_hash");
 
 # test source object
 my $pf_object = $pf->object();

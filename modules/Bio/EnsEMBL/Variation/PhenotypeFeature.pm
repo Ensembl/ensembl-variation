@@ -355,7 +355,12 @@ sub object {
 sub object_id {
   my ($self, $object_id) = @_;
   
-  $self->{_object_id} = $object_id if defined($object_id);
+  if (defined $object_id){
+    $self->{_object_id} = $object_id;
+  } elsif($self->object){
+    $self->{_object_id} =$self->object->stable_id()
+  }
+
   return $self->{_object_id};
 }
 
@@ -1188,5 +1193,56 @@ sub date_last_evaluated{
   return defined($self->get_all_attributes->{'DateLastEvaluated'}) ? $self->get_all_attributes->{'DateLastEvaluated'} : undef;
 }
 
+=head2 display_id
+  Arg [1]    : none
+  Example    : print $pf->display_id();
+  Description: This method returns a string that is considered to be
+               the 'display' identifier.  It is overridden by subclasses to
+               return an appropriate value for objects of that particular
+               class.  If no appropriate display id is available an empty
+               string is returned instead.
+               Returns the 'display' identifier for this feature. For
+               PhenotypeFeatures this is the name of the object it is associated with.
+  Returntype : string
+  Exceptions : none
+  Caller     : webcode
+  Status     : Stable
+=cut
+
+sub display_id {
+  my $self = shift;
+  return $self->object_id || '';
+}
+
+=head2 summary_as_hash
+
+  Example       : $feature_summary = $feature->summary_as_hash();
+  Description   : Extends Feature::summary_as_hash
+                  Retrieves a summary of this PhenotypeFeature object.
+
+  Returns       : hashref of descriptive strings
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+
+  my $summary_ref = $self->SUPER::summary_as_hash;
+  $summary_ref->{$self->type()} = $self->object_id;
+  $summary_ref->{'description'} = $self->phenotype->description;
+  $summary_ref->{'source'} = $self->source_name;
+  $summary_ref->{'location'} = $self->seq_region_name.":".$self->seq_region_start."-".$self->seq_region_end;
+
+  $summary_ref->{'external_reference'} = $self->external_reference  if $self->external_reference;
+  $summary_ref->{'associated_gene'} = $self->associated_gene        if $self->associated_gene;
+
+  my $attributes = $self->get_all_attributes;
+  $summary_ref->{'attributes'} =  $attributes                       if ( defined $attributes && scalar(keys %$attributes) );
+
+  my $ontology_accessions = $self->get_all_ontology_accessions();
+  $summary_ref->{ontology_accessions} = $ontology_accessions        if ( defined $ontology_accessions && scalar(@$ontology_accessions));
+
+  return $summary_ref;
+}
 
 1;
