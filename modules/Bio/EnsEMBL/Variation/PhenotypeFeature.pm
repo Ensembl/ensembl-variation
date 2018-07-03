@@ -1203,6 +1203,7 @@ sub summary_as_hash {
 
   my $summary_ref = $self->SUPER::summary_as_hash;
   $summary_ref->{$self->type()} = $self->object_id;
+  $summary_ref->{'display_id'} = $self->object_id;
   $summary_ref->{'description'} = $self->phenotype->description;
   $summary_ref->{'source'} = $self->source_name;
   $summary_ref->{'location'} = $self->seq_region_name.":".$self->seq_region_start."-".$self->seq_region_end;

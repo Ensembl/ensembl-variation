@@ -157,6 +157,7 @@ my $expected_summary = {
           'source' => 'dbSNP',
           'ontology_accessions' => ['EFO:00001'],
           'Variation' => undef,
+          'display_id' => undef,
           'location' => '18:23821095-23821095',
           'description' => 'Tea Consumption',
           'end' => 23821095,
