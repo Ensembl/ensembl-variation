@@ -156,14 +156,14 @@ ok($pf->get_all_ontology_accessions->[0] eq $ontology_accessions[0], "ontology a
 my $expected_summary = {
           'source' => 'dbSNP',
           'ontology_accessions' => ['EFO:00001'],
-          'Variation' => undef,
+          'Variation' => $v_name,
           'location' => '18:23821095-23821095',
           'description' => 'Tea Consumption',
           'end' => 23821095,
           'seq_region_name' => '18',
           'associated_gene' => 'TEA1',
           'strand' => undef,
-          'id' => 'rs142276873',
+          'id' => $v_name,
           'attributes' => {
                             'p_value' => '2.3e-06',
                             'allele_symbol' => 't_1',
