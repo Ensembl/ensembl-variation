@@ -603,7 +603,10 @@ sub import_phenotype_feature{
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
-  $attribs{pubmed_id}        = substr($attribs{pubmed_id}, 0,rindex($attribs{pubmed_id}, ",")) if defined $attribs{pubmed_id} && length($attribs{pubmed_id}) == 255;
+  if (defined $attribs{pubmed_id} && length($attribs{pubmed_id}) > 255) {
+    $attribs{pubmed_id}      = substr($attribs{pubmed_id}, 0, 255);
+    $attribs{pubmed_id}      = substr($attribs{pubmed_id}, 0,rindex($attribs{pubmed_id}, ","));
+  }
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
   $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo};
