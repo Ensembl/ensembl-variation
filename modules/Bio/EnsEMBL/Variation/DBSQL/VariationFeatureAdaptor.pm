@@ -857,7 +857,7 @@ sub fetch_all_by_Slice_Population {
 	AND vf.seq_region_id = ?
 	AND vf.seq_region_end >= ?
 	AND vf.seq_region_start <= ?
-    ORDER BY a.variation_id
+    ORDER BY vf.variation_id
   });
   
   $sth->execute($pop->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
