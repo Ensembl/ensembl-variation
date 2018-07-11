@@ -59,7 +59,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-our $DEBUG = 1;
+our $DEBUG = 0;
 
 my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean);
 
@@ -170,8 +170,8 @@ while (my $set = $ref->get_record() ){
     }
     else{
       if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
-        warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
-    	import( \%record);
+         warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
+         import( \%record);
       }
       else{
     	my $message =  "Not importing var: ";
@@ -198,12 +198,6 @@ sub get_set{
 
   ## info on sets
   my $data =      {
-    'clin_assoc' => {
-	    'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
-	    'name' => 'Clinically associated'},
-    'ClinVar'    => {
-	    'desc' => 'Variants with ClinVar annotation',
-	    'name' => 'All ClinVar'},
     'ph_omim'           => {
       'desc' => 'Variants linked to entries in the Online Mendelian Inheritance in Man (OMIM) database',
       'name' => 'OMIM phenotype variants'},
@@ -609,6 +603,7 @@ sub import_phenotype_feature{
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
+  $attribs{pubmed_id}        = substr($attribs{pubmed_id}, 0,rindex($attribs{pubmed_id}, ",")) if defined $attribs{pubmed_id} && length($attribs{pubmed_id}) == 255;
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
   $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo};
@@ -622,7 +617,6 @@ sub import_phenotype_feature{
     $submitter_ids{ $submitters->{$sub} } = 1;
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
-#TODO: clean variation_set_variation table for variation_set 'OMIM set' -> add if submitter_id 1, expect 21,907
 
   update_variation_set($feature_object->dbID()) if exists $submitter_ids{1} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
 
@@ -965,6 +959,7 @@ sub clean_old_data{
 
   my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=\\N ]);
 
+  my $omimSet_updt_sth   = $dba->dbc->do(qq[ delete from variation_set_variation where variation_set in (select variation_set_id from variation_set where name='OMIM phenotype variants')]);
 
 }
 
