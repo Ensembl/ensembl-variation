@@ -354,12 +354,10 @@ sub object {
 
 sub object_id {
   my ($self, $object_id) = @_;
-  
-  if (defined $object_id){
-    $self->{_object_id} = $object_id;
-  } elsif($self->object){
-    $self->{_object_id} =$self->object->stable_id()
-  }
+
+  $self->{_object_id} = $object_id if defined($object_id);
+
+  $self->{_object_id} ||= $self->object->stable_id();
 
   return $self->{_object_id};
 }
