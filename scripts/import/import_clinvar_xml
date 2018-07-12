@@ -92,6 +92,7 @@ my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
 ## fetch ClinVar source object
 my $source   =   get_source($data_file);
+my $omim_source = get_source($data_file, 'OMIM');
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -559,7 +560,7 @@ sub import{
 
       ## add synonym
       add_synonyms($feature_object, $record->{Acc}, $source) if defined $feature_object;
-      add_synonyms($feature_object, $record->{feature_info}{'OMIM'}, "OMIM") if defined $feature_object && defined $record->{feature_info}{'OMIM'};
+      add_synonyms($feature_object, $record->{feature_info}{'OMIM'}, $omim_source) if defined $feature_object && defined $record->{feature_info}{'OMIM'};
 
       ## add phenotype_feature & attrib (there may not be an alt_allele)
       import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
@@ -901,12 +902,17 @@ sub get_structural_variant{
 sub get_source{
 
   my $file = shift;  ##ClinVarFullRelease_2016-10.xml 
+  my $source_name = shift;
 
   my $version = $file;
   $version =~ s/\D+//g;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
+  if (defined $source_name) {
+    my $source = $source_adaptor->fetch_by_name( 'OMIM' );
+    return $source;
+  }
   my $source = $source_adaptor->fetch_by_name( 'ClinVar' );
 
   die "Source information not held for ClinVar\n" unless defined $source ;
@@ -923,10 +929,6 @@ sub add_synonyms{
   my $synonym_accession = shift;
   my $synonym_source    = shift;
 
-  if (ref($synonym_source) ne 'Bio::EnsEMBL::Variation::Source'){
-    my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
-    $synonym_source = $source_adaptor->fetch_by_name( $synonym_source );
-  }
   if ($synonym_source->name eq 'ClinVar') {
     $synonym_accession =~ s/\.\d+$//; ##remove version for synonym
   }
@@ -961,6 +963,7 @@ sub clean_old_data{
   my $synonym_del_sth    = $dba->dbc->do(qq[ delete from variation_synonym where source_id in (select source_id from source where name ='ClinVar') ]);
 
   my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=\\N ]);
+
 
 }
 
