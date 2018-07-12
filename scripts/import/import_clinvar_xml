@@ -910,7 +910,7 @@ sub get_source{
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
   if (defined $source_name) {
-    my $source = $source_adaptor->fetch_by_name( 'OMIM' );
+    my $source = $source_adaptor->fetch_by_name( $source_name );
     return $source;
   }
   my $source = $source_adaptor->fetch_by_name( 'ClinVar' );
