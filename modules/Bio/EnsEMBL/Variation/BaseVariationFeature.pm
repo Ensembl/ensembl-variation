@@ -203,7 +203,7 @@ sub transfer {
 
   my $prev_strand = $self->strand;
   my $tr = $self->SUPER::transfer(@_);
-  $tr->strand($prev_strand);
+  $tr->strand($prev_strand) if ($tr);
 
   return $tr;
 }
