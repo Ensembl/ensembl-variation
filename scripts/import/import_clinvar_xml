@@ -815,7 +815,7 @@ sub enter_var{
    }
 
   my $somatic = 0;
-  $somatic = 1 if $inherit =~ /Somatic/i;
+  $somatic = 1 if defined $inherit && $inherit =~ /Somatic/i;
     
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
