@@ -346,7 +346,7 @@ sub object {
   Description: Getter/Setter for the ID of the object associated with this
                annotation.
   Returntype : string
-  Exceptions : none
+  Exceptions : Throw if object not set
   Caller     : general
   Status     : Stable
 
@@ -354,12 +354,16 @@ sub object {
 
 sub object_id {
   my ($self, $object_id) = @_;
-  
-  if (defined $object_id){
-    $self->{_object_id} = $object_id;
-  } elsif($self->object){
-    $self->{_object_id} =$self->object->stable_id()
+
+  ## set object id if one is supplied.
+  $self->{_object_id} = $object_id if defined($object_id);
+
+  if(! $self->{_object_id} && ! $self->object() ) {
+    throw("No object available for this phenotype feature");
   }
+
+  ## unless an object id is available, look it up from the object
+  $self->{_object_id} ||= $self->object->stable_id();
 
   return $self->{_object_id};
 }

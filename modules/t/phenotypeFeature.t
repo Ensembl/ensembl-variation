@@ -17,6 +17,8 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Deep;
+use Test::Exception;
+
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 use Bio::EnsEMBL::Variation::Source;
@@ -144,7 +146,8 @@ ok($pf->study_description() eq $study_description, "study description");
 ok($pf->variation_names() eq $var_name,            "assoc var names");
 ok($pf->phenotype() eq $phenotype,                 "phenotype object");
 ok($pf->phenotype_id() eq $phenotype_id,           "phenotype ID");
-ok($pf->phenotype()->description eq $desc,         "phenotype");
+ok($pf->phenotype()->description eq $desc,         "phenotype description from description object");
+ok($pf->phenotype_description eq $desc,            "phenotype description shortcut");
 ok($pf->object()->name() eq $v_name,               "variation name");
 ok($pf->external_reference() eq $study_xref,       "external reference");
 ok($pf->pubmed_id() eq $pubmed_ids,                "pubmed ID");
@@ -194,6 +197,7 @@ my $variation2 = Bio::EnsEMBL::Variation::Variation->new(-name   => 'rs1234',
                                                         -source => $source);
 $pf->variation($variation2);
 ok($pf->variation()->name()   eq 'rs1234',   "updated variation name");
+throws_ok { $pf->variation("rs1234"); } qr/Bio::EnsEMBL::Variation::Variation argument expected/, 'Throw OK if variation object not supplied ';
 
 ## new source object 
 my $source_name2           = 'ClinVar';
@@ -206,6 +210,7 @@ my $source2 = Bio::EnsEMBL::Variation::Source->new
 );
 $pf->source($source2);
 ok($pf->source_name() eq $source_name2,             "update source");
+throws_ok { $pf->source("source_name"); } qr/Bio::EnsEMBL::Variation::Source argument expected/, 'Throw OK if source object not supplied ';
 
 
 # Tests to populate empty variables ('object', 'variation', 'source')
@@ -232,6 +237,15 @@ ok($pf2->project_fullname eq $project, 'project_fullname & _set_attribute');
 
 # Test strain
 ok($pf2->strain->name eq 'NA12891', 'strain');
+
+# Test missing object
+my $pf3 = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+    -adaptor    => $pf_adaptor,
+    -type       => 'Variation',
+    -_source_id => $source_id,
+   );
+
+throws_ok { $pf3->object_id(); } qr/No object or internal identifier found for PhenotypeFeature/, 'Throw OK if object not set';
 
 
 done_testing();
