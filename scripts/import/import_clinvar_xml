@@ -856,6 +856,14 @@ sub enter_var{
      -is_somatic      => 0,
      -adaptor         => $var_feat_adaptor,
     );
+  if ($ref_allele eq '-' && $allele_str ne '-/') {
+    if ($vf->start == $vf->end){
+      $vf->start($vf->end+1) ;
+    } elsif ( $vf->start +1 == $vf->end) {
+      $vf->start($data->{feature_info}->{end});
+      $vf->end($data->{feature_info}->{start});
+    }
+  }
   $var_feat_adaptor->store($vf);
 
   my @vf; #return vf to attach phenotype feature to
