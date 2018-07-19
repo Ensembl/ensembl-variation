@@ -222,7 +222,7 @@ sub get_set{
   $set_ext_sth->execute( $set);
   my $set_id = $set_ext_sth->fetchall_arrayref();
 
-  if (defined $set_id->[0]->[0] ){
+  if (defined $clean && defined $set_id->[0]->[0] ){
     ## remove old set content
     $set_del_sth->execute($set_id->[0]->[0]);
     return $set_id->[0]->[0] ;
