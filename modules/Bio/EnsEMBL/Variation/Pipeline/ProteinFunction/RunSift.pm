@@ -138,6 +138,7 @@ sub run {
       }
       else {
         # If we just did not find enough hits, that's ok, just skip this
+        $alignment_ok = 0;
         my $error_file = $fasta_file . ".query.globalX.error";
         if (-s $error_file) {
           open my $error_fh, "<", $error_file or die $!;
@@ -145,13 +146,15 @@ sub run {
           close $error_fh;
           chomp $error_msg;
           if ($error_msg =~ /Not enough sequences \(only \d\) found by the PSI-BLAST search!|PSI-BLAST found no hits/) {
+            $self->_insert_error_msg($translation_md5, 'Not enough sequences found by PSI-BLAST search', 'sift');
             return;
+          } else {
+            die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
           }
-          die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
-        }
+        } else {
         # the alignment failed for some reason, what to do?
-        die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
-        $alignment_ok = 0;
+          die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
+        }
       }
     }
   }
@@ -198,13 +201,15 @@ sub run {
         close $error_fh;
         chomp $error_msg;
         if ($error_msg =~ /\d sequence\(s\) were chosen\. Less than the minimum number of sequences required/) {
+          $self->_insert_error_msg($translation_md5, 'Less than the minimum number of sequences required', 'sift');
           return;
+        } else {
+          die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");
         }
-        die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
+      } else {
+        # Otherwise die with a reason
+        die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");
       }
-      
-      # Otherwise die with a reason
-      die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");
     }
 
     $self->dbc->disconnect_when_inactive(0);
@@ -275,4 +280,13 @@ sub run {
   );
   
   die "Failed to create $output_dir/$tarball: $stderr" unless $exit_code == 0;
+}
+
+sub _insert_error_msg {
+  my $self = shift;
+  my ($translation_md5, $error, $analysis) = @_;
+  my $sql = "INSERT INTO failure_reason (translation_md5,error_msg,analysis) VALUES (?,?,?)";
+  my $sth = $self->data_dbc->prepare($sql);
+  $sth->execute($translation_md5, $error, $analysis);
+  $sth->finish();
 }
