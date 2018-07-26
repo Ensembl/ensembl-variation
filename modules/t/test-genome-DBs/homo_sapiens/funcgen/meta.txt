@@ -276,5 +276,12 @@
 715	\N	patch	patch_92_93_w.sql|Modify index name_exp_idx from table read_file_experimental_configuration
 716	\N	patch	patch_93_94_a.sql|schema_version
 717	\N	patch	patch_93_94_b.sql|Modify column display_label length from epigenome table
-718	\N	patch	patch_93_94_c.sql|Adds table segmentation_cell_table_ctcf
-719	\N	patch	patch_93_94_d.sql|Adds table segmentation_cell_table_without_ctcf
+718	\N	patch	patch_93_94_c.sql|Modify binding_matrix_table
+719	\N	patch	patch_93_94_d.sql|Create binding_matrix_frequencies table
+720	\N	patch	patch_93_94_e.sql|Create transcription_factor table
+721	\N	patch	patch_93_94_f.sql|Create transcription_factor_complex table
+722	\N	patch	patch_93_94_g.sql|Create transcription_factor_complex_composition table
+723	\N	patch	patch_93_94_h.sql|Create binding_matrix_transcription_factor_complex table
+724	\N	patch	patch_93_94_i.sql|Modify motif_feature table
+725	\N	patch	patch_93_94_j.sql|Create motif_feature_peak table
+726	\N	patch	patch_93_94_k.sql|Create motif_feature_regulatory_feature table
