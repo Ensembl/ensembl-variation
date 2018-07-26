@@ -116,7 +116,7 @@ sub store {
             $allele->allele_string,
             $mfv->variation_feature->is_somatic,
             (join ',', map { $_->SO_term } @{ $allele->get_all_OverlapConsequences }),
-            $mfv->motif_feature->display_label,
+            $mfv->motif_feature->stable_id,
             $allele->motif_start,
             $allele->motif_end,
             $allele->motif_score_delta,
