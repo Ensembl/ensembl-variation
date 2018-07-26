@@ -233,7 +233,7 @@ sub motif_score_delta {
     my $matrix = $mf->binding_matrix;
 
     # get the binding affinity of the reference sequence
-    my $ref_affinity = $matrix->relative_affinity($mf_seq, $linear);
+    my $ref_affinity = $matrix->relative_sequence_similarity_score($mf_seq);
         
     unless(defined($ref_affinity)) {
       $self->{motif_score_delta} = undef;
@@ -250,7 +250,7 @@ sub motif_score_delta {
     }
 
     # and get the affinity of the variant sequence
-    my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
+    my $var_affinity = $matrix->relative_sequence_similarity_score($mf_seq);
         
     unless(defined($var_affinity)) {
       $self->{motif_score_delta} = undef;
