@@ -222,9 +222,9 @@ sub get_set{
   $set_ext_sth->execute( $set);
   my $set_id = $set_ext_sth->fetchall_arrayref();
 
-  if (defined $clean && defined $set_id->[0]->[0] ){
+  if (defined $set_id->[0]->[0] ){
     ## remove old set content
-    $set_del_sth->execute($set_id->[0]->[0]);
+    $set_del_sth->execute($set_id->[0]->[0]) if defined $clean;
     return $set_id->[0]->[0] ;
   }
 
@@ -660,7 +660,7 @@ sub import_phenotype_feature{
 sub update_variation_set{
   my $variation_id      = shift;
 
-  my $vsv_ins_sth = $dbh->prepare(qq[ insert into variation_set_variation
+  my $vsv_ins_sth = $dbh->prepare(qq[ insert ignore into variation_set_variation
                                      (variation_id, variation_set_id)
                                       values (?,?)] );
   $vsv_ins_sth->execute( $variation_id, $omim_set_id );
