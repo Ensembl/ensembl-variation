@@ -138,7 +138,6 @@ sub run {
       }
       else {
         # If we just did not find enough hits, that's ok, just skip this
-        $alignment_ok = 0;
         my $error_file = $fasta_file . ".query.globalX.error";
         if (-s $error_file) {
           open my $error_fh, "<", $error_file or die $!;
