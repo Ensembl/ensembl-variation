@@ -60,7 +60,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-our $DEBUG = 1;
+our $DEBUG = 0;
 
 my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean);
 
