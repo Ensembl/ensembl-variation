@@ -1361,7 +1361,8 @@ sub _get_hgvs_protein_format {
 
   elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
 
-    $hgvs_notation->{alt} = "Ter" if $hgvs_notation->{alt} =~ /^Ter/;
+    ## don't report other peptides after a stop is found
+    $hgvs_notation->{alt} =~ s/Ter\w+/Ter/ ;
 
     #### list first and last aa in reference only
     my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
