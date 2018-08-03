@@ -251,11 +251,11 @@ sub update_meta{
   }
 
   if ($self->required_param('dbnsfp_run_type')  == FULL){
-    $update_meta_sth->execute('dbnsfp_version', $self->required('dbnsfp_version'));
+    $update_meta_sth->execute('dbnsfp_version', $self->required_param('dbnsfp_version'));
   }
 
   if ($self->required_param('cadd_run_type')  == FULL){
-    $update_meta_sth->execute('cadd_version', $self->required('cadd_version'));
+    $update_meta_sth->execute('cadd_version', $self->required_param('cadd_version'));
   }
 
 }
