@@ -421,6 +421,8 @@ sub get_with_freq_stmt{
     my $task_start = shift; 
     my $task_end   = shift;
 
+    # Use afbsp fields for ORDER BY, as index on afbsp
+    # "allelefreqbysspop_pkey" PRIMARY KEY, btree (subsnp_id, pop_id, allele_id)
     my  $ss_with_freq_stmt = qq{SELECT
       sssl.subsnp_id,
       afbsp.pop_id,
@@ -434,7 +436,7 @@ sub get_with_freq_stmt{
     JOIN  Population pop  on (afbsp.pop_id = pop.pop_id)
     WHERE afbsp.subsnp_id BETWEEN $task_start and $task_end
     ORDER BY
-      sssl.subsnp_id ASC,   
+      afbsp.subsnp_id ASC,   
       afbsp.pop_id ASC
   };
 ## for human 1KG removal: AND   pop.pop_id not in (16651, 16652,16653,16654, 16655)
