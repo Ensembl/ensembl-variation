@@ -40,10 +40,13 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $CADD_CUTOFF = 0.0;
 my $REVEL_CUTOFF = 0.5;
+
 sub run {
   my $self = shift;
+  $self->dbc and $self->dbc->disconnect_if_idle();
+  $self->dbc->disconnect_when_inactive(1);
+
   my $working_dir = $self->required_param('dbnsfp_working');
   my $dbnsfp_file = $self->required_param('dbnsfp_file');
   unless (-d $working_dir) {
@@ -78,20 +81,24 @@ sub run {
   }
   close HEAD;
 
-  my $vdba = $self->get_species_adaptor('variation');
-  my $cdba = $self->get_species_adaptor('core');
-
-  my $slice_adaptor = $cdba->get_SliceAdaptor or die "Failed to get slice adaptor";
-  my $translation_adaptor = $cdba->get_TranslationAdaptor or die "Failed to get translation adaptor";
-  my $pfpma = $vdba->get_ProteinFunctionPredictionMatrixAdaptor or die "Failed to get matrix adaptor";
-
   my $translation_md5 = $self->required_param('translation_md5');
   my $translation_stable_id = $self->get_stable_id_for_md5($translation_md5);
-  my $translation = $translation_adaptor->fetch_by_stable_id($translation_stable_id);
+
+  if (!$translation_stable_id) {
+    $self->warning("No stable id for $translation_md5");
+    return;
+  }
+
+  my $translation = $self->get_translation($translation_stable_id);
+  my $translation_seq = $translation->seq;
+  my $transcript_stable_id = $translation->transcript->stable_id;
+
+  my $vdba = $self->get_species_adaptor('variation');
+  my $pfpma = $vdba->get_ProteinFunctionPredictionMatrixAdaptor or die "Failed to get matrix adaptor";
 
   my $pred_matrices = {};
   my $results_available = {};
-  foreach my $analysis (qw/dbnsfp_cadd dbnsfp_revel dbnsfp_meta_svm dbnsfp_mutation_assessor/) {
+  foreach my $analysis (qw/dbnsfp_revel dbnsfp_meta_svm dbnsfp_mutation_assessor/) {
     my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
       -analysis       => $analysis,
       -peptide_length   => $translation->length,
@@ -100,39 +107,17 @@ sub run {
     $pred_matrices->{$analysis} = $pred_matrix;
   }
 
-  my $transcript = $translation->transcript;
-  my $chrom = $transcript->seq_region_name;
-  my $start = $transcript->seq_region_start;
-  my $end = $transcript->seq_region_end;
-  my $strand = $transcript->seq_region_strand;
-  my $slice = $slice_adaptor->fetch_by_region('chromosome', $chrom,  $start, $end);
-  my $transcript_mapper = $transcript->get_TranscriptMapper();
-
-  my $transcript_stable_id =  $transcript->stable_id;
-  my $translation_seq = $translation->seq;
   my @amino_acids = ();
-  foreach my $i (1 .. $translation->length) {
-    my @pep_coordinates = $transcript_mapper->pep2genomic($i, $i);
-    my $triplet = '';
-    my @coords = ();
-    foreach my $coord (@pep_coordinates) {
-      my $coord_start = $coord->start;
-      my $coord_end = $coord->end;
-      next if ($coord_start <= 0);
-      my $new_start = $coord_start - $start + 1;
-      my $new_end   = $coord_end   - $start + 1;
-      my $subseq = $slice->subseq($new_start, $new_end, $strand);
-      $triplet .= $subseq;
-      push @coords, [$coord_start, $coord_end];
-    }
-    my $aa = $codonTable->translate($triplet);
-    if (!$aa) {
-      push @amino_acids, 'X';
-      next;
-    }
+  my @all_triplets = @{$self->get_triplets($translation_stable_id)};
+  foreach my $entry (@all_triplets) {
+    my $aa = $entry->{aa};
     push @amino_acids, $aa;
-    
-    my $new_triplets = mutate($triplet);
+    next if $aa eq 'X';
+    my @coords = @{$entry->{coords}};
+    my $chrom = $entry->{chrom};
+    my $triplet_seq = $entry->{triplet_seq};
+    my $i = $entry->{aa_position};
+    my $new_triplets = $entry->{new_triplets};
     foreach my $coord (@coords) {
       my $triplet_start = $coord->[0];
       my $triplet_end = $coord->[1];
@@ -142,9 +127,6 @@ sub run {
         my @split = split /\t/, $line;
         my %data = map {$headers->[$_] => $split[$_]} (0..(scalar @{$headers} - 1));
         my $chr = $data{'#chr'};
-        my $cadd_raw = $data{'CADD_raw'};
-        my $cadd_rank = $data{'CADD_raw_rankscore'};
-        my $cadd_phred = $data{'CADD_phred'};
         my $revel_raw = $data{'REVEL_score'};
         my $revel_rank = $data{'REVEL_rankscore'};
         my $metaSVM_score = $data{'MetaSVM_score'};
@@ -159,23 +141,11 @@ sub run {
         next if ($alt eq $ref);
         my $aaalt = $data{'aaalt'};
         my $aaref = $data{'aaref'};
-        my $mutated_triplet =  $new_triplets->{$triplet}->{$nucleotide_position}->{$alt};
+        my $mutated_triplet =  $new_triplets->{$triplet_seq}->{$nucleotide_position}->{$alt};
         my $mutated_aa = $codonTable->translate($mutated_triplet);
-        if ($cadd_raw ne '.') {
-          $results_available->{'dbnsfp_cadd'} = 1; 
-          my $prediction = ($cadd_raw >= $CADD_CUTOFF) ? 'simulated' : 'observed';
-          my $low_quality = 0;
-          $pred_matrices->{'dbnsfp_cadd'}->add_prediction(
-            $i,
-            $mutated_aa,
-            $prediction,
-            $cadd_raw,
-            $low_quality,
-          );
-        }
         if ($revel_raw ne '.') {
           $results_available->{'dbnsfp_revel'} = 1; 
-          my $prediction = ($revel_raw >= $REVEL_CUTOFF) ? 'likely_disease_causing' : 'likely_not_disease_causing';
+          my $prediction = ($revel_raw >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
           my $low_quality = 0;
           $pred_matrices->{'dbnsfp_revel'}->add_prediction(
             $i,
@@ -225,34 +195,6 @@ sub run {
       $pfpma->store($pred_matrix);
     }
   }
-}
-
-sub mutate {
-  my $triplet = shift;
-  my @nucleotides = split('', $triplet);
-  my $new_triplets;
-  foreach my $i (0 .. $#nucleotides) {
-    my $mutations = get_mutations();
-    $new_triplets = get_mutated_triplets($triplet, $mutations, $i, $new_triplets);
-  }
-  return $new_triplets;
-}
-
-sub get_mutated_triplets {
-  my $triplet = shift;
-  my $mutations = shift;
-  my $position = shift;
-  my $new_triplets = shift;
-  foreach my $mutation (@$mutations) {
-    my $update_triplet = $triplet;
-    substr($update_triplet, $position, 1, $mutation);
-    $new_triplets->{$triplet}->{$position}->{$mutation} = $update_triplet;
-  }
-  return $new_triplets;
-}
-
-sub get_mutations {
-  return ['A', 'G', 'C', 'T'];
 }
 
 1;
