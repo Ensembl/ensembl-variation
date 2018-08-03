@@ -118,13 +118,13 @@ my $PREDICTION_TO_VAL = {
         'tolerated - low confidence'    => 2, 
         'deleterious - low confidence'   => 3, 
     },
-    dbnsfp_cadd => {
-        'simulated' => 0,
-        'observed'  => 1,
+    cadd => {
+        'likely deleterious' => 0,
+        'likely benign'  => 1,
     },
     dbnsfp_revel => {
-        'likely_disease_causing'     => 0,
-        'likely_not_disease_causing' => 1,
+        'likely disease causing' => 0,
+        'likely benign' => 1,
     },
     dbnsfp_meta_svm => {
         'tolerated'  => 0,
