@@ -113,8 +113,8 @@ sub run {
     print $report "$cited_var variants with citations\n\n";
 
     ## check the expected number of variants have 1KG MAF
-    my $v_maf_fail  = $self->check_maf( "variation", $report);
-    my $vf_maf_fail = $self->check_maf( "variation_feature", $report);
+    my $v_maf_fail  = $self->check_maf( "variation_working", $report);
+    my $vf_maf_fail = $self->check_maf( "variation_feature_working", $report);
 
     ## check all statuses and exit if there is a problem
     if( $suspiciously_poor   ==1 ||   #  high failure rates
@@ -358,7 +358,8 @@ sub check_MT_fails{
 =cut
 sub check_variation_feature_consistency{
 
-  my ($var_dba, $report) = shift;
+  my $var_dba = shift;
+  my $report = shift;
 
   my $consistency_fail = 0;
 
