@@ -550,25 +550,23 @@ sub sift_score {
     return $self->{sift_score};
 }
 
-=head2 dbnsfp_cadd_prediction
+=head2 cadd_prediction
 
   Description: Return the qualitative CADD prediction for the effect of this allele.
                (Note that we currently only have predictions for variants that 
                result in single amino acid substitutions in human)
-  Returntype : string (one of 'observed', 'simulated') if this is a missense 
+  Returntype : string (one of 'likely benign', 'likely deleterious') if this is a missense 
                change and a prediction is available, undef otherwise. Predictions
-               are assigned based on the raw CADD scores. "Raw" CADD scores come
-               straight from the model, and are interpretable as the extent to which
-               the annotation profile for a given variant suggests that that variant
-               is likely to be "observed" (negative values) vs "simulated" (positive values). 
+               are assigned based on CADD PHRED scores. CADD PHRED scores greater or
+               equal to 15 are considered likely deleterious.  
   Exceptions : none
   Status     : At Risk
 
 =cut
 
-sub dbnsfp_cadd_prediction {
-  my ($self, $dbnsfp_cadd_prediction) = @_;
-  return $self->_prediction('dbnsfp_cadd_prediction', $dbnsfp_cadd_prediction);
+sub cadd_prediction {
+  my ($self, $cadd_prediction) = @_;
+  return $self->_prediction('cadd_prediction', $cadd_prediction);
 }
 
 =head2 dbnsfp_revel_prediction
@@ -650,23 +648,18 @@ sub _prediction {
   return $self->{$prediction_type};
 }
 
-=head2 dbnsfp_cadd_score
+=head2 cadd_score
 
-  Description: Return the raw CADD score for this allele. The score is retrieved from dbNSFP.
-               "Raw" CADD scores come straight from the model, and are interpretable as the
-               extent to which the annotation profile for a given variant suggests that that
-               variant is likely to be "observed" (negative values) vs "simulated" (positive values).
-               (Note that we currently only have CADD predictions for variants that result in
-               single amino acid substitutions in human)
+  Description: Return the CADD PHRED score for this allele.
   Returntype : float if this is a missense change and a prediction is available, undef otherwise
   Exceptions : none
   Status     : At Risk
 
 =cut
 
-sub dbnsfp_cadd_score {
-  my ($self, $dbnsfp_cadd_score) = @_;
-  return $self->_score('dbnsfp_cadd_score');
+sub cadd_score {
+  my ($self, $cadd_score) = @_;
+  return $self->_score('cadd_score');
 }
 
 =head2 dbnsfp_revel_score
