@@ -34,7 +34,7 @@ use warnings;
 
 use Bio::SimpleAlign;
 use Bio::LocatableSeq;
-
+use Bio::Tools::CodonTable;
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 sub get_protein_sequence {
@@ -81,5 +81,94 @@ sub get_stable_id_for_md5 {
 
     return $stable_id;
 }
+
+sub get_translation {
+  my $self = shift;
+  my $translation_stable_id = shift;
+  my $core_type = ($translation_stable_id =~ /^NP/) ? 'otherfeatures' : 'core';
+  my $cdba = $self->get_species_adaptor($core_type);
+  my $translation_adaptor = $cdba->get_TranslationAdaptor or die "Failed to get translation adaptor";
+  my $translation = $translation_adaptor->fetch_by_stable_id($translation_stable_id);
+  return $translation;
+}
+
+sub mutate {
+  my $self = shift;
+  my $triplet = shift;
+  my @nucleotides = split('', $triplet);
+  my $new_triplets;
+  foreach my $i (0 .. $#nucleotides) {
+    my $mutations = ['A', 'G', 'C', 'T'];
+    $new_triplets = $self->get_mutated_triplets($triplet, $mutations, $i, $new_triplets);
+  }
+  return $new_triplets;
+}
+
+sub get_mutated_triplets {
+  my $self = shift;
+  my $triplet = shift;
+  my $mutations = shift;
+  my $position = shift;
+  my $new_triplets = shift;
+  foreach my $mutation (@$mutations) {
+    my $update_triplet = $triplet;
+    substr($update_triplet, $position, 1, $mutation);
+    $new_triplets->{$triplet}->{$position}->{$mutation} = $update_triplet;
+  }
+  return $new_triplets;
+}
+
+sub get_triplets {
+  my $self = shift;
+  my $translation_stable_id = shift;
+  my $core_type = ($translation_stable_id =~ /^NP/) ? 'otherfeatures' : 'core';
+  my $cdba = $self->get_species_adaptor($core_type);
+  my $translation_adaptor = $cdba->get_TranslationAdaptor or die "Failed to get translation adaptor";
+  my $translation = $translation_adaptor->fetch_by_stable_id($translation_stable_id);
+  my $slice_adaptor = $cdba->get_SliceAdaptor or die "Failed to get slice adaptor";
+
+  my $transcript = $translation->transcript;
+  my $chrom = $transcript->seq_region_name;
+  my $start = $transcript->seq_region_start;
+  my $end = $transcript->seq_region_end;
+  my $strand = $transcript->seq_region_strand;
+  my $slice = $slice_adaptor->fetch_by_region('toplevel', $chrom,  $start, $end);
+  my $transcript_mapper = $transcript->get_TranscriptMapper();
+
+  my $codonTable = Bio::Tools::CodonTable->new();
+  my @all_triplets = ();
+  foreach my $i (1 .. $translation->length) {
+    my @pep_coordinates = $transcript_mapper->pep2genomic($i, $i);
+    my $triplet = '';
+    my @coords = ();
+    foreach my $coord (@pep_coordinates) {
+      my $coord_start = $coord->start;
+      my $coord_end = $coord->end;
+      next if ($coord_start <= 0);
+      my $new_start = $coord_start - $start + 1;
+      my $new_end   = $coord_end   - $start + 1;
+      my $subseq = $slice->subseq($new_start, $new_end, $strand);
+      $triplet .= $subseq;
+      push @coords, [$coord_start, $coord_end];
+    }
+    my $entry = {
+      coords => \@coords,
+      aa_position => $i,
+      chrom => $chrom,
+      triplet_seq => $triplet,
+    };
+    my $aa = $codonTable->translate($triplet);
+    if (!$aa) {
+      $entry->{aa} = 'X';
+    } else {
+      $entry->{aa} = $aa;
+      my $new_triplets = $self->mutate($triplet);
+      $entry->{new_triplets} = $new_triplets;
+    }
+    push @all_triplets, $entry;
+  } 
+  return \@all_triplets;
+}
+
 
 1;
