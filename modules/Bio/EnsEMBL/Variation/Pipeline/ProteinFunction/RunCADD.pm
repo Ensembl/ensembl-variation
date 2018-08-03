@@ -59,7 +59,7 @@ sub run {
   my $obj = Bio::DB::HTS::Tabix->new(filename => $cadd_file);
 
   my $headers;
-  open HEAD, "tabix -fh $dbnsfp_file 1:1-1 2>&1 | ";
+  open HEAD, "tabix -fh $cadd_file 1:1-1 2>&1 | ";
   while(<HEAD>) {
     next unless /^\#/;
     chomp;
@@ -115,7 +115,7 @@ sub run {
         my $cadd_phred = $data{'PHRED'};
         my $nucleotide_position = $pos - $triplet_start;
         next if ($alt eq $ref);
-        my $mutated_triplet = $new_triplets->{$triplet}->{$nucleotide_position}->{$alt};
+        my $mutated_triplet = $new_triplets->{$triplet_seq}->{$nucleotide_position}->{$alt};
         my $mutated_aa = $codonTable->translate($mutated_triplet);
 
         if ($cadd_phred ne '.') {
