@@ -317,8 +317,11 @@ sub summarise_evidence{
       push @{$evidence{$var}},  $evidence_ids->{ExAC}
            if defined $submitter_info->{$var}->{'ExAC'} ;
  
-      push @{$evidence{$var}},  $evidence_ids->{TOPMED}
-           if defined $submitter_info->{$var}->{'TOPMED'} ;
+      push @{$evidence{$var}},  $evidence_ids->{TOPMed}
+           if defined $submitter_info->{$var}->{'TOPMed'} ;
+
+      push @{$evidence{$var}},  $evidence_ids->{gnomAD}
+           if defined $submitter_info->{$var}->{'gnomAD'} ;
 
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
            if defined $submitter_info->{$var}->{'KG'} ;
@@ -464,9 +467,11 @@ sub get_submitters{
 
     $evidence{$l->[0]}{'ExAC'}   = 1 if $l->[1]  =~/EVA_EXAC/i;
 
-    $evidence{$l->[0]}{'TopMed'} = 1 if $l->[1]  =~/TOPMED/i;
+    $evidence{$l->[0]}{'TOPMed'} = 1 if $l->[1]  =~/TOPMED/i;
 
-    $evidence{$l->[0]}{'freq'}   = 1 if $l->[1] =~/1000GENOMES|NHLBI-ESP|EVA_EXAC|TopMed/i;
+    $evidence{$l->[0]}{'gnomAD'} = 1 if $l->[1]  =~/GNOMAD/i;
+
+    $evidence{$l->[0]}{'freq'}   = 1 if $l->[1] =~/1000GENOMES|NHLBI-ESP|EVA_EXAC|TOPMED|GNOMAD/i;
 
     ## cow specific
     $evidence{$l->[0]}{'1000_BULL_GENOMES'} = 1 if $l->[1] =~/1000_BULL_GENOMES/;
