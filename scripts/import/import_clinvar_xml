@@ -559,7 +559,7 @@ sub import{
   my $alt_allele; ## disease associated allele from HGVS
   my $feat;       ## use stored *variation_features where possible
 
-  if(defined $record->{feature_info}->{dbSNP}){
+  if(defined $record->{feature_info}->{dbSNP} && !defined $structvar){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
 
       ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
@@ -606,8 +606,8 @@ sub import_phenotype_feature{
   my %attribs;
   $attribs{review_status}    = $record->{Status};
   $attribs{external_id}      = $record->{Acc};
-  $attribs{clinvar_clin_sig} = $record->{Desc};
-  $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
+  $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Dec} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
+  $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
@@ -629,7 +629,7 @@ sub import_phenotype_feature{
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
-  update_variation_set($feature_object->dbID()) if exists $submitter_ids{1} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitter_ids{1} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
 
   foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
     print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
