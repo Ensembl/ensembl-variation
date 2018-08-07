@@ -590,21 +590,21 @@ sub dbnsfp_revel_prediction {
   return $self->_prediction('dbnsfp_revel_prediction', $dbnsfp_revel_prediction);
 }
 
-=head2 dbnsfp_meta_svm_prediction
+=head2 dbnsfp_meta_lr_prediction
 
-  Description: Return the qualitative MetaSVM prediction for the effect of this allele.
+  Description: Return the qualitative MetaLR prediction for the effect of this allele.
                (Note that we currently only have predictions for variants that 
                result in single amino acid substitutions in human)
   Returntype : string (one of 'tolerated', 'damaging').
-               The score cutoff between "D" and "T" is 0.
+               The score cutoff between "D" and "T" is 0.5.
   Exceptions : none
   Status     : At Risk
 
 =cut
 
-sub dbnsfp_meta_svm_prediction {
-  my ($self, $dbnsfp_meta_svm_prediction) = @_;
-  return $self->_prediction('dbnsfp_meta_svm_prediction', $dbnsfp_meta_svm_prediction);
+sub dbnsfp_meta_lr_prediction {
+  my ($self, $dbnsfp_meta_lr_prediction) = @_;
+  return $self->_prediction('dbnsfp_meta_lr_prediction', $dbnsfp_meta_lr_prediction);
 }
 
 =head2 dbnsfp_mutation_assessor_prediction
@@ -678,9 +678,9 @@ sub dbnsfp_revel_score {
   return $self->_score('dbnsfp_revel_score');
 }
 
-=head2 dbnsfp_meta_svm_score
+=head2 dbnsfp_meta_lr_score
 
-  Description: Return the MetaSVM score for this allele. The score is retrieved from dbNSFP. (We only
+  Description: Return the MetaLR score for this allele. The score is retrieved from dbNSFP. (We only
                have predictions for variants that result in single amino acid substitutions in human)
   Returntype : float if this is a missense change and a prediction is 
                available, undef otherwise
@@ -689,9 +689,9 @@ sub dbnsfp_revel_score {
 
 =cut
 
-sub dbnsfp_meta_svm_score {
-  my ($self, $dbnsfp_meta_svm_score) = @_;
-  return $self->_score('dbnsfp_meta_svm_score', $dbnsfp_meta_svm_score);
+sub dbnsfp_meta_lr_score {
+  my ($self, $dbnsfp_meta_lr_score) = @_;
+  return $self->_score('dbnsfp_meta_lr_score', $dbnsfp_meta_lr_score);
 }
 
 =head2 dbnsfp_mutation_assessor_score
