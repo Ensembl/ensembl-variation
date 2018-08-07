@@ -85,7 +85,7 @@ sub get_stable_id_for_md5 {
 sub get_translation {
   my $self = shift;
   my $translation_stable_id = shift;
-  my $core_type = ($translation_stable_id =~ /^NP/) ? 'otherfeatures' : 'core';
+  my $core_type = ($translation_stable_id =~ /^NP|XP/) ? 'otherfeatures' : 'core';
   my $cdba = $self->get_species_adaptor($core_type);
   my $translation_adaptor = $cdba->get_TranslationAdaptor or die "Failed to get translation adaptor";
   my $translation = $translation_adaptor->fetch_by_stable_id($translation_stable_id);
@@ -121,7 +121,7 @@ sub get_mutated_triplets {
 sub get_triplets {
   my $self = shift;
   my $translation_stable_id = shift;
-  my $core_type = ($translation_stable_id =~ /^NP/) ? 'otherfeatures' : 'core';
+  my $core_type = ($translation_stable_id =~ /^NP|XP/) ? 'otherfeatures' : 'core';
   my $cdba = $self->get_species_adaptor($core_type);
   my $translation_adaptor = $cdba->get_TranslationAdaptor or die "Failed to get translation adaptor";
   my $translation = $translation_adaptor->fetch_by_stable_id($translation_stable_id);
