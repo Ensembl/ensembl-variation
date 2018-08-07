@@ -58,7 +58,7 @@ sub run {
   my $codonTable = Bio::Tools::CodonTable->new();
 
   my $predictions = {
-    dbnsfp_meta_svm => {
+    dbnsfp_meta_lr => {
       T => 'tolerated',
       D => 'damaging',
     },
@@ -98,7 +98,7 @@ sub run {
 
   my $pred_matrices = {};
   my $results_available = {};
-  foreach my $analysis (qw/dbnsfp_revel dbnsfp_meta_svm dbnsfp_mutation_assessor/) {
+  foreach my $analysis (qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/) {
     my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
       -analysis       => $analysis,
       -peptide_length   => $translation->length,
@@ -106,6 +106,9 @@ sub run {
     );
     $pred_matrices->{$analysis} = $pred_matrix;
   }
+
+  my $debug_data = {};
+
 
   my @amino_acids = ();
   my @all_triplets = @{$self->get_triplets($translation_stable_id)};
@@ -129,9 +132,9 @@ sub run {
         my $chr = $data{'#chr'};
         my $revel_raw = $data{'REVEL_score'};
         my $revel_rank = $data{'REVEL_rankscore'};
-        my $metaSVM_score = $data{'MetaSVM_score'};
-        my $metaSVM_pred = $data{'MetaSVM_pred'};
-        my $mutation_assessor_score = $data{'MutationAssessor_score'};
+        my $metaLR_score = $data{'MetaLR_score'};
+        my $metaLR_pred = $data{'MetaLR_pred'};
+        my $mutation_assessor_rankscore = $data{'MutationAssessor_score_rankscore'};
         my $mutation_assessor_pred = $data{'MutationAssessor_pred'};
         my $pos = $data{'pos(1-based)'};
         my $nucleotide_position = $pos - $triplet_start;
@@ -147,6 +150,7 @@ sub run {
           $results_available->{'dbnsfp_revel'} = 1; 
           my $prediction = ($revel_raw >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
           my $low_quality = 0;
+#          $debug_data->{dbnsfp_revel}->{$i}->{$mutated_aa}->{$prediction} = $revel_raw;
           $pred_matrices->{'dbnsfp_revel'}->add_prediction(
             $i,
             $mutated_aa,
@@ -155,27 +159,29 @@ sub run {
             $low_quality,
           );
         }
-        if ($metaSVM_score ne '.') {
-          $results_available->{'dbnsfp_meta_svm'} = 1; 
-          my $prediction = $predictions->{dbnsfp_meta_svm}->{$metaSVM_pred};
+        if ($metaLR_score ne '.') {
+          $results_available->{'dbnsfp_meta_lr'} = 1; 
+          my $prediction = $predictions->{dbnsfp_meta_lr}->{$metaLR_pred};
           my $low_quality = 0;
-          $pred_matrices->{'dbnsfp_meta_svm'}->add_prediction(
+#          $debug_data->{dbnsfp_meta_lr}->{$i}->{$mutated_aa}->{$prediction} = $metaLR_score;
+          $pred_matrices->{'dbnsfp_meta_lr'}->add_prediction(
             $i,
             $mutated_aa,
             $prediction,
-            $metaSVM_score,
+            $metaLR_score,
             $low_quality,
           );
         }
-        if ($mutation_assessor_score ne '.') {
+        if ($mutation_assessor_rankscore ne '.') {
           $results_available->{'dbnsfp_mutation_assessor'} = 1; 
           my $prediction = $predictions->{dbnsfp_mutation_assessor}->{$mutation_assessor_pred};
           my $low_quality = 0;
+#          $debug_data->{dbnsfp_mutation_assessor}->{$i}->{$mutated_aa}->{$prediction} = $mutation_assessor_rankscore;
           $pred_matrices->{'dbnsfp_mutation_assessor'}->add_prediction(
             $i,
             $mutated_aa,
             $prediction,
-            $mutation_assessor_score,
+            $mutation_assessor_rankscore,
             $low_quality,
           );
         }
@@ -189,12 +195,26 @@ sub run {
     print $fh join('', @amino_acids), "\n";
     $fh->close;
   }
+#  my $fh = FileHandle->new("$working_dir/debug_$translation_stable_id", 'w');
   foreach my $analysis (keys %$pred_matrices) {
     my $pred_matrix = $pred_matrices->{$analysis};
     if ($results_available->{$analysis}) {
       $pfpma->store($pred_matrix);
+#      my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $translation_md5); 
+#      foreach my $i (keys %{$debug_data->{$analysis}}) {
+#        foreach my $aa (keys %{$debug_data->{$analysis}->{$i}}) {
+#          next if ($aa eq '*');
+#          foreach my $prediction (keys %{$debug_data->{$analysis}->{$i}->{$aa}}) {
+#            my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa);
+#            print $fh join(' ', $analysis, $i, $aa, $prediction, $debug_data->{$analysis}->{$i}->{$aa}->{$prediction}, $new_pred, $new_score), "\n";
+#          }
+#        }
+#      }
     }
   }
+  $fh->close;
+
+
 }
 
 1;
