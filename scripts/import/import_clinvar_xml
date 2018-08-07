@@ -606,7 +606,7 @@ sub import_phenotype_feature{
   my %attribs;
   $attribs{review_status}    = $record->{Status};
   $attribs{external_id}      = $record->{Acc};
-  $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Dec} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
+  $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Desc} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
   $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
