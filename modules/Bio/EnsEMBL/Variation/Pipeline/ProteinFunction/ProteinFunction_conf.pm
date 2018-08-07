@@ -58,7 +58,7 @@ sub default_options {
         hive_auto_rebalance_semaphores => 0, 
         hive_no_init => 0,
 
-        debug_mode              => 0,
+        debug_mode              => 1,
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
@@ -85,10 +85,10 @@ sub default_options {
         fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
         # set this flag to include LRG translations in the analysis
 
-        include_lrg             => 1,
+        include_lrg             => 0,
 
         # include RefSeq transcripts, and edit with accompanying BAM?
-        include_refseq          => 1,
+        include_refseq          => 0,
         bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh38.p10_knownrefseq_alignments_2017-01-13.bam',
 
         # GRCh37 bam
