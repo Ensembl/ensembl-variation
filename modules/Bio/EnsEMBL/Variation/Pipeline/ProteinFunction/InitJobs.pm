@@ -61,7 +61,7 @@ sub fetch_input {
 
     if ($self->param('debug_mode')) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('SPAST')->[0]->get_all_Transcripts };
+        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BAIAP2')->[0]->get_all_Transcripts };
     }
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
@@ -94,7 +94,7 @@ sub fetch_input {
       $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'cadd'/);
     }
     if ($dbnsfp_run_type == FULL ) {
-      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_svm', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_lr', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
     }
     # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
     if ($sift_run_type == FULL) {
