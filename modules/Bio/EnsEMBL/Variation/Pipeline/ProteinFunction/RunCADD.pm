@@ -34,6 +34,7 @@ use Bio::DB::HTS::Tabix;
 use Bio::Tools::CodonTable;
 use File::Path qw(make_path remove_tree);
 use FileHandle;
+use Data::Dumper;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
 

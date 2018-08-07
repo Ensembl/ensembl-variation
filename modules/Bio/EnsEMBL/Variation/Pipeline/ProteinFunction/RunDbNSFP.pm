@@ -37,6 +37,7 @@ use Data::Dumper;
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
@@ -212,7 +213,7 @@ sub run {
 #      }
     }
   }
-  $fh->close;
+#  $fh->close;
 
 
 }
