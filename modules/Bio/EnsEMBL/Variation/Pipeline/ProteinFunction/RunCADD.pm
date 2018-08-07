@@ -46,7 +46,7 @@ sub run {
   $self->dbc and $self->dbc->disconnect_if_idle();
   $self->dbc->disconnect_when_inactive(1);
 
-  my $working_dir = $self->required_param('working');
+  my $working_dir = $self->required_param('cadd_working');
   my $cadd_file = $self->required_param('cadd_file');
   unless (-d $working_dir) {
     my $err;
