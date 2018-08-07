@@ -30,7 +30,6 @@ limitations under the License.
 package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs;
 
 use strict;
-
 use Bio::EnsEMBL::Registry;
 
 use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
@@ -62,7 +61,7 @@ sub fetch_input {
 
     if ($self->param('debug_mode')) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
+        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('SPAST')->[0]->get_all_Transcripts };
     }
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
@@ -116,14 +115,14 @@ sub fetch_input {
 
     my %unique_translations;
 
-    for my $tran (@transcripts) {
+   for my $tran (@transcripts) {
         
         my $tl = $tran->translation;
 
         my $seq = $tl->seq;
         
         my $md5 = md5_hex($seq);
-        
+        $self->warning($tran->stable_id . ' ' . $tl->stable_id . ' ' . $md5);
         $unique_translations{$md5} = $seq;
 
         $add_mapping_sth->execute($tl->stable_id, $md5);
@@ -351,15 +350,14 @@ sub get_refseq_transcripts {
         @transcripts =
             grep { $_->translation }
             map {$vep_obj->apply_edits($_); $_}
-            @{ $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts };
+            @{ $ga->fetch_all_by_external_name('SPAST')->[0]->get_all_Transcripts };
     }
 
     else {
         for my $slice (@{$slices}) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
-                for my $transcript (grep {$_->stable_id =~ /^NM_/} @{ $gene->get_all_Transcripts }) {
+                for my $transcript (grep {$_->stable_id =~ /^NM_/ && $_->source eq 'BestRefSeq'} @{ $gene->get_all_Transcripts }) {
                     $vep_obj->apply_edits($transcript) if $vep_obj;
-
                     if (my $translation = $transcript->translation) {
                         push @transcripts, $transcript;
                     }
