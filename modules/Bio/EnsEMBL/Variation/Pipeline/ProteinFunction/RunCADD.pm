@@ -40,7 +40,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $CADD_CUTOFF = 15;
+my $CADD_CUTOFF = 30;
 
 sub run {
   my $self = shift;
