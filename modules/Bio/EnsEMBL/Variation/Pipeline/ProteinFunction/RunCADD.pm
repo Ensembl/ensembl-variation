@@ -40,7 +40,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $CADD_CUTOFF = 30;
+my $CADD_CUTOFF = 15;
 
 sub run {
   my $self = shift;
@@ -126,7 +126,9 @@ sub run {
           $results_available = 1;
           my $prediction = ($cadd_phred >= $CADD_CUTOFF) ? 'likely deleterious' : 'likely benign';
           my $low_quality = 0;
-  #        $debug_data->{$i}->{$mutated_aa}->{$prediction} = $cadd_phred;
+          if ($self->param('debug_mode')) {
+            $debug_data->{$i}->{$mutated_aa}->{$prediction} = $cadd_phred;
+          }
           $pred_matrix->add_prediction(
             $i,
             $mutated_aa,
@@ -148,19 +150,20 @@ sub run {
   if ($results_available) {
     $pfpma->store($pred_matrix);
   }
-
-#  my $matrix = $pfpma->fetch_by_analysis_translation_md5('cadd', $translation_md5);
-#  my $fh = FileHandle->new("$working_dir/debug_$translation_stable_id", 'w');
-#  foreach my $i (keys %$debug_data) {
-#    foreach my $aa (keys %{$debug_data->{$i}}) {
-#      next if ($aa eq '*');
-#      foreach my $prediction (keys %{$debug_data->{$i}->{$aa}}) {
-#        my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa); 
-#        print $fh join(' ', $i, $aa, $prediction, $debug_data->{$i}->{$aa}->{$prediction}, $new_pred, $new_score), "\n";
-#      }
-#    }
-#  }
-#  $fh->close;
+  if ($self->param('debug_mode')) {
+    my $matrix = $pfpma->fetch_by_analysis_translation_md5('cadd', $translation_md5);
+    my $fh = FileHandle->new("$working_dir/debug_$translation_stable_id", 'w');
+    foreach my $i (keys %$debug_data) {
+      foreach my $aa (keys %{$debug_data->{$i}}) {
+        next if ($aa eq '*');
+        foreach my $prediction (keys %{$debug_data->{$i}->{$aa}}) {
+          my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa); 
+          print $fh join(' ', $i, $aa, $prediction, $debug_data->{$i}->{$aa}->{$prediction}, $new_pred, $new_score), "\n";
+        }
+      }
+    }
+    $fh->close;
+  }
 
 }
 
