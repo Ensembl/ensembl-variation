@@ -110,7 +110,6 @@ sub run {
 
   my $debug_data = {};
 
-
   my @amino_acids = ();
   my @all_triplets = @{$self->get_triplets($translation_stable_id)};
   foreach my $entry (@all_triplets) {
@@ -151,7 +150,7 @@ sub run {
           $results_available->{'dbnsfp_revel'} = 1; 
           my $prediction = ($revel_raw >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
           my $low_quality = 0;
-#          $debug_data->{dbnsfp_revel}->{$i}->{$mutated_aa}->{$prediction} = $revel_raw;
+          $debug_data->{dbnsfp_revel}->{$i}->{$mutated_aa}->{$prediction} = $revel_raw if ($self->param('debug_mode'));
           $pred_matrices->{'dbnsfp_revel'}->add_prediction(
             $i,
             $mutated_aa,
@@ -164,7 +163,7 @@ sub run {
           $results_available->{'dbnsfp_meta_lr'} = 1; 
           my $prediction = $predictions->{dbnsfp_meta_lr}->{$metaLR_pred};
           my $low_quality = 0;
-#          $debug_data->{dbnsfp_meta_lr}->{$i}->{$mutated_aa}->{$prediction} = $metaLR_score;
+          $debug_data->{dbnsfp_meta_lr}->{$i}->{$mutated_aa}->{$prediction} = $metaLR_score if ($self->param('debug_mode'));
           $pred_matrices->{'dbnsfp_meta_lr'}->add_prediction(
             $i,
             $mutated_aa,
@@ -177,7 +176,7 @@ sub run {
           $results_available->{'dbnsfp_mutation_assessor'} = 1; 
           my $prediction = $predictions->{dbnsfp_mutation_assessor}->{$mutation_assessor_pred};
           my $low_quality = 0;
-#          $debug_data->{dbnsfp_mutation_assessor}->{$i}->{$mutated_aa}->{$prediction} = $mutation_assessor_rankscore;
+          $debug_data->{dbnsfp_mutation_assessor}->{$i}->{$mutated_aa}->{$prediction} = $mutation_assessor_rankscore if ($self->param('debug_mode'));
           $pred_matrices->{'dbnsfp_mutation_assessor'}->add_prediction(
             $i,
             $mutated_aa,
@@ -196,26 +195,26 @@ sub run {
     print $fh join('', @amino_acids), "\n";
     $fh->close;
   }
-#  my $fh = FileHandle->new("$working_dir/debug_$translation_stable_id", 'w');
   foreach my $analysis (keys %$pred_matrices) {
     my $pred_matrix = $pred_matrices->{$analysis};
     if ($results_available->{$analysis}) {
       $pfpma->store($pred_matrix);
-#      my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $translation_md5); 
-#      foreach my $i (keys %{$debug_data->{$analysis}}) {
-#        foreach my $aa (keys %{$debug_data->{$analysis}->{$i}}) {
-#          next if ($aa eq '*');
-#          foreach my $prediction (keys %{$debug_data->{$analysis}->{$i}->{$aa}}) {
-#            my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa);
-#            print $fh join(' ', $analysis, $i, $aa, $prediction, $debug_data->{$analysis}->{$i}->{$aa}->{$prediction}, $new_pred, $new_score), "\n";
-#          }
-#        }
-#      }
+      if ($self->param('debug_mode')) {
+        my $fh = FileHandle->new("$working_dir/$analysis\_$translation_stable_id", 'w');
+        my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $translation_md5); 
+        foreach my $i (keys %{$debug_data->{$analysis}}) {
+          foreach my $aa (keys %{$debug_data->{$analysis}->{$i}}) {
+            next if ($aa eq '*');
+            foreach my $prediction (keys %{$debug_data->{$analysis}->{$i}->{$aa}}) {
+              my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa);
+              print $fh join(' ', $analysis, $i, $aa, $prediction, $debug_data->{$analysis}->{$i}->{$aa}->{$prediction}, $new_pred, $new_score), "\n";
+            }
+          }
+        }
+        $fh->close;
+      }
     }
   }
-#  $fh->close;
-
-
 }
 
 1;
