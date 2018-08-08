@@ -58,17 +58,16 @@ sub default_options {
         hive_auto_rebalance_semaphores => 0, 
         hive_no_init => 0,
 
-        debug_mode              => 1,
+        debug_mode              => 0,
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
-        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
+        hive_root_dir           => $ENV{'HOME'} . '/scr/ensembl-hive',
         
-        pipeline_name           => 'protein_function_93',
-        #pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
-        #species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
-        species_dir => '/hps/nobackup2/production/ensembl/anja/release_93/human/protein_function/',
+        pipeline_name           => 'protein_function',
+        pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         # directory used for the hive's own output files
 
         output_dir              => $self->o('species_dir').'/hive_output',
@@ -331,7 +330,7 @@ sub pipeline_analyses {
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
             -input_ids      => [],
-            -hive_capacity  => $self->o('sift_max_workers'),
+            -hive_capacity  => $self->o('dbnsfp_max_workers'),
             -rc_name        => 'medmem',
         },
 
@@ -345,7 +344,7 @@ sub pipeline_analyses {
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
             -input_ids      => [],
-            -hive_capacity  => $self->o('sift_max_workers'),
+            -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
         },
 
