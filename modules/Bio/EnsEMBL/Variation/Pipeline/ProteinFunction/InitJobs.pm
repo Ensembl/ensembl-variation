@@ -61,7 +61,7 @@ sub fetch_input {
 
     if ($self->param('debug_mode')) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BAIAP2')->[0]->get_all_Transcripts };
+        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
     }
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
@@ -122,7 +122,7 @@ sub fetch_input {
         my $seq = $tl->seq;
         
         my $md5 = md5_hex($seq);
-        $self->warning($tran->stable_id . ' ' . $tl->stable_id . ' ' . $md5);
+
         $unique_translations{$md5} = $seq;
 
         $add_mapping_sth->execute($tl->stable_id, $md5);
