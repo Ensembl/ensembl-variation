@@ -26,6 +26,9 @@ use warnings;
 
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw(get_reference_base check_variant_size check_for_ambiguous_alleles check_illegal_characters);
+
+our $DEBUG = 0;
 
 our $SOURCENAME = 'ClinVar';
 
@@ -39,9 +42,14 @@ $registry->load_all($registry_file);
 
 my $db_adaptor = $registry->get_DBAdaptor('homo_sapiens','variation') 
     or die ("Could not get variation DBAdaptor");
+my $slice_adaptor = $registry->get_adaptor('homo_sapiens','core', 'slice')
+        or die ("Could not get slice DBAdaptor");
 
 my $dbh = $db_adaptor->dbc;
 
+
+#do Variation QC for the variants added from ClinVar
+run_variation_checks($dbh);
 
 my $variation_ids = update_variation($dbh);
 
@@ -53,6 +61,122 @@ check_phenotype_names($dbh);
 
 check_counts($dbh);
 
+
+sub run_variation_checks {
+    my $dbh = shift;
+
+    ## count pass & fail for basic reporting
+    my %status;
+
+    #get ClinVar - source_id
+    my $source_id_sth = $dbh->prepare(qq[ SELECT source_id
+                                    FROM source
+                                    WHERE name = ?]);
+    #get ClinVar inserted variants
+    my $variant_ext_sth = $dbh->prepare(qq[SELECT vf.variation_id, vf.variation_name,
+                                                  vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand,
+                                                  vf.source_id,
+                                                  sr.name,
+                                                  vf.flags, vf.allele_string
+                                           FROM variation_feature vf,
+                                                seq_region sr,
+                                                variation v
+                                          WHERE  v.source_id = ?
+                                                AND vf.seq_region_id = sr.seq_region_id
+                                                AND vf.variation_id = v.variation_id
+                                          ]);
+    my $failed_set_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id
+                                               FROM variation_set, attrib
+                                               WHERE variation_set.short_name_attrib_id = attrib.attrib_id
+                                               AND attrib.value = ? ]);
+    my $insert_failed_var_sth = $dbh->prepare(qq[INSERT IGNORE INTO failed_variation(variation_id, failed_description_id)
+                                                VALUES (?, ?) ]);
+    my $insert_failed_var_set_var_sth = $dbh->prepare(qq[INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+                                              VALUES (?, ?) ]);
+    my $update_failed_var_feat_sth = $dbh->prepare(qq[UPDATE variation_feature
+                                                      SET variation_set_id = concat(variation_set_id,',', ?)
+                                                      WHERE variation_id = ? ]);
+    ## get ClinVar source id
+    $source_id_sth->execute($SOURCENAME);
+    my $source_id =  $source_id_sth->fetchall_arrayref();
+    ## get ClinVar inserted variants
+    $variant_ext_sth-> execute($source_id->[0]->[0]);
+    my $var_feat_list =  $variant_ext_sth->fetchall_arrayref();
+
+    ## look for fail_all set record
+    $failed_set_ext_sth->execute( "fail_all");
+    my $set_id = $failed_set_ext_sth->fetchall_arrayref();
+
+    foreach my $l (@{$var_feat_list}){
+        my %var = ( "start"       =>  $l->[3],
+                    "end"         =>  $l->[4],
+                    "strand"      =>  $l->[5],
+                    "seqreg_name" =>  $l->[7],
+                    "allele"      =>  $l->[9],
+                    "source"      =>  $l->[6],
+                    "name"        =>  $l->[1],
+                    "id"          =>  $l->[0],
+            );
+
+        $var{fail_reasons} = run_checks(\%var);
+
+        $status{all}++;
+        # update failed variation if needed
+        if (defined $var{fail_reasons} && scalar(@{$var{fail_reasons}}) > 0 ){
+            print "$var{name}\tfailed: ", join(",",@{$var{fail_reasons}}), "\n" if $DEBUG == 1;
+            ## keep a count for fail rate
+            $status{fail}++ ;
+
+            # add failed reasons
+            while (my $fail = shift(@{$var{fail_reasons}}) ) {
+              $insert_failed_var_sth->execute($var{id}, $fail);
+            }
+            # add to failed variation_set
+            $insert_failed_var_set_var_sth->execute($var{id}, $set_id->[0]->[0]);
+            # update variation_feature variation_set_id
+            $update_failed_var_feat_sth->execute($set_id->[0]->[0], $var{id});
+        } else {
+            print $var{name}, "\n" if $DEBUG == 1;
+        }
+    }
+    print "ClinVar imported variants: ", $status{all}, ", failed: ", $status{fail}, "\n";
+}
+
+## call standard QC checks & return string of failure reasons
+sub run_checks{
+
+    my $var = shift;
+
+    my @fail;
+
+    # Extract reference sequence to run ref checks [ compliments for reverse strand multi-mappers]
+    my $ref_seq = get_reference_base($var, $slice_adaptor, "coredb") ;
+
+    ## Type 15: Mapped position is not compatible with reported alleles
+    unless(defined $ref_seq){
+        ## don't check further if obvious coordinate error
+        push @fail, 15;
+        return \@fail;
+    }
+    ## Type 2: None of the variant alleles match the reference allele - is ref base in agreement?
+    my $exp_ref = (split/\//, $var->{allele} )[0] ;
+    push @fail, 2 unless (defined $exp_ref && "\U$exp_ref" eq "\U$ref_seq"); ## using soft masked seq
+
+    ## is either allele of compatible length with given coordinates?
+    my $ref = (split/\//, $var->{allele} )[0];
+    my $match_coord_length = check_variant_size( $var->{start}, $var->{end}, $ref);
+    push @fail, 15 unless  ($match_coord_length == 1);
+
+    ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
+    my $is_ambiguous = check_for_ambiguous_alleles( $var->{allele} );
+    push @fail, 14  if(defined $is_ambiguous->[0]  ) ;
+
+    ## Type 13 Alleles contain non-nucleotide characters
+    my $is_illegal = check_illegal_characters( $var->{allele} );
+    push @fail, 13  if(defined $is_illegal->[0]) ;
+
+    return \@fail;
+}
 
 ## copy clinical significance to variation table from phenotype_feature 
 sub update_variation{
