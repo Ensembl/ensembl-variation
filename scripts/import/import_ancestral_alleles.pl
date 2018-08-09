@@ -69,7 +69,7 @@ if ($config->{resume_update} eq 'update_AA') {
 	preprocess_ancestral_alleles($config);
 	update_ancestral_alleles($config);
 } else {
-	fetch_variation_ids_without_AA($config);
+	fetch_variation_ids_without_AA($config) if (!$config->{mode} eq 'load');
 	fetch_variation_features($config);
 	assign_ancestral_alleles($config);
 	preprocess_ancestral_alleles($config);
@@ -237,65 +237,72 @@ sub preprocess_ancestral_alleles {
 }
 
 sub update_ancestral_alleles {
-	my $config = shift;
-	my $version   =	$config->{version};
-	my $TMP_DIR   = $config->{tmp_dir};
-	my $tmp_file  = "update_AA_$version.txt";
-	# consolidate information from preprocess step and write file: variation_id to AA
+  my $config = shift;
+  my $version   =	$config->{version};
+  my $TMP_DIR   = $config->{tmp_dir};
+  my $tmp_file  = "update_AA_$version.txt";
+  # consolidate information from preprocess step and write file: variation_id to AA
 
-	my $IN = FileHandle->new("$TMP_DIR/preprocessed_AA_$version.txt", 'r');
-	my $fh = FileHandle->new("$TMP_DIR/$tmp_file", 'w');
-    my %assigned_alleles;
-    while (<$IN>) {
-        chomp;
-        my ($id, $aas) = split/\t/;
-        my @values = split(',', $aas);
-        my %map;
-        foreach my $value (@values) {
-            if ($value =~ m/^[ACGTacgt]$/) {
-                my $uc_value = uc $value;
-                $map{$uc_value} = 1;
-            }
-        }
-        my @final = keys %map;
-        if (scalar @final == 1) {
-            if ($final[0] =~ m/^[ACGT]$/) {
-                my $AA = $final[0];
-                $assigned_alleles{$AA} = 1;
-				print $fh "$id\t$AA\n";
-            }
-        }
+  my $IN = FileHandle->new("$TMP_DIR/preprocessed_AA_$version.txt", 'r');
+  my $fh = FileHandle->new("$TMP_DIR/$tmp_file", 'w');
+  my %assigned_alleles;
+  while (<$IN>) {
+    chomp;
+    my ($id, $aas) = split/\t/;
+    my @values = split(',', $aas);
+    my %map;
+    foreach my $value (@values) {
+      if ($value =~ m/^[ACGTacgt]+$/) {
+        my $uc_value = uc $value;
+        $map{$uc_value} = 1;
+      }
     }
-	print STDERR "Assigned ancestral_alleles:\n";
-    for my $aa (keys %assigned_alleles) {
-        print STDERR $aa, "\n";
+    my @final = keys %map;
+    if (scalar @final == 1) {
+      if ($final[0] =~ m/^[ACGT]+$/) {
+        my $AA = $final[0];
+        $assigned_alleles{$AA} = 1;
+        print $fh "$id\t$AA\n";
+      }
     }
-	$IN->close();
-	$fh->close();
+  }
+  print STDERR "Assigned ancestral_alleles:\n";
+  for my $aa (keys %assigned_alleles) {
+    print STDERR $aa, "\n";
+  }
+  $IN->close();
+  $fh->close();
 
-	# load data into variation database
+  # load data into variation database
 
-	$ImportUtils::TMP_DIR  = $TMP_DIR;
-	$ImportUtils::TMP_FILE = $tmp_file;
+  $ImportUtils::TMP_DIR  = $TMP_DIR;
+  $ImportUtils::TMP_FILE = $tmp_file;
 
-	my $dbh = $config->{dbh};
-	my $dbc = $config->{dbc};
-	$dbh->do(qq{DROP TABLE IF EXISTS variation_id_AA}) or die $dbh->errstr;
-	$dbh->do(qq{
-    	CREATE TABLE `variation_id_AA` (
-        	`variation_id` int(10) unsigned NOT NULL DEFAULT '0',
-            `ancestral_allele` varchar(255) DEFAULT NULL,
-            UNIQUE KEY `variation_idx` (`variation_id`));
-   		}) or die $dbh->errstr;
+  my $dbh = $config->{dbh};
+  my $dbc = $config->{dbc};
+  $dbh->do(qq{DROP TABLE IF EXISTS variation_id_AA}) or die $dbh->errstr;
+  $dbh->do(qq{
+  CREATE TABLE `variation_id_AA` (
+  `variation_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `ancestral_allele` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `variation_idx` (`variation_id`));
+  }) or die $dbh->errstr;
 
-	load($dbc, qw(variation_id_AA variation_id ancestral_allele));	
+  load($dbc, qw(variation_id_AA variation_id ancestral_allele));	
 
-	# update variation table
+  # update variation table
 
-	$dbh->do(qq{
-		UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
-		SET v.ancestral_allele = vaa.ancestral_allele; 
-	}) or die $dbh->errstr;
+  if ($config->{mode} eq 'load') {
+    # set all ancestral alleles to NULL
+    $dbh->do(qq{
+      UPDATE variation SET ancestral_allele = NULL; 
+    }) or die $dbh->errstr;
+}
+
+$dbh->do(qq{
+UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
+SET v.ancestral_allele = vaa.ancestral_allele; 
+}) or die $dbh->errstr;
 
 }
 
