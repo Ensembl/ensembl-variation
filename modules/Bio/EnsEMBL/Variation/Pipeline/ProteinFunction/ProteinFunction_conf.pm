@@ -100,7 +100,7 @@ sub default_options {
             -port   => 4521,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
-            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
+            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species'),
             -driver => 'mysql',
         },
         
@@ -168,15 +168,23 @@ sub default_options {
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => UPDATE,
+        sift_run_type           => NONE,
 
         sift_use_compara        => 0,
 
         sift_max_workers        => 500,
 
-        dbnsfp_run_type         => NONE,
+        dbnsfp_run_type         => FULL,
+        dbnsfp_max_workers      => 250,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_file             => '/nfs/production/panda/ensembl/variation/data/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
+        dbnsfp_version          => '3.5.a',
+
+        cadd_run_type         => FULL,
+        cadd_max_workers      => 250,
+        cadd_working          => $self->o('species_dir').'/cadd_working',
+        cadd_file             => '/hps/nobackup2/production/ensembl/anja/CADD/whole_genome_SNVs.tsv.gz',
+        cadd_version          => 'GRCh38-v1.4',
 
     };
 }
@@ -223,6 +231,9 @@ sub pipeline_analyses {
                 sift_run_type   => $self->o('sift_run_type'),
                 pph_run_type    => $self->o('pph_run_type'),
                 dbnsfp_run_type => $self->o('dbnsfp_run_type'),
+                cadd_run_type   => $self->o('cadd_run_type'),
+                dbnsfp_version  => $self->o('dbnsfp_version'),
+                cadd_version    => $self->o('cadd_version'),
                 include_lrg     => $self->o('include_lrg'),
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
@@ -239,6 +250,7 @@ sub pipeline_analyses {
                 2 => [ 'run_polyphen' ],
                 3 => [ 'run_sift' ],
                 4 => [ 'run_dbnsfp' ],
+                5 => [ 'run_cadd' ],
             },
         },
 
@@ -318,7 +330,21 @@ sub pipeline_analyses {
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
             -input_ids      => [],
-            -hive_capacity  => $self->o('sift_max_workers'),
+            -hive_capacity  => $self->o('dbnsfp_max_workers'),
+            -rc_name        => 'medmem',
+        },
+
+        {   -logic_name     => 'run_cadd',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunCADD',
+            -parameters     => {
+                cadd_working => $self->o('cadd_working'),
+                cadd_file    => $self->o('cadd_file'),
+                @common_params,
+            },
+            -failed_job_tolerance => 0,
+            -max_retry_count => 0,
+            -input_ids      => [],
+            -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
         },
 

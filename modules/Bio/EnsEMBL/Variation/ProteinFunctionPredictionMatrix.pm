@@ -118,15 +118,15 @@ my $PREDICTION_TO_VAL = {
         'tolerated - low confidence'    => 2, 
         'deleterious - low confidence'   => 3, 
     },
-    dbnsfp_cadd => {
-        'simulated' => 0,
-        'observed'  => 1,
+    cadd => {
+        'likely deleterious' => 0,
+        'likely benign'  => 1,
     },
     dbnsfp_revel => {
-        'likely_disease_causing'     => 0,
-        'likely_not_disease_causing' => 1,
+        'likely disease causing' => 0,
+        'likely benign' => 1,
     },
-    dbnsfp_meta_svm => {
+    dbnsfp_meta_lr => {
         'tolerated'  => 0,
         'damaging'   => 1,
     },
@@ -517,8 +517,11 @@ sub prediction_to_short {
     # probability into a number between 0 and 1000. 
     # 2^10 == 1024 so we need 10 bits of our short to store 
     # this value
-    
-    my $val = $prob * 1000;
+     
+    my $val = $prob;
+    if ($self->{analysis} ne 'cadd') {
+      $val = $prob * 1000;
+    }
 
     # we store the prediction in the top $NUM_PRED_BITS bits
     # so look up the numerical value for the prediction, 
@@ -571,7 +574,10 @@ sub prediction_from_short {
 
     # mask off the top 6 bits reserved for the prediction and convert back to a 3 d.p. float
 
-    my $prob = ($val & (2**10 - 1)) / 1000;
+    my $prob = ($val & (2**10 - 1));
+    if ($self->{analysis} ne 'cadd') {
+      $prob = $prob / 1000;
+    }
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;
 
