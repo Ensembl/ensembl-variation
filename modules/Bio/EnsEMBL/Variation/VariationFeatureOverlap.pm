@@ -204,7 +204,7 @@ sub dbID {
   unless ($self->{dbID}) {
     # we don't really have a dbID, so concatenate all the dbIDs of our alleles
 
-    $self->{dbID} = join '_', map { $_->dbID } @{ $self->get_all_alternate_VariationFeatureOverlapAlleles };
+    $self->{dbID} = join '_', map { $_->dbID || '' } @{ $self->get_all_alternate_VariationFeatureOverlapAlleles };
   }
 
   return $self->{dbID};
