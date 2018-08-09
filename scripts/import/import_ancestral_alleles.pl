@@ -26,6 +26,7 @@ use DBI;
 use FileHandle;
 use Getopt::Long;
 use ImportUtils qw(load);
+use Bio::EnsEMBL::Variation::Utils::Date qw(run_date);
 
 usage() if (!scalar(@ARGV));
 
@@ -33,6 +34,7 @@ my $config = {};
 
 GetOptions(
   $config,
+  'source=s',
   'tmp_dir=s',
   'fasta_files_dir=s',
   'mode=s',
@@ -51,6 +53,7 @@ GetOptions(
 usage() if ($config->{help});
 
 die ("fasta files dir (--fasta_file_dir) is required") unless (defined($config->{fasta_files_dir}));
+die ("source (--source) is required") unless (defined($config->{source}));
 die ("tmp dir (--tmp_dir) is required") unless (defined($config->{tmp_dir}));
 die ("Mode is required (--mode update or --mode load (try --help))") unless (defined($config->{mode}));
 die ("Not a valid value for mode. (--mode update or --mode reload (try --help))") unless ($config->{mode} eq 'update' || $config->{mode} eq 'load');
@@ -62,9 +65,9 @@ die ("Database credentials or a registry file are required (try --help)") unless
 die ("Variation database credentials (--host, --dbname, --user, --pass, --port) are required") if (!$variation_credentials && !$registry);
 
 set_up_db_connections($config);
-if ($config->{resume_update} eq 'update_AA') {
+if ($config->{resume_update} && $config->{resume_update} eq 'update_AA') {
 	update_ancestral_alleles($config);
-} elsif ($config->{resume_update} eq 'assign_AA') {
+} elsif ($config->{resume_update} && $config->{resume_update} eq 'assign_AA') {
 	assign_ancestral_alleles($config);
 	preprocess_ancestral_alleles($config);
 	update_ancestral_alleles($config);
@@ -75,28 +78,30 @@ if ($config->{resume_update} eq 'update_AA') {
 	preprocess_ancestral_alleles($config);
 	update_ancestral_alleles($config);
 }
+update_meta($config);
 
 sub set_up_db_connections {
-    my $config = shift;
-    my $registry = 'Bio::EnsEMBL::Registry';
-	my $species = $config->{species};
-    my ($dbh, $dbc, $vdba);
-    if ($config->{registry}) {
-        $registry->load_all($config->{registry});
-        $vdba = $registry->get_DBAdaptor($species, 'variation');
-    } else { 
-        $vdba = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
-            -host => $config->{host},
-            -user => $config->{user},
-            -pass => $config->{pass},
-            -port => $config->{port},
-            -dbname => $config->{dbname},
-        ) or die("Could not get a database adaptor for $config->{dbname} on $config->{host}:$config->{port}");
-    }
-    $dbh = $vdba->dbc->db_handle;
-	$dbc = $vdba->dbc;
-    $config->{dbc} = $dbc;
-    $config->{dbh} = $dbh;
+  my $config = shift;
+  my $registry = 'Bio::EnsEMBL::Registry';
+  my $species = $config->{species};
+  my ($dbh, $dbc, $vdba);
+  if ($config->{registry}) {
+    $registry->load_all($config->{registry});
+    $vdba = $registry->get_DBAdaptor($species, 'variation');
+  } else { 
+    $vdba = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
+      -host => $config->{host},
+      -user => $config->{user},
+      -pass => $config->{pass},
+      -port => $config->{port},
+      -dbname => $config->{dbname},
+    ) or die("Could not get a database adaptor for $config->{dbname} on $config->{host}:$config->{port}");
+  }
+  $dbh = $vdba->dbc->db_handle;
+  $dbc = $vdba->dbc;
+  $config->{dbc} = $dbc;
+  $config->{dbh} = $dbh;
+  $config->{dba} = $vdba;
 }
 
 sub fetch_variation_ids_without_AA {
@@ -297,14 +302,28 @@ sub update_ancestral_alleles {
     $dbh->do(qq{
       UPDATE variation SET ancestral_allele = NULL; 
     }) or die $dbh->errstr;
+  }
+
+  $dbh->do(qq{
+    UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
+    SET v.ancestral_allele = vaa.ancestral_allele; 
+  }) or die $dbh->errstr;
+
 }
 
-$dbh->do(qq{
-UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
-SET v.ancestral_allele = vaa.ancestral_allele; 
-}) or die $dbh->errstr;
-
+## store rundate in meta table
+sub update_meta {
+  my $config = shift;
+  my $dba = $config->{dba};
+  my $source = $config->{source};
+  my $type = shift;
+  my $meta_ins_sth = $dba->dbc->prepare(qq{
+    insert ignore into meta(meta_key,meta_value) values (?,?)
+  });
+  $meta_ins_sth->execute("ancestral_allele_update", run_date());
+  $meta_ins_sth->execute("ancestral_allele_source", $source);
 }
+
 
 sub usage {
 
