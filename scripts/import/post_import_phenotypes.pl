@@ -34,6 +34,7 @@ GetOptions(
   'registry=s',
   'species=s',
   'clean_up',  
+  'update_tv',
   'help!',
 ) or die "Error: Failed to parse command line arguments\n";
 
@@ -97,19 +98,20 @@ sub main {
     SET vf.display = 1
     WHERE e.variation_id = vf.variation_id;
   });
-  $dbh->do(qq{
-    UPDATE transcript_variation tv, variation_feature vf, variation_ids_new_phenotype_evdn e
-    SET tv.display = 1
-    WHERE e.variation_id = vf.variation_id
-    AND vf.variation_feature_id = tv.variation_feature_id;
-  });
-  $dbh->do(qq{
-    UPDATE MTMP_transcript_variation tv, variation_feature vf, variation_ids_new_phenotype_evdn e
-    SET tv.display = 1
-    WHERE e.variation_id = vf.variation_id
-    AND vf.variation_feature_id = tv.variation_feature_id;
-  });
-
+  if ($config->{update_tv}) {
+    $dbh->do(qq{
+      UPDATE transcript_variation tv, variation_feature vf, variation_ids_new_phenotype_evdn e
+      SET tv.display = 1
+      WHERE e.variation_id = vf.variation_id
+      AND vf.variation_feature_id = tv.variation_feature_id;
+    });
+    $dbh->do(qq{
+      UPDATE MTMP_transcript_variation tv, variation_feature vf, variation_ids_new_phenotype_evdn e
+      SET tv.display = 1
+      WHERE e.variation_id = vf.variation_id
+      AND vf.variation_feature_id = tv.variation_feature_id;
+    });
+  }
 
 }
 

@@ -30,7 +30,6 @@ limitations under the License.
 package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs;
 
 use strict;
-
 use Bio::EnsEMBL::Registry;
 
 use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
@@ -48,10 +47,10 @@ sub fetch_input {
     my $sift_run_type   = $self->required_param('sift_run_type');
     my $pph_run_type    = $self->required_param('pph_run_type');
     my $dbnsfp_run_type = $self->required_param('dbnsfp_run_type');
+    my $cadd_run_type = $self->required_param('cadd_run_type');
     my $include_lrg     = $self->param('include_lrg');
     
     $self->update_meta ;
-
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba  = $self->get_species_adaptor('variation');
@@ -90,9 +89,12 @@ sub fetch_input {
             KEY md5_idx (md5)
         )
     });
-  
+
+    if ($cadd_run_type == FULL) {
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'cadd'/);
+    }
     if ($dbnsfp_run_type == FULL ) {
-      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_svm', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_lr', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
     }
     # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
     if ($sift_run_type == FULL) {
@@ -108,23 +110,19 @@ sub fetch_input {
         INSERT IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
     });
 
-    my $add_md5_sth = $var_dba->dbc->prepare(qq{
-        INSERT IGNORE INTO translation_md5 (translation_md5) VALUES (?)
-    });
-
     # build a hash mapping MD5s for our set of translations to their peptide sequences
     # and also write each stable ID - MD5 mapping to the database
 
     my %unique_translations;
 
-    for my $tran (@transcripts) {
+   for my $tran (@transcripts) {
         
         my $tl = $tran->translation;
 
         my $seq = $tl->seq;
         
         my $md5 = md5_hex($seq);
-        
+
         $unique_translations{$md5} = $seq;
 
         $add_mapping_sth->execute($tl->stable_id, $md5);
@@ -137,16 +135,19 @@ sub fetch_input {
     my @sift_md5s;
     my @pph_md5s;
     my @dbnsfp_md5s;
+    my @cadd_md5s;
 
     # if we're doing full runs, then we just use all the translations
 
     @sift_md5s    = @translation_md5s if $sift_run_type == FULL;
     @pph_md5s     = @translation_md5s if $pph_run_type == FULL;
     @dbnsfp_md5s  = @translation_md5s if $dbnsfp_run_type == FULL;
+    @cadd_md5s  = @translation_md5s if $cadd_run_type == FULL;
+
 
     # if we're updating we need to check which translations already have predictions
         
-    if ($sift_run_type == UPDATE || $pph_run_type == UPDATE) {
+    if ($sift_run_type == UPDATE || $pph_run_type == UPDATE || $dbnsfp_run_type == UPDATE || $cadd_run_type == UPDATE) {
         
         my $var_dbh = $var_dba->dbc->db_handle;
     
@@ -166,21 +167,24 @@ sub fetch_input {
         while ( my ($md5, $analysis, $preds) = $get_existing_sth->fetchrow_array ) {
             # there are 2 polyphen analyses, but we only want to track one
             $analysis = 'pph' if $analysis =~ /polyphen/;
+            $analysis = 'dbnsfp' if $analysis =~ /dbnsfp/;
             # just record true if we already have predictions for each translation
             $existing_md5s->{$md5}->{$analysis} = length($preds) > 0;   
         }
 
         # exclude any translations MD5s we find in the database
 
-        @sift_md5s = grep { ! $existing_md5s->{$_}->{sift} } @translation_md5s if $sift_run_type == UPDATE;
-        @pph_md5s  = grep { ! $existing_md5s->{$_}->{pph} } @translation_md5s if $pph_run_type == UPDATE;
+        @sift_md5s   = grep { ! $existing_md5s->{$_}->{sift} } @translation_md5s if $sift_run_type == UPDATE;
+        @pph_md5s    = grep { ! $existing_md5s->{$_}->{pph} } @translation_md5s if $pph_run_type == UPDATE;
+        @dbnsfp_md5s = grep { ! $existing_md5s->{$_}->{dbnsfp} } @translation_md5s if $dbnsfp_run_type == UPDATE;
+        @cadd_md5s   = grep { ! $existing_md5s->{$_}->{cadd} } @translation_md5s if $cadd_run_type == UPDATE;
     }
     
     # create a FASTA dump of all the necessary translation sequences
 
     # work out the set of all unique MD5s for sift and polyphen
 
-    my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s);
+    my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s, @dbnsfp_md5s);
 
     my $fasta = $self->required_param('fasta_file');
     if ($sift_run_type ne 'NONE' || $pph_run_type ne 'NONE') {
@@ -213,47 +217,47 @@ sub fetch_input {
     $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
     $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
     $self->param('dbnsfp_output_ids', [ map { {translation_md5 => $_} } @dbnsfp_md5s ]);
-
+    $self->param('cadd_output_ids', [ map { {translation_md5 => $_} } @cadd_md5s ]);
 }
 
 ## hold code & protein database version in meta table if new complete run
 sub update_meta{
-    my $self = shift;
+  my $self = shift;
+  my $var_dba  = $self->get_species_adaptor('variation');
 
-    my $var_dba  = $self->get_species_adaptor('variation');
+  my $var_dbh = $var_dba->dbc->db_handle;
 
-    my $var_dbh = $var_dba->dbc->db_handle;
-    
-    my $update_meta_sth = $var_dbh->prepare(qq{
-            insert ignore into meta ( meta_key, meta_value) values (?,?)
-        });
+  my $update_meta_sth = $var_dbh->prepare(qq{
+    insert ignore into meta ( meta_key, meta_value) values (?,?)
+  });
 
-    if ($self->required_param('sift_run_type')  == FULL){
+  if ($self->required_param('sift_run_type')  == FULL){
+    my @code =split/\//, $self->required_param('sift_dir');
+    my $sift_version = pop @code;
 
-	my @code =split/\//, $self->required_param('sift_dir');
-	my $sift_version = pop @code;
+    $update_meta_sth->execute('sift_version', $sift_version);
 
-	$update_meta_sth->execute('sift_version', $sift_version);
-
-	unless($self->param('use_compara')){
-
-	    my @db =split/\//, $self->required_param('blastdb');
-	    my $db_version = pop @db;
-
-	    $update_meta_sth->execute('sift_protein_db_version', $db_version);
-	}
-
+    unless($self->param('use_compara')){
+      my @db =split/\//, $self->required_param('blastdb');
+      my $db_version = pop @db;
+      $update_meta_sth->execute('sift_protein_db_version', $db_version);
     }
-    if ($self->required_param('pph_run_type')  == FULL){
+  }
+  if ($self->required_param('pph_run_type')  == FULL){
+    my @code =split/\//,$self->required_param('polyphen_dir');
+    my $polyphen_version = pop @code;   
+    $update_meta_sth->execute('polyphen_version', $polyphen_version);
+  }
 
-	my @code =split/\//,$self->required_param('polyphen_dir');
-	my $polyphen_version = pop @code;   
+  if ($self->required_param('dbnsfp_run_type')  == FULL){
+    $update_meta_sth->execute('dbnsfp_version', $self->required_param('dbnsfp_version'));
+  }
 
-	$update_meta_sth->execute('polyphen_version', $polyphen_version);
-    }
+  if ($self->required_param('cadd_run_type')  == FULL){
+    $update_meta_sth->execute('cadd_version', $self->required_param('cadd_version'));
+  }
 
 }
-
 
 sub write_output {
     my $self = shift;
@@ -270,6 +274,10 @@ sub write_output {
         $self->dataflow_output_id($self->param('dbnsfp_output_ids'), 4);
     }
 
+    unless ($self->param('cadd_run_type') == NONE) {
+        $self->dataflow_output_id($self->param('cadd_output_ids'), 5);
+    }
+
 }
 
 
@@ -278,7 +286,7 @@ sub get_refseq_transcripts {
 
     my $of_dba = $self->get_species_adaptor('otherfeatures');
     my $sa = $of_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
-    my $slices = $sa->fetch_all('toplevel', undef, 1, undef, ($self->param('include_lrg') ? 1 : undef));
+    my $slices = $sa->fetch_all('toplevel', undef, 1, undef, undef);
 
     my $vep_obj;
     if(my $bam = $self->param('bam')) {
@@ -342,15 +350,14 @@ sub get_refseq_transcripts {
         @transcripts =
             grep { $_->translation }
             map {$vep_obj->apply_edits($_); $_}
-            @{ $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts };
+            @{ $ga->fetch_all_by_external_name('SPAST')->[0]->get_all_Transcripts };
     }
 
     else {
         for my $slice (@{$slices}) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
-                for my $transcript (grep {$_->stable_id =~ /^NM_/} @{ $gene->get_all_Transcripts }) {
+                for my $transcript (grep {$_->stable_id =~ /^NM_/ && $_->source eq 'BestRefSeq'} @{ $gene->get_all_Transcripts }) {
                     $vep_obj->apply_edits($transcript) if $vep_obj;
-
                     if (my $translation = $transcript->translation) {
                         push @transcripts, $transcript;
                     }
