@@ -26,6 +26,7 @@ use DBI;
 use FileHandle;
 use Getopt::Long;
 use ImportUtils qw(load);
+use Bio::EnsEMBL::Variation::Utils::Date qw(run_date);
 
 usage() if (!scalar(@ARGV));
 
@@ -33,6 +34,7 @@ my $config = {};
 
 GetOptions(
   $config,
+  'source=s',
   'tmp_dir=s',
   'fasta_files_dir=s',
   'mode=s',
@@ -51,6 +53,7 @@ GetOptions(
 usage() if ($config->{help});
 
 die ("fasta files dir (--fasta_file_dir) is required") unless (defined($config->{fasta_files_dir}));
+die ("source (--source) is required") unless (defined($config->{source}));
 die ("tmp dir (--tmp_dir) is required") unless (defined($config->{tmp_dir}));
 die ("Mode is required (--mode update or --mode load (try --help))") unless (defined($config->{mode}));
 die ("Not a valid value for mode. (--mode update or --mode reload (try --help))") unless ($config->{mode} eq 'update' || $config->{mode} eq 'load');
@@ -62,41 +65,43 @@ die ("Database credentials or a registry file are required (try --help)") unless
 die ("Variation database credentials (--host, --dbname, --user, --pass, --port) are required") if (!$variation_credentials && !$registry);
 
 set_up_db_connections($config);
-if ($config->{resume_update} eq 'update_AA') {
+if ($config->{resume_update} && $config->{resume_update} eq 'update_AA') {
 	update_ancestral_alleles($config);
-} elsif ($config->{resume_update} eq 'assign_AA') {
+} elsif ($config->{resume_update} && $config->{resume_update} eq 'assign_AA') {
 	assign_ancestral_alleles($config);
 	preprocess_ancestral_alleles($config);
 	update_ancestral_alleles($config);
 } else {
-	fetch_variation_ids_without_AA($config);
+	fetch_variation_ids_without_AA($config) if (!$config->{mode} eq 'load');
 	fetch_variation_features($config);
 	assign_ancestral_alleles($config);
 	preprocess_ancestral_alleles($config);
 	update_ancestral_alleles($config);
 }
+update_meta($config);
 
 sub set_up_db_connections {
-    my $config = shift;
-    my $registry = 'Bio::EnsEMBL::Registry';
-	my $species = $config->{species};
-    my ($dbh, $dbc, $vdba);
-    if ($config->{registry}) {
-        $registry->load_all($config->{registry});
-        $vdba = $registry->get_DBAdaptor($species, 'variation');
-    } else { 
-        $vdba = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
-            -host => $config->{host},
-            -user => $config->{user},
-            -pass => $config->{pass},
-            -port => $config->{port},
-            -dbname => $config->{dbname},
-        ) or die("Could not get a database adaptor for $config->{dbname} on $config->{host}:$config->{port}");
-    }
-    $dbh = $vdba->dbc->db_handle;
-	$dbc = $vdba->dbc;
-    $config->{dbc} = $dbc;
-    $config->{dbh} = $dbh;
+  my $config = shift;
+  my $registry = 'Bio::EnsEMBL::Registry';
+  my $species = $config->{species};
+  my ($dbh, $dbc, $vdba);
+  if ($config->{registry}) {
+    $registry->load_all($config->{registry});
+    $vdba = $registry->get_DBAdaptor($species, 'variation');
+  } else { 
+    $vdba = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
+      -host => $config->{host},
+      -user => $config->{user},
+      -pass => $config->{pass},
+      -port => $config->{port},
+      -dbname => $config->{dbname},
+    ) or die("Could not get a database adaptor for $config->{dbname} on $config->{host}:$config->{port}");
+  }
+  $dbh = $vdba->dbc->db_handle;
+  $dbc = $vdba->dbc;
+  $config->{dbc} = $dbc;
+  $config->{dbh} = $dbh;
+  $config->{dba} = $vdba;
 }
 
 sub fetch_variation_ids_without_AA {
@@ -237,67 +242,88 @@ sub preprocess_ancestral_alleles {
 }
 
 sub update_ancestral_alleles {
-	my $config = shift;
-	my $version   =	$config->{version};
-	my $TMP_DIR   = $config->{tmp_dir};
-	my $tmp_file  = "update_AA_$version.txt";
-	# consolidate information from preprocess step and write file: variation_id to AA
+  my $config = shift;
+  my $version   =	$config->{version};
+  my $TMP_DIR   = $config->{tmp_dir};
+  my $tmp_file  = "update_AA_$version.txt";
+  # consolidate information from preprocess step and write file: variation_id to AA
 
-	my $IN = FileHandle->new("$TMP_DIR/preprocessed_AA_$version.txt", 'r');
-	my $fh = FileHandle->new("$TMP_DIR/$tmp_file", 'w');
-    my %assigned_alleles;
-    while (<$IN>) {
-        chomp;
-        my ($id, $aas) = split/\t/;
-        my @values = split(',', $aas);
-        my %map;
-        foreach my $value (@values) {
-            if ($value =~ m/^[ACGTacgt]$/) {
-                my $uc_value = uc $value;
-                $map{$uc_value} = 1;
-            }
-        }
-        my @final = keys %map;
-        if (scalar @final == 1) {
-            if ($final[0] =~ m/^[ACGT]$/) {
-                my $AA = $final[0];
-                $assigned_alleles{$AA} = 1;
-				print $fh "$id\t$AA\n";
-            }
-        }
+  my $IN = FileHandle->new("$TMP_DIR/preprocessed_AA_$version.txt", 'r');
+  my $fh = FileHandle->new("$TMP_DIR/$tmp_file", 'w');
+  my %assigned_alleles;
+  while (<$IN>) {
+    chomp;
+    my ($id, $aas) = split/\t/;
+    my @values = split(',', $aas);
+    my %map;
+    foreach my $value (@values) {
+      if ($value =~ m/^[ACGTacgt]+$/) {
+        my $uc_value = uc $value;
+        $map{$uc_value} = 1;
+      }
     }
-	print STDERR "Assigned ancestral_alleles:\n";
-    for my $aa (keys %assigned_alleles) {
-        print STDERR $aa, "\n";
+    my @final = keys %map;
+    if (scalar @final == 1) {
+      if ($final[0] =~ m/^[ACGT]+$/) {
+        my $AA = $final[0];
+        $assigned_alleles{$AA} = 1;
+        print $fh "$id\t$AA\n";
+      }
     }
-	$IN->close();
-	$fh->close();
+  }
+  print STDERR "Assigned ancestral_alleles:\n";
+  for my $aa (keys %assigned_alleles) {
+    print STDERR $aa, "\n";
+  }
+  $IN->close();
+  $fh->close();
 
-	# load data into variation database
+  # load data into variation database
 
-	$ImportUtils::TMP_DIR  = $TMP_DIR;
-	$ImportUtils::TMP_FILE = $tmp_file;
+  $ImportUtils::TMP_DIR  = $TMP_DIR;
+  $ImportUtils::TMP_FILE = $tmp_file;
 
-	my $dbh = $config->{dbh};
-	my $dbc = $config->{dbc};
-	$dbh->do(qq{DROP TABLE IF EXISTS variation_id_AA}) or die $dbh->errstr;
-	$dbh->do(qq{
-    	CREATE TABLE `variation_id_AA` (
-        	`variation_id` int(10) unsigned NOT NULL DEFAULT '0',
-            `ancestral_allele` varchar(255) DEFAULT NULL,
-            UNIQUE KEY `variation_idx` (`variation_id`));
-   		}) or die $dbh->errstr;
+  my $dbh = $config->{dbh};
+  my $dbc = $config->{dbc};
+  $dbh->do(qq{DROP TABLE IF EXISTS variation_id_AA}) or die $dbh->errstr;
+  $dbh->do(qq{
+  CREATE TABLE `variation_id_AA` (
+  `variation_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `ancestral_allele` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `variation_idx` (`variation_id`));
+  }) or die $dbh->errstr;
 
-	load($dbc, qw(variation_id_AA variation_id ancestral_allele));	
+  load($dbc, qw(variation_id_AA variation_id ancestral_allele));	
 
-	# update variation table
+  # update variation table
 
-	$dbh->do(qq{
-		UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
-		SET v.ancestral_allele = vaa.ancestral_allele; 
-	}) or die $dbh->errstr;
+  if ($config->{mode} eq 'load') {
+    # set all ancestral alleles to NULL
+    $dbh->do(qq{
+      UPDATE variation SET ancestral_allele = NULL; 
+    }) or die $dbh->errstr;
+  }
+
+  $dbh->do(qq{
+    UPDATE variation_id_AA vaa JOIN variation v ON (vaa.variation_id = v.variation_id)
+    SET v.ancestral_allele = vaa.ancestral_allele; 
+  }) or die $dbh->errstr;
 
 }
+
+## store rundate in meta table
+sub update_meta {
+  my $config = shift;
+  my $dba = $config->{dba};
+  my $source = $config->{source};
+  my $type = shift;
+  my $meta_ins_sth = $dba->dbc->prepare(qq{
+    insert ignore into meta(meta_key,meta_value) values (?,?)
+  });
+  $meta_ins_sth->execute("ancestral_allele_update", run_date());
+  $meta_ins_sth->execute("ancestral_allele_source", $source);
+}
+
 
 sub usage {
 
