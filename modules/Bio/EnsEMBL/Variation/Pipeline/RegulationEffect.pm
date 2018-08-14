@@ -43,7 +43,7 @@ sub run {
     my $feature_id = $self->param('feature_id');
     my $feature_type = $self->param('feature_type');
     my $species = $self->param('species');
-
+  
     my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
 
     my $cdba = $self->get_adaptor($species, 'core');
@@ -77,28 +77,25 @@ sub run {
         }
     } elsif ($feature_type eq 'motif_feature') {
         my $mfva = $vdba->get_MotifFeatureVariationAdaptor;
-        my $motif_feature = $mfa->fetch_by_dbID($feature_id) 
-            or die "Failed to fetch MotifFeature for id: $feature_id";
-        my $rf = $rfa->fetch_all_by_attribute_feature($motif_feature)->[0];
-        if ($rf) { 
-            # we need to include failed variations
-            $mfva->db->include_failed_variations(1);
-            my $slice = $sa->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
 
-            for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
-                my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
-                    -motif_feature      => $motif_feature,
-                    -variation_feature  => $vf,
-                    -adaptor            => $mfva,
-                    -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
-                );
-                if ($mfv && (scalar(@{$mfv->consequence_type}) > 0) ) {
-                    $mfva->store($mfv, $rf);
-                }
-            }
-        } else {
-            $self->warning('No stable id for RF. MF: ' . $feature_id);
-        }
+        my $motif_feature = $mfa->fetch_by_stable_id($feature_id) 
+          or die "Failed to fetch MotifFeature for id: $feature_id";
+          # we need to include failed variations
+          $mfva->db->include_failed_variations(1);
+          my $slice = $sa->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
+
+          for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
+              my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
+                  -motif_feature      => $motif_feature,
+                  -variation_feature  => $vf,
+                  -adaptor            => $mfva,
+                  -disambiguate_single_nucleotide_alleles => 1,
+              );
+              $self->warning($vf->variation_name . ' ' . $vf->allele_string);
+              if ($mfv && (scalar(@{$mfv->consequence_type}) > 0) ) {
+                  $mfva->store($mfv);
+              }
+          }
     } elsif ($feature_type eq 'external_feature') {
 
     } else {    
