@@ -37,8 +37,10 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub fetch_input {
     my $self = shift;
+    my $slice_name = $self->param('slice_name');
+
     my $species = $self->param_required('species');
-    $self->warning($species); 
+    $self->warning($slice_name); 
 
     my $cdba = $self->get_adaptor($species, 'core');
     my $fdba = $self->get_adaptor($species, 'funcgen');
@@ -62,19 +64,19 @@ sub fetch_input {
     my $fsa = $fdba->get_FeatureSetAdaptor or die 'Failed to get FeatureSetAdaptor';
 
     my $sa = $cdba->get_SliceAdaptor or die 'Failed to get SliceAdaptor';
-
-    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+    my @slices = ();
+    my $slice = $sa->fetch_by_region('toplevel', $slice_name );
+    push @slices, $slice;
 
     if ($self->param('debug')) {
         my $slice = $sa->fetch_by_region('chromosome', 12);
-        $slices = [];
-        push @$slices, $slice;
+        push @slices, $slice;
     }
 
 #    my $regulatory_feature_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
 #    my @external_feature_sets = @{$fsa->fetch_all_by_type('external')};
 
-    foreach my $slice (@$slices) {
+    foreach my $slice (@slices) {
         # get all RegulatoryFeatures
         my @feature_ids = ();
         unless ($self->param('only_motif_feature')) {
@@ -91,10 +93,10 @@ sub fetch_input {
         # get all MotifFeatures
         unless ($self->param('only_regulatory_feature')) {
           $self->warning($slice->seq_region_name);
-
             my @mfs = @{$mfa->fetch_all_by_Slice($slice) || []};
+            $self->warning(scalar @mfs);
             foreach my $mf (@mfs) {
-                push @feature_ids, { feature_id => $mf->dbID,
+                push @feature_ids, { feature_id => $mf->stable_id,
                                      feature_type => 'motif_feature',
                                      species => $species, };  
             }
