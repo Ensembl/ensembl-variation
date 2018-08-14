@@ -2789,16 +2789,17 @@ sub mfva_to_line {
 
   my $mf = $mfva->motif_feature;
 
+  return undef unless $mf->stable_id;
   # check that the motif has a binding matrix, if not there's not
   # much we can do so don't return anything
-  return undef unless defined $mf->binding_matrix;
+  return undef unless keys %{$mf->binding_matrix->{elements}} > 0;
 
-  my $matrix = ($mf->binding_matrix->description ? $mf->binding_matrix->description.' ' : '').$mf->display_label;
+  my $matrix = ($mf->binding_matrix->stable_id ? $mf->binding_matrix->stable_id : '');
   $matrix =~ s/\s+/\_/g;
 
   my $base_line = {
     Feature_type => 'MotifFeature',
-    Feature      => $mf->binding_matrix->name,
+    Feature      => $mf->stable_id,
     Extra        => {
       MOTIF_NAME  => $matrix,
       STRAND      => $mf->strand + 0
@@ -5309,6 +5310,7 @@ sub load_dumped_transcript_cache {
 
     my $tr_cache = deserialize_from_file($config, $dump_file);
 
+
     # reattach adaptors
     foreach my $t(@{$tr_cache->{$chr}}) {
         if(defined($t->{translation})) {
@@ -5806,6 +5808,11 @@ sub clean_reg_feat {
     }
 
     if(defined($rf->{binding_matrix})) {
+        if ($rf->stable_id) {
+          $rf->binding_matrix->_elements;
+          $rf->binding_matrix->_min_max_sequence_similarity_score;
+          $rf->{binding_matrix}->{associated_transcription_factor_complexes} = [];
+        }
         $rf->{_variation_effect_feature_cache}->{seq} = $rf->seq;
 
         foreach my $key(qw/adaptor feature_type analysis dbID/) {

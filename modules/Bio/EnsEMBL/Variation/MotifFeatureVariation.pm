@@ -116,7 +116,7 @@ sub feature_stable_id {
 sub motif_name {
   my $self = shift;
   unless ($self->{motif_name}) {
-    $self->{motif_name} = $self->motif_feature->display_label;
+    $self->{motif_name} = $self->motif_feature->stable_id;
   }
   return $self->{motif_name};
 }

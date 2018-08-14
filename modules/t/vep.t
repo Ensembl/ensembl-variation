@@ -139,11 +139,11 @@ ok($cons && scalar @$cons == 3, "get_all_consequences - everything 1");
 $exp = {
   'IMPACT' => 'MODERATE',
   'SYMBOL' => 'MRPL39',
-  'DOMAINS' => 'hmmpanther:PTHR11451,Gene3D:3.10.20.30,Superfamily_domains:SSF81271',
+  'DOMAINS' => 'Gene3D:3.10.20.30,hmmpanther:PTHR42753,hmmpanther:PTHR42753:SF1,Superfamily_domains:SSF81271,cd01667',
   'SYMBOL_SOURCE' => 'HGNC',
   'ENSP' => 'ENSP00000404426',
   'ALLELE_NUM' => 1,
-  'PolyPhen' => 'probably_damaging(0.975)',
+  'PolyPhen' => 'probably_damaging(1)',
   'BIOTYPE' => 'protein_coding',
   'UNIPARC' => 'UPI0000E5A387',
   'AA_MAF' => 'C:0',
@@ -153,7 +153,7 @@ $exp = {
   'HGVSc' => 'ENST00000419219.1:c.275N>G',
   'HGVSp' => 'ENSP00000404426.1:p.Ala92Gly',
   'TREMBL' => 'C9JG87',
-  'EA_MAF' => 'C:0.0001',
+  'EA_MAF' => 'C:0.0001163',
   'VARIANT_CLASS' => 'SNV',
   'EXON' => '2/8',
   'TSL' => '5',
@@ -165,21 +165,21 @@ is_deeply($cons->[2]->{Extra}, $exp, "get_all_consequences - everything 2");
 # regulatory
 $config = copy_config($base_config, {
   regulatory => 1,
-  cell_type  => ['HUVEC'],
   biotype    => 1,
+
 });
-($vf) = @{parse_line($config, '21 25562380 25562380 G/T +')};
+
+($vf) = @{parse_line($config, '21 25607446 25607446 C/A +')};
 $cons = get_all_consequences($config, [$vf]);
 
 ok((grep {$_->{Extra}->{BIOTYPE} && $_->{Extra}->{BIOTYPE} eq 'promoter'} @$cons), "regulatory - type");
-ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.017} @$cons), "regulatory - motif score");
+ok((grep {$_->{Extra}->{MOTIF_SCORE_CHANGE} && $_->{Extra}->{MOTIF_SCORE_CHANGE} == -0.013} @$cons), "regulatory - motif score");
 
 # regulatory SV
 $config = copy_config($base_config, { regulatory => 1 });
 ($vf) = @{parse_line($config, '21 25560805 25568206 DEL +')};
 $cons = get_all_consequences($config, [$vf]);
-ok((grep {$_->{Feature} eq 'ENSR00000612089'} @$cons), "regulatory - SV overlap");
-
+ok((grep {$_->{Feature} eq 'ENSR00000299950'} @$cons), "regulatory - SV overlap");
 ## input formats
 
 # ensembl SV
@@ -413,8 +413,7 @@ $config = copy_config($base_config, {
 $cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\n", $input)]);
 my %ex = map {$_->{Uploaded_variation} => 1} @$cons;
 ok(!$ex{test1} && $ex{test2}, "check frequency 1");
-is($cons->[0]->{Extra}->{FREQS}, '1kg_eas:0.0010', "check frequency 2");
-
+is($cons->[0]->{Extra}->{FREQS}, '1kg_eas:0.001', "check frequency 2");
 $config = copy_config($base_config, {
   check_existing => 1,
   check_frequency => 1,
@@ -469,10 +468,9 @@ $config = copy_config($base_config, {
 $cons = get_all_consequences($config, [$vf]);
 %got = map {$_ => 1} split(',', $cons->[0]->{Consequence});
 %ex = (
-  regulatory_region_variant => 1,
+  TF_binding_site_variant => 1,
 );
 is_deeply(\%got, \%ex, "most_severe regulatory");
-
 # flag pick
 $config = copy_config($base_config, { flag_pick => 1 });
 ($vf) = @{parse_line($config, '21 25587758 rs116645811 G A . . .')};
@@ -728,24 +726,23 @@ delete $config->{cache};
 # regulatory
 delete($config->{format});
 $config->{regulatory} = 1;
-($vf) = @{parse_line($config, "7 151409212 151409212 C/T +")};
+($vf) = @{parse_line($config, "7 151409215 151409215 C/T +")};
 $vf->{slice} = get_slice($config, $vf->{chr}, undef, 1);
 $cons = get_all_consequences($config, [$vf]);
 
 my ($rf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'RegulatoryFeature'} @$cons;
-my ($mf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'MotifFeature'} @$cons;
-
+my ($mf_con) = grep {$_->{Feature_type} && $_->{Feature_type} eq 'MotifFeature' && $_->{Feature} eq 'ENSM00000000012'} @$cons;
 is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "db - regulatory biotype");
 is($rf_con->{Feature}, 'ENSR00000636355', "db - regulatory ID");
-is($mf_con->{Feature}, 'PB0043.1', "db - motif ID");
+is($mf_con->{Feature}, 'ENSM00000000012', "db - motif ID");
 is_deeply(
   $mf_con->{Extra},
   {
-    'STRAND' => -1,
-    'MOTIF_POS' => 16,
-    'MOTIF_NAME' => 'Jaspar_Matrix_Max:PB0043.1',
+    'STRAND' => 1,
+    'MOTIF_POS' => 3,
+    'MOTIF_NAME' => 'ENSPFM0402',
     'HIGH_INF_POS' => 'N',
-    'MOTIF_SCORE_CHANGE' => '0.010',
+    'MOTIF_SCORE_CHANGE' => '-0.010',
     'IMPACT' => 'MODIFIER',
   },
   "db - motif extra"
@@ -811,13 +808,13 @@ $cons = get_all_consequences($config, [$vf]);
 
 # is($rf_con->{Extra}->{BIOTYPE}, 'regulatory_region', "build - regulatory biotype");
 is($rf_con->{Feature}, 'ENSR00000672895', "build - regulatory ID");
-is($mf_con->{Feature}, 'MA0139.1', "build - motif ID");
+is($mf_con->{Feature}, 'ENSM00000000002', "build - motif ID");
 is_deeply(
   $mf_con->{Extra},
   {
     'STRAND' => -1,
-    'MOTIF_POS' => 18,
-    'MOTIF_NAME' => 'Jaspar_Matrix_CTCF:MA0139.1',
+    'MOTIF_POS' => 9,
+    'MOTIF_NAME' => 'ENSPFM0402',
     'HIGH_INF_POS' => 'N',
     'MOTIF_SCORE_CHANGE' => '0.000',
     'IMPACT' => 'MODIFIER',

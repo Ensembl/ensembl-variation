@@ -57,8 +57,8 @@ sub default_options {
         hive_auto_rebalance_semaphores => 0,
         hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
-        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
+        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'regulation_effect',
@@ -98,7 +98,7 @@ sub default_options {
         debug => 0,
 
         only_update_vf => 0,
-        update_vf => 1,
+        update_vf => 0,
         only_motif_feature => 0,
         only_regulatory_feature => 0,
 
@@ -173,20 +173,26 @@ sub pipeline_analyses {
         );
     } else {
         push @analyses, (
-            {   -logic_name => 'init_regulation_effect',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
+            {   -logic_name => 'init_slice',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::SliceFactory',
                 -hive_capacity => 1,
-                -rc_name => 'highmem',
+                -rc_name => 'default',
                 -input_ids => [{},],
                 -flow_into => {
-                    '2->A' => ['regulation_effect'],
+                    '2->A' => ['init_regulation_effect'],
                     'A->1' => ['finish_regulation_effect'],
                 },
+            },
+            {   -logic_name => 'init_regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
+                -hive_capacity => 25,
+                -rc_name => 'highmem',
+                -flow_into => { 2 => ['regulation_effect'] },
             },
             {   -logic_name => 'regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
                 -rc_name => 'default',
-                -hive_capacity  =>  20,
+                -hive_capacity  =>  50,
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
