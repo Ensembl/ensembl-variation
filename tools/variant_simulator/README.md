@@ -5,7 +5,6 @@ The script generates all single base substitutions (SNPs) for protein_coding gen
 ##### Table of contents
 * [Usage](#usage)
 * [Examples](#examples)
-
 ---
 <a name="usage"></a>
 ### Usage
@@ -28,7 +27,6 @@ The script generates all single base substitutions for protein coding genes give
 * `-output|-o [output_file]` : output vcf file (default: simulated.vcf)
 * `-help` : print usage message
 
-
 <a name="examples"></a>
 ### Examples 
 #### Generate SNPs for a chromosome
@@ -36,7 +34,6 @@ The script generates all single base substitutions for protein coding genes give
 ./simulate_variation.pl -registry registry_file -chrom 2
 ```
 First 6 rows of the output:
-
 ```txt
 ##fileformat=VCFv4.1
 ##INFO=gene_name:feature_id
@@ -51,12 +48,10 @@ First 6 rows of the output:
 ./simulate_variation.pl -registry registry_file -gene ENSG00000139618
 ```
 or
-
 ```bash
 ./simulate_variation.pl -registry registry_file -gene BRCA2
 ```
 First 6 rows of the output:
-
 ```txt
 ##fileformat=VCFv4.1
 ##INFO=gene_name:feature_id
@@ -71,7 +66,6 @@ First 6 rows of the output:
 ./simulate_variation.pl -registry registry_file -gene BRCA2 -exonsOnly
 ```
 First 6 rows of the output:
-
 ```txt
 ##fileformat=VCFv4.1
 ##INFO=gene_name:feature_id
@@ -86,7 +80,6 @@ First 6 rows of the output:
 ./simulate_variation.pl -registry registry_file -gene BRCA2 -codingOnly
 ```
 First 6 rows of the output:
-
 ```txt
 ##fileformat=VCFv4.1
 ##INFO=gene_name:feature_id
@@ -101,7 +94,6 @@ First 6 rows of the output:
 ./simulate_variation.pl -registry registry_file -gene BRCA2 -codingOnly -edge 5
 ```
 First 6 rows of the output:
-
 ```txt
 ##fileformat=VCFv4.1
 ##INFO=gene_name:feature_id
