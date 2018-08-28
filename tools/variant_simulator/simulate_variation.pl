@@ -177,12 +177,12 @@ sub usage {
   print qq{
   Usage: perl simulate_variation.pl [OPTIONS]
 
-  Generate a VCFv4 file with all possibel SNPs for protein_coding genes given specific species or chromosome or gene.
+  Generate a VCFv4 file with all possible SNPs for protein_coding genes given specific species or chromosome or gene.
 
   Options:
 
       -registry          Ensembl registry file containing database connection details (Required)
-      -species           Progress information is printed (Default: human)
+      -species           Generate SNPs for specified species (Default: human)
 
       -output|o          Output file (Default: simulated.vcf)
 
@@ -192,7 +192,7 @@ sub usage {
       -exonsOnly         Generate SNPs only for all exons of the genes
       -intronsOnly       Generate SNPs only for all introns of the genes
 
-      -edge              Upstream/downstream bp of each feature (Default: 0)
+      -edge              Length of flanking region in which to generate SNPs (Default: 0)
 
       -help              Print this message
   } . "\n";

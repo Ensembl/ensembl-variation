@@ -8,7 +8,7 @@ The script generates all single base substitutions (SNPs) for protein_coding gen
 ---
 <a name="usage"></a>
 ### Usage
-The script generates all single base substitutions for protein coding genes given a specific species or chromosome or gene. The script uses the Esembl API and Ensembl databases.
+The script generates all single base substitutions for protein coding genes given a specific species or chromosome or gene. The script uses the Ensembl API and Ensembl databases.
 
 #### Running the script
 ```bash
