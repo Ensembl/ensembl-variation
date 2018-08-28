@@ -15,7 +15,7 @@ need:
   cd -
   export HTSLIB_DIR=[your_local_sw_dir]/htslib
 
-2 - Compile the C code present in this directory, called calc_genotypes.c and ld_vcf.c.
+2 - Compile the C code present in this directory (ensembl-variation/C_code), called calc_genotypes.c and ld_vcf.c.
 
 You can compile the code doing:
 
