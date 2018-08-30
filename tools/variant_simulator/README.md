@@ -12,7 +12,7 @@ The script generates all single base substitutions for protein coding genes give
 
 #### Running the script
 ```bash
-./simulate_variation.pl -gene BRCA2
+./simulate_variation -gene BRCA2
 ```
 
 #### Script options

@@ -185,6 +185,8 @@ sub generateSNPs {
 sub usage {
 
   print qq{
+  Help: dev\@ensembl.org , helpdesk\@ensembl.org
+
   Usage:  ./simulate_variation [OPTIONS]
 
   Generate a VCFv4 file with all possible SNPs for protein_coding genes given specific species or chromosome or gene.
