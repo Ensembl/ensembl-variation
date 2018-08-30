@@ -20,7 +20,7 @@ limitations under the License.
 
 =head1 NAME
 
-simulate_variation.pl
+simulate_variation
 
 =head1 DESCRIPTION
 
@@ -185,7 +185,7 @@ sub generateSNPs {
 sub usage {
 
   print qq{
-  Usage: perl simulate_variation.pl [OPTIONS]
+  Usage:  ./simulate_variation [OPTIONS]
 
   Generate a VCFv4 file with all possible SNPs for protein_coding genes given specific species or chromosome or gene.
 

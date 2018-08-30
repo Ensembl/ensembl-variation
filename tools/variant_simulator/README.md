@@ -32,74 +32,79 @@ The script generates all single base substitutions for protein coding genes give
 ### Examples 
 #### Generate SNPs for a chromosome
 ```bash
-./simulate_variation.pl -registry registry_file -chrom 2
+./simulate_variation -chrom 2
 ```
-First 6 rows of the output:
+First 7 rows of the output:
 ```txt
-##fileformat=VCFv4.1
-##INFO=gene_name:feature_id
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-2	38814	2-38814-T-A	T	A	.	.	FAM110C:ENSG00000184731
-2	38814	2-38814-T-C	T	C	.	.	FAM110C:ENSG00000184731
-2	38814	2-38814-T-G	T	G	.	.	FAM110C:ENSG00000184731
+2	38814	2-38814-T-A	T	A	.	.	GENE=FAM110C;FEATURE=ENSG00000184731
+2	38814	2-38814-T-C	T	C	.	.	GENE=FAM110C;FEATURE=ENSG00000184731
+2	38814	2-38814-T-G	T	G	.	.	GENE=FAM110C;FEATURE=ENSG00000184731
 ```
 
 #### Generate SNPs for a gene
 ```bash
-./simulate_variation.pl -registry registry_file -gene ENSG00000139618
+./simulate_variation -gene ENSG00000139618
 ```
 or
 ```bash
-./simulate_variation.pl -registry registry_file -gene BRCA2
+./simulate_variation -gene BRCA2
 ```
-First 6 rows of the output:
+First 7 rows of the output:
 ```txt
-##fileformat=VCFv4.1
-##INFO=gene_name:feature_id
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-13	32315474	13-32315474-G-A	G	A	.	.	BRCA2:ENSG00000139618
-13	32315474	13-32315474-G-C	G	C	.	.	BRCA2:ENSG00000139618
-13	32315474	13-32315474-G-T	G	T	.	.	BRCA2:ENSG00000139618
+13	32315474	13-32315474-G-A	G	A	.	.	GENE=BRCA2;FEATURE=ENSG00000139618
+13	32315474	13-32315474-G-C	G	C	.	.	GENE=BRCA2;FEATURE=ENSG00000139618
+13	32315474	13-32315474-G-T	G	T	.	.	GENE=BRCA2;FEATURE=ENSG00000139618
 ```
 
 #### Generate SNPs for a gene using exonsOnly
 ```bash
-./simulate_variation.pl -registry registry_file -gene BRCA2 -exonsOnly
+./simulate_variation -gene BRCA2 -exonsOnly
 ```
-First 6 rows of the output:
+First 7 rows of the output:
 ```txt
-##fileformat=VCFv4.1
-##INFO=gene_name:feature_id
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-13	32357742	13-32357742-C-A	C	A	.	.	BRCA2:ENSE00003719469
-13	32357742	13-32357742-C-T	C	T	.	.	BRCA2:ENSE00003719469
-13	32357742	13-32357742-C-G	C	G	.	.	BRCA2:ENSE00003719469
+13	32357742	13-32357742-C-A	C	A	.	.	GENE=BRCA2;FEATURE=ENSE00003719469
+13	32357742	13-32357742-C-T	C	T	.	.	GENE=BRCA2;FEATURE=ENSE00003719469
+13	32357742	13-32357742-C-G	C	G	.	.	GENE=BRCA2;FEATURE=ENSE00003719469
 ```
 
 #### Generate SNPs for a gene using codingOnly exons
 ```bash
-./simulate_variation.pl -registry registry_file -gene BRCA2 -codingOnly
+./simulate_variation -gene BRCA2 -codingOnly
 ```
-First 6 rows of the output:
+First 7 rows of the output:
 ```txt
-##fileformat=VCFv4.1
-##INFO=gene_name:feature_id
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-13	32325076	13-32325076-G-A	G	A	.	.	BRCA2:ENSE00003659301
-13	32325076	13-32325076-G-C	G	C	.	.	BRCA2:ENSE00003659301
-13	32325076	13-32325076-G-T	G	T	.	.	BRCA2:ENSE00003659301
+13	32325076	13-32325076-G-A	G	A	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
+13	32325076	13-32325076-G-C	G	C	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
+13	32325076	13-32325076-G-T	G	T	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
 ```
 
 #### Generate SNPs for a gene using codingOnly exons with 5bp upstream/downstream of each exon
 ```bash
-./simulate_variation.pl -registry registry_file -gene BRCA2 -codingOnly -edge 5
+./simulate_variation -gene BRCA2 -codingOnly -edge 5
 ```
-First 6 rows of the output:
+First 7 rows of the output:
 ```txt
-##fileformat=VCFv4.1
-##INFO=gene_name:feature_id
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-13	32325071	13-32325071-T-A	T	A	.	.	BRCA2:ENSE00003659301
-13	32325071	13-32325071-T-C	T	C	.	.	BRCA2:ENSE00003659301
-13	32325071	13-32325071-T-G	T	G	.	.	BRCA2:ENSE00003659301
+13	32325071	13-32325071-T-A	T	A	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
+13	32325071	13-32325071-T-C	T	C	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
+13	32325071	13-32325071-T-G	T	G	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
 ```
