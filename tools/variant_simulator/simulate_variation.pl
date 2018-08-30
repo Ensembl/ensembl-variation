@@ -36,7 +36,7 @@ use Getopt::Long qw(GetOptions);
 my ($help, $chromOnly, $gene, $registryFile,
 $exonOnly, $intronOnly, $codingOnly,
 );
-my ($species, $edges, $outFile) = ("homo_sapiens", 0, "simulated.vcf");
+my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
 usage() if (!scalar(@ARGV));
 
@@ -48,21 +48,30 @@ GetOptions( "species=s" => \$species,
     "exonsOnly" => \$exonOnly,
     "codingOnly" => \$codingOnly,
     "intronsOnly" => \$intronOnly,
+    "assembly=s" => \$assembly,
     "registry=s" => \$registryFile,
     "help!" => \$help,
 ) or usage();
 
 usage() if ($help);
 
-unless (defined $registryFile) {
-  print "\nError -registry registry_file missing\n";
-  usage();
-}
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
 
 my $registry = 'Bio::EnsEMBL::Registry';
-$registry->load_all($registryFile);
+if (defined $registryFile){
+  $registry->load_all($registryFile);
+} else {
+  my $port = 3306;
+  if ($assembly eq 'grch37') {
+    $port = 3337;
+  }
+  $registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org',
+    -user => 'anonymous',
+    -port => $port,
+  );
+}
 
 print "getting species ($species)";
 print ", chrom ($chromOnly)" if $chromOnly;
@@ -77,8 +86,9 @@ my $biotype = 'protein_coding';
 my $FHO;
 open ($FHO, ">$outFile") or die "Can't open file to write: $outFile, $!\n";
 #print header:
-print $FHO '##fileformat=VCFv4.1', "\n";
-print $FHO '##INFO=gene_name:feature_id', "\n";
+print $FHO '##fileformat=VCFv4.2', "\n";
+print $FHO '##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">',"\n";
+print $FHO '##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">',"\n";
 print $FHO "#".join("\t", qw/CHROM POS ID REF ALT QUAL FILTER INFO/), "\n";
 
 my @geneIDs;
@@ -162,7 +172,7 @@ sub generateSNPs {
          my $ref_seq = $seqAr[$i];
          my @tmp_alts = grep {$_ ne $ref_seq} @bases;
          $pos = $start + $i;
-         $info = join(":", ($gene_name, $partID));
+         $info = 'GENE='.$gene_name.';'.'FEATURE='.$partID;
          while(my $tmp_alt = shift @tmp_alts) {
            $id = $chrom."-".$pos."-".$ref_seq."-".$tmp_alt;
            printf $fho "%s\t%s\t%s\t%s\t%s\t", $chrom, $pos, $id, $ref_seq, $tmp_alt;
@@ -181,8 +191,9 @@ sub usage {
 
   Options:
 
-      -registry          Ensembl registry file containing database connection details (Required)
       -species           Generate SNPs for specified species (Default: human)
+      -assembly          Assembly to use if species is human (Default: grch38)
+      -registry          Ensembl registry file containing database connection details
 
       -output|o          Output file (Default: simulated.vcf)
 

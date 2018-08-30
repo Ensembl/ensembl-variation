@@ -12,12 +12,13 @@ The script generates all single base substitutions for protein coding genes give
 
 #### Running the script
 ```bash
-./simulate_variation.pl -registry registry_file
+./simulate_variation.pl -gene BRCA2
 ```
-* `-registry [registry_file]` : [registry_file](https://www.ensembl.org/info/docs/api/registry.html)
 
 #### Script options
 * `-species [species]` : species to use (default: human)
+* `-assembly [assembly]` : assembly to use if species is human (default: grch38)
+* `-registry [registry_file]` : [registry_file](https://www.ensembl.org/info/docs/api/registry.html)
 * `-chrom [chromosome]` : generate SNPs only for specified chromosome
 * `-gene [gene_ensembl_stable_id | gene_symbol ]` : generate SNPs only for specified gene (if chromosome and gene are both specified but don't agree, the gene options is used)
 * `-exonsOnly` : generate SNPs only for all exons of the protein_coding genes
