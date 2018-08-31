@@ -69,8 +69,8 @@ sub default_options {
         so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
 
         tmp_dir           => $self->o('tmp_dir'),
-        gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
-        vcf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF',
+        gvf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF_human',
+        vcf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF_human',
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
@@ -106,8 +106,8 @@ sub pipeline_wide_parameters {
         so_file          => $self->o('so_file'),    
         gvf_validator    => $self->o('gvf_validator'),
         tmp_dir          => $self->o('tmp_dir'),
-        gvf_readme       => $self->o('gvf_readme'), 
-        vcf_readme       => $self->o('vcf_readme'),
+        gvf_readme_human => $self->o('gvf_readme_human'), 
+        vcf_readme_human => $self->o('vcf_readme_human'),
     };
 }
 
@@ -150,6 +150,7 @@ sub pipeline_analyses {
       -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
       -parameters => {
         'file_type' => 'gvf',
+        'gvf_readme_human' => $self->o('gvf_readme_human'),
       },
       -flow_into => {
         1 => ['init_population_vcf'],
@@ -172,6 +173,7 @@ sub pipeline_analyses {
       -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
       -parameters => {
         'file_type' => 'vcf',
+        'vcf_readme_human' => $self->o('vcf_readme_human'),
       },
     },
   );
