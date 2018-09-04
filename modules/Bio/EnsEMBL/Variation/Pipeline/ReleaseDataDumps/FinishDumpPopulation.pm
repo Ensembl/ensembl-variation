@@ -38,9 +38,10 @@ sub run {
     my $self = shift;
     my $file_type = $self->param('file_type');
     if ($file_type eq 'gvf') {
-        # remove allele_string and variation_id attributes from file    
-        # gzip file
-#        $self->clean_up_gvf_file;
+      my $chrom = $self->param('chrom');
+      # remove allele_string and variation_id attributes from file    
+      # gzip file
+      $self->clean_up_gvf_file($chrom);
     }
     if ($file_type eq 'vcf') {
         # sort, bgzip, validate
@@ -72,46 +73,44 @@ sub clean_up_vcf_files {
 
 sub clean_up_gvf_file {
   my $self = shift;
+  my $chrom = shift;
   my $pipeline_dir = $self->param('pipeline_dir');
 
-  foreach my $chrom (1..22, 'X', 'Y', 'MT') {
-    my $human_gvf_file = "$pipeline_dir/gvf/homo_sapiens/homo_sapiens-chr$chrom.gvf.gz";
-    my $human_gvf_file_before_clean_up = "$pipeline_dir/gvf/homo_sapiens/homo_sapiens-chr$chrom\_before_clean_up.gvf.gz";
+  my $human_gvf_file = "$pipeline_dir/gvf/homo_sapiens/homo_sapiens-chr$chrom.gvf.gz";
+  my $human_gvf_file_before_clean_up = "$pipeline_dir/gvf/homo_sapiens/homo_sapiens-chr$chrom\_before_clean_up.gvf.gz";
 
-    die "Couldn't find $human_gvf_file" unless (-f $human_gvf_file);
-    $self->run_cmd("mv $human_gvf_file $human_gvf_file_before_clean_up"); 
-    die "Couldn't find $human_gvf_file_before_clean_up" unless (-f $human_gvf_file_before_clean_up);
+  die "Couldn't find $human_gvf_file" unless (-f $human_gvf_file);
+  $self->run_cmd("mv $human_gvf_file $human_gvf_file_before_clean_up"); 
+  die "Couldn't find $human_gvf_file_before_clean_up" unless (-f $human_gvf_file_before_clean_up);
 
-    my $fh_before = gzopen($human_gvf_file_before_clean_up, "rb") or die "Error reading $human_gvf_file_before_clean_up: $gzerrno\n";
-    my $fh_after = FileHandle->new($human_gvf_file, 'w');
-    while ($fh_in->gzreadline($_) > 0) {
-      chomp;
-      if (/^#/) {
-        print $fh_after $_, "\n";
-      } else {
-        my $line = $_;
-        my $gvf_line = get_gvf_line($line);
-        delete $gvf_line->{attributes}->{variation_id};
-        delete $gvf_line->{attributes}->{allele_string};
-        $line = join("\t", map {$gvf_line->{$_}} (
-          'seq_id',
-          'source',
-          'type',
-          'start',
-          'end',
-          'score',
-          'strand',
-          'phase'));
-        my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
-        print $fh_after $line, "\t", $attributes, "\n";
-      }
+  my $fh_before = gzopen($human_gvf_file_before_clean_up, "rb") or die "Error reading $human_gvf_file_before_clean_up: $gzerrno\n";
+  my $fh_after = FileHandle->new($human_gvf_file, 'w');
+  while ($fh_in->gzreadline($_) > 0) {
+    chomp;
+    if (/^#/) {
+      print $fh_after $_, "\n";
+    } else {
+      my $line = $_;
+      my $gvf_line = get_gvf_line($line);
+      delete $gvf_line->{attributes}->{variation_id};
+      delete $gvf_line->{attributes}->{allele_string};
+      $line = join("\t", map {$gvf_line->{$_}} (
+        'seq_id',
+        'source',
+        'type',
+        'start',
+        'end',
+        'score',
+        'strand',
+        'phase'));
+      my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
+      print $fh_after $line, "\t", $attributes, "\n";
     }
-
-    $fh_before->gzclose();
-    $fh_after->close();
-    $self->run_cmd("gzip $human_gvf_file");  
-    #$self->run_cmd("rm $human_gvf_file_before_clean_up");  
   }
+
+  $fh_before->gzclose();
+  $fh_after->close();
+  $self->run_cmd("gzip $human_gvf_file");  
 }
 
 sub get_gvf_line {
