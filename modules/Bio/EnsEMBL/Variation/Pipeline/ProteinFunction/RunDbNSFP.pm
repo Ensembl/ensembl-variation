@@ -92,7 +92,9 @@ sub run {
 
   my $translation = $self->get_translation($translation_stable_id);
   my $translation_seq = $translation->seq;
-  my $transcript_stable_id = $translation->transcript->stable_id;
+  my $transcript = $translation->transcript;
+  my $reverse = $transcript->strand < 0;
+  my $transcript_stable_id = $transcript->stable_id;
 
   my $vdba = $self->get_species_adaptor('variation');
   my $pfpma = $vdba->get_ProteinFunctionPredictionMatrixAdaptor or die "Failed to get matrix adaptor";
@@ -137,7 +139,7 @@ sub run {
         my $mutation_assessor_rankscore = $data{'MutationAssessor_score_rankscore'};
         my $mutation_assessor_pred = $data{'MutationAssessor_pred'};
         my $pos = $data{'pos(1-based)'};
-        my $nucleotide_position = $pos - $triplet_start;
+        my $nucleotide_position = ($reverse) ? $triplet_end - $pos : $pos - $triplet_start;
         my $ref = $data{'ref'};
         my $refcodon = $data{'refcodon'};
         my $alt = $data{'alt'};
@@ -146,6 +148,7 @@ sub run {
         my $aaref = $data{'aaref'};
         my $mutated_triplet =  $new_triplets->{$triplet_seq}->{$nucleotide_position}->{$alt};
         my $mutated_aa = $codonTable->translate($mutated_triplet);
+        next if ($aaalt ne $mutated_aa);
         if ($revel_raw ne '.') {
           $results_available->{'dbnsfp_revel'} = 1; 
           my $prediction = ($revel_raw >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
