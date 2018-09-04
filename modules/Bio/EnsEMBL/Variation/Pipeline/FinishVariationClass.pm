@@ -64,8 +64,26 @@ sub run {
     # and get rid of the temp tables
     $dbc->do(qq{DROP TABLE $temp_var_table});
     $dbc->do(qq{DROP TABLE $temp_var_feat_table});
+
+    $self->update_meta();
     
     return;
+}
+
+sub update_meta{
+
+  my $self = shift;
+
+  my $var_dba  = $self->get_species_adaptor('variation');
+
+  my $var_dbh = $var_dba->dbc->db_handle;
+
+  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
+                                              ( meta_key, meta_value) values (?,?)
+                                            ]);
+
+  $update_meta_sth->execute('VariationClass_run_date', $self->run_date() );
+
 }
 
 1;
