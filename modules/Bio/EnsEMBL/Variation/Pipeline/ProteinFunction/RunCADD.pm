@@ -78,7 +78,9 @@ sub run {
 
   my $translation = $self->get_translation($translation_stable_id);
   my $translation_seq = $translation->seq;
-  my $transcript_stable_id = $translation->transcript->stable_id;
+  my $transcript = $translation->transcript;
+  my $reverse = $transcript->strand < 0;
+  my $transcript_stable_id = $transcript->stable_id;
 
   my $vdba = $self->get_species_adaptor('variation');
   my $pfpma = $vdba->get_ProteinFunctionPredictionMatrixAdaptor or die "Failed to get matrix adaptor";
@@ -117,8 +119,8 @@ sub run {
         my $ref = $data{'Ref'};
         my $alt = $data{'Alt'};
         my $cadd_phred = $data{'PHRED'};
-        my $nucleotide_position = $pos - $triplet_start;
         next if ($alt eq $ref);
+        my $nucleotide_position = ($reverse) ? $triplet_end - $pos : $pos - $triplet_start;
         my $mutated_triplet = $new_triplets->{$triplet_seq}->{$nucleotide_position}->{$alt};
         my $mutated_aa = $codonTable->translate($mutated_triplet);
 
