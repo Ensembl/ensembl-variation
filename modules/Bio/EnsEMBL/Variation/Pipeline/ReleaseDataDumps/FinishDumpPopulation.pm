@@ -53,15 +53,15 @@ sub clean_up_vcf_files {
   my $self = shift;
   my $pipeline_dir = $self->param('pipeline_dir');
   my $tmp_dir = $self->param('tmp_dir');
-  my $human_vcf_dir = "$pipeline_dir/vcf/homo_sapiens/";
+  my $human_vcf_dir = $self->param('vcf_files_dir');
   die "$human_vcf_dir is not a directory" unless (-d $human_vcf_dir);
 
-  opendir(my $dh, "$pipeline_dir/vcf/homo_sapiens") or die $!;
+  opendir(my $dh, "$human_vcf_dir") or die $!;
   my @dir_content = readdir($dh);
   closedir($dh);
   foreach my $file (@dir_content) {
     if ($file =~ m/\.vcf$/) {
-      my $vcf_file = "$pipeline_dir/vcf/homo_sapiens/$file";
+      my $vcf_file = "$human_vcf_dir/$file";
       $self->run_cmd("vcf-sort < $vcf_file | bgzip > $vcf_file.gz");
       $self->run_cmd("rm $vcf_file");
     }

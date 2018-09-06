@@ -73,9 +73,6 @@ sub fetch_input {
 
   }
 
-  if ($file_type eq 'vcf') {
-    $self->param('vcf_files_dir', "$pipeline_dir/vcf/homo_sapiens/");
-  }
 }
 
 sub run {

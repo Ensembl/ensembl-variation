@@ -69,7 +69,7 @@ sub default_options {
         so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
 
         tmp_dir           => $self->o('tmp_dir'),
-
+        vcf_files_dir     => $self->o('pipeline_dir') . '/vcf/homo_sapiens/',
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
@@ -104,6 +104,7 @@ sub pipeline_wide_parameters {
         so_file          => $self->o('so_file'),    
         gvf_validator    => $self->o('gvf_validator'),
         tmp_dir          => $self->o('tmp_dir'),
+        vcf_files_dir    => $self->o('vcf_files_dir'),
     };
 }
 
