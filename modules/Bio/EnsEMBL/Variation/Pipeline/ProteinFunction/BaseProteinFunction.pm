@@ -35,6 +35,8 @@ use warnings;
 use Bio::SimpleAlign;
 use Bio::LocatableSeq;
 use Bio::Tools::CodonTable;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 sub get_protein_sequence {
@@ -95,11 +97,12 @@ sub get_translation {
 sub mutate {
   my $self = shift;
   my $triplet = shift;
+  my $reverse = shift;
   my @nucleotides = split('', $triplet);
   my $new_triplets;
   foreach my $i (0 .. $#nucleotides) {
     my $mutations = ['A', 'G', 'C', 'T'];
-    $new_triplets = $self->get_mutated_triplets($triplet, $mutations, $i, $new_triplets);
+    $new_triplets = $self->get_mutated_triplets($triplet, $mutations, $i, $new_triplets, $reverse);
   }
   return $new_triplets;
 }
@@ -110,9 +113,16 @@ sub get_mutated_triplets {
   my $mutations = shift;
   my $position = shift;
   my $new_triplets = shift;
+  my $reverse = shift;
   foreach my $mutation (@$mutations) {
     my $update_triplet = $triplet;
-    substr($update_triplet, $position, 1, $mutation);
+    if ($reverse) {
+      my $reverse_mutation = $mutation;
+      reverse_comp(\$reverse_mutation);
+      substr($update_triplet, $position, 1, $reverse_mutation);
+    } else {
+      substr($update_triplet, $position, 1, $mutation);
+    }
     $new_triplets->{$triplet}->{$position}->{$mutation} = $update_triplet;
   }
   return $new_triplets;
@@ -162,7 +172,8 @@ sub get_triplets {
       $entry->{aa} = 'X';
     } else {
       $entry->{aa} = $aa;
-      my $new_triplets = $self->mutate($triplet);
+      my $reverse = ($strand < 0);
+      my $new_triplets = $self->mutate($triplet, $reverse);
       $entry->{new_triplets} = $new_triplets;
     }
     push @all_triplets, $entry;
