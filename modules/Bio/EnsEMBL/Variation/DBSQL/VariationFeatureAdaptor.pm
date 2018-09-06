@@ -1402,6 +1402,10 @@ sub _objs_from_sth {
               @clin_sig = split(/,/,$clin_sig );
             }
 
+            ## fix for e!94 allele strings with // or trailing /
+            $allele_string =~ s/\/\//\//;
+            $allele_string =~ s/\/$//;
+
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_types);
             
             my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, ($consequence_types || 'sequence_variant') ];

@@ -69,9 +69,7 @@ sub default_options {
         so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
 
         tmp_dir           => $self->o('tmp_dir'),
-        gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
-        vcf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_VCF',
-
+        vcf_files_dir     => $self->o('pipeline_dir') . '/vcf/homo_sapiens/',
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
@@ -106,8 +104,7 @@ sub pipeline_wide_parameters {
         so_file          => $self->o('so_file'),    
         gvf_validator    => $self->o('gvf_validator'),
         tmp_dir          => $self->o('tmp_dir'),
-        gvf_readme       => $self->o('gvf_readme'), 
-        vcf_readme       => $self->o('vcf_readme'),
+        vcf_files_dir    => $self->o('vcf_files_dir'),
     };
 }
 
@@ -136,7 +133,7 @@ sub pipeline_analyses {
       },
       -flow_into => {
         '2->A' => ['dump_population_gvf'],
-        'A->1' => ['finish_dump_population_gvf']
+        'A->1' => ['init_finish_dump_population_gvf']
       },
     },
     { -logic_name => 'dump_population_gvf',
@@ -146,14 +143,18 @@ sub pipeline_analyses {
         'prefetched_frequencies' => $self->o('prefetched_frequencies'),
       },
     },
-    { -logic_name => 'finish_dump_population_gvf',
-      -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
+    { -logic_name => 'init_finish_dump_population_gvf',
+      -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitFinishDumpPopulation',
       -parameters => {
         'file_type' => 'gvf',
       },
       -flow_into => {
-        1 => ['init_population_vcf'],
+        '2->A' => ['finish_population_gvf'],
+        'A->1' => ['init_population_vcf']
       },
+    },
+    { -logic_name => 'finish_dump_population_gvf',
+      -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpPopulation',
     },
     { -logic_name => 'init_population_vcf',
       -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitDumpPopulation',

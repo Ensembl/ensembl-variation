@@ -61,7 +61,7 @@ sub default_options {
         species => [],
         antispecies => [],
         division    => [],
-        run_all     => 0,
+        run_all     => 1,
 
         pipeline_name      => $self->o('pipeline_name'),
 
@@ -126,6 +126,8 @@ sub pipeline_wide_parameters {
         tmp_dir          => $self->o('tmp_dir'),
         gvf_readme       => $self->o('gvf_readme'), 
         vcf_readme       => $self->o('vcf_readme'),
+        gvf_readme_human => $self->o('gvf_readme_human'), 
+        vcf_readme_human => $self->o('vcf_readme_human'),
         pipeline_wide_analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),        
         debug => $self->o('debug'),
         global_vf_count_in_species => $self->o('global_vf_count_in_species'),
@@ -355,6 +357,8 @@ sub pipeline_analyses {
           -parameters => {
               'gvf_readme' => $self->o('gvf_readme'),
               'vcf_readme' => $self->o('vcf_readme'),
+              'gvf_readme_human' => $self->o('gvf_readme_human'),
+              'vcf_readme_human' => $self->o('vcf_readme_human'),
           }
       },
   );
