@@ -124,8 +124,6 @@ ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib
 
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
-ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES variation(name);
-ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES structural_variation(variation_name);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
