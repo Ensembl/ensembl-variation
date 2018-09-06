@@ -34,6 +34,7 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 use FileHandle;
+use Compress::Zlib;
 
 sub run {
   my $self = shift;
@@ -48,44 +49,38 @@ sub run {
 
 sub dump_gvf {
   my $self = shift;
-
-  my $human_gvf_file = $self->param('human_gvf_file');
-  my $variation_ids_dir = $self->param('variation_ids_dir');
   my $prefetched_frequencies_dir = $self->param('prefetched_frequencies'); 
-
   my $file_name = $self->param('file_name');
   my $population_gvf_file = $self->param('population_gvf_file');
   my $population_name = $self->param('population_name');
   my $short_name = $self->param('short_name');
   my $group = $self->param('group'); # HAPMAP, 1000G, ESP
-
-  my $add_to_header = "##population $population_name\n";
-  my $added_name = 0;
-
-  my $prev_seq_id = -1;
-  my $cache = {};
-  my $fh_gvf = FileHandle->new($human_gvf_file, 'r');
+  my $gvf_files_dir =  $self->param('gvf_files_dir');
   my $fh_out = FileHandle->new($population_gvf_file, 'w');
-  while (<$fh_gvf>) {
+  my $cache = update_cache("$prefetched_frequencies_dir/$group/$short_name.txt");
+  my $id = 1;
+  my $gvf_file = "$gvf_files_dir/homo_sapiens-chrMT.gvf.gz";
+  my $fh_in = gzopen($gvf_file, "rb") or die "Error reading $gvf_file: $gzerrno\n";
+  while ($fh_in->gzreadline($_) > 0) {
     chomp;
     if (/^#/) {
-      if (/^##sequence-region/) {
-        unless ($added_name) {
-          print $fh_out $add_to_header;
-          $added_name = 1;
-        }   
-        print $fh_out $_, "\n";
-      } else {
-        print $fh_out $_, "\n";
+      if (!/^##sequence/) {
+        print $fh_out "$_\n";
       }
-    } else {
+    }
+  }
+  $fh_in->gzclose();
+  print $fh_out "##population $population_name\n";
+
+  foreach my $chrom (1..22, 'X', 'Y', 'MT') {
+    my $gvf_file = "$gvf_files_dir/homo_sapiens-chr$chrom.gvf.gz";
+    my $fh_in = gzopen($gvf_file, "rb") or die "Error reading $gvf_file: $gzerrno\n";
+    while ($fh_in->gzreadline($_) > 0) {
+      chomp;
+      next if (/^#/);
       my $line = $_;
       my $gvf_line = get_gvf_line($line);
       my $seq_id = $gvf_line->{seq_id};
-      unless ("$seq_id" eq "$prev_seq_id") {
-        $cache = update_cache("$variation_ids_dir/$seq_id.txt", "$prefetched_frequencies_dir/$group/$short_name.txt"  );
-        $prev_seq_id = $seq_id;
-      }
       my $allele_string = $gvf_line->{attributes}->{allele_string};
       my $variation_id  = $gvf_line->{attributes}->{variation_id};
       next unless ($cache->{$variation_id});
@@ -118,6 +113,8 @@ sub dump_gvf {
       if (grep {$_ =~ /\d/} @freqs) {
         $gvf_line->{attributes}->{Variant_freq} = join(',', @freqs);
       }
+      $gvf_line->{attributes}->{ID} = $id;
+      $id++;
       delete $gvf_line->{attributes}->{variation_id};
       delete $gvf_line->{attributes}->{allele_string};
       delete $gvf_line->{attributes}->{global_minor_allele_frequency};
@@ -134,8 +131,9 @@ sub dump_gvf {
       my $attributes = join(";", map{"$_=$gvf_line->{attributes}->{$_}"} keys %{$gvf_line->{attributes}});
       print $fh_out $line, "\t", $attributes, "\n";
     }
-  } # while
-
+    $fh_in->gzclose();
+  }
+  $fh_out->close();
   system("gzip $population_gvf_file");
 }
 
@@ -161,24 +159,14 @@ sub get_gvf_line {
 }
 
 sub update_cache {
-  my $variation_ids_file = shift;
   my $cache_file = shift;
-  my $fh_var_ids = FileHandle->new($variation_ids_file, 'r');
-  my $variation_ids = {};
-  while (<$fh_var_ids>) {
-    chomp;
-    $variation_ids->{$_} = 1;
-  }
-  $fh_var_ids->close();
   my $cache = {};
   my $fh = FileHandle->new($cache_file, 'r');
   while (<$fh>) {
     chomp;
     my ($variation_id, $allele, $frequency) = split(/\t/);
-    if ($variation_ids->{$variation_id}) {
-      $frequency ||= 0;
-      $cache->{$variation_id}->{$allele} = $frequency;
-    }
+    $frequency ||= 0;
+    $cache->{$variation_id}->{$allele} = $frequency;
   }
   $fh->close();
   return $cache;

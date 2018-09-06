@@ -623,6 +623,7 @@ sub print_header {
     my $schema_version = $mca->get_schema_version;
     my $species_name = $mca->get_scientific_name;
     $species_name =~ s/ /_/g;
+    $species_name = lc $species_name;
     my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
     $year += 1900;    # correct the year
     $mon++;           # correct the month
