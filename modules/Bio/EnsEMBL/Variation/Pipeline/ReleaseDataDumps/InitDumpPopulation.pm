@@ -71,29 +71,14 @@ sub fetch_input {
     my $prefetched_frequencies_dir = $self->param('prefetched_frequencies');
     die "$prefetched_frequencies_dir doesn't exist" unless (-d $prefetched_frequencies_dir);
 
-    my $variation_ids_dir = "$pipeline_dir/variation_ids";
-    make_path($variation_ids_dir) unless (-d $variation_ids_dir);
-    $self->param('variation_ids_dir', $variation_ids_dir);
-
-    my $human_gvf_file_gz = $self->param('pipeline_dir') . '/gvf/Homo_sapiens/Homo_sapiens.gvf.gz';
-    die("$human_gvf_file_gz doesn't exist") unless (-f $human_gvf_file_gz);
-    my $human_gvf_file = $self->param('pipeline_dir') . '/gvf/Homo_sapiens/Homo_sapiens.gvf';
-    system("gunzip $human_gvf_file_gz");
-
-    $self->param('human_gvf_file', $human_gvf_file);
-    $self->param('gvf_files_dir', "$pipeline_dir/gvf/Homo_sapiens/");
   }
 
-  if ($file_type eq 'vcf') {
-    $self->param('vcf_files_dir', "$pipeline_dir/vcf/Homo_sapiens/");
-  }
 }
 
 sub run {
   my $self = shift;
   my $file_type = $self->param('file_type');
   if ($file_type eq 'gvf') {
-    $self->divide_variation_ids_by_chrom;
     my $input = $self->get_input_dump_gvf;
     $self->param('input_parameters', $input);
   } elsif ($file_type eq 'vcf') {
@@ -113,7 +98,7 @@ sub get_input_dump_vcf {
   my $script          = '/misc/release/gvf2vcf.pl';
   my $output_dir      = $self->param('pipeline_dir');
   my $connection_args = '--registry ' . $self->param('registry_file');
-  my $species = 'Homo_sapiens';
+  my $species = 'homo_sapiens';
   my @input = ();
 
   foreach my $group (keys %$populations) { 
@@ -144,37 +129,6 @@ sub get_input_dump_vcf {
   return \@input;
 }
 
-sub divide_variation_ids_by_chrom {
-  my $self = shift;
-  my $pipeline_dir = $self->param('pipeline_dir');
-
-  my $variation_ids_dir = $self->param('variation_ids_dir');
-  my $human_gvf_file = $self->param('human_gvf_file');
-
-  my $fh_gvf = FileHandle->new($human_gvf_file, 'r');
-  my $prev_seq_id = undef;
-  my $fh = undef;
-
-  while (<$fh_gvf>) {
-    chomp;
-    if (/^#/) {
-      next;
-    } else {
-      my $line = $_;
-      my $gvf_line = get_gvf_line($line);
-      my $seq_id = $gvf_line->{seq_id};
-      my $variation_id  = $gvf_line->{attributes}->{variation_id};
-      if ("$seq_id" ne "$prev_seq_id" || !$seq_id) {
-        $fh->close() if ($fh);
-        $fh = FileHandle->new("$variation_ids_dir/$seq_id.txt", 'w');
-        $prev_seq_id = $seq_id;
-      }
-      print $fh $variation_id, "\n";
-    }
-  }
-  $fh_gvf->close();
-  $fh->close();
-}
 
 sub get_gvf_line {
   my $line = shift;
@@ -202,27 +156,22 @@ sub get_input_dump_gvf {
   my @input = ();
 
   my $populations = $self->param('populations');
-  my $human_gvf_file = $self->param('human_gvf_file');
-  my $gvf_files_dir = $self->param('gvf_files_dir');
-  my $variation_ids_dir = $self->param('variation_ids_dir');
-
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $gvf_files_dir = "$pipeline_dir/gvf/homo_sapiens/";
   my $file_type = $self->param('file_type');
   foreach my $group (keys %$populations) {
     foreach my $population_name (keys %{$populations->{$group}}) {
-      $self->warning("$group $population_name");
       my $params = {};
       my $short_name = $populations->{$group}->{$population_name};
       my $file_name = $population_name;
       $file_name =~ s/:/-/;
-
-      $params->{human_gvf_file} = $human_gvf_file;
-      $params->{variation_ids_dir} = $variation_ids_dir;
       $params->{population_name} = $population_name;
       $params->{file_name} = $population_name;
       $params->{population_gvf_file} = "$gvf_files_dir/$file_name.gvf";
       $params->{short_name} = $short_name;
       $params->{file_type} = $file_type;
       $params->{group} = $group;
+      $params->{gvf_files_dir} = $gvf_files_dir;
       push @input, $params;
     }
   }
