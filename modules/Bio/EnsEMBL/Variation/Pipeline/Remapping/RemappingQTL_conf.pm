@@ -162,7 +162,14 @@ sub pipeline_analyses {
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::QtlQC',
       -analysis_capacity => 5,
       -rc_name           => 'default_mem',
+      -flow_into => {
+        1 => ['compare_prev_assembly'],
+      },
     },
+    {
+      -logic_name => 'compare_prev_assembly',
+      -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::ComparePreviousAssembly',
+    }
   );
    return \@analyses;
 }
