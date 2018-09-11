@@ -157,7 +157,7 @@ sub map_variant {
 
 sub filter_read_mapping {
   my $config = shift;
-  my $feature_type_id = $config->{feature_type_id} # e.g. 'phenotype_feature_id';
+  my $feature_type_id = $config->{feature_type_id}; # e.g. 'phenotype_feature_id';
   my $file_init_feature = $config->{file_init_feature};
   my $file_filtered_mappings = $config->{file_filtered_mappings};
   my $file_mappings = $config->{file_mappings};
