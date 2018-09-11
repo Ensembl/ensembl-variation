@@ -51,7 +51,7 @@ sub default_options {
     map_to_chrom_only       => 1,
     entries_per_file        => 200000,
     feature_table           => 'phenotype_feature',
-
+    feature_table_mapping_results => 'phenotype_feature_mapping_results',
     qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
   };
 }
@@ -60,17 +60,18 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-        mode                         => $self->o('mode'),
-        flank_seq_length             => $self->o('flank_seq_length'),	
-        feature_table                => $self->o('feature_table'),
-        algn_score_threshold         => $self->o('algn_score_threshold'),
-        max_map_weight               => $self->o('max_map_weight'),
-        use_prior_for_filtering      => $self->o('use_prior_for_filtering'),
-        map_to_chrom_only            => $self->o('map_to_chrom_only'),
-        entries_per_file             => $self->o('entries_per_file'),
-        debug                        => $self->o('debug'),
-        debug_sequence_name          => $self->o('debug_sequence_name'),
-        qc_mapped_features_dir       => $self->o('qc_mapped_features'),
+        mode                          => $self->o('mode'),
+        flank_seq_length              => $self->o('flank_seq_length'),	
+        feature_table                 => $self->o('feature_table'),
+        feature_table_mapping_results => $self->o('feature_table_mapping_results'),
+        algn_score_threshold          => $self->o('algn_score_threshold'),
+        max_map_weight                => $self->o('max_map_weight'),
+        use_prior_for_filtering       => $self->o('use_prior_for_filtering'),
+        map_to_chrom_only             => $self->o('map_to_chrom_only'),
+        entries_per_file              => $self->o('entries_per_file'),
+        debug                         => $self->o('debug'),
+        debug_sequence_name           => $self->o('debug_sequence_name'),
+        qc_mapped_features_dir        => $self->o('qc_mapped_features'),
     };
 }
 
@@ -158,7 +159,7 @@ sub pipeline_analyses {
     },
     {
       -logic_name        => 'qtl_qc',
-      -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::MappingQC',
+      -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::QtlQC',
       -analysis_capacity => 5,
       -rc_name           => 'default_mem',
     },
