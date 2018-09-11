@@ -229,11 +229,17 @@ sub rename_mapped_feature_table {
   my $vdba_newasm = $self->param('vdba_newasm');
   my $dbh  = $vdba_newasm->dbc->db_handle;
 
-  if ($self->table_exists($feature_table, $vdba_newasm)) {
+  # only create before_remapping table once
+  if (!$self->table_exists("before_remapping_$feature_table", $vdba_newasm) && $self->table_exists($feature_table, $vdba_newasm)) {
     $dbh->do("RENAME TABLE $feature_table TO before_remapping_$feature_table;") or die $!;
   }
 
   if ($self->table_exists($result_table, $vdba_newasm)) {
+    # drop feature table if it exists
+    # if it exists at this point it means that before_remapping_feature_table has been created and this is another remapping run
+    if ($self->table_exists($feature_table, $vdba_newasm)) {
+      $dbh->do("DROP TABLE $feature_table;") or die $!;
+    }
     $dbh->do("RENAME TABLE $result_table TO $feature_table;") or die $!;
   }
 }
