@@ -50,7 +50,6 @@ sub run {
 
   # we need at least bioperl version 1.006924
   my $bioperl_version = Bio::Perl->VERSION;  
-  $self->warning($bioperl_version);
   die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
 
   # load new seq_region IDs
