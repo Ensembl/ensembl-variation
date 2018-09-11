@@ -65,48 +65,27 @@ sub join_qtl_data {
   my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
 
   my $feature_data = {};
-  my $key = '';
   while (<$fh_init_feature>) {
     chomp;
     my $data = $self->read_data($_);
-    $key = $data->{phenotype_feature_id};
+    my $key = $data->{phenotype_feature_id};
     $feature_data->{$key} = $data;
   }
   $fh_init_feature->close();
 
-  # get new seq_region_ids
-  my $seq_region_ids = {};
-  my $cdba = $self->param('cdba_newasm');
-  my $sa = $cdba->get_SliceAdaptor;
-  my $slices = $sa->fetch_all('toplevel', undef, 1);
-  foreach my $slice (@$slices) {
-    $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
-  }
-  # new map_weights
-  my $file_filtered_mappings = $self->param('file_filtered_mappings');
-  my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
-  my $map_weights = {};
-  while (<$fh_mappings>) {
-    chomp;
-    my ($query_id, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
-    $map_weights->{$query_id}++;
-  }
-  $fh_mappings->close();
+  my $new_seq_region_ids = $self->get_new_seq_region_ids;
 
   # join feature data with mapping data:
   my $file_load_features = $self->param('file_load_features');
   my $fh_load_features = FileHandle->new($file_load_features, 'w');   
-  $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
+  my $file_filtered_mappings = $self->param('file_filtered_mappings');
+  my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
   my ($data, $variation_feature_id, $version, $variation_name);
   while (<$fh_mappings>) {
     chomp;
     my ($query_id, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
-
-    my $seq_region_id = $seq_region_ids->{$seq_name};
-    my $map_weight = $map_weights->{$query_id};
-
+    my $seq_region_id = $new_seq_region_ids->{$seq_name};
     $data = $feature_data->{$query_id};
-
     $data->{seq_region_id} = $seq_region_id;
     $data->{seq_region_start} = $start;
     $data->{seq_region_end} = $end;
