@@ -50,6 +50,7 @@ sub default_options {
       map_to_chrom_only       => 1,
       entries_per_file        => 200000,
       feature_table           => 'structural_variation_feature',
+      feature_table_mapping_results => 'structural_variation_feature_mapping_results',
       qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
     };
 }
@@ -58,17 +59,18 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
       %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-      mode                         => $self->o('mode'),
-      flank_seq_length             => $self->o('flank_seq_length'), 
-      feature_table                => $self->o('feature_table'),
-      algn_score_threshold         => $self->o('algn_score_threshold'),
-      max_map_weight               => $self->o('max_map_weight'),
-      use_prior_for_filtering      => $self->o('use_prior_for_filtering'),
-      map_to_chrom_only            => $self->o('map_to_chrom_only'),
-      entries_per_file             => $self->o('entries_per_file'),
-      debug                        => $self->o('debug'),
-      debug_sequence_name          => $self->o('debug_sequence_name'),
-      qc_mapped_features_dir       => $self->o('qc_mapped_features'),
+      mode                          => $self->o('mode'),
+      flank_seq_length              => $self->o('flank_seq_length'), 
+      feature_table                 => $self->o('feature_table'),
+      feature_table_mapping_results => $self->o('feature_table_mapping_results'),
+      algn_score_threshold          => $self->o('algn_score_threshold'),
+      max_map_weight                => $self->o('max_map_weight'),
+      use_prior_for_filtering       => $self->o('use_prior_for_filtering'),
+      map_to_chrom_only             => $self->o('map_to_chrom_only'),
+      entries_per_file              => $self->o('entries_per_file'),
+      debug                         => $self->o('debug'),
+      debug_sequence_name           => $self->o('debug_sequence_name'),
+      qc_mapped_features_dir        => $self->o('qc_mapped_features'),
     };
 }
 
@@ -88,6 +90,7 @@ sub pipeline_analyses {
         {
             -logic_name => 'pre_run_checks',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks',
+            -max_retry_count  => 0,
             -input_ids  => [{},],
             -flow_into  => {
                 1 => ['init_mapping']
@@ -98,6 +101,7 @@ sub pipeline_analyses {
             -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitStructuralVariationFeatureMapping',
             -rc_name           => 'default_mem',
             -analysis_capacity => 5,
+            -max_retry_count  => 0,
             -flow_into => { 
                 '2->A' => ['run_mapping'],
                 'A->1' => ['init_parse_mapping']
@@ -150,6 +154,13 @@ sub pipeline_analyses {
         {
           -logic_name => 'load_mapping',
           -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+            -flow_into => {
+                1 => ['qc_mapping'],
+            },
+        },
+        {
+          -logic_name => 'qc_mapping',
+          -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::StructuralVariationFeatureQC',
         }
     );
    return \@analyses;
