@@ -44,7 +44,7 @@ use Bio::DB::Fasta;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 
-our @EXPORT_OK = qw(map_variant filter_vf_mapping_first_round filter_vf_mapping_second_round qc_mapped_vf);
+our @EXPORT_OK = qw(map_variant filter_vf_mapping_first_round filter_vf_mapping_second_round qc_mapped_vf filter_svf_mapping);
 
 my $NO_MAPPING = 'no mapping';
 my $TOO_MANY_MAPPINGS = 'map weight > 5';
@@ -152,6 +152,200 @@ sub map_variant {
     $t_start = $new_t_start;  
   } # end while
   return [$snp_t_start, $snp_t_end, $indel_colocation, $flag_suspicious];
+}
+
+sub filter_svf_mapping {
+  my $config = shift;
+  my $file_prev_mappings = $config->{file_prev_mappings};
+  my $file_mappings = $config->{file_mappings};
+  my $file_filtered_mappings = $config->{'file_filtered_mappings'};
+  my $file_failed_filtered_mappings = $config->{'file_failed_filtered_mappings'};
+
+  my $prev_mappings = _get_prev_mappings($file_prev_mappings);
+  my $mapped = _get_svf_mappings($file_mappings, $prev_mappings);
+
+  my $filtered_mappings = {};
+  # for each structural variation feature get the best mapping for each coord type
+  foreach my $id (keys %$mapped) {
+    foreach my $coord_type (keys %{$mapped->{$id}}) {
+      my $mappings = $mapped->{$id}->{$coord_type};
+      my @sorted_coord_by_score = sort { $mappings->{$b} <=> $mappings->{$a} } keys %$mappings;
+      my $algn_score_threshold = 0.5;
+      if ($mappings->{$sorted_coord_by_score[0]} == 1.0) {
+        $algn_score_threshold = 1.0;
+      }
+      my $count_exceed_threshold = grep {$_ >= $algn_score_threshold} values %$mappings;
+      if ($count_exceed_threshold > 1) {
+        my $prev_mapping = $prev_mappings->{$id}->{$coord_type};
+        my $mapped_location = best_mapping($algn_score_threshold, $prev_mapping, $mappings);
+        $filtered_mappings->{$id}->{$coord_type}->{$mapped_location} = $mappings->{$mapped_location};
+      } else { # $count_excess_threshold <= 1 either get 1 mapping or no mapping if threshold to low
+        foreach my $coord (@sorted_coord_by_score) {
+          my $score = $mappings->{$coord};
+          if ($score >= $algn_score_threshold) {
+            $filtered_mappings->{$id}->{$coord_type}->{$coord} = $score;
+          }
+        }
+      }
+    }
+  }
+  # check all coord types from last release have been remapped, also check the correct order
+  my $final_mappings = {};
+  my $fh_failed = FileHandle->new($file_failed_filtered_mappings, 'w');
+  my @start_order = qw/outer_start seq_region_start inner_start/;
+  my @end_order = qw/inner_end seq_region_end outer_end/;
+  foreach my $id (keys %$prev_mappings) {
+    my @prev_coord_types = grep {$_ ne 'seq_region_name'} keys %{$prev_mappings->{$id}};
+    my @new_coord_types =  keys %{$filtered_mappings->{$id}};
+    if (overlap(\@prev_coord_types, \@new_coord_types)) {
+      my $start_coords_in_order = coords_are_in_order(\@start_order, $filtered_mappings->{$id});
+      my $end_coords_in_order = coords_are_in_order(\@end_order, $filtered_mappings->{$id});
+      if (!($start_coords_in_order && $end_coords_in_order)) {
+        print $fh_failed "$id Coords not in order\n";
+        next;
+      }
+      # check start coords are smaller than end coords
+      my $start = get_start($filtered_mappings->{$id}->{seq_region_start});
+      my $end = get_start($filtered_mappings->{$id}->{seq_region_end});
+      if ($end < $start) {
+        my $swap_map = {
+          'outer_start'      => 'inner_end',
+          'seq_region_start' => 'seq_region_end',
+          'inner_start'      => 'outer_end',
+
+          'inner_end'        => 'outer_start',
+          'seq_region_end'   => 'seq_region_start',
+          'outer_end'        => 'inner_start',
+        };
+        my @order = qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/;
+        my $after_swap_mappings = {};
+        foreach my $c (@order) {
+          $final_mappings->{$id}->{$c} = get_start($filtered_mappings->{$id}->{$swap_map->{$c}});
+        }
+        next;
+      }
+      foreach my $c (@new_coord_types) {
+        my $start = get_start($filtered_mappings->{$id}->{$c});
+        $final_mappings->{$id}->{$c} = $start;
+      }
+    } else {
+      print $fh_failed "$id Incomplete mappings Prev ", join(', ', @prev_coord_types), " new ", join(', ', @new_coord_types), "\n";
+    }
+  }
+  $fh_failed->close;
+
+  # write filtered mappings to file
+  my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
+  my $already_stored = {};
+  foreach my $id (keys %$final_mappings) {
+    my ($svf_id, $strand) = split('_', $id);
+    next if ($already_stored->{$svf_id});
+    my @values = ();
+    my $seq_region_name = $prev_mappings->{$id}->{seq_region_name};
+    push @values, "seq_region_name=$seq_region_name";
+    push @values, "structural_variation_feature_id=$svf_id";
+    push @values, "seq_region_strand=$strand";
+    foreach my $coord (keys %{$final_mappings->{$id}}) {
+      my $start = $final_mappings->{$id}->{$coord};
+      push @values, "$coord=$start";
+    }
+    print $fh_filtered_mappings join("\t", @values), "\n";
+    $already_stored->{$svf_id} = 1;
+  }
+  $fh_filtered_mappings->close();
+}
+
+sub get_start {
+  my $coord = shift;
+  if ($coord) {
+    my @keys = keys %$coord;
+    return $keys[0];
+  }
+  return 0;
+}
+
+sub best_mapping {
+  my $threshold = shift;
+  my $prev_location = shift;
+  my $new_mappings = shift;
+  my $new_mapping = '';
+  my $diff = 1_000_000_000;
+
+  foreach my $start (keys %$new_mappings) {
+    my $score = $new_mappings->{$start};
+    if ($score >= $threshold) {
+      my $new_diff = abs($prev_location - $start);
+      if ($diff > $new_diff) {
+        $diff = $new_diff;
+        $new_mapping = $start;
+      }
+    }
+  }
+  return $new_mapping;
+}
+
+sub coords_are_in_order {
+  my $order = shift;
+  my $mappings = shift;
+
+  for (my $i = 0; $i < scalar @$order - 1; $i++) {
+    my $a_coord = $order->[$i];
+    my $b_coord = $order->[$i + 1];
+    my $a_start = get_start($mappings->{$a_coord});
+    my $b_start = get_start($mappings->{$b_coord});
+    if ($a_start && $b_start) {
+      if ($a_start > $b_start) {
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+sub overlap {
+  my $a = shift;
+  my $b = shift;
+  return (scalar @$a == scalar @$b);
+}
+
+sub _get_prev_mappings {
+  my $file = shift;
+  my $prev_mappings = {};
+  my $fh = FileHandle->new($file, 'r');
+  while (<$fh>) {
+    chomp;
+    #93742   seq_region_name=X;seq_region_start=44601505;inner_start=44601505;inner_end=44619579;seq_region_end=44619579
+    my ($vf_id, $coords) = split/\t/;
+    foreach my $coord (split(';', $coords)) {
+      my ($key, $value) = split('=', $coord);
+      $prev_mappings->{"$vf_id\_1"}->{$key} = $value;
+      $prev_mappings->{"$vf_id\_-1"}->{$key} = $value;
+    }
+  }
+  $fh->close();
+  return $prev_mappings;
+}
+
+sub _get_svf_mappings {
+  my $file = shift;
+  my $prev_mappings = shift;
+  my $fh_mappings = FileHandle->new($file, 'r');
+  my $mapped = {};
+  while (<$fh_mappings>) {
+    chomp;
+    #feature_id-coord, coord: outer_start seq_region_start inner_start inner_end seq_region_end outer_end
+
+    #107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984
+    #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
+    #102027-seq_region_start 10      44974586        44974758        1       145     1       274     score=0.850746268656716 173M28H
+    my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score, $cigar_str) = split("\t", $_);
+    my ($id, $coord) = split('-', $query_name);
+    $id = "$id\_$new_strand";
+    if ($prev_mappings->{$id}->{seq_region_name} eq "$new_seq_name") {
+      $mapped->{$id}->{$coord}->{$new_start} = $algn_score;
+    }
+  }
+  $fh_mappings->close();
+  return $mapped;
 }
 
 sub filter_vf_mapping_first_round {
