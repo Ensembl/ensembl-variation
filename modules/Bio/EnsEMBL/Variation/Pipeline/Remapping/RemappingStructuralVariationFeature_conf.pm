@@ -154,13 +154,20 @@ sub pipeline_analyses {
         {
           -logic_name => 'load_mapping',
           -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
-            -flow_into => {
+          -flow_into => {
                 1 => ['qc_mapping'],
             },
         },
         {
           -logic_name => 'qc_mapping',
           -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::StructuralVariationFeatureQC',
+          -flow_into => {
+                1 => ['compare_prev_assembly'],
+            },
+        },
+        {
+          -logic_name => 'compare_prev_assembly',
+          -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::ComparePreviousAssembly',
         }
     );
    return \@analyses;
