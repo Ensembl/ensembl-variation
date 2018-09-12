@@ -391,7 +391,6 @@ sub _fetch_by_Slice_VCF {
     my %location_to_name;
     my $strict_name_match = 0;
     foreach my $vc (@$collections) {
-      print STDERR $vc->id, "\n";
       my $sample_string = '';
       # skip this collection if it doesn't have the population we want
       if (defined($population)) {
