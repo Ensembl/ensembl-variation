@@ -261,6 +261,13 @@ foreach my $ld_value (@$ld_values) {
   cmp_ok($result->{$variation_name2}->{d_prime}, '==', $d_prime, "fetch_by_VariationFeature d_prime for $variation_name2 and rs1333049 no_id_in_vcf");
 }
 
+# test that API can deal with negative start values if max_snp_distance is causing slice start to be negative
+$ldfca->max_snp_distance(22_125_504); # use VF start and max_snp_distance to create slice with a negative start
+$ldfc = $ldfca->fetch_by_VariationFeature($vf, $population);
+cmp_ok(scalar @{$ldfc->get_all_ld_values}, '==', 6, "No error is thrown if max_snp_distance creates negative start value");
+# reset max snp distance
+$ldfca->max_snp_distance(100_000);
+
 #fetch_by_VariationFeature, population is not defined
 $ldfc = $ldfca->fetch_by_VariationFeature($vf);
 foreach my $ld_value (@$ld_values) {
