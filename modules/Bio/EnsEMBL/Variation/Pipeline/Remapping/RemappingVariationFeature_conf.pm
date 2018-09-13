@@ -43,6 +43,7 @@ sub default_options {
     %{ $self->SUPER::default_options() },   # inherit from parent
     mode                    => 'remap_variation_feature',
     feature_table           => 'variation_feature', #'variation_feature',
+    feature_table_mapping_results => 'variation_feature_mapping_results',
     debug                   => 0,
     debug_sequence_name     => 3,
     flank_seq_length        => 150,
@@ -66,6 +67,7 @@ sub pipeline_wide_parameters {
         seq_region_name_mappings_file => $self->o('seq_region_name_mappings_file'),
         flank_seq_length              => $self->o('flank_seq_length'),	
         feature_table                 => $self->o('feature_table'),
+        feature_table_mapping_results => $self->o('feature_table_mapping_results'),
         algn_score_threshold          => $self->o('algn_score_threshold'),
         max_map_weight                => $self->o('max_map_weight'),
         use_prior_for_filtering       => $self->o('use_prior_for_filtering'),
@@ -186,7 +188,14 @@ sub pipeline_analyses {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
       -max_retry_count => 0,
+       -flow_into => {
+        1 => ['compare_prev_assembly'],
+      },
     },
+    {
+      -logic_name => 'compare_prev_assembly',
+      -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::ComparePreviousAssembly',
+    }
     ); 
   } else {
     push @analyses, (
