@@ -96,7 +96,8 @@ sub load_mapping_results {
 
   my $load_features_dir = $self->param('load_features_dir');
   my $feature_table = $self->param('feature_table');
-  my $result_table = "$feature_table\_mapping_results";
+  my $result_table = $self->param('feature_table_mapping_results');
+
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
