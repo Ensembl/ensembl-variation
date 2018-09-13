@@ -1751,7 +1751,7 @@ sub fetch_by_hgvs_notation {
     else {
       push @transcripts, $transcript;
     }
-    
+
     throw ("Could not get a Transcript object for '$reference'") unless @transcripts;
 
     my @results;
@@ -1807,24 +1807,33 @@ sub fetch_by_hgvs_notation {
     #Get the Transcript object to convert coordinates
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);
-    
+
     my @transcripts;
 
-    #try and fetch via gene
+    # support some malformed HGVS
     if(!defined($transcript)) {
-      push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
+      # Seeing transcripts erroneously submitted with p. changes
+      if($reference =~ /ENST|NM/){
+         push @transcripts, $transcript_adaptor->fetch_by_stable_id($reference);
+      }
+      else{
+        #try and fetch via gene
+        $multiple_ok = 1;  ## for VEP - return all possible here but report 1st with matching ref base
+        push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
+        $multiple_ok = 0;
+      }
     }
     else {
       push @transcripts, $transcript;
     }
-    
+
     throw ("Could not get a Transcript object for '$reference'") unless @transcripts;
 
     my @results;
     my %errors;
 
     foreach my $transcript(@transcripts) {
-      
+
       my $possible_prot;
       eval {
         $possible_prot = _parse_hgvs_protein_position($description, $reference, $transcript);
@@ -1855,7 +1864,6 @@ sub fetch_by_hgvs_notation {
         }
       }
     }
-
     throw(join("\n", keys %errors)) unless @results;
 
     return $multiple_ok ? \@results : $results[0];
@@ -1932,6 +1940,7 @@ sub _hgvs_from_components {
   
   #Get the reference allele based on the coordinates - need to supply lowest coordinate first to slice->subseq()
   my $refseq_allele;
+
   if($start > $end){ $refseq_allele = $slice->subseq($end,   $start, $strand);}
   else{              $refseq_allele = $slice->subseq($start, $end,  $strand);}
 
@@ -2038,7 +2047,7 @@ sub _pick_likely_transcript {
     $info->{canonical} = $tr->is_canonical ? 0 : 1;
     $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
     $info->{ccds} = (grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries}) ? 0 : 1;
-    
+
     # "invert" length so longer is best
     $info->{length} = 0 - $tr->length();
     
@@ -2058,7 +2067,6 @@ sub _pick_likely_transcript {
         }
       }
     }
-    
     push @tr_info, $info;
   }
   
@@ -2067,17 +2075,17 @@ sub _pick_likely_transcript {
   
   # go through each category in order
   foreach my $cat(@order) {
-    
+
     # sort on that category
     @tr_info = sort {$a->{$cat} <=> $b->{$cat}} @tr_info;
     
     # take the first (will have the lowest value of $cat)
     $picked = shift @tr_info;
     my @tmp = ($picked);
-    
+
     # now add to @tmp those vfoas that have the same value of $cat as $picked
     push @tmp, shift @tr_info while @tr_info && $tr_info[0]->{$cat} eq $picked->{$cat};
-    
+
     # if there was only one, return
     return $picked->{tr} if scalar @tmp == 1;
     
