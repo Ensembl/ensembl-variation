@@ -254,6 +254,7 @@ sub run {
         if(++$var_count > 100000) {
           $self->dump_hgvs_var($hgvs_by_var, $hgvs_fh);
           $var_count = 0;
+          $hgvs_by_var = {};
         }
       }                       
     }
@@ -317,8 +318,6 @@ sub dump_hgvs_var {
       print $fh "$var_id\t$_\n" for keys %{$hgvs_by_var->{$var_id}};
     }
   }
-
-  $hgvs_by_var = {};
 }
 
 1;
