@@ -391,15 +391,6 @@ sub _fetch_by_Slice_VCF {
     my %location_to_name;
     my $strict_name_match = 0;
     foreach my $vc (@$collections) {
-      $strict_name_match = $vc->strict_name_match;
-      # if we cannot match variants from VCF by name
-      if (!$strict_name_match) {
-        foreach my $slice (@slices) {
-          my %location_to_name_for_slice =  %{$vc->get_location_to_name_map($slice)};
-          %location_to_name = (%location_to_name, %location_to_name_for_slice);
-        }
-      }
-
       my $sample_string = '';
       # skip this collection if it doesn't have the population we want
       if (defined($population)) {
@@ -410,6 +401,14 @@ sub _fetch_by_Slice_VCF {
           map {$_->name}
           @{$population->get_all_Samples}
         );
+      }
+      $strict_name_match = $vc->strict_name_match;
+      # if we cannot match variants from VCF by name
+      if (!$strict_name_match) {
+        foreach my $slice (@slices) {
+          my %location_to_name_for_slice =  %{$vc->get_location_to_name_map($slice)};
+          %location_to_name = (%location_to_name, %location_to_name_for_slice);
+        }
       }
 
       my $cmd;
