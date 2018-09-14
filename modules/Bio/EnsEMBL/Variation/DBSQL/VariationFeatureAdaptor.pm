@@ -1818,9 +1818,8 @@ sub fetch_by_hgvs_notation {
       }
       else{
         #try and fetch via gene
-        $multiple_ok = 1;  ## for VEP - return all possible here but report 1st with matching ref base
-        push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
-        $multiple_ok = 0;
+        # 3rd arg: return all possible transcripts here but for VEP report 1st with matching ref base
+        push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, 1)};
       }
     }
     else {
