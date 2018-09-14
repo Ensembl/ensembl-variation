@@ -1488,6 +1488,7 @@ sub _seek {
   $self->_current($vcf);
   
   # now seek
+  $s = 0 if ($s < 0);
   $vcf->seek($c, $s, $e);
 
   if($self->use_seq_region_synonyms && !defined($vcf->{iterator}->{_tabix_iter}) && (my @synonyms = @{$self->_get_synonyms_by_chr($c)})) {
