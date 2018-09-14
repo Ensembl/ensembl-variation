@@ -432,6 +432,7 @@ my %test_input = (
      20 => ["NC_000007.13:g.143175210G>A",
             "ENST00000408916.1:c.245G>A",
             "ENSP00000386201.1:p.Arg82Gln",
+            "ENST00000408916.1:p.Arg82Gln",  ## malformed HGVS seen in some dbs
            ],  
 
      21 => ["NC_000012.11:g.102056227G>A",
