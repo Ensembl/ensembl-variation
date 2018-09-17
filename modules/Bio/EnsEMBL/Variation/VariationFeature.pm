@@ -655,7 +655,10 @@ sub get_all_MotifFeatureVariations {
   }
   
   if(!exists($self->{motif_feature_variations})) {
-    if($self->dbID) {
+    # We couldn't store motif_feature_variation for human in release/94
+    # compute them on the fly instead
+    my $species = lc $self->adaptor->db->species;
+    if($self->dbID && ($species !~ /homo_sapiens|human/)) {
       if (my $db = $self->adaptor->db) {
         my $mfva = $db->get_MotifFeatureVariationAdaptor;
         my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   

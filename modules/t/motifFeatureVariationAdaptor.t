@@ -63,6 +63,7 @@ my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
   -_source_id => 1,
   -is_somatic => 0,
   -variation => $v,
+  -adaptor => $vfa,
 );
 $vfa->store($vf);
 
