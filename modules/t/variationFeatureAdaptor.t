@@ -396,6 +396,7 @@ my $vf18 = Bio::EnsEMBL::Variation::VariationFeature->new(
   -is_somatic => 0,
   -class_attrib_id => 2,
   -class_SO_term => 'SNV',
+  -adaptor => $vfa,
 );
 
 $vfa->store($vf18);
