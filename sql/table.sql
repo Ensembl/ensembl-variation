@@ -256,6 +256,29 @@ create table variation_synonym (
   key source_idx (source_id)
 );
 
+/**
+@table allele_synonym
+
+@colour #B22222
+@desc This table allows for the allele of a variant to have multiple IDs.
+
+@column allele_synonym_id     Primary key, internal identifier.
+@column variation_id          Foreign key references to the @link variation table.
+@column hgvs                  HGVS of variant e.g. NC_000001.11:g.230710048A>G
+@column name                  Name of the allele synonym e.g. CA127784
+
+@see variation
+*/
+
+CREATE TABLE allele_synonym (
+  allele_synonym_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  variation_id      int(10) unsigned NOT NULL,
+  hgvs              varchar(600) NOT NULL,
+  name              varchar(255) NOT NULL,
+  PRIMARY KEY (allele_synonym_id),
+  UNIQUE KEY variation_name_idx (variation_id, name),
+  KEY hgvs_idx (hgvs)
+) ENGINE = MyISAM;
 
 /**
 @table allele
