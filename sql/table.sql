@@ -256,6 +256,29 @@ create table variation_synonym (
   key source_idx (source_id)
 );
 
+/**
+@table allele_synonym
+
+@colour #B22222
+@desc This table allows for the allele of a variant to have multiple IDs.
+
+@column allele_synonym_id     Primary key, internal identifier.
+@column variation_id          Foreign key references to the @link variation table.
+@column hgvs_genomic          HGVS representation of this allele with respect to the genomic sequence
+@column name                  Name of the allele synonym e.g. CA127784
+
+@see variation
+*/
+
+CREATE TABLE allele_synonym (
+  allele_synonym_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  variation_id      int(10) unsigned NOT NULL,
+  hgvs_genomic      varchar(600) NOT NULL,
+  name              varchar(255) NOT NULL,
+  PRIMARY KEY (allele_synonym_id),
+  UNIQUE KEY variation_name_idx (variation_id, name),
+  KEY name_idx (name)
+) ENGINE = MyISAM;
 
 /**
 @table allele
@@ -1799,12 +1822,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '94');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '95');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_93_94_a.sql|schema version');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_b.sql|create table to store allele synonyms');
 
 /**
 @header  Failed tables
