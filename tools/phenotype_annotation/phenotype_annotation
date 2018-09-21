@@ -1,0 +1,305 @@
+#!/usr/bin/env perl
+
+=head1 LICENSE
+
+Copyright [2018] EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
+=head1 NAME
+
+phenotype_annotation
+
+=head1 DESCRIPTION
+
+Add phenotype/disease associations to input data
+
+=cut
+
+use strict;
+use warnings;
+
+use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor;
+#use Bio::EnsEMBL::VEP::Parser::VCF;
+use Bio::EnsEMBL::IO::ListBasedParser;
+use Bio::EnsEMBL::IO::Parser::VCF4;
+use Bio::EnsEMBL::IO::Parser::VEP_output;
+use Data::Dumper;
+use List::MoreUtils qw(uniq);
+use Getopt::Long qw(GetOptions);
+
+#read input arguments
+usage() if (!scalar(@ARGV));
+
+my ($help, $registryFile, $inputF, $inputType, $force_overwrite);
+my ($phen_assocaited, $phen_overlap, $phen_all);
+my ($species, $assembly, $outFile, $outType) = ("homo_sapiens", "grch38", "phenotype_annotation_output.txt", "txt");
+
+GetOptions("input_file|i=s" => \$inputF,
+  "inputType=s" => \$inputType,
+
+  "associated"  => \$phen_assocaited,
+  "overlap"     => \$phen_overlap,
+  "all"         => \$phen_all,
+
+  "output_file|o=s"  => \$outFile,
+  "output_format=s" => \$outType,
+  "force_overwrite|force" => \$force_overwrite,
+
+  "assembly=s"  => \$assembly,
+  "registry=s"  => \$registryFile,
+  "help!"       => \$help,
+) or usage();
+
+usage() if $help;
+
+die "Missing -input|i (input file) -inputType (type of input data)!\n" unless $inputF && $inputType;
+
+die "Input file $inputF does not exist\n" unless -e $inputF;
+die "Output file already exists. Specify a different file with -output or overwrite existing file with --force_overwrite\n" if (! $force_overwrite && -e $outFile);
+
+
+#registry data:
+my $registry = 'Bio::EnsEMBL::Registry';
+if (defined $registryFile){
+  $registry->load_all($registryFile);
+} else {
+  my $port = 3306;
+  if ($assembly eq 'grch37') {
+    $port = 3337;
+  }
+  $registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org',
+    -user => 'anonymous',
+    -port => $port,
+  );
+}
+
+#ensembl adaptors:
+my $pfa = $registry->get_adaptor($species,"variation","phenotypefeature");
+$pfa->db->include_non_significant_phenotype_associations(1);
+$pfa->_include_ontology(1);
+my $va = $registry->get_adaptor($species,"variation","variation");
+my $ga  = $registry->get_adaptor( $species, "core", "gene" );
+my $sa = $registry->get_adaptor($species,"core","slice");
+my $ca = $registry->get_adaptor($species,"core","coordsystem");
+
+my $outFH;
+open $outFH, ">$outFile" || die "Failed to open output file $outFile :$!\n";
+
+if ($outType eq 'bed') { #https://genome.ucsc.edu/FAQ/FAQformat.html#format1
+  print $outFH join("\t", "Chrom", "Start", "End", "Identifier"), "\n";
+} elsif ($outType eq 'vcf'){ #https://github.com/samtools/hts-specs/blob/master/VCFv4.1.pdf
+  print $outFH '##fileformat=VCFv4.2', "\n";
+  print $outFH '##INFO=<ID=OBJ,Number=1,Type=String,Description="Object id(gene or variation name)">',"\n";
+  print $outFH '##INFO=<ID=PHEN,Number=.,Type=String,Description="Phenotype annotation from Ensembl. Format: Phenotype description|Phenotype accession">',"\n";
+  print $outFH "#".join("\t", qw/CHROM POS ID REF ALT QUAL FILTER INFO/), "\n";
+} else { #text format (name is either SNPname, GeneName or PhenotypeName)
+  print $outFH join("\t", "Uploaded_name", "Chrom", "Start", "End", "Strand", "Identifier", "Phenotype_description", "Phenotype_accession"), "\n";
+}
+
+if ($inputType eq 'gene'){
+  gene_phenotypeFeatures($inputF);
+} elsif ($inputType eq 'phenotype'){
+  pheno_phenotypeFeatures($inputF);
+} elsif ($inputType eq 'variant'){
+  if ($inputF =~ /\.vcf$/ ){
+    snp_phenotypeFeatures($inputF, 'vcf');
+  } else {
+    snp_phenotypeFeatures($inputF);
+  }
+} elsif (uc($inputType) eq 'VEP'){
+  snp_phenotypeFeatures($inputF, 'vep');
+} else {
+  warn "Unknown input type $inputType\n";
+}
+
+close($outFH);
+
+
+#--------------------------------------------------
+# subroutines
+
+sub gene_phenotypeFeatures{
+  my ($inF) = @_;
+
+  my $parser = Bio::EnsEMBL::IO::ListBasedParser->open($inF);
+
+  while ($parser->next()){
+    my $entry = $parser->get_value();
+    my $genes = $ga->fetch_all_by_external_name($entry);
+    warn "Error gene name $entry not found\n" if (scalar @$genes == 0);
+    foreach my $gene (@$genes){
+      my @extracted_phenos = @{$pfa->fetch_all_by_Gene($gene)};
+      if ($phen_assocaited || $phen_all){
+        my @assoc = @{$pfa->fetch_all_by_associated_gene($gene->external_name())};
+        push @extracted_phenos, @assoc;
+      }
+      if ($phen_overlap || $phen_all){
+        my @pfs_overlap = @{$pfa->fetch_all_by_Slice($gene->slice())};
+        push @extracted_phenos, @pfs_overlap;
+      }
+      my %phenotypes = map { $_->phenotype_id. $_->seq_region_name. $_->seq_region_start.$_->seq_region_end => $_ } @extracted_phenos; #make phenotype features unique
+      @extracted_phenos = values %phenotypes;
+      print_phenos($entry, \@extracted_phenos, $outType);
+    }
+  }
+  $parser->close();
+}
+
+sub pheno_phenotypeFeatures{
+  my ($inF) = @_;
+
+  my $parser = Bio::EnsEMBL::IO::ListBasedParser->open($inF);
+
+  my $ont_ad  = $registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm');
+
+  while ($parser->next()){
+    my $entry = $parser->get_value();
+    my $terms = $ont_ad->fetch_all_by_name($entry);
+    warn "Error phenotype $entry not found\n" if (scalar @$terms == 0);
+    my @extracted_phenos;
+    foreach my $term (@$terms){
+      @extracted_phenos = (@extracted_phenos, @{$pfa->fetch_all_by_phenotype_accession_type_source($term->accession(), 'is')} );
+    }
+    my %phenotypes = map { $_->phenotype_id. $_->seq_region_name. $_->seq_region_start.$_->seq_region_end.$_->object_id => $_ } @extracted_phenos; #make phenotype features unique
+    @extracted_phenos = values %phenotypes;
+    print_phenos($entry, \@extracted_phenos, $outType);
+  }
+  $parser->close();
+}
+
+sub snp_phenotypeFeatures{
+  my $inF = shift;
+  my $fileType = shift;
+
+  my $fileTypeVcf= 0;
+  my $fileTypeVep = 0;
+  my $parser;
+  if (! defined $fileType){
+    $parser = Bio::EnsEMBL::IO::ListBasedParser->open($inF);
+  } elsif ($fileType eq 'vcf'){
+    $parser = Bio::EnsEMBL::IO::Parser::VCF4->open($inF);
+    $fileTypeVcf = 1;
+  } elsif ($fileType eq 'vep'){
+    $parser = Bio::EnsEMBL::IO::Parser::VEP_output->open($inF);
+    $fileTypeVep = 1;
+  } else {
+    throw IOException("Error opening file <$inF> - unknown file type <$fileType>");
+  }
+
+  my $coord_system = $ca->fetch_by_name('chromosome');
+
+  my $record;
+  while ($parser->next()){
+    if ($fileTypeVcf){
+      $record = $parser->{'record'};
+    } elsif ($fileTypeVep){
+      $record  = $parser->get_uploaded_variation();
+    } else { # list of rsIDs
+      $record = $parser->get_value();
+    }
+
+    my @extracted_phenos;
+    my $found = 0;
+    if ($fileTypeVcf && $record->[2] ne '.'){
+      #if ID present & in EnsEMBL -> fetch via existing Variation
+      @extracted_phenos = @{$pfa->fetch_all_by_object_id($record->[2])};
+      warn "Warning: no phenotypes found for variation $record->[2]\n" if (scalar @extracted_phenos == 0);
+      print_phenos($parser->get_uploaded_variation(), \@extracted_phenos, $outType);
+      $found = 1 if scalar @extracted_phenos > 0;
+    } elsif (!$fileTypeVcf || ($fileTypeVep && $record !~ /^\d/)){
+      @extracted_phenos = @{$pfa->fetch_all_by_object_id($record)};
+      warn "Warning: no phenotypes found for variation $record\n" if (scalar @extracted_phenos == 0);
+      print_phenos($record, \@extracted_phenos, $outType);
+      $found = 1 if scalar @extracted_phenos > 0;
+    }
+
+    if (!$found && ($fileTypeVep || $fileTypeVcf)){  #fetch based on slice
+      my $vfChrom = $parser->get_seqname();
+      my $vfStart = $parser->get_start();
+      my $vfEnd = $parser->get_end();
+      my $name = $parser->get_uploaded_variation();
+      $name = $vfChrom.'_'.$vfStart.'_'.$parser->get_allele() if $name eq '.' ;
+      my $tmpSlice = Bio::EnsEMBL::Slice->new(-coord_system => $coord_system,
+                                              -start => $vfStart,
+                                              -end => $vfEnd,
+                                              -strand => 1,
+                                              -seq_region_name => $vfChrom,
+                                              -seq_region_length => $vfEnd - $vfStart + 1,
+                                              -adaptor => $sa);
+      # get phenotypes for genes that are overlapped by query variation
+      my @extracted_phenos = @{$pfa->fetch_all_by_Slice_type($tmpSlice, "Gene")};
+      my @assoc = @{$pfa->fetch_all_by_Slice_type($tmpSlice, "Variation")};
+      push @extracted_phenos, @assoc;
+      my %phenotypes = map { $_->phenotype_id. $_->seq_region_name. $_->seq_region_start.$_->seq_region_end => $_ } @extracted_phenos; #make phenotype features unique
+      @extracted_phenos = values %phenotypes;
+      print_phenos($name, \@extracted_phenos, $outType);
+    }
+  }
+  $parser->close();
+}
+
+sub print_phenos {
+  my ($uploaded_name, $phenof, $format) = @_;
+  foreach my $ph (@$phenof){
+    my $coords =  join("-",$ph->seq_region_name, $ph->seq_region_start, $ph->seq_region_end);
+    my $acc_tmp = join(";", @{$ph->get_all_ontology_accessions});
+    my $desc =  $ph->phenotype_description();
+    if ($format eq 'bed') {
+      print $outFH join("\t", $ph->seq_region_name, $ph->seq_region_start, $ph->seq_region_end,
+                   join(":", $ph->object_id, "'".$desc."'(". $acc_tmp .")")
+                   ) , "\n";
+    } elsif ($format eq 'vcf') {
+      my $tmp ="."; # for REF, ALT, QUAL, FILTER
+      print $outFH join("\t", $ph->seq_region_name, $ph->seq_region_start, $ph->seq_region_end,
+                        $tmp, $tmp, $tmp, $tmp,
+                        "OBJ=".$ph->object_id.";" . "PHEN=".join("|",$desc, $acc_tmp)
+                        ) , "\n";
+    } else {
+      print $outFH join("\t", $uploaded_name, $ph->seq_region_name, $ph->seq_region_start, $ph->seq_region_end, $ph->strand,
+                   $ph->object_id, $desc, $acc_tmp), "\n";
+    }
+  }
+}
+
+sub usage {
+
+  print qq{
+  Help: dev\@ensembl.org , helpdesk\@ensembl.org
+  Usage:  ./phenotype_annotation [OPTIONS]
+  Annotate input data: variants (list of rsIDs or VCF or VEP output file) OR genes (list of gene identifiers or gene symbols) OR phenotypes (list of accessions or term names) with assigned phenotype features.
+  Options:
+      -input_file|i      Input file (variants in VCF, rsIDs or genes or phenotypes in text file list form)
+      -inputType         Type of input data: [variant, gene, phenotype, vep] (Default: gene)
+
+      -species           Species of the input data (Default: human)
+      -assembly          Assembly to use if species is human (Default: grch38)
+      -registry          Ensembl registry file containing database connection details
+
+      -associated        If inputType is gene, include GWAS variant-phenotype associations where the gene is reported as a likely candidate
+      -overlap           If inputType is gene, include phenotypes overlapping the input data
+      -all               If inputType is gene, annotate all phenotypes (directly assigned, associated and overlapping)
+
+      -output_file|o     Output file (Default: phenotype_annotation_output.txt)
+      -output_format     Format of the output data: [txt, bed, vcf] (Default: txt)
+      -force_overwrite   Existing output file will get overwritten
+
+      -help              Print this message
+  } . "\n";
+  exit(0);
+}
