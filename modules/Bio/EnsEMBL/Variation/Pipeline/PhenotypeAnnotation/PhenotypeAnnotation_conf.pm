@@ -98,15 +98,17 @@ sub default_options {
         reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
 
         # the run type can be one of: RGD (import RGD data),
-        # AnimalQTL (import AnimalQTL)
+        # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
 
         run_import_type         =>  NONE,        
 
         threshold_qtl           =>  0, #for RGD_qtl, AnimalQTL
-                
+
         animalqtl_input_dir     => $self->o('pipeline_dir').'/AnimalQTL/inputFiles',
-        animalqtl_version       => '20180822', #release 36 is 20180822
+        animalqtl_version       => '20180822', #release 36 is 20180822 TODO: confirm there is no computational way to get it
+
+        zfin_version            => '20001020', #13 Sep 2018 #TODO: confirm there is no computational way to get it
         
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
@@ -180,6 +182,7 @@ sub pipeline_analyses {
             -flow_into  => {
                 '2->A' => [ 'import_rgd' ],
                 '3->A' => [ 'import_animal_qtldb' ],
+                '4->A' => [ 'import_zfin' ],
                 'A->1' => [ 'finish_pipeline' ],
           #      4 => [ 'import_mim_morbid' ],
             #    5 => [ 'import_orphanet' ],
@@ -208,10 +211,25 @@ sub pipeline_analyses {
 
         {   -logic_name => 'import_animal_qtldb',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportAnimalQTL',
-            -parameters => {                
+            -parameters => {
                 animalqtl_input_dir => $self->o('animalqtl_input_dir'),
                 animalqtl_version   => $self->o('animalqtl_version'),
                 threshold_qtl       => $self->o('threshold_qtl'),
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'import_zfin',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportZFIN',
+            -parameters => {
+                zfin_version => $self->o('zfin_version'),
                 @common_params,
             },
             -input_ids      => [],
