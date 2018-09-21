@@ -44,6 +44,7 @@ package Bio::EnsEMBL::Variation::Utils::Date;
 use strict;
 use warnings;
 use base qw(Exporter);
+use POSIX;
 
 our @EXPORT_OK = qw(run_date log_time);
 
@@ -63,12 +64,7 @@ our @EXPORT_OK = qw(run_date log_time);
 
 sub run_date{
 
-    my @dt = localtime();
-
-    $dt[5] += 1900;
-    $dt[4] +=1; 
-
-    return $dt[5] ."-". $dt[4] . "-". $dt[3] ;
+    return strftime("%Y-%m-%d", localtime);
 }
 
 =head2 log_time
@@ -86,17 +82,7 @@ sub run_date{
 
 sub log_time{
 
-    my @dt = localtime();
-
-    $dt[5] += 1900;
-    $dt[4] +=1;
-
-    ## pad time to 6 digits where required
-    $dt[0] = '0' . $dt[0] if length($dt[0]) ==1;
-    $dt[1] = '0' . $dt[1] if length($dt[1]) ==1;
-    $dt[2] = '0' . $dt[2] if length($dt[2]) ==1;
-
-    return $dt[5] ."-". $dt[4] . "-". $dt[3] ."_" . $dt[2] . $dt[1] . $dt[0];
+    return strftime("%Y-%m-%d_%H%M%S", localtime);
 }
 
 
