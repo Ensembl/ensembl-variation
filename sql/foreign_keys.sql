@@ -30,6 +30,8 @@ ALTER TABLE allele ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allel
 ALTER TABLE allele ADD FOREIGN KEY (population_id) REFERENCES population(population_id);
 ALTER TABLE allele ADD FOREIGN KEY (frequency_submitter_handle) REFERENCES submitter_handle(handle_id);
 
+ALTER TABLE allele_synonym ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+
 ALTER TABLE associate_study ADD FOREIGN KEY (study1_id) REFERENCES study(study_id);
 ALTER TABLE associate_study ADD FOREIGN KEY (study2_id) REFERENCES study(study_id);
 
