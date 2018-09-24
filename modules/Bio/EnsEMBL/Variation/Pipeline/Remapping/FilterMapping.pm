@@ -30,6 +30,7 @@ use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
+use Bio::EnsEMBL::Variation::Utils::RemappingUtils qw(filter_read_mapping);
 
 sub fetch_input {
   my $self = shift;
@@ -259,175 +260,32 @@ sub report_failed_read_mappings {
 
 sub filter_read_mapping_results {
   my $self = shift;
-  my $connect_mapped_data_id = shift; # phenotype_feature_id
-  $connect_mapped_data_id ||= 'entry';
-  my $algn_score_threshold = $self->param('algn_score_threshold');
+  my $feature_type_id = shift; # phenotype_feature_id
+  $feature_type_id ||= 'entry';
 
-  my $file_mappings = $self->param('file_mappings');
-  my $fh_mappings = FileHandle->new($file_mappings, 'r');
+  my $config = {
+    feature_type_id => $feature_type_id,
+    file_init_feature => $self->param('file_init_feature'),
+    file_filtered_mappings =>  $self->param('file_filtered_mappings'),
+    file_mappings => $self->param('file_mappings'),
+  };
+  my $stats = filter_read_mapping($config);
 
-  my ($stats_failed, $stats_unique_map, $stats_multi_map);
+  $self->param('stats_unique_map', $stats->{unique_map});
+  $self->param('stats_multi_map', $stats->{multi_map});
+  $self->param('stats_failed', $stats->{failed});
+}
 
-  my $mapped = {};
-  while (<$fh_mappings>) {
-    chomp;
-    #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
-    #10137:patched    4       127441656       127441755       1       1       1.00000 241M
-    #417:complete     4       127285626       127285726       1       293     0.99010 101M
-    #10157:upstream   4       128525045       128525544       -1      1       0.99800 277M1I223M
-    #10157:downstream 4       129826530       129827031       -1      1       0.99401 213M1D288M
-    my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score, $cigar) = split("\t", $_); 
-    my ($id, $type) = split(':', $query_name);   
-    $mapped->{$id}->{$type}->{$new_seq_name}->{"$new_start:$new_end:$new_strand"} = $algn_score;
+sub get_new_seq_region_ids {
+  my $self = shift;
+  my $seq_region_ids = {};
+  my $cdba = $self->param('cdba_newasm');
+  my $sa = $cdba->get_SliceAdaptor;
+  my $slices = $sa->fetch_all('toplevel', undef, 1);
+  foreach my $slice (@$slices) {
+    $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
   }
-  $fh_mappings->close();
-
-  my $file_init_feature = $self->param('file_init_feature');
-  my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
-
-  # this comes from the initial dump from phenotype_feature
-  my $feature_data = {};
-  while (<$fh_init_feature>) {
-    chomp;
-    my $data = $self->read_data($_);
-    $feature_data->{$data->{$connect_mapped_data_id}} = $data;
-  }
-  $fh_init_feature->close();
-
-  my $file_filtered_mappings = $self->param('file_filtered_mappings');
-  my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
-
-  foreach my $id (keys %$mapped) {
-    my $init_data = $feature_data->{$id};
-    my $old_chrom = $init_data->{seq_region_name};
-    my $old_start = $init_data->{seq_region_start}; 
-    my $old_end = $init_data->{seq_region_end};
-    my $diff = $old_end - $old_start + 1;
-    my $types = scalar keys %{$mapped->{$id}}; # upstream, downstream, patched, complete 
-    my $count_out = 0;
-    my @output_lines = ();
-    if ($types == 2) { # upstream and downstream mappings
-      my $filtered = {};
-      foreach my $seq_name (keys %{$mapped->{$id}->{upstream}}) {
-        # find pairs
-        my $filtered_upstream   = $mapped->{$id}->{upstream}->{$seq_name};
-        my $filtered_downstream = $mapped->{$id}->{downstream}->{$seq_name};
-        next unless ($filtered_upstream && $filtered_downstream);
-
-        # match up upstream and downstream reads select pairs whose difference matches best with the size (diff) of the originial QTL
-        foreach my $upstream_mapping (keys %$filtered_upstream) {
-          my $upstream_score = $filtered_upstream->{$upstream_mapping};
-          my ($up_start, $up_end, $up_strand) = split(':', $upstream_mapping);
-          foreach my $downstream_mapping (keys %$filtered_downstream) {
-            my $downstream_score = $filtered_downstream->{$downstream_mapping};
-            my ($down_start, $down_end, $down_strand) = split(':', $downstream_mapping);
-            my $mapping_diff = $down_end - $up_start + 1;
-            my $diff_score = abs($mapping_diff - $diff);
-            if ($up_strand == $down_strand) {
-              if ($up_start > $down_end) {
-                ($up_start, $down_end) = ($down_end, $up_start);
-              }
-              $filtered->{$seq_name}->{"$up_start:$down_end:$down_strand"} = $diff_score;
-            }
-          }
-        }
-      } # end match upstream and downstream           
-      # use prior knowledge from previous mapping and prefer same chromosome on which QLT was located in old assembly
-      if ($filtered->{$old_chrom}) {
-        my $mappings = $filtered->{$old_chrom};
-        my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings); # score is defined as difference between previous length of QTL and new length of QTL, the smaller the better
-        my $threshold = $mappings->{$keys[0]}; 
-        foreach my $mapping (@keys) {
-          my $score = $mappings->{$mapping};
-          if ($score <= $threshold) { # consider all mappings with the same score
-            $count_out++;
-            my ($new_start, $new_end, $new_strand) = split(':', $mapping);
-            push @output_lines, "$id\t$old_chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
-          }
-        }
-      } else {
-        # compute best score over all seq_names
-        # Get best score for each seq_region
-        # Get all seq_regions with best score
-        # Get all mappings from seq_regions with best score
-        my $seq_regions = {};
-        foreach my $seq_name (keys %$filtered) {
-          my $mappings = $filtered->{$seq_name};
-          my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
-          my $threshold = $mappings->{$keys[0]};
-          $seq_regions->{$seq_name} = $threshold;
-        }
-        my @post_seq_regions = ();
-        my @keys = sort {$seq_regions->{$a} <=> $seq_regions->{$b}} keys(%$seq_regions);
-        my $threshold = $seq_regions->{$keys[0]};
-        foreach my $seq_region (keys %$seq_regions) {
-          if ($seq_regions->{$seq_region} <= $threshold) {
-            push @post_seq_regions, $seq_region;
-          }
-        }
-        foreach my $new_chrom (@post_seq_regions) {
-          my $mappings = $filtered->{$new_chrom};
-          my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
-          my $threshold = $mappings->{$keys[0]};
-          foreach my $mapping (@keys) {
-            my $score = $mappings->{$mapping};
-            if ($score <= $threshold) {
-              $count_out++;
-              my ($new_start, $new_end, $new_strand) = split(':', $mapping);
-              push @output_lines, "$id\t$new_chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
-            }
-          }
-        }
-      }
-    } elsif ($types == 1) { # complete or patched
-      foreach my $type (keys %{$mapped->{$id}}) {
-        my $mappings = {};
-        if ($mapped->{$id}->{$type}->{$old_chrom}) {
-          foreach my $coords (keys %{$mapped->{$id}->{$type}->{$old_chrom}}) {
-            $mappings->{"$old_chrom:$coords"} = $mapped->{$id}->{$type}->{$old_chrom}->{$coords};
-          }
-        } else {
-          foreach my $seq_name (keys %{$mapped->{$id}->{$type}}) {
-            foreach my $coords (keys %{$mapped->{$id}->{$type}->{$seq_name}}) {
-              $mappings->{"$seq_name:$coords"} = $mapped->{$id}->{$type}->{$seq_name}->{$coords};
-            }
-          }
-        }
-        my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
-        my $threshold = $mappings->{$keys[0]};
-        foreach my $mapping (@keys) {
-          my $score = $mappings->{$mapping};
-          if ($score <= $threshold) {
-            $count_out++;
-            my ($chrom, $new_start, $new_end, $new_strand) = split(':', $mapping);
-            push @output_lines, "$id\t$chrom\t$new_start\t$new_end\t$new_strand\t$score\n";
-          }
-        }
-      }
-    } else {
-      $self->warning("Error for id: $id. More than 2 types");
-    }
-
-    if ($count_out == 1) {
-      $stats_unique_map++;
-    } elsif ($count_out > 1 && $count_out <= 5) {
-      $stats_multi_map++;
-    } elsif ($count_out > 5) {
-      $stats_failed++;
-    } else {
-      $stats_failed++;
-    }
-    if ($count_out >= 1 && $count_out <= 5) {
-      foreach my $line (@output_lines) {
-        print $fh_filtered_mappings $line;
-      }
-    }
-  }
-
-  $fh_filtered_mappings->close();
-  $self->param('stats_unique_map', $stats_unique_map);
-  $self->param('stats_multi_map', $stats_multi_map);
-  $self->param('stats_failed', $stats_failed);
+  return $seq_region_ids;
 }
 
 1;

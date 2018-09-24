@@ -82,7 +82,7 @@ sub generate_svf_mapping_input {
         push @all_coords, "seq_region_name=$seq_region_name";
         foreach my $coord_name (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
           my $coord = $data->{$coord_name};
-          if ($coord ne '\N') {
+          if ($coord ne '\N') { # some coord types (outer_*, inner_*) are not always defined for structural variations
             push @all_coords, "$coord_name=$coord";
             my $query_sequence = $self->get_query_sequence($seq_region_name, $coord, $coord + 200, $strand);
             my $id = ">$feature_id-$coord_name";

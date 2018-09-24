@@ -37,8 +37,8 @@ sub run {
   my $self = shift;
   if ($self->param('mode') eq 'remap_read_coverage') {
     $self->load_read_coverage();
-  } elsif ($self->param('mode') eq 'remap_QTL') {
-    $self->load_qtl();
+  } elsif ($self->param('mode') eq 'remap_QTL' || $self->param('mode') eq 'remap_svf') {
+    $self->load_mapping_results();
   } else {
     $self->load_features();
   }
@@ -55,7 +55,6 @@ sub load_read_coverage {
   my $vdba = $self->param('vdba_newasm');
   my $dbc = $vdba->dbc;
 
-  my $dbname = $vdba->dbc->dbname();
   my $feature_table = $self->param('feature_table');
   my $result_table = "$feature_table\_mapping_results";
 
@@ -63,22 +62,7 @@ sub load_read_coverage {
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
 
-  my $dbh = $dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = '$dbname'
-      AND TABLE_NAME = '$result_table';
-      });
-  $sth->execute();
-
-# QC that all necessary columns are there: e.g. seq_region_id, ...
-  my @column_names = ();
-  while (my @name = $sth->fetchrow_array) {
-    push @column_names, $name[0];
-  }
-  $sth->finish();
-  @column_names = sort @column_names;
-
+  my @column_names = @{$self->get_sorted_column_names($vdba, $result_table)};
   my $column_names_concat = join(',', @column_names);
 
   opendir(IND_DIR, $load_features_dir) or die $!;
@@ -102,41 +86,24 @@ sub load_read_coverage {
   closedir(IND_DIR);
 
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
-  $dbh->disconnect;
 }
 
-sub load_qtl {
+sub load_mapping_results {
   my $self = shift;
 
   my $vdba = $self->param('vdba_newasm');
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
-
-  my $dbname = $vdba->dbc->dbname();
   my $feature_table = $self->param('feature_table');
-  my $result_table = "$feature_table\_mapping_results";
+  my $result_table = $self->param('feature_table_mapping_results');
+
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
 
-  my $dbh = $dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = '$dbname'
-      AND TABLE_NAME = '$result_table';
-      });
-  $sth->execute();
-
-  my @column_names = ();
-  while (my @name = $sth->fetchrow_array) {
-    push @column_names, $name[0];
-  }
-  $sth->finish();
-  @column_names = sort @column_names;
-
+  my @column_names = @{$self->get_sorted_column_names($vdba, $result_table)};
   my $column_names_concat = join(',', @column_names);
-
   opendir(DIR, $load_features_dir) or die $!;
   while (my $file = readdir(DIR)) {
     if ($file =~ /^(.+)\.txt$/) {
@@ -151,7 +118,6 @@ sub load_qtl {
   }
   closedir(DIR);
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
-  $dbh->disconnect;
 }
 
 sub load_features {
@@ -161,33 +127,15 @@ sub load_features {
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
-
-  my $dbname = $vdba->dbc->dbname();
   my $feature_table = $self->param('feature_table');
-  my $result_table = "$feature_table\_mapping_results";
+  my $result_table = $self->param('feature_table_mapping_results');
 
   $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
   $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
   $dbc->do(qq{ ALTER TABLE $result_table ADD variation_feature_id_old int(10) unsigned});
   $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
 
-  my $dbh = $dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = '$dbname'
-      AND TABLE_NAME = '$result_table';
-      });
-  $sth->execute();
-
-  my @column_names = ();
-  while (my @name = $sth->fetchrow_array) {
-    unless ($name[0] =~ /^variation_feature_id$/) {
-      push @column_names, $name[0];
-    }
-  }
-  $sth->finish();
-  @column_names = sort @column_names;
-
+  my @column_names = @{$self->get_sorted_column_names($vdba, $result_table, {variation_feature_id => 1})};
   my $column_names_concat = join(',', @column_names);
 
   opendir(DIR, $load_features_dir) or die $!;
@@ -205,7 +153,6 @@ sub load_features {
   closedir(DIR);
 
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
-  $dbh->disconnect;
 }
 
 1;
