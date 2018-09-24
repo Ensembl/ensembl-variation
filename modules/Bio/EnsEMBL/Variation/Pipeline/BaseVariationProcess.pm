@@ -33,6 +33,8 @@ package Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess;
 use strict;
 use warnings;
 
+use POSIX;
+
 use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Hive::AnalysisJob;
@@ -121,12 +123,7 @@ sub _load_registry {
 sub run_date{
     my ($self) = @_;
 
-    my @dt = localtime();
-
-    $dt[5] += 1900;
-    $dt[4] +=1; 
-
-    return $dt[5] ."-". $dt[4] . "-". $dt[3] ;
+    return strftime("%Y-%m-%d", localtime);
 }
 
 1;
