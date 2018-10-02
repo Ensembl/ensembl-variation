@@ -29,6 +29,7 @@ use FileHandle;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path);
+use Bio::Perl;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
@@ -53,7 +54,8 @@ sub fetch_input {
     }
     $self->param('seq_region_name_mappings', $seq_region_name_mappings);
   }
-
+  my $bioperl_version = Bio::Perl->VERSION;
+  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
 }
 
 sub run {
