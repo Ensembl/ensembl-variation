@@ -82,8 +82,7 @@ sub run {
   $self->param('file_count', $file_count);
 
   my $fasta_db_dir = $self->param('new_assembly_dir');
-  my $bioperl_version = Bio::Perl->VERSION;
-  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
+  $self->test_bioperl_version;
   my $fasta_db = Bio::DB::Fasta->new($fasta_db_dir, -reindex => 1);
   $self->param('fasta_db', $fasta_db_dir);
 

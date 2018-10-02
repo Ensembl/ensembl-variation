@@ -35,6 +35,13 @@ use warnings;
 use base qw(Bio::EnsEMBL::Hive::Process);
 
 use Bio::EnsEMBL::Registry;
+use Bio::Perl;
+
+sub test_bioperl_version {
+  my $self = shift;
+  my $bioperl_version = Bio::Perl->VERSION;
+  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
+}
 
 sub fetch_input {
   my $self = shift;
