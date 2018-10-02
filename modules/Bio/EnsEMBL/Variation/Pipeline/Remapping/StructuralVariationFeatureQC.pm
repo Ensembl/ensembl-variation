@@ -95,10 +95,9 @@ sub unmapped_structural_variation_features {
   my $dump_features_dir = $self->param('dump_features_dir');
   my $load_features_dir = $self->param('load_features_dir');
 
-  my $failed_descriptions = {
-    '17' => 'Variant can not be re-mapped to the current assembly',
-    '18' => 'Supporting evidence can not be re-mapped to the current assembly',
-  };
+  # failed_descriptions TODO check that ids still match descriptions
+  #  '17' => 'Variant can not be re-mapped to the current assembly',
+  #  '18' => 'Supporting evidence can not be re-mapped to the current assembly',
 
   opendir (DIR, $load_features_dir) or die $!;
   while (my $load_file = readdir(DIR)) {
