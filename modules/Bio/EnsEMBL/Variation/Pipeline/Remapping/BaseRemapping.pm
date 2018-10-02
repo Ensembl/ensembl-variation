@@ -237,9 +237,7 @@ sub rename_mapped_feature_table {
   if ($self->table_exists($result_table, $vdba_newasm)) {
     # drop feature table if it exists
     # if it exists at this point it means that before_remapping_feature_table has been created and this is another remapping run
-    if ($self->table_exists($feature_table, $vdba_newasm)) {
-      $dbh->do("DROP TABLE $feature_table;") or die $!;
-    }
+    $dbh->do("DROP TABLE IF EXISTS $feature_table;") or die $!;
     $dbh->do("RENAME TABLE $result_table TO $feature_table;") or die $!;
   }
 }
