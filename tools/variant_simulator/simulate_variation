@@ -87,7 +87,7 @@ my $FHO;
 open ($FHO, ">$outFile") or die "Can't open file to write: $outFile, $!\n";
 #print header:
 print $FHO '##fileformat=VCFv4.2', "\n";
-print $FHO '##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">',"\n";
+print $FHO '##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">',"\n";
 print $FHO '##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">',"\n";
 print $FHO "#".join("\t", qw/CHROM POS ID REF ALT QUAL FILTER INFO/), "\n";
 
@@ -146,7 +146,7 @@ sub processGenes{
       @parts = ($geneID);
     }
 
-    generateSNPs(\@parts,$geneID->external_name, $fho);
+    generateSNPs(\@parts,defined $geneID->external_name ? $geneID->external_name : $geneID->stable_id, $fho);
   }
 }  
 
@@ -164,7 +164,7 @@ sub generateSNPs {
     my $partID;
     $partID = $part->stable_id if $exonOnly;
     $partID = $part->display_id if $intronOnly;
-    $partID  = $part->display_id;
+    $partID = $part->display_id;
     my $seq = $slice_adaptor->fetch_by_region("chromosome", $chrom, $start ,$part->seq_region_end + $edges)->seq;
     my @seqAr = split("", $seq);
     my ($id, $qual, $filter, $info) = (".", ".", ".", ".");

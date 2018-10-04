@@ -37,7 +37,7 @@ The script generates all single base substitutions for protein coding genes give
 First 7 rows of the output:
 ```txt
 ##fileformat=VCFv4.2
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
 ##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
 2	38814	2-38814-T-A	T	A	.	.	GENE=FAM110C;FEATURE=ENSG00000184731
@@ -56,7 +56,7 @@ or
 First 7 rows of the output:
 ```txt
 ##fileformat=VCFv4.2
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
 ##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
 13	32315474	13-32315474-G-A	G	A	.	.	GENE=BRCA2;FEATURE=ENSG00000139618
@@ -71,7 +71,7 @@ First 7 rows of the output:
 First 7 rows of the output:
 ```txt
 ##fileformat=VCFv4.2
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
 ##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
 13	32357742	13-32357742-C-A	C	A	.	.	GENE=BRCA2;FEATURE=ENSE00003719469
@@ -86,7 +86,7 @@ First 7 rows of the output:
 First 7 rows of the output:
 ```txt
 ##fileformat=VCFv4.2
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
 ##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
 13	32325076	13-32325076-G-A	G	A	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
@@ -101,10 +101,25 @@ First 7 rows of the output:
 First 7 rows of the output:
 ```txt
 ##fileformat=VCFv4.2
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
 ##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
 13	32325071	13-32325071-T-A	T	A	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
 13	32325071	13-32325071-T-C	T	C	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
 13	32325071	13-32325071-T-G	T	G	.	.	GENE=BRCA2;FEATURE=ENSE00003659301
+```
+
+#### Generate SNPs for a specific species
+```bash
+./simulate_variation -species pig -chrom 12
+```
+First 7 rows of the output:
+```txt
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">
+##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+12	128254	12-128254-T-A	T	A	.	.	GENE=ENSSSCG00000034696;FEATURE=ENSSSCG00000034696
+12	128254	12-128254-T-C	T	C	.	.	GENE=ENSSSCG00000034696;FEATURE=ENSSSCG00000034696
+12	128254	12-128254-T-G	T	G	.	.	GENE=ENSSSCG00000034696;FEATURE=ENSSSCG00000034696
 ```
