@@ -27,6 +27,7 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::InitVariationFeatureQC;
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
 use Bio::DB::Fasta;
+use Bio::Perl;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use FileHandle;
@@ -81,7 +82,7 @@ sub run {
   $self->param('file_count', $file_count);
 
   my $fasta_db_dir = $self->param('new_assembly_dir');
-
+  $self->test_bioperl_version;
   my $fasta_db = Bio::DB::Fasta->new($fasta_db_dir, -reindex => 1);
   $self->param('fasta_db', $fasta_db_dir);
 

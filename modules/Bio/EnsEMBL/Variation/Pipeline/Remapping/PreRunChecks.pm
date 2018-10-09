@@ -37,7 +37,6 @@ use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 use IPC::Cmd qw(can_run);
-use Bio::Perl;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 
@@ -48,9 +47,7 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
-  # we need at least bioperl version 1.006924
-  my $bioperl_version = Bio::Perl->VERSION;  
-  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
+  $self->test_bioperl_version;
 
   # load new seq_region IDs
   my $registry = 'Bio::EnsEMBL::Registry';

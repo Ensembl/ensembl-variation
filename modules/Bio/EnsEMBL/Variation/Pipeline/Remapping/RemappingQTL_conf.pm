@@ -159,7 +159,7 @@ sub pipeline_analyses {
     },
     {
       -logic_name        => 'qtl_qc',
-      -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::QtlQC',
+      -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::QTLQC',
       -analysis_capacity => 5,
       -rc_name           => 'default_mem',
       -flow_into => {

@@ -35,6 +35,13 @@ use warnings;
 use base qw(Bio::EnsEMBL::Hive::Process);
 
 use Bio::EnsEMBL::Registry;
+use Bio::Perl;
+
+sub test_bioperl_version {
+  my $self = shift;
+  my $bioperl_version = Bio::Perl->VERSION;
+  die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
+}
 
 sub fetch_input {
   my $self = shift;
@@ -237,9 +244,7 @@ sub rename_mapped_feature_table {
   if ($self->table_exists($result_table, $vdba_newasm)) {
     # drop feature table if it exists
     # if it exists at this point it means that before_remapping_feature_table has been created and this is another remapping run
-    if ($self->table_exists($feature_table, $vdba_newasm)) {
-      $dbh->do("DROP TABLE $feature_table;") or die $!;
-    }
+    $dbh->do("DROP TABLE IF EXISTS $feature_table;") or die $!;
     $dbh->do("RENAME TABLE $result_table TO $feature_table;") or die $!;
   }
 }

@@ -15,15 +15,15 @@ limitations under the License.
 
 =head1 CONTACT
  Please email comments or questions to the public Ensembl
- developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+ developers list at <https://lists.ensembl.org/mailman/listinfo/dev>.
  Questions may also be sent to the Ensembl help desk at
- <http://www.ensembl.org/Help/Contact>.
+ <https://www.ensembl.org/Help/Contact>.
 =cut
 
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::Pipeline::Remapping::QtlQC;
+package Bio::EnsEMBL::Variation::Pipeline::Remapping::QTLQC;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::BaseRemapping');
 

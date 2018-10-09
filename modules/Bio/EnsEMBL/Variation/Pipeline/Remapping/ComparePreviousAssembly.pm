@@ -75,7 +75,7 @@ sub get_feature_counts_by_seq_region {
     seq_region sr
     ON (ft.seq_region_id = sr.seq_region_id)
     $extra_sql
-    GROUP BY ft.seq_region_id;
+    GROUP BY sr.name;
   }, {mysql_use_result => 1});
 
   $sth->execute() or die $sth->errstr;
