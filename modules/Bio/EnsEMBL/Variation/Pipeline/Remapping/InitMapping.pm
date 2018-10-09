@@ -26,7 +26,6 @@ use strict;
 use warnings;
 
 use FileHandle;
-use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path);
 
@@ -53,7 +52,7 @@ sub fetch_input {
     }
     $self->param('seq_region_name_mappings', $seq_region_name_mappings);
   }
-
+ $self->test_bioperl_version;
 }
 
 sub run {

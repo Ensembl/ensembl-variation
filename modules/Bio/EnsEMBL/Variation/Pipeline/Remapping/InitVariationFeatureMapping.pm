@@ -68,7 +68,6 @@ sub generate_mapping_input {
   $self->param('qc_ref_seq', $fh_ref_seq);
 
   my $variants_with_multi_map = {};
-  my $mode = $self->param('mode');
   my $dump_multi_map = 1;
   my $file_count = 0;
   opendir(DIR, $dump_features_dir) or die $!;
