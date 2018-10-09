@@ -268,7 +268,7 @@ sub get_clinsig{
     ## Description = 'conflicting data from submitters' - the values are in the explanation
     defined $ClinicalSignificance->{Explanation} ?
     $desc = "\L$ClinicalSignificance->{Explanation}->[0]" :
-    warn "warning: conflicting ClinicalSignificance but no Explanation";
+    warn "warning: conflicting ClinicalSignificance but no Explanation\n";
     $desc |='';
     $desc =~ s/\(\d+\)//g; ## remove bracketed counts
     $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
