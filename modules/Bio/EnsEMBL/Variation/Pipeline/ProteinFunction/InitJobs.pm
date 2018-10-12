@@ -99,11 +99,11 @@ sub fetch_input {
     # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
     if ($sift_run_type == FULL) {
       $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'sift'/);
-      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions_attrib pfpa, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'sift'/);
+      $var_dba->dbc->do(qq/DELETE pfpa.* FROM protein_function_predictions_attrib pfpa, attrib a WHERE pfpa.analysis_attrib_id = a.attrib_id AND a.value = 'sift'/);
     }
     if ($pph_run_type == FULL) {
       $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('polyphen_humdiv', 'polyphen_humvar')/);
-      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions_attrib pfpa, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('polyphen_humdiv', 'polyphen_humvar')/);
+      $var_dba->dbc->do(qq/DELETE pfpa.* FROM protein_function_predictions_attrib pfpa, attrib a WHERE pfpa.analysis_attrib_id = a.attrib_id AND a.value IN ('polyphen_humdiv', 'polyphen_humvar')/);
     }
 
     my $add_mapping_sth = $var_dba->dbc->prepare(qq{
