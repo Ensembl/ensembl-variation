@@ -133,6 +133,7 @@ while (my $set = $ref->get_record() ){
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
+    warn "processing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     next if $done{$record{Acc}};
