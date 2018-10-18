@@ -241,6 +241,7 @@ sub pipeline_analyses {
                 include_refseq  => $self->o('include_refseq'),
                 bam             => $self->o('bam'),
                 species_dir     => $self->o('species_dir'),
+                use_compara     => $self->o('sift_use_compara'),
                 @common_params,
             },
             -input_ids  => [{}],
