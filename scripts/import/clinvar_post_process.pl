@@ -139,7 +139,7 @@ sub run_variation_checks {
             print $var{name}, "\n" if $DEBUG == 1;
         }
     }
-    print "ClinVar imported variants: ", $status{all}, ", failed: ", $status{fail}, "\n";
+    print "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
 }
 
 ## call standard QC checks & return string of failure reasons
