@@ -133,6 +133,7 @@ while (my $set = $ref->get_record() ){
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
+    warn "processing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     next if $done{$record{Acc}};
@@ -268,7 +269,7 @@ sub get_clinsig{
     ## Description = 'conflicting data from submitters' - the values are in the explanation
     defined $ClinicalSignificance->{Explanation} ?
     $desc = "\L$ClinicalSignificance->{Explanation}->[0]" :
-    warn "warning: conflicting ClinicalSignificance but no Explanation";
+    warn "warning: conflicting ClinicalSignificance but no Explanation\n";
     $desc |='';
     $desc =~ s/\(\d+\)//g; ## remove bracketed counts
     $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
@@ -350,7 +351,7 @@ sub get_feature{
    }
 
    ## if multiple rsIDs for the same ReferenceClinVarAssertion print warning
-   warn "multiple rsIDs for same RCV: $accession, rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} ) if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 );
+   warn "multiple rsIDs for same RCV: $accession, rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} )."\n" if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 );
 
     ## position on required assembly
     next unless defined $measure->{SequenceLocation};
@@ -496,14 +497,14 @@ sub get_submitters{
     next unless $assert->{ClinVarSubmissionID}->[1]->{submitter} eq 'OMIM';
     if (defined $assert->{ExternalID} && $assert->{ExternalID}->[1]->{DB} eq 'OMIM') {
       my $omimAlleleID = $assert->{ExternalID}->[1]->{ID};
-      warn "OMIM submitter with ExternalID BUT not for variation type, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") id type(",$assert->{ExternalID}->[1]->{Type} ,")!! " if $DEBUG == 1 &&  $assert->{ExternalID}->[1]->{Type} ne 'Allelic variant';
+      warn "OMIM submitter with ExternalID BUT not for variation type, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") id type(",$assert->{ExternalID}->[1]->{Type} ,")!!\n" if $DEBUG == 1 &&  $assert->{ExternalID}->[1]->{Type} ne 'Allelic variant';
       #iterate over the measureSet xrefs saved from the ReferenceClinVarAssertion, in case of multiple sets of xref, the one with the expected OMIM submitter allele is used
       foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
         if (defined $mainXrefs->{'measureXrefs'}{$tmpMeasure} &&
             defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'} &&
             defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}) {
           if (scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}} > 1) {
-            warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, rs:", join(",", @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}}), "!";
+            warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, rs:", join(",", @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}}), "!\n";
           }
           $mainXrefs->{'OMIM'} ||= $omimAlleleID;
           $mainXrefs->{'MIM'} = (split/\./, $omimAlleleID)[0] unless defined $mainXrefs->{'MIM'};
@@ -513,7 +514,7 @@ sub get_submitters{
       }
       $mainXrefs->{'MIM'} = (split/\./, $omimAlleleID)[0] unless defined $mainXrefs->{'MIM'};
     } elsif ($DEBUG == 1){
-      warn "OMIM submitter but no ExternalID, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") gene(",$mainXrefs->{gene} ,")!! ";
+      warn "OMIM submitter but no ExternalID, assertion(", $assert->{ClinVarAccession}->[1]->{Acc}, ") gene(",$mainXrefs->{gene} ,")!!\n";
     }
   }
 
