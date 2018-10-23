@@ -351,7 +351,7 @@ sub get_feature{
    }
 
    ## if multiple rsIDs for the same ReferenceClinVarAssertion print warning
-   warn "multiple rsIDs for same RCV: $accession, rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} ) if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 )."\n";
+   warn "multiple rsIDs for same RCV: $accession, rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} )."\n" if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 );
 
     ## position on required assembly
     next unless defined $measure->{SequenceLocation};
