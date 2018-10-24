@@ -152,7 +152,7 @@ CREATE TABLE variation_feature (
   map_weight INT NOT NULL,
   flags SET('genotyped'),
   source_id INT(10) UNSIGNED NOT NULL,
-  consequence_types SET (
+  consequence_types SET(
         'intergenic_variant',
         'splice_acceptor_variant',
         'splice_donor_variant',
@@ -196,7 +196,7 @@ CREATE TABLE variation_feature (
         'protein_altering_variant',
         'start_retained_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
-    variation_set_id SET (
+    variation_set_id SET(
             '1','2','3','4','5','6','7','8',
             '9','10','11','12','13','14','15','16',
             '17','18','19','20','21','22','23','24',
@@ -1221,7 +1221,7 @@ CREATE TABLE structural_variation_feature (
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
 	breakpoint_order TINYINT(4) DEFAULT NULL,
 	length INT(10) DEFAULT NULL,
-  variation_set_id SET (
+  variation_set_id SET(
           '1','2','3','4','5','6','7','8',
           '9','10','11','12','13','14','15','16',
           '17','18','19','20','21','22','23','24',
@@ -1412,7 +1412,7 @@ CREATE TABLE transcript_variation (
     feature_stable_id                   VARCHAR(128) DEFAULT NULL,
     allele_string                       TEXT,
     somatic                             TINYINT(1) NOT NULL DEFAULT 0,
-    consequence_types                   SET (
+    consequence_types                   SET(
                                             'splice_acceptor_variant',
                                             'splice_donor_variant',
                                             'stop_lost',
@@ -1529,7 +1529,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
     motif_feature_id                    INT(11) UNSIGNED NOT NULL,
     allele_string                       TEXT,
     somatic                             TINYINT(1) NOT NULL DEFAULT 0,
-    consequence_types                   SET (
+    consequence_types                   SET(
                                           'TF_binding_site_variant',
                                           'TFBS_ablation',
                                           'TFBS_fusion',
@@ -1573,7 +1573,7 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
     feature_type                        TEXT, 
     allele_string                       TEXT,
     somatic                             TINYINT(1) NOT NULL DEFAULT 0,
-    consequence_types                   SET (
+    consequence_types                   SET(
                                           'regulatory_region_variant',
                                           'regulatory_region_ablation',
                                           'regulatory_region_fusion',
@@ -1635,7 +1635,7 @@ CREATE TABLE source (
 	description VARCHAR(400),
 	url VARCHAR(255),
 	type ENUM('chip','lsdb') DEFAULT NULL,
-  somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
+  somatic_status ENUM('germline','somatic','mixed') DEFAULT 'germline',
   data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
 	PRIMARY KEY ( source_id )
