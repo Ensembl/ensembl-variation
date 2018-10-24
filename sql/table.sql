@@ -75,7 +75,7 @@ CREATE TABLE variation (
   evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
   display INT(1) DEFAULT 1,
 
-	PRIMARY KEY( variation_id ),
+	PRIMARY KEY ( variation_id ),
 	UNIQUE KEY ( name ),
 	KEY source_idx (source_id)
 );
@@ -140,7 +140,7 @@ CREATE TABLE variation_attrib (
 @see attrib
 */
 
-CREATE TABLE variation_feature(
+CREATE TABLE variation_feature (
   variation_feature_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   seq_region_id INT(10) UNSIGNED NOT NULL,
   seq_region_start INT NOT NULL,
@@ -216,9 +216,9 @@ CREATE TABLE variation_feature(
     clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
     display INT(1) DEFAULT 1,
 
-   	PRIMARY KEY( variation_feature_id ),
-	  KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
-	  KEY variation_idx( variation_id ),
+   	PRIMARY KEY ( variation_feature_id ),
+	  KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
+	  KEY variation_idx ( variation_id ),
     KEY variation_set_idx ( variation_set_id ),
     KEY consequence_type_idx (consequence_types),
     KEY source_idx (source_id)
@@ -249,9 +249,9 @@ CREATE TABLE variation_synonym (
   source_id INT(10) UNSIGNED NOT NULL,
   name VARCHAR(255),
 
-  PRIMARY KEY(variation_synonym_id),
+  PRIMARY KEY (variation_synonym_id),
   KEY variation_idx (variation_id),
-  KEY subsnp_idx(subsnp_id),
+  KEY subsnp_idx (subsnp_id),
   UNIQUE KEY (name, source_id),
   KEY source_idx (source_id)
 );
@@ -470,7 +470,7 @@ CREATE TABLE subsnp_handle (
   subsnp_id INT(11) UNSIGNED NOT NULL,
   handle VARCHAR(20),
 
-  PRIMARY KEY(subsnp_id)
+  PRIMARY KEY (subsnp_id)
 );
 
 
@@ -489,7 +489,7 @@ CREATE TABLE subsnp_handle (
 CREATE TABLE submitter_handle (
   handle_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   handle VARCHAR(25),
- PRIMARY KEY( handle_id ),
+ PRIMARY KEY ( handle_id ),
         UNIQUE KEY ( handle )
 );
 
@@ -643,7 +643,7 @@ CREATE TABLE coord_system (
 @see display_group
 */
 
-CREATE TABLE population(
+CREATE TABLE population (
     population_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     name VARCHAR(255),
     size INT(10),
@@ -653,7 +653,7 @@ CREATE TABLE population(
     display ENUM('LD', 'MARTDISPLAYABLE', 'UNDISPLAYABLE') default 'UNDISPLAYABLE',
     display_group_id TINYINT(1) ,
 
-    PRIMARY KEY(population_id),
+    PRIMARY KEY (population_id),
     KEY name_idx (name)
 );
 
@@ -697,7 +697,7 @@ CREATE TABLE population_structure (
 @see sample
 */
 
-CREATE TABLE individual(
+CREATE TABLE individual (
   individual_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(255),
   description TEXT,
@@ -705,7 +705,7 @@ CREATE TABLE individual(
   father_individual_id INT(10) unsigned,
   mother_individual_id INT(10) unsigned,
   individual_type_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
-  PRIMARY KEY(individual_id),
+  PRIMARY KEY (individual_id),
   KEY father_individual_idx (father_individual_id),
   KEY mother_individual_idx (mother_individual_id)
 );
@@ -725,7 +725,7 @@ CREATE TABLE individual(
 @see individual
 */
 
-CREATE TABLE individual_type(
+CREATE TABLE individual_type (
   individual_type_id INT(0) UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -767,7 +767,7 @@ with a study.
 @see variation_set
 */
 
-CREATE TABLE sample(
+CREATE TABLE sample (
   sample_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   individual_id INT(10) UNSIGNED NOT NULL,
   name VARCHAR(255) DEFAULT NULL,
@@ -801,7 +801,7 @@ CREATE TABLE sample_synonym (
   sample_id INT(10) UNSIGNED NOT NULL,
   source_id INT(10) UNSIGNED NOT NULL,
   name VARCHAR(255),
-  PRIMARY KEY(synonym_id),
+  PRIMARY KEY (synonym_id),
   KEY sample_idx (sample_id),
   KEY (name, source_id)
 );
@@ -823,8 +823,8 @@ CREATE TABLE sample_population (
   sample_id INT(10) UNSIGNED NOT NULL,
   population_id INT(10) UNSIGNED NOT NULL,
 
-  KEY sample_idx(sample_id),
-  KEY population_idx(population_id)
+  KEY sample_idx (sample_id),
+  KEY population_idx (population_id)
 
 );
 
@@ -849,7 +849,7 @@ CREATE TABLE individual_synonym (
   source_id INT(10) UNSIGNED NOT NULL,
   name VARCHAR(255),
 
-  PRIMARY KEY(synonym_id),
+  PRIMARY KEY (synonym_id),
   KEY individual_idx (individual_id),
   KEY (name, source_id)
 );
@@ -875,7 +875,7 @@ CREATE TABLE population_synonym (
   source_id INT(10) UNSIGNED NOT NULL,
   name VARCHAR(255),
 
-  PRIMARY KEY(synonym_id),
+  PRIMARY KEY (synonym_id),
   KEY population_idx (population_id),
   KEY (name, source_id)
 );
@@ -892,12 +892,12 @@ CREATE TABLE population_synonym (
 
 @see population
 */
-CREATE TABLE display_group(
+CREATE TABLE display_group (
   display_group_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT ,
   display_priority INT(10) UNSIGNED NOT NULL, 
   display_name     VARCHAR(255) NOT NULL,
 
-	PRIMARY KEY( display_group_id ),
+	PRIMARY KEY ( display_group_id ),
 	UNIQUE KEY ( display_name ),
 	UNIQUE KEY ( display_priority )
  );
@@ -971,9 +971,9 @@ CREATE TABLE tmp_sample_genotype_single_bp (
 	allele_2 char(1),
 	sample_id INT(10) UNSIGNED NOT NULL,
 
-	KEY variation_idx(variation_id),
-    KEY subsnp_idx(subsnp_id),
-    KEY sample_idx(sample_id)
+	KEY variation_idx (variation_id),
+    KEY subsnp_idx (subsnp_id),
+    KEY sample_idx (sample_id)
 ) MAX_ROWS = 100000000;
 
 
@@ -1001,9 +1001,9 @@ CREATE TABLE sample_genotype_multiple_bp (
   allele_2 VARCHAR(25000),
   sample_id INT(10) unsigned,
 
-  KEY variation_idx(variation_id),
-  KEY subsnp_idx(subsnp_id),
-  KEY sample_idx(sample_id)
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id),
+  KEY sample_idx (sample_id)
 );
 
 
@@ -1085,7 +1085,7 @@ CREATE TABLE read_coverage (
   seq_region_end INT NOT NULL,
   level TINYINT NOT NULL,
   sample_id INT(10) UNSIGNED NOT NULL,
-  KEY seq_region_idx(seq_region_id,seq_region_start),
+  KEY seq_region_idx (seq_region_id,seq_region_start),
   KEY sample_idx (sample_id)
 );
 
@@ -1233,7 +1233,7 @@ CREATE TABLE structural_variation_feature (
   ) NOT NULL DEFAULT '',
 	
   PRIMARY KEY (structural_variation_feature_id),
-	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
+	KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
@@ -1265,8 +1265,8 @@ CREATE TABLE structural_variation_sample (
 	zygosity TINYINT(1) DEFAULT NULL,
 	
 	PRIMARY KEY (structural_variation_sample_id),
-	KEY structural_variation_idx(structural_variation_id),
-	KEY sample_idx(sample_id)
+	KEY structural_variation_idx (structural_variation_id),
+	KEY sample_idx (sample_id)
 );
 
 /**
@@ -1479,10 +1479,10 @@ CREATE TABLE transcript_variation (
 @column hgvs_name            Primary key, HGVS change description
 */
 
-CREATE TABLE variation_hgvs(
+CREATE TABLE variation_hgvs (
 variation_id INT(10) UNSIGNED NOT NULL,
 hgvs_name VARCHAR(255) NOT NULL,
-PRIMARY KEY(variation_id, hgvs_name));
+PRIMARY KEY (variation_id, hgvs_name));
 
 
 /**
@@ -1497,7 +1497,7 @@ PRIMARY KEY(variation_id, hgvs_name));
 CREATE TABLE variation_genename (
 variation_id INT(10) UNSIGNED NOT NULL, 
 gene_name VARCHAR(255) NOT NULL, 
-PRIMARY KEY(variation_id, gene_name));
+PRIMARY KEY (variation_id, gene_name));
 
 
 /**
@@ -1628,7 +1628,7 @@ You can see the complete list, by species, <a href="/info/genome/variation/speci
 @see study
 */
 
-CREATE TABLE source(
+CREATE TABLE source (
 	source_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	name VARCHAR(24) NOT NULL,
 	version INT,
@@ -1638,7 +1638,7 @@ CREATE TABLE source(
   somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
   data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
-	PRIMARY KEY( source_id )
+	PRIMARY KEY ( source_id )
 );
 
 
@@ -1672,9 +1672,9 @@ CREATE TABLE study (
 	external_reference VARCHAR(255) DEFAULT NULL,
 	study_type VARCHAR(255) DEFAULT NULL,
 	
-	PRIMARY KEY( study_id ),
+	PRIMARY KEY ( study_id ),
 	KEY source_idx (source_id),
-  KEY external_reference_idx(external_reference)
+  KEY external_reference_idx (external_reference)
 );
 
 
@@ -1693,7 +1693,7 @@ CREATE TABLE associate_study (
 	study1_id INT(10) UNSIGNED NOT NULL,
 	study2_id INT(10) UNSIGNED NOT NULL,
 	
-	PRIMARY KEY( study1_id,study2_id )
+	PRIMARY KEY ( study1_id,study2_id )
 );
 
 /**
@@ -1707,7 +1707,7 @@ CREATE TABLE associate_study (
 
 @see phenotype_feature_attrib
 */
-CREATE TABLE submitter(
+CREATE TABLE submitter (
   submitter_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   description          VARCHAR(255),
   PRIMARY KEY ( submitter_id )
@@ -1732,7 +1732,7 @@ CREATE TABLE submitter(
 @see variation_citation
 */
 
-CREATE TABLE publication(
+CREATE TABLE publication (
   publication_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, 
   title          VARCHAR(255),
   authors        VARCHAR(255) CHARACTER SET utf8mb4,
@@ -1790,7 +1790,7 @@ CREATE TABLE meta_coord (
   coord_system_id INT(10) UNSIGNED NOT NULL,
   max_length		  INT,
 
-  UNIQUE KEY(table_name, coord_system_id)
+  UNIQUE KEY (table_name, coord_system_id)
 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1814,7 +1814,7 @@ CREATE TABLE meta (
   meta_key    VARCHAR( 40 ) NOT NULL,
   meta_value  VARCHAR( 255 ) NOT NULL,
 
-  PRIMARY KEY( meta_id ),
+  PRIMARY KEY ( meta_id ),
   UNIQUE KEY species_key_value_idx (species_id, meta_key, meta_value ),
   KEY species_value_idx (species_id, meta_value )
 
@@ -1854,7 +1854,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 @see failed_structural_variation
 */
 
-CREATE TABLE failed_description(
+CREATE TABLE failed_description (
 
  failed_description_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
  description  TEXT NOT NULL,
