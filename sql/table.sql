@@ -76,7 +76,7 @@ CREATE TABLE variation (
   display INT(1) DEFAULT 1,
 
 	PRIMARY KEY( variation_id ),
-	UNIQUE ( name ),
+	UNIQUE KEY ( name ),
 	KEY source_idx (source_id)
 );
 
@@ -252,7 +252,7 @@ CREATE TABLE variation_synonym (
   PRIMARY KEY(variation_synonym_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx(subsnp_id),
-  UNIQUE (name, source_id),
+  UNIQUE KEY (name, source_id),
   KEY source_idx (source_id)
 );
 
@@ -490,7 +490,7 @@ CREATE TABLE submitter_handle (
   handle_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   handle VARCHAR(25),
  PRIMARY KEY( handle_id ),
-        UNIQUE ( handle )
+        UNIQUE KEY ( handle )
 );
 
 
@@ -674,7 +674,7 @@ CREATE TABLE population_structure (
   super_population_id INT(10) UNSIGNED NOT NULL,
   sub_population_id INT(10) UNSIGNED NOT NULL,
 
-  UNIQUE super_population_idx (super_population_id, sub_population_id),
+  UNIQUE KEY super_population_idx (super_population_id, sub_population_id),
   KEY sub_population_idx (sub_population_id)
 );
 
@@ -898,8 +898,8 @@ CREATE TABLE display_group(
   display_name     VARCHAR(255) NOT NULL,
 
 	PRIMARY KEY( display_group_id ),
-	UNIQUE ( display_name ),
-	UNIQUE ( display_priority )
+	UNIQUE KEY ( display_name ),
+	UNIQUE KEY ( display_priority )
  );
 
 
@@ -1136,7 +1136,7 @@ CREATE TABLE structural_variation (
 	copy_number TINYINT(2) DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_id),
-  UNIQUE (variation_name),
+  UNIQUE KEY (variation_name),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id)
@@ -1790,7 +1790,7 @@ CREATE TABLE meta_coord (
   coord_system_id INT(10) UNSIGNED NOT NULL,
   max_length		  INT,
 
-  UNIQUE(table_name, coord_system_id)
+  UNIQUE KEY(table_name, coord_system_id)
 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
