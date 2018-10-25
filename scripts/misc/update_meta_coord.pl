@@ -28,6 +28,7 @@ my @table_names = qw(
   phenotype_feature
   read_coverage
   variation_feature
+  structural_variation_feature
 );
 
 my $script_opts = [{args => ['host', 'dbhost', 'h'], type => '=s'},
