@@ -69,15 +69,6 @@ sub fetch_input {
       $self->param($file_param, $file);
     }
   }
-
-  # get seq_region ids for new assembly
-  my $registry = 'Bio::EnsEMBL::Registry';
-  $registry->load_all($self->param('registry_file_newasm'));
-  my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
-  $self->param('cdba_newasm', $cdba);
-  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
-  $self->param('vdba_newasm', $vdba);
-
 }
 
 sub run {
@@ -91,7 +82,7 @@ sub write_output {
 sub get_seq_region_names {
   my $self = shift;
   my $coord = shift;
-  my $cdba = $self->param('cdba_newasm');  
+  my $cdba = $self->get_newasm_core_database_connection;
   my $seq_region_names = {};
   my $sa = $cdba->get_SliceAdaptor;
   foreach my $slice (@{$sa->fetch_all($coord)}) {
@@ -278,7 +269,7 @@ sub filter_read_mapping_results {
 sub get_new_seq_region_ids {
   my $self = shift;
   my $seq_region_ids = {};
-  my $cdba = $self->param('cdba_newasm');
+  my $cdba = $self->get_newasm_core_database_connection;
   my $sa = $cdba->get_SliceAdaptor;
   my $slices = $sa->fetch_all('toplevel', undef, 1);
   foreach my $slice (@$slices) {
