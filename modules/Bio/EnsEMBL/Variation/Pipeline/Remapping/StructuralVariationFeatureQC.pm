@@ -47,7 +47,7 @@ sub load_failed_sv {
   my $self = shift;
   my $failed_sv_ids = shift;
   my $prev_failed_sv_ids = shift;
-  my $vdba_newasm = $self->param('vdba_newasm');
+  my $vdba_newasm = $self->get_newasm_variation_database_connection;
   my $dbc  = $vdba_newasm->dbc;
   my $dbh = $dbc->db_handle;
 
@@ -74,7 +74,7 @@ sub load_failed_sv {
 
 sub prev_failed_structural_variations {
   my $self = shift;
-  my $vdba = $self->param('vdba_oldasm');
+  my $vdba = $self->get_oldasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $failed_variations = {};
   my $sth = $dbh->prepare(qq{
@@ -144,8 +144,8 @@ sub _read_mapped_sv_info {
   my $self = shift;
   my $file = shift;
 
-  my $vdba = $self->param('vdba_newasm');
-  my @columns = @{$self->get_sorted_column_names($vdba, 'structural_variation_feature')};
+  my $vdba_newasm = $self->get_newasm_variation_database_connection;
+  my @columns = @{$self->get_sorted_column_names($vdba_newasm, 'structural_variation_feature')};
 
   my $sv_info = {}; 
   my $fh = FileHandle->new($file, 'r');
