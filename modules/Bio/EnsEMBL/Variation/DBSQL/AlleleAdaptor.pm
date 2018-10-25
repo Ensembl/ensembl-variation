@@ -595,7 +595,7 @@ sub _allele_code {
 				$sth2->bind_columns(\$allele_code);
 				$sth2->fetch();
 				
-				throw("ERROR: Failed to insert allele '$allele' into allele_code") unless defined($allele_code);
+				throw("ERROR: Failed to insert allele '$allele' into allele_code $@") unless defined($allele_code);
 				
 				$sth2->finish();
 			}
