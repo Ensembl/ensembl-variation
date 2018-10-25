@@ -34,30 +34,44 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::Perl;
+
+sub get_newasm_variation_database_connection {
+  my $self = shift;
+  return $self->_get_database_connection('variation', 'registry_file_newasm');
+}
+
+sub get_oldasm_variation_database_connection {
+  my $self = shift;
+  return $self->_get_database_connection('variation', 'registry_file_oldasm');
+}
+
+sub get_newasm_core_database_connection {
+  my $self = shift;
+  return $self->_get_database_connection('core', 'registry_file_newasm');
+}
+
+sub get_oldasm_core_database_connection {
+  my $self = shift;
+  return $self->_get_database_connection('core', 'registry_file_oldasm');
+}
+
+sub _get_database_connection {
+  my $self = shift;
+  my $type = shift;
+  my $registry_file = shift;
+  my $registry = 'Bio::EnsEMBL::Registry';
+  $registry->load_all($self->param($registry_file));
+  return  $registry->get_DBAdaptor($self->param('species'), $type);
+}
 
 sub test_bioperl_version {
   my $self = shift;
   my $bioperl_version = Bio::Perl->VERSION;
   die "At least Bio::Perl 1.006924 required" if ($bioperl_version < 1.006924);
-}
-
-sub fetch_input {
-  my $self = shift;
-  my $registry = 'Bio::EnsEMBL::Registry';
-  $registry->load_all($self->param('registry_file_newasm'));
-  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
-  my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
-  $self->param('vdba_newasm', $vdba);
-  $self->param('cdba_newasm', $cdba);
-
-  $registry->load_all($self->param('registry_file_oldasm'));
-  $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
-  $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
-  $self->param('vdba_oldasm', $vdba);
-  $self->param('cdba_oldasm', $cdba);
-
 }
 
 sub read_line {
@@ -233,7 +247,7 @@ sub rename_mapped_feature_table {
   my $feature_table = $self->param('feature_table');
   my $result_table = $self->param('feature_table_mapping_results');
 
-  my $vdba_newasm = $self->param('vdba_newasm');
+  my $vdba_newasm = $self->get_newasm_variation_database_connection;
   my $dbh  = $vdba_newasm->dbc->db_handle;
 
   # only create before_remapping table once
