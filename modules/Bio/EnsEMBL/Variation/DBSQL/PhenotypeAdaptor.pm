@@ -63,9 +63,20 @@ package Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Variation::Phenotype;
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
+=head2 fetch_by_description
+  Arg [1]    : string ontology accession
+  Arg [2]    : string $mapping_type for ontology accessions mapping type ['is'/'involves'] (optional)
+  Example    : $phenotype = $pheno_adaptor->fetch_all_by_description('diabetes', 'is');
+  Description: Retrieves a list of Phenotype objects for a phenotype description
+               If no phenotype exists undef is returned.
+  Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
+  Exceptions : none
+  Caller     : general
+=cut
 sub fetch_by_description {
     my $self = shift;
     my $desc = shift;
@@ -73,6 +84,35 @@ sub fetch_by_description {
     return undef if(!$desc);
     $desc =~ s/'/\\'/g;
     return $self->generic_fetch("p.description = '$desc'");
+}
+
+=head2 fetch_by_description_accession_type
+  Arg [1]    : string ontology accession
+  Arg [2]    : string $mapping_type - default 'is', option 'involves'
+  Example    : $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes');
+               $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes', 'is');
+  Description: Retrieves a list of Phenotype objects for a phenotype description
+               ontology accessions of mapping_type
+               If no phenotype exists undef is returned.
+  Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
+  Exceptions : throw if description arg is not defined or mapping_type not supported
+  Caller     : general
+=cut
+sub fetch_by_description_accession_type {
+    my $self = shift;
+    my $desc = shift;
+    my $mapping_type = shift;
+    throw("You need to pass a description as argument for fetch_by_description") unless $desc;
+    $mapping_type ||= 'is';
+    throw("$mapping_type is not a valid mapping type, valid types are: 'is','involves'") unless $mapping_type eq 'is' || $mapping_type eq 'involves';
+
+    return undef if(!$desc);
+    $desc =~ s/'/\\'/g;
+
+    my $constraint = qq{ p.description = '$desc'};
+    $constraint .= qq{ AND poa.mapping_type = '$mapping_type'} if defined $mapping_type;
+
+    return $self->generic_fetch($constraint);
 }
 
 =head2 fetch_all_by_ontology_accession
