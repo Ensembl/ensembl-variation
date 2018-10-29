@@ -60,24 +60,24 @@ SET default_storage_engine=MYISAM;
 @see attrib
 */
 
-create table variation (
-  variation_id int(10) unsigned not null auto_increment, # PK
-  source_id int(10) unsigned not null, 
-  name varchar(255),
-  ancestral_allele varchar(255) DEFAULT NULL,
-  flipped tinyint(1) unsigned NULL DEFAULT NULL,
-  class_attrib_id int(10) unsigned default 0,
-  somatic tinyint(1) DEFAULT 0 NOT NULL,
-  minor_allele varchar(50) DEFAULT NULL,
-  minor_allele_freq float DEFAULT NULL,
-  minor_allele_count int(10) unsigned DEFAULT NULL,
+CREATE TABLE variation (
+  variation_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, # PK
+  source_id INT(10) UNSIGNED NOT NULL, 
+  name VARCHAR(255),
+  ancestral_allele VARCHAR(255) DEFAULT NULL,
+  flipped TINYINT(1) UNSIGNED NULL DEFAULT NULL,
+  class_attrib_id INT(10) UNSIGNED default 0,
+  somatic TINYINT(1) DEFAULT 0 NOT NULL,
+  minor_allele VARCHAR(50) DEFAULT NULL,
+  minor_allele_freq FLOAT DEFAULT NULL,
+  minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
   clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective'),
   evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
-  display int(1) DEFAULT 1,
+  display INT(1) DEFAULT 1,
 
-	primary key( variation_id ),
-	unique ( name ),
-	key source_idx (source_id)
+	PRIMARY KEY ( variation_id ),
+	UNIQUE KEY ( name ),
+	KEY source_idx (source_id)
 );
 
 
@@ -140,19 +140,19 @@ CREATE TABLE variation_attrib (
 @see attrib
 */
 
-create table variation_feature(
-  variation_feature_id int(10) unsigned not null auto_increment,
-  seq_region_id int(10) unsigned not null,
-  seq_region_start int not null,
-  seq_region_end int not null,
-  seq_region_strand tinyint not null,
-  variation_id int(10) unsigned not null,
-  allele_string varchar(50000),
-  variation_name varchar(255),
-  map_weight int not null,
+CREATE TABLE variation_feature (
+  variation_feature_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  seq_region_id INT(10) UNSIGNED NOT NULL,
+  seq_region_start INT NOT NULL,
+  seq_region_end INT NOT NULL,
+  seq_region_strand TINYINT NOT NULL,
+  variation_id INT(10) UNSIGNED NOT NULL,
+  allele_string VARCHAR(50000),
+  variation_name VARCHAR(255),
+  map_weight INT NOT NULL,
   flags SET('genotyped'),
-  source_id int(10) unsigned not null,
-  consequence_types SET (
+  source_id INT(10) UNSIGNED NOT NULL,
+  consequence_types SET(
         'intergenic_variant',
         'splice_acceptor_variant',
         'splice_donor_variant',
@@ -196,7 +196,7 @@ create table variation_feature(
         'protein_altering_variant',
         'start_retained_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
-    variation_set_id SET (
+    variation_set_id SET(
             '1','2','3','4','5','6','7','8',
             '9','10','11','12','13','14','15','16',
             '17','18','19','20','21','22','23','24',
@@ -206,22 +206,22 @@ create table variation_feature(
             '49','50','51','52','53','54','55','56',
             '57','58','59','60','61','62','63','64'
     ) NOT NULL DEFAULT '',
-    class_attrib_id int(10) unsigned default 0,
-    somatic tinyint(1) DEFAULT 0 NOT NULL,
-    minor_allele varchar(50) DEFAULT NULL,
-    minor_allele_freq float DEFAULT NULL,
-    minor_allele_count int(10) unsigned DEFAULT NULL,
+    class_attrib_id INT(10) UNSIGNED default 0,
+    somatic TINYINT(1) DEFAULT 0 NOT NULL,
+    minor_allele VARCHAR(50) DEFAULT NULL,
+    minor_allele_freq FLOAT DEFAULT NULL,
+    minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
     evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
     clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
-    display int(1) DEFAULT 1,
+    display INT(1) DEFAULT 1,
 
-   	primary key( variation_feature_id ),
-	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
-	  key variation_idx( variation_id ),
-    key variation_set_idx ( variation_set_id ),
-    key consequence_type_idx (consequence_types),
-    key source_idx (source_id)
+   	PRIMARY KEY ( variation_feature_id ),
+	  KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
+	  KEY variation_idx ( variation_id ),
+    KEY variation_set_idx ( variation_set_id ),
+    KEY consequence_type_idx (consequence_types),
+    KEY source_idx (source_id)
 );
 
 
@@ -242,18 +242,18 @@ create table variation_feature(
 @see subsnp_handle
 */
 
-create table variation_synonym (
-  variation_synonym_id int(10) unsigned not null auto_increment,
-  variation_id int(10) unsigned not null,
-  subsnp_id int(15) unsigned ,
-  source_id int(10) unsigned not null,
-  name varchar(255),
+CREATE TABLE variation_synonym (
+  variation_synonym_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  variation_id INT(10) UNSIGNED NOT NULL,
+  subsnp_id INT(15) UNSIGNED ,
+  source_id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(255),
 
-  primary key(variation_synonym_id),
-  key variation_idx (variation_id),
-  key subsnp_idx(subsnp_id),
-  unique (name, source_id),
-  key source_idx (source_id)
+  PRIMARY KEY (variation_synonym_id),
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id),
+  UNIQUE KEY (name, source_id),
+  KEY source_idx (source_id)
 );
 
 /**
@@ -271,10 +271,10 @@ create table variation_synonym (
 */
 
 CREATE TABLE allele_synonym (
-  allele_synonym_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-  variation_id      int(10) unsigned NOT NULL,
-  hgvs_genomic      varchar(600) NOT NULL,
-  name              varchar(255) NOT NULL,
+  allele_synonym_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  variation_id      INT(10) UNSIGNED NOT NULL,
+  hgvs_genomic      VARCHAR(600) NOT NULL,
+  name              VARCHAR(255) NOT NULL,
   PRIMARY KEY (allele_synonym_id),
   UNIQUE KEY variation_name_idx (variation_id, name),
   KEY name_idx (name)
@@ -303,14 +303,14 @@ CREATE TABLE allele_synonym (
 */
 
 CREATE TABLE allele (
-  allele_id int(11) NOT NULL AUTO_INCREMENT,
-  variation_id int(11) unsigned NOT NULL,
-  subsnp_id int(11) unsigned DEFAULT NULL,
-  allele_code_id int(11) unsigned NOT NULL,
-  population_id int(11) unsigned DEFAULT NULL,
-  frequency float unsigned DEFAULT NULL,
-  count int(11) unsigned DEFAULT NULL,
-  frequency_submitter_handle int(10) DEFAULT NULL,
+  allele_id INT(11) NOT NULL AUTO_INCREMENT,
+  variation_id INT(11) UNSIGNED NOT NULL,
+  subsnp_id INT(11) UNSIGNED DEFAULT NULL,
+  allele_code_id INT(11) UNSIGNED NOT NULL,
+  population_id INT(11) UNSIGNED DEFAULT NULL,
+  frequency FLOAT UNSIGNED DEFAULT NULL,
+  count INT(11) UNSIGNED DEFAULT NULL,
+  frequency_submitter_handle INT(10) DEFAULT NULL,
 
   PRIMARY KEY (allele_id),
   KEY variation_idx (variation_id),
@@ -353,17 +353,17 @@ CREATE TABLE allele (
 */
 
 CREATE TABLE IF NOT EXISTS `phenotype_feature` (
-  `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `phenotype_id` int(11) unsigned DEFAULT NULL,
-  `source_id` int(11) unsigned DEFAULT NULL,
-  `study_id` int(11) unsigned DEFAULT NULL,
-  `type` enum('Gene','Variation','StructuralVariation','SupportingStructuralVariation','QTL','RegulatoryFeature') DEFAULT NULL,
-  `object_id` varchar(255) DEFAULT NULL,
-  `is_significant` tinyint(1) unsigned DEFAULT '1',
-  `seq_region_id` int(11) unsigned DEFAULT NULL,
-  `seq_region_start` int(11) unsigned DEFAULT NULL,
-  `seq_region_end` int(11) unsigned DEFAULT NULL,
-  `seq_region_strand` tinyint(4) DEFAULT NULL,
+  `phenotype_feature_id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `phenotype_id` INT(11) UNSIGNED DEFAULT NULL,
+  `source_id` INT(11) UNSIGNED DEFAULT NULL,
+  `study_id` INT(11) UNSIGNED DEFAULT NULL,
+  `type` ENUM('Gene','Variation','StructuralVariation','SupportingStructuralVariation','QTL','RegulatoryFeature') DEFAULT NULL,
+  `object_id` VARCHAR(255) DEFAULT NULL,
+  `is_significant` TINYINT(1) UNSIGNED DEFAULT '1',
+  `seq_region_id` INT(11) UNSIGNED DEFAULT NULL,
+  `seq_region_start` INT(11) UNSIGNED DEFAULT NULL,
+  `seq_region_end` INT(11) UNSIGNED DEFAULT NULL,
+  `seq_region_strand` TINYINT(4) DEFAULT NULL,
   PRIMARY KEY (`phenotype_feature_id`),
   KEY `phenotype_idx` (`phenotype_id`),
   KEY `object_idx` (`object_id`,`type`),
@@ -388,9 +388,9 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature` (
 */
 
 CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
-  `phenotype_feature_id` int(11) unsigned NOT NULL,
-  `attrib_type_id` int(11) DEFAULT NULL,
-  `value` varchar(255) DEFAULT NULL,
+  `phenotype_feature_id` INT(11) UNSIGNED NOT NULL,
+  `attrib_type_id` INT(11) DEFAULT NULL,
+  `value` VARCHAR(255) DEFAULT NULL,
   KEY `phenotype_feature_idx` (`phenotype_feature_id`),
   KEY `type_value_idx` (`attrib_type_id`,`value`)
 );
@@ -411,10 +411,10 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
 */
 
 CREATE TABLE `phenotype` (
-  `phenotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `stable_id` varchar(255) DEFAULT NULL,
-  `name` varchar(50) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
+  `phenotype_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `stable_id` VARCHAR(255) DEFAULT NULL,
+  `name` VARCHAR(50) DEFAULT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`),
   KEY `name_idx` (`name`),
   UNIQUE KEY `desc_idx` (`description`),
@@ -435,10 +435,10 @@ CREATE TABLE `phenotype` (
 @see phenotype
 */
 CREATE TABLE `phenotype_ontology_accession` (
-  `phenotype_id` int(11) unsigned NOT NULL,
-  `accession` varchar(255) NOT NULL,
-  `mapped_by_attrib` set('437','438','439','440','441','442','443','444','588', '589','590','591','592','593','594') DEFAULT NULL,
-  `mapping_type` enum('is','involves') DEFAULT NULL,
+  `phenotype_id` INT(11) UNSIGNED NOT NULL,
+  `accession` VARCHAR(255) NOT NULL,
+  `mapped_by_attrib` SET('437','438','439','440','441','442','443','444','588', '589','590','591','592','593','594') DEFAULT NULL,
+  `mapping_type` ENUM('is','involves') DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`,`accession`),
   KEY `accession_idx` (`accession`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -466,11 +466,11 @@ CREATE TABLE `phenotype_ontology_accession` (
 @see variation_synonym
 */
 
-create table subsnp_handle (
-  subsnp_id int(11) unsigned not null,
-  handle varchar(20),
+CREATE TABLE subsnp_handle (
+  subsnp_id INT(11) UNSIGNED NOT NULL,
+  handle VARCHAR(20),
 
-  primary key(subsnp_id)
+  PRIMARY KEY (subsnp_id)
 );
 
 
@@ -486,11 +486,11 @@ create table subsnp_handle (
 @see allele 
 */
 
-create table submitter_handle (
-  handle_id int(10) unsigned not null auto_increment,
-  handle varchar(25),
- primary key( handle_id ),
-        unique ( handle )
+CREATE TABLE submitter_handle (
+  handle_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  handle VARCHAR(25),
+ PRIMARY KEY ( handle_id ),
+        UNIQUE KEY ( handle )
 );
 
 
@@ -511,8 +511,8 @@ create table submitter_handle (
 */
 
 CREATE TABLE allele_code (
-  allele_code_id int(11) NOT NULL AUTO_INCREMENT,
-  allele varchar(60000) DEFAULT NULL,
+  allele_code_id INT(11) NOT NULL AUTO_INCREMENT,
+  allele VARCHAR(60000) DEFAULT NULL,
   
   PRIMARY KEY (allele_code_id),
   UNIQUE KEY allele_idx (allele(1000))
@@ -535,10 +535,10 @@ CREATE TABLE allele_code (
 */
 
 CREATE TABLE genotype_code (
-  genotype_code_id int(11) unsigned NOT NULL,
-  allele_code_id int(11) unsigned NOT NULL,
-  haplotype_id tinyint(2) unsigned NOT NULL,
-  phased tinyint(2) unsigned DEFAULT NULL,
+  genotype_code_id INT(11) UNSIGNED NOT NULL,
+  allele_code_id INT(11) UNSIGNED NOT NULL,
+  haplotype_id TINYINT(2) UNSIGNED NOT NULL,
+  phased TINYINT(2) UNSIGNED DEFAULT NULL,
   
   KEY genotype_code_id (genotype_code_id),
   KEY allele_code_id (allele_code_id)
@@ -643,18 +643,18 @@ CREATE TABLE coord_system (
 @see display_group
 */
 
-CREATE TABLE population(
-    population_id int(10) unsigned not null auto_increment,
-    name varchar(255),
-    size int(10),
-    description text,
-    collection tinyint(1) default 0,
-    freqs_from_gts tinyint(1),
-    display enum('LD', 'MARTDISPLAYABLE', 'UNDISPLAYABLE') default 'UNDISPLAYABLE',
-    display_group_id tinyint(1) ,
+CREATE TABLE population (
+    population_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255),
+    size INT(10),
+    description TEXT,
+    collection TINYINT(1) default 0,
+    freqs_from_gts TINYINT(1),
+    display ENUM('LD', 'MARTDISPLAYABLE', 'UNDISPLAYABLE') default 'UNDISPLAYABLE',
+    display_group_id TINYINT(1) ,
 
-    primary key(population_id),
-    key name_idx (name)
+    PRIMARY KEY (population_id),
+    KEY name_idx (name)
 );
 
 
@@ -670,12 +670,12 @@ CREATE TABLE population(
 @see population
 */
 
-create table population_structure (
-  super_population_id int(10) unsigned not null,
-  sub_population_id int(10) unsigned not null,
+CREATE TABLE population_structure (
+  super_population_id INT(10) UNSIGNED NOT NULL,
+  sub_population_id INT(10) UNSIGNED NOT NULL,
 
-  unique super_population_idx (super_population_id, sub_population_id),
-  key sub_population_idx (sub_population_id)
+  UNIQUE KEY super_population_idx (super_population_id, sub_population_id),
+  KEY sub_population_idx (sub_population_id)
 );
 
 /**
@@ -697,17 +697,17 @@ create table population_structure (
 @see sample
 */
 
-create table individual(
-  individual_id int(10) unsigned not null auto_increment,
-  name varchar(255),
-  description text,
-  gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
-  father_individual_id int(10) unsigned,
-  mother_individual_id int(10) unsigned,
-  individual_type_id int(10) unsigned NOT NULL DEFAULT 0,
-  primary key(individual_id),
-  key father_individual_idx (father_individual_id),
-  key mother_individual_idx (mother_individual_id)
+CREATE TABLE individual (
+  individual_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(255),
+  description TEXT,
+  gender ENUM('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
+  father_individual_id INT(10) unsigned,
+  mother_individual_id INT(10) unsigned,
+  individual_type_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (individual_id),
+  KEY father_individual_idx (father_individual_id),
+  KEY mother_individual_idx (mother_individual_id)
 );
 
 /**
@@ -725,12 +725,12 @@ create table individual(
 @see individual
 */
 
-create table individual_type(
-  individual_type_id int(0) unsigned not null auto_increment,
-  name varchar(255) not null,
-  description text,
+CREATE TABLE individual_type (
+  individual_type_id INT(0) UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
   
-  primary key (individual_type_id)
+  PRIMARY KEY (individual_type_id)
 );
 
 #this table will always contain the same values
@@ -767,15 +767,15 @@ with a study.
 @see variation_set
 */
 
-CREATE TABLE sample(
-  sample_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-  individual_id int(10) unsigned NOT NULL,
-  name varchar(255) DEFAULT NULL,
-  description text,
-  study_id int(10) unsigned DEFAULT NULL,
-  display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD','MARTDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
-  has_coverage tinyint(1) unsigned NOT NULL DEFAULT '0',
-  variation_set_id set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
+CREATE TABLE sample (
+  sample_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  individual_id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(255) DEFAULT NULL,
+  description TEXT,
+  study_id INT(10) UNSIGNED DEFAULT NULL,
+  display ENUM('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD','MARTDISPLAYABLE') DEFAULT 'UNDISPLAYABLE',
+  has_coverage TINYINT(1) UNSIGNED NOT NULL DEFAULT '0',
+  variation_set_id SET('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') DEFAULT NULL,
   PRIMARY KEY (sample_id),
   KEY individual_idx (individual_id),
   KEY study_idx (study_id)
@@ -797,13 +797,13 @@ CREATE TABLE sample(
 */
 
 CREATE TABLE sample_synonym (
-  synonym_id int(10) unsigned not null auto_increment,
-  sample_id int(10) unsigned not null,
-  source_id int(10) unsigned not null,
-  name varchar(255),
-  primary key(synonym_id),
-  key sample_idx (sample_id),
-  key (name, source_id)
+  synonym_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  sample_id INT(10) UNSIGNED NOT NULL,
+  source_id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(255),
+  PRIMARY KEY (synonym_id),
+  KEY sample_idx (sample_id),
+  KEY (name, source_id)
 );
   
 /**
@@ -819,12 +819,12 @@ CREATE TABLE sample_synonym (
 @see population
 */
 
-create table sample_population (
-  sample_id int(10) unsigned not null,
-  population_id int(10) unsigned not null,
+CREATE TABLE sample_population (
+  sample_id INT(10) UNSIGNED NOT NULL,
+  population_id INT(10) UNSIGNED NOT NULL,
 
-  key sample_idx(sample_id),
-  key population_idx(population_id)
+  KEY sample_idx (sample_id),
+  KEY population_idx (population_id)
 
 );
 
@@ -844,14 +844,14 @@ create table sample_population (
 */
 
 CREATE TABLE individual_synonym (
-  synonym_id int(10) unsigned not null auto_increment,
-  individual_id int(10) unsigned not null,
-  source_id int(10) unsigned not null,
-  name varchar(255),
+  synonym_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  individual_id INT(10) UNSIGNED NOT NULL,
+  source_id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(255),
 
-  primary key(synonym_id),
-  key individual_idx (individual_id),
-  key (name, source_id)
+  PRIMARY KEY (synonym_id),
+  KEY individual_idx (individual_id),
+  KEY (name, source_id)
 );
 
 /**
@@ -870,14 +870,14 @@ CREATE TABLE individual_synonym (
 */
 
 CREATE TABLE population_synonym (
-  synonym_id int(10) unsigned not null auto_increment,
-  population_id int(10) unsigned not null,
-  source_id int(10) unsigned not null,
-  name varchar(255),
+  synonym_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  population_id INT(10) UNSIGNED NOT NULL,
+  source_id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(255),
 
-  primary key(synonym_id),
-  key population_idx (population_id),
-  key (name, source_id)
+  PRIMARY KEY (synonym_id),
+  KEY population_idx (population_id),
+  KEY (name, source_id)
 );
 
 /**
@@ -892,14 +892,14 @@ CREATE TABLE population_synonym (
 
 @see population
 */
-CREATE TABLE display_group(
-  display_group_id int(10) unsigned not null auto_increment ,
-  display_priority int(10) unsigned not null, 
-  display_name     varchar(255) not null,
+CREATE TABLE display_group (
+  display_group_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT ,
+  display_priority INT(10) UNSIGNED NOT NULL, 
+  display_name     VARCHAR(255) NOT NULL,
 
-	primary key( display_group_id ),
-	unique ( display_name ),
-	unique ( display_priority )
+	PRIMARY KEY ( display_group_id ),
+	UNIQUE KEY ( display_name ),
+	UNIQUE KEY ( display_priority )
  );
 
 
@@ -932,13 +932,13 @@ CREATE TABLE display_group(
 
 
 CREATE TABLE population_genotype (
-  population_genotype_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-  variation_id int(11) unsigned NOT NULL,
-  subsnp_id int(11) unsigned DEFAULT NULL,
-  genotype_code_id int(11) DEFAULT NULL,
-  frequency float DEFAULT NULL,
-  population_id int(10) unsigned DEFAULT NULL,
-  count int(10) unsigned DEFAULT NULL,
+  population_genotype_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  variation_id INT(11) UNSIGNED NOT NULL,
+  subsnp_id INT(11) UNSIGNED DEFAULT NULL,
+  genotype_code_id INT(11) DEFAULT NULL,
+  frequency FLOAT DEFAULT NULL,
+  population_id INT(10) UNSIGNED DEFAULT NULL,
+  count INT(10) UNSIGNED DEFAULT NULL,
   
   PRIMARY KEY (population_genotype_id),
   KEY population_idx (population_id),
@@ -965,15 +965,15 @@ CREATE TABLE population_genotype (
 */
 
 CREATE TABLE tmp_sample_genotype_single_bp (
-	variation_id int(10) not null,
-	subsnp_id int(15) unsigned,   
+	variation_id INT(10) NOT NULL,
+	subsnp_id INT(15) unsigned,   
 	allele_1 char(1),
 	allele_2 char(1),
-	sample_id int(10) unsigned not null,
+	sample_id INT(10) UNSIGNED NOT NULL,
 
-	key variation_idx(variation_id),
-    key subsnp_idx(subsnp_id),
-    key sample_idx(sample_id)
+	KEY variation_idx (variation_id),
+    KEY subsnp_idx (subsnp_id),
+    KEY sample_idx (sample_id)
 ) MAX_ROWS = 100000000;
 
 
@@ -994,16 +994,16 @@ CREATE TABLE tmp_sample_genotype_single_bp (
 @see subsnp_handle
 */
 
-create table sample_genotype_multiple_bp (
-  variation_id int(10) unsigned not null,
-  subsnp_id int(15) unsigned,	
-  allele_1 varchar(25000),
-  allele_2 varchar(25000),
-  sample_id int(10) unsigned,
+CREATE TABLE sample_genotype_multiple_bp (
+  variation_id INT(10) UNSIGNED NOT NULL,
+  subsnp_id INT(15) unsigned,	
+  allele_1 VARCHAR(25000),
+  allele_2 VARCHAR(25000),
+  sample_id INT(10) unsigned,
 
-  key variation_idx(variation_id),
-  key subsnp_idx(subsnp_id),
-  key sample_idx(sample_id)
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id),
+  KEY sample_idx (sample_id)
 );
 
 
@@ -1027,12 +1027,12 @@ create table sample_genotype_multiple_bp (
 */
 
 CREATE TABLE compressed_genotype_region (
-  sample_id int(10) unsigned NOT NULL,
-  seq_region_id int(10) unsigned NOT NULL,
-  seq_region_start int(11) NOT NULL,
-  seq_region_end int(11) NOT NULL,
-  seq_region_strand tinyint(4) NOT NULL,
-  genotypes blob,
+  sample_id INT(10) UNSIGNED NOT NULL,
+  seq_region_id INT(10) UNSIGNED NOT NULL,
+  seq_region_start INT(11) NOT NULL,
+  seq_region_end INT(11) NOT NULL,
+  seq_region_strand TINYINT(4) NOT NULL,
+  genotypes BLOB,
   
   KEY pos_idx (seq_region_id,seq_region_start),
   KEY sample_idx (sample_id)
@@ -1054,9 +1054,9 @@ CREATE TABLE compressed_genotype_region (
 */
 
 CREATE TABLE compressed_genotype_var (
-  variation_id int(11) unsigned NOT NULL,
-  subsnp_id int(11) unsigned DEFAULT NULL,
-  genotypes blob,
+  variation_id INT(11) UNSIGNED NOT NULL,
+  subsnp_id INT(11) UNSIGNED DEFAULT NULL,
+  genotypes BLOB,
   
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id)
@@ -1080,12 +1080,12 @@ CREATE TABLE compressed_genotype_var (
 */
 
 CREATE TABLE read_coverage (
-  seq_region_id int(10) unsigned not null,
-  seq_region_start int not null,
-  seq_region_end int not null,
-  level tinyint not null,
-  sample_id int(10) unsigned not null,
-  KEY seq_region_idx(seq_region_id,seq_region_start),
+  seq_region_id INT(10) UNSIGNED NOT NULL,
+  seq_region_start INT NOT NULL,
+  seq_region_end INT NOT NULL,
+  level TINYINT NOT NULL,
+  sample_id INT(10) UNSIGNED NOT NULL,
+  KEY seq_region_idx (seq_region_id,seq_region_start),
   KEY sample_idx (sample_id)
 );
 
@@ -1123,12 +1123,12 @@ CREATE TABLE read_coverage (
 */
 
 CREATE TABLE structural_variation (
-  structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-  variation_name varchar(255) DEFAULT NULL,
-  alias varchar(255) DEFAULT NULL,
-	source_id int(10) unsigned NOT NULL,
-  study_id int(10) unsigned DEFAULT NULL,
-	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
+  structural_variation_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  variation_name VARCHAR(255) DEFAULT NULL,
+  alias VARCHAR(255) DEFAULT NULL,
+	source_id INT(10) UNSIGNED NOT NULL,
+  study_id INT(10) UNSIGNED DEFAULT NULL,
+	class_attrib_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
@@ -1136,7 +1136,7 @@ CREATE TABLE structural_variation (
 	copy_number TINYINT(2) DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_id),
-  UNIQUE (variation_name),
+  UNIQUE KEY (variation_name),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id)
@@ -1156,8 +1156,8 @@ CREATE TABLE structural_variation (
 */
 
 CREATE TABLE structural_variation_association (
-  structural_variation_id int(10) unsigned NOT NULL,
-  supporting_structural_variation_id int(10) unsigned NOT NULL,
+  structural_variation_id INT(10) UNSIGNED NOT NULL,
+  supporting_structural_variation_id INT(10) UNSIGNED NOT NULL,
 	
   PRIMARY KEY (structural_variation_id, supporting_structural_variation_id),
 	KEY structural_variation_idx (structural_variation_id),
@@ -1201,27 +1201,27 @@ CREATE TABLE structural_variation_association (
 @see variation_set
 */
 
-create table structural_variation_feature (
-	structural_variation_feature_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-	seq_region_id int(10) unsigned NOT NULL,
-	outer_start int,	
-	seq_region_start int NOT NULL,
-	inner_start int,
-	inner_end int,
-	seq_region_end int NOT NULL,
-	outer_end int,
-	seq_region_strand tinyint NOT NULL,
-	structural_variation_id int(10) unsigned NOT NULL,
-  variation_name varchar(255),
-	source_id int(10) unsigned NOT NULL,
-  study_id int(10) unsigned DEFAULT NULL,
-  class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
-	allele_string longtext DEFAULT NULL,
-	is_evidence tinyint(1) NOT NULL DEFAULT 0,
+CREATE TABLE structural_variation_feature (
+	structural_variation_feature_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	seq_region_id INT(10) UNSIGNED NOT NULL,
+	outer_start INT,	
+	seq_region_start INT NOT NULL,
+	inner_start INT,
+	inner_end INT,
+	seq_region_end INT NOT NULL,
+	outer_end INT,
+	seq_region_strand TINYINT NOT NULL,
+	structural_variation_id INT(10) UNSIGNED NOT NULL,
+  variation_name VARCHAR(255),
+	source_id INT(10) UNSIGNED NOT NULL,
+  study_id INT(10) UNSIGNED DEFAULT NULL,
+  class_attrib_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
+	allele_string LONGTEXT DEFAULT NULL,
+	is_evidence TINYINT(1) NOT NULL DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
 	breakpoint_order TINYINT(4) DEFAULT NULL,
-	length int(10) DEFAULT NULL,
-  variation_set_id SET (
+	length INT(10) DEFAULT NULL,
+  variation_set_id SET(
           '1','2','3','4','5','6','7','8',
           '9','10','11','12','13','14','15','16',
           '17','18','19','20','21','22','23','24',
@@ -1233,7 +1233,7 @@ create table structural_variation_feature (
   ) NOT NULL DEFAULT '',
 	
   PRIMARY KEY (structural_variation_feature_id),
-	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
+	KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
@@ -1259,14 +1259,14 @@ create table structural_variation_feature (
 */
 
 CREATE TABLE structural_variation_sample (
-	structural_variation_sample_id int(10) unsigned NOT NULL auto_increment,
-	structural_variation_id int(10) unsigned NOT NULL,
-	sample_id int(10) unsigned DEFAULT NULL,
+	structural_variation_sample_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	structural_variation_id INT(10) UNSIGNED NOT NULL,
+	sample_id INT(10) UNSIGNED DEFAULT NULL,
 	zygosity TINYINT(1) DEFAULT NULL,
 	
-	primary key (structural_variation_sample_id),
-	key structural_variation_idx(structural_variation_id),
-	key sample_idx(sample_id)
+	PRIMARY KEY (structural_variation_sample_id),
+	KEY structural_variation_idx (structural_variation_id),
+	KEY sample_idx (sample_id)
 );
 
 /**
@@ -1290,8 +1290,8 @@ CREATE TABLE structural_variation_sample (
 */
 
 CREATE TABLE IF NOT EXISTS variation_set_variation (
-	variation_id int(10) unsigned NOT NULL,
-	variation_set_id int(10) unsigned NOT NULL,
+	variation_id INT(10) UNSIGNED NOT NULL,
+	variation_set_id INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (variation_id,variation_set_id),
 	KEY variation_set_idx (variation_set_id,variation_id)
 );
@@ -1315,7 +1315,7 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 */
  
 CREATE TABLE IF NOT EXISTS variation_set (
-	variation_set_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+	variation_set_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	name VARCHAR(255),
 	description TEXT,
 	short_name_attrib_id INT(10) UNSIGNED DEFAULT NULL,
@@ -1337,8 +1337,8 @@ CREATE TABLE IF NOT EXISTS variation_set (
 */
 
 CREATE TABLE IF NOT EXISTS variation_set_structure (
-	variation_set_super int(10) unsigned NOT NULL,
-	variation_set_sub int(10) unsigned NOT NULL,
+	variation_set_super INT(10) UNSIGNED NOT NULL,
+	variation_set_sub INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (variation_set_super,variation_set_sub),
 	KEY sub_idx (variation_set_sub,variation_set_super)
 );
@@ -1358,8 +1358,8 @@ CREATE TABLE IF NOT EXISTS variation_set_structure (
 */
 
 CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
-	structural_variation_id int(10) unsigned NOT NULL,
-	variation_set_id int(10) unsigned NOT NULL,
+	structural_variation_id INT(10) UNSIGNED NOT NULL,
+	variation_set_id INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (structural_variation_id,variation_set_id)
 );
 
@@ -1407,12 +1407,12 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 */
 
 CREATE TABLE transcript_variation (
-    transcript_variation_id             int(11) unsigned NOT NULL AUTO_INCREMENT,
-    variation_feature_id                int(11) unsigned NOT NULL,
-    feature_stable_id                   varchar(128) DEFAULT NULL,
-    allele_string                       text,
-    somatic                             tinyint(1) NOT NULL DEFAULT 0,
-    consequence_types                   set (
+    transcript_variation_id             INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    variation_feature_id                INT(11) UNSIGNED NOT NULL,
+    feature_stable_id                   VARCHAR(128) DEFAULT NULL,
+    allele_string                       TEXT,
+    somatic                             TINYINT(1) NOT NULL DEFAULT 0,
+    consequence_types                   SET(
                                             'splice_acceptor_variant',
                                             'splice_donor_variant',
                                             'stop_lost',
@@ -1445,23 +1445,23 @@ CREATE TABLE transcript_variation (
                                             'protein_altering_variant',
                                             'start_retained_variant'
                                         ),
-    cds_start                           int(11) unsigned,
-    cds_end                             int(11) unsigned,
-    cdna_start                          int(11) unsigned,
-    cdna_end                            int(11) unsigned,
-    translation_start                   int(11) unsigned,
-    translation_end                     int(11) unsigned,
-    distance_to_transcript              int(11) unsigned,
-    codon_allele_string                 text,
-    pep_allele_string                   text,
-    hgvs_genomic                        text,
-    hgvs_transcript                     text,
-    hgvs_protein                        text,
-    polyphen_prediction                 enum('unknown', 'benign', 'possibly damaging', 'probably damaging') DEFAULT NULL,
-    polyphen_score                      float DEFAULT NULL,
-    sift_prediction                     enum('tolerated', 'deleterious', 'tolerated - low confidence', 'deleterious - low confidence') DEFAULT NULL,
-    sift_score                          float DEFAULT NULL,
-    display                             int(1) DEFAULT 1,
+    cds_start                           INT(11) UNSIGNED,
+    cds_end                             INT(11) UNSIGNED,
+    cdna_start                          INT(11) UNSIGNED,
+    cdna_end                            INT(11) UNSIGNED,
+    translation_start                   INT(11) UNSIGNED,
+    translation_end                     INT(11) UNSIGNED,
+    distance_to_transcript              INT(11) UNSIGNED,
+    codon_allele_string                 TEXT,
+    pep_allele_string                   TEXT,
+    hgvs_genomic                        TEXT,
+    hgvs_transcript                     TEXT,
+    hgvs_protein                        TEXT,
+    polyphen_prediction                 ENUM('unknown', 'benign', 'possibly damaging', 'probably damaging') DEFAULT NULL,
+    polyphen_score                      FLOAT DEFAULT NULL,
+    sift_prediction                     ENUM('tolerated', 'deleterious', 'tolerated - low confidence', 'deleterious - low confidence') DEFAULT NULL,
+    sift_score                          FLOAT DEFAULT NULL,
+    display                             INT(1) DEFAULT 1,
 
     PRIMARY KEY                         (transcript_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
@@ -1479,10 +1479,10 @@ CREATE TABLE transcript_variation (
 @column hgvs_name            Primary key, HGVS change description
 */
 
-create table variation_hgvs(
-variation_id int(10) unsigned not null,
-hgvs_name varchar(255) not null,
-primary key(variation_id, hgvs_name));
+CREATE TABLE variation_hgvs (
+variation_id INT(10) UNSIGNED NOT NULL,
+hgvs_name VARCHAR(255) NOT NULL,
+PRIMARY KEY (variation_id, hgvs_name));
 
 
 /**
@@ -1494,10 +1494,10 @@ primary key(variation_id, hgvs_name));
 @column gene_name            Primary key, display name of gene
 */
 
-create table variation_genename (
-variation_id int(10) unsigned not null, 
-gene_name varchar(255) not null, 
-primary key(variation_id, gene_name));
+CREATE TABLE variation_genename (
+variation_id INT(10) UNSIGNED NOT NULL, 
+gene_name VARCHAR(255) NOT NULL, 
+PRIMARY KEY (variation_id, gene_name));
 
 
 /**
@@ -1523,24 +1523,24 @@ primary key(variation_id, gene_name));
 */
 
 CREATE TABLE IF NOT EXISTS motif_feature_variation (
-    motif_feature_variation_id          int(11) unsigned NOT NULL AUTO_INCREMENT,
-    variation_feature_id                int(11) unsigned NOT NULL,
-    feature_stable_id                   varchar(128) DEFAULT NULL,
-    motif_feature_id                    int(11) unsigned NOT NULL,
-    allele_string                       text,
-    somatic                             tinyint(1) NOT NULL DEFAULT 0,
-    consequence_types                   set (
+    motif_feature_variation_id          INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    variation_feature_id                INT(11) UNSIGNED NOT NULL,
+    feature_stable_id                   VARCHAR(128) DEFAULT NULL,
+    motif_feature_id                    INT(11) UNSIGNED NOT NULL,
+    allele_string                       TEXT,
+    somatic                             TINYINT(1) NOT NULL DEFAULT 0,
+    consequence_types                   SET(
                                           'TF_binding_site_variant',
                                           'TFBS_ablation',
                                           'TFBS_fusion',
                                           'TFBS_amplification',
                                           'TFBS_translocation'
                                         ),
-    motif_name                          varchar(60) DEFAULT NULL,
-    motif_start                         int(11) unsigned,
-    motif_end                           int(11) unsigned,
-    motif_score_delta                   float DEFAULT NULL,
-    in_informative_position             tinyint(1) NOT NULL DEFAULT 0,
+    motif_name                          VARCHAR(60) DEFAULT NULL,
+    motif_start                         INT(11) UNSIGNED,
+    motif_end                           INT(11) UNSIGNED,
+    motif_score_delta                   FLOAT DEFAULT NULL,
+    in_informative_position             TINYINT(1) NOT NULL DEFAULT 0,
 
     PRIMARY KEY                         (motif_feature_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
@@ -1567,13 +1567,13 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
 */
 
 CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
-    regulatory_feature_variation_id     int(11) unsigned NOT NULL AUTO_INCREMENT,
-    variation_feature_id                int(11) unsigned NOT NULL,
-    feature_stable_id                   varchar(128) DEFAULT NULL,
-    feature_type                        text, 
-    allele_string                       text,
-    somatic                             tinyint(1) NOT NULL DEFAULT 0,
-    consequence_types                   set (
+    regulatory_feature_variation_id     INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    variation_feature_id                INT(11) UNSIGNED NOT NULL,
+    feature_stable_id                   VARCHAR(128) DEFAULT NULL,
+    feature_type                        TEXT, 
+    allele_string                       TEXT,
+    somatic                             TINYINT(1) NOT NULL DEFAULT 0,
+    consequence_types                   SET(
                                           'regulatory_region_variant',
                                           'regulatory_region_ablation',
                                           'regulatory_region_fusion',
@@ -1628,17 +1628,17 @@ You can see the complete list, by species, <a href="/info/genome/variation/speci
 @see study
 */
 
-create table source(
-	source_id int(10) unsigned not null auto_increment,
-	name varchar(24) not null,
-	version int,
-	description varchar(400),
-	url varchar(255),
+CREATE TABLE source (
+	source_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	name VARCHAR(24) NOT NULL,
+	version INT,
+	description VARCHAR(400),
+	url VARCHAR(255),
 	type ENUM('chip','lsdb') DEFAULT NULL,
-  somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
+  somatic_status ENUM('germline','somatic','mixed') DEFAULT 'germline',
   data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
-	primary key( source_id )
+	PRIMARY KEY ( source_id )
 );
 
 
@@ -1664,17 +1664,17 @@ create table source(
 */
 
 CREATE TABLE study (
-	study_id int(10) unsigned not null auto_increment,
-	source_id int(10) unsigned not null,
-	name varchar(255) DEFAULT null,
-	description text DEFAULT NULL,
-	url varchar(255) DEFAULT NULL,
-	external_reference varchar(255) DEFAULT NULL,
-	study_type varchar(255) DEFAULT NULL,
+	study_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	source_id INT(10) UNSIGNED NOT NULL,
+	name VARCHAR(255) DEFAULT NULL,
+	description TEXT DEFAULT NULL,
+	url VARCHAR(255) DEFAULT NULL,
+	external_reference VARCHAR(255) DEFAULT NULL,
+	study_type VARCHAR(255) DEFAULT NULL,
 	
-	primary key( study_id ),
-	key source_idx (source_id),
-  key external_reference_idx(external_reference)
+	PRIMARY KEY ( study_id ),
+	KEY source_idx (source_id),
+  KEY external_reference_idx (external_reference)
 );
 
 
@@ -1690,10 +1690,10 @@ CREATE TABLE study (
 @see study
 */
 CREATE TABLE associate_study (
-	study1_id int(10) unsigned not null,
-	study2_id int(10) unsigned not null,
+	study1_id INT(10) UNSIGNED NOT NULL,
+	study2_id INT(10) UNSIGNED NOT NULL,
 	
-	primary key( study1_id,study2_id )
+	PRIMARY KEY ( study1_id,study2_id )
 );
 
 /**
@@ -1707,9 +1707,9 @@ CREATE TABLE associate_study (
 
 @see phenotype_feature_attrib
 */
-CREATE TABLE submitter(
-  submitter_id int(10) unsigned not null auto_increment,
-  description          varchar(255),
+CREATE TABLE submitter (
+  submitter_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  description          VARCHAR(255),
   PRIMARY KEY ( submitter_id )
 );
 
@@ -1732,15 +1732,15 @@ CREATE TABLE submitter(
 @see variation_citation
 */
 
-CREATE TABLE publication(
-  publication_id int(10) unsigned not null auto_increment, 
-  title          varchar(255),
-  authors        varchar(255) CHARACTER SET utf8mb4,
-  pmid           int(10),
-  pmcid          varchar(255),
-  year           int(10) unsigned,
-  doi            varchar(50),
-  ucsc_id        varchar(50),
+CREATE TABLE publication (
+  publication_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, 
+  title          VARCHAR(255),
+  authors        VARCHAR(255) CHARACTER SET utf8mb4,
+  pmid           INT(10),
+  pmcid          VARCHAR(255),
+  year           INT(10) UNSIGNED,
+  doi            VARCHAR(50),
+  ucsc_id        VARCHAR(50),
   PRIMARY KEY ( publication_id ),
   KEY pmid_idx (pmid),
   KEY doi_idx (doi)
@@ -1759,8 +1759,8 @@ CREATE TABLE publication(
 */
 
 CREATE TABLE variation_citation (
-   variation_id int(10) unsigned not null,
-   publication_id int(10) unsigned not null,
+   variation_id INT(10) UNSIGNED NOT NULL,
+   publication_id INT(10) UNSIGNED NOT NULL,
    PRIMARY KEY variation_citation_idx (variation_id, publication_id)
 );
 
@@ -1790,7 +1790,7 @@ CREATE TABLE meta_coord (
   coord_system_id INT(10) UNSIGNED NOT NULL,
   max_length		  INT,
 
-  UNIQUE(table_name, coord_system_id)
+  UNIQUE KEY (table_name, coord_system_id)
 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1809,12 +1809,12 @@ CREATE TABLE meta_coord (
 
 CREATE TABLE meta (
 
-  meta_id 		INT(10) UNSIGNED not null auto_increment,
+  meta_id 		INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   species_id  INT UNSIGNED DEFAULT 1,
-  meta_key    varchar( 40 ) not null,
-  meta_value  varchar( 255 ) not null,
+  meta_key    VARCHAR( 40 ) NOT NULL,
+  meta_value  VARCHAR( 255 ) NOT NULL,
 
-  PRIMARY KEY( meta_id ),
+  PRIMARY KEY ( meta_id ),
   UNIQUE KEY species_key_value_idx (species_id, meta_key, meta_value ),
   KEY species_value_idx (species_id, meta_value )
 
@@ -1854,10 +1854,10 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 @see failed_structural_variation
 */
 
-CREATE TABLE failed_description(
+CREATE TABLE failed_description (
 
- failed_description_id int(10) unsigned not null AUTO_INCREMENT,
- description  text not null,
+ failed_description_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+ description  TEXT NOT NULL,
 
  PRIMARY KEY (failed_description_id)
 );
@@ -1878,9 +1878,9 @@ CREATE TABLE failed_description(
 */
 
 CREATE TABLE failed_variation (
-  failed_variation_id int(11) NOT NULL AUTO_INCREMENT,
-  variation_id int(10) unsigned NOT NULL,
-  failed_description_id int(10) unsigned NOT NULL,
+  failed_variation_id INT(11) NOT NULL AUTO_INCREMENT,
+  variation_id INT(10) UNSIGNED NOT NULL,
+  failed_description_id INT(10) UNSIGNED NOT NULL,
   PRIMARY KEY (failed_variation_id),
   UNIQUE KEY variation_idx (variation_id,failed_description_id)
 );
@@ -1901,9 +1901,9 @@ CREATE TABLE failed_variation (
 */
 
 CREATE TABLE failed_allele (
-  failed_allele_id int(11) NOT NULL AUTO_INCREMENT,
-  allele_id int(10) unsigned NOT NULL,
-  failed_description_id int(10) unsigned NOT NULL,
+  failed_allele_id INT(11) NOT NULL AUTO_INCREMENT,
+  allele_id INT(10) UNSIGNED NOT NULL,
+  failed_description_id INT(10) UNSIGNED NOT NULL,
   PRIMARY KEY (failed_allele_id),
   UNIQUE KEY allele_idx (allele_id,failed_description_id)
 );
@@ -1924,9 +1924,9 @@ CREATE TABLE failed_allele (
 */
 
 CREATE TABLE failed_structural_variation (
-  failed_structural_variation_id int(11) NOT NULL AUTO_INCREMENT,
-  structural_variation_id int(10) unsigned NOT NULL,
-  failed_description_id int(10) unsigned NOT NULL,
+  failed_structural_variation_id INT(11) NOT NULL AUTO_INCREMENT,
+  structural_variation_id INT(10) UNSIGNED NOT NULL,
+  failed_description_id INT(10) UNSIGNED NOT NULL,
 	
   PRIMARY KEY (failed_structural_variation_id),
   UNIQUE KEY structural_variation_idx (structural_variation_id,failed_description_id)
@@ -1985,7 +1985,7 @@ CREATE TABLE attrib_type (
 */
 CREATE TABLE attrib (
 
-    attrib_id           INT(11) UNSIGNED NOT NULL auto_increment,
+    attrib_id           INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
     attrib_type_id      SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
     value               TEXT NOT NULL,
 
@@ -2041,9 +2041,9 @@ CREATE TABLE attrib_set (
 */
 
 CREATE TABLE protein_function_predictions (
-    translation_md5_id int(11) unsigned NOT NULL,
-    analysis_attrib_id int(11) unsigned NOT NULL,
-    prediction_matrix mediumblob,
+    translation_md5_id INT(11) UNSIGNED NOT NULL,
+    analysis_attrib_id INT(11) UNSIGNED NOT NULL,
+    prediction_matrix MEDIUMBLOB,
     
     PRIMARY KEY (translation_md5_id, analysis_attrib_id)
 );
@@ -2061,7 +2061,7 @@ CREATE TABLE protein_function_predictions (
 */
 
 CREATE TABLE translation_md5 (
-    translation_md5_id int(11) NOT NULL AUTO_INCREMENT,
+    translation_md5_id INT(11) NOT NULL AUTO_INCREMENT,
     translation_md5 char(32) NOT NULL,
 
     PRIMARY KEY (translation_md5_id),
@@ -2083,10 +2083,10 @@ CREATE TABLE translation_md5 (
 @see    protein_function_predictions
 */
 CREATE TABLE protein_function_predictions_attrib (
-    translation_md5_id int(11) unsigned NOT NULL,
-    analysis_attrib_id int(11) unsigned NOT NULL,
-    attrib_type_id     int(11) unsigned NOT NULL,
-    position_values    blob,
+    translation_md5_id INT(11) UNSIGNED NOT NULL,
+    analysis_attrib_id INT(11) UNSIGNED NOT NULL,
+    attrib_type_id     INT(11) UNSIGNED NOT NULL,
+    position_values    BLOB,
     
     PRIMARY KEY (translation_md5_id, analysis_attrib_id,attrib_type_id )
 );
