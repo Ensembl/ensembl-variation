@@ -68,9 +68,8 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 =head2 fetch_by_description
-  Arg [1]    : string ontology accession
-  Arg [2]    : string $mapping_type for ontology accessions mapping type ['is'/'involves'] (optional)
-  Example    : $phenotype = $pheno_adaptor->fetch_all_by_description('diabetes', 'is');
+  Arg [1]    : string $description
+  Example    : $phenotype = $pheno_adaptor->fetch_all_by_description('diabetes');
   Description: Retrieves a list of Phenotype objects for a phenotype description
                If no phenotype exists undef is returned.
   Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
@@ -87,15 +86,15 @@ sub fetch_by_description {
 }
 
 =head2 fetch_by_description_accession_type
-  Arg [1]    : string ontology accession
+  Arg [1]    : string $description
   Arg [2]    : string $mapping_type - default 'is', option 'involves'
   Example    : $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes');
-               $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes', 'is');
-  Description: Retrieves a list of Phenotype objects for a phenotype description
-               ontology accessions of mapping_type
+               $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes', 'involves');
+  Description: Retrieves a list of Phenotype objects for a phenotype description including
+               the corresponding ontology accessions of $mapping_type
                If no phenotype exists undef is returned.
   Returntype : list ref of Bio::EnsEMBL::Variation::Phenotypes
-  Exceptions : throw if description arg is not defined or mapping_type not supported
+  Exceptions : throw if $description arg is not defined or $mapping_type not supported
   Caller     : general
 =cut
 sub fetch_by_description_accession_type {
@@ -106,7 +105,6 @@ sub fetch_by_description_accession_type {
     $mapping_type ||= 'is';
     throw("$mapping_type is not a valid mapping type, valid types are: 'is','involves'") unless $mapping_type eq 'is' || $mapping_type eq 'involves';
 
-    return undef if(!$desc);
     $desc =~ s/'/\\'/g;
 
     my $constraint = qq{ p.description = '$desc'};
