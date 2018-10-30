@@ -81,9 +81,10 @@ foreach my $core_dbname (keys %$core_dbas) {
   $vdba->dbc()->sql_helper()->execute_update(-SQL => "DELETE FROM meta_coord", -PARAMS => []);
   foreach my $table_name (@table_names) {
     print("Updating $table_name table entries... ");
+# insertions where end < start cause an error. Because both start and end are unsigned, negative is not allowed as unsigned integer. If you cast the values to signed before doing the difference it works or add a 1 at the beginning
     my $sql = "INSERT INTO meta_coord "
         . "SELECT '$table_name', s.coord_system_id, "
-        . "MAX( t.seq_region_end - t.seq_region_start + 1 ) "
+        . "MAX( 1 + t.seq_region_end - t.seq_region_start ) "
         . "FROM $table_name t, $core_dbname.seq_region s, $core_dbname.coord_system c "
         . "WHERE t.seq_region_id = s.seq_region_id AND c.coord_system_id=s.coord_system_id AND c.species_id=?"
         . "GROUP BY s.coord_system_id";
