@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_conf;
 
 use strict;
 use warnings;
-
+use Bio::EnsEMBL::Hive::Version 2.5;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub default_options {
