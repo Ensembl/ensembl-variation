@@ -228,10 +228,11 @@ sub pipeline_analyses {
                     max_distance => $self->o('max_distance'),
                     @common_params,
                 },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_name        => 'default',
-                -flow_into      => {
+                -input_ids       => [],
+                -hive_capacity   => $self->o('transcript_effect_capacity'),
+                -rc_name         => 'default',
+                -max_retry_count => 0
+                -flow_into       => {
                   -1 => ['transcript_effect_highmem'],
                 }
             },
@@ -246,10 +247,11 @@ sub pipeline_analyses {
                     max_distance => $self->o('max_distance'),
                     @common_params,
                 },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_name        => 'highmem',
-                -can_be_empty   => 1,
+                -input_ids       => [],
+                -hive_capacity   => $self->o('transcript_effect_capacity'),
+                -rc_name         => 'highmem',
+                -can_be_empty    => 1,
+                -max_retry_count => 0
             },
 
             {   -logic_name     => 'finish_transcript_effect',
@@ -258,13 +260,13 @@ sub pipeline_analyses {
                     pipeline_dir => $self->o('pipeline_dir'),
                     @common_params,
                 },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'highmem',
-                -wait_for       => [ 'transcript_effect', 'transcript_effect_highmem' ],
-                -flow_into      => {},
+                -input_ids            => [],
+                -hive_capacity        => 1,
+                -rc_name              => 'highmem',
+                -wait_for             => [ 'transcript_effect', 'transcript_effect_highmem' ],
+                -flow_into            => {},
                 -failed_job_tolerance => 0,
-                -max_retry_count => 0,
+                -max_retry_count      => 0,
             },
 
             {   -logic_name     => 'rebuild_tv_indexes',
@@ -272,11 +274,12 @@ sub pipeline_analyses {
                 -parameters     => {
                     @common_params,
                 },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'urgent',
-                -wait_for       => [ 'finish_transcript_effect' ],
-                -flow_into      => {},
+                -input_ids       => [],
+                -hive_capacity   => 1,
+                -rc_name         => 'urgent',
+                -wait_for        => [ 'finish_transcript_effect' ],
+                -flow_into       => {},
+                -max_retry_count => 0
             },
         
             {   -logic_name     => 'check_transcript_variation',
@@ -297,11 +300,12 @@ sub pipeline_analyses {
                 -parameters     => {
                     @common_params,
                 },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'urgent',
-                -wait_for       => [ 'rebuild_tv_indexes' ],
-                -flow_into      => {},
+                -input_ids       => [],
+                -hive_capacity   => 1,
+                -rc_name         => 'urgent',
+                -wait_for        => [ 'rebuild_tv_indexes' ],
+                -flow_into       => {},
+                -max_retry_count => 0
             }, 
 
         );
