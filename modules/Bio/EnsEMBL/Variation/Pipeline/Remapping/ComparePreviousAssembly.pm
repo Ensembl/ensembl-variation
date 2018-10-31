@@ -38,8 +38,10 @@ sub fetch_input {
 sub run {
   my $self = shift;
   my $feature_table = $self->param('feature_table');
-  my $counts_prev_assembly = $self->get_feature_counts_by_seq_region('vdba_oldasm', $feature_table);
-  my $counts_new_assembly = $self->get_feature_counts_by_seq_region('vdba_newasm', $feature_table);
+  my $vdba_oldasm = $self->get_oldasm_variation_database_connection;
+  my $counts_prev_assembly = $self->get_feature_counts_by_seq_region($vdba_oldasm, $feature_table);
+  my $vdba_newasm = $self->get_newasm_variation_database_connection;
+  my $counts_new_assembly = $self->get_feature_counts_by_seq_region($vdba_newasm, $feature_table);
   my $pipeline_dir = $self->param('pipeline_dir');
   my $fh = FileHandle->new("$pipeline_dir/QC_ComparePreviousAssembly", 'w');
   my @seq_regions = uniq (keys %$counts_prev_assembly, keys %$counts_new_assembly);
@@ -60,9 +62,8 @@ sub run {
 
 sub get_feature_counts_by_seq_region {
   my $self = shift;
-  my $vdba_version = shift;
+  my $vdba = shift;
   my $feature_table = shift;
-  my $vdba = $self->param($vdba_version);
   my $dbh = $vdba->dbc->db_handle();
   my $extra_sql = '';
   if ($self->param('mode') eq 'remap_QTL') {

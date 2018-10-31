@@ -39,7 +39,7 @@ sub fetch_input {
 
 sub run {
   my $self = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle();
 
   my $qc_mapped_features_dir = $self->param('qc_mapped_features_dir');

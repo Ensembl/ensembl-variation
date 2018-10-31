@@ -82,6 +82,10 @@ sub run {
       die("New assembly file is not indexed. $file_type is missing.");
     }
   }
+  $dir = $self->param('old_assembly_dir');
+  unless ($self->count_files($dir, '.fa')) {
+    die("Old assembly file doesn't exist or is still zipped.");
+  }
 
   foreach my $tool (qw/bwa samtools/) {
     can_run($self->param($tool)) or die "$tool could not be found at location: ", $self->param($tool);

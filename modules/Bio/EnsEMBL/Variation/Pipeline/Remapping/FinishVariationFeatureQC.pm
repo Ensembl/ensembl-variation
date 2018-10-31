@@ -34,7 +34,6 @@ use FileHandle;
 
 sub fetch_input {
   my $self = shift;
-  $self->SUPER::fetch_input;
 }
 
 sub run {
@@ -45,7 +44,7 @@ sub run {
 
   $self->add_flip_column($feature_table);
   $self->run_qc_updates($qc_update_features_dir);
-  $self->backup_tables(['allele', 'population_genotype', 'tmp_sample_genotype_single_bp', 'failed_variation']);
+#  $self->backup_tables(['allele', 'population_genotype', 'tmp_sample_genotype_single_bp', 'failed_variation']);
 
   my $failed_variations_after_remapping = $self->failed_variations_after_remapping($qc_failure_reasons_dir);
   my $previous_unmapped_variants = $self->previous_unmapped_variants(); # did not map in previous assembly
@@ -72,9 +71,9 @@ sub run {
 sub add_flip_column {
   my $self = shift;
   my $feature_table = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
-  if ($self->column_exists($feature_table, 'flip')) {
+  if ($self->column_exists($vdba, $feature_table, 'flip')) {
     $dbh->do("ALTER TABLE $feature_table DROP COLUMN flip;")
   }
   $dbh->do("ALTER TABLE $feature_table ADD COLUMN flip INT DEFAULT 0;")
@@ -83,7 +82,7 @@ sub add_flip_column {
 sub run_qc_updates {
   my $self = shift;
   my $qc_update_features = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   opendir(DIR, $qc_update_features) or die $!;
   while (my $file = readdir(DIR)) {
@@ -145,7 +144,7 @@ sub init_flip_features {
 sub flip_features {
   my $self = shift;
   my $pipeline_dir = $self->param('pipeline_dir');
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $fh = FileHandle->new("$pipeline_dir/update_flip_features.txt", 'r');
   while(<$fh>) {
@@ -158,7 +157,7 @@ sub flip_features {
 sub backup_tables {
   my $self = shift;
   my $tables = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   foreach my $table (@$tables) {
@@ -179,7 +178,7 @@ sub failed_alleles {
   my $self = shift;
   my $feature_table = shift;
   my $failed_alleles = {};
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $sth = $dbh->prepare(qq{
   SELECT fa.allele_id, fa.failed_description_id, a.variation_id
@@ -203,7 +202,7 @@ sub failed_variations {
   my $self = shift;
   my $feature_table = shift;
   my $failed_variations = {};
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $sth = $dbh->prepare(qq{
   SELECT fv.variation_id, fv.failed_description_id
@@ -230,8 +229,9 @@ sub flip_alleles {
   my $dumped_features_file = shift;
   my $fh_out = shift;
   my $fh_err = shift;
-  my $vdba = $self->param('vdba_newasm');
-  my $allele_adaptor = $vdba->get_AlleleAdaptor;
+  my $vdba = $self->get_newasm_variation_database_connection;
+  my $allele_adaptor = $vdba->get_adaptor('Allele');
+  
   my %allele_id_2_string = reverse %{$allele_adaptor->_cache_allele_codes};
   my $fh = FileHandle->new($dumped_features_file, 'r');
 
@@ -257,7 +257,7 @@ sub flip_population_genotypes {
   my $dumped_features_file = shift;
   my $fh_out = shift;
   my $fh_err = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $sgta = $vdba->get_SampleGenotypeAdaptor;
   my $gtca = $vdba->get_GenotypeCodeAdaptor;
   my $gtcs = $gtca->fetch_all;
@@ -345,7 +345,7 @@ sub dump_features_for_flipping {
   my $self = shift;
   my $query = shift;
   my $file_name = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $fh = FileHandle->new($file_name, 'w');
   my $sth = $dbh->prepare($query, {mysql_use_result => 1});
@@ -360,9 +360,9 @@ sub dump_features_for_flipping {
 
 sub column_exists {
   my $self = shift;
+  my $vdba = shift;
   my $feature_table = shift;
   my $column = shift;
-  my $vdba = $self->param('vdba_newasm');
   my $dbh = $vdba->dbc->db_handle;
   my $dbname = $vdba->dbc->dbname();
   my $sth = $dbh->prepare(qq{
@@ -403,7 +403,7 @@ sub failed_variations_after_remapping {
 
 sub previous_unmapped_variants {
   my $self = shift;
-  my $vdba = $self->param('vdba_oldasm');
+  my $vdba = $self->get_oldasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
   my $previous_unmapped_variants = {};
   my $sth = $dbh->prepare(qq{
@@ -420,7 +420,7 @@ sub previous_unmapped_variants {
 sub unmapped_variants {
   my $self = shift;
   my $feature_table_mapping_results = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   my $unmapped_variants = {};
@@ -443,7 +443,7 @@ sub cleanup_failed_variants {
   my $self = shift;
   my $feature_table = shift;
     
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   $dbh->do("DELETE fv FROM failed_variation as fv LEFT JOIN $feature_table ft ON fv.variation_id = ft.variation_id AND ft.variation_id IS NOT NULL ;") or die $!;
@@ -453,7 +453,7 @@ sub load_failed_variants {
   my $self = shift;
   my $failed_variants = shift;
 
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   foreach my $variation_id (keys %$failed_variants) {
@@ -465,7 +465,7 @@ sub load_failed_variants {
 
 sub update_variation_set_variation {
   my $self = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   my $sth = $dbh->prepare(qq{
@@ -485,7 +485,7 @@ sub update_variation_set_variation {
 sub update_display {
   my $self = shift;
   my $feature_table = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   $dbh->do("UPDATE variation SET display=1;") or die $!;
@@ -496,7 +496,7 @@ sub update_display {
 
 sub cleanup_mapped_feature_table {
   my $self = shift;
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbh = $vdba->dbc->db_handle;
 
   my $feature_table = $self->param('feature_table');
@@ -505,7 +505,7 @@ sub cleanup_mapped_feature_table {
   $dbh->do("RENAME TABLE $feature_table to before_remapping_$feature_table;") or die $!;
   $dbh->do("RENAME TABLE $feature_table_mapping_results to $feature_table;") or die $!;
   foreach my $column (qw/flip variation_feature_id_old/) {
-    if ($self->column_exists($feature_table, $column)) {
+    if ($self->column_exists($vdba, $feature_table, $column)) {
       $dbh->do("ALTER TABLE $feature_table DROP COLUMN $column;")
     }
   }
