@@ -720,6 +720,7 @@ sub fetch_all_by_phenotype_accession_source {
   throw('phenotype ontology accession argument expected') if(!defined($accession));
  
   my $ontologyFlag = $self->_include_ontology();
+  my $attribFlag = $self->_include_attrib();
   $self->_include_ontology(1);
   $self->_include_attrib(1);
 
@@ -731,7 +732,7 @@ sub fetch_all_by_phenotype_accession_source {
 
   ## reset flags  
   $self->_include_ontology($ontologyFlag);
-  $self->_include_attrib(0);
+  $self->_include_attrib($attribFlag);
 
   return $result;
 }
@@ -859,6 +860,7 @@ sub fetch_all_by_associated_gene {
   #Check that the gene_name is defined and not an object
   throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
 
+  my $attribFlag = $self->_include_attrib();
   $self->_include_attrib(1);
 
   my $extra_sql  = " at.code = 'associated_gene' and (pfa.value = '$gene_name' OR pfa.value like '%,$gene_name' OR pfa.value like '$gene_name,%' OR pfa.value like '%,$gene_name,%')";
@@ -871,7 +873,7 @@ sub fetch_all_by_associated_gene {
 
   my $result = $self->generic_fetch($extra_sql);
   
-  $self->_include_attrib(0);
+  $self->_include_attrib($attribFlag);
   $result = [grep {$_->type ne 'Gene'} @$result];  
   return $result;
 }
@@ -895,6 +897,7 @@ sub count_all_by_associated_gene {
   #Check that the gene_name is defined and not an object
   throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
   
+  my $attribFlag = $self->_include_attrib();
   $self->_include_attrib(1);
 
   my $extra_sql  = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
@@ -907,7 +910,7 @@ sub count_all_by_associated_gene {
 
   my $result = $self->generic_count($extra_sql);
   
-  $self->_include_attrib(0);
+  $self->_include_attrib($attribFlag);
 
   return $result;
 }
