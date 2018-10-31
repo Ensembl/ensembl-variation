@@ -278,6 +278,10 @@ sub map_sample_genotypes {
   }
   my $sample_genotypes_new = {};
 
+  # if alleles from old allele string (from VCF file) are missing from new allele string (from database) add missing alleles to end of new allele string
+  $self->add_missing_alleles($mapping, $rev_comp);
+
+  # This will be new entry in VCF file. After remapping we know correct allele order for the new allele string in remapped VCF file
   my $new_allele_map = get_allele_map($mapping->allele_string_new);
   my $old_rev_comp_map = {};
   if ($rev_comp) {
@@ -300,6 +304,38 @@ sub map_sample_genotypes {
     $sample_genotypes_new->{$sample} = join($seperator, @new_gt);
   }
   return $sample_genotypes_new;
+}
+
+sub add_missing_alleles {
+  my $self = shift;
+  my $mapping = shift;
+  my $rev_comp = shift;
+
+  my $old_allele_string = $mapping->allele_string_old;
+  if ($rev_comp) {
+    $old_allele_string = rev_comp_allele_string($old_allele_string);
+  }
+  my $new_allele_string = $mapping->allele_string_new;
+
+  my $sorted_allele_string_old = sort_allele_string($old_allele_string);
+  my $sorted_allele_string_new = sort_allele_string($new_allele_string);
+
+  return if ($sorted_allele_string_new eq $sorted_allele_string_old);
+
+  my $new_allele_map = get_allele_map($new_allele_string);
+
+  my @new_alleles = split('/', $new_allele_string);
+  my @old_alleles = split('/', $old_allele_string);
+  foreach my $allele (@old_alleles) {
+    if (! defined $new_allele_map->{$allele}) {
+      push @new_alleles, $allele;
+    }
+  }
+  $new_allele_string = join('/', @new_alleles);
+  my $variation_id = $mapping->variation_id;
+  my $new_allele_string_before_change = $mapping->allele_string_new;
+  $self->warning("$old_allele_string $new_allele_string $new_allele_string_before_change $variation_id");
+  $mapping->allele_string_new($new_allele_string);
 }
 
 # allele to index
