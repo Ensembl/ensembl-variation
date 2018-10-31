@@ -62,11 +62,11 @@ sub run {
 sub dump_features {
   my $self = shift;
   my $extra_sql = shift; # AND type = 'QTL'
-  my $cdba = $self->param('cdba_oldasm');
-  my $vdba = $self->param('vdba_oldasm');
+  my $cdba_oldasm = $self->get_oldasm_core_database_connection;
+  my $vdba_oldasm = $self->get_oldasm_variation_database_connection;
   my $feature_table = $self->param('feature_table');
 
-  my @column_names = @{$self->get_sorted_column_names($vdba, $feature_table)};
+  my @column_names = @{$self->get_sorted_column_names($vdba_oldasm, $feature_table)};
   my $column_names_string = join(',', @column_names);
   $self->param('sorted_column_names', $column_names_string);
 
@@ -76,12 +76,12 @@ sub dump_features {
   my $count_entries = 0;
   my $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
 
-  my $dbh = $vdba->dbc->db_handle();
+  my $dbh = $vdba_oldasm->dbc->db_handle();
   my $sth = $dbh->prepare(qq{
     SELECT $column_names_string FROM $feature_table WHERE seq_region_id = ? $extra_sql;
   }, {mysql_use_result => 1});
 
-  my $seq_region_ids = $self->get_seq_region_ids($cdba);
+  my $seq_region_ids = $self->get_seq_region_ids($cdba_oldasm);
 
   foreach my $seq_region_id (keys %$seq_region_ids) {
     my $seq_region_name = $seq_region_ids->{$seq_region_id};

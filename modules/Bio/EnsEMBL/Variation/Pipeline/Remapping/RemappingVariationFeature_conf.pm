@@ -188,6 +188,7 @@ sub pipeline_analyses {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
       -max_retry_count => 0,
+      -rc_name    => 'default_mem',
        -flow_into => {
         1 => ['compare_prev_assembly'],
       },
@@ -195,6 +196,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'compare_prev_assembly',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::ComparePreviousAssembly',
+      -rc_name    => 'default_mem',
     }
     ); 
   } else {

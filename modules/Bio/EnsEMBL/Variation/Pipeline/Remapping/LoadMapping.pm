@@ -52,7 +52,7 @@ sub load_read_coverage {
   my $self = shift;
 
   my $load_features_dir = $self->param('load_features_dir');
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbc = $vdba->dbc;
 
   my $feature_table = $self->param('feature_table');
@@ -91,7 +91,7 @@ sub load_read_coverage {
 sub load_mapping_results {
   my $self = shift;
 
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
@@ -123,7 +123,7 @@ sub load_mapping_results {
 sub load_features {
   my $self = shift;
 
-  my $vdba = $self->param('vdba_newasm');
+  my $vdba = $self->get_newasm_variation_database_connection;
   my $dbc  = $vdba->dbc;
 
   my $load_features_dir = $self->param('load_features_dir');
