@@ -792,7 +792,9 @@ sub qc_mapped_vf {
       }
       if (scalar @new_allele_strings > 0) {
         my $new_allele_string = join('/', @new_allele_strings);
-        print $fh_update "UPDATE $feature_table SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
+        if ($allele_string ne $new_allele_string) {
+          print $fh_update "UPDATE $feature_table SET allele_string='$new_allele_string' WHERE variation_feature_id=$vf_id;\n";
+        }
         if ($is_reverse_comp) {
           print $fh_update "UPDATE $feature_table SET flip=1 WHERE variation_feature_id=$vf_id;\n";
         }

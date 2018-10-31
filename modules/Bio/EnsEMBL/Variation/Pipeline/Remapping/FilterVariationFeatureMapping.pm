@@ -161,7 +161,7 @@ sub join_feature_data {
 
   # get new seq_region_ids
   my $seq_region_ids = {};
-  my $cdba = $self->param('cdba_newasm');
+  my $cdba = $self->get_newasm_core_database_connection;
   my $sa = $cdba->get_SliceAdaptor;
   my $slices = $sa->fetch_all('toplevel', undef, 1);
   foreach my $slice (@$slices) {
