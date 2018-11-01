@@ -70,7 +70,7 @@ sub run {
     my $start = $parser->get_start; # or raw start?
     my $raw_IDs = $parser->get_raw_IDs;
 
-    my $mappings = $self->update_mappings($dbh, $seq_name, $raw_start);
+    my $mappings = $self->update_mappings($dbh, $seq_name, $raw_start, $allele_string);
     my $number_of_mappings = scalar @$mappings;
 
     if ( $number_of_mappings == 0) {
@@ -89,7 +89,9 @@ sub run {
           my $vcf_line = $self->get_vcf_line($mapping, $raw_IDs, $qual, $filter, $info, $format, $samples, $mapped_sample_genotypes, $population, $sa);
           print $fh_out "$vcf_line\n";
         } else {
-          print $fh_err "$seq_name $raw_start $raw_IDs $is_mapping\n";
+          my $allele_string_old = $mapping->allele_string_old;
+          my $allele_string_new = $mapping->allele_string_new;
+          print $fh_err "$seq_name $raw_start $raw_IDs $is_mapping $allele_string_old $allele_string_new\n";
         }
       }
     }
@@ -111,10 +113,12 @@ sub compare_allele_strings {
   my $sorted_allele_string_new = sort_allele_string($allele_string_new);
 
   if ($sorted_allele_string_old eq $sorted_allele_string_new) {
+    $mapping->alleles_are_equal(1);
     return EQUAL;
   }
   my $rev_comp_sorted_allele_string_old = rev_comp_allele_string($sorted_allele_string_old);
   if ($rev_comp_sorted_allele_string_old eq $sorted_allele_string_new) {
+    $mapping->alleles_are_equal(1);
     return EQUAL_AFTER_REV_COMP;
   }
 
@@ -222,7 +226,6 @@ sub get_vcf_line {
   #CHROM POS ID REF ALT QUAL FILTER INFO FORMAT genotypes
   $info = allele_frequency($new_allele_string, $mapped_sample_genotypes, $population); 
   if (!$info) {
-    #$self->warning("No genotypes $new_allele_string $chrom $location");
     $info = 'No INFO';
   }
   my $line = join("\t", $chrom, $location, $rawIDs, $ref_allele, $alt_alleles, $qual, $filter, $info, $format, @genotypes);
@@ -278,12 +281,15 @@ sub map_sample_genotypes {
   }
   my $sample_genotypes_new = {};
 
-  # if alleles from old allele string (from VCF file) are missing from new allele string (from database) add missing alleles to end of new allele string
-  $self->add_missing_alleles($mapping, $rev_comp);
+  # if alleles from old allele string (from VCF file) are missing from new allele string (from database) add missing alleles to end of new allele string  
+  if (!$mapping->alleles_are_equal) {
+    $self->add_missing_alleles($mapping, $rev_comp);
+  }
 
-  # This will be new entry in VCF file. After remapping we know correct allele order for the new allele string in remapped VCF file
+  # This will be new entry in VCF file. After remapping we know correct allele order for the new allele string
   my $new_allele_map = get_allele_map($mapping->allele_string_new);
   my $old_rev_comp_map = {};
+
   if ($rev_comp) {
     $old_rev_comp_map = get_rev_comp_allele_map($mapping->allele_string_old); 
   } 
@@ -295,11 +301,20 @@ sub map_sample_genotypes {
     my @alleles = split(/\||\//, $old_gt);
     my @new_gt = ();
     foreach my $allele (@alleles) {
+      my $allele_index = undef;
       if ($rev_comp) {
-        push @new_gt, $new_allele_map->{$old_rev_comp_map->{$allele}};
+        $allele_index = $new_allele_map->{$old_rev_comp_map->{$allele}};
       } else {
-        push @new_gt, $new_allele_map->{$allele};
+        $allele_index = $new_allele_map->{$allele};
       }
+      if (!defined $allele_index) {
+        my $new_start = $mapping->seq_region_start_new;
+        my $new_allele_string = $mapping->allele_string_new;
+        my $old_allele_string = $mapping->allele_string_old;
+        my $seq_region_name_new = $mapping->seq_region_name_new;
+      }
+      push @new_gt, $allele_index;
+
     }
     $sample_genotypes_new->{$sample} = join($seperator, @new_gt);
   }
@@ -311,20 +326,11 @@ sub add_missing_alleles {
   my $mapping = shift;
   my $rev_comp = shift;
 
-  my $old_allele_string = $mapping->allele_string_old;
-  if ($rev_comp) {
-    $old_allele_string = rev_comp_allele_string($old_allele_string);
-  }
   my $new_allele_string = $mapping->allele_string_new;
-
-  my $sorted_allele_string_old = sort_allele_string($old_allele_string);
-  my $sorted_allele_string_new = sort_allele_string($new_allele_string);
-
-  return if ($sorted_allele_string_new eq $sorted_allele_string_old);
+  my $old_allele_string = $mapping->allele_string_old;
 
   my $new_allele_map = get_allele_map($new_allele_string);
-
-  my @new_alleles = split('/', $new_allele_string);
+  my @new_alleles = split('/', $new_allele_string); 
   my @old_alleles = split('/', $old_allele_string);
   foreach my $allele (@old_alleles) {
     if (! defined $new_allele_map->{$allele}) {
@@ -334,7 +340,6 @@ sub add_missing_alleles {
   $new_allele_string = join('/', @new_alleles);
   my $variation_id = $mapping->variation_id;
   my $new_allele_string_before_change = $mapping->allele_string_new;
-  $self->warning("$old_allele_string $new_allele_string $new_allele_string_before_change $variation_id");
   $mapping->allele_string_new($new_allele_string);
 }
 
@@ -368,6 +373,7 @@ sub update_mappings {
   my $dbh = shift;
   my $seq_region_name = shift;
   my $raw_start = shift;
+  my $allele_string = shift;
   my @mappings = ();
 
   my $sth = $dbh->prepare(qq{
@@ -375,11 +381,12 @@ sub update_mappings {
     FROM vcf_variation
     WHERE seq_region_name_old = ?
     AND seq_region_start_old = ?
+    AND allele_string_old = ?
     AND variation_id IS NOT NULL
     AND seq_region_name_new IS NOT NULL;
   }, {mysql_use_result => 1});
 
-  $sth->execute($seq_region_name, $raw_start);
+  $sth->execute($seq_region_name, $raw_start, $allele_string);
   my ($vcf_variation_id, $seq_region_name_old, $seq_region_id_old, $seq_region_start_old, $seq_region_start_padded_old, $allele_string_old, $allele_string_padded_old, $vcf_id, $variation_id, $seq_region_name_new, $seq_region_id_new, $seq_region_start_new, $allele_string_new); 
   $sth->bind_columns(\($vcf_variation_id, $seq_region_name_old, $seq_region_id_old, $seq_region_start_old, $seq_region_start_padded_old, $allele_string_old, $allele_string_padded_old, $vcf_id, $variation_id, $seq_region_name_new, $seq_region_id_new, $seq_region_start_new, $allele_string_new));
   while ($sth->fetch) {
