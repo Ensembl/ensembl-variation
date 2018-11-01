@@ -176,6 +176,12 @@ sub variation_id {
   return $self->{variation_id};
 }
 
+sub alleles_are_equal {
+  my $self = shift;
+  $self->{alleles_are_equal} = shift if @_;
+  return $self->{alleles_are_equal};
+}
+
 =begin
 CREATE TABLE `vcf_variation` (
   `vcf_variation_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
