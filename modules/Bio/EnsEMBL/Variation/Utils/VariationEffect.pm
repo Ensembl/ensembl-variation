@@ -654,6 +654,7 @@ sub _get_peptide_alleles {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{_get_peptide_alleles})) {
+      $DB::single = 1;
         my @alleles = ();
 
         #return () if frameshift(@_);
@@ -1036,7 +1037,7 @@ sub stop_gained {
 
 sub stop_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
+$DB::single = 1;
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1263,13 +1264,16 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        #my $dup_bvfoa = {%$bvfoa};
+        #$bvfoa->_return_3prime(1);
+        #return 0 unless defined $bvfo->translation_start(undef, $bvfoa->{shift_object}->{shift_length});
+        return 0 unless defined $bvfo->translation_start();
         
-        return 0 unless defined $bvfo->translation_start;
-
+        delete($bvfoa->{shift_object});
         my $cds_length = length $bvfo->_translateable_seq;
 
+        #my $codon_cds_start = ($bvfo->translation_start(undef, $bvfoa->{shift_object}->{shift_length}) * 3) - 2;
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
-
         my $last_codon_length = $cds_length - ($codon_cds_start - 1);
         
         $cache->{_partial_codon} = ( $last_codon_length < 3 and $last_codon_length > 0 );
