@@ -51,7 +51,7 @@ my $core_dba;
 my $variation_dba;
 my $ontology_db_adaptor;
 
-my $pubmed_prefix;
+my $pubmed_prefix = 'PMID:';
 
 
 #TODO: figure out how to do this automatic in future. currently human download is needed, also make species assembly automatic based on variation assembly
@@ -92,7 +92,6 @@ sub fetch_input {
                 #    source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
                 #    set => undef
                     ); 
-    $pubmed_prefix = 'PMID:';
 
     #create workdir folder
     $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;

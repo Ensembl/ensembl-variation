@@ -36,7 +36,7 @@ use File::Path qw(make_path);
 use LWP::Simple;
 use Data::Dumper; #TODO: remove if not needed
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL NONE);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD NONE);
 #use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
