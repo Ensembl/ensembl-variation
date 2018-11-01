@@ -51,6 +51,8 @@ my %special_characters = (
   'í' => 'i',
 );
 
+my $pubmed_prefix = 'PMID:';
+
 my $prev_prog;
 
 our $debug; #TODO: difference between our and my in this context?
@@ -525,6 +527,16 @@ sub convert_p_value {
   return $sci_pval;
 }
 
+## format ontology accessions
+sub iri2acc{
+
+  my $iri = shift;
+  my @a = split/\//, $iri;
+  my $acc = pop @a;
+  $acc =~ s/\_/\:/;
+
+  return $acc;
+}
 
 sub get_seq_region_ids {
   my ($self, $db_adaptor) = @_;

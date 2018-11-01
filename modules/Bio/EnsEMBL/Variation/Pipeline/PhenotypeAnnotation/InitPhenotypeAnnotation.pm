@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS NONE species);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
@@ -59,6 +59,10 @@ sub fetch_input {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'ZFIN'}} ]);
       print "Setting up for ZFIN import: ". join(", ",@{$import_species{'ZFIN'}}). "\n" if $debug ;
 
+    } elsif($run_type eq GWAS){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'GWAS'}} ]);
+      print "Setting up for NHGRI-EBI GWAS Catalog import: ". join(", ",@{$import_species{'GWAS'}}). "\n" if $debug ;
+
     } else {
       warn "No valid run_import_type specified: $run_type\n" if $debug ;
     }
@@ -80,6 +84,9 @@ sub write_output {
     } elsif ( $run_type eq ZFIN){
       $self->dataflow_output_id($self->param('output_ids'), 4);
       print "Setting up for ZFIN import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq GWAS){
+      $self->dataflow_output_id($self->param('output_ids'), 5);
+      print "Setting up for NHGRI-EBI GWAS import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     }
   } 
 }
