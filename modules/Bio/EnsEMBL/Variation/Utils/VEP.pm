@@ -2676,7 +2676,7 @@ sub tva_to_line {
 
     $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
     $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
-
+    $DB::single = 1;
     $line->{Extra}->{HGVS_OFFSET} = $offset if $offset;
   }
 
