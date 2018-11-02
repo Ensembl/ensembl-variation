@@ -111,6 +111,9 @@ sub default_options {
         zfin_version            => '20001020', #13 Sep 2018 #TODO: confirm there is no computational way to get it
 
         nhgri_version           => '20001020', #TODO: confirm there is no computational way to get it
+
+        omia_version            => '20001020', #TODO: confirm there is no computational way to get it
+
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
         # the command line to suit your farm. The names of each option hopefully
@@ -185,6 +188,7 @@ sub pipeline_analyses {
                 '3->A' => [ 'import_animal_qtldb' ],
                 '4->A' => [ 'import_zfin' ],
                 '5->A' => [ 'import_gwas' ],
+                '6->A' => [ 'import_omia' ],
                 'A->1' => [ 'finish_pipeline' ],
           #      4 => [ 'import_mim_morbid' ],
             #    5 => [ 'import_orphanet' ],
@@ -258,6 +262,20 @@ sub pipeline_analyses {
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
+        {   -logic_name => 'import_omia',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOMIA',
+            -parameters => {
+                omia_version => $self->o('omia_version'),
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
         {   -logic_name => 'check_phenotypes',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {

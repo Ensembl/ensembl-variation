@@ -32,18 +32,24 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants;
 use base qw(Exporter);
 use Const::Fast;
 
-our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS NONE species);
+our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA NONE species);
 
 use constant RGD       => 'RGD';
 use constant AnimalQTL => 'AnimalQTL';
 use constant ZFIN => 'ZFIN';
 use constant GWAS => 'GWAS';
+use constant OMIA => 'OMIA';
 use constant NONE   => 'NONE';
 
 use constant species => ( 'RGD' => ['rattus_norvegicus'],
                   'AnimalQTL' => ['gallus_gallus','equus_caballus'],
                 # 'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus', 'sus_scrofa', 'ovis_aries'],
                  'ZFIN' => ['danio_rerio'],
+            #     'OMIA' => ['felis_catus','gallus_gallus','pan_troglodytes',
+            #                'bos_taurus','canis_familiaris','equus_caballus',
+            #                'macaca_mulatta','sus_scrofa','ovis_aries',
+            #                'meleagris_gallopavo','danio_rerio'],
+                 'OMIA' => ['gallus_gallus'],
                  'GWAS' => ['homo_sapiens'],
                  );
 #TODO: hash key source -> array of species: used by the modules to schedule jobs for each species: see vep dum

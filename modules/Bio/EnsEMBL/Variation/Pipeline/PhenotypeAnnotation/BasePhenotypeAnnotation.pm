@@ -230,7 +230,7 @@ sub add_phenotypes {
     $source_info->{source_attrib_type} = 'Rat Genome Database';
   }
   my $mapped_by = 'Data source';
-  if (exists $ont_attrib_type->{$source_info->{source_mapped_attrib_type}}){
+  if (exists $source_info->{source_mapped_attrib_type} && exists $ont_attrib_type->{$source_info->{source_mapped_attrib_type}}){
     $mapped_by = $source_info->{source_mapped_attrib_type};
   }
 
