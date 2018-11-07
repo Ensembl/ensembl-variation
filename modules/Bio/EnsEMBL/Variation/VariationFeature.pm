@@ -502,6 +502,23 @@ sub get_all_highest_frequency_minor_Alleles {
 
 
 
+sub get_GERP_score {
+  my $self = shift;
+  my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
+  my $gerp_file = $annotation_file_adaptor->fetch_by_type('gerp');
+  my $gerp_score = $gerp_file->get_score_by_location($self->slice);
+}
+
+
+sub get_CADD_score {
+  my $self = shift;
+  my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
+  my $cadd_file = $annotation_file_adaptor->fetch_by_type('cadd');
+  my $cadd_score = $cadd_file->get_score_by_location($self->slice);
+}
+
+
+
 =head2 get_all_TranscriptVariations
 
   Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects
