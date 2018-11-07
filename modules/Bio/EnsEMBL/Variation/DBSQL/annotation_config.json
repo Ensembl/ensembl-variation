@@ -1,0 +1,22 @@
+{
+  "annotation_type": {
+    "gerp": [
+      {
+        "id": "70_mammals.gerp_conservation_score",
+        "species": "homo_sapiens",
+        "assembly": "GRCh38",
+        "type": "remote",
+        "filename_template": "ftp://ftp.ensembl.org/pub/current_compara/conservation_scores/70_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.bw"
+      },
+    ],
+    "cadd": [
+      {
+        "id": "CADD",
+        "species": "homo_sapiens",
+        "assembly": "GRCh38",
+        "type": "local",
+        "filename_template": "/hps/nobackup2/production/ensembl/anja/CADD/whole_genome_SNVs.tsv.gz"
+      }
+    ]
+  }
+}
