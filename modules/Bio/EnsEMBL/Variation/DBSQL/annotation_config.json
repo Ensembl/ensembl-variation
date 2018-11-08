@@ -7,15 +7,22 @@
         "assembly": "GRCh38",
         "type": "remote",
         "filename_template": "ftp://ftp.ensembl.org/pub/current_compara/conservation_scores/70_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.bw"
-      },
+      }
     ],
     "cadd": [
       {
-        "id": "CADD",
+        "id": "CADDv1.4GRCh38",
         "species": "homo_sapiens",
         "assembly": "GRCh38",
-        "type": "local",
-        "filename_template": "/hps/nobackup2/production/ensembl/anja/CADD/whole_genome_SNVs.tsv.gz"
+        "type": "remote",
+        "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/homo_sapiens/GRCh38/CADD_GRCh38_whole_genome_SNVs.tsv.gz"
+      },
+      {
+        "id": "CADDv1.4GRCh37",
+        "species": "homo_sapiens",
+        "assembly": "GRCh37",
+        "type": "remote",
+        "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/homo_sapiens/GRCh37/CADD_GRCh37_whole_genome_SNVs.tsv.gz"
       }
     ]
   }
