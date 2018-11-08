@@ -46,7 +46,7 @@ Bio::EnsEMBL::DBSQL::AnnotationFileAdaptor
 
   ## explicit use
 
-  # get VCF Collection Adaptor
+  # get Annotation File Adaptor
   my $annotation_file_adaptor = $reg->get_adaptor('human', 'variation', 'AnnotationFile');
   my $va  = $reg->get_adaptor('human', 'variation', 'variation');
   my $v = $va->fetch_by_name('rs699');
@@ -54,12 +54,12 @@ Bio::EnsEMBL::DBSQL::AnnotationFileAdaptor
 
   my $gerp_file = $annotation_file_adaptor->fetch_by_type('gerp');
   my $cadd_file = $annotation_file_adaptor->fetch_by_type('cadd');
-  my $gerp_score = $gerp_file->get_score_by_Slice($vf->slice);
-  my $cadd_score = $gerp_file->get_score_by_Slice($vf->slice);
+  my $gerp_score = $gerp_file->get_score_by_VariationFeature($vf);
+  my $cadd_scores = $gerp_file->get_scores_by_VariationFeature($vf);
 
   # get scores from variation feature
   my $gerp_score = $vf->get_gerp_score;
-  my $cadd_score = $vf->get_cadd_score;
+  my $cadd_score = $vf->get_cadd_scores;
 
 
 =head1 DESCRIPTION
@@ -79,11 +79,12 @@ use JSON;
 use Cwd;
 use Net::FTP;
 use URI;
-
+use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
-use Bio::EnsEMBL::Variation::VCFCollection;
+use Bio::EnsEMBL::Variation::CADDFile;
+use Bio::EnsEMBL::Variation::GERPFile;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
@@ -123,6 +124,7 @@ sub new {
   # try and get config from DB adaptor
   $config = $self->db->annotation_config if $self->db;
 
+
   unless($config && scalar keys %$config) {
     my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
     
@@ -135,7 +137,6 @@ sub new {
       $config_file  = $INC{$mod_path};
       $config_file =~ s/AnnotationFileAdaptor\.pm/annotation_config\.json/ if $config_file;
     }
-    
     throw("ERROR: No config file defined") unless defined($config_file);
     throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
     
@@ -163,18 +164,17 @@ sub new {
   
   $self->{root_dir} = $root_dir;
 
-  ## set up tmp dir
   my $tmpdir = cwd();
-  if($ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}) {
-    $tmpdir = $ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}.'/';
+  if($ENV{ENSEMBL_VARIATION_ANNOTATION_TMP_DIR}) {
+    $tmpdir = $ENV{ENSEMBL_VARIATION_ANNOTATION_TMP_DIR}.'/';
   }
-  elsif($self->db && $self->db->vcf_tmp_dir) {
-    $tmpdir = $self->db->vcf_tmp_dir.'/';
+  elsif($self->db && $self->db->annotation_tmp_dir) {
+    $tmpdir = $self->db->annotation_tmp_dir.'/';
   }
 
-  $self->{tmp_dir} = $tmpdir;
+  $self->{tmpdir} = $tmpdir;
 
-  throw("ERROR: No annotation data defined in config file") unless $config->{annotation_type} && scalar @{$config->{annotation_type}};
+  throw("ERROR: No annotation data defined in config file") unless $config->{annotation_type} && keys %{$config->{annotation_type}};
  
   if ($self->db) {
     $self->{species} = lc($self->db->species);
@@ -184,20 +184,29 @@ sub new {
   return $self;
 }
 
+=head2 fetch_by_annotation_type
+  Example    : my $gerp_file = $annotation_file_adaptor->fetch_by_annotation_type('gerp');
+               my $cadd_file = $annotation_file_adaptor->fetch_by_annotation_type('cadd');
+  Description: Fetches AnnotationFile by given annotation type
+  Returntype : Bio::EnsEMBL::Variation::GERPFile or Bio::EnsEMBL::Variation::CADDFile
+  Exceptions : Throws on wrong annotation type
+  Caller     : general
+  Status     : Stable
+=cut
+
 sub fetch_by_annotation_type {
   my $self = shift;
   my $type = shift;
 
   my $annotation_hash = $self->_get_annotation_hash($type);
-2
+
   if ($type eq 'gerp') {
     return $self->_get_gerp_annotation_file($annotation_hash);
   } elsif ($type eq 'cadd') {
     return $self->_get_cadd_annotation_file($annotation_hash);
   } else {
-    # throw error annotation type not recognised
+    die("Unknown annotation type. Annotation type must be cadd or gerp.");
   }
-
 }
 
 sub _get_annotation_hash {
@@ -206,11 +215,13 @@ sub _get_annotation_hash {
   my $config = $self->{config};
   my $species = $self->{species};
   my $assembly = $self->{assembly};
-  my @annotations  = grep {lc $_->{species} eq $species && lc $_->{assembly} eq $assembly} @{$config->{annotation_type}->{gerp}};
+  my @annotations  = grep {lc $_->{species} eq $species && lc $_->{assembly} eq $assembly} @{$config->{annotation_type}->{$annotation_type}};
   if (scalar @annotations == 1) {
     return $annotations[0];
+  } elsif (scalar @annotations > 1) {
+    die "Found more than one annotation file for annotation type $annotation_type for species $species and assembly $assembly\n";
   } else {
-
+    die "Could not find annotation file for annotation type $annotation_type for species $species and assembly $assembly\n";
   }
 }
 
@@ -223,7 +234,8 @@ sub _get_gerp_annotation_file {
     -filename_template => $self->_get_filename_template($hash),
     -assembly  => $hash->{assembly} || undef,
     -adaptor => $self,
-  ));
+    -tmpdir => $self->{tmpdir},
+  );
 }
 
 sub _get_cadd_annotation_file {
@@ -235,24 +247,22 @@ sub _get_cadd_annotation_file {
     -filename_template => $self->_get_filename_template($hash),
     -assembly  => $hash->{assembly} || undef,
     -adaptor => $self,
-  ));
+    -tmpdir => $self->{tmpdir},
+  );
 }
 
 sub _get_filename_template {
   my $self = shift;
   my $hash = shift;
-  my $filename_template = $hash->{filename_template};
   my $root_dir = $self->{root_dir};
+  
   my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
   my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
-
-  # Skip creation of VCFCollection object with non-existent or inaccessible file
   if (!$file_exists) {
-    warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
+    warn("WARNING: Cannot read from file $filename_template for species " . $hash->{species} );
   }
-
+  return $filename_template;
 }
-
 
 # Internal method checking if a remote file exists
 sub _ftp_file_exists {
@@ -266,6 +276,5 @@ sub _ftp_file_exists {
 
   return $exists;
 }
-
 
 1;
