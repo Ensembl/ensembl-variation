@@ -441,5 +441,9 @@ $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or
 print "\n# Test - fetch_by_hgvs_notation\n";
 my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
 throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
+
+print "\n# Test - fetch_by_spdi_notation\n";
+my $spdi_str = 'NC_000016.10:68644751::';
+throws_ok {$vfa->fetch_by_spdi_notation($spdi_str); } qr/Could not parse the SPDI notation $spdi_str/, 'Throw on invalid SPDI notation.';
 done_testing();
 
