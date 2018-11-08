@@ -500,24 +500,56 @@ sub get_all_highest_frequency_minor_Alleles {
   return $self->{hfm_alleles};
 }
 
+=head2 get_gerp_score
+  Arg [1]     : (optional) filename_template for testing
+  Example     : my $gerp_score = $vf->get_gerp_score; 
+  Description : Return highest GERP score for region overlapped by variant.
+  Returntype  : float
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+=cut
 
-
-sub get_GERP_score {
+sub get_gerp_score {
   my $self = shift;
-  my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
-  my $gerp_file = $annotation_file_adaptor->fetch_by_type('gerp');
-  my $gerp_score = $gerp_file->get_score_by_location($self->slice);
+  my $filename_template = shift;
+  if(!exists($self->{gerp_score})) {
+    my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
+    my $gerp_file = $annotation_file_adaptor->fetch_by_annotation_type('gerp');
+    if ($filename_template) {
+      $gerp_file->filename_template($filename_template);
+    }
+    my $gerp_score = $gerp_file->get_score_by_VariationFeature($self);
+    $self->{gerp_score} = $gerp_score;
+  }
+  return $self->{gerp_score};
 }
 
+=head2 get_cadd_scores
+  Arg [1]     : (optional) filename_template for testing
+  Example     : my $hashref_cadd_score = $vf->get_cadd_scores; 
+  Description : Return CADD phred scores for all possible alternative alleles of
+                length 1 for a variation feature.
+  Returntype  : hashref of alternative allele => CADD score
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+=cut
 
-sub get_CADD_score {
+sub get_cadd_scores {
   my $self = shift;
-  my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
-  my $cadd_file = $annotation_file_adaptor->fetch_by_type('cadd');
-  my $cadd_score = $cadd_file->get_score_by_location($self->slice);
+  my $filename_template = shift;
+  if(!exists($self->{cadd_scores})) {
+    my $annotation_file_adaptor = $self->adaptor->db->get_AnnotationFileAdaptor();
+    my $cadd_file = $annotation_file_adaptor->fetch_by_annotation_type('cadd');
+    if ($filename_template) {
+      $cadd_file->filename_template($filename_template);
+    }
+    my $cadd_scores = $cadd_file->get_scores_by_VariationFeature($self);
+    $self->{cadd_scores} = $cadd_scores;
+  }
+  return $self->{cadd_scores};
 }
-
-
 
 =head2 get_all_TranscriptVariations
 
