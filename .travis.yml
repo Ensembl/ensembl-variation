@@ -36,6 +36,11 @@ install:
 - export DEPS=$HOME/dependencies
 - export KENT_SRC="$DEPS/kent-335_base/src"
 - export HTSLIB_DIR="$DEPS/htslib"
+- export MACHTYPE=$(uname -m)
+- export CFLAGS="-fPIC"
+- cd $DEPS
+- $CWD/travisci/build_c.sh
+- cd $CWD
 - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
 - cpanm -v --installdeps --notest .
 - cpanm -n Devel::Cover::Report::Coveralls
