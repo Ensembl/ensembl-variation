@@ -95,6 +95,11 @@ my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 my $source   =   get_source($data_file);
 my $omim_source = get_source($data_file, 'OMIM');
 
+#update OMIM source version with ClinVar version
+$omim_source->version($source->version);
+my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
+$source_adaptor->update_version($omim_source);
+
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
 
