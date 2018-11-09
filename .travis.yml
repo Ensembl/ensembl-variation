@@ -31,6 +31,9 @@ before_install:
 - cd $DEPS
 - $CWD/travisci/get_dependencies.sh
 - cd $CWD
+- cd C_code/
+- make
+- cd ../
 install:
 - export CWD=$PWD
 - export DEPS=$HOME/dependencies
