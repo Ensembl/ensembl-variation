@@ -348,6 +348,8 @@ sub select_transcript {
   my $trs = shift;
   my $div_bacteria = shift;
   
+  $div_bacteria |= 0;
+
   # we want a transcript on the fwd strand with an intron that's protein coding
   my $biotype = '';
   my $intron_count = ($div_bacteria == 1 ? 1 :0 );
