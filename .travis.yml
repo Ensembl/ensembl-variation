@@ -34,6 +34,9 @@ before_install:
 - cd C_code/
 - make
 - cd ../
+- wget https://github.com/ucscGenomeBrowser/kent/archive/v335_base.tar.gz
+- tar xzf v335_base.tar.gz
+- export KENT_SRC="$PWD/kent-335_base/src"
 install:
 - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
 - cpanm -v --installdeps --notest .
