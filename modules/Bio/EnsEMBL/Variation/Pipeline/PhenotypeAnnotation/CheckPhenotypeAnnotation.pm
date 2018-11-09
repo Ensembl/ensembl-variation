@@ -99,8 +99,61 @@ sub check_phenotype_description{
 	   my $full = $l->[1];
 	   $l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
 	   print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(length($l->[1]) >0);
+
+     # check for characters which will be interpreted a new lines
+     $l->[1] =~ /*\n*/;
+     print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(length($l->[1]) >0);
+
+     # check for phenotype descriptions suggesting no phenotype
+     print $report "WARNING: Phenotype : $full (id:$l->[0]) is not useful \n" if !checkNonTerms( $l->[1] );
+
+     # check for unsupported individual character
+     print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters \n" if !checkUnsupportedChar( $l->[1] );
+
   }
 
+}
+
+sub checkNonTerms {
+  my $desc = shift;
+
+  my $is_ok = 1;
+  my @junk = ("None", "Not provided", "not specified", "Not in OMIM", "Variant of unknown significance", "not_provided", "?","." );
+
+  for my $check (@junk){
+    if (index($desc, $check) != -1) {
+      $is_ok  = 0;
+      return $is_ok;
+    }
+  }
+
+  return $is_ok;
+}
+
+sub checkUnsupportedChar {
+  my $desc = shift;
+
+  my $is_ok = 1;
+  my $i = 0;
+  for my $c (split //, $desc) {
+    # get ascii code
+    my $ascii_val = ord($c);
+
+    # check code in supported range
+    if($ascii_val < 32 || $ascii_val  > 126 || $ascii_val == 60 || $ascii_val == 62 ){
+      $is_ok = 0;
+    }
+
+    # also check first character makes sense
+    if($i == 0 && ( $ascii_val < 48 ||
+      ($ascii_val  > 57 && $ascii_val < 65) ||
+      ($ascii_val  > 90 && $ascii_val < 97) ||
+      $ascii_val  > 122)){
+      $is_ok = 0;
+      $i++;
+    }
+  }
+  return $is_ok;
 }
 
 # basic report on imported data
