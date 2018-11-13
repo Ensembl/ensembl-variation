@@ -36,88 +36,18 @@ use warnings;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub fetch_input {
-    my $self = shift;
-    my $slice_name = $self->param('slice_name');
-
-    my $species = $self->param_required('species');
-    $self->warning($slice_name); 
-
-    my $cdba = $self->get_adaptor($species, 'core');
-    my $fdba = $self->get_adaptor($species, 'funcgen');
-    my $vdba = $self->get_adaptor($species, 'variation');
-
-    # clear tables
-    my $vdbc = $vdba->dbc();
-
-    unless ($self->param('only_regulatory_feature')) {
-        $vdbc->do('TRUNCATE TABLE motif_feature_variation');
-        $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
-    }
-    unless ($self->param('only_motif_feature')) {
-#        $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
-#        $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
-    }
-
-    # get regulation object ids
-    my $rfa = $fdba->get_RegulatoryFeatureAdaptor or die 'Failed to get RegulatoryFeatureAdaptor';
-    my $mfa = $fdba->get_MotifFeatureAdaptor or die 'Failed to get MotifFeatureAdaptor';
-    my $fsa = $fdba->get_FeatureSetAdaptor or die 'Failed to get FeatureSetAdaptor';
-
-    my $sa = $cdba->get_SliceAdaptor or die 'Failed to get SliceAdaptor';
-    my @slices = ();
-    my $slice = $sa->fetch_by_region('toplevel', $slice_name );
-    push @slices, $slice;
-
-    if ($self->param('debug')) {
-        my $slice = $sa->fetch_by_region('chromosome', 12);
-        push @slices, $slice;
-    }
-
-#    my $regulatory_feature_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
-#    my @external_feature_sets = @{$fsa->fetch_all_by_type('external')};
-
-    foreach my $slice (@slices) {
-        # get all RegulatoryFeatures
-        my @feature_ids = ();
-        unless ($self->param('only_motif_feature')) {
-#          my $it = $rfa->fetch_Iterator_by_Slice($slice);
-          $self->warning($slice->seq_region_name);
-          my @rfs = @{$rfa->fetch_all_by_Slice($slice) || []};
-          $self->warning(scalar @rfs);
-          foreach my $rf (@rfs) {
-              push @feature_ids, { feature_id => $rf->stable_id,
-                                   feature_type => 'regulatory_feature',
-                                   species => $species, };
-          }
-        }
-        # get all MotifFeatures
-        unless ($self->param('only_regulatory_feature')) {
-          $self->warning($slice->seq_region_name);
-            my @mfs = @{$mfa->fetch_all_by_Slice($slice) || []};
-            $self->warning(scalar @mfs);
-            foreach my $mf (@mfs) {
-                push @feature_ids, { feature_id => $mf->stable_id,
-                                     feature_type => 'motif_feature',
-                                     species => $species, };  
-            }
-        }
-        # get all ExternalFeatures
-#        if ($self->param('include_external_features')) {
-#            foreach my $external_fset (@external_feature_sets) {
-#                my $feature_set = $fsa->fetch_by_name($external_fset->name);
-#                foreach my $external_feature (@{$feature_set->get_Features_by_Slice($slice)}) {
-#                    push @feature_ids, { feature_id => $external_feature->dbID,
-#                                         feature_type => 'external_feature', };
-#                }
-#            }
-#        }
-        $self->dataflow_output_id(\@feature_ids, 2);
-    }
+  my $self = shift;
+  my $species = $self->param_required('species');
+  my $vdba = $self->get_adaptor($species, 'variation');
+  my $vdbc = $vdba->dbc();
+  $vdbc->do('TRUNCATE TABLE motif_feature_variation');
+  $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
+  $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
+  $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
 }
 
-
 sub write_output {
-    my $self = shift;
-    return;
+  my $self = shift;
+  return;
 }
 1;
