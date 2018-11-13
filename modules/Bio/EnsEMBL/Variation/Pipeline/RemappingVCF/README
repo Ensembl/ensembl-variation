@@ -1,0 +1,18 @@
+Initialise pipeline config:
+pipeline_name=
+pipeline_dir=
+population=
+species=
+vcf_file_name=
+HIVE_SRV=
+init_pipeline.pl Bio::EnsEMBL::Variation::Pipeline::RemappingVCF::RemappingVCF_conf \
+$($HIVE_SRV details hive) \
+-pipeline_name $pipeline_name \
+-pipeline_dir $pipeline_dir  \
+-population $population \
+-species $species \
+-registry_file_oldasm  $pipeline_dir/ensembl.registry.oldasm \
+-registry_file_oldasm_same_server $pipeline_dir/ensembl.registry.oldasm.same_server \
+-registry_file_newasm $pipeline_dir/ensembl.registry.newasm \
+-vcf_file $pipeline_dir/$vcf_file_name \
+-load_from_vcf 1 \
