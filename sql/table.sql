@@ -47,7 +47,7 @@ SET default_storage_engine=MYISAM;
 @column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP. The minor allele frequency is the frequency of the second most frequent allele.
 @column minor_allele_count     The number of samples the minor allele of this variant is found in. The minor allele is the second most frequent allele.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
-                               The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_association.html#clin_significance">here</a>.
+                               The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance">here</a>.
 @column evidence_attribs            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/prediction/variant_quality.html#evidence_status">here</a>.
 @column display                Flags whether this variation should be displayed in browser tracks and returned by default by the API
 
@@ -129,9 +129,9 @@ CREATE TABLE variation_attrib (
 @column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP. The minor allele frequency is the frequency of the second most frequent allele.
 @column minor_allele_count     The number of samples the minor allele of this variant is found in. The minor allele is the second most frequent allele.
 @column alignment_quality      Quality of alignment for variants mapped by flanks rather than position justified.
-@column evidence_attribs       A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
+@column evidence_attribs       A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/prediction/variant_quality.html#evidence_status">here</a>.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
-                               The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_association.html#clin_significance">here</a>.
+                               The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance">here</a>.
 @column display                Flags whether this variation should be displayed in browser tracks and returned by default by the API
 
 @see variation
@@ -1111,7 +1111,7 @@ CREATE TABLE read_coverage (
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
                                 The list of structural variation classes is available <a href="/info/genome/variation/prediction/classification.html#classes">here</a>.
 @column clinical_significance   A set of clinical significance classes assigned to the structural variant.<br /> 
-                                The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_association.html#clin_significance">here</a>.
+                                The list of clinical significances is available <a href="/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance">here</a>.
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column somatic                 Flags whether this structural variation is known to be somatic or not
