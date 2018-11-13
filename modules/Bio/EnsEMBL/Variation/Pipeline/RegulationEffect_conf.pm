@@ -55,12 +55,12 @@ sub default_options {
         pipeline_dir                   => $self->o('pipeline_dir'),
         registry_file                  => $self->o('pipeline_dir') . '/ensembl.registry',
 
-        use_experimentally_validated   => 0,
-        debug                          => 0,
-        split_slice                    => 1,
-        split_slice_length             => 5e6,
-        only_update_vf                 => 0,
-        update_vf                      => 1,
+        use_experimentally_validated_mf => 1,
+        debug                           => 0,
+        split_slice                     => 1,
+        split_slice_length              => 5e6,
+        only_update_vf                  => 0,
+        update_vf                       => 1,
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
         # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
@@ -148,7 +148,7 @@ sub pipeline_analyses {
                 -max_retry_count => 0,
                 -hive_capacity  =>  50,
                 -parameters => {
-                  'use_experimentally_validated_motif_feature' => 0,
+                  'use_experimentally_validated_mf' => $self->o('use_experimentally_validated_mf'),
                 },
             }, 
             {   -logic_name => 'finish_regulation_effect',
