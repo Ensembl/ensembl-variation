@@ -2493,7 +2493,12 @@ sub get_reference_allele{
   my ($slice_adaptor, $sequence_id, $start, $end) = @_; 
 
   # get a slice for the variant genomic coordinate 
-  my $slice = $slice_adaptor->fetch_by_region('chromosome',$sequence_id,$start,$end);   
+  my $slice = $slice_adaptor->fetch_by_region('chromosome',$sequence_id,$start,$end);
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  } 
+
   my $re_allele = $slice->seq(); 
     
   return $re_allele;    
