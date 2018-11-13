@@ -84,7 +84,7 @@ foreach my $core_dbname (keys %$core_dbas) {
 # insertions where end < start cause an error. Because both start and end are unsigned, negative is not allowed as unsigned integer. If you cast the values to signed before doing the difference it works or add a 1 at the beginning
     my $sql = "INSERT INTO meta_coord "
         . "SELECT '$table_name', s.coord_system_id, "
-        . "MAX( 1 + t.seq_region_end - t.seq_region_start ) "
+        . "MAX( 1 + cast( t.seq_region_end as signed) - cast( t.seq_region_start as signed) ) "
         . "FROM $table_name t, $core_dbname.seq_region s, $core_dbname.coord_system c "
         . "WHERE t.seq_region_id = s.seq_region_id AND c.coord_system_id=s.coord_system_id AND c.species_id=?"
         . "GROUP BY s.coord_system_id";
