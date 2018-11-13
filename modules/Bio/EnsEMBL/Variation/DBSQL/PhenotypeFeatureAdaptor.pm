@@ -169,6 +169,45 @@ sub fetch_all_by_object_id {
   return $self->generic_fetch($constraint);
 }
 
+=head2 fetch_all_by_object_id_accession_type
+
+  Arg [1]    : string $id
+  Arg [2]    : string $mapping_type - default 'is', option 'involves'
+  Example    : my @pfs = @{$pfa->fetch_all_by_object_id_accession_type('rs1333049')};
+               my @pfs = @{$pfa->fetch_all_by_object_id_accession_type('Activ1', 'involves')};
+  Description: Retrieves all phenotype features of the given object ID with
+               corresponding ontology accessions mapped by $mapping_type.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_object_id_accession_type {
+  my $self = shift;
+  my $id   = shift;
+  my $mapping_type = shift;
+
+  $mapping_type ||= "is";
+  throw("$mapping_type is not a valid mapping type, valid types are: 'is','involves' ") unless $mapping_type eq 'is' || $mapping_type eq 'involves';
+
+  my $constraint = qq{ pf.object_id = '$id' };
+
+  $constraint .= qq{ AND poa.mapping_type = '$mapping_type' } ;
+
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+
+  my $ontologyFlag = $self->_include_ontology();
+  $self->_include_ontology(1);
+  my $result = $self->generic_fetch($constraint);
+  ## reset flags
+  $self->_include_ontology($ontologyFlag);
+
+  return $result;
+}
+
 
 =head2 fetch_all_by_Slice_type
 
@@ -196,6 +235,43 @@ sub fetch_all_by_Slice_type {
   $constraint = $self->_is_significant_constraint($constraint);
   
   return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+=head2 fetch_all_by_Slice_accession_type
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Arg [2]    : string $mapping_type - default 'is', option 'involves'
+  Example    : my @pfs = @{$pfa->fetch_all_by_Slice_accession_type($slice)};
+               my @pfs = @{$pfa->fetch_all_by_Slice_accession_type($slice, 'is')};
+  Description: Retrieves all phenotype features and corresponding ontology accessions
+              of mapping_type on a slice.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_accession_type {
+  my $self  = shift;
+  my $slice = shift;
+  my $mapping_type  = shift;
+
+  $mapping_type ||= 'is';
+  throw("$mapping_type is not a valid mapping type, valid types are: 'is','involves' ") unless $mapping_type eq 'is' || $mapping_type eq 'involves';
+
+  my $constraint = qq{poa.mapping_type = '$mapping_type'};
+
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+
+  my $ontologyFlag = $self->_include_ontology();
+  $self->_include_ontology(1);
+  my $result = $self->fetch_all_by_Slice_constraint($slice, $constraint);
+  ## reset flags
+  $self->_include_ontology($ontologyFlag);
+
+  return $result;
 }
 
 
@@ -263,6 +339,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
     $constraint .= qq{pf.type = '$type'};
   }
 
+  my $ontologyFlag = $self->_include_ontology();
   $self->_include_ontology(1);
 
   # Add the constraint for significant data
@@ -271,7 +348,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
   my $result = $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
   ## reset flags
-  $self->_include_ontology(0);
+  $self->_include_ontology($ontologyFlag);
 
   return $result;
 }
@@ -642,6 +719,8 @@ sub fetch_all_by_phenotype_accession_source {
 
   throw('phenotype ontology accession argument expected') if(!defined($accession));
  
+  my $ontologyFlag = $self->_include_ontology();
+  my $attribFlag = $self->_include_attrib();
   $self->_include_ontology(1);
   $self->_include_attrib(1);
 
@@ -652,8 +731,8 @@ sub fetch_all_by_phenotype_accession_source {
   my $result = $self->generic_fetch($extra_sql);
 
   ## reset flags  
-  $self->_include_ontology(0);
-  $self->_include_attrib(0);
+  $self->_include_ontology($ontologyFlag);
+  $self->_include_attrib($attribFlag);
 
   return $result;
 }
@@ -682,6 +761,8 @@ sub fetch_all_by_phenotype_accession_type_source {
   throw('phenotype ontology accession argument expected') if(!defined($accession));
   $map_type ||= 'is';
 
+  my $ontologyFlag = $self->_include_ontology();
+  my $attribFlag =  $self->_include_attrib();
   $self->_include_ontology(1);
   $self->_include_attrib(1);
 
@@ -693,8 +774,8 @@ sub fetch_all_by_phenotype_accession_type_source {
   my $result = $self->generic_fetch($extra_sql);
 
   ## reset flags  
-  $self->_include_ontology(0);
-  $self->_include_attrib(0);
+  $self->_include_ontology($ontologyFlag);
+  $self->_include_attrib($attribFlag);
 
   return $result;
 }
@@ -726,6 +807,39 @@ sub fetch_all_by_associated_gene_phenotype_description {
   return $self->fetch_all_by_associated_gene($gene_name,$constraint);
 }
 
+=head2 fetch_all_by_associated_gene_accession_type
+
+  Arg [1]    : string $gene_name
+  Arg [2]    : string $mapping_type - default 'is', option 'involves'
+  Example    : $pf = $pf_adaptor->fetch_all_by_associated_gene_accession_type('HFE','involves');
+  Description: Retrieves the PhenotypeFeature objects which are associated with the gene,
+               annotated with ontology accessions of mapping_type.
+  Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw if the $gene_name is not defined
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_associated_gene_accession_type {
+  my $self = shift;
+  my $gene_name = shift;
+  my $mapping_type = shift;
+
+  $mapping_type ||= 'is';
+
+  throw('gene_name argument expected') if(!defined($gene_name));
+  throw("$mapping_type is not a valid mapping type, valid types are: 'is','involves' ") unless $mapping_type eq 'is' || $mapping_type eq 'involves';
+
+  my $constraint = qq{poa.mapping_type="$mapping_type"};
+  my $ontologyFlag = $self->_include_ontology();
+  $self->_include_ontology(1);
+  my $result = $self->fetch_all_by_associated_gene($gene_name,$constraint);
+  ## reset flags
+  $self->_include_ontology($ontologyFlag);
+  return $result;
+}
+
 =head2 fetch_all_by_associated_gene
 
   Arg [1]    : string $gene_name
@@ -746,6 +860,7 @@ sub fetch_all_by_associated_gene {
   #Check that the gene_name is defined and not an object
   throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
 
+  my $attribFlag = $self->_include_attrib();
   $self->_include_attrib(1);
 
   my $extra_sql  = " at.code = 'associated_gene' and (pfa.value = '$gene_name' OR pfa.value like '%,$gene_name' OR pfa.value like '$gene_name,%' OR pfa.value like '%,$gene_name,%')";
@@ -758,7 +873,7 @@ sub fetch_all_by_associated_gene {
 
   my $result = $self->generic_fetch($extra_sql);
   
-  $self->_include_attrib(0);
+  $self->_include_attrib($attribFlag);
   $result = [grep {$_->type ne 'Gene'} @$result];  
   return $result;
 }
@@ -782,6 +897,7 @@ sub count_all_by_associated_gene {
   #Check that the gene_name is defined and not an object
   throw('gene_name argument expected') if(!defined($gene_name) || ref($gene_name));
   
+  my $attribFlag = $self->_include_attrib();
   $self->_include_attrib(1);
 
   my $extra_sql  = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
@@ -794,7 +910,7 @@ sub count_all_by_associated_gene {
 
   my $result = $self->generic_count($extra_sql);
   
-  $self->_include_attrib(0);
+  $self->_include_attrib($attribFlag);
 
   return $result;
 }

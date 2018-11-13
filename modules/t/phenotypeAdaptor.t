@@ -16,6 +16,7 @@
 use strict;
 use warnings;
 
+use Test::Exception;
 use Test::More;
 use FindBin qw($Bin);
 
@@ -43,6 +44,13 @@ ok($p && $p->name eq 'ACH', "fetch_by_dbID");
 $p = $pa->fetch_by_description('ACHONDROPLASIA')->[0];
 ok($p && $p->name eq 'ACH', "fetch_by_description");
 
+{
+  my $p = $pa->fetch_by_description_accession_type('BRUGADA SYNDROME')->[0];
+  ok($p && $p->ontology_accessions->[0] eq 'Orphanet:130', "fetch_by_description_accession_type");
+  $p = $pa->fetch_by_description_accession_type('BRUGADA SYNDROME','involves')->[0];
+  ok($p && $p->ontology_accessions->[0] eq 'EFO:0004255', "fetch_by_description_accession_type - involves");
+  throws_ok { $pa->fetch_by_description_accession_type('BRUGADA SYNDROME','badType'); } qr/badType is not a valid mapping type, valid types are: 'is','involves'/, 'fetch_by_description_accession_type - badType';
+}
 
 $p->name('test');
 $p->description('test');
