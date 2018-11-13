@@ -72,6 +72,7 @@ sub get_available_adaptors{
     my %pairs = (
       'Allele'                                 => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
       'AlleleFeature'                          => 'Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor',
+      'AnnotationFile'                         => 'Bio::EnsEMBL::Variation::DBSQL::AnnotationFileAdaptor',
       'Attribute'                              => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
       'GenotypeCode'                           => 'Bio::EnsEMBL::Variation::DBSQL::GenotypeCodeAdaptor',
       'Individual'                             => 'Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor',
@@ -396,5 +397,47 @@ sub vcf_tmp_dir {
   
   return $self->{vcf_tmp_dir};
 }
+
+sub annotation_config {
+  my $self = shift;
+
+  if(!exists($self->{annotation_config})) {
+    if(@_) {
+      $self->{annotation_config} = shift;
+    }
+    else {
+      $self->{annotation_config} = {};
+    }
+  }
+  
+  return $self->{annotation_config};
+}
+
+sub annotation_config_file {
+  my $self = shift;
+  if (@_) {  
+    $self->{annotation_config_file} = shift if @_;
+    $self->{annotation_config} = {};
+  }
+  
+  return $self->{annotation_config_file};
+}
+
+sub annotation_root_dir {
+  my $self = shift;
+  
+  $self->{annotation_root_dir} = shift if @_;
+  
+  return $self->{annotation_root_dir};
+}
+
+sub annotation_tmp_dir {
+  my $self = shift;
+  
+  $self->{annotation_tmp_dir} = shift if @_;
+  
+  return $self->{annotation_tmp_dir};
+}
+
 
 1;
