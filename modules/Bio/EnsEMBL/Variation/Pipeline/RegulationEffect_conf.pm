@@ -32,88 +32,40 @@ package Bio::EnsEMBL::Variation::Pipeline::RegulationEffect_conf;
 
 use strict;
 use warnings;
-
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
 sub default_options {
     my ($self) = @_;
-
-    # The hash returned from this function is used to configure the
-    # pipeline, you can supply any of these options on the command
-    # line to override these default values.
-    
-    # You shouldn't need to edit anything in this file other than
-    # these values, if you find you do need to then we should probably
-    # make it an option here, contact the variation team to discuss
-    # this - patches are welcome!
-
     return {
-
+        %{$self->SUPER::default_options},
         # general pipeline options that you should change to suit your environment
-       
-        hive_force_init => 1,
-        hive_use_param_stack => 0,
-        hive_use_triggers => 0, 
+        hive_default_max_retry_count   => 0,
+        hive_force_init                => 1,
+        hive_use_param_stack           => 0,
+        hive_use_triggers              => 0, 
         hive_auto_rebalance_semaphores => 0,
-        hive_no_init => 0,
+        hive_no_init                   => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
-        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
-        # a name for your pipeline (will also be used in the name of the hive database)
-        
-        pipeline_name           => 'regulation_effect',
+        ensembl_cvs_root_dir           => $ENV{'HOME'} . '/bin',
+        hive_root_dir                  => $ENV{'HOME'} . '/bin/ensembl-hive',
 
-        species                 => $self->o('species'),
-        # a directory to keep hive output files and your registry file, you should
-        # create this if it doesn't exist
-        
-        pipeline_dir            => $self->o('pipeline_dir'),
+        pipeline_name                  => $self->o('pipeline_name'),
+        species                        => $self->o('species'),
+        pipeline_dir                   => $self->o('pipeline_dir'),
+        registry_file                  => $self->o('pipeline_dir') . '/ensembl.registry',
 
-        # a directory where hive workers will dump STDOUT and STDERR for their jobs
-        # if you use lots of workers this directory can get quite big, so it's
-        # a good idea to keep it on lustre, or some other place where you have a 
-        # healthy quota!
-        
-        output_dir              => $self->o('pipeline_dir') . '/hive_output',
-
-        # a standard ensembl registry file containing connection parameters
-        # for your target database(s) (and also possibly aliases for your species
-        # of interest that you can then supply to init_pipeline.pl with the -species
-        # option)
-        
-        registry_file           => $self->o('pipeline_dir') . '/ensembl.registry',
-
+        use_experimentally_validated_mf => 1,
+        debug                           => 0,
+        split_slice                     => 1,
+        split_slice_length              => 5e6,
+        only_update_vf                  => 0,
+        update_vf                       => 1,
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
         # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
         # genomes and we don't use it by default in the ensembl variation pipeline)
-        
-        disambiguate_single_nucleotide_alleles => 0,
-
-
-        # set this flag to 1 to include LRG transcripts in the transcript effect analysis
-
-        include_lrg => 1,
-        include_external_features => 0,
-        debug => 0,
-
-        only_update_vf => 0,
-        update_vf => 0,
-        only_motif_feature => 0,
-        only_regulatory_feature => 0,
-
-        # connection parameters for the hive database, you should supply the hive_db_password
-        # option on the command line to init_pipeline.pl (parameters for the target database
-        # should be set in the registry file defined above)
-
-
-        # init_pipeline.pl will create the hive database on this machine, naming it
-        # <username>_<pipeline_name>, and will drop any existing database with this
-        # name
-
-        hive_db_host    => 'mysql-ens-var-prod-1',
-        hive_db_port    => 4449,
-        hive_db_user    => 'ensadmin',
+        disambiguate_single_nucleotide_alleles => 1,
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
@@ -136,10 +88,8 @@ sub resource_classes {
     # requirements, queue parameters etc.) to suit your own data
 
     return {
-          'default' => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-          'urgent'  => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-          'highmem' => { 'LSF' => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000]" -M15000'},
-          'long'    => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+      'default' => { 'LSF' => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+      'highmem' => { 'LSF' => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000]" -M15000'},
     };
 }
 
@@ -147,15 +97,14 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},
-        ensembl_registry => $self->o('registry_file'),
-        include_external_features => $self->o('include_external_features'),
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-        debug => $self->o('debug'),
-        only_update_vf => $self->o('only_update_vf'),
-        update_vf => $self->o('update_vf'),
-        only_motif_feature => $self->o('only_motif_feature'),   
-        only_regulatory_feature => $self->o('only_regulatory_feature'),
-        species => $self->o('species'),
+        ensembl_registry                       => $self->o('registry_file'),
+        only_update_vf                         => $self->o('only_update_vf'),
+        update_vf                              => $self->o('update_vf'),
+        species                                => $self->o('species'),
+        debug                                  => $self->o('debug'),
+        split_slice                            => $self->o('split_slice'),
+        split_slice_length                     => $self->o('split_slice_length'),
     };
 }
 
@@ -173,26 +122,34 @@ sub pipeline_analyses {
         );
     } else {
         push @analyses, (
+            {   -logic_name => 'init_regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
+                -hive_capacity => 1,
+                -rc_name => 'default',
+                -flow_into => { 1 => ['init_slice'] },
+                -rc_name => 'default',
+                -input_ids => [{},],
+            }, 
             {   -logic_name => 'init_slice',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::SliceFactory',
                 -hive_capacity => 1,
                 -rc_name => 'default',
-                -input_ids => [{},],
+                -max_retry_count => 0,
+                -parameters => {
+                },
                 -flow_into => {
-                    '2->A' => ['init_regulation_effect'],
+                    '2->A' => ['regulation_effect'],
                     'A->1' => ['finish_regulation_effect'],
                 },
-            },
-            {   -logic_name => 'init_regulation_effect',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
-                -hive_capacity => 25,
-                -rc_name => 'highmem',
-                -flow_into => { 2 => ['regulation_effect'] },
             },
             {   -logic_name => 'regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
                 -rc_name => 'default',
+                -max_retry_count => 0,
                 -hive_capacity  =>  50,
+                -parameters => {
+                  'use_experimentally_validated_mf' => $self->o('use_experimentally_validated_mf'),
+                },
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
