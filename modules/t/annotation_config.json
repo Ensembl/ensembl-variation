@@ -1,0 +1,22 @@
+{
+  "annotation_type": {
+    "gerp": [
+      {
+        "id": "70_mammals.gerp_conservation_score",
+        "species": "homo_sapiens",
+        "assembly": "GRCh37",
+        "type": "local",
+        "filename_template": "###t-root###/testdata/gerp.bw"
+      }
+    ],
+    "cadd": [
+      {
+        "id": "CADD",
+        "species": "homo_sapiens",
+        "assembly": "GRCh37",
+        "type": "local",
+        "filename_template": "###t-root###/testdata/cadd.tsv.gz"
+      }
+    ]
+  }
+}

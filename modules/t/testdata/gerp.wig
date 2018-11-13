@@ -1,0 +1,7 @@
+browser position 2:40417423-49417423
+# 300 base wide bar graph, autoScale is on by default == graphing
+# limits will dynamically change to always show full range of data
+# in viewing window, priority = 20 positions this as the second graph
+# Note, zero-relative, half-open coordinate system in use for bed format
+track type=bedGraph name="Bed Format" description="BED format" visibility=full color=200,100,0 altColor=0,100,200 priority=20
+2 40417423 49417423 -1.0
