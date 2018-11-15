@@ -82,7 +82,10 @@ sub run {
   Bio::EnsEMBL::Registry->clear();
 
   my $core_dba = $self->get_species_adaptor('core');
+  $core_dba->dbc->reconnect_when_lost(1);
+
   my $var_dba = $self->get_species_adaptor('variation');
+  $var_dba->dbc->reconnect_when_lost(1);
   
   my $ga = $core_dba->get_GeneAdaptor;
   my $sa = $core_dba->get_SliceAdaptor;
