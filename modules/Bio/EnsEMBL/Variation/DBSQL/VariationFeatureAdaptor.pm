@@ -2379,8 +2379,8 @@ sub fetch_by_spdi_notation{
   # count number of elements   
   my $count_separator = () = $spdi =~ m/\:/g; 
 
-  throw ("Could not parse the SPDI notation $spdi")
-    unless ($count_separator == 3);  
+  if($count_separator > 3){ throw ("Could not parse the SPDI notation $spdi. Too many elements present"); } 
+  elsif($count_separator < 3){ throw ("Could not parse the SPDI notation $spdi. Too few elements present"); } 
 
   # strip version number from reference 
   if($sequence_id =~ m/\./i){
@@ -2475,7 +2475,7 @@ sub fetch_by_spdi_notation{
 
   # Variation is not valid 
   else{
-    throw ("Could not parse the SPDI notation $spdi");  
+    throw ("Could not parse the SPDI notation $spdi. SPDI notation not supported.");    
   } 
 
   my $result;
@@ -2496,7 +2496,7 @@ sub get_reference_allele{
   my $slice = $slice_adaptor->fetch_by_region('chromosome',$sequence_id,$start,$end);
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-    throw('Bio::EnsEMBL::Slice arg expected');
+    throw('Bio::EnsEMBL::Slice expected. Sequence name not valid'); 
   } 
 
   my $re_allele = $slice->seq(); 
