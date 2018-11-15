@@ -1971,7 +1971,7 @@ sub hgvs_genomic {
 =head2  spdi_genomic
 
   Description : Returns a reference to a hash with the allele as key and a string with the genomic SPDI notation of this VariationFeature as value. By default uses the
-                slice it is placed on as reference but a different reference feature can be supplied.
+                slice it is placed on as reference. 
   Returntype  : Hash reference
   Exceptions  : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
   Caller      : general
