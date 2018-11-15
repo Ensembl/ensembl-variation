@@ -1968,7 +1968,85 @@ sub hgvs_genomic {
 
 }
 
+=head2  spdi_genomic
 
+  Description : Returns a reference to a hash with the allele as key and a string with the genomic SPDI notation of this VariationFeature as value. By default uses the
+                slice it is placed on as reference but a different reference feature can be supplied.
+  Returntype  : Hash reference
+  Exceptions  : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
+  Caller      : general
+  Status      : Experimental
+
+=cut
+
+sub spdi_genomic{ 
+
+  my $self = shift; 
+  
+  my $ref_feature = $self;   
+  my %spdi; 
+
+  my $ref_slice = $self->slice; 
+
+  my $tr_vf = $self; 
+  my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
+
+  return {} if ($vf_start < 1 || $vf_end < 1);  
+
+  my $vf_strand = $self->strand(); 
+  
+  # set up sequence reference 
+  my $syn = $ref_slice->get_all_synonyms('RefSeq_genomic'); 
+  my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $ref_feature->seq_region_name()); 
+
+  my @all_alleles = split(/\//,$tr_vf->allele_string());
+  my $ref_allele = shift @all_alleles; 
+  my $spdi_ref_allele; 
+  my $spdi_alt_allele; 
+  
+  # Create a spdi notation for each allele 
+  foreach my $alt_allele (@all_alleles){ 
+    
+    # Expand tandems before check for non nucleotide character 
+    expand(\$alt_allele); 
+
+    # Skip if the allele contains weird characters 
+    next if $alt_allele =~ m/[^ACGT\-]/ig; 
+
+    my $chr_start = $tr_vf->start;
+    my $chr_end   = $tr_vf->end; 
+
+    # If the variant is a substitution, deletion or indel 
+    my $spdi_position = $chr_start - 1;  
+
+    if($chr_start == $chr_end){ 
+      $spdi_ref_allele = $ref_allele; 
+      
+      # Variation is a deletion  
+      if($alt_allele eq '-'){ $spdi_alt_allele = ""; }  
+
+      # Variation is a substitution 
+      else{                   $spdi_alt_allele = $alt_allele; }
+
+    } 
+    # Variation is an insertion 
+    elsif($ref_allele eq '-'){ 
+      $spdi_position = $chr_end; 
+      $spdi_ref_allele = "";  
+      $spdi_alt_allele = $alt_allele; 
+    }
+    # Variation is an indel  
+    else{
+      $spdi_ref_allele = $ref_allele;   
+      $spdi_alt_allele = $alt_allele; 
+    }
+ 
+    my $spdi_notation = $reference_name . ":" . $spdi_position . ":" . $spdi_ref_allele . ":" . $spdi_alt_allele; 
+    $spdi{$alt_allele} = $spdi_notation; 
+  }
+
+  return \%spdi; 
+} 
 
 sub length {
   my $self = shift;

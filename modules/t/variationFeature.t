@@ -316,6 +316,18 @@ my $motif_feature = $mfvs->[0]->motif_feature;
 $mfvs = $vf6->get_all_MotifFeatureVariations([$motif_feature]);
 ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVariations, motif_feature');
 
+# test spdi genomic 
+my $spdi_notation_3 = $vf3->spdi_genomic(); 
+ok($spdi_notation_3->{'T'} eq 'NC_000013.10:32954008:C:T', 'SPDI genomic valid substitution'); 
+ok($spdi_notation_3->{'G'} eq 'NC_000013.10:32954008:C:G', 'SPDI genomic valid substitution');   
+my $var7 = $va->fetch_by_name('rs35370278');
+my $vf7_spdi = $var7->get_all_VariationFeatures()->[0];
+my $spdi_notation_7 = $vf7_spdi->spdi_genomic(); 
+ok($spdi_notation_7->{'-'} eq 'NC_000011.9:66315558:G:', 'SPDI genomic valid deletion'); 
+my $var8 = $va->fetch_by_name('rs370045702'); 
+my $vf8_spdi = $var8->get_all_VariationFeatures()->[0];
+my $spdi_notation_8 = $vf8_spdi->spdi_genomic(); 
+ok($spdi_notation_8->{'AA'} eq 'NC_000011.9:66317203::AA', 'SPDI genomic valid insertion'); 
 
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
