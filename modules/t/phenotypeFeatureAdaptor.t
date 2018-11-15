@@ -43,6 +43,17 @@ $pfs =  $pfa->fetch_all_by_object_id('rs2299222', 'Variation');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id + type");
 throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a valid object type, valid types are/, ' > Throw on wrong object type';
 
+# fetch_all_by_object_id_accession_type
+{
+  $pfs = $pfa->fetch_all_by_object_id_accession_type('rs2299299');
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299299' && scalar @{$pfs->[0]->get_all_ontology_accessions} == 1 && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_object_id_accession_type - ontology accession");
+
+  $pfs = $pfa->fetch_all_by_object_id_accession_type('rs2299299','involves');
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299299' && scalar @{$pfs->[0]->get_all_ontology_accessions} == 1 && $pfs->[0]->get_all_ontology_accessions->[0] eq 'EFO:0004255', "fetch_all_by_object_id_accession_type + type - ontology accession");
+
+  throws_ok { $pfa->fetch_all_by_object_id_accession_type('rs2299299', 'Variant'); } qr/is not a valid mapping type, valid types are/, ' > Throw on wrong mapping type';
+}
+
 # fetch_all_by_Slice_type
 $pfs = $pfa->fetch_all_by_Slice_type($sl, 'Variation');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Slice_type");
@@ -118,6 +129,17 @@ $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa, 'Variation');
 
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_Slice_with_ontology_accession");
 
+# fetch_all_by_Slice_accession_type
+{
+  $pfs = $pfa->fetch_all_by_Slice_accession_type($sl_oa);
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_Slice_accession_type - ontology accession");
+
+  $pfs = $pfa->fetch_all_by_Slice_accession_type($sl_oa, 'involves');
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && $pfs->[0]->get_all_ontology_accessions->[0] eq 'EFO:0004255', "fetch_all_by_Slice_accession_type + type - ontology accession");
+
+  throws_ok { $pfa->fetch_all_by_Slice_accession_type($sl_oa, 'Variant'); } qr/is not a valid mapping type, valid types are/, ' > Throw on wrong mapping type';
+}
+
 # fetch_all_by_phenotype_ontology_accession
 $pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs), "fetch_all_by_phenotype_accession");
@@ -148,6 +170,17 @@ ok(ref($pfs_accessions) eq 'ARRAY' && scalar @$pfs_accessions == 1 && (grep {$_ 
 # fetch_all_by_associated_gene_phenotype_description
 $pfs = $pfa->fetch_all_by_associated_gene_phenotype_description('YES1', 'ACHONDROPLASIA');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all_by_associated_gene_phenotype_description");
+
+# fetch_all_by_associated_gene_accession_type
+{
+  $pfs = $pfa->fetch_all_by_associated_gene_accession_type('NOS1');
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs) && scalar @{$pfs->[0]->get_all_ontology_accessions} == 1 && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_associated_gene_accession_type - ontology accession");
+
+  $pfs = $pfa->fetch_all_by_associated_gene_accession_type('NOS1', "involves");
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs) && scalar @{$pfs->[0]->get_all_ontology_accessions} == 1 && $pfs->[0]->get_all_ontology_accessions->[0] eq 'EFO:0004255', "fetch_all_by_associated_gene_accession_type + type - ontology accession");
+
+  throws_ok { $pfa->fetch_all_by_associated_gene_accession_type('NOS1', 'Gene'); } qr/is not a valid mapping type, valid types are/, ' > Throw on wrong mapping type';
+}
 
 # fetch_all_by_Phenotype
 my $pa = $vdba->get_PhenotypeAdaptor();

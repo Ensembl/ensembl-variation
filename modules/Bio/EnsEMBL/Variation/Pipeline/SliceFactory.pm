@@ -34,30 +34,48 @@ use strict;
 use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 
 sub fetch_input {
-    my $self = shift;
-    my $species = $self->param_required('species');
+  my $self = shift;
+  my $species = $self->param_required('species');
 
-    my $cdba = $self->get_adaptor($species, 'core');
+  my $cdba = $self->get_adaptor($species, 'core');
 
-    my $sa = $cdba->get_SliceAdaptor or die 'Failed to get SliceAdaptor';
+  my $sa = $cdba->get_SliceAdaptor or die 'Failed to get SliceAdaptor';
 
-    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
-    my @slice_names = ();
+  my $slices;
+  my @slice_names = ();
 
-   if ($self->param('debug')) {
-      my $slice = $sa->fetch_by_region('chromosome', 12);
-      push @slice_names, {slice_name => $slice->seq_region_name };
-    } else {
-      foreach my $slice (@$slices) {
-        push @slice_names, { slice_name => $slice->seq_region_name}; 
-      } 
+  if ($self->param('debug')) {
+    my $slice = $sa->fetch_by_region('chromosome', 17);
+    $slices = [$slice];
+  } else {
+    $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+  } 
+
+  foreach my $slice (@$slices) {
+    if ($self->param('split_slice')) {
+      my $max_split_slice_length = $self->param('split_slice_length');
+      my $overlap = 0;
+      my $slice_pieces = split_Slices([$slice], $max_split_slice_length, $overlap);
+      foreach my $slice (@$slice_pieces) {
+        push @slice_names, { 
+          seq_region_name => $slice->seq_region_name,
+          seq_region_start => $slice->seq_region_start,
+          seq_region_end => $slice->seq_region_end,
+        }; 
+      }
+    } else {  
+      push @slice_names, { 
+        seq_region_name => $slice->seq_region_name,
+        seq_region_start => $slice->seq_region_start,
+        seq_region_end => $slice->seq_region_end,
+      }; 
     }
-
-    $self->dataflow_output_id(\@slice_names, 2);
+  } 
+  $self->dataflow_output_id(\@slice_names, 2);
 }
-
 
 sub write_output {
     my $self = shift;

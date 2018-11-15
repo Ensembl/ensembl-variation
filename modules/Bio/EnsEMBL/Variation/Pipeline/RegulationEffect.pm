@@ -34,76 +34,100 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
-
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
-
 
 sub run {
     my $self = shift;
-    my $feature_id = $self->param('feature_id');
-    my $feature_type = $self->param('feature_type');
+    my $seq_region_name = $self->param('seq_region_name');
+    my $seq_region_start = $self->param('seq_region_start');
+    my $seq_region_end = $self->param('seq_region_end');
     my $species = $self->param('species');
-  
     my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
 
     my $cdba = $self->get_adaptor($species, 'core');
     my $vdba = $self->get_adaptor($species, 'variation');
     my $fdba = $self->get_adaptor($species, 'funcgen');
 
-    my $sa = $cdba->get_SliceAdaptor; 
-    my $rfa = $fdba->get_RegulatoryFeatureAdaptor;
-    my $mfa = $fdba->get_MotifFeatureAdaptor;
+    my $slice_adaptor = $cdba->get_SliceAdaptor; 
+    my $regulatory_feature_adaptor = $fdba->get_RegulatoryFeatureAdaptor;
+    my $motif_feature_adaptor = $fdba->get_MotifFeatureAdaptor;
 
-    if ($feature_type eq 'regulatory_feature') {
-        my $rfva = $vdba->get_RegulatoryFeatureVariationAdaptor;
-        my $regulatory_feature = $rfa->fetch_by_stable_id($feature_id) 
-            or die "Failed to fetch RegulatoryFeature for stable id: $feature_id";
+    my $slice = $slice_adaptor->fetch_by_region('toplevel', $seq_region_name, $seq_region_start, $seq_region_end); 
+    my @regulatory_features = grep { $_->seq_region_end <= $seq_region_end  } @{$regulatory_feature_adaptor->fetch_all_by_Slice($slice)||[]};
+    $self->add_regulatory_feature_variations(\@regulatory_features);
 
-        # we need to include failed variations
-        $rfva->db->include_failed_variations(1);
-        my $slice = $sa->fetch_by_Feature($regulatory_feature) or die "Failed to get slice around RegulatoryFeature: " . $regulatory_feature->stable_id;
-
-        for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
-            my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
-                -regulatory_feature => $regulatory_feature,
-                -variation_feature  => $vf,
-                -adaptor            => $rfva,
-                -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
-            );
-
-            if ($rfv && (scalar(@{$rfv->consequence_type}) > 0 )) {
-                $rfva->store($rfv);
-            }
-        }
-    } elsif ($feature_type eq 'motif_feature') {
-        my $mfva = $vdba->get_MotifFeatureVariationAdaptor;
-
-        my $motif_feature = $mfa->fetch_by_stable_id($feature_id) 
-          or die "Failed to fetch MotifFeature for id: $feature_id";
-          # we need to include failed variations
-          $mfva->db->include_failed_variations(1);
-          my $slice = $sa->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
-
-          for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
-              my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
-                  -motif_feature      => $motif_feature,
-                  -variation_feature  => $vf,
-                  -adaptor            => $mfva,
-                  -disambiguate_single_nucleotide_alleles => 1,
-              );
-              $self->warning($vf->variation_name . ' ' . $vf->allele_string);
-              if ($mfv && (scalar(@{$mfv->consequence_type}) > 0) ) {
-                  $mfva->store($mfv);
-              }
-          }
-    } elsif ($feature_type eq 'external_feature') {
-
-    } else {    
-        die "Feature type: $feature_type is not a valid argument";
+    if ($self->param('use_experimentally_validated_mf')) {
+      foreach my $rf (@regulatory_features) {
+        my $motif_features = $rf->fetch_all_MotifFeatures_with_matching_Peak();
+        $self->add_motif_feature_variations($motif_features);
+      }
+    } else {
+      my @motif_features = grep { $_->seq_region_end <= $seq_region_end  } @{$motif_feature_adaptor->fetch_all_by_Slice($slice)||[]};
+      $self->add_motif_feature_variations(\@motif_features);
     }
     return;
 }
 
+sub add_regulatory_feature_variations {
+  my $self = shift;
+  my $regulatory_features = shift;
+  my $species = $self->param('species');
+  my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
 
+  my $cdba = $self->get_adaptor($species, 'core');
+  my $vdba = $self->get_adaptor($species, 'variation');
+
+  my $rfva = $vdba->get_RegulatoryFeatureVariationAdaptor;
+  $rfva->db->include_failed_variations(1);
+  my $slice_adaptor = $cdba->get_SliceAdaptor; 
+
+  foreach my $regulatory_feature (@$regulatory_features) {
+    my $slice = $slice_adaptor->fetch_by_Feature($regulatory_feature) or die "Failed to get slice around RegulatoryFeature: " . $regulatory_feature->stable_id;
+    for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
+      my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(
+        -regulatory_feature => $regulatory_feature,
+        -variation_feature  => $vf,
+        -adaptor            => $rfva,
+        -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
+      );
+
+      if ($rfv && (scalar(@{$rfv->consequence_type}) > 0 )) {
+        $rfva->store($rfv);
+      }
+    }
+  }
+}
+
+sub add_motif_feature_variations {
+  my $self = shift;
+  my $motif_features = shift;
+
+  my $species = $self->param('species');
+  my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
+
+
+  my $cdba = $self->get_adaptor($species, 'core');
+  my $vdba = $self->get_adaptor($species, 'variation');
+
+  my $mfva = $vdba->get_MotifFeatureVariationAdaptor;
+  $mfva->db->include_failed_variations(1);
+  my $slice_adaptor = $cdba->get_SliceAdaptor; 
+   
+  foreach my $motif_feature (@$motif_features) {
+    my $slice = $slice_adaptor->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
+
+    for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
+      my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
+        -motif_feature      => $motif_feature,
+        -variation_feature  => $vf,
+        -adaptor            => $mfva,
+        -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
+      );
+      if ($mfv && (scalar(@{$mfv->consequence_type}) > 0) ) {
+        $mfva->store($mfv);
+      }
+    }
+  }
+}
 
 1;
