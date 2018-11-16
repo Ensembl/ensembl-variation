@@ -35,7 +35,6 @@ use warnings;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor;
-#use Bio::EnsEMBL::VEP::Parser::VCF;
 use Bio::EnsEMBL::IO::ListBasedParser;
 use Bio::EnsEMBL::IO::Parser::VCF4;
 use Bio::EnsEMBL::IO::Parser::VEP_output;
@@ -46,13 +45,13 @@ use Getopt::Long qw(GetOptions);
 #read input arguments
 usage() if (!scalar(@ARGV));
 
-my ($help, $registryFile, $inputF, $inputType, $force_overwrite);
+my ($help, $registryFile, $inputF, $input_type, $force_overwrite);
 my ($phen_assocaited, $phen_overlap, $phen_all);
 my ($species, $assembly, $outFile, $outType) = ("homo_sapiens", "grch38", "phenotype_annotation_output.txt", "txt");
 my ($mapping_type, $debug) = ('is', 0);
 
 GetOptions("input_file|i=s" => \$inputF,
-  "inputType=s" => \$inputType,
+  "input_type=s" => \$input_type,
 
   "associated"  => \$phen_assocaited,
   "overlap"     => \$phen_overlap,
@@ -62,6 +61,7 @@ GetOptions("input_file|i=s" => \$inputF,
   "output_format=s" => \$outType,
   "force_overwrite|force" => \$force_overwrite,
 
+  "species=s"   => \$species,
   "assembly=s"  => \$assembly,
   "registry=s"  => \$registryFile,
   "help!"       => \$help,
@@ -69,10 +69,10 @@ GetOptions("input_file|i=s" => \$inputF,
 
 usage() if $help;
 
-die "Missing -input|i (input file) -inputType (type of input data)!\n" unless $inputF && $inputType;
+die "Missing -input|i (input file) -input_type (type of input data)!\n" unless $inputF && $input_type;
 
 die "Input file $inputF does not exist\n" unless -e $inputF;
-die "Output file already exists. Specify a different file with -output or overwrite existing file with --force_overwrite\n" if (! $force_overwrite && -e $outFile);
+die "Output file already exists. Specify a different file with -output_file or overwrite existing file with -force_overwrite\n" if (! $force_overwrite && -e $outFile);
 
 
 #registry data:
@@ -115,20 +115,20 @@ if ($outType eq 'bed') { #https://genome.ucsc.edu/FAQ/FAQformat.html#format1
   print $outFH join("\t", "Uploaded_name", "Chrom", "Start", "End", "Strand", "Identifier", "Phenotype_description", "Phenotype_accession"), "\n";
 }
 
-if ($inputType eq 'gene'){
+if ($input_type eq 'gene'){
   gene_phenotypeFeatures($inputF);
-} elsif ($inputType eq 'phenotype'){
+} elsif ($input_type eq 'phenotype'){
   pheno_phenotypeFeatures($inputF);
-} elsif ($inputType eq 'variant'){
+} elsif ($input_type eq 'variant'){
   if ($inputF =~ /\.vcf$/ ){
     snp_phenotypeFeatures($inputF, 'vcf');
   } else {
     snp_phenotypeFeatures($inputF);
   }
-} elsif (uc($inputType) eq 'VEP'){
+} elsif (uc($input_type) eq 'VEP'){
   snp_phenotypeFeatures($inputF, 'vep');
 } else {
-  warn "Unknown input type $inputType\n";
+  warn "Unknown input type $input_type\n";
 }
 
 close($outFH);
@@ -306,15 +306,15 @@ sub usage {
   Annotate input data: variants (list of rsIDs or VCF or VEP output file) OR genes (list of gene identifiers or gene symbols) OR phenotypes (list of accessions or term names) with assigned phenotype features.
   Options:
       -input_file|i      Input file (variants in VCF, rsIDs or genes or phenotypes in text file list form)
-      -inputType         Type of input data: [variant, gene, phenotype, vep] (Default: gene)
+      -input_type        Type of input data: [variant, gene, phenotype, vep] (Default: gene)
 
       -species           Species of the input data (Default: human)
       -assembly          Assembly to use if species is human (Default: grch38)
       -registry          Ensembl registry file containing database connection details
 
-      -associated        If inputType is gene, include GWAS variant-phenotype associations where the gene is reported as a likely candidate
-      -overlap           If inputType is gene, include phenotypes overlapping the input data
-      -all               If inputType is gene, annotate all phenotypes (directly assigned, associated and overlapping)
+      -associated        If input_type is gene, include GWAS variant-phenotype associations where the gene is reported as a likely candidate
+      -overlap           If input_type is gene, include phenotypes overlapping the input data
+      -all               If input_type is gene, annotate all phenotypes (directly assigned, associated and overlapping)
 
       -output_file|o     Output file (Default: phenotype_annotation_output.txt)
       -output_format     Format of the output data: [txt, bed, vcf] (Default: txt)
