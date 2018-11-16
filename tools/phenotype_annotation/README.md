@@ -27,6 +27,7 @@ The script is a wrapper of the Ensembl Variation API to retrieve the phenotype a
 * `-output_file|-o [output_file]`: output file (default: phenotype_annotation_output.txt)
 * `-output_format [format]`: format of the output data: [txt, bed, vcf] (default: txt)
 * `-force_overwrite`: if output file exists it will get overwritten
+* `-verbose`: print a bit more information while running (Default: off)
 * `-help`: print usage message
 
 <a name="examples"></a>

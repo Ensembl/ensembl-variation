@@ -48,7 +48,7 @@ usage() if (!scalar(@ARGV));
 my ($help, $registryFile, $inputF, $input_type, $force_overwrite);
 my ($phen_assocaited, $phen_overlap, $phen_all);
 my ($species, $assembly, $outFile, $outType) = ("homo_sapiens", "grch38", "phenotype_annotation_output.txt", "txt");
-my ($mapping_type, $debug) = ('is', 0);
+my ($mapping_type, $verbose) = ('is', 0);
 
 GetOptions("input_file|i=s" => \$inputF,
   "input_type=s" => \$input_type,
@@ -64,6 +64,8 @@ GetOptions("input_file|i=s" => \$inputF,
   "species=s"   => \$species,
   "assembly=s"  => \$assembly,
   "registry=s"  => \$registryFile,
+
+  "verbose"     => \$verbose,
   "help!"       => \$help,
 ) or usage();
 
@@ -148,12 +150,15 @@ sub gene_phenotypeFeatures{
     warn "WARNING: gene name '$entry' not found\n" if (scalar @$genes == 0);
     foreach my $gene (@$genes){
       my @extracted_phenos = @{$pfa->fetch_all_by_object_id_accession_type($gene->stable_id, $mapping_type)};
+      warn "INFO: found ", scalar @extracted_phenos, " phenotypes assigned to gene $entry\n" if $verbose;
       if ($phen_assocaited || $phen_all){
         my @assoc = @{$pfa->fetch_all_by_associated_gene_accession_type($gene->external_name(), $mapping_type)};
+        warn "INFO: found ", scalar @assoc, " phenotypes associated with gene $entry\n" if $verbose;
         push @extracted_phenos, @assoc;
       }
       if ($phen_overlap || $phen_all){
         my @pfs_overlap = @{$pfa->fetch_all_by_Slice_accession_type($gene->slice(), $mapping_type)};
+        warn "INFO: found ", scalar @pfs_overlap, " phenotypes overlapping gene $entry\n" if $verbose;
         push @extracted_phenos, @pfs_overlap;
       }
       my %phenotypes = map { $_->phenotype_id. $_->seq_region_name. $_->seq_region_start.$_->seq_region_end => $_ } @extracted_phenos; #make phenotype features unique
@@ -178,9 +183,9 @@ sub pheno_phenotypeFeatures{
     } else {
       my $terms = $ont_ad->fetch_all_by_name($entry);
       if (scalar @$terms == 0){
-        warn "WARNING: phenotype description '$entry' not found in the ontology database\n" if (scalar @$terms == 0 && $debug);
+        warn "WARNING: phenotype description '$entry' not found in the ontology database\n" if (scalar @$terms == 0 && $verbose);
         $terms = $pa->fetch_by_description_accession_type($entry, $mapping_type);
-        warn "WARNING: phenotype description '$entry' not found in the variation database\n" if (scalar @$terms == 0 && $debug);
+        warn "WARNING: phenotype description '$entry' not found in the variation database\n" if (scalar @$terms == 0 && $verbose);
         warn "WARNING: phenotype description '$entry' not found\n" if (scalar @$terms == 0);
       }
 
@@ -188,10 +193,12 @@ sub pheno_phenotypeFeatures{
         if (ref($term) eq 'Bio::EnsEMBL::OntologyTerm'){
           my $acc = $term->accession;
           my $current_phenos = $pfa->fetch_all_by_phenotype_accession_type_source($acc, $mapping_type);
+          warn "INFO: found ", scalar @$current_phenos, " assignedments of phenotype $acc\n" if $verbose;
           push @extracted_phenos,@{$current_phenos};
         } else {
           foreach my $acc (@{$term->ontology_accessions}){
             my $current_phenos = $pfa->fetch_all_by_phenotype_accession_type_source($acc, $mapping_type);
+            warn "INFO: found ", scalar @$current_phenos, " assignedments of phenotype $acc\n" if $verbose;
             push @extracted_phenos,@{$current_phenos};
           }
         }
@@ -242,11 +249,13 @@ sub snp_phenotypeFeatures{
     if ($fileTypeVcf && $record->[2] ne '.'){
       #if ID present & in EnsEMBL -> fetch via existing Variation
       @extracted_phenos = @{$pfa->fetch_all_by_object_id_accession_type($record->[2], $mapping_type)};
+      warn "INFO: found ", scalar @extracted_phenos, " phenotypes assigned to variation $record->[2]\n" if $verbose;
       warn "WARNING: no phenotypes found for variation '$record->[2]'\n" if (scalar @extracted_phenos == 0);
       print_phenos($parser->get_uploaded_variation(), \@extracted_phenos, $outType);
       $found = 1 if scalar @extracted_phenos > 0;
     } elsif (!$fileTypeVcf || ($fileTypeVep && $record !~ /^\d/)){
       @extracted_phenos = @{$pfa->fetch_all_by_object_id_accession_type($record, $mapping_type)};
+      warn "INFO: found ", scalar @extracted_phenos, " phenotypes assigned to variation $record\n" if $verbose;
       warn "WARNING: no phenotypes found for variation '$record'\n" if (scalar @extracted_phenos == 0);
       print_phenos($record, \@extracted_phenos, $outType);
       $found = 1 if scalar @extracted_phenos > 0;
@@ -267,6 +276,7 @@ sub snp_phenotypeFeatures{
                                               -adaptor => $sa);
       # get phenotypes for genes that are overlapped by query variation
       my @extracted_phenos = @{$pfa->fetch_all_by_Slice_accession_type($tmpSlice, $mapping_type)};
+      warn "INFO: found ", scalar @extracted_phenos, " phenotypes assigned to variation $name\n" if $verbose;
       my %phenotypes = map { $_->phenotype_id. $_->seq_region_name. $_->seq_region_start.$_->seq_region_end => $_ } @extracted_phenos; #make phenotype features unique
       @extracted_phenos = values %phenotypes;
       print_phenos($name, \@extracted_phenos, $outType);
@@ -320,6 +330,7 @@ sub usage {
       -output_format     Format of the output data: [txt, bed, vcf] (Default: txt)
       -force_overwrite   Existing output file will get overwritten
 
+      -verbose           Print out a bit more information while running (Default: off)
       -help              Print this message
   } . "\n";
   exit(0);
