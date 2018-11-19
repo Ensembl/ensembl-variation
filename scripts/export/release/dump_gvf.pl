@@ -356,6 +356,14 @@ sub dump_data {
                         $count = 0;
                     }
                 }
+                if (@vfs) {
+                  if ($config->{incl_consequences}) {
+                      $gvf_lines = add_variant_effect($config, \@vfs);
+                  } elsif ($config->{population}) {
+                      $gvf_lines = add_frequencies($config, \@vfs);
+                  }
+                  annotate_gvf_lines($config, $gvf_lines);
+                }
             } else {
                 while (my $vf = $vf_it->next) {
                   my $vf_start = $vf->seq_region_start;
