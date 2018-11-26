@@ -77,10 +77,6 @@ sub default_options {
         finish_dumps => 0,
         human_population_dumps => 0,
 
-        hive_db_host    => 'ens-variation',
-        hive_db_port    => 3306,
-        hive_db_user    => 'ensadmin',
-
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
@@ -149,7 +145,7 @@ sub pipeline_analyses {
         'file_type' => 'gvf',
       },
       -flow_into => {
-        '2->A' => ['finish_population_gvf'],
+        '2->A' => ['finish_dump_population_gvf'],
         'A->1' => ['init_population_vcf']
       },
     },
