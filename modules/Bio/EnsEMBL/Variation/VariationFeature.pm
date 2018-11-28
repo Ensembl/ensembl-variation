@@ -1818,8 +1818,7 @@ sub hgvs_genomic {
 
 
   my $tr_vf = $self;
-  my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
-
+  my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);  
 
   # Return undef if this VariationFeature does not fall within the supplied feature.
   return {} if ($vf_start < 1 || 
@@ -1987,9 +1986,8 @@ sub spdi_genomic{
   my %spdi; 
 
   my $ref_slice = $self->slice; 
-
-  my $tr_vf = $self; 
-  my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
+ 
+  my ($vf_start, $vf_end, $ref_length) = ($ref_feature->start, $ref_feature->end, ($ref_feature->end - $ref_feature->start) + 1);
 
   return {} if ($vf_start < 1 || $vf_end < 1);  
 
@@ -1999,7 +1997,7 @@ sub spdi_genomic{
   my $syn = $ref_slice->get_all_synonyms('RefSeq_genomic'); 
   my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $ref_feature->seq_region_name()); 
 
-  my @all_alleles = split(/\//,$tr_vf->allele_string());
+  my @all_alleles = split(/\//,$ref_feature->allele_string());
   my $ref_allele = shift @all_alleles; 
   my $spdi_ref_allele; 
   my $spdi_alt_allele; 
@@ -2013,8 +2011,8 @@ sub spdi_genomic{
     # Skip if the allele contains weird characters 
     next if $alt_allele =~ m/[^ACGT\-]/ig; 
 
-    my $chr_start = $tr_vf->start;
-    my $chr_end   = $tr_vf->end; 
+    my $chr_start = $ref_feature->start;
+    my $chr_end   = $ref_feature->end; 
 
     # If the variant is a substitution, deletion or indel 
     my $spdi_position = $chr_start - 1;  
