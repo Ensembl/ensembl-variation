@@ -79,6 +79,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
+
 our $DEBUG = 0;
 our $NO_TRANSFER = 0;
 
@@ -102,8 +103,6 @@ sub _return_3prime {
   my $vf ||= $tv->base_variation_feature;
   my $tr ||= $tv->transcript;
   my $hgvs_notation;
-  $DB::single = ($tr->stable_id eq 'ENST00000477686');
-  $DB::single = 1;
   my @preshifted_objects = grep { ($_->{allele_string} eq $tv->{base_variation_feature}->{allele_string}) && ($_->{strand} eq $tr->strand())} @{$self->base_variation_feature->{tva_shift_objects}};
   if(scalar(@preshifted_objects))# && !$hgvs_only)
   {
@@ -303,9 +302,7 @@ sub _return_3prime {
     "allele_string" => $self->allele_string, #$tv->{base_variation_feature}->{allele_string},
     "transcript_stable_id" => $tr->stable_id,
   );
-  
-  #$DB::single = ($shift_length eq 0);
-  
+    
   if(defined $self->base_variation_feature->{tva_shift_objects})
   {
     push @{$self->base_variation_feature->{tva_shift_objects}}, \%shift_object;
@@ -590,6 +587,7 @@ sub display_codon_allele_string {
 
 sub peptide {
   my ($self, $peptide) = @_;
+
   $self->{peptide} = $peptide if $peptide;
 
   unless(exists($self->{peptide})) {
@@ -698,13 +696,13 @@ sub codon {
   
   $self->{codon} = $codon if defined $codon;
   unless(exists($self->{codon})) {
+
     $self->{codon} = undef;
   
     my $tv = $self->base_variation_feature_overlap;
     
     my $shifting_offset = 0;
     my $tr = $tv->transcript;
-    #$DB::single = 1;
     #if($tr->strand() > 0)
     #{
     #  $shifting_offset = defined($self->{shift_length}) ? $self->{shift_length} : 0;
@@ -990,7 +988,6 @@ sub hgvs_transcript {
   my $self = shift;
   my $notation = shift;
   my $no_shift = shift;
-  $DB::single = 1;
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
 
@@ -1022,7 +1019,7 @@ sub hgvs_transcript {
   my $refseq_strand = $tr->strand();
 
   my $var_name = $vf->variation_name();
-  
+
   if($DEBUG ==1){    
   	print "\nHGVS transcript: Checking ";
   	print " var_name $var_name " if defined $var_name ;
@@ -1226,7 +1223,6 @@ sub hgvs_protein {
   my $pre         = $hgvs_tva->_pre_consequence_predicates;
 
   ### no HGVS protein annotation for variants outside translated region 
-  #$DB::single = 1;
   delete($hgvs_tva_tv->{translation_start});
   delete($hgvs_tva_tv->{translation_end});
   delete($hgvs_tva_tv->{_translation_coords});
@@ -1289,7 +1285,6 @@ sub hgvs_protein {
   $hgvs_notation->{start}   = $hgvs_tva_tv->translation_start();
   $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();
   ## get default reference & alt peptides  [changed later to hgvs format]
-  #  $DB::single = 1;
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
   my $ref_tva = $hgvs_tva_tv->get_reference_TranscriptVariationAllele;
   $ref_tva->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string} if defined($self->{shift_object}->{hgvs_allele_string});
@@ -1360,7 +1355,6 @@ sub hgvs_protein {
 
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva;
-  $DB::single = 1;
   my $hgvs_tva_tv = $hgvs_tva->base_variation_feature_overlap;
   return undef unless defined $hgvs_tva_tv;
 
@@ -1379,7 +1373,6 @@ sub hgvs_protein {
   }
 
   ### no HGVS protein annotation for variants outside translated region 
-  $DB::single = 1;
   if(defined($hgvs_tva->{shift_object}))
   {
     delete($hgvs_tva_tv->{translation_start});
@@ -1430,7 +1423,6 @@ sub hgvs_protein {
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{ref_orig_allele_string};
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{shifted_allele_string} if $hgvs_tva_vf->var_class eq 'deletion';  
   }
-  $DB::single = 1;
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
   $hgvs_notation->{ref} = $hgvs_tva_ref->peptide;    
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
@@ -1949,7 +1941,6 @@ sub _get_allele_length {
 sub _get_fs_peptides {
   my $self    = shift;
   my $hgvs_notation = shift;
-  #$DB::single = 1;
   ### get CDS with alt variant
   my $alt_cds = $self->_get_alternate_cds();
   return undef unless defined($alt_cds);
@@ -2019,7 +2010,6 @@ sub _get_surrounding_peptides {
 sub _get_alternate_cds{
     
   my $self = shift;
-  #$DB::single = 1;
   ### get reference sequence
   my $reference_cds_seq = $self->transcript_variation->_translateable_seq();
   
