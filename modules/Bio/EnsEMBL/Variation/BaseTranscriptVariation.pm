@@ -245,6 +245,7 @@ sub translation_start {
     my ($self, $translation_start, $shifting_offset) = @_;
     
     $self->{translation_start} = $translation_start if defined $translation_start;
+
     unless (exists $self->{translation_start}) {
         my $translation_coords = $self->translation_coords($shifting_offset);
         
@@ -307,7 +308,7 @@ sub cdna_coords {
             $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
         }
     }
-
+    
     return $self->{_cdna_coords};
 }
 
@@ -363,18 +364,13 @@ sub cds_coords {
 
 sub translation_coords {
     my $self = shift;
+
     my $shifting_offset = shift;
     $shifting_offset = 0 unless defined($shifting_offset);
     unless ($self->{_translation_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript; 
-        #if ($vf->{shifted_flag})
-        #{
-        #   $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ];
-        #}
-        #else{
-           $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
-        #}
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
                 
         if(defined($self->{_translation_coords}->[0]) && $self->{_translation_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
         {
@@ -390,18 +386,6 @@ sub translation_coords {
     return $self->{_translation_coords};
 }
 
-
-#sub translation_coords {
-#    my $self = shift;
-#    
-#    unless ($self->{_translation_coords}) {
-#        my $vf   = $self->base_variation_feature;
-#        my $tran = $self->transcript; 
-#        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
-#    }
-#    
-#    return $self->{_translation_coords};
-#}
 
 =head2 distance_to_transcript
 

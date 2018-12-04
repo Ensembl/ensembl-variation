@@ -508,7 +508,7 @@ sub splice_region {
 sub within_intron {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    
+
     return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{intronic};
 }
 
@@ -654,7 +654,6 @@ sub _get_peptide_alleles {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{_get_peptide_alleles})) {
-      $DB::single = 1;
         my @alleles = ();
 
         #return () if frameshift(@_);
@@ -723,7 +722,7 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -795,7 +794,7 @@ sub _inv_start_altered {
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
         my $utr = $bvfo->_five_prime_utr();
-	return 0 unless $utr;
+	      return 0 unless $utr;
         my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
@@ -1037,7 +1036,7 @@ sub stop_gained {
 
 sub stop_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-$DB::single = 1;
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1050,13 +1049,7 @@ $DB::single = 1;
         
         # sequence variant
         if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
-            
-            # special case frameshift
-    #        if(frameshift(@_)) {
-    #          my $ref_pep = _get_ref_pep(@_);
-    #          return $ref_pep && $ref_pep =~ /\*/;
-    #        }
-            
+                    
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
             if(defined($ref_pep) && defined($alt_pep)) {
@@ -1264,9 +1257,7 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
-        #my $dup_bvfoa = {%$bvfoa};
-        #$bvfoa->_return_3prime(1);
-        #return 0 unless defined $bvfo->translation_start(undef, $bvfoa->{shift_object}->{shift_length});
+
         return 0 unless defined $bvfo->translation_start();
         
         delete($bvfoa->{shift_object});
