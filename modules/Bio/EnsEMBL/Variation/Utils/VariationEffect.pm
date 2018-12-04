@@ -741,7 +741,7 @@ sub start_lost {
         # sequence variant
         if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
             return $cache->{start_lost} = 1 if _ins_del_start_altered(@_) && !(inframe_insertion(@_) || inframe_deletion(@_));
-            #return $cache->{start_lost} = 1 if _inv_start_altered(@_);
+            return $cache->{start_lost} = 1 if _inv_start_altered(@_);
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
             return 0 unless $ref_pep;
