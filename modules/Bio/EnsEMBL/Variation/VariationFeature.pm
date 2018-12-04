@@ -1735,10 +1735,11 @@ sub _get_flank_seq{
 
   #### find flank size needed for checking
   my $add_length = 100;  ## allow at least 100 for 3'shifting
+  my $shift_length = 50;
   my @allele = split(/\//,$self->allele_string());
   foreach my $al(@allele){ ## alleles be longer
-    if(length($al) > $add_length){
-      $add_length = length $al ;
+    if(length($al) > ($add_length - $shift_length) ){
+      $add_length = length($al) + $shift_length ;
     }
   }
  
