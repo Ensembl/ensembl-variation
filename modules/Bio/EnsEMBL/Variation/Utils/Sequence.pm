@@ -508,7 +508,7 @@ sub hgvs_variant_notation {
   if ($ref_length < 0) {
     $ref_length = 0;
   }
-
+  
   # Remove any gap characters in the alt allele
   $alt_allele =~ s/\-//g;
   
