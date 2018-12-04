@@ -2079,6 +2079,11 @@ sub spdi_genomic{
   return \%spdi;
 }
 
+sub length {
+  my $self = shift;
+  return $self->{'end'} - $self->{'start'} + 1;
+}
+
 =head2 summary_as_hash
 
   Example       : $feature_summary = $feature->summary_as_hash();
