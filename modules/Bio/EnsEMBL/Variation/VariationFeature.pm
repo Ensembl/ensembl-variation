@@ -1997,7 +1997,7 @@ sub spdi_genomic{
   my %spdi;
   if(!$include_ref_allele){ $include_ref_allele = 0; }
   # If input is provided, it must have value '1' (include reference allele) or '0' (not include reference allele)
-  throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^[01]/);
+  throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^[01]$/);
 
   my $ref_slice = $ref_feature->slice;
   throw("This variation feature is not placed on a slice.") unless ($ref_slice->isa('Bio::EnsEMBL::Slice'));
