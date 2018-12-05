@@ -1973,7 +1973,7 @@ Arg [1]     : int (Optional)
               It also returns a SPDI notation for the reference allele. By default value is '0'.
               '1' -> returns a SPDI for the reference allele;
               '0' -> doesn't return a SPDI for the reference allele;
-Example     : my $variation = $variation_adaptor->fetch_by_name(rs145160881);
+Example     : my $variation = $variation_adaptor->fetch_by_name('rs145160881');
               my $vf = $variation->get_all_VariationFeatures->[0];
               my $spdi = $vf->spdi_genomic();
               while (my ($allele,$spdi_str) = each(%{$spdi})) {
@@ -1983,7 +1983,7 @@ Description : Returns a reference to a hash with the alternate and reference all
               By default uses the slice it is placed on as reference and only returns spdi notation for the alternate alleles.
 Returntype  : Hash reference
 Exceptions  : Throws exception if VariationFeature can not be described relative to a Slice;
-              Throws exception if input is provided and value is not 0 or 1 
+              Throws exception if input is provided and value is not 0 or 1
 Caller      : general
 Status      : Experimental
 
