@@ -2427,34 +2427,37 @@ sub fetch_by_spdi_notation{
         unless ($ref_allele eq $refseq_allele);   
     } 
     else{
-      $ref_allele = $refseq_allele;    
+      throw ("Could not parse the SPDI notation $spdi. Deleted sequence ($deleted_seq) length does not match inserted sequence length (1).")
+        unless ($deleted_seq == 1);
+      $ref_allele = $refseq_allele;
     }
-    $alt_allele = uc $inserted_seq; 
+    $alt_allele = uc $inserted_seq;
     throw ("Reference allele given by SPDI notation $spdi ($ref_allele) matches alt allele given by SPDI notation $spdi ($alt_allele)")
-      unless ($ref_allele ne $alt_allele);  
-  }  
+      unless ($ref_allele ne $alt_allele);
+  }
 
   # Variation is a deletion
-  elsif($check_deleted_seq && $inserted_seq eq ''){ 
-    $start = $position + 1; 
-    $end = $start; 
+  elsif($check_deleted_seq && $inserted_seq eq ''){
+    $start = $position + 1;
 
-    if($check_deleted_seq_letters){ 
-      $ref_allele = uc $deleted_seq; 
+    if($check_deleted_seq_letters){
+      $ref_allele = uc $deleted_seq;
+      $end = $position + length($deleted_seq);
       my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + length($deleted_seq));
 
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)") 
-        unless ($ref_allele eq $refseq_allele);  
+        unless ($ref_allele eq $refseq_allele);
 
     } 
-    else{ 
-      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + $deleted_seq); 
+    else{
+      $end = $position + $deleted_seq;
+      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + $deleted_seq);
     }   
-    $alt_allele = '-'; 
+    $alt_allele = '-';
   }    
 
   # Variation is an insertion 
-  elsif($deleted_seq eq '' && $check_inserted_seq_letters){ 
+  elsif($deleted_seq eq '' && $check_inserted_seq_letters){
     $start = $position + 1; 
     $end = $position; 
     $ref_allele = '-';   
