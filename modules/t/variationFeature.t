@@ -1,12 +1,12 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 # Copyright [2016-2018] EMBL-European Bioinformatics Institute
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,7 @@ my $sa  = $cdb->get_SliceAdaptor();
 
 # test constructor
 
-## need source object 
+## need source object
 
 my $source_name           = 'dbSNP';
 my $source_version        = 138;
@@ -50,7 +50,7 @@ my $source = Bio::EnsEMBL::Variation::Source->new
 );
 
 
-## need a variation object 
+## need a variation object
 my $v = Bio::EnsEMBL::Variation::Variation->new(-dbID => 12345,
                                                 -name => 'rs2421',
                                                 -source => $source);
@@ -106,9 +106,9 @@ ok($vf->source_name() eq $source_name,  "source");
 ok($vf->source_version() eq $source_version, "source version");
 ok($vf->length() == 1,                  "length");
 ok($vf->is_somatic() eq $is_somatic,    "is_somatic");
-ok($vf->minor_allele() eq $minor_allele, "minor allele"); 
-ok($vf->minor_allele_frequency() == $minor_allele_frequency , "minor allele freq"); 
-ok($vf->minor_allele_count() == $minor_allele_count,  "minor allele count"); 
+ok($vf->minor_allele() eq $minor_allele, "minor allele");
+ok($vf->minor_allele_frequency() == $minor_allele_frequency , "minor allele freq");
+ok($vf->minor_allele_count() == $minor_allele_count,  "minor allele count");
 ok($vf->get_Variation_dbID() == 12345,  "get variation db id");
 ok($vf->is_reference,                   "check that the VF's slice is a reference");
 ok($vf->consequence_type->[0] eq $consequence->SO_term, "get the consequence");
@@ -316,18 +316,20 @@ my $motif_feature = $mfvs->[0]->motif_feature;
 $mfvs = $vf6->get_all_MotifFeatureVariations([$motif_feature]);
 ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVariations, motif_feature');
 
-# test spdi genomic 
-my $spdi_notation_3 = $vf3->spdi_genomic(); 
-ok($spdi_notation_3->{'T'} eq 'NC_000013.10:32954008:C:T', 'SPDI genomic valid substitution'); 
-ok($spdi_notation_3->{'G'} eq 'NC_000013.10:32954008:C:G', 'SPDI genomic valid substitution');   
+# test spdi genomic
+my $spdi_notation_3 = $vf3->spdi_genomic();
+ok($spdi_notation_3->{'T'} eq 'NC_000013.10:32954008:C:T', 'SPDI genomic valid substitution');
+ok($spdi_notation_3->{'G'} eq 'NC_000013.10:32954008:C:G', 'SPDI genomic valid substitution');
 my $var7 = $va->fetch_by_name('rs35370278');
 my $vf7_spdi = $var7->get_all_VariationFeatures()->[0];
-my $spdi_notation_7 = $vf7_spdi->spdi_genomic(); 
-ok($spdi_notation_7->{'-'} eq 'NC_000011.9:66315558:G:', 'SPDI genomic valid deletion'); 
-my $var8 = $va->fetch_by_name('rs370045702'); 
+my $spdi_notation_7 = $vf7_spdi->spdi_genomic();
+ok($spdi_notation_7->{'-'} eq 'NC_000011.9:66315558:G:', 'SPDI genomic valid deletion');
+my $spdi_notation_7_ref_allele = $vf7_spdi->spdi_genomic(1);
+ok($spdi_notation_7_ref_allele->{'G'} eq 'NC_000011.9:66315558:G:G', 'SPDI genomic valid deletion (ref allele)');
+my $var8 = $va->fetch_by_name('rs370045702');
 my $vf8_spdi = $var8->get_all_VariationFeatures()->[0];
-my $spdi_notation_8 = $vf8_spdi->spdi_genomic(); 
-ok($spdi_notation_8->{'AA'} eq 'NC_000011.9:66317203::AA', 'SPDI genomic valid insertion'); 
+my $spdi_notation_8 = $vf8_spdi->spdi_genomic();
+ok($spdi_notation_8->{'AA'} eq 'NC_000011.9:66317203::AA', 'SPDI genomic valid insertion');
 
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";

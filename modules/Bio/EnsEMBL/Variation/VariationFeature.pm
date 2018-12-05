@@ -1973,16 +1973,17 @@ Arg [1]     : int (Optional)
               It also returns a SPDI notation for the reference allele. By default value is '0'.
               '1' -> returns a SPDI for the reference allele;
               '0' -> doesn't return a SPDI for the reference allele;
-Example     : my $vf = $variation_feature_adaptor->fetch_by_dbID(rs145160881);
+Example     : my $variation = $variation_adaptor->fetch_by_name(rs145160881);
+              my $vf = $variation->get_all_VariationFeatures->[0];
               my $spdi = $vf->spdi_genomic();
               while (my ($allele,$spdi_str) = each(%{$spdi})) {
-               print "Allele $allele $spdi_str\n"; # Will print 'Allele A NC_000016.10:68684738:G:A'
+               print "Allele $allele $spdi_str\n"; # For example 'Allele A NC_000016.10:68684738:G:A'
              }
 Description : Returns a reference to a hash with the alternate and reference alleles as key and a string with the genomic SPDI notation of this VariationFeature as value.
               By default uses the slice it is placed on as reference and only returns spdi notation for the alternate alleles.
 Returntype  : Hash reference
 Exceptions  : Throws exception if VariationFeature can not be described relative to a Slice;
-              Throws exception if input value is not numeric (0 or 1)
+              Throws exception if input is provided and value is not 0 or 1 
 Caller      : general
 Status      : Experimental
 
@@ -1996,12 +1997,12 @@ sub spdi_genomic{
   my %spdi;
   if(!$include_ref_allele){ $include_ref_allele = 0; }
   # If input is provided, it must have value '1' (include reference allele) or '0' (not include reference allele)
-  throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^(1|0)/i);
+  throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^[01]/);
 
   my $ref_slice = $ref_feature->slice;
   throw("This variation feature is not placed on a slice.") unless ($ref_slice->isa('Bio::EnsEMBL::Slice'));
 
-  my ($vf_start, $vf_end) = ($ref_feature->start, $ref_feature->end, ($ref_feature->end - $ref_feature->start) + 1);
+  my ($vf_start, $vf_end) = ($ref_feature->start, $ref_feature->end);
 
   return {} if ($vf_start < 1 || $vf_end < 1);
 
