@@ -552,7 +552,8 @@ sub within_cdna {
     $feat ||= $bvfo->feature;
     
     my $cdna_coords = $bvfo->cdna_coords;
-    my $shift_length = $bvf->{shifted_flag} ? $feat->strand * $bvf->{shift_length} : 0;
+    #my $shift_length = $bvf->{shifted_flag} ? $feat->strand * $bvf->{shift_length} : 0;
+    my $shift_length = defined($bvfoa->{shift_object}) ? $feat->strand * $bvfoa->{shift_object}->{shift_length} : 0;
     if (@$cdna_coords > 0) {
         for my $coord (@$cdna_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
@@ -830,8 +831,8 @@ sub _overlaps_start_codon {
         return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
-        $cdna_start += $bvfo->variation_feature->{shift_length} if $bvfo->variation_feature->{shifted_flag};
-        $cdna_end += $bvfo->variation_feature->{shift_length} if $bvfo->variation_feature->{shifted_flag};
+        $cdna_start += $bvfoa->{shift_object}->{shift_length} if defined($bvfoa->{shift_object});
+        $cdna_end += $bvfoa->{shift_object}->{shift_length} if defined($bvfoa->{shift_object});
         return 0 unless $cdna_start && $cdna_end;
         $cache->{overlaps_start_codon} = overlap(
             $cdna_start, $cdna_end,
