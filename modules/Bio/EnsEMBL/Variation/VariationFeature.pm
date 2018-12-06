@@ -1800,7 +1800,7 @@ sub hgvs_genomic {
   my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
   my $use_allele       = shift;    ## optional single allele to check
 
-  $ref_feature  = $self unless defined $ref_feature;
+  $ref_feature  = $self->slice() unless defined $ref_feature;
   my %hgvs;
 
   ########set up sequence reference
@@ -1815,7 +1815,6 @@ sub hgvs_genomic {
   else{
     $ref_slice =  $self->slice;
   }
-
 
   my $tr_vf = $self;
   my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);

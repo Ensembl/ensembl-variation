@@ -698,6 +698,15 @@ sub test_output{
   ok(  $hgvs_genomic->{$allele} eq $output->[0], "$input genomic level $output->[0], $output->[5]" );
   if($DEBUG==1){print "TEMP: $input => gen; expected $output->[0]\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";} 
 
+  # hgvs genomic with slice and without a slice 
+  my $slice_adaptor = $cdba->get_Slice;
+  my $chr = $variation_feature->seq_region_name();  
+  my $slice = $slice_adaptor->fetch_by_region('chromosome', $chr, 1, 665568000);
+  my $hgvs_genomic_notation_slice = $variation_feature->hgvs_genomic($slice); 
+  ok( $hgvs_genomic->{$allele} eq $hgvs_genomic_notation_slice->{$allele}, "hgvs genomic notation with a slice is the same as get_all_hgvs_notations genomic ('g')");
+
+  my $hgvs_genomic_notation = $variation_feature->hgvs_genomic(); 
+  ok( $hgvs_genomic->{$allele} eq $hgvs_genomic_notation->{$allele}, "hgvs genomic notation without a slice is the same as get_all_hgvs_notations genomic ('g')");
 
   ## transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference 
   return unless defined $transcript;
