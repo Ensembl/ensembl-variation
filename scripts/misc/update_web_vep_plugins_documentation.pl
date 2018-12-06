@@ -166,7 +166,7 @@ while (my $file = readdir($dh)) {
 # Print output HTML
 open OUT, "> $output_file" or die $!;
 
-$new_content .= qq{   
+my $table_content .= qq{   
   <table class="ss">
     <thead>
       <tr>
@@ -181,6 +181,7 @@ $new_content .= qq{
 };
 my @sorted_files = sort { lc $a cmp lc $b } @files;
 my $tr_class = 'bg1';
+my %plugin_class_list;
 
 # 1 Plugin file <=> 1 row in the output table
 foreach my $file (@sorted_files) {
@@ -188,16 +189,22 @@ foreach my $file (@sorted_files) {
   my $plugin_name  = $data{$file}{'name'};
   my $plugin_class = ($data_section{$plugin_name} && $data_section{$plugin_name}{'section'}) ? $data_section{$plugin_name}{'section'} : 'ND'; 
   my $plugin_class_colour = $class_colour{$plugin_class} ? $class_colour{$plugin_class} : 'black';
- 
-  $new_content .= sprintf(
-    '<tr class="%s">'.
+  
+  my $plugin_id = lc($plugin_class);
+     $plugin_id =~ s/ /_/g;
+  
+  $plugin_class_list{$plugin_class} = $plugin_id;
+
+  $table_content .= sprintf(
+    '<tr class="%s plugin_row" data-category="%s">'.
     '<td><div style="font-weight:bold"><a rel="external" href="%s">%s</a></div>%s</td>'.
     '<td>%s</td>'.
-    '<td><div class="vdoc_dtype_count" style="float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div:w></td>'.
+    '<td><div class="vdoc_dtype_count" style="float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
     '<td>%s</td>'.
     '<td>%s</td>'.
     '</tr>',
     $tr_class,
+    $plugin_id,
     "$vep_plugin_url_version/$file",
     $plugin_name,
     ($plugin_extended_names{$plugin_name}) ? '<div style="margin-top:6px"><small>'.$plugin_extended_names{$plugin_name}.'</small></div>' : '',
@@ -208,10 +215,27 @@ foreach my $file (@sorted_files) {
     scalar(@{$data{$file}{'developer'}}) > 1 ? '<ul style="padding-left:1em"><li>'.join("</li><li>",@{$data{$file}{'developer'}})."</li></ul>" : $data{$file}{'developer'}->[0]
   );
   $tr_class = ($tr_class eq 'bg1') ? 'bg2' : 'bg1';
-  $new_content .= "\n";
+  $table_content .= "\n";
 }
-$new_content .= qq{</tbody></table>};
+$table_content .= qq{</tbody></table>};
 close(OUT);
+
+# Add a dropdown to select the plugins to display by category
+$new_content .= qq{
+  <div style="margin:5px 0px 10px">
+    <span style="padding-right:8px">Select categories:</span>
+    <select id="select_category" onchange="javascritpt:show_hide_category()">
+       <option value="all">All categories</option>};
+foreach my $p_class (sort(keys(%plugin_class_list))) {
+  $new_content .= sprintf(
+    '<option value="%s">%s</option>',
+    $plugin_class_list{$p_class},
+    $p_class
+  );
+}
+$new_content .= qq{\n    </select>\n  </div>};
+
+$new_content .= $table_content;
 
 # Replace the old HTML table by the new one, within the existing vep_plugins.html file
 my $section = 'Plugins list';
@@ -383,6 +407,7 @@ sub print_into_tmp_file {
   print TMP  $new;
   print TMP  $after;
 }
+
 
 sub usage {
   my $msg = shift;
