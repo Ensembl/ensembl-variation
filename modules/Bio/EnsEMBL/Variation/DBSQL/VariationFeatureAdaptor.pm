@@ -2467,7 +2467,7 @@ sub fetch_by_spdi_notation{
   # Variation is an indel  
   elsif($check_deleted_seq_letters && $check_inserted_seq_letters){
     $start = $position + 1; 
-    $end = $position + length($inserted_seq);   
+    $end = $position + length($deleted_seq);   
 
     my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + length($deleted_seq)); 
     $ref_allele = uc $deleted_seq; 
