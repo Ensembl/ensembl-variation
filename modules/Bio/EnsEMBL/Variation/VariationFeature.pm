@@ -1982,7 +1982,8 @@ Description : Returns a reference to a hash with the alternate and reference all
               By default uses the slice it is placed on as reference and only returns spdi notation for the alternate alleles.
 Returntype  : Hash reference
 Exceptions  : Throws exception if VariationFeature can not be described relative to a Slice;
-              Throws exception if input is provided and value is not 0 or 1
+              Throws exception if input is provided and value is not 0 nor 1; 
+              Throws exception if reference allele contains odd characters 
 Caller      : general
 Status      : Experimental
 
@@ -2013,6 +2014,11 @@ sub spdi_genomic{
 
   my @all_alleles = split(/\//,$ref_feature->allele_string());
   my $ref_allele = shift @all_alleles;
+
+  # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
+  if( $ref_allele =~ m/[^ACGT\-]$/ig ){
+    throw("No supported SPDI genomic is available for Variation Feature $reference_name:$vf_start-$vf_end ($vf_strand)"); 
+  } 
 
   my $spdi_ref_allele;
   my $spdi_alt_allele;
@@ -2053,7 +2059,7 @@ sub spdi_genomic{
     elsif($alt_allele eq '-'){
       $spdi_ref_allele = $ref_allele;
       my $ref_size = length($spdi_ref_allele);
-      # If reference allele (e.g. deleted sequence) size > 20bp then spdi notation for the deletion is NC_000002.12:47403326:29:
+      # If reference allele (e.g. deleted sequence) length > 20bp then spdi notation for the deletion is NC_000002.12:47403326:29: 
       $spdi_ref_allele = $ref_size unless ( $ref_size <= 20 );
       $spdi_alt_allele = "";
     }
@@ -2063,8 +2069,12 @@ sub spdi_genomic{
       $spdi_alt_allele = $alt_allele;
     }
 
-    reverse_comp(\$spdi_ref_allele) if( $flip_allele == 1 && $spdi_ref_allele && $spdi_ref_allele =~ m/^[A-Z]+/i);
-    reverse_comp(\$spdi_alt_allele) if( $flip_allele == 1 && $spdi_alt_allele );
+    # If variation feature is on the reverse strand then flip alleles (SPDI format is only reported on forward strand)
+    # If variation is a deletion >20 bp then the deleted allele is represented by the sequence length (NC_000002:47403326:29:) and it doesn't need to be flipped  
+    if($flip_allele == 1 && $spdi_ref_allele =~ m/^[ACGT]*$/i){ 
+      reverse_comp(\$spdi_ref_allele) if( $spdi_ref_allele );  
+      reverse_comp(\$spdi_alt_allele) if( $spdi_alt_allele );
+    } 
 
     my $spdi_notation = $reference_name . ":" . $spdi_position . ":" . $spdi_ref_allele . ":" . $spdi_alt_allele;
     $spdi{$alt_allele} = $spdi_notation;
