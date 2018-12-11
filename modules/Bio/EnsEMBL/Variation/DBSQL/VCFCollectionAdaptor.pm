@@ -41,8 +41,6 @@ Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
   my $reg = 'Bio::EnsEMBL::Registry';
 
   # set path to configuration file
-  # optionally it can be set as environment variable $ENSEMBL_VARIATION_VCF_CONFIG_FILE
-  $Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = '/path/to/vcf_config.json';
 
   ## explicit use
 
@@ -101,6 +99,7 @@ use Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor);
+
 our @EXPORT_OK = qw($CONFIG_FILE);
 
 our $CONFIG_FILE;
@@ -123,6 +122,9 @@ our $CONFIG_FILE;
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
+
+  $Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor::CONFIG_FILE = $CONFIG_FILE if ($CONFIG_FILE); 
+
   my $self = $class->SUPER::new(@_); 
 
   my $config = $self->config; 
