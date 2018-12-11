@@ -87,13 +87,9 @@ use Bio::EnsEMBL::Variation::Population;
 use Bio::EnsEMBL::Variation::VCFVariationFeature;
 use Bio::EnsEMBL::Variation::IntergenicVariation;
 
-our %TYPES = (
-  'remote' => 1,
-  'local'  => 1,
-);
+use base qw(Bio::EnsEMBL::Variation::BaseAnnotation);
 
 my $MAX_OPEN_FILES = 2;
-
 
 =head2 new
 
@@ -135,223 +131,36 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my (
-    $id,
-    $description,
-    $type,
-    $use_as_source,
-    $filename_template,
-    $chromosomes,
     $sample_prefix,
     $individual_prefix,
     $pop_prefix,
     $sample_pops,
     $populations,
-    $assembly,
-    $source,
-    $strict,
-    $created,
-    $updated,
-    $is_remapped,
-    $adaptor,
-    $use_seq_region_synonyms,
-    $tmpdir,
     $ref_freq_index,
   ) = rearrange(
     [qw(
-      ID
-      DESCRIPTION
-      TYPE
-      USE_AS_SOURCE
-      FILENAME_TEMPLATE
-      CHROMOSOMES
       SAMPLE_PREFIX
       INDIVIDUAL_PREFIX
       POPULATION_PREFIX
       SAMPLE_POPULATIONS
       POPULATIONS
-      ASSEMBLY
-      SOURCE
-      STRICT_NAME_MATCH
-      CREATED
-      UPDATED
-      IS_REMAPPED
-      ADAPTOR
-      USE_SEQ_REGION_SYNONYMS
-      TMPDIR
       REF_FREQ_INDEX
     )],
     @_
   ); 
-  
-  throw("ERROR: No id defined for collection") unless $id;
-  throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
  
-  if( defined  $source && !$source->isa('Bio::EnsEMBL::Variation::Source')) {
-    throw("Bio::EnsEMBL::Variation::Source argument expected");
-  }
+ my $self = $class->SUPER::new(@_);
 
-  my %collection = (
-    adaptor => $adaptor,
-    id => $id,
-    description => $description,
-    type => $type,
-    use_as_source => $use_as_source,
-    sample_prefix => $sample_prefix,
-    individual_prefix => $individual_prefix,
-    population_prefix => $pop_prefix,
-    populations => $populations,
-    chromosomes => $chromosomes,
-    filename_template => $filename_template,
-    assembly  => $assembly,
-    source => $source,
-    strict_name_match => defined($strict) ? $strict : 0,
-    ref_freq_index => $ref_freq_index,
-    created => $created,
-    updated => $updated,
-    is_remapped => $is_remapped,
-    use_seq_region_synonyms => $use_seq_region_synonyms,
-    tmpdir => $tmpdir || cwd(),
-    _use_db => 1,
-    _raw_populations => $sample_pops,
-  );
+  $self->sample_prefix($sample_prefix);
+  $self->population_prefix($pop_prefix);
+  $self->{individual_prefix} = $individual_prefix;
+  $self->{populations} = $populations;
+  $self->{_raw_populations} = $sample_pops;
+  $self->ref_freq_index($ref_freq_index);
+  $self->{_use_db} = 1; 
   
-  bless(\%collection, $class);
-  
-  return \%collection;
+  return $self;
 }
-
-
-=head2 adaptor
-
-  Arg [1]    : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor $adaptor (optional)
-               Set the adaptor for this VCFCollection
-  Example    : my $adaptor = $collection->adaptor()
-  Description: Getter/Setter for the adaptor.
-  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub adaptor {
-  my $self = shift;
-  $self->{adaptor} = shift if @_;
-  return $self->{adaptor};
-}
-
-
-=head2 id
-
-  Arg [1]    : string $id (optional)
-               The new value to set the ID attribute to
-  Example    : my $id = $collection->id()
-  Description: Getter/Setter for the ID of this collection
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub id {
-  my $self = shift;
-  $self->{id} = shift if @_;
-  return $self->{id};
-}
-
-
-=head2 description
-
-  Arg [1]    : string $description (optional)
-               The new value to set the description attribute to
-  Example    : my $description = $collection->description()
-  Description: Getter/Setter for the description of this collection
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub description {
-  my $self = shift;
-  $self->{description} = shift if @_;
-  return $self->{description};
-}
-
-
-=head2 type
-
-  Arg [1]    : string $type (optional)
-               The new value to set the type attribute to
-  Example    : my $type = $collection->type()
-  Description: Getter/Setter for the type of this collection
-               ('local' or 'remote').
-  Returntype : string
-  Exceptions : invalid type
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub type {
-  my $self = shift;
-  
-  if(@_) {
-    my $type = shift;
-    throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
-    $self->{type} = shift if @_;
-  }
-  
-  return $self->{type};
-}
-
-
-=head2 use_as_source
-
-  Arg [1]    : bool $use_as_source (optional)
-               The new value to set the use_as_source attribute to
-  Example    : my $use_as_source = $collection->use_as_source()
-  Description: Getter/Setter for the use_as_source attribute of this
-               collection. Indicates to web code if we should treat
-               the variants in this collection as a source/track.
-  Returntype : boolean
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub use_as_source {
-  my $self = shift;
-  $self->{use_as_source} = shift if @_;
-  return $self->{use_as_source};
-}
-
-
-=head2 strict_name_match
-
-  Arg [1]    : bool $strict (optional)
-               The new value to set the attribute to
-  Example    : my $strict = $collection->strict_name_match()
-  Description: Getter/Setter for the strict_name_match parameter. If set
-               to a true value, genotypes are returned against a
-               VariationFeature only if one of the names in the VCF ID field
-               matches $vf->variation_name
-  Returntype : boolean
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub strict_name_match {
-  my $self = shift;
-  $self->{strict_name_match} = shift if @_;
-  return $self->{strict_name_match};
-}
-
 
 =head2 ref_freq_index
 
@@ -378,6 +187,62 @@ sub ref_freq_index {
   return $self->{ref_freq_index};
 }
 
+=head2 list_chromosomes
+
+  Example    : my $chrs = $collection->list_chromosomes()
+  Description: Get list of chromosome names covered by this collection.
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub list_chromosomes {
+  my $self = shift;
+
+  if(!defined($self->{chromosomes})) {
+
+    # if the collection only contains one file we can use tabix to get the chr list
+    # test this by passing a dummy value to get the filename
+    my $dummy_chr = $$.'_dummy_VCFCollection_chr';
+
+    my $fn = $self->_get_vcf_filename_by_chr($dummy_chr);
+
+    if($fn !~ /$dummy_chr/) {
+      $self->{chromosomes} = $self->_vcf_parser_obj($fn)->{tabix_file}->seqnames;
+    }
+    else {
+      $self->{chromosomes} = [];
+    }
+  }
+  return $self->{chromosomes};
+}
+
+=head2 use_db
+
+  Arg [1]    : int $use_db (optional)
+               The new value to set the use_db attribute to.
+  Example    : my $use_db = $collection->use_db()
+  Description: Getter/Setter for the use_db attribute of this collection.
+               If set to 1 (default), the API will attempt to retrieve
+               Sample and Population objects from the database, using
+               sample_prefix and population_prefix as appropriate.
+               If set to 0, the API will create "fake" Sample and
+               Population objects. Fake objects will also be created if
+               the DB fetch fails for a sample.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_db {
+  my $self = shift;
+  $self->{_use_db} = shift if @_;
+  return $self->{_use_db};
+}
 
 =head2 sample_prefix
 
@@ -420,130 +285,6 @@ sub population_prefix {
   my $self = shift;
   $self->{population_prefix} = shift if @_;
   return $self->{population_prefix} || '';
-}
-
-
-=head2 filename_template
-
-  Arg [1]    : string $filename_template (optional)
-               The new value to set the filename_template attribute to
-  Example    : my $filename_template = $collection->filename_template()
-  Description: Getter/Setter for the filename template of this collection.
-               The wildcard string '###CHR###' can be used in this template
-               and will be replaced with the chromosome name when reading,
-               allowing a collection to consist of e.g. one VCF file per
-               chromosome.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub filename_template {
-  my $self = shift;
-  $self->{filename_template} = shift if @_;
-  return $self->{filename_template};
-}
-
-
-=head2 tmpdir
-
-  Arg [1]    : string $tmpdir (optional)
-               The new value to set the tmpdir attribute to
-  Example    : my $tmpdir = $collection->tmpdir()
-  Description: Getter/Setter for the temporary directory path used when
-               downloading indexes for remote tabix files.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub tmpdir {
-  my $self = shift;
-  $self->{tmpdir} = shift if @_;
-  return $self->{tmpdir};
-}
-
-
-=head2 use_seq_region_synonyms
-
-  Arg [1]    : int $use_seq_region_synonyms (optional)
-               The new value to set the use_seq_region_synonyms attribute to
-  Example    : my $use_seq_region_synonyms = $collection->use_seq_region_synonyms()
-  Description: Getter/Setter for the parameter that tells the API to look
-               up seq_region synonyms in VCF queries
-  Returntype : bool
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub use_seq_region_synonyms {
-  my $self = shift;
-  $self->{use_seq_region_synonyms} = shift if @_;
-  return $self->{use_seq_region_synonyms};
-}
-
-
-=head2 list_chromosomes
-
-  Example    : my $chrs = $collection->list_chromosomes()
-  Description: Get list of chromosome names covered by this collection.
-  Returntype : arrayref of strings
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub list_chromosomes {
-  my $self = shift;
-
-  if(!defined($self->{chromosomes})) {
-
-    # if the collection only contains one file we can use tabix to get the chr list
-    # test this by passing a dummy value to get the filename
-    my $dummy_chr = $$.'_dummy_VCFCollection_chr';
-
-    my $fn = $self->_get_vcf_filename_by_chr($dummy_chr);
-
-    if($fn !~ /$dummy_chr/) {
-      $self->{chromosomes} = $self->_vcf_parser_obj($fn)->{tabix_file}->seqnames;
-    }
-    else {
-      $self->{chromosomes} = [];
-    }
-  }
-  return $self->{chromosomes};
-}
-
-
-=head2 use_db
-
-  Arg [1]    : int $use_db (optional)
-               The new value to set the use_db attribute to.
-  Example    : my $use_db = $collection->use_db()
-  Description: Getter/Setter for the use_db attribute of this collection.
-               If set to 1 (default), the API will attempt to retrieve
-               Sample and Population objects from the database, using
-               sample_prefix and population_prefix as appropriate.
-               If set to 0, the API will create "fake" Sample and
-               Population objects. Fake objects will also be created if
-               the DB fetch fails for a sample.
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub use_db {
-  my $self = shift;
-  $self->{_use_db} = shift if @_;
-  return $self->{_use_db};
 }
 
 
@@ -1167,63 +908,6 @@ sub get_all_SampleGenotypeFeatures_by_Slice {
   return \@genotypes;
 }
 
-## used for GA4GH - milliseconds from the epoch 
-## could store by file (chrom) rather than collection?
-sub created{
-  my $self = shift;
-  return $self->{created};
-}
-## used for GA4GH - milliseconds from the epoch
-sub updated{
-  my $self = shift;
-  return $self->{updated};
-}
-
-## info values cannot all be trusted for lifted over positions
-sub is_remapped{
-  my $self = shift;
-  return $self->{is_remapped};
-}
-
-sub source {
-  my $self = shift;
-  
-  if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
-      throw("Bio::EnsEMBL::Variation::Source argument expected");
-    }
-    $self->{'source'} = shift;
-  }
-  
-  return $self->{'source'};
-}
-
-sub source_name{
-  my $self = shift;
-  my $source = $self->{source};
-  return unless defined $source;
-  
-  $source->name(@_) if(@_);
-  return $source->name;
-}
-
-sub source_url{
-  my $self = shift;
-  my $source = $self->{source};
-  return unless defined $source;
-
-  $source->url(@_) if(@_);
-  return $source->url;
-}
-
-sub assembly{
-  my $self = shift;
-  return $self->{assembly};
-}
-
-## INTERNAL METHODS
-###################
-
 sub _limit_Samples {
   my $self = shift;
   my $samples = shift;
@@ -1425,29 +1109,6 @@ sub _get_vcf_by_chr {
   return $self->{files}->{$chr};
 }
 
-sub _get_synonyms_by_chr {
-  my $self = shift;
-  my $chr = shift;
-
-  my $cache = $self->{_seq_region_synonyms} ||= {};
-
-  if(!exists($cache->{$chr})) {
-    my @synonyms = ();
-
-    if(my $db = $self->adaptor->db) {
-      if(my $sa = $db->dnadb->get_SliceAdaptor()) {
-        if(my $s = $sa->fetch_by_region(undef, $chr)) {
-          @synonyms = map {$_->name} @{$s->get_all_synonyms};
-        }
-      }
-    }
-
-    $cache->{$chr} = \@synonyms;
-  }
-
-  return $cache->{$chr};
-}
-
 sub _get_vcf_filename_by_chr {
   my ($self, $chr) = @_;
   my $file = $self->filename_template;
@@ -1469,12 +1130,6 @@ sub _vcf_parser_obj {
   chdir($cwd);
 
   return $obj;
-}
-
-sub _current {
-  my $self = shift;
-  $self->{current} = shift if @_;
-  return $self->{current};
 }
 
 sub _seek {
@@ -1697,7 +1352,7 @@ sub _get_all_population_names {
 sub vcf_collection_close {
   my $self = shift;
   my $vcf  = $self->{current};
-  
+
   $vcf->close() if ($vcf);
 }
 
