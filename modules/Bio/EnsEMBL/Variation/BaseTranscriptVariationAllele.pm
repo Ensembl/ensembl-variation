@@ -113,11 +113,10 @@ sub _intron_effects {
     $tv ||= $self->base_variation_feature_overlap;
     $vf ||= $self->base_variation_feature;
     my $vf_start = $vf->{start};
-    
     foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
       my ($r_start_unshifted, $r_end_unshifted) = ($r_start, $r_end); 
-      ($r_start_unshifted, $r_end_unshifted) = ($vf->{unshifted_start} + $region->{s}, $vf->{unshifted_start} + $region->{e}) if defined($vf->{unshifted_start});
+      ($r_start_unshifted, $r_end_unshifted) = ($self->{shift_object}->{unshifted_start} + $region->{s}, $self->{shift_object}->{unshifted_start}+ $region->{e}) if defined($self->{shift_object});
 
       my $insertion = $r_start == $r_end + 1;
       

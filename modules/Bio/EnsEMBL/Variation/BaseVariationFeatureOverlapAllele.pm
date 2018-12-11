@@ -256,14 +256,25 @@ sub get_all_OverlapConsequences {
     my $bvfo = $self->base_variation_feature_overlap;
     my $bvf  = $bvfo->base_variation_feature;
     my $feat = $bvfo->feature;
-    
+
     my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
 
     # loop over all the consequences determined for this pre hash
     OC: for my $oc (@{$self->_get_oc_list($pre)}) {
 
       last if $assigned_tier && $oc->{tier} > $assigned_tier;
+      my $shifting_offset = 0;
+      if($self->transcript->strand() > 0)
+      {
+        $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} : 0;
+      }
+      elsif($self->transcript->strand < 0)
+      {
+        $shifting_offset = defined($self->{shift_object}) ? 0 - $self->{shift_object}->{shift_length} : 0;
+      }
       
+      $bvf->{start} += $shifting_offset;
+      $bvf->{end} += $shifting_offset;
       if($oc->predicate->($self, $feat, $bvfo, $bvf)) {
         push @$cons, $oc;
 
@@ -272,6 +283,8 @@ sub get_all_OverlapConsequences {
           $assigned_tier = $tier;
         }
       }
+      $bvf->{start} -= $shifting_offset;
+      $bvf->{end} -= $shifting_offset;
     }
 
     $cons = [$DEFAULT_OVERLAP_CONSEQUENCE] unless @$cons;
@@ -291,7 +304,6 @@ sub _get_oc_list {
   unless(exists($cache->{$digest})) {
     my $dummy_feat = bless {}, $pre->{feature_class};
     my $dummy_vf   = bless {}, $pre->{vf_class};
-
     $cache->{$digest} ||= [
       map {$_->{SO_term}}
       grep {
@@ -329,7 +341,7 @@ sub _skip_oc {
 # used to work out whether to execute predicates in get_all_OverlapConsequences
 sub _pre_consequence_predicates {
   my ($self, $feat, $bvfo, $bvf) = @_;
-  
+
   unless(exists($self->{pre_consequence_predicates})) {
     $bvfo ||= $self->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
@@ -435,7 +447,17 @@ sub _bvfo_preds {
   my $bvfo_preds = {};
   my $pred_digest = '';
 
-  my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});  
+  my $shifting_offset = 0;
+  if($feat->strand() > 0)
+  {
+    $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} : 0;
+  }
+  elsif($feat->strand < 0)
+  {
+    $shifting_offset = defined($self->{shift_object}) ? 0 - $self->{shift_object}->{shift_length} : 0;
+  }
+
+  my ($vf_start, $vf_end) = ($bvf->{start} + $shifting_offset, $bvf->{end} + $shifting_offset);  
   my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
   
   # within feature
