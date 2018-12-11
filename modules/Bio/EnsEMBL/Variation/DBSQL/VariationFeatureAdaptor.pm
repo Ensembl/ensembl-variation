@@ -2426,8 +2426,11 @@ sub fetch_by_spdi_notation{
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)")
         unless ($ref_allele eq $refseq_allele);   
     } 
+    elsif($deleted_seq == 0){
+      throw ("Could not parse the SPDI notation $spdi. SPDI notation not supported."); 
+    } 
     else{
-      throw ("Could not parse the SPDI notation $spdi. Deleted sequence ($deleted_seq) length does not match inserted sequence length (1).")
+      throw ("Could not parse the SPDI notation $spdi. Deleted sequence length ($deleted_seq) does not match inserted sequence length (1).")
         unless ($deleted_seq == 1);
       $ref_allele = $refseq_allele;
     }
