@@ -61,10 +61,9 @@ matrix:
   exclude:
   - perl: '5.14'
     env: COVERALLS=false DB=mysql
-  - perl: '5.14'
-    env: COVERALLS=true  DB=mysql
   - perl: '5.26'
-    env: COVERALLS=false DB=mysql
+    env: COVERALLS=true  DB=mysql
+
 
 script: ./travisci/harness.sh
 
