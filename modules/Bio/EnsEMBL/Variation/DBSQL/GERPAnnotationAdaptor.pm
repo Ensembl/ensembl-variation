@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::GERPAnnotation;
+use Bio::EnsEMBL::Variation::Source;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor);
@@ -133,7 +134,6 @@ sub new {
     }
 
     my $filename_template = $self->_get_filename_template($hash);
-
     ## create source object if source info available
     my $source = Bio::EnsEMBL::Variation::Source->new_fast({
       name        => $hash->{source_name} || $hash->{id},
