@@ -123,7 +123,12 @@ sub _return_3prime {
           $self->{shift_object} = $shifted_obj; #cleanup
           return $self;
         }
+        
       }
+    }
+    else{ # This vf does not lie within that feature
+      $self->{shift_object} = $shifted_obj; #fix this, currently nonsense
+      return $self;
     }
   }
   #return $self if (scalar(@preshifted_objects)) && !$hgvs_only;
@@ -185,8 +190,10 @@ sub _return_3prime {
   my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
   $new_slice = $new_slice->constrain_to_seq_region();
   
-  my $post_seq =  $slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-  my $pre_seq =  $slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
+  my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
+  
+  my $pre_seq = substr($seqs, 0, $area_to_search); #$slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
+  my $post_seq = substr($seqs, 0 -$area_to_search);#$slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
   
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
@@ -239,9 +246,8 @@ sub _return_3prime {
       }
     }
   }
-  
-  my $five_prime_flanking_seq = $slice_to_shrink->subseq($orig_start - $shift_length - 1, $orig_start - 1); #Can possibly speed up by subseqing $pre_seq
-  my $three_prime_flanking_seq = $slice_to_shrink->subseq($orig_end + 1, $orig_end + $shift_length + 1); #Can possibly speed up by subseqing $post_seq
+  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);#$slice_to_shrink->subseq($orig_start - $shift_length - 1, $orig_start - 1); #Can possibly speed up by subseqing $pre_seq
+  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1); #$slice_to_shrink->subseq($orig_end + 1, $orig_end + $shift_length + 1); #Can possibly speed up by subseqing $post_seq
   
   my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
 
