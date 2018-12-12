@@ -17,7 +17,7 @@ The script is a wrapper of the Ensembl Variation API to retrieve the phenotype a
 
 #### Script options
 * `-input_file | i [input_file]`: input file (list or VCF or VEP output)
-* `-input_type [type]`: type of input data: [variant, gene, phenotype, vep] (Default: gene)
+* `-input_type [type]`: type of input data: [variant, gene, phenotype, vep] (default: gene)
 * `-species [species]`: species to use (default: human)
 * `-assembly [assembly]`: assembly to use if species is human (default: grch38)
 * `-registry [registry_file]`: [registry_file](https://www.ensembl.org/info/docs/api/registry.html)
@@ -27,7 +27,7 @@ The script is a wrapper of the Ensembl Variation API to retrieve the phenotype a
 * `-output_file|-o [output_file]`: output file (default: phenotype_annotation_output.txt)
 * `-output_format [format]`: format of the output data: [txt, bed, vcf] (default: txt)
 * `-force_overwrite`: if output file exists it will get overwritten
-* `-verbose`: print a bit more information while running (Default: off)
+* `-verbose`: print a bit more information while running (default: off)
 * `-help`: print usage message
 
 <a name="examples"></a>
