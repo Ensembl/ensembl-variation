@@ -131,6 +131,9 @@ sub new {
   my $root_dir = $self->root_dir;
   my $tmpdir = $self->tmpdir;
   foreach my $hash(@{$config->{collections}}) {
+#    next unless (defined $hash->{annotation_type} && lc $hash->{annotation_type} eq 'vcf');
+    next if (defined $hash->{annotation_type});
+
     # check the species and assembly if we can
     if($self->db) {
       my $species = $hash->{species};
@@ -149,21 +152,7 @@ sub new {
       }
     }
 
-    # Check that the remote/local VCF file exists before creating a corresponding VCFCollection object
-    my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
-
-    # Can't test if a file with '#' characters exists (e.g. 1KG VCF files 'ALL.chr###CHR###.phase3...genotypes.vcf.gz')
-    if ($filename_template !~ /[#]+[^#]+[#]+/) {
-
-      # Check if the local or remote file exists and is accessible
-      my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
-
-      # Skip creation of VCFCollection object with non-existent or inaccessible file
-      if (!$file_exists) {
-        warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
-        next;
-      }
-    }
+    my $filename_template = $self->_get_filename_template($hash);
 
     ## create source object if source info available
     my $source = Bio::EnsEMBL::Variation::Source->new_fast({
