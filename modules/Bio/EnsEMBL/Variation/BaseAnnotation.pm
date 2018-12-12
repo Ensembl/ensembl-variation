@@ -61,7 +61,6 @@ our %TYPES = (
   'local'  => 1,
 );
 
-
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
