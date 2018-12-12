@@ -59,19 +59,21 @@ my $vf = $variation->get_all_VariationFeatures()->[0];
 my $gerp_score = $gerp_annotation->get_score_by_VariationFeature($vf);
 ok($gerp_score == -1, "GERP score for rs76641827");
 
-#my $vf_gerp_score;
-#warning { $vf_gerp_score = $vf->get_gerp_score($gerp_file->filename_template); };
-#ok($vf_gerp_score == -1, "GERP score for VF rs76641827");
+my $vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
+my ($id, $score) = %{$vf_gerp_score};
+ok($score == -1, "GERP score for VF rs76641827");
+ok($id eq '70_mammals.gerp_conservation_score', "GERP annotation file name");
 
 my $cadd_scores = $cadd_annotation->get_all_scores_by_VariationFeature($vf);
 ok($cadd_scores->{A} == 24.36, "CADD score for rs76641827 variant allele A");
 ok($cadd_scores->{C} ==  4.36, "CADD score for rs76641827 variant allele C");
 ok($cadd_scores->{G} == 14.36, "CADD score for rs76641827 variant allele G");
 
-#my $vf_cadd_scores;
-#warning { $vf_cadd_scores = $vf->get_cadd_scores($cadd_file->filename_template); };
-#ok($vf_cadd_scores->{A} == 24.36, "CADD score for VF rs76641827 variant allele A");
-#ok($vf_cadd_scores->{C} ==  4.36, "CADD score for VF rs76641827 variant allele C");
-#ok($vf_cadd_scores->{G} == 14.36, "CADD score for VF rs76641827 variant allele G");
+my $vf_cadd_scores = $vf->get_cadd_scores($cadd_annotation->filename_template);
+my ($cadd_annotation_id, $scores) = %{$vf_cadd_scores};
+ok($cadd_annotation_id eq 'CADD', "CADD annotation file name");
+ok($scores->{A} == 24.36, "CADD score for VF rs76641827 variant allele A");
+ok($scores->{C} ==  4.36, "CADD score for VF rs76641827 variant allele C");
+ok($scores->{G} == 14.36, "CADD score for VF rs76641827 variant allele G");
 
 done_testing();
