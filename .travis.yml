@@ -9,7 +9,8 @@ env:
   - COVERALLS=false DB=mysql
   global:
     secure: O28fOP56ZKwOl8ftpEaL+6DUxyD7JHAg4KIA7nrOUXR1cHr9F2q0+EFtZWJb9gzhfpr5wALSfHwXfSZslCp9mX61BAzHMQxUT1ArLibJWsjA8r7/6lcm2RP4WgfH8nEIF/83gaAJrxs6Qmt4dmtDHA7qhk+X/xDCYqbtUU3sldw=
-sudo: false
+sudo: required
+dist: trusty
 group: deprecated
 addons:
   apt:
