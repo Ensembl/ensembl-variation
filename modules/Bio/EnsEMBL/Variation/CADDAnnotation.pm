@@ -63,6 +63,8 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::CADDAnnotation;
 
+use Cwd;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::EnsEMBL::IO::Parser::CADDTabix;
