@@ -29,18 +29,37 @@ limitations under the License.
 =cut
 
 #
-# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::CADDAnnotationAdaptor
 #
 #
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
+Bio::EnsEMBL::DBSQL::CADDAnnotationAdaptor
 
 =head1 SYNOPSIS
+  my $reg = 'Bio::EnsEMBL::Registry';
+
+  # set path to configuration file
+
+  ## explicit use
+
+  # get CADD Annotation Adaptor
+  my $cadd_annotation_adaptor = $reg->get_adaptor('human', 'variation', 'CADDAnnotation');
+  my $va  = $reg->get_adaptor('human', 'variation', 'variation');
+
+  my $v = $va->fetch_by_name('rs699');
+  my $vf = $v->get_all_VariationFeatures->[0];
+
+  # iterate over CADD annotation collections
+  foreach my $cadd_annotation (@{$cadd_annotation_adaptor->fetch_all})
+    # get CADD scores for this VariationFeature
+    my $cadd_scores = $cadd_annotation->get_scores_by_VariationFeature($vf);
+  }
+
 =head1 DESCRIPTION
 
-This module creates a set of objects that can read from tabix-indexed VCF files.
+This module creates a set of objects that can read CADD scores from tabixed files.
 
 =head1 METHODS
 
@@ -52,29 +71,30 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::CADDAnnotationAdaptor;
 
-use JSON;
-use Cwd;
-use Net::FTP;
-use URI;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
-use Bio::EnsEMBL::Variation::VCFCollection;
+use Bio::EnsEMBL::Variation::CADDAnnotation;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-#our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor);
 
+our @EXPORT_OK = qw($CONFIG_FILE);
+
+our $CONFIG_FILE;
 
 =head2 new
 
   Arg [-CONFIG]: string - path to JSON configuration file
-  Example    : my $vca = Bio::EnsEMBL::Variation::VCFCollectionAdaptor->new(
-                 -config => '/path/to/vcf_config.json'
+  Example    : my $cadd_annotation_adaptor = Bio::EnsEMBL::Variation::CADDAnnotationAdaptor->new(
+                 -config => '/path/to/annotation_config.json'
                );
-  Description: Constructor.  Instantiates a new VCFCollectionAdaptor object.
-  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
+
+  Description: Constructor.  Instantiates a new CADDAnnotationAdaptor object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::CADDAnnotationAdaptor
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -84,14 +104,20 @@ use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor);
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
+
+  $Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor::CONFIG_FILE = $CONFIG_FILE if ($CONFIG_FILE); 
+
   my $self = $class->SUPER::new(@_); 
 
   my $config = $self->config; 
   my $root_dir = $self->root_dir;
   my $tmpdir = $self->tmpdir;
   foreach my $hash(@{$config->{collections}}) {
+    next unless (defined $hash->{annotation_type} && lc $hash->{annotation_type} eq 'cadd');
+
     # check the species and assembly if we can
     if($self->db) {
+
       my $species = $hash->{species};
       my $assembly = $hash->{assembly};
       
@@ -108,21 +134,7 @@ sub new {
       }
     }
 
-    # Check that the remote/local VCF file exists before creating a corresponding VCFCollection object
-    my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
-
-    # Can't test if a file with '#' characters exists (e.g. 1KG VCF files 'ALL.chr###CHR###.phase3...genotypes.vcf.gz')
-    if ($filename_template !~ /[#]+[^#]+[#]+/) {
-
-      # Check if the local or remote file exists and is accessible
-      my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
-
-      # Skip creation of VCFCollection object with non-existent or inaccessible file
-      if (!$file_exists) {
-        warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
-        next;
-      }
-    }
+    my $filename_template = $self->_get_filename_template($hash);
 
     ## create source object if source info available
     my $source = Bio::EnsEMBL::Variation::Source->new_fast({
@@ -132,63 +144,23 @@ sub new {
       description => $hash->{description} || $hash->{id},
     });
 
-    ## store populations if available
-    my $populations;
-    if( defined $hash->{populations}){
-      my $prefix = $hash->{population_prefix} || '';
-      my $display_group_data = $hash->{population_display_group} || {};
-
-      foreach my $pop_id (keys %{$hash->{populations}}) {
-
-        my $ref = $hash->{populations}->{$pop_id};
-        my $hashref;
-
-        if(ref($ref) eq 'HASH') {
-          $hashref = $ref;
-          
-          # we need a name at least
-          throw("ERROR: No name given in population from VCF config\n") unless $hashref->{name};
-
-          $hashref->{dbID} ||= $pop_id;
-        }
-        else {
-          $hashref = { name => $ref };
-        }
-
-        # add display group data
-        $hashref->{$_} = $display_group_data->{$_} for keys %{$display_group_data};
-
-        # add prefix
-        if($prefix && !exists($hashref->{_raw_name})) {
-          $hashref->{_raw_name} = $hashref->{name};
-          $hashref->{name} = $prefix.$hashref->{_raw_name};
-        }
-
-        push @{$populations}, Bio::EnsEMBL::Variation::Population->new_fast($hashref);
-      }
-    }
-
-    $self->add_VCFCollection(Bio::EnsEMBL::Variation::VCFCollection->new(
-      -id => $hash->{id},
-      -description => $hash->{description},
-      -type => $hash->{type},
-      -use_as_source => $hash->{use_as_source},
-      -filename_template => $filename_template,
-      -chromosomes => $hash->{chromosomes},
-      -sample_prefix => $hash->{sample_prefix},
-      -population_prefix => $hash->{population_prefix},
-      -sample_populations => $hash->{sample_populations},
-      -populations =>  $populations || undef ,
-      -assembly  => $hash->{assembly} || undef,
-      -source => $source || undef,
-      -strict_name_match => $hash->{strict_name_match},
-      -use_seq_region_synonyms => $hash->{use_seq_region_synonyms},
-      -created =>$hash->{created} || undef,
-      -updated =>$hash->{updated} || undef,
-      -is_remapped => $hash->{is_remapped} ||0,
-      -adaptor => $self,
-      -tmpdir => $hash->{tmpdir} || $tmpdir,
-      -ref_freq_index => $hash->{ref_freq_index},
+    $self->add_CADDAnnotation(
+      Bio::EnsEMBL::Variation::CADDAnnotation->new(
+        -id => $hash->{id},
+        -description => $hash->{description},
+        -type => $hash->{type},
+        -use_as_source => $hash->{use_as_source},
+        -filename_template => $filename_template,
+        -chromosomes => $hash->{chromosomes},
+        -assembly  => $hash->{assembly} || undef,
+        -source => $source || undef,
+        -strict_name_match => $hash->{strict_name_match},
+        -use_seq_region_synonyms => $hash->{use_seq_region_synonyms},
+        -created =>$hash->{created} || undef,
+        -updated =>$hash->{updated} || undef,
+        -is_remapped => $hash->{is_remapped} || 0,
+        -adaptor => $self,
+        -tmpdir => $hash->{tmpdir} || $tmpdir,
     ));
   }
   return $self;
@@ -196,9 +168,9 @@ sub new {
 
 =head2 fetch_by_id
 
-  Example    : my $collection = $vca->fetch_by_id('1000GenomesPhase3');
-  Description: Fetches VCFCollection with given ID
-  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Example    : my $collection = $cadd_annotation_adaptor->fetch_by_id('cadd_version123');
+  Description: Fetches CADDAnnotation with given ID
+  Returntype : Bio::EnsEMBL::Variation::CADDAnnotation
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -208,15 +180,16 @@ sub new {
 sub fetch_by_id {
   my $self = shift;
   my $id = shift;
+
   return $self->{collections}->{$id};
 }
 
 
 =head2 fetch_all
 
-  Example    : my $collections = $vca->fetch_all();
-  Description: Fetches all configured VCFCollections
-  Returntype : Arrayref of Bio::EnsEMBL::Variation::VCFCollection
+  Example    : my $collections = $cadd_annotation_adaptor->fetch_all();
+  Description: Fetches all configured CADDAnnotations
+  Returntype : Arrayref of Bio::EnsEMBL::Variation::CADDAnnotations
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -229,28 +202,11 @@ sub fetch_all {
 }
 
 
-=head2 fetch_all_for_web
+=head2 add_CADDAnnotation
 
-  Example    : my $collections = $vca->fetch_all_for_web();
-  Description: Fetches all configured VCFCollections that can be used
-               as sources on the web
-  Returntype : Arrayref of Bio::EnsEMBL::Variation::VCFCollection
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub fetch_all_for_web {
-  return [grep {$_->use_as_source} @{$_[0]->fetch_all}];
-}
-
-
-=head2 add_VCFCollection
-
-  Example    : $vca->add_VCFCollection($collection);
-  Description: Add a VCFCollection to the cached list on this adaptor
-  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Example    : $cadd_annotation_adaptor->add_CADDAnnotation($collection);
+  Description: Add a CADDAnnotation to the cached list on this adaptor
+  Returntype : Bio::EnsEMBL::Variation::CADDAnnotation
   Exceptions : throw on invalid or missing collection
                throw on attempt to add collection with duplicated ID
   Caller     : general
@@ -258,12 +214,12 @@ sub fetch_all_for_web {
 
 =cut
 
-sub add_VCFCollection {
+sub add_CADDAnnotation {
   my $self = shift;
   my $collection = shift;
 
   # check class
-  assert_ref($collection, 'Bio::EnsEMBL::Variation::VCFCollection');
+  assert_ref($collection, 'Bio::EnsEMBL::Variation::CADDAnnotation');
 
   # check ID
   my $id = $collection->id;
@@ -275,11 +231,10 @@ sub add_VCFCollection {
   return $collection;
 }
 
+=head2 remove_CADDAnnotation_by_ID
 
-=head2 remove_VCFCollection_by_ID
-
-  Example    : $vca->remove_VCFCollection_by_ID($id);
-  Description: Remove a VCFCollection from the cached list on this adaptor
+  Example    : $cadd_annotation_adaptor->remove_CADDAnnotation_by_ID($id);
+  Description: Remove a CADDAnnotation from the cached list on this adaptor
   Returntype : bool (0 = ID does not exist; 1 = deleted OK)
   Exceptions : none
   Caller     : general
@@ -287,7 +242,7 @@ sub add_VCFCollection {
 
 =cut
 
-sub remove_VCFCollection_by_ID {
+sub remove_CADDAnnotation_by_ID {
   my $self = shift;
   my $id = shift;
 
