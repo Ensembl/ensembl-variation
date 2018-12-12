@@ -1247,7 +1247,6 @@ sub frameshift {
 
 sub partial_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    $DB::single = 1;
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1259,7 +1258,6 @@ sub partial_codon {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
         return 0 unless defined $bvfo->translation_start();
-        $DB::single = 1;
         #delete($bvfoa->{shift_object});
         my $cds_length = length $bvfo->_translateable_seq;
 

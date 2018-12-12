@@ -101,6 +101,9 @@ sub _return_3prime {
   my $hgvs_only = shift;
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
+  
+  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
+
   my $tr ||= $tv->transcript;
   my $hgvs_notation;
   my @preshifted_objects = grep { ($_->{allele_string} eq $tv->{base_variation_feature}->{allele_string}) && ($_->{strand} eq $tr->strand())} @{$self->base_variation_feature->{tva_shift_objects}};
@@ -126,7 +129,7 @@ sub _return_3prime {
   #return $self if (scalar(@preshifted_objects)) && !$hgvs_only;
   #return $self if $vf->{shifted_flag} && !$hgvs_only;
 
-  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
+  
   
 
   # split into ref and alt, and take the important parts of indels
