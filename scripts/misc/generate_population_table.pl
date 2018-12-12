@@ -69,98 +69,36 @@ my $json_string = <IN>;
 # parse JSON into hashref $config
 my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file");
 
-my %pops_list;
 
-my %projects_in_vcf = ('gnomADe_GRCh38' => 1, 'gnomADg_GRCh38' => 1, 'uk10k_GRCh38' => 1, 'topmed_GRCh38' => 1);
-
-get_project_populations(\%projects_in_vcf);
 
 ## Settings ##
-my %pops = ('1000 Genomes Project'           => { 'order'      => 1,
-                                                  'species'    => 'Homo sapiens',
-                                                  'term'       => '1000GENOMES:phase_3%',
-                                                  'constraint' => 'size is not null',
-                                                  'url'        => 'http://www.1000genomes.org',
-                                                  'evidence'   => '1000Genomes'
-                                                },
-            'gnomAD exomes'                  => { 'order'    => 2,
-                                                  'species'  => 'Homo sapiens',
-                                                  'list'     => $pops_list{'gnomADe_GRCh38'},
-                                                  'url'      => 'http://gnomad.broadinstitute.org/'
-                                                },
-            'gnomAD genomes'                 => { 'order'    => 3,
-                                                  'species'  => 'Homo sapiens',
-                                                  'list'     => $pops_list{'gnomADg_GRCh38'},
-                                                  'url'      => 'http://gnomad.broadinstitute.org/'
-                                                },
-            'TOPMed'                         => { 'order'    => 4,
-                                                  'species'  => 'Homo sapiens',
-                                                  'list'     => $pops_list{'topmed_GRCh38'},
-                                                  'url'      => 'https://www.nhlbi.nih.gov/research/resources/nhlbi-precision-medicine-initiative/topmed'
-                                                },
-            'UK10K'                          => { 'order'    => 5,
-                                                  'species'  => 'Homo sapiens',
-                                                  'list'     => $pops_list{'uk10k_GRCh38'},
-                                                  'url'      => 'https://www.uk10k.org/'
-                                                },
-            'HapMap Project'                 => { 'order'    => 6,
-                                                  'species'  => 'Homo sapiens',
-                                                  'term'     => 'CSHL-HAPMAP:HAPMAP%',
-                                                  'url'      => 'https://www.genome.gov/10001688/international-hapmap-project/',
-                                                  'evidence' => 'HapMap'
-                                                },
-            'Exome Sequencing Project (ESP)' => { 'order'    => 7,
-                                                  'species'  => 'Homo sapiens',
-                                                  'term'     => 'ESP6500:%',
-                                                  'url'      => 'http://evs.gs.washington.edu/EVS/',
-                                                  'evidence' => 'ESP'
-                                                },
-            'Mouse Genomes Project (MGP)'    => { 'order'    => 8,
-                                                  'species'  => 'Mus musculus',
-                                                  'term'     => 'Mouse Genomes Project',
-                                                  'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
-                                                },
-            'NextGen Project - Sheep'        => { 'order'    => 9,
-                                                  'species'  => 'Ovis aries',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
-            'NextGen Project - Sheep'        => { 'order'    => 10,
-                                                  'species'  => 'Ovis aries',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
-            'NextGen Project - Cow'          => { 'order'    => 11,
-                                                  'species'  => 'Bos taurus',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
-            'NextGen Project - Goat'          => { 'order'   => 12,
-                                                  'species'  => 'Capra hircus',
-                                                  'term'     => 'NextGen:%',
-                                                  'url'      => 'http://projects.ensembl.org/nextgen/'
-                                                },
-            'EVA study PRJEB24066 - Dog'     => { 'order'    => 13,
-                                                  'species'  => 'Canis familiaris',
-                                                  'term'     => 'PRJEB24066%',
-                                                  'url'      => 'https://www.ebi.ac.uk/eva/?eva-study=PRJEB24066'
-                                                },
-           );
            
-my $server_name = 'http://static.ensembl.org';
+my %project_urls = (
+  '1000 Genomes'    => 'http://www.1000genomes.org',
+  'gnomAD'          => 'http://gnomad.broadinstitute.org/',
+  'TOPMed'          => 'https://www.nhlbi.nih.gov/research/resources/nhlbi-precision-medicine-initiative/topmed',
+  'UK10K'           => 'https://www.uk10k.org/',
+  'MGP'             => 'http://www.sanger.ac.uk/resources/mouse/genomes/',
+  'NextGen Project' => 'http://projects.ensembl.org/nextgen/',
+  'EVA'             => 'https://www.ebi.ac.uk/eva/?eva-study=###ID###',
+  'ISGC'            => 'http://www.sheephapmap.org/'
+);
+
+my $server_name = 'https://static.ensembl.org';
+   $server_name = $site if ($site) ;
 my $ecaption = 'Ensembl';
 my @hostnames = split /,/, $hlist;
 my $database = "";
 my $pswd = "";
 my $db_type = 'variation';
+
 my $margin_bottom_max = '35px';
 my $size_max_width = '36px';
+my $img_class = "badge-48";
 
 my $evidence_icon_prefix = '/i/val/evidence_';
 my $evidence_icon_suffix = '.png';
 my $evidence_doc_url  = '../prediction/variant_quality.html#evidence_status';
-
-$server_name = $site if ($site) ;
 
 my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2 = qq{SELECT p.name,p.description,p.size,p.freqs_from_gts,d.display_name,d.display_priority FROM population p, display_group d WHERE p.display_group_id=d.display_group_id ORDER by d.display_priority};
@@ -168,8 +106,10 @@ my $sql3 = qq{ SELECT p2.name FROM population p1, population p2, population_stru
                WHERE p1.population_id=ps.super_population_id AND p2.population_id=ps.sub_population_id AND p1.population_id=?};
 
 my $bg = '';
-my $first_species;
+my %pops_list;
 my %species_host;
+my %species_usual_name;
+my @evidence_list;
 
 
 ## Headers ##
@@ -203,122 +143,143 @@ foreach my $hostname (@hostnames) {
     my $label_name = ucfirst($s_name);
        $label_name =~ s/_/ /g;
     
+    # Get list of triplets: species / DB / Host
     $species_host{$label_name} = {'host' => $hostname, 'dbname' => $dbname};
+
+    # Get the list of evidence status
+    if (!@evidence_list) {
+      @evidence_list = @{get_evidence($dbname,$hostname)};
+    }
   }
   $sth->finish;
 }
+
+## Get all the data in (organised) hashes
+get_project_populations();
 
 
 ## Populations ##
 my $html_pop = '';
 
-foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pops)) {
-  
-  my $html_current_pop = '';
-  my $term = $pops{$project}{'term'};
-  my $list = $pops{$project}{'list'};
-  my $spe  = $pops{$project}{'species'};
-  my $url = $pops{$project}{'url'};
-  my $evidence = $pops{$project}{'evidence'};
+# Loop over the species (placing human first)
+foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(%pops_list)) {
 
-  my $project_id = $project;
-  $project_id =~ s/ /_/g;
-  $project_id = lc $project_id;
-  $html_current_pop .= qq{<table id="$project_id" class="ss" style="margin-bottom:4px">\n  $pop_table_header\n};
+  my $id_species = $species;
+     $id_species =~ s/ /_/g;
+  my $species_label = $species_usual_name{$species};
 
-  $bg = '';
-  my %pop_data;
-  my %pop_tree;
-  my %sub_pops;
-  my $pop_list;
-  
-  if ($term) {
-    my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
-    my $dbname = $species_host{$spe}{'dbname'};
-    my $host   = $species_host{$spe}{'host'};
-    my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
-    my $sth  = get_connection_and_query($dbname, $host, $stmt, [$term]);
-   
-    while(my @data = $sth->fetchrow_array) {
-    
-      my @composed_name = split(':', $data[1]);
-         $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
-      my $pop_name = join(':',@composed_name);
-      $data[2] = '-' if (!$data[2]);
-      my $desc = parse_desc($data[3]);
-      my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0], $dbname, $host);
-      
-      $pop_data{$data[1]} = {'id'    => $data[0],
-                             'label' => $pop_name,
-                             'desc'  => $desc,
-                             'size'  => $size
-                            };
-      # Super/sub populations                      
-      my $sth2 = get_connection_and_query($dbname, $host, $sql3, [$data[0]]);
-      while(my ($sub_pop) = $sth2->fetchrow_array) {
-        $sub_pops{$sub_pop} = 1;
-        $pop_tree{$data[1]}{$sub_pop} = 1; 
-      }
-      $sth2->finish;
-    }
-    $sth->finish;
-    $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
-  }
-  elsif ($list) {
-    foreach my $pname (keys(%$list)) {
-      my @composed_name = split(':', $pname);
-         $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
-      my $pop_name = join(':',@composed_name);
-      $pop_data{$pname} = {'label' => $pop_name,
-                           'desc'  => $list->{$pname},
-                           'size'  => '-'
-                          };
-    }
-    $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
-  }
-  
-  foreach my $pop (@$pop_list) {
+  my $margin_top = ($species =~ /Homo/i) ? '20px' : '50px';
 
-    my $new_bg = $bg;
-    if ($pop_tree{$pop}) {
-      $new_bg = ($pop =~ /all$/i) ? ' class="supergroup"' : ' class="subgroup"';
-    }
-    my $p_name = $pop_data{$pop}{'label'};
-       $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>} if (!$pop_tree{$pop} && %pop_tree);
-    my $desc   = $pop_data{$pop}{'desc'};
-    my $size   = $pop_data{$pop}{'size'};
-
-
-    $html_current_pop .= qq{  <tr$new_bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
-
-    $bg = set_bg($bg);
-  }
-
-  $html_current_pop .= "</table>\n";
-
-  my $plural = (scalar(@$pop_list) > 1) ? 's' : '';
+  # Species header
   $html_pop .= qq{
-  <ul style="padding-left:1em;margin-left:2px">
-    <li><h3>Population$plural from the <a href="$url" target="_blank" style="text-decoration:none">$project</a> (<i>$spe</i>)</h3></li>
-  </ul>
-  $html_current_pop\n};
+    <div style="padding-left:0px;padding-bottom:3px;margin-top:$margin_top;margin-bottom:20px">
+      <a href="/$id_species/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$id_species.png" alt="$id_species" class="$img_class" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="$id_species" style="display:inline;color:#333">$species<span class="small vdoc_species_sci_name"> ($species_label)</span></h2>
+    </div>
+    <div style="margin-left:10px">
+  };
 
+  # Loop over the projects (from the VCF config file)
+  foreach my $project_label (sort { $a cmp $b } keys(%{$pops_list{$species}})) {
 
-  # Evidence status
-  if ($pops{$project}{'evidence'}) {
-    my $evidence = $pops{$project}{'evidence'};
-    my $evidence_img = "$evidence_icon_prefix$evidence$evidence_icon_suffix";
-    my $margin = ($pops{$project}{'order'} == scalar(keys(%pops))-1) ? '30px' : $margin_bottom_max;
+    my %pop_seen;
+
+    my $project_id = lc($project_label);
+    $project_id =~ s/ /_/g;
+    my $html_current_pop = qq{<table id="$project_id" class="ss" style="margin-bottom:5px">\n  $pop_table_header\n};
+
+    my $evidence = $pops_list{$species}{$project_label}{'evidence'};
+
+    my $count_project_entries = 0;
+
+    # Loop over the different files/parts of a same project
+    foreach my $project (sort { $a cmp $b } keys(%{$pops_list{$species}{$project_label}})) {
+
+      $bg = '';
+
+      next if (!$pops_list{$species}{$project_label}{$project}{'pop_list'});
+
+      my %pop_tree;
+      my %sub_pops;
+
+      # Get the populations structure (if it exists)
+      %pop_tree = %{$pops_list{$species}{$project_label}{$project}{'pop_tree'}} if ($pops_list{$species}{$project_label}{$project}{'pop_tree'});
+      %sub_pops = %{$pops_list{$species}{$project_label}{$project}{'sub_pops'}} if ($pops_list{$species}{$project_label}{$project}{'sub_pops'});
+
+      my %pop_data = %{$pops_list{$species}{$project_label}{$project}{'pop_data'}};
+      my @pop_list = @{$pops_list{$species}{$project_label}{$project}{'pop_list'}};
+
+      @pop_list = sort { ($a !~ /ALL/ cmp $b !~ /ALL/) || $a cmp $b } @pop_list if (!%pop_tree);
+
+      # Loop over the populations and add a row for each
+      foreach my $pop (@pop_list) {
+        next if ($pop_seen{$pop});
+
+        # Avoid duplicated entries within the same project
+        $pop_seen{$pop} = 1;
+
+        my $new_bg = $bg;
+        if ($pop_tree{$pop}) {
+          $new_bg = ($pop =~ /all$/i) ? ' class="supergroup"' : ' class="subgroup"';
+        }
+        my $p_name = $pop_data{$pop}{'label'};
+           $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>} if (!$pop_tree{$pop} && %pop_tree);
+        my $desc   = $pop_data{$pop}{'desc'};
+        my $size   = $pop_data{$pop}{'size'};
+
+        # Create a HTML row with the population data
+        $html_current_pop .= qq{  <tr$new_bg>\n    <td>$p_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$desc</td>\n  </tr>\n};
+        $bg = set_bg($bg);
+        $count_project_entries ++;
+      }
+    }
+    $html_current_pop .= "</table>\n";
+
+    # Create the project header
+    my $plural = ($count_project_entries > 1) ? 's' : '';
+
+    my $url;
+    foreach my $project_name (keys(%project_urls)) {
+      if ($project_label =~ /$project_name/) {
+        $url = $project_urls{$project_name};
+        if ($url =~ /###ID###/ && $project_label =~ /EVA study\s(\w+)$/) {
+          my $study_id = $1;
+          $url =~ s/###ID###/$study_id/;
+        }
+        last;
+      }
+    }
+    my $project_title = ($url) ? qq{<a href="$url" target="_blank" style="text-decoration:none">$project_label</a>} : $project_label;
+       $project_title = ' the '.$project_title if ($project_title =~ /(project|study|consortium)/i);
+
     $html_pop .= qq{
-<p style="margin-bottom:$margin">
-Variants which have been discovered in this project have the "evidence status" <a href="$evidence_doc_url"><b>$evidence</b></a>.
-On the website this corresponds to the icon <a href="$evidence_doc_url"><img class="_ht" src="$evidence_img" title="$evidence" style="vertical-align:bottom"/></a>.
-</p>
-    };
+      <h3>Population$plural from $project_title</h3>
+      $html_current_pop\n};
+
+
+    # Evidence status
+    my $has_evidence = 0;
+    foreach my $evidence (@evidence_list) {
+      my $label_no_space = $project_label;
+         $label_no_space =~ s/ //g;
+
+      if ($project_label =~ /$evidence/ || $label_no_space =~ /$evidence/) {
+        my $evidence_img = "$evidence_icon_prefix$evidence$evidence_icon_suffix";
+        $html_pop .= qq{
+      <p style="margin-bottom:$margin_bottom_max">
+      Variants which have been discovered in this project have the "evidence status" <a href="$evidence_doc_url"><b>$evidence</b></a>.
+      On the website this corresponds to the icon <a href="$evidence_doc_url"><img class="_ht" src="$evidence_img" title="$evidence" style="vertical-align:bottom"/></a>.
+      </p>};
+      $has_evidence = 1;
+      last;
+      }
+    }
+
+    if ($has_evidence == 0) {
+      $html_pop .= qq{\n  <div style="margin-bottom:$margin_bottom_max"></div>\n};
+    }
   }
-  else {
-    $html_pop .= qq{\n<div style="margin-bottom:$margin_bottom_max"></div>\n};
-  }
+  $html_pop .= qq{</div>};
 }
 
 
@@ -328,10 +289,13 @@ print HTML $html_pop;
 close(HTML);
 
 
+
+
 #############
 ## Methods ##
 #############
 
+# Build the project populations structure if it exists
 sub get_population_structure {
   my $pops     = shift;
   my $pop_tree = shift;
@@ -359,7 +323,7 @@ sub get_population_structure {
   return $pop_list;
 }
 
-
+# Add the sub-populations after the super-population in the "pop_list" array
 sub add_population_to_list {
   my $pop_tree = shift;
   my $pop_id   = shift;
@@ -374,15 +338,203 @@ sub add_population_to_list {
   return $pop_list;
 }
 
+sub get_evidence {
+  my $dbname   = shift;
+  my $hostname = shift;
+  
+  my @evidence_list;
+  
+  my $stmt = qq{ SELECT value FROM attrib WHERE attrib_type_id=497 };
+  my $sth = get_connection_and_query($dbname, $hostname, $stmt);
+
+  while(my @data = $sth->fetchrow_array) {
+    push @evidence_list, $data[0];
+  }
+  $sth->finish;
+  return \@evidence_list;
+}
+
+
+# Get population size if it hasn't been set in the "population" SQL table
+sub get_size {
+  my $pop_id   = shift;
+  my $dbname   = shift;
+  my $hostname = shift;
+
+  my $stmt = qq{ SELECT count(*) FROM sample_population WHERE population_id=?};
+  my $sth = get_connection_and_query($dbname, $hostname, $stmt, [$pop_id]);
+  my $size = ($sth->fetchrow_array)[0];
+  $sth->finish;
+
+  return ($size == 0) ? '-' : $size;
+}
+
+# Alternate the background colour of the table rows
+sub set_bg {
+  my $bg_class = shift;
+  return ($bg_class eq '') ? ' class="bg2"' : '';
+}
+
+
+# Format the population description text
+sub parse_desc {
+  my $content = shift;
+  $content = '-' if (!$content);
+  my @desc = split(/\.,/, $content);
+  $content = "$desc[0]. $desc[1]." if scalar(@desc > 1);
+  
+  return $content;
+}
+
+# Build a hash containing all the relevant information to create the species/projects/populations content
+# Mostly based on the vcf_config file and Variation databases
+sub get_project_populations {
+
+  foreach my $project (@{$vcf_config->{'collections'}}) {
+    my $project_id = $project->{'id'};
+    next if ($project_id =~ /GRCh37/i);
+
+    my $species = ucfirst($project->{'species'});
+       $species =~ s/_/ /g;
+
+    if (!$species_usual_name{$species}) {
+      my $spe_host   = $species_host{$species}{'host'};
+      my $spe_dbname = $species_host{$species}{'dbname'};
+         $spe_dbname =~ s/variation/core/;
+      my $spe_stmt = qq{ SELECT meta_value FROM meta WHERE meta_key='species.display_name'};
+      my $spe_sth  = get_connection_and_query($spe_dbname, $spe_host, $spe_stmt);
+      $species_usual_name{$species} = ($spe_sth->fetchrow_array)[0];
+      $spe_sth->finish;
+    }
+
+    my $project_label = get_project_label($project,$species);
+
+    my $population_prefix;
+    if ($project->{'population_prefix'}) {
+      $population_prefix = $project->{'population_prefix'};
+    }
+    elsif ($project->{'sample_prefix'}) {
+      $population_prefix = $project->{'sample_prefix'};
+    }
+    # Special case for MGP
+    if ($population_prefix && $population_prefix =~ /^MGP:/) {
+      $population_prefix = "Mouse Genomes Project";
+    }
+
+    my %pop_data;
+    my %pop_tree;
+    my %sub_pops;
+    my $pop_list;
+
+    if ($project->{'populations'}) {
+      foreach my $pop (keys(%{$project->{'populations'}})) {
+        next if ($pop !~ /\w+/ || $pop eq '');
+        my $pop_name = $project->{'populations'}{$pop}{'name'};
+        if ($population_prefix && $pop_name !~ /$population_prefix/i) {
+          $pop_name = $population_prefix.$pop_name;
+        }
+        my @composed_name = split(':', $pop_name);
+           $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
+        $pop_name = join(':',@composed_name);
+
+        my $pop_desc = $project->{'populations'}{$pop}{'description'};
+
+        $pop_data{$pop_name} = {'id'    => $pop,
+                                'label' => $pop_name,
+                                'desc'  => $pop_desc,
+                                'size'  => '-'
+                               };
+        push(@$pop_list,$pop_name);
+      }
+      $pops_list{$species}{$project_label}{$project}{'pop_data'} = \%pop_data;
+      $pops_list{$species}{$project_label}{$project}{'pop_list'} = $pop_list;
+    }
+    else {
+      my $term = ($population_prefix) ? $population_prefix : '';
+         $term =~ s/:$//;
+      my $dbname = $species_host{$species}{'dbname'};
+      my $host   = $species_host{$species}{'host'};
+      my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE name like ? or name = ? ORDER BY name};
+      my $sth  = get_connection_and_query($dbname, $host, $stmt, ["$population_prefix%",$term]);
+
+      while(my @data = $sth->fetchrow_array) {
+
+        my @composed_name = split(':', $data[1]);
+           $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
+        my $pop_name = join(':',@composed_name);
+
+        $data[2] = '-' if (!$data[2]);
+        my $desc = parse_desc($data[3]);
+        my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0], $dbname, $host);
+
+        $pop_data{$data[1]} = {'id'    => $data[0],
+                               'label' => $pop_name,
+                               'desc'  => $desc,
+                               'size'  => $size
+                              };
+        # Super/sub populations                      
+        my $sth2 = get_connection_and_query($dbname, $host, $sql3, [$data[0]]);
+        while(my ($sub_pop) = $sth2->fetchrow_array) {
+          if (($population_prefix && $sub_pop =~ /^$population_prefix/) || !$population_prefix) {
+            $sub_pops{$sub_pop} = 1;
+            $pop_tree{$data[1]}{$sub_pop} = 1;
+          }
+        }
+        $sth2->finish;
+      }
+      $sth->finish;
+      $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
+
+      $pops_list{$species}{$project_label}{$project}{'pop_data'} = \%pop_data;
+      $pops_list{$species}{$project_label}{$project}{'pop_tree'} = \%pop_tree;
+      $pops_list{$species}{$project_label}{$project}{'sub_pops'} = \%sub_pops;
+      $pops_list{$species}{$project_label}{$project}{'pop_list'} = $pop_list;
+    }
+  }
+}
+
+# Get a more displayable project label from the project ID/name in the vcf_config file
+sub get_project_label {
+  my $project = shift;
+  my $species = shift;
+
+  my $label =  $project->{'id'};
+     $label =~ s/_GRCh38//i;
+
+  if ($project->{'source_name'}) {
+    $label = $project->{'source_name'};
+  }
+  elsif ($project->{'population_display_group'} && $project->{'population_display_group'}{'display_group_name'}) {
+    $label = $project->{'population_display_group'}{'display_group_name'};
+  }
+  elsif ($label =~ /^1000/) {
+    $label = '1000 Genomes Project';
+  }
+  elsif ($label =~ /^nextgen/) {
+    $label = 'NextGen Project';
+  }
+  elsif ($label =~ /EVA_(.+)$/) {
+    $label = "EVA study $1";
+  }
+  elsif ($label =~ /mouse_genome_project/) {
+    $label = "Mouse Genomes Project (MGP)";
+  }
+  elsif ($label =~ /sheep_genome_consortium/) {
+    $label = "International Sheep Genome Consortium (ISGC)";
+  }
+  return $label;
+}
+
+
 # Connects and execute a query
 sub get_connection_and_query {
   my $dbname = shift;
   my $hname  = shift;
   my $sql    = shift;
   my $params = shift;
-  
+
   my ($host, $port) = split /\:/, $hname;
-  
+
   # DBI connection 
   my $dsn = "DBI:mysql:$dbname:$host:$port";
   my $dbh = DBI->connect($dsn, $user, $pswd) or die "Connection failed";
@@ -397,68 +549,17 @@ sub get_connection_and_query {
   return $sth;
 }
 
-sub get_size {
-  my $pop_id   = shift;
-  my $dbname   = shift;
-  my $hostname = shift;
-
-  my $stmt = qq{ SELECT count(*) FROM sample_population WHERE population_id=?};
-  my $sth = get_connection_and_query($dbname, $hostname, $stmt, [$pop_id]);
-  my $size = ($sth->fetchrow_array)[0];
-  $sth->finish;
-
-  return ($size == 0) ? '-' : $size;
-}
-
-sub set_bg {
-  my $bg_class = shift;
-  return ($bg_class eq '') ? ' class="bg2"' : '';
-}
-
-sub parse_desc {
-  my $content = shift;
-  #$content =~ s/<[^>]+>//g; # Remove URLs
-  $content = '-' if (!$content);
-  my @desc = split(/\.,/, $content);
-  $content = "$desc[0]. $desc[1]." if scalar(@desc > 1);
-  
-  if ($content =~ /(45 unrelated Han Chinese in Beijing, China, representing one of the populations studied in the International HapMap project)/) {
-    $content = "$1.";
-  }
-  
-  return $content;
-}
-
-sub get_project_populations {
-  my $projects = shift;
-  
-  foreach my $project (@{$vcf_config->{'collections'}}) {
-    my $project_id = $project->{'id'};
-    my $project_prefix = ($project->{'population_prefix'}) ? $project->{'population_prefix'} : '';
-    if ($projects->{$project_id}) {
-      foreach my $pop (keys(%{$project->{'populations'}})) {
-        my $pop_name = $project->{'populations'}{$pop}{'name'};
-        if ($project_prefix && $pop_name !~ /$project_prefix/i) {
-          $pop_name = $project_prefix.$pop_name;
-        }
-        my $pop_desc = $project->{'populations'}{$pop}{'description'};
-        $pops_list{$project_id}{$pop_name} = $pop_desc;
-     }
-   }
-  }
-}
 
 sub usage {
-  
+
   print qq{
   Usage: perl sources2html.pl [OPTION]
-  
+
   Create HTML tables for listing the population in the main genotyping projects available in Ensembl Variation.
-  
+
   Options:
 
     -help           Print this message
-      
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)      
     -hlist          The list of host names (with port) where the new databases are stored, separated by a coma,
@@ -467,7 +568,4 @@ sub usage {
   } . "\n";
   exit(0);
 }
-
-
-
 
