@@ -60,6 +60,8 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::GERPAnnotation;
 
+use Cwd;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::EnsEMBL::IO::Parser::BigWig;
