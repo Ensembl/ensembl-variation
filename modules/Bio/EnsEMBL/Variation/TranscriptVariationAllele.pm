@@ -127,7 +127,7 @@ sub _return_3prime {
       }
     }
     else{ # This vf does not lie within that feature
-      $self->{shift_object} = $shifted_obj; #fix this, currently nonsense
+      $self->{shift_object} = @preshifted_objects[0]; #fix this, currently nonsense
       return $self;
     }
   }
