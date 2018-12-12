@@ -31,20 +31,24 @@ limitations under the License.
 #
 # Ensembl module for Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor
 #
-#
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
+Bio::EnsEMBL::Variation::BaseAnnotationAdaptor
 
 =head1 SYNOPSIS
+
+Abstract class - should not be instantiated.  Implementation of
+abstract methods must be performed by subclasses.
+
 =head1 DESCRIPTION
 
-This module creates a set of objects that can read from tabix-indexed VCF files.
+This class provides methods which are shared by file based annotation modules.
 
 =head1 METHODS
 
 =cut
+
 
 use strict;
 use warnings;
@@ -60,31 +64,14 @@ use URI;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
-use Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-use Data::Dumper;
+
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 use base qw(Exporter);
 our @EXPORT_OK = qw($CONFIG_FILE);
 
 our $CONFIG_FILE;
-
-
-=head2 new
-
-  Arg [-CONFIG]: string - path to JSON configuration file
-  Example    : my $vca = Bio::EnsEMBL::Variation::VCFCollectionAdaptor->new(
-                 -config => '/path/to/vcf_config.json'
-               );
-
-  Description: Constructor.  Instantiates a new VCFCollectionAdaptor object.
-  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub new {
   my $caller = shift;
@@ -124,6 +111,17 @@ sub new {
 
 }
 
+=head2 config_file
+
+  Example    : $vcf_config_file = $vcf_collection_adaptor->config_file;
+  Description: Sets and returns the location of the vcf config file.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub config_file {
   my ($self, $config_file) = @_;
   if (!$config_file) {
@@ -145,6 +143,17 @@ sub config_file {
 }
 
 
+=head2 config
+
+  Example    : $config = $vcf_collection_adaptor->config;
+  Description: Sets and returns the arrayref representation of the vcf config file.
+  Returntype : Arrayref
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub config {
   my ($self, $config) = @_;
   if ($config) {
@@ -158,6 +167,18 @@ sub config {
   } 
   return $self->{config};
 }
+
+=head2 root_dir
+
+  Example    : $root_dir = $vcf_collection_adaptor->root_dir;
+  Description: Sets and returns the root directory.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 
 sub root_dir {
   my ($self, $root_dir) = @_;
@@ -178,6 +199,17 @@ sub root_dir {
   return $self->{root_dir};
 }
 
+=head2 tmpdir
+
+  Example    : $tmpdir = $vcf_collection_adaptor->tmpdir;
+  Description: Sets and returns the tmpdir.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub tmpdir {
   my ($self, $tmpdir) = @_;
   if (!$tmpdir) {
@@ -195,6 +227,23 @@ sub tmpdir {
     $self->{tmpdir} = $tmpdir;  
   }
   return $self->{tmpdir};
+}
+
+sub _get_filename_template {
+  my $self = shift;
+  my $hash = shift;
+  my $root_dir = $self->root_dir;
+
+  my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
+
+  if ($filename_template !~ /[#]+[^#]+[#]+/) {
+    my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
+    if (!$file_exists) {
+      warn("WARNING: Cannot read from file $filename_template for species " . $hash->{species} );
+    }
+  }
+
+  return $filename_template;
 }
 
 # Internal method checking if a remote VCF file exists
