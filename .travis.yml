@@ -56,6 +56,7 @@ install:
 - cpanm Bio::DB::HTS
 - cpanm --quiet -n Devel::Cover::Report::Coveralls
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
+- mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
 matrix:
   exclude:
   - perl: '5.14'
