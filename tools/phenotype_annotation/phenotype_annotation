@@ -144,8 +144,12 @@ sub gene_phenotypeFeatures{
 
   my $parser = Bio::EnsEMBL::IO::ListBasedParser->open($inF);
 
+  my %doneList;
   while ($parser->next()){
     my $entry = $parser->get_value();
+
+    next if exists $doneList{$entry};
+
     my $genes = $ga->fetch_all_by_external_name($entry);
     warn "WARNING: gene name '$entry' not found\n" if (scalar @$genes == 0);
     foreach my $gene (@$genes){
@@ -165,6 +169,7 @@ sub gene_phenotypeFeatures{
       @extracted_phenos = values %phenotypes;
       print_phenos($entry, \@extracted_phenos, $outType);
     }
+    $doneList{$entry} = 1;
   }
   $parser->close();
 }
@@ -175,8 +180,12 @@ sub pheno_phenotypeFeatures{
   my $ont_ad  = $registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm');
   my $parser = Bio::EnsEMBL::IO::ListBasedParser->open($inF);
 
+  my %doneList;
   while ($parser->next()){
     my $entry = $parser->get_value();
+
+    next if exists $doneList{$entry};
+
     my @extracted_phenos;
     if ($entry =~ /(^[a-zA-Z]+:\d+)/ ){ # input is an Ontology Accession Term
       @extracted_phenos = @{$pfa->fetch_all_by_phenotype_accession_type_source($entry, $mapping_type)};
@@ -193,12 +202,12 @@ sub pheno_phenotypeFeatures{
         if (ref($term) eq 'Bio::EnsEMBL::OntologyTerm'){
           my $acc = $term->accession;
           my $current_phenos = $pfa->fetch_all_by_phenotype_accession_type_source($acc, $mapping_type);
-          warn "INFO: found ", scalar @$current_phenos, " assignedments of phenotype $acc\n" if $verbose;
+          warn "INFO: found ", scalar @$current_phenos, " assignments of phenotype $acc\n" if $verbose;
           push @extracted_phenos,@{$current_phenos};
         } else {
           foreach my $acc (@{$term->ontology_accessions}){
             my $current_phenos = $pfa->fetch_all_by_phenotype_accession_type_source($acc, $mapping_type);
-            warn "INFO: found ", scalar @$current_phenos, " assignedments of phenotype $acc\n" if $verbose;
+            warn "INFO: found ", scalar @$current_phenos, " assignments of phenotype $acc\n" if $verbose;
             push @extracted_phenos,@{$current_phenos};
           }
         }
@@ -209,6 +218,7 @@ sub pheno_phenotypeFeatures{
     @extracted_phenos = values %phenotypes;
 
     print_phenos($entry, \@extracted_phenos, $outType);
+    $doneList{$entry} = 1;
   }
   $parser->close();
 }
@@ -235,6 +245,7 @@ sub snp_phenotypeFeatures{
   my $coord_system = $ca->fetch_by_name('chromosome');
 
   my $record;
+  my %doneList;
   while ($parser->next()){
     if ($fileTypeVcf){
       $record = $parser->{'record'};
@@ -243,6 +254,8 @@ sub snp_phenotypeFeatures{
     } else { # list of rsIDs
       $record = $parser->get_value();
     }
+
+    next if exists $doneList{$record};
 
     my @extracted_phenos;
     my $found = 0;
@@ -281,6 +294,7 @@ sub snp_phenotypeFeatures{
       @extracted_phenos = values %phenotypes;
       print_phenos($name, \@extracted_phenos, $outType);
     }
+    $doneList{$record} = 1;
   }
   $parser->close();
 }
@@ -316,21 +330,21 @@ sub usage {
   Annotate input data: variants (list of rsIDs or VCF or VEP output file) OR genes (list of gene identifiers or gene symbols) OR phenotypes (list of accessions or term names) with assigned phenotype features.
   Options:
       -input_file|i      Input file (variants in VCF, rsIDs or genes or phenotypes in text file list form)
-      -input_type        Type of input data: [variant, gene, phenotype, vep] (Default: gene)
+      -input_type        Type of input data: [variant, gene, phenotype, vep] (default: gene)
 
-      -species           Species of the input data (Default: human)
-      -assembly          Assembly to use if species is human (Default: grch38)
+      -species           Species of the input data (default: human)
+      -assembly          Assembly to use if species is human (default: grch38)
       -registry          Ensembl registry file containing database connection details
 
       -associated        If input_type is gene, include GWAS variant-phenotype associations where the gene is reported as a likely candidate
       -overlap           If input_type is gene, include phenotypes overlapping the input data
       -all               If input_type is gene, annotate all phenotypes (directly assigned, associated and overlapping)
 
-      -output_file|o     Output file (Default: phenotype_annotation_output.txt)
-      -output_format     Format of the output data: [txt, bed, vcf] (Default: txt)
+      -output_file|o     Output file (default: phenotype_annotation_output.txt)
+      -output_format     Format of the output data: [txt, bed, vcf] (default: txt)
       -force_overwrite   Existing output file will get overwritten
 
-      -verbose           Print out a bit more information while running (Default: off)
+      -verbose           Print out a bit more information while running (default: off)
       -help              Print this message
   } . "\n";
   exit(0);
