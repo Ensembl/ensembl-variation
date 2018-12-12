@@ -69,7 +69,7 @@ ok($cadd_scores->{A} == 24.36, "CADD score for rs76641827 variant allele A");
 ok($cadd_scores->{C} ==  4.36, "CADD score for rs76641827 variant allele C");
 ok($cadd_scores->{G} == 14.36, "CADD score for rs76641827 variant allele G");
 
-my $vf_cadd_scores = $vf->get_cadd_scores($cadd_annotation->filename_template);
+my $vf_cadd_scores = $vf->get_all_cadd_scores($cadd_annotation->filename_template);
 my ($cadd_annotation_id, $scores) = %{$vf_cadd_scores};
 ok($cadd_annotation_id eq 'CADD', "CADD annotation file name");
 ok($scores->{A} == 24.36, "CADD score for VF rs76641827 variant allele A");
