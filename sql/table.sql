@@ -252,7 +252,7 @@ CREATE TABLE variation_synonym (
   PRIMARY KEY (variation_synonym_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id),
-  UNIQUE KEY (name, source_id),
+  UNIQUE KEY name_idx (name, source_id, variation_id),
   KEY source_idx (source_id)
 );
 
