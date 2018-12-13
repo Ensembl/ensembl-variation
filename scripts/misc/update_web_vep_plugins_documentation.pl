@@ -322,7 +322,7 @@ sub read_plugin_file {
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
             if ($line =~ /^\s*\.\/(filter|vep)/ || $line =~ /^\s*--plugin/) {
-              $line = '<pre class="class="code sh_sh">'.$line.'</pre>';
+              $line = '<pre class="code sh_sh">'.$line.'</pre>';
             }
             else {
               $line =~ s/^\s+// if $line =~ /\S+/;
