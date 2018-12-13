@@ -20,7 +20,7 @@ The script is a wrapper of the Ensembl Variation API to retrieve the phenotype a
 * `-input_type [type]`: type of input data: [variant, gene, phenotype, vep] (default: gene)
 * `-species [species]`: species to use (default: human)
 * `-assembly [assembly]`: assembly to use if species is human (default: grch38)
-* `-registry [registry_file]`: [registry_file](https://www.ensembl.org/info/docs/api/registry.html)
+* `-registry [registry_file]`: [registry_file](https://www.ensembl.org/info/docs/api/registry.html) (default: uses current Ensembl release database)
 * `-associated`: if input_type is `gene`, include GWAS variant-phenotype associations associated where the gene is reported as a likely candidate
 * `-overlap`: if input_type is `gene`, include phenotypes overlapping the input data
 * `-all`: if input_type is `gene`, annotate all phenotypes (directly assigned, associated and overlapping)
