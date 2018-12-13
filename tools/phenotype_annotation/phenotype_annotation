@@ -334,7 +334,7 @@ sub usage {
 
       -species           Species of the input data (default: human)
       -assembly          Assembly to use if species is human (default: grch38)
-      -registry          Ensembl registry file containing database connection details
+      -registry          Ensembl registry file containing database connection details (default: uses current Ensembl release database)
 
       -associated        If input_type is gene, include GWAS variant-phenotype associations where the gene is reported as a likely candidate
       -overlap           If input_type is gene, include phenotypes overlapping the input data
