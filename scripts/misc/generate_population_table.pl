@@ -392,7 +392,7 @@ sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
     my $project_id = $project->{'id'};
-    next if ($project_id =~ /GRCh37/i);
+    next if ($project->{'assembly'} =~ /GRCh37/i);
 
     my $species = ucfirst($project->{'species'});
        $species =~ s/_/ /g;
