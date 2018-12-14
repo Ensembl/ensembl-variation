@@ -329,23 +329,79 @@ sub use_seq_region_synonyms {
   return $self->{use_seq_region_synonyms};
 }
 
+=head2 created
+
+  arg [1]    : string $created (optional)
+               the new value to set the created attribute to
+  example    : my $created = $collection->created()
+  description: getter/setter for created attribute of this collection
+  returntype : string
+  exceptions : none
+  caller     : general
+  status     : stable
+
+=cut
+
 ## used for GA4GH - milliseconds from the epoch 
 ## could store by file (chrom) rather than collection?
-sub created{
+sub created {
   my $self = shift;
+  $self->{created} = shift if @_;
   return $self->{created};
 }
+
+=head2 updated
+
+  arg [1]    : string $updated (optional)
+               the new value to set the updated attribute to
+  example    : my $updated = $collection->updated()
+  description: getter/setter for updated attribute of this collection
+  returntype : string
+  exceptions : none
+  caller     : general
+  status     : stable
+
+=cut
+
 ## used for GA4GH - milliseconds from the epoch
-sub updated{
+sub updated {
   my $self = shift;
+  $self->{updated} = shift if @_;
   return $self->{updated};
 }
 
+=head2 is_remapped
+
+  arg [1]    : boolean $is_remapped (optional)
+               the new value to set the is_remapped attribute to
+  example    : my $is_remapped = $collection->is_remapped()
+  description: getter/setter for is_remapped attribute of this collection
+  returntype : boolean
+  exceptions : none
+  caller     : general
+  status     : stable
+
+=cut
+
 ## info values cannot all be trusted for lifted over positions
-sub is_remapped{
+sub is_remapped {
   my $self = shift;
+  $self->{is_remapped} = shift if @_;
   return $self->{is_remapped};
 }
+
+=head2 source
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source = $collection->source()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub source {
   my $self = shift;
@@ -360,7 +416,20 @@ sub source {
   return $self->{'source'};
 }
 
-sub source_name{
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source_name to
+  Example    : my $source_name = $collection->source_name()
+  Description: Getter/Setter for the source_name of this collection
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_name {
   my $self = shift;
   my $source = $self->{source};
   return unless defined $source;
@@ -369,7 +438,20 @@ sub source_name{
   return $source->name;
 }
 
-sub source_url{
+=head2 source_url
+
+  Arg [1]    : string $source_url (optional)
+               The new value to set the source_url to
+  Example    : my $source_url = $collection->source_url()
+  Description: Getter/Setter for the source_url of this collection
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_url {
   my $self = shift;
   my $source = $self->{source};
   return unless defined $source;
@@ -378,8 +460,22 @@ sub source_url{
   return $source->url;
 }
 
-sub assembly{
+=head2 assembly
+
+  arg [1]    : string $assembly (optional)
+               the new value to set the assembly attribute to
+  example    : my $assembly = $collection->assembly()
+  description: getter/setter for the assembly of this collection
+  returntype : string
+  exceptions : none
+  caller     : general
+  status     : stable
+
+=cut
+
+sub assembly {
   my $self = shift;
+  $self->{assembly} = shift if @_;
   return $self->{assembly};
 }
 
