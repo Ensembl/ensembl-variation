@@ -112,7 +112,7 @@ sub new {
   Example    : my $cadd_scores = $cadd_file->get_all_scores_by_VariationFeature($vf)
   Description: Return CADD phred scores for all possible alternative alleles of
                length 1 for a variant.
-  Returntype : hasref of alternative_allele => phred_score
+  Returntype : hashref of alternative_allele => phred_score
   Exceptions : throws on wrong argument
                warns if length of variation feature is not 1
   Caller     : Bio::EnsEMBL::Variation::VariationFeature
@@ -162,7 +162,7 @@ sub _file_parser_obj {
   my $cwd = cwd();
   chdir($self->tmpdir);
 
-  # open object (remote indexes get downloaded)
+  # open object (remote indexes get downloaded) locally, therefore we change the current directory to point to the tmp directory
   my $obj = Bio::EnsEMBL::IO::Parser::CADDTabix->open($self->filename_template);
 
   # change back
