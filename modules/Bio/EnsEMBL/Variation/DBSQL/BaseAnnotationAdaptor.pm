@@ -78,6 +78,7 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self;
   eval {$self = $class->SUPER::new(shift);};
+  throw("ERROR: Instantiating BaseAnnotationAdaptor $@") if $@;
 
   my $config = $self->config;
 
@@ -135,9 +136,9 @@ sub config_file {
         $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
       }
       $self->{config_file} = $config_file;
-    } else {
-      $self->{config_file} = $config_file;
-    }
+    } 
+  } else {
+    $self->{config_file} = $config_file;
   }
   return $self->{config_file};
 }
@@ -227,6 +228,17 @@ sub tmpdir {
     $self->{tmpdir} = $tmpdir;  
   }
   return $self->{tmpdir};
+}
+
+sub fetch_by_id {
+  my $self = shift;
+  my $id = shift;
+  return $self->{collections}->{$id};
+}
+
+sub fetch_all {
+  my $self = shift;
+  return [map {$self->{collections}->{$_}} @{$self->{order} || []}];
 }
 
 sub _get_filename_template {
