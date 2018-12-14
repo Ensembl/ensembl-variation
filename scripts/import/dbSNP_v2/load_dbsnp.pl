@@ -83,7 +83,7 @@ sub init_reports {
 
   # Set up an error file
   my $rpt_dir = $config->{'rpt_dir'};
-  my @suffixes = ('.json', '.json.gz');
+  my @suffixes = ('.json', '.json.gz', '.json.bz2');
   my ($base_filename, $path, $suffix) = fileparse($config->{'input_file'}, @suffixes);
   my $error_filename = join('.', $base_filename, 'errors');
   my $rpt_filename = join('.', $base_filename, 'summary');
@@ -146,6 +146,8 @@ sub parse_dbSNP_file {
   # Not zcat not dying if file does not exist
   if ($inputfile =~ /gz$/) {
     open($in, "zcat $inputfile 2>&1 |") or die("Could not open $inputfile for reading");
+  } elsif ($inputfile =~/bz2$/) {
+    open($in, "bzcat $inputfile 2>&1 |") or die("Could not open $inputfile for reading");
   } else {
     open($in, '<', $inputfile) or die("Unable to open $inputfile: $!");
   }
