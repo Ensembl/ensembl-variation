@@ -143,7 +143,7 @@ sub parse_dbSNP_file {
       die("$inputfile does not exist");
   }
 
-  # Not zcat not dying if file does not exist
+  # Note zcat not dying if file does not exist
   if ($inputfile =~ /gz$/) {
     open($in, "zcat $inputfile 2>&1 |") or die("Could not open $inputfile for reading");
   } elsif ($inputfile =~/bz2$/) {
