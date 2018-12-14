@@ -88,7 +88,7 @@ our $CONFIG_FILE;
 =head2 new
 
   Arg [-CONFIG]: string - path to JSON configuration file
-  Example    : my $gaa = Bio::EnsEMBL::Variation::GERPAnnotationAdaptor->new(
+  Example    : my $gaa = Bio::EnsEMBL::Variation::DBSQL::GERPAnnotationAdaptor->new(
                  -config => '/path/to/annotation_config.json'
                );
 
@@ -177,8 +177,7 @@ sub new {
 
 sub fetch_by_id {
   my $self = shift;
-  my $id = shift;
-  return $self->{collections}->{$id};
+  return $self->SUPER::fetch_by_id(@_);
 }
 
 
@@ -195,7 +194,7 @@ sub fetch_by_id {
 
 sub fetch_all {
   my $self = shift;
-  return [map {$self->{collections}->{$_}} @{$self->{order} || []}];
+  return $self->SUPER::fetch_all(@_);
 }
 
 
