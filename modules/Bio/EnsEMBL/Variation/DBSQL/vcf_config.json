@@ -457,6 +457,22 @@
         "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "X", "MT"
       ],
       "sample_prefix": "PRJEB9799:"
+    },
+    {
+      "id": "70_mammals.gerp_conservation_score",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/current_compara/conservation_scores/70_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "CADD_GRCh38_whole_genome_SNVs",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_whole_genome_SNVs.tsv.gz",
+      "annotation_type": "cadd"
     }
   ]
 }
