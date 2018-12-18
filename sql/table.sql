@@ -1513,7 +1513,7 @@ PRIMARY KEY (variation_id, gene_name));
 @column allele_string               Shows the reference sequence and variant sequence of this allele.
 @column somatic                     Flags if the associated variation is known to be somatic.
 @column consequence_types		        The consequence(s) of the variant allele on this motif_feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/prediction/predicted_data.html#consequences">here</a>.
-@column motif_name                  The display label of the motif.
+@column binding_matrix_stable_id    The stable id of the binding matrix.
 @column motif_start                 The start position of the variation in the motif.
 @column motif_end                   The end position of the variation in the motif.
 @column motif_score_delta           The deviation from the score (that is derived from alignment software (e.g. MOODS)) caused by the variation.
@@ -1536,7 +1536,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
                                           'TFBS_amplification',
                                           'TFBS_translocation'
                                         ),
-    motif_name                          VARCHAR(60) DEFAULT NULL,
+    binding_matrix_stable_id            VARCHAR(60) DEFAULT NULL,
     motif_start                         INT(11) UNSIGNED,
     motif_end                           INT(11) UNSIGNED,
     motif_score_delta                   FLOAT DEFAULT NULL,
@@ -1830,6 +1830,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');            
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|add new entries to the failed_description table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|create table to store failed variation features');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.');
 
 /**
 @header  Failed tables
