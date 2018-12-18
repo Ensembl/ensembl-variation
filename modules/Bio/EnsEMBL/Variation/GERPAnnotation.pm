@@ -127,6 +127,7 @@ sub get_score_by_VariationFeature {
     $max_score = $score if (!defined $max_score);
     $max_score = $score if ($score > $max_score);
   }
+  $max_score = sprintf("%.2f", $max_score);
   return $max_score;
 }
 
