@@ -1991,7 +1991,7 @@ Status      : Experimental
 
 sub spdi_genomic{
 
-  my $ref_feature = shift;
+  my $self = shift;
   my $include_ref_allele = shift;
 
   my %spdi;
@@ -1999,20 +1999,20 @@ sub spdi_genomic{
   # If input is provided, it must have value '1' (include reference allele) or '0' (not include reference allele)
   throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^[01]$/);
 
-  my $ref_slice = $ref_feature->slice;
+  my $ref_slice = $self->slice;
   throw("This variation feature is not placed on a slice.") unless ($ref_slice->isa('Bio::EnsEMBL::Slice'));
 
-  my ($vf_start, $vf_end) = ($ref_feature->start, $ref_feature->end);
+  my ($vf_start, $vf_end) = ($self->start, $self->end);
 
   return {} if ($vf_start < 1 || $vf_end < 1);
 
-  my $vf_strand = $ref_feature->strand();
+  my $vf_strand = $self->strand();
 
   # set up sequence reference
   my $syn = $ref_slice->get_all_synonyms('RefSeq_genomic');
-  my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $ref_feature->seq_region_name());
+  my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $self->seq_region_name());
 
-  my @all_alleles = split(/\//,$ref_feature->allele_string());
+  my @all_alleles = split(/\//,$self->allele_string());
   my $ref_allele = shift @all_alleles;
 
   # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
@@ -2036,8 +2036,8 @@ sub spdi_genomic{
     my $flip_allele = 0;
     if( $vf_strand == -1 ){ $flip_allele = 1; }
 
-    my $chr_start = $ref_feature->start;
-    my $chr_end   = $ref_feature->end;
+    my $chr_start = $self->start;
+    my $chr_end   = $self->end;
 
     # If the variant is a substitution, deletion or indel
     my $spdi_position = $chr_start - 1;
