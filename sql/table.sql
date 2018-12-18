@@ -1536,7 +1536,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
                                           'TFBS_amplification',
                                           'TFBS_translocation'
                                         ),
-    binding_matrix                      VARCHAR(60) DEFAULT NULL,
+    binding_matrix_stable_id            VARCHAR(60) DEFAULT NULL,
     motif_start                         INT(11) UNSIGNED,
     motif_end                           INT(11) UNSIGNED,
     motif_score_delta                   FLOAT DEFAULT NULL,
