@@ -57,11 +57,11 @@ my $variation = $va->fetch_by_name('rs76641827');
 my $vf = $variation->get_all_VariationFeatures()->[0];
 
 my $gerp_score = $gerp_annotation->get_score_by_VariationFeature($vf);
-ok($gerp_score == -1, "GERP score for rs76641827");
+ok($gerp_score == -1.12, "GERP score for rs76641827");
 
 my $vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
 my ($id, $score) = %{$vf_gerp_score};
-ok($score == -1, "GERP score for VF rs76641827");
+ok($score == -1.12, "GERP score for VF rs76641827");
 ok($id eq '70_mammals.gerp_conservation_score', "GERP annotation file name");
 
 my $cadd_scores = $cadd_annotation->get_all_scores_by_VariationFeature($vf);
