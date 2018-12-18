@@ -1828,7 +1828,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|Rename motif_name to binding_matrix_stable_id.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.');
 
 /**
 @header  Failed tables
