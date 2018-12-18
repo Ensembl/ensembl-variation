@@ -1513,7 +1513,7 @@ PRIMARY KEY (variation_id, gene_name));
 @column allele_string               Shows the reference sequence and variant sequence of this allele.
 @column somatic                     Flags if the associated variation is known to be somatic.
 @column consequence_types		        The consequence(s) of the variant allele on this motif_feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/prediction/predicted_data.html#consequences">here</a>.
-@column motif_name                  The display label of the motif.
+@column binding_matrix_stable_id    The stable id of the binding matrix.
 @column motif_start                 The start position of the variation in the motif.
 @column motif_end                   The end position of the variation in the motif.
 @column motif_score_delta           The deviation from the score (that is derived from alignment software (e.g. MOODS)) caused by the variation.
@@ -1536,7 +1536,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
                                           'TFBS_amplification',
                                           'TFBS_translocation'
                                         ),
-    motif_name                          VARCHAR(60) DEFAULT NULL,
+    binding_matrix_stable_id            VARCHAR(60) DEFAULT NULL,
     motif_start                         INT(11) UNSIGNED,
     motif_end                           INT(11) UNSIGNED,
     motif_score_delta                   FLOAT DEFAULT NULL,
@@ -1827,7 +1827,10 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');            
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|add new entries to the failed_description table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|create table to store failed variation features');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.');
 
 /**
 @header  Failed tables
@@ -1885,6 +1888,27 @@ CREATE TABLE failed_variation (
   UNIQUE KEY variation_idx (variation_id,failed_description_id)
 );
 
+/**
+@table failed_variation_feature
+
+@colour #3CB371
+@desc For various reasons it may be necessary to store information about a variation feature that has failed quality checks. This table acts as a flag for such failures.
+
+@column failed_variation_feature_id Primary key, internal identifier.
+@column variation_feature_id        Foreign key references to the @link variation_feature table.
+@column failed_description_id       Foreign key references to the @link failed_description table.
+
+@see failed_description
+@see variation_feature
+*/
+
+CREATE TABLE failed_variation_feature (
+  failed_variation_feature_id INT NOT NULL AUTO_INCREMENT,
+  variation_feature_id INT UNSIGNED NOT NULL,
+  failed_description_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (failed_variation_feature_id),
+  UNIQUE KEY variation_feature_idx (variation_feature_id, failed_description_id)
+);
 
 /**
 @table failed_allele
@@ -2127,3 +2151,5 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (17,'V
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variant maps to more than one genomic location');
 INSERT INTO failed_description (failed_description_id,description) VALUES (20,'Variant at first base in sequence');
+INSERT INTO failed_description (failed_description_id,description) VALUES (21, 'Reference allele does not match the bases at this genome location');
+INSERT INTO failed_description (failed_description_id,description) VALUES (22, 'Alleles cannot be resolved');

@@ -500,7 +500,60 @@ sub get_all_highest_frequency_minor_Alleles {
   return $self->{hfm_alleles};
 }
 
+=head2 get_gerp_score
+  Arg [1]     : (optional) filename_template for testing
+  Example     : my $gerp_score = $vf->get_gerp_score;
+  Description : Return hashref of GERP annotation file ID and highest GERP score for region overlapped by variant.
+  Returntype  : hashref
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+=cut
 
+sub get_gerp_score {
+  my $self = shift;
+  my $filename_template = shift;
+  if(!exists($self->{gerp_score})) {
+    my $gerp_annotation_adaptor = $self->adaptor->db->get_GERPAnnotationAdaptor();
+    foreach (@{$gerp_annotation_adaptor->fetch_all}) {
+      if ($filename_template) {
+        $_->filename_template($filename_template);
+      }
+      my $gerp_score = $_->get_score_by_VariationFeature($self);
+      my $id = $_->id;
+      $self->{gerp_score}->{$id} = $gerp_score;
+    }
+  }
+  return $self->{gerp_score};
+}
+
+=head2 get_all_cadd_scores
+  Arg [1]     : (optional) filename_template for testing
+  Example     : my $hashref_cadd_score = $vf->get_all_cadd_scores;
+  Description : Return CADD phred scores for all possible alternative alleles of
+                length 1 for a variation feature for each CADD annotation file.
+  Returntype  : hashref of CADD annotation file ID to alternative allele => CADD score
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+=cut
+
+sub get_all_cadd_scores {
+  my $self = shift;
+  my $filename_template = shift;
+  if(!exists($self->{cadd_scores})) {
+    my $cadd_annotation_adaptor = $self->adaptor->db->get_CADDAnnotationAdaptor();
+    foreach (@{$cadd_annotation_adaptor->fetch_all}) {
+      if ($filename_template) {
+        $_->filename_template($filename_template);
+      }
+      my $cadd_scores = $_->get_all_scores_by_VariationFeature($self);
+      my $id = $_->id;
+      $self->{cadd_scores}->{$id} = $cadd_scores;
+    }
+  }
+  return $self->{cadd_scores};
+}
 
 =head2 get_all_TranscriptVariations
 

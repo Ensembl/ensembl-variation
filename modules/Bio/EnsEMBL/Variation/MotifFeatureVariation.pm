@@ -121,6 +121,29 @@ sub motif_name {
   return $self->{motif_name};
 }
 
+=head2 binding_matrix_stable_id
+
+  Arg [1]    : string $stable_id (optional)
+               The new value to set the binding_matrix_stable_id attribute to
+  Example    : $binding_matrix_stable_id = $motif_feature_variation->binding_matrix_stable_id()
+  Description: Getter/Setter for the binding_matrix_stable_id attribute. This is the
+               stable id of the binding matrix associated with this feature.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub binding_matrix_stable_id {
+  my $self = shift;
+  $self->{binding_matrix_stable_id} = shift if(@_);
+  unless ($self->{binding_matrix_stable_id}) {
+    $self->{binding_matrix_stable_id} = $self->motif_feature->binding_matrix->stable_id;
+  }
+  return $self->{binding_matrix_stable_id};
+}
+
 sub _motif_feature_seq {
     my $self = shift;
     my $mf = $self->motif_feature;

@@ -185,7 +185,7 @@ CREATE TABLE `motif_feature_variation` (
   `allele_string` text,
   `somatic` tinyint(1) NOT NULL DEFAULT '0',
   `consequence_types` set('TF_binding_site_variant','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation') DEFAULT NULL,
-  `motif_name` text,
+  `binding_matrix_stable_id` varchar(60) DEFAULT NULL,
   `motif_start` int(11) unsigned DEFAULT NULL,
   `motif_end` int(11) unsigned DEFAULT NULL,
   `motif_score_delta` float DEFAULT NULL,
