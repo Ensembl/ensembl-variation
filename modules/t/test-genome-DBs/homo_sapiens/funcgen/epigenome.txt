@@ -1,22 +1,22 @@
-1	HeLa-S3		Human Epithelial Carcinoma Cells	HeLa_S3	female
-2	GM06990		Human B-Lymphocyte cell line	GM06990	female
-3	U2OS		Human Bone Osteosarcoma Epithelial Cells	U2OS	female
-4	CD4		Human CD4 T-Cells	CD4	unknown
-5	IMR90		Human Fetal Lung Fibroblast	IMR90	female
-6	HL-60		Human Promyelotic Leukemia Cells	HL_60	female
-7	HepG2		Human hepatocellular liver carcinoma cell line	HepG2	male
-8	Lymphoblastoid		Lymphoblastoid cells	Lymphoblastoid	unknown
-10	CD133		Human CD133+ Hematopoietic Stem Cell	CD133	unknown
-11	CD36		Human CD36+ Erythrocyte Precursor Cell	CD36	unknown
-14	K562		Human myelogenous leukaemia cell line	K562	female
-15	GM12878		Human B-Lymphocyte cell line	GM12878	female
-16	HUVEC		Human umbilical vein endothelial cell line	HUVEC	female
-17	NHEK		Normal human epidermal keratinocyte cell line	NHEK	female
-18	H1ESC		Human Embryonic Stem Cells	H1ESC	unknown
-20	K562b		Human myelogenous leukaemia line (alternative)	K562b	female
-21	NH-A		Normal Human Astrocytes	NH_A	unknown
-22	HSMM		Human Skeletal Muscle Myoblasts	HSMM	unknown
-23	HMEC		Human Mammary Epithelial Cells	HMEC	unknown
+1	HeLa-S3	HeLa-S3	Human Epithelial Carcinoma Cells	HeLa_S3	female
+2	GM06990	GM06990	Human B-Lymphocyte cell line	GM06990	female
+3	U2OS	U2OS	Human Bone Osteosarcoma Epithelial Cells	U2OS	female
+4	CD4	CD4	Human CD4 T-Cells	CD4	unknown
+5	IMR90	IMR90	Human Fetal Lung Fibroblast	IMR90	female
+6	HL-60	HL-60	Human Promyelotic Leukemia Cells	HL_60	female
+7	HepG2	HepG2	Human hepatocellular liver carcinoma cell line	HepG2	male
+8	Lymphoblastoid	Lymphoblastoid	Lymphoblastoid cells	Lymphoblastoid	unknown
+10	CD133	CD133	Human CD133+ Hematopoietic Stem Cell	CD133	unknown
+11	CD36	CD36	Human CD36+ Erythrocyte Precursor Cell	CD36	unknown
+14	K562	K562	Human myelogenous leukaemia cell line	K562	female
+15	GM12878	GM12878	Human B-Lymphocyte cell line	GM12878	female
+16	HUVEC	HUVEC	Human umbilical vein endothelial cell line	HUVEC	female
+17	NHEK	NHEK	Normal human epidermal keratinocyte cell line	NHEK	female
+18	H1ESC	H1ESC	Human Embryonic Stem Cells	H1ESC	unknown
+20	K562b	K562b	Human myelogenous leukaemia line (alternative)	K562b	female
+21	NH-A	NH-A	Normal Human Astrocytes	NH_A	unknown
+22	HSMM	HSMM	Human Skeletal Muscle Myoblasts	HSMM	unknown
+23	HMEC	HMEC	Human Mammary Epithelial Cells	HMEC	unknown
 24	A549	A549	Epithelial Lung Carcinoma	A549	male
 25	AG04449	AG04449	Fetal thigh fibroblast	AG04449	male
 26	AG04450	AG04450	Fetal lung fibroblast	AG04450	male
