@@ -1827,7 +1827,9 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');            
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|add new entries to the failed_description table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|create table to store failed variation features');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.');
 
 /**
@@ -1886,6 +1888,27 @@ CREATE TABLE failed_variation (
   UNIQUE KEY variation_idx (variation_id,failed_description_id)
 );
 
+/**
+@table failed_variation_feature
+
+@colour #3CB371
+@desc For various reasons it may be necessary to store information about a variation feature that has failed quality checks. This table acts as a flag for such failures.
+
+@column failed_variation_feature_id Primary key, internal identifier.
+@column variation_feature_id        Foreign key references to the @link variation_feature table.
+@column failed_description_id       Foreign key references to the @link failed_description table.
+
+@see failed_description
+@see variation_feature
+*/
+
+CREATE TABLE failed_variation_feature (
+  failed_variation_feature_id INT NOT NULL AUTO_INCREMENT,
+  variation_feature_id INT UNSIGNED NOT NULL,
+  failed_description_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (failed_variation_feature_id),
+  UNIQUE KEY variation_feature_idx (variation_feature_id, failed_description_id)
+);
 
 /**
 @table failed_allele
@@ -2128,3 +2151,5 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (17,'V
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variant maps to more than one genomic location');
 INSERT INTO failed_description (failed_description_id,description) VALUES (20,'Variant at first base in sequence');
+INSERT INTO failed_description (failed_description_id,description) VALUES (21, 'Reference allele does not match the bases at this genome location');
+INSERT INTO failed_description (failed_description_id,description) VALUES (22, 'Alleles cannot be resolved');
