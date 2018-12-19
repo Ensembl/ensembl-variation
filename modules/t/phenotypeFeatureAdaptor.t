@@ -127,7 +127,8 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'ENSG000
 my $sl_oa  = $sla->fetch_by_region('chromosome', 13, 86442400, 86442450);
 $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa, 'Variation');
 
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && $pfs->[0]->get_all_ontology_accessions->[0] eq 'Orphanet:130', "fetch_all_by_Slice_with_ontology_accession");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299299' && 
+   (grep {$_ eq 'Orphanet:130'} @{$pfs->[0]->get_all_ontology_accessions}), "fetch_all_by_Slice_with_ontology_accession");
 
 # fetch_all_by_Slice_accession_type
 {
