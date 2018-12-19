@@ -461,16 +461,22 @@ $spdi_str = 'NC_000013.10:32954017:G:G';
 throws_ok {$vfa->fetch_by_spdi_notation($spdi_str); } qr/Reference allele given by SPDI notation $spdi_str \(G\) matches alt allele given by SPDI notation $spdi_str \(G\)/, 'Throw on invalid alt allele.'; 
 $spdi_str = 'NC_000013.10:32954017:G:A';
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
-ok($vf->seq_region_start eq '32954018', "Valid subtitution 'NC_000013.10:32954017:G:A', spdi position is 0-based: 32954017(spdi) = 32954018");
+ok($vf->seq_region_start eq '32954018', "Valid substitution 'NC_000013.10:32954017:G:A', spdi position is 0-based: 32954017(spdi) = 32954018");
+$spdi_str = 'NC_000013.10:32954017:1:A';
+$vf = $vfa->fetch_by_spdi_notation($spdi_str);
+ok($vf->seq_region_start eq '32954018', "Valid substitution 'NC_000013.10:32954017:1:A', spdi position is 0-based: 32954017(spdi) = 32954018");
+$spdi_str = 'NC_000011.9:66321302:TG:CA';
+$vf = $vfa->fetch_by_spdi_notation($spdi_str);
+ok($vf->seq_region_start eq '66321303' && $vf->seq_region_end eq '66321304', "Valid substitution 'NC_000011.9:66321302:TG:CA'");
 $spdi_str = 'NC_000002.11:45406939:N:';
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
 ok($vf->allele_string eq 'N/-', "Valid deletion 'NC_000002.11:45406939:N:' - reference and spdi alleles match");
 $spdi_str = 'NC_000011.9:66317226::C';
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
 ok($vf->seq_region_start eq '66317227' && $vf->seq_region_end eq '66317226', "Valid insertion 'NC_000011.9:66317226::C' - a 'C' is inserted at 66317226-66317227");
-$spdi_str = 'NC_000011.9:66321302:TG:CA';
+$spdi_str = 'NC_000011.9:66321302:2:CA';
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
-ok($vf->seq_region_start eq '66321303' && $vf->seq_region_end eq '66321304', "Valid indel");
+ok($vf->seq_region_start eq '66321303' && $vf->seq_region_end eq '66321304', "Valid substitution 'NC_000011.9:66321302:2:CA'"); 
 
 done_testing();
 
