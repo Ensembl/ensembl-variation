@@ -286,3 +286,16 @@
 725	\N	patch	patch_93_94_j.sql|Create motif_feature_peak table
 726	\N	patch	patch_93_94_k.sql|Create motif_feature_regulatory_feature table
 727	\N	patch	patch_94_95_a.sql|schema_version
+728	\N	patch	patch_94_95_b.sql|update to segmentation state tables
+729	\N	patch	patch_94_95_c.sql|Update to alignment table
+730	\N	patch	patch_94_95_d.sql|Update to execution_plan table
+731	\N	patch	patch_94_95_e.sql|Update to regulatory_build_statistic table
+732	\N	patch	patch_94_95_f.sql|Update to experimental_group table
+733	\N	patch	patch_94_95_g.sql|segmentation table
+734	\N	patch	patch_94_95_h.sql|segmentation_cell_tables
+735	\N	patch	patch_94_95_i.sql|segmentation_statistic table
+736	\N	patch	patch_94_95_j.sql|segmentation_file table
+737	\N	patch	patch_94_95_k.sql|peak calling statistic table
+738	\N	patch	patch_94_95_l.sql|Modify length for column name from epigenome table
+739	\N	patch	patch_94_95_m.sql|drop obsolete tables
+740	\N	patch	patch_94_95_n.sql|add unique constrain on display_label column for epigenome table

@@ -51,6 +51,9 @@ ALTER TABLE failed_allele ADD FOREIGN KEY (failed_description_id) REFERENCES fai
 ALTER TABLE failed_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE failed_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
 
+ALTER TABLE failed_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
+ALTER TABLE failed_variation_feature ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
+
 ALTER TABLE failed_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 ALTER TABLE failed_structural_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
 

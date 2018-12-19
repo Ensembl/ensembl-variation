@@ -337,9 +337,6 @@ sub source_phen_table {
     push (@species_list,{name => $species, display => $display_name, s_name => $s_name, anchor => $s_name_id});
   }
 
-
-  my $phe_title = ($count_phen > 1) ? "See all ".lc($display_name)." phenotype entries" : "See ".lc($display_name)." phenotype entry";
-
   my $html = qq{<!-- $display_name ($species) -->};
   if ($is_new) {
     $html .= qq{
@@ -348,7 +345,7 @@ sub source_phen_table {
         <a href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:0px;padding-right:0px;vertical-align:middle;background-color:#00F" /></a><h2 id="$s_name_id" style="display:inline;vertical-align:middle;margin-left:5px;padding:8px;background-color:#F0F0F0;color:#22949b">$display_name<span class="small vdoc_species_sci_name"> ($species)</span></h2><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
       </div>
       <div style="float:right;margin:25px 10px 0px 0px">
-        <a href="/$s_name/Phenotype/All" title="$display_name Ensembl Phenotypes" style="vertical-align:middle" target="_blank"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
+        <img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle"/>
         <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht ht" title="$count_phen phenotype(s)/disease(s)/trait(s) available for $display_name">$count_phen</span></span>
       </div>
       <div style="clear:both"></div>
@@ -362,7 +359,7 @@ sub source_phen_table {
         <a target="_blank" href="/$s_name/Info/Index" title="$display_name Ensembl Home page" style="vertical-align:middle"><img src="/i/species/$s_name.png" alt="$display_name" class="$img_class" style="float:none;margin-right:0px;padding-right:0px;vertical-align:middle;border-color:#22949b" /></a><h2 id="$s_name_id" style="display:inline;vertical-align:middle;margin-left:5px;padding:8px;background-color:#F0F0F0;color:#22949b">$display_name<span class="small vdoc_species_sci_name"> ($species)</span></h2>
       </div>
       <div style="float:right;margin:25px 10px 0px 0px">
-        <a target="_blank" href="/$s_name/Phenotype/All" title="$display_name Ensembl Phenotypes" style="vertical-align:middle"><img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle" alt="$phe_title" title="$phe_title" /></a>
+        <img src="$phen_icon" style="border-radius:5px;border:1px solid #000;vertical-align:middle"/>
         <span style="font-weight:bold;vertical-align:middle;margin-left:5px;color:#333" class="_ht ht" title="$count_phen phenotype(s) available for $display_name">$count_phen</span></span>
       </div>
       <div style="clear:both"></div>

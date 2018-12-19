@@ -41,8 +41,6 @@ Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
   my $reg = 'Bio::EnsEMBL::Registry';
 
   # set path to configuration file
-  # optionally it can be set as environment variable $ENSEMBL_VARIATION_VCF_CONFIG_FILE
-  $Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = '/path/to/vcf_config.json';
 
   ## explicit use
 
@@ -99,13 +97,12 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
-use base qw(Exporter);
+use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor);
+
 our @EXPORT_OK = qw($CONFIG_FILE);
 
 our $CONFIG_FILE;
-
 
 =head2 new
 
@@ -125,73 +122,18 @@ our $CONFIG_FILE;
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  
-  my $self;
-  eval {$self = $class->SUPER::new(shift);};
-  $self ||= {};
-  
-  bless($self, $class);
 
-  my $config = {};
+  $Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor::CONFIG_FILE = $CONFIG_FILE if ($CONFIG_FILE); 
 
-  # try and get config from DB adaptor
-  $config = $self->db->vcf_config if $self->db;
+  my $self = $class->SUPER::new(@_); 
 
-  unless($config && scalar keys %$config) {
-    my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
-    
-    # try and get config file from global variable or ENV
-    $config_file ||= $CONFIG_FILE || ($self->db ? $self->db->vcf_config_file : undef) || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
-    
-    # try and find default config file in API dir
-    if(!defined($config_file)) {
-      my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/VCFCollectionAdaptor.pm';
-      $config_file  = $INC{$mod_path};
-      $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
-    }
-    
-    throw("ERROR: No config file defined") unless defined($config_file);
-    throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
-    
-    # read config from JSON config file
-    open IN, $config_file or throw("ERROR: Could not read from config file $config_file");
-    local $/ = undef;
-    my $json_string = <IN>;
-    close IN;
-    
-    # parse JSON into hashref $config
-    $config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $config_file");
-  }
-  
-  $self->{config} = $config;
-  $self->db->vcf_config($config) if $self->db;
-
-  ## set up root dir
-  my $root_dir = '';
-  if($ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}) {
-    $root_dir = $ENV{ENSEMBL_VARIATION_VCF_ROOT_DIR}.'/';
-  }
-  elsif($self->db && $self->db->vcf_root_dir) {
-    $root_dir = $self->db->vcf_root_dir.'/';
-  }
-
-  ## set up tmp dir
-  my $tmpdir = cwd();
-  if($ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}) {
-    $tmpdir = $ENV{ENSEMBL_VARIATION_VCF_TMP_DIR}.'/';
-  }
-  elsif($self->db && $self->db->vcf_tmp_dir) {
-    $tmpdir = $self->db->vcf_tmp_dir.'/';
-  }
-
-  
-  throw("ERROR: No collections defined in config file") unless $config->{collections} && scalar @{$config->{collections}};
-  
-  $self->{collections} = {};
-  $self->{order} = [];
-  
+  my $config = $self->config; 
+  my $root_dir = $self->root_dir;
+  my $tmpdir = $self->tmpdir;
   foreach my $hash(@{$config->{collections}}) {
-    
+#    next unless (defined $hash->{annotation_type} && lc $hash->{annotation_type} eq 'vcf');
+    next if (defined $hash->{annotation_type});
+
     # check the species and assembly if we can
     if($self->db) {
       my $species = $hash->{species};
@@ -210,21 +152,7 @@ sub new {
       }
     }
 
-    # Check that the remote/local VCF file exists before creating a corresponding VCFCollection object
-    my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
-
-    # Can't test if a file with '#' characters exists (e.g. 1KG VCF files 'ALL.chr###CHR###.phase3...genotypes.vcf.gz')
-    if ($filename_template !~ /[#]+[^#]+[#]+/) {
-
-      # Check if the local or remote file exists and is accessible
-      my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
-
-      # Skip creation of VCFCollection object with non-existent or inaccessible file
-      if (!$file_exists) {
-        warn("WARNING: Can't access to the ".$hash->{species}." VCF file '$filename_template' (".$hash->{id}.")");
-        next;
-      }
-    }
+    my $filename_template = $self->_get_filename_template($hash);
 
     ## create source object if source info available
     my $source = Bio::EnsEMBL::Variation::Source->new_fast({
@@ -296,20 +224,6 @@ sub new {
   return $self;
 }
 
-# Internal method checking if a remote VCF file exists
-sub _ftp_file_exists {
-  my $self = shift;
-  my $uri = URI->new(shift);
-
-  my $ftp = Net::FTP->new($uri->host) or die "Connection error($uri): $@";
-  $ftp->login('anonymous', 'guest') or die "Login error", $ftp->message;
-  my $exists = defined $ftp->size($uri->path);
-  $ftp->quit;
-
-  return $exists;
-}
-
-
 =head2 fetch_by_id
 
   Example    : my $collection = $vca->fetch_by_id('1000GenomesPhase3');
@@ -322,7 +236,8 @@ sub _ftp_file_exists {
 =cut
 
 sub fetch_by_id {
-  return $_[0]->{collections}->{$_[1]};
+  my $self = shift;
+  return $self->SUPER::fetch_by_id(@_);
 }
 
 
@@ -338,7 +253,8 @@ sub fetch_by_id {
 =cut
 
 sub fetch_all {
-  return [map {$_[0]->{collections}->{$_}} @{$_[0]->{order} || {}}];
+  my $self = shift;
+  return $self->SUPER::fetch_all(@_);
 }
 
 
