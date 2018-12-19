@@ -98,7 +98,7 @@ use Bio::EnsEMBL::Variation::BaseVariationFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand); 
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
@@ -112,7 +112,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
-use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES); 
+use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES);
 use Data::Dumper;
 
 
@@ -191,15 +191,15 @@ our $DEBUG = 0;
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-    
+
   my $self = $class->SUPER::new(@_);
 
   my (
-      $allele_str, 
-      $var_name, 
-      $map_weight, 
+      $allele_str,
+      $var_name,
+      $map_weight,
       $variation,
-      $variation_id, 
+      $variation_id,
       $source_id,
       $source,
       $is_somatic,
@@ -212,15 +212,15 @@ sub new {
       $clin_sig,
       $display
   ) = rearrange([qw(
-          ALLELE_STRING 
-          VARIATION_NAME 
-          MAP_WEIGHT 
-          VARIATION 
-          _VARIATION_ID 
+          ALLELE_STRING
+          VARIATION_NAME
+          MAP_WEIGHT
+          VARIATION
+          _VARIATION_ID
           _SOURCE_ID
           SOURCE
           IS_SOMATIC
-          OVERLAP_CONSEQUENCES 
+          OVERLAP_CONSEQUENCES
           CLASS_SO_TERM
           MINOR_ALLELE
           MINOR_ALLELE_FREQUENCY
@@ -283,27 +283,27 @@ sub allele_string{
   my $self = shift;
   my $newval = shift;
   my $strand = shift;
-  
+
   if(defined($newval)) {
 	 $self->{allele_string} = $newval;
    delete($self->{_ref_allele});
    delete($self->{_alt_alleles});
    return $self->{allele_string};
   }
-  
+
   my $as = $self->{'allele_string'};
-  
+
   if(defined($strand) && $strand != $self->strand) {
 	my @flipped;
-	
+
 	foreach my $a(split /\//, $as) {
 	  reverse_comp(\$a) if $a =~ /^[ACGTn\-]+$/;
 	  push @flipped, $a;
 	}
-	
+
 	$as = join '/', @flipped;
   }
-  
+
   return $as;
 }
 
@@ -357,7 +357,7 @@ sub name{
 
 =head2 map_weight
 
-  Arg [1]     : int $newval (optional) 
+  Arg [1]     : int $newval (optional)
                 The new value to set the map_weight attribute to
   Example     : $map_weight = $obj->map_weight()
   Description : Getter/Setter for the map_weight attribute. The map_weight
@@ -475,7 +475,7 @@ sub get_all_highest_frequency_minor_Alleles {
     my $ref = $self->ref_allele_string;
 
     foreach my $pop(sort keys %by_pop) {
-      
+
       # we want the minor allele, which is by definition the second most frequent
       # if there are more than one the same, we want the non-reference
       my @sorted = sort {
@@ -570,7 +570,7 @@ sub get_all_cadd_scores {
 =cut
 
 sub get_all_TranscriptVariations {
-    
+
     my ($self, $transcripts) = @_;
 
     if ($transcripts) {
@@ -581,7 +581,7 @@ sub get_all_TranscriptVariations {
     #die unless $self->{transcript_variations};
 
     if ($self->dbID && not defined $self->{transcript_variations}) {
-        # this VariationFeature is from the database, so we can just fetch the 
+        # this VariationFeature is from the database, so we can just fetch the
         # TranscriptVariations from the database as well
 
         if (my $db = $self->adaptor->db) {
@@ -596,7 +596,7 @@ sub get_all_TranscriptVariations {
         }
     }
     elsif (not defined $self->{transcript_variations}) {
-        # this VariationFeature is not in the database so we have to build the 
+        # this VariationFeature is not in the database so we have to build the
         # TranscriptVariations ourselves
 
         unless ($transcripts) {
@@ -606,16 +606,16 @@ sub get_all_TranscriptVariations {
             # that we still call consequences for
 
             my $slice = $self->feature_Slice->expand(
-                MAX_DISTANCE_FROM_TRANSCRIPT, 
+                MAX_DISTANCE_FROM_TRANSCRIPT,
                 MAX_DISTANCE_FROM_TRANSCRIPT
             );
 
-            # fetch all transcripts on this slice 
+            # fetch all transcripts on this slice
 
             $transcripts = $slice->get_all_Transcripts(1);
         }
 
-        my @unfetched_transcripts = grep { 
+        my @unfetched_transcripts = grep {
             not exists $self->{transcript_variations}->{$self->_get_transcript_key($_)}
             and not exists $self->{transcript_variations}->{$_->stable_id}
         } @$transcripts;
@@ -662,7 +662,7 @@ sub get_all_RegulatoryFeatureVariations {
     assert_ref($regulatory_features, 'ARRAY');
     map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::RegulatoryFeature') } @$regulatory_features;
   }
-  
+
   if(!exists($self->{regulatory_feature_variations})) {
     if ($self->dbID) {
       # This VariationFeature is from the database, so we can just fetch the
@@ -678,10 +678,10 @@ sub get_all_RegulatoryFeatureVariations {
       # RegulatoryFeatureVariations ourselves
       $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
     }
-    
+
     $self->{regulatory_feature_variations} ||= {};
   }
-  
+
   if ($regulatory_features) {
     return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
   } else {
@@ -706,7 +706,7 @@ sub get_all_MotifFeatureVariations {
     assert_ref($motif_features, 'ARRAY');
     map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::MotifFeature')} @$motif_features;
   }
-  
+
   if(!exists($self->{motif_feature_variations})) {
     # We couldn't store motif_feature_variation for human in release/94
     # compute them on the fly instead
@@ -714,19 +714,19 @@ sub get_all_MotifFeatureVariations {
     if($self->dbID && ($species !~ /homo_sapiens|human/)) {
       if (my $db = $self->adaptor->db) {
         my $mfva = $db->get_MotifFeatureVariationAdaptor;
-        my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
+        my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);
         map {$self->add_MotifFeatureVariation($_)} @$mfvs;
       }
     }
     else {
       $self->_get_all_RegulationVariations('MotifFeature', @_);
     }
-    
+
     $self->{motif_feature_variations} ||= {};
   }
-  
+
   if ($motif_features) {
-    return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
+    return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features];
   } else {
     return [] unless keys %{$self->{motif_feature_variations}};
     return [ map {$self->{motif_feature_variations}->{$_}} sort keys %{$self->{motif_feature_variations}} ];
@@ -753,22 +753,22 @@ sub _get_all_RegulationVariations {
   unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
     throw("Invalid Ensembl Regulation type '$type'");
   }
-  
+
   my $lc_type = lc($type).'_variations';
   $lc_type =~ s/Feature/_feature/i;
 
   unless(exists($self->{$lc_type})) {
-    
+
     my $fg_adaptor;
 
     if (my $adap = $self->adaptor) {
       if(my $db = $adap->db) {
         $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
-        -species  => $adap->db->species, 
+        -species  => $adap->db->species,
         -type     => $type,
-        );			
+        );
       }
-            
+
       unless ($fg_adaptor) {
         warning("Failed to get adaptor for $type");
         return [];
@@ -780,7 +780,7 @@ sub _get_all_RegulationVariations {
     }
 
     my $slice = $self->feature_Slice;
-                
+
     my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
     my $get_adaptor = 'get_'.$type.'VariationAdaptor';
     my $add_method  = 'add_'.$type.'Variation';
@@ -794,7 +794,7 @@ sub _get_all_RegulationVariations {
         )
       ) for @{ $fg_adaptor->fetch_all_by_Slice($slice) };
     };
-		
+
     $self->{$lc_type} ||= {};
   }
 
@@ -833,7 +833,7 @@ sub get_IntergenicVariation {
 
 sub get_all_VariationFeatureOverlaps {
     my $self = shift;
-    
+
     my $vfos =  [
         @{ $self->get_all_TranscriptVariations },
         @{ $self->get_all_RegulatoryFeatureVariations },
@@ -961,7 +961,7 @@ sub variation {
 
 =head2 get_all_OverlapConsequences
 
-  Description : Get a list of all the unique OverlapConsequences of this VariationFeature, 
+  Description : Get a list of all the unique OverlapConsequences of this VariationFeature,
                 calculating them on the fly from the TranscriptVariations if necessary
   Returntype  : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
   Exceptions  : none
@@ -973,8 +973,8 @@ sub get_all_OverlapConsequences {
     my $self = shift;
 
     unless ($self->{overlap_consequences}) {
-        
-        # work them out and store them in a hash keyed by SO_term as we don't 
+
+        # work them out and store them in a hash keyed by SO_term as we don't
         # want duplicates from different VFOs
 
         my %overlap_cons;
@@ -987,10 +987,10 @@ sub get_all_OverlapConsequences {
             }
         }
 
-        # if we don't have any consequences we use a default from Constants.pm 
+        # if we don't have any consequences we use a default from Constants.pm
         # (currently set to the intergenic consequence)
 
-        $self->{overlap_consequences} = [ 
+        $self->{overlap_consequences} = [
             %overlap_cons ? values %overlap_cons : $DEFAULT_OVERLAP_CONSEQUENCE
         ];
     }
@@ -1001,7 +1001,7 @@ sub get_all_OverlapConsequences {
 =head2 add_OverlapConsequence
 
   Arg [1]     : Bio::EnsEMBL::Variation::OverlapConsequence instance
-  Description : Add an OverlapConsequence to this VariationFeature's list 
+  Description : Add an OverlapConsequence to this VariationFeature's list
   Returntype  : none
   Exceptions  : throws if the argument is the wrong type
   Status      : At Risk
@@ -1060,18 +1060,18 @@ sub _finish_annotation {
     Caller      : General
     Status      : Stable
 
-=cut 
+=cut
 
 sub ambig_code{
     my $self = shift;
 	my $strand = shift;
-    
+
     return &ambiguity_code($self->allele_string(undef, $strand));
 }
 
 =head2 var_class
 
-    Args[1]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+    Args[1]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string
                   (used by the ensembl variation pipeline)
     Example     : my $variation_class = $vf->var_class
     Description : returns the Ensembl term for the class of this variation
@@ -1086,25 +1086,25 @@ sub var_class {
 
     my $self    = shift;
     my $no_db   = shift;
-    
+
     unless ($self->{class_display_term}) {
-        
+
         my $so_term = $self->class_SO_term(undef, $no_db);
 
         # convert the SO term to the ensembl display term
-       
-        $self->{class_display_term} = $self->is_somatic ? 
-            $VARIATION_CLASSES{$so_term}->{somatic_display_term} : 
+
+        $self->{class_display_term} = $self->is_somatic ?
+            $VARIATION_CLASSES{$so_term}->{somatic_display_term} :
             $VARIATION_CLASSES{$so_term}->{display_term};
     }
-    
+
     return $self->{class_display_term};
 }
 
 =head2 class_SO_term
 
     Args[1]     : (optional) class_SO_term - the SO term for the class of this variation feature
-    Args[2]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+    Args[2]     : (optional) no_db - don't use the term from the database, always calculate it from the allele string
                   (used by the ensembl variation pipeline)
     Example     : my $SO_variation_class = $vf->class_SO_term()
     Description : Get/set the SO term for the class of this variation
@@ -1117,7 +1117,7 @@ sub var_class {
 
 sub class_SO_term {
     my ($self, $class_SO_term, $no_db) = @_;
-   
+
     $self->{class_SO_term} = $class_SO_term if $class_SO_term;
 
     if ($no_db || !$self->{class_SO_term}) {
@@ -1183,14 +1183,14 @@ sub get_all_clinical_significance_states {
   Example     : $v->add_evidence_value('Frequency');
   Description : Adds an evidence value  to this variation.
   Returntype  : none
-  Exceptions  : 
+  Exceptions  :
   Caller      : general
   Status      : At Risk
 
 =cut
 
 sub add_evidence_value {
-    
+
     my $self = shift;
     my $add_ev = shift if(@_);
 
@@ -1201,7 +1201,7 @@ sub add_evidence_value {
     my %unique = map { $_ => 1 } @{$self->{'evidence'}};
     @{$self->{'evidence'}} = keys %unique;
 
-    return $self->{'evidence'};    
+    return $self->{'evidence'};
 }
 
 
@@ -1220,7 +1220,7 @@ sub add_evidence_value {
 
 sub source{
   my $self = shift;
-  
+
   # set
   if(@_) {
     if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
@@ -1234,7 +1234,7 @@ sub source{
     my $sa = $self->adaptor->db()->get_SourceAdaptor();
     $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
   }
-  
+
   return $self->{'source'};
 }
 
@@ -1258,7 +1258,7 @@ sub source_name{
 
   my $source = $self->source;
   return unless defined $source;
-  
+
   $source->name(@_) if(@_);
   return $source->name;
 }
@@ -1280,7 +1280,7 @@ sub source_version{
   my $self = shift;
   my $source = $self->source;
   return unless defined $source;
-  
+
   $source->version(@_) if(@_);
   return $source->version;
 }
@@ -1333,7 +1333,7 @@ sub is_reference {
                 backwards compatibility
   ReturnType  : Bio::EnsEMBL::SNP
   Exceptions  : None
-  Caller      : general      
+  Caller      : general
   Status      : At Risk
 
 =cut
@@ -1363,7 +1363,7 @@ sub convert_to_SNP{
 
     Args        : none
     Description : returns all LD values for this variation feature. This function will only work correctly if the variation
-                  database has been attached to the core database. 
+                  database has been attached to the core database.
     ReturnType  : Bio::EnsEMBL::Variation::LDFeatureContainer
     Exceptions  : none
     Caller      : snpview
@@ -1487,7 +1487,7 @@ sub get_all_LD_Populations {
 
 sub get_all_sources{
     my $self = shift;
-   
+
     my @sources;
     my %sources;
     if ($self->adaptor()){
@@ -1521,7 +1521,7 @@ sub ref_allele_string {
 
 
 =head2 reference_allele
-  
+
   Args        : none
   Example     : print $vf->alternate_alleles(), "\n";
   Description : Returns the alternate alleles for this VariationFeature.
@@ -1565,13 +1565,13 @@ sub _get_alleles {
 
 sub get_all_VariationSets {
     my $self = shift;
-    
+
     if (!$self->adaptor()) {
       throw('An adaptor must be attached in order to get all variation sets');
     }
     my $vs_adaptor = $self->adaptor()->db()->get_VariationSetAdaptor();
     my $variation_sets = $vs_adaptor->fetch_all_by_Variation($self->variation());
-    
+
     return $variation_sets;
 }
 
@@ -1591,24 +1591,24 @@ sub get_all_VariationSets {
 
 sub get_all_Alleles{
     my $self = shift;
-	
+
 	my @alleles = @{$self->variation->get_all_Alleles};
-	
+
 	# put all alleles in a hash
 	my %order = ();
 	foreach my $allele(@alleles) {
 	  $order{$allele->allele} = 1;
 	}
-	
+
 	$order{$self->ref_allele_string} = 2;
-	
+
 	# now sort them by population, submitter, allele
 	my @new_alleles = sort {
 	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
 	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
 	  $order{$b->allele} <=> $order{$a->allele}
 	} @alleles;
-	
+
 	return \@new_alleles;
 }
 
@@ -1628,26 +1628,26 @@ sub get_all_Alleles{
 
 sub get_all_PopulationGenotypes{
     my $self = shift;
-	
+
 	my @gens = @{$self->variation->get_all_PopulationGenotypes};
-	
+
 	# put all alleles in a hash
 	my %order = ();
 	foreach my $gen(@gens) {
 	  # homs low priority, hets higher
 	  $order{$gen->allele1.$gen->allele2} = ($gen->allele1 eq $gen->allele2 ? 1 : 2);
 	}
-	
+
 	# ref hom highest priority
 	$order{$self->ref_allele_string x 2} = 3;
-	
+
 	# now sort them by population, submitter, genotype
 	my @new_gens = sort {
 	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
 	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
 	  $order{$b->allele1.$b->allele2} <=> $order{$a->allele1.$a->allele2}
 	} @gens;
-	
+
 	return \@new_gens;
 }
 
@@ -1695,50 +1695,50 @@ sub get_all_PopulationGenotypes{
 
 =cut
 sub get_all_hgvs_notations {
-    
+
     my $self                 = shift;
     my $ref_feature          = shift;
     my $numbering            = shift;    ## HGVS system g=genomic, c=coding, p=protein
     my $reference_name       = shift;    ## If the ref_feature is a slice, this is over-written
     my $use_allele           = shift;    ## optional single allele to check
     my $transcript_variation = shift;    ## optional transcript variation - looked up for c|p if not supplied
-    
+
     my %hgvs;
 
     ##### don't get them for HGMD mutations or CNV probes
     return {} if ($self->allele_string =~ /INS|DEL|HGMD|CNV/ig || $self->var_class() =~ /microsat/i);
     ##### By default, use genomic position numbering
     $numbering ||= 'g';
-      
-    # If no reference feature is supplied, set it to the slice underlying this VariationFeature    
+
+    # If no reference feature is supplied, set it to the slice underlying this VariationFeature
     $ref_feature  ||= $self->slice();
-  	    
+
     # Special parsing for LRG
     if (defined $reference_name && $reference_name =~ /^LRG_/) {
 		# Remove version
 	if ($reference_name =~ /(.+)\.\d+$/) {
 	    $reference_name = $1;
 	}
-    }    
+    }
 
-    ### Check/get transcript variation available for protein & coding 
-    if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {	
-	
+    ### Check/get transcript variation available for protein & coding
+    if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {
+
 	# Get a TranscriptVariation object for this VariationFeature and the supplied Transcript if it wasn't passed in the call
-	$transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0] if (!defined($transcript_variation));	
-	
+	$transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0] if (!defined($transcript_variation));
+
 	##### call new TranscriptVariationAllele method for each allele
     }
-    
-      
+
+
     if ($numbering eq 'p') {
-	
+
 	#### If there is no transcript variation supplied and the variant
 	#### is not in the translated region there is no protein change
-	return {} if (!defined($transcript_variation) || 
-		      !defined($transcript_variation->translation_start()) || 
+	return {} if (!defined($transcript_variation) ||
+		      !defined($transcript_variation->translation_start()) ||
 		      !defined($transcript_variation->translation_end()));
-	
+
 	##### call TranscriptVariationAllele method for each allele
 	foreach my $transcriptVariationAllele (@{$transcript_variation->get_all_alternate_TranscriptVariationAlleles()} ){
 
@@ -1749,14 +1749,14 @@ sub get_all_hgvs_notations {
 		reverse_comp(\$allele_string);    ### hash returned relative to input variation feature strand regardless of transcript strand
 	    }
 	    $hgvs{$allele_string} = $hgvs_full_string ;
-	} 
+	}
 	return \%hgvs;
     }
-    
+
     elsif ( $numbering =~ m/c|n/) { ### coding or non- coding transcript
-	
+
 	return {} if (!defined $transcript_variation);
-	
+
 	foreach my $transcriptVariationAllele (@{$transcript_variation->get_all_alternate_TranscriptVariationAlleles()} ){
 
 	    my $allele_string    = $transcriptVariationAllele->feature_seq();
@@ -1766,13 +1766,13 @@ sub get_all_hgvs_notations {
 		 reverse_comp(\$allele_string);    ### hash returned relative to input variation feature strand regardless of transcript strand
 	    }
 	    $hgvs{$allele_string} = $hgvs_full_string ;
-	} 
+	}
 	return \%hgvs;
     }
-    
+
     elsif( $numbering =~ m/g/ ) {
 	#### handling both alleles together locally for genomic class
-	my $hgvs = $self->hgvs_genomic($ref_feature, $reference_name, $use_allele );	
+	my $hgvs = $self->hgvs_genomic($ref_feature, $reference_name, $use_allele );
 	return $hgvs;
     }
     else{
@@ -1797,7 +1797,7 @@ sub _get_flank_seq{
       $add_length = length $al ;
     }
   }
- 
+
 
   ## start of subseq is var pos minus required flank
   my $seq_start =  $self->start() - $add_length;
@@ -1853,7 +1853,7 @@ sub hgvs_genomic {
   my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
   my $use_allele       = shift;    ## optional single allele to check
 
-  $ref_feature  = $self unless defined $ref_feature;
+  $ref_feature  = $self->slice() unless defined $ref_feature;
   my %hgvs;
 
   ########set up sequence reference
@@ -1863,21 +1863,19 @@ sub hgvs_genomic {
     $ref_slice = $ref_feature;
   }
   elsif($ref_feature) {
-    $ref_slice = $ref_feature->feature_Slice;	    
-  }         
+    $ref_slice = $ref_feature->feature_Slice;
+  }
   else{
     $ref_slice =  $self->slice;
   }
 
-
   my $tr_vf = $self;
   my ($vf_start, $vf_end, $ref_length) = ($tr_vf->start, $tr_vf->end, ($ref_feature->end - $ref_feature->start) + 1);
 
-
   # Return undef if this VariationFeature does not fall within the supplied feature.
-  return {} if ($vf_start < 1 || 
-    $vf_end   < 1 || 
-    $vf_start > $ref_length || 
+  return {} if ($vf_start < 1 ||
+    $vf_end   < 1 ||
+    $vf_start > $ref_length ||
     $vf_end   > $ref_length);
 
   #########   define reference sequence name ###################################
@@ -1890,9 +1888,9 @@ sub hgvs_genomic {
     $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $ref_feature->seq_region_name ());
   }
 
-  # Use the feature's display id as reference name unless specified otherwise. 
+  # Use the feature's display id as reference name unless specified otherwise.
   # If the feature is a transcript or translation, append the version number as well
-  $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && 
+  $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') &&
   $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
 
   my $vf_strand = $self->strand();
@@ -1900,7 +1898,7 @@ sub hgvs_genomic {
   ##### get short flank sequence for duplication checking & adjusted variation coordinates
   my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);
 
-  my @all_alleles = split(/\//,$tr_vf->allele_string());    
+  my @all_alleles = split(/\//,$tr_vf->allele_string());
   my $ref_allele = shift @all_alleles;  ## remove reference allele - not useful for HGVS
 
   foreach my $allele ( @all_alleles ) {
@@ -1911,7 +1909,7 @@ sub hgvs_genomic {
     ## expand tandems before check for non nucleotide character
     expand(\$allele);
     # Skip if the allele contains weird characters
-    next if $allele =~ m/[^ACGT\-]/ig;   
+    next if $allele =~ m/[^ACGT\-]/ig;
 
     my $check_allele = $allele;
     ##### vf strand is relative to slice - if transcript feature slice, may need complimenting
@@ -1919,7 +1917,7 @@ sub hgvs_genomic {
     if(
       $vf_strand <0 && $ref_slice->strand >0 ||
       $vf_strand >0 && $ref_slice->strand < 0
-    ){	    
+    ){
      # reverse_comp(\$check_allele);
 
       $flip_allele = 1;
@@ -1929,7 +1927,7 @@ sub hgvs_genomic {
     my $chr_start = $tr_vf->seq_region_start();
     my $chr_end   = $tr_vf->seq_region_end();
 
-    
+
     ### Apply HGVS 3' shift if required
     my $offset = 0;
     my $var_class  =  $self->var_class();
@@ -1939,7 +1937,7 @@ sub hgvs_genomic {
     if(
       ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&
       (
-        defined $self->adaptor() && UNIVERSAL::can($self->adaptor, 'isa') && $self->adaptor->db ? 
+        defined $self->adaptor() && UNIVERSAL::can($self->adaptor, 'isa') && $self->adaptor->db ?
         $self->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
         $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
       )
@@ -1965,7 +1963,7 @@ sub hgvs_genomic {
 
    }
     else{
-      reverse_comp(\$check_allele) if $flip_allele == 1 ; 
+      reverse_comp(\$check_allele) if $flip_allele == 1 ;
     }
 
     my $hgvs_notation = hgvs_variant_notation(
@@ -1974,8 +1972,8 @@ sub hgvs_genomic {
       $ref_start + $offset,   ## start on substring of slice for ref allele extraction
       $ref_end + $offset,
       $chr_start + $offset,   ## start wrt seq region slice is on (eg. chrom)
-      $chr_end + $offset,   
-      $self->variation_name() ## for error message 
+      $chr_end + $offset,
+      $self->variation_name() ## for error message
     );
 
     # Skip if e.g. allele is identical to the reference slice
@@ -2010,7 +2008,7 @@ sub hgvs_genomic {
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
     # Add the position_numbering scheme
-    $hgvs_notation->{'numbering'} = ($ref_feature->seq_region_name() eq 'MT' ? 'm' : 'g');     
+    $hgvs_notation->{'numbering'} = ($ref_feature->seq_region_name() eq 'MT' ? 'm' : 'g');
 
     # Construct the HGVS notation from the data in the hash
     $hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
@@ -2021,7 +2019,128 @@ sub hgvs_genomic {
 
 }
 
+=head2  spdi_genomic
 
+Arg [1]     : int (Optional)
+              It also returns a SPDI notation for the reference allele. By default value is '0'.
+              '1' -> returns a SPDI for the reference allele;
+              '0' -> doesn't return a SPDI for the reference allele;
+Example     : my $variation = $variation_adaptor->fetch_by_name('rs145160881');
+              my $vf = $variation->get_all_VariationFeatures->[0];
+              my $spdi = $vf->spdi_genomic();
+              while (my ($allele,$spdi_str) = each(%{$spdi})) {
+               print "Allele $allele $spdi_str\n"; # For example 'Allele A NC_000016.10:68684738:G:A'
+             }
+Description : Returns a reference to a hash with the alternate and reference alleles as key and a string with the genomic SPDI notation of this VariationFeature as value.
+              By default uses the slice it is placed on as reference and only returns spdi notation for the alternate alleles.
+Returntype  : Hash reference
+Exceptions  : Throws exception if VariationFeature can not be described relative to a Slice;
+              Throws exception if input is provided and value is not 0 nor 1; 
+              Throws exception if reference allele contains odd characters 
+Caller      : general
+Status      : Experimental
+
+=cut
+
+sub spdi_genomic{
+
+  my $self = shift;
+  my $include_ref_allele = shift;
+
+  my %spdi;
+  if(!$include_ref_allele){ $include_ref_allele = 0; }
+  # If input is provided, it must have value '1' (include reference allele) or '0' (not include reference allele)
+  throw("Include reference allele must be a numeric value '1' or '0'.") unless ($include_ref_allele =~ m/^[01]$/);
+
+  my $ref_slice = $self->slice;
+  throw("This variation feature is not placed on a slice.") unless ($ref_slice->isa('Bio::EnsEMBL::Slice'));
+
+  my ($vf_start, $vf_end) = ($self->start, $self->end);
+
+  return {} if ($vf_start < 1 || $vf_end < 1);
+
+  my $vf_strand = $self->strand();
+
+  # set up sequence reference
+  my $syn = $ref_slice->get_all_synonyms('RefSeq_genomic');
+  my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $self->seq_region_name());
+
+  my @all_alleles = split(/\//,$self->allele_string());
+  my $ref_allele = shift @all_alleles;
+
+  # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
+  if( $ref_allele =~ m/[^ACGT\-]$/ig ){
+    throw("No supported SPDI genomic is available for Variation Feature $reference_name:$vf_start-$vf_end ($vf_strand)"); 
+  } 
+
+  my $spdi_ref_allele;
+  my $spdi_alt_allele;
+
+  # Create a spdi notation for each allele
+  foreach my $alt_allele (@all_alleles){
+
+    # Expand tandems before check for non nucleotide character
+    expand(\$alt_allele);
+
+    # Skip if the allele contains weird characters
+    next if $alt_allele =~ m/[^ACGT\-]/ig;
+
+    ##### vf strand is relative to slice
+    my $flip_allele = 0;
+    if( $vf_strand == -1 ){ $flip_allele = 1; }
+
+    my $chr_start = $self->start;
+    my $chr_end   = $self->end;
+
+    # If the variant is a substitution, deletion or indel
+    my $spdi_position = $chr_start - 1;
+
+    if($chr_start == $chr_end){
+      $spdi_ref_allele = $ref_allele;
+      # Variation is a deletion (1bp)
+      if($alt_allele eq '-'){ $spdi_alt_allele = ""; }
+      # Variation is a substitution
+      else{ $spdi_alt_allele = $alt_allele; }
+    }
+    # Variation is an insertion
+    elsif($ref_allele eq '-'){
+      $spdi_position = $chr_end;
+      $spdi_ref_allele = "";
+      $spdi_alt_allele = $alt_allele;
+    }
+    # Variation is a deletion (>1bp)
+    elsif($alt_allele eq '-'){
+      $spdi_ref_allele = $ref_allele;
+      my $ref_size = length($spdi_ref_allele);
+      # If reference allele (e.g. deleted sequence) length > 20bp then spdi notation for the deletion is NC_000002.12:47403326:29: 
+      $spdi_ref_allele = $ref_size unless ( $ref_size <= 20 );
+      $spdi_alt_allele = "";
+    }
+    # Variation is an indel
+    else{
+      $spdi_ref_allele = $ref_allele;
+      $spdi_alt_allele = $alt_allele;
+    }
+
+    # If variation feature is on the reverse strand then flip alleles (SPDI format is only reported on forward strand)
+    # If variation is a deletion >20 bp then the deleted allele is represented by the sequence length (NC_000002:47403326:29:) and it doesn't need to be flipped  
+    if($flip_allele == 1 && $spdi_ref_allele =~ m/^[ACGT]*$/i){ 
+      reverse_comp(\$spdi_ref_allele) if( $spdi_ref_allele );  
+      reverse_comp(\$spdi_alt_allele) if( $spdi_alt_allele );
+    } 
+
+    my $spdi_notation = $reference_name . ":" . $spdi_position . ":" . $spdi_ref_allele . ":" . $spdi_alt_allele;
+    $spdi{$alt_allele} = $spdi_notation;
+
+    # Include reference allele in the output hash
+    if($include_ref_allele == 1){
+      $spdi_notation = $reference_name . ":" . $spdi_position . ":" . $spdi_ref_allele . ":" . $spdi_ref_allele;
+      $spdi{$ref_allele} = $spdi_notation;
+    }
+  }
+
+  return \%spdi;
+}
 
 sub length {
   my $self = shift;
@@ -2033,7 +2152,7 @@ sub length {
   Example       : $feature_summary = $feature->summary_as_hash();
   Description   : Extends Feature::summary_as_hash
                   Retrieves a summary of this VariationFeature object.
-					                        
+
   Returns       : hashref of descriptive strings
 
 =cut
@@ -2087,11 +2206,11 @@ sub flank_match{
 
 sub get_Variation_dbID {
   my $self = shift;
-  
+
   if(!defined($self->{_variation_id})) {
     $self->{_variation_id} = $self->variation->dbID;
   }
-  
+
   return $self->{_variation_id};
 }
 
@@ -2214,13 +2333,13 @@ sub to_VCF_record {
 }
 
 =head2 _get_ref_seq
-  
+
   Arg 1      : (optional) int $strand
   Example    : $seq = $bvf->_get_ref_seq();
   Description: Get the reference sequence for the span of this feature
   Returntype : string
   Exceptions : none
-  Caller     : to_VCF_record(), 
+  Caller     : to_VCF_record(),
   Status     : Stable
 
 =cut
