@@ -2392,6 +2392,7 @@ sub fetch_by_spdi_notation{
 
   # check deleted sequence (number, string)   
   my $check_deleted_seq = $deleted_seq =~ m/^\w+$/;
+  my $check_deleted_seq_digit = $deleted_seq =~ m/^\d+\z/i; 
   # check deleted sequence (string)  
   my $check_deleted_seq_letters = $deleted_seq =~ m/^([A-Z]+)$/i;  
 
@@ -2414,10 +2415,14 @@ sub fetch_by_spdi_notation{
   my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor(); 
   my $slice = $slice_adaptor->fetch_by_region('chromosome', $sequence_id ) || $slice_adaptor->fetch_by_region(undef, $sequence_id);  
 
-  # Variation is a substitution  
-  if($check_deleted_seq && $check_inserted_seq_letters && length($deleted_seq) == length($inserted_seq) && length($deleted_seq) == 1){ 
+   
+  my $deleted_seq_length = length($deleted_seq); 
+  my $inserted_seq_length = length($inserted_seq); 
+
+  # Variation is a substitution 
+  if($check_deleted_seq && $check_inserted_seq_letters && $deleted_seq_length == $inserted_seq_length){ 
     $start = $position + 1; 
-    $end = $start;  
+    $end = $position + $deleted_seq_length;   
 
     my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end); 
 
@@ -2426,35 +2431,41 @@ sub fetch_by_spdi_notation{
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)")
         unless ($ref_allele eq $refseq_allele);   
     } 
+    elsif($deleted_seq == 0){
+      throw ("Could not parse the SPDI notation $spdi. SPDI notation not supported."); 
+    } 
     else{
-      $ref_allele = $refseq_allele;    
+      throw ("Could not parse the SPDI notation $spdi. Deleted sequence length ($deleted_seq) does not match inserted sequence length ($inserted_seq_length).") 
+        unless ($inserted_seq_length == $deleted_seq); 
+      $ref_allele = $refseq_allele;
     }
-    $alt_allele = uc $inserted_seq; 
+    $alt_allele = uc $inserted_seq;
     throw ("Reference allele given by SPDI notation $spdi ($ref_allele) matches alt allele given by SPDI notation $spdi ($alt_allele)")
-      unless ($ref_allele ne $alt_allele);  
-  }  
+      unless ($ref_allele ne $alt_allele);
+  }
 
   # Variation is a deletion
-  elsif($check_deleted_seq && $inserted_seq eq ''){ 
-    $start = $position + 1; 
-    $end = $start; 
+  elsif($check_deleted_seq && $inserted_seq eq ''){
+    $start = $position + 1;
 
-    if($check_deleted_seq_letters){ 
-      $ref_allele = uc $deleted_seq; 
-      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + length($deleted_seq));
+    if($check_deleted_seq_letters){
+      $ref_allele = uc $deleted_seq;
+      $end = $position + $deleted_seq_length;
+      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end);
 
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)") 
-        unless ($ref_allele eq $refseq_allele);  
+        unless ($ref_allele eq $refseq_allele);
 
     } 
-    else{ 
-      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + $deleted_seq); 
+    else{
+      $end = $position + $deleted_seq;
+      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end);
     }   
-    $alt_allele = '-'; 
+    $alt_allele = '-';
   }    
 
   # Variation is an insertion 
-  elsif($deleted_seq eq '' && $check_inserted_seq_letters){ 
+  elsif($deleted_seq eq '' && $check_inserted_seq_letters){
     $start = $position + 1; 
     $end = $position; 
     $ref_allele = '-';   
@@ -2464,14 +2475,24 @@ sub fetch_by_spdi_notation{
   # Variation is an indel  
   elsif($check_deleted_seq_letters && $check_inserted_seq_letters){
     $start = $position + 1; 
-    $end = $position + length($inserted_seq);   
+    $end = $position + $deleted_seq_length;   
 
-    my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + length($deleted_seq)); 
+    my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + $deleted_seq_length); 
     $ref_allele = uc $deleted_seq; 
     $alt_allele = uc $inserted_seq; 
     throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)")
       unless ($ref_allele eq $refseq_allele); 
   } 
+
+  # Variation is a substitution with numbers and deleted sequence length >1 (ex. NC_000011.9:66321302:2:CA) 
+  elsif($check_deleted_seq_digit && $check_inserted_seq_letters && $deleted_seq == $inserted_seq_length){
+    $start = $position + 1; 
+    $end = $position + $deleted_seq;
+    
+    my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $position + $deleted_seq);  
+    $ref_allele = uc $refseq_allele; 
+    $alt_allele = uc $inserted_seq; 
+  }
 
   # Variation is not valid 
   else{
