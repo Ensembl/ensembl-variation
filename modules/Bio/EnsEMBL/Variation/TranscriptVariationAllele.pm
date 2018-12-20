@@ -394,18 +394,18 @@ $reverse = 0 if ($reverse eq "");
   my $shift_length = 0;
   
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
-  for (my $n = 1; $n <= $loop_limiter; $n++ ){
+  for (my $n = $reverse; $n <= $loop_limiter; $n++ ){
     ## check each position in deletion/ following seq for match
     my $check_next_del  = $reverse ? substr( $seq_to_check, length($seq_to_check) -1, 1) : substr( $seq_to_check, 0, 1);
     my $check_next_pre = $reverse ? substr( $pre_seq, length($pre_seq) - $n, 1) : substr( $post_seq, $n, 1);;
     my $hgvs_next_del  = $reverse ? substr( $hgvs_output_string, length($hgvs_output_string) -1, 1) : substr( $hgvs_output_string, 0, 1);;
     
     if($check_next_del eq $check_next_pre){
-
+$DB::single = 1;
       ## move position of deletion along
       $shift_length++;
-      $var_start++ if !$reverse;
-      $var_end++ if !$reverse;
+      $var_start++ if $reverse == 0;
+      $var_end++ if $reverse == 0;
       ## modify deleted sequence - remove start & append to end
 
       $seq_to_check = $reverse ? substr($seq_to_check, 0, length($seq_to_check) -1) : substr($seq_to_check,1);
@@ -519,7 +519,7 @@ sub _genomic_shift
   }
   my ($a, $b, $c, $d, $e);
 $DB::single = 1;
-  ($a, $b, $c, $d, $e) = $self->do_the_shift_combined($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, !$strand); # if $strand == 1;;
+  ($a, $b, $c, $d, $e) = $self->do_the_shift_combined($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); # if $strand == 1;;
   #($a, $b, $c, $d, $e) = $self->do_the_shift_reverse($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) if $strand == -1;;
   my $shift_length = $a;
   $seq_to_check = $b;
