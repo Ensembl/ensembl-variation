@@ -387,7 +387,9 @@ sub do_the_shift_reverse
 sub do_the_shift_combined
 {
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
-  ## get length of pattern to check 
+  $DB::single = 1; 
+ ## get length of pattern to check 
+$reverse = 0 if ($reverse eq "");
   my $indel_length = (length $seq_to_check);
   my $shift_length = 0;
   
@@ -516,6 +518,7 @@ sub _genomic_shift
     $type = 'ins';
   }
   my ($a, $b, $c, $d, $e);
+$DB::single = 1;
   ($a, $b, $c, $d, $e) = $self->do_the_shift_combined($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, !$strand); # if $strand == 1;;
   #($a, $b, $c, $d, $e) = $self->do_the_shift_reverse($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) if $strand == -1;;
   my $shift_length = $a;
