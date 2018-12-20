@@ -103,10 +103,17 @@ sub _return_3prime {
   my $vf ||= $tv->base_variation_feature;
   
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
-
+  
   my $tr ||= $tv->transcript;
+
+  $self->_genomic_shift(1) if !defined($vf->{shift_object}) && $tr->strand == 1;
+  $self->_genomic_shift(-1) if !defined($vf->{shift_object_reverse}) && $tr->strand == -1;
+
   my $hgvs_notation;
   my @preshifted_objects = grep { ($_->{allele_string} eq $tv->{base_variation_feature}->{allele_string}) && ($_->{strand} eq $tr->strand())} @{$self->base_variation_feature->{tva_shift_objects}};
+  push @preshifted_objects, $vf->{shift_object} if (defined($vf->{shift_object}) && $tr->strand == 1);
+  push @preshifted_objects, $vf->{shift_object_reverse} if (defined($vf->{shift_object_reverse}) && $tr->strand == -1);
+  #$DB::single = (($tr->strand eq -1) && $vf->{shift_object_reverse}->{shift_length} > 0) ;
   if(scalar(@preshifted_objects))
   {
     my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
@@ -114,6 +121,7 @@ sub _return_3prime {
     {
       foreach my $shifted_obj (@preshifted_objects)
       {
+        #$DB::single = 1;
         my $whole_seq = substr($slice->seq, $slice_start2 - $shifted_obj->{shift_length} - 2, $slice_end2 - $slice_start2 + 1 + (2 * (1+$shifted_obj->{shift_length})));
         reverse_comp(\$whole_seq) if $tr->strand != 1;
         my $pre_substr = substr($whole_seq, 0 , 1 + $shifted_obj->{shift_length});
@@ -127,7 +135,9 @@ sub _return_3prime {
       }
     }
     else{ # This vf does not lie within that feature
-      $self->{shift_object} = @preshifted_objects[0]; #fix this, currently nonsense
+      $self->{shift_object} = $vf->{shift_object} if (defined($vf->{shift_object}) && $tr->strand == 1);
+      $self->{shift_object} = $vf->{shift_object_reverse} if (defined($vf->{shift_object_reverse}) && $tr->strand == -1);
+
       return $self;
     }
   }
@@ -317,6 +327,172 @@ sub _return_3prime {
   
   return $self;
 }
+
+sub do_the_shift
+{
+  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) = @_;
+  
+  my $indel_length = (length $seq_to_check);
+  ## move along sequence after indel looking for match to start of indel
+  my $shift_length = 0;
+  for (my $n = 0; $n<= (length($post_seq) - $indel_length); $n++ ){
+    ## check each position in indel/ following seq for match
+    my $check_next_del  = substr( $seq_to_check, 0, 1);
+    my $check_next_post = substr( $post_seq, $n, 1);
+    my $hgvs_next_del  = substr( $hgvs_output_string, 0, 1);
+
+    if($check_next_del eq $check_next_post){
+      ## move position of deletion along
+      $var_start++;
+      $var_end++;
+      $shift_length++;
+        ## modify sequence - remove start & append to end
+      $seq_to_check = substr($seq_to_check,1);
+      $seq_to_check .= $check_next_del;
+      $hgvs_output_string = substr($hgvs_output_string,1);
+      $hgvs_output_string .= $hgvs_next_del;
+    }
+    else{
+      last;	    
+    }
+  }
+  
+  return $shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end;
+}
+
+sub do_the_shift_reverse
+{
+  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) = @_;
+  ## get length of pattern to check 
+  my $indel_length = (length $seq_to_check);
+  my $shift_length = 0;
+  for (my $n = 1; $n<= (length($pre_seq) - $indel_length) + 1; $n++ ){
+    ## check each position in deletion/ following seq for match
+    my $check_next_del  = substr( $seq_to_check, length($seq_to_check) -1, 1);
+    my $check_next_pre = substr( $pre_seq, length($pre_seq) - $n, 1);
+    my $hgvs_next_del  = substr( $hgvs_output_string, length($hgvs_output_string) -1, 1);
+    if($check_next_del eq $check_next_pre){
+
+      ## move position of deletion along
+      $shift_length++;
+      ## modify deleted sequence - remove start & append to end
+
+      $seq_to_check = substr($seq_to_check, 0, length($seq_to_check) -1);
+      $seq_to_check = $check_next_del . $seq_to_check;
+      $hgvs_output_string = substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
+      $hgvs_output_string = $hgvs_next_del . $hgvs_output_string;
+    }
+    else{
+      last;	    
+    }
+  }  
+  
+  return $shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end;
+}
+
+sub create_shift_object
+{
+  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand) = @_;
+  my $vf = $self->variation_feature;
+  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);#$slice_to_shrink->subseq($orig_start - $shift_length - 1, $orig_start - 1); #Can possibly speed up by subseqing $pre_seq
+  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1); #$slice_to_shrink->subseq($orig_end + 1, $orig_end + $shift_length + 1); #Can possibly speed up by subseqing $post_seq
+  
+  my @allele_string = split('/', $self->variation_feature->allele_string);
+  
+  my %shift_object = (
+    "genomic" => 1,
+    "strand" => $strand,
+    "shifted_allele_string"  => $seq_to_check,#$allele_string[1],
+    "unshifted_allele_string" => $self->variation_feature->allele_string, #$tv->{base_variation_feature}->{allele_string},
+    "shift_length"  => $shift_length,
+    "start" => $var_start,
+    "end" => $var_end,
+    "type" => $type,
+    "unshifted_start" => $vf->seq_region_start,
+    "unshifted_end" => $vf->seq_region_end,
+    "hgvs_allele_string" => $hgvs_output_string,
+    "ref_orig_allele_string" => $allele_string[0],
+    "alt_orig_allele_string" => $allele_string[1],
+    "_hgvs_offset" => $shift_length,
+    "five_prime_flanking_seq" => $five_prime_flanking_seq,
+    "three_prime_flanking_seq" => $three_prime_flanking_seq,
+    "allele_string" => $self->allele_string, 
+  );
+  
+    $vf->{shift_object} = \%shift_object if $strand == 1;
+    $vf->{shift_object_reverse} = \%shift_object if $strand == -1;
+    
+    return;
+}
+
+sub _genomic_shift
+{
+  my $self = shift;
+  my $strand = shift;
+  my $tv = $self->transcript_variation;
+  my $vf = $tv->variation_feature;
+  
+  
+  my $slice_to_shrink = $vf->slice;
+  my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
+  my $area_to_search = 1000;
+  
+  my $orig_start = $var_start;
+  my $orig_end = $var_end;
+  
+  my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
+  $new_slice = $new_slice->constrain_to_seq_region();
+  
+  my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
+  
+  my $pre_seq = substr($seqs, 0, $area_to_search); #$slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
+  my $post_seq = substr($seqs, 0 -$area_to_search);#$slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
+  
+  my $unshifted_allele_string = $self->variation_feature->{allele_string};
+  my @allele_string = split('/', $unshifted_allele_string);
+  my $hgvs_output_string = $allele_string[1];
+  
+  my $seq_to_check;
+  my $type;
+  if ($vf->var_class eq 'indel')
+  {
+    if($allele_string[0] eq '-' || length($allele_string[0]) < length($allele_string[1]) ) {
+      $seq_to_check = $allele_string[1];
+      $type = 'ins';
+    }
+    elsif ($allele_string[1] eq '-' || length($allele_string[0]) > length($allele_string[1])) {
+      $seq_to_check = $allele_string[0];
+      $type = 'del';
+    }
+    else{
+      return $self;
+    }
+  }
+  elsif ($vf->var_class eq 'deletion')
+  {
+    $seq_to_check = $allele_string[0];
+    $type = 'del';
+  }
+  elsif ($vf->var_class eq 'insertion') #Has to be an insertion, could probably remove
+  {
+    $seq_to_check = $allele_string[1];
+    $type = 'ins';
+  }
+  my ($a, $b, $c, $d, $e);
+  ($a, $b, $c, $d, $e) = $self->do_the_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) if $strand == 1;;
+  ($a, $b, $c, $d, $e) = $self->do_the_shift_reverse($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string) if $strand == -1;;
+  my $shift_length = $a;
+  $seq_to_check = $b;
+  $hgvs_output_string = $c;
+  $var_start = $d;
+  $var_end = $e;
+  
+  
+  $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand);
+  
+  my $ag = 1;
+}
+
 
 sub look_for_slice_start {
   my $self = shift;
