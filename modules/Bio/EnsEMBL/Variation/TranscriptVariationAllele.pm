@@ -230,28 +230,30 @@ sub _return_3prime {
     $self->variation_feature->{_slice}       = $slice;
   }
   
-
-  my %shift_object = (
-    "shifted_allele_string"  => $seq_to_check,#$allele_string[1],
-    "unshifted_allele_string" => $self->allele_string, #$tv->{base_variation_feature}->{allele_string},
-    "shift_length"  => $shift_length,
-    "start" => $var_start,
-    "end" => $var_end,
-    "type" => $type,
-    "strand" => $tr->strand(), 
-    "unshifted_start" => $orig_start,
-    "unshifted_end" => $orig_end,
-    "hgvs_allele_string" => $hgvs_output_string,
-    "ref_orig_allele_string" => $allele_string[0],
-    "alt_orig_allele_string" => $allele_string[1],
-    "_hgvs_offset" => $shift_length,
-    "_slice_start" => $slice_start2,
-    "_slice_end" => $slice_end2,
-    "five_prime_flanking_seq" => $five_prime_flanking_seq,
-    "three_prime_flanking_seq" => $three_prime_flanking_seq,
-    "allele_string" => $self->allele_string, 
-    "transcript_stable_id" => $tr->stable_id,
-  );
+  
+  my %shift_object = $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $tr->strand, 0);
+  
+  #my %shift_object = (
+  #  "shifted_allele_string"  => $seq_to_check,#$allele_string[1],
+  #  "unshifted_allele_string" => $self->allele_string, #$tv->{base_variation_feature}->{allele_string},
+  #  "shift_length"  => $shift_length,
+  #  "start" => $var_start,
+  #  "end" => $var_end,
+  #  "type" => $type,
+  #  "strand" => $tr->strand(), 
+  #  "unshifted_start" => $orig_start,
+  #  "unshifted_end" => $orig_end,
+  #  "hgvs_allele_string" => $hgvs_output_string,
+  #  "ref_orig_allele_string" => $allele_string[0],
+  #  "alt_orig_allele_string" => $allele_string[1],
+  #  "_hgvs_offset" => $shift_length,
+  #  "_slice_start" => $slice_start2,
+  #  "_slice_end" => $slice_end2,
+  #  "five_prime_flanking_seq" => $five_prime_flanking_seq,
+  #  "three_prime_flanking_seq" => $three_prime_flanking_seq,
+  #  "allele_string" => $self->allele_string, 
+  #  "transcript_stable_id" => $tr->stable_id,
+  #);
     
   if(defined $self->base_variation_feature->{tva_shift_objects})
   {
@@ -325,18 +327,20 @@ sub perform_shift
 
 sub create_shift_object
 {
+  #Generates a hash to attach to the TVA object to store shifting info.
+  #Can contain shifting info for both directions for genes with transcripts on both strands
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand) = @_;
   my $vf = $self->variation_feature;
-  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);#$slice_to_shrink->subseq($orig_start - $shift_length - 1, $orig_start - 1); #Can possibly speed up by subseqing $pre_seq
-  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1); #$slice_to_shrink->subseq($orig_end + 1, $orig_end + $shift_length + 1); #Can possibly speed up by subseqing $post_seq
+  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);
+  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1);
   
   my @allele_string = split('/', $self->variation_feature->allele_string);
   
   my %shift_object = (
     "genomic" => 1,
     "strand" => $strand,
-    "shifted_allele_string"  => $seq_to_check,#$allele_string[1],
-    "unshifted_allele_string" => $self->variation_feature->allele_string, #$tv->{base_variation_feature}->{allele_string},
+    "shifted_allele_string"  => $seq_to_check,
+    "unshifted_allele_string" => $self->variation_feature->allele_string, 
     "shift_length"  => $shift_length,
     "start" => $var_start,
     "end" => $var_end,
@@ -355,17 +359,19 @@ sub create_shift_object
     $vf->{shift_object} = \%shift_object if $strand == 1;
     $vf->{shift_object_reverse} = \%shift_object if $strand == -1;
     
-    return;
+    return %shift_object;
 }
 
 sub _genomic_shift
 {
+  #Does the initial shift at the genomic level, can be on either strand
+  
   my $self = shift;
   my $strand = shift;
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   
-  
+  #Gets chr slice, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   my $area_to_search = 1000;
@@ -378,8 +384,8 @@ sub _genomic_shift
   
   my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
   
-  my $pre_seq = substr($seqs, 0, $area_to_search); #$slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-  my $post_seq = substr($seqs, 0 - $area_to_search);#$slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
+  my $pre_seq = substr($seqs, 0, $area_to_search); 
+  my $post_seq = substr($seqs, 0 - $area_to_search);
   
   my $unshifted_allele_string = $self->variation_feature->{allele_string};
   my @allele_string = split('/', $unshifted_allele_string);
@@ -418,9 +424,7 @@ sub _genomic_shift
   ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
   
   
-  $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand);
-  
-  my $ag = 1;
+  $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
 }
 
 
