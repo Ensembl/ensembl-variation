@@ -183,7 +183,7 @@ sub _return_3prime {
   ## check peptides after deletion 
   
   #Not sure whether I should create a new slice for speed or not, might want this later
-  
+  $DB::single = 1;
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   my $area_to_search = 1000;
@@ -196,8 +196,8 @@ sub _return_3prime {
   
   my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
   
-  my $pre_seq = substr($seqs, 0, $area_to_search); #$slice_to_shrink->subseq($var_end + 1, $var_end+ $area_to_search);
-  my $post_seq = substr($seqs, 0 -$area_to_search);#$slice_to_shrink->subseq($var_start - $area_to_search, $var_start - 1);
+  my $pre_seq = substr($seqs, 0, $area_to_search);
+  my $post_seq = substr($seqs, 0 -$area_to_search);
   
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
@@ -208,8 +208,8 @@ sub _return_3prime {
   ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($tr->strand -1))/2); 
   ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
   
-  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);#$slice_to_shrink->subseq($orig_start - $shift_length - 1, $orig_start - 1); #Can possibly speed up by subseqing $pre_seq
-  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1); #$slice_to_shrink->subseq($orig_end + 1, $orig_end + $shift_length + 1); #Can possibly speed up by subseqing $post_seq
+  my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);
+  my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1); 
   
   my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
 
@@ -232,29 +232,7 @@ sub _return_3prime {
   
   
   my %shift_object = $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $tr->strand, 0);
-  
-  #my %shift_object = (
-  #  "shifted_allele_string"  => $seq_to_check,#$allele_string[1],
-  #  "unshifted_allele_string" => $self->allele_string, #$tv->{base_variation_feature}->{allele_string},
-  #  "shift_length"  => $shift_length,
-  #  "start" => $var_start,
-  #  "end" => $var_end,
-  #  "type" => $type,
-  #  "strand" => $tr->strand(), 
-  #  "unshifted_start" => $orig_start,
-  #  "unshifted_end" => $orig_end,
-  #  "hgvs_allele_string" => $hgvs_output_string,
-  #  "ref_orig_allele_string" => $allele_string[0],
-  #  "alt_orig_allele_string" => $allele_string[1],
-  #  "_hgvs_offset" => $shift_length,
-  #  "_slice_start" => $slice_start2,
-  #  "_slice_end" => $slice_end2,
-  #  "five_prime_flanking_seq" => $five_prime_flanking_seq,
-  #  "three_prime_flanking_seq" => $three_prime_flanking_seq,
-  #  "allele_string" => $self->allele_string, 
-  #  "transcript_stable_id" => $tr->stable_id,
-  #);
-    
+      
   if(defined $self->base_variation_feature->{tva_shift_objects})
   {
     push @{$self->base_variation_feature->{tva_shift_objects}}, \%shift_object;
