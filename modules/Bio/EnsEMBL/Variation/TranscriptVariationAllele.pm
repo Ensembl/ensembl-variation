@@ -195,9 +195,9 @@ sub _return_3prime {
   $new_slice = $new_slice->constrain_to_seq_region();
   
   my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
-  
-  my $pre_seq = substr($seqs, 0, $area_to_search);
-  my $post_seq = substr($seqs, 0 -$area_to_search);
+  my $transcript_seq = $slice3->subseq((($slice_start3 - $area_to_search) > 0 ? ($slice_start3 - $area_to_search) : 1), ($slice_end3 + $area_to_search) <= length($slice3->seq) ? ($slice_end3 + $area_to_search) : length($slice3->seq));
+  my $pre_seq = substr($transcript_seq, 0, ($slice_start3 - $area_to_search) > 0 ? $area_to_search : $slice_start3 );
+  my $post_seq = substr($transcript_seq, ($slice_end3 + $area_to_search) <= length($slice3->seq) ? ($area_to_search) : length($slice3->seq) - $slice_end3 + 1);
   
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
