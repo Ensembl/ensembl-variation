@@ -103,12 +103,17 @@ sub _return_3prime {
   my $vf ||= $tv->base_variation_feature;
   
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
-  
+  $DB::single = 1;
   my $tr ||= $tv->transcript;
 
   $self->_genomic_shift(1) if !defined($vf->{shift_object}) && $tr->strand == 1;
   $self->_genomic_shift(-1) if !defined($vf->{shift_object_reverse}) && $tr->strand == -1;
-
+  
+  $self->{shift_object} = $vf->{shift_object} if $tr->strand == 1;
+  $self->{shift_object} = $vf->{shift_object_reverse} if $tr->strand == -1;
+  
+  return $self;
+  
   my $hgvs_notation;
   my @preshifted_objects = grep { ($_->{allele_string} eq $tv->{base_variation_feature}->{allele_string}) && ($_->{strand} eq $tr->strand())} @{$self->base_variation_feature->{tva_shift_objects}};
   push @preshifted_objects, $vf->{shift_object} if (defined($vf->{shift_object}) && $tr->strand == 1);
