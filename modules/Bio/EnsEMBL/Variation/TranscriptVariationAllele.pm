@@ -103,7 +103,6 @@ sub _return_3prime {
   my $vf ||= $tv->base_variation_feature;
   
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
-  $DB::single = 1;
   my $tr ||= $tv->transcript;
 
   $self->_genomic_shift(1) if !defined($vf->{shift_object}) && $tr->strand == 1;
@@ -708,9 +707,14 @@ sub codon {
     my $codon_cds_start = $tv_tr_start * 3 - 2;
     my $codon_cds_end   = $tv_tr_end * 3;
     my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-    my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
+    delete($tv->{cds_end});
+    delete($tv->{cds_start});
+    delete($tv->{_cds_coords});
+    my $vf_nt_len       = $tv->cds_end(undef, $tr->strand * $shifting_offset) - $tv->cds_start(undef, $tr->strand * $shifting_offset) + 1;
     my $allele_len      = $self->seq_length;
-    
+    delete($tv->{cds_end});
+    delete($tv->{cds_start});
+    delete($tv->{_cds_coords});
     my $cds;
     if ($allele_len != $vf_nt_len) {
       if (abs($allele_len - $vf_nt_len) % 3) {
@@ -729,7 +733,7 @@ sub codon {
       # splice the allele sequence into the CDS
       $cds = $tv->_translateable_seq;
     
-      substr($cds, $tv->cds_start-1 + $shifting_offset, $vf_nt_len) = $seq;
+      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1 + $shifting_offset, $vf_nt_len) = $seq;
     }
 
     # and extract the codon sequence
@@ -1550,6 +1554,7 @@ sub hgvs_protein {
   $hgvs_notation->{'numbering'} = 'p';
 
   ### get default reference location [changed later in some cases eg. duplication]
+  $DB::single = 1;
   $hgvs_notation->{start}   = $hgvs_tva_tv->translation_start();
   $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
 
@@ -2166,13 +2171,14 @@ sub _get_alternate_cds{
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   my $tr = $tv->transcript;
+  my $shifting_offset = (defined($self->{shift_object}) && defined($self->{shift_object}->{shift_length})) ? $self->{shift_object}->{shift_length} : 0;
   
-  return undef unless defined($tv->cds_start) && defined($tv->cds_end());
-  my $shifting_offset;
+  return undef unless defined($tv->cds_start(undef, $tr->strand * $shifting_offset)) && defined($tv->cds_end(undef, $tr->strand * $shifting_offset));
+  #my $shifting_offset;
   #if($tr->strand() > 0)
   #{
     #$shifting_offset = defined($vfoa->base_variation_feature->{shift_length}) ? $vfoa->base_variation_feature->{shift_length} : 0;
-    $shifting_offset = (defined($self->{shift_object}) && defined($self->{shift_object}->{shift_length})) ? $self->{shift_object}->{shift_length} : 0;
+  #  $shifting_offset = (defined($self->{shift_object}) && defined($self->{shift_object}->{shift_length})) ? $self->{shift_object}->{shift_length} : 0;
   #}
   #elsif($tr->strand < 0)
   #{
