@@ -187,12 +187,12 @@ sub cdna_end {
 =cut
 
 sub cds_start {
-    my ($self, $cds_start) = @_;
-    
+    my ($self, $cds_start, $toshift) = @_;
+    my $shifting_offset = defined($toshift) ? $toshift : 0;
     $self->{cds_start} = $cds_start if defined $cds_start;
     
     unless (exists $self->{cds_start}) {
-        my $cds_coords = $self->cds_coords;
+        my $cds_coords = $self->cds_coords($shifting_offset);
         
         my ($first, $last) = ($cds_coords->[0], $cds_coords->[-1]);
         my $exon_phase = $self->transcript->start_Exon->phase;
@@ -218,12 +218,12 @@ sub cds_start {
 =cut
 
 sub cds_end {
-    my ($self, $cds_end) = @_;
-    
+    my ($self, $cds_end, $toshift) = @_;
+    my $shifting_offset = defined($toshift) ? $toshift : 0;
     $self->{cds_end} = $cds_end if defined $cds_end;
     
     # call cds_start to calculate the start and end
-    $self->cds_start unless exists $self->{cds_end};
+    $self->cds_start(undef, $toshift) unless exists $self->{cds_end};
     
     return $self->{cds_end};
 }
@@ -296,6 +296,8 @@ sub translation_end {
 
 sub cdna_coords {
     my $self = shift;
+    my $toshift = shift;
+    my $shifting_offset = defined($toshift) ? $toshift : 0;
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
@@ -305,7 +307,7 @@ sub cdna_coords {
         #  $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ];
         #}
         #else{
-          $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+          $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
         #}
     }
     
@@ -325,6 +327,8 @@ sub cdna_coords {
 
 sub cds_coords {
     my $self = shift;
+    my $toshift = shift;
+    my $shifting_offset = defined($toshift) ? $toshift : 0;
     
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
@@ -334,7 +338,7 @@ sub cds_coords {
         #  $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ];
         #}
         #else{
-          $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+          $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
         #}
         
         if(defined($self->{_cds_coords}->[0]) && $self->{_cds_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
