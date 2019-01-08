@@ -187,7 +187,6 @@ sub _return_3prime {
   ## check peptides after deletion 
   
   #Not sure whether I should create a new slice for speed or not, might want this later
-  $DB::single = 1;
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   my $area_to_search = 1000;
@@ -710,6 +709,7 @@ sub codon {
     delete($tv->{cds_end});
     delete($tv->{cds_start});
     delete($tv->{_cds_coords});
+    return $self->{codon} if !defined($tv->cds_end(undef, $tr->strand * $shifting_offset)) || !defined($tv->cds_start(undef, $tr->strand * $shifting_offset));
     my $vf_nt_len       = $tv->cds_end(undef, $tr->strand * $shifting_offset) - $tv->cds_start(undef, $tr->strand * $shifting_offset) + 1;
     my $allele_len      = $self->seq_length;
     delete($tv->{cds_end});
@@ -1227,6 +1227,7 @@ sub hgvs_transcript {
   my $offset_to_add = defined($self->{shift_object}) ? $self->{shift_object}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
   ### decide event type from HGVS nomenclature   
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
+  return undef if (length($self->{_slice}->seq()) < $self->{_slice_end} + $offset_to_add);
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1554,7 +1555,6 @@ sub hgvs_protein {
   $hgvs_notation->{'numbering'} = 'p';
 
   ### get default reference location [changed later in some cases eg. duplication]
-  $DB::single = 1;
   $hgvs_notation->{start}   = $hgvs_tva_tv->translation_start();
   $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
 
