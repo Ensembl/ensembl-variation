@@ -382,7 +382,7 @@ sub get_feature{
                            $attrib->{Attribute}->[1]->{integerValue} == $assembly_number );	
 
       next unless (defined $attrib->{Attribute}->[1]->{Type} &&
-                           $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top\s+level$/ );
+                           $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top\s+level/ );
 	
       $feature{hgvs_g} =  $attrib->{Attribute}->[1]->{Change}; 
     }
