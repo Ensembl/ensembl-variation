@@ -158,7 +158,7 @@ print STDOUT "> Variant sets finished\n";
 $section = 'clin_significance';
 $tmp_file    = "data_desc_$section.html";
 $tmp_section = "$section\_tmp.html";
-$file_name   = "phenotype_association.html";
+$file_name   = "phenotype_annotation.html";
 
 print STDOUT "# Start clinical significance ...\n";
 `cp $input_dir/phenotype/$file_name $tmp_file`;
