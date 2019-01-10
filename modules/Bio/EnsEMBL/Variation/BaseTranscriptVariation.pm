@@ -219,6 +219,7 @@ sub cds_start {
 
 sub cds_end {
     my ($self, $cds_end, $toshift) = @_;
+
     my $shifting_offset = defined($toshift) ? $toshift : 0;
     $self->{cds_end} = $cds_end if defined $cds_end;
     
@@ -302,13 +303,8 @@ sub cdna_coords {
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        #if($vf->{shifted_flag}) 
-        #{
-        #  $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ];
-        #}
-        #else{
-          $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
-        #}
+
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
@@ -334,13 +330,8 @@ sub cds_coords {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
         
-        #if ($vf->{shifted_flag}){
-        #  $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->{unshifted_start}, $vf->{unshifted_end}, $tran->strand) ];
-        #}
-        #else{
-          $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
-        #}
-        
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
+                
         if(defined($self->{_cds_coords}->[0]) && $self->{_cds_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
         {
           my $new_cds_coords = [ $self->_mapper->genomic2cds($vf->{start}, $vf->{end}, $tran->strand) ];
