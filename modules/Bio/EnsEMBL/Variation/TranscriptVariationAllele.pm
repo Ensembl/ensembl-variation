@@ -97,17 +97,24 @@ sub new_fast {
 }
 
 sub _return_3prime {
+  
+  ## Called in TranscriptVariation.pm for original mapping and in TranscriptVariationAllele.pm if required for HGVS
+  
+  ## Will create a "shift_object", containing info on precisely how the variant should be shifted when required
   my $self = shift;
   my $hgvs_only = shift;
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
   
+  ## Don't even attempt shifting if it's not an indel
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
   my $tr ||= $tv->transcript;
 
+  ## Performs a shift in either the 5' or 3' direction depending on the strand of the transcript
   $self->_genomic_shift(1) if !defined($vf->{shift_object}) && $tr->strand == 1;
   $self->_genomic_shift(-1) if !defined($vf->{shift_object_reverse}) && $tr->strand == -1;
   
+  ## Copies the genomic shift object over to the $tva object for later use
   $self->{shift_object} = $vf->{shift_object} if $tr->strand == 1;
   $self->{shift_object} = $vf->{shift_object_reverse} if $tr->strand == -1;
   
@@ -137,7 +144,7 @@ sub _return_3prime {
         
       }
     }
-    else{ # This vf does not lie within that feature
+    else{ ## This vf does not lie within that feature
       $self->{shift_object} = $vf->{shift_object} if (defined($vf->{shift_object}) && $tr->strand == 1);
       $self->{shift_object} = $vf->{shift_object_reverse} if (defined($vf->{shift_object_reverse}) && $tr->strand == -1);
 
@@ -145,10 +152,10 @@ sub _return_3prime {
     }
   }
 
-  # split into ref and alt, and take the important parts of indels
+  ## split into ref and alt, and take the important parts of indels
   my $seq_to_check;
   my @split;
-  #($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
+
   my ($slice_start3, $slice_end3, $slice3 ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
   my $unshifted_allele_string = defined($self->allele_string) ? $self->allele_string : $tv->{base_variation_feature}->{allele_string};
   $unshifted_allele_string = $tv->{base_variation_feature}->{allele_string} if (index($unshifted_allele_string, '/') == -1);
@@ -265,12 +272,15 @@ sub _return_3prime {
 
 sub perform_shift
 {
+  ## Performs the shifting calculation
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
+  
   ## get length of pattern to check 
   $reverse = 0 if ($reverse eq "");
   my $indel_length = (length $seq_to_check);
   my $shift_length = 0;
   
+  ## Sets up the for loop, ensuring that the correct bases are compared depending on the strand
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
   for (my $n = $reverse; $n <= $loop_limiter; $n++ ){
     ## check each position in deletion/ following seq for match
@@ -287,6 +297,8 @@ sub perform_shift
 
       $seq_to_check = $reverse ? substr($seq_to_check, 0, length($seq_to_check) -1) : substr($seq_to_check,1);
       $hgvs_output_string = $reverse ? substr($hgvs_output_string, 0, length($hgvs_output_string) -1) : substr($hgvs_output_string,1);
+      
+      ## Reforms the sequences to check and the HGVS output strings for the next iteration
       if($reverse)
       {
         $seq_to_check = $check_next_del . $seq_to_check;  
@@ -302,7 +314,8 @@ sub perform_shift
       last;	    
     }
   }
-      return $shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end;
+  
+  return $shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end;
 }
 
 
@@ -310,6 +323,7 @@ sub create_shift_object
 {
   #Generates a hash to attach to the TVA object to store shifting info.
   #Can contain shifting info for both directions for genes with transcripts on both strands
+  
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand) = @_;
   my $vf = $self->variation_feature;
   my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);
@@ -345,26 +359,27 @@ sub create_shift_object
 
 sub _genomic_shift
 {
-  #Does the initial shift at the genomic level, can be on either strand
+  ## Does the initial shift at the genomic level, can be on either strand
   
   my $self = shift;
   my $strand = shift;
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   
-  #Gets chr slice, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
-  my $area_to_search = 1000;
   
+  ## Gets chr slice, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
+  ## Little bit of a magic number - should be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
+  my $area_to_search = 1000;
   my $orig_start = $var_start;
   my $orig_end = $var_end;
   
   my $new_slice = $slice_to_shrink->expand(0 - ($var_start - $slice_start - $area_to_search), 0 - ($slice_end - $var_end - $area_to_search));
   $new_slice = $new_slice->constrain_to_seq_region();
   
+  ## Gets flanking sequences around the variant to test if shifting is possible
   my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
-  
   my $pre_seq = substr($seqs, 0, $area_to_search); 
   my $post_seq = substr($seqs, 0 - $area_to_search);
   
@@ -372,6 +387,8 @@ sub _genomic_shift
   my @allele_string = split('/', $unshifted_allele_string);
   my $hgvs_output_string = $allele_string[1];
   
+  
+  ## isolate correct sequence to attempt to shift
   my $seq_to_check;
   my $type;
   if ($vf->var_class eq 'indel')
@@ -400,11 +417,15 @@ sub _genomic_shift
   }
   
   my $shift_length;
+  
+  ## Fix this - I'm sure Perl has a smoother way of doing this
   my ($a, $b, $c, $d, $e);
+  
+  ## Actually performs the shift, and provides raw data in order to create shifting object
   ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
   ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
   
-  
+  ## Creates shift_object to attach to VF and TVA objects for 
   $self->create_shift_object($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
 }
 
@@ -1018,14 +1039,16 @@ sub hgvs_transcript {
   my $hgvs_tva = $self;
   my $variation_feature_sequence;
   my $adaptor_shifting_flag = 1;
+  
+  ## Check previous shift_hgvs_variants_3prime flag and act accordingly
   $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
-  #if($tr->strand() > 0)
-  #{
+  
+  ## Perform HGVS shift even if no_shift is on
   $hgvs_tva->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
 
   $variation_feature_sequence = $self->variation_feature_seq();
   $variation_feature_sequence = $self->{shift_object}->{hgvs_allele_string} if defined($self->{shift_object}) && $vf->var_class() eq 'insertion' && ($adaptor_shifting_flag != 0);
-  #my $hgvs_tva_debug = $self->_hgvs_tva($tr, $tv, $vf);
+  
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva && defined $hgvs_tva->base_variation_feature_overlap;
   $self->look_for_slice_start unless (defined  $self->{_slice_start});
@@ -2003,7 +2026,7 @@ sub _get_alternate_cds{
   ### get sequences upstream and downstream of variant
   my $upstream_seq   =  substr($reference_cds_seq, 0, ($tv->cds_start() + $shifting_offset -1) );
   my $downstream_seq =  substr($reference_cds_seq, ($tv->cds_end() + $shifting_offset ) );
-
+  return undef unless defined($downstream_seq) && defined($upstream_seq);
   ### fix alternate allele if deletion or on opposite strand
   my $alt_allele  = $self->variation_feature_seq();
   $alt_allele  =~ s/\-//;
