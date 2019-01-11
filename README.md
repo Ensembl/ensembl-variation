@@ -1,7 +1,7 @@
 # Ensembl Variation API
 
-[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=master)][travis]
-[![Coverage Status](https://coveralls.io/repos/Ensembl/ensembl-variation/badge.png)][coveralls]
+[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=master)](https://travis-ci.org/Ensembl/ensembl-variation)
+[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=master)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=master)
 
 [travis]: https://travis-ci.org/Ensembl/ensembl-variation
 [coveralls]: https://coveralls.io/r/Ensembl/ensembl-variation
