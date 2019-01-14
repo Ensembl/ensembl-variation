@@ -1258,10 +1258,9 @@ sub partial_codon {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
         return 0 unless defined $bvfo->translation_start();
-        #delete($bvfoa->{shift_object});
+        
         my $cds_length = length $bvfo->_translateable_seq;
 
-        #my $codon_cds_start = ($bvfo->translation_start(undef, $bvfoa->{shift_object}->{shift_length}) * 3) - 2;
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
         my $last_codon_length = $cds_length - ($codon_cds_start - 1);
         
