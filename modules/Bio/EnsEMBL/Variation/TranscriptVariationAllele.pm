@@ -107,7 +107,7 @@ sub _return_3prime {
   my $vf ||= $tv->base_variation_feature;
   
   ## Don't even attempt shifting if it's not an indel
-  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' || $vf->var_class eq 'indel');
+  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' );
   my $tr ||= $tv->transcript;
 
   ## Performs a shift in either the 5' or 3' direction depending on the strand of the transcript
@@ -119,6 +119,10 @@ sub _return_3prime {
   $self->{shift_object} = $vf->{shift_object_reverse} if $tr->strand == -1;
   
   return $self;
+  
+  
+  #####EVERYTHING BELOW THIS IS KEPT FOR DEBUGGIN PURPOSES POST-REFACTOR
+  
   
   my $hgvs_notation;
   my @preshifted_objects = grep { ($_->{allele_string} eq $tv->{base_variation_feature}->{allele_string}) && ($_->{strand} eq $tr->strand())} @{$self->base_variation_feature->{tva_shift_objects}};
@@ -393,17 +397,17 @@ sub _genomic_shift
   my $type;
   if ($vf->var_class eq 'indel')
   {
-    if($allele_string[0] eq '-' || length($allele_string[0]) < length($allele_string[1]) ) {
-      $seq_to_check = $allele_string[1];
-      $type = 'ins';
-    }
-    elsif ($allele_string[1] eq '-' || length($allele_string[0]) > length($allele_string[1])) {
-      $seq_to_check = $allele_string[0];
-      $type = 'del';
-    }
-    else{
+    #if($allele_string[0] eq '-' || length($allele_string[0]) < length($allele_string[1]) ) {
+    #  $seq_to_check = $allele_string[1];
+    #  $type = 'ins';
+    #}
+    #elsif ($allele_string[1] eq '-' || length($allele_string[0]) > length($allele_string[1])) {
+    #  $seq_to_check = $allele_string[0];
+    #  $type = 'del';
+    #}
+    #else{
       return $self;
-    }
+    #}
   }
   elsif ($vf->var_class eq 'deletion')
   {
