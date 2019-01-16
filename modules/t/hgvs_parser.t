@@ -745,4 +745,29 @@ ok( $hgvs_genomic_slice->{'T'} eq $hgvs_genomic->{'T'}, "hgvs genomic notation w
 my $hgvs_genomic_no_slice = $variation_feature->hgvs_genomic(); 
 ok( $hgvs_genomic_no_slice->{'T'} eq $hgvs_genomic->{'T'}, "hgvs genomic notation with a slice is the same as get_all_hgvs_notations genomic ('g')");
 
+{
+  # Test trimming of alleles in hgvs_genomic when type is delins
+  # Test delins that is trimmed to an insertion
+  my $vfa = $vdba->get_variationFeatureAdaptor();
+  my $sa = $cdba->get_SliceAdaptor();
+  my $slice = $sa->fetch_by_region('chromosome', 2);
+
+  my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+   -start => 46746468,
+   -end   => 46746468,
+   -slice => $slice,
+   -allele_string => 'T/TGT',
+   -strand => 1,
+   -map_weight => 1,
+   -adaptor => $vfa,
+   -variation_name => 'newSNP'
+  );
+
+  my $hgvs_expected = 'NC_000002.11:g.46746468_46746469insGT';
+  my $hgvs_genomic = $new_vf->hgvs_genomic();
+
+  is( $hgvs_genomic->{'TGT'}, $hgvs_expected, 'trimming of alleles for delins to ins');
+
+}
+
 done_testing(); 
