@@ -732,7 +732,7 @@ sub test_output{
 
 # Test hgvs genomic with slice and without slice 
 my $variationfeature_adaptor = $vdba->get_variationFeatureAdaptor; 
-my $slice_adaptor = $cdba->get_Slice;   
+my $slice_adaptor = $cdba->get_SliceAdaptor();
 my $slice = $slice_adaptor->fetch_by_region('chromosome', 2, 1, 665568000);
 my $variation_feature = $variationfeature_adaptor->fetch_by_hgvs_notation( "ENST00000522587.1:c.-101-6514C>T" );  
 my $hgvs_genomic = $variation_feature->get_all_hgvs_notations("", "g");
