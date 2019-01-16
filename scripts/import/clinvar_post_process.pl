@@ -366,6 +366,17 @@ sub check_counts{
                                                from variation where clinical_significance is not null 
                                                group by clinical_significance]);
 
+  my $pheno_attrib_ext_sth = $dbh->prepare(qq[ SELECT a.code, count(*)
+                                               FROM attrib_type a, phenotype_feature_attrib pfa, phenotype_feature pf, source s
+                                               WHERE s.name='ClinVar'
+                                               AND pf.source_id = s.source_id AND pf.phenotype_feature_id = pfa.phenotype_feature_id AND pfa.attrib_type_id = a.attrib_type_id
+                                               group by a.code]);
+
+  my $omim_set_ext_sth = $dbh->prepare(qq[ SELECT count(*)
+                                           FROM variation_set_variation vsv, variation_set vs, attrib a
+                                           WHERE vs.short_name_attrib_id = a.attrib_id
+                                           AND vsv.variation_set_id = vs.variation_set_id
+                                           AND a.value = ? ]);
 
    $pheno_count_ext_sth->execute( $SOURCENAME )||die;
    my $ph =  $pheno_count_ext_sth->fetchall_arrayref();
@@ -403,6 +414,18 @@ sub check_counts{
    my $classes = $class_ext_sth->fetchall_arrayref();
    foreach my $l(@{$classes}){
        warn "\nNo variants with class: $l->[0]\n"  unless defined  $class_count{$l->[0]} ;
+   }
+
+   #get OMIM variant set count:
+   $omim_set_ext_sth->execute( "ph_omim"); #get OMIM set id
+   my $omim_set_count = $omim_set_ext_sth->fetchrow_array();
+   print "OMIM set variants: ", $omim_set_count, "\n";
+
+   warn "Getting ClinVar phenotype_attrib counts\n";
+   $pheno_attrib_ext_sth->execute()||die;
+   my $rows = $pheno_attrib_ext_sth->fetchall_arrayref();
+   foreach my $row(@{$rows}) {
+     warn join(': ', @{$row}), "\n";
    }
 }
 
