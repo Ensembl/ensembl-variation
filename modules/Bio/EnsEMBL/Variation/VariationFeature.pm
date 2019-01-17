@@ -2002,7 +2002,12 @@ sub hgvs_genomic {
       $hgvs_notation->{ref} ||= '-';
       $hgvs_notation->{alt} ||= '-';
       $hgvs_notation->{type} = 'del' if $hgvs_notation->{alt} eq '-';
-      $hgvs_notation->{type} = 'ins' if $hgvs_notation->{ref} eq '-';
+      if ($hgvs_notation->{ref} eq '-') {
+        $hgvs_notation->{type} = 'ins';
+        ## fix position for ins
+        $hgvs_notation->{start}--;
+        $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
+      }
     }
 
     # Add the name of the reference
