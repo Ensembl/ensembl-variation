@@ -123,7 +123,7 @@ sub run_variation_checks {
         $status{all}++;
         # update failed variation if needed
         if (defined $var{fail_reasons} && scalar(@{$var{fail_reasons}}) > 0 ){
-            print "$var{name}\tfailed: ", join(",",@{$var{fail_reasons}}), "\n" if $DEBUG == 1;
+            warn $var{name},"\tfailed: ", join(",",@{$var{fail_reasons}}), "\n" if $DEBUG == 1;
             ## keep a count for fail rate
             $status{fail}++ ;
 
@@ -136,10 +136,10 @@ sub run_variation_checks {
             # update variation_feature variation_set_id
             $update_failed_var_feat_sth->execute($set_id->[0]->[0], $var{id});
         } else {
-            print $var{name}, "\n" if $DEBUG == 1;
+            warn $var{name}, "\n" if $DEBUG == 1;
         }
     }
-    print "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
+    warn "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
 }
 
 ## call standard QC checks & return string of failure reasons
@@ -419,7 +419,7 @@ sub check_counts{
    #get OMIM variant set count:
    $omim_set_ext_sth->execute( "ph_omim"); #get OMIM set id
    my $omim_set_count = $omim_set_ext_sth->fetchrow_array();
-   print "OMIM set variants: ", $omim_set_count, "\n";
+   warn "OMIM set variants: ", $omim_set_count, "\n";
 
    warn "Getting ClinVar phenotype_attrib counts\n";
    $pheno_attrib_ext_sth->execute()||die;
