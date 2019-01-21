@@ -45,10 +45,11 @@ use Bio::EnsEMBL::Variation::Source;
 
 our $DEBUG = 0;
 
-my ($data_file, $registry_file, $species, $source_name, $clean, $source_version, $source_url, $source_description);
+my ($data_file, $registry_file, $species, $source_type, $source_name, $clean, $source_version, $source_url, $source_description);
 
 GetOptions ("data_file=s"          => \$data_file,
             "species=s"            => \$species,
+            "source_type=s"        => \$source_type,
             "source_name=s"        => \$source_name,
             "source_url=s"         => \$source_url,
             "source_version=s"     => \$source_version,
@@ -57,7 +58,7 @@ GetOptions ("data_file=s"          => \$data_file,
             "clean"                => \$clean 
             );
 
-usage() unless defined $registry_file && defined $source_name;
+usage() unless defined $registry_file && defined $source_name; 
 
 $species ||= 'homo_sapiens';
 
@@ -69,26 +70,56 @@ my $dba = $reg->get_DBAdaptor($species, 'variation');
 $dba->include_failed_variations(1);
 
 
-my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description );
-
-my $synonyms;
-
 ## collect synonyms by source
 if($source_name eq 'PharmGKB'){
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description );
+
+  my $synonyms;
 
   ## collect data files if not already available
   $data_file = download_PharmGKB() unless $data_file;
 
   ## extract synonyms from file
   $synonyms  = extract_PharmGKB($data_file);
+  
+  ## add synonyms to the database
+  import_synonyms($synonyms, $source, $dba, $species); 
 }
+
+
+if($source_name eq 'dbSNP'){
+  
+  ### import synonyms from production database ### I don't use a registry file because this database doesn't have adaptors 
+  my $source_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
+    ( '-host'    => 'mysql-ens-var-prod-1.ebi.ac.uk',
+      '-port'    => 4449, 
+      '-user'    => 'ensadmin',
+      '-pass'    => 'ensembl',
+      '-dbname'  => 'production',
+      '-driver'  =>  'mysql' 
+    ); 
+
+  my $synonyms_output = fetch_synonyms_data($source_dbc, '*', 'human_synonym'); 
+  
+  my %synonyms; # key: synonym_name; value: rs_name 
+  my %source_ids; # key: synonym_name; value: source_id 
+  # my %source_names; #key: source_id; value: source object  
+
+  # get data from human_synonym table 
+  foreach my $result (@{$synonyms_output}){  
+    $synonyms{$result->[2]} = $result->[1]; 
+    $source_ids{$result->[2]} = $result->[4]; 
+  } 
+
+  # get all available sources from production database  
+  my $sources = get_all_sources($dba, $source_dbc); 
+  import_synonyms_all_sources(\%synonyms, $sources, \%source_ids, $dba, $species); 
+} 
+
+
 else{
     die "data source : $source_name not supported\n";
-}
-
-
-## add synonyms to the database
-import_synonyms($synonyms, $source, $dba, $species);
+} 
 
 
 =head2 download_PharmGKB
@@ -162,6 +193,34 @@ sub import_synonyms{
   }
 }
 
+=head2 import_synonyms
+
+import synonyms from production database  
+
+=cut
+sub import_synonyms_all_sources{
+
+  my $synonyms          = shift;
+  my $sources           = shift; 
+  my $output_source_ids = shift; 
+  my $dest_db           = shift; 
+  my $species           = shift; 
+
+  my $variation_adaptor = $dest_db->get_VariationAdaptor($species, 'variation');  
+
+  foreach my $synonym_name (keys %{$synonyms}){ 
+    my $var_name = $synonyms->{$synonym_name}; 
+    my $var = $variation_adaptor->fetch_by_name($var_name);
+    
+    if(defined($var)){  
+      my $source_id = $output_source_ids->{$synonym_name}; 
+      my $source = $sources->{$source_id}; 
+      $var->add_synonym($source->name(), $synonym_name);
+      $variation_adaptor->store_synonyms($var); 
+    } 
+  } 
+} 
+
 =head2 get_source
 
 get or add source object
@@ -201,6 +260,73 @@ sub get_source{
   }
   return $source;
 }
+
+=head2 get_all_sources
+
+get or add sources object
+
+=cut
+
+sub get_all_sources{
+
+  my $dest_db = shift;
+  my $source_dbc = shift; 
+
+  # my %source_names; # hash with source id and corresponding source name 
+  my %source_list; 
+
+  my $source_adaptor = $dest_db->get_SourceAdaptor('human', 'variation'); 
+
+  my $source_output = fetch_synonyms_data($source_dbc, '*', 'source');  
+
+  foreach my $result_from_source (@{$source_output}){  
+    # my $source_id = $result_from_source->[0]; 
+    my $source_name = $result_from_source->[1]; 
+    my $source = $source_adaptor->fetch_by_name($source_name);
+    
+    if(defined($source)){
+      # print "SOURCE DEFINED: $source_name\n";  
+      # if(defined $version){ 
+      #   $source->version($version);
+      #   $source_adaptor->update_version($source);   
+      # }  
+    }
+    else{    
+      # print "Adding info for source $source_name\n"; 
+      $source = Bio::EnsEMBL::Variation::Source->new
+         (-name        => $source_name, 
+          -url         => $result_from_source->[4],
+          -version     => $result_from_source->[2],
+          -description => $result_from_source->[3], 
+          -data_types  => ['variation_synonym']
+        );
+
+      eval{$source_adaptor->store($source);} ; die "ERROR storing source: $@\n" unless $@ eq ''; 
+    } 
+    $source_list{$result_from_source->[0]} = $source; 
+  } 
+
+  return \%source_list; 
+} 
+
+=head2 fetch_synonyms_data 
+
+fetch data from production database   
+
+=cut
+sub fetch_synonyms_data{
+
+  my $source_dbc = shift;
+  my $params     = shift; 
+  my $table_name = shift;
+
+  my $statement = $source_dbc->prepare("SELECT $params FROM $table_name");  
+  $statement->execute(); 
+  my $source_output = $statement->fetchall_arrayref();  
+  $statement->finish(); 
+
+  return $source_output; 
+} 
 
 sub usage{
 
