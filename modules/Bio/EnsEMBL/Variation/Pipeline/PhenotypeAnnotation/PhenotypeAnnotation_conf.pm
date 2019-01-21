@@ -114,6 +114,8 @@ sub default_options {
 
         omia_version            => '20001020', #TODO: confirm there is no computational way to get it
 
+        ega_database_conf       => $self->o('pipeline_dir').'/ega_database.conf',
+
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
         # the command line to suit your farm. The names of each option hopefully
@@ -189,6 +191,7 @@ sub pipeline_analyses {
                 '4->A' => [ 'import_zfin' ],
                 '5->A' => [ 'import_gwas' ],
                 '6->A' => [ 'import_omia' ],
+                '7->A' => [ 'import_ega' ],
                 'A->1' => [ 'finish_pipeline' ],
           #      4 => [ 'import_mim_morbid' ],
             #    5 => [ 'import_orphanet' ],
@@ -275,7 +278,22 @@ sub pipeline_analyses {
                 1 => [ 'check_phenotypes']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+
+        {   -logic_name => 'import_ega',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportEGA',
+            -parameters => {
+                ega_database_conf => $self->o('ega_database_conf'),
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
         },
+
         {   -logic_name => 'check_phenotypes',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {

@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA NONE species);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
@@ -67,6 +67,10 @@ sub fetch_input {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'OMIA'}} ]);
       print "Setting up for OMIA import: ". join(", ",@{$import_species{'OMIA'}}). "\n" if $debug ;
 
+    } elsif($run_type eq EGA){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'EGA'}} ]);
+      print "Setting up for EGA import: ". join(", ",@{$import_species{'EGA'}}). "\n" if $debug ;
+
     } else {
       warn "No valid run_import_type specified: $run_type\n" if $debug ;
     }
@@ -94,6 +98,9 @@ sub write_output {
     } elsif ( $run_type eq OMIA){
       $self->dataflow_output_id($self->param('output_ids'), 6);
       print "Setting up for OMIA import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq EGA){
+      $self->dataflow_output_id($self->param('output_ids'), 7);
+      print "Setting up for EGA import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     }
   } 
 }
