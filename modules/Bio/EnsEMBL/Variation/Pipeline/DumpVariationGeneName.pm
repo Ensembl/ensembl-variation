@@ -90,7 +90,7 @@ sub run {
     @{ $vfa->fetch_all_somatic_by_Slice_SO_terms($slice) }
   );
 
-  my $table_files_dir = $self->get_table_files_prefix($gene_id);
+  my $table_files_dir = $self->get_files_prefix($gene_id, 'web_index');
 
   # write VFs to table file for web search indexes
   if($gene_name) {
