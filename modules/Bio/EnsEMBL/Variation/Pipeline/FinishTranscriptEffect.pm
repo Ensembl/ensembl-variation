@@ -44,25 +44,17 @@ sub run {
   my $var_dba = $self->get_species_adaptor('variation');
   my $tva = $var_dba->get_TranscriptVariationAdaptor;
 
- # initialise a hash of files
   my $files = {
     transcript_variation      => { 'cols' => [$tva->_write_columns],      },
     MTMP_transcript_variation => { 'cols' => [$tva->_mtmp_write_columns], },
   };
 
-  # create filenames, file handles etc
-  my $tmpdir = $self->param('pipeline_dir');
-  $ImportUtils::TMP_DIR = $tmpdir;
-  # COPY FILES FIRST IN CASE OF ERROR?
-  # create file handles
   foreach my $transcript_id (@transcript_ids) {
-    for my $table(keys %$files) {
-      my $hash = $files->{$table};
-      $hash->{filename} = sprintf('%s_%s.txt', $transcript_id, $table);
-      $hash->{filepath} = sprintf('%s/%s', $tmpdir, $hash->{filename});
-    }
+    my $tmpdir =  $self->get_files_prefix($transcript_id, 'transcript_effect');
+    $ImportUtils::TMP_DIR = $tmpdir;
+
     foreach my $table(keys %$files) {
-      $ImportUtils::TMP_FILE = $files->{$table}->{filename};
+      $ImportUtils::TMP_FILE = sprintf('%s_%s.txt', $transcript_id, $table);
       load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
     }
   }
