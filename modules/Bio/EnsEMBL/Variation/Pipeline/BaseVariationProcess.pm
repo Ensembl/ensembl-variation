@@ -104,7 +104,7 @@ sub get_adaptor {
     unless (defined $dba) {
         die "Failed to a get DBA for $species and group $group";
     }
-    
+    $dba->dbc->reconnect_when_lost(1);
     return $dba;
 }
 
