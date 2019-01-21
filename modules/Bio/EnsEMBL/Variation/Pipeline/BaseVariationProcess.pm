@@ -38,6 +38,7 @@ use POSIX;
 use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Hive::AnalysisJob;
+use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
@@ -124,6 +125,19 @@ sub run_date{
     my ($self) = @_;
 
     return strftime("%Y-%m-%d", localtime);
+}
+
+sub get_table_files_prefix {
+  my $self = shift;
+  my $id = shift;
+
+  my $dir = $self->required_param('pipeline_dir').'/table_files/'.substr(md5_hex($id), 0, 2);
+
+  unless(-d $dir) {
+    mkdir($dir) or die "ERROR: Could not make directory $dir\n";
+  }
+
+  return $dir.'/'.$id;
 }
 
 1;
