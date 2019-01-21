@@ -75,7 +75,7 @@ sub fetch_input {
                     source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
                     source_status => 'germline',
                     threshold => $self->required_param('threshold_qtl'),
-                    );    
+                    );
     #TODO: smart map between species and RGD files Currently only RAT is imported... could remove the rest from here
     my %rgd_names_qtl = (rattus_norvegicus =>'RAT',
                      rat => 'RAT',

@@ -179,6 +179,7 @@ sub parse_nhgri {
 
       $gene =~ s/\s+//g;
       $gene =~ s/–/-/g;
+      $gene =~ s/[^\x00-\x7F]//g; # Remove non ASCII characters
 
       my %data = (
         'study_type' => 'GWAS',

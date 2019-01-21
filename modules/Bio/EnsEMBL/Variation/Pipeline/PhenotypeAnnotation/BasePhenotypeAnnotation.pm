@@ -45,10 +45,15 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 #our @EXPORT_OK = qw($core_dba $variation_dba $core_dba);
 
 my %special_characters = (
+  'Å' => 'A',
   'ö' => 'o',
   'ü' => 'u',
   'ä' => 'a',
   'í' => 'i',
+  'é' => 'e',
+  'è' => 'e',
+  'ë' => 'e',
+  'ç' => 'c',
 );
 
 my $pubmed_prefix = 'PMID:';
