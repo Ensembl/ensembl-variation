@@ -129,7 +129,7 @@ sub run {
     @{ $vfa->fetch_all_by_Slice_SO_terms($slice) },
     @{ $vfa->fetch_all_somatic_by_Slice_SO_terms($slice) }
   );
-  my $table_files_dir = $self->get_table_files_prefix($stable_id, $tva);
+  my $table_files_dir = $self->get_files_prefix($stable_id, 'web_index');
 
   # get a fh for the hgvs file too
   my $hgvs_fh = FileHandle->new();
@@ -232,7 +232,7 @@ sub run {
   foreach my $table(keys %$files) {
     $files->{$table}->{fh}->close();
     if (!$by_transcript) {
-      my $tmpdir = $self->param('pipeline_dir');
+      my $tmpdir = $self->get_files_prefix($stable_id, 'transcript_effect');
       $ImportUtils::TMP_DIR = $tmpdir;
       $ImportUtils::TMP_FILE = $files->{$table}->{filename};
       load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
@@ -273,7 +273,8 @@ sub get_dump_files {
     transcript_variation      => { 'cols' => [$tva->_write_columns],      },
     MTMP_transcript_variation => { 'cols' => [$tva->_mtmp_write_columns], },
   };
-  my $tmpdir = $self->param('pipeline_dir');
+  my $tmpdir = $self->get_files_prefix($stable_id, 'transcript_effect');
+
   # create file handles
   for my $table(keys %$files) {
     my $hash = $files->{$table};
