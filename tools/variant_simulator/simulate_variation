@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long qw(GetOptions);
 
 my ($help, $chromOnly, $gene, $registryFile,
-$exonOnly, $intronOnly, $codingOnly,
+$exonOnly, $intronOnly, $codingOnly,$refSeq_genes
 );
 my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
@@ -49,6 +49,7 @@ GetOptions( "species=s" => \$species,
     "codingOnly" => \$codingOnly,
     "intronsOnly" => \$intronOnly,
     "assembly=s" => \$assembly,
+    "refseq"     => \$refSeq_genes,
     "registry=s" => \$registryFile,
     "help!" => \$help,
 ) or usage();
@@ -77,9 +78,13 @@ print "getting species ($species)";
 print ", chrom ($chromOnly)" if $chromOnly;
 print ", gene ($gene)", if $gene;
 print ", out: $outFile\n";
+my $dbtype = "core";
+$dbtype = "otherfeatures" if $refSeq_genes;
+my $logic_name;
+$logic_name = "refseq_import" if $refSeq_genes;
 
-my $slice_adaptor = $registry->get_adaptor( $species, 'core', 'slice' );
-my $gene_adaptor  = $registry->get_adaptor( $species, "core", "gene" );
+my $slice_adaptor = $registry->get_adaptor( $species, $dbtype, 'slice' );
+my $gene_adaptor = $registry->get_adaptor( $species, $dbtype, "gene" );
 
 my $biotype = 'protein_coding';
 
@@ -102,7 +107,7 @@ if ($chromOnly || $gene){ #if chrom or gene specified then use the most stringen
     processGenes(\@geneIDs, $FHO);
   } else{
     my $chr_slice = $slice_adaptor->fetch_by_region( 'chromosome', $chromOnly);
-    @geneIDs = @{ $chr_slice->get_all_Genes_by_type($biotype, undef, 1)};
+    @geneIDs = @{ $chr_slice->get_all_Genes_by_type($biotype, $logic_name, 1)};
     print "processing genes: ", scalar @geneIDs, "\n";
     processGenes(\@geneIDs, $FHO);
   }
@@ -111,7 +116,7 @@ if ($chromOnly || $gene){ #if chrom or gene specified then use the most stringen
   print "nr of chroms: ", scalar @$chroms, "\n";
   while (my $slice = shift @$chroms) {
     print "processing chrom: ", $slice->seq_region_name, "\n";
-    @geneIDs = @{ $slice->get_all_Genes_by_type($biotype, undef, 1)};
+    @geneIDs = @{ $slice->get_all_Genes_by_type($biotype, $logic_name, 1)};
     processGenes(\@geneIDs, $FHO);
   }
 }
@@ -195,6 +200,7 @@ sub usage {
 
       -species           Generate SNPs for specified species (Default: human)
       -assembly          Assembly to use if species is human (Default: grch38)
+      -refseq            Use RefSeq genes/transcripts if species is human
       -registry          Ensembl registry file containing database connection details
 
       -output|o          Output file (Default: simulated.vcf)
