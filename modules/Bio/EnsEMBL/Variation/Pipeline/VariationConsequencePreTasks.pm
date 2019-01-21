@@ -81,8 +81,10 @@ sub fetch_input {
         mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
       }
 
-      rmtree($dir.'/table_files');
-      mkdir($dir.'/table_files') or die "ERROR: Could not make directory $dir\/table_files\n";
+      foreach my $folder_name (qw/web_index transcript_effect/) {
+        rmtree($dir.'/'.$folder_name.'_files');
+        mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
+      }
 
       my @rebuild = qw(transcript_variation variation_hgvs variation_genename);
 
