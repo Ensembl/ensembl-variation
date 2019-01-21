@@ -127,11 +127,12 @@ sub run_date{
     return strftime("%Y-%m-%d", localtime);
 }
 
-sub get_table_files_prefix {
+sub get_files_prefix {
   my $self = shift;
   my $id = shift;
+  my $folder_name = shift;
 
-  my $dir = $self->required_param('pipeline_dir').'/table_files/'.substr(md5_hex($id), 0, 2);
+  my $dir = $self->required_param('pipeline_dir').'/'.$folder_name.'_files/'.substr(md5_hex($id), 0, 2);
 
   unless(-d $dir) {
     mkdir($dir) or die "ERROR: Could not make directory $dir\n";
