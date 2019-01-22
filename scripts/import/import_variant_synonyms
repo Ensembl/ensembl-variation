@@ -66,6 +66,7 @@ $species ||= 'homo_sapiens';
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species, 'variation');
+# my $prod_dbc = $reg->get_DBAdaptor('multi', 'source_db'); 
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
 
