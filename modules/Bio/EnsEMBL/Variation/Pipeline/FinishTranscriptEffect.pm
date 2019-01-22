@@ -50,7 +50,7 @@ sub run {
   };
 
   foreach my $transcript_id (@transcript_ids) {
-    my $tmpdir =  $self->get_files_prefix($transcript_id, 'transcript_effect');
+    my $tmpdir =  $self->get_files_dir($transcript_id, 'transcript_effect');
     $ImportUtils::TMP_DIR = $tmpdir;
 
     foreach my $table(keys %$files) {
