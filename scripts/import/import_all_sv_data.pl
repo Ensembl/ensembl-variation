@@ -162,7 +162,7 @@ my %var_set = ('pilot1' => 31, 'pilot2' => 32);
 
 
 # run the mapping sub-routine if the data needs mapping
-my (%num_mapped, %num_not_mapped, %samples, %subjects, %study_done);
+my (%num_mapped, %num_not_mapped, %samples, %subjects, %study_done, %seq_regions);
 my $no_mapping_needed = 0;
 my $skipped = 0;
 my $failed = [];
@@ -410,7 +410,7 @@ sub study_table{
     }
     
     my $external_link_sql;
-    if ($external_link =~ /NULL/i) {
+    if ($external_link eq 'NULL') {
       if ($study_xref && $study_xref !~ /NULL/i && $study_xref ne '') {
         $external_link_sql = '';
       }
@@ -433,7 +433,9 @@ sub study_table{
   }
   # INSERT
   else {
-  
+    if ($external_link && $external_link ne 'NULL' && $external_link ne '') {
+      $external_link = "'$external_link'";
+    }
     $stmt = qq{
       INSERT INTO `$study_table` (
         `name`,
@@ -453,7 +455,7 @@ sub study_table{
           '$assembly_desc'),
         '$study_ftp',
         $source_id,
-        '$external_link',
+        $external_link,
         '$study_type'
       )
     };
@@ -1351,9 +1353,38 @@ sub parse_line {
   $info->{end}     = $data[4];
   $info->{strand}  = ($data[6] eq '.') ? 1 : ($data[6] eq '-') ? -1 : 1;
 
+  $info->{chr} = ($seq_regions{$info->{chr}}) ? $seq_regions{$info->{chr}} : get_seq_region($info->{chr});
+
   $info = parse_9th_col($info,\@last_col);
 
   return $info;
+}
+
+
+sub get_seq_region {
+  my $seq_region = shift;
+  
+  # Check if the seq_region is in the main Core seq_region
+  my $sth = $dbVar->prepare(qq{ SELECT name FROM seq_region WHERE name=?});
+  $sth->execute($seq_region);
+  my $seq_region_name = ($sth->fetchrow_array)[0];
+  
+  # Look for synonyms
+  if (!$seq_region_name) {
+    $sth = $dbCore->prepare(qq{ SELECT seq.name FROM seq_region seq, seq_region_synonym syn WHERE syn.seq_region_id=seq.seq_region_id AND syn.synonym=?});
+    $sth->execute($seq_region);
+    $seq_region_name = ($sth->fetchrow_array)[0];
+  }
+  $sth->finish;
+  
+  if ($seq_region_name) {
+    $seq_regions{$seq_region} = $seq_region_name;
+    return $seq_region_name;
+  }
+  else {
+    $seq_regions{$seq_region} = $seq_region;
+    return $seq_region;
+  }
 }
 
 
