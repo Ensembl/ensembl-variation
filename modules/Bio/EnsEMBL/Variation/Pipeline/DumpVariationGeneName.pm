@@ -90,12 +90,12 @@ sub run {
     @{ $vfa->fetch_all_somatic_by_Slice_SO_terms($slice) }
   );
 
-  my $table_files_dir = $self->get_files_prefix($gene_id, 'web_index');
+  my $web_index_files_dir = $self->get_files_dir($gene_id, 'web_index');
 
   # write VFs to table file for web search indexes
   if($gene_name) {
     my $fh = FileHandle->new();
-    $fh->open(">".$table_files_dir."_variation_genename.txt") or die "Cannot open dump file ".$table_files_dir."_variation_genename.txt: $!";
+    $fh->open(">" . $web_index_files_dir . "/$gene_id\_variation_genename.txt") or die "Cannot open dump file " . $web_index_files_dir . "$gene_id\_variation_genename.txt: $!";
     print $fh "$_\t$gene_name\n" for map {$_->get_Variation_dbID()} @vfs;
     $fh->close();
   }
