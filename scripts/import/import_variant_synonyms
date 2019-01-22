@@ -86,11 +86,9 @@ if($source_name eq 'PharmGKB'){
   import_synonyms($synonyms, $source, $dba, $species); 
 }
 
-
 if($source_name eq 'dbSNP'){
-  
-  ### import synonyms from production database ### I don't use a registry file because this database doesn't have adaptors 
-  my $source_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
+  ### import synonyms from production database ### Access directly database because this database doesn't have adaptors 
+  my $prod_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
     ( '-host'    => 'mysql-ens-var-prod-1.ebi.ac.uk',
       '-port'    => 4449, 
       '-user'    => 'ensadmin',
@@ -99,23 +97,22 @@ if($source_name eq 'dbSNP'){
       '-driver'  =>  'mysql' 
     ); 
 
-  my $synonyms_output = fetch_synonyms_data($source_dbc, '*', 'human_synonym'); 
+  my $synonyms_output = query_synonyms_data($prod_dbc, '*', 'human_synonym'); 
   
-  my %synonyms; # key: synonym_name; value: rs_name 
-  my %source_ids; # key: synonym_name; value: source_id 
-  # my %source_names; #key: source_id; value: source object  
+  my %synonyms; # synonym_name => rs_name 
+  my %source_ids; # synonym_name => source_id   
 
-  # get data from human_synonym table 
+  # get data from human_synonym table (in production db)  
   foreach my $result (@{$synonyms_output}){  
     $synonyms{$result->[2]} = $result->[1]; 
     $source_ids{$result->[2]} = $result->[4]; 
   } 
 
   # get all available sources from production database  
-  my $sources = get_all_sources($dba, $source_dbc); 
+  my $sources = get_all_sources($dba, $prod_dbc);
+
   import_synonyms_all_sources(\%synonyms, $sources, \%source_ids, $dba, $species); 
 } 
-
 
 else{
     die "data source : $source_name not supported\n";
@@ -193,9 +190,9 @@ sub import_synonyms{
   }
 }
 
-=head2 import_synonyms
+=head2 import_synonyms_all_sources
 
-import synonyms from production database  
+import all synonyms from production database  
 
 =cut
 sub import_synonyms_all_sources{
@@ -210,14 +207,18 @@ sub import_synonyms_all_sources{
 
   foreach my $synonym_name (keys %{$synonyms}){ 
     my $var_name = $synonyms->{$synonym_name}; 
-    my $var = $variation_adaptor->fetch_by_name($var_name);
-    
-    if(defined($var)){  
-      my $source_id = $output_source_ids->{$synonym_name}; 
-      my $source = $sources->{$source_id}; 
-      $var->add_synonym($source->name(), $synonym_name);
-      $variation_adaptor->store_synonyms($var); 
-    } 
+    my $var = $variation_adaptor->fetch_by_name($var_name); 
+
+    unless($var){
+      warn "variant $var_name not found\n";
+      next; 
+    }
+  
+    my $source_id = $output_source_ids->{$synonym_name}; 
+    my $source = $sources->{$source_id}; 
+    $var->add_synonym($source->name(), $synonym_name);
+    $variation_adaptor->store_synonyms($var); 
+
   } 
 } 
 
@@ -263,36 +264,29 @@ sub get_source{
 
 =head2 get_all_sources
 
-get or add sources object
+get sources object 
 
 =cut
 
 sub get_all_sources{
 
   my $dest_db = shift;
-  my $source_dbc = shift; 
+  my $prod_dbc = shift; 
 
   # my %source_names; # hash with source id and corresponding source name 
   my %source_list; 
 
   my $source_adaptor = $dest_db->get_SourceAdaptor('human', 'variation'); 
 
-  my $source_output = fetch_synonyms_data($source_dbc, '*', 'source');  
+  my $source_output = query_synonyms_data($prod_dbc, '*', 'source');  
 
   foreach my $result_from_source (@{$source_output}){  
     # my $source_id = $result_from_source->[0]; 
     my $source_name = $result_from_source->[1]; 
     my $source = $source_adaptor->fetch_by_name($source_name);
-    
-    if(defined($source)){
-      # print "SOURCE DEFINED: $source_name\n";  
-      # if(defined $version){ 
-      #   $source->version($version);
-      #   $source_adaptor->update_version($source);   
-      # }  
-    }
-    else{    
-      # print "Adding info for source $source_name\n"; 
+
+    if(!defined($source)){    
+      # get info for source  
       $source = Bio::EnsEMBL::Variation::Source->new
          (-name        => $source_name, 
           -url         => $result_from_source->[4],
@@ -309,18 +303,18 @@ sub get_all_sources{
   return \%source_list; 
 } 
 
-=head2 fetch_synonyms_data 
+=head2 query_synonyms_data 
 
 fetch data from production database   
 
 =cut
-sub fetch_synonyms_data{
+sub query_synonyms_data{
 
-  my $source_dbc = shift;
+  my $prod_dbc = shift;
   my $params     = shift; 
   my $table_name = shift;
 
-  my $statement = $source_dbc->prepare("SELECT $params FROM $table_name");  
+  my $statement = $prod_dbc->prepare("SELECT $params FROM $table_name");  
   $statement->execute(); 
   my $source_output = $statement->fetchall_arrayref();  
   $statement->finish(); 
