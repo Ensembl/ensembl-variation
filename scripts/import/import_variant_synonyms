@@ -86,7 +86,7 @@ if($source_name eq 'PharmGKB'){
   import_synonyms($synonyms, $source, $dba, $species); 
 }
 
-if($source_name eq 'dbSNP'){
+elsif($source_name eq 'dbSNP'){
   ### import synonyms from production database ### Access directly database because this database doesn't have adaptors 
   my $prod_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
     ( '-host'    => 'mysql-ens-var-prod-1.ebi.ac.uk',
