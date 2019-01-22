@@ -66,8 +66,10 @@ sub run {
   Bio::EnsEMBL::Registry->clear();
 
   my $core_dba = $self->get_species_adaptor('core');
+  $core_dba->dbc->reconnect_when_lost(1);
 
   my $var_dba = $self->get_species_adaptor('variation');
+  $var_dba->dbc->reconnect_when_lost(1);
   
   my $sa = $core_dba->get_SliceAdaptor;
   
@@ -129,11 +131,11 @@ sub run {
     @{ $vfa->fetch_all_by_Slice_SO_terms($slice) },
     @{ $vfa->fetch_all_somatic_by_Slice_SO_terms($slice) }
   );
-  my $table_files_dir = $self->get_files_prefix($stable_id, 'web_index');
+  my $web_index_files_dir = $self->get_files_dir($stable_id, 'web_index');
 
   # get a fh for the hgvs file too
   my $hgvs_fh = FileHandle->new();
-  $hgvs_fh->open(">".$table_files_dir."_variation_hgvs.txt") or die "Cannot open dump file ".$table_files_dir."_variation_hgvs.txt: $!";
+  $hgvs_fh->open(">" . $web_index_files_dir . "/$stable_id\_variation_hgvs.txt") or die "Cannot open dump file " . $web_index_files_dir . "/$stable_id\_variation_hgvs.txt: $!";
 
 #  my @write_data;
   my $hgvs_by_var = {};
@@ -229,10 +231,10 @@ sub run {
 
   ## uncomment this if using BEHAVIOUR 3 above
   ## LOADING HAS BEEN MOVED TO FinishTranscriptEffect.pm if run in by_transcript analysis mode
+  my $tmpdir = $self->get_files_dir($stable_id, 'transcript_effect');
   foreach my $table(keys %$files) {
     $files->{$table}->{fh}->close();
     if (!$by_transcript) {
-      my $tmpdir = $self->get_files_prefix($stable_id, 'transcript_effect');
       $ImportUtils::TMP_DIR = $tmpdir;
       $ImportUtils::TMP_FILE = $files->{$table}->{filename};
       load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
@@ -273,15 +275,15 @@ sub get_dump_files {
     transcript_variation      => { 'cols' => [$tva->_write_columns],      },
     MTMP_transcript_variation => { 'cols' => [$tva->_mtmp_write_columns], },
   };
-  my $tmpdir = $self->get_files_prefix($stable_id, 'transcript_effect');
-
+  my $tmpdir = $self->get_files_dir($stable_id, 'transcript_effect');
   # create file handles
   for my $table(keys %$files) {
     my $hash = $files->{$table};
     $hash->{filename} = sprintf('%s_%s.txt', $stable_id, $table);
     $hash->{filepath} = sprintf('%s/%s', $tmpdir, $hash->{filename});
+    
     my $fh = FileHandle->new();
-    $fh->open(">".$hash->{filepath}) or throw("ERROR: Could not write to ".$hash->{filepath});
+    $fh->open(">".$hash->{filepath}) or die("ERROR: Could not write to ".$hash->{filepath});
     $hash->{fh} = $fh;
   }
   return $files;
