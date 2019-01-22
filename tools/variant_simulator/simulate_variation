@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long qw(GetOptions);
 
 my ($help, $chromOnly, $gene, $registryFile,
-$exonOnly, $intronOnly, $codingOnly,$refSeq_genes
+$exonOnly, $intronOnly, $codingOnly,$refseq_genes
 );
 my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
@@ -49,7 +49,7 @@ GetOptions( "species=s" => \$species,
     "codingOnly" => \$codingOnly,
     "intronsOnly" => \$intronOnly,
     "assembly=s" => \$assembly,
-    "refseq"     => \$refSeq_genes,
+    "refseq"     => \$refseq_genes,
     "registry=s" => \$registryFile,
     "help!" => \$help,
 ) or usage();
@@ -78,10 +78,8 @@ print "getting species ($species)";
 print ", chrom ($chromOnly)" if $chromOnly;
 print ", gene ($gene)", if $gene;
 print ", out: $outFile\n";
-my $dbtype = "core";
-$dbtype = "otherfeatures" if $refSeq_genes;
-my $logic_name;
-$logic_name = "refseq_import" if $refSeq_genes;
+my $dbtype = $refseq_genes ? "otherfeatures" : "core";
+my $logic_name = $refseq_genes ? "refseq_import" : undef;
 
 my $slice_adaptor = $registry->get_adaptor( $species, $dbtype, 'slice' );
 my $gene_adaptor = $registry->get_adaptor( $species, $dbtype, "gene" );
