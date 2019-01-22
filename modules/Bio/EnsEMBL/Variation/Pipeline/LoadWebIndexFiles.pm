@@ -90,15 +90,15 @@ sub rejoin_table_files {
   my $hgvs_fh = FileHandle->new();
   $hgvs_fh->open(">".$dir."/variation_hgvs.txt") or die $!;
 
-  opendir DIR, $dir."/table_files";
+  opendir DIR, $dir."/web_index_files";
   foreach my $hex_stub(grep {!/^\./} readdir DIR) {
 
-    opendir HEX, "$dir/table_files/$hex_stub";
+    opendir HEX, "$dir/web_index_files/$hex_stub";
     foreach my $file(grep {!/^\./} readdir HEX) {
 
       my $fh = $file =~ /hgvs/ ? $hgvs_fh : $gene_fh;
 
-      open IN, "$dir/table_files/$hex_stub/$file" or die $!;
+      open IN, "$dir/web_index_files/$hex_stub/$file" or die $!;
       while(<IN>) {
         print $fh $_;
       }
@@ -106,7 +106,7 @@ sub rejoin_table_files {
     }
   }
 
-  rmtree($dir."/table_files");
+  rmtree($dir."/web_index_files");
 }
 
 sub update_meta{
