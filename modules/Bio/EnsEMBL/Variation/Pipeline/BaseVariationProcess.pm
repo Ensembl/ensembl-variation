@@ -104,7 +104,6 @@ sub get_adaptor {
     unless (defined $dba) {
         die "Failed to a get DBA for $species and group $group";
     }
-    $dba->dbc->reconnect_when_lost(1);
     return $dba;
 }
 
@@ -127,7 +126,7 @@ sub run_date{
     return strftime("%Y-%m-%d", localtime);
 }
 
-sub get_files_prefix {
+sub get_files_dir {
   my $self = shift;
   my $id = shift;
   my $folder_name = shift;
@@ -138,7 +137,7 @@ sub get_files_prefix {
     mkdir($dir) or die "ERROR: Could not make directory $dir\n";
   }
 
-  return $dir.'/'.$id;
+  return $dir;
 }
 
 1;
