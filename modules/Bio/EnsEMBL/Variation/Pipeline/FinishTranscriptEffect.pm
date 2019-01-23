@@ -40,6 +40,7 @@ sub run {
   my $self = shift;
 
   my @transcript_ids = @{$self->param('transcript_ids_funnel')};
+  my $gene_stable_id = $self->param('gene_stable_id');
 
   my $var_dba = $self->get_species_adaptor('variation');
   my $tva = $var_dba->get_TranscriptVariationAdaptor;
@@ -49,15 +50,38 @@ sub run {
     MTMP_transcript_variation => { 'cols' => [$tva->_mtmp_write_columns], },
   };
 
-  foreach my $transcript_id (@transcript_ids) {
-    my $tmpdir =  $self->get_files_dir($transcript_id, 'transcript_effect');
-    $ImportUtils::TMP_DIR = $tmpdir;
+  # create log file and read if available or create
 
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $loaded_transcript_ids = {};
+  my $fh;
+  my $log_file = "$pipeline_dir/LOG_$gene_stable_id";
+  if (-e $log_file) {
+    # read successfully loaded transcripts
+    $fh = FileHandle->new($log_file, 'r');
+    while (<$fh>) {
+      chomp;
+      $loaded_transcript_ids->{$_} = 1;
+    }
+    $fh->close;
+  }
+  open($fh, '>>', $log_file) or die "Could not open file '$log_file' $!";
+
+  foreach my $transcript_id (@transcript_ids) {
     foreach my $table(keys %$files) {
-      $ImportUtils::TMP_FILE = sprintf('%s_%s.txt', $transcript_id, $table);
+      next if $loaded_transcript_ids->{"$transcript_id\_$table"};
+      my $tmpdir =  $self->get_files_dir($transcript_id, 'transcript_effect');
+      my $filename = sprintf('%s_%s.txt', $transcript_id, $table);
+      $self->run_cmd("cp $tmpdir/$filename $tmpdir/load_$filename");      
+      $ImportUtils::TMP_DIR = $tmpdir;
+      $ImportUtils::TMP_FILE = "load_$filename";
       load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
+      print $fh "$transcript_id\_$table\n";
+      $self->run_cmd("rm $tmpdir/$filename");
     }
   }
+
+  close($fh);
 
   return;
 }
