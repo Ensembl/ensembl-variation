@@ -140,4 +140,14 @@ sub get_files_dir {
   return $dir;
 }
 
+sub run_cmd {
+  my $self = shift;
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>= 8;
+    die "system($cmd) failed: $return_value";
+  }
+}
+
+
 1;
