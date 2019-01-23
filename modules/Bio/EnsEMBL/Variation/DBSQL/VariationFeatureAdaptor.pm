@@ -2392,12 +2392,12 @@ sub fetch_by_spdi_notation{
 
   # check deleted sequence (digit, string) 
   my $check_deleted_seq = $deleted_seq =~ m/^\w+$/;
-  my $check_deleted_seq_digit = $deleted_seq =~ m/^[1-9]+\z/i; # match if deleted sequence is digit  
-  my $check_deleted_seq_letters = $deleted_seq =~ m/^([ACGTN]+)$/i; # match if deleted sequence is A, C, T or G 
+  my $check_deleted_seq_digit = $deleted_seq =~ m/^[0-9]+\z/i; # match if deleted sequence is digit  
+  my $check_deleted_seq_letters = $deleted_seq =~ m/^([ACGTN]+)$/i; # match if deleted sequence is A, C, T, G or N 
  
   # check inserted sequence (digit, string) 
   my $check_inserted_seq = $inserted_seq =~ m/^\w+$/; 
-  my $check_inserted_seq_letters = $inserted_seq =~ m/^([ACGTN]+)$/i; # match if inserted sequence is A, C, T or G 
+  my $check_inserted_seq_letters = $inserted_seq =~ m/^([ACGTN]+)$/i; # match if inserted sequence is A, C, T, G or N  
 
   throw ("Could not parse the SPDI notation $spdi")  
     unless (defined($sequence_id) && $sequence_id ne '' && defined($position) && $check_position ne '' && $position ne '' && defined($deleted_seq) && defined($inserted_seq) 
@@ -2414,8 +2414,13 @@ sub fetch_by_spdi_notation{
   my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor(); 
   my $slice = $slice_adaptor->fetch_by_region('chromosome', $sequence_id ) || $slice_adaptor->fetch_by_region(undef, $sequence_id);  
 
+  # First checks if deleted and inserted sequences are not 0 (invalid notation)  
+  if($deleted_seq eq '0' && $inserted_seq eq '0'){
+    throw ("Could not parse the SPDI notation $spdi. SPDI notation not supported."); 
+  } 
+
   # Variation is an insertion 
-  if(($deleted_seq eq '' || $deleted_seq eq '0') && $check_inserted_seq_letters){ 
+  elsif(($deleted_seq eq '' || $deleted_seq eq '0') && $check_inserted_seq_letters){ 
     $end = $position; 
     $ref_allele = '-';   
     $alt_allele = uc $inserted_seq; 
@@ -2441,7 +2446,7 @@ sub fetch_by_spdi_notation{
 
   # Variation is a substitution or indel 
   elsif(($check_deleted_seq_digit || $check_deleted_seq_letters) && $check_inserted_seq_letters){ 
-    $end = $position + length($deleted_seq);   
+    $end = ($check_deleted_seq_digit) ? $position : $position + length($deleted_seq); 
 
     my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end); 
     
