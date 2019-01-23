@@ -36,16 +36,14 @@ use strict;
 
 use File::Path qw(make_path);
 use LWP::Simple;
+use POSIX 'strftime';
+use DBI qw(:sql_types);
 use Data::Dumper; #TODO: remove if not needed
 use Bio::EnsEMBL::Registry;
 #use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS NONE);
 #use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
-
-#TODO: should contain everything about EGA, including getting the file(s) and for all EGA species
-
-TODO: actually implement the class
 
 my %source_info;
 my $workdir;
@@ -79,7 +77,7 @@ sub fetch_input {
     my $dateStr = strftime "%Y%m", localtime;
 
     %source_info = (source_description => 'Variants imported from the European Genome-phenome Archive with phenotype association',
-                    source_url => 'http://www.ebi.ac.uk/ega/',
+                    source_url => 'https://www.ebi.ac.uk/ega/',
                     object_type => 'Variation',
 
                     source_name => 'EGA', #TODO: figure out where this is used
@@ -111,11 +109,14 @@ sub fetch_input {
     }
 
     #get input file EGA:
+    local (*STDOUT, *STDERR);
+    open STDOUT, ">", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
+    open STDERR, ">", $workdir."/".'log_import_err_'.$file_ega;
     my $dsn = "dbi:mysql:$database_conf{DATABASE}:$database_conf{HOST}:$database_conf{PORT}";
     $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
-    get_ega_file($workDir."/".$file_ega) unless -e unless -e $workdir."/".$file_ega;
+    get_ega_file($workdir."/".$file_ega) unless -e $workdir."/".$file_ega;
 
-    print "Found files (".$workdir."/".$file_gwas.") and will skip new fetch\n" if -e $workdir."/".$file_ega;
+    print "Found files (".$workdir."/".$file_ega."), will skip new fetch\n" if -e $workdir."/".$file_ega;
     $self->param('ega_file', $file_ega);
 }
 
@@ -125,19 +126,16 @@ sub run {
   my $file_ega = $self->required_param('ega_file');
 
   local (*STDOUT, *STDERR);
-  open STDOUT, ">", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
-  open STDERR, ">", $workdir."/".'log_import_err_'.$file_ega;
+  open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
+  open STDERR, ">>", $workdir."/".'log_import_err_'.$file_ega;
 
   #get source id
-  my $source_id = get_or_add_source($source_info{source_name},
-                              $source_info{source_description},
-                              $source_info{source_url},
-                              $source_info{source_status},$variation_dba);
+  my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
   print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);
 
   # get phenotype data + save it (all in one method)
   my $results = parse_ega($workdir."/".$file_ega, $source_id);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  print "Got ".(scalar @{$results->{'studies'}})." new studies \n" if $debug ;
 
   my %param_source = (source_name => $source_info{source_name},
                       type => ['Variation']);
@@ -169,9 +167,9 @@ sub get_ega_file {
       next;
     }
     #TODO: can I replace it with source_url:http://www.ebi.ac.uk/ega/ OR does it matter the https/ http?
-    my $url = "https://www.ebi.ac.uk/ega/studies/".$stable_id;
+  #  my $url = "https://www.ebi.ac.uk/ega/studies/".$stable_id;
 
-    print FILE "$stable_id,$pmid,$url\n";
+    print FILE "$stable_id,$pmid,$source_info{source_url}studies/$stable_id\n";
   }
 
   close (FILE);
@@ -203,6 +201,28 @@ sub get_study_id {
 
   return $study_id;
 }
+
+sub get_publication {
+    my ($study_id) = @_;
+
+    my $sth = $dbh->prepare(qq[SELECT publication_id FROM study_publication WHERE study_id = ?]);
+    $sth->execute($study_id);
+
+    my $publication_id = $sth->fetchrow();
+    $sth->finish();
+
+    my $pmid;
+    if ($publication_id) {
+      $sth = $dbh->prepare(qq[SELECT pmid from publication WHERE publication_id = ?]);
+      $sth->execute($publication_id);
+
+      $pmid = $sth->fetchrow();
+      $sth->finish();
+    }
+
+    return $pmid;
+}
+
 
 
 # EGA specific phenotype parsing method
@@ -272,6 +292,7 @@ sub parse_ega {
   open(IN,'<',$infile) or die ("Could not open $infile for reading");
   
   # Read through the file and parse out the desired fields
+  my @new_studies;
   while (<IN>) {
     chomp $_;
     my @attributes = split(",",$_);
@@ -289,7 +310,7 @@ sub parse_ega {
     $nhgri_check_sth->fetch();
     
     if (!defined($nhgri_study_id)) {
-      print "No NHGRI-EBI study found for the EGA $name | $pubmed !\n";
+      warn "No NHGRI-EBI study found for the EGA $name | $pubmed !\n";
       next;
     }
     
@@ -306,6 +327,7 @@ sub parse_ega {
       $study_ins_sth->bind_param(4,$study_type,SQL_VARCHAR);
       $study_ins_sth->execute();
       $study_id = $variation_dba->dbc->db_handle->{'mysql_insertid'};
+      push (@new_studies, $name)
     }
     
     my $is_associated;
@@ -322,6 +344,9 @@ sub parse_ega {
     }
   }
   close(IN);
+
+  my %result = ('studies' => \@new_studies);
+  return \%result;
 }
 
 1;

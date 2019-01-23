@@ -278,6 +278,7 @@ sub pipeline_analyses {
                 1 => [ 'check_phenotypes']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
 
         {   -logic_name => 'import_ega',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportEGA',
@@ -289,7 +290,7 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'finish_pipeline']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },

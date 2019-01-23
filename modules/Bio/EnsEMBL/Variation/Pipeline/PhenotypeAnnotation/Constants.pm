@@ -40,7 +40,7 @@ use constant ZFIN => 'ZFIN';
 use constant GWAS => 'GWAS';
 use constant OMIA => 'OMIA';
 use constant EGA  => 'EGA';
-use constant NONE   => 'NONE';
+use constant NONE => 'NONE';
 
 use constant species => ( 'RGD' => ['rattus_norvegicus'],
                   'AnimalQTL' => ['gallus_gallus','equus_caballus'],

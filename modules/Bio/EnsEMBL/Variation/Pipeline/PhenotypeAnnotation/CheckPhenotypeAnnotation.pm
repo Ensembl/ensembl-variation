@@ -101,7 +101,7 @@ sub check_phenotype_description{
 	   print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(length($l->[1]) >0);
 
      # check for characters which will be interpreted a new lines
-     $l->[1] =~ /*\n*/;
+     $l->[1] =~ /.*\n.*/;
      print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(length($l->[1]) >0);
 
      # check for phenotype descriptions suggesting no phenotype

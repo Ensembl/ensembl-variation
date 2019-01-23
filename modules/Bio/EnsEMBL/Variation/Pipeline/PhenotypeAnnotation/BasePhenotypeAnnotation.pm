@@ -687,6 +687,8 @@ sub get_attrib_types {
 }
 
 sub get_or_add_source {
+  my $self = shift;
+
   my $source_info = shift;
   my $db_adaptor  = shift;
   
