@@ -192,6 +192,7 @@ sub pipeline_analyses {
                 '5->A' => [ 'import_gwas' ],
                 '6->A' => [ 'import_omia' ],
                 '7->A' => [ 'import_ega' ],
+                '8->A' => ['import_orphanet' ],
                 'A->1' => [ 'finish_pipeline' ],
           #      4 => [ 'import_mim_morbid' ],
             #    5 => [ 'import_orphanet' ],
@@ -291,6 +292,20 @@ sub pipeline_analyses {
             -rc_name    => 'default',
             -flow_into  => {
                 1 => [ 'finish_pipeline']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'import_orphanet',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOrphanet',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },

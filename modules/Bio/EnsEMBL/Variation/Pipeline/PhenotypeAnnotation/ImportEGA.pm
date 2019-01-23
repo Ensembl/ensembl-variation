@@ -129,6 +129,7 @@ sub run {
   open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
   open STDERR, ">>", $workdir."/".'log_import_err_'.$file_ega;
 
+ #TODO: Q: where does EGA get the data_type study in source table from?
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
   print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);

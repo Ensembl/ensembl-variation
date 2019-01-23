@@ -71,6 +71,10 @@ our $skip_sets = 0; #TODO: this is never set in the script BUT is input param to
 our %phenotype_cache;
 
 
+sub get_special_characters {
+  return \%special_characters;
+}
+
 sub add_phenotypes {
   my $data = shift;
   my $source_info = shift;
@@ -975,7 +979,7 @@ sub save_phenotypes {
   }
 
   # Get or add a source
-  my $source_id = get_or_add_source($source_info,$variation_dba);
+  my $source_id = $self->get_or_add_source($source_info,$variation_dba);
   print STDOUT "$source_info->{source} source_id is $source_id\n" if ($debug);
 
   # Add the synonyms if required
