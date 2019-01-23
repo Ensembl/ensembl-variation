@@ -76,7 +76,7 @@ sub run {
     push @transcript_ids_funnel, $transcript->stable_id,
   }
 
-  $self->param('transcript_ids_funnel', {'transcript_ids_funnel' => \@transcript_ids_funnel});
+  $self->param('transcript_ids_funnel', {'transcript_ids_funnel' => \@transcript_ids_funnel, 'gene_stable_id' => $gene_stable_id});
   $self->param('transcript_ids_fan', \@transcript_ids_fan);
 
   return;
