@@ -70,6 +70,9 @@ sub run {
     or die "failed to fetch gene for stable id: $gene_id";
 
   my $gene_name = $gene->display_xref->display_id if defined $gene->display_xref();
+  if (!$gene_name) {
+    $self->warning("No display xref for $gene_id");
+  }
 
   my $max_distance = $self->get_max_distance;
 
