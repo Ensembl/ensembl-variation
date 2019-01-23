@@ -45,16 +45,21 @@ use Bio::EnsEMBL::Variation::Source;
 
 our $DEBUG = 0;
 
-my ($data_file, $registry_file, $species, $source_type, $source_name, $clean, $source_version, $source_url, $source_description);
+my ($data_file, $registry_file, $species, $source_name, $clean, $source_version, $source_url, $source_description, $host,
+   $port, $user, $pass, $db_name);
 
 GetOptions ("data_file=s"          => \$data_file,
             "species=s"            => \$species,
-            "source_type=s"        => \$source_type,
             "source_name=s"        => \$source_name,
             "source_url=s"         => \$source_url,
             "source_version=s"     => \$source_version,
             "source_description=s" => \$source_description,
-            "registry=s"           => \$registry_file,
+            "registry=s"           => \$registry_file,            
+            "host=s"               => \$host,
+            "port=s"               => \$port,
+            "user=s"               => \$user,
+            "pass=s"               => \$pass,
+            "db_name=s"            => \$db_name,
             "clean"                => \$clean 
             );
 
@@ -66,7 +71,7 @@ $species ||= 'homo_sapiens';
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species, 'variation');
-# my $prod_dbc = $reg->get_DBAdaptor('multi', 'source_db'); 
+ 
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
 
@@ -90,11 +95,11 @@ if($source_name eq 'PharmGKB'){
 elsif($source_name eq 'dbSNP'){
   ### import synonyms from production database ### Access directly database because this database doesn't have adaptors 
   my $prod_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
-    ( '-host'    => 'mysql-ens-var-prod-1.ebi.ac.uk',
-      '-port'    => 4449, 
-      '-user'    => 'ensadmin',
-      '-pass'    => 'ensembl',
-      '-dbname'  => 'production',
+    ( '-host'    => $host,
+      '-port'    => $port, 
+      '-user'    => $user,
+      '-pass'    => $pass,
+      '-dbname'  => $db_name, 
       '-driver'  =>  'mysql' 
     ); 
 
