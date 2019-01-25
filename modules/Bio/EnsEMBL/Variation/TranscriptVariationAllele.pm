@@ -118,8 +118,9 @@ sub _return_3prime {
   $self->{shift_object} = $vf->{shift_object} if $tr->strand == 1;
   $self->{shift_object} = $vf->{shift_object_reverse} if $tr->strand == -1;
   
-  return $self;
-  
+
+  return $self unless (defined($tr->{_bam_edit_status})) && $tr->{_bam_edit_status} eq 'ok';
+
   
   #####EVERYTHING BELOW THIS IS KEPT FOR DEBUGGIN PURPOSES POST-REFACTOR
   
@@ -132,12 +133,21 @@ sub _return_3prime {
   if(scalar(@preshifted_objects))
   {
     my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
+
     if(defined($slice))
     {
+      
       foreach my $shifted_obj (@preshifted_objects)
-      {
+      {  
         my $whole_seq = substr($slice->seq, $slice_start2 - $shifted_obj->{shift_length} - 2, $slice_end2 - $slice_start2 + 1 + (2 * (1+$shifted_obj->{shift_length})));
         reverse_comp(\$whole_seq) if $tr->strand != 1;
+        
+        if(($shifted_obj->{type} eq 'ins' && (length($whole_seq) != ((2 * ($shifted_obj->{shift_length} + 1))))) || ($shifted_obj->{type} eq 'del' && (length($whole_seq) != ((2 * ($shifted_obj->{shift_length} + 1 )) + length($shifted_obj->{allele_string})))) )
+        {
+          #This happens when an insertion/deletion gets too close to the transcript boundary and shifting in either direction at a transcript level becomes tricky. Need to tidy up 
+          $self->{shift_object} = $shifted_obj; #CHANGE THIS AS IT NEEDS TO DO SOME SPECIAL TRANSCRIPT WIZARDRY
+          return $self;
+        }
         my $pre_substr = substr($whole_seq, 0 , 1 + $shifted_obj->{shift_length});
         my $post_substr = substr($whole_seq, , -1 - $shifted_obj->{shift_length});
         if ($pre_substr eq $shifted_obj->{five_prime_flanking_seq} && $post_substr eq $shifted_obj->{three_prime_flanking_seq})
@@ -155,7 +165,7 @@ sub _return_3prime {
       return $self;
     }
   }
-
+  
   ## split into ref and alt, and take the important parts of indels
   my $seq_to_check;
   my @split;
@@ -211,7 +221,7 @@ sub _return_3prime {
   my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
   my $transcript_seq = $slice3->subseq((($slice_start3 - $area_to_search) > 0 ? ($slice_start3 - $area_to_search) : 1), ($slice_end3 + $area_to_search) <= length($slice3->seq) ? ($slice_end3 + $area_to_search) : length($slice3->seq));
   my $pre_seq = substr($transcript_seq, 0, ($slice_start3 - $area_to_search) > 0 ? $area_to_search : $slice_start3 );
-  my $post_seq = substr($transcript_seq, ($slice_end3 + $area_to_search) <= length($slice3->seq) ? ($area_to_search) : length($slice3->seq) - $slice_end3 + 1);
+  my $post_seq = substr($transcript_seq, -1*(($slice_end3 + $area_to_search) <= length($slice3->seq) ? ($area_to_search) : length($slice3->seq) - $slice_end3 ));
   
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
@@ -286,6 +296,7 @@ sub perform_shift
   
   ## Sets up the for loop, ensuring that the correct bases are compared depending on the strand
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
+  $loop_limiter = length($post_seq) if $loop_limiter < 0;
   for (my $n = $reverse; $n <= $loop_limiter; $n++ ){
     ## check each position in deletion/ following seq for match
     my $check_next_del  = $reverse ? substr( $seq_to_check, length($seq_to_check) -1, 1) : substr( $seq_to_check, 0, 1);
@@ -751,14 +762,16 @@ sub codon {
 
       ## Bioperl Seq object
       my $cds_obj = $self->_get_alternate_cds();
+      return undef unless defined($cds_obj);
       $cds = $cds_obj->seq();
     }
 
     else {
       # splice the allele sequence into the CDS
       $cds = $tv->_translateable_seq;
-    
-      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1 + $shifting_offset, $vf_nt_len) = $seq;
+      #return undef if (length($cds) <  $tv->cds_start(undef, $tr->strand * $shifting_offset) -1 + $shifting_offset + $vf_nt_len);
+      #substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1 + $shifting_offset, $vf_nt_len) = $seq;
+      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
     }
 
     # and extract the codon sequence
@@ -1068,7 +1081,8 @@ sub hgvs_transcript {
   };
   #my $offset_to_add = $self->{_hgvs_offset} ||= 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
   my $offset_to_add = defined($self->{shift_object}) ? $self->{shift_object}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
-  ### decide event type from HGVS nomenclature   
+  ### delete consequences i
+  delete($self->{_predicate_cache}) if $offset_to_add != 0; #Might save some speed if we check if '--no_shift' is on in the if statement, but I have to test first
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
   return undef if (length($self->{_slice}->seq()) < $self->{_slice_end} + $offset_to_add);
   $hgvs_notation = hgvs_variant_notation(
@@ -1105,6 +1119,8 @@ sub hgvs_transcript {
   my $same_pos = $hgvs_notation->{start} == $hgvs_notation->{end};
   $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} );
   $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} );
+  #$hgvs_notation->{start} = defined($tv->cds_start(undef, $tr->strand * $offset_to_add)) ? $tv->cds_start(undef, $tr->strand * $offset_to_add) : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} );
+  #$hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : defined($tv->cds_end(undef, $tr->strand * $offset_to_add)) ? $tv->cds_end(undef, $tr->strand * $offset_to_add) : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} );
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 
   # Make sure that start is always less than end
@@ -1318,8 +1334,7 @@ sub hgvs_protein {
 sub hgvs_protein {
   my $self     = shift;
   my $notation = shift;  
-  my $hgvs_notation; 
-  
+  my $hgvs_notation;
   if($DEBUG == 1){
     print "\nStarting hgvs_protein with "; 
     print " var: " . $self->transcript_variation->variation_feature->variation_name() 
@@ -1328,7 +1343,6 @@ sub hgvs_protein {
       if defined $self->transcript_variation->transcript->display_id() ;
     print "\n";
   }
-
   ### set if string supplied
   $self->{hgvs_protein} = $notation  if defined $notation;
   
@@ -1357,6 +1371,12 @@ sub hgvs_protein {
 
   my $hgvs_tva_vf = $hgvs_tva_tv->base_variation_feature;
   my $tr          = $hgvs_tva_tv->transcript;
+  #delete($hgvs_tva->{pre_consequence_predicates});
+  #delete($hgvs_tva->base_variation_feature_overlap->{pre_consequence_predicates});
+  #delete($hgvs_tva->base_variation_feature->{pre_consequence_predicates});
+  #delete($hgvs_tva->base_variation_feature_overlap->{_overlapped_exons});
+  #delete($hgvs_tva->base_variation_feature_overlap->{_overlapped_introns_boundary});
+  #delete($hgvs_tva->base_variation_feature_overlap->{_overlapped_introns});
   my $pre         = $hgvs_tva->_pre_consequence_predicates;
   my $shifting_offset = 0;
   if($tr->strand() > 0)
@@ -1377,7 +1397,7 @@ sub hgvs_protein {
     delete($hgvs_tva_tv->{_translation_coords});
   }
   unless (
-    $pre->{coding} &&
+    ($pre->{coding}) &&
     $hgvs_tva_tv->translation_start(undef, $shifting_offset) && 
     $hgvs_tva_tv->translation_end(undef, $shifting_offset)
   ){
@@ -1420,7 +1440,10 @@ sub hgvs_protein {
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{ref_orig_allele_string};
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{shifted_allele_string} if $hgvs_tva_vf->var_class eq 'deletion';  
   }
+  
+  #$self->transcript_variation->cds_start($self->transcript_variation->cds_start_unshifted);
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
+  
   $hgvs_notation->{ref} = $hgvs_tva_ref->peptide;    
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
 
@@ -2028,8 +2051,9 @@ sub _get_alternate_cds{
   #}
   #$shifting_offset = 0;
   ### get sequences upstream and downstream of variant
-  my $upstream_seq   =  substr($reference_cds_seq, 0, ($tv->cds_start() + $shifting_offset -1) );
-  my $downstream_seq =  substr($reference_cds_seq, ($tv->cds_end() + $shifting_offset ) );
+  #return undef if (length($reference_cds_seq) < ($tv->cds_end() + $shifting_offset));
+  my $upstream_seq   =  substr($reference_cds_seq, 0, ($tv->cds_start(undef, $tr->strand * $shifting_offset) -1) );
+  my $downstream_seq =  substr($reference_cds_seq, ($tv->cds_end(undef, $tr->strand * $shifting_offset)) );
   return undef unless defined($downstream_seq) && defined($upstream_seq);
   ### fix alternate allele if deletion or on opposite strand
   my $alt_allele  = $self->variation_feature_seq();

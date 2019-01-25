@@ -229,6 +229,60 @@ sub cds_end {
     return $self->{cds_end};
 }
 
+=head2 cds_start_unshifted
+
+  Arg [1]    : (optional) int $start
+  Example    : $cds_start = $tv->cds_start;
+  Description: Getter/Setter for the start position of this variation on the
+               transcript in CDS coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_start_unshifted {
+    my ($self, $cds_start) = @_;
+    $self->{cds_start_unshifted} = $cds_start if defined $cds_start;
+    
+    unless (exists $self->{cds_start_unshifted}) {
+        my $cds_coords = $self->cds_coords(0);
+        
+        my ($first, $last) = ($cds_coords->[0], $cds_coords->[-1]);
+        my $exon_phase = $self->transcript->start_Exon->phase;
+        
+        $self->{cds_start_unshifted} = $first->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $first->start + ($exon_phase > 0 ? $exon_phase : 0);
+        $self->{cds_end_unshifted}   = $last->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $last->end + ($exon_phase > 0 ? $exon_phase : 0);
+    }
+    
+    return $self->{cds_start_unshifted};
+}
+
+=head2 cds_end_unshifted
+
+  Arg [1]    : (optional) int $end
+  Example    : $cds_end = $tv->cds_end;
+  Description: Getter/Setter for the end position of this variation on the
+               transcript in CDS coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_end_unshifted {
+    my ($self, $cds_end) = @_;
+
+    $self->{cds_end_unshifted} = $cds_end if defined $cds_end;
+    
+    # call cds_start to calculate the start and end
+    $self->cds_start() unless exists $self->{cds_end_unshifted};
+    
+    return $self->{cds_end};
+}
+
 =head2 translation_start
 
   Arg [1]    : (optional) int $start
@@ -325,11 +379,11 @@ sub cds_coords {
     my $self = shift;
     my $toshift = shift;
     my $shifting_offset = defined($toshift) ? $toshift : 0;
-    
+
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        
+        $self->{_cds_coords_unshifted} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
         $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
                 
         if(defined($self->{_cds_coords}->[0]) && $self->{_cds_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
