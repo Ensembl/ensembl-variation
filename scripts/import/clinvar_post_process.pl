@@ -34,7 +34,8 @@ our $SOURCENAME = 'ClinVar';
 
 my $registry_file;
 
-GetOptions ("registry_file=s"       => \$registry_file);
+GetOptions ("registry_file=s"       => \$registry_file,
+            "debug"                 => \$DEBUG);
 die "\nERROR: registry file for human database needed\n\n" unless defined $registry_file;
 
 my $registry = 'Bio::EnsEMBL::Registry';
