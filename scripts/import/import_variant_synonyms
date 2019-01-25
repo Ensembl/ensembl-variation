@@ -70,8 +70,8 @@ $species ||= 'homo_sapiens';
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-my $dba = $reg->get_DBAdaptor($species, 'variation');
- 
+my $dba = $reg->get_DBAdaptor($species, 'variation'); 
+
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
 
@@ -104,20 +104,19 @@ elsif($source_name eq 'dbSNP'){
     ); 
 
   my $synonyms_output = query_synonyms_data($prod_dbc, '*', 'human_synonym'); 
-  
-  my %synonyms; # synonym_name => rs_name 
-  my %source_ids; # synonym_name => source_id   
 
-  # get data from human_synonym table (in production db)  
+  my %data; # synonym_name => {rs_name} & {source_id} 
+
+  # get data from human_synonym table (in production db) 
   foreach my $result (@{$synonyms_output}){  
-    $synonyms{$result->[2]} = $result->[1]; 
-    $source_ids{$result->[2]} = $result->[4]; 
-  } 
-
+    $data{$result->[2]}{rs_name} = $result->[1]; 
+    $data{$result->[2]}{source_id} = $result->[4]; 
+  }
+  # print "DATA: ", Dumper(\%data), "\n"; 
   # get all available sources from production database  
   my $sources = get_all_sources($dba, $prod_dbc);
 
-  import_synonyms_all_sources(\%synonyms, $sources, \%source_ids, $dba, $species); 
+  import_synonyms_all_sources($sources, $dba, $species, \%data);  
 } 
 
 else{
@@ -203,16 +202,15 @@ import all synonyms from production database
 =cut
 sub import_synonyms_all_sources{
 
-  my $synonyms          = shift;
-  my $sources           = shift; 
-  my $output_source_ids = shift; 
+  my $sources           = shift;  
   my $dest_db           = shift; 
   my $species           = shift; 
+  my $data              = shift;
 
   my $variation_adaptor = $dest_db->get_VariationAdaptor($species, 'variation');  
 
-  foreach my $synonym_name (keys %{$synonyms}){ 
-    my $var_name = $synonyms->{$synonym_name}; 
+  foreach my $synonym_name (keys %{$data}){ 
+    my $var_name = $data->{$synonym_name}->{rs_name}; 
     my $var = $variation_adaptor->fetch_by_name($var_name); 
 
     unless($var){
@@ -220,7 +218,7 @@ sub import_synonyms_all_sources{
       next; 
     }
   
-    my $source_id = $output_source_ids->{$synonym_name}; 
+    my $source_id = $data->{$synonym_name}->{source_id};
     my $source = $sources->{$source_id}; 
     $var->add_synonym($source->name(), $synonym_name);
     $variation_adaptor->store_synonyms($var); 
