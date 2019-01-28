@@ -232,12 +232,16 @@ my $prev_prog;
 my $pubmed_prefix = 'PMID:';
 
 my %special_characters = (
+  'Å' => 'A',
   'ö' => 'o',
   'ü' => 'u',
   'ä' => 'a',
   'í' => 'i',
+  'é' => 'e',
+  'è' => 'e',
+  'ë' => 'e',
+  'ç' => 'c',
 );
-
 
 
 =head
@@ -684,6 +688,7 @@ sub parse_nhgri {
       
       $gene =~ s/\s+//g;
       $gene =~ s/–/-/g;
+      $gene =~ s/[^\x00-\x7F]//g; # Remove non ASCII characters
 
       my %data = (
         'study_type' => 'GWAS',
@@ -1437,22 +1442,12 @@ sub parse_orphanet {
   die("ERROR: Could not get gene adaptor") unless defined($ga);
   
   my @phenotypes;
-  
-  my %orphanet_special_char = (
-    '\\\E7' => 'c',
-    '\\\C5' => 'A',
-    '\\\E8' => 'e',
-    '\\\E9' => 'e',
-    '\\\EB' => 'e',
-    '\\\F6' => 'o',
-    '\\\FC' => 'u',
-    '\\\ED' => 'i',
-    '\\\E4' => 'a',
-  );
 
   my $xml_parser   = XML::LibXML->new();
   my $orphanet_doc = $xml_parser->parse_file($infile);
-  
+
+  my $special_chars = join('',keys(%special_characters));
+
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
     my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
     my $orpha_number = $orpha_number_node->to_literal;
@@ -1460,10 +1455,11 @@ sub parse_orphanet {
     my $name = $name_node->to_literal;
 
     # Replace special characters
-    if ($name =~ /\\/) {
-      foreach my $char (keys(%orphanet_special_char)) {
+    utf8::encode($name);
+    if ($name =~ /[$special_chars]/) {
+      foreach my $char (keys(%special_characters)) {
         my $new_char = $special_characters{$char};
-        $name =~ s/$char/$new_char/g;
+        $name =~ s/$char/$new_char/g if ($name =~ /$char/);
       }
     }
 
