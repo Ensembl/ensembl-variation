@@ -2446,13 +2446,14 @@ sub fetch_by_spdi_notation{
 
   # Variation is a substitution or indel 
   elsif(($check_deleted_seq_digit || $check_deleted_seq_letters) && $check_inserted_seq_letters){ 
-    $end = ($check_deleted_seq_digit) ? $position : $position + length($deleted_seq); 
 
-    my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end); 
-    
     # Indel or substitution (deleted and inserted sequences are letters) 
     if($check_deleted_seq_letters){ 
       $ref_allele = uc $deleted_seq; 
+      $end = ($check_deleted_seq_digit) ? $position : $position + length($deleted_seq); 
+
+      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end); 
+      
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)")
         unless ($ref_allele eq $refseq_allele); 
     }
