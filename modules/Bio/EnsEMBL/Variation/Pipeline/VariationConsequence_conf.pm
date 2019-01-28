@@ -59,6 +59,8 @@ sub default_options {
         hive_use_triggers => 0,
         hive_auto_rebalance_semaphores => 0, 
         hive_no_init => 0,
+        hive_debug_init => 1,
+        hive_default_max_retry_count => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
@@ -231,7 +233,7 @@ sub pipeline_analyses {
                 -input_ids       => [],
                 -hive_capacity   => $self->o('transcript_effect_capacity'),
                 -rc_name         => 'default',
-                -max_retry_count => 0
+                -max_retry_count => 0,
                 -flow_into       => {
                   -1 => ['transcript_effect_highmem'],
                 }
