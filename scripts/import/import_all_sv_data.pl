@@ -1063,7 +1063,9 @@ sub parse_gvf {
           $end_c = ($info->{outer_end}) ? $info->{outer_end} : $info->{inner_end};
         }
   
-        eval { $slice = $sa->fetch_by_region('chromosome', $info->{chr}, $start_c, $end_c, 1, $assembly); };
+        if ($info->{chr}) {
+          eval { $slice = $sa->fetch_by_region('chromosome', $info->{chr}, $start_c, $end_c, 1, $assembly); };
+        }
   
         # check got the slice OK
         if(!defined($slice)) {
@@ -1382,8 +1384,7 @@ sub get_seq_region {
     return $seq_region_name;
   }
   else {
-    $seq_regions{$seq_region} = $seq_region;
-    return $seq_region;
+    return undef;
   }
 }
 
