@@ -314,7 +314,7 @@ sub protein_altering_variant{
 
     return 0 if  length($alt_pep) eq length($ref_pep);       # synonymous_variant(@_);  missense_variant(@_);
     return 0 if  $ref_pep =~/^\*/  || $alt_pep =~/^\*/;      # stop lost/ gained/ retained
-    return 0 if  $alt_pep =~/^\Q$ref_pep\E|\Q$ref_pep\E$/;   # inframe_insertion(@_);
+    return 0 if inframe_insertion(@_);
 
     return 0 if inframe_deletion(@_);  
     return 0 if start_lost(@_);
@@ -932,6 +932,12 @@ sub inframe_insertion {
 
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
+        # check for internal match
+        ($ref_codon, $alt_codon) = @{Bio::EnsEMBL::Variation::Utils::Sequence::trim_sequences($ref_codon, $alt_codon)};
+        
+        # if nothing remains of $ref_codon,
+        # then it fully matched a part in the middle of $alt_codon
+        return length($ref_codon) == 0 && length($alt_codon) % 3 == 0;
     }
     
     # structural variant
