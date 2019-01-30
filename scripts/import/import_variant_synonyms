@@ -282,7 +282,7 @@ sub get_all_sources{
 
   my $source_adaptor = $dest_db->get_SourceAdaptor('human', 'variation'); 
 
-  my $source_output = query_synonyms_data($prod_dbc, '*', 'source');  
+  my $source_output = query_synonyms_data($prod_dbc, 'source_id,name,version,description,url', 'source'); 
 
   foreach my $result_from_source (@{$source_output}){  
     # my $source_id = $result_from_source->[0]; 
