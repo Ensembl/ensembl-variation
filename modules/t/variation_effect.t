@@ -1084,7 +1084,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(protein_altering_variant)],
+        effects => [qw(inframe_insertion)],
     }, {
         alleles => '-',
         strand  => -1,
