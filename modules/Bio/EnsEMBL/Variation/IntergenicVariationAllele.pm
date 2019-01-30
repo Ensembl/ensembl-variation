@@ -60,4 +60,17 @@ sub get_all_OverlapConsequences {
     return [ $OVERLAP_CONSEQUENCES{intergenic_variant} ];
 }
 
+sub genomic_shift {
+  my $self = shift;
+
+  bless $self, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele'; 
+  $self->_genomic_shift(1);
+  bless $self, 'Bio::EnsEMBL::Variation::IntergenicVariationAllele'; 
+  $self->{shift_object} = $self->variation_feature->{shift_object};
+  
+  return $self;
+}
+
+
+
 1;

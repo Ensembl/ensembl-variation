@@ -118,7 +118,9 @@ sub _return_3prime {
   $self->{shift_object} = $vf->{shift_object} if $tr->strand == 1;
   $self->{shift_object} = $vf->{shift_object_reverse} if $tr->strand == -1;
   
-
+  my @attribs = @{$tr->get_all_Attributes()};
+  my @rseq_attrs = grep {$_->code =~ /^rseq/} @attribs;
+  
   return $self unless (defined($tr->{_bam_edit_status})) && $tr->{_bam_edit_status} eq 'ok';
 
   
@@ -463,6 +465,39 @@ sub look_for_slice_start {
   }
   return $self; #not necessary?
 }
+
+sub clear_shifting_variables {
+  
+  ## Clears variables to allow for correct shifting values to be used by the OutputFactory and future analysis (i.e. Plugins)
+  my $self = shift;
+  
+  my $tv = $self->transcript_variation;
+  my $vf ||= $tv->base_variation_feature;
+  my $tr ||= $tv->transcript;
+
+  delete($tv->{cds_end});
+  delete($tv->{cds_start});
+  delete($tv->{_cds_coords});
+  delete($tv->{translation_start});
+  delete($tv->{translation_end});
+  delete($tv->{_translation_coords});
+  delete($tv->{cdna_start});
+  delete($tv->{cdna_end});
+  delete($tv->{_cdna_coords});
+  
+  if(defined($self->{shift_object}))
+  {
+    $tv->cds_start(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    $tv->cds_end(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    $tv->cdna_start(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    $tv->cdna_end(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    $tv->translation_start(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    $tv->translation_end(undef, $tr->strand * $self->{shift_object}->{shift_length});
+    
+  }
+}
+
+
 
 =head2 transcript_variation
 
@@ -811,7 +846,7 @@ sub display_codon {
     if(my $codon = $self->codon) {
 
       my $display_codon = lc $self->codon;
-
+      
       if(my $codon_pos = $self->transcript_variation->codon_position) {
 
         # if this allele is an indel then just return all lowercase
@@ -1429,6 +1464,7 @@ sub hgvs_protein {
     delete($hgvs_tva->{peptide});
     delete($hgvs_tva->{codon});
     delete($hgvs_tva->{feature_seq});
+
     $hgvs_tva_tv->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
     $self->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
   }
@@ -1442,6 +1478,7 @@ sub hgvs_protein {
   }
   
   #$self->transcript_variation->cds_start($self->transcript_variation->cds_start_unshifted);
+  
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
   
   $hgvs_notation->{ref} = $hgvs_tva_ref->peptide;    
