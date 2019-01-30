@@ -69,6 +69,7 @@ GetOptions ("data_file=s"  => \$data_file,
             "assembly=s"   => \$assembly,
             "structvar"    => \$structvar, 
             "done_file=s"  => \$done_file,
+            "debug"        => \$DEBUG,
             "clean"        => \$clean 
             );
 
