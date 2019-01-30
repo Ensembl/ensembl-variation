@@ -1745,8 +1745,7 @@ sub fetch_by_hgvs_notation {
  
   ########################### Check & split input ###########################
 
-  #Clean the HGVS notation to avoid '(gene)' or '(p.)' 
-  # my $x = $hgvs =~ s/\(.+\):/:/r; 
+  #Clean the HGVS notation to avoid '(gene)' or '(p.)'  
   $hgvs =~ s/\(.+\):/:/; 
   $hgvs =~ s/\(p\..+\)//;   
 
