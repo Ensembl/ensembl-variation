@@ -125,7 +125,7 @@ sub new {
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } 
         @{ $self->get_all_BaseVariationFeatureOverlapAlleles };
     
-    map { $_->_return_3prime} 
+    map { $_->_return_3prime } 
             @{ $self->get_all_BaseVariationFeatureOverlapAlleles } unless $args{'-no_shift'};
     
     return $self;
