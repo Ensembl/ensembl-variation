@@ -61,6 +61,8 @@ sub get_all_OverlapConsequences {
 }
 
 sub genomic_shift {
+  
+  ## Performs shifting at genomic level for intergenic variants - Converts to TVA, shifts, then switches back
   my $self = shift;
 
   bless $self, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele'; 
