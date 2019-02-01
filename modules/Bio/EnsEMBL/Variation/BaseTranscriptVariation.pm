@@ -175,11 +175,11 @@ sub cdna_end {
     return $self->{cdna_end};
 }
 
-=head2 cdna_start
+=head2 cdna_start_unshifted
 
   Arg [1]    : (optional) int $start
-  Example    : $cdna_start = $tv->cdna_start;
-  Description: Getter/Setter for the start position of this variation on the
+  Example    : $cdna_start = $tv->cdna_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
                transcript in cDNA coordinates.
   Returntype : int
   Exceptions : None
@@ -208,8 +208,8 @@ sub cdna_start_unshifted {
 =head2 cdna_end_unshifted
 
   Arg [1]    : (optional) int $end
-  Example    : $cdna_end = $tv->cdna_end;
-  Description: Getter/Setter for the end position of this variation on the
+  Example    : $cdna_end = $tv->cdna_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
                transcript in cDNA coordinates.
   Returntype : int
   Exceptions : None
@@ -290,8 +290,8 @@ sub cds_end {
 =head2 cds_start_unshifted
 
   Arg [1]    : (optional) int $start
-  Example    : $cds_start = $tv->cds_start;
-  Description: Getter/Setter for the start position of this variation on the
+  Example    : $cds_start = $tv->cds_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
                transcript in CDS coordinates.
   Returntype : int
   Exceptions : None
@@ -320,8 +320,8 @@ sub cds_start_unshifted {
 =head2 cds_end_unshifted
 
   Arg [1]    : (optional) int $end
-  Example    : $cds_end = $tv->cds_end;
-  Description: Getter/Setter for the end position of this variation on the
+  Example    : $cds_end = $tv->cds_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
                transcript in CDS coordinates.
   Returntype : int
   Exceptions : None
@@ -396,11 +396,11 @@ sub translation_end {
     return $self->{translation_end};
 }
 
-=head2 translation_start
+=head2 translation_start_unshifted
 
   Arg [1]    : (optional) int $start
-  Example    : $translation_start = $tv->translation_start;
-  Description: Getter/Setter for the start position of this variation on the
+  Example    : $translation_start = $tv->translation_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
                transcript in peptide coordinates.
   Returntype : int
   Exceptions : None
@@ -427,11 +427,11 @@ sub translation_start_unshifted {
 }
 
 
-=head2 translation_end
+=head2 translation_end_unshifted
 
   Arg [1]    : (optional) int $end
-  Example    : $transaltion_end = $tv->translation_end;
-  Description: Getter/Setter for the end position of this variation on the
+  Example    : $transaltion_end = $tv->translation_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
                transcript in peptide coordinates.
   Returntype : int
   Exceptions : None

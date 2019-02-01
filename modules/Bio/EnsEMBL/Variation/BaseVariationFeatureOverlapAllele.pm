@@ -263,16 +263,8 @@ sub get_all_OverlapConsequences {
     OC: for my $oc (@{$self->_get_oc_list($pre)}) {
 
       last if $assigned_tier && $oc->{tier} > $assigned_tier;
-      my $shifting_offset = 0;
-      if($self->transcript->strand() > 0)
-      {
-        $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} : 0;
-      }
-      elsif($self->transcript->strand < 0)
-      {
-        $shifting_offset = defined($self->{shift_object}) ? 0 - $self->{shift_object}->{shift_length} : 0;
-      }
-      
+      my $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} * $self->transcript->strand : 0;
+            
       $bvf->{start} += $shifting_offset;
       $bvf->{end} += $shifting_offset;
       if($oc->predicate->($self, $feat, $bvfo, $bvf)) {
@@ -447,15 +439,7 @@ sub _bvfo_preds {
   my $bvfo_preds = {};
   my $pred_digest = '';
 
-  my $shifting_offset = 0;
-  if($feat->strand() > 0)
-  {
-    $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} : 0;
-  }
-  elsif($feat->strand < 0)
-  {
-    $shifting_offset = defined($self->{shift_object}) ? 0 - $self->{shift_object}->{shift_length} : 0;
-  }
+  my $shifting_offset = defined($self->{shift_object}) ? $self->{shift_object}->{shift_length} * $self->transcript->strand : 0;
 
   my ($vf_start, $vf_end) = ($bvf->{start} + $shifting_offset, $bvf->{end} + $shifting_offset);  
   my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
