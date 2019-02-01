@@ -383,6 +383,8 @@ sub _genomic_shift
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   
+  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' );
+  
   my $slice_to_shrink = $vf->slice;
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   
