@@ -46,7 +46,7 @@ GetOptions ( "registry=s"   => \$registry_file,
 
 die "Error registry file needed\n" unless defined $registry_file;
 
-open my $out, ">import_phenotype_accessions.log" || die "Failed to open log file :$!\n";
+open my $out, ">import_phenotype_accessions_$species.log" || die "Failed to open log file :$!\n";
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
