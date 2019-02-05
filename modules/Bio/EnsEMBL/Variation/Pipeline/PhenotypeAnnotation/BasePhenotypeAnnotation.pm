@@ -46,6 +46,9 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %special_characters = (
   'Å' => 'A',
+  'Ä' => 'A',
+  'Ö' => 'O',
+  'Ü' => 'U',
   'ö' => 'o',
   'ü' => 'u',
   'ä' => 'a',
@@ -70,6 +73,9 @@ our $skip_sets = 0; #TODO: this is never set in the script BUT is input param to
 
 our %phenotype_cache;
 
+sub set_skip_synonyms {
+  $skip_synonyms = shift;
+}
 
 sub get_special_characters {
   return \%special_characters;
@@ -907,11 +913,25 @@ sub run {
     #TODO: figure out if I need this
 }
 
+=head2 save_phenotypes
+
+    Arg [1]              : hashref $source_info
+    Arg [2]              : hashref $input_data
+    Arg [3]              : Bio::EnsEMBL::DBSQL::DBAdaptor $core_dba
+    Arg [4]              : Bio::EnsEMBL::Variation::DBSQL::DBAdaptor $variation_dba
+    Example              : $self->save_phenotypes(\%source_info, $input_data, $core_dba, $variation_dba);
+    Description          : Saves the phenotype data ($input_data) for the given source ($source_info) using the given core and variation adaptors.
+    Returntype           : none
+    Exceptions           : none
+    Caller               : general
+    Status               : Stable
+
+=cut
 sub save_phenotypes {
   my $self        = shift;
 
   my $source_info = shift;
-  my $result      = shift;
+  my $input_data      = shift;
   my $core_dba    = shift;
   my $variation_dba = shift;
 
@@ -929,13 +949,13 @@ sub save_phenotypes {
   my @ids;
   my %synonym;
   my @phenotypes;
-  if (exists($result->{'synonyms'})) {
-    %synonym = %{$result->{'synonyms'}};
+  if (exists($input_data->{'synonyms'})) {
+    %synonym = %{$input_data->{'synonyms'}};
     # To get all the ids of the source (Uniprot)
     @ids = keys(%synonym);
   }
-  if (exists($result->{'phenotypes'})) {
-    @phenotypes = @{$result->{'phenotypes'}};
+  if (exists($input_data->{'phenotypes'})) {
+    @phenotypes = @{$input_data->{'phenotypes'}};
   }
   print STDOUT "Got ".(scalar @phenotypes)." objects\n" if ($debug);
 

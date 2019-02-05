@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P dbGaP CGC IMPC MGI NONE species);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
@@ -75,6 +75,30 @@ sub fetch_input {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'Orphanet'}} ]);
       print "Setting up for Orphanet import: ". join(", ",@{$import_species{'Orphanet'}}). "\n" if $debug ;
 
+    } elsif($run_type eq MIMmorbid){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'MIMmorbid'}} ]);
+      print "Setting up for MIMmorbid import: ". join(", ",@{$import_species{'MIMmorbid'}}). "\n" if $debug ;
+
+    } elsif($run_type eq DDG2P){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'DDG2P'}} ]);
+      print "Setting up for DDG2P import: ". join(", ",@{$import_species{'DDG2P'}}). "\n" if $debug ;
+
+    } elsif($run_type eq dbGaP){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'dbGaP'}} ]);
+      print "Setting up for dbGaP import: ". join(", ",@{$import_species{'dbGaP'}}). "\n" if $debug ;
+
+    } elsif($run_type eq CGC){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'CGC'}} ]);
+      print "Setting up for CancerGeneConsensus import: ". join(", ",@{$import_species{'CGC'}}). "\n" if $debug ;
+
+    } elsif($run_type eq IMPC){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'IMPC'}} ]);
+      print "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if $debug ;
+
+    } elsif($run_type eq MGI){
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'MGI'}} ]);
+      print "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if $debug ;
+
     } else {
       warn "No valid run_import_type specified: $run_type\n" if $debug ;
     }
@@ -108,6 +132,24 @@ sub write_output {
     } elsif ( $run_type eq Orphanet){
       $self->dataflow_output_id($self->param('output_ids'), 8);
       print "Setting up for Orphanet import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq MIMmorbid){
+      $self->dataflow_output_id($self->param('output_ids'), 9);
+      print "Setting up for MIMmorbid import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq DDG2P){
+      $self->dataflow_output_id($self->param('output_ids'), 10);
+      print "Setting up for DDG2P import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq dbGaP){
+      $self->dataflow_output_id($self->param('output_ids'), 11);
+      print "Setting up for dbGaP import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq CGC){
+      $self->dataflow_output_id($self->param('output_ids'), 12);
+      print "Setting up for CancerGeneConsensus import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq IMPC){
+      $self->dataflow_output_id($self->param('output_ids'), 13);
+      print "Setting up for IMPC import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq MGI){
+      $self->dataflow_output_id($self->param('output_ids'), 14);
+      print "Setting up for MGI import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     }
   } 
 }

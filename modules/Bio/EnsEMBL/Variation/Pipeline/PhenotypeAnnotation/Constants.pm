@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants;
 use base qw(Exporter);
 use Const::Fast;
 
-our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet NONE species);
+our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P dbGaP CGC IMPC MGI NONE species);
 
 use constant RGD       => 'RGD';
 use constant AnimalQTL => 'AnimalQTL';
@@ -41,6 +41,12 @@ use constant GWAS => 'GWAS';
 use constant OMIA => 'OMIA';
 use constant EGA  => 'EGA';
 use constant Orphanet => 'Orphanet';
+use constant MIMmorbid => 'MIMmorbid';
+use constant DDG2P     => 'DDG2P';
+use constant dbGaP     => 'dbGaP';
+use constant CGC       => 'CGC';
+use constant IMPC      => 'IMPC';
+use constant MGI       => 'MGI';
 use constant NONE => 'NONE';
 
 use constant species => ( 'RGD' => ['rattus_norvegicus'],
@@ -52,9 +58,16 @@ use constant species => ( 'RGD' => ['rattus_norvegicus'],
             #                'macaca_mulatta','sus_scrofa','ovis_aries',
             #                'meleagris_gallopavo','danio_rerio'],
                  'OMIA' => ['gallus_gallus'],
-                 'GWAS' => ['homo_sapiens'],
-                 'EGA'  => ['homo_sapiens'],
-                 'Orphanet' => ['homo_sapiens'],
+                 'GWAS'      => ['homo_sapiens'],
+                 'EGA'       => ['homo_sapiens'],
+                 'Orphanet'  => ['homo_sapiens'],
+                 'MIMmorbid' => ['homo_sapiens'],
+                 'DDG2P'     => ['homo_sapiens'],
+                 'dbGaP'     => ['homo_sapiens'],
+                 'CGC'       => ['homo_sapiens'],
+
+                 'IMPC' => ['mus_musculus'],
+                 'MGI'  => ['mus_musculus'],
                  );
 #TODO: hash key source -> array of species: used by the modules to schedule jobs for each species: see vep dum
 #TODO: @: how is it best to take input params? numbers as constants or string? eg. for this _conf takes RGD, while cmd line takes 1, latest: made const string
