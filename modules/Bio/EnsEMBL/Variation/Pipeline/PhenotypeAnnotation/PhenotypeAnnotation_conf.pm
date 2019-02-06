@@ -198,7 +198,7 @@ sub pipeline_analyses {
                 '9->A' => ['import_mim_morbid' ],
                 '10->A'=> ['import_ddg2p' ],
                 '11->A'=> ['import_dbgap' ],
-                '12->A'=> ['import_cancer' ],
+                '12->A'=> ['import_cancerGC' ],
                 '13->A'=> ['import_impc' ],
                 '14->A'=> ['import_mgi' ],
                 'A->1' => [ 'finish_pipeline' ],
@@ -356,7 +356,7 @@ sub pipeline_analyses {
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
-        {   -logic_name => 'import_cancer',
+        {   -logic_name => 'import_cancerGC',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportCGC',
             -parameters => {
                 @common_params,

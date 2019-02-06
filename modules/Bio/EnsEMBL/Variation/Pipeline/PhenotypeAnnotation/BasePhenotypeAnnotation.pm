@@ -310,6 +310,12 @@ sub add_phenotypes {
       $st_check_sth->fetch();
 
       if (!defined($study_id)) {
+        if (length($phenotype->{"study"}) > 255) {
+          warn "WARNING study external_references truncated FROM:>",$phenotype->{"study"}, "<\n";
+          $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
+          $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
+          warn "WARNING study external_references truncated TO  :>",$phenotype->{"study"}, "<\n";
+        }
         $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
         $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
         $st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);

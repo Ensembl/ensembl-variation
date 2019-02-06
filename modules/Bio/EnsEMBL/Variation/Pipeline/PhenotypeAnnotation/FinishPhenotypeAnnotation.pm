@@ -127,7 +127,8 @@ sub report_results{
     my $previous = shift;
 
     my $dir =  $self->required_param('workdir');
-    open my $report, ">$dir/REPORT_import.txt"||die "Failed to open report file for summary info :$!\n";
+    my $report;
+    open $report, ">$dir/REPORT_import.txt"||die "Failed to open report file for summary info :$!\n";
 
     my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
     $text_out.= "$new->{phenotype_count} phenotype entries";
@@ -153,6 +154,7 @@ sub report_results{
     }
 
     print $report $text_out;
+    close $report;
 }
 
 =head2 get_old_results

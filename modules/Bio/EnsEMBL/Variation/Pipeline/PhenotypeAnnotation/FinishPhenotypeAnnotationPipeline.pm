@@ -51,13 +51,25 @@ sub run {
     $runTime_sth->execute()||die;
     my $time = $runTime_sth->fetchall_arrayref();
 
+    my $runTime_imports_sth = $hive_dba->prepare(qq[
+              SELECt ab.logic_name, timediff(max(when_finished), min(when_started))
+              FROM analysis_base ab, role r
+              WHERE ab.logic_name like 'import_%' AND ab.analysis_id = r.analysis_id
+              GROUP BY ab.logic_name ]);
+    $runTime_imports_sth->execute()||die;
+
     my $dir =$self->required_param('pipeline_dir');
     open my $report, ">$dir/REPORT_hive_pipe.txt"||die "Failed to open report file for summary info :$!\n";
 
     print $report "PhenotypeAnnotation pipeline finished! \n";
     print $report "running time: $time->[0]->[0] \n";
     print $report "pipeline_dir: ", $self->required_param('pipeline_dir'), "\n";
-    
+
+    while(my @row = $runTime_imports_sth->fetchrow_array()) {
+      print $report join("\t", @row)."\n";
+      print "here\n";
+    }
+
     close $report;
 }
 
