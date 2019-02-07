@@ -103,16 +103,12 @@ sub fetch_input {
     print "AnimalQTL import expects input folder with gff3 files: example format gallus_gallus.*.gff3  \n" if $debug;
     print "using input folder: $animalqtl_inputDir for species: $species \n" if $debug;
 
-
-  
-
-
     #create folder + copy user input folder data here
     print "Fetching data for: ", $species, "\n" if $debug;
-    opendir(INDIR, $animalqtl_inputDir);     #TODO: move this read dir into initPipe -> each job will have species and specific file
+    opendir(INDIR, $animalqtl_inputDir);
     my @files = readdir(INDIR);
     closedir(INDIR);
-    
+
     my $ok = 0; 
     foreach my $file (@files){
       if ($file =~/^$species.*gff3$/ || $file =~/^$species.*gff3.gz$/){
@@ -154,7 +150,7 @@ sub run {
     $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
     
     my %param_source = (source_name => $source_info{source_name},
-                        type => ['QTL']);
+                        type => $source_info{object_type});
     $self->param('output_ids', { source => \%param_source, 
                                  species => $self->required_param('species')
                                });

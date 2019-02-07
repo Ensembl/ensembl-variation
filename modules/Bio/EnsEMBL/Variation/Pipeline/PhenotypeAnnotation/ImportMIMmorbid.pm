@@ -76,10 +76,6 @@ sub fetch_input {
                     source_version => $dateStr,
                     source_status => 'germline',
                     source => 'omimgene', #TODO: is this used anywhere?
-
-                  #  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                    
-                  #  threshold => $self->required_param('threshold_qtl'),
                     );
 
     $workdir = $pipeline_dir."/".$source_info{source_name_use}."/".$species;

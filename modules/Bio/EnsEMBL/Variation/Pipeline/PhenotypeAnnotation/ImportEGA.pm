@@ -84,11 +84,6 @@ sub fetch_input {
                     source_version => $dateStr, # it is current month
                     source_status => 'germline',
                     source => 'ega',
-
-                    #  object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type ones
-                  #  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                    
-                  #  threshold => $self->required_param('threshold_qtl'),
                     );
 
     $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
@@ -139,7 +134,7 @@ sub run {
   print "Got ".(scalar @{$results->{'studies'}})." new studies \n" if $debug ;
 
   my %param_source = (source_name => $source_info{source_name},
-                      type => ['Variation']);
+                      type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });

@@ -106,7 +106,7 @@ sub run {
     $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
 
     my %param_source = (source_name => $source_info{source_name},
-                        type => ['Gene']);
+                        type => $souce_info{object_type});
     $self->param('output_ids', { source => \%param_source,
                                  species => $self->required_param('species')
                                });

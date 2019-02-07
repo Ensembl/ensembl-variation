@@ -79,12 +79,6 @@ sub fetch_input {
                     source_name => 'Orphanet', #TODO: figure out where this is used
                     source_status => 'germline',
                     source => 'orphanet',
-
-                    # source_version will be read from file
-                    #  object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type ones
-                  #  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                    
-                  #  threshold => $self->required_param('threshold_qtl'),
                     );
 
     #get input file Orphanet:
