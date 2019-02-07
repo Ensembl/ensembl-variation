@@ -197,10 +197,9 @@ sub pipeline_analyses {
                 '8->A' => ['import_orphanet' ],
                 '9->A' => ['import_mim_morbid' ],
                 '10->A'=> ['import_ddg2p' ],
-                '11->A'=> ['import_dbgap' ],
-                '12->A'=> ['import_cancerGC' ],
-                '13->A'=> ['import_impc' ],
-                '14->A'=> ['import_mgi' ],
+                '11->A'=> ['import_cancerGC' ],
+                '12->A'=> ['import_impc' ],
+                '13->A'=> ['import_mgi' ],
                 'A->1' => [ 'finish_pipeline' ],
               #import_gwas, import_omia
               #import_uniprot, import_omim, import_ega, import_giant, import_magic
@@ -330,20 +329,6 @@ sub pipeline_analyses {
 
         {   -logic_name => 'import_ddg2p',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportDDG2P',
-            -parameters => {
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_name    => 'default',
-            -flow_into  => {
-                1 => [ 'check_phenotypes']
-            },
-            -failed_job_tolerance => 5, # tries 5 times to run a job
-        },
-
-        {   -logic_name => 'import_dbgap',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportdbGaP',
             -parameters => {
                 @common_params,
             },

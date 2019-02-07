@@ -95,12 +95,10 @@ sub add_phenotypes {
   my $source_id = $source_info->{source_id};
   my $threshold = $source_info->{threshold};
 
-  my $st_col = ($source_info->{source} =~ m/dbgap/i) ? 'name' : 'description';
-
   # Prepared statements
   my $st_ins_stmt = qq{
-    INSERT INTO 
-      study ( source_id, external_reference, study_type, $st_col
+    INSERT INTO
+      study ( source_id, external_reference, study_type, description
     )
     VALUES (
       $source_id, ?, ?, ?
@@ -280,8 +278,6 @@ sub add_phenotypes {
       if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
       if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }
 
-      my $study_name = ($source_info->{source} =~ m/dbgap/i) ? ' AND name=? ' : '';
-
       my $st_check_stmt = qq{
         SELECT study_id
         FROM study
@@ -289,7 +285,6 @@ sub add_phenotypes {
         source_id = $source_id AND
         external_reference $sql_study AND
         study_type $sql_type
-        $study_name
         LIMIT 1
       };
 
@@ -304,7 +299,6 @@ sub add_phenotypes {
         $st_check_sth->bind_param($param_num,$phenotype->{"study_type"},SQL_VARCHAR);
         $param_num++;
       }
-      $st_check_sth->bind_param($param_num,$phenotype->{"study_description"},SQL_VARCHAR) if ($source_info->{source} =~ m/dbgap/i);
       $st_check_sth->execute();
       $st_check_sth->bind_columns(\$study_id);
       $st_check_sth->fetch();

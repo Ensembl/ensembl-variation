@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants;
 use base qw(Exporter);
 use Const::Fast;
 
-our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P dbGaP CGC IMPC MGI NONE species);
+our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
 
 use constant RGD       => 'RGD';
 use constant AnimalQTL => 'AnimalQTL';
@@ -43,7 +43,6 @@ use constant EGA  => 'EGA';
 use constant Orphanet => 'Orphanet';
 use constant MIMmorbid => 'MIMmorbid';
 use constant DDG2P     => 'DDG2P';
-use constant dbGaP     => 'dbGaP';
 use constant CGC       => 'CGC';
 use constant IMPC      => 'IMPC';
 use constant MGI       => 'MGI';
@@ -63,7 +62,6 @@ use constant species => ( 'RGD' => ['rattus_norvegicus'],
                  'Orphanet'  => ['homo_sapiens'],
                  'MIMmorbid' => ['homo_sapiens'],
                  'DDG2P'     => ['homo_sapiens'],
-                 'dbGaP'     => ['homo_sapiens'],
                  'CGC'       => ['homo_sapiens'],
 
                  'IMPC' => ['mus_musculus'],

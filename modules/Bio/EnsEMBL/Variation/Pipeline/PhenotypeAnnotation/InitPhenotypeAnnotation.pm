@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P dbGaP CGC IMPC MGI NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
@@ -82,10 +82,6 @@ sub fetch_input {
     } elsif($run_type eq DDG2P){
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'DDG2P'}} ]);
       print "Setting up for DDG2P import: ". join(", ",@{$import_species{'DDG2P'}}). "\n" if $debug ;
-
-    } elsif($run_type eq dbGaP){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'dbGaP'}} ]);
-      print "Setting up for dbGaP import: ". join(", ",@{$import_species{'dbGaP'}}). "\n" if $debug ;
 
     } elsif($run_type eq CGC){
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'CGC'}} ]);
@@ -138,17 +134,14 @@ sub write_output {
     } elsif ( $run_type eq DDG2P){
       $self->dataflow_output_id($self->param('output_ids'), 10);
       print "Setting up for DDG2P import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq dbGaP){
-      $self->dataflow_output_id($self->param('output_ids'), 11);
-      print "Setting up for dbGaP import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     } elsif ( $run_type eq CGC){
-      $self->dataflow_output_id($self->param('output_ids'), 12);
+      $self->dataflow_output_id($self->param('output_ids'), 11);
       print "Setting up for CancerGeneConsensus import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     } elsif ( $run_type eq IMPC){
-      $self->dataflow_output_id($self->param('output_ids'), 13);
+      $self->dataflow_output_id($self->param('output_ids'), 12);
       print "Setting up for IMPC import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     } elsif ( $run_type eq MGI){
-      $self->dataflow_output_id($self->param('output_ids'), 14);
+      $self->dataflow_output_id($self->param('output_ids'), 13);
       print "Setting up for MGI import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
     }
   } 
