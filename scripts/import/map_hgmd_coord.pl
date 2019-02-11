@@ -83,7 +83,7 @@ my $month_hash = { 1 => 'March', 2 => 'June', 3 => 'September', 4 => 'December' 
 
 my $new_source_ref = $dbVar2->selectall_arrayref(qq{SELECT source_id FROM source WHERE name = "$source_name"});
 
-$input_file =~ /\/(\d{4})\.(\d+)-hgmd-public\.tsv$/;
+$input_file =~ /\/(\d{4})\.(\d+)-hgmd-public/;
 my $year      = $1;
 my $month_num  = $2;
 my $month     = $month_hash->{$month_num} if ($month_num);
