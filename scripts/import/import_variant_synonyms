@@ -103,14 +103,14 @@ elsif($source_name eq 'dbSNP'){
       '-driver'  =>  'mysql' 
     ); 
 
-  my $synonyms_output = query_synonyms_data($prod_dbc, '*', 'human_synonym'); 
+  my $synonyms_output = query_synonyms_data($prod_dbc, 'rs_name,synonym_name,source_id', 'human_synonym'); 
 
   my %data; # synonym_name => {rs_name} & {source_id} 
 
   # get data from human_synonym table (in production db) 
   foreach my $result (@{$synonyms_output}){  
-    $data{$result->[2]}{rs_name} = $result->[1]; 
-    $data{$result->[2]}{source_id} = $result->[4]; 
+    $data{$result->[1]}{rs_name} = $result->[0]; 
+    $data{$result->[1]}{source_id} = $result->[2]; 
   }
   # print "DATA: ", Dumper(\%data), "\n"; 
   # get all available sources from production database  
