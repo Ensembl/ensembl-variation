@@ -42,7 +42,7 @@ before_install:
 - cd $CWD
 install:
 - export CWD=$PWD
-- export PERL5LIB=$PWD/bioperl-live-bioperl-release-1-6-924:$PERL5LIB
+- export PERL5LIB=$PWD/bioperl-live:$PERL5LIB
 - export DEPS=$HOME/dependencies
 - export KENT_SRC="$DEPS/kent-335_base/src"
 - export HTSLIB_DIR="$PWD/htslib"
