@@ -78,8 +78,9 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self;
   eval {$self = $class->SUPER::new(shift);};
-  throw("ERROR: Instantiating BaseAnnotationAdaptor $@") if $@;
-
+  #throw("ERROR: Instantiating BaseAnnotationAdaptor $@") if $@;
+  $self ||= {};
+  bless($self, $class);
   my $config = $self->config;
 
   unless($config && scalar keys %$config) {
@@ -105,8 +106,6 @@ sub new {
   $self->root_dir();
 
   $self->tmpdir();
-  
-  bless($self, $class);
 
   return $self;
 
