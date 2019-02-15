@@ -99,6 +99,7 @@ sub fetch_input {
       my $sth = $core_dba->dbc->prepare($st_getdata);
       $sth->execute();
       open OUT, ">$workdir/$file_mim" or die "ERROR: Unable to write to file $workdir/$file_mim\n";
+      print OUT join("\t", @{$sth->{NAME}})."\n";
       while(my @row = $sth->fetchrow_array()) {
         print OUT join("\t", @row)."\n";
       }
