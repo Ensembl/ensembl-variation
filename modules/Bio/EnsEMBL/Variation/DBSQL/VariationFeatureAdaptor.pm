@@ -2,7 +2,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2019] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1853,10 +1853,15 @@ sub fetch_by_hgvs_notation {
       if($reference =~ /ENST|NM/){
          push @transcripts, $transcript_adaptor->fetch_by_stable_id($reference);
       }
-      else{
+      # Fetch as UniProt ID or gene
+      else {
+        # Try to see if the ID is from UniProt
+        push @transcripts, @{$transcript_adaptor->fetch_all_by_external_name($reference,"Uniprot/SWISSPROT")};
         #try and fetch via gene
-        # 3rd arg: return all possible transcripts here but for VEP report 1st with matching ref base
-        push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, 1)};
+        if (! @transcripts) {
+          # 3rd arg: return all possible transcripts here but for VEP report 1st with matching ref base
+          push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, 1)};
+        }
       }
     }
     else {

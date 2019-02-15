@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2018] EMBL-European Bioinformatics Institute
+# Copyright [2016-2019] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -639,6 +639,12 @@ is(
   $vdba->get_variationFeatureAdaptor->fetch_by_hgvs_notation(-hgvs => 'NC_000002.11:g.46746465N>A', -replace_ref => 1)->allele_string,
   'G/A',
   'replace_ref'
+);
+
+is(
+  $vdba->get_variationFeatureAdaptor->fetch_by_hgvs_notation(-hgvs => 'Q00872:p.Pro18Leu')->allele_string,
+  'C/T',
+  'uniprot_ref'
 );
 
 
