@@ -138,7 +138,7 @@ sub _seek_by_VariationFeature {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
   my $parser = $self->_file_parser_obj();
-  $parser->seek($vf->seq_region_name, $vf->seq_region_start - 1, $vf->seq_region_end + 1);
+  $parser->seek($vf->seq_region_name, $vf->seq_region_start - 1, $vf->seq_region_end);
   return $parser;
 }
 
