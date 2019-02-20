@@ -46,7 +46,8 @@ sub get_mouse_phenotype_data {
   my $data_source = shift;
   my $url = shift;
   my $phenotype_file = "$working_dir/$data_source\_phenotypes.txt";
-  open(IN, ">".$phenotype_file) or die ("Could not open $phenotype_file for reading");
+
+  open(OUT, ">".$phenotype_file) or die ("Could not open $phenotype_file for writing");
   my $http = HTTP::Tiny->new();
 
   my $i      = 0;
@@ -81,6 +82,7 @@ sub get_mouse_phenotype_data {
           $value ||= '\N';
           push @pairs, $key . "=" . $value;
         }
+        print ">", join("\t", @pairs), "<\n";
         print OUT join("\t", @pairs), "\n";
       }
     }
@@ -93,12 +95,9 @@ sub get_mouse_phenotype_data {
 sub get_mouse_phenotype_data_source_ids {
   my $self = shift;
   my $phenotype_file = shift;
-  my $source_info = shift;
+  my $data_source = shift;
   my $variation_dba = shift;
 
-  my $data_source = $source_info->{source};
-  my $version = $source_info->{source_version};
-  
   my $dbh = $variation_dba->dbc->db_handle;
   open(IN, "<".$phenotype_file) or die ("Could not open $phenotype_file for reading");
   my $source_names = {};
