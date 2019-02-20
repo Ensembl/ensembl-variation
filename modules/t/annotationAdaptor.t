@@ -76,4 +76,11 @@ ok($scores->{A} == 24.36, "CADD score for VF rs76641827 variant allele A");
 ok($scores->{C} ==  4.36, "CADD score for VF rs76641827 variant allele C");
 ok($scores->{G} == 14.36, "CADD score for VF rs76641827 variant allele G");
 
+
+$variation = $va->fetch_by_name('rs2299222');
+$vf = $variation->get_all_VariationFeatures()->[0];
+$vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
+($id, $score) = %{$vf_gerp_score};
+ok(! defined $score, "Returns undef if GERP score not available in annotation file");
+
 done_testing();
