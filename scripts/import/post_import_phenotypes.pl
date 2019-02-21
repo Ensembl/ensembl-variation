@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2018] EMBL-European Bioinformatics Institute
+# Copyright [2016-2019] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,11 +65,13 @@ sub main {
       SET v.evidence_attribs = REPLACE(v.evidence_attribs, '$phenotype_attrib_id', '')
       WHERE e.variation_id = v.variation_id;
     });
+    $dbh->do(qq{ UPDATE variation SET evidence_attribs = NULL WHERE evidence_attribs = '';});
     $dbh->do(qq{
       UPDATE variation_feature vf, variation_ids_old_phenotype_evdn e
       SET vf.evidence_attribs = REPLACE(vf.evidence_attribs, '$phenotype_attrib_id', '')
       WHERE e.variation_id = vf.variation_id;
     });
+    $dbh->do(qq{ UPDATE variation_feature SET evidence_attribs = NULL WHERE evidence_attribs = '';});
   }
   # collect all variations with phenotype associations and update evidence_attribs
   $dbh->do(qq{ DROP TABLE IF EXISTS variation_ids_new_phenotype_evdn});
