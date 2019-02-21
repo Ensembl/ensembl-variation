@@ -4,4 +4,9 @@ browser position 2:40417423-49417423
 # in viewing window, priority = 20 positions this as the second graph
 # Note, zero-relative, half-open coordinate system in use for bed format
 track type=bedGraph name="Bed Format" description="BED format" visibility=full color=200,100,0 altColor=0,100,200 priority=20
-2 40417423 49417423 -1.1234
+2 40417423 45409277 -1.1234
+2 45409277 45409278 -8.36999988555908203
+2 45409278 45409279 -8.69999980926513672
+2 45409279 45409280 2.45000004768371582
+2 45409280 45409281 -8.80000019073486328
+2 45409281 49417423 -1.1234
