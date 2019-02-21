@@ -129,7 +129,7 @@ sub get_all_scores_by_VariationFeature {
   my $start = $vf->seq_region_start;
   my $end = $vf->seq_region_end;
 
-  if ($end - $start > 0) {
+  if ($end - $start > 0 || $end < $start) {
     warn("Can only calculate CADD scores for variants of length 1");
     return {};
   }
