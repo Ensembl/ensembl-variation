@@ -127,7 +127,7 @@ sub get_score_by_VariationFeature {
     $max_score = $score if (!defined $max_score);
     $max_score = $score if ($score > $max_score);
   }
-  $max_score = sprintf("%.2f", $max_score);
+  $max_score = sprintf("%.2f", $max_score) if (defined $max_score);
   return $max_score;
 }
 
@@ -138,7 +138,7 @@ sub _seek_by_VariationFeature {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
   my $parser = $self->_file_parser_obj();
-  $parser->seek($vf->seq_region_name, $vf->seq_region_start - 1, $vf->seq_region_end + 1);
+  $parser->seek($vf->seq_region_name, $vf->seq_region_start - 1, $vf->seq_region_end);
   return $parser;
 }
 
