@@ -459,6 +459,16 @@
       "sample_prefix": "PRJEB9799:"
     },
     {
+      "id": "vervet_EVA_PRJEB22989",
+      "source_name": "PRJEB22989",
+      "species": "chlorocebus_sabaeus",
+      "assembly": "ChlSab1.1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "strict_name_match" : 0,
+      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
+    },
+    {
       "id": "75_mammals.gerp_conservation_score",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
