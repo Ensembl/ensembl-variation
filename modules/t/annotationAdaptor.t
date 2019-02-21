@@ -91,4 +91,11 @@ warns_like {
   $vf_cadd_scores = $vf->get_all_cadd_scores($cadd_annotation->filename_template);
 } qr/Can only calculate CADD scores for variants of length 1/, 'Warn if input variant is an insertion';
 
+# GERP for insertions rs70937952
+$variation = $va->fetch_by_name('rs70937952');
+$vf = $variation->get_all_VariationFeatures()->[0];
+$vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
+($id, $score) = %{$vf_gerp_score};
+ok($score == 2.45, "GERP score for VF rs70937952 insertion");
+
 done_testing();
