@@ -441,6 +441,8 @@ $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or
 print "\n# Test - fetch_by_hgvs_notation\n";
 my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
 throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
+$hgvs_str = 'Q00872:p.Ala53Val';
+ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000016.10:68644751::';

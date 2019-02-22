@@ -641,6 +641,12 @@ is(
   'replace_ref'
 );
 
+is(
+  $vdba->get_variationFeatureAdaptor->fetch_by_hgvs_notation(-hgvs => 'Q00872:p.Pro18Leu')->allele_string,
+  'C/T',
+  'uniprot_ref'
+);
+
 
 sub get_results{
 
