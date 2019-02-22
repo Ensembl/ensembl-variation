@@ -45,9 +45,9 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotyp
 
 sub run {
     my $self = shift;
-    
+
     my $hive_dba = $self->dbc;
-    
+
     my $runTime_sth = $hive_dba->prepare(qq[ select timediff(max(when_died), min(when_born)) from worker ]);
     $runTime_sth->execute()||die;
     my $time = $runTime_sth->fetchall_arrayref();

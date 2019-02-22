@@ -43,7 +43,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $run_type = $self->required_param('run_import_type');
-  
+
   my $debug = $self->param('debug_mode');
 
   unless ($run_type eq NONE) {
@@ -88,14 +88,8 @@ sub fetch_input {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'CGC'}} ]);
       print "Setting up for CancerGeneConsensus import: ". join(", ",@{$import_species{'CGC'}}). "\n" if $debug ;
 
-    } elsif($run_type eq IMPC){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'IMPC'}} ]);
-      print "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if $debug ;
-
-    } elsif($run_type eq MGI){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'MGI'}} ]);
-      print "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if $debug ;
-
+    } elsif($run_type eq IMPC || $run_type eq MGI ){
+      $self->param('output_ids', [{run_type => $run_type}]);
     } else {
       warn "No valid run_import_type specified: $run_type\n" if $debug ;
     }
@@ -104,9 +98,9 @@ sub fetch_input {
 
 sub write_output {
   my $self = shift;
-    
+
   my $run_type = $self->param('run_import_type');
-    
+
   unless ($run_type eq NONE) {
     if ($run_type eq RGD){
       $self->dataflow_output_id($self->param('output_ids'), 2);
@@ -138,12 +132,9 @@ sub write_output {
     } elsif ( $run_type eq CGC){
       $self->dataflow_output_id($self->param('output_ids'), 11);
       print "Setting up for CancerGeneConsensus import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq IMPC){
+    } elsif ( $run_type eq IMPC || $run_type eq MGI){
       $self->dataflow_output_id($self->param('output_ids'), 12);
-      print "Setting up for IMPC import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq MGI){
-      $self->dataflow_output_id($self->param('output_ids'), 13);
-      print "Setting up for MGI import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+      print "Setting up for $run_type import \n" if $self->param('debug_mode');
     }
   } 
 }

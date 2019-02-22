@@ -195,16 +195,12 @@ sub pipeline_analyses {
                 '5->A' => [ 'import_gwas' ],
                 '6->A' => [ 'import_omia' ],
                 '7->A' => [ 'import_ega' ],
-                '8->A' => ['import_orphanet' ],
-                '9->A' => ['import_mim_morbid' ],
-                '10->A'=> ['import_ddg2p' ],
-                '11->A'=> ['import_cancerGC' ],
-                '12->A'=> ['import_impc' ],
-                '13->A'=> ['import_mgi' ],
+                '8->A' => [ 'import_orphanet' ],
+                '9->A' => [ 'import_mim_morbid' ],
+                '10->A'=> [ 'import_ddg2p' ],
+                '11->A'=> [ 'import_cancerGC' ],
+                '12->A'=> [ 'import_mouse' ],
                 'A->1' => [ 'finish_pipeline' ],
-              #import_gwas, import_omia
-              #import_uniprot, import_omim, import_ega, import_giant, import_magic
-              #import_zfin, import_goa, import_mgp, import_3i, import_mgi
             },
         },
 
@@ -352,6 +348,21 @@ sub pipeline_analyses {
             -rc_name    => 'default',
             -flow_into  => {
                 1 => [ 'check_phenotypes']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'import_mouse',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportMouse',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                2 => [ 'import_impc'],
+                3 => [ 'import_mgi']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },

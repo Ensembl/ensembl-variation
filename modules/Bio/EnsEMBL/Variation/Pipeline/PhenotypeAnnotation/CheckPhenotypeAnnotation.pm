@@ -53,7 +53,8 @@ sub fetch_input {
     my $self = shift;
     $species = $self->required_param('species');
     $source = $self->required_param('source');
-    $workdir = $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$species;
+    $workdir = $self->param('workdir');
+    $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$species;
 }
 
 sub run {

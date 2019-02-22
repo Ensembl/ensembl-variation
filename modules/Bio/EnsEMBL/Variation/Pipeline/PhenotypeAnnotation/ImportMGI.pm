@@ -49,8 +49,6 @@ my $core_dba;
 my $variation_dba;
 my $phenotype_dba;
 
-my $coord_file;
-
 my $debug;
 
 sub fetch_input {
@@ -58,6 +56,7 @@ sub fetch_input {
 
     my $pipeline_dir = $self->required_param('pipeline_dir');
     my $species      = $self->required_param('species');
+    my $coord_file   = $self->required_param('coord_file');
 
     $core_dba    = $self->get_species_adaptor('core');
     $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
@@ -83,18 +82,12 @@ sub fetch_input {
     make_path($workdir);
 
     #get input file MGI:
-    my $coord_file = "MGI_MRK_Coord.rpt";
-    my $impc_file_url = "http://www.informatics.jax.org/downloads/reports/MGI_MRK_Coord.rpt";
-    getstore($impc_file_url, $workdir."/".$coord_file) unless -e $workdir."/".$coord_file;
-
-    die "Coord file is required: ftp://ftp.informatics.jax.org/pub/reports/MGI_MRK_Coord.rpt" if (!-f $workdir."/".$coord_file);
     my $url = '/mi/impc/solr/mgi-phenotype';
     my $file_mgi = "mgi_phenotypes.txt";
     print "Found file (".$workdir."/".$file_mgi."), will skip new fetch\n" if -e $workdir."/".$file_mgi;
     $file_mgi = $self->get_mouse_phenotype_data($workdir, $source_info{source}, $url) unless -e $workdir."/".$file_mgi;
 
     $self->param('mgi_file', $file_mgi);
-    $self->param('coord_file', $coord_file);
 }
 
 sub run {
@@ -113,7 +106,7 @@ sub run {
 
   $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids,$variation_dba); 
   $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids,$variation_dba);
-  my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $workdir."/".$coord_file,$core_dba);
+  my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $coord_file,$core_dba);
 
   # get phenotype data
   my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source}, $mouse_phenotype_source_ids, $variation_dba);
@@ -130,7 +123,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               workdir => $workdir
                              });
 }
 
