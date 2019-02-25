@@ -39,7 +39,7 @@ sub run {
     my $self = shift;
 
     my $var_dba = $self->get_species_adaptor('variation');
-    
+    $var_dba->dbc->reconnect_when_lost(1);   
     my $dbc = $var_dba->dbc;
     
     # first set the default consequence type

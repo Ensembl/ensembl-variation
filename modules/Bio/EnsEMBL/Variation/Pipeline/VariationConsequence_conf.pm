@@ -33,7 +33,8 @@ package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_conf;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Hive::Version 2.5;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
 sub default_options {
     my ($self) = @_;
@@ -53,7 +54,8 @@ sub default_options {
     return {
 
         # general pipeline options that you should change to suit your environment
-       
+        hive_debug_init => 1, # If set to 1, will show the objects (analyses, data-flow rules, etc) that are parsed from the PipeConfig file.
+        hive_default_max_retry_count => 0,
         hive_force_init => 1,
         hive_use_param_stack => 0,
         hive_use_triggers => 0,
@@ -102,15 +104,12 @@ sub default_options {
         # requirements, queue parameters etc.) to suit your own data
         
         default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>4000] rusage[mem=4000]" -M4000',
-        urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>5000] rusage[mem=5000]" -M5000',
         highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species
 
-        transcript_effect_capacity      => 50,
         set_variation_class_capacity    => 10,
         
         # set this flag to 1 to include LRG transcripts in the transcript effect analysis
@@ -167,6 +166,7 @@ sub default_options {
             -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_'.$self->o('species'),
             -driver => 'mysql',
+            -reconnect_when_lost => 1
         },
     };
 }
@@ -176,9 +176,7 @@ sub resource_classes {
     my ($self) = @_;
     return {
           'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
           'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
           'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
     };
 }
@@ -189,131 +187,167 @@ sub pipeline_analyses {
     my @common_params = (
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
+        pipeline_dir => $self->o('pipeline_dir'),
+        max_distance => $self->o('max_distance'),
     );
    
     my @analyses;
 
     if ($self->o('run_transcript_effect')) {
-
         push @analyses, (
-            
-            {   -logic_name => 'init_transcript_effect',
-                -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
-                -parameters => {
-                    include_lrg => $self->o('include_lrg'),
-                    limit_biotypes => $self->o('limit_biotypes'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
-                    sort_variation_feature => $self->o('sort_variation_feature'),
-                    @common_params,
-                },
-                -input_ids  => [{}],
-                -rc_name    => 'long',
-                -flow_into  => {
-                    2 => [ 'rebuild_tv_indexes' ],
-                    3 => [ 'update_variation_feature' ],
-                    4 => [ 'transcript_effect' ],
-                    5 => [ 'check_transcript_variation' ],
-                    6 => [ 'finish_transcript_effect' ],
-                    7 => [ 'transcript_effect_highmem' ],
-                },
+          { -logic_name => 'init_transcript_effect',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::VariationConsequencePreTasks',
+            -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
+              fasta => $self->o('fasta'),
+              sort_variation_feature => $self->o('sort_variation_feature'),
+              @common_params,
             },
-
-            {   -logic_name     => 'transcript_effect',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-                -parameters     => { 
-                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
-                    max_distance => $self->o('max_distance'),
-                    @common_params,
-                },
-                -input_ids       => [],
-                -hive_capacity   => $self->o('transcript_effect_capacity'),
-                -rc_name         => 'default',
-                -max_retry_count => 0,
-                -flow_into       => {
-                  -1 => ['transcript_effect_highmem'],
-                }
+            -rc_name   => 'default',
+            -flow_into => {
+              1 => ['gene_factory'],
+              2 => ['rebuild_tv_indexes'],
             },
+            -input_ids  => [{}],
+          },
+          { -logic_name => 'gene_factory',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::GeneFactory',
+            -hive_capacity  => 150,
 
-            {   -logic_name     => 'transcript_effect_highmem',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-                -parameters     => {
-                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-                    mtmp_table => $self->o('mtmp_table'),
-                    fasta => $self->o('fasta'),
-                    pipeline_dir => $self->o('pipeline_dir'),
-                    max_distance => $self->o('max_distance'),
-                    @common_params,
-                },
-                -input_ids       => [],
-                -hive_capacity   => $self->o('transcript_effect_capacity'),
-                -rc_name         => 'highmem',
-                -can_be_empty    => 1,
-                -max_retry_count => 0
+            -parameters => {
+              include_lrg => $self->o('include_lrg'),
+              limit_biotypes => $self->o('limit_biotypes'),
+              @common_params,
             },
-
-            {   -logic_name     => 'finish_transcript_effect',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
-                -parameters     => {
-                    pipeline_dir => $self->o('pipeline_dir'),
-                    @common_params,
-                },
-                -input_ids            => [],
-                -hive_capacity        => 1,
-                -rc_name              => 'highmem',
-                -wait_for             => [ 'transcript_effect', 'transcript_effect_highmem' ],
-                -flow_into            => {},
-                -failed_job_tolerance => 0,
-                -max_retry_count      => 0,
+            -rc_name   => 'default',
+            -flow_into => { 
+              '2->A' => ['dump_variation_gene_name'], 
+              'A->1' => ['web_index_load'], 
             },
-
-            {   -logic_name     => 'rebuild_tv_indexes',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids       => [],
-                -hive_capacity   => 1,
-                -rc_name         => 'urgent',
-                -wait_for        => [ 'finish_transcript_effect' ],
-                -flow_into       => {},
-                -max_retry_count => 0
+          },
+          { -logic_name => 'dump_variation_gene_name',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
+            -hive_capacity  => 150,
+            -parameters => {
+              @common_params,
             },
-        
-            {   -logic_name     => 'check_transcript_variation',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
-                -parameters     => {
-                    pipeline_dir  => $self->o('pipeline_dir'),
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => 1,
-                -rc_name        => 'default',
-                -wait_for       => [ 'rebuild_tv_indexes' ],
-                -flow_into      => {},
+            -rc_name   => 'default',
+            -flow_into => { 
+              -1 => ['dump_variation_gene_name_highmem'],
+              2 => ['transcript_factory'], 
+              3 => ['by_gene_transcript_effect'], 
             },
-
-            {   -logic_name     => 'update_variation_feature',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
-                -parameters     => {
-                    @common_params,
-                },
-                -input_ids       => [],
-                -hive_capacity   => 1,
-                -rc_name         => 'urgent',
-                -wait_for        => [ 'rebuild_tv_indexes' ],
-                -flow_into       => {},
-                -max_retry_count => 0
-            }, 
-
+          },
+          { -logic_name => 'dump_variation_gene_name_highmem',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
+            -hive_capacity  => 150,
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'highmem',
+            -flow_into => { 
+              2 => ['transcript_factory'], 
+              3 => ['by_gene_transcript_effect'], 
+            },
+          },
+          { -logic_name => 'transcript_factory',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptFactory',
+            -hive_capacity  => 150,
+            -analysis_capacity  => 50,
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'medmem',
+            -flow_into => {
+              '2->A' => ['transcript_effect'],
+              'A->1' => ['finish_transcript_effect'],
+            },
+          },
+          { -logic_name => 'by_gene_transcript_effect',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+            -hive_capacity  => 150,
+            -analysis_capacity  => 60,
+            -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
+              fasta => $self->o('fasta'),
+              disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              @common_params,
+            },
+            -rc_name   => 'default',
+          },
+          { -logic_name => 'transcript_effect',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+            -hive_capacity  => 150,
+            -analysis_capacity  => 50,
+            -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
+              fasta => $self->o('fasta'),
+              disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              @common_params,
+            },
+            -rc_name   => 'medmem',
+            -flow_into => {
+              -1 => ['transcript_effect_highmem'],
+            },
+          },
+          { -logic_name => 'transcript_effect_highmem',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+            -hive_capacity  => 150,
+            -analysis_capacity  => 50,
+            -rc_name => 'highmem',
+            -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
+              fasta => $self->o('fasta'),
+              disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              @common_params,
+            },
+          },
+          { -logic_name => 'finish_transcript_effect',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect',
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'default',
+          },
+          { -logic_name => 'web_index_load',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::LoadWebIndexFiles',
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'default',
+          },
+          { -logic_name => 'rebuild_tv_indexes',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'default',
+            -wait_for => 'web_index_load',
+            -flow_into => {
+              1 => ['update_variation_feature'],
+            },
+          },
+          { -logic_name => 'update_variation_feature',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'default',
+            -flow_into => {
+              1 => ['check_transcript_variation']
+            },
+          },
+          { -logic_name => 'check_transcript_variation',
+            -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
+            -parameters => {
+              @common_params,
+            },
+            -rc_name   => 'default',
+          }
         );
     }
 
-    if ($self->o('run_variation_class')) {
+   if ($self->o('run_variation_class')) {
 
         push @analyses, (
 
@@ -353,7 +387,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_name        => 'urgent',
+                -rc_name        => 'default',
                 -wait_for       => [ 'set_variation_class' ],
                 -flow_into      => {},
             },
