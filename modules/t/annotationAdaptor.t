@@ -96,6 +96,6 @@ $variation = $va->fetch_by_name('rs70937952');
 $vf = $variation->get_all_VariationFeatures()->[0];
 $vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
 ($id, $score) = %{$vf_gerp_score};
-ok($score == 2.45, "GERP score for VF rs70937952 insertion");
+ok($score == -8.37, "GERP score for VF rs70937952 insertion");
 
 done_testing();
