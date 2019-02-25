@@ -469,11 +469,11 @@
       "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
     },
     {
-      "id": "70_mammals.gerp_conservation_score",
+      "id": "75_mammals.gerp_conservation_score",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/current_compara/conservation_scores/70_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/current_compara/conservation_scores/75_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
       "annotation_type": "gerp"
     },
     {
