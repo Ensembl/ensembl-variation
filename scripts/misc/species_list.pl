@@ -122,7 +122,7 @@ foreach my $hostname (@hostnames) {
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
-    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
     $dbname =~ /^(.+)_variation/;
@@ -138,6 +138,13 @@ foreach my $hostname (@hostnames) {
     }
     print "\n";
     
+    # Count the number of variations
+    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
+    my $count_var = $sth2->fetchrow_array;
+    $sth2->finish;
+    next if ($count_var == 0);
+    $species_list{$s_name}{'count'} = round_count($count_var);
+
     my $label_name = ucfirst($s_name);
        $label_name =~ s/_/ /g;
     $species_list{$s_name}{label} = $label_name;
@@ -147,17 +154,11 @@ foreach my $hostname (@hostnames) {
        $core_dbname =~ s/variation/core/i;
     my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
     my $display_name = $sth_core->fetchrow_array;  
-       $display_name =~ s/saccharomyces/S\./i;
+       #$display_name =~ s/saccharomyces/S\./i;
     $species_list{$s_name}{'name'} = $display_name;
     $display_list{$display_name} = $s_name;
-    
-    # Count the number of variations
-    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-    my $count_var = $sth2->fetchrow_array;
-    $sth2->finish;
-    $species_list{$s_name}{'count'} = round_count($count_var);
 
-    # Count the number of variantion sources
+    # Count the number of variation sources
     my $sth2a = get_connection_and_query($dbname, $hostname, $sql2a);
     $species_list{$s_name}{'sources'} = [];
     while(my $src = ($sth2a->fetchrow_array)[0]) {
@@ -290,29 +291,30 @@ $html_content .= qq{</table>\n};
 
 # Legend
 my $html_legend = qq{
-<span style="border:1px #DDD solid;padding:4px">
-  <span style="margin-right:5px;font-weight:bold">Colour legend: </span>
+<div>
+  <span style="border:1px #DDD solid;padding:4px">
+    <span style="margin-right:5px;font-weight:bold">Colour legend: </span>
 };
 foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
   my $desc  = $colours{$type}{'legend'};
   my $class = $colours{$type}{'colour'};
   $html_legend .= qq{  
-  <span style="margin-left:20px">
-    <span class="vdoc_count_legend $class" style="margin-right:5px"></span>
-    <span>$desc</span>
-  </span>};
+    <span style="margin-left:20px">
+      <span class="vdoc_count_legend $class" style="margin-right:5px"></span>
+      <span>$desc</span>
+    </span>};
 }
 $html_legend .= qq{
-</span>
+  </span>
+</div>
 };
 
 
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
-print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> variation databases in Ensembl:</p>\n};
+print HTML qq{<p style="padding-top:0px;margin-top:0px">We currently have <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> vertebrate species with variation databases. A range of different information is available:</p>\n};
 print HTML $html_content;
 print HTML $html_legend;
-print HTML qq{<p style="padding-top:15px">The <b>full list of species</b> with their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>\n};
 close(HTML);
 
 
