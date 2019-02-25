@@ -111,11 +111,13 @@ sub _return_3prime {
   ## Will create a "shift_object", containing info on precisely how the variant should be shifted when required
   my $self = shift;
   my $hgvs_only = shift;
+  
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
   ## Don't even attempt shifting if it's not an indel
   return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' );
   my $tr ||= $tv->transcript; 
+  return $self if (defined($vf->adaptor) && defined($vf->adaptor->db)) && ($vf->adaptor->db->shift_hgvs_variants_3prime() == 0);
   $self->initialise_unshifted_values;
   
   ## Performs a shift in either the 5' or 3' direction depending on the strand of the transcript
@@ -557,7 +559,6 @@ sub affects_peptide {
 
 sub pep_allele_string {
     my ($self) = @_;
-    
     my $pep = $self->peptide;
     
     return undef unless $pep;
@@ -754,6 +755,7 @@ sub codon {
     }
    
     # try to calculate the codon sequence
+    $self->shift_feature_seqs;
     my $seq = $self->feature_seq;  
     $seq = '' if $seq eq '-';
     
@@ -1175,6 +1177,29 @@ sub _protein_function_prediction {
     return undef;
 }
 
+
+sub shift_feature_seqs {
+  my $self = shift;
+    
+    if(defined($self->{shift_object}) && !$self->{shifted_feature_seqs})
+    {
+      my $vf_seq = $self->{variation_feature_seq};
+      my $f_seq = $self->{feature_seq};
+      
+      my $shift_length = $self->{shift_object}->{shift_length};
+
+      for (my $n = 0; $n < $shift_length; $n++ ){
+        ## check each position in deletion/ following seq for match
+        $vf_seq = substr($vf_seq, 1) . substr($vf_seq, 0, 1) if defined($vf_seq);
+        $f_seq = substr($f_seq, 1) . substr($f_seq, 0, 1) if defined($f_seq);
+      } 
+      $self->variation_feature_seq($vf_seq);
+      $self->feature_seq($f_seq);
+      $self->{shifted_feature_seqs} = 1;
+    }   
+}
+
+
 =head2 hgvs_genomic
 
   Description: Return a string representing the genomic-level effect of this allele in HGVS format
@@ -1545,15 +1570,16 @@ sub hgvs_protein {
     delete($hgvs_tva->{peptide});
     delete($hgvs_tva->{codon});
     delete($hgvs_tva->{feature_seq});
-
-    $hgvs_tva_tv->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
-    $self->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
+    $self->shift_feature_seqs();
+    #$hgvs_tva_tv->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
+    #$self->{variation_feature_seq} = $self->{shift_object}->{hgvs_allele_string};
   }
   if(defined($hgvs_tva_ref->{shift_object}))
   {
     delete($hgvs_tva_ref->{peptide});
     delete($hgvs_tva_ref->{codon});
     delete($hgvs_tva_ref->{feature_seq});
+
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{ref_orig_allele_string};
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{shifted_allele_string} if $hgvs_tva_vf->var_class eq 'deletion';  
   }
@@ -1595,7 +1621,7 @@ sub hgvs_protein {
 =cut
 sub hgvs_offset {
   my $self = shift;
-  return $self->{_hgvs_offset};
+  return $self->{shift_object}->{_hgvs_offset};
 }
 
 =head2 hgvs_exon_start_coordinate

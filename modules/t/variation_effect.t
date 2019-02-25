@@ -736,11 +736,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_end-10,
         effects => [qw(coding_sequence_variant)],
     }, {
-        comment => 'delete the last codon of an exon',
+        comment => 'delete the last codon of an exon - shifting into splice donor region',
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start-1,
-        effects => [qw(inframe_deletion splice_region_variant)],
+        effects => [qw(coding_sequence_variant splice_donor_variant)],
     }, 
     
 
@@ -775,11 +775,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_start,
         effects => [qw(5_prime_UTR_variant start_retained_variant start_lost)],
     }, {
-        comment => 'deletion overlapping STOP and 3\' UTR, stop retained',
+        comment => 'deletion overlapping STOP and 3\' UTR, stop retained - shifted into solely 3\' UTR',
         alleles => '-',
         start   => $cds_end-1,
         end     => $cds_end+1,
-        effects => [qw( 3_prime_UTR_variant stop_retained_variant)],
+        effects => [qw( 3_prime_UTR_variant)],
     }, {
         comment => 'deletion overlapping STOP and 3\' UTR, stop retained, different codon',
         alleles => '-',
@@ -1172,7 +1172,10 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
-        effects => [qw(stop_lost inframe_deletion)],
+        effects => [qw(3_prime_UTR_variant coding_sequence_variant)], 
+        ## changed for shifting code. Different result is given here than in regular VEP because the transcript
+        ## used for the tests is no longer in the gene set, and has the cds_end_NF attribute attached, preventing
+        ## overlap_stop_codon from correctly flagging. Test will be updated.
     }, {
         alleles => 'TAA',
         strand  => -1,

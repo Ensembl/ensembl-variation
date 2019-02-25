@@ -553,15 +553,18 @@ sub within_cdna {
     
     my $cdna_coords = $bvfo->cdna_coords;
     my $shift_length = defined($bvfoa->{shift_object}) ? $feat->strand * $bvfoa->{shift_object}->{shift_length} : 0;
+    
     if (@$cdna_coords > 0) {
         for my $coord (@$cdna_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if ($coord->end + $shift_length > 0 && $coord->start + $shift_length <= $feat->length) {
+                #if ($coord->end > 0 && $coord->start <= $feat->length) {
                     return 1;
                 }
             }
         }
     }
+    
     # we also need to check if the vf is in a frameshift intron within the cDNA
 
     if ($bvfoa->_intron_effects->{within_frameshift_intron}) {
@@ -722,7 +725,6 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -830,8 +832,9 @@ sub _overlaps_start_codon {
         return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
-        $cdna_start += $bvfoa->{shift_object}->{shift_length} if defined($bvfoa->{shift_object});
-        $cdna_end += $bvfoa->{shift_object}->{shift_length} if defined($bvfoa->{shift_object});
+        my $shifting_offset = defined($bvfoa->{shift_object}) ? $bvfoa->{shift_object}->{shift_length} : 0;
+        $cdna_start += $shifting_offset;
+        $cdna_end += $shifting_offset;
         return 0 unless $cdna_start && $cdna_end;
         $cache->{overlaps_start_codon} = overlap(
             $cdna_start, $cdna_end,
@@ -1049,7 +1052,13 @@ sub stop_lost {
         
         # sequence variant
         if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
-                    
+            
+            # special case frameshift
+    #        if(frameshift(@_)) {
+    #          my $ref_pep = _get_ref_pep(@_);
+    #          return $ref_pep && $ref_pep =~ /\*/;
+    #        }
+            
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
             if(defined($ref_pep) && defined($alt_pep)) {
@@ -1085,7 +1094,6 @@ sub stop_lost {
 
 sub stop_retained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1126,7 +1134,6 @@ sub stop_retained {
 
 sub _overlaps_stop_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{overlaps_stop_codon})) {
@@ -1247,6 +1254,7 @@ sub frameshift {
 
 sub partial_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1256,12 +1264,13 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
-
-        return 0 unless defined $bvfo->translation_start();
         
+        return 0 unless defined $bvfo->translation_start;
+
         my $cds_length = length $bvfo->_translateable_seq;
 
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
+
         my $last_codon_length = $cds_length - ($codon_cds_start - 1);
         
         $cache->{_partial_codon} = ( $last_codon_length < 3 and $last_codon_length > 0 );
