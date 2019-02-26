@@ -1745,6 +1745,10 @@ sub fetch_by_hgvs_notation {
  
   ########################### Check & split input ###########################
 
+  #Clean the HGVS notation to avoid '(gene)' or '(p.)'  
+  $hgvs =~ s/\(.+\):/:/; 
+  $hgvs =~ s/\(p\..+\)//;   
+
   #Split the HGVS notation into the reference, notation type and variation description
   my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmnrp]?)\.?(.*?[\*\-0-9]+.*)$/i;
 
@@ -1752,7 +1756,7 @@ sub fetch_by_hgvs_notation {
   throw ("Could not parse the HGVS notation $hgvs") 
       unless (defined($reference) && defined($type) && defined($description));
 
-      
+
   my $extra;
   if($description =~ m/\(.+\)/) {        
     ($description, $extra) = $description=~ /(.+?)(\(.+\))/;        
