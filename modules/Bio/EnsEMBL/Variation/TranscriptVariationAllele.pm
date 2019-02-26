@@ -1186,7 +1186,7 @@ sub shift_feature_seqs {
       my $vf_seq = $self->{variation_feature_seq};
       my $f_seq = $self->{feature_seq};
       
-      my $shift_length = $self->{shift_object}->{shift_length};
+      my $shift_length = $self->{shift_object}->{shift_length} ||= 0;
 
       for (my $n = 0; $n < $shift_length; $n++ ){
         ## check each position in deletion/ following seq for match
