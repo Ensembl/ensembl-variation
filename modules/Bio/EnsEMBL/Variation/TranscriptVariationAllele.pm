@@ -1179,8 +1179,7 @@ sub _protein_function_prediction {
 
 
 sub shift_feature_seqs {
-  my $self = shift;
-    
+    my $self = shift;
     if(defined($self->{shift_object}) && !$self->{shifted_feature_seqs})
     {
       my $vf_seq = $self->{variation_feature_seq};
@@ -1563,7 +1562,7 @@ sub hgvs_protein {
   $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
 
   my $hgvs_tva_ref = $hgvs_tva_tv->get_reference_TranscriptVariationAllele;
-  $hgvs_tva_ref->_return_3prime;
+  $hgvs_tva_ref->_return_3prime(1);
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($hgvs_tva->{shift_object}))
   {
@@ -1582,6 +1581,7 @@ sub hgvs_protein {
 
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{ref_orig_allele_string};
     $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_object}->{shifted_allele_string} if $hgvs_tva_vf->var_class eq 'deletion';  
+    $hgvs_tva_ref->{shifted_feature_seqs} = 1;
   }
   
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
