@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2019] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -130,9 +130,9 @@ sub config_file {
       $config_file ||= $CONFIG_FILE || ($self->db ? $self->db->vcf_config_file : undef) || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
       # try and find default config file in API dir
       if(!defined($config_file)) {
-        my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/VCFCollectionAdaptor.pm';
+        my $mod_path  = 'Bio/EnsEMBL/Variation/DBSQL/BaseAnnotationAdaptor.pm';
         $config_file  = $INC{$mod_path};
-        $config_file =~ s/VCFCollectionAdaptor\.pm/vcf_config\.json/ if $config_file;
+        $config_file =~ s/BaseAnnotationAdaptor\.pm/vcf_config\.json/ if $config_file;
       }
       $self->{config_file} = $config_file;
     } 

@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2018] EMBL-European Bioinformatics Institute
+# Copyright [2016-2019] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,5 +75,27 @@ ok($cadd_annotation_id eq 'CADD', "CADD annotation file name");
 ok($scores->{A} == 24.36, "CADD score for VF rs76641827 variant allele A");
 ok($scores->{C} ==  4.36, "CADD score for VF rs76641827 variant allele C");
 ok($scores->{G} == 14.36, "CADD score for VF rs76641827 variant allele G");
+
+# test some corner cases
+$variation = $va->fetch_by_name('rs2299222');
+$vf = $variation->get_all_VariationFeatures()->[0];
+$vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
+($id, $score) = %{$vf_gerp_score};
+ok(! defined $score, "Returns undef if GERP score not available in annotation file");
+
+# CADD for insertions rs35107173
+$variation = $va->fetch_by_name('rs35107173');
+$vf = $variation->get_all_VariationFeatures()->[0];
+
+warns_like {
+  $vf_cadd_scores = $vf->get_all_cadd_scores($cadd_annotation->filename_template);
+} qr/Can only calculate CADD scores for variants of length 1/, 'Warn if input variant is an insertion';
+
+# GERP for insertions rs70937952
+$variation = $va->fetch_by_name('rs70937952');
+$vf = $variation->get_all_VariationFeatures()->[0];
+$vf_gerp_score = $vf->get_gerp_score($gerp_annotation->filename_template);
+($id, $score) = %{$vf_gerp_score};
+ok($score == -8.37, "GERP score for VF rs70937952 insertion");
 
 done_testing();

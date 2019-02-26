@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2019] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ use POSIX;
 use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Hive::AnalysisJob;
+use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
@@ -103,7 +104,6 @@ sub get_adaptor {
     unless (defined $dba) {
         die "Failed to a get DBA for $species and group $group";
     }
-    
     return $dba;
 }
 
@@ -125,5 +125,29 @@ sub run_date{
 
     return strftime("%Y-%m-%d", localtime);
 }
+
+sub get_files_dir {
+  my $self = shift;
+  my $id = shift;
+  my $folder_name = shift;
+
+  my $dir = $self->required_param('pipeline_dir').'/'.$folder_name.'_files/'.substr(md5_hex($id), 0, 2);
+
+  unless(-d $dir) {
+    mkdir($dir) or die "ERROR: Could not make directory $dir\n";
+  }
+
+  return $dir;
+}
+
+sub run_cmd {
+  my $self = shift;
+  my $cmd = shift;
+  if (my $return_value = system($cmd)) {
+    $return_value >>= 8;
+    die "system($cmd) failed: $return_value";
+  }
+}
+
 
 1;

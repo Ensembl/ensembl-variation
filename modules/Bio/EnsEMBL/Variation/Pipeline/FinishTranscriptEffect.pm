@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [2016-2019] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,97 +32,59 @@ package Bio::EnsEMBL::Variation::Pipeline::FinishTranscriptEffect;
 use strict;
 use warnings;
 use ImportUtils qw(load);
-use Sys::Hostname;
 use FileHandle;
-use File::Path qw(rmtree);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
-
-my $DEBUG = 0;
 
 sub run {
   my $self = shift;
 
-  $self->rejoin_table_files();
+  my @transcript_ids = @{$self->param('transcript_ids_funnel')};
+  my $gene_stable_id = $self->param('gene_stable_id');
 
-  my $dbc = $self->get_species_adaptor('variation')->dbc;
+  my $var_dba = $self->get_species_adaptor('variation');
+  my $tva = $var_dba->get_TranscriptVariationAdaptor;
 
-  my $dir = $self->required_param('pipeline_dir');
-  $ImportUtils::TMP_DIR = $dir;
+  my $files = {
+    transcript_variation      => { 'cols' => [$tva->_write_columns],      },
+    MTMP_transcript_variation => { 'cols' => [$tva->_mtmp_write_columns], },
+  };
 
-  my $host = hostname;
+  # create log file and read if available or create
 
-  # do unique sort on command line, it's faster than relying on MySQL's unique index
-  foreach my $file(grep {-e "$dir/$_"} qw(variation_hgvs.txt variation_genename.txt)) {
-    system("gzip -c $dir/$file > $dir/$file\_bak.gz");
-    system(
-      sprintf(
-        'cat %s/%s | sort -T %s -u > %s/%s.unique',
-        $dir, $file, $dir, $dir, $file, 
-      )
-    ) and die("ERROR: Failed to unique sort $file");
-    unlink("$dir/$file\.gz") if -e "$dir/$file\.gz";
-    system("gzip $dir/$file");# unlink("$dir/$file");
+  my $pipeline_dir = $self->param('pipeline_dir');
+  my $loaded_transcript_ids = {};
+  my $fh;
+  my $log_file = "$pipeline_dir/LOG_$gene_stable_id";
+  if (-e $log_file) {
+    # read successfully loaded transcripts
+    $fh = FileHandle->new($log_file, 'r');
+    while (<$fh>) {
+      chomp;
+      $loaded_transcript_ids->{$_} = 1;
+    }
+    $fh->close;
+  }
+  open($fh, '>>', $log_file) or die "Could not open file '$log_file' $!";
+
+  foreach my $transcript_id (@transcript_ids) {
+    foreach my $table(keys %$files) {
+      next if $loaded_transcript_ids->{"$transcript_id\_$table"};
+      my $tmpdir =  $self->get_files_dir($transcript_id, 'transcript_effect');
+      my $filename = sprintf('%s_%s.txt', $transcript_id, $table);
+      $self->run_cmd("cp $tmpdir/$filename $tmpdir/load_$filename");      
+      $ImportUtils::TMP_DIR = $tmpdir;
+      $ImportUtils::TMP_FILE = "load_$filename";
+      load($var_dba->dbc, ($table, @{$files->{$table}->{cols}}));
+      print $fh "$transcript_id\_$table\n";
+      $self->run_cmd("rm $tmpdir/$filename");
+    }
   }
 
-  if(-e $dir.'/variation_hgvs.txt.unique') {
-    $ImportUtils::TMP_FILE = 'variation_hgvs.txt.unique';
-    load($dbc, qw(variation_hgvs variation_id hgvs_name));
-  }
-
-  if(-e $dir.'/variation_genename.txt.unique') {
-    $ImportUtils::TMP_FILE = 'variation_genename.txt.unique';
-    load($dbc, qw(variation_genename variation_id gene_name));
-  }
-
-  $self->update_meta();
+  close($fh);
 
   return;
 }
 
-sub rejoin_table_files {
-  my $self = shift;
-
-  my $dir = $self->required_param('pipeline_dir');
-
-  my $gene_fh = FileHandle->new();
-  $gene_fh->open(">".$dir."/variation_genename.txt") or die $!;
-  my $hgvs_fh = FileHandle->new();
-  $hgvs_fh->open(">".$dir."/variation_hgvs.txt") or die $!;
-
-  opendir DIR, $dir."/table_files";
-  foreach my $hex_stub(grep {!/^\./} readdir DIR) {
-
-    opendir HEX, "$dir/table_files/$hex_stub";
-    foreach my $file(grep {!/^\./} readdir HEX) {
-
-      my $fh = $file =~ /hgvs/ ? $hgvs_fh : $gene_fh;
-
-      open IN, "$dir/table_files/$hex_stub/$file" or die $!;
-      while(<IN>) {
-        print $fh $_;
-      }
-      close IN;
-    }
-  }
-
-  rmtree($dir."/table_files");
-}
-
-sub update_meta{
-
-  my $self = shift;
-
-  my $var_dba  = $self->get_species_adaptor('variation');
-
-  my $var_dbh = $var_dba->dbc->db_handle;
-
-  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
-                                              ( meta_key, meta_value) values (?,?)
-                                            ]);
-
-  $update_meta_sth->execute('TranscriptEffect_run_date', $self->run_date() );
-
-}
 1;
 
