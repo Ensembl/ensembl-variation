@@ -172,6 +172,12 @@ my $html_title = qq{
 
     <h2>List of data sources for each species - $ecaption $e_version</h2>
 
+    <p style="margin-bottom:20px">
+We provide data from a variety of sources. To view variants specific to these data sets in the
+browser go to a species Location page (e.g. <a href="/Homo_sapiens/Location/View?r=6:133017695-133161157">for human</a>), and click on
+the <i>'Configure this page'</i> link on the left-hand side. The <i>'Variation'</i> and <i>'Somatic mutations'</i> sections contain a track list of all the sources of variant data for that species.
+    </p>
+
     <div style="margin-bottom:20px">
       <a href="../prediction/sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
     </div>
