@@ -1881,7 +1881,7 @@ sub fetch_by_hgvs_notation {
 
       my $possible_prot;
       eval {
-        if($description =~ /del$/){
+        if($description =~ /del$/){ 
           $possible_prot = _parse_hgvs_protein_position_del($description, $reference, $transcript);
         } 
         else{
@@ -2274,11 +2274,9 @@ sub _parse_hgvs_protein_position_del{
   }
   
   # only one amino acid is deleted eg. Lys1110del
-  else{
+  else{  
     ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
   } 
-  # conver three letter AA to single for both amino acids (convert first altered amino acid)  
-  $from = $Bio::SeqUtils::ONECODE{$from} || $from;
 
   # get genomic position 
   my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, $pos2, 1); 
