@@ -82,7 +82,6 @@ sub get_mouse_phenotype_data {
           $value ||= '\N';
           push @pairs, $key . "=" . $value;
         }
-        print ">", join("\t", @pairs), "<\n";
         print OUT join("\t", @pairs), "\n";
       }
     }
@@ -392,7 +391,7 @@ sub parse_mouse_phenotype_data {
         my $accession = $data{accession};
         my $source = $data{source};
         my $strain_id = $data{strain_id};
-        my $key = join('-', ($accession, $source, $object_id, $strain_id));
+        my $key = join('-', ($accession, $source, $object_id, $strain_id || ''));
         unless ($already_inserted->{$key}) {
           my %phenotype_data = ();
           foreach my $key (keys %data) {

@@ -102,7 +102,7 @@ sub run {
 
   #get source ids
   my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source},$variation_dba);
-  print STDOUT $source_info{source}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
+  print STDOUT $source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
 
   $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids,$variation_dba); 
   $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids,$variation_dba);

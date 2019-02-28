@@ -57,6 +57,7 @@ sub fetch_input {
 
     my $pipeline_dir = $self->required_param('pipeline_dir');
     my $species      = $self->required_param('species');
+    my $coord_file   = $self->required_param('coord_file');
 
     $core_dba    = $self->get_species_adaptor('core');
     $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
@@ -67,8 +68,7 @@ sub fetch_input {
     #TODO: 
     # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
     #-source impc -infile ${datadir}/impc_data.txt -source impc -verbose -version 20121031
-    
-    my $dateStr = strftime "%Y%m%d", localtime;
+
     %source_info = (source_description => 'International Mouse Phenotyping Consortium',
                     source_url => 'http://www.mousephenotype.org/',
                     object_type => 'Gene',
@@ -76,29 +76,18 @@ sub fetch_input {
                     source_name => 'IMPC', #TODO: figure out where this is used
                     source_status => 'germline',
                     source => 'impc',
-                    source_version => $dateStr,
+                    #source version is set based on the EBI fetched data hash response_date
                     );
 
     $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
     make_path($workdir);
 
-    #get input file IMPC:
-    my $coord_file = "MGI_MRK_Coord.rpt";
-    my $impc_file_url = "http://www.informatics.jax.org/downloads/reports/MGI_MRK_Coord.rpt";
-    getstore($impc_file_url, $workdir."/".$coord_file) unless -e $workdir."/".$coord_file;
-
-    die "Coord file is required: http://www.informatics.jax.org/downloads/reports/MGI_MRK_Coord.rpt" if (!-f  $workdir."/".$coord_file);
     my $url ='/mi/impc/solr/genotype-phenotype';
     my $file_impc = "impc_phenotypes.txt";
     print "Found file (".$workdir."/".$file_impc."), will skip new fetch\n" if -e $workdir."/".$file_impc;
     $file_impc = $self->get_mouse_phenotype_data($workdir, $source_info{source}, $url) unless -e $workdir."/".$file_impc;
 
-    my $fileTime = strftime "%Y%m%d", localtime(stat($workdir."/".$file_impc)->mtime);
-    warn "WARNING: File $file_impc to be imported has a different date than today!: $fileTime \n" if $fileTime ne $dateStr;
-    $source_info{source_version} = $fileTime if $fileTime ne $dateStr;
-
     $self->param('impc_file', $file_impc);
-    $self->param('coord_file', $coord_file);
 }
 
 sub run {
@@ -112,12 +101,12 @@ sub run {
   open STDERR, ">>", $workdir."/".'log_import_err_'.$file_impc;
 
   #get source ids
-  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_impc, \%source_info, $variation_dba);
-  print STDOUT "$source_info{source} source_id is ", keys %$mouse_phenotype_source_ids, "\n" if ($debug);
+  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_impc, $source_info{source}, $variation_dba);
+  print STDOUT "$source_info{source_name} source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
 
   $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids, $variation_dba); 
   $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids, $variation_dba);
-  my $marker_coords = $self->get_marker_coords($workdir."/".$file_impc, $workdir."/".$coord_file, $core_dba);
+  my $marker_coords = $self->get_marker_coords($workdir."/".$file_impc, $coord_file, $core_dba);
 
   # get phenotype data
   my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_impc, $marker_coords, $source_info{source}, $mouse_phenotype_source_ids, $variation_dba);
@@ -133,9 +122,10 @@ sub run {
 
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
-  $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
-                             });
+ $self->param('output_ids', { source => \%param_source,
+                              species => $self->required_param('species'),
+                              workdir => $workdir
+                            });
 }
 
 sub write_output {
