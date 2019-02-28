@@ -58,6 +58,9 @@ my %special_characters = (
   'è' => 'e',
   'ë' => 'e',
   'ç' => 'c',
+  '<' => ' less than ',
+  '>' => ' more than ',
+  'Đ' => 'D',
 );
 
 my $pubmed_prefix = 'PMID:';
