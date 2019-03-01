@@ -65,7 +65,7 @@ my $section;
 my ($tmp_file, $tmp_section, $file_name);
 my ($content_before, $new_content, $content_after);
 
-my @ontologies = ('efo', 'hpo');
+my @ontologies = ('cmo','efo','hp','mp','vt');
 
 
 #### Generates the "List of species" table documentation
