@@ -73,7 +73,7 @@ $reg->load_registry_from_db(
 );
 
 $dir ||= '.';
-$formats ||= 'ensembl,vcf,id,hgvs,pileup';
+$formats ||= 'ensembl,vcf,id,hgvs';
 
 my @formats = split(',', $formats);
 
