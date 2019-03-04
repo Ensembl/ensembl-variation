@@ -68,7 +68,7 @@ sub genomic_shift {
   bless $self, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele'; 
   $self->_genomic_shift(1);
   bless $self, 'Bio::EnsEMBL::Variation::IntergenicVariationAllele'; 
-  $self->{shift_object} = $self->variation_feature->{shift_object};
+  $self->{shift_hash} = $self->variation_feature->{shift_hash};
   
   return $self;
 }

@@ -116,7 +116,7 @@ sub _intron_effects {
     foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
       my ($r_start_unshifted, $r_end_unshifted) = ($r_start, $r_end); 
-      ($r_start_unshifted, $r_end_unshifted) = ($self->{shift_object}->{unshifted_start} + $region->{s}, $self->{shift_object}->{unshifted_start}+ $region->{e}) if defined($self->{shift_object});
+      ($r_start_unshifted, $r_end_unshifted) = ($self->{shift_hash}->{unshifted_start} + $region->{s}, $self->{shift_hash}->{unshifted_start}+ $region->{e}) if defined($self->{shift_hash});
 
       my $insertion = $r_start == $r_end + 1;
       
