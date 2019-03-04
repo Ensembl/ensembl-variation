@@ -552,12 +552,10 @@ sub within_cdna {
     $feat ||= $bvfo->feature;
     
     my $cdna_coords = $bvfo->cdna_coords;
-    #my $shift_length = defined($bvfoa->{shift_object}) ? $feat->strand * $bvfoa->{shift_object}->{shift_length} : 0;
     
     if (@$cdna_coords > 0) {
         for my $coord (@$cdna_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-                #if ($coord->end + $shift_length > 0 && $coord->start + $shift_length <= $feat->length) {
                 if ($coord->end > 0 && $coord->start <= $feat->length) {
                     return 1;
                 }
@@ -725,6 +723,7 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -796,7 +795,7 @@ sub _inv_start_altered {
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
         my $utr = $bvfo->_five_prime_utr();
-	      return 0 unless $utr;
+        return 0 unless $utr;
         my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
@@ -836,6 +835,7 @@ sub _overlaps_start_codon {
         $cdna_start += $shifting_offset;
         $cdna_end += $shifting_offset;
         return 0 unless $cdna_start && $cdna_end;
+        
         $cache->{overlaps_start_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_start, $feat->cdna_coding_start + 2
@@ -1094,6 +1094,7 @@ sub stop_lost {
 
 sub stop_retained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1134,6 +1135,7 @@ sub stop_retained {
 
 sub _overlaps_stop_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{overlaps_stop_codon})) {
