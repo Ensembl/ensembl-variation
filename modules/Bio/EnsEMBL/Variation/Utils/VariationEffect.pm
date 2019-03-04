@@ -723,7 +723,7 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1094,7 +1094,7 @@ sub stop_lost {
 
 sub stop_retained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1135,7 +1135,7 @@ sub stop_retained {
 
 sub _overlaps_stop_codon {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
+
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{overlaps_stop_codon})) {
