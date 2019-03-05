@@ -21,7 +21,7 @@ use Test::Exception;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles));
+    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles get_hgvs_alleles));
 }
 
 
@@ -632,6 +632,33 @@ foreach my $test(@tests) {
     'get_matched_variant_alleles - '.($test->{d} || 'misc')
   );
 }
+
+
+## parse hgvs alleles
+my $test1="17:g.43082402A>C";
+my ($ref_allele, $alt_allele) = get_hgvs_alleles($test1);
+ok($ref_allele eq 'A', "get_hgvs_alleles - ref allele - $test1" );
+ok($alt_allele eq 'C', "get_hgvs_alleles - alt allele - $test1" );
+
+$test1="ENST00000003084:c.1431_1433delTTC";
+($ref_allele, $alt_allele) = get_hgvs_alleles($test1);
+ok($ref_allele eq 'TTC', "get_hgvs_alleles - ref allele - $test1" );
+ok($alt_allele eq '-', "get_hgvs_alleles - alt allele - $test1" );
+
+$test1="19:g.110747_110748insT";
+($ref_allele, $alt_allele) = get_hgvs_alleles($test1);
+ok($ref_allele eq '-', "get_hgvs_alleles - ref allele - $test1" );
+ok($alt_allele eq 'T', "get_hgvs_alleles - alt allele - $test1" );
+
+$test1="ENST00000522587.1:c.-310+750[13]A";
+($ref_allele, $alt_allele) = get_hgvs_alleles($test1);
+ok($ref_allele eq 'A', "get_hgvs_alleles - ref allele - $test1" );
+ok($alt_allele eq 'AAAAAAAAAAAAA', "get_hgvs_alleles - alt allele - $test1" );
+
+$test1="5:g.87363407A[3]";
+($ref_allele, $alt_allele) = get_hgvs_alleles($test1);
+ok($ref_allele eq 'A', "get_hgvs_alleles - ref allele - $test1" );
+ok($alt_allele eq 'AAA', "get_hgvs_alleles - alt allele - $test1" );
 
 
 ## sequence with ambiguity

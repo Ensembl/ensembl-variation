@@ -798,8 +798,8 @@ sub get_variant{
 
   ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
 
-  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr}  ){
-    warn "Not entering new refSNP: $rs_id as no HGVS available for alleles\n";
+  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} || ($ref_allele eq $alt_allele && $alt_allele eq '') ){
+    warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
     return undef;
   }
 
@@ -824,7 +824,7 @@ sub enter_var{
   my $inherit    = shift;
 
    unless (defined $ref_allele && defined $alt_allele){
-     warn "ERROR: missing alleles for $data->{hgvs_g} / $dbSNP\n";
+     warn "ERROR: missing alleles for $data->{feature_info}->{hgvs_g} / $dbSNP\n";
      return undef;
    }
 
@@ -885,6 +885,22 @@ sub enter_var{
     my $ref_seq = $ref_slice->seq();
     $vf->allele_string("-/".$ref_seq);
     $vf->start($vf->end + 1);
+  } elsif ($alt_allele =~/^$ref_allele/ && $data->{feature_info}->{hgvs_g} =~ m/\[/i ) {
+    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
+    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
+    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                    $vf->seq_region_start, $vf->seq_region_start + length($alt_allele) - 1);
+
+    my @refSeq = split //, $refSlice->seq;
+    my @altSeq = split //, $alt_allele;
+    my ($i,$match) = (0,1);
+    while ($i< scalar @altSeq && $match){
+      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
+      $i++;
+    }
+    $ref_allele = substr($refSlice->seq, 0, $i-1);
+    $allele_str = $ref_allele ."/". $alt_allele;
+    $vf->allele_string($allele_str);
   }
   $var_feat_adaptor->store($vf);
 
