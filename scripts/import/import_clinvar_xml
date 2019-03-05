@@ -839,18 +839,6 @@ sub enter_var{
     );
   $variation_adaptor->store($var);
 
-
-  foreach my $allele ( $ref_allele, $alt_allele){
-    $allele =~s/\s+//;
-    my $al = Bio::EnsEMBL::Variation::Allele->new
-      ( -variation_id   => $var->dbID(),
-        -allele         => $allele,
-        -adaptor        => $allele_adaptor,
-      );
-    $allele_adaptor->store($al);
-  }
-
-
   my $allele_str = $ref_allele ."/". $alt_allele;
 
   ## get slice for new variationfeature
@@ -902,7 +890,31 @@ sub enter_var{
     $allele_str = $ref_allele ."/". $alt_allele;
     $vf->allele_string($allele_str);
   }
+
+  # case eg. NC_000009.12:g.137233961_137234061del
+  elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
+      my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
+      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})" if ($start ne $vf->seq_region_start || $end != $vf->seq_region_end );
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                      $vf->seq_region_start, $vf->seq_region_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+      $vf->allele_string($allele_str);
+      print "$allele_str<<";
+  }
+
   $var_feat_adaptor->store($vf);
+
+  # save the update ref, alt allele
+  foreach my $allele ( $ref_allele, $alt_allele){
+    $allele =~s/\s+//;
+    my $al = Bio::EnsEMBL::Variation::Allele->new
+      ( -variation_id   => $var->dbID(),
+        -allele         => $allele,
+        -adaptor        => $allele_adaptor,
+      );
+    $allele_adaptor->store($al);
+  }
 
   my @vf; #return vf to attach phenotype feature to
   push @vf, $vf;
