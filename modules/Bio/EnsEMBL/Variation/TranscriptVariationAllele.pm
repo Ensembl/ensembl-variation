@@ -111,23 +111,28 @@ sub _return_3prime {
   ## Will create a "shift_hash", containing info on precisely how the variant should be shifted when required
   my $self = shift;
   my $hgvs_only = shift;
-  
+  return $self if defined($self->{shift_hash}) || ($self->is_reference && !$hgvs_only);
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
+  my $var_class = $vf->var_class;
   ## Don't even attempt shifting if it's not an indel
-  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' );
+  return $self unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
   my $tr ||= $tv->transcript; 
   return $self if (defined($vf->adaptor) && defined($vf->adaptor->db)) && ($vf->adaptor->db->shift_hgvs_variants_3prime() == 0);
   $self->initialise_unshifted_values;
   
+  #Checks to see if a relevant shift_hash exists. If not, a genomic_shift is performed
+  my $hash = $self->check_tva_shifting_hashes;
+  $self->{shift_hash} = $hash if(defined($hash));
+  
   ## Performs a shift in either the 5' or 3' direction depending on the strand of the transcript
-  $self->_genomic_shift(1) if !defined($vf->{shift_hash}) && $tr->strand == 1;
-  $self->_genomic_shift(-1) if !defined($vf->{shift_hash_reverse}) && $tr->strand == -1;
-  
-  ## Copies the genomic shift hash over to the $tva object for later use
-  $self->{shift_hash} = $vf->{shift_hash} if $tr->strand == 1;
-  $self->{shift_hash} = $vf->{shift_hash_reverse} if $tr->strand == -1;
-  
+  if (!defined($self->{shift_hash}))
+  {
+    $self->_genomic_shift($tr->strand);
+    $hash = $self->check_tva_shifting_hashes;
+    $self->{shift_hash} = $hash if(defined($hash))
+  }
+
   return $self unless (defined($tv->cdna_start) && defined($tv->cdna_end) && defined($tv->cds_start) && defined($tv->cds_end));
   return $self unless (defined($tv->cdna_start_unshifted) && defined($tv->cdna_end_unshifted) && defined($tv->cds_start_unshifted) && defined($tv->cds_end_unshifted));
   
@@ -149,8 +154,8 @@ sub _return_3prime {
       
       foreach my $shifted_obj (@preshifted_hashs)
       { 
-        my $start = $vf->var_class eq 'insertion' ? $tv->cdna_end_unshifted : $tv->cdna_start_unshifted;
-        my $end = $vf->var_class eq 'insertion' ? $tv->cdna_start_unshifted : $tv->cdna_end_unshifted;
+        my $start = $var_class eq 'insertion' ? $tv->cdna_end_unshifted : $tv->cdna_start_unshifted;
+        my $end = $var_class eq 'insertion' ? $tv->cdna_start_unshifted : $tv->cdna_end_unshifted;
         my $whole_seq2 = substr($slice->seq, $slice_start2 - $shifted_obj->{shift_length} - 2, $slice_end2 - $slice_start2 + 1 + (2 * (1+$shifted_obj->{shift_length})));
         my $seq_to_search = defined($tr->{_variation_effect_feature_cache}->{spliced_seq}) ? $tr->{_variation_effect_feature_cache}->{spliced_seq} : $tr->seq->seq;
         my $whole_seq = substr($seq_to_search, $start - $shifted_obj->{shift_length} - 2, $end - $start + 1 + (2 * ($shifted_obj->{shift_length} + 1)));
@@ -181,8 +186,8 @@ sub _return_3prime {
   }
   
   my $refseq_transcript_seq = defined($tr->{_variation_effect_feature_cache}->{spliced_seq}) ? $tr->{_variation_effect_feature_cache}->{spliced_seq} : $tr->seq->seq;
-  my $start = $vf->var_class eq 'insertion' ? $tv->cdna_end_unshifted : $tv->cdna_start_unshifted;
-  my $end = $vf->var_class eq 'insertion' ? $tv->cdna_start_unshifted : $tv->cdna_end_unshifted;
+  my $start = $var_class eq 'insertion' ? $tv->cdna_end_unshifted : $tv->cdna_start_unshifted;
+  my $end = $var_class eq 'insertion' ? $tv->cdna_start_unshifted : $tv->cdna_end_unshifted;
 
   ## Gets transcript sequence, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
   ## Little bit of a magic number - should be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
@@ -195,7 +200,7 @@ sub _return_3prime {
   my $pre_seq = substr($seqs, 0, $start - $search_start - 1); 
   my $post_seq = substr($seqs, 0 - ($search_end - $end));
   
-  my $unshifted_allele_string = $self->variation_feature->{allele_string};
+  my $unshifted_allele_string = $self->allele_string;
   my @allele_string = split('/', $unshifted_allele_string);
   my $hgvs_output_string = $allele_string[1];
   
@@ -203,16 +208,16 @@ sub _return_3prime {
   ## isolate correct sequence to attempt to shift
   my $seq_to_check;
   my $type;
-  if ($vf->var_class eq 'indel')
+  if ($var_class eq 'indel')
   {
     return $self;
   }
-  elsif ($vf->var_class eq 'deletion')
+  elsif ($var_class eq 'deletion')
   {
     $seq_to_check = $allele_string[0];
     $type = 'del';
   }
-  elsif ($vf->var_class eq 'insertion') 
+  elsif ($var_class eq 'insertion') 
   {
     $seq_to_check = $allele_string[1];
     $type = 'ins';
@@ -235,6 +240,17 @@ sub _return_3prime {
 }
 
 
+sub check_tva_shifting_hashes{
+  my $self = shift;
+  my $preshifted_hashs = $self->base_variation_feature->{tva_shift_hashs};  
+  my @shift_hashes = grep {$_->{unshifted_allele_string} eq $self->allele_string  && $self->transcript->strand eq $_->{strand}} @{$preshifted_hashs} if defined($preshifted_hashs);
+  if (scalar(@shift_hashes) == 1)
+  {
+    return $shift_hashes[0];
+  }
+  return undef;
+}
+
 =head2 perform_shift
 
   Description: Performs the shifting calculation
@@ -248,7 +264,6 @@ sub perform_shift
 {
   ## Performs the shifting calculation
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
-  
   ## get length of pattern to check 
   $reverse = 0 if ($reverse eq "");
   my $indel_length = (length $seq_to_check);
@@ -311,13 +326,13 @@ sub create_shift_hash
   my $five_prime_flanking_seq = substr($pre_seq, -1 - $shift_length);
   my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1);
   
-  my @allele_string = split('/', $self->variation_feature->allele_string);
+  my @allele_string = split('/', $self->allele_string);
   
   my %shift_hash = (
     "genomic" => $genomic,
     "strand" => $strand,
     "shifted_allele_string"  => $seq_to_check,
-    "unshifted_allele_string" => $self->variation_feature->allele_string, 
+    "unshifted_allele_string" => $self->allele_string, 
     "shift_length"  => $shift_length,
     "start" => $var_start,
     "end" => $var_end,
@@ -358,8 +373,8 @@ sub _genomic_shift
   my $strand = shift;
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
-
-  return $self unless ($vf->var_class eq 'insertion' || $vf->var_class eq 'deletion' );
+  my $var_class = $vf->var_class;
+  return $self unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
   
 
   my $slice_to_shrink = $vf->slice;
@@ -375,28 +390,29 @@ sub _genomic_shift
   $new_slice = $new_slice->constrain_to_seq_region();
   
   ## Gets flanking sequences around the variant to test if shifting is possible
-  my $seqs = $slice_to_shrink->subseq($var_start - $area_to_search, $var_end + $area_to_search);
+  my $seqs = $new_slice->seq;
   my $pre_seq = substr($seqs, 0, $area_to_search); 
   my $post_seq = substr($seqs, 0 - $area_to_search);
   
-  my $unshifted_allele_string = $self->variation_feature->{allele_string};
+  my $unshifted_allele_string = $self->allele_string;#$self->variation_feature->{allele_string};
   my @allele_string = split('/', $unshifted_allele_string);
+  @allele_string = split('/', $self->variation_feature->allele_string) if $self->is_reference;
   my $hgvs_output_string = $allele_string[1];
   
   
   ## isolate correct sequence to attempt to shift
   my $seq_to_check;
   my $type;
-  if ($vf->var_class eq 'indel')
+  if ($var_class eq 'indel')
   {
     return $self;
   }
-  elsif ($vf->var_class eq 'deletion')
+  elsif ($var_class eq 'deletion')
   {
     $seq_to_check = $allele_string[0];
     $type = 'del';
   }
-  elsif ($vf->var_class eq 'insertion') 
+  elsif ($var_class eq 'insertion') 
   {
     $seq_to_check = $allele_string[1];
     $type = 'ins';
@@ -410,7 +426,6 @@ sub _genomic_shift
   ## Actually performs the shift, and provides raw data in order to create shifting hash
   ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
   ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
-  
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
 }
@@ -481,7 +496,7 @@ sub clear_shifting_variables {
 
 =head2 initialise_unshifted_values
 
-  Description: Populates the unshifted values at the beginnign before any shifting
+  Description: Populates the unshifted values at the beginning before any shifting
                is done
   Status     : Stable
 
@@ -493,12 +508,21 @@ sub initialise_unshifted_values {
   
   my $tv = $self->transcript_variation;
   
-  $tv->cds_start_unshifted();
-  $tv->cds_end_unshifted();
-  $tv->cdna_start_unshifted();
-  $tv->cdna_end_unshifted();
-  $tv->translation_start_unshifted();
-  $tv->translation_end_unshifted();
+  unless(defined($tv->{cds_end_unshifted}))
+  {  
+    $tv->cds_start_unshifted();
+    $tv->cds_end_unshifted();
+  }
+  unless(defined($tv->{cdna_end_unshifted}))
+  {  
+    $tv->cdna_start_unshifted();
+    $tv->cdna_end_unshifted();
+  }
+  unless(defined($tv->{translation_end_unshifted}))
+  {  
+    $tv->translation_start_unshifted();
+    $tv->translation_end_unshifted();
+  }
 }
 
 
@@ -1230,7 +1254,6 @@ sub hgvs_transcript {
   my $no_shift = shift;
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
-
   ##### return if held 
   return $self->{hgvs_transcript}        if defined $self->{hgvs_transcript};
 
@@ -1311,7 +1334,7 @@ sub hgvs_transcript {
   ### delete consequences i
   delete($self->{_predicate_cache}) if $offset_to_add != 0; #Might save some speed if we check if '--no_shift' is on in the if statement, but I have to test first
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
-  return undef if (length($self->{_slice}->seq()) < $self->{_slice_end} + $offset_to_add);
+  return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1562,6 +1585,7 @@ sub hgvs_protein {
   $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
 
   my $hgvs_tva_ref = $hgvs_tva_tv->get_reference_TranscriptVariationAllele;
+
   $hgvs_tva_ref->_return_3prime(1);
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($hgvs_tva->{shift_hash}))
@@ -1585,7 +1609,7 @@ sub hgvs_protein {
   }
   
   $hgvs_notation->{alt} = $hgvs_tva->peptide;
-  
+  #$hgvs_tva_ref->{shift_hash} = $hgvs_tva->{shift_hash} #can potentially get a speedup here by calculating the differences between these two;
   $hgvs_notation->{ref} = $hgvs_tva_ref->peptide;    
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
 
@@ -1876,7 +1900,6 @@ sub _get_hgvs_protein_type {
 sub _get_hgvs_peptides {
   my $self          = shift;
   my $hgvs_notation = shift;
-
   if($hgvs_notation->{type} eq "fs"){
     ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
     $hgvs_notation = $self->_get_fs_peptides($hgvs_notation); 

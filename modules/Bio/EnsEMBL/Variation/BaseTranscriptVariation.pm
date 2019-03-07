@@ -498,7 +498,6 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        $self->{_cds_coords_unshifted} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
         $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
                 
         if(defined($self->{_cds_coords}->[0]) && $self->{_cds_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
