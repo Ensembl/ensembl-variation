@@ -121,6 +121,7 @@ sub get_score_by_VariationFeature {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
   my $parser = $self->_seek_by_VariationFeature($vf);
+  return undef if (!defined $parser);
   my $max_score = undef;
   while ($parser->next) {
     my $score = $parser->get_score;
@@ -138,6 +139,7 @@ sub _seek_by_VariationFeature {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
   my $parser = $self->_file_parser_obj();
+  return undef if (!defined $parser);
   my ($start, $end) = ($vf->seq_region_start, $vf->seq_region_end);
   ($start, $end) = ($end, $start) if ($start > $end);
   $parser->seek($vf->seq_region_name, $start - 1, $end);
