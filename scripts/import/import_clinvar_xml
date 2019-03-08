@@ -124,6 +124,23 @@ if (defined $done_file){
   }
 }
 
+my %special_characters = (
+  'Å' => 'A',
+  'Ä' => 'A',
+  'Ö' => 'O',
+  'Ü' => 'U',
+  'ö' => 'o',
+  'ü' => 'u',
+  'ä' => 'a',
+  'í' => 'i',
+  'é' => 'e',
+  'è' => 'e',
+  'ë' => 'e',
+  'ç' => 'c',
+  '<' => 'less than',
+  '>' => 'more than',
+);
+
 ## parse file
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
@@ -163,6 +180,9 @@ while (my $set = $ref->get_record() ){
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
+    print "WARNING: No MeasureSet found for $record{Acc}.\n" if !defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
+    print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
+    next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Haplotype";
@@ -606,6 +626,11 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
+  # Remove special characters from the phenotype description
+  foreach my $char (keys(%special_characters)) {
+    my $new_char = $special_characters{$char};
+    $record->{disease} =~ s/$char/$new_char/g;
+  }
 
   ## look for existing or enter new phenotype object
   my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
@@ -798,7 +823,9 @@ sub get_variant{
 
   ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
 
-  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} || ($ref_allele eq $alt_allele && $alt_allele eq '') ){
+  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} ||
+      !defined $ref_allele || !defined $alt_allele ||
+      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele && $alt_allele eq '') ){
     warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
     return undef;
   }
