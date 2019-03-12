@@ -73,7 +73,7 @@ $reg->load_registry_from_db(
 );
 
 $dir ||= '.';
-$formats ||= 'ensembl,vcf,id,hgvs';
+$formats ||= 'ensembl,vcf,id,hgvs,spdi';
 
 my @formats = split(',', $formats);
 
@@ -576,4 +576,19 @@ sub convert_to_vcf {
       '.', '.', '.'
     ];
   }
+}
+
+sub convert_to_spdi {
+  my $config = shift;
+  my $vf = shift;
+
+  my $tvs = $vf->get_all_TranscriptVariations;
+  my @return;
+  if(defined($tvs)) {
+    push @return, map {values %{$vf->spdi_genomic()}} @$tvs;
+  }
+
+  @return = grep {defined($_)} @return;
+
+  return [$return[0] || undef];
 }
