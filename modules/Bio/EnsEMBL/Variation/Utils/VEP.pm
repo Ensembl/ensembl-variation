@@ -387,8 +387,16 @@ sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
 
-    # HGVS: ENST00000285667.3:c.1047_1048insC
+    # SPDI: NC_000016.10:68684738:G:A
     if (
+      scalar @data == 1 &&
+      $data[0] =~ /^(.*?\:){2}([^\:]+|)$/i
+    ) {
+      return 'spdi';
+    }
+
+    # HGVS: ENST00000285667.3:c.1047_1048insC
+    elsif (
         scalar @data == 1 &&
         $data[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
     ) {
