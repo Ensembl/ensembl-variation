@@ -397,4 +397,23 @@ is_deeply(
 
 $vfa->db->use_vcf(0);
 
+
+# test fake variation feature adapter and fake variation feature
+{
+  my $vfa = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake('homo_sapiens');
+  my $tmp_vf_fs = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+    start          => 100000,
+    end            => 100005,
+    allele_string  => 'A/-',
+    strand         => 1,
+    map_weight     => 1,
+    adaptor        => $vfa,
+    slice          => $slice,
+    seq_region_start => $slice->seq_region_start,
+    seq_region_end   => $slice->seq_region_end
+  });
+  my $conseq = join ",", @{$tmp_vf_fs->consequence_type};
+  ok($conseq eq 'intergenic_variant', "fake VariationFeatureAdaptor and VariationFeature");
+}
+
 done_testing();
