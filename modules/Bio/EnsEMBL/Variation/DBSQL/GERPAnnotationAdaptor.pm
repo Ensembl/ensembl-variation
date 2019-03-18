@@ -273,7 +273,7 @@ sub root_dir {
   } else {
     $self->{root_dir} = $root_dir;
   }
-  return $self->{root_dir};
+  return $self->{root_dir} || '';
 }
 
 
