@@ -40,8 +40,11 @@ my $gerp_annotation = $gerp_annotation_adaptor->fetch_by_id('70_mammals.gerp_con
 my $cadd_annotation = $cadd_annotation_adaptor->fetch_by_id('CADD');
 
 # now we need to set the filename_template
+$vdb->gerp_root_dir($dir);
+ok($vdb->gerp_root_dir eq '.', "set and get gerp_root_dir");
 my $temp = $gerp_annotation->filename_template();
 $temp =~ s/###t\-root###/$dir/;
+
 $gerp_annotation->filename_template($temp);
 ok($gerp_annotation->filename_template =~ /^$dir/, "update GERPAnnotation filename_template");
 
