@@ -391,6 +391,14 @@ sub vcf_root_dir {
   return $self->{vcf_root_dir};
 }
 
+sub gerp_root_dir {
+  my $self = shift;
+  
+  $self->{gerp_root_dir} = shift if @_;
+  
+  return $self->{gerp_root_dir};
+}
+
 sub vcf_tmp_dir {
   my $self = shift;
   

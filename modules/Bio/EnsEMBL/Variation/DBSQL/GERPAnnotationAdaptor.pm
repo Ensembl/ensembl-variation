@@ -250,4 +250,33 @@ sub remove_GERPAnnotation_by_ID {
   return 1;
 }
 
+=head2 root_dir
+
+  Example    : $root_dir = $gerp_annotation_adaptor->root_dir;
+  Description: Sets and returns the root directory.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+
+sub root_dir {
+  my ($self, $root_dir) = @_;
+  if (!$root_dir) {
+    if (!$self->{root_dir}) {
+      if($self->db && $self->db->gerp_root_dir) {
+        $self->{root_dir} = $self->db->gerp_root_dir.'/';
+      }
+    }
+  } else {
+    $self->{root_dir} = $root_dir;
+  }
+  return $self->{root_dir};
+}
+
+
+
+
 1;
