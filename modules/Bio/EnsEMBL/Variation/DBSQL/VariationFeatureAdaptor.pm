@@ -81,7 +81,7 @@ by setting the include_failed_variations flag in Bio::EnsEMBL::Variation::DBSQL:
 =cut
 
 use strict;
-use warnings;
+use warnings; 
 
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
@@ -1881,7 +1881,12 @@ sub fetch_by_hgvs_notation {
 
       my $possible_prot;
       eval {
+        if($description =~ /del$/){ 
+          $possible_prot = _parse_hgvs_protein_position_del($description, $reference, $transcript);
+        } 
+        else{
         $possible_prot = _parse_hgvs_protein_position($description, $reference, $transcript);
+        } 
         throw("Could not uniquely determine nucleotide change from $hgvs") if scalar @$possible_prot > 1 && !$multiple_ok;
         $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(), $transcript->seq_region_name());
       };
@@ -2161,34 +2166,9 @@ sub _parse_hgvs_protein_position{
   $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
 
   # get genomic position 
-  my $tr_mapper = $transcript->get_TranscriptMapper(); 
-
-  my @coords = $tr_mapper->pep2genomic($pos, $pos); 
-
-  throw ("Unable to map the peptide coordinate $pos to genomic coordinates for protein $reference") if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')); 
-
-  my $strand = $coords[0]->strand(); 
-  my $start  = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
-  my $end    = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
-
-  ## find reference sequence 
-  my $slice = $transcript->slice();
-
-  ## make a small slice for sequence look-up
-  my $from_slice = Bio::EnsEMBL::Slice->new(-coord_system => $slice->coord_system(),
-                                            -start => $coords[0]->start(),
-                                            -end => $coords[0]->start()+2,
-                                            -strand => $slice->strand(),
-                                            -seq_region_name => $slice->seq_region_name,
-                                            -seq_region_length => 3,
-                                            -adaptor => $slice->adaptor);
-
-  my $from_codon_ref = $from_slice->seq();
-
+  my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, undef, 0);  
+  
   throw ("Unable to find the genomic reference sequence for protein $reference") unless defined $from_codon_ref; 
-
-  ## correct for strand
-  reverse_comp(\$from_codon_ref) if $strand <0;
 
   # get correct codon table 
   my $attrib = $transcript->slice->get_all_Attributes('codon_table')->[0];
@@ -2274,6 +2254,88 @@ sub _parse_hgvs_protein_position{
   #exit(0); 
 }
 
+## Extract enough information to make a variation_feature from HGVS protein nomenclature
+## Only attempts deletions 
+sub _parse_hgvs_protein_position_del{
+
+  my ($description, $reference, $transcript ) = @_;
+
+  my ($from, $pos, $from2, $pos2, $to); 
+
+  # if the is a deletion of several amino acids eg. Lys1110_Gln1111del  
+  if($description =~ /_/){
+    my ($first_residue,$second_residue) = split('_', $description); 
+
+    # get the first altered amino acid and position 
+    ($from, $pos) = $first_residue =~ /^(\w+?)(\d+)$/;
+    
+    # get the last altered amino acid and position  
+    ($from2, $pos2, $to) = $second_residue =~ /^(\w+?)(\d+)(\w+?|\*)$/;
+  }
+  
+  # only one amino acid is deleted eg. Lys1110del
+  else{  
+    ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
+  } 
+
+  # get genomic position 
+  my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, $pos2, 1); 
+  
+  throw ("Unable to find the genomic reference sequence for protein $reference") unless defined $from_codon_ref; 
+
+  my @results; 
+  push @results, [$from_codon_ref, '-', $start, $end, $strand];
+
+  return \@results; 
+} 
+
+## Extract strand, reference allele, start and end position   
+sub get_reference{
+  my ($transcript, $pos, $pos2, $type_del) = @_; 
+  
+  my $tr_mapper = $transcript->get_TranscriptMapper(); 
+
+  my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
+  
+  my $strand = $coords[0]->strand();
+
+  my $start; 
+  if($type_del == 1 || $strand > 0){ $start = $coords[0]->start(); } 
+  elsif($strand < 0){ $start = $coords[0]->end(); }
+
+  my $end; 
+  # it's a deletion of more than one amino acid eg. Lys1110_Gln1111del  
+  if($type_del == 1){
+    if(defined($pos2)){ $end = $coords[0]->end(); }
+    else{ $end = $coords[0]->start() + 2; } 
+  }
+  # it's a deletion of one amino acid eg. Lys1110del 
+  else{
+    if($strand > 0){ $end = $coords[0]->start(); }
+    else{ $end = $coords[0]->end(); }
+  }
+
+  my $seq_length = $type_del == 1 ? ($end-$start) + 1 : 3;  
+
+  ## find reference sequence 
+  my $slice = $transcript->slice();
+
+  ## make a small slice for sequence look-up
+  my $from_slice = Bio::EnsEMBL::Slice->new(-coord_system => $slice->coord_system(),
+                                              -start => $start,
+                                              -end => $end,
+                                              -strand => $slice->strand(),
+                                              -seq_region_name => $slice->seq_region_name,
+                                              -seq_region_length => $seq_length, 
+                                              -adaptor => $slice->adaptor); 
+
+  my $from_codon_ref = $from_slice->seq(); 
+  
+  ## correct for strand
+  reverse_comp(\$from_codon_ref) if $strand <0; 
+  
+  return ($from_codon_ref, $start, $end, $strand); 
+}
 
 =head2 fetch_by_dbID
 
