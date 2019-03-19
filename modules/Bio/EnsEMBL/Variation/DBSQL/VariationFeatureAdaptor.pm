@@ -1845,6 +1845,11 @@ sub fetch_by_hgvs_notation {
          
   elsif($type =~ m/p/i) {
   
+    # throw a message for frameshifts  
+    if($description =~ /[A-Za-z]+[0-9]+[A-Za-z]+fs/){
+          throw("Frameshifts are not supported for HGVS protein input");
+    } 
+
     #Get the Transcript object to convert coordinates
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);
