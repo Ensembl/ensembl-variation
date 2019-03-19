@@ -1826,11 +1826,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|modify index on variation_synonym');            
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|add new entries to the failed_description table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|create table to store failed variation features');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|move ancestral allele column to variation_feature');
 
 /**
 @header  Failed tables
