@@ -111,6 +111,7 @@ sub _return_3prime {
   ## Will create a "shift_hash", containing info on precisely how the variant should be shifted when required
   my $self = shift;
   my $hgvs_only = shift;
+  
   return $self if defined($self->{shift_hash}) || ($self->is_reference && !$hgvs_only);
   my $tv = $self->transcript_variation;
   my $vf ||= $tv->base_variation_feature;
@@ -327,7 +328,7 @@ sub create_shift_hash
   my $three_prime_flanking_seq = substr($post_seq, 0, $shift_length + 1);
   
   my @allele_string = split('/', $self->allele_string);
-  
+  reverse_comp(\$seq_to_check) if $self->variation_feature->strand <0; 
   my %shift_hash = (
     "genomic" => $genomic,
     "strand" => $strand,
@@ -422,7 +423,7 @@ sub _genomic_shift
   
   ## Fix this - I'm sure Perl has a smoother way of doing this
   my ($a, $b, $c, $d, $e);
-  
+  reverse_comp(\$seq_to_check) if $self->variation_feature->strand <0; 
   ## Actually performs the shift, and provides raw data in order to create shifting hash
   ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
   ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
@@ -1514,7 +1515,6 @@ sub hgvs_protein {
   }
   ### set if string supplied
   $self->{hgvs_protein} = $notation  if defined $notation;
-  
 
   ### return if set
   return $self->{hgvs_protein}       if defined $self->{hgvs_protein} ;
