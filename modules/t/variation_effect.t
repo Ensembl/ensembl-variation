@@ -847,7 +847,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
-        alleles => 'T',
+        alleles => 'G',
         start   => $t_end + 1,
         end     => $t_end,
         effects => [ qw(upstream_gene_variant) ],
@@ -1492,7 +1492,7 @@ for my $stable_id (keys %$transcript_tests) {
         }
 
         $DB::single = 1 if $test->{debug};
-
+        
         $test->{strand} = $def_strand unless defined $test->{strand};
 
         my $allele_string = $ref.'/'.$test->{alleles};
