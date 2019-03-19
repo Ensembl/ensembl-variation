@@ -73,7 +73,7 @@ $reg->load_registry_from_db(
 );
 
 $dir ||= '.';
-$formats ||= 'ensembl,vcf,id,hgvs,pileup';
+$formats ||= 'ensembl,vcf,id,hgvs,spdi';
 
 my @formats = split(',', $formats);
 
@@ -110,8 +110,11 @@ SPECIES: foreach my $species(@all_species) {
     my $name;
     my $sth = $real_vfa->db->dbc->prepare(qq{
       SELECT variation_name
-      FROM variation_feature
+      FROM variation_feature vf
+        LEFT JOIN failed_variation fv
+        ON vf.variation_id = fv.variation_id
       WHERE consequence_types LIKE ?
+      AND fv.variation_id IS NULL
       LIMIT 1
     });
 
@@ -347,8 +350,8 @@ sub dump_vf {
 sub select_transcript {
   my $trs = shift;
   my $div_bacteria = shift;
-  
-  $div_bacteria |= 0;
+
+  $div_bacteria ||= 0;
 
   # we want a transcript on the fwd strand with an intron that's protein coding
   my $biotype = '';
@@ -573,4 +576,19 @@ sub convert_to_vcf {
       '.', '.', '.'
     ];
   }
+}
+
+sub convert_to_spdi {
+  my $config = shift;
+  my $vf = shift;
+
+  my $tvs = $vf->get_all_TranscriptVariations;
+  my @return;
+  if(defined($tvs)) {
+    push @return, map {values %{$vf->spdi_genomic()}} @$tvs;
+  }
+
+  @return = grep {defined($_)} @return;
+
+  return [$return[0] || undef];
 }
