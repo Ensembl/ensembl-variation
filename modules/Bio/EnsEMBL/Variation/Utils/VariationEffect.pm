@@ -797,6 +797,10 @@ sub _inv_start_altered {
         my $utr = $bvfo->_five_prime_utr();
         return 0 unless $utr;
         my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
+        my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
+        $cdna_start += $shifting_offset;
+        $cdna_end += $shifting_offset;
+        
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
         my $atg_start = length($utr->seq);
@@ -831,7 +835,7 @@ sub _overlaps_start_codon {
         return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
-        my $shifting_offset = defined($bvfoa->{shift_object}) ? $bvfoa->{shift_object}->{shift_length} : 0;
+        my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
         $cdna_start += $shifting_offset;
         $cdna_end += $shifting_offset;
         return 0 unless $cdna_start && $cdna_end;
