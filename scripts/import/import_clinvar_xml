@@ -113,6 +113,7 @@ my %omimVarSet;
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
+my $haplotype_type = "Haplotype";
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -139,6 +140,7 @@ my %special_characters = (
   'ç' => 'c',
   '<' => 'less than',
   '>' => 'more than',
+  '&' => 'and',
 );
 
 ## parse file
@@ -185,7 +187,7 @@ while (my $set = $ref->get_record() ){
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
-                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Haplotype";
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq $haplotype_type;
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
     $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
@@ -371,9 +373,9 @@ sub get_feature{
           }
         }
         # for haplotype entries: allelic variant ids are not real synonyms & this will result in them not being saved
-        $feature{measureXrefs}{$measure->{ID}}{OmimAllele2dbSNP} = \%tmpAllelicID unless $type eq 'Haplotype';
+        $feature{measureXrefs}{$measure->{ID}}{OmimAllele2dbSNP} = \%tmpAllelicID unless $type eq $haplotype_type;
       }
-      push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq 'Haplotype' && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
+      push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq $haplotype_type && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
    }
 
    ## if multiple rsIDs for the same ReferenceClinVarAssertion print warning
@@ -389,6 +391,10 @@ sub get_feature{
       $feature{Chr}    = $loc->{Chr} ; 
       $feature{start}  = $loc->{start} ; 
       $feature{end}    = $loc->{stop} ; 
+
+      $feature{measureXrefs}{$measure->{ID}}{Chr}   = $loc->{Chr}    if $type eq $haplotype_type;
+      $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start}  if $type eq $haplotype_type;
+      $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
     }
 
 
@@ -406,9 +412,10 @@ sub get_feature{
                            $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top\s+level/ );
 	
       $feature{hgvs_g} =  $attrib->{Attribute}->[1]->{Change}; 
+      $feature{measureXrefs}{$measure->{ID}}{hgvs_g} = $attrib->{Attribute}->[1]->{Change} if $type eq $haplotype_type;
     }
 
-    ## find reported genes 
+    ## find reported genes, note: each measure set can have a MeasureRelationship gene
     if(defined $measure->{MeasureRelationship}){
       my @genes;          
       my $meas_rels = to_array($measure->{MeasureRelationship});
@@ -416,11 +423,25 @@ sub get_feature{
         push @genes, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
       }
       $feature{gene} = join(",", @genes);
+      $feature{measureXrefs}{$measure->{ID}}{gene} = $feature{gene} if $type eq $haplotype_type;
+    }
+
+    #last processing of this specific measure
+    #populate higher level hash of rsIDs and specific coordinates, hgvs_g
+    print "ERROR: multiple rsIDs for same measure/location! $accession\n" if ( defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'} && scalar(@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}) > 1);
+    if (defined $feature{'haplo'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} ){
+      foreach my $rsID (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
+        $feature{'rs'.$rsID}{Chr} = $feature{measureXrefs}{$measure->{ID}}{Chr};
+        $feature{'rs'.$rsID}{start} = $feature{measureXrefs}{$measure->{ID}}{start};
+        $feature{'rs'.$rsID}{end} = $feature{measureXrefs}{$measure->{ID}}{end};
+        $feature{'rs'.$rsID}{hgvs_g} = $feature{measureXrefs}{$measure->{ID}}{hgvs_g};
+        $feature{'rs'.$rsID}{gene} = $feature{measureXrefs}{$measure->{ID}}{gene};
+      }
     }
   }
 
   # if haplotype present then save corresponding rsIDs for phenotype_feature_attrib entry
-  if ($type eq 'Haplotype' && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
+  if ($type eq $haplotype_type && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
     my @rsIDs = @{$feature{haplo}{rs}};
     # only if more than 1 rsID present make them phenotype_feature_attribs
     if( scalar @rsIDs >1){
@@ -432,10 +453,13 @@ sub get_feature{
           push @{$feature{haplo}{'rs'.$rs}}, 'rs'.$rs2;
         }
       }
+      #remove global details as multiple rsIDs present, each with own coordinates and hgvs_g
+      delete @feature{qw/Chr start end hgvs_g gene/};
     } else {
       delete $feature{haplo};
     }
   }
+
   return \%feature;
 }
 
@@ -547,7 +571,7 @@ sub get_submitters{
   #if no OMIM submitter than make sure rsID from dbSNP is at upper hash level
   if (! defined $mainXrefs->{'dbSNP'}){
     foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
-      push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'};
+      push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'} && defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'};
     }
   }
 
@@ -588,6 +612,15 @@ sub import{
 
   if(defined $record->{feature_info}->{dbSNP} && !defined $structvar){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
+
+      # for haplotypes (multiple rsIDs) each rsID has it's own hgvs_g string
+      if (defined $record->{feature_info}->{'rs'.$rs}){
+        $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{'rs'.$rs}->{hgvs_g};
+        $record->{feature_info}->{Chr} = $record->{feature_info}->{'rs'.$rs}->{Chr};
+        $record->{feature_info}->{start} = $record->{feature_info}->{'rs'.$rs}->{start};
+        $record->{feature_info}->{end} = $record->{feature_info}->{'rs'.$rs}->{end};
+        $record->{feature_info}->{gene} = $record->{feature_info}->{'rs'.$rs}->{gene};
+      }
 
       ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
       next unless defined $feature_object;
