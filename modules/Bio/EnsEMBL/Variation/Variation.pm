@@ -809,7 +809,7 @@ sub get_all_Alleles {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : deprecated
 
 =cut
 
