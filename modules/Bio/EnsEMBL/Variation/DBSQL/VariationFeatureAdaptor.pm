@@ -1847,7 +1847,7 @@ sub fetch_by_hgvs_notation {
   
     # throw a message for frameshifts  
     if($description =~ /[A-Za-z]+[0-9]+[A-Za-z]+fs/){
-          throw("Frameshifts are not supported");
+          throw("Frameshifts are not supported for HGVS protein input");
     } 
 
     #Get the Transcript object to convert coordinates
