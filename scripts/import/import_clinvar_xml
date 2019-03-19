@@ -74,6 +74,7 @@ GetOptions ("data_file=s"  => \$data_file,
             );
 
 usage() unless defined $data_file && defined $registry_file && defined $assembly;
+die "File not found: $data_file\n" unless -e $data_file;
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
@@ -431,11 +432,7 @@ sub get_feature{
     print "ERROR: multiple rsIDs for same measure/location! $accession\n" if ( defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'} && scalar(@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}) > 1);
     if (defined $feature{'haplo'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} ){
       foreach my $rsID (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
-        $feature{'rs'.$rsID}{Chr} = $feature{measureXrefs}{$measure->{ID}}{Chr};
-        $feature{'rs'.$rsID}{start} = $feature{measureXrefs}{$measure->{ID}}{start};
-        $feature{'rs'.$rsID}{end} = $feature{measureXrefs}{$measure->{ID}}{end};
-        $feature{'rs'.$rsID}{hgvs_g} = $feature{measureXrefs}{$measure->{ID}}{hgvs_g};
-        $feature{'rs'.$rsID}{gene} = $feature{measureXrefs}{$measure->{ID}}{gene};
+        @{$feature{'rs'.$rsID}}{qw/Chr start end hgvs_g gene/} = @{$feature{measureXrefs}{$measure->{ID}}}{qw/Chr start end hgvs_g gene/};
       }
     }
   }
@@ -612,14 +609,10 @@ sub import{
 
   if(defined $record->{feature_info}->{dbSNP} && !defined $structvar){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
-
+      my $rsID = 'rs'.$rs;
       # for haplotypes (multiple rsIDs) each rsID has it's own hgvs_g string
-      if (defined $record->{feature_info}->{'rs'.$rs}){
-        $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{'rs'.$rs}->{hgvs_g};
-        $record->{feature_info}->{Chr} = $record->{feature_info}->{'rs'.$rs}->{Chr};
-        $record->{feature_info}->{start} = $record->{feature_info}->{'rs'.$rs}->{start};
-        $record->{feature_info}->{end} = $record->{feature_info}->{'rs'.$rs}->{end};
-        $record->{feature_info}->{gene} = $record->{feature_info}->{'rs'.$rs}->{gene};
+      if (defined $record->{feature_info}->{$rsID}){
+        @{$record->{feature_info}}{qw/hgvs_g Chr start end gene/} = @{$record->{feature_info}->{$rsID}}{qw/hgvs_g Chr start end gene/};
       }
 
       ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
