@@ -95,7 +95,7 @@ package Bio::EnsEMBL::Variation::VariationFeature;
 use Scalar::Util qw(weaken isweak);
 
 use Bio::EnsEMBL::Variation::BaseVariationFeature;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);

@@ -62,7 +62,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::Study;
 
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw  warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::Storable');

@@ -66,7 +66,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariationSample;
 
 use Scalar::Util qw(looks_like_number);
-use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
@@ -227,25 +227,6 @@ sub study {
   }
   
   return $self->{'study'};
-}
-
-
-=head2 individual
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Individual (optional)
-  Example    : $individual = $svs->individual()
-  Description: Getter/Setter for the individual object
-  Returntype : Bio::EnsEMBL::Variation::Individual
-  Exceptions : none
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub individual {
-  my $self = shift;
-  deprecate("Please use Bio::EnsEMBL::Variation::StructuralVariationSample::strain.");
-  return $self->strain(@_);
 }
 
 =head2 sample
