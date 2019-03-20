@@ -133,11 +133,11 @@ my $vf2_name = 'rs2299222';
   my $slice1 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
   $vfa->db->include_failed_variations(1);
   my $vfs_slice = $vfa->fetch_all_by_Slice($slice1);
-  cmp_ok(scalar @$vfs_slice, "==", 446, "slice (+failed default cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice, "==", 447, "slice (+failed default cache) -> vf count ");
   my $slice2 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
   $vfa->db->include_failed_variations(0); # failed flag will be ignored as the cache is in place
   $vfs_slice = $vfa->fetch_all_by_Slice($slice2);
-  cmp_ok(scalar @$vfs_slice,"==", 446, "slice (-failed default cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice,"==", 447, "slice (-failed default cache) -> vf count ");
 }
 # test fetch_all_by_Slice +/- inc failed with no caching
 {
@@ -146,11 +146,11 @@ my $vf2_name = 'rs2299222';
   $vfa->db->include_failed_variations(1);
   $vfa->db->no_cache(1);
   my $vfs_slice = $vfa->fetch_all_by_Slice($slice1);
-  cmp_ok(scalar @$vfs_slice, "==", 446, "slice (+failed, default cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice, "==", 447, "slice (+failed, default cache) -> vf count ");
   my $slice2 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
   $vfa->db->include_failed_variations(0); # failed flag will be included as the cache is not in place
   $vfs_slice = $vfa->fetch_all_by_Slice($slice2);
-  cmp_ok(scalar @$vfs_slice,"==", 444, "slice (-failed, no cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice,"==", 445, "slice (-failed, no cache) -> vf count ");
 }
 # test fetch_all_by_Slice +/- inc failed with clearing caching
 {
@@ -160,12 +160,12 @@ my $vf2_name = 'rs2299222';
   $vfa->db()->no_cache(0);
   cmp_ok($vfa->db()->no_cache(), "==", 0, "caching is on");
   my $vfs_slice = $vfa->fetch_all_by_Slice($slice1); #will be saved in the cache
-  cmp_ok(scalar @$vfs_slice, "==", 446, "slice (+failed, default cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice, "==", 447, "slice (+failed, default cache) -> vf count ");
   my $slice2 = $sa->fetch_by_region('chromosome','11',6303493,66324360);
   $vfa->db->include_failed_variations(0); # failed flag will be ignored unless the cache is cleared
   $vfa->clear_cache(); # feature cache is cleared
   $vfs_slice = $vfa->fetch_all_by_Slice($slice2);
-  cmp_ok(scalar @$vfs_slice,"==", 444, "slice (-failed, no cache) -> vf count ");
+  cmp_ok(scalar @$vfs_slice,"==", 445, "slice (-failed, no cache) -> vf count ");
 }
 
 # test fetch all +/- inc failed
@@ -174,13 +174,13 @@ my $vf2_name = 'rs2299222';
   my $vf2_name = 'rs2299222';
   $vfa->db->include_failed_variations(0);
   my $vfs2 = $vfa->fetch_all();
-  cmp_ok(scalar @$vfs2, "==", 1291, "vf by all - count (-failed)");
+  cmp_ok(scalar @$vfs2, "==", 1293, "vf by all - count (-failed)");
   cmp_ok($vfs2->[0]->variation_name(), "eq", $vf2_name, "vf by all - check first variation name");
 
   #test fetch all with inc failed my $vf_nameF='rs111067473';
   $vfa->db->include_failed_variations(1);
   my $vfs = $vfa->fetch_all(); 
-  cmp_ok(scalar @$vfs, "==", 1298, "vf by all - count (+failed)");
+  cmp_ok(scalar @$vfs, "==", 1300, "vf by all - count (+failed)");
 }
 
 # test fetch all somatic

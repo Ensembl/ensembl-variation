@@ -147,6 +147,7 @@ sub store {
             seq_region_strand,
             variation_id,
             allele_string,
+            ancestral_allele,
             variation_name,
             map_weight,
             flags,
@@ -160,7 +161,7 @@ sub store {
             minor_allele_count,
             alignment_quality,
             evidence_attribs
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -170,6 +171,7 @@ sub store {
         $vf->strand,
         $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
         $vf->allele_string,
+        $vf->ancestral_allele,
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
@@ -237,6 +239,7 @@ sub update {
             seq_region_strand = ?,
             variation_id = ?,
             allele_string = ?,
+            ancestral_allele = ?,
             variation_name = ?,
             map_weight = ?,
             flags = ?,
@@ -260,6 +263,7 @@ sub update {
         $vf->strand,
         $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
         $vf->allele_string,
+        $vf->ancestral_allele,
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
@@ -1247,7 +1251,7 @@ sub _default_where_clause {
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight vf.source_id vf.somatic 
+             vf.allele_string vf.ancestral_allele vf.variation_name vf.map_weight vf.source_id vf.somatic 
              vf.consequence_types vf.class_attrib_id
              vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality 
              vf.evidence_attribs vf.clinical_significance vf.display s.name);
@@ -1275,14 +1279,14 @@ sub _objs_from_sth {
 
     my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight, $source_id,
+      $allele_string, $ancestral_allele, $variation_name, $map_weight, $source_id,
       $is_somatic, $consequence_types, $class_attrib_id,
       $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,
       $alignment_quality,$evidence_attribs,$clin_sig,$display, $source_name );
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-                     \$variation_id, \$allele_string, \$variation_name,
+                     \$variation_id, \$allele_string, \$ancestral_allele, \$variation_name,
                      \$map_weight, \$source_id, \$is_somatic,
                      \$consequence_types, \$class_attrib_id,
                      \$minor_allele, \$minor_allele_freq, \$minor_allele_count,
@@ -1421,6 +1425,7 @@ sub _objs_from_sth {
                 'strand'   => $seq_region_strand,
                 'slice'    => $slice,
                 'allele_string' => $allele_string,
+                'ancestral_allele' => $ancestral_allele,
                 'variation_name' => $variation_name,
                 'adaptor'  => $self,
                 'dbID'     => $variation_feature_id,
@@ -1845,6 +1850,11 @@ sub fetch_by_hgvs_notation {
          
   elsif($type =~ m/p/i) {
   
+    # throw a message for frameshifts  
+    if($description =~ /[A-Za-z]+[0-9]+[A-Za-z]+fs/){
+          throw("Frameshifts are not supported for HGVS protein input");
+    } 
+
     #Get the Transcript object to convert coordinates
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);

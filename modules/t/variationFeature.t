@@ -65,6 +65,7 @@ my $strand = 1;
 my $vname = $v->name();
 my $map_weight = 1;
 my $allele_str = 'A/T';
+my $ancestral_allele = 'A';
 my $is_somatic = 0;
 my $minor_allele = 'A';
 my $minor_allele_frequency = 0.1;
@@ -83,6 +84,7 @@ my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
    -variation_name => $vname,
    -map_weight => $map_weight,
    -allele_string => $allele_str,
+   -ancestral_allele => $ancestral_allele,
    -variation => $v,
    -source => $source,
    -is_somatic => $is_somatic,
@@ -101,6 +103,7 @@ ok($vf->variation_name() eq $vname,     "get variation_name");
 ok($vf->name() eq $vname,               "get name");
 ok($vf->map_weight() == $map_weight,    "get map_weight");
 ok($vf->allele_string() eq $allele_str, "get allele");
+ok($vf->ancestral_allele() eq $ancestral_allele, "get ancestral_allele");
 ok($vf->ref_allele_string() eq 'A',     "get ref allele");
 is_deeply($vf->alt_alleles, ['T'],      "get alt alleles");
 ok($vf->display_id() eq $vname,         "display_name");
@@ -131,6 +134,7 @@ my $v2 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs12311',
 ok(test_getter_setter($vf, 'variation', $v2),            'set new variation object');
 ok(test_getter_setter($vf, 'map_weight', 4),             'set new map_weight');
 ok(test_getter_setter($vf, 'allele_string', 'T/G'),    'set new allele_string');
+ok(test_getter_setter($vf, 'ancestral_allele', 'T'),    'set new ancestral_allele');
 ok(test_getter_setter($vf, 'variation_name', 'rs21431'), 'set new variation name');
 ok(test_getter_setter($vf, 'flank_match', '1'),          'set new flank_match');
 

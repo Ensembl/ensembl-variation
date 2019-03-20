@@ -262,5 +262,8 @@ ok($varup->get_all_synonyms('dbSNP')->[0] eq 'ss55331', "fetch updated synonym")
 $var->add_synonym('turnip', 'ss55331');
 throws_ok { $va->store_synonyms($var) } qr/No source found for name turnip/, 'Throw if source not found.';
 
+# test deprecated ancestral_allele method
 
+$var = $va->fetch_by_name('rs1267742856');
+ok(! defined $var->ancestral_allele, "No ancestral_allele if mappings have different ancestral allelels");
 done_testing();
