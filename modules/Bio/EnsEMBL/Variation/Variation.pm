@@ -130,9 +130,6 @@ use Scalar::Util qw(weaken);
     names and values are lists of identifiers from that db.
     e.g.: {'dbSNP' => ['ss1231', '1231'], 'TSC' => ['1452']}
 
-  Arg [-ANCESTRAL_ALLELE] :
-    string - the ancestral allele of this SNP
-
   Arg [-ALLELES] :
     Listref of Bio::EnsEMBL::Variation::Allele objects
 
@@ -163,9 +160,9 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $class_so_term, $source_id, $source, $is_somatic, $flipped, $syns,
-      $ancestral_allele, $alleles, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
+      $alleles, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ALLELES
                       FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
                       MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
 
@@ -179,7 +176,6 @@ sub new {
     'is_somatic' => $is_somatic,
     'flipped' => $flipped,
     'synonyms' => $syns || {},
-    'ancestral_allele' => $ancestral_allele,
     'five_prime_flanking_seq' => $five_seq,
     'three_prime_flanking_seq' => $three_seq,
     'flank_flag' => $flank_flag,
@@ -807,17 +803,30 @@ sub get_all_Alleles {
 
   Arg [1]    : string $ancestral_allele (optional)
   Example    : $ancestral_allele = v->ancestral_allele();
-  Description: Getter/Setter ancestral allele associated with this variation
+  Description: Getter/Setter ancestral allele associated with this variation.
+               If the variant has more than one mapping the ancestral allele
+               is only reported if it is the same for all mappings.
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : deprecated
 
 =cut
 
 sub ancestral_allele {
   my $self = shift;
   return $self->{'ancestral_allele'} = shift if(@_);
+  deprecate('Bio::EnsEMBL::Variation::Variation::ancestral_allele is deprecated and will be removed in e100. Please use Bio::EnsEMBL::Variation::VariationFeature::ancestral_allele instead');
+  if (!$self->{'ancestral_allele'}) {
+    my %ancestral_alleles;
+    foreach my $vf (@{$self->get_all_VariationFeatures}) {
+      $ancestral_alleles{$vf->ancestral_allele} = 1;
+    }
+    if (scalar keys %ancestral_alleles == 1) {
+      my ($aa) = keys %ancestral_alleles;
+      $self->{'ancestral_allele'} = $aa;
+    }
+  }
   return $self->{'ancestral_allele'};
 }
 

@@ -82,7 +82,6 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
    -synonyms          => \%syonym,
    -alleles           => $alleles,
    -adaptor           => $variation_adaptor,
-   -ancestral_allele  => $ancestral_allele,
    -is_somatic        => 0,
    -flipped           => 0,
   );
@@ -91,7 +90,6 @@ ok($v->dbID() eq 123,             "db ID");
 ok($v->name() eq $name,           "name");
 ok($v->is_somatic() eq 0,         "is_somatic");
 ok($v->flipped() eq 0,            "flipped");
-ok($v->ancestral_allele() eq 'A', "ancestral_allele");
 # source
 ok($v->source->name() eq $source_name,                  'source' );
 ok($v->source_name eq $source_name,                     'source_name');
