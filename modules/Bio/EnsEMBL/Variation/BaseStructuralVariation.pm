@@ -74,7 +74,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::BaseStructuralVariation;
 
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
 use Bio::EnsEMBL::Variation::Failable;
