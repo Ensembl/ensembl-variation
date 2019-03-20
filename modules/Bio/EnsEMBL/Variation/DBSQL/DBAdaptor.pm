@@ -77,8 +77,6 @@ sub get_available_adaptors{
       'GenotypeCode'                           => 'Bio::EnsEMBL::Variation::DBSQL::GenotypeCodeAdaptor',
       'GERPAnnotation'                         => 'Bio::EnsEMBL::Variation::DBSQL::GERPAnnotationAdaptor',
       'Individual'                             => 'Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor',
-      'IndividualGenotype'                     => 'Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor',
-      'IndividualGenotypeFeature'              => 'Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeFeatureAdaptor',
       'LDFeatureContainer'                     => 'Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor',
       'MetaCoordContainer'                     => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
       'MetaContainer'                          => 'Bio::EnsEMBL::Variation::DBSQL::MetaContainer',
