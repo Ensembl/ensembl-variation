@@ -408,7 +408,6 @@ sub pipeline_analyses {
           #      2 => [ 'ontology_mapping']
             },
         },
-        #next TODO: ontology_mapping
 
         {   -logic_name => 'finish_phenotype_annotation',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeAnnotation',

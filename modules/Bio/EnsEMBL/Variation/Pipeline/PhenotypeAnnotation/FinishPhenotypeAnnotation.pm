@@ -31,8 +31,8 @@ limitations under the License.
 
 =head1 FinishPhenotypeAnnotation
 
-This module runs at the end of the Phenotype Annotation pipeline and produces 
-a summary report to check the results look reasonable.
+This module runs at the end of the phenotype annotation import pipeline and produces
+a summary report to check the results against the previous run counts.
 
 =cut
 
@@ -40,25 +40,25 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeA
 
 use strict;
 use warnings;
-use Data::Dumper; #TODO: remove once done testing
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub run {
-    my $self = shift;
-    
-    ## retrieve old results from production db for comparison if available
-    my $previous_counts = $self->get_old_results();  
+  my $self = shift;
 
-    ## calculate new counts from new phenotype_feature table
-    my $new_counts      = $self->get_new_results();
+  ## retrieve old results from production db for comparison if available
+  my $previous_counts = $self->get_old_results();
 
-    ## write report in working directory 
-    $self->report_results($new_counts, $previous_counts);
+  ## calculate new counts from new phenotype_feature table
+  my $new_counts      = $self->get_new_results();
 
-    ## updated production db for later use
-    $self->update_internal_db($new_counts);
+  ## write report in working directory
+  $self->report_results($new_counts, $previous_counts);
 
+  ## updated production db for later use
+  $self->update_internal_db($new_counts);
+
+  $self->update_meta();
 }
 
 =head2 get_new_results
@@ -67,53 +67,51 @@ Run all the counting SQL on the new database
 
 =cut
 sub get_new_results{
+  my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
 
-    my $self     = shift;
-    my $previous = shift;  ## previous status only available if production db connection details supplied
-  
-    my $var_dba = $self->get_species_adaptor('variation');   
-    my $dbc     = $var_dba->dbc;
+  my $var_dba = $self->get_species_adaptor('variation');
+  my $dbc     = $var_dba->dbc;
 
-    my $source = $self->param('source');
-    
-    my %new;  ## hold some of the new counts to store
- 
-    ## counts on phenotypes relevant to all species
-    my $phenotype_count_st                    = qq[ select count(*) from phenotype];
-    my $phenotype_feature_count_st            = qq[ select count(*) from phenotype_feature ];
-    my $phenotype_feature_attrib_count_st     = qq[ select count(*) from phenotype_feature_attrib ];
-    my $phenotype_ontology_accession_count_st = qq[ select count(*) from phenotype_ontology_accession ];  
+  my $source = $self->param('source');
 
-    ## counts based on type and source
-    my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
-                                            from phenotype_feature pf, source s
-                                            where pf.source_id = s.source_id
-                                            group by s.name, pf.type ];
+  my %new;  ## hold some of the new counts to store
 
-    ## General results
-    $new{phenotype_count}  = count_results($dbc, $phenotype_count_st );
-    unless($new{phenotype_count} > 0){  ## report & die if total failure
-        $self->warning('ERROR: no phenotypes found');
-        die;
-    }
-    $new{phenotype_feature_count}   = count_results($dbc, $phenotype_feature_count_st );
-    unless($new{phenotype_feature_count} > 0){  ## report & die if total failure
-        $self->warning('ERROR: no phenotype feature results found');
-        die;
-    }
+  ## counts on phenotypes relevant to all species
+  my $phenotype_count_st                    = qq[ select count(*) from phenotype];
+  my $phenotype_feature_count_st            = qq[ select count(*) from phenotype_feature ];
+  my $phenotype_feature_attrib_count_st     = qq[ select count(*) from phenotype_feature_attrib ];
+  my $phenotype_ontology_accession_count_st = qq[ select count(*) from phenotype_ontology_accession ];
 
-    $new{phenotype_feature_attrib_count} = count_results($dbc, $phenotype_feature_attrib_count_st );
-    $new{phenotype_ontology_accession_count} = count_results($dbc, $phenotype_ontology_accession_count_st );
+  ## counts based on type and source
+  my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
+                                          from phenotype_feature pf, source s
+                                          where pf.source_id = s.source_id
+                                          group by s.name, pf.type ];
 
-    # get grouped counts
-    my $sth = $dbc->prepare($phenotype_feature_grouped_count_st);
-    $sth->execute();
-    my $dat = $sth->fetchall_arrayref();
-    foreach my $l (@{$dat}){
-      $new{phenotype_feature_count_details}{$l->[0]."_".$l->[1]} = $l->[2];
-    }
+  ## General results
+  $new{phenotype_count}  = count_results($dbc, $phenotype_count_st );
+  unless($new{phenotype_count} > 0){  ## report & die if total failure
+      $self->warning('ERROR: no phenotypes found');
+      die;
+  }
+  $new{phenotype_feature_count}   = count_results($dbc, $phenotype_feature_count_st );
+  unless($new{phenotype_feature_count} > 0){  ## report & die if total failure
+      $self->warning('ERROR: no phenotype feature results found');
+      die;
+  }
 
-    return \%new;
+  $new{phenotype_feature_attrib_count} = count_results($dbc, $phenotype_feature_attrib_count_st );
+  $new{phenotype_ontology_accession_count} = count_results($dbc, $phenotype_ontology_accession_count_st );
+
+  # get grouped counts
+  my $sth = $dbc->prepare($phenotype_feature_grouped_count_st);
+  $sth->execute();
+  my $dat = $sth->fetchall_arrayref();
+  foreach my $l (@{$dat}){
+    $new{phenotype_feature_count_details}{$l->[0]."_".$l->[1]} = $l->[2];
+  }
+
+  return \%new;
 }
 
 =head2 report_results
@@ -122,40 +120,38 @@ Print a report in the working directory showing current and previous data
 
 =cut
 sub report_results{
+  my ($self, $new, $previous) = @_;
 
-    my $self     = shift;
-    my $new      = shift;
-    my $previous = shift;
 
-    my $dir =  $self->required_param('workdir');
-    my $report;
-    open $report, ">$dir/REPORT_import.txt"||die "Failed to open report file for summary info :$!\n";
+  my $dir =  $self->required_param('workdir');
+  my $report;
+  open $report, ">$dir/REPORT_import.txt"||die "Failed to open report file for summary info :$!\n";
 
-    my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
-    $text_out.= "$new->{phenotype_count} phenotype entries";
-    $text_out.= " (previously $previous->{phenotype_count})" if defined  $previous->{phenotype_count} ;
+  my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
+  $text_out.= "$new->{phenotype_count} phenotype entries";
+  $text_out.= " (previously $previous->{phenotype_count})" if defined  $previous->{phenotype_count} ;
+  $text_out.= "\n";
+
+  $text_out.= "$new->{phenotype_ontology_accession_count} phenotype_ontology_accession entries";
+  $text_out.= " (previously $previous->{phenotype_ontology_accession_count})" if defined  $previous->{phenotype_ontology_accession_count} ;
+  $text_out.= "\n";
+
+  $text_out.= "$new->{phenotype_feature_count} phenotype_feature entries";
+  $text_out.= " (previously $previous->{phenotype_feature_count})" if defined  $previous->{phenotype_feature_count} ;
+  $text_out.= "\n";
+
+  $text_out.= "$new->{phenotype_feature_attrib_count} phenotype_feature_attrib entries";
+  $text_out.= " (previously $previous->{phenotype_feature_attrib_count})" if defined  $previous->{phenotype_feature_attrib_count} ;
+  $text_out.= "\n";
+
+  foreach my $source_type ( keys %{$new->{phenotype_feature_count_details}}){
+    $text_out.= "$new->{phenotype_feature_count_details}{$source_type} $source_type phenotype_feature entries";
+    $text_out.= " (previously $previous->{phenotype_feature_count_details}{$source_type} )" if defined  $previous->{phenotype_feature_count_details}{$source_type} ;
     $text_out.= "\n";
-    
-    $text_out.= "$new->{phenotype_ontology_accession_count} phenotype_ontology_accession entries";
-    $text_out.= " (previously $previous->{phenotype_ontology_accession_count})" if defined  $previous->{phenotype_ontology_accession_count} ;
-    $text_out.= "\n";
+  }
 
-    $text_out.= "$new->{phenotype_feature_count} phenotype_feature entries";
-    $text_out.= " (previously $previous->{phenotype_feature_count})" if defined  $previous->{phenotype_feature_count} ;
-    $text_out.= "\n";
-
-    $text_out.= "$new->{phenotype_feature_attrib_count} phenotype_feature_attrib entries";
-    $text_out.= " (previously $previous->{phenotype_feature_attrib_count})" if defined  $previous->{phenotype_feature_attrib_count} ;
-    $text_out.= "\n";
-    
-    foreach my $source_type ( keys %{$new->{phenotype_feature_count_details}}){
-      $text_out.= "$new->{phenotype_feature_count_details}{$source_type} $source_type phenotype_feature entries";
-      $text_out.= " (previously $previous->{phenotype_feature_count_details}{$source_type} )" if defined  $previous->{phenotype_feature_count_details}{$source_type} ;
-      $text_out.= "\n";
-    }
-
-    print $report $text_out;
-    close $report;
+  print $report $text_out;
+  close $report;
 }
 
 =head2 get_old_results
@@ -165,109 +161,101 @@ for this species
 
 =cut
 sub get_old_results{
+  my  $self = shift;
 
-    my  $self = shift;
+  my $int_dba ;
+  eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
 
-    my $int_dba ;
-    eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
+  unless (defined $int_dba){
+    $self->warning('No internal database connection found to write status ');
+    return;
+  }
 
-    unless (defined $int_dba){
-        $self->warning('No internal database connection found to write status '); 
-        return;
+  my %previous_result;
+
+  my $result_adaptor = $int_dba->get_ResultAdaptor();
+  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
+
+  foreach my $result (@{$res}){
+
+    if ($result->parameter()){
+      $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
+    } else {
+      $previous_result{ $result->result_type() } = $result->result_value();
     }
-    
-    my %previous_result;
+  }
 
-    my $result_adaptor = $int_dba->get_ResultAdaptor();
-    my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
-
-    foreach my $result (@{$res}){
-
-      if ($result->parameter()){
-        $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
-      } else {
-        $previous_result{ $result->result_type() } = $result->result_value();
-      }
-    }
-
-    return \%previous_result;
+  return \%previous_result;
 }
 
 
 =head2 update_internal_db
 
-Update internal production database with new statuses   
+Update internal production database with new statuses
 
 =cut
 sub update_internal_db{
+  my ($self, $new_counts) = @_;
 
-    my $self             = shift;
-    my $new_counts       = shift;
-  
-    my $int_dba ;
-    eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
+  my $int_dba ;
+  eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
 
-    unless (defined $int_dba){
-        $self->warning('No internal database connection found to write status '); 
-        return;
-    }
+  unless (defined $int_dba){
+    $self->warning('No internal database connection found to write status '); 
+    return;
+  }
 
-    my $var_dba = $self->get_species_adaptor('variation');
-    my $ensdb_name = $var_dba->dbc->dbname;
+  my $var_dba = $self->get_species_adaptor('variation');
+  my $ensdb_name = $var_dba->dbc->dbname;
 
-    my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
-    my $result_dba    =  $int_dba->get_ResultAdaptor();
+  my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
+  my $result_dba    =  $int_dba->get_ResultAdaptor();
 
-    my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
-    unless (defined $ensdb ){
+  my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
+  unless (defined $ensdb ){
 
-        ## add new db  *** NOT setting last to non-current - fix this ***
-        my @b = split/\_/,$ensdb_name;
-        pop @b;
-        my $ens_version = pop @b;
+    ## add new db  *** NOT setting last to non-current - fix this ***
+    my @b = split/\_/,$ensdb_name;
+    pop @b;
+    my $ens_version = pop @b;
 
-        $ensdb = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ name             => $ensdb_name,
-                                                            species          => $self->required_param('species'),
-                                                            version          => $ens_version,
-                                                            status_desc      => 'Created'
-                                                          });
-                
-        $ensvardb_dba->store( $ensdb );
-    }
-    $ensvardb_dba->update_status( $ensdb, 'phenotype_annotation_run' );
+    $ensdb = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ name             => $ensdb_name,
+                                                        species          => $self->required_param('species'),
+                                                        version          => $ens_version,
+                                                        status_desc      => 'Created'
+                                                      });
+    $ensvardb_dba->store( $ensdb );
+  }
+  $ensvardb_dba->update_status( $ensdb, 'phenotype_annotation_run' );
 
-    foreach my $type ( keys %{$new_counts}){
-      
-      if ($type eq 'phenotype_feature_count_details'){
-        ## set any previous results to non current for this check type and species
-        $result_dba->set_non_current_by_species_and_type($self->required_param('species') , 'phenotype_feature_count');
-    
-        my $details = $new_counts->{$type};
-        foreach my $source_type ( keys %{$details}){
-          my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
-                                                                 result_value => $details->{$source_type},
-                                                                 result_type  => 'phenotype_feature_count',
-                                                                 parameter => $source_type,
-                                                                 adaptor      => $result_dba
-                                                               });
+  foreach my $type ( keys %{$new_counts}){
 
-          $result_dba->store($result);
-        }
-      } else {
-        ## set any previous results to non current for this check type and species
-        $result_dba->set_non_current_by_species_and_type($self->required_param('species') , $type);
-      
+    if ($type eq 'phenotype_feature_count_details'){
+      ## set any previous results to non current for this check type and species
+      $result_dba->set_non_current_by_species_and_type($self->required_param('species') , 'phenotype_feature_count');
+
+      my $details = $new_counts->{$type};
+      foreach my $source_type ( keys %{$details}){
         my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
-                                                               result_value => $new_counts->{$type},
-                                                               result_type  => $type,
+                                                               result_value => $details->{$source_type},
+                                                               result_type  => 'phenotype_feature_count',
+                                                               parameter => $source_type,
                                                                adaptor      => $result_dba
                                                              });
-
         $result_dba->store($result);
-        }
-    }
-    
+      }
+    } else {
+      ## set any previous results to non current for this check type and species
+      $result_dba->set_non_current_by_species_and_type($self->required_param('species') , $type);
 
+      my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                             result_value => $new_counts->{$type},
+                                                             result_type  => $type,
+                                                             adaptor      => $result_dba
+                                                           });
+      $result_dba->store($result);
+      }
+  }
 }
 
 =head2 count_results
@@ -278,24 +266,37 @@ sub update_internal_db{
  a hash of attribute => row count depending on input.
 =cut
 sub count_results{
+  my ($dbc, $st) = @_;
 
-    my $dbc = shift;
-    my $st  = shift;
+  my $sth = $dbc->prepare($st);
+  $sth->execute();
+  my $dat = $sth->fetchall_arrayref();
 
-    my $sth = $dbc->prepare($st);
-    $sth->execute();
-    my $dat = $sth->fetchall_arrayref();
-
-    if(defined $dat->[0]->[1]){
-        my %count;
-        foreach my $l (@{$dat}){
-            $count{$l->[0]} = $l->[1];
-        }
-        return \%count;
+  if(defined $dat->[0]->[1]){
+    my %count;
+    foreach my $l (@{$dat}){
+        $count{$l->[0]} = $l->[1];
     }
-    else{
-        return $dat->[0]->[0];
-    }
+    return \%count;
+  }
+  else{
+    return $dat->[0]->[0];
+  }
+}
+
+## store the date the pipeline was run in the species meta table
+sub update_meta{
+  my $self = shift;
+
+  my $var_dba  = $self->get_species_adaptor('variation');
+  my $var_dbh = $var_dba->dbc->db_handle;
+
+  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
+                                              ( meta_key, meta_value) values (?,?)
+                                            ]);
+
+  $update_meta_sth->execute('PhenotypeAnnotation_run_date', $self->run_date() );
+
 }
 
 

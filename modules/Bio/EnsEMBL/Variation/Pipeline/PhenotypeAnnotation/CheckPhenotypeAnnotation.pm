@@ -31,7 +31,7 @@ limitations under the License.
 
 =head1 CheckPhenotypeAnnotation
 
-This module runs at the after phenotype import and performs phenotype QC
+This module runs checks and produces reports after the phenotype import stage
 
 =cut
 
@@ -40,39 +40,35 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAn
 use strict;
 use warnings;
 
-use Data::Dumper; #TODO: remove when not needed anymore
-
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 my $source;
-my $species;
 my $workdir;
 my $report;
 
 sub fetch_input {
-    my $self = shift;
-    $species = $self->required_param('species');
-    $source = $self->required_param('source');
-    $workdir = $self->param('workdir');
-    $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$species;
+  my $self = shift;
+  $source = $self->required_param('source');
+  $workdir = $self->param('workdir');
+  $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
 }
 
 sub run {
-    my $self = shift;
+  my $self = shift;
 
-    my $dbh = $self->get_species_adaptor('variation')->dbc;
+  my $dbh = $self->get_species_adaptor('variation')->dbc;
 
-    open $report, ">$workdir/REPORT_QC.txt"||die "Failed to open report file for summary info :$!\n";
+  open $report, ">$workdir/REPORT_QC.txt"||die "Failed to open report file for summary info :$!\n";
 
-    print $report "\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n";
-    check_phenotype_description($dbh);
-    print $report "\n";
-    check_fk($dbh);
+  print $report "\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n";
+  check_phenotype_description($dbh);
+  print $report "\n";
+  check_fk($dbh);
 
-    $self->param('output_ids', { source => $self->required_param('source'),
-                        species => $self->required_param('species'),
-                        workdir => $workdir,
-                      });
+  $self->param('output_ids', { source => $self->required_param('source'),
+                      species => $self->required_param('species'),
+                      workdir => $workdir,
+                    });
 }
 
 sub write_output {
@@ -94,23 +90,23 @@ sub check_phenotype_description{
 
   my $ph =  $pheno_ext_sth->fetchall_arrayref();
   foreach my $l (@{$ph}){
-	   print $report "WARNING: Phenotype id:$l->[0] has no description!\n" unless defined $l->[1];
-     next unless defined $l->[1];
-     print $report "WARNING: Phenotype id:$l->[0] has empty description!\n" if $l->[1] eq '';
+    print $report "WARNING: Phenotype id:$l->[0] has no description!\n" unless defined $l->[1];
+    next unless defined $l->[1];
+    print $report "WARNING: Phenotype id:$l->[0] has empty description!\n" if $l->[1] eq '';
 
-	   my $full = $l->[1];
-	   $l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
-	   print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(length($l->[1]) >0);
+    my $full = $l->[1];
+    $l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(length($l->[1]) >0);
 
-     # check for characters which will be interpreted a new lines
-     $l->[1] =~ /.*\n.*/;
-     print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(length($l->[1]) >0);
+    # check for characters which will be interpreted a new lines
+    $l->[1] =~ /.*\n.*/;
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(length($l->[1]) >0);
 
-     # check for phenotype descriptions suggesting no phenotype
-     print $report "WARNING: Phenotype : $full (id:$l->[0]) is not useful \n" if !checkNonTerms( $l->[1] );
+    # check for phenotype descriptions suggesting no phenotype
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) is not useful \n" if !checkNonTerms( $l->[1] );
 
-     # check for unsupported individual character
-     print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters \n" if !checkUnsupportedChar( $l->[1] );
+    # check for unsupported individual character
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters \n" if !checkUnsupportedChar( $l->[1] );
 
   }
 
@@ -189,7 +185,7 @@ sub check_fk{
   $phenoless_feat_count_ext_sth->execute()||die;
   my $phenoless_count = $phenoless_feat_count_ext_sth->fetchall_arrayref();
   print $report "$phenoless_count->[0]->[0] phenotype_feature entries with missing phenotype entry (expected: 0)\n";
-  
+
   $phenoless_acc_count_ext_sth->execute()||die;
   my $phenoless_acc_count = $phenoless_acc_count_ext_sth->fetchall_arrayref();
   print $report "$phenoless_acc_count->[0]->[0] phenotype_ontology_accession rows with missing phenotype entry (expected: 0)\n";

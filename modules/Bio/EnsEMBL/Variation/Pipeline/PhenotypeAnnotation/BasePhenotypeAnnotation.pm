@@ -37,13 +37,7 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
-#TODO: check that all libraries from import_script are imported. Any missing? Were they actually used?
-use Data::Dumper;
-
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
-#use base qw(Exporter);
-
-#our @EXPORT_OK = qw($core_dba $variation_dba $core_dba);
 
 my %special_characters = (
   'Å' => 'A',
@@ -61,21 +55,18 @@ my %special_characters = (
   '<' => ' less than ',
   '>' => ' more than ',
   'Đ' => 'D',
+  '&' => 'and',
 );
 
 my $pubmed_prefix = 'PMID:';
 
 my $prev_prog;
 
-our $debug; #TODO: difference between our and my in this context?
-#our $core_dba;
-#our $variation_dba; #TODO: info: this was $db_adaptor in previous script
-#our $phenotype_dba;
-our $skip_synonyms = 0; #TODO: Q does this have to be a parameter to the entrire pipeline? script has it on for impc, nhgri
-our $skip_phenotypes = 0; #TODO; as above, script has it on for uniprot
-our $skip_sets = 0; #TODO: this is never set in the script BUT is input param to script
+my $skip_synonyms = 0; # 1 for IMPC, MGI
+my $skip_phenotypes = 0; #TODO: take it out or keep it for legacy ? was 1 for uniprot
+my $skip_sets = 0; #TODO: when needed? this is never set in the script BUT is input param to script
 
-our %phenotype_cache;
+my %phenotype_cache;
 
 sub set_skip_synonyms {
   $skip_synonyms = shift;
@@ -85,19 +76,21 @@ sub get_special_characters {
   return \%special_characters;
 }
 
-sub add_phenotypes {
-  my $data = shift;
-  my $source_info = shift;
-  my $db_adaptor = shift;
+sub get_pubmed_prefix {
+  return $pubmed_prefix;
+}
 
-  my $phenotypes = $data->{phenotypes};
-  my $coords = $data->{coords};
-  my @attrib_types = @{$data->{attrib_types}};
+sub add_phenotypes {
+  my ($data, $source_info, $db_adaptor) = @_;
+
+  my $phenotypes    = $data->{phenotypes};
+  my $coords        = $data->{coords};
+  my @attrib_types  = @{$data->{attrib_types}};
   my $variation_ids = $data->{variation_ids};
 
   my $object_type = $source_info->{object_type};
-  my $source_id = $source_info->{source_id};
-  my $threshold = $source_info->{threshold};
+  my $source_id   = $source_info->{source_id};
+  my $threshold   = $source_info->{threshold};
 
   # Prepared statements
   my $st_ins_stmt = qq{
@@ -404,19 +397,16 @@ sub add_phenotypes {
     }
   }
   end_progress();
-  print STDOUT "$study_count new studies added\n" if ($debug);
-  print STDOUT "$phenotype_feature_count new phenotype_features added\n" if ($debug);
+  print STDOUT "$study_count new studies added\n" if $self->param('debug_mode');
+  print STDOUT "$phenotype_feature_count new phenotype_features added\n" if $self->param('debug_mode');
 }
 
 sub add_synonyms { #TODO: test this method when I have synonyms
-  my $synonyms = shift;
-  my $variation_ids = shift;
-  my $source_id = shift;
-  my $db_adaptor = shift;
-  
+  my ($synonyms, $variation_ids, $source_id, $db_adaptor) = @_;
+
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
-  
+
   # Some prepeared statements needed for inserting the synonyms into database
   my $ins_stmt = qq{
     INSERT IGNORE INTO
@@ -432,24 +422,24 @@ sub add_synonyms { #TODO: test this method when I have synonyms
     )
   };
   my $ins_sth = $db_adaptor->dbc->prepare($ins_stmt);
-  
+
   my $alt_count = 0;
   my $variation_count = 0;
-  
+
   foreach my $rs_id (keys %{$variation_ids}) {
-    
+
     my $var_id = $variation_ids->{$rs_id}[0];
-    
+
     # If we have a variation id, we can proceed
     if (defined($var_id)) {
-      
+
       $variation_count++;
-      
+
       $ins_sth->bind_param(1,$var_id,SQL_INTEGER);
-      
+
       # Handle all synonym ids for this rs_id
       while (my $alt_id = shift(@{$synonyms->{$rs_id}})) {
-      
+
         # Add the id as synonym, if it is already present, it will just be ignored
         $ins_sth->bind_param(2,$alt_id,SQL_VARCHAR);
         $ins_sth->execute();
@@ -457,21 +447,18 @@ sub add_synonyms { #TODO: test this method when I have synonyms
       }
     }
   }
-  
-  print STDOUT "Added $alt_count synonyms for $variation_count rs-ids\n" if ($debug);
+
+  print STDOUT "Added $alt_count synonyms for $variation_count rs-ids\n" if $self->param('debug_mode');
 }
 
 sub add_set {
-  my $set = shift;
-  my $source_id = shift;
-  my $db_adaptor = shift;
-  my $set_from = shift;
-  
+  my ($set, $source_id, $db_adaptor, $set_from) = @_;
+
   return if (!defined($set));
-  return if (!defined($set_from) && ($set_from ne 'phenotype' || $set_from ne 'synonym')); 
-   
+  return if (!defined($set_from) && ($set_from ne 'phenotype' || $set_from ne 'synonym'));
+
   my $variation_set_id;
-  
+
   # Get variation_set_id
   my $select_set_stmt = qq{
   SELECT v.variation_set_id
@@ -485,7 +472,7 @@ sub add_set {
   $sth1->bind_columns(\$variation_set_id);
   $sth1->fetch();
   return if (!defined($variation_set_id));
-  
+
   # Insert into variation_set_variation
   my $insert_set_stmt = qq{
     INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
@@ -506,7 +493,7 @@ sub add_set {
         vs.source_id=?
     };
   }
-  
+
   my $sth2 = $db_adaptor->dbc->prepare($insert_set_stmt);
   $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
@@ -515,7 +502,7 @@ sub add_set {
 
 sub convert_p_value {
   my $pval = shift;
-  
+
   my $sci_pval = '';
   # If a scientific format is not found, then ...
   if ($pval !~ /^\d+.*e.+$/i) {  
@@ -548,8 +535,8 @@ sub convert_p_value {
 
 ## format ontology accessions
 sub iri2acc{
-
   my $iri = shift;
+
   my @a = split/\//, $iri;
   my $acc = pop @a;
   $acc =~ s/\_/\:/;
@@ -575,14 +562,11 @@ sub get_seq_region_ids {
 }
 
 sub get_coords {
-  my $ids = shift;
-  my $variation_ids = shift;
-  my $type = shift;
-  my $db_adaptor = shift;
-  
+  my ($ids, $variation_ids, $type, $db_adaptor) = @_;
+
   my $tables;
   my $where_clause;
-  
+
   my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
 
   if($type eq 'Variation') {
@@ -597,7 +581,7 @@ sub get_coords {
     $tables = 'gene f';
     $where_clause = 'f.stable_id = ?';
   }
-  
+
   my $sth = $db_adaptor->dbc->prepare(qq{
     SELECT
       f.seq_region_id, f.seq_region_start, f.seq_region_end, f.seq_region_strand
@@ -606,15 +590,15 @@ sub get_coords {
     WHERE
       $where_clause
   });
-  
+
   my $coords = {};
   my ($sr_id, $start, $end, $strand);
-  
+
   foreach my $id (@object_ids) {
     $sth->bind_param(1,$id,SQL_VARCHAR);
     $sth->execute();
     $sth->bind_columns(\$sr_id, \$start, \$end, \$strand);
-    
+
     push @{$coords->{$id}}, {
       seq_region_id => $sr_id,
       seq_region_start => $start,
@@ -622,15 +606,14 @@ sub get_coords {
       seq_region_strand => $strand
     } while $sth->fetch();
   }
-  
+
   $sth->finish();
-  
+
   return $coords;
 }
 
 sub get_dbIDs {
-  my $rs_ids = shift;
-  my $db_adaptor = shift;
+  my ($rs_ids, $db_adaptor) = @_;
 
   my $id_stmt = qq{
     SELECT DISTINCT
@@ -701,18 +684,7 @@ sub get_attrib_types {
 }
 
 sub get_or_add_source {
-  my $self = shift;
-
-  my $source_info = shift;
-  my $db_adaptor  = shift;
-  
-#  my $source_name = shift;
-#  my $source_description = shift;
-#  my $source_url    = shift;
-#  my $source_status = shift;
-#  my $source_version = shift;
-#  my $db_adaptor    = shift;
-#  my $debug     = shift;
+  my ($self, $source_info, $db_adaptor) = @_;
 
   my $stmt = qq{
     SELECT
@@ -793,36 +765,36 @@ sub get_phenotype_id {
   }
 
   if(scalar keys %phenotype_cache) {
-    
+
     # check cache first
     return $phenotype_cache{$description} if defined $phenotype_cache{$description};
-    
+
     my @tmp = keys %phenotype_cache;
-    
+
     # lc everything
     my $description_bak = $description;
     $description = lc($description);
-    
+
     # store mapped
     my %mapped;
     $mapped{lc($_)} = $_ for @tmp;
     @tmp = keys %mapped;
-    
+
     # check if it matches lc
     if(defined($mapped{$description})) {
       $phenotype_cache{$description_bak} = $phenotype_cache{$mapped{$description}};
       return $phenotype_cache{$description_bak};
     }
-    
+
     # try a fuzzy match using String::Approx
     my @matches = amatch($description, [10], @tmp);
-  
+
     if(@matches) {
-      
+
       # we only want the best match
       my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
       print STDERR "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n";
-      
+
       my $skip = 0;
 
       # Assuming a perfect match check has been done in the previous lines, e.g. if ($phenotype_cache{$description})
@@ -830,7 +802,7 @@ sub get_phenotype_id {
 
       # find characters that differ
       my $diff = diff([split(//,$description)], [split(//,$best)]);
-      
+
       # skip if mismatch is anything word-like
       my $diff_string = '';
       my $previous_diff_pos;
@@ -866,41 +838,39 @@ sub get_phenotype_id {
         return $phenotype_cache{$mapped{$best}};
       }
     }
-    
+
     # restore from backup before inserting
     $description = $description_bak;
   }
-
 
   # finally if no match, do an insert
   my $sth = $db_adaptor->dbc->prepare(qq{
     INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
   });
-  
+
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->bind_param(2,$description,SQL_VARCHAR);
   $sth->execute();
   my $phenotype_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
-  
+
   # update cache
   $phenotype_cache{$description} = $phenotype_id;
-  
+
   return $phenotype_id;
 }
 
-#TODO: Q: do I still need a progress bar?
 # update or initiate progress bar
 sub progress {
   my ($i, $total) = @_;
-  
+
   my $width = 60;
   my $percent = int(($i/$total) * 100);
   my $numblobs = int((($i/$total) * $width) - 2);
-  
+
   # this ensures we're not writing to the terminal too much
   return if defined($prev_prog) && $numblobs.'-'.$percent eq $prev_prog;
   $prev_prog = $numblobs.'-'.$percent;
-  
+
   printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
 
@@ -910,12 +880,6 @@ sub end_progress {
   print "\n";
 }
 
-sub run {
-
-    my $self = shift;
-
-    #TODO: figure out if I need this
-}
 
 =head2 save_phenotypes
 
@@ -932,24 +896,18 @@ sub run {
 
 =cut
 sub save_phenotypes {
-  my $self        = shift;
+  my ($self, $source_info, $input_data, $core_dba, $variation_dba) = @_;
 
-  my $source_info = shift;
-  my $input_data      = shift;
-  my $core_dba    = shift;
-  my $variation_dba = shift;
-
-  my $phenotype_dba =  $variation_dba->get_PhenotypeAdaptor; #TODO: maybe work a way to have these global, OR move lines 577-579 to general one
-#  $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
+  my $phenotype_dba =  $variation_dba->get_PhenotypeAdaptor;
   my $debug = $self->param('debug_mode');
 
   my $set = defined($source_info->{set}) ? $source_info->{set} : undef;
   $source_info->{source_status} = 'germline' unless defined($source_info->{source_status});
-  
+
   my $initial_phenotype_count = $phenotype_dba->generic_count;
   my @attrib_types = @{get_attrib_types($variation_dba)};
   %phenotype_cache = map {$_->description() => $_->dbID()} @{$phenotype_dba->fetch_all};
-  
+
   my @ids;
   my %synonym;
   my @phenotypes;
@@ -979,11 +937,9 @@ sub save_phenotypes {
   if(defined($phenotypes[0]->{seq_region_id})) {
     foreach my $p(@phenotypes) {
       my $coord = {};
-      
       foreach my $key(qw(id start end strand)) {
         $coord->{'seq_region_'.$key} = $p->{'seq_region_'.$key};
       }
-      
       push @{$coords->{$p->{id}}}, $coord;
     }
   }
@@ -998,7 +954,7 @@ sub save_phenotypes {
       $_->{seq_region_end}."_".
       $_->{seq_region_strand}."_" => $_
     } @{$coords->{$id}};
-    
+
     $coords->{$id} = [values %tmp];
   }
 

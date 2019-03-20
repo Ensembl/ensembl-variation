@@ -32,21 +32,35 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants;
 use base qw(Exporter);
 use Const::Fast;
 
-our @EXPORT_OK = qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
+our @EXPORT_OK = qw(
+            RGD
+            AnimalQTL
+            ZFIN
+            GWAS
+            OMIA
+            EGA
+            Orphanet
+            MIMmorbid
+            DDG2P
+            CGC
+            IMPC
+            MGI
+            NONE
+            species);
 
 use constant RGD       => 'RGD';
 use constant AnimalQTL => 'AnimalQTL';
-use constant ZFIN => 'ZFIN';
-use constant GWAS => 'GWAS';
-use constant OMIA => 'OMIA';
-use constant EGA  => 'EGA';
-use constant Orphanet => 'Orphanet';
+use constant ZFIN      => 'ZFIN';
+use constant GWAS      => 'GWAS';
+use constant OMIA      => 'OMIA';
+use constant EGA       => 'EGA';
+use constant Orphanet  => 'Orphanet';
 use constant MIMmorbid => 'MIMmorbid';
 use constant DDG2P     => 'DDG2P';
 use constant CGC       => 'CGC';
 use constant IMPC      => 'IMPC';
 use constant MGI       => 'MGI';
-use constant NONE => 'NONE';
+use constant NONE      => 'NONE';
 
 use constant species => ( 'RGD' => ['rattus_norvegicus'],
                   'AnimalQTL' => ['gallus_gallus','equus_caballus'],
@@ -67,11 +81,5 @@ use constant species => ( 'RGD' => ['rattus_norvegicus'],
                  'IMPC' => ['mus_musculus'],
                  'MGI'  => ['mus_musculus'],
                  );
-#TODO: hash key source -> array of species: used by the modules to schedule jobs for each species: see vep dum
-#TODO: @: how is it best to take input params? numbers as constants or string? eg. for this _conf takes RGD, while cmd line takes 1, latest: made const string
-#cow bos_taurus
-
-#TODO: RGD: look into source/evidence for mouse and human qtls, which currently are not imported
-
 
 1;

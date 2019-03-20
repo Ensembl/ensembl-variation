@@ -37,8 +37,6 @@ use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD Ani
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
-  #TODO: should only read input params & make the right next analysis be started
-  #  $self->update_meta ; TODO: do I need this?
   my $self = shift;
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
