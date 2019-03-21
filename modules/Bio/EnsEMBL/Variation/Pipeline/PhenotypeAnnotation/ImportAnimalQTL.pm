@@ -161,7 +161,6 @@ sub write_output {
   print $logFH "Passing AnimalQTL import (".$self->required_param('species').") for checks\n" if $self->param('debug_mode');
   close($logFH);
   close($errFH);
-  exit();
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
