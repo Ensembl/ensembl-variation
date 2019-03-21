@@ -170,7 +170,7 @@ sub run_checks{
 
     ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
     my $is_ambiguous = check_for_ambiguous_alleles( $var->{allele} );
-    push @fail, 14  if(defined $is_ambiguous->[0]  ) ;
+    push @fail, 14  if(defined $is_ambiguous) ;
 
     ## Type 13 Alleles contain non-nucleotide characters
     my $is_illegal = check_illegal_characters( $var->{allele} );

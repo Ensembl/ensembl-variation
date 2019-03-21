@@ -74,6 +74,7 @@ GetOptions ("data_file=s"  => \$data_file,
             );
 
 usage() unless defined $data_file && defined $registry_file && defined $assembly;
+die "File not found: $data_file\n" unless -e $data_file;
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
@@ -113,6 +114,7 @@ my %omimVarSet;
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
+my $haplotype_type = "Haplotype";
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -123,6 +125,24 @@ if (defined $done_file){
     $done{$id} = 1;
   }
 }
+
+my %special_characters = (
+  'Å' => 'A',
+  'Ä' => 'A',
+  'Ö' => 'O',
+  'Ü' => 'U',
+  'ö' => 'o',
+  'ü' => 'u',
+  'ä' => 'a',
+  'í' => 'i',
+  'é' => 'e',
+  'è' => 'e',
+  'ë' => 'e',
+  'ç' => 'c',
+  '<' => 'less than',
+  '>' => 'more than',
+  '&' => 'and',
+);
 
 ## parse file
 my $ref = XML::Records->new($data_file);
@@ -163,9 +183,12 @@ while (my $set = $ref->get_record() ){
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
+    print "WARNING: No MeasureSet found for $record{Acc}.\n" if !defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
+    print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
+    next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
-                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Haplotype";
+                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq $haplotype_type;
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
     $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
@@ -351,9 +374,9 @@ sub get_feature{
           }
         }
         # for haplotype entries: allelic variant ids are not real synonyms & this will result in them not being saved
-        $feature{measureXrefs}{$measure->{ID}}{OmimAllele2dbSNP} = \%tmpAllelicID unless $type eq 'Haplotype';
+        $feature{measureXrefs}{$measure->{ID}}{OmimAllele2dbSNP} = \%tmpAllelicID unless $type eq $haplotype_type;
       }
-      push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq 'Haplotype' && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
+      push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq $haplotype_type && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
    }
 
    ## if multiple rsIDs for the same ReferenceClinVarAssertion print warning
@@ -369,6 +392,10 @@ sub get_feature{
       $feature{Chr}    = $loc->{Chr} ; 
       $feature{start}  = $loc->{start} ; 
       $feature{end}    = $loc->{stop} ; 
+
+      $feature{measureXrefs}{$measure->{ID}}{Chr}   = $loc->{Chr}    if $type eq $haplotype_type;
+      $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start}  if $type eq $haplotype_type;
+      $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
     }
 
 
@@ -386,9 +413,10 @@ sub get_feature{
                            $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top\s+level/ );
 	
       $feature{hgvs_g} =  $attrib->{Attribute}->[1]->{Change}; 
+      $feature{measureXrefs}{$measure->{ID}}{hgvs_g} = $attrib->{Attribute}->[1]->{Change} if $type eq $haplotype_type;
     }
 
-    ## find reported genes 
+    ## find reported genes, note: each measure set can have a MeasureRelationship gene
     if(defined $measure->{MeasureRelationship}){
       my @genes;          
       my $meas_rels = to_array($measure->{MeasureRelationship});
@@ -396,11 +424,21 @@ sub get_feature{
         push @genes, $meas->{Symbol}->{ElementValue}->[0] if $meas->{Symbol}->{ElementValue}->[0] =~ /\w/;
       }
       $feature{gene} = join(",", @genes);
+      $feature{measureXrefs}{$measure->{ID}}{gene} = $feature{gene} if $type eq $haplotype_type;
+    }
+
+    #last processing of this specific measure
+    #populate higher level hash of rsIDs and specific coordinates, hgvs_g
+    print "ERROR: multiple rsIDs for same measure/location! $accession\n" if ( defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'} && scalar(@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}) > 1);
+    if (defined $feature{'haplo'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} ){
+      foreach my $rsID (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
+        @{$feature{'rs'.$rsID}}{qw/Chr start end hgvs_g gene/} = @{$feature{measureXrefs}{$measure->{ID}}}{qw/Chr start end hgvs_g gene/};
+      }
     }
   }
 
   # if haplotype present then save corresponding rsIDs for phenotype_feature_attrib entry
-  if ($type eq 'Haplotype' && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
+  if ($type eq $haplotype_type && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
     my @rsIDs = @{$feature{haplo}{rs}};
     # only if more than 1 rsID present make them phenotype_feature_attribs
     if( scalar @rsIDs >1){
@@ -412,10 +450,13 @@ sub get_feature{
           push @{$feature{haplo}{'rs'.$rs}}, 'rs'.$rs2;
         }
       }
+      #remove global details as multiple rsIDs present, each with own coordinates and hgvs_g
+      delete @feature{qw/Chr start end hgvs_g gene/};
     } else {
       delete $feature{haplo};
     }
   }
+
   return \%feature;
 }
 
@@ -527,7 +568,7 @@ sub get_submitters{
   #if no OMIM submitter than make sure rsID from dbSNP is at upper hash level
   if (! defined $mainXrefs->{'dbSNP'}){
     foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
-      push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'};
+      push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'} && defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'};
     }
   }
 
@@ -568,6 +609,11 @@ sub import{
 
   if(defined $record->{feature_info}->{dbSNP} && !defined $structvar){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
+      my $rsID = 'rs'.$rs;
+      # for haplotypes (multiple rsIDs) each rsID has it's own hgvs_g string
+      if (defined $record->{feature_info}->{$rsID}){
+        @{$record->{feature_info}}{qw/hgvs_g Chr start end gene/} = @{$record->{feature_info}->{$rsID}}{qw/hgvs_g Chr start end gene/};
+      }
 
       ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
       next unless defined $feature_object;
@@ -606,6 +652,11 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
+  # Remove special characters from the phenotype description
+  foreach my $char (keys(%special_characters)) {
+    my $new_char = $special_characters{$char};
+    $record->{disease} =~ s/$char/$new_char/g;
+  }
 
   ## look for existing or enter new phenotype object
   my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
@@ -798,8 +849,10 @@ sub get_variant{
 
   ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
 
-  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr}  ){
-    warn "Not entering new refSNP: $rs_id as no HGVS available for alleles\n";
+  if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} ||
+      !defined $ref_allele || !defined $alt_allele ||
+      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele && $alt_allele eq '') ){
+    warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
     return undef;
   }
 
@@ -824,7 +877,7 @@ sub enter_var{
   my $inherit    = shift;
 
    unless (defined $ref_allele && defined $alt_allele){
-     warn "ERROR: missing alleles for $data->{hgvs_g} / $dbSNP\n";
+     warn "ERROR: missing alleles for $data->{feature_info}->{hgvs_g} / $dbSNP\n";
      return undef;
    }
 
@@ -838,18 +891,6 @@ sub enter_var{
       -adaptor           => $variation_adaptor,
     );
   $variation_adaptor->store($var);
-
-
-  foreach my $allele ( $ref_allele, $alt_allele){
-    $allele =~s/\s+//;
-    my $al = Bio::EnsEMBL::Variation::Allele->new
-      ( -variation_id   => $var->dbID(),
-        -allele         => $allele,
-        -adaptor        => $allele_adaptor,
-      );
-    $allele_adaptor->store($al);
-  }
-
 
   my $allele_str = $ref_allele ."/". $alt_allele;
 
@@ -885,8 +926,58 @@ sub enter_var{
     my $ref_seq = $ref_slice->seq();
     $vf->allele_string("-/".$ref_seq);
     $vf->start($vf->end + 1);
+  } elsif ($alt_allele =~/^$ref_allele/ && $data->{feature_info}->{hgvs_g} =~ m/\[/i ) {
+    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
+    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
+    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                    $vf->seq_region_start, $vf->seq_region_start + length($alt_allele) - 1);
+
+    my @refSeq = split //, $refSlice->seq;
+    my @altSeq = split //, $alt_allele;
+    my ($i,$match) = (0,1);
+    while ($i< scalar @altSeq && $match){
+      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
+      $i++;
+    }
+    $ref_allele = substr($refSlice->seq, 0, $i-1);
+    $allele_str = $ref_allele ."/". $alt_allele;
+    $vf->allele_string($allele_str);
   }
+
+  # case eg. NC_000009.12:g.137233961_137234061del
+  elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
+      my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
+      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf->seq_region_start || $end != $vf->seq_region_end );
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                      $vf->seq_region_start, $vf->seq_region_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+      $vf->allele_string($allele_str);
+  }
+
+  # case eg. NC_000007.14:g.5978687_5978689delinsC
+  elsif ($data->{feature_info}->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
+      my ($start, $end, $alt) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
+      print "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf->seq_region_start || $end != $vf->seq_region_end  || $alt ne $alt_allele);
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                      $vf->seq_region_start, $vf->seq_region_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+      $vf->allele_string($allele_str);
+  }
+
   $var_feat_adaptor->store($vf);
+
+  # save the update ref, alt allele
+  foreach my $allele ( $ref_allele, $alt_allele){
+    $allele =~s/\s+//;
+    my $al = Bio::EnsEMBL::Variation::Allele->new
+      ( -variation_id   => $var->dbID(),
+        -allele         => $allele,
+        -adaptor        => $allele_adaptor,
+      );
+    $allele_adaptor->store($al);
+  }
 
   my @vf; #return vf to attach phenotype feature to
   push @vf, $vf;
