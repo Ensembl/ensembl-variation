@@ -320,10 +320,10 @@ sub add_phenotypes {
 
       if (!defined($study_id)) {
         if (length($phenotype->{"study"}) > 255) {
-          warn "WARNING study external_references truncated FROM:>",$phenotype->{"study"}, "<\n";
+          print $errFH "WARNING study external_references truncated FROM:>",$phenotype->{"study"}, "<\n";
           $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
           $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
-          warn "WARNING study external_references truncated TO  :>",$phenotype->{"study"}, "<\n";
+          print $errFH "WARNING study external_references truncated TO  :>",$phenotype->{"study"}, "<\n";
         }
         $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
         $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
@@ -675,7 +675,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;
+    print $errFH "$rs_id - no mapping found in variation db\n" unless $var_id ;
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
 

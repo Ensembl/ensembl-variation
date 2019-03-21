@@ -28,6 +28,14 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImportCGC
+
+This module imports Cancer Gene Census data. The module fetched the data from
+OpenTargets project https://www.targetvalidation.org/downloads/data
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportCGC;
 
 use warnings;
@@ -37,15 +45,14 @@ use File::Path qw(make_path);
 use File::Basename;
 use DateTime;
 use JSON;
-use Data::Dumper; #TODO: remove if not needed
 use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS NONE);
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
 my $phenotype_dba;
@@ -61,40 +68,30 @@ sub fetch_input {
 
     $core_dba    = $self->get_species_adaptor('core');
     $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
-    $ontology_dba = 
+    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor;
     $ontology_dba = $self->get_adaptor('multi', 'ontology');
 
-
     $debug        = $self->param('debug_mode');
-
-    #TODO: 
-    # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
-    #-source nhgri -infile ${datadir}/gwascatalog.txt -verbose -version 20121031
-
+    $self->SUPER::set_debug($self->param('debug_mode'));
 
     %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                     source_url => 'http://cancer.sanger.ac.uk/census',
                     object_type => 'Gene',
-
-                    source_name => 'Cancer Gene Census', #TODO: figure out where this is used
-                    source_name_use => 'CancerGeneCensus',
-            #        source_version => 0, # it is current year/month
+                    #source_version  will be set based on the date in the file name (year/month-> yyyymm)
                     source_status => 'somatic',
-                    source => 'cgc',
-
-                    #  object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type ones
-                  #  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                    
-                  #  threshold => $self->required_param('threshold_qtl'),
+                    source_name => 'Cancer Gene Census',   #source name in the variation db
+                    source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
                     );
 
-    $workdir = $pipeline_dir."/".$source_info{source_name_use}."/".$species;
+    $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
     make_path($workdir);
-    my $cgc_google_url = 'https://www.targetvalidation.org/downloads/data';
-    $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
-    #TODO: double check if no better alternative exists
-  #  https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
+    my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
+    # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
+
+    open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+    open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+    $self->SUPER::set_logFH($logFH);
+    $self->SUPER::set_errFH($errFH);
 
     #get input file CGC via OpenTargets, get latest published file:
     my $dt = DateTime->now;
@@ -103,7 +100,7 @@ sub fetch_input {
     my $cgc_ftp_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
 
     my $file_opent = basename($cgc_ftp_url); #OpenTargets file
-    print "Found files (".$workdir."/".$file_opent."), will skip new fetch\n" if -e $workdir."/".$file_opent;
+    print $logFH "Found files (".$workdir."/".$file_opent."), will skip new fetch\n" if -e $workdir."/".$file_opent;
     my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
     while (!$found){
@@ -112,27 +109,27 @@ sub fetch_input {
       $month = sprintf ("%02d",$month);
       my $cgc_check_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
       $file_opent = basename($cgc_check_url);
-      
+
       if (-e $workdir."/".$file_opent){
         $found = 1;
-        warn "INFO: Found $file_opent, will skip new fetch.\n";
+        print $logFH "INFO: Found $file_opent, will skip new fetch.\n";
         next;
       }
 
       my $resHTTPcode = qx{curl -w %{http_code} -X GET $cgc_check_url -o '$workdir/$file_opent'};
       if ($resHTTPcode == 404){ #Not Found
         unlink($workdir."/".$file_opent) if -e $workdir."/".$file_opent;
-        warn "WARNING: No OpenTarget file found for current month ($file_opent), will check past month.\n";
+        print $errFH "WARNING: No OpenTarget file found for current month ($file_opent), will check past month.\n";
       } elsif ($resHTTPcode == 200){ #Successful
-        warn "HTTP code 200 (successful) but file ($file_opent) is missing \n" unless -e $workdir."/".$file_opent;
+        print $errFH "HTTP code 200 (successful) but file ($file_opent) is missing \n" unless -e $workdir."/".$file_opent;
       }
       if (-e $workdir."/".$file_opent) { $found = 1;}
     }
     # get only Cancer Gene Census files
     $source_info{source_version} = "20$year$month";
     my $file_cgc_json = "open_targets_20$year-$month.json";
-    print "Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
-    `gzcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
+    print $logFH "Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
+    `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
 
     $self->param('cgc_file', $file_cgc_json);
 }
@@ -143,44 +140,40 @@ sub run {
   my $file_cgc = $self->required_param('cgc_file');
   my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
 
-  {
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_cgc; #TODO: what is best error/out log naming convention?
-    open STDERR, ">>", $workdir."/".'log_import_err_'.$file_cgc;
-
-    #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
-    print "Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n";
-    get_cancer_gene_census_file($workdir."/".$file_cgc, $workdir."/".$file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
-    print "Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n";
-  }
-
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_cgc_ensembl;
-  open STDERR, ">>", $workdir."/".'log_import_err_'.$file_cgc_ensembl;
+  #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
+  print $logFH "Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n";
+  get_cancer_gene_census_file($file_cgc, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
+  print $logFH "Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n";
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);
+  print $logFH "$source_info{source_name_short} source_id is $source_id\n" if ($debug);
 
   # get phenotype data + save it (all in one method)
   my $results = parse_cancer_gene_census($workdir."/".$file_cgc_ensembl, $core_dba);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba) unless scalar(@{$results->{'phenotypes'}}) == 0;
 
-  my %param_source = (source_name => $source_info{source_name_use},
+  my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing CGC import for checks\n" if $self->param('debug_mode');
 }
 
 
@@ -188,6 +181,9 @@ sub write_output {
 sub get_cancer_gene_census_file {
   my $input_file = shift;
   my $output_file = shift;
+
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) ;
 
   my %efos;
   my %data;
@@ -198,10 +194,10 @@ sub get_cancer_gene_census_file {
   die("ERROR: Could not get ontology term adaptor") unless defined($ota);
 
   if($input_file =~ /gz$/) {
-    open IN, "zcat $input_file |" or die ("Could not open $input_file for reading");
+    open IN, "zcat $workdir/$input_file |" or die ("Could not open $input_file for reading");
   }
   else {
-    open(IN,'<',$input_file) or die ("Could not open $input_file for reading");
+    open(IN,'<',$workdir."/".$input_file) or die ("Could not open $input_file for reading");
   }
 
   while(<IN>) {
@@ -225,7 +221,7 @@ sub get_cancer_gene_census_file {
     }
 
     if (!$phenotype) {
-      print STDERR "$gene_symbol: no phenotype desc found for $phenotype_id\n";
+      print $errFH1 "$gene_symbol: no phenotype desc found for $phenotype_id\n";
       $phenotype = 'ND';
     }
     else {
@@ -243,7 +239,7 @@ sub get_cancer_gene_census_file {
       if ($1) {
         $stable_ids{$1} = 1;
       }
-      print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $gene_symbol\n";
+      print $errFH1 "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $gene_symbol\n";
     }
 
     next unless scalar @$genes;
@@ -260,9 +256,9 @@ sub get_cancer_gene_census_file {
       }
     }
   }
-  close(F);
+  close(IN);
 
-  open OUT, "> $output_file" || die $!;
+  open OUT, "> $workdir/$output_file" || die $!;
   foreach my $gene_symbol (sort(keys(%data))) {
     foreach my $gene_id (keys(%{$data{$gene_symbol}})) {
       foreach my $phenotype (keys(%{$data{$gene_symbol}{$gene_id}})) {
@@ -276,6 +272,8 @@ sub get_cancer_gene_census_file {
   }
 
   close(OUT);
+
+  close ($errFH1);
 }
 
 sub get_phenotype_desc {
@@ -313,6 +311,9 @@ sub parse_cancer_gene_census {
   my $infile = shift;
   my $core_dba = shift;
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+
   my $ga = $core_dba->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor") unless defined($ga);
 
@@ -344,7 +345,7 @@ sub parse_cancer_gene_census {
     my $gene = $ga->fetch_by_stable_id($gene_id);
 
     if(!$gene) {
-      print STDERR "WARNING: Ensembl gene $gene_id not found in the Ensembl Core database. Skipped!\n";
+      print $errFH1 "WARNING: Ensembl gene $gene_id not found in the Ensembl Core database. Skipped!\n";
       next;
     }
 
@@ -364,6 +365,7 @@ sub parse_cancer_gene_census {
     push(@phenotypes,\%data);
   }
   close(IN);
+  close($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
