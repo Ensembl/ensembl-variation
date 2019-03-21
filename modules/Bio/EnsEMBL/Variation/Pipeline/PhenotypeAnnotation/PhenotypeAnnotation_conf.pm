@@ -76,7 +76,7 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
 
         # release number used in the name of default workdir and hive database
-        ensembl_release         => 93,
+        ensembl_release         => 95,
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -106,10 +106,9 @@ sub default_options {
 
         run_import_type         =>  NONE,
 
-        threshold_qtl           =>  0, #for RGD_qtl, AnimalQTL
+        threshold_qtl           =>  0, # default for RGD_qtl, AnimalQTL
 
-        animalqtl_input_dir     => $self->o('pipeline_dir').'/AnimalQTL/inputFiles',
-        animalqtl_version       => '20180822', #release 36 is 20180822 TODO: confirm there is no computational way to get it
+        animalqtl_input_dir     => $self->o('pipeline_dir').'/inputData',
 
         zfin_version            => '20001020', #13 Sep 2018 #TODO: confirm there is no computational way to get it
 
@@ -223,7 +222,6 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportAnimalQTL',
             -parameters => {
                 animalqtl_input_dir => $self->o('animalqtl_input_dir'),
-                animalqtl_version   => $self->o('animalqtl_version'),
                 threshold_qtl       => $self->o('threshold_qtl'),
                 @common_params,
             },

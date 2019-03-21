@@ -57,8 +57,11 @@ my %special_characters = (
   'Đ' => 'D',
   '&' => 'and',
 );
+my %phenotype_cache;
 
 my $pubmed_prefix = 'PMID:';
+my $debug = 0;
+my ($logFH, $errFH);
 
 my $prev_prog;
 
@@ -66,7 +69,6 @@ my $skip_synonyms = 0; # 1 for IMPC, MGI
 my $skip_phenotypes = 0; #TODO: take it out or keep it for legacy ? was 1 for uniprot
 my $skip_sets = 0; #TODO: when needed? this is never set in the script BUT is input param to script
 
-my %phenotype_cache;
 
 sub set_skip_synonyms {
   $skip_synonyms = shift;
@@ -78,6 +80,22 @@ sub get_special_characters {
 
 sub get_pubmed_prefix {
   return $pubmed_prefix;
+}
+
+sub set_debug {
+  my $self = shift;
+
+  $debug = shift;
+}
+
+sub set_logFH {
+  my $self = shift;
+  $logFH = shift;
+}
+
+sub set_errFH {
+  my $self = shift;
+  $errFH = shift;
 }
 
 sub add_phenotypes {
@@ -106,7 +124,7 @@ sub add_phenotypes {
   my $left_join = '';
 
   # add special joins for checking certain sources
-  if ($source_info->{source} =~ m/uniprot/i) {
+  if ($source_info->{source_name_short} =~ m/uniprot/i) { #TODO: remove if decided to remove uniprot entirly
     $left_join = qq{
       LEFT JOIN
       (
@@ -119,7 +137,7 @@ sub add_phenotypes {
 
     $extra_cond = 'AND at.code = "variation_names" and pfa.value = ? ';
   }
-  elsif ($source_info->{source} =~ m/omim/i) {
+  elsif ($source_info->{source_name_short} =~ m/omim/i) { #TODO: remove if decided to remove omim entirly
     $left_join = qq{
       LEFT JOIN
       (
@@ -145,7 +163,7 @@ sub add_phenotypes {
       AND pfa2.value = ?
     };
   }
-  elsif ($source_info->{source} =~ m/nhgri/i) {
+  elsif ($source_info->{source_name_short} =~ m/GWAS/i) {
     $left_join = qq{
       LEFT JOIN
       (
@@ -236,7 +254,7 @@ sub add_phenotypes {
   $attrib_id_ext_sth->execute();
   my $ont_attrib_type = $attrib_id_ext_sth->fetchall_hashref("value");
 
-  if ($source_info->{source_name} eq 'RGD'){ #required as db source:name is RGD and attrib_type_id 509 for ontology_mapping is Rat Genome Database
+  if ($source_info->{source_name} eq 'RGD'){ #required as db source:name is 'RGD' and attrib_type_id 509 for ontology_mapping is 'Rat Genome Database'
     $source_info->{source_attrib_type} = 'Rat Genome Database';
   }
   my $mapped_by = 'Data source';
@@ -347,15 +365,15 @@ sub add_phenotypes {
     $pf_check_sth->bind_param(4,$source_id,SQL_INTEGER);
     $pf_check_sth->bind_param(5,$study_id,SQL_INTEGER);
     # For uniprot data
-    if ($source_info->{source} =~ m/uniprot/i) {
+    if ($source_info->{source_name_short} =~ m/uniprot/i) { #TODO: remove if decided to remove uniprot entirly
       $pf_check_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
     }
     # For nhgri-ebi gwas data
-    elsif ($source_info->{source} =~ m/nhgri/i) {
+    elsif ($source_info->{source_name_short} =~ m/GWAS/i) {
       $pf_check_sth->bind_param(6,$phenotype->{"p_value"},SQL_VARCHAR);
     }
     # For omim data
-    elsif ($source_info->{source} =~ m/omim/i) {
+    elsif ($source_info->{source_name_short} =~ m/omim/i) { #TODO: remove if decided to remove omim entirly
       $pf_check_sth->bind_param(6,$phenotype->{"risk_allele"},SQL_VARCHAR);
       $pf_check_sth->bind_param(7,$phenotype->{"associated_gene"},SQL_VARCHAR);
     }
@@ -397,8 +415,8 @@ sub add_phenotypes {
     }
   }
   end_progress();
-  print STDOUT "$study_count new studies added\n" if $self->param('debug_mode');
-  print STDOUT "$phenotype_feature_count new phenotype_features added\n" if $self->param('debug_mode');
+  print $logFH "$study_count new studies added\n" if ($debug);
+  print $logFH "$phenotype_feature_count new phenotype_features added\n" if ($debug);
 }
 
 sub add_synonyms { #TODO: test this method when I have synonyms
@@ -448,7 +466,7 @@ sub add_synonyms { #TODO: test this method when I have synonyms
     }
   }
 
-  print STDOUT "Added $alt_count synonyms for $variation_count rs-ids\n" if $self->param('debug_mode');
+  print $logFH "Added $alt_count synonyms for $variation_count rs-ids\n";
 }
 
 sub add_set {
@@ -716,7 +734,7 @@ sub get_or_add_source {
     $db_adaptor->dbc->do($stmt);
     $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
 
-    print STDOUT "Added source for $source_info->{source_name} (source_id = $source_id)\n" if ($debug);
+    print $logFH "Added source for $source_info->{source_name} (source_id = $source_id)\n" if ($debug);
   }
   else {
     $stmt = qq{
@@ -793,7 +811,7 @@ sub get_phenotype_id {
 
       # we only want the best match
       my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
-      print STDERR "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n";
+      print $errFH "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n";
 
       my $skip = 0;
 
@@ -828,13 +846,13 @@ sub get_phenotype_id {
       }
       if ( $diff_string ne '') {
         $diff_string .= ']' if ($diff_string !~ /\]$/);
-        print STDERR "\tDIFFERENCE(S): $diff_string\n" if ( $diff_string ne '');
+        print $errFH "\tDIFFERENCE(S): $diff_string\n" if ( $diff_string ne '');
       }
 
       # cache this match so we don't have to fuzz again
       $phenotype_cache{$description_bak} = $phenotype_cache{$mapped{$best}};
       unless ($skip) {
-        print STDERR "\tUSED (with diff): $best\n";
+        print $errFH "\tUSED (with diff): $best\n";
         return $phenotype_cache{$mapped{$best}};
       }
     }
@@ -871,13 +889,13 @@ sub progress {
   return if defined($prev_prog) && $numblobs.'-'.$percent eq $prev_prog;
   $prev_prog = $numblobs.'-'.$percent;
 
-  printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
+  printf $logFH ("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
 
 # end progress bar
 sub end_progress {
   progress(1,1);
-  print "\n";
+  print $logFH "\n";
 }
 
 
@@ -919,10 +937,10 @@ sub save_phenotypes {
   if (exists($input_data->{'phenotypes'})) {
     @phenotypes = @{$input_data->{'phenotypes'}};
   }
-  print STDOUT "Got ".(scalar @phenotypes)." objects\n" if ($debug);
+  print $logFH "Got ".(scalar @phenotypes)." phenotype objects\n" if ($debug);
 
   # Get internal variation ids for the rsIds
-  print STDOUT "Retrieving internal variation IDs\n" if ($debug);
+  print $logFH "Retrieving internal variation IDs\n" if ($debug);
   if (scalar @ids == 0) {
     @ids = map {$_->{'id'}} @phenotypes;
   }
@@ -931,7 +949,7 @@ sub save_phenotypes {
   # Get coordinates of objects
   my $coords;
 
-  print STDOUT "Retrieving object coordinates\n" if ($debug);
+  print $logFH "Retrieving object coordinates\n" if ($debug);
 
   # might be able to copy them from data (QTLs and Genes)
   if(defined($phenotypes[0]->{seq_region_id})) {
@@ -960,11 +978,11 @@ sub save_phenotypes {
 
   # Get or add a source
   my $source_id = $self->get_or_add_source($source_info,$variation_dba);
-  print STDOUT "$source_info->{source} source_id is $source_id\n" if ($debug);
+  print $logFH "$source_info->{source_name} source_id is $source_id\n";
 
   # Add the synonyms if required
   unless ($skip_synonyms) {
-    print STDOUT "Adding synonyms\n" if ($debug);
+    print $logFH "Adding synonyms\n" if ($debug);
     add_synonyms(\%synonym,$variation_ids,$source_id,$variation_dba);
   }
 
@@ -972,25 +990,25 @@ sub save_phenotypes {
   unless ($skip_phenotypes) {
     die("ERROR: No phenotypes or objects retrieved from input\n") unless scalar @phenotypes;
 
-    print STDOUT "Adding phenotypes\n" if ($debug);
+    print $logFH "Adding phenotypes\n" if ($debug);
     $source_info->{source_id}=$source_id;
     my %data = (phenotypes => \@phenotypes, coords => $coords, 
                 variation_ids => $variation_ids, attrib_types=> \@attrib_types);
     add_phenotypes(\%data,$source_info,$variation_dba);
 
-    print STDOUT "$initial_phenotype_count initial phenotypes\n" if ($debug);
+    print $logFH "$initial_phenotype_count initial phenotypes\n" if ($debug);
     my $added_phenotypes = $phenotype_dba->generic_count - $initial_phenotype_count;
-    print STDOUT "$added_phenotypes new phenotypes added\n" if ($debug);
+    print $logFH "$added_phenotypes new phenotypes added\n" if ($debug);
   }
 
   # Add the variation sets if required
   unless ($skip_sets) {
     if (%synonym && !$skip_synonyms && $skip_phenotypes) {
-      print STDOUT "Adding variation sets for synonyms\n" if ($debug);
+      print $logFH "Adding variation sets for synonyms\n" if ($debug);
       add_set($set,$source_id,$variation_dba,'synonym');
     }
     elsif (@phenotypes && !$skip_phenotypes) {
-      print STDOUT "Adding variation sets for phenotypes\n" if ($debug);
+      print $logFH "Adding variation sets for phenotypes\n" if ($debug);
       add_set($set,$source_id,$variation_dba,'phenotype');
     }
   }
