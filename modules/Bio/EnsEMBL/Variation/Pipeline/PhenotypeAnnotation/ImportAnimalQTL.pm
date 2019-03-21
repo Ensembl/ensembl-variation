@@ -107,8 +107,8 @@ sub fetch_input {
   #create workdir folder
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
-  open ($logFH, ">", $workdir."/".'log_import_out_AnimalQTL_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_AnimalQTL_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -154,13 +154,18 @@ sub run {
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
-  print $logFH "Passing AnimalQTL import (".$self->required_param('species').") for checks\n" if $self->param('debug_mode');
-  close($logFH);
-  close($errFH);
+
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing AnimalQTL import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
