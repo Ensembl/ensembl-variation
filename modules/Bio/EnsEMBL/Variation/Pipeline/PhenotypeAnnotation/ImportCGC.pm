@@ -45,7 +45,6 @@ use File::Path qw(make_path);
 use File::Basename;
 use DateTime;
 use JSON;
-use Bio::EnsEMBL::Registry;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -79,7 +78,7 @@ sub fetch_input {
                     object_type => 'Gene',
                     #source_version  will be set based on the date in the file name (year/month-> yyyymm)
                     source_status => 'somatic',
-                    source_name => 'Cancer Gene Census',   #source name in the variation db
+                    source_name => 'Cancer Gene Census',     #source name in the variation db
                     source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
                     );
 

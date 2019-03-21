@@ -28,6 +28,14 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImprotDDG2P
+
+This module imports DDG2P (Developmental Disorders Genotype-to-Phenotype) data. The module fetched the data from
+EBI Gene2Phenotype project https://www.ebi.ac.uk/gene2phenotype/.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportDDG2P;
 
 use warnings;
@@ -37,57 +45,59 @@ use File::Path qw(make_path);
 use POSIX 'strftime';
 use IO::Uncompress::Gunzip qw(gunzip);
 use Text::CSV;
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
+  $core_dba    = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $debug        = $self->param('debug_mode');
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    my $dateStr = strftime "%Y%m%d", localtime;
+  %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
+                  source_url => 'http://decipher.sanger.ac.uk/',
+                  object_type => 'Gene',
+                  source_status => 'germline',
+                  source_name => 'DDG2P',       #source name in the variation db
+                  source_name_short => 'DDG2P', #source identifier in the pipeline
+                  source_version => strftime "%Y%m%d", localtime, # it is current month
+                  );
 
-    %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
-                    source_url => 'http://decipher.sanger.ac.uk/',
-                    object_type => 'Gene',
+  $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
+  make_path($workdir);
 
-                    source_name => 'DDG2P', #TODO: figure out where this is used
-                    source_version => $dateStr, # it is current month
-                    source_status => 'germline', #TODO: check statuses
-                    source => 'ddg2p',
-                    );
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    make_path($workdir);
+  #get input file DDG2P:
+  my $ddg2p_url = 'http://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
+  my $dateStrURL = strftime "%d_%m_%Y", localtime;
+  my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
 
-    #get input file DDG2P:
-    my $ddg2p_url = 'http://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
-    my $dateStrURL = strftime "%d_%m_%Y", localtime;
-    my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
+  print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
+  my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $ddg2p_url -o $workdir/$file_ddg2p_gz} unless -e $workdir."/".$file_ddg2p_gz ;
+  print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
 
-    print "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
-    my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $ddg2p_url -o $workdir/$file_ddg2p_gz} unless -e $workdir."/".$file_ddg2p_gz ;
-    warn "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
-    
-    my $file_ddg2p = "DDG2P.csv";
-    gunzip $workdir."/".$file_ddg2p_gz => $workdir."/".$file_ddg2p; 
-    $self->param('ddg2p_file', $file_ddg2p);
+  my $file_ddg2p = "DDG2P.csv";
+  gunzip $workdir."/".$file_ddg2p_gz => $workdir."/".$file_ddg2p;
+  $self->param('ddg2p_file', $file_ddg2p);
 }
 
 sub run {
@@ -95,17 +105,13 @@ sub run {
 
   my $file_ddg2p = $self->required_param('ddg2p_file');
 
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_ddg2p; #TODO: what is best error/out log naming convention?
-  open STDERR, ">>", $workdir."/".'log_import_err_'.$file_ddg2p;
-
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);
+  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = parse_ddg2p($workdir."/".$file_ddg2p, $core_dba);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
+  my $results = parse_ddg2p($file_ddg2p, $core_dba);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
@@ -115,13 +121,20 @@ sub run {
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing DDG2P import for checks\n" if $self->param('debug_mode');
 }
 
 # DDG2P specific phenotype parsing method
@@ -132,15 +145,18 @@ sub parse_ddg2p {
   my $ga = $core_dba->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor") unless defined($ga);
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+
   my @phenotypes;
   my $fh;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open $fh, "zcat $infile |" or die ("Could not open $infile for reading");
+    open $fh, "zcat $workdir/$infile |" or die ("Could not open $infile for reading");
   }
   else {
-    open($fh,'<',$infile) or die ("Could not open $infile for reading");
+    open($fh,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
   }
 
   my %headers;
@@ -177,8 +193,7 @@ sub parse_ddg2p {
       }
 
       if (scalar @$genes != 1) {
-        $DB::single = 1;
-        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
+        print $errFH1 "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
       }
 
       next unless scalar @$genes;
@@ -201,6 +216,7 @@ sub parse_ddg2p {
     }
   }
   close($fh);
+  close($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;

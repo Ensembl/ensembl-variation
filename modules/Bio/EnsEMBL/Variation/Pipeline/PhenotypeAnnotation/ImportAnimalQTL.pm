@@ -55,8 +55,6 @@ use File::stat;
 use POSIX 'strftime';
 use PerlIO::gzip;
 
-use Bio::EnsEMBL::Registry;
-
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
