@@ -9,14 +9,10 @@ This file contains the list of methods deprecated in the Ensembl Variation API. 
 ### Removed in Ensembl Release 99 (deprecated from Ensembl Release 95) ###
 - Bio::EnsEMBL::Variation::**VariationFeature**::*add_consequence_type()*
 - Bio::EnsEMBL::Variation::**VariationFeature**::*get_consequence_type()*
-- Bio::EnsEMBL::Variation::**StrainSlice**::*get_all_differences_Slice()*
-- Bio::EnsEMBL::Variation::**IndividualGenotype** *(whole module)*
-
 
 ### Removed in Ensembl Release 91 (deprecated from Ensembl Release 87) ###
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*array_to_bitval()*
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*bitval_to_array()*
-
 
 ### Removed in Ensembl Release 89 (deprecated from Ensembl Release 85) ###
 - Bio::EnsEMBL::Variation::DBSQL::**PopulationAdaptor**::*fetch_tagged_Population()*

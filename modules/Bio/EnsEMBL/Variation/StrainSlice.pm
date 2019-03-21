@@ -82,7 +82,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Mapper;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 
 our @ISA = ('Bio::EnsEMBL::Slice');
@@ -734,18 +734,6 @@ sub mapper {
     $self->{'mapper'} = $mapper;
   }
   return $self->{'mapper'};
-}
-
-=head2 get_all_differences_Slice
-
-    Description : DEPRECATED use get_all_AlleleFeatures instead
-   
-=cut
-
-sub get_all_differences_Slice {
-  my $self = shift;
-  deprecate('get_all_differences_Slice is deprecated and will be removed in e87. Please use get_all_AlleleFeatures_Slice instead');
-  return $self->get_all_AlleleFeatures_Slice(@_);
 }
 
 =head2 get_all_VariationFeatures

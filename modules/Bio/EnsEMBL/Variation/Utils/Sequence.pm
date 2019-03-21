@@ -61,7 +61,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Utils::Sequence;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array assert_ref);

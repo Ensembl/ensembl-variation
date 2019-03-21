@@ -413,12 +413,6 @@ sub _get_name_by_dbID {
   return $name;
 }
 
-sub _get_sample_name_by_dbID {
-    my $self = shift;
-    warn('The use od this method is deprecated. Use _get_name_by_dbID instead.')
-}
-
-
 #
 # private method, constructs Individuals from an executed statement handle
 # ordering of columns must be consistant
