@@ -114,7 +114,7 @@ sub insert_source {
   $data_types = 'variation';
   $sth->execute($source_id, $name, $description, $data_types);
 
-  # Insert the Archive dbSNP
+  # Insert the Archive dbSNP - dbsnp v1 merges
   $source_id = 2;
   $name = "Archive $dbname";
   $description = 'Former variants names imported from dbSNP';
@@ -125,6 +125,12 @@ sub insert_source {
   $source_id = 3;
   $name = "$dbname HGVS";
   $description = 'HGVS annotation from dbSNP';
+  $sth->execute($source_id, $name, $description, $data_types);
+
+  # Insert the Former dbSNP - dbsnp v2 merges 
+  $source_id = 4;
+  $name = "Former $dbname";
+  $description = 'Former dbSNP v2 names imported';
   $sth->execute($source_id, $name, $description, $data_types);
 }
 
@@ -284,4 +290,3 @@ sub get_db_info {
   $sth->execute();
   $sth->dump_results();
 }
-
