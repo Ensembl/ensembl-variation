@@ -1638,7 +1638,8 @@ CREATE TABLE source (
   somatic_status ENUM('germline','somatic','mixed') DEFAULT 'germline',
   data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
-	PRIMARY KEY ( source_id )
+	PRIMARY KEY ( source_id ),
+  UNIQUE KEY name_idx (name) 
 );
 
 
@@ -1829,6 +1830,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|move ancestral allele column to variation_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|add an unique index on the name column');
 
 /**
 @header  Failed tables
