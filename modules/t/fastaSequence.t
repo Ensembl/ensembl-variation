@@ -77,7 +77,7 @@ clear_fasta_cache();
 is($slice1->expand(5, 5)->invert->seq, $seq1, "expand single bp slice 5' and 3' and invert after cache clear");
 
 # test softmasked sequence fetching
-$db_masked = setup_fasta($fasta_masked);
+$db_masked = setup_fasta(-FASTA => $fasta_masked, -SYNONYMS => {foo => {99 => 1}});
 $slice1_masked = $sa->fetch_by_region('chromosome', 99, 7, 7);
 is($slice1_masked->seq, 'c', "single bp slice");
 is($slice1_masked->expand(0, 5)->seq, 'cgcgcg', "expand single bp slice 3'");
