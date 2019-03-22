@@ -230,3 +230,6 @@
 1030	\N	patch	patch_95_96_a.sql|schema_version
 1031	\N	patch	patch_96_97_a.sql|schema_version
 1032	\N	patch	patch_96_97_b.sql|biotype_so_term
+1033	\N	patch	patch_96_97_c.sql|rnaproduct_tables
+1034	\N	patch	patch_96_97_d.sql|add_object_type_rnaproduct
+1035	\N	patch	patch_96_97_e.sql|add_stable_id_event_type_rnaproduct
