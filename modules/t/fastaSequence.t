@@ -78,11 +78,12 @@ is($slice1->expand(5, 5)->invert->seq, $seq1, "expand single bp slice 5' and 3' 
 
 # test softmasked sequence fetching
 $db_masked = setup_fasta(-FASTA => $fasta_masked, -SYNONYMS => {foo => {21 => 1}});
-$slice1_masked = $sa->fetch_by_region('chromosome', 21, 7, 7);
-is($slice1_masked->seq, 'c', "single bp slice");
-is($slice1_masked->expand(0, 5)->seq, 'cgcgcg', "expand single bp slice 3'");
-is($slice1_masked->expand(5, 0)->seq, 'aaCGTc', "expand single bp slice 5'");
-is($slice1_masked->expand(5, 5)->seq, 'aaCGTcgcgcg', "expand single bp slice 5' and 3'");
+$slice1_masked = $sa->fetch_by_region('chromosome', 21, 67, 67);
+is($slice1_masked->seq(undef,undef,undef,1), 'c', "single bp slice");
+is($slice1_masked->expand(0, 5)->seq(undef,undef,undef,1), 'cgcgcg', "expand single bp slice 3'");
+is($slice1_masked->expand(5, 0)->seq(undef,undef,undef,1), 'aaCGTc', "expand single bp slice 5'");
+is($slice1_masked->expand(5, 5)->seq(undef,undef,undef,1), 'aaCGTcgcgcg', "expand single bp slice 5' and 3'");
+is($slice1_masked->expand(5, 5)->seq(), 'AACGTCGCGCG', "expand single bp slice 5' and 3'");
 
 # do same tests again, starting with reverse strand slice
 clear_fasta_cache();
