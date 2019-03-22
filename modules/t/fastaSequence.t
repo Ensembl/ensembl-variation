@@ -39,7 +39,7 @@ $fasta_masked =~ s/\.gz//;
 `gzip -dc $gz_fasta_masked > $fasta_masked` if(-e "$gz_fasta_masked");
 
 my ($db, $slice1, $slice2, $seq1, $seq2);
-my ($db_masked, $slice1_masked, $slice2_masked, $seq1_masked, $seq2_masked);
+my ($db_masked, $slice1_masked);
 
 $db = setup_fasta(-FASTA => $fasta);
 ok($db, "basic");
