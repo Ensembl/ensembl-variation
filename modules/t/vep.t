@@ -349,15 +349,6 @@ $config = copy_config($base_config, { gp => 1 });
 ok($vf && $vf->start == 25606454 && $vf->{chr} eq '21', "vcf format - gp");
 
 
-# pileup
-$config = copy_config($base_config);
-($vf) = grep {validate_vf($config, $_)} @{parse_line($config, 'chr21 25606454 G C')};
-ok($vf && $vf->allele_string eq 'G/C', "pileup format - parse_line");
-$cons = get_all_consequences($config, [$vf]);
-ok($cons && scalar @$cons == 3, "pileup format - consequences");
-
-# pileup indel
-
 # invalid format
 $config = copy_config($base_config);
 dies_ok { parse_line($config, 'a b') } "invalid format";
