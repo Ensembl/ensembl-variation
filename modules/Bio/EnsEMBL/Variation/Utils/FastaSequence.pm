@@ -358,7 +358,7 @@ sub _get_fasta_db {
 # sequence is cached in 1MB range around the current slice
 sub _new_slice_seq {
   return sub {
-    my ($self, $start, $end, $strand) = @_;
+    my ($self, $start, $end, $strand, $preserve_masking) = @_;
     my ($seq, $length) = ('', 0);
 
     $start = $start ? ($self->start + $start) - 1 : $self->start;
@@ -432,7 +432,7 @@ sub _new_slice_seq {
       if($start < $region_start) {
 
         # get missing sequence
-        my $missing_seq = $self->_raw_seq($sr_name, $start, $region_start - 1, $region_strand);
+        my $missing_seq = $self->_raw_seq($sr_name, $start, $region_start - 1, $region_strand, $preserve_masking);
 
         # reverse strand: append to current seq
         if($region_strand < 0) {
@@ -453,7 +453,7 @@ sub _new_slice_seq {
       if($end > $region_end) {
 
         # get missing sequence
-        my $missing_seq = $self->_raw_seq($sr_name, $region_end + 1, $end, $region_strand);
+        my $missing_seq = $self->_raw_seq($sr_name, $region_end + 1, $end, $region_strand, $preserve_masking);
 
         # reverse strand: prepend to current seq
         if($region_strand < 0) {
@@ -498,7 +498,7 @@ sub _new_slice_seq {
     if(!$seq) {
 
       # do raw fetch
-      $seq = $self->_raw_seq($sr_name, $start, $end, $strand);
+      $seq = $self->_raw_seq($sr_name, $start, $end, $strand, $preserve_masking);
 
       # prune the cache
       # do this before we add the new one to do one fewer greps
@@ -521,7 +521,7 @@ sub _new_slice_seq {
 # does the actual sequence fetch
 sub _raw_seq {
   return sub {
-    my ($self, $sr_name, $start, $end, $strand) = @_;
+    my ($self, $sr_name, $start, $end, $strand, $preserve_masking) = @_;
 
     # indels
     return "" if $start > $end;
@@ -632,13 +632,19 @@ sub _raw_seq {
     if($fasta_db->isa('Bio::DB::HTS::Faidx')) {
       my $location_string = $sr_name.":".$start."-".$end ;
       ($seq, $length) = $fasta_db->get_sequence($location_string);
-      $seq = uc($seq);
     }
     elsif($fasta_db->isa('Bio::DB::Fasta')) {
-      $seq = uc($fasta_db->seq($sr_name, $start => $end));
+      $seq = $fasta_db->seq($sr_name, $start => $end);
     }
     else {
       throw("ERROR: Don't know how to fetch sequence from a ".ref($fasta_db)."\n");
+    }
+
+    # If the preserve_masking flag has been passed in, we do not want to uc the sequence, as this would
+    # remove masking present in the flatfile. This allows avoidance of the querying the database for repeats
+    # via the API, which is very costly at scale
+    unless($preserve_masking) {
+      $seq = uc($seq);
     }
 
     reverse_comp(\$seq) if $seq && defined($strand) && $strand < 0;
