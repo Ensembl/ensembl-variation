@@ -14,9 +14,12 @@
 -- limitations under the License.
 
 
+ALTER TABLE variation_feature ADD COLUMN ancestral_allele varchar(50) DEFAULT NULL AFTER allele_string; 
+
+UPDATE variation_feature vf, variation v SET vf.ancestral_allele = v.ancestral_allele WHERE vf.variation_id = v.variation_id;
+
 ALTER TABLE variation DROP ancestral_allele;
 
-ALTER TABLE variation_feature ADD COLUMN ancestral_allele varchar(50) DEFAULT NULL AFTER allele_string; 
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|move ancestral allele column to variation_feature');
