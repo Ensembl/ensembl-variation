@@ -30,7 +30,7 @@ use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Slice;
 
 my $gz_fasta = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test.fa.gz";
-my $gz_fasta_masked = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test_masked.fa.gz";
+my $gz_fasta_masked = "$Bin\/testdata/test_masked.fa.gz";
 my $fasta = $gz_fasta;
 my $fasta_masked = $gz_fasta_masked;
 $fasta =~ s/\.gz//;
