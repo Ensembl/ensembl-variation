@@ -266,4 +266,8 @@ throws_ok { $va->store_synonyms($var) } qr/No source found for name turnip/, 'Th
 
 $var = $va->fetch_by_name('rs1267742856');
 ok(! defined $var->ancestral_allele, "No ancestral_allele if mappings have different ancestral allelels");
+
+$var = $va->fetch_by_name('rs191996219');
+ok(! defined $var->ancestral_allele, "No ancestral_allele returns undef");
+
 done_testing();
