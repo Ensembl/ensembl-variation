@@ -164,8 +164,8 @@ sub _return_3prime {
         
         if(($shifted_obj->{type} eq 'ins' && (length($whole_seq) != ((2 * ($shifted_obj->{shift_length} + 1))))) || ($shifted_obj->{type} eq 'del' && (length($whole_seq) != ((2 * ($shifted_obj->{shift_length} + 1)) + length($shifted_obj->{allele_string})))) )
         {
-          #This happens when an insertion/deletion gets too close to the transcript boundary and shifting in either direction at a transcript level becomes tricky. Need to tidy up 
-          $self->{shift_hash} = $shifted_obj; #CHANGE THIS AS IT NEEDS TO DO SOME SPECIAL TRANSCRIPT WIZARDRY
+          #This happens when an insertion/deletion gets too close to the transcript boundary and shifting in either direction at transcript level becomes tricky.
+          $self->{shift_hash} = $shifted_obj;
           return $self;
         }
         my $pre_substr = substr($whole_seq, 0 , 1 + $shifted_obj->{shift_length});
@@ -191,7 +191,7 @@ sub _return_3prime {
   my $end = $var_class eq 'insertion' ? $tv->cdna_start_unshifted : $tv->cdna_end_unshifted;
 
   ## Gets transcript sequence, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
-  ## Little bit of a magic number - should be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
+  ## Could be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
   my $area_to_search = 1000;
   
   ## Gets flanking sequences around the variant to test if shifting is possible
@@ -231,8 +231,7 @@ sub _return_3prime {
   my ($a, $b, $c, $d, $e);
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2); 
-  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = ($a, $b, $c, $d, $e);
+  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2); 
   
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, $type, $shift_length, $strand, 0);
@@ -382,7 +381,7 @@ sub _genomic_shift
   my ($slice_start, $slice_end, $var_start, $var_end) = ($slice_to_shrink->start, $slice_to_shrink->end, $vf->seq_region_start, $vf->seq_region_end );
   
   ## Gets chr slice, gets sequence +/- 1000bp from variant location, and checks how far it can shift.
-  ## Little bit of a magic number - should be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
+  ## Could be tidied up into a 'Shift 50 bases and if it's longer than that then take a larger slice'
   my $area_to_search = 1000;
   my $orig_start = $var_start;
   my $orig_end = $var_end;
@@ -395,7 +394,7 @@ sub _genomic_shift
   my $pre_seq = substr($seqs, 0, $area_to_search); 
   my $post_seq = substr($seqs, 0 - $area_to_search);
   
-  my $unshifted_allele_string = $self->allele_string;#$self->variation_feature->{allele_string};
+  my $unshifted_allele_string = $self->allele_string;
   my @allele_string = split('/', $unshifted_allele_string);
   @allele_string = split('/', $self->variation_feature->allele_string) if $self->is_reference;
   my $hgvs_output_string = $allele_string[1];
@@ -425,8 +424,7 @@ sub _genomic_shift
   my ($a, $b, $c, $d, $e);
   reverse_comp(\$seq_to_check) if $self->variation_feature->strand <0; 
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($a, $b, $c, $d, $e) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
-  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = ($a, $b, $c, $d, $e);
+  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
 }
