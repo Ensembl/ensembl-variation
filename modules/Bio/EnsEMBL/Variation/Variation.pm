@@ -820,7 +820,7 @@ sub ancestral_allele {
   if (!$self->{'ancestral_allele'}) {
     my %ancestral_alleles;
     foreach my $vf (@{$self->get_all_VariationFeatures}) {
-      $ancestral_alleles{$vf->ancestral_allele} = 1;
+      $ancestral_alleles{$vf->ancestral_allele} = 1 if (defined $vf->ancestral_allele);
     }
     if (scalar keys %ancestral_alleles == 1) {
       my ($aa) = keys %ancestral_alleles;
