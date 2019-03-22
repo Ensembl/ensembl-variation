@@ -387,8 +387,16 @@ sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
 
-    # HGVS: ENST00000285667.3:c.1047_1048insC
+    # SPDI: NC_000016.10:68684738:G:A
     if (
+      scalar @data == 1 &&
+      $data[0] =~ /^(.*?\:){2}([^\:]+|)$/i
+    ) {
+      return 'spdi';
+    }
+
+    # HGVS: ENST00000285667.3:c.1047_1048insC
+    elsif (
         scalar @data == 1 &&
         $data[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
     ) {
@@ -410,16 +418,6 @@ sub detect_format {
         $data[4] && $data[4] =~ /^([\.ACGTN\-\*]+\,?)+$|^(\<[\w]+\>)$/i
     ) {
         return 'vcf';
-    }
-
-    # pileup: chr1  60  T  A
-    elsif (
-        $data[0] =~ /(chr)?\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[2] =~ /^[\*ACGTN-]+$/i &&
-        $data[3] =~ /^[\*ACGTNRYSWKM\+\/-]+$/i
-    ) {
-        return 'pileup';
     }
 
     # ensembl: 20  14370  14370  A/G  +
