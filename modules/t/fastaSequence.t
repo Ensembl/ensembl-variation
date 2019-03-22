@@ -83,6 +83,8 @@ is($slice1_masked->seq(undef,undef,undef,1), 'c', "single bp slice");
 is($slice1_masked->expand(0, 5)->seq(undef,undef,undef,1), 'cgcgcg', "expand single bp slice 3'");
 is($slice1_masked->expand(5, 0)->seq(undef,undef,undef,1), 'aaCGTc', "expand single bp slice 5'");
 is($slice1_masked->expand(5, 5)->seq(undef,undef,undef,1), 'aaCGTcgcgcg', "expand single bp slice 5' and 3'");
+clear_fasta_cache();
+$slice1_masked = $sa->fetch_by_region('chromosome', 21, 67, 67);
 is($slice1_masked->expand(5, 5)->seq(), 'AACGTCGCGCG', "expand single bp slice 5' and 3'");
 
 # do same tests again, starting with reverse strand slice
