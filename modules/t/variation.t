@@ -241,6 +241,15 @@ my $var_cit = $variation_adaptor->fetch_by_name('rs7698608');
 my $pubs = $var_cit->get_all_Publications();
 ok($pubs->[0]->pmid == 22779046, 'get_all_Publications');
 
+# get all AlleleSynonyms
+my $var_as = $variation_adaptor->fetch_by_name('rs509556');
+my $allele_synonyms = $var_as->get_all_AlleleSynonyms();
+ok(@{$allele_synonyms} == 2, 'get_all_AlleleSynonyms - number');
+
+my @expected_as_names = ('CA13462540','CA475368754');
+my @as_names = map {$_->name()} @{$allele_synonyms};
+is_deeply(\@as_names, \@expected_as_names, 'get_all_AlleleSynonyms - name');
+
 ## Variation Feature ##
 
 my $var_name = 'rs142276873';

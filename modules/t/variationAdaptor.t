@@ -214,6 +214,43 @@ ok($var_list{$var7->[0]->name}, "var by VariationSet - 1");
 ok($var_list{$var7->[1]->name}, "var by VariationSet - 2");
 ok($var_list{$var7->[2]->name}, "var by VariationSet - 3");
 
+# test fetch all by AlleleSynonym name
+print "\n# Test - fetch_all_by_allele_synonym\n";
+throws_ok { $va->fetch_all_by_allele_synonym_name(); }
+           qr/name argument expected/,
+           'fetch_all_by_allele_synonym_name - Throw on missing name argument';
+
+my $as_name_1 = 'CA224064043';
+my @expected_var_names_1 = ('rs370045702','rs61393902');
+my $as_var_1 = $va->fetch_all_by_allele_synonym_name($as_name_1);
+ok(@{$as_var_1} == 2, 'fetch_all_by_allele_synonym_name - number');
+
+my @var_names_1 = map {$_->name()} @{$as_var_1};
+is_deeply(\@var_names_1, \@expected_var_names_1,
+   'fetch_all_by_allele_synonym_name - var name');
+
+# test fetch all by AlleleSynonyn name for failed Variant
+# Saving the incl fail status at start of test
+my $incl_failed = $va->db->include_failed_variations();
+$va->db->include_failed_variations(1);
+my $as_name_2 = 'CA74198116';
+my @expected_var_names_2 = ('rs9882584');
+my $as_var_2 = $va->fetch_all_by_allele_synonym_name($as_name_2);
+cmp_ok(@{$as_var_2}, '==', 1,
+  'fetch_all_by_allele_synonym_name incl failed variant - number');
+
+my @var_names_2 = map {$_->name()} @{$as_var_2};
+is_deeply(\@var_names_2, \@expected_var_names_2,
+   'fetch_all_by_allele_synonym_name incl failed variant - var name');
+
+$va->db->include_failed_variations(0);
+$as_var_2 = $va->fetch_all_by_allele_synonym_name($as_name_2);
+cmp_ok(@{$as_var_2}, '==', 0,
+     'fetch_all_by_allele_synonym_name excl failed variant  - number');
+
+# Restoring the incl fail status at end of test
+$va->db->include_failed_variations($incl_failed);
+
 # test load alleles
 print "\n# Test - load_alleles\n";
 $va->load_alleles(1);

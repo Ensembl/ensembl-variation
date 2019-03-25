@@ -72,6 +72,7 @@ sub get_available_adaptors{
     my %pairs = (
       'Allele'                                 => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
       'AlleleFeature'                          => 'Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor',
+      'AlleleSynonym'                          => 'Bio::EnsEMBL::Variation::DBSQL::AlleleSynonymAdaptor',
       'Attribute'                              => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
       'CADDAnnotation'                         => 'Bio::EnsEMBL::Variation::DBSQL::CADDAnnotationAdaptor',
       'GenotypeCode'                           => 'Bio::EnsEMBL::Variation::DBSQL::GenotypeCodeAdaptor',

@@ -1403,4 +1403,26 @@ sub update_attributes{
     }
 }
 
+=head2 get_all_AlleleSynonyms
+
+  Args       : none
+  Example    : my $allele_synonyms = $var->get_all_AlleleSynonyms()
+  Description: Getter for AlleleSynonyms for this Variation, returns empty list if
+               there are none.
+  Returntype : Arrayref of Bio::EnsEMBL::Variation::AlleleSynonym objects
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+=cut
+sub get_all_AlleleSynonyms {
+    my $self = shift;
+
+    #Assert the adaptor reference
+    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+
+    # Get the AlleleSynonyms from the database
+    return $self->adaptor->db->get_AlleleSynonymAdaptor()->fetch_all_by_Variation($self);
+
+}
+
 1;

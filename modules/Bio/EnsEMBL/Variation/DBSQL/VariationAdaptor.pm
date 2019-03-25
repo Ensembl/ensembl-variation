@@ -1365,6 +1365,47 @@ sub fetch_all_by_publication{
 
 }
 
+=head2 fetch_all_by_allele_synonym_name
+
+  Arg [1]    : string $name
+  Example    : $vars = $va->fetch_all_by_allele_synonym_name('CA75242691');
+  Description: Retrieves all variations for an allele synonym name
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw if name argument is not provided
+  Caller     : general, Variation
+  Status     : At Risk
+=cut
+
+sub fetch_all_by_allele_synonym_name {
+
+    my $self    = shift;
+    my $name    = shift;
+
+    throw('name argument expected') unless ($name);
+
+    my @var;
+    my $variation_id;
+
+    my $stmt = "SELECT  vas.variation_id
+                FROM allele_synonym vas JOIN  variation v
+                   ON vas.variation_id = v.variation_id
+                WHERE vas.name = ? ";
+
+    # Add the constraint for failed variations
+    $stmt .= " AND " .  $self->db->_exclude_failed_variations_constraint()
+        unless $self->db->include_failed_variations();
+
+    my $sth = $self->prepare($stmt);
+    $sth->execute($name);
+    $sth->bind_columns(\$variation_id);
+    while ($sth->fetch()){
+      push @var, $self->fetch_by_dbID($variation_id);
+    }
+    $sth->finish;
+    return \@var;
+}
+
+
 # Internal method
 # Fetches attributes
 sub _fetch_attribs_by_dbID {
