@@ -139,7 +139,7 @@ sub binding_matrix_stable_id {
   my $self = shift;
   $self->{binding_matrix_stable_id} = shift if(@_);
   unless ($self->{binding_matrix_stable_id}) {
-    $self->{binding_matrix_stable_id} = $self->motif_feature->binding_matrix->stable_id;
+    $self->{binding_matrix_stable_id} = $self->motif_feature->get_BindingMatrix->stable_id;
   }
   return $self->{binding_matrix_stable_id};
 }
