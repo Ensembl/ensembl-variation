@@ -267,13 +267,16 @@ sub print_line {
   my $t_name   = $type{$type_id}{'label'};
   my $examples = get_examples($type_id,$data);
 
-  my $so_desc;
+  my $so_desc = '';
   print STDERR "Class $so_term ... ";
   my $oterm = $odb->fetch_by_accession($so_acc);
   if ($oterm) {
     my $desc = $oterm->definition;
-    $desc =~ /"(.+)"/;
-    $so_desc = $1;
+    if ($desc =~ /^"/) {
+      $desc =~ s/"//g;
+    }
+    $so_desc = $desc;
+    warn "\nWARNING: Failed to get the SO term definition!\n" if ($so_desc eq '');
   }
   print STDERR "done\n";
   

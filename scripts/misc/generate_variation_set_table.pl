@@ -126,11 +126,11 @@ foreach my $hostname (@hostnames) {
   
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
-    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$db_version\_\d+$/i);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
-    $dbname =~ /^(.+)_variation/;
+    $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1;
     
     my $label_name = ucfirst($s_name);

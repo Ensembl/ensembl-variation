@@ -179,7 +179,7 @@ the <i>'Configure this page'</i> link on the left-hand side. The <i>'Variation'<
     </p>
 
     <div style="margin-bottom:20px">
-      <a href="../prediction/sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
+      <a href="../phenotype/sources_phenotype_documentation.html">See documentation for the detailed phenotype/disease/trait association sources &rarr;</a>
     </div>
 };
 
