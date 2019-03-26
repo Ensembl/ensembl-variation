@@ -133,8 +133,8 @@ sub feature {
 =cut
 
 sub cdna_start {
-    my ($self, $cdna_start, $toshift) = @_;
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my ($self, $cdna_start, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     
     $self->{cdna_start} = $cdna_start if defined $cdna_start;
     
@@ -164,8 +164,8 @@ sub cdna_start {
 =cut
 
 sub cdna_end {
-    my ($self, $cdna_end, $toshift) = @_;
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my ($self, $cdna_end, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     
     $self->{cdna_end} = $cdna_end if defined $cdna_end;
     
@@ -245,8 +245,8 @@ sub cdna_end_unshifted {
 =cut
 
 sub cds_start {
-    my ($self, $cds_start, $toshift) = @_;
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my ($self, $cds_start, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     $self->{cds_start} = $cds_start if defined $cds_start;
     
     unless (exists $self->{cds_start}) {
@@ -276,13 +276,12 @@ sub cds_start {
 =cut
 
 sub cds_end {
-    my ($self, $cds_end, $toshift) = @_;
-
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my ($self, $cds_end, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     $self->{cds_end} = $cds_end if defined $cds_end;
     
     # call cds_start to calculate the start and end
-    $self->cds_start(undef, $toshift) unless exists $self->{cds_end};
+    $self->cds_start(undef, $shifting_offset) unless exists $self->{cds_end};
     
     return $self->{cds_end};
 }
@@ -466,8 +465,8 @@ sub translation_end_unshifted {
 
 sub cdna_coords {
     my $self = shift;
-    my $toshift = shift;
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my $shifting_offset = shift;
+    $shifting_offset ||= 0;
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
@@ -492,8 +491,8 @@ sub cdna_coords {
 
 sub cds_coords {
     my $self = shift;
-    my $toshift = shift;
-    my $shifting_offset = defined($toshift) ? $toshift : 0;
+    my $shifting_offset = shift;
+    $shifting_offset ||= 0;
 
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
