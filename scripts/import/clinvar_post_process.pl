@@ -435,7 +435,7 @@ sub delete_pheno_less{
 
     my $dbh = shift;
 
-    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "not provided" ]);
+    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "ClinVar: phenotype not specified" ]);
     
     my $pheno_attrib_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature_attrib 
                                                    where  phenotype_feature_id in
