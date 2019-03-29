@@ -258,36 +258,47 @@ sub perform_shift {
   ## Performs the shifting calculation
   my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
   ## get length of pattern to check 
-  $reverse = 0 if ($reverse eq "");
   my $indel_length = (length $seq_to_check);
   my $shift_length = 0;
   
   ## Sets up the for loop, ensuring that the correct bases are compared depending on the strand
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
   $loop_limiter = length($post_seq) if $loop_limiter < 0;
+  
   for (my $n = $reverse; $n <= $loop_limiter; $n++ ){
     ## check each position in deletion/ following seq for match
-    my $check_next_del  = $reverse ? substr( $seq_to_check, length($seq_to_check) -1, 1) : substr( $seq_to_check, 0, 1);
-    my $check_next_pre = $reverse ? substr( $pre_seq, length($pre_seq) - $n, 1) : substr( $post_seq, $n, 1);;
-    my $hgvs_next_del  = $reverse ? substr( $hgvs_output_string, length($hgvs_output_string) -1, 1) : substr( $hgvs_output_string, 0, 1);;
+    my $check_next_del;
+    my $check_next_pre;
+    my $hgvs_next_del;
     
+    if ($reverse)
+    {
+      $check_next_del  = substr($seq_to_check, length($seq_to_check) -1, 1);
+      $check_next_pre = substr($pre_seq, length($pre_seq) - $n, 1);
+      $hgvs_next_del  = substr($hgvs_output_string, length($hgvs_output_string) -1, 1);
+    }
+    else{
+      $check_next_del  = substr($seq_to_check, 0, 1);
+      $check_next_pre = substr($post_seq, $n, 1);
+      $hgvs_next_del  = substr($hgvs_output_string, 0, 1);  
+    }
     if($check_next_del eq $check_next_pre){
       
       ## move position of deletion along
       $shift_length++;
       
-      ## modify deleted sequence - remove start & append to end
-      $seq_to_check = $reverse ? substr($seq_to_check, 0, length($seq_to_check) -1) : substr($seq_to_check,1);
-      $hgvs_output_string = $reverse ? substr($hgvs_output_string, 0, length($hgvs_output_string) -1) : substr($hgvs_output_string,1);
-      
       ## Reforms the sequences to check and the HGVS output strings for the next iteration
       if($reverse)
       {
+        $seq_to_check = substr($seq_to_check, 0, length($seq_to_check) -1);
+        $hgvs_output_string = substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
         $seq_to_check = $check_next_del . $seq_to_check;  
         $hgvs_output_string = $hgvs_next_del . $hgvs_output_string;
       }
       else
       {
+        $seq_to_check = substr($seq_to_check,1);
+        $hgvs_output_string = substr($hgvs_output_string,1);
         $seq_to_check .= $check_next_del;
         $hgvs_output_string .= $hgvs_next_del;
         $var_start++;
@@ -765,7 +776,7 @@ sub codon {
     }
    
     # try to calculate the codon sequence
-    $self->shift_feature_seqs;
+    $self->shift_feature_seqs unless $shifting_offset == 0;
     my $seq = $self->feature_seq;  
     $seq = '' if $seq eq '-';
     
@@ -774,15 +785,21 @@ sub codon {
     my $codon_cds_start = $tv_tr_start * 3 - 2;
     my $codon_cds_end   = $tv_tr_end * 3;
     my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-    delete($tv->{cds_end});
-    delete($tv->{cds_start});
-    delete($tv->{_cds_coords});
+    unless($shifting_offset == 0)
+    {
+      delete($tv->{cds_end});
+      delete($tv->{cds_start});
+      delete($tv->{_cds_coords});
+    }
     return $self->{codon} if !defined($tv->cds_end(undef, $tr->strand * $shifting_offset)) || !defined($tv->cds_start(undef, $tr->strand * $shifting_offset));
     my $vf_nt_len       = $tv->cds_end(undef, $tr->strand * $shifting_offset) - $tv->cds_start(undef, $tr->strand * $shifting_offset) + 1;
     my $allele_len      = $self->seq_length;
-    delete($tv->{cds_end});
-    delete($tv->{cds_start});
-    delete($tv->{_cds_coords});
+    unless($shifting_offset == 0)
+    {
+      delete($tv->{cds_end});
+      delete($tv->{cds_start});
+      delete($tv->{_cds_coords});
+    }
     my $cds;
     if ($allele_len != $vf_nt_len) {
       if (abs($allele_len - $vf_nt_len) % 3) {
@@ -1361,6 +1378,7 @@ sub hgvs_transcript {
 
   my $misalignment_offset = 0;
   $misalignment_offset = $self->get_misalignment_offset(@edit_attrs) if (scalar(@edit_attrs) && substr($tr->stable_id, 0,3) eq 'NM_');
+
   $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
   $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
 

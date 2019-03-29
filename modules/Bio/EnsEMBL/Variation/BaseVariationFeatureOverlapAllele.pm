@@ -258,12 +258,14 @@ sub get_all_OverlapConsequences {
     my $feat = $bvfo->feature;
 
     my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
-
+    
+    my @oc_list = @{$self->_get_oc_list($pre)};
+    my $tr = $self->transcript if defined($self->{shift_hash});
     # loop over all the consequences determined for this pre hash
-    OC: for my $oc (@{$self->_get_oc_list($pre)}) {
+    OC: for my $oc (@oc_list) {
 
       last if $assigned_tier && $oc->{tier} > $assigned_tier;
-      my $shifting_offset = defined($self->{shift_hash}) ? $self->{shift_hash}->{shift_length} * $self->transcript->strand : 0;
+      my $shifting_offset = defined($self->{shift_hash}) ? $self->{shift_hash}->{shift_length} * $tr->strand : 0;
             
       $bvf->{start} += $shifting_offset;
       $bvf->{end} += $shifting_offset;
