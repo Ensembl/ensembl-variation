@@ -1379,9 +1379,14 @@ sub hgvs_transcript {
   my $misalignment_offset = 0;
   $misalignment_offset = $self->get_misalignment_offset(@edit_attrs) if (scalar(@edit_attrs) && substr($tr->stable_id, 0,3) eq 'NM_');
 
-  $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
-  $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
-
+  if ($vf->var_class eq 'SNP' && defined($tv->cds_start) && defined($tv->cds_end)) {
+    $hgvs_notation->{start} = $tv->cds_start + $misalignment_offset;
+    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $tv->cds_end + $misalignment_offset;
+  }
+  else{
+    $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
+    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
+  }
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 
   # Make sure that start is always less than end
