@@ -790,4 +790,13 @@ my $vf_3 = $vf_adaptor->fetch_by_hgvs_notation( "ENST00000293261.2(TMEM143):c.13
 my $hgvs_genomic_3 = $vf_3->hgvs_genomic();  
 ok( $hgvs_genomic_3->{'-'} eq 'NC_000019.9:g.48836478_48836480del', "hgvs genomic notation with (gene) and (p.)"); 
 
+# Test hgvs inversions 
+ my $vf_4 = $vf_adaptor->fetch_by_hgvs_notation( "ENST00000522587.6:c.-101-7012_-101-7011inv" );
+ my $hgvs_inv_4 = $vf_4->hgvs_genomic();  
+ ok( $hgvs_inv_4->{'CA'} eq 'NC_000002.11:g.46746962_46746963inv', "hgvs inversion");  
+
+ my $vf_5 = $vf_adaptor->fetch_by_hgvs_notation( "ENST00000306448.4:c.-981_-980inv" );
+ my $hgvs_inv_5 = $vf_5->hgvs_genomic();  
+ ok( $hgvs_inv_5->{'CA'} eq 'NC_000002.11:g.46746962_46746963inv', "hgvs inversion");
+
 done_testing(); 
