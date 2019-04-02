@@ -68,7 +68,6 @@ sub run {
 
   while(my @row = $runTime_imports_sth->fetchrow_array()) {
     print $report join("\t", @row)."\n";
-    print "here\n";
   }
 
   close $report;
