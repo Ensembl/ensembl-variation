@@ -28,90 +28,85 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImprotEGA
+
+This module imports EGA (European Genome-phenome Archive) data.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportEGA;
 
 use warnings;
 use strict;
 
 use File::Path qw(make_path);
-use LWP::Simple;
 use POSIX 'strftime';
+use LWP::Simple;
 use DBI qw(:sql_types);
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS NONE);
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
-
-my $pubmed_prefix = 'PMID:';
 my $dbh;
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
-    my $conf_file    = $self->required_param('ega_database_conf');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
+  my $conf_file    = $self->required_param('ega_database_conf');
 
+  $core_dba    = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    $debug        = $self->param('debug_mode');
+  %source_info = (source_description => 'Variants imported from the European Genome-phenome Archive with phenotype association',
+                  source_url => 'https://www.ebi.ac.uk/ega/',
+                  object_type => 'Variation',
+                  source_status => 'germline',
+                  source_name => 'EGA',        #source name in the variation db
+                  source_name_short => 'EGA',  #source identifier in the pipeline
+                  );
+  $source_info{source_version} = strftime "%Y%m", localtime; # it is current month
 
-    #TODO: 
-    # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
-    #-source nhgri -infile ${datadir}/gwascatalog.txt -verbose -version 20121031
+  $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
+  make_path($workdir);
+  my $file_ega = "ega.studies.csv";
 
-    my $dateStr = strftime "%Y%m", localtime;
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-    %source_info = (source_description => 'Variants imported from the European Genome-phenome Archive with phenotype association',
-                    source_url => 'https://www.ebi.ac.uk/ega/',
-                    object_type => 'Variation',
+  #parse database connection details:
+  my %database_conf;
+  open(CONF,'<',$conf_file) or die ("Could not open $conf_file for reading\n");
+  while (<CONF>) {
+      chomp;                  # no newline
+      s/#.*//;                # no comments
+      s/^\s+//;               # no leading white
+      s/\s+$//;               # no trailing white
+      next unless length;     # anything left?
+      my ($var, $value) = split(/\s*=\s*/, $_, 2);
+      $database_conf{$var} = $value;
+  }
 
-                    source_name => 'EGA', #TODO: figure out where this is used
-                    source_version => $dateStr, # it is current month
-                    source_status => 'germline',
-                    source => 'ega',
-                    );
+  my $dsn = "dbi:mysql:$database_conf{DATABASE}:$database_conf{HOST}:$database_conf{PORT}";
+  $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
+  get_ega_file($file_ega) unless -e $workdir."/".$file_ega;
 
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    make_path($workdir);
-    my $file_ega = "ega.studies.csv";
-
-    #parse database connection details:
-    my %database_conf;
-    open(CONF,'<',$conf_file) or die ("Could not open $conf_file for reading");
-    while (<CONF>) {
-        chomp;                  # no newline
-        s/#.*//;                # no comments
-        s/^\s+//;               # no leading white
-        s/\s+$//;               # no trailing white
-        next unless length;     # anything left?
-        my ($var, $value) = split(/\s*=\s*/, $_, 2);
-        $database_conf{$var} = $value;
-    }
-
-    #get input file EGA:
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
-    open STDERR, ">", $workdir."/".'log_import_err_'.$file_ega;
-    my $dsn = "dbi:mysql:$database_conf{DATABASE}:$database_conf{HOST}:$database_conf{PORT}";
-    $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
-    get_ega_file($workdir."/".$file_ega) unless -e $workdir."/".$file_ega;
-
-    print "Found files (".$workdir."/".$file_ega."), will skip new fetch\n" if -e $workdir."/".$file_ega;
-    $self->param('ega_file', $file_ega);
+  print $logFH "Found files (".$workdir."/".$file_ega."), will skip new fetch\n" if -e $workdir."/".$file_ega;
+  $self->param('ega_file', $file_ega);
 }
 
 sub run {
@@ -119,31 +114,33 @@ sub run {
 
   my $file_ega = $self->required_param('ega_file');
 
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_ega; #TODO: what is best error/out log naming convention?
-  open STDERR, ">>", $workdir."/".'log_import_err_'.$file_ega;
-
  #TODO: Q: where does EGA get the data_type study in source table from?
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);
+  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = parse_ega($workdir."/".$file_ega, $source_id);
-  print "Got ".(scalar @{$results->{'studies'}})." new studies \n" if $debug ;
+  my $results = $self->parse_ega($file_ega, $source_id);
+  print $logFH "Got ".(scalar @{$results->{'studies'}})." new studies \n" if $debug ;
 
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing EGA import for checks\n" if $self->param('debug_mode');
 }
 
 
@@ -151,14 +148,17 @@ sub write_output {
 sub get_ega_file {
   my $outfile = shift;
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$outfile) ;
+
   my $studies = get_all_study_stable_ids();
-  open (FILE, ">".$outfile);
+  open (FILE, ">".$workdir."/".$outfile);
 
   foreach my $stable_id (sort {$a cmp $b } @$studies) {
     my $study_id = get_study_id($stable_id);
     my $pmid = get_publication($study_id);
     if (!$pmid) {
-      warn "Cannot find a publication for $stable_id\n";
+      print $errFH1 "WARNING: Cannot find a publication for $stable_id\n";
       next;
     }
     #TODO: can I replace it with source_url:http://www.ebi.ac.uk/ega/ OR does it matter the https/ http?
@@ -168,6 +168,7 @@ sub get_ega_file {
   }
 
   close (FILE);
+  close ($errFH1);
 }
 
 sub get_all_study_stable_ids {
@@ -222,9 +223,11 @@ sub get_publication {
 
 # EGA specific phenotype parsing method
 sub parse_ega {
-  my $infile = shift;
-  my $source_id = shift;
-  
+  my ($self, $infile, $source_id) = @_;
+
+  my $errFH2;
+  open ($errFH2, ">", $workdir."/".'log_import_err_parse_'.$infile) ;
+
   my $study_check_stmt = qq{
     SELECT
       study_id
@@ -276,16 +279,16 @@ sub parse_ega {
       associate_study (study1_id,study2_id)
     VALUES (?,?)
   };
-  
+
   my $nhgri_check_sth = $variation_dba->dbc->prepare($nhgri_check_stmt);
   my $study_check_sth = $variation_dba->dbc->prepare($study_check_stmt);
   my $study_ins_sth   = $variation_dba->dbc->prepare($study_ins_stmt);
   my $asso_study_check_sth = $variation_dba->dbc->prepare($asso_study_check_stmt);
   my $asso_study_ins_sth   = $variation_dba->dbc->prepare($asso_study_ins_stmt);
-  
+
   # Open the input file for reading
-  open(IN,'<',$infile) or die ("Could not open $infile for reading");
-  
+  open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+
   # Read through the file and parse out the desired fields
   my @new_studies;
   while (<IN>) {
@@ -293,9 +296,9 @@ sub parse_ega {
     my @attributes = split(",",$_);
     next if ($attributes[1] eq '');
     my $name = $attributes[0];
-    my $pubmed = $pubmed_prefix.$attributes[1];
+    my $pubmed = $self->get_pubmed_prefix().$attributes[1];
     my $url = $attributes[2];
-    
+
     # NHGRI study
     my $nhgri_study_id;
     my $study_type;
@@ -303,12 +306,12 @@ sub parse_ega {
     $nhgri_check_sth->execute();
     $nhgri_check_sth->bind_columns(\$nhgri_study_id,\$study_type);
     $nhgri_check_sth->fetch();
-    
+
     if (!defined($nhgri_study_id)) {
-      warn "No NHGRI-EBI study found for the EGA $name | $pubmed !\n";
+      print $errFH2 "No NHGRI-EBI study found for the EGA $name | $pubmed !\n";
       next;
     }
-    
+
     # EGA study
     my $study_id;
     $study_check_sth->bind_param(1,$name,SQL_VARCHAR);
@@ -339,6 +342,7 @@ sub parse_ega {
     }
   }
   close(IN);
+  close($errFH2);
 
   my %result = ('studies' => \@new_studies);
   return \%result;

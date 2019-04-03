@@ -286,7 +286,7 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'finish_pipeline']
+                1 => [ 'check_phenotypes']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },

@@ -51,7 +51,6 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 my %source_info;
 my $workdir;
 my ($logFH, $errFH);
-my %special_characters;
 
 my $core_dba;
 my $variation_dba;
