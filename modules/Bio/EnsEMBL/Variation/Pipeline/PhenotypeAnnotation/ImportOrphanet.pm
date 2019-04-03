@@ -80,7 +80,6 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'Orphanet',        #source name in the variation db
                   source_name_short => 'Orphanet',  #source identifier in the pipeline
-                #  source => 'orphanet', TODO: remove
                 #  source_version is set based on record contained in file
                   );
 

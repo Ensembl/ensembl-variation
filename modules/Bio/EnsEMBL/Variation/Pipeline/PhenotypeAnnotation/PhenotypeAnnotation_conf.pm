@@ -112,8 +112,6 @@ sub default_options {
 
         zfin_version            => '20001020', #13 Sep 2018 #TODO: confirm there is no computational way to get it
 
-        nhgri_version           => '20001020', #TODO: confirm there is no computational way to get it
-
         omia_version            => '20001020', #TODO: confirm there is no computational way to get it
 
         ega_database_conf       => $self->o('pipeline_dir').'/ega_database.conf',
@@ -134,11 +132,11 @@ sub default_options {
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
 
-        # Should hive use triggeres?
+        # Should hive use triggeres? TODO: what is the answer?
         hive_use_triggers       => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
-        # <username>_<pipeline_name>, and will drop any existing database with this
+        # <username>_<pipeline_name>_<ensembl_release>, and will drop any existing database with this
         # name
 
         hive_db_host    => 'mysql-ens-var-prod-1',
@@ -252,7 +250,6 @@ sub pipeline_analyses {
         {   -logic_name => 'import_gwas',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGWAS',
             -parameters => {
-                nhgri_version => $self->o('nhgri_version'),
                 @common_params,
             },
             -input_ids      => [],
@@ -429,7 +426,7 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_name    => 'default',
-        #    -wait_for       => [ 'finish_phenotype_annotation' ],
+        #    -wait_for       => [ 'finish_phenotype_annotation' ], TODO: do I need this?
             -flow_into      => {},
             -failed_job_tolerance => 0,
             -max_retry_count => 0,

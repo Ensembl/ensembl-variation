@@ -28,75 +28,104 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImportGWAS
+
+This module imports NHGRI-EBI GWAS catalog data. The module fetches the data from
+the API hosted at EBI: http://www.ebi.ac.uk/gwas/.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGWAS;
 
 use warnings;
 use strict;
 
 use File::Path qw(make_path);
-use LWP::Simple;
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS NONE);
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
+use File::stat;
+use File::Basename;
+use POSIX 'strftime';
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
-#TODO: should contain everything about RGD, including getting the file(s) and for all RGD species
-
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+my %special_characters;
+
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
-
-my $pubmed_prefix = 'PMID:';
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
+  $core_dba    = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $debug        = $self->param('debug_mode');
+  $debug        = $self->param('debug_mode');
 
-    #TODO: 
-    # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
-    #-source nhgri -infile ${datadir}/gwascatalog.txt -verbose -version 20121031
+  my $gwas_url = 'http://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 
-    my $gwas_url = 'http://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
+  %source_info = (source_description => 'Variants associated with phenotype data from the NHGRI-EBI GWAS catalog',
+                  source_url => 'http://www.ebi.ac.uk/gwas/',
+                  object_type => 'Variation',
+                  source_status => 'germline',
+                  set => 'ph_nhgri',
+                  source_name       => 'NHGRI-EBI GWAS catalog', #source name in the variation db
+                  source_name_short => 'GWAS',                   #source identifier in the pipeline
+                # source_version is set based on file name
+                  );
 
-    %source_info = (source_description => 'Variants associated with phenotype data from the NHGRI-EBI GWAS catalog',
-                    source_url => 'http://www.ebi.ac.uk/gwas/',
-                    object_type => 'Variation',
-                    set => 'ph_nhgri',
 
-                    source_name_use => 'GWAS',
-                    source_name => 'NHGRI-EBI GWAS catalog', #TODO: figure out where this is used
-                    source_version => $self->required_param('nhgri_version'), #TODO: figure out how to get the original file_name and get : 'Date on the file name'
+  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  make_path($workdir);
 
-                    source => 'nhgri',
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-                    #  object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type ones
-                  #  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                  #  source_status => 'germline',
-                  #  threshold => $self->required_param('threshold_qtl'),
-                    );
+  #get input files:
+  my $file_gwas;
 
-    $workdir = $pipeline_dir."/".$source_info{source_name_use}."/".$species;
-    my $file_gwas = 'gwas_catalog_v1.0.2-associations.txt';
+  # first look if one already was downloaded, if not then fetch latest
+  my @files = glob($workdir. '/gwas_catalog_v*-associations_e*_r*\.tsv' );
+  my ($latestFile, $latestFileTime);
+  foreach my $f (@files){
+    if (defined $latestFile) {
+      my $fileTime = strftime "%Y%m%d", localtime(stat($f)->mtime); #get file date
+      if ($fileTime > $latestFileTime) {
+        $latestFile = $f; $latestFileTime = $fileTime;
+      }
+    } else {
+      $latestFile = $f;
+      $latestFileTime = strftime "%Y%m%d", localtime(stat($latestFile)->mtime);
+    }
+  }
+  if (defined $latestFile) {
+    $file_gwas = basename($latestFile);
+    print $logFH "Found file (".$workdir."/".$file_gwas.") and will skip new fetch\n";
+  } else {
+    chdir $workdir;
+    my $redirInfo=`curl -w '%{redirect_url}' -JLO $gwas_url `;
+    my @tmp = split(/'/, $redirInfo);
+    $file_gwas = $tmp[1];
+    print $logFH "Fetched new file : $file_gwas\n";
+  }
 
-    #get input files RGD eQTL, GENE:
-    make_path($workdir);
-    getstore($gwas_url, $workdir."/".$file_gwas) unless -e $workdir."/".$file_gwas;
-    print "Found files (".$workdir."/".$file_gwas.") and will skip new fetch\n" if -e $workdir."/".$file_gwas;
-    $self->param('gwas_file', $file_gwas);
+  #parse date from file name
+  if ($file_gwas  =~ m/gwas_catalog_v.*-associations_e.*_r(.*)\.tsv/){
+    $source_info{source_version} = $1;
+    $source_info{source_version} =~ s/-//g;
+  } else {
+    print $errFH "WARNING: could not parse version from file : $file_gwas\n";
+  }
+  $self->param('gwas_file', $file_gwas);
 }
 
 sub run {
@@ -104,45 +133,50 @@ sub run {
 
   my $gwas_file = $self->required_param('gwas_file');
 
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">", $workdir."/".'log_import_out_'.$gwas_file; #TODO: what is best error/out log naming convention?
-  open STDERR, ">", $workdir."/".'log_import_err_'.$gwas_file;
-
   # get phenotype data
-  my $results = parse_nhgri($workdir."/".$gwas_file);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  my $results = $self->parse_nhgri($gwas_file);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
 
-  my %param_source = (source_name => $source_info{source_name_use},
+  my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing NHGRI-EBI GWAS import for checks\n" if $self->param('debug_mode');
 }
 
 
 # NHGRI-EBI GWAS specific phenotype parsing method
 sub parse_nhgri {
-  my $infile = shift;
+  my ($self, $infile) = @_;
 
   my %headers;
   my @phenotypes;
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $infile for reading");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
   }
 
   # Read through the file and parse out the desired fields
@@ -233,10 +267,10 @@ sub parse_nhgri {
         push(@ids,$1);
       }
       $data{'variation_names'} = join(',',@ids);
-      $data{'study'} = $pubmed_prefix . $pubmed_id if (defined($pubmed_id));
+      $data{'study'} = $self->get_pubmed_prefix() . $pubmed_id if (defined($pubmed_id));
 
       # If we didn't get any rsIds, skip this row (this will also get rid of the header)
-      warn("Could not parse any rsIds from string '$rs_id'\n") if (!scalar(@ids));
+      print $errFH1 "WARNING: Could not parse any rsIds from string '$rs_id'\n" if (!scalar(@ids));
       next if (!scalar(@ids));
 
       map {
@@ -247,6 +281,7 @@ sub parse_nhgri {
     }
   }
   close(IN);
+  close($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
 
