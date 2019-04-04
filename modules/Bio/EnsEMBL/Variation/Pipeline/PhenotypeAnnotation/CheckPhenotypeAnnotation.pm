@@ -77,7 +77,7 @@ sub write_output {
 
   if ($self->param('debug_mode')) {
     open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing $source->{source_name} import for summary counts (finish_phenotype_annotation)\n";
+    print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
     close ($logPipeFH);
   }
   $self->dataflow_output_id($self->param('output_ids'), 1);

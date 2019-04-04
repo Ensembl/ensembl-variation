@@ -65,12 +65,13 @@ my ($logFH, $errFH);
 
 my $prev_prog;
 
-my $skip_synonyms = 0; # 1 for IMPC, MGI
+my $skip_synonyms = 0;   # 1 for IMPC, MGI
 my $skip_phenotypes = 0; #TODO: take it out or keep it for legacy ? was 1 for uniprot
 my $skip_sets = 0; #TODO: when needed? this is never set in the script BUT is input param to script
 
 
 sub set_skip_synonyms {
+  my $self = shift;
   $skip_synonyms = shift;
 }
 
@@ -84,7 +85,6 @@ sub get_pubmed_prefix {
 
 sub set_debug {
   my $self = shift;
-
   $debug = shift;
 }
 

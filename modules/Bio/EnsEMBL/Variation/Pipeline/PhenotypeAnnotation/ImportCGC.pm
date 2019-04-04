@@ -54,83 +54,81 @@ my ($logFH, $errFH);
 
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
 my $ontology_dba;
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor;
-    $ontology_dba = $self->get_adaptor('multi', 'ontology');
+  $core_dba    = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
+  $ontology_dba = $self->get_adaptor('multi', 'ontology');
 
-    $debug        = $self->param('debug_mode');
-    $self->SUPER::set_debug($self->param('debug_mode'));
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
-                    source_url => 'http://cancer.sanger.ac.uk/census',
-                    object_type => 'Gene',
-                    #source_version  will be set based on the date in the file name (year/month-> yyyymm)
-                    source_status => 'somatic',
-                    source_name => 'Cancer Gene Census',     #source name in the variation db
-                    source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
-                    );
+  %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
+                  source_url => 'http://cancer.sanger.ac.uk/census',
+                  object_type => 'Gene',
+                  #source_version  will be set based on the date in the file name (year/month-> yyyymm)
+                  source_status => 'somatic',
+                  source_name => 'Cancer Gene Census',     #source name in the variation db
+                  source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
+                  );
 
-    $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-    make_path($workdir);
-    my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
-    # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
+  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  make_path($workdir);
+  my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
+  # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
 
-    open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-    open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
-    $self->SUPER::set_logFH($logFH);
-    $self->SUPER::set_errFH($errFH);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-    #get input file CGC via OpenTargets, get latest published file:
-    my $dt = DateTime->now;
-    my $year = sprintf("%02d", $dt->year % 100);
-    my $month = sprintf ("%02d",$dt->month);
-    my $cgc_ftp_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
+  #get input file CGC via OpenTargets, get latest published file:
+  my $dt = DateTime->now;
+  my $year = sprintf("%02d", $dt->year % 100);
+  my $month = sprintf ("%02d",$dt->month);
+  my $cgc_ftp_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
 
-    my $file_opent = basename($cgc_ftp_url); #OpenTargets file
-    print $logFH "Found files (".$workdir."/".$file_opent."), will skip new fetch\n" if -e $workdir."/".$file_opent;
-    my $found = (-e $workdir."/".$file_opent ? 1: 0);
+  my $file_opent = basename($cgc_ftp_url); #OpenTargets file
+  print $logFH "Found files (".$workdir."/".$file_opent."), will skip new fetch\n" if -e $workdir."/".$file_opent;
+  my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
-    while (!$found){
-      if ($month == 01){ $month =12; $year = $year-1;}
-      else { $month = $month -1;}
-      $month = sprintf ("%02d",$month);
-      my $cgc_check_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
-      $file_opent = basename($cgc_check_url);
+  while (!$found){
+    if ($month == 01){ $month =12; $year = $year-1;}
+    else { $month = $month -1;}
+    $month = sprintf ("%02d",$month);
+    my $cgc_check_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
+    $file_opent = basename($cgc_check_url);
 
-      if (-e $workdir."/".$file_opent){
-        $found = 1;
-        print $logFH "INFO: Found $file_opent, will skip new fetch.\n";
-        next;
-      }
-
-      my $resHTTPcode = qx{curl -w %{http_code} -X GET $cgc_check_url -o '$workdir/$file_opent'};
-      if ($resHTTPcode == 404){ #Not Found
-        unlink($workdir."/".$file_opent) if -e $workdir."/".$file_opent;
-        print $errFH "WARNING: No OpenTarget file found for current month ($file_opent), will check past month.\n";
-      } elsif ($resHTTPcode == 200){ #Successful
-        print $errFH "HTTP code 200 (successful) but file ($file_opent) is missing \n" unless -e $workdir."/".$file_opent;
-      }
-      if (-e $workdir."/".$file_opent) { $found = 1;}
+    if (-e $workdir."/".$file_opent){
+      $found = 1;
+      print $logFH "INFO: Found $file_opent, will skip new fetch.\n";
+      next;
     }
-    # get only Cancer Gene Census files
-    $source_info{source_version} = "20$year$month";
-    my $file_cgc_json = "open_targets_20$year-$month.json";
-    print $logFH "Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
-    `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
 
-    $self->param('cgc_file', $file_cgc_json);
+    my $resHTTPcode = qx{curl -w %{http_code} -X GET $cgc_check_url -o '$workdir/$file_opent'};
+    if ($resHTTPcode == 404){ #Not Found
+      unlink($workdir."/".$file_opent) if -e $workdir."/".$file_opent;
+      print $errFH "WARNING: No OpenTarget file found for current month ($file_opent), will check past month.\n";
+    } elsif ($resHTTPcode == 200){ #Successful
+      print $errFH "HTTP code 200 (successful) but file ($file_opent) is missing \n" unless -e $workdir."/".$file_opent;
+    }
+    if (-e $workdir."/".$file_opent) { $found = 1;}
+  }
+  # get only Cancer Gene Census files
+  $source_info{source_version} = "20$year$month";
+  my $file_cgc_json = "open_targets_20$year-$month.json";
+  print $logFH "Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
+  `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
+
+  $self->param('cgc_file', $file_cgc_json);
 }
 
 sub run {
