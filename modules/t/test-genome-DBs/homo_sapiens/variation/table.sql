@@ -28,7 +28,7 @@ CREATE TABLE `allele_synonym` (
   PRIMARY KEY (`allele_synonym_id`),
   UNIQUE KEY `variation_name_idx` (`variation_id`,`name`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM ;
+) ENGINE=MyISAM  ;
 
 CREATE TABLE `associate_study` (
   `study1_id` int(10) unsigned NOT NULL,

@@ -369,3 +369,8 @@
 441	509	EFO partial
 442	509	Manual
 443	0	
+609	12	cadd
+605	12	dbnsfp_cadd
+606	12	dbnsfp_meta_lr
+607	12	dbnsfp_mutation_assessor
+608	12	dbnsfp_revel
