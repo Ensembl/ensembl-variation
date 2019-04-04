@@ -114,7 +114,6 @@ sub run {
 
   my $file_ega = $self->required_param('ega_file');
 
- #TODO: Q: where does EGA get the data_type study in source table from?
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
   print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
@@ -161,8 +160,6 @@ sub get_ega_file {
       print $errFH1 "WARNING: Cannot find a publication for $stable_id\n";
       next;
     }
-    #TODO: can I replace it with source_url:http://www.ebi.ac.uk/ega/ OR does it matter the https/ http?
-  #  my $url = "https://www.ebi.ac.uk/ega/studies/".$stable_id;
 
     print FILE "$stable_id,$pmid,$source_info{source_url}studies/$stable_id\n";
   }
