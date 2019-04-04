@@ -75,9 +75,16 @@ ok( $trv->affects_peptide() eq '1',                          "affects_peptide");
 ok( $trv->hgvs_transcript()->{'G'} eq  'ENST00000470094.1:c.16C>G', "hgvs c");
 ok( $trv->hgvs_protein()->{'G'}    eq  'ENSP00000434898.1:p.Ser6Cys', "hgvs p");
 my $tvas = $trv->get_all_alternate_TranscriptVariationAlleles();
-
-ok( $tvas->[0]->sift_prediction eq 'deleterious',            "sift prediction");
-
+my $tva = $tvas->[0];
+ok( $tva->sift_prediction eq 'deleterious',            "sift prediction");
+ok($tva->dbnsfp_meta_lr_prediction eq 'tolerated', "dbnsfp meta_lr prediction");
+ok($tva->dbnsfp_meta_lr_score == 0.459, "dbnsfp meta_lr score");
+ok($tva->dbnsfp_mutation_assessor_prediction eq 'medium', "dbnsfp mutation_assessor prediction");
+ok($tva->dbnsfp_mutation_assessor_score == 0.767, "dbnsfp mutation_assessor score");
+ok($tva->dbnsfp_revel_prediction eq 'likely benign', "dbnsfp revel prediction");
+ok($tva->dbnsfp_revel_score == 0.315, "dbnsfp revel score");
+ok($tva->cadd_prediction eq 'likely benign', "cadd prediction");
+ok($tva->cadd_score == 23, "cadd score");
 
 # test fetch_all_by_VariationFeatures
 my $slice = $s_ad->fetch_by_region('chromosome',13,32953990,32954050);
