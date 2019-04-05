@@ -28,6 +28,14 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImportMGI
+
+This module imports Mouse MGI data. The module fetched the data from
+http://www.mousephenotype.org.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportMGI;
 
 use warnings;
@@ -37,57 +45,54 @@ use File::Path qw(make_path);
 use File::stat;
 use POSIX 'strftime';
 use LWP::Simple;
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
-    my $coord_file   = $self->required_param('coord_file');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
+  my $coord_file   = $self->required_param('coord_file');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
+  $core_dba    = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $debug        = $self->param('debug_mode');
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    #TODO: 
-    # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
-    #-source mgi -infile ${datadir}/mgifile?.txt -verbose -version 20121031
+  %source_info = (source_description => 'Mouse Genome Informatics',
+                  source_url => 'http://www.informatics.jax.org/',
+                  object_type => 'Gene',
+                  source_status => 'germline',
+                  source_name => 'MGI',        #source name in the variation db
+                  source_name_short => 'MGI',  #source identifier in the pipeline
+                  #source version is set based on EBI fetch data hash response_date
+                  );
+  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  make_path($workdir);
 
-    %source_info = (source_description => 'Mouse Genome Informatics',
-                    source_url => 'http://www.informatics.jax.org/',
-                    object_type => 'Gene',
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-                    source_name => 'MGI', #TODO: figure out where this is used
-                    source_status => 'germline',
-                    source => 'mgi',
-                    #source version is set based on ebi fetch data hash response_date
-                    );
-    
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    make_path($workdir);
+  #get input file MGI:
+  my $url = '/mi/impc/solr/mgi-phenotype';
+  my $file_mgi = "MGI_phenotypes.txt";
+  print $logFH "Found file (".$workdir."/".$file_mgi."), will skip new fetch\n" if -e $workdir."/".$file_mgi;
+  $file_mgi = $self->get_mouse_phenotype_data($workdir, $source_info{source_name}, $url) unless -e $workdir."/".$file_mgi;
 
-    #get input file MGI:
-    my $url = '/mi/impc/solr/mgi-phenotype';
-    my $file_mgi = "mgi_phenotypes.txt";
-    print "Found file (".$workdir."/".$file_mgi."), will skip new fetch\n" if -e $workdir."/".$file_mgi;
-    $file_mgi = $self->get_mouse_phenotype_data($workdir, $source_info{source}, $url) unless -e $workdir."/".$file_mgi;
-
-    $self->param('mgi_file', $file_mgi);
+  $self->param('mgi_file', $file_mgi);
 }
 
 sub run {
@@ -96,28 +101,24 @@ sub run {
   my $file_mgi = $self->required_param('mgi_file');
   my $coord_file = $self->required_param('coord_file');
 
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">>", $workdir."/".'log_import_out_'.$file_mgi; #TODO: what is best error/out log naming convention?
-  open STDERR, ">>", $workdir."/".'log_import_err_'.$file_mgi;
-
   #get source ids
-  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source},$variation_dba);
-  print STDOUT $source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
+  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source_name},$variation_dba);
+  print $logFH $source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
 
   $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids,$variation_dba); 
   $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids,$variation_dba);
   my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $coord_file,$core_dba);
 
   # get phenotype data
-  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source}, $mouse_phenotype_source_ids, $variation_dba);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
+  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source_name}, $mouse_phenotype_source_ids, $variation_dba);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print STDOUT "$source_info{source} source_id is $source_id\n" if ($debug);
+  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
 
   # save phenotypes
-  $self->set_skip_synonyms(1); #TODO:check if it was set in BasePhenotypeAnnotation 
+  $self->set_skip_synonyms(1);
   $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
 
   my %param_source = (source_name => $source_info{source_name},
@@ -126,13 +127,20 @@ sub run {
                                species => $self->required_param('species'),
                                workdir => $workdir
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing MGI import for checks\n" if $self->param('debug_mode');
+
 }
 
 1;

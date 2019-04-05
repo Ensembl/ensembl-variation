@@ -32,7 +32,7 @@ limitations under the License.
 =head1 ImportIMPC
 
 This module imports Mouse IMPC data. The module fetched the data from
-OpenTargets project https://www.targetvalidation.org/downloads/data
+http://www.mousephenotype.org.
 
 =cut
 
