@@ -257,10 +257,15 @@ sub fetch_all_by_Variation {
       my $vfs = $variation->get_all_VariationFeatures;
 
       if($vfs && @$vfs) {
-        @from_vcf =
-          map {$_->{adaptor} = $self; $_}
-          map {@{$_->get_all_Alleles_by_VariationFeature($vfs->[0], $population)}}
-          @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+        my $vf = $vfs->[0];
+
+        # Check that there are no empty allele strings
+        if (!grep { $_ eq ''} split(/\//, $vf->allele_string)) {
+          @from_vcf =
+            map {$_->{adaptor} = $self; $_}
+            map {@{$_->get_all_Alleles_by_VariationFeature($vf, $population)}}
+            @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+        }
       }
     }
 
