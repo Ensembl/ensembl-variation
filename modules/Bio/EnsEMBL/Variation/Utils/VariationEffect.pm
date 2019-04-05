@@ -679,7 +679,9 @@ sub _get_peptide_alleles {
 sub _get_ref_pep {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    return $bvfo->get_reference_TranscriptVariationAllele->peptide;
+    my $ref_tva = $bvfo->get_reference_TranscriptVariationAllele;
+    $ref_tva->{shift_hash} = $bvfoa->{shift_hash};
+    return $ref_tva->peptide;
 }
 
 sub _get_codon_alleles {
@@ -723,7 +725,6 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -834,7 +835,7 @@ sub _overlaps_start_codon {
         $feat ||= $bvfo->feature;
         return 0 if grep {$_->code eq 'cds_start_NF'} @{$feat->get_all_Attributes()};
 
-        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start_unshifted, $bvfo->cdna_end_unshifted);
         my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
         $cdna_start += $shifting_offset;
         $cdna_end += $shifting_offset;
@@ -1218,7 +1219,6 @@ sub _ins_del_stop_altered {
 sub frameshift {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
