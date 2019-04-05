@@ -379,6 +379,7 @@ sub _genomic_shift
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   my $var_class = $vf->var_class;
+  $DB::single = 1;
   return $self unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
   
 
@@ -401,7 +402,8 @@ sub _genomic_shift
   
   my $unshifted_allele_string = $self->allele_string;
   my @allele_string = split('/', $unshifted_allele_string);
-  @allele_string = split('/', $self->variation_feature->allele_string) if $self->is_reference;
+  #@allele_string = split('/', $self->variation_feature->allele_string) if $self->is_reference;
+  $allele_string[1] = '-' if (($self->is_reference) && (length(@allele_string) == 1));
   my $hgvs_output_string = $allele_string[1];
   
   
@@ -631,8 +633,11 @@ sub display_codon_allele_string {
     my $display_codon = $self->display_codon;
     
     return undef unless $display_codon;
+        
+    my $ref_tva = $self->transcript_variation->get_reference_TranscriptVariationAllele;
+    $ref_tva->{shift_hash} = $self->{shift_hash};
     
-    my $ref_display_codon = $self->transcript_variation->get_reference_TranscriptVariationAllele->display_codon;
+    my $ref_display_codon = $ref_tva->display_codon;
     
     return undef unless $ref_display_codon;
     
@@ -759,7 +764,6 @@ sub codon {
   
   $self->{codon} = $codon if defined $codon;
   unless(exists($self->{codon})) {
-
     $self->{codon} = undef;
   
     my $tv = $self->base_variation_feature_overlap;
@@ -1213,7 +1217,7 @@ sub shift_feature_seqs {
       my $f_seq = $self->{feature_seq};
       
       my $shift_length = $self->{shift_hash}->{shift_length} ||= 0;
-
+      $shift_length = $self->seq_length - $shift_length if $self->transcript->strand == -1;
       for (my $n = 0; $n < $shift_length; $n++ ){
         ## check each position in deletion/ following seq for match
         $vf_seq = substr($vf_seq, 1) . substr($vf_seq, 0, 1) if defined($vf_seq);
@@ -1374,14 +1378,15 @@ sub hgvs_transcript {
   my $same_pos = $hgvs_notation->{start} == $hgvs_notation->{end};
   
   my @attribs = @{$tr->get_all_Attributes()};
+  
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
 
   my $misalignment_offset = 0;
-  $misalignment_offset = $self->get_misalignment_offset(@edit_attrs) if (scalar(@edit_attrs) && substr($tr->stable_id, 0,3) eq 'NM_');
+  $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && substr($tr->stable_id, 0,3) eq 'NM_');
 
   if ($vf->var_class eq 'SNP' && defined($tv->cds_start) && defined($tv->cds_end)) {
     $hgvs_notation->{start} = $tv->cds_start + $misalignment_offset;
-    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $tv->cds_end + $misalignment_offset;
+    $hgvs_notation->{end}   = $hgvs_notation->{start};
   }
   else{
     $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
@@ -1455,17 +1460,18 @@ sub is_polyA {
 
 sub get_misalignment_offset{
   my $self = shift;
-  my @attrs = shift;
+  my $attrs = shift;
   my $mlength = 0;
-  foreach my $attr (@attrs)
+  foreach my $attr (@{$attrs})
   {
     next if defined($attr->{description}) && $attr->description =~ /op=X/;
     ## Find out whether insertion or deletion, and get length  
     my @split_val = split(/ /,$attr->{value});
+    next if (scalar(@split_val) eq 3) && ($split_val[1] - $split_val[0] + 1) eq length($split_val[2]);
     my $type = (scalar(@split_val) eq 3) ? 'ins' : 'del';
     my $var_location_start = $self->transcript_variation->cdna_start;
     $var_location_start = 0 unless defined($var_location_start);
-    return 0 if $var_location_start < $split_val[0];
+    next if $var_location_start < $split_val[0];
 
     if ($type eq 'del')
     {
@@ -1475,7 +1481,7 @@ sub get_misalignment_offset{
       $mlength += length($split_val[2]);
     }
   }
-  
+  $self->{refseq_misalignment_offset} = $mlength;
   return $mlength;
   
 }
@@ -1525,7 +1531,6 @@ sub hgvs_protein {
   }
   ### set if string supplied
   $self->{hgvs_protein} = $notation  if defined $notation;
-
   ### return if set
   return $self->{hgvs_protein}       if defined $self->{hgvs_protein} ;
   
