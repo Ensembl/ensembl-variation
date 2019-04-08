@@ -2028,6 +2028,11 @@ sub _hgvs_from_components {
      # insertion: the start & end positions are inverted by convention
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   
   }
+  elsif ($description =~ m/inv/i) {
+    $ref_allele = $refseq_allele; 
+    $alt_allele = $refseq_allele;
+    reverse_comp(\$alt_allele); 
+  }
  
   else {    
     if($DEBUG==1){print "Reference allele: $refseq_allele expected allele: $ref_allele\n";}
