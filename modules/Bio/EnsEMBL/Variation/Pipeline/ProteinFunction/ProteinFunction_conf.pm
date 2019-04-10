@@ -175,7 +175,7 @@ sub default_options {
         sift_max_workers        => 500,
 
         variation_data          => '/nfs/production/panda/ensembl/variation/data/', 
-        dbnsfp_run_type         => FULL,
+        dbnsfp_run_type         => NONE,
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
     
@@ -188,7 +188,7 @@ sub default_options {
                                         version => '3.5a',
                                       } 
                                     },
-        cadd_run_type         => FULL,
+        cadd_run_type         => NONE,
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
