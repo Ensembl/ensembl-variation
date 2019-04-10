@@ -187,7 +187,7 @@ sub fetch_input {
     my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s, @dbnsfp_md5s);
 
     my $fasta = $self->required_param('fasta_file');
-    if ($sift_run_type ne 'NONE' || $pph_run_type ne 'NONE') {
+    if ($sift_run_type != NONE || $pph_run_type != NONE) {
       my @dir = split('/', $fasta);
       pop @dir;
       make_path(join('/', @dir));
@@ -250,11 +250,15 @@ sub update_meta{
   }
 
   if ($self->required_param('dbnsfp_run_type')  == FULL){
-    $update_meta_sth->execute('dbnsfp_version', $self->required_param('dbnsfp_version'));
+    my $assembly = $self->get_assembly();
+    my $annotation = $self->param('dbnsfp_annotation');
+    $update_meta_sth->execute('dbnsfp_version', $annotation->{$assembly}->{'version'});
   }
 
   if ($self->required_param('cadd_run_type')  == FULL){
-    $update_meta_sth->execute('cadd_version', $self->required_param('cadd_version'));
+    my $assembly = $self->get_assembly();
+    my $annotation = $self->param('cadd_annotation');
+    $update_meta_sth->execute('cadd_version', $annotation->{$assembly}->{'version'});
   }
 
 }
