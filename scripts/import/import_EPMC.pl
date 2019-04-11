@@ -94,7 +94,7 @@ if( $type eq "EPMC"){
     $file_data = parse_EPMC_file($data_file, $avoid_list);
 
     ##import any new publications & citations
-    import_citations($reg, $file_data);
+    import_citations($reg, $file_data, $type);
 
     ## update variations & variation_features to have Cited status
     update_evidence($dba) unless defined $no_evidence;
@@ -137,9 +137,10 @@ sub import_citations{
     my $data           = shift;
     my $type           = shift;
 
-    ## store variants not from this species
     open my $error_log, ">>$species\_$type\_notfound_" . log_time() . "\.log"|| die "Failed to open log file: $!\n";
-
+    ## store variants not from this species
+    open my $not_found, ">>rsID\_$type\_notfound\.csv"|| die "Failed to open file: $!\n";
+    print $not_found "rsID,PMCID,PMID\n"; 
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -169,10 +170,10 @@ sub import_citations{
                 no warnings ;
                 ### write file of variants not found in this species to use as input file for next
                 if($type eq "EPMC"){
-                  print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
+                  print $not_found "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid}\n"; 
                 }
                 elsif($type eq "UCSC") {
-                  print $error_log $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
+                  print $not_found $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
                }
                use warnings ;
             }
@@ -231,6 +232,7 @@ sub import_citations{
             $pub_ad->store( $publication);
         }
     }
+    close $not_found;
 }
 
 sub get_publication_info_from_epmc{
