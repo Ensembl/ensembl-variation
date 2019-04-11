@@ -16,6 +16,7 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 use Test::More;
 use Test::Deep;
 use Bio::EnsEMBL::Registry;
@@ -34,6 +35,7 @@ $vdb->dnadb($db);
 
 my $dir = $multi->curr_dir();
 my $dbNSFP = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->new(
+  -working_dir => $dir,
   -species => 'Homo_sapiens',
   -annotation_file => $dir . '/testdata/dbNSFP3.5a_grch37.txt.gz',
   -assembly => 'GRCh37',
@@ -43,8 +45,7 @@ my $dbNSFP = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->ne
   -debug_mode => 1,
 );
 
-
-# calculate prediction scores for:
+ok($dbNSFP->working_dir eq $dir, 'working_dir');
 
 $dbNSFP->run('4d08f77b4cb14259684ce086ba089565', {'4d08f77b4cb14259684ce086ba089565' => 'ENSP00000435699'});
 my @results = ();
@@ -88,7 +89,10 @@ my $expected_results = [
           },
         ];
  
-cmp_deeply(\@sorted_results, $expected_results, "Retrieve scores and predictions from stored matrices.");
+cmp_deeply(\@sorted_results, $expected_results, "dbNSFP - Retrieve scores and predictions from stored matrices.");
+
+my $amino_acids = join('', @{$dbNSFP->amino_acids}[0..9]);
+ok($amino_acids eq 'MPIGSKERPT', 'Compare first 10 amino acids');
 
 my $all_triplets = $dbNSFP->get_triplets('ENSP00000435699'); # on forward strand
 my $first_triplet = $all_triplets->[0];
@@ -222,9 +226,40 @@ my $cadd = Bio::EnsEMBL::Variation::Utils::CADDProteinFunctionAnnotation->new(
   -annotation_file => $dir . '/testdata/cadd_v1.3_grch37.txt.gz',
   -assembly => 'GRCh37',
   -annotation_file_version => 'v1.3',
-  -pipeline_mode => 0,
+  -pipeline_mode => 1,
+  -write_mode => 0,
   -debug_mode => 1,
 );
+$cadd->run('4d08f77b4cb14259684ce086ba089565', {'4d08f77b4cb14259684ce086ba089565' => 'ENSP00000435699'});
+@results = ();
+$pred_matrices = $cadd->{pred_matrices};
+foreach my $analysis (keys %$pred_matrices) {
+  my $pred_matrix = $pred_matrices->{$analysis};
+  if ($cadd->{results_available}->{$analysis}) {
+    my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, '4d08f77b4cb14259684ce086ba089565');
+    my $debug_data = $cadd->{debug_data};
+    my $i = 588;
+    my $aa = 'S';
+    foreach my $prediction (keys %{$debug_data->{$analysis}->{$i}->{$aa}}) {
+      my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa);
+      push @results, {position => $i, aa => $aa, new_pred => $new_pred, new_score => $new_score, analysis => $analysis}; 
+    }
+  }
+}
+
+$expected_results =  [
+          {
+            'new_score' => 28,
+            'new_pred' => 'likely benign',
+            'position' => 588,
+            'aa' => 'S',
+            'analysis' => 'cadd'
+          }
+        ];
+
+cmp_deeply(\@results, $expected_results, "CADD - Retrieve scores and predictions from stored matrices.");
+
+
 @rows = ();
 $iter = $cadd->get_tabix_iterator(13, 32907425, 32907425);
 while (my $line = $iter->next) {
