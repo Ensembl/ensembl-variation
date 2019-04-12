@@ -81,9 +81,8 @@ sub default_options {
         batch_size => 1_000_000,
         
         
-        default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>5000] rusage[mem=5000]" -M5000',
-        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>5000] rusage[mem=5000]" -M5000',
 
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,
