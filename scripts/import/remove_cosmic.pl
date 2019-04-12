@@ -97,16 +97,13 @@ $dbh->do(qq{
     AND     v.source_id = $source_id
 });
 
-# variation_feature - variation_id
+# variation_feature
 
 $dbh->do(qq{
-    DELETE  vf
-    FROM    variation_feature vf, variation v
-    WHERE   vf.variation_id = v.variation_id
-    AND     v.source_id = $source_id
+    DELETE FROM variation_feature WHERE source_id = $source_id
 });
 
-# phenotype_feature_attrib - variation_id
+# phenotype_feature_attrib
 
 $dbh->do(qq{
     DELETE  pfa
@@ -115,12 +112,10 @@ $dbh->do(qq{
     AND     pf.source_id = $source_id
 });
 
-# phenotype_feature - variation_id
+# phenotype_feature
 
 $dbh->do(qq{
-    DELETE  pf
-    FROM    phenotype_feature pf
-    WHERE   pf.source_id = $source_id
+    DELETE FROM phenotype_feature WHERE source_id = $source_id
 });
 
 # variation_set_variation - variation_id
@@ -132,7 +127,7 @@ $dbh->do(qq{
     AND     v.source_id = $source_id
 });
 
-# variation - source_id
+# variation
 
 $dbh->do(qq{
     DELETE FROM variation WHERE source_id = $source_id
