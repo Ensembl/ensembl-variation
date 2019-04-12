@@ -158,6 +158,22 @@ sub loadfile {
   my $cols = join( ",", @colnames );
 
   my $table_file = "$TMP_DIR/$tablename\_$$\.txt";
+
+  if (! -e $loadfile) {
+    die("File to load ($loadfile) does not exist");
+  }
+
+  # Do not rename the $loadfile to the $table_file
+  # if the $table_file already exists
+  if (-e $table_file) {
+    die("File to rename to for table load exists ($table_file)");
+   }
+
+  my $ret = rename($loadfile, $table_file);
+  if (! $ret) {
+    die("rename of ($loadfile) to ($table_file) for table load fails");
+  }
+
   rename($loadfile, $table_file);
    
 #  my $host = $db->host();
