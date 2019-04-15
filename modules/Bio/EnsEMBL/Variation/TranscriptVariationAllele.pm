@@ -1307,10 +1307,6 @@ sub hgvs_transcript {
 
   my $hgvs_notation ; ### store components of HGVS string in hash
 
-  ## create new transcript variation object as position may be different
-  ## for most variants (SNPs etc) this will actually just return $self
-  ## logic is neater this way though
-  my $hgvs_tva = $self;
   my $variation_feature_sequence;
   my $adaptor_shifting_flag = 1;
   
@@ -1318,13 +1314,13 @@ sub hgvs_transcript {
   $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
   
   ## Perform HGVS shift even if no_shift is on
-  $hgvs_tva->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
+  $self->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
 
   $variation_feature_sequence = $self->variation_feature_seq();
   $variation_feature_sequence = $self->{shift_hash}->{hgvs_allele_string} if defined($self->{shift_hash}) && $vf->var_class() eq 'insertion' && ($adaptor_shifting_flag != 0);
   
   ## return if a new transcript_variation_allele is not available - variation outside transcript
-  return undef unless defined $hgvs_tva && defined $hgvs_tva->base_variation_feature_overlap;
+  return undef unless defined $self->base_variation_feature_overlap;
   $self->look_for_slice_start unless (defined  $self->{_slice_start});
   
   unless (defined  $self->{_slice_start} ){
@@ -1389,8 +1385,8 @@ sub hgvs_transcript {
     $hgvs_notation->{end}   = $hgvs_notation->{start};
   }
   else{
-    $hgvs_notation->{start} = $hgvs_tva->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
-    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $hgvs_tva->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
+    $hgvs_notation->{start} = $self->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
+    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $self->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
   }
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 
@@ -1545,18 +1541,15 @@ sub hgvs_protein {
   print "checking pos with hgvs prot\n" if $DEBUG ==1;
 
   ## HGVS requires the variant be located in as 3' position as possible
-  ## create new tva so position can be changed without impacting ensembl consequence
-  my $hgvs_tva = $self;
 
   ## return if a new transcript_variation_allele is not available - variation outside transcript
-  return undef unless defined $hgvs_tva;
-  my $hgvs_tva_tv = $hgvs_tva->base_variation_feature_overlap;
-  return undef unless defined $hgvs_tva_tv;
+  my $tv = $self->base_variation_feature_overlap;
+  return undef unless defined $tv;
 
-  my $hgvs_tva_vf = $hgvs_tva_tv->base_variation_feature;
-  my $tr          = $hgvs_tva_tv->transcript;
+  my $vf = $tv->base_variation_feature;
+  my $tr          = $tv->transcript;
 
-  my $pre         = $hgvs_tva->_pre_consequence_predicates;
+  my $pre         = $self->_pre_consequence_predicates;
   my $shifting_offset = 0;
   if($tr->strand() > 0)
   {
@@ -1568,23 +1561,23 @@ sub hgvs_protein {
   }
 
   ### no HGVS protein annotation for variants outside translated region 
-  if(defined($hgvs_tva->{shift_hash}) && $hgvs_tva->{shift_hash}->{shift_length} != 0)
+  if(defined($self->{shift_hash}) && $self->{shift_hash}->{shift_length} != 0)
   {
-    delete($hgvs_tva_tv->{translation_start});
-    delete($hgvs_tva_tv->{translation_end});
-    delete($hgvs_tva_tv->{_translation_coords});
+    delete($tv->{translation_start});
+    delete($tv->{translation_end});
+    delete($tv->{_translation_coords});
   }
   unless (
     ($pre->{coding}) &&
-    $hgvs_tva_tv->translation_start(undef, $shifting_offset) && 
-    $hgvs_tva_tv->translation_end(undef, $shifting_offset)
+    $tv->translation_start(undef, $shifting_offset) && 
+    $tv->translation_end(undef, $shifting_offset)
   ){
-    print "Exiting hgvs_protein - variant " . $hgvs_tva_vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
+    print "Exiting hgvs_protein - variant " . $vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
     return undef;
   }
        
   print "proceeding with hgvs prot\n" if $DEBUG == 1;
-  print "Checking translation start: " . $hgvs_tva_tv->translation_start() ."\n" if $DEBUG == 1;
+  print "Checking translation start: " . $tv->translation_start() ."\n" if $DEBUG == 1;
 
   ## checks complete - start building term
 
@@ -1596,40 +1589,40 @@ sub hgvs_protein {
   $hgvs_notation->{'numbering'} = 'p';
 
   ### get default reference location [changed later in some cases eg. duplication]
-  $hgvs_notation->{start}   = $hgvs_tva_tv->translation_start();
-  $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
+  $hgvs_notation->{start}   = $tv->translation_start();
+  $hgvs_notation->{end}     = $tv->translation_end();  
 
-  my $hgvs_tva_ref = $hgvs_tva_tv->get_reference_TranscriptVariationAllele;
+  my $ref = $tv->get_reference_TranscriptVariationAllele;
 
-  $hgvs_tva_ref->_return_3prime(1);
+  $ref->_return_3prime(1);
   ## get default reference & alt peptides  [changed later to hgvs format]
-  if(defined($hgvs_tva->{shift_hash})  && $hgvs_tva->{shift_hash}->{shift_length} != 0)
+  if(defined($self->{shift_hash})  && $self->{shift_hash}->{shift_length} != 0)
   {
-    delete($hgvs_tva->{peptide});
-    delete($hgvs_tva->{codon});
-    delete($hgvs_tva->{feature_seq});
+    delete($self->{peptide});
+    delete($self->{codon});
+    delete($self->{feature_seq});
     $self->shift_feature_seqs();
-    #$hgvs_tva_tv->{variation_feature_seq} = $self->{shift_hash}->{hgvs_allele_string};
+    #$tv->{variation_feature_seq} = $self->{shift_hash}->{hgvs_allele_string};
     #$self->{variation_feature_seq} = $self->{shift_hash}->{hgvs_allele_string};
   }
-  if(defined($hgvs_tva_ref->{shift_hash})  && $hgvs_tva->{shift_hash}->{shift_length} != 0)
+  if(defined($ref->{shift_hash})  && $self->{shift_hash}->{shift_length} != 0)
   {
-    delete($hgvs_tva_ref->{peptide});
-    delete($hgvs_tva_ref->{codon});
-    delete($hgvs_tva_ref->{feature_seq});
+    delete($ref->{peptide});
+    delete($ref->{codon});
+    delete($ref->{feature_seq});
 
-    $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_hash}->{ref_orig_allele_string};
-    $hgvs_tva_ref->{variation_feature_seq} = $self->{shift_hash}->{shifted_allele_string} if $hgvs_tva_vf->var_class eq 'deletion';  
-    $hgvs_tva_ref->{shifted_feature_seqs} = 1;
+    $ref->{variation_feature_seq} = $self->{shift_hash}->{ref_orig_allele_string};
+    $ref->{variation_feature_seq} = $self->{shift_hash}->{shifted_allele_string} if $vf->var_class eq 'deletion';  
+    $ref->{shifted_feature_seqs} = 1;
   }
   
-  $hgvs_notation->{alt} = $hgvs_tva->peptide;
-  #$hgvs_tva_ref->{shift_hash} = $hgvs_tva->{shift_hash} #can potentially get a speedup here by calculating the differences between these two;
+  $hgvs_notation->{alt} = $self->peptide;
+  #$ref->{shift_hash} = $self->{shift_hash} #can potentially get a speedup here by calculating the differences between these two;
 
-  $hgvs_notation->{ref} = $hgvs_tva_ref->peptide; 
+  $hgvs_notation->{ref} = $ref->peptide; 
   
   return undef unless $hgvs_notation->{ref};   
-  print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $hgvs_tva->codon() .")\n" if $DEBUG ==1;
+  print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $self->codon() .")\n" if $DEBUG ==1;
 
   if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref} &&
     ($hgvs_notation->{alt} ne  $hgvs_notation->{ref})){
@@ -1637,18 +1630,18 @@ sub hgvs_protein {
   }
 
   #### define type - types are different for protein numbering
-  $hgvs_notation  = $hgvs_tva->_get_hgvs_protein_type($hgvs_notation);
+  $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
   return undef unless defined $hgvs_notation->{type}; 
 
   ##### Convert ref & alt peptides taking into account HGVS rules
-  $hgvs_notation = $hgvs_tva->_get_hgvs_peptides($hgvs_notation);
+  $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
   unless($hgvs_notation) {
     $self->{hgvs_protein} = undef;
     return undef;
   }
 
   ##### String formatting
-  return $hgvs_tva->_get_hgvs_protein_format($hgvs_notation);
+  return $self->_get_hgvs_protein_format($hgvs_notation);
 }
 
 
