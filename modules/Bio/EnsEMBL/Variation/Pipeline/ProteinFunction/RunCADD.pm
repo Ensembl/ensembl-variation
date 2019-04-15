@@ -39,11 +39,7 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 sub run {
   my $self = shift;
   my $working_dir = $self->param('cadd_working');
-  unless (-d $working_dir) {
-    my $err;
-    make_path($working_dir, {error => \$err});
-    die "make_path failed: ".Dumper($err) if $err && @$err;
-  }
+  die "Working directory ($working_dir) doesn't exist" unless (-d $working_dir);
 
   my $assembly = $self->get_assembly();
   my $cadd_annotation = $self->param('cadd_annotation');
