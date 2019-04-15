@@ -112,14 +112,14 @@ sub _return_3prime {
   my $self = shift;
   my $hgvs_only = shift;
   
-  return $self if defined($self->{shift_hash}) || ($self->is_reference && !$hgvs_only);
+  return if defined($self->{shift_hash}) || ($self->is_reference && !$hgvs_only);
   my $tv = $self->transcript_variation;
   my $vf = $tv->base_variation_feature;
   my $var_class = $vf->var_class;
   ## Don't even attempt shifting if it's not an indel
-  return $self unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
+  return unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
 
-  return $self if (defined($vf->adaptor) && defined($vf->adaptor->db)) && ($vf->adaptor->db->shift_hgvs_variants_3prime() == 0);
+  return if (defined($vf->adaptor) && defined($vf->adaptor->db)) && ($vf->adaptor->db->shift_hgvs_variants_3prime() == 0);
   my $tr = $tv->transcript; 
   $self->initialise_unshifted_values;
   
@@ -135,18 +135,18 @@ sub _return_3prime {
     $self->{shift_hash} = $hash if(defined($hash))
   }
 
-  return $self unless (defined($tv->cdna_start) && defined($tv->cdna_end) && defined($tv->cds_start) && defined($tv->cds_end));
-  return $self unless (defined($tv->cdna_start_unshifted) && defined($tv->cdna_end_unshifted) && defined($tv->cds_start_unshifted) && defined($tv->cds_end_unshifted));
+  return unless (defined($tv->cdna_start) && defined($tv->cdna_end) && defined($tv->cds_start) && defined($tv->cds_end));
+  return unless (defined($tv->cdna_start_unshifted) && defined($tv->cdna_end_unshifted) && defined($tv->cds_start_unshifted) && defined($tv->cds_end_unshifted));
   
   my @attribs = @{$tr->get_all_Attributes()};
   
   ## Checks to see if the underlying sequence has been edited
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/ && !$self->is_polyA($_)} @attribs;
-  return $self unless scalar(@edit_attrs);
+  return unless scalar(@edit_attrs);
   ## RefSeq transcript has edited sequence, we need to check flanking sequences
   my $hgvs_notation;
 
-  my @preshifted_hashs = @{$self->base_variation_feature->{tva_shift_hashs}};
+  my @preshifted_hashs = @{$self->base_variation_feature->{tva_shift_hashes}};
   if(scalar(@preshifted_hashs))
   {
     my ($slice_start2, $slice_end2, $slice ) = $self->_var2transcript_slice_coords($tr, $tv, $vf);
@@ -167,14 +167,14 @@ sub _return_3prime {
         {
           #This happens when an insertion/deletion gets too close to the transcript boundary and shifting in either direction at transcript level becomes tricky.
           $self->{shift_hash} = $shifted_obj;
-          return $self;
+          return;
         }
         my $pre_substr = substr($whole_seq, 0 , 1 + $shifted_obj->{shift_length});
         my $post_substr = substr($whole_seq, , -1 - $shifted_obj->{shift_length});
         if ($pre_substr eq $shifted_obj->{five_prime_flanking_seq} && $post_substr eq $shifted_obj->{three_prime_flanking_seq})
         {
           $self->{shift_hash} = $shifted_obj;
-          return $self;
+          return;
         }
         
       }
@@ -183,7 +183,7 @@ sub _return_3prime {
       $self->{shift_hash} = $vf->{shift_hash} if (defined($vf->{shift_hash}) && $tr->strand == 1);
       $self->{shift_hash} = $vf->{shift_hash_reverse} if (defined($vf->{shift_hash_reverse}) && $tr->strand == -1);
 
-      return $self;
+      return;
     }
   }
   
@@ -230,13 +230,13 @@ sub _return_3prime {
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, $type, $shift_length, $strand, 0);
 
-  return $self;
+  return;
 }
 
 
 sub check_tva_shifting_hashes{
   my $self = shift;
-  my $preshifted_hashs = $self->base_variation_feature->{tva_shift_hashs};  
+  my $preshifted_hashs = $self->base_variation_feature->{tva_shift_hashes};  
   my @shift_hashes = grep {$_->{unshifted_allele_string} eq $self->allele_string  && $self->transcript->strand eq $_->{strand}} @{$preshifted_hashs} if defined($preshifted_hashs);
   if (scalar(@shift_hashes) == 1)
   {
@@ -355,14 +355,14 @@ sub create_shift_hash
     $self->{shift_hash} = \%shift_hash unless $genomic;
     $vf->{shift_hash} = \%shift_hash if ($strand == 1 && $genomic);
     $vf->{shift_hash_reverse} = \%shift_hash if ($strand == -1 && $genomic);
-    $vf->{tva_shift_hashs} = [] unless defined($vf->{tva_shift_hashs});
-    push @{$vf->{tva_shift_hashs}}, \%shift_hash;
+    $vf->{tva_shift_hashes} = [] unless defined($vf->{tva_shift_hashes});
+    push @{$vf->{tva_shift_hashes}}, \%shift_hash;
     
     
     return %shift_hash;
 }
 
-=head2 genomic_shift
+=head2 _genomic_shift
 
   Description: Performs the shifting at genomic level - works great for ensembl 
                transcripts. Shifts 3' on either strand
@@ -379,8 +379,8 @@ sub _genomic_shift
   my $tv = $self->transcript_variation;
   my $vf = $tv->variation_feature;
   my $var_class = $vf->var_class;
-  $DB::single = 1;
-  return $self unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
+
+  return unless ($var_class eq 'insertion' || $var_class eq 'deletion' );
   
 
   my $slice_to_shrink = $vf->slice;
@@ -403,7 +403,7 @@ sub _genomic_shift
   my $unshifted_allele_string = $self->allele_string;
   my @allele_string = split('/', $unshifted_allele_string);
   #@allele_string = split('/', $self->variation_feature->allele_string) if $self->is_reference;
-  $allele_string[1] = '-' if (($self->is_reference) && (length(@allele_string) == 1));
+  $allele_string[1] = '-' if (($self->is_reference) && (scalar(@allele_string) == 1));
   my $hgvs_output_string = $allele_string[1];
   
   
@@ -453,7 +453,7 @@ sub look_for_slice_start {
     $self->{_slice_end}   = $slice_end;
     $self->{_slice}       = $slice;
   }
-  return $self; #not necessary?
+  return; 
 }
 
 =head2 clear_shifting_variables
@@ -1546,7 +1546,7 @@ sub hgvs_protein {
 
   ## HGVS requires the variant be located in as 3' position as possible
   ## create new tva so position can be changed without impacting ensembl consequence
-  my $hgvs_tva = $self;#->_hgvs_tva();
+  my $hgvs_tva = $self;
 
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $hgvs_tva;

@@ -124,7 +124,8 @@ sub feature {
   Arg [1]    : (optional) int $start
   Example    : $cdna_start = $tv->cdna_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start and 
+               cdna_end if cdna_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -155,7 +156,8 @@ sub cdna_start {
   Arg [1]    : (optional) int $end
   Example    : $cdna_end = $tv->cdna_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start and 
+               cdna_end if cdna_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -180,7 +182,8 @@ sub cdna_end {
   Arg [1]    : (optional) int $start
   Example    : $cdna_start = $tv->cdna_start_unshifted;
   Description: Getter/Setter for the unshifted start position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start_unshifted and 
+               cdna_end_unshifted if cdna_start_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -210,7 +213,8 @@ sub cdna_start_unshifted {
   Arg [1]    : (optional) int $end
   Example    : $cdna_end = $tv->cdna_end_unshifted;
   Description: Getter/Setter for the unshifted end position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start_unshifted and 
+               cdna_end_unshifted if cdna_start_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -236,7 +240,8 @@ sub cdna_end_unshifted {
   Arg [1]    : (optional) int $start
   Example    : $cds_start = $tv->cds_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start and 
+               cds_end if cds_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -267,7 +272,8 @@ sub cds_start {
   Arg [1]    : (optional) int $end
   Example    : $cds_end = $tv->cds_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start and 
+               cds_end if cds_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -291,7 +297,8 @@ sub cds_end {
   Arg [1]    : (optional) int $start
   Example    : $cds_start = $tv->cds_start_unshifted;
   Description: Getter/Setter for the unshifted start position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start_unshifted and 
+               cds_end_unshifted if cds_start_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -321,7 +328,8 @@ sub cds_start_unshifted {
   Arg [1]    : (optional) int $end
   Example    : $cds_end = $tv->cds_end_unshifted;
   Description: Getter/Setter for the unshifted end position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start_unshifted and 
+               cds_end_unshifted if cds_end_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -345,7 +353,8 @@ sub cds_end_unshifted {
   Arg [1]    : (optional) int $start
   Example    : $translation_start = $tv->translation_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start and 
+               translation_end if translation_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -376,7 +385,8 @@ sub translation_start {
   Arg [1]    : (optional) int $end
   Example    : $transaltion_end = $tv->translation_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start and 
+               translation_end if translation_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -400,7 +410,8 @@ sub translation_end {
   Arg [1]    : (optional) int $start
   Example    : $translation_start = $tv->translation_start_unshifted;
   Description: Getter/Setter for the unshifted start position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start_unshifted and 
+               translation_end_unshifted if translation_start_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -431,7 +442,8 @@ sub translation_start_unshifted {
   Arg [1]    : (optional) int $end
   Example    : $transaltion_end = $tv->translation_end_unshifted;
   Description: Getter/Setter for the unshifted end position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start_unshifted and 
+               translation_end_unshifted if translation_end_unshifted does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
