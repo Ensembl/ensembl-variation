@@ -91,6 +91,10 @@ my $predictions = {
   }
 };
 
+# dbNSFP has assembly and version specific headers
+# If a new version is added, the new version first needs to tested and the column_names
+# hash needs to be updated 
+# the column names are changed for readability and consistency
 my $column_names = {
   '3.5a' => {
     assembly_unspecific => {
