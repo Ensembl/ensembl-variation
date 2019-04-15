@@ -49,8 +49,16 @@ sub fetch_input {
     my $dbnsfp_run_type = $self->required_param('dbnsfp_run_type');
     my $cadd_run_type = $self->required_param('cadd_run_type');
     my $include_lrg     = $self->param('include_lrg');
+
+    foreach my $type (qw/cadd dbnsfp/) {
+      if ($self->required_param("$type\_run_type") != NONE) {
+        my $working_dir = $self->param("$type\_working");
+        make_path($working_dir) unless (-d $working_dir);
+        die "Protein function pipeline for analysis $type can only be run in FULL mode." unless ($self->required_param("$type\_run_type") == FULL);
+      }
+    }  
     
-    $self->update_meta ;
+    $self->update_meta;
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba  = $self->get_species_adaptor('variation');
