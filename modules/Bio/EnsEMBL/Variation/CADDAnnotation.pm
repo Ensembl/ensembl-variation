@@ -164,7 +164,7 @@ sub _file_parser_obj {
   chdir($self->tmpdir);
 
   # open object (remote indexes get downloaded) locally, therefore we change the current directory to point to the tmp directory
-  my $obj;
+  my $obj = undef;
   eval { $obj = Bio::EnsEMBL::IO::Parser::CADDTabix->open($self->filename_template); }; warn $@ if $@; 
   # change back
   chdir($cwd);
