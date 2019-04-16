@@ -1124,8 +1124,8 @@ sub _vcf_parser_obj {
   chdir($self->tmpdir);
 
   # open obect (remote indexes get downloaded)
-  my $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-
+  my $obj = undef;
+  eval { $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file); }; warn $@ if $@;
   # change back
   chdir($cwd);
 
