@@ -60,6 +60,18 @@ sub main {
     $dbh->do(qq{ DROP TABLE IF EXISTS variation_ids_old_phenotype_evdn});
     $dbh->do(qq{ CREATE TABLE `variation_ids_old_phenotype_evdn` (`variation_id` int(10) unsigned NOT NULL, PRIMARY KEY (`variation_id`))});
     $dbh->do(qq{ INSERT INTO variation_ids_old_phenotype_evdn SELECT distinct variation_id FROM variation WHERE evidence_attribs LIKE '%$phenotype_attrib_id%'}) ;
+    # set display status to 0
+    $dbh->do(qq{
+      UPDATE variation v, variation_ids_old_phenotype_evdn e
+      SET v.display = 0
+      WHERE e.variation_id = v.variation_id;
+    });
+    $dbh->do(qq{
+      UPDATE variation_feature vf, variation_ids_old_phenotype_evdn e
+      SET vf.display = 0
+      WHERE e.variation_id = vf.variation_id;
+    });
+    # remove phenotype evidence attrib 
     $dbh->do(qq{
       UPDATE variation v, variation_ids_old_phenotype_evdn e
       SET v.evidence_attribs = REPLACE(v.evidence_attribs, '$phenotype_attrib_id', '')
@@ -88,6 +100,8 @@ sub main {
     SET vf.evidence_attribs = CONCAT_WS(',', vf.evidence_attribs, '$phenotype_attrib_id')
     WHERE e.variation_id = vf.variation_id;
   });
+  # also add variants with citations when updating display
+  $dbh->do(qq{ INSERT IGNORE INTO variation_ids_new_phenotype_evdn SELECT distinct variation_id FROM variation_citation; }) ;
 
   # update display column
   $dbh->do(qq{
