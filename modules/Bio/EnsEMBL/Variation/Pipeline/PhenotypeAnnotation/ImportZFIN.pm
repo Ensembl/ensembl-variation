@@ -29,6 +29,12 @@ limitations under the License.
 =cut
 
 
+=head1 ImportZFIN
+
+This module imports ZFIN (The Zebrafish Information Network) data.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportZFIN;
 
 use strict;
@@ -36,89 +42,96 @@ use warnings;
 
 use File::Copy;
 use File::Path qw(make_path remove_tree);
+use File::stat;
+use POSIX 'strftime';
 use LWP::Simple;
-use Data::Dumper;
-
-use Bio::EnsEMBL::Registry;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-my $debug;
-my $inputFile;
+my ($logFH, $errFH);
 
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
 
-#-source zfin
+my $debug;
 
 sub fetch_input {
-    #create output folder structure and fetches input files 
-    my $self = shift;
+  #create output folder structure and fetches input files
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation');
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor;
+  $core_dba       = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $debug        = $self->param('debug_mode');
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    # import specific constants
-    %source_info = (source_description => 'The zebrafish model organism database',
-                    source_url => 'http://www.zfin.org/',
-                    object_type => 'Gene',
+  # import specific constants
+  %source_info = (source_description => 'The zebrafish model organism database',
+                  source_url => 'http://www.zfin.org/',
+                  object_type => 'Gene',
+                  #source_version  will be set based on the date of the fetched input file  (year/month/day-> yyyymmdd)
 
-                    source_name => 'ZFIN',
-                    source_version => $self->required_param('zfin_version'),
+                  source_status => 'germline',
 
-                    source_status => 'germline',
-                    source => 'ZFIN',
-                    );
-    my $zfin_url = 'http://zfin.org/downloads/phenoGeneCleanData_fish.txt';
-    $inputFile = 'phenoGeneCleanData_fish.txt';
+                  source_name => 'ZFIN',        #source name in the variation db
+                  source_name_short => 'ZFIN',  #source identifier in the pipeline
+                  );
+  my $zfin_url = 'http://zfin.org/downloads/phenoGeneCleanData_fish.txt';
+  my $inputFile = 'phenoGeneCleanData_fish.txt';
 
-    #create workdir folder
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    make_path($workdir);
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">", $workdir."/".'log_import_ZFIN_out'; #TODO: what is best error/out log naming convention?
-    open STDERR, ">", $workdir."/".'log_import_ZFIN_err';
+  #create workdir folder
+  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  make_path($workdir);
 
-    getstore($zfin_url, $workdir."/".$inputFile) unless -e $workdir."/".$inputFile;
-    print "Found files (".$workdir."/".$inputFile.") and will skip new fetch\n" if -e $workdir."/".$inputFile;
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
+
+  getstore($zfin_url, $workdir."/".$inputFile) unless -e $workdir."/".$inputFile;
+  print $logFH "Found files (".$workdir."/".$inputFile.") and will skip new fetch\n" if -e $workdir."/".$inputFile;
+  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime);
+
+  $self->param('zfin_file', $inputFile);
+
 }
 
 sub run {
-    my $self = shift;
-    
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">", $workdir."/".'log_import_out_'.$inputFile; #TODO: what is best error/out log naming convention?
-    open STDERR, ">", $workdir."/".'log_import_err_'.$inputFile;
+  my $self = shift;
 
-    # get phenotype data
-    my $results = parse_zfin($workdir."/".$inputFile);
-    print "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  #Process QTLs file
+  my $input_file = $self->required_param('zfin_file');   #GO through files and parse them in the correct format
 
-    # save phenotypes
-    $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  # get phenotype data
+  my $results = parse_zfin($input_file);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
 
-    my %param_source = (source_name => $source_info{source_name},
+  # save phenotypes
+  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+
+  my %param_source = (source_name => $source_info{source_name},
                         type => $source_info{object_type});
-    $self->param('output_ids', { source => \%param_source,
-                                 species => $self->required_param('species')
-                               });
-    
+  $self->param('output_ids', { source => \%param_source,
+                               species => $self->required_param('species')
+                             });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing RGD import for checks\n" if $self->param('debug_mode');
 }
 
 
@@ -129,14 +142,17 @@ sub parse_zfin {
   my $ga = $core_dba->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor") unless defined($ga);
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/"."log_import_err_".$infile) ;
+
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open IN, "zcat $workdir/$infile |" or die ("Could not open $infile for reading");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
   }
 
   # Read through the file and parse out the desired fields
@@ -163,7 +179,7 @@ sub parse_zfin {
       }
 
       if(scalar @$genes != 1) {
-        print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene ID $symbol\n";
+        print $errFH1 "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene ID $symbol\n";
       }
 
       next unless scalar @$genes;
@@ -181,6 +197,8 @@ sub parse_zfin {
       }
     }
   }
+  close (IN);
+  close ($errFH1);
 
   return {'phenotypes' => \@phenotypes};
 }
