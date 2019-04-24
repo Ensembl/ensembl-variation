@@ -95,10 +95,9 @@ sub fetch_input {
 
   getstore($zfin_url, $workdir."/".$inputFile) unless -e $workdir."/".$inputFile;
   print $logFH "Found files (".$workdir."/".$inputFile.") and will skip new fetch\n" if -e $workdir."/".$inputFile;
-  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime);
+  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir."/".$inputFile)->mtime);
 
   $self->param('zfin_file', $inputFile);
-
 }
 
 sub run {
