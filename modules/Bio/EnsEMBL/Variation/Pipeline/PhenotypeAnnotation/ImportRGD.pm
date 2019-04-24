@@ -29,7 +29,7 @@ limitations under the License.
 =cut
 
 
-=head1 ImprotRGD
+=head1 ImportRGD
 
 This module imports RGD (Rat Genome Database) data.
 

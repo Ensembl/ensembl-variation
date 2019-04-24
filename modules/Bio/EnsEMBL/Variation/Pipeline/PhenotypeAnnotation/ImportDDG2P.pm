@@ -29,7 +29,7 @@ limitations under the License.
 =cut
 
 
-=head1 ImprotDDG2P
+=head1 ImportDDG2P
 
 This module imports DDG2P (Developmental Disorders Genotype-to-Phenotype) data. The module fetched the data from
 EBI Gene2Phenotype project https://www.ebi.ac.uk/gene2phenotype/.

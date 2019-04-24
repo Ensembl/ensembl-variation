@@ -53,7 +53,7 @@ sub run {
   my $time = $runTime_sth->fetchall_arrayref();
 
   my $runTime_imports_sth = $hive_dba->prepare(qq[
-            SELECt ab.logic_name, timediff(max(when_finished), min(when_started))
+            SELECT ab.logic_name, timediff(max(when_finished), min(when_started))
             FROM analysis_base ab, role r
             WHERE ab.logic_name like 'import_%' AND ab.analysis_id = r.analysis_id
             GROUP BY ab.logic_name ]);

@@ -29,7 +29,7 @@ limitations under the License.
 =cut
 
 
-=head1 ImprotMIMmorbid
+=head1 ImportMIMmorbid
 
 This module imports MIM morbid data. The module fetches the data from
 core xrefs.

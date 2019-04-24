@@ -29,7 +29,7 @@ limitations under the License.
 =cut
 
 
-=head1 ImprotOMIA
+=head1 ImportOMIA
 
 This module imports OMIA (Online Mendelian Inheritance in Animals) data.
 

@@ -29,7 +29,7 @@ limitations under the License.
 =cut
 
 
-=head1 ImprotEGA
+=head1 ImportEGA
 
 This module imports EGA (European Genome-phenome Archive) data.
 
