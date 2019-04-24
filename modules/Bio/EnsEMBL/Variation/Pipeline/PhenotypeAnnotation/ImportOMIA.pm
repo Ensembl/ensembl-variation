@@ -28,31 +28,35 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImprotOMIA
+
+This module imports OMIA (Online Mendelian Inheritance in Animals) data.
+
+Imports gene symbols and the associated phenotypes and is not affected
+by assembly/coordinate changes.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOMIA;
 
 use warnings;
 use strict;
 
 use File::Path qw(make_path);
+use File::stat;
+use POSIX 'strftime';
 use LWP::Simple;
 use HTTP::Tiny;
 
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS NONE);
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
-
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
-
-#TODO: should contain everything about OMIA, including getting the file(s) and for all OMIA species
 
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
-
-my $pubmed_prefix = 'PMID:';
 
 my $debug;
 
@@ -104,52 +108,52 @@ my %species_synonyms = (
 );
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
+  $core_dba       = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    $debug        = $self->param('debug_mode');
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
 
-    #TODO: 
-    # original call: perl ensembl-variation/scripts/import/import_phenotype_data.pl -host ${host} -user ${user} -pass ${pass}  -dbname ${dbname} \
-    #-source omia -infile ${datadir}/gwascatalog.txt -verbose -version 20121031
+  my $omia_url = 'https://omia.org/curate/causal_mutations/?format=gene_table';
 
-    my $omia_url = 'http://omia.angis.org.au/curate/causal_mutations/?format=gene_table';
+  %source_info = (source_description => 'Online Mendelian Inheritance in Animals (OMIA) is a database of genes, inherited disorders and traits in more than 200 animal species (other than human and mouse)',
+                  source_url => 'http://omia.angis.org.au/home/',
+                  object_type => 'Gene',
+                  #source_version  will be set based on the date of the fetched input file (year/month/day-> yyyymmdd)
+                  source_name => 'OMIA',        #source name in the variation db
+                  source_name_short => 'OMIA',  #source identifier in the pipeline
+                  );
 
-    %source_info = (source_description => 'Online Mendelian Inheritance in Animals (OMIA) is a database of genes, inherited disorders and traits in more than 200 animal species (other than human and mouse)',
-                    source_url => 'http://omia.angis.org.au/home/',
-                    object_type => 'Gene',
+  my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};
+  make_path($workdir_fetch);
+  my $file_omia = 'omia_gene_table.txt';
 
-                    source_name => 'OMIA',
-                    source_version => $self->required_param('omia_version'), #TODO: figure out how to get the original file_name and get : 'Date on the file name'
+  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  make_path($workdir);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
 
-                    source => 'omia', #used in BasePhenotypeAnnotation multiple lines 83, ..., 972 TODO: check if really needed
-                    );
+  #get input files OMIA gene_table, this file contains multiple species
+  print $logFH "Found file (".$workdir_fetch."/".$file_omia.") and will skip new fetch\n" if -e $workdir_fetch."/".$file_omia;
+  getstore($omia_url, $workdir_fetch."/".$file_omia) unless -e $workdir_fetch."/".$file_omia;
+  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime);
 
-    $workdir = $pipeline_dir."/".$source_info{source_name};
-    my $file_omia = 'omia_gene_table.txt';
+  #get section specific for this species
+  print $logFH "Found folder (".$workdir_fetch."/omia_split) and will skip new split\n" if -e $workdir_fetch."/omia_split";
+  split_omia($workdir_fetch,$file_omia) unless -e $workdir_fetch."/"."omia_split";
 
-    #get input files OMIA gene_table, this file contains multiple species
-    make_path($workdir);
-    print "Found file (".$workdir."/".$file_omia.") and will skip new fetch\n" if -e $workdir."/".$file_omia;
-    getstore($omia_url, $workdir."/".$file_omia) unless -e $workdir."/".$file_omia;
+  my $org_path = $pipeline_dir."/".$source_info{source_name_short}."/omia_split/omia_".$species.".txt";
+  my $new_link = $workdir."/omia_".$species.".txt";
+  symlink $org_path, $new_link unless -e $new_link;
 
-    #get section specific for this species
-    print "Found folder (".$workdir."/omia_split) and will skip new split\n" if -e $workdir."/omia_split";
-    split_omia($workdir,$file_omia) unless -e $workdir."/"."omia_split";
-
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    make_path($workdir);
-    my $org_path = $pipeline_dir."/".$source_info{source_name}."/omia_split/omia_".$species.".txt";
-    my $new_link = $workdir."/omia_".$species.".txt";
-    symlink $org_path, $new_link unless -e $new_link;
-
-    $self->param('omia_file', "omia_".$species.".txt");
+  $self->param('omia_file', "omia_".$species.".txt");
 }
 
 sub run {
@@ -157,30 +161,32 @@ sub run {
 
   my $omia_file = $self->required_param('omia_file');
 
-  local (*STDOUT, *STDERR);
-  open STDOUT, ">", $workdir."/".'log_import_out_'.$omia_file; #TODO: what is best error/out log naming convention?
-  open STDERR, ">", $workdir."/".'log_import_err_'.$omia_file;
-
   # get phenotype data
-  my $results = parse_omia($workdir."/".$omia_file);
-  print "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  my $results = parse_omia($omia_file);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
 
-  my %param_source = (source_name => $source_info{source_name},
+  my %param_source = (source_name => $source_info{source_name_short},
                       type => [$source_info{object_type}]);
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing OMIA import (".$self->param('species').") for checks\n" if $self->param('debug_mode');
-} #TODO: add to all multi-species runs, the log + species info as above
+}
 
 
 # OMIA specific phenotype parsing methods
@@ -204,6 +210,8 @@ sub split_omia {
     my $line = $_;
     my @line_content = split("\t",$line);
     my $taxo = $line_content[3];
+    die("ERROR: Input file ($all_file) not in expected format") unless defined($taxo);
+
     if ($data{$taxo}) {
       push(@{$data{$taxo}}, $line);
     }
@@ -248,35 +256,38 @@ sub split_omia {
 sub parse_omia {
   my $infile = shift;
 
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+
   my $ga = $core_dba->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor") unless defined($ga);
-  
+
   my @phenotypes;
-  
+
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $workdir."/".$infile for reading");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open(IN,'<',$workdir."/".$infile) or die ("Could not open $workdir."/".$infile for reading");
   }
-  
+
   # Read through the file and parse out the desired fields
   while (<IN>) {
     chomp;
-    
+
     next if /^gene_symbol/;
-    
+
     my @data = split /\t/, $_;
-    
+
     my $genes = $ga->fetch_all_by_external_name($data[0]);
-    
+
     if(scalar @$genes != 1) {
-      print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene name $data[0]\n";
+      print $errFH1 "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for gene name $data[0]\n";
     }
-    
+
     next unless scalar @$genes;
-    
+
     foreach my $gene(@$genes) {
       push @phenotypes, {
         'id' => $gene->stable_id,
@@ -290,7 +301,8 @@ sub parse_omia {
     }
   }
   close(IN);
-  
+  close ($errFH1);
+
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
 }
