@@ -28,6 +28,13 @@ limitations under the License.
 
 =cut
 
+
+=head1 ImprotRGD
+
+This module imports RGD (Rat Genome Database) data.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportRGD;
 
 use warnings;
@@ -35,79 +42,80 @@ use strict;
 
 use File::Path qw(make_path);
 use LWP::Simple;
-use Data::Dumper; #TODO: remove if not needed
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD NONE);
-#use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation qw($variation_dba);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
-#TODO: should contain everything about RGD, including getting the file(s) and for all RGD species
-
 my %source_info;
 my $workdir;
+my ($logFH, $errFH);
+
 my $core_dba;
 my $variation_dba;
-my $phenotype_dba;
 
 my $debug;
 
 sub fetch_input {
-    my $self = shift;
+  my $self = shift;
 
-    my $pipeline_dir = $self->required_param('pipeline_dir');
-    my $species      = $self->required_param('species');
-    
-    $core_dba    = $self->get_species_adaptor('core');
-    $variation_dba  = $self->get_species_adaptor('variation'); #TODO: why did the init -> Base class -> this not work?
-    $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
-    
-    $debug        = $self->param('debug_mode');
-  
-    #TODO:info RAT species assembly used to be an input parameter, now is parsed from core db and used latest
+  my $pipeline_dir = $self->required_param('pipeline_dir');
+  my $species      = $self->required_param('species');
 
-    my $rgd_ftp_url_qtl = 'ftp://ftp.rgd.mcw.edu/pub/data_release/';
-    my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
+  $core_dba       = $self->get_species_adaptor('core');
+  $variation_dba  = $self->get_species_adaptor('variation');
 
-    %source_info = (source_description => 'QTLs from the Rat Genome Database (RGD)',
-                    source_url => 'http://rgd.mcw.edu/',
-                    object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type ones
-                    source_name => 'RGD',
-                    source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
-                    source_status => 'germline',
-                    threshold => $self->required_param('threshold_qtl'),
-                    );
-    #TODO: smart map between species and RGD files Currently only RAT is imported... could remove the rest from here
-    my %rgd_names_qtl = (rattus_norvegicus =>'RAT',
-                     rat => 'RAT',
-                     );
-    my %rgd_names_gene = (rattus_norvegicus =>'rattus',
-                     rat => 'rattus',
-                     );
-    
-    $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-    #get input files RGD eQTL, GENE:
-    my $file_qtl = 'QTLS_'.$rgd_names_qtl{$species}.'.txt';
-    make_path($workdir);
-    getstore($rgd_ftp_url_qtl.$file_qtl, $workdir."/".$file_qtl) unless -e $workdir."/".$file_qtl;
-    print "Found files (".$workdir."/".$file_qtl.") and will skip new fetch\n" if -e $workdir."/".$file_qtl;
-    my @files_todo =();
-    foreach my $rgd_f (qw/_terms_mp _terms_rdo _terms_vt/){
-      my $rgd_file = $rgd_names_gene{$species}.$rgd_f;
-      getstore($rgd_ftp_url_gene.$rgd_file, $workdir."/".$rgd_file) unless -e $workdir."/".$rgd_file;
-      push @files_todo, $rgd_file;
-    }
-    $self->param('qtl_file', $file_qtl);
-    $self->param('gene_file', [@files_todo]);
-    #TODO: could/should I(?) add a warning if file already exists? latest: if file there it skips fetch from ftp
-    
-    #fetch coreDB assembly: TODO: is there a nicer/ most reliable way of doing this?
-    my $gc =  $core_dba->get_adaptor('GenomeContainer');
-    if ($species eq 'rattus_norvegicus'){
-      my @assemblyV = split('_',$gc->get_version); #Rnor_6.0
-      $self->param('species_assembly', $assemblyV[1]);  #'6.0';
-      print 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if $debug;
-    }
+  $debug        = $self->param('debug_mode');
+  $self->SUPER::set_debug($self->param('debug_mode'));
+
+  my $rgd_ftp_url_qtl = 'ftp://ftp.rgd.mcw.edu/pub/data_release/';
+  my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
+
+  %source_info = (source_description => 'QTLs from the Rat Genome Database (RGD)',
+                  source_url => 'http://rgd.mcw.edu/',
+                  object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type phenotypes
+                  #source_version  will be set based on the date in the fetched QTL input file  (year/month/day-> yyyymmdd)
+                  source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)
+                  source_status => 'germline',
+                  threshold => $self->required_param('threshold_qtl'),
+
+                  source_name => 'RGD',        #source name in the variation db
+                  source_name_short => 'RGD',  #source identifier in the pipeline
+                  );
+  #NOTE: smart map between species and RGD files Currently only RAT is imported, could be extended for the rest.
+  my %rgd_names_qtl = (rattus_norvegicus =>'RAT',
+                   rat => 'RAT',
+                   );
+  my %rgd_names_gene = (rattus_norvegicus =>'rattus',
+                   rat => 'rattus',
+                   );
+
+  $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
+  make_path($workdir);
+
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  $self->SUPER::set_logFH($logFH);
+  $self->SUPER::set_errFH($errFH);
+
+  #get input files RGD eQTL, GENE:
+  my $file_qtl = 'QTLS_'.$rgd_names_qtl{$species}.'.txt';
+  getstore($rgd_ftp_url_qtl.$file_qtl, $workdir."/".$file_qtl) unless -e $workdir."/".$file_qtl;
+  print $logFH  "Found files (".$workdir."/".$file_qtl.") and will skip new fetch\n" if -e $workdir."/".$file_qtl;
+  my @files_todo =();
+  foreach my $rgd_f (qw/_terms_mp _terms_rdo _terms_vt/){
+    my $rgd_file = $rgd_names_gene{$species}.$rgd_f;
+    getstore($rgd_ftp_url_gene.$rgd_file, $workdir."/".$rgd_file) unless -e $workdir."/".$rgd_file;
+    push @files_todo, $rgd_file;
+  }
+  $self->param('qtl_file', $file_qtl);
+  $self->param('gene_file', [@files_todo]);
+
+  #fetch coreDB assembly:
+  my $gc =  $core_dba->get_adaptor('GenomeContainer');
+  if ($species eq 'rattus_norvegicus'){
+    my @assemblyV = split('_',$gc->get_version); #Rnor_6.0
+    $self->param('species_assembly', $assemblyV[1]);  #'6.0';
+    print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if $debug;
+  }
 
 }
 
@@ -116,37 +124,27 @@ sub run {
 
   # parameters from fetch input
   my $species_assembly = $self->required_param('species_assembly');
-  
-  #PROCESS QTLs file
+
+  #Process QTLs file
   my $rgd_file = $self->required_param('qtl_file');   #GO through files and parse them in the correct format
-  
+
   # get seq_region_ids
   my $seq_region_ids = $self->get_seq_region_ids($variation_dba);
 
   # parse phenotypes
-  {
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">", $workdir."/".'log_import_out_'.$rgd_file; #TODO: what is best error/out log naming convention?
-    open STDERR, ">", $workdir."/".'log_import_err_'.$rgd_file;
-    my ($results, $version) = parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
-    warn "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
-  
-    # save phenotypes:
-    $source_info{source} = 'rgd_qtl';
-    $source_info{source_version} = $version;
+  my ($results, $version) = parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
+  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
 
-    $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
-  }
+  # save phenotypes:
+  $source_info{source} = 'rgd_qtl';
+  $source_info{source_version} = $version;
 
-  #TODO: the last read in file saves also the version; TODO:Q: should I only use the version from QTL file?
-  #PROCESS GENEs files 
+  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+
+  #Process GENEs files
   foreach my $rgd_gene_file (@{$self->required_param('gene_file')}){
-  #TODO: remove after test  $rgd_gene_file = 'rattus_terms_vt';
-    local (*STDOUT, *STDERR);
-    open STDOUT, ">", $workdir."/".'log_import_out_'.$rgd_gene_file; #TODO: what is best error/out log naming convention?
-    open STDERR, ">", $workdir."/".'log_import_err_'.$rgd_gene_file;
     my ($results, $version) = parse_rgd_gene($seq_region_ids, $rgd_gene_file);
-    warn "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes from file $rgd_gene_file\n" if $debug ;
+    print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes from file $rgd_gene_file\n" if $debug ;
     $source_info{source} = 'rgd_gene';
     $source_info{object_type} = 'Gene'; # By default it is set to 'QTL
 
@@ -158,13 +156,19 @@ sub run {
   $self->param('output_ids', { source => \%param_source, 
                                species => $self->required_param('species'),
                              });
+  close($logFH);
+  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
+  if ($self->param('debug_mode')) {
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
+    close ($logPipeFH);
+  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
-  print "Passing RGD import for checks\n" if $self->param('debug_mode');
 }
 
 
@@ -172,7 +176,10 @@ sub write_output {
 sub parse_rgd_gene {
   my $seq_region_ids = shift;
   my $infile = shift;
-  
+
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+
   my @phenotypes;
 
   my $gene_adaptor = $core_dba->get_GeneAdaptor;
@@ -195,11 +202,11 @@ sub parse_rgd_gene {
   while (<IN>) {
     chomp;
     $line_num++;
-    
+
     if (/^\#\s+GENERATED-ON:\s+(.*)/){
       $version = $1;
       $version =~ s/\///g;
-      print "$infile source version: ", $version, "\n" if $debug;
+      print $errFH1 "$infile source version: ", $version, "\n" if $debug;
     }
 
     next if /^(\#|\s)/ || !$_;
@@ -230,7 +237,7 @@ sub parse_rgd_gene {
         }
 
         if (!$gene) {
-          print STDERR "Symbol '$symbol' not found in the Core database\n";
+          print $errFH1 "Symbol '$symbol' not found in the Core database\n";
           next;
         }
 
@@ -264,6 +271,7 @@ sub parse_rgd_gene {
     }
   }
   close IN;
+  close ($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
   return (\%result, $version);
@@ -275,6 +283,9 @@ sub parse_rgd_qtl {
   my $seq_region_ids = shift;
   my $infile = shift;
   my $assembly = shift;
+
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
@@ -297,7 +308,7 @@ sub parse_rgd_qtl {
     if (/^\#\s+GENERATED-ON:\s+(.*)/){
       $version = $1;
       $version =~ s/\///g;
-      print "source version: ", $version, "\n" if $debug;
+      print $errFH1 "source version: ", $version, "\n" if $debug;
     }
     next if (/^(\#|\s)/ || !$_) ;
 
@@ -316,14 +327,14 @@ sub parse_rgd_qtl {
       my $chr = $data{$assembly.'_MAP_POS_CHR'};
 
       if(!defined($chr) || !$chr) {
-        print STDERR "WARNING: Could not get coordinates for assembly $assembly on line $line_num\n";
+        print $errFH1 "WARNING: Could not get coordinates for assembly $assembly on line $line_num\n";
         next;
       }
 
       $chr =~ s/^chr(om)?\.?//i;
 
       if(!defined($seq_region_ids->{$chr})) {
-        print STDERR "WARNING: Could not find seq_region_id for chromosome name $chr on line $line_num\n";
+        print $errFH1 "WARNING: Could not find seq_region_id for chromosome name $chr on line $line_num\n";
         next;
       }
 
@@ -358,7 +369,8 @@ sub parse_rgd_qtl {
     }
   }
   close IN;
-  
+  close ($errFH1);
+
   my %result = ('phenotypes' => \@phenotypes);
   return (\%result, $version);
 }
