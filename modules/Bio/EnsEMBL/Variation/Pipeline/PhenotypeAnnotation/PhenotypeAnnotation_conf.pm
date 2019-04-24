@@ -112,8 +112,6 @@ sub default_options {
 
         zfin_version            => '20001020', #13 Sep 2018 #TODO: confirm there is no computational way to get it
 
-        omia_version            => '20001020', #TODO: confirm there is no computational way to get it
-
         ega_database_conf       => $self->o('pipeline_dir').'/ega_database.conf',
 
         # configuration for the various resource options used in the pipeline
@@ -264,7 +262,6 @@ sub pipeline_analyses {
         {   -logic_name => 'import_omia',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOMIA',
             -parameters => {
-                omia_version => $self->o('omia_version'),
                 @common_params,
             },
             -input_ids      => [],
