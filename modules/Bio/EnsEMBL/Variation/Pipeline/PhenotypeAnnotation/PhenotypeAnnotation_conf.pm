@@ -116,11 +116,11 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
 
-        default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>4000] rusage[mem=4000]" -M4000',
-        urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000',
+        urgent_lsf_options  => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction-rh74 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
