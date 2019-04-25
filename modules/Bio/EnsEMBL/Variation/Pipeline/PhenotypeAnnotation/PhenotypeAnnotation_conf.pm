@@ -36,9 +36,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL NONE);
-
-#TODO: Q: should I use EnsemblGeneric_conf.pm? / clear understanding when to use EnsemblGeneric_conf, when HiveGeneric_conf and when neither/smth else?
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
 
 
 sub default_options {
@@ -128,7 +126,6 @@ sub default_options {
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
 
-        # Should hive use triggeres? TODO: what is the answer?
         hive_use_triggers       => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
@@ -420,7 +417,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_name    => 'default',
-        #    -wait_for       => [ 'finish_phenotype_annotation' ], TODO: do I need this?
             -flow_into      => {},
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
