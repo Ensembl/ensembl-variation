@@ -119,7 +119,7 @@ sub checkNonTerms {
   my $desc = shift;
 
   my $is_ok = 1;
-  my @junk = ("None", "Not provided", "not specified", "Not in OMIM", "Variant of unknown significance", "not_provided", "?","." );
+  my @junk = ("None", "Not provided", "not specified", "Not in OMIM", "Variant of unknown significance", "not_provided", "?",".", "ClinVar: phenotype not specified");
 
   for my $check (@junk){
     if (index($desc, $check) != -1) {
