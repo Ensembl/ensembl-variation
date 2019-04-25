@@ -27,6 +27,13 @@ limitations under the License.
  <http://www.ensembl.org/Help/Contact>.
 
 =cut
+
+=head1 Constants
+
+General constatns for the PhenotypeAnnotation pipeline.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants;
 
 use base qw(Exporter);
@@ -62,24 +69,24 @@ use constant IMPC      => 'IMPC';
 use constant MGI       => 'MGI';
 use constant NONE      => 'NONE';
 
-use constant species => ( 'RGD' => ['rattus_norvegicus'],
-                  'AnimalQTL' => ['gallus_gallus','equus_caballus'],
-                # 'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus', 'sus_scrofa', 'ovis_aries'],
-                 'ZFIN' => ['danio_rerio'],
-            #     'OMIA' => ['felis_catus','gallus_gallus','pan_troglodytes',
-            #                'bos_taurus','canis_familiaris','equus_caballus',
-            #                'macaca_mulatta','sus_scrofa','ovis_aries',
-            #                'meleagris_gallopavo','danio_rerio'],
-                 'OMIA' => ['gallus_gallus'],
-                 'GWAS'      => ['homo_sapiens'],
-                 'EGA'       => ['homo_sapiens'],
-                 'Orphanet'  => ['homo_sapiens'],
-                 'MIMmorbid' => ['homo_sapiens'],
-                 'DDG2P'     => ['homo_sapiens'],
-                 'CGC'       => ['homo_sapiens'],
+use constant species => ( 'RGD'       => ['rattus_norvegicus'],
+                          'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
+                                          'sus_scrofa', 'ovis_aries'],
+                          'ZFIN'      => ['danio_rerio'],
+                          'OMIA'      => ['felis_catus','gallus_gallus','pan_troglodytes',
+                                          'bos_taurus','canis_familiaris','equus_caballus',
+                                          'macaca_mulatta','sus_scrofa','ovis_aries',
+                                          'meleagris_gallopavo','danio_rerio'],
 
-                 'IMPC' => ['mus_musculus'],
-                 'MGI'  => ['mus_musculus'],
-                 );
+                          'GWAS'      => ['homo_sapiens'],
+                          'EGA'       => ['homo_sapiens'],
+                          'Orphanet'  => ['homo_sapiens'],
+                          'MIMmorbid' => ['homo_sapiens'],
+                          'DDG2P'     => ['homo_sapiens'],
+                          'CGC'       => ['homo_sapiens'],
+
+                          'IMPC'      => ['mus_musculus'],
+                          'MGI'       => ['mus_musculus'],
+                        );
 
 1;
