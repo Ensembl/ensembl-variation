@@ -73,10 +73,9 @@ use constant species => ( 'RGD'       => ['rattus_norvegicus'],
                           'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
                                           'sus_scrofa', 'ovis_aries'],
                           'ZFIN'      => ['danio_rerio'],
-                          'OMIA'      => ['felis_catus','gallus_gallus','pan_troglodytes',
+                          'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
                                           'bos_taurus','canis_familiaris','equus_caballus',
-                                          'macaca_mulatta','sus_scrofa','ovis_aries',
-                                          'meleagris_gallopavo','danio_rerio'],
+                                          'macaca_mulatta','sus_scrofa','ovis_aries'],
 
                           'GWAS'      => ['homo_sapiens'],
                           'EGA'       => ['homo_sapiens'],
@@ -87,6 +86,10 @@ use constant species => ( 'RGD'       => ['rattus_norvegicus'],
 
                           'IMPC'      => ['mus_musculus'],
                           'MGI'       => ['mus_musculus'],
+                          'ontology'  => ['homo_sapiens', 'gallus_gallus',
+                                          'sus_scrofa', 'bos_taurus',
+                                          'equus_caballus', 'ovis_aries',
+                                          'capra_hircus', 'canis_familiaris']
                         );
 
 1;

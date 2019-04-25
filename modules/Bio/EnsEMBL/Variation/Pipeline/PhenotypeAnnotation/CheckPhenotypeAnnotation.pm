@@ -41,6 +41,7 @@ use strict;
 use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species);
 
 my $source;
 my $workdir;
@@ -75,12 +76,24 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
-    close ($logPipeFH);
+  # if species is an 'ontology' term species then move to dataflow 2
+  my %import_species = &species;
+  my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
+  if (defined ($ontology_species{$self->param('species')})) {
+    if ($self->param('debug_mode')) {
+      open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
+      print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for adding ontology accessions (ontology_mapping)\n";
+      close ($logPipeFH);
+    }
+    $self->dataflow_output_id($self->param('output_ids'), 2);
+  } else {
+    if ($self->param('debug_mode')) {
+      open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
+      print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
+      close ($logPipeFH);
+    }
+    $self->dataflow_output_id($self->param('output_ids'), 3);
   }
-  $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
 
