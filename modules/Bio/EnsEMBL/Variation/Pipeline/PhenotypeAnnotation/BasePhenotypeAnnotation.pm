@@ -67,7 +67,7 @@ my $prev_prog;
 
 my $skip_synonyms = 0;   # 1 for IMPC, MGI
 my $skip_phenotypes = 0; #TODO: take it out or keep it for legacy ? was 1 for uniprot
-my $skip_sets = 0;       #TODO: when needed? this is never set in the script BUT is input param to script
+my $skip_sets = 0;       #TODO: when needed? this is never set in the script BUT is input param
 
 
 sub set_skip_synonyms {
@@ -124,46 +124,7 @@ sub add_phenotypes {
   my $left_join = '';
 
   # add special joins for checking certain sources
-  if ($source_info->{source_name_short} =~ m/uniprot/i) { #TODO: remove if decided to remove uniprot entirly
-    $left_join = qq{
-      LEFT JOIN
-      (
-        phenotype_feature_attrib pfa
-        JOIN attrib_type at
-        ON pfa.attrib_type_id = at.attrib_type_id
-      )
-      ON pf.phenotype_feature_id = pfa.phenotype_feature_id
-    };
-
-    $extra_cond = 'AND at.code = "variation_names" and pfa.value = ? ';
-  }
-  elsif ($source_info->{source_name_short} =~ m/omim/i) { #TODO: remove if decided to remove omim entirly
-    $left_join = qq{
-      LEFT JOIN
-      (
-        phenotype_feature_attrib pfa1
-        JOIN attrib_type at1
-        ON pfa1.attrib_type_id = at1.attrib_type_id
-      )
-      ON pf.phenotype_feature_id = pfa1.phenotype_feature_id
-
-      LEFT JOIN
-      (
-        phenotype_feature_attrib pfa2
-        JOIN attrib_type at2
-        ON pfa2.attrib_type_id = at2.attrib_type_id
-      )
-      ON pf.phenotype_feature_id = pfa2.phenotype_feature_id
-    };
-
-    $extra_cond = qq{
-      AND at1.code = "risk_allele"
-      AND pfa1.value = ?
-      AND at2.code = "associated_gene"
-      AND pfa2.value = ?
-    };
-  }
-  elsif ($source_info->{source_name_short} =~ m/GWAS/i) {
+  if ($source_info->{source_name_short} =~ m/GWAS/i) {
     $left_join = qq{
       LEFT JOIN
       (
@@ -364,18 +325,10 @@ sub add_phenotypes {
     $pf_check_sth->bind_param(3,$phenotype_id,SQL_INTEGER);
     $pf_check_sth->bind_param(4,$source_id,SQL_INTEGER);
     $pf_check_sth->bind_param(5,$study_id,SQL_INTEGER);
-    # For uniprot data
-    if ($source_info->{source_name_short} =~ m/uniprot/i) { #TODO: remove if decided to remove uniprot entirly
-      $pf_check_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
-    }
+
     # For nhgri-ebi gwas data
-    elsif ($source_info->{source_name_short} =~ m/GWAS/i) {
+    if ($source_info->{source_name_short} =~ m/GWAS/i) {
       $pf_check_sth->bind_param(6,$phenotype->{"p_value"},SQL_VARCHAR);
-    }
-    # For omim data
-    elsif ($source_info->{source_name_short} =~ m/omim/i) { #TODO: remove if decided to remove omim entirly
-      $pf_check_sth->bind_param(6,$phenotype->{"risk_allele"},SQL_VARCHAR);
-      $pf_check_sth->bind_param(7,$phenotype->{"associated_gene"},SQL_VARCHAR);
     }
 
     $pf_check_sth->execute();
@@ -419,7 +372,7 @@ sub add_phenotypes {
   print $logFH "$phenotype_feature_count new phenotype_features added\n" if ($debug);
 }
 
-sub add_synonyms { #TODO: test this method when I have synonyms
+sub add_synonyms {
   my ($synonyms, $variation_ids, $source_id, $db_adaptor) = @_;
 
   # If we actually didn't get any synonyms, just return
