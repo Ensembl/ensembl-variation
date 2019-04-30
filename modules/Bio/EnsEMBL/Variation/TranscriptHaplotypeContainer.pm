@@ -331,7 +331,7 @@ sub get_all_most_frequent_CDSHaplotypes {
   Example    : my @phs = @{$thc->get_all_most_frequent_ProteinHaplotypes()}
   Description: Get all protein haplotypes that have an observed count equal
                to the maximum observed count
-  Returntype : arrayref of Bio::EnsEMBL::ProteinHaplotype
+  Returntype : arrayref of Bio::EnsEMBL::Variation::ProteinHaplotype
   Exceptions : none
   Caller     : general
   Status     : Stable
