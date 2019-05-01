@@ -57,7 +57,7 @@ usage() if ($help);
 my ($content_before, $new_content, $content_after);
 my $tmp_file    = 'vep_plugins_tmp.html';
 my $vep_plugin_url = "https://github.com/Ensembl/VEP_plugins/";
-my $vep_plugin_url_version = "https://github.com/Ensembl/VEP_plugins/blob/release/$version";
+my $vep_plugin_url_version = "https://github.com/Ensembl/VEP_plugins/blob/release/[[SPECIESDEFS::ENSEMBL_VERSION]]";
 my $plugin_conf_file = "$git_dir/plugin_config.txt";
 my $cpanm_url = 'https://metacpan.org/pod/';
 
