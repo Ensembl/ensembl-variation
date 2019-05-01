@@ -174,8 +174,6 @@ sub loadfile {
     die("rename of ($loadfile) to ($table_file) for table load fails");
   }
 
-  rename($loadfile, $table_file);
-   
 #  my $host = $db->host();
 #  my $user = $db->user();
 #  my $pass = $db->pass();
