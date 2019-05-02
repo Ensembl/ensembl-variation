@@ -400,8 +400,7 @@ sub get_or_add_source {
     };
     $db_adaptor->dbc->do($stmt);
     $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
-
-    # print STDOUT "Added source for $source_name (source_id = $source_id)\n" if ($verbose); 
+ 
   }
   else {
     $stmt = qq{
@@ -529,9 +528,6 @@ sub add_synonyms_uniprot {
 
     # If we have a variation id, we can proceed
     if (defined($var_id)) {
-      
-      print "VARIATION ID: $var_id\n"; 
-
       $update_source_sth->execute($var_id); 
       
       $variation_count++;
