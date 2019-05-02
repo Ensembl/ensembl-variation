@@ -108,8 +108,8 @@ elsif($source_name eq 'dbSNP'){
 
   # get data from human_synonym table (in production db) 
   foreach my $result (@{$synonyms_output}){  
-    $data{$result->[2]}{rs_name} = $result->[1]; 
-    $data{$result->[2]}{source_id} = $result->[4]; 
+    $data{$result->[1]}{rs_name} = $result->[0]; 
+    $data{$result->[1]}{source_id} = $result->[2]; 
   }
  
   # get all available sources from production database  
