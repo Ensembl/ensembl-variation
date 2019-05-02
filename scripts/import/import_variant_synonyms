@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2018] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,8 +37,7 @@ use strict;
 use warnings;
 use HTTP::Tiny;
 use Getopt::Long;
-use Data::Dumper;
-
+use DBI qw(:sql_types);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Source;
@@ -103,21 +102,72 @@ elsif($source_name eq 'dbSNP'){
       '-driver'  =>  'mysql' 
     ); 
 
-  my $synonyms_output = query_synonyms_data($prod_dbc, 'rs_name,synonym_name,source_id', 'human_synonym'); 
+  my $synonyms_output = query_synonyms_data($prod_dbc, '*', 'human_synonym'); 
 
   my %data; # synonym_name => {rs_name} & {source_id} 
 
   # get data from human_synonym table (in production db) 
   foreach my $result (@{$synonyms_output}){  
-    $data{$result->[1]}{rs_name} = $result->[0]; 
-    $data{$result->[1]}{source_id} = $result->[2]; 
+    $data{$result->[2]}{rs_name} = $result->[1]; 
+    $data{$result->[2]}{source_id} = $result->[4]; 
   }
-  # print "DATA: ", Dumper(\%data), "\n"; 
+ 
   # get all available sources from production database  
   my $sources = get_all_sources($dba, $prod_dbc);
 
   import_synonyms_all_sources($sources, $dba, $species, \%data);  
 } 
+
+elsif($source_name eq 'UniProt'){
+  # download UniProt file if it's not provided  
+  $data_file = download_UniProt() unless $data_file; 
+ 
+  my $result = parse_uniprot($data_file); 
+
+  # Source UniProt 
+  my %source_uniprot = (
+  "UniProt" => {
+    description => "Variants with protein annotation imported from Uniprot",
+    url => "http://www.uniprot.org/",
+    set => "ph_uniprot",
+    type => "Variation",
+    status => 'germline',
+  }, 
+  ); 
+
+  # get source info 
+  $source_description = $source_uniprot{$source_name}->{description}; 
+  $source_url = $source_uniprot{$source_name}->{url}; 
+  my $set = $source_uniprot{$source_name}->{set}; 
+  my $object_type = $source_uniprot{$source_name}->{type}; 
+  my $source_status = $source_uniprot{$source_name}->{status}; 
+
+  # get source and returns source_id 
+  my $source = get_or_add_source($source_name,$source_description,$source_url,$source_status,$dba); 
+
+  my @ids; 
+  my %synonym;
+  my @phenotypes; 
+  if (exists($result->{'synonyms'})) {
+    %synonym = %{$result->{'synonyms'}};
+    # To get all the ids of the source (Uniprot)
+    @ids = keys(%synonym);
+  }
+  # not used right now 
+  if (exists($result->{'phenotypes'})) {
+    @phenotypes = @{$result->{'phenotypes'}};
+  } 
+  
+  if (scalar @ids == 0) {
+    @ids = map {$_->{'id'}} @phenotypes;
+  }
+  my $variation_ids = $object_type =~ /Variation/ ? get_dbIDs(\@ids,$dba) : {}; 
+
+  # Add the synonyms
+    my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
+    add_synonyms_uniprot(\%synonym,$variation_ids,$source,$variation_set_id,$dba); 
+
+}
 
 else{
     die "data source : $source_name not supported\n";
@@ -145,6 +195,360 @@ sub download_PharmGKB{
   die "Failed to unzip data :$@\n" unless $@ eq '';
 
   return "rsid.tsv";
+}
+
+=head2 download_UniProt
+
+collect current export from UniProt site
+
+=cut 
+
+sub download_UniProt{
+
+  my $http     = HTTP::Tiny->new();
+  my $response = $http->get('https://www.uniprot.org/docs/humsavar.txt');
+  die "Failed to pick up file\n" unless $response->{success};
+
+  open my $out, ">humsavar.txt" ||die "Failed to write data locally : $!\n";
+  print $out  $response->{content}; 
+
+  return "humsavar.txt";
+}
+
+=head2 parse_uniprot
+
+parse UniProt file 
+
+=cut 
+
+sub parse_uniprot {
+  my $infile = shift;
+  
+  my %synonym;
+  my @phenotypes;
+  
+  # Open the input file for reading
+  if($infile =~ /gz$/) {
+    open (IN, "zcat $infile |") or die ("Could not open $infile for reading");
+  }
+  else {
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  }
+  
+  # Read through the file and parse out the desired fields
+  while (<IN>) {
+    chomp;
+    
+    # A regexp to catch the meta information in the header. Just echo this to the stdout for logging purposes
+    if ($_ =~ m/^\s*(Description|Name|Release)\:/) {
+      print STDOUT $_ . "\n";
+    }
+    
+    # Main regexp to extract relevant variation information
+    if ($_ =~ m/^(\S+)\s+\S+\s+(VAR\_\d+)\s+\w\.\S+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s*(.*)$/) {
+      
+      # Get the data that was caught by the regexp
+      my $gene = $1;
+      my $uniprot_id = $2;
+      my $rs_id = $4;
+      my $phenotype = $5;
+      
+      # If no rsId was given, will attempt to get one by looking up the Uniprot id in the synonym table
+      if ($rs_id ne '-') {
+        push(@{$synonym{$rs_id}},$uniprot_id);
+      }
+      #else {
+      #  $rs_id = $uniprot_id;
+      #}
+      
+      #$phenotype ||= '-';
+      
+      ## Try to further split the phenotype into a short name, description and possibly MIM id
+      #if ($phenotype ne '-') {
+      #  my $description;
+      #  my $name;
+      #  my $mim_id;
+      #  
+      #  ($description,$mim_id) = $phenotype =~ m/^([^\[]+)(?:\[(MIM\:.+?)\])?$/;
+      #  ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
+      #  
+      #  $mim_id &&= join(",MIM:",split(",",$mim_id));
+      #  $mim_id =~ s/\s//g if (defined($mim_id));
+      #
+      #  push(
+      #    @phenotypes,
+      #    {
+      #      "id"              => $rs_id,
+      #      "associated_gene" => $gene,
+      #      "description"     => $description,
+      #      "name"            => $name,
+      #      "variation_names" => $rs_id,
+      #      "study"           => $mim_id,
+      #      "study_type"      => 'GWAS'
+      #    }
+      #  );
+      #}
+    }
+  }
+  close(IN);
+  
+  #my %result = ('synonyms' => \%synonym, 'phenotypes' => \@phenotypes);
+  my %result = ('synonyms' => \%synonym);
+  return \%result;
+}
+
+sub get_dbIDs {
+  my $rs_ids = shift;
+  my $db_adaptor = shift;
+  
+  my $id_stmt = qq{
+    SELECT
+      DISTINCT
+      v.variation_id,
+      v.name
+    FROM
+      variation v,
+      variation_feature vf
+      
+    WHERE
+      v.name = ? AND
+      v.variation_id=vf.variation_id
+    LIMIT 1
+  };
+  my $syn_stmt = qq{
+    SELECT
+      DISTINCT
+      v.variation_id,
+      v.name
+    FROM
+      variation_feature vf,
+      variation_synonym vs JOIN
+      variation v ON vs.variation_id = v.variation_id
+    WHERE
+      vs.name = ? AND
+      v.variation_id=vf.variation_id
+    LIMIT 1
+  };
+  my $id_sth = $db_adaptor->dbc->prepare($id_stmt);
+  my $syn_sth = $db_adaptor->dbc->prepare($syn_stmt);
+  
+  my %mapping;
+  
+  foreach my $rs_id (@{$rs_ids}) {
+    $id_sth->bind_param(1,$rs_id,SQL_VARCHAR);
+    $id_sth->execute();
+    my ($var_id,$var_name);
+    $id_sth->bind_columns(\$var_id,\$var_name);
+    $id_sth->fetch();
+    
+    # If we couldn't find the rs_id, look in the synonym table
+    if (!defined($var_id)) {
+      $syn_sth->bind_param(1,$rs_id,SQL_VARCHAR);
+      $syn_sth->execute();
+      $syn_sth->bind_columns(\$var_id,\$var_name);
+      $syn_sth->fetch();
+    }
+    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
+    if($var_id){
+      warn "$rs_id - found!!\n"; 
+    }
+    $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
+  }
+  
+  return \%mapping;
+} 
+
+sub get_or_add_source {
+  my $source_name = shift;
+  my $source_description = shift;
+  my $source_url    = shift;
+  my $source_status = shift;
+  my $db_adaptor    = shift;
+
+  my $stmt = qq{
+    SELECT
+      source_id
+    FROM
+      source
+    WHERE
+      name = '$source_name'
+    LIMIT 1
+  };
+  my $sth = $db_adaptor->dbc->prepare($stmt);
+  $sth->execute();
+  my $source_id;
+  $sth->bind_columns(\$source_id);
+  $sth->fetch();
+  
+  if (!defined($source_id)) {
+    $stmt = qq{
+      INSERT INTO
+        source (
+          name,
+          description,
+          url,
+          somatic_status,
+          version
+        )
+      VALUES (
+        '$source_name',
+        '$source_description',
+        '$source_url',
+        '$source_status',
+        '$source_version'
+      )
+    };
+    $db_adaptor->dbc->do($stmt);
+    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+
+    # print STDOUT "Added source for $source_name (source_id = $source_id)\n" if ($verbose); 
+  }
+  else {
+    $stmt = qq{
+      UPDATE
+        source 
+      SET name=?,
+        description=?,
+        url=?,
+        version=?
+      WHERE
+        source_id=?
+    };
+    my $update_source_sth =$db_adaptor->dbc->prepare($stmt);
+    $update_source_sth->execute($source_name,$source_description,$source_url,$source_version,$source_id);
+  }
+
+  return $source_id;
+}
+ 
+sub add_set_uniprot {  
+  my $db_adaptor = shift;
+  my $set_name = shift; 
+  my $set_description = shift;
+
+  # check if UniProt already exists 
+  my $stmt = qq{
+    SELECT
+      variation_set_id
+    FROM
+      variation_set
+    WHERE
+      name = '$set_name'
+    LIMIT 1
+  };
+  my $sth = $db_adaptor->dbc->prepare($stmt);
+  $sth->execute();
+  my $variation_set_id;
+  $sth->bind_columns(\$variation_set_id);
+  $sth->fetch();
+
+  if (!defined($variation_set_id)) {  
+    my $stmt_attrib = qq{
+      SELECT
+        attrib_id
+      FROM
+        attrib
+      WHERE
+        value = '$set_name'
+      LIMIT 1
+    };
+    my $sth_attrib = $db_adaptor->dbc->prepare($stmt_attrib);
+    $sth_attrib->execute();
+    my $attrib_id;
+    $sth_attrib->bind_columns(\$attrib_id);
+    $sth_attrib->fetch();
+
+    my $ins_stmt = qq{
+      INSERT IGNORE INTO
+        variation_set (
+        name,
+        description,
+        short_name_attrib_id
+        )
+      VALUES (
+        '$set_name',
+        '$set_description',
+        '$attrib_id' 
+      )
+    };
+
+    $db_adaptor->dbc->do($ins_stmt); 
+    $variation_set_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+ 
+  } 
+  
+  return $variation_set_id; 
+}
+
+sub add_synonyms_uniprot {
+  my $synonyms = shift;
+  my $variation_ids = shift;
+  my $source_id = shift;
+  my $variation_set_id = shift; 
+  my $db_adaptor = shift;
+
+  # If we actually didn't get any synonyms, just return
+  return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
+  
+  # Some prepeared statements needed for inserting the synonyms into database
+  my $ins_stmt = qq{
+    INSERT IGNORE INTO
+      variation_synonym (
+      variation_id,
+      source_id,
+      name
+      )
+    VALUES (
+      ?,
+      $source_id,
+      ?
+    )
+  };
+
+  my $stmt_update = qq{
+    UPDATE
+      variation_feature 
+    SET 
+      variation_set_id = CONCAT(variation_set_id,',$variation_set_id')  
+    WHERE
+      variation_id=?
+  }; 
+
+  print "SQL: $stmt_update\n"; 
+
+  my $ins_sth = $db_adaptor->dbc->prepare($ins_stmt);
+ 
+  my $update_source_sth =$db_adaptor->dbc->prepare($stmt_update); 
+
+  my $alt_count = 0;
+  my $variation_count = 0;
+  
+  foreach my $rs_id (keys %{$variation_ids}) {
+    
+    my $var_id = $variation_ids->{$rs_id}[0]; 
+
+    # If we have a variation id, we can proceed
+    if (defined($var_id)) {
+      
+      print "VARIATION ID: $var_id\n"; 
+
+      $update_source_sth->execute($var_id); 
+      
+      $variation_count++;
+      
+      $ins_sth->bind_param(1,$var_id,SQL_INTEGER);
+      
+      # Handle all synonym ids for this rs_id
+      while (my $alt_id = shift(@{$synonyms->{$rs_id}})) {
+      
+        # Add the id as synonym, if it is already present, it will just be ignored
+        $ins_sth->bind_param(2,$alt_id,SQL_VARCHAR);
+        $ins_sth->execute();
+        $alt_count++;
+      }
+    }
+  }
+
 }
 
 =head2 extract_PharmGKB
@@ -282,7 +686,7 @@ sub get_all_sources{
 
   my $source_adaptor = $dest_db->get_SourceAdaptor('human', 'variation'); 
 
-  my $source_output = query_synonyms_data($prod_dbc, 'source_id,name,version,description,url', 'source'); 
+  my $source_output = query_synonyms_data($prod_dbc, 'source_id,name,version,description,url', 'source');  
 
   foreach my $result_from_source (@{$source_output}){  
     # my $source_id = $result_from_source->[0]; 
