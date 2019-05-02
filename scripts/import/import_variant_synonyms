@@ -102,7 +102,7 @@ elsif($source_name eq 'dbSNP'){
       '-driver'  =>  'mysql' 
     ); 
 
-  my $synonyms_output = query_synonyms_data($prod_dbc, '*', 'human_synonym'); 
+  my $synonyms_output = query_synonyms_data($prod_dbc, 'rs_name,synonym_name,source_id', 'human_synonym'); 
 
   my %data; # synonym_name => {rs_name} & {source_id} 
 
