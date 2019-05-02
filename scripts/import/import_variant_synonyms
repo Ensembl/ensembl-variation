@@ -76,8 +76,8 @@ $dba->include_failed_variations(1);
 
 
 ## collect synonyms by source
-if($source_name eq 'PharmGKB'){
-  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description );
+if($source_name eq 'PharmGKB') { 
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description);
 
   my $synonyms;
 
@@ -91,7 +91,7 @@ if($source_name eq 'PharmGKB'){
   import_synonyms($synonyms, $source, $dba, $species); 
 }
 
-elsif($source_name eq 'dbSNP'){
+elsif($source_name eq 'dbSNP') {
   ### import synonyms from production database ### Access directly database because this database doesn't have adaptors 
   my $prod_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
     ( '-host'    => $host,
@@ -126,12 +126,12 @@ elsif($source_name eq 'UniProt'){
 
   # Source UniProt 
   my %source_uniprot = (
-  "UniProt" => {
+  "UniProt"     => {
     description => "Variants with protein annotation imported from Uniprot",
-    url => "http://www.uniprot.org/",
-    set => "ph_uniprot",
-    type => "Variation",
-    status => 'germline',
+    url         => "http://www.uniprot.org/",
+    set         => "ph_uniprot",
+    type        => "Variation",
+    status      => 'germline',
   }, 
   ); 
 
@@ -180,13 +180,13 @@ collect current export from PharmGKB site
 
 =cut 
 
-sub download_PharmGKB{
+sub download_PharmGKB {
 
   my $http     = HTTP::Tiny->new();
   my $response = $http->get('https://api.pharmgkb.org/v1/download/file/data/rsid.zip');
   die "Failed to pick up file\n" unless $response->{success};
 
-  open my $out, ">rsid.zip" ||die "Failed to write data locally : $!\n";
+  open (my $out, ">rsid.zip") or die ("Failed to write data locally : $!\n");
   print $out  $response->{content};
 
   eval{
@@ -203,13 +203,13 @@ collect current export from UniProt site
 
 =cut 
 
-sub download_UniProt{
+sub download_UniProt {
 
   my $http     = HTTP::Tiny->new();
   my $response = $http->get('https://www.uniprot.org/docs/humsavar.txt');
   die "Failed to pick up file\n" unless $response->{success};
 
-  open my $out, ">humsavar.txt" ||die "Failed to write data locally : $!\n";
+  open (my $out, ">humsavar.txt") or die ("Failed to write data locally : $!\n");
   print $out  $response->{content}; 
 
   return "humsavar.txt";
@@ -232,7 +232,7 @@ sub parse_uniprot {
     open (IN, "zcat $infile |") or die ("Could not open $infile for reading");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$infile) or die ("Could not open $infile for reading");
   }
   
   # Read through the file and parse out the desired fields
@@ -257,48 +257,16 @@ sub parse_uniprot {
       if ($rs_id ne '-') {
         push(@{$synonym{$rs_id}},$uniprot_id);
       }
-      #else {
-      #  $rs_id = $uniprot_id;
-      #}
-      
-      #$phenotype ||= '-';
-      
-      ## Try to further split the phenotype into a short name, description and possibly MIM id
-      #if ($phenotype ne '-') {
-      #  my $description;
-      #  my $name;
-      #  my $mim_id;
-      #  
-      #  ($description,$mim_id) = $phenotype =~ m/^([^\[]+)(?:\[(MIM\:.+?)\])?$/;
-      #  ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
-      #  
-      #  $mim_id &&= join(",MIM:",split(",",$mim_id));
-      #  $mim_id =~ s/\s//g if (defined($mim_id));
-      #
-      #  push(
-      #    @phenotypes,
-      #    {
-      #      "id"              => $rs_id,
-      #      "associated_gene" => $gene,
-      #      "description"     => $description,
-      #      "name"            => $name,
-      #      "variation_names" => $rs_id,
-      #      "study"           => $mim_id,
-      #      "study_type"      => 'GWAS'
-      #    }
-      #  );
-      #}
     }
   }
   close(IN);
   
-  #my %result = ('synonyms' => \%synonym, 'phenotypes' => \@phenotypes);
   my %result = ('synonyms' => \%synonym);
   return \%result;
 }
 
 sub get_dbIDs {
-  my $rs_ids = shift;
+  my $rs_ids     = shift;
   my $db_adaptor = shift;
   
   my $id_stmt = qq{
@@ -349,9 +317,7 @@ sub get_dbIDs {
       $syn_sth->fetch();
     }
     warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
-    if($var_id){
-      warn "$rs_id - found!!\n"; 
-    }
+
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
   
@@ -359,11 +325,11 @@ sub get_dbIDs {
 } 
 
 sub get_or_add_source {
-  my $source_name = shift;
+  my $source_name        = shift;
   my $source_description = shift;
-  my $source_url    = shift;
-  my $source_status = shift;
-  my $db_adaptor    = shift;
+  my $source_url         = shift;
+  my $source_status      = shift;
+  my $db_adaptor         = shift;
 
   my $stmt = qq{
     SELECT
@@ -374,6 +340,7 @@ sub get_or_add_source {
       name = '$source_name'
     LIMIT 1
   };
+
   my $sth = $db_adaptor->dbc->prepare($stmt);
   $sth->execute();
   my $source_id;
@@ -399,8 +366,7 @@ sub get_or_add_source {
       )
     };
     $db_adaptor->dbc->do($stmt);
-    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
- 
+    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'}; 
   }
   else {
     $stmt = qq{
@@ -421,8 +387,8 @@ sub get_or_add_source {
 }
  
 sub add_set_uniprot {  
-  my $db_adaptor = shift;
-  my $set_name = shift; 
+  my $db_adaptor      = shift;
+  my $set_name        = shift; 
   my $set_description = shift;
 
   # check if UniProt already exists 
@@ -435,6 +401,7 @@ sub add_set_uniprot {
       name = '$set_name'
     LIMIT 1
   };
+
   my $sth = $db_adaptor->dbc->prepare($stmt);
   $sth->execute();
   my $variation_set_id;
@@ -480,11 +447,11 @@ sub add_set_uniprot {
 }
 
 sub add_synonyms_uniprot {
-  my $synonyms = shift;
-  my $variation_ids = shift;
-  my $source_id = shift;
+  my $synonyms         = shift;
+  my $variation_ids    = shift;
+  my $source_id        = shift;
   my $variation_set_id = shift; 
-  my $db_adaptor = shift;
+  my $db_adaptor       = shift;
 
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
@@ -553,14 +520,14 @@ extract data from PharmGKB file
 
 =cut
 
-sub extract_PharmGKB{
+sub extract_PharmGKB {
 
   my $data_file = shift;
 
   my %synonyms;
 
   open my $rslist, $data_file ||die "Failed to open synonym list to load: $!\n";
-  while(<$rslist>){
+  while(<$rslist>) {
     next if/RSID/;
 
     my @a = split/\t/;
@@ -574,7 +541,7 @@ sub extract_PharmGKB{
 import synonyms from refhash and source object;
 
 =cut
-sub import_synonyms{
+sub import_synonyms {
 
   my $synonyms = shift;
   my $source   = shift;
@@ -583,7 +550,7 @@ sub import_synonyms{
 
   my $variation_adaptor = $dba->get_VariationAdaptor($species, 'variation', );
 
-  foreach my $var_name (keys %{$synonyms}){
+  foreach my $var_name (keys %{$synonyms}) {
 
     my $var = $variation_adaptor->fetch_by_name($var_name);
     unless($var){
@@ -600,7 +567,7 @@ sub import_synonyms{
 import all synonyms from production database  
 
 =cut
-sub import_synonyms_all_sources{
+sub import_synonyms_all_sources {
 
   my $sources           = shift;  
   my $dest_db           = shift; 
@@ -609,11 +576,11 @@ sub import_synonyms_all_sources{
 
   my $variation_adaptor = $dest_db->get_VariationAdaptor($species, 'variation');  
 
-  foreach my $synonym_name (keys %{$data}){ 
+  foreach my $synonym_name (keys %{$data}) { 
     my $var_name = $data->{$synonym_name}->{rs_name}; 
     my $var = $variation_adaptor->fetch_by_name($var_name); 
 
-    unless($var){
+    unless($var) {
       warn "variant $var_name not found\n";
       next; 
     }
@@ -632,7 +599,7 @@ get or add source object
 
 =cut
 
-sub get_source{
+sub get_source {
 
   my $species     = shift;
   my $dba         = shift;
@@ -644,9 +611,9 @@ sub get_source{
   my $source_adaptor = $dba->get_SourceAdaptor('human', 'variation', );
   my $source = $source_adaptor->fetch_by_name($source_name);
 
-  if (defined $source){
+  if (defined $source) {
     ## do we need to update the version of an existing source?
-    if(defined $version){ 
+    if(defined $version) { 
       $source->version($version);
       $source_adaptor->update_version($source);   
     }
@@ -661,7 +628,10 @@ sub get_source{
         -description => $description || undef,
         -data_types  => ['variation_synonym']
       );
-    eval{$source_adaptor->store($source);} ; die "ERROR storing source: $@\n" unless $@ eq ''; 
+    eval{
+      $source_adaptor->store($source);
+    };
+    die "ERROR storing source: $@\n" unless $@ eq ''; 
   }
   return $source;
 }
@@ -672,9 +642,9 @@ get sources object
 
 =cut
 
-sub get_all_sources{
+sub get_all_sources {
 
-  my $dest_db = shift;
+  my $dest_db  = shift;
   my $prod_dbc = shift; 
 
   # my %source_names; # hash with source id and corresponding source name 
@@ -684,12 +654,12 @@ sub get_all_sources{
 
   my $source_output = query_synonyms_data($prod_dbc, 'source_id,name,version,description,url', 'source');  
 
-  foreach my $result_from_source (@{$source_output}){  
+  foreach my $result_from_source (@{$source_output}) {  
     # my $source_id = $result_from_source->[0]; 
     my $source_name = $result_from_source->[1]; 
     my $source = $source_adaptor->fetch_by_name($source_name);
 
-    if(!defined($source)){    
+    if(!defined($source)) { 
       # get info for source  
       $source = Bio::EnsEMBL::Variation::Source->new
          (-name        => $source_name, 
@@ -699,7 +669,10 @@ sub get_all_sources{
           -data_types  => ['variation_synonym']
         );
 
-      eval{$source_adaptor->store($source);} ; die "ERROR storing source: $@\n" unless $@ eq ''; 
+      eval{
+        $source_adaptor->store($source);
+      };
+      die "ERROR storing source: $@\n" unless $@ eq ''; 
     } 
     $source_list{$result_from_source->[0]} = $source; 
   } 
@@ -712,9 +685,9 @@ sub get_all_sources{
 fetch data from production database   
 
 =cut
-sub query_synonyms_data{
+sub query_synonyms_data {
 
-  my $prod_dbc = shift;
+  my $prod_dbc   = shift;
   my $params     = shift; 
   my $table_name = shift;
 
