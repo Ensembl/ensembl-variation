@@ -734,6 +734,12 @@ sub usage{
 \t         -source_version     [version]
 \t         -source_url         [url]
 \t         -source_description [longer description]
-\t         -species            [species]      - defaults to human
-\t         -clean                             - remove old data\n\n";
+\t         -species            [species]               - defaults to human
+\t         -registry           [registry file]
+\t         -db_name            [production db name]
+\t         -host               [production db host]
+\t         -port               [production db port]
+\t         -user               [user]
+\t         -pass               [pass]
+\t         -clean                                      - remove old data\n\n";
 }
