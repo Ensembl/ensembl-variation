@@ -286,7 +286,7 @@ sub fetch_all_by_Variation {
       my $vf = $variation->get_all_VariationFeatures->[0];
 
       # Check that there are no empty allele strings
-      if (!grep { $_ eq ''} split(/\//, $vf->allele_string)) {
+      if ($vf && !grep { $_ eq ''} split(/\//, $vf->allele_string)) {
         @$cached = map {@{$_->get_all_SampleGenotypeFeatures_by_VariationFeature($vf)}}
                        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []} if $vf;
       }
