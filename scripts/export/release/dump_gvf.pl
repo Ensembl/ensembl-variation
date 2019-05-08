@@ -86,7 +86,7 @@ $config,
   'set_name=s', # phenotype_associated clinically_associated
 
   'individual=s',
-
+  'sample=s',
   'population=s',
   'input_gvf=s',
   'frequencies_dir=s', # cache_files_dir?
@@ -100,7 +100,8 @@ check_arguments($config);
 init_db_connections($config);
 init_variation_set($config) if (defined $config->{set_name});
 init_failed_variations($config) if (defined $config->{failed});
-init_sample_data($config) if (defined $config->{individual} || defined $config->{population});
+init_sample_data($config) if (defined $config->{individual} || defined $config->{population} || $config->{sample});
+$config->{sample} = $config->{individual} if (defined $config->{individual});
 init_consequence_data($config) if ($config->{incl_consequences});
 init_slices($config);
 $config->{fh} = FileHandle->new($config->{gvf_file}, 'w');
@@ -136,8 +137,8 @@ sub init_db_connections {
   $config->{vdba} = $vdba;
   $config->{cdba} = $cdba;
   $config->{slice_adaptor} = $cdba->get_SliceAdaptor;
-  $config->{individual_gt_adaptor} = $vdba->get_IndividualGenotypeAdaptor;
-  $config->{individual_adaptor} = $vdba->get_IndividualAdaptor;
+  $config->{sample_gt_adaptor} = $vdba->get_SampleGenotypeAdaptor;
+  $config->{sample_adaptor} = $vdba->get_SampleAdaptor;
   $config->{vf_adaptor}  = $vdba->get_VariationFeatureAdaptor;
   $config->{tv_adaptor}  = $vdba->get_TranscriptVariationAdaptor;
   $config->{variation_set_adaptor} = $vdba->get_VariationSetAdaptor;
@@ -184,13 +185,13 @@ sub init_failed_variations {
 
 sub init_sample_data {
     my $config = shift;
-    if ($config->{individual}) {
-        my $name = $config->{individual};
-        my $ia = $config->{individual_adaptor};
-        my $individuals = $ia->fetch_all_by_name($name);
-        die "More than one individual for name $name" if (scalar @$individuals > 1);
-        die "No individual for name $name" if (scalar @$individuals == 0);
-        $config->{_individual} = $individuals->[0];
+    if ($config->{sample}) {
+        my $name = $config->{sample};
+        my $sa = $config->{sample_adaptor};
+        my $samples = $sa->fetch_all_by_name($name);
+        die "More than one sample for name $name" if (scalar @$samples > 1);
+        die "No sample for name $name" if (scalar @$samples == 0);
+        $config->{_sample} = $samples->[0];
     }
 }
 
@@ -317,7 +318,7 @@ sub dump_data {
         foreach my $slice_piece (@$slice_pieces) {
           my $slice_piece_start = $slice_piece->seq_region_start;
           my $slice_piece_end = $slice_piece->seq_region_end;
-            if ($config->{individual}) { 
+            if ($config->{sample}) { 
                 update_gts($config, $slice_piece);
             }
             if ($config->{somatic}) {
@@ -409,7 +410,7 @@ sub annotate_vf {
     add_coords($gvf_line, $vf);
     add_alleles($gvf_line, $vf);
 
-    if ($config->{individual}) {
+    if ($config->{sample}) {
         return unless (add_genotype($config, $gvf_line, $vf));
     }
 
@@ -519,9 +520,8 @@ sub add_alleles {
 
 sub add_ancestral_allele {
     my ($gvf_line, $vf) = @_;
-    my $variation = $vf->variation;
-    if (defined($variation->ancestral_allele)) {
-        $gvf_line->{attributes}->{ancestral_allele} = $variation->ancestral_allele;
+    if (defined($vf->ancestral_allele)) {
+        $gvf_line->{attributes}->{ancestral_allele} = $vf->ancestral_allele;
     }
 }
 
@@ -627,28 +627,28 @@ sub add_variant_effect {
 
 sub update_gts {
     my ($config, $slice) = @_;
-    my $igta = $config->{individual_gt_adaptor};
-    my $individual = $config->{_individual};
-    my $igts = $igta->fetch_all_by_Slice($slice, $individual);
+    my $sgta = $config->{sample_gt_adaptor};
+    my $sample = $config->{_sample};
+    my $sgts = $sgta->fetch_all_by_Slice($slice, $sample);
     my $gt_hash = {};
-    for my $igt (@$igts) {
+    for my $sgt (@$sgts) {
         my $key = join('_',
-            $igt->slice->seq_region_name,
-            $igt->seq_region_start,
-            $igt->seq_region_end,
+            $sgt->slice->seq_region_name,
+            $sgt->seq_region_start,
+            $sgt->seq_region_end,
         );
         my $gts = $gt_hash->{$key} ||= [];
         my $seen = 0;
         if (@$gts) {
             for my $gt (@$gts) {
-                if (($gt->allele1 eq $igt->allele1 && $gt->allele2 eq $igt->allele2) ||
-                    ($gt->allele1 eq $igt->allele2 && $gt->allele2 eq $igt->allele1)) {
+                if (($gt->allele1 eq $sgt->allele1 && $gt->allele2 eq $sgt->allele2) ||
+                    ($gt->allele1 eq $sgt->allele2 && $gt->allele2 eq $sgt->allele1)) {
                     $seen++;
                     last;
                 }
             }
         }
-        push @$gts, $igt unless $seen;
+        push @$gts, $sgt unless $seen;
     }
     $config->{gts} = $gt_hash;
 }
@@ -735,7 +735,7 @@ sub add_genotype {
     }
 
     unless ($gvf_line->{attributes}->{Zygosity}) {
-        # this vf isn't in this individual, so don't output it
+        # this vf isn't in this sample, so don't output it
         # next VF;
         $gvf_line = {};
         return 0;
@@ -786,8 +786,8 @@ sub print_header {
     . "##data-source Source=ensembl;version=$schema_version;url=$url\n"
     . "##file-version $schema_version\n";
 
-    if ($config->{individual}) {
-        $gvf_header .= "##individual-id " . $config->{individual};
+    if ($config->{sample}) {
+        $gvf_header .= "##sample-id " . $config->{sample};
     }
     
     if ($config->{population}) {
