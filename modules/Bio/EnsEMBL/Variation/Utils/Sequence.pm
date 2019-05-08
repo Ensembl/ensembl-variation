@@ -1046,8 +1046,8 @@ sub get_matched_variant_alleles {
 
   # convert allele_string key
   foreach my $var($a, $b) {
-    if(my $as = $var->{allele_string} && $var->{allele_string} !~ /^\/.+$/) {
-      my @alleles = split('/', $as);
+    if($var->{allele_string} && $var->{allele_string} !~ /^\/.+$/) {
+      my @alleles = split('/', $var->{allele_string});
       $var->{ref}  ||= shift @alleles;
       $var->{alts}   = \@alleles unless exists($var->{alts});
     }
@@ -1067,7 +1067,7 @@ sub get_matched_variant_alleles {
   warning("Missing pos key in first variant") unless $a->{pos};
   warning("Missing pos key in second variant") unless $b->{pos};
 
-  return [] if (!exists($a->{ref}) || !exists($b->{ref}) || !exists($a->{alts}) || !exists($b->{alts}) || !$a->{pos} || $b->{pos});
+  return [] if (!exists($a->{ref}) || !exists($b->{ref}) || !exists($a->{alts}) || !exists($b->{alts}) || !$a->{pos} || !$b->{pos});
 
   # munge in strand
   $a->{strand} = 1 unless exists($a->{strand});
