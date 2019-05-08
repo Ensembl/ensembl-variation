@@ -586,6 +586,10 @@ sub add_variant_effect {
 
         foreach my $tv_allele (@{$tv->get_all_alternate_TranscriptVariationAlleles}) {
             my $allele_idx = first { $alleles[$_] eq $tv_allele->variation_feature_seq } 0..$#alleles;
+            if (!defined $allele_idx) { # This can happen for LRGs which can have a different reference sequence compared to the genomic reference sequence
+              print STDERR "Missing allele_idx for VF_id $vf_id transcript_stable_id $tv_stable_id and TV_allele " ,  $tv_allele->variation_feature_seq, "\n"; 
+              next;
+            }
             if ($config->{incl_consequences}) {
                 for my $oc (@{$tv_allele->get_all_OverlapConsequences}) {
                     next unless (defined $allele_idx);
