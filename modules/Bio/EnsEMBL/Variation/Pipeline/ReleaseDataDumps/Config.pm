@@ -110,7 +110,7 @@ sub variation_data_survey {
     my $vdbc = $vdba->dbc();
     my $queries = {
         sift => 'select count(*) from protein_function_predictions;',
-        ancestral_allele => 'select variation_id from variation where ancestral_allele is not null limit 1;',
+        ancestral_allele => 'select variation_feature_id from variation_feature where ancestral_allele is not null limit 1;',
         global_maf => 'select variation_id from variation where minor_allele is not null limit 1;',
         clinical_significance => 'select variation_id from variation where clinical_significance is not null limit 1;',
         clinical_significance_svs => 'select structural_variation_id from structural_variation where clinical_significance is not null limit 1;',
