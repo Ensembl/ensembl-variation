@@ -1773,6 +1773,11 @@ sub fetch_by_hgvs_notation {
     $reference =~ s/\.\d+//g;
    }
 
+  # Old code only worked with right transcript version
+  # Delete transcript version to avoid problems
+  my $reference_no_version = $reference;
+  $reference_no_version =~ s/\.[0-9]+//;
+
   $description =~ s/\s+//;
 
   #######################  extract genomic coordinates and reference seq allele  #######################
@@ -1789,7 +1794,12 @@ sub fetch_by_hgvs_notation {
     my $transcript = $transcript_adaptor->fetch_by_stable_id($reference);
 
     my @transcripts;
-    
+ 
+    # Fetch xref transcripts
+    if(!defined($transcript) && $reference =~ /NM_/){
+      @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference_no_version)};
+    }
+   
     #try and fetch via gene
     if(!defined($transcript)) {
       push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
@@ -1861,12 +1871,21 @@ sub fetch_by_hgvs_notation {
 
     my @transcripts;
 
+    # Fetch xref transcript
+    if(!defined($transcript) && $reference =~ /NP/){
+      @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference_no_version)};
+    } 
+
     # support some malformed HGVS
     if(!defined($transcript)) {
       # Seeing transcripts erroneously submitted with p. changes
-      if($reference =~ /ENST|NM/){
+      if($reference =~ /ENST/){
          push @transcripts, $transcript_adaptor->fetch_by_stable_id($reference);
       }
+      elsif($reference =~ /NM/){
+        @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference_no_version)}; 
+      }
+
       # Fetch as UniProt ID or gene
       else {
         # Try to see if the ID is from UniProt
