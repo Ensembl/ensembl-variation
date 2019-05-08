@@ -122,9 +122,9 @@ $dbh->do(qq{
 
 $dbh->do(qq{
     DELETE  vsv
-    FROM    variation_set_variation vsv, variation v
-    WHERE   vsv.variation_id = v.variation_id
-    AND     v.source_id = $source_id
+    FROM    variation_set_variation vsv, variation_set vs
+    WHERE   vsv.variation_set_id = vs.variation_set_id
+    AND     vs.name = "COSMIC phenotype variants"
 });
 
 # variation
