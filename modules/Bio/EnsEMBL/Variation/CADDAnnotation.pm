@@ -136,7 +136,7 @@ sub get_all_scores_by_VariationFeature {
 
   my $parser = $self->_seek_by_VariationFeature($vf);
   my $scores = {};
-  while ($parser->next) {
+  while ($parser && $parser->next) {
     my $phred_score = $parser->get_phred_score;
     my $alt_allele = $parser->get_alternative;
     $scores->{$alt_allele} = $phred_score;
