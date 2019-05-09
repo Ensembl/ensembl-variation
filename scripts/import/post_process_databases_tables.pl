@@ -160,7 +160,7 @@ sub post_process_phenotype () {
   my $sql_phe_1 = "DELETE FROM phenotype WHERE phenotype_id NOT IN (SELECT phenotype_id FROM phenotype_feature)";
   my $sql_phe_2 = "DELETE FROM phenotype_ontology_accession WHERE phenotype_id NOT IN (SELECT phenotype_id FROM phenotype)";
 
-  my @tables = ('phenotype','phenotype_feature','phenotype_feature_attib','phenotype_feature_attrib');
+  my @tables = ('phenotype','phenotype_feature','phenotype_ontology_accession','phenotype_feature_attrib');
 
   # Cleanup phenotype related tables
   get_connection_and_query($db, $host, $sql_phe_1);
