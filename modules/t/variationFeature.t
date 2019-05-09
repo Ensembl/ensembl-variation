@@ -23,7 +23,6 @@ use Test::Exception;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Source;
 use Bio::EnsEMBL::Test::MultiTestDB;
-use Data::Dumper; 
 
 use_ok('Bio::EnsEMBL::Variation::Variation');
 use_ok('Bio::EnsEMBL::Variation::VariationFeature');
