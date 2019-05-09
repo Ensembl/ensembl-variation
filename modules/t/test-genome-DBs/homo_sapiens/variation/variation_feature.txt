@@ -1300,3 +1300,4 @@
 977538234	27519	102009451	102009457	1	9771344	GCCCCCC/CT	\N	rs796515439	1	\N	1	intron_variant		14	0	\N	\N	\N	1	\N	\N	1
 997738293	27504	87778	87778	1	112643978	T/C	T	rs1267742856	1	\N	1	intergenic_variant		2	0	\N	\N	\N	1		\N	1
 997738294	27504	62987612	62987612	1	112643978	C/G	C	rs1267742856	1	\N	1	non_coding_transcript_variant,NMD_transcript_variant,intron_variant		2	0	\N	\N	\N	1		\N	1
+997738295	27513	76134861	76134861	1	112643979	(T)9/(T)10	\N	rs8192742	1	\N	1	non_coding_transcript_variant,intron_variant		16	0	\N	\N	\N	1		\N	1
