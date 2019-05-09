@@ -94,6 +94,14 @@ warns_like {
   $vf_cadd_scores = $vf->get_all_cadd_scores($cadd_annotation->filename_template);
 } qr/Can only calculate CADD scores for variants of length 1/, 'Warn if input variant is an insertion';
 
+# location not in CADD file:
+$variation = $va->fetch_by_name('rs199476127');
+$vf = $variation->get_all_VariationFeatures()->[0];
+$vf_cadd_scores = $vf->get_all_cadd_scores($cadd_annotation->filename_template);
+($cadd_annotation_id, $scores) = %{$vf_cadd_scores};
+ok($cadd_annotation_id eq 'CADD', "CADD annotation file name");
+ok(scalar keys %$scores == 0, "Return empty if location is not in CADD file");
+
 # GERP for insertions rs70937952
 $variation = $va->fetch_by_name('rs70937952');
 $vf = $variation->get_all_VariationFeatures()->[0];
