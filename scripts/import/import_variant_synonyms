@@ -77,7 +77,7 @@ $dba->include_failed_variations(1);
 
 ## collect synonyms by source
 if($source_name eq 'PharmGKB') { 
-  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description);
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, 'germline');
 
   my $synonyms;
 
@@ -124,14 +124,14 @@ elsif($source_name eq 'UniProt'){
  
   my $result = parse_uniprot($data_file); 
 
-  # Source UniProt 
+  # Source UniProt - variation_set table 
   my %source_uniprot = (
   "UniProt"     => {
-    description => "Variants with protein annotation imported from Uniprot",
+    description => "Variants with annotations provided by UniProt",
     url         => "http://www.uniprot.org/",
-    set         => "ph_uniprot",
+    set         => "Uniprot variants",
     type        => "Variation",
-    status      => 'germline',
+    status      => 'mixed',
   }, 
   ); 
 
@@ -143,29 +143,23 @@ elsif($source_name eq 'UniProt'){
   my $source_status = $source_uniprot{$source_name}->{status}; 
 
   # get source and returns source_id 
-  my $source = get_or_add_source($source_name,$source_description,$source_url,$source_status,$dba); 
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status); 
+  my $source_id = $source->dbID();
 
   my @ids; 
   my %synonym;
-  my @phenotypes; 
+  
   if (exists($result->{'synonyms'})) {
     %synonym = %{$result->{'synonyms'}};
     # To get all the ids of the source (Uniprot)
     @ids = keys(%synonym);
   }
-  # not used right now 
-  if (exists($result->{'phenotypes'})) {
-    @phenotypes = @{$result->{'phenotypes'}};
-  } 
-  
-  if (scalar @ids == 0) {
-    @ids = map {$_->{'id'}} @phenotypes;
-  }
+
   my $variation_ids = $object_type =~ /Variation/ ? get_dbIDs(\@ids,$dba) : {}; 
 
   # Add the synonyms
     my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
-    add_synonyms_uniprot(\%synonym,$variation_ids,$source,$variation_set_id,$dba); 
+    add_synonyms_uniprot(\%synonym,$variation_ids,$source_id,$variation_set_id,$dba); 
 
 }
 
@@ -205,14 +199,15 @@ collect current export from UniProt site
 
 sub download_UniProt {
 
-  my $http     = HTTP::Tiny->new();
-  my $response = $http->get('https://www.uniprot.org/docs/humsavar.txt');
+  my $http      = HTTP::Tiny->new();
+  my $data_file = 'humsavar.txt'; 
+  my $response  = $http->get('https://www.uniprot.org/docs/' . $data_file);
   die "Failed to pick up file\n" unless $response->{success};
 
-  open (my $out, ">humsavar.txt") or die ("Failed to write data locally : $!\n");
+  open (my $out, '>' . $data_file) or die ("Failed to write data locally : $!\n");
   print $out  $response->{content}; 
 
-  return "humsavar.txt";
+  return $data_file;
 }
 
 =head2 parse_uniprot
@@ -225,8 +220,7 @@ sub parse_uniprot {
   my $infile = shift;
   
   my %synonym;
-  my @phenotypes;
-  
+    
   # Open the input file for reading
   if($infile =~ /gz$/) {
     open (IN, "zcat $infile |") or die ("Could not open $infile for reading");
@@ -316,7 +310,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
+    # warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
 
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
@@ -324,68 +318,6 @@ sub get_dbIDs {
   return \%mapping;
 } 
 
-sub get_or_add_source {
-  my $source_name        = shift;
-  my $source_description = shift;
-  my $source_url         = shift;
-  my $source_status      = shift;
-  my $db_adaptor         = shift;
-
-  my $stmt = qq{
-    SELECT
-      source_id
-    FROM
-      source
-    WHERE
-      name = '$source_name'
-    LIMIT 1
-  };
-
-  my $sth = $db_adaptor->dbc->prepare($stmt);
-  $sth->execute();
-  my $source_id;
-  $sth->bind_columns(\$source_id);
-  $sth->fetch();
-  
-  if (!defined($source_id)) {
-    $stmt = qq{
-      INSERT INTO
-        source (
-          name,
-          description,
-          url,
-          somatic_status,
-          version
-        )
-      VALUES (
-        '$source_name',
-        '$source_description',
-        '$source_url',
-        '$source_status',
-        '$source_version'
-      )
-    };
-    $db_adaptor->dbc->do($stmt);
-    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'}; 
-  }
-  else {
-    $stmt = qq{
-      UPDATE
-        source 
-      SET name=?,
-        description=?,
-        url=?,
-        version=?
-      WHERE
-        source_id=?
-    };
-    my $update_source_sth =$db_adaptor->dbc->prepare($stmt);
-    $update_source_sth->execute($source_name,$source_description,$source_url,$source_version,$source_id);
-  }
-
-  return $source_id;
-}
- 
 sub add_set_uniprot {  
   my $db_adaptor      = shift;
   my $set_name        = shift; 
@@ -456,7 +388,7 @@ sub add_synonyms_uniprot {
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
   
-  # Some prepeared statements needed for inserting the synonyms into database
+  # Some prepared statements needed for inserting the synonyms into database
   my $ins_stmt = qq{
     INSERT IGNORE INTO
       variation_synonym (
@@ -480,14 +412,9 @@ sub add_synonyms_uniprot {
       variation_id=?
   }; 
 
-  print "SQL: $stmt_update\n"; 
-
   my $ins_sth = $db_adaptor->dbc->prepare($ins_stmt);
  
-  my $update_source_sth =$db_adaptor->dbc->prepare($stmt_update); 
-
-  my $alt_count = 0;
-  my $variation_count = 0;
+  my $update_variation_set_sth =$db_adaptor->dbc->prepare($stmt_update); 
   
   foreach my $rs_id (keys %{$variation_ids}) {
     
@@ -495,9 +422,7 @@ sub add_synonyms_uniprot {
 
     # If we have a variation id, we can proceed
     if (defined($var_id)) {
-      $update_source_sth->execute($var_id); 
-      
-      $variation_count++;
+      $update_variation_set_sth->execute($var_id); 
       
       $ins_sth->bind_param(1,$var_id,SQL_INTEGER);
       
@@ -507,7 +432,6 @@ sub add_synonyms_uniprot {
         # Add the id as synonym, if it is already present, it will just be ignored
         $ins_sth->bind_param(2,$alt_id,SQL_VARCHAR);
         $ins_sth->execute();
-        $alt_count++;
       }
     }
   }
@@ -601,12 +525,13 @@ get or add source object
 
 sub get_source {
 
-  my $species     = shift;
-  my $dba         = shift;
-  my $source_name = shift;
-  my $version     = shift;
-  my $url         = shift;
-  my $description = shift;
+  my $species       = shift;
+  my $dba           = shift;
+  my $source_name   = shift;
+  my $version       = shift;
+  my $url           = shift;
+  my $description   = shift;
+  my $source_status = shift;
 
   my $source_adaptor = $dba->get_SourceAdaptor('human', 'variation', );
   my $source = $source_adaptor->fetch_by_name($source_name);
@@ -622,11 +547,12 @@ sub get_source {
     ## update enter new source
     print "Source information not held for $source_name - adding supplied info\n" unless defined $source ;
     $source = Bio::EnsEMBL::Variation::Source->new
-       (-name        => $source_name,
-        -url         => $url         || undef,
-        -version     => $version     || undef,
-        -description => $description || undef,
-        -data_types  => ['variation_synonym']
+       (-name           => $source_name,
+        -url            => $url           || undef,
+        -version        => $version       || undef,
+        -description    => $description   || undef,
+        -somatic_status => $source_status || undef,
+        -data_types     => ['variation_synonym']
       );
     eval{
       $source_adaptor->store($source);
