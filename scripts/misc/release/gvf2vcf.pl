@@ -629,16 +629,17 @@ sub print_header {
     $mon++;           # correct the month
     my $vcf_file_date = sprintf "%4d%02d%02d", $year, $mon, $mday;
     my $url = '';
+    my $ensembl_url = 'https://www.ensembl.org';
     my ($division) = @{$mca->list_value_by_key('species.division')};
     if (!$division) {
-      $url = 'http://www.ensembl.org';
+      $url = $ensembl_url;
     }
     elsif ($division eq 'Ensembl') {
-      $url = 'http://e'.$schema_version.'.ensembl.org/'.$species_name;
+      $url = 'https://e'.$schema_version.'.ensembl.org/'.$species_name;
     } else {
       $division =~ s/^Ensembl//;
       $division = lc $division;
-      $url = 'http://'.$division.'.ensembl.org/'.$species_name;
+      $url = 'https://'.$division.'.ensembl.org/'.$species_name;
     }
     my $vcf_source_field = "ensembl;version=$schema_version;url=$url";
     my $reference_info = "ftp://ftp.ensembl.org/pub/release-$schema_version/fasta/$species_name/dna/";
@@ -657,14 +658,14 @@ sub print_header {
     }
 
     if ($config->{evidence}) {
-        my $link = 'http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status';
+        my $link = $ensembl_url . '/info/genome/variation/prediction/variant_quality.html#evidence_status';
         while (my($abbr, $evidence_value) = each %{$config->{abbr_to_evidence_value}}) {
             print $fh "##INFO=<ID=$abbr,Number=0,Type=Flag,Description=\"$evidence_value.$link\">\n";
         }
     }
 
     if ($config->{clinical_significance}) {
-        my $link = 'http://www.ensembl.org/info/genome/variation/data_description.html#clin_significance';
+        my $link = $ensembl_url . '/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance';
         while (my($abbr, $clin_significance) = each %{$config->{abbr_to_clin_significance}}) {
             print $fh "##INFO=<ID=$abbr,Number=0,Type=Flag,Description=\"$clin_significance.$link\">\n";
         }
