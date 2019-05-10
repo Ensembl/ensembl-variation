@@ -1,5 +1,6 @@
 # Ensembl Variation API
 
+[![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/release/97/LICENSE)
 [![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=release/97)](https://travis-ci.org/Ensembl/ensembl-variation)
 [![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=release/97)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=release/97)
 
