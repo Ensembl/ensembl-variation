@@ -82,7 +82,7 @@ if($source_name eq 'PharmGKB') {
   my $synonyms;
 
   ## collect data files if not already available
-  $data_file = download_PharmGKB() unless $data_file;
+  $data_file = download_file('PharmGKB', 'rsid.zip') unless $data_file;
 
   ## extract synonyms from file
   $synonyms  = extract_PharmGKB($data_file);
@@ -120,7 +120,7 @@ elsif($source_name eq 'dbSNP') {
 
 elsif($source_name eq 'UniProt'){
   # download UniProt file if it's not provided  
-  $data_file = download_UniProt() unless $data_file; 
+  $data_file = download_file('UniProt', 'humsavar.txt') unless $data_file; 
  
   my $result = parse_uniprot($data_file); 
 
@@ -167,48 +167,49 @@ else{
     die "data source : $source_name not supported\n";
 } 
 
+=head2 download_file
 
-=head2 download_PharmGKB
+collect current export from PharmGKB and UniProt site
 
-collect current export from PharmGKB site
+=cut
 
-=cut 
+sub download_file {
+  my $source = shift; 
+  my $data_file = shift;
+  my $output_file; 
 
-sub download_PharmGKB {
+  my $http = HTTP::Tiny->new();
+  my $url; 
 
-  my $http     = HTTP::Tiny->new();
-  my $response = $http->get('https://api.pharmgkb.org/v1/download/file/data/rsid.zip');
-  die "Failed to pick up file\n" unless $response->{success};
+  if($source eq "PharmGKB") {
+    $url = "https://api.pharmgkb.org/v1/download/file/data/" . $data_file; 
+  }
+  elsif($source eq "UniProt") {
+    $url = "https://www.uniprot.org/docs/" . $data_file; 
+  }
+  else {
+    die "Can't download file for data source: $data_file\n"; 
+  }
+  
+  my $response = $http->get($url); 
+  die "Failed to pick up file: $data_file\n" unless $response->{success};
 
-  open (my $out, ">rsid.zip") or die ("Failed to write data locally : $!\n");
+  open (my $out, ">" . $data_file) or die ("Failed to write data locally : $!\n");
   print $out  $response->{content};
 
-  eval{
+  if($source eq "PharmGKB") {
+    eval{
     `unzip rsid.zip`
-  };
-  die "Failed to unzip data :$@\n" unless $@ eq '';
+    };
+    die "Failed to unzip data :$@\n" unless $@ eq '';
+    $output_file = "rsid.tsv"; 
+  }
+  else {
+    $output_file = $data_file; 
+  }
 
-  return "rsid.tsv";
-}
-
-=head2 download_UniProt
-
-collect current export from UniProt site
-
-=cut 
-
-sub download_UniProt {
-
-  my $http      = HTTP::Tiny->new();
-  my $data_file = 'humsavar.txt'; 
-  my $response  = $http->get('https://www.uniprot.org/docs/' . $data_file);
-  die "Failed to pick up file\n" unless $response->{success};
-
-  open (my $out, '>' . $data_file) or die ("Failed to write data locally : $!\n");
-  print $out  $response->{content}; 
-
-  return $data_file;
-}
+  return $output_file; 
+} 
 
 =head2 parse_uniprot
 
@@ -310,7 +311,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    # warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
+    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
 
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
