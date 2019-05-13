@@ -145,6 +145,7 @@ elsif($source_name eq 'UniProt'){
   # get source and returns source_id 
   my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status); 
   my $source_id = $source->dbID();
+  my $source_name = $source->name(); 
 
   my @ids; 
   my %synonym;
@@ -159,8 +160,7 @@ elsif($source_name eq 'UniProt'){
 
   # Add the synonyms
     my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
-    add_synonyms_uniprot(\%synonym,$variation_ids,$source_id,$variation_set_id,$dba); 
-
+    add_synonyms_uniprot(\%synonym, $variation_ids, $source_name, $variation_set_id, $dba, $species); 
 }
 
 else{
@@ -260,6 +260,12 @@ sub parse_uniprot {
   return \%result;
 }
 
+=head2 get_dbIDs
+
+get variation ids 
+
+=cut 
+
 sub get_dbIDs {
   my $rs_ids     = shift;
   my $db_adaptor = shift;
@@ -318,6 +324,12 @@ sub get_dbIDs {
   
   return \%mapping;
 } 
+
+=head2 add_set_uniprot
+
+add uniprot variation set 
+
+=cut
 
 sub add_set_uniprot {  
   my $db_adaptor      = shift;
@@ -379,31 +391,25 @@ sub add_set_uniprot {
   return $variation_set_id; 
 }
 
+=head2 add_synonyms_uniprot
+
+import uniprot synonyms;
+
+=cut
+
 sub add_synonyms_uniprot {
-  my $synonyms         = shift;
-  my $variation_ids    = shift;
-  my $source_id        = shift;
-  my $variation_set_id = shift; 
-  my $db_adaptor       = shift;
+  my $synonyms           = shift;
+  my $variation_ids      = shift;
+  my $source_name        = shift;
+  my $variation_set_id   = shift; 
+  my $db_adaptor         = shift;
+  my $species            = shift; 
 
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
-  
-  # Some prepared statements needed for inserting the synonyms into database
-  my $ins_stmt = qq{
-    INSERT IGNORE INTO
-      variation_synonym (
-      variation_id,
-      source_id,
-      name
-      )
-    VALUES (
-      ?,
-      $source_id,
-      ?
-    )
-  };
-
+ 
+  my $variation_adaptor = $db_adaptor->get_VariationAdaptor($species, 'variation', );
+ 
   my $stmt_update = qq{
     UPDATE
       variation_feature 
@@ -412,29 +418,21 @@ sub add_synonyms_uniprot {
     WHERE
       variation_id=?
   }; 
-
-  my $ins_sth = $db_adaptor->dbc->prepare($ins_stmt);
  
-  my $update_variation_set_sth =$db_adaptor->dbc->prepare($stmt_update); 
+  my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update); 
   
   foreach my $rs_id (keys %{$variation_ids}) {
     
-    my $var_id = $variation_ids->{$rs_id}[0]; 
-
-    # If we have a variation id, we can proceed
-    if (defined($var_id)) {
-      $update_variation_set_sth->execute($var_id); 
-      
-      $ins_sth->bind_param(1,$var_id,SQL_INTEGER);
-      
-      # Handle all synonym ids for this rs_id
-      while (my $alt_id = shift(@{$synonyms->{$rs_id}})) {
-      
-        # Add the id as synonym, if it is already present, it will just be ignored
-        $ins_sth->bind_param(2,$alt_id,SQL_VARCHAR);
-        $ins_sth->execute();
-      }
+    my $variation = $variation_adaptor->fetch_by_name($rs_id);
+    unless($variation){
+      warn "Variant $rs_id not found\n"; 
+      next; 
     }
+    
+    $variation->add_synonym($source_name, @{$synonyms->{$rs_id}}); 
+    $variation_adaptor->store_synonyms($variation); 
+    
+    $update_variation_set_sth->execute($variation_ids->{$rs_id}[0]); 
   }
 
 }
@@ -612,6 +610,7 @@ sub get_all_sources {
 fetch data from production database   
 
 =cut
+
 sub query_synonyms_data {
 
   my $prod_dbc   = shift;
