@@ -423,6 +423,11 @@ sub get_dbsnp2_merges {
   my %dbsnp2_merges;
   my $present_obs_movements = $rs_json->{'present_obs_movements'};
   for my $pom (@$present_obs_movements) {
+    my $allele_in_cur_release = $pom->{'allele_in_cur_release'};
+    if ($allele_in_cur_release->{'deleted_sequence'} eq
+      $allele_in_cur_release->{'inserted_sequence'}) {
+      next;
+    }
     my $prev_rel_rsids = $pom->{'previous_release'}->{'rsids'};
     for my $prev_rel_rsid (@$prev_rel_rsids) {
       # Only store if not equal to refsnp_id
