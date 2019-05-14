@@ -317,7 +317,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
+    # warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
 
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
@@ -409,7 +409,25 @@ sub add_synonyms_uniprot {
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
  
   my $variation_adaptor = $db_adaptor->get_VariationAdaptor($species, 'variation', );
+
+  my $stmt_check_var_set = qq{
+    SELECT 
+      variation_set_id
+    FROM 
+      variation_feature 
+    WHERE 
+      variation_id=?
+  }; 
  
+  my $stmt_update_after_check = qq{
+    UPDATE
+      variation_feature 
+    SET 
+      variation_set_id = '$variation_set_id'
+    WHERE
+      variation_id=?
+  }; 
+
   my $stmt_update = qq{
     UPDATE
       variation_feature 
@@ -418,11 +436,14 @@ sub add_synonyms_uniprot {
     WHERE
       variation_id=?
   }; 
- 
+
+  my $check_variation_set_sth = $db_adaptor->dbc->prepare($stmt_check_var_set); 
+  my $update_after_check_sth = $db_adaptor->dbc->prepare($stmt_update_after_check);
   my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update); 
   
   foreach my $rs_id (keys %{$variation_ids}) {
-    
+    my $variation_id = $variation_ids->{$rs_id}[0];    
+
     my $variation = $variation_adaptor->fetch_by_name($rs_id);
     unless($variation){
       warn "Variant $rs_id not found\n"; 
@@ -432,7 +453,18 @@ sub add_synonyms_uniprot {
     $variation->add_synonym($source_name, @{$synonyms->{$rs_id}}); 
     $variation_adaptor->store_synonyms($variation); 
     
-    $update_variation_set_sth->execute($variation_ids->{$rs_id}[0]); 
+    $check_variation_set_sth->bind_param(1, $variation_id, SQL_VARCHAR);
+    $check_variation_set_sth->execute();
+    my $var_set_id;
+    $check_variation_set_sth->bind_columns(\$var_set_id);
+    $check_variation_set_sth->fetch();
+
+    if(!defined($var_set_id)){
+      $update_after_check_sth->execute($variation_id);
+    }
+    else{
+      $update_variation_set_sth->execute($variation_id); 
+    }
   }
 
 }
