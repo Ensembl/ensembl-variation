@@ -560,8 +560,8 @@ sub get_evidence {
     }
 
     if (defined $subsnp_support->{'TOPMED'}) {
-      if (defined $lu_info->{'evidence_ids'}->{'TOPMED'}) {
-        push @evidence, $lu_info->{'evidence_ids'}->{'TOPMED'};
+      if (defined $lu_info->{'evidence_ids'}->{'TOPMed'}) {
+        push @evidence, $lu_info->{'evidence_ids'}->{'TOPMed'};
         $freq_evidence++;
       }
     }
