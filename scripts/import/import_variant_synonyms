@@ -336,6 +336,8 @@ sub add_set_uniprot {
   my $set_name        = shift; 
   my $set_description = shift;
 
+  my $attrib_name = 'ph_uniprot';
+
   # check if UniProt already exists 
   my $stmt = qq{
     SELECT
@@ -360,7 +362,7 @@ sub add_set_uniprot {
       FROM
         attrib
       WHERE
-        value = '$set_name'
+        value = '$attrib_name'
       LIMIT 1
     };
     my $sth_attrib = $db_adaptor->dbc->prepare($stmt_attrib);
