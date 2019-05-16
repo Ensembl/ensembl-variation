@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string get_3prime_seq_offset);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within_intron stop_lost start_lost frameshift stop_retained);
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
@@ -1023,9 +1024,13 @@ sub hgvs_protein {
   ## checks complete - start building term
 
   ### get reference sequence and add seq version unless LRG
-  my $tr_id = $tr->translation->display_id();
-  $tr_id =~ s/.*NP_/NP_/; 
-  $hgvs_notation->{ref_name} = $tr_id;
+  $hgvs_notation->{ref_name} = $tr->translation->display_id();
+
+  ### get RefSeq identifiers
+  my @entries = grep {$_->{dbname} eq 'GenBank'} @{$tr->translation->get_all_DBEntries};
+  if(scalar @entries == 1){
+    $hgvs_notation->{ref_name} = $entries[0]->{primary_id};
+  }
 
   $hgvs_notation->{ref_name} .= "." . $tr->translation->version() 
     unless ($hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/);
