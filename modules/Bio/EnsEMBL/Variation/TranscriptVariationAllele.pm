@@ -1023,7 +1023,7 @@ sub hgvs_protein {
   ## checks complete - start building term
 
   ### get reference sequence
-  if($tr->stable_id =~ /^ENS|^LRG/){
+  if($tr->stable_id =~ /^ENS|^LRG/ || !defined($tr->analysis) || (defined($tr->analysis) && !defined($tr->analysis->db()))){
     $hgvs_notation->{ref_name} = $tr->translation->display_id();
   }
   else{
