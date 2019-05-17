@@ -1785,7 +1785,7 @@ sub fetch_by_hgvs_notation {
 
     my @transcripts;
 
-    if(!defined($transcript) && $reference =~ /NM_/){
+    if(!defined($transcript) && ($reference =~ /NM_/ || $reference =~ /XM_/)){
       @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference)};
     }
     
@@ -1856,7 +1856,7 @@ sub fetch_by_hgvs_notation {
     my @transcripts;
 
     # Fetch xref transcript
-    if(!defined($transcript) && $reference =~ /NP/){
+    if(!defined($transcript) && ($reference =~ /NP/ || $reference =~ /XP/)){
       @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference)};
     }
 

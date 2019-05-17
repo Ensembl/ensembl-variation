@@ -952,6 +952,7 @@ sub hgvs_transcript_reference{
 
 }
 
+use Data::Dumper;
 
 =head2 hgvs_protein
 
@@ -1023,7 +1024,7 @@ sub hgvs_protein {
   ## checks complete - start building term
 
   ### get reference sequence
-  if($tr->stable_id =~ /^ENS|^LRG/){
+  if($tr->stable_id =~ /^ENS|^LRG/ || !defined($tr->analysis) || (defined($tr->analysis) && !defined($tr->analysis->db()))){
     $hgvs_notation->{ref_name} = $tr->translation->display_id();
   }
   else{
@@ -1032,8 +1033,8 @@ sub hgvs_protein {
       if(scalar @entries == 1){
         $hgvs_notation->{ref_name} = $entries[0]->{primary_id};
       }
-  }
-  
+   }
+ 
   # Add seq version unless LRG
   $hgvs_notation->{ref_name} .= "." . $tr->translation->version() 
     unless ($hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/);
