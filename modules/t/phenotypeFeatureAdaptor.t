@@ -236,7 +236,7 @@ throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without db
 $pfs = $pfa->get_PhenotypeFeatures_by_location(27512, 721588, 812327);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1, "get_PhenotypeFeatures_by_location");
 $pfs = $pfa->get_PhenotypeFeatureAttribs_by_location(27512, 721588, 812327);
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1, "get_PhenotypeFeatureAttribs_by_location");
+ok(ref($pfs) eq 'HASH' && scalar(@{$pfs->{'27512:721588-812327'}}) == 1 , "get_PhenotypeFeatureAttribs_by_location");
 
 ### test trailing white space removal on attrib value
 my $padded_genename  = "gene name  ";
