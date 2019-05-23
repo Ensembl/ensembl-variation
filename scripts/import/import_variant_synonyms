@@ -502,6 +502,7 @@ sub extract_PharmGKB {
 import synonyms from refhash and source object;
 
 =cut
+
 sub import_synonyms {
 
   my $synonyms = shift;
@@ -528,6 +529,7 @@ sub import_synonyms {
 import all synonyms from production database  
 
 =cut
+
 sub import_synonyms_all_sources {
 
   my $sources           = shift;  
