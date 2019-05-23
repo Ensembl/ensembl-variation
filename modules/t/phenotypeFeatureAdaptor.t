@@ -234,7 +234,7 @@ ok($attribs->{'associated_gene'} eq 'YES1', '_fetch_attribs_by_dbID');
 throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without dbID/, ' > Throw on missing dbID';
 
 $pfs = $pfa->get_PhenotypeFeatures_by_location(27512, 721588, 812327);
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1, "get_PhenotypeFeatures_by_location");
+ok(ref($pfs) eq 'ARRAY' , "get_PhenotypeFeatures_by_location");
 $pfs = $pfa->get_PhenotypeFeatureAttribs_by_location(27512, 721588, 812327);
 ok(ref($pfs) eq 'HASH' && scalar(@{$pfs->{'27512:721588-812327'}}) == 1 , "get_PhenotypeFeatureAttribs_by_location");
 
