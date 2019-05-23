@@ -317,7 +317,7 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    # warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
+    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
 
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
@@ -327,7 +327,7 @@ sub get_dbIDs {
 
 =head2 add_set_uniprot
 
-add uniprot variation set 
+add UniProt variation set 
 
 =cut
 
@@ -371,6 +371,10 @@ sub add_set_uniprot {
     $sth_attrib->bind_columns(\$attrib_id);
     $sth_attrib->fetch();
 
+    if(!defined($attrib_id)){
+      die "Error: attrib '$attrib_name' is not defined in attrib table.\n";
+    }
+
     my $ins_stmt = qq{
       INSERT IGNORE INTO
         variation_set (
@@ -395,7 +399,7 @@ sub add_set_uniprot {
 
 =head2 add_synonyms_uniprot
 
-import uniprot synonyms;
+import UniProt synonyms;
 
 =cut
 
@@ -434,7 +438,7 @@ sub add_synonyms_uniprot {
     UPDATE
       variation_feature 
     SET 
-      variation_set_id = CONCAT(variation_set_id,',$variation_set_id')  
+      variation_set_id = CONCAT_WS(',',variation_set_id,'$variation_set_id')  
     WHERE
       variation_id=?
   }; 
