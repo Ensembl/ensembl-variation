@@ -19,6 +19,10 @@ addons:
   apt:
     packages:
     - unzip
+
+services:
+  - mysql
+
 before_install:
 - git clone --branch release/97 --depth 1 https://github.com/Ensembl/ensembl-test.git
 - git clone --branch release/97 --depth 1 https://github.com/Ensembl/ensembl.git
