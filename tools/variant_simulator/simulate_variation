@@ -105,7 +105,7 @@ if ($chromOnly || $gene){ #if chrom or gene specified then use the most stringen
     processGenes(\@geneIDs, $FHO);
   } else{
     my $chr_slice = $slice_adaptor->fetch_by_region( 'chromosome', $chromOnly);
-    @geneIDs = @{ $chr_slice->get_all_Genes_by_type($biotype, $logic_name, 1)};
+    @geneIDs = @{ $chr_slice->get_all_Genes_by_type($biotype, $logic_name, 1)} if defined($chr_slice);
     print "processing genes: ", scalar @geneIDs, "\n";
     processGenes(\@geneIDs, $FHO);
   }
