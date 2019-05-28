@@ -1074,6 +1074,19 @@ sub fetch_all {
   
 }
 
+=head2 get_PhenotypeFeatures_by_location
+
+  Arg [1]    : int $seq_region_id
+  Arg [2]    : int $seq_region_start
+  Arg [3]    : int $seq_region_end
+  Description: Retrieves PhenotypeFeatures by genomic location
+               
+  Returntype : hashref of array of types => phenotype_feature count
+  Exceptions : none
+  Caller     : general
+
+=cut
+
 sub get_PhenotypeFeatures_by_location {
   my $self = shift;
   my $seq_region_id = shift;
@@ -1090,6 +1103,19 @@ sub get_PhenotypeFeatures_by_location {
 
   return $self->generic_fetch("$extra_sql");
 }
+
+=head2 get_PhenotypeFeatureAttribs_by_location
+
+  Arg [1]    : int $seq_region_id
+  Arg [2]    : int $seq_region_start
+  Arg [3]    : int $seq_region_end
+  Description: Retrieves PhenotypeFeatureAttribs by genomic location
+               
+  Returntype : hashref of array of PhenotypeFeatureAttribs by location
+  Exceptions : none
+  Caller     : general
+
+=cut
 
 sub get_PhenotypeFeatureAttribs_by_location {
   my $self = shift;
