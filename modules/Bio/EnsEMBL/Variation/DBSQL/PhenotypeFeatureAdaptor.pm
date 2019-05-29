@@ -1081,7 +1081,7 @@ sub fetch_all {
   Arg [3]    : int $seq_region_end
   Description: Retrieves PhenotypeFeatures by genomic location
                
-  Returntype : hashref of array of types => phenotype_feature count
+  Returntype : hashref of array of types => phenotype_feature 
   Exceptions : none
   Caller     : general
 
@@ -1092,12 +1092,14 @@ sub get_PhenotypeFeatures_by_location {
   my $seq_region_id = shift;
   my $seq_region_start = shift;
   my $seq_region_end = shift;
+  my $source_id = shift;
 
   throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
 
   my $attribs = {};
 
   my $extra_sql = " pf.seq_region_id = $seq_region_id AND pf.seq_region_start >= $seq_region_start AND pf.seq_region_end <= $seq_region_end ";
+  $extra_sql .= " AND pf.source_id = $source_id " if defined($source_id);
 
   $extra_sql = $self->_is_significant_constraint($extra_sql);
 
