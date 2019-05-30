@@ -232,11 +232,8 @@ ok($count == 1, '_check_gene_by_HGNC');
 my $attribs = $pfa->_fetch_attribs_by_dbID(1);
 ok($attribs->{'associated_gene'} eq 'YES1', '_fetch_attribs_by_dbID');
 throws_ok { $pfa->_fetch_attribs_by_dbID } qr/Cannot fetch attributes without dbID/, ' > Throw on missing dbID';
-
-$pfs = $pfa->get_PhenotypeFeatures_by_location(27512, 721588, 812327);
-ok(ref($pfs) eq 'ARRAY' && scalar(@{$pfs}) == 1, "get_PhenotypeFeatures_by_location");
-$pfs = $pfa->get_PhenotypeFeatureAttribs_by_location(27512, 721588, 812327);
-ok(ref($pfs) eq 'HASH' && scalar(@{$pfs->{'27512:721588-812327'}}) == 1 , "get_PhenotypeFeatureAttribs_by_location");
+$pfs = $pfa->get_clinsig_alleles_by_location(27513, 86442404,86442404);
+ok(ref($pfs) eq 'HASH' && scalar(@{$pfs->{'27513:86442404-86442404'}}) == 1 , "get_clinsig_alleles_by_location");
 
 ### test trailing white space removal on attrib value
 my $padded_genename  = "gene name  ";
