@@ -1074,52 +1074,20 @@ sub fetch_all {
   
 }
 
-=head2 get_PhenotypeFeatures_by_location
+=head2 get_clinsig_alleles_by_location
 
   Arg [1]    : int $seq_region_id
   Arg [2]    : int $seq_region_start
   Arg [3]    : int $seq_region_end
-  Description: Retrieves PhenotypeFeatures by genomic location
+  Description: Retrieves allele-specific clinsig data by genomic location. Called by VEP.
                
-  Returntype : hashref of array of types => phenotype_feature 
+  Returntype : hashref of array of allele-specific clinsig data by location
   Exceptions : none
-  Caller     : general
+  Caller     : VEP
 
 =cut
 
-sub get_PhenotypeFeatures_by_location {
-  my $self = shift;
-  my $seq_region_id = shift;
-  my $seq_region_start = shift;
-  my $seq_region_end = shift;
-  my $source_id = shift;
-
-  throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
-
-  my $attribs = {};
-
-  my $extra_sql = " pf.seq_region_id = $seq_region_id AND pf.seq_region_start >= $seq_region_start AND pf.seq_region_end <= $seq_region_end ";
-  $extra_sql .= " AND pf.source_id = $source_id " if defined($source_id);
-
-  $extra_sql = $self->_is_significant_constraint($extra_sql);
-
-  return $self->generic_fetch("$extra_sql");
-}
-
-=head2 get_PhenotypeFeatureAttribs_by_location
-
-  Arg [1]    : int $seq_region_id
-  Arg [2]    : int $seq_region_start
-  Arg [3]    : int $seq_region_end
-  Description: Retrieves PhenotypeFeatureAttribs by genomic location
-               
-  Returntype : hashref of array of PhenotypeFeatureAttribs by location
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub get_PhenotypeFeatureAttribs_by_location {
+sub get_clinsig_alleles_by_location {
   my $self = shift;
   my $seq_region_id = shift;
   my $seq_region_start = shift;
@@ -1134,7 +1102,7 @@ sub get_PhenotypeFeatureAttribs_by_location {
       CONCAT(pf.seq_region_id, ':', pf.seq_region_start, '-', pf.seq_region_end),
       CONCAT_WS('; ',
         CONCAT('id=', pf.object_id), CONCAT('pf_id=', pf.phenotype_feature_id),
-        GROUP_CONCAT(at.code, "=", concat('', pfa.value, '') SEPARATOR '; ')
+        GROUP_CONCAT(IF(at.code in ('risk_allele', 'clinvar_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; ')
       ) AS attribute
 
       FROM
@@ -1151,6 +1119,7 @@ sub get_PhenotypeFeatureAttribs_by_location {
       AND pf.seq_region_id = ?
       AND pf.seq_region_start >= ?
       AND pf.seq_region_end <= ?
+      AND pf.source_id in (select source_id from source where name = 'ClinVar') 
       AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && attrib_type_id = 483)
 
       GROUP BY pf.phenotype_feature_id
