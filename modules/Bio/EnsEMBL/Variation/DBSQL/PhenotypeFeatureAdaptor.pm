@@ -1092,7 +1092,7 @@ sub get_clinsig_alleles_by_location {
   my $seq_region_id = shift;
   my $seq_region_start = shift;
   my $seq_region_end = shift;
-
+  my $source_id = shift;
   throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
 
   my $extra_sql = $self->_is_significant_constraint();
@@ -1119,7 +1119,7 @@ sub get_clinsig_alleles_by_location {
       AND pf.seq_region_id = ?
       AND pf.seq_region_start >= ?
       AND pf.seq_region_end <= ?
-      AND pf.source_id in (select source_id from source where name = 'ClinVar') 
+      AND pf.source_id = ? 
       AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && attrib_type_id = 483)
 
       GROUP BY pf.phenotype_feature_id
@@ -1129,6 +1129,7 @@ sub get_clinsig_alleles_by_location {
   $sth->bind_param(1, $seq_region_id, SQL_VARCHAR);
   $sth->bind_param(2, $seq_region_start, SQL_VARCHAR);
   $sth->bind_param(3, $seq_region_end, SQL_VARCHAR);
+  $sth->bind_param(4, $source_id, SQL_VARCHAR);
   $sth->execute();
 
   my $pf_id;
@@ -1147,7 +1148,6 @@ sub get_clinsig_alleles_by_location {
   }
 
   $sth->finish();
-
   return $hash;
 }
 
