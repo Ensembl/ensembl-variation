@@ -56,7 +56,7 @@ sub run {
       if ($cdba) {
         $self->param('species', $species_name);
         my $assembly = $self->get_assembly;
-        my ($ancestral_file) = grep { $_ =~ /$species_name/ && $_ =~ /$assembly/ } @ancestral_files;
+        my ($ancestral_file) = grep { $_ =~ /$species_name/i && $_ =~ /$assembly/ } @ancestral_files;
         if ($ancestral_file) {
           $run_pipeline->{$species_name} = { file => $ancestral_file, assembly => $assembly};
         }
@@ -65,7 +65,6 @@ sub run {
       }
   }
   $self->warning(Dumper($run_pipeline));
-
   my @input = ();
   my @post_processing_input = ();
   foreach my $species_name (keys %$run_pipeline) {
