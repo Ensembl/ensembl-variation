@@ -90,7 +90,7 @@ sub create_species_dir_tree {
     # If division is defined.
     if ( scalar(@division) ) {
       foreach my $division (@division) {
-        $pipeline_dir=$pipeline_dir."/".$division;
+        $pipeline_dir=$pipeline_dir."/".$division."/variation";
         $dump_dir = "$pipeline_dir/$file_type/";
         make_path($dump_dir) unless (-d $dump_dir);
       }

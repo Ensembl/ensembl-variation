@@ -42,7 +42,7 @@ sub data_dir {
   # If division is defined append the pipeline_dir
   if ($species_division)
   {
-    $data_dump_dir = $data_dump_dir."/".$species_division;
+    $data_dump_dir = $data_dump_dir."/".$species_division."/variation";
   }
   return $data_dump_dir;
 }
