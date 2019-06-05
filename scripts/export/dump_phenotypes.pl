@@ -111,8 +111,8 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   print "Found phenotype features: ", $count, "\n";
   next unless $count > 0;
 
-  my $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%i.bed.gz", $s_name, $e_version);
-  $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%s.bed.gz", $s_name, $e_version."_GRCh".$assembly) if $s_name eq 'homo_sapiens';
+  my $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%i.gvf.gz", $s_name, $e_version);
+  $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%s.gvf.gz", $s_name, $e_version."_GRCh".$assembly) if $s_name eq 'homo_sapiens';
 
   die ("Phenotype file $dumpFile already exists. Specify a different output folder or use --force to override the existing one\n") if -e $dumpFile & !$force ;
 
@@ -121,7 +121,7 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   my %reg_config = (reg => $registry, species => $s_name, quiet => $quiet );
   my %db_config = (config => \%reg_config);
 
-  # Run Phenotypes.pm plugin to export BED formated Phenotypes
+  # Run Phenotypes.pm plugin to export GVF formated Phenotypes
   Phenotypes::generate_phenotype_gff(\%db_config, $dumpFile);
 }
 $sth_h->finish;
@@ -158,13 +158,13 @@ sub usage {
   print qq{
   Usage: perl dump_phenotypes.pl [OPTION]
 
-  Dumping to BED of phenotype data for Ensembl Variation species.
+  Dumping to GVF of phenotype data for Ensembl Variation species.
 
   Options:
 
     -help             Print this message
 
-    -output_dir|o     Output directory for the BED dumps (Required)
+    -output_dir|o     Output directory for the GVF dumps (Required)
     -force|f          Force to override any pre-existing dumps
     -quiet|q          Suppress warning messages.Not used by default
 
