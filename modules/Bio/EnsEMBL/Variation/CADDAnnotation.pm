@@ -136,7 +136,7 @@ sub get_all_scores_by_VariationFeature {
 
   my $parser = $self->_seek_by_VariationFeature($vf);
   my $scores = {};
-  while ($parser->next) {
+  while ($parser && $parser->next) {
     my $phred_score = $parser->get_phred_score;
     my $alt_allele = $parser->get_alternative;
     $scores->{$alt_allele} = $phred_score;
@@ -151,8 +151,9 @@ sub _seek_by_VariationFeature {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
   my $parser = $self->_file_parser_obj();
-  $parser->seek($vf->seq_region_name, $vf->seq_region_start, $vf->seq_region_end);
-  return $parser;
+  if ($parser && $parser->seek($vf->seq_region_name, $vf->seq_region_start, $vf->seq_region_end)) {
+    return $parser;
+  }
 }
 
 sub _file_parser_obj {
@@ -163,8 +164,8 @@ sub _file_parser_obj {
   chdir($self->tmpdir);
 
   # open object (remote indexes get downloaded) locally, therefore we change the current directory to point to the tmp directory
-  my $obj = Bio::EnsEMBL::IO::Parser::CADDTabix->open($self->filename_template);
-
+  my $obj = undef;
+  eval { $obj = Bio::EnsEMBL::IO::Parser::CADDTabix->open($self->filename_template); }; warn $@ if $@; 
   # change back
   chdir($cwd);
 

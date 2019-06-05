@@ -2095,6 +2095,8 @@ sub spdi_genomic{
   my @all_alleles = split(/\//,$self->allele_string());
   my $ref_allele = shift @all_alleles;
 
+  expand(\$ref_allele);
+
   # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
   if( $ref_allele =~ m/[^ACGT\-]$/ig ){
     throw("No supported SPDI genomic is available for Variation Feature $reference_name:$vf_start-$vf_end ($vf_strand)"); 

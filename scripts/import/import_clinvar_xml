@@ -124,6 +124,7 @@ if (defined $done_file){
     my $id = (split)[1];
     $done{$id} = 1;
   }
+  close $donelist;
 }
 
 my %special_characters = (
@@ -379,9 +380,6 @@ sub get_feature{
       push @{$feature{'haplo'}{'rs'}}, @{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}} if $type eq $haplotype_type && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'};
    }
 
-   ## if multiple rsIDs for the same ReferenceClinVarAssertion print warning
-   warn "multiple rsIDs for same RCV: $accession, rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} )."\n" if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 );
-
     ## position on required assembly
     next unless defined $measure->{SequenceLocation};
     foreach my $loc(@{$measure->{SequenceLocation}}){
@@ -428,20 +426,38 @@ sub get_feature{
     }
 
     #last processing of this specific measure
+    # if multiple rsIDs for the same measure set in ReferenceClinVarAssertion print warning
+    warn "multiple rsIDs for same measure ($measure->{ID}) in RCV ($accession), rsIDs: ".join(",",@{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} )."\n" if (defined $feature{measureXrefs}{$measure->{ID}}{dbSNP} && scalar @{$feature{measureXrefs}{$measure->{ID}}{dbSNP}{rs}} >1 );
+
     #populate higher level hash of rsIDs and specific coordinates, hgvs_g
-    print "ERROR: multiple rsIDs for same measure/location! $accession\n" if ( defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'} && scalar(@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}) > 1);
     if (defined $feature{'haplo'} && defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'} ){
       foreach my $rsID (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
-        @{$feature{'rs'.$rsID}}{qw/Chr start end hgvs_g gene/} = @{$feature{measureXrefs}{$measure->{ID}}}{qw/Chr start end hgvs_g gene/};
+        my $varID = 'rs'.$rsID;
+        #check if the existing record has same values as the latest measure set: {measureXrefs}{$measure->{ID}
+        if (defined $feature{$varID} &&
+            (defined $feature{$varID}{'Chr'} &&
+             $feature{$varID}{Chr} != $feature{measureXrefs}{$measure->{ID}}{Chr} ||
+             $feature{$varID}{start} != $feature{measureXrefs}{$measure->{ID}}{start} ||
+             $feature{$varID}{end} != $feature{measureXrefs}{$measure->{ID}}{end} ||
+             $feature{$varID}{hgvs_g} != $feature{measureXrefs}{$measure->{ID}}{hgvs_g}) ){
+
+              # these phenotypes will end up not being imported unless the rsID already exists
+             print "WARNING: removing location/hgvs for rsID with multiple locations/hgvs, as either of them can be correct: rs$rsID\n";
+             delete @{$feature{$varID}}{qw/Chr start end hgvs_g gene/}; # $feature{'rs'.$rsID} left in palce as a mark
+             delete @feature{qw/Chr start end hgvs_g gene/};
+        } else {
+          @{$feature{$varID}}{qw/Chr start end hgvs_g gene/} = @{$feature{measureXrefs}{$measure->{ID}}}{qw/Chr start end hgvs_g gene/};
+        }
       }
     }
   }
 
   # if haplotype present then save corresponding rsIDs for phenotype_feature_attrib entry
   if ($type eq $haplotype_type && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
-    my @rsIDs = @{$feature{haplo}{rs}};
+    my @rsIDs = keys {map { $_ => 1 } @{$feature{haplo}{rs}}};
+    $feature{haplo}{rs} = \@rsIDs;
     # only if more than 1 rsID present make them phenotype_feature_attribs
-    if( scalar @rsIDs >1){
+    if( scalar @rsIDs >1 && (scalar keys $feature{measureXrefs}  == scalar @rsIDs) ){
       my %index;
       @index{@rsIDs} = (0..$#rsIDs);
       foreach my $rs (@{$feature{haplo}{rs}}){
@@ -570,6 +586,8 @@ sub get_submitters{
     foreach my $tmpMeasure (keys %{$mainXrefs->{'measureXrefs'}}) {
       push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'} && defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'};
     }
+    # make sure the list contains unique rsIDs to deal with haplotypes/records encountered with multiple sets using same rsID
+    @{$mainXrefs->{'dbSNP'}} = keys {map { $_ => 1 } @{$mainXrefs->{'dbSNP'}} } if defined $mainXrefs->{'dbSNP'};
   }
 
   return \@submitters;
@@ -675,7 +693,7 @@ sub import_phenotype_feature{
   }
   $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
   $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
-  $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo};
+  $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo} && defined $record->{feature_info}->{haplo}->{$feature_object->name};
   my %submitter_ids;
   foreach my $sub (@{$record->{submitters}}){
     ##enter submitter unless already available

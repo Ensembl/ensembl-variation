@@ -350,6 +350,10 @@ my $var11 = $va->fetch_by_name('rs1321600644');
 my $vf11_spdi = $var11->get_all_VariationFeatures()->[0];
 my $spdi_notation_11 = $vf11_spdi->spdi_genomic();
 ok($spdi_notation_11->{'-'} eq 'NC_000012.11:101997654:25:', 'SPDI genomic valid deletion >20 bp'); 
+my $var12 = $va->fetch_by_name('rs8192742');
+my $vf12_spdi = $var12->get_all_VariationFeatures()->[0];
+my $spdi_notation_12 = $vf12_spdi->spdi_genomic();
+ok($spdi_notation_12->{'TTTTTTTTTT'} eq 'NC_000013.10:76134860:TTTTTTTTT:TTTTTTTTTT', 'SPDI tandem repeat');
 
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
