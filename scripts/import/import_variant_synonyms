@@ -38,6 +38,7 @@ use warnings;
 use HTTP::Tiny;
 use Getopt::Long;
 use DBI qw(:sql_types);
+use Time::Piece;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Source;
@@ -580,6 +581,12 @@ sub get_source {
     if(defined $version) { 
       $source->version($version);
       $source_adaptor->update_version($source);   
+    }
+    # Update version with current date 
+    else{ 
+      $version = localtime->strftime('%Y%m%d');
+      $source->version($version);
+      $source_adaptor->update_version($source);
     }
   }
   else{
