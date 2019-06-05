@@ -137,7 +137,7 @@ sub import_citations{
     my $data           = shift;
     my $type           = shift;
 
-    open (my $error_log, ">>$species\_$type\_notfound\_" . log_time() . "\.log") or die "Failed to open log file: $!\n";
+    open (my $error_log, ">>$species\_$type\_errors\_" . log_time() . "\.log") or die "Failed to open log file: $!\n";
     ## store variants not from this species
     open (my $not_found, ">>rsID\_$type\_notfound\_$species\_" . log_time() . ".csv") or die "Failed to open file: $!\n";
     
