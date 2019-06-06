@@ -47,8 +47,9 @@ our @ISA = ('Bio::EnsEMBL::Variation::Utils::BaseProteinFunctionAnnotation');
 my $REVEL_CUTOFF = 0.5;
 
 =head2 new
+
   Example    :
-  my $cadd = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->new(
+  my $dbnsfp = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->new(
     -species => 'Homo_sapiens',
     -annotation_file => 'dbNSFP3.5a_grch37.txt.gz',
     -assembly => 'GRCh37',
@@ -119,8 +120,9 @@ my $column_names = {
       },
     },
   },
-  '4.0b1' => {
-
+  '4.0a' => {
+  # This is a placeholder for version 4.0a
+  # TODO check the assembly specific headers
   }
 };
 
@@ -177,6 +179,7 @@ sub add_predictions {
 }
 
 =head2 get_dbNSFP_row
+
   Arg 1      : String $line from parser
   Description: - Join header column with row value
                - Use assembly and file version specific header
@@ -188,7 +191,6 @@ sub add_predictions {
 sub get_dbNSFP_row {
   my $self = shift;
   my $line = shift;
-  $line =~ s/\r$//g;
   my @split = split /\t/, $line;
   my $header = $self->header;
   my $assembly = $self->assembly;
