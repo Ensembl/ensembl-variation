@@ -152,25 +152,15 @@ sub run_cmd {
 sub get_assembly {
   my $self = shift;
   my $core_dba = $self->get_species_adaptor('core');
-  my $dbc = $core_dba->dbc;
-  my $current_db_name = $dbc->dbname();
-  my $species = $self->param('species');
-  my $species_id = $self->get_species_id($dbc, $current_db_name, $species);
-  my $sth = $dbc->prepare("SELECT version FROM ".$current_db_name.".coord_system WHERE species_id = ".$species_id." ORDER BY rank LIMIT 1;");
-  $sth->execute();
-  my $assembly;
-  $sth->bind_columns(\$assembly);
-  $sth->execute();
-  $sth->fetch();
-  $sth->finish();
-
-  return $assembly;
+  my $genome_container_adaptor = $core_dba->get_GenomeContainerAdaptor;
+  return $genome_container_adaptor->get_version();
 }
 
 sub get_species_id {
-  my ($self, $dbc, $current_db_name, $species) = @_;
-  my $species_id = $dbc->sql_helper()->execute_simple( -SQL =>qq/select species_id from $current_db_name.meta where meta_key = 'species.production_name' and meta_value ='$species';/);
-  return $species_id->[0];
+  my $self = shift;
+  my $core_dba = $self->get_species_adaptor('core');
+  my $meta_container_adaptor = $core_dba->get_MetaContainerAdaptor;
+  return $meta_container_adaptor->species_id();
 }
 
 1;
