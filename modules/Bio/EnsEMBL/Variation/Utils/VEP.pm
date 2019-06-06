@@ -387,8 +387,16 @@ sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
 
-    # HGVS: ENST00000285667.3:c.1047_1048insC
+    # SPDI: NC_000016.10:68684738:G:A
     if (
+      scalar @data == 1 &&
+      $data[0] =~ /^(.*?\:){2}([^\:]+|)$/i
+    ) {
+      return 'spdi';
+    }
+
+    # HGVS: ENST00000285667.3:c.1047_1048insC
+    elsif (
         scalar @data == 1 &&
         $data[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
     ) {
@@ -410,16 +418,6 @@ sub detect_format {
         $data[4] && $data[4] =~ /^([\.ACGTN\-\*]+\,?)+$|^(\<[\w]+\>)$/i
     ) {
         return 'vcf';
-    }
-
-    # pileup: chr1  60  T  A
-    elsif (
-        $data[0] =~ /(chr)?\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[2] =~ /^[\*ACGTN-]+$/i &&
-        $data[3] =~ /^[\*ACGTNRYSWKM\+\/-]+$/i
-    ) {
-        return 'pileup';
     }
 
     # ensembl: 20  14370  14370  A/G  +
@@ -775,82 +773,6 @@ sub parse_vcf {
     }
 }
 
-# parse a line of pileup input into variation feature objects
-sub parse_pileup {
-    my $config = shift;
-    my $line = shift;
-
-    my @data = split /\s+/, $line;
-
-    # simple validity check
-    unless($data[0] && $data[1] && $data[2]) {
-      warning_msg($config, "Invalid input formatting on line ".$config->{line_number});
-      return [];
-    }
-
-    # pileup can produce more than one VF per line
-    my @return;
-
-    # normal variant
-    if($data[2] ne "*"){
-        my $var;
-
-        if($data[3] =~ /^[A|C|G|T]$/) {
-            $var = $data[3];
-        }
-        else {
-            ($var = (unambiguity_code($data[3]) || $data[3])) =~ s/$data[2]//ig;
-        }
-
-        for my $alt(split //, $var){
-            push @return, Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-                start          => $data[1],
-                end            => $data[1],
-                allele_string  => $data[2].'/'.$alt,
-                strand         => 1,
-                map_weight     => 1,
-                adaptor        => $config->{vfa},
-                chr            => $data[0],
-            });
-        }
-    }
-
-    # in/del
-    else {
-        my %tmp_hash = map {$_ => 1} split '\/', $data[3];
-        my @genotype = keys %tmp_hash;
-
-        foreach my $allele(@genotype){
-            if(substr($allele,0,1) eq "+") { #ins
-                push @return, Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-                    start          => $data[1] + 1,
-                    end            => $data[1],
-                    allele_string  => '-/'.substr($allele, 1),
-                    strand         => 1,
-                    map_weight     => 1,
-                    adaptor        => $config->{vfa},
-                    chr            => $data[0],
-                });
-            }
-            elsif(substr($allele,0,1) eq "-"){ #del
-                push @return, Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-                    start          => $data[1] + 1,
-                    end            => $data[1] + length(substr($allele, 1)),
-                    allele_string  => substr($allele, 1).'/-',
-                    strand         => 1,
-                    map_weight     => 1,
-                    adaptor        => $config->{vfa},
-                    chr            => $data[0],
-                });
-            }
-            elsif($allele ne "*"){
-                warning_msg($config, "WARNING: invalid pileup indel genotype: $line\n");
-            }
-        }
-    }
-
-    return \@return;
-}
 
 # parse a line of HGVS input into a variation feature object
 sub parse_hgvs {

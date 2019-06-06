@@ -55,7 +55,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::PhenotypeFeature;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw  warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Feature;
 

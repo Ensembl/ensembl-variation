@@ -100,7 +100,7 @@ sub motif_start {
 
         # adjust if the motif is on the reverse strand
 
-        $mf_start = $mf->binding_matrix->length - $mf_start + 1 if $mf->strand < 0;
+        $mf_start = $mf->get_BindingMatrix->length - $mf_start + 1 if $mf->strand < 0;
         
         # check that we're in bounds
 
@@ -131,7 +131,7 @@ sub motif_end {
 
         # adjust if the motif is on the reverse strand
 
-        $mf_end = $mf->binding_matrix->length - $mf_end + 1 if $mf->strand < 0;
+        $mf_end = $mf->get_BindingMatrix->length - $mf_end + 1 if $mf->strand < 0;
         
         # check that we're in bounds
 
@@ -166,7 +166,7 @@ sub in_informative_position {
 
         return 0 unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
 
-        $self->{in_informative_position} = $self->motif_feature->binding_matrix->is_position_informative($start);
+        $self->{in_informative_position} = $self->motif_feature->get_BindingMatrix->is_position_informative($start);
     }
     return $self->{in_informative_position};
 }
@@ -230,7 +230,7 @@ sub motif_score_delta {
       return undef;
     }
 
-    my $matrix = $mf->binding_matrix;
+    my $matrix = $mf->get_BindingMatrix;
 
     # get the binding affinity of the reference sequence
     my $ref_affinity = $matrix->relative_sequence_similarity_score($mf_seq);

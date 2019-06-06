@@ -121,11 +121,11 @@ foreach my $hostname (@hostnames) {
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
-    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$e_version\_\d+$/i);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
-    $dbname =~ /^(.+)_variation/;
+    $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1;
     
     if ($etype) { # EG site - need to filter out species
@@ -448,7 +448,8 @@ sub get_species_data_tables {
 
       # loop over databases
       while (my ($dbname) = $sth->fetchrow_array) {
-        next if ($dbname =~ /^master_schema/);
+        next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$e_version\_\d+$/i);
+        next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
 
         $dbname =~ /^(.+)_$db_type/;
         my $s_name = $1;

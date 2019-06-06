@@ -36,6 +36,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(
   get_version_data
   get_time
   debug
+  detect_format
 );
 
 # configure
@@ -348,15 +349,6 @@ $config = copy_config($base_config, { gp => 1 });
 ok($vf && $vf->start == 25606454 && $vf->{chr} eq '21', "vcf format - gp");
 
 
-# pileup
-$config = copy_config($base_config);
-($vf) = grep {validate_vf($config, $_)} @{parse_line($config, 'chr21 25606454 G C')};
-ok($vf && $vf->allele_string eq 'G/C', "pileup format - parse_line");
-$cons = get_all_consequences($config, [$vf]);
-ok($cons && scalar @$cons == 3, "pileup format - consequences");
-
-# pileup indel
-
 # invalid format
 $config = copy_config($base_config);
 dies_ok { parse_line($config, 'a b') } "invalid format";
@@ -643,6 +635,41 @@ if(`which tabix` =~ /tabix/) {
 else {
   print STDERR "# tabix not found, skipping custom file tests\n";
 }
+
+
+# Detect input formats
+my $entry = '21 25587758 sv_dup T . . . SVTYPE=DUP;END=25587769';
+is(detect_format($entry), 'vcf', 'detect_format - VCF SV 1');
+
+$entry = '21 25587758 sv_dup T <DUP> . . .';
+is(detect_format($entry), 'vcf', 'detect_format - VCF SV 2');
+
+$entry = 'rs699';
+is(detect_format($entry), 'id', 'detect_format - id');
+
+$entry = '21:g.25585733C>T';
+is(detect_format($entry), 'hgvs', 'detect_format - HGVSg');
+
+$entry = 'ENST00000352957.8:c.991G>A';
+is(detect_format($entry), 'hgvs', 'detect_format - HGVSt');
+
+$entry = 'ENSP00000284967.6:p.Ala331Thr';
+is(detect_format($entry), 'hgvs', 'detect_format - HGVSp');
+
+$entry = '21 25587759 25587759 C/A + test';
+is(detect_format($entry), 'ensembl', 'detect_format - VEP_input');
+
+$entry = '21   25587759 25587759     C/A  +  test';
+is(detect_format($entry), 'ensembl', 'detect_format - VEP_input multiple spaces delimiter');
+
+$entry = '21 25587759 25587759 C/A/G + test';
+is(detect_format($entry), 'ensembl', 'detect_format - VEP_input multiple');
+
+$entry = '21 25587759 25587769 DUP + test';
+is(detect_format($entry), 'ensembl', 'detect_format - VEP_input SV');
+
+$entry = 'NC_000016.10:68684738:G:A';
+is(detect_format($entry), 'spdi', 'detect_format - spdi');
 
 
 ## DATABASE

@@ -170,7 +170,7 @@ sub run_checks{
 
     ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
     my $is_ambiguous = check_for_ambiguous_alleles( $var->{allele} );
-    push @fail, 14  if(defined $is_ambiguous->[0]  ) ;
+    push @fail, 14  if(defined $is_ambiguous) ;
 
     ## Type 13 Alleles contain non-nucleotide characters
     my $is_illegal = check_illegal_characters( $var->{allele} );
@@ -435,7 +435,7 @@ sub delete_pheno_less{
 
     my $dbh = shift;
 
-    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "not provided" ]);
+    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "ClinVar: phenotype not specified" ]);
     
     my $pheno_attrib_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature_attrib 
                                                    where  phenotype_feature_id in

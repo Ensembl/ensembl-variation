@@ -30,11 +30,16 @@ use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Slice;
 
 my $gz_fasta = "$Bin\/testdata/vep-cache/homo_sapiens/78_GRCh38/test.fa.gz";
+my $gz_fasta_masked = "$Bin\/testdata/test_masked.fa.gz";
 my $fasta = $gz_fasta;
+my $fasta_masked = $gz_fasta_masked;
 $fasta =~ s/\.gz//;
+$fasta_masked =~ s/\.gz//;
 `gzip -dc $gz_fasta > $fasta` if(-e "$gz_fasta");
+`gzip -dc $gz_fasta_masked > $fasta_masked` if(-e "$gz_fasta_masked");
 
 my ($db, $slice1, $slice2, $seq1, $seq2);
+my ($db_masked, $slice1_masked);
 
 $db = setup_fasta(-FASTA => $fasta);
 ok($db, "basic");
@@ -48,6 +53,7 @@ ok($db, "single arg");
 throws_ok(sub {setup_fasta()}, qr/No FASTA file specified/, 'throws - No FASTA file specified');
 throws_ok(sub {setup_fasta(-FASTA => '/does/not/exist')}, qr/not found/, 'throws - not found');
 throws_ok(sub {setup_fasta(-FASTA => $fasta, -TYPE => 'invalid')}, qr/Unrecognised index type/, 'throws - Unrecognised index type');
+throws_ok(sub {setup_fasta(-FASTA => $fasta_masked, -TYPE => 'invalid')}, qr/Unrecognised index type/, 'throws - Unrecognised index type');
 # throws_ok(sub {setup_fasta(-FASTA => $gz_fasta, -TYPE => 'Bio::DB::Fasta')}, qr/Cannot index bgzipped FASTA file with Bio::DB::Fasta/, 'throws - Cannot index bgzipped FASTA file with Bio::DB::Fasta');
 
 
@@ -70,6 +76,16 @@ reverse_comp(\$seq1);
 clear_fasta_cache();
 is($slice1->expand(5, 5)->invert->seq, $seq1, "expand single bp slice 5' and 3' and invert after cache clear");
 
+# test softmasked sequence fetching
+$db_masked = setup_fasta(-FASTA => $fasta_masked, -SYNONYMS => {foo => {21 => 1}});
+$slice1_masked = $sa->fetch_by_region('chromosome', 21, 67, 67);
+is($slice1_masked->seq(undef,undef,undef,1), 'c', "single bp slice");
+is($slice1_masked->expand(0, 5)->seq(undef,undef,undef,1), 'cgcgcg', "expand single bp slice 3'");
+is($slice1_masked->expand(5, 0)->seq(undef,undef,undef,1), 'aaCGTc', "expand single bp slice 5'");
+is($slice1_masked->expand(5, 5)->seq(undef,undef,undef,1), 'aaCGTcgcgcg', "expand single bp slice 5' and 3'");
+clear_fasta_cache();
+$slice1_masked = $sa->fetch_by_region('chromosome', 21, 67, 67);
+is($slice1_masked->expand(5, 5)->seq(), 'AACGTCGCGCG', "expand single bp slice 5' and 3'");
 
 # do same tests again, starting with reverse strand slice
 clear_fasta_cache();
@@ -132,5 +148,8 @@ revert_fasta();
 unlink($fasta);
 unlink("$fasta\.index");
 unlink("$fasta\.fai");
+unlink($fasta_masked);
+unlink("$fasta_masked\.index");
+unlink("$fasta_masked\.fai");
 
 done_testing();

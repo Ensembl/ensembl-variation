@@ -102,13 +102,12 @@ my $evidence_doc_url  = '../prediction/variant_quality.html#evidence_status';
 
 my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2 = qq{SELECT p.name,p.description,p.size,p.freqs_from_gts,d.display_name,d.display_priority FROM population p, display_group d WHERE p.display_group_id=d.display_group_id ORDER by d.display_priority};
-my $sql3 = qq{ SELECT p2.name FROM population p1, population p2, population_structure ps 
-               WHERE p1.population_id=ps.super_population_id AND p2.population_id=ps.sub_population_id AND p1.population_id=?};
 
 my $bg = '';
 my %pops_list;
 my %species_host;
 my %species_usual_name;
+my %species_subpop;
 my @evidence_list;
 
 
@@ -128,16 +127,15 @@ my $pop_table_header = qq{
 
 ## Species / host / database ##
 foreach my $hostname (@hostnames) {
-  
   my $sth = get_connection_and_query($database, $hostname, $sql);
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname =~ /^master_schema/);
-    next if ($dbname =~ /sample$/);
+    next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$e_version\_\d+$/i);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print "$dbname\n";
-    $dbname =~ /^(.+)_variation/;
+    $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1; 
     
     my $label_name = ucfirst($s_name);
@@ -145,6 +143,9 @@ foreach my $hostname (@hostnames) {
     
     # Get list of triplets: species / DB / Host
     $species_host{$label_name} = {'host' => $hostname, 'dbname' => $dbname};
+
+    # Get the sub populations
+    $species_subpop{$label_name} = get_sub_populations($label_name);
 
     # Get the list of evidence status
     if (!@evidence_list) {
@@ -360,7 +361,7 @@ sub get_size {
   my $pop_id   = shift;
   my $dbname   = shift;
   my $hostname = shift;
-
+ 
   my $stmt = qq{ SELECT count(*) FROM sample_population WHERE population_id=?};
   my $sth = get_connection_and_query($dbname, $hostname, $stmt, [$pop_id]);
   my $size = ($sth->fetchrow_array)[0];
@@ -386,13 +387,32 @@ sub parse_desc {
   return $content;
 }
 
+# Store the sub population names 
+sub get_sub_populations {
+  my $species = shift;
+  
+  my $host   = $species_host{$species}{'host'};
+  my $dbname = $species_host{$species}{'dbname'};
+  
+  my %subpop_data;
+  
+  my $pop_sql = qq{ SELECT p1.population_id, p2.name FROM population p1, population p2, population_structure ps 
+                    WHERE p1.population_id=ps.super_population_id AND p2.population_id=ps.sub_population_id };
+  my $pop_sth = get_connection_and_query($dbname, $host, $pop_sql);
+  while(my @data = $pop_sth->fetchrow_array) {
+    $subpop_data{$data[0]}{$data[1]} = 1;
+  }
+  $pop_sth->finish;
+  return \%subpop_data;
+}
+
 # Build a hash containing all the relevant information to create the species/projects/populations content
 # Mostly based on the vcf_config file and Variation databases
 sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
     my $project_id = $project->{'id'};
-    next if ($project->{'assembly'} =~ /GRCh37/i);
+    next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'});
 
     my $species = ucfirst($project->{'species'});
        $species =~ s/_/ /g;
@@ -402,6 +422,7 @@ sub get_project_populations {
       my $spe_dbname = $species_host{$species}{'dbname'};
          $spe_dbname =~ s/variation/core/;
       my $spe_stmt = qq{ SELECT meta_value FROM meta WHERE meta_key='species.display_name'};
+ 
       my $spe_sth  = get_connection_and_query($spe_dbname, $spe_host, $spe_stmt);
       $species_usual_name{$species} = ($spe_sth->fetchrow_array)[0];
       $spe_sth->finish;
@@ -455,6 +476,7 @@ sub get_project_populations {
       my $dbname = $species_host{$species}{'dbname'};
       my $host   = $species_host{$species}{'host'};
       my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE name like ? or name = ? ORDER BY name};
+
       my $sth  = get_connection_and_query($dbname, $host, $stmt, ["$population_prefix%",$term]);
 
       while(my @data = $sth->fetchrow_array) {
@@ -472,15 +494,15 @@ sub get_project_populations {
                                'desc'  => $desc,
                                'size'  => $size
                               };
-        # Super/sub populations                      
-        my $sth2 = get_connection_and_query($dbname, $host, $sql3, [$data[0]]);
-        while(my ($sub_pop) = $sth2->fetchrow_array) {
-          if (($population_prefix && $sub_pop =~ /^$population_prefix/) || !$population_prefix) {
-            $sub_pops{$sub_pop} = 1;
-            $pop_tree{$data[1]}{$sub_pop} = 1;
+        # Super/sub populations   
+        if ($species_subpop{$species}{$data[0]}) {
+          foreach my $sub_pop (keys(%{$species_subpop{$species}{$data[0]}})) {
+            if (($population_prefix && $sub_pop =~ /^$population_prefix/) || !$population_prefix) {
+              $sub_pops{$sub_pop} = 1;
+              $pop_tree{$data[1]}{$sub_pop} = 1;
+            }
           }
         }
-        $sth2->finish;
       }
       $sth->finish;
       $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
@@ -500,11 +522,8 @@ sub get_project_label {
 
   my $label =  $project->{'id'};
      $label =~ s/_GRCh38//i;
-
-  if ($project->{'source_name'}) {
-    $label = $project->{'source_name'};
-  }
-  elsif ($project->{'population_display_group'} && $project->{'population_display_group'}{'display_group_name'}) {
+  
+  if ($project->{'population_display_group'} && $project->{'population_display_group'}{'display_group_name'}) {
     $label = $project->{'population_display_group'}{'display_group_name'};
   }
   elsif ($label =~ /^1000/) {
@@ -521,6 +540,9 @@ sub get_project_label {
   }
   elsif ($label =~ /sheep_genome_consortium/) {
     $label = "International Sheep Genome Consortium (ISGC)";
+  }
+  elsif ($project->{'source_name'}) {
+    $label = $project->{'source_name'};
   }
   return $label;
 }

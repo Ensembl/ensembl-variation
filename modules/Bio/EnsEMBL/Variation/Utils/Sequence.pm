@@ -61,7 +61,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Utils::Sequence;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array assert_ref);
@@ -732,7 +732,9 @@ sub get_hgvs_alleles{
     ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
     $ref_allele = '-';
   }
-  ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA)
+
+  ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA) OR
+  ## 5:g.87363407A[3] => AAA : http://varnomen.hgvs.org/recommendations/DNA/variant/repeated/
   elsif ($description =~ m/\[/i) {
 
     my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
@@ -740,7 +742,14 @@ sub get_hgvs_alleles{
     foreach my $n(1..$number){ $alt_allele .= $string;}
     $ref_allele = $string;
 
+    if($string eq '') { #the ref_allele is before the repeat number []
+      ($string, $number) = $description =~ m/([A-Z]*)\[(\d+)\]$/i;
+      # check if the reference already contains copies of the sequence eg. 11:g.108282799A[5] (rs1555092425) => ref AAA, alt AAAAAA
+      foreach my $n(1..$number){ $alt_allele .= $string;}
+      $ref_allele = $string;
+    }
   }
+
   # no change
   elsif ($description =~ m/\=/i) {
     ($ref_allele) = $description =~ m/([A-Z]*)\=$/i;

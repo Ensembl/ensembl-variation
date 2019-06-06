@@ -3,17 +3,16 @@ Ensembl Variation Deprecated Methods
 
 This file contains the list of methods deprecated in the Ensembl Variation API. A method is deprecated when it is not functional anymore (schema/data change) or has been replaced by a better one. Backwards compatibility is provided whenever possible. When a method is deprecated, a deprecation warning is thrown whenever the method is used. The warning also contains instructions on replacing the deprecated method and when it will be removed. A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### Removed in Ensembl Release 100 (deprecated from Ensembl Release 96) ###
+- Bio::EnsEMBL::**Variation**::*ancestral_allele()*
+
 ### Removed in Ensembl Release 99 (deprecated from Ensembl Release 95) ###
 - Bio::EnsEMBL::Variation::**VariationFeature**::*add_consequence_type()*
 - Bio::EnsEMBL::Variation::**VariationFeature**::*get_consequence_type()*
-- Bio::EnsEMBL::Variation::**StrainSlice**::*get_all_differences_Slice()*
-- Bio::EnsEMBL::Variation::**IndividualGenotype** *(whole module)*
-
 
 ### Removed in Ensembl Release 91 (deprecated from Ensembl Release 87) ###
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*array_to_bitval()*
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*bitval_to_array()*
-
 
 ### Removed in Ensembl Release 89 (deprecated from Ensembl Release 85) ###
 - Bio::EnsEMBL::Variation::DBSQL::**PopulationAdaptor**::*fetch_tagged_Population()*

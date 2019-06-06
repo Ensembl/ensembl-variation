@@ -71,7 +71,6 @@ package Bio::EnsEMBL::Variation::Individual;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Storable;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
