@@ -542,6 +542,7 @@ sub init_protein_matrix {
 =head2 load_predictions_for_triplets
   Arg 1      : Arrayref of triplet hashes
   Description: Get and store score and prediction for each mutated triplet
+               Override in child class
   Returntype : None
   Exceptions : None
   Caller     : run()
@@ -556,7 +557,8 @@ sub load_predictions_for_triplets {
   Arg 2      : Int $i amino acid position
   Arg 3      : String $mutated_aa mutated amino acid
   Description: Store score and prediction for mutated amino acid
-               if score exists
+               if score exists.
+               Override in child class 
   Returntype : None
   Exceptions : None
   Caller     : load_predictions_for_triplets()
@@ -618,8 +620,8 @@ sub store_protein_matrix {
     if ($self->{results_available}->{$analysis}) {
       $pfpma->store($pred_matrix);
       if ($self->{'debug_mode'} && $self->{'write_mode'}) {
-        my $fh = FileHandle->new($self->working_dir. "/$analysis\_$translation_stable_id", 'w');
-        print $self->working_dir. "/$analysis\_$translation_stable_id", "\n";
+        my $write_file = $self->working_dir. "/$analysis\_$translation_stable_id";
+        my $fh = FileHandle->new($write_file, 'w') or die "cannot open file $write_file: $!";
         my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $translation_md5);
         my $debug_data = $self->{debug_data};
         foreach my $i (sort keys %{$debug_data->{$analysis}}) {
