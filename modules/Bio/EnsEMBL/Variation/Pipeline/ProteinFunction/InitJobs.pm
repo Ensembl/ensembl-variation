@@ -259,13 +259,15 @@ sub update_meta{
 
   if ($self->required_param('dbnsfp_run_type')  == FULL){
     my $assembly = $self->get_assembly();
-    my $annotation = $self->param('dbnsfp_annotation');
+    my $annotation = $self->required_param('dbnsfp_annotation');
+    die "dbnsfp version is not defined" if (! defined $annotation->{$assembly}->{'version'});
     $update_meta_sth->execute('dbnsfp_version', $annotation->{$assembly}->{'version'});
   }
 
   if ($self->required_param('cadd_run_type')  == FULL){
     my $assembly = $self->get_assembly();
-    my $annotation = $self->param('cadd_annotation');
+    my $annotation = $self->required_param('cadd_annotation');
+    die "cadd version is not defined" if (! defined $annotation->{$assembly}->{'version'});
     $update_meta_sth->execute('cadd_version', $annotation->{$assembly}->{'version'});
   }
 
