@@ -100,7 +100,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "local",
-      "filename_template": "###t-root###/testdata/cadd.tsv.gz"
+      "filename_template": "###t-root###/testdata/test_data_cadd.tsv.gz"
     }
   ]
 }
