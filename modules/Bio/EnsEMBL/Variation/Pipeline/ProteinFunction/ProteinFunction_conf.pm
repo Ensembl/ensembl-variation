@@ -164,7 +164,9 @@ sub default_options {
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/nfs/production/panda/ensembl/variation/data/sift5.2.2/uniref90/uniref90.fasta',
+        variation_data          => '/nfs/production/panda/ensembl/variation/data', 
+
+        blastdb                 => $self->o('species_dir').'/sift5.2.2/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
@@ -174,7 +176,6 @@ sub default_options {
 
         sift_max_workers        => 500,
 
-        variation_data          => '/nfs/production/panda/ensembl/variation/data/', 
         dbnsfp_run_type         => NONE,
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
