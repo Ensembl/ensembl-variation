@@ -387,17 +387,17 @@ $expected_rows =  [
 cmp_deeply(\@rows, $expected_rows, "CADD rows for location 13:32907425-32907425");
 
 sub get_debug_data {
-  my $dbNSFP = shift;
+  my $annotation_source = shift;
   my $translation_md5 = shift;
   my $i = shift;
   my $aa = shift;
   my @results = ();
-  my $pred_matrices = $dbNSFP->{pred_matrices};
+  my $pred_matrices = $annotation_source->{pred_matrices};
   foreach my $analysis (keys %$pred_matrices) {
     my $pred_matrix = $pred_matrices->{$analysis};
-    if ($dbNSFP->{results_available}->{$analysis}) {
+    if ($annotation_source->{results_available}->{$analysis}) {
       my $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $translation_md5);
-      my $debug_data = $dbNSFP->{debug_data};
+      my $debug_data = $annotation_source->{debug_data};
       if (defined $i && defined $aa) {
         foreach my $prediction (keys %{$debug_data->{$analysis}->{$i}->{$aa}}) {
           my ($new_pred, $new_score) = $matrix->get_prediction($i, $aa);
