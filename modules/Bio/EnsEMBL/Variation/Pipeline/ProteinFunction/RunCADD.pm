@@ -32,30 +32,30 @@ package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunCADD;
 use strict;
 use Bio::EnsEMBL::Variation::Utils::CADDProteinFunctionAnnotation;
 use File::Path qw(make_path);
-use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub run {
   my $self = shift;
-  my $working_dir = $self->param('cadd_working');
+  my $working_dir = $self->required_param('cadd_working');
   die "Working directory ($working_dir) doesn't exist" unless (-d $working_dir);
 
   my $assembly = $self->get_assembly();
-  my $cadd_annotation = $self->param('cadd_annotation');
+  my $cadd_annotation = $self->required_param('cadd_annotation');
+  die "Assembly ($assembly) is not supported" if (!defined $cadd_annotation->{$assembly});
   my $annotation_file = $cadd_annotation->{$assembly}->{file};
   my $annotation_file_version = $cadd_annotation->{$assembly}->{version};
 
   my $cadd = Bio::EnsEMBL::Variation::Utils::CADDProteinFunctionAnnotation->new(
-    -registry_file => $self->param('ensembl_registry'),
-    -species => $self->param('species'),
+    -registry_file => $self->required_param('ensembl_registry'),
+    -species => $self->required_param('species'),
     -working_dir => $working_dir,
     -annotation_file =>  $annotation_file,
     -assembly => $assembly,
     -annotation_file_version => $annotation_file_version,
   );
 
-  my $translation_md5 = $self->param('translation_md5');
+  my $translation_md5 = $self->required_param('translation_md5');
   $cadd->run($translation_md5);
 
 }
