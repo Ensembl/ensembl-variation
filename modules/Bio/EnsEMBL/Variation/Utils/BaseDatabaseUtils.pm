@@ -40,7 +40,6 @@ package Bio::EnsEMBL::Variation::Utils::BaseDatabaseUtils;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Registry;
 
@@ -55,11 +54,6 @@ sub new {
   }, $class;
 
   return $self;
-}
-
-sub adaptor {
-  my $self = shift;
-  return $self->{'adaptor'};
 }
 
 sub species {
