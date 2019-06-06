@@ -131,7 +131,6 @@ sub add_predictions {
 sub get_CADD_row {
   my $self = shift;
   my $line = shift;
-  $line =~ s/\r$//g;
   my @split = split /\t/, $line;
   my $header = $self->header;
   my %data = map {$header->[$_] => $split[$_]} (0..(scalar @{$header} - 1));
