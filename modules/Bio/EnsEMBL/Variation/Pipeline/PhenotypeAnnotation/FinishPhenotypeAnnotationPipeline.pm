@@ -49,7 +49,7 @@ sub run {
   my $hive_dba = $self->dbc;
 
   my $runTime_sth = $hive_dba->prepare(qq[ select timediff(max(when_died), min(when_born)) from worker ]);
-  $runTime_sth->execute()||die;
+  $runTime_sth->execute() || die ("Failed to fetch timediff from hive db: $!\n");
   my $time = $runTime_sth->fetchall_arrayref();
 
   my $runTime_imports_sth = $hive_dba->prepare(qq[
@@ -57,10 +57,10 @@ sub run {
             FROM analysis_base ab, role r
             WHERE ab.logic_name like 'import_%' AND ab.analysis_id = r.analysis_id
             GROUP BY ab.logic_name ]);
-  $runTime_imports_sth->execute()||die;
+  $runTime_imports_sth->execute() || die ("Failed to fetch runtime stats from hive db: $!\n");
 
   my $dir =$self->required_param('pipeline_dir');
-  open my $report, ">$dir/REPORT_hive_pipe.txt"||die "Failed to open report file for summary info :$!\n";
+  open (my $report, ">$dir/REPORT_hive_pipe.txt") || die ("Failed to open report file for summary info: $!\n");
 
   print $report "PhenotypeAnnotation pipeline finished! \n";
   print $report "running time: $time->[0]->[0] \n";

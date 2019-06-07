@@ -72,13 +72,13 @@ sub fetch_input {
   $variation_dba  = $self->get_species_adaptor('variation');
   $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
 
-  open ($logFH, ">", $workdir."/".'log_import_out_ontology_mapping_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
 }
 
 sub run {
   my $self = shift;
 
-  open $outFH, ">$workdir/import_phenotype_accessions_$species.log" || die "Failed to open log file :$!\n";
+  open ($outFH, ">$workdir/import_phenotype_accessions_$species.log") || die ("Failed to open log file :$!\n");
 
   ## add exact matches where available for all phenotypes
   my $all_phenos = get_all_phenos($variation_dba->dbc->db_handle );
@@ -110,12 +110,13 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species')) || die ("Could not open file for appending: $!\n");
     print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
     close ($logPipeFH);
   }
-  $self->dataflow_output_id($self->param('output_ids'), 1);
   close($logFH);
+  $self->dataflow_output_id($self->param('output_ids'), 1);
+
 }
 
 sub store_terms{

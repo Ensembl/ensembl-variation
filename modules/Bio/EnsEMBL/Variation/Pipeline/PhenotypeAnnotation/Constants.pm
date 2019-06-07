@@ -30,7 +30,7 @@ limitations under the License.
 
 =head1 Constants
 
-General constatns for the PhenotypeAnnotation pipeline.
+General constants for the PhenotypeAnnotation pipeline.
 
 =cut
 
@@ -55,19 +55,21 @@ our @EXPORT_OK = qw(
             NONE
             species);
 
-use constant RGD       => 'RGD';
-use constant AnimalQTL => 'AnimalQTL';
-use constant ZFIN      => 'ZFIN';
-use constant GWAS      => 'GWAS';
-use constant OMIA      => 'OMIA';
-use constant EGA       => 'EGA';
-use constant Orphanet  => 'Orphanet';
-use constant MIMmorbid => 'MIMmorbid';
-use constant DDG2P     => 'DDG2P';
-use constant CGC       => 'CGC';
-use constant IMPC      => 'IMPC';
-use constant MGI       => 'MGI';
-use constant NONE      => 'NONE';
+use constant {
+  RGD       => 'RGD',
+  AnimalQTL => 'AnimalQTL',
+  ZFIN      => 'ZFIN',
+  GWAS      => 'GWAS',
+  OMIA      => 'OMIA',
+  EGA       => 'EGA',
+  Orphanet  => 'Orphanet',
+  MIMmorbid => 'MIMmorbid',
+  DDG2P     => 'DDG2P',
+  CGC       => 'CGC',
+  IMPC      => 'IMPC',
+  MGI       => 'MGI',
+  NONE      => 'NONE',
+};
 
 use constant species => ( 'RGD'       => ['rattus_norvegicus'],
                           'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
@@ -86,6 +88,7 @@ use constant species => ( 'RGD'       => ['rattus_norvegicus'],
 
                           'IMPC'      => ['mus_musculus'],
                           'MGI'       => ['mus_musculus'],
+
                           'ontology'  => ['homo_sapiens', 'gallus_gallus',
                                           'sus_scrofa', 'bos_taurus',
                                           'equus_caballus', 'ovis_aries',

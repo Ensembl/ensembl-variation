@@ -34,9 +34,11 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
-use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
+
+use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $logPipeFH;
+
 sub fetch_input {
   my $self = shift;
 

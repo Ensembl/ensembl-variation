@@ -66,6 +66,7 @@ sub run {
 Run all the counting SQL on the new database
 
 =cut
+
 sub get_new_results{
   my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
 
@@ -76,11 +77,6 @@ sub get_new_results{
 
   my %new;  ## hold some of the new counts to store
 
-  ## counts on phenotypes relevant to all species
-  my $phenotype_count_st                    = qq[ select count(*) from phenotype];
-  my $phenotype_feature_count_st            = qq[ select count(*) from phenotype_feature ];
-  my $phenotype_feature_attrib_count_st     = qq[ select count(*) from phenotype_feature_attrib ];
-  my $phenotype_ontology_accession_count_st = qq[ select count(*) from phenotype_ontology_accession ];
 
   ## counts based on type and source
   my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
@@ -88,20 +84,17 @@ sub get_new_results{
                                           where pf.source_id = s.source_id
                                           group by s.name, pf.type ];
 
-  ## General results
-  $new{phenotype_count}  = count_results($dbc, $phenotype_count_st );
-  unless($new{phenotype_count} > 0){  ## report & die if total failure
-      $self->warning('ERROR: no phenotypes found');
-      die;
+  ## counts on phenotypes relevant to all species
+  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
+  foreach my $table (@tables) {
+    my $count_st = qq[ select count(*) from $table];
+    $new{"$table\_count"}  = count_results($dbc, $count_st);
+    unless($new{"$table\_count"} > 0){  ## report & die if total failure
+        $self->warning("WARNING: no entries found in the table $table\n");
+        die unless ($table eq 'phenotype_feature_attrib' ||
+                    $table eq 'phenotype_ontology_accession');
+    }
   }
-  $new{phenotype_feature_count}   = count_results($dbc, $phenotype_feature_count_st );
-  unless($new{phenotype_feature_count} > 0){  ## report & die if total failure
-      $self->warning('ERROR: no phenotype feature results found');
-      die;
-  }
-
-  $new{phenotype_feature_attrib_count} = count_results($dbc, $phenotype_feature_attrib_count_st );
-  $new{phenotype_ontology_accession_count} = count_results($dbc, $phenotype_ontology_accession_count_st );
 
   # get grouped counts
   my $sth = $dbc->prepare($phenotype_feature_grouped_count_st);
@@ -119,30 +112,23 @@ sub get_new_results{
 Print a report in the working directory showing current and previous data
 
 =cut
+
 sub report_results{
   my ($self, $new, $previous) = @_;
 
 
   my $dir =  $self->required_param('workdir');
   my $report;
-  open $report, ">$dir/REPORT_import.txt"||die "Failed to open report file for summary info :$!\n";
+  open ($report, ">$dir/REPORT_import.txt") || die ("Failed to open report file for summary info :$!\n");
 
   my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
-  $text_out.= "$new->{phenotype_count} phenotype entries";
-  $text_out.= " (previously $previous->{phenotype_count})" if defined  $previous->{phenotype_count} ;
-  $text_out.= "\n";
 
-  $text_out.= "$new->{phenotype_ontology_accession_count} phenotype_ontology_accession entries";
-  $text_out.= " (previously $previous->{phenotype_ontology_accession_count})" if defined  $previous->{phenotype_ontology_accession_count} ;
-  $text_out.= "\n";
-
-  $text_out.= "$new->{phenotype_feature_count} phenotype_feature entries";
-  $text_out.= " (previously $previous->{phenotype_feature_count})" if defined  $previous->{phenotype_feature_count} ;
-  $text_out.= "\n";
-
-  $text_out.= "$new->{phenotype_feature_attrib_count} phenotype_feature_attrib entries";
-  $text_out.= " (previously $previous->{phenotype_feature_attrib_count})" if defined  $previous->{phenotype_feature_attrib_count} ;
-  $text_out.= "\n";
+  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
+  foreach my $table (@tables) {
+    $text_out.= $new->{"$table\_count"}." $table entries";
+    $text_out.= " (previously ".$previous->{"$table\_count"}.")" if defined  $previous->{"$table\_count"} ;
+    $text_out.= "\n";
+  }
 
   foreach my $source_type ( keys %{$new->{phenotype_feature_count_details}}){
     $text_out.= "$new->{phenotype_feature_count_details}{$source_type} $source_type phenotype_feature entries";
@@ -160,6 +146,7 @@ Check internal production database for previous phenotype annotation import info
 for this species 
 
 =cut
+
 sub get_old_results{
   my  $self = shift;
 
@@ -265,6 +252,7 @@ sub update_internal_db{
  It returns either the total number of rows in the table or 
  a hash of attribute => row count depending on input.
 =cut
+
 sub count_results{
   my ($dbc, $st) = @_;
 
