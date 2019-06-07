@@ -81,14 +81,14 @@ sub write_output {
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
     if ($self->param('debug_mode')) {
-      open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
+      open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species'));
       print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for adding ontology accessions (ontology_mapping)\n";
       close ($logPipeFH);
     }
     $self->dataflow_output_id($self->param('output_ids'), 2);
   } else {
     if ($self->param('debug_mode')) {
-      open (my $logPipeFH, ">>", $workdir."/".'log_import_debug_pipe');
+      open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species')) || die ("Could not open file for appending: $!\n");
       print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
       close ($logPipeFH);
     }

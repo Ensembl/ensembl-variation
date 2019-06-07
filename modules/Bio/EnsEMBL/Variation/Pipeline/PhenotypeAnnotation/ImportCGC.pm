@@ -50,13 +50,8 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-my $ontology_dba;
-
-my $debug;
+my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -64,12 +59,10 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $core_dba    = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-  $ontology_dba = $self->get_adaptor('multi', 'ontology');
-
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $basePheno->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'http://cancer.sanger.ac.uk/census',
@@ -85,10 +78,12 @@ sub fetch_input {
   my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
   # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   #get input file CGC via OpenTargets, get latest published file:
   my $dt = DateTime->now;
@@ -97,7 +92,7 @@ sub fetch_input {
   my $cgc_ftp_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
 
   my $file_opent = basename($cgc_ftp_url); #OpenTargets file
-  print $logFH "Found files (".$workdir."/".$file_opent."), will skip new fetch\n" if -e $workdir."/".$file_opent;
+  print $logFH "INFO: Found file ($file_opent), will skip new fetch\n" if -e $workdir."/".$file_opent;
   my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
   while (!$found){
@@ -125,7 +120,7 @@ sub fetch_input {
   # get only Cancer Gene Census files
   $source_info{source_version} = "20$year$month";
   my $file_cgc_json = "open_targets_20$year-$month.json";
-  print $logFH "Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
+  print $logFH "INFO: Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
   `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
 
   $self->param('cgc_file', $file_cgc_json);
@@ -138,39 +133,39 @@ sub run {
   my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
 
   #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
-  print $logFH "Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n";
+  $basePheno->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
+  $basePheno->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
   get_cancer_gene_census_file($file_cgc, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
-  print $logFH "Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n";
+  $basePheno->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
 
   #get source id
-  my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print $logFH "$source_info{source_name_short} source_id is $source_id\n" if ($debug);
+  my $source_id = $basePheno->get_or_add_source(\%source_info);
+  $basePheno->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($basePheno->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = parse_cancer_gene_census($workdir."/".$file_cgc_ensembl, $core_dba);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
+  my $results = parse_cancer_gene_census($file_cgc_ensembl);
+  $basePheno->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug) ;
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba) unless scalar(@{$results->{'phenotypes'}}) == 0;
+  $basePheno->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH ;
+  close($basePheno->errFH) if defined $basePheno->errFH ;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
+
 }
 
 
@@ -180,21 +175,21 @@ sub get_cancer_gene_census_file {
   my $output_file = shift;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) ;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) || die ("Failed to open file: $!\n");
 
   my %efos;
   my %data;
 
-  my $ga = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
-  my $ota = $ontology_dba->get_OntologyTermAdaptor;
-  die("ERROR: Could not get ontology term adaptor") unless defined($ota);
+  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
+  my $ota = $basePheno->ontology_db_adaptor->get_OntologyTermAdaptor;
+  die("ERROR: Could not get ontology term adaptor\n") unless defined($ota);
 
   if($input_file =~ /gz$/) {
-    open IN, "zcat $workdir/$input_file |" or die ("Could not open $input_file for reading");
+    open (IN, "zcat $workdir/$input_file |") || die ("Could not open $input_file for reading: $!\n");
   }
   else {
-    open(IN,'<',$workdir."/".$input_file) or die ("Could not open $input_file for reading");
+    open (IN,'<',$workdir."/".$input_file) || die ("Could not open $input_file for reading: $!\n");
   }
 
   while(<IN>) {
@@ -255,7 +250,7 @@ sub get_cancer_gene_census_file {
   }
   close(IN);
 
-  open OUT, "> $workdir/$output_file" || die $!;
+  open (OUT, "> $workdir/$output_file") || die ("Could not open file for writing: $!\n");
   foreach my $gene_symbol (sort(keys(%data))) {
     foreach my $gene_id (keys(%{$data{$gene_symbol}})) {
       foreach my $phenotype (keys(%{$data{$gene_symbol}{$gene_id}})) {
@@ -306,22 +301,21 @@ sub parse_publications {
 # CGC specific phenotype parsing method
 sub parse_cancer_gene_census {
   my $infile = shift;
-  my $core_dba = shift;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
 
-  my $ga = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
+  my $ga = $basePheno->get_core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   # Read through the file and parse out the desired fields
