@@ -37,69 +37,531 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
-my %special_characters = (
-  'Å' => 'A',
-  'Ä' => 'A',
-  'Ö' => 'O',
-  'Ü' => 'U',
-  'ö' => 'o',
-  'ü' => 'u',
-  'ä' => 'a',
-  'í' => 'i',
-  'é' => 'e',
-  'è' => 'e',
-  'ë' => 'e',
-  'ç' => 'c',
-  '<' => ' less than ',
-  '>' => ' more than ',
-  'Đ' => 'D',
-  '&' => 'and',
-);
-my %phenotype_cache;
 
-my $pubmed_prefix = 'PMID:';
-my $debug = 0;
-my ($logFH, $errFH);
+=head2 new
 
-my $prev_prog;
+  Arg [-debug] : boolean - run in debug mode, default: 0 - off
+  Arg [-skip_synonyms] : boolean - default: 0
+  Arg [-skip_sets] : boolean - default: 0
+  Example    : $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new
+                    (-debug   => 1,
+                     -skip_synonyms => 1);
 
-my $skip_synonyms = 0;   # 1 for IMPC, MGI
-my $skip_phenotypes = 0; #TODO: take it out or keep it for legacy ? was 1 for uniprot
-my $skip_sets = 0;       #TODO: when needed? this is never set in the script BUT is input param
+  Description: Constructor. Instantiates a new BasePhenotype object.
+  Returntype : Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
 
+=cut
 
-sub set_skip_synonyms {
-  my $self = shift;
-  $skip_synonyms = shift;
+sub new {
+  my $caller = shift;
+  my $class = ref($caller) || $caller;
+
+  my ($debug, $skip_synonyms, $skip_sets) =
+        rearrange([qw(debug skip_synonyms skip_sets)],@_);
+
+  my $self = bless {
+    "debug"         => $debug || 0,
+    "skip_synonyms" => $skip_synonyms || 0,
+    "skip_sets"     => $skip_sets || 0,
+  }, $class;
+  $self->{pubmed_prefix} = "PMID:";
+  my %special_characters = (
+    'Å' => 'A',
+    'Ä' => 'A',
+    'Ö' => 'O',
+    'Ü' => 'U',
+    'ö' => 'o',
+    'ü' => 'u',
+    'ä' => 'a',
+    'í' => 'i',
+    'é' => 'e',
+    'è' => 'e',
+    'ë' => 'e',
+    'ç' => 'c',
+    '<' => ' less than ',
+    '>' => ' more than ',
+    'Đ' => 'D',
+    '&' => 'and',
+  );
+  $self->{special_characters} = \%special_characters;
+
+  return $self;
+}
+
+=head2 skip_synonyms
+
+  Arg [1]    : boolean $skip_synonyms (optional)
+               The new skip_synonyms flag status
+  Example    : $skip_syn = $obj->skip_synonyms()
+  Description: Get/set the skip_synonyms flag status
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub skip_synonyms {
+  my ($self, $skip_synonyms) = @_;
+  $self->{skip_synonyms} = $skip_synonyms if defined $skip_synonyms;
+  return $self->{skip_synonyms};
 }
 
 sub get_special_characters {
-  return \%special_characters;
+  my $self = shift;
+  return $self->{special_characters};
 }
 
 sub get_pubmed_prefix {
-  return $pubmed_prefix;
-}
-
-sub set_debug {
   my $self = shift;
-  $debug = shift;
+  return $self->{pubmed_prefix};
 }
 
-sub set_logFH {
+=head2 core_db_adaptor
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
+               The new core_db_adaptor
+  Example    : $core_dba = $obj->core_db_adaptor()
+  Description: Get/set the core_db_adaptor
+  Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub core_db_adaptor {
+  my ($self, $db_adaptor) = @_;
+  $self->{core_dba} = $db_adaptor if defined $db_adaptor;
+  return $self->{core_dba};
+}
+
+=head2 variation_db_adaptor
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
+               The new core_db_adaptor
+  Example    : $variation_dba = $obj->variation_db_adaptor()
+  Description: Get/set the variation_db_adaptor
+  Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub variation_db_adaptor {
+  my ($self, $db_adaptor) = @_;
+  $self->{variation_dba} = $db_adaptor if defined $db_adaptor;
+  return $self->{variation_dba};
+}
+
+
+=head2 ontology_db_adaptor
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
+               The new ontology_db_adaptor
+  Example    : $ontology_dba = $obj->ontology_db_adaptor()
+  Description: Get/set the variation_db_adaptor
+  Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub ontology_db_adaptor {
+  my ($self, $db_adaptor) = @_;
+  $self->{ontology_dba} = $db_adaptor if defined $db_adaptor;
+  return $self->{ontology_dba};
+}
+
+
+=head2 debug
+
+  Arg [1]    : boolean $debug (optional)
+               The new debug mode flag
+  Example    : $debug = $obj->debug()
+  Description: Get/set debug mode flag
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub debug {
+  my ($self, $debug) = @_;
+  $self->{debug} = $debug if defined $debug;
+  return $self->{debug};
+}
+
+
+=head2 logFH
+
+  Arg [1]    : FileHandle $logFH (optional)
+               The new logFH
+  Example    : $logF = $obj->logFH()
+  Description: Gettter/Setter the logging file handle
+  Returntype : FileHandle
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub logFH {
+  my ($self, $logFH) = @_;
+  $self->{logFH} = $logFH if defined $logFH;
+  return $self->{logFH};
+}
+
+=head2 errFH
+  Arg [1]    : FileHandle $errFH (optional)
+               The new errFH
+  Example    : $errF = $obj->errFH()
+  Description: Gettter/Setter for the error logging file handle
+  Returntype : FileHandle
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub errFH {
+  my ($self, $errFH) = @_;
+  $self->{errFH} = $errFH if defined $errFH;
+  return $self->{errFH};
+}
+
+
+=head2 pipelogFH
+
+  Arg [1]    : FileHandle $pipelogFH (optional)
+               The new logFH
+  Example    : $logF = $obj->pipelogFH()
+  Description: Getter/Setter for the pipeline logging file handle
+  Returntype : FileHandle
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub pipelogFH {
+  my ($self, $pipelogFH) = @_;
+  $self->{pipelogFH} = $pipelogFH if defined $pipelogFH;
+  return $self->{pipelogFH};
+}
+
+
+=head2 print_logFH
+
+  Example    : $obj->print_logFH("new log message")
+  Description: Writes message to logging file handle
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub print_logFH {
+  my ($self, $msg) = @_;
+
+  my $logFH = $self->logFH;
+
+  if ($logFH) {
+    print $logFH $msg;
+  }
+  else {
+    die("Missing logFH variable\n");
+  }
+}
+
+
+=head2 print_errFH
+
+  Example    : $obj->print_errFH("new log message")
+  Description: Writes message to error logging file handle
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub print_errFH {
+  my ($self, $msg) = @_;
+
+  my $errFH = $self->errFH;
+
+  if ($errFH) {
+    print $errFH $msg;
+  }
+  else {
+    die("Missing errFH variable\n");
+  }
+}
+
+
+=head2 print_pipelogFH
+
+  Example    : $obj->print_pipelogFH("new log message")
+  Description: Writes message to pipeline logging file handle
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub print_pipelogFH {
   my $self = shift;
-  $logFH = shift;
+  my $msg = shift;
+  my $pipelogFH = $self->pipelogFH;
+
+  if ($pipelogFH) {
+    print $pipelogFH $msg;
+  }
+  else {
+    die("Missing pipelogFH variable\n");
+  }
 }
 
-sub set_errFH {
+# getter for the internal phenotype_cache shared between methods
+sub _phenotype_cache {
   my $self = shift;
-  $errFH = shift;
+  return $self->{phenotype_cache};
 }
 
-sub add_phenotypes {
-  my ($data, $source_info, $db_adaptor) = @_;
+# getter for the internal sql statments handles shared between methods
+sub _sql_statements {
+  my $self = shift;
+  return $self->{sql_statements};
+}
+
+
+#----------------------------
+# PUBLIC METHODS
+
+=head2 get_seq_region_ids
+
+  Example    : $obj->get_seq_region_ids()
+  Description: Writes message to logging file handle
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_seq_region_ids {
+  my $self = shift;
+
+  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
+    SELECT seq_region_id, name
+    FROM seq_region
+  });
+  $sth->execute;
+
+  my (%seq_region_ids, $id, $name);
+  $sth->bind_columns(\$id, \$name);
+  $seq_region_ids{$name} = $id while $sth->fetch();
+  $sth->finish;
+
+  return \%seq_region_ids;
+}
+
+
+sub get_or_add_source {
+  my ($self, $source_info) = @_;
+
+  my $db_adaptor = $self->{variation_dba};
+
+  my $stmt = qq{
+    SELECT
+      source_id
+    FROM
+      source
+    WHERE
+      name = '$source_info->{source_name}'
+    LIMIT 1
+  };
+  my $sth = $db_adaptor->dbc->prepare($stmt);
+  $sth->execute();
+  my $source_id;
+  $sth->bind_columns(\$source_id);
+  $sth->fetch();
+
+  if (!defined($source_id)) {
+    $stmt = qq{
+      INSERT INTO
+        source (name, description, url, somatic_status, version )
+      VALUES (
+        '$source_info->{source_name}',
+        '$source_info->{source_description}',
+        '$source_info->{source_url}',
+        '$source_info->{source_status}',
+        $source_info->{source_version}
+      )
+    };
+    $db_adaptor->dbc->do($stmt);
+    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+
+    $self->print_logFH("Added source for $source_info->{source_name} (source_id = $source_id)\n") if ($self->{debug});
+  }
+  else {
+    $stmt = qq{
+      UPDATE
+        source
+      SET name=?,
+        description=?,
+        url=?,
+        version=?
+      WHERE
+        source_id=?
+    };
+    my $update_source_sth =$db_adaptor->dbc->prepare($stmt);
+    $update_source_sth->execute($source_info->{source_name},
+                                $source_info->{source_description},
+                                $source_info->{source_url},
+                                $source_info->{source_version},
+                                $source_id);
+  }
+
+  return $source_id;
+}
+
+
+=head2 save_phenotypes
+
+    Arg [1]              : hashref $source_info
+    Arg [2]              : hashref $input_data
+    Example              : $self->save_phenotypes(\%source_info, $input_data);
+    Description          : Saves the phenotype data ($input_data) for the given source ($source_info).
+    Returntype           : none
+    Exceptions           : none
+    Caller               : general
+    Status               : Stable
+
+=cut
+
+sub save_phenotypes {
+  my ($self, $source_info, $input_data) = @_;
+
+  my $core_dba = $self->{core_dba};
+  my $phenotype_dba =  $self->{variation_dba}->get_PhenotypeAdaptor;
+
+  my $set = defined($source_info->{set}) ? $source_info->{set} : undef;
+  $source_info->{source_status} = 'germline' unless defined($source_info->{source_status});
+
+  my $initial_phenotype_count = $phenotype_dba->generic_count;
+  my @attrib_types = @{$self->_get_attrib_types()};
+  my %phenotype_cache = map {$_->description() => $_->dbID()} @{$phenotype_dba->fetch_all};
+  $self->{phenotype_cache} = \%phenotype_cache;
+
+  my @ids;
+  my %synonym;
+  my @phenotypes;
+  if (exists($input_data->{'synonyms'})) {
+    %synonym = %{$input_data->{'synonyms'}};
+    # To get all the ids of the source (Uniprot)
+    @ids = keys(%synonym);
+  }
+  if (exists($input_data->{'phenotypes'})) {
+    @phenotypes = @{$input_data->{'phenotypes'}};
+  }
+  $self->print_logFH( "Got ".(scalar @phenotypes)." phenotype objects\n") if ($self->{debug});
+
+  # Get internal variation ids for the rsIds
+  $self->print_logFH( "Retrieving internal variation IDs\n") if ($self->{debug});
+  if (scalar @ids == 0) {
+    @ids = map {$_->{'id'}} @phenotypes;
+  }
+  my $variation_ids = $source_info->{object_type} =~ /Variation/ ? $self->_get_dbIDs(\@ids) : {};
+
+  # Get coordinates of objects
+  my $coords;
+
+  $self->print_logFH( "Retrieving object coordinates\n") if ($self->{debug});
+
+  # might be able to copy them from data (QTLs and Genes)
+  if(defined($phenotypes[0]->{seq_region_id})) {
+    foreach my $p(@phenotypes) {
+      my $coord = {};
+      foreach my $key(qw(id start end strand)) {
+        $coord->{'seq_region_'.$key} = $p->{'seq_region_'.$key};
+      }
+      push @{$coords->{$p->{id}}}, $coord;
+    }
+  }
+
+  $coords ||= $self->_get_coords(\@ids,$variation_ids, $source_info->{object_type}, $source_info->{object_type} eq 'Gene' ? $self->{core_dba} : $self->{variation_dba});
+
+  # uniquify coords
+  foreach my $id (keys %$coords) {
+    my %tmp = map {
+      $_->{seq_region_id}."_".
+      $_->{seq_region_start}."_".
+      $_->{seq_region_end}."_".
+      $_->{seq_region_strand}."_" => $_
+    } @{$coords->{$id}};
+
+    $coords->{$id} = [values %tmp];
+  }
+
+  # Get or add a source
+  my $source_id = $self->get_or_add_source($source_info);
+  $self->print_logFH( "$source_info->{source_name} source_id is $source_id\n");
+
+  # Add the synonyms if required
+  unless ($self->{skip_synonyms}) {
+    $self->print_logFH( "Adding synonyms\n") if ($self->{debug});
+    $self->_add_synonyms(\%synonym,$variation_ids,$source_id);
+  }
+
+  # Now, insert phenotypes
+  die("ERROR: No phenotypes or objects retrieved from input\n") unless scalar @phenotypes;
+
+  $self->print_logFH( "Adding phenotypes\n") if ($self->{debug});
+  $source_info->{source_id}=$source_id;
+  my %data = (phenotypes => \@phenotypes, coords => $coords,
+              variation_ids => $variation_ids, attrib_types=> \@attrib_types);
+  $self->_add_phenotypes(\%data,$source_info);
+
+  $self->print_logFH( "$initial_phenotype_count initial phenotypes\n") if ($self->{debug});
+  my $added_phenotypes = $phenotype_dba->generic_count - $initial_phenotype_count;
+  $self->print_logFH("$added_phenotypes new phenotypes added\n") if ($self->{debug});
+
+
+  # Add the variation sets if required
+  unless ($self->{skip_sets}) {
+    if (%synonym && !$self->{skip_synonyms} && $self->{skip_phenotypes}) {
+      $self->print_logFH("Adding variation sets for synonyms\n") if ($self->{debug});
+      $self->_add_set($set,$source_id,'synonym');
+    }
+    elsif (@phenotypes && !$self->{skip_phenotypes}) {
+      $self->print_logFH("Adding variation sets for phenotypes\n") if ($self->{debug});
+      $self->_add_set($set,$source_id,'phenotype');
+    }
+  }
+}
+
+#----------------------------
+# PRIVATE METHODS
+
+
+sub _add_phenotypes {
+  my ($self, $data, $source_info) = @_;
+
+  my $db_adaptor    = $self->{variation_dba};
+  my $special_characters = $self->get_special_characters;
 
   my $phenotypes    = $data->{phenotypes};
   my $coords        = $data->{coords};
@@ -210,6 +672,8 @@ sub add_phenotypes {
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
   my $ontology_accession_ins_sth = $db_adaptor->dbc->prepare($ontology_accession_ins_stmt);
 
+  $self->{sql_statements}{st_ins_sth} = $st_ins_sth;
+
   ## get the attrib id for the type of description to ontology term linking
   my $attrib_id_ext_sth = $db_adaptor->dbc->prepare($attrib_id_ext_stmt);
   $attrib_id_ext_sth->execute();
@@ -225,97 +689,48 @@ sub add_phenotypes {
 
   # First, sort the array according to the phenotype description
   my @sorted = sort {($a->{description} || $a->{name}) cmp ($b->{description} || $b->{name})} @{$phenotypes};
-  my $study_count = 0;
+  $self->{study_count} = 0;
   my $phenotype_feature_count = 0;
 
   my $total = scalar @sorted;
   my $i = 0;
 
   while (my $phenotype = shift(@sorted)) {
-    progress($i++, $total);
+    $self->_progress($i++, $total);
 
     $object_type = $phenotype->{type} if defined($phenotype->{type});
 
     my $object_id = $phenotype->{"id"};
     # If the rs could not be mapped to a variation id, skip it
-    next if $object_type =~ /Variation/ && (!defined($variation_ids->{$object_id}));
+    if ($object_type =~ /Variation/ && (!defined($variation_ids->{$object_id}))){
+      $self->print_errFH( "WARN: skipping rsID: could not be mapped to a variation id : $object_id \n");
+      next;
+    }
 
     $object_id = $variation_ids->{$object_id}[1] if ($object_type eq 'Variation');
 
-    # if we have no coords, skip it
-    my $study_id;
-
-    if(defined($phenotype->{study}) || defined($phenotype->{study_description}) || defined($phenotype->{study_type})) {
-
-      my $sql_study = '= ?';
-      my $sql_type  = '= ?';
-
-      # To avoid duplication of study entries
-      if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
-      if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }
-
-      my $st_check_stmt = qq{
-        SELECT study_id
-        FROM study
-        WHERE
-        source_id = $source_id AND
-        external_reference $sql_study AND
-        study_type $sql_type
-        LIMIT 1
-      };
-
-      my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
-      my $param_num = 1;
-
-      if (defined $phenotype->{"study"}) {
-        $st_check_sth->bind_param($param_num,$phenotype->{"study"},SQL_VARCHAR);
-        $param_num++;
-      }
-      if (defined $phenotype->{"study_type"}) {
-        $st_check_sth->bind_param($param_num,$phenotype->{"study_type"},SQL_VARCHAR);
-        $param_num++;
-      }
-      $st_check_sth->execute();
-      $st_check_sth->bind_columns(\$study_id);
-      $st_check_sth->fetch();
-
-      if (!defined($study_id)) {
-        if (length($phenotype->{"study"}) > 255) {
-          print $errFH "WARNING study external_references truncated FROM:>",$phenotype->{"study"}, "<\n";
-          $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
-          $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
-          print $errFH "WARNING study external_references truncated TO  :>",$phenotype->{"study"}, "<\n";
-        }
-        $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
-        $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
-        $st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
-        $st_ins_sth->execute();
-        $study_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
-        $study_count++;
-      }
-    }
+    my $study_id = $self->_get_study_id($phenotype,$source_id);
 
     # Remove special characters from the phenotype description
-    foreach my $char (keys(%special_characters)) {
-      my $new_char = $special_characters{$char};
+    foreach my $char (keys(%{$special_characters})) {
+      my $new_char = $special_characters->{$char};
       $phenotype->{description} =~ s/$char/$new_char/g;
     }
 
     # get phenotype ID
-    my $phenotype_id = get_phenotype_id($phenotype, $db_adaptor);
+    my $phenotype_id = $self->_get_phenotype_id($phenotype);
 
     foreach my $acc (@{$phenotype->{accessions}}){
       $acc =~ s/\s+//g;
-      $acc = iri2acc($acc) if $acc =~ /^http/;
-      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->{$mapped_by}->{'attrib_id'}, $phenotype->{ontology_mapping_type} ) ||die "Failed to import phenotype accession\n";
+      $acc = $self->_iri2acc($acc) if $acc =~ /^http/;
+      $ontology_accession_ins_sth->execute( $phenotype_id, $acc,  $ont_attrib_type->{$mapped_by}->{'attrib_id'}, $phenotype->{ontology_mapping_type} ) || die ("Failed to import phenotype accession\n");
     }
-
     if ($phenotype->{"associated_gene"}) {
       $phenotype->{"associated_gene"} =~ s/\s//g;
       $phenotype->{"associated_gene"} =~ s/;/,/g;
     }
 
-    $phenotype->{"p_value"} = convert_p_value($phenotype->{"p_value"}) if (defined($phenotype->{"p_value"}));
+    $phenotype->{"p_value"} = $self->_convert_p_value($phenotype->{"p_value"}) if (defined($phenotype->{"p_value"}));
 
     # Check if this phenotype_feature already exists for this variation and source, in that case we probably want to skip it
     my $pf_id;
@@ -334,7 +749,10 @@ sub add_phenotypes {
     $pf_check_sth->execute();
     $pf_check_sth->bind_columns(\$pf_id);
     $pf_check_sth->fetch();
-    next if (defined($pf_id));
+    if (defined($pf_id)) {
+      $self->print_errFH( "WARN: skipping phenotype_feature ($pf_id), phenotype($phenotype_id), source ($source_id) as it already exists for this variation and source.\n");
+      next;
+    }
 
     my $is_significant = defined($threshold) ? ($phenotype->{"p_value"} && $phenotype->{"p_value"} < $threshold ? 1 : 0) : 1;
 
@@ -367,13 +785,18 @@ sub add_phenotypes {
       }
     }
   }
-  end_progress();
-  print $logFH "$study_count new studies added\n" if ($debug);
-  print $logFH "$phenotype_feature_count new phenotype_features added\n" if ($debug);
+
+  $self->_end_progress();
+  $self->print_logFH( "$self->{study_count} new studies added\n") if ($self->{debug});
+  $self->print_logFH( "$phenotype_feature_count new phenotype_features added\n") if ($self->{debug});
+
 }
 
-sub add_synonyms {
-  my ($synonyms, $variation_ids, $source_id, $db_adaptor) = @_;
+
+sub _add_synonyms {
+  my ($self, $synonyms, $variation_ids, $source_id) = @_;
+
+  my $db_adaptor = $self->{varition_dba};
 
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
@@ -416,15 +839,19 @@ sub add_synonyms {
         $ins_sth->execute();
         $alt_count++;
       }
+    } else {
+      $self->print_logFH( "failed to add synonyms as variation was missing for $rs_id \n");
     }
   }
 
-  print $logFH "Added $alt_count synonyms for $variation_count rs-ids\n";
+  $self->print_logFH( "Added $alt_count synonyms for $variation_count rs-ids\n");
 }
 
-sub add_set {
-  my ($set, $source_id, $db_adaptor, $set_from) = @_;
 
+sub _add_set {
+  my ($self, $set, $source_id, $set_from) = @_;
+
+  my $db_adaptor = $self->{variation_dba};
   return if (!defined($set));
   return if (!defined($set_from) && ($set_from ne 'phenotype' || $set_from ne 'synonym'));
 
@@ -471,69 +898,10 @@ sub add_set {
   $sth2->execute();
 }
 
-sub convert_p_value {
-  my $pval = shift;
 
-  my $sci_pval = '';
-  # If a scientific format is not found, then ...
-  if ($pval !~ /^\d+.*e.+$/i) {  
-    # If a range format is found (e.g. 10^-2 > p > 10^-3)
-    if ($pval =~ /^\d+\^(-\d+)/) {
-      if (length("$1")==1) { $1 = "0$1"; } 
-      $sci_pval = "1.00e$1"; # e.g 10^-2 > p > 10^-3 => 1.00e-2
-    }
-    # If a decimal format is found (e.g. 0.0023)
-    elsif ($pval =~ /(\d+.*)/){
-      $sci_pval = $1;
-    #$sci_pval = sprintf("%.2e",$pval); # e.g. 0.002 => 2,30e-3
-    }
-    elsif ($pval =~ /^\w+/) {
-      $sci_pval = "NULL";
-    }
-  }
-  else {
-    $pval =~ tr/E/e/;
-    if ($pval =~ /^(\d+)(e-?\d+)/) {
-      $pval="$1.00$2";  
-    }
-    if ($pval =~ /^(\d+\.\d{1})(e-?\d+)/) {
-      $pval="$1"."0$2";  
-    }
-    $sci_pval = $pval;
-  }
-  return $sci_pval;
-}
 
-## format ontology accessions
-sub iri2acc{
-  my $iri = shift;
-
-  my @a = split/\//, $iri;
-  my $acc = pop @a;
-  $acc =~ s/\_/\:/;
-
-  return $acc;
-}
-
-sub get_seq_region_ids {
-  my ($self, $db_adaptor) = @_;
-
-  my $sth = $db_adaptor->dbc->prepare(qq{
-    SELECT seq_region_id, name
-    FROM seq_region
-  });
-  $sth->execute;
-
-  my (%seq_region_ids, $id, $name);
-  $sth->bind_columns(\$id, \$name);
-  $seq_region_ids{$name} = $id while $sth->fetch();
-  $sth->finish;
-
-  return \%seq_region_ids;
-}
-
-sub get_coords {
-  my ($ids, $variation_ids, $type, $db_adaptor) = @_;
+sub _get_coords {
+  my ($self, $ids, $variation_ids, $type, $db_adaptor) = @_;
 
   my $tables;
   my $where_clause;
@@ -583,8 +951,9 @@ sub get_coords {
   return $coords;
 }
 
-sub get_dbIDs {
-  my ($rs_ids, $db_adaptor) = @_;
+
+sub _get_dbIDs {
+  my ($self, $rs_ids) = @_;
 
   my $id_stmt = qq{
     SELECT DISTINCT
@@ -609,8 +978,8 @@ sub get_dbIDs {
       v.variation_id=vf.variation_id
     LIMIT 1
   };
-  my $id_sth = $db_adaptor->dbc->prepare($id_stmt);
-  my $syn_sth = $db_adaptor->dbc->prepare($syn_stmt);
+  my $id_sth = $self->get_variation_db_adaptor->dbc->prepare($id_stmt);
+  my $syn_sth = $self->get_variation_db_adaptor->dbc->prepare($syn_stmt);
 
   my %mapping;
 
@@ -628,17 +997,17 @@ sub get_dbIDs {
       $syn_sth->bind_columns(\$var_id,\$var_name);
       $syn_sth->fetch();
     }
-    print $errFH "$rs_id - no mapping found in variation db\n" unless $var_id ;
+    $self->print_errFH("$rs_id - no mapping found in variation db\n") unless $var_id ;
     $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
   }
 
   return \%mapping;
 }
 
-sub get_attrib_types {
-  my $db_adaptor = shift;
+sub _get_attrib_types {
+  my $self = shift;
 
-  my $sth = $db_adaptor->dbc->prepare(qq{
+  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
     SELECT code
     FROM attrib_type
   });
@@ -654,66 +1023,11 @@ sub get_attrib_types {
   return \@tmp_types;
 }
 
-sub get_or_add_source {
-  my ($self, $source_info, $db_adaptor) = @_;
 
-  my $stmt = qq{
-    SELECT
-      source_id
-    FROM
-      source
-    WHERE
-      name = '$source_info->{source_name}'
-    LIMIT 1
-  };
-  my $sth = $db_adaptor->dbc->prepare($stmt);
-  $sth->execute();
-  my $source_id;
-  $sth->bind_columns(\$source_id);
-  $sth->fetch();
+sub _get_phenotype_id {
+  my ($self, $phenotype) = @_;
 
-  if (!defined($source_id)) {
-    $stmt = qq{
-      INSERT INTO
-        source (name, description, url, somatic_status, version )
-      VALUES (
-        '$source_info->{source_name}',
-        '$source_info->{source_description}',
-        '$source_info->{source_url}',
-        '$source_info->{source_status}',
-        $source_info->{source_version}
-      )
-    };
-    $db_adaptor->dbc->do($stmt);
-    $source_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
-
-    print $logFH "Added source for $source_info->{source_name} (source_id = $source_id)\n" if ($debug);
-  }
-  else {
-    $stmt = qq{
-      UPDATE
-        source
-      SET name=?,
-        description=?,
-        url=?,
-        version=?
-      WHERE
-        source_id=?
-    };
-    my $update_source_sth =$db_adaptor->dbc->prepare($stmt);
-    $update_source_sth->execute($source_info->{source_name},
-                                $source_info->{source_description},
-                                $source_info->{source_url},
-                                $source_info->{source_version},
-                                $source_id);
-  }
-
-  return $source_id;
-}
-
-sub get_phenotype_id {
-  my $phenotype = shift;
-  my $db_adaptor = shift;
+  my %phenotype_cache = %{$self->_phenotype_cache};
 
   my ($name, $description);
   $name = $phenotype->{name};
@@ -764,7 +1078,7 @@ sub get_phenotype_id {
 
       # we only want the best match
       my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
-      print $errFH "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n";
+      $self->print_errFH( "\nPHENOTYPE:\n\tINPUT: $description\n\tBEST:  $best\n\tDIST: ".adist($description, $best)."\n");
 
       my $skip = 0;
 
@@ -799,13 +1113,13 @@ sub get_phenotype_id {
       }
       if ( $diff_string ne '') {
         $diff_string .= ']' if ($diff_string !~ /\]$/);
-        print $errFH "\tDIFFERENCE(S): $diff_string\n" if ( $diff_string ne '');
+        $self->print_errFH( "\tDIFFERENCE(S): $diff_string\n") if ( $diff_string ne '');
       }
 
       # cache this match so we don't have to fuzz again
       $phenotype_cache{$description_bak} = $phenotype_cache{$mapped{$best}};
       unless ($skip) {
-        print $errFH "\tUSED (with diff): $best\n";
+        $self->print_errFH( "\tUSED (with diff): $best\n");
         return $phenotype_cache{$mapped{$best}};
       }
     }
@@ -815,156 +1129,152 @@ sub get_phenotype_id {
   }
 
   # finally if no match, do an insert
-  my $sth = $db_adaptor->dbc->prepare(qq{
+  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
     INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
   });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->bind_param(2,$description,SQL_VARCHAR);
   $sth->execute();
-  my $phenotype_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+  my $phenotype_id = $self->get_variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
 
   # update cache
   $phenotype_cache{$description} = $phenotype_id;
+  $self->{phenotype_cache} = \%phenotype_cache;
 
   return $phenotype_id;
 }
 
+sub _get_study_id {
+  my ($self, $phenotype, $source_id) = @_;
+
+  my $st_ins_sth = $self->_sql_statements->{st_ins_sth};
+
+  my $study_id;
+  if(defined($phenotype->{study}) || defined($phenotype->{study_description}) || defined($phenotype->{study_type})) {
+
+    my $sql_study = '= ?';
+    my $sql_type  = '= ?';
+
+    # To avoid duplication of study entries
+    if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
+    if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }
+
+    my $st_check_stmt = qq{
+      SELECT study_id
+      FROM study
+      WHERE
+      source_id = $source_id AND
+      external_reference $sql_study AND
+      study_type $sql_type
+      LIMIT 1
+    };
+
+    my $st_check_sth = $self->get_variation_db_adaptor->dbc->prepare($st_check_stmt);
+    my $param_num = 1;
+
+    if (defined $phenotype->{"study"}) {
+      if (length($phenotype->{"study"}) > 255) {
+        $self->print_errFH( "WARNING: study external_references truncated search FROM:>".$phenotype->{"study"}. "<\n");
+        $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
+        $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
+        $self->print_errFH( "WARNING: study external_references truncated search TO  :>".$phenotype->{"study"}. "<\n");
+      }
+      $st_check_sth->bind_param($param_num,$phenotype->{"study"},SQL_VARCHAR);
+      $param_num++;
+    }
+    if (defined $phenotype->{"study_type"}) {
+      $st_check_sth->bind_param($param_num,$phenotype->{"study_type"},SQL_VARCHAR);
+      $param_num++;
+    }
+    $st_check_sth->execute();
+    $st_check_sth->bind_columns(\$study_id);
+    $st_check_sth->fetch();
+
+    if (!defined($study_id)) {
+      if (length($phenotype->{"study"}) > 255) {
+        $self->print_errFH( "WARNING: study external_references truncated FROM:>".$phenotype->{"study"}. "<\n");
+        $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
+        $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
+        $self->print_errFH( "WARNING: study external_references truncated TO  :>".$phenotype->{"study"}. "<\n");
+      }
+      $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
+      $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+      $st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
+      $st_ins_sth->execute();
+      $study_id = $self->get_variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
+      $self->{study_count}++;
+    }
+  }
+  return $study_id;
+}
+
+
 # update or initiate progress bar
-sub progress {
-  my ($i, $total) = @_;
+sub _progress {
+  my ($self, $i, $total) = @_;
 
   my $width = 60;
   my $percent = int(($i/$total) * 100);
   my $numblobs = int((($i/$total) * $width) - 2);
 
   # this ensures we're not writing to the terminal too much
-  return if defined($prev_prog) && $numblobs.'-'.$percent eq $prev_prog;
-  $prev_prog = $numblobs.'-'.$percent;
+  return if defined($self->{prev_prog}) && $numblobs.'-'.$percent eq $self->{prev_prog};
+  $self->{prev_prog} = $numblobs.'-'.$percent;
 
-  printf $logFH ("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
+  $self->print_pipelogFH( sprintf ("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]"));
 }
 
 # end progress bar
-sub end_progress {
-  progress(1,1);
-  print $logFH "\n";
+sub _end_progress {
+  my $self = shift;
+  $self->_progress(1,1);
+  $self->print_pipelogFH("\n");
 }
 
+# standardize p_values
+sub _convert_p_value {
+  my ($self, $pval) = @_;
 
-=head2 save_phenotypes
-
-    Arg [1]              : hashref $source_info
-    Arg [2]              : hashref $input_data
-    Arg [3]              : Bio::EnsEMBL::DBSQL::DBAdaptor $core_dba
-    Arg [4]              : Bio::EnsEMBL::Variation::DBSQL::DBAdaptor $variation_dba
-    Example              : $self->save_phenotypes(\%source_info, $input_data, $core_dba, $variation_dba);
-    Description          : Saves the phenotype data ($input_data) for the given source ($source_info) using the given core and variation adaptors.
-    Returntype           : none
-    Exceptions           : none
-    Caller               : general
-    Status               : Stable
-
-=cut
-sub save_phenotypes {
-  my ($self, $source_info, $input_data, $core_dba, $variation_dba) = @_;
-
-  my $phenotype_dba =  $variation_dba->get_PhenotypeAdaptor;
-  my $debug = $self->param('debug_mode');
-
-  my $set = defined($source_info->{set}) ? $source_info->{set} : undef;
-  $source_info->{source_status} = 'germline' unless defined($source_info->{source_status});
-
-  my $initial_phenotype_count = $phenotype_dba->generic_count;
-  my @attrib_types = @{get_attrib_types($variation_dba)};
-  %phenotype_cache = map {$_->description() => $_->dbID()} @{$phenotype_dba->fetch_all};
-
-  my @ids;
-  my %synonym;
-  my @phenotypes;
-  if (exists($input_data->{'synonyms'})) {
-    %synonym = %{$input_data->{'synonyms'}};
-    # To get all the ids of the source (Uniprot)
-    @ids = keys(%synonym);
-  }
-  if (exists($input_data->{'phenotypes'})) {
-    @phenotypes = @{$input_data->{'phenotypes'}};
-  }
-  print $logFH "Got ".(scalar @phenotypes)." phenotype objects\n" if ($debug);
-
-  # Get internal variation ids for the rsIds
-  print $logFH "Retrieving internal variation IDs\n" if ($debug);
-  if (scalar @ids == 0) {
-    @ids = map {$_->{'id'}} @phenotypes;
-  }
-  my $variation_ids = $source_info->{object_type} =~ /Variation/ ? get_dbIDs(\@ids,$variation_dba) : {};
-
-  # Get coordinates of objects
-  my $coords;
-
-  print $logFH "Retrieving object coordinates\n" if ($debug);
-
-  # might be able to copy them from data (QTLs and Genes)
-  if(defined($phenotypes[0]->{seq_region_id})) {
-    foreach my $p(@phenotypes) {
-      my $coord = {};
-      foreach my $key(qw(id start end strand)) {
-        $coord->{'seq_region_'.$key} = $p->{'seq_region_'.$key};
-      }
-      push @{$coords->{$p->{id}}}, $coord;
+  my $sci_pval = '';
+  # If a scientific format is not found, then ...
+  if ($pval !~ /^\d+.*e.+$/i) {
+    # If a range format is found (e.g. 10^-2 > p > 10^-3)
+    if ($pval =~ /^\d+\^(-\d+)/) {
+      if (length("$1")==1) { $1 = "0$1"; }
+      $sci_pval = "1.00e$1"; # e.g 10^-2 > p > 10^-3 => 1.00e-2
+    }
+    # If a decimal format is found (e.g. 0.0023)
+    elsif ($pval =~ /(\d+.*)/){
+      $sci_pval = $1;
+    #$sci_pval = sprintf("%.2e",$pval); # e.g. 0.002 => 2,30e-3
+    }
+    elsif ($pval =~ /^\w+/) {
+      $sci_pval = "NULL";
     }
   }
-
-  $coords ||= get_coords(\@ids,$variation_ids, $source_info->{object_type}, $source_info->{object_type} eq 'Gene' ? $core_dba : $variation_dba);
-
-  # uniquify coords
-  foreach my $id (keys %$coords) {
-    my %tmp = map {
-      $_->{seq_region_id}."_".
-      $_->{seq_region_start}."_".
-      $_->{seq_region_end}."_".
-      $_->{seq_region_strand}."_" => $_
-    } @{$coords->{$id}};
-
-    $coords->{$id} = [values %tmp];
-  }
-
-  # Get or add a source
-  my $source_id = $self->get_or_add_source($source_info,$variation_dba);
-  print $logFH "$source_info->{source_name} source_id is $source_id\n";
-
-  # Add the synonyms if required
-  unless ($skip_synonyms) {
-    print $logFH "Adding synonyms\n" if ($debug);
-    add_synonyms(\%synonym,$variation_ids,$source_id,$variation_dba);
-  }
-
-  # Now, insert phenotypes
-  unless ($skip_phenotypes) {
-    die("ERROR: No phenotypes or objects retrieved from input\n") unless scalar @phenotypes;
-
-    print $logFH "Adding phenotypes\n" if ($debug);
-    $source_info->{source_id}=$source_id;
-    my %data = (phenotypes => \@phenotypes, coords => $coords, 
-                variation_ids => $variation_ids, attrib_types=> \@attrib_types);
-    add_phenotypes(\%data,$source_info,$variation_dba);
-
-    print $logFH "$initial_phenotype_count initial phenotypes\n" if ($debug);
-    my $added_phenotypes = $phenotype_dba->generic_count - $initial_phenotype_count;
-    print $logFH "$added_phenotypes new phenotypes added\n" if ($debug);
-  }
-
-  # Add the variation sets if required
-  unless ($skip_sets) {
-    if (%synonym && !$skip_synonyms && $skip_phenotypes) {
-      print $logFH "Adding variation sets for synonyms\n" if ($debug);
-      add_set($set,$source_id,$variation_dba,'synonym');
+  else {
+    $pval =~ tr/E/e/;
+    if ($pval =~ /^(\d+)(e-?\d+)/) {
+      $pval="$1.00$2";
     }
-    elsif (@phenotypes && !$skip_phenotypes) {
-      print $logFH "Adding variation sets for phenotypes\n" if ($debug);
-      add_set($set,$source_id,$variation_dba,'phenotype');
+    if ($pval =~ /^(\d+\.\d{1})(e-?\d+)/) {
+      $pval="$1"."0$2";
     }
+    $sci_pval = $pval;
   }
+  return $sci_pval;
+}
+
+## format ontology accessions
+sub _iri2acc{
+  my ($self, $iri) = @_;
+
+  my @a = split/\//, $iri;
+  my $acc = pop @a;
+  $acc =~ s/\_/\:/;
+
+  return $acc;
 }
 
 1;
