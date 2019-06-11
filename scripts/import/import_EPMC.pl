@@ -94,7 +94,7 @@ if( $type eq "EPMC"){
     $file_data = parse_EPMC_file($data_file, $avoid_list);
 
     ##import any new publications & citations
-    import_citations($reg, $file_data);
+    import_citations($reg, $file_data, $type);
 
     ## update variations & variation_features to have Cited status
     update_evidence($dba) unless defined $no_evidence;
@@ -137,9 +137,16 @@ sub import_citations{
     my $data           = shift;
     my $type           = shift;
 
+    open (my $error_log, ">>$species\_$type\_errors\_" . log_time() . "\.log") or die "Failed to open log file: $!\n";
     ## store variants not from this species
-    open my $error_log, ">>$species\_$type\_notfound_" . log_time() . "\.log"|| die "Failed to open log file: $!\n";
-
+    open (my $not_found, ">>rsID\_$type\_notfound\_$species\_" . log_time() . ".csv") or die "Failed to open file: $!\n";
+    
+    if($type eq "EPMC"){ 
+      print $not_found "rsID,PMCID,PMID\n"; 
+    }
+    elsif($type eq "UCSC"){
+      print $not_found "rsID\tPMID\tDOI\tTitle\tAuthors\tYear\tUCSC\n";
+    }  
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -169,10 +176,10 @@ sub import_citations{
                 no warnings ;
                 ### write file of variants not found in this species to use as input file for next
                 if($type eq "EPMC"){
-                  print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
+                  print $not_found "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid}\n"; 
                 }
                 elsif($type eq "UCSC") {
-                  print $error_log $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
+                  print $not_found $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
                }
                use warnings ;
             }
@@ -231,6 +238,7 @@ sub import_citations{
             $pub_ad->store( $publication);
         }
     }
+    close $not_found;
 }
 
 sub get_publication_info_from_epmc{
@@ -351,7 +359,7 @@ sub parse_EPMC_file{
     my $avoid_list  = shift;
 
     my %data;
-    open my $file, $pubmed_file || die "Failed to open file of PubMed ids $pubmed_file : $!\n";
+    open (my $file, $pubmed_file) or die "Failed to open file of PubMed ids $pubmed_file : $!\n";
     while (<$file>){
         ## basic check that format is as expected
         next unless /rs\d+\,/i;
@@ -408,7 +416,7 @@ sub check_dbSNP{
    
     my $dba       = shift;
 
-    open my $error_log, ">>$species\_dbSNP.log"|| die "Failed to open log file:$!\n";
+    open (my $error_log, ">>$species\_dbSNP.log") or die "Failed to open log file:$!\n";
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
@@ -505,7 +513,7 @@ sub report_summary{
     my $dba     = shift;
     my $species = shift;
 
-    open my $report, ">import_EPMC_$species\_"  . log_time() . ".txt" ||die "Failed to open report file to write: $!\n";
+    open (my $report, ">import_EPMC_$species\_"  . log_time() . ".txt") or die "Failed to open report file to write: $!\n";
 
     my $publication_count = count_rows($dba, 'publication');
     my $citation_count    = count_rows($dba, 'variation_citation');
@@ -588,7 +596,7 @@ sub update_meta{
 sub get_current_UCSC_data{
 
     my $filename = "UCSC_export";
-    open my $out, ">$filename" || die "Failed to open file to write data : $!\n";
+    open (my $out, ">$filename") or die "Failed to open file to write data : $!\n";
 
     my $dbh = DBI->connect('dbi:mysql:hgFixed:genome-mysql.cse.ucsc.edu:3306:max_allowed_packet=1MB', 'genome', '', undef);
 
@@ -622,7 +630,7 @@ sub parse_UCSC_file{
    my $avoid_list = shift;
 
     my %data;
-    open my $file, $ucsc_file || die "Failed to open file of UCSC citations $ucsc_file : $!\n";
+    open (my $file, $ucsc_file) or die "Failed to open file of UCSC citations $ucsc_file : $!\n";
     while (<$file>){
 
         next unless /rs\d+/i;
