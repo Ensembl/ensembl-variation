@@ -486,14 +486,4 @@ sub is_default {
     return $self->{is_default};
 }
 
-sub get_all_parent_SO_terms {
-    my ($self) = @_;
-    
-    if (my $adap = $self->{adaptor}) {
-        if (my $goa = $adap->db->get_SOTermAdaptor) {
-            
-        }
-    }
-}
-
 1;

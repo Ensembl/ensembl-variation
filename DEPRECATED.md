@@ -10,6 +10,9 @@ This file contains the list of methods deprecated in the Ensembl Variation API. 
 - Bio::EnsEMBL::Variation::**VariationFeature**::*add_consequence_type()*
 - Bio::EnsEMBL::Variation::**VariationFeature**::*get_consequence_type()*
 
+### Removed in Ensembl Release 98 ###
+- Bio::EnsEMBL::Variation::**OverlapConsequence**::*get_all_parent_SO_terms()*
+
 ### Removed in Ensembl Release 91 (deprecated from Ensembl Release 87) ###
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*array_to_bitval()*
 - Bio::EnsEMBL::Variation::Utils::**Sequence**::*bitval_to_array()*
