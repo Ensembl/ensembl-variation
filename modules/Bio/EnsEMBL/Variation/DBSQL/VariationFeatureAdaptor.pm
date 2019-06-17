@@ -1789,7 +1789,11 @@ sub fetch_by_hgvs_notation {
     my $transcript = $transcript_adaptor->fetch_by_stable_id($reference);
 
     my @transcripts;
-    
+   
+    if(!defined($transcript) && ($reference =~ /NM_/ || $reference =~ /XM_/)){
+      @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference)};
+    }
+ 
     #try and fetch via gene
     if(!defined($transcript)) {
       push @transcripts, @{$self->_get_gene_transcripts($transcript_adaptor, $reference, $multiple_ok)};
@@ -1860,6 +1864,11 @@ sub fetch_by_hgvs_notation {
     my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);
 
     my @transcripts;
+
+    # Fetch xref transcript 
+    if(!defined($transcript) && ($reference =~ /NP/ || $reference =~ /XP/)){
+      @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference)};
+    }
 
     # support some malformed HGVS
     if(!defined($transcript)) {

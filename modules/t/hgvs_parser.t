@@ -27,8 +27,6 @@ use warnings;
 
 use Test::More;
 
-use Data::Dumper;
-
 use FindBin qw($Bin);
 
 
@@ -798,5 +796,9 @@ ok( $hgvs_genomic_3->{'-'} eq 'NC_000019.9:g.48836478_48836480del', "hgvs genomi
  my $vf_5 = $vf_adaptor->fetch_by_hgvs_notation( "ENST00000306448.4:c.-981_-980inv" );
  my $hgvs_inv_5 = $vf_5->hgvs_genomic();  
  ok( $hgvs_inv_5->{'CA'} eq 'NC_000002.11:g.46746962_46746963inv', "hgvs inversion");
+# Test RefSeq transcript 
+#my $vf_4 = $vf_adaptor->fetch_by_hgvs_notation( "NM_000484.3:c.56N>T" );
+#my $hgvs_genomic_4 = $vf_4->hgvs_genomic();
+#ok( $hgvs_genomic_4->{'T'} eq 'NC_000021.8:g.26170678N>A', "RefSeq transcript");
 
 done_testing(); 
