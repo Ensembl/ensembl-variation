@@ -149,5 +149,18 @@ sub run_cmd {
   }
 }
 
+sub get_assembly {
+  my $self = shift;
+  my $core_dba = $self->get_species_adaptor('core');
+  my $genome_container_adaptor = $core_dba->get_GenomeContainerAdaptor;
+  return $genome_container_adaptor->get_version();
+}
+
+sub get_species_id {
+  my $self = shift;
+  my $core_dba = $self->get_species_adaptor('core');
+  my $meta_container_adaptor = $core_dba->get_MetaContainerAdaptor;
+  return $meta_container_adaptor->species_id();
+}
 
 1;

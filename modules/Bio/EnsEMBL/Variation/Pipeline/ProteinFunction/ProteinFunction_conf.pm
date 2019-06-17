@@ -165,7 +165,9 @@ sub default_options {
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/nfs/production/panda/ensembl/variation/data/sift5.2.2/uniref90/uniref90.fasta',
+        variation_data          => '/nfs/production/panda/ensembl/variation/data', 
+
+        blastdb                 => $self->o('species_dir').'/sift5.2.2/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
@@ -175,18 +177,31 @@ sub default_options {
 
         sift_max_workers        => 500,
 
-        dbnsfp_run_type         => FULL,
-        dbnsfp_max_workers      => 250,
+        dbnsfp_run_type         => NONE,
+        dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
-        dbnsfp_file             => '/nfs/production/panda/ensembl/variation/data/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
-        dbnsfp_version          => '3.5.a',
-
-        cadd_run_type         => FULL,
-        cadd_max_workers      => 250,
+    
+        dbnsfp_annotation       => { GRCh37 =>
+                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a_grch37/dbNSFP3.5a_grch37.txt.gz',
+                                        version => '3.5a',
+                                      },
+                                     GRCh38 =>
+                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
+                                        version => '3.5a',
+                                      } 
+                                    },
+        cadd_run_type         => NONE,
+        cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
-        cadd_file             => '/hps/nobackup2/production/ensembl/anja/CADD/whole_genome_SNVs.tsv.gz',
-        cadd_version          => 'GRCh38-v1.4',
-
+        cadd_annotation       => { GRCh37 =>
+                                      { file => $self->o('variation_data') . 'CADD/v1.4/grch37/whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.4',
+                                      },
+                                   GRCh38 =>
+                                      { file => $self->o('variation_data') . 'CADD/v1.5/grch38/whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.5',
+                                      } 
+                                  },
     };
 }
 
@@ -232,9 +247,9 @@ sub pipeline_analyses {
                 sift_run_type   => $self->o('sift_run_type'),
                 pph_run_type    => $self->o('pph_run_type'),
                 dbnsfp_run_type => $self->o('dbnsfp_run_type'),
+                dbnsfp_annotation => $self->o('dbnsfp_annotation'),
                 cadd_run_type   => $self->o('cadd_run_type'),
-                dbnsfp_version  => $self->o('dbnsfp_version'),
-                cadd_version    => $self->o('cadd_version'),
+                cadd_annotation => $self->o('cadd_annotation'),
                 include_lrg     => $self->o('include_lrg'),
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
@@ -325,8 +340,8 @@ sub pipeline_analyses {
         {   -logic_name     => 'run_dbnsfp',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunDbNSFP',
             -parameters     => {
-                dbnsfp_working => $self->o('dbnsfp_working'),
-                dbnsfp_file    => $self->o('dbnsfp_file'),
+                dbnsfp_working    => $self->o('dbnsfp_working'),
+                dbnsfp_annotation => $self->o('dbnsfp_annotation'),
                 @common_params,
             },
             -failed_job_tolerance => 0,
@@ -339,8 +354,8 @@ sub pipeline_analyses {
         {   -logic_name     => 'run_cadd',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunCADD',
             -parameters     => {
-                cadd_working => $self->o('cadd_working'),
-                cadd_file    => $self->o('cadd_file'),
+                cadd_working    => $self->o('cadd_working'),
+                cadd_annotation => $self->o('cadd_annotation'),
                 @common_params,
             },
             -failed_job_tolerance => 0,

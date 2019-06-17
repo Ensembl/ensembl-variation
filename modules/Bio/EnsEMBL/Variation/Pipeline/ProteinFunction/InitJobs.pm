@@ -49,8 +49,16 @@ sub fetch_input {
     my $dbnsfp_run_type = $self->required_param('dbnsfp_run_type');
     my $cadd_run_type = $self->required_param('cadd_run_type');
     my $include_lrg     = $self->param('include_lrg');
+
+    foreach my $type (qw/cadd dbnsfp/) {
+      if ($self->required_param("$type\_run_type") != NONE) {
+        my $working_dir = $self->param("$type\_working");
+        make_path($working_dir) unless (-d $working_dir);
+        die "Protein function pipeline for analysis $type can only be run in FULL mode." unless ($self->required_param("$type\_run_type") == FULL);
+      }
+    }  
     
-    $self->update_meta ;
+    $self->update_meta;
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba  = $self->get_species_adaptor('variation');
@@ -187,7 +195,7 @@ sub fetch_input {
     my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s, @dbnsfp_md5s);
 
     my $fasta = $self->required_param('fasta_file');
-    if ($sift_run_type ne 'NONE' || $pph_run_type ne 'NONE') {
+    if ($sift_run_type != NONE || $pph_run_type != NONE) {
       my @dir = split('/', $fasta);
       pop @dir;
       make_path(join('/', @dir));
@@ -250,11 +258,17 @@ sub update_meta{
   }
 
   if ($self->required_param('dbnsfp_run_type')  == FULL){
-    $update_meta_sth->execute('dbnsfp_version', $self->required_param('dbnsfp_version'));
+    my $assembly = $self->get_assembly();
+    my $annotation = $self->required_param('dbnsfp_annotation');
+    die "dbnsfp version is not defined" if (! defined $annotation->{$assembly}->{'version'});
+    $update_meta_sth->execute('dbnsfp_version', $annotation->{$assembly}->{'version'});
   }
 
   if ($self->required_param('cadd_run_type')  == FULL){
-    $update_meta_sth->execute('cadd_version', $self->required_param('cadd_version'));
+    my $assembly = $self->get_assembly();
+    my $annotation = $self->required_param('cadd_annotation');
+    die "cadd version is not defined" if (! defined $annotation->{$assembly}->{'version'});
+    $update_meta_sth->execute('cadd_version', $annotation->{$assembly}->{'version'});
   }
 
 }
