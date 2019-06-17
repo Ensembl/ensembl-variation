@@ -42,6 +42,7 @@
 1700	protein_id	1	KNOWNXREF	1	0	LIT	Protein ID	MISC	\N
 1701	protein_id_predicted	1	PRED	1	0	MISC	Predicted Protein ID	MISC	\N
 1800	RefSeq_dna	NCBI Reference Sequence (RefSeq) Databas	KNOWN	1	0		RefSeq DNA	MISC	\N
+1801	RefSeq_mRNA	NCBI Reference Sequence (RefSeq) Database	KNOWN	1	0		RefSeq DNA	MISC	\N
 1805	RefSeq_dna_predicted	NCBI Reference Sequence (RefSeq) Databas	PRED	1	0		RefSeq DNA predicted	MISC	\N
 1810	RefSeq_peptide	NCBI Reference Sequence (RefSeq) Databas	KNOWN	1	0		RefSeq peptide	MISC	\N
 1815	RefSeq_peptide_predicted	NCBI Reference Sequence (RefSeq) Databas	PRED	1	0		RefSeq peptide predicted	MISC	\N

@@ -1022,8 +1022,20 @@ sub hgvs_protein {
 
   ## checks complete - start building term
 
-  ### get reference sequence and add seq version unless LRG
-  $hgvs_notation->{ref_name} = $tr->translation->display_id();
+  ### get reference sequence
+  ### this is a temporary fix
+  if($tr->stable_id =~ /^ENS|^LRG/ || !defined($tr->analysis) || (defined($tr->analysis) && !defined($tr->analysis->db()))){
+    $hgvs_notation->{ref_name} = $tr->translation->display_id();
+  }
+  else{
+    ### get RefSeq identifiers
+    my @entries = grep {$_->{dbname} eq 'GenBank'} @{$tr->translation->get_all_DBEntries};
+    if(scalar @entries == 1){
+      $hgvs_notation->{ref_name} = $entries[0]->{primary_id};
+    }
+  }
+
+  # Add seq version unless LRG 
   $hgvs_notation->{ref_name} .= "." . $tr->translation->version() 
     unless ($hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/);
 
