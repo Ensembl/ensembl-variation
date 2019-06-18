@@ -193,8 +193,8 @@ ok($var_list{$var5->[0]->name}, "var by list of names");
 # test get all sources
 print "\n# Test - get_all_sources\n";
 my $src1 = $va->get_all_sources();
-ok($src1->[0] eq 'dbSNP',  "get all sources - 1");
-ok($src1->[1] eq 'COSMIC', "get all sources - 2");
+ok(scalar (grep { $_ eq 'dbSNP' } @$src1) == 1, "get all sources - 1");
+ok(scalar (grep { $_ eq 'COSMIC' } @$src1) == 1, "get all sources - 2");
 
 # test get flanking sequence
 print "\n# Test - get_flanking_sequence\n";
