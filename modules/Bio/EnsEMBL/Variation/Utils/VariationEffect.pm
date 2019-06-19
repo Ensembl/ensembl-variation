@@ -354,9 +354,19 @@ sub _upstream {
 
 sub _downstream {
     my ($bvf, $feat, $dist) = @_;
+    $dist += get_max_shift_length($bvf);
     return $feat->strand == 1 ? 
         _after_end($bvf, $feat, $dist) : 
         _before_start($bvf, $feat, $dist);
+}
+
+sub get_max_shift_length {
+  my ($bvf) = shift;
+  my $max_shift_length = 0;
+  foreach my $hash (@{$bvf->{tva_shift_hashes}}){
+    $max_shift_length = $hash->{shift_length} if $hash->{shift_length} > $max_shift_length;
+  }
+  return $max_shift_length;
 }
 
 #package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
