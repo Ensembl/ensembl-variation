@@ -35,3 +35,7 @@
 509	ontology_mapping	Ontology Mapping	Method used to link a description to an ontology term
 526	DateLastEvaluated	EvalDate	The most recent date on which evidence was evaluated and this conclusion drawn.
 527	submitter_id	Submitter_ID	ID for data submitter
+531	cadd_pred	CADD prediction	CADD prediction
+532	dbnsfp_revel_pred	dbNSFP REVEL prediction	dbNSFP REVEL prediction
+533	dbnsfp_meta_lr_pred	dbNSFP MetaLR prediction	dbNSFP MetaLR prediction
+534	dbnsfp_ma_pred	dbNSFP mutation assessor prediction	dbNSFP mutation assessor prediction

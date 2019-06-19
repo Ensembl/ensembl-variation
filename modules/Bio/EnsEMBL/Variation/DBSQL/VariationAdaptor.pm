@@ -133,7 +133,6 @@ sub store {
         INSERT INTO variation (
             source_id,
             name,
-            ancestral_allele,
             flipped,
             class_attrib_id,
             somatic,
@@ -142,13 +141,12 @@ sub store {
             minor_allele_count,
             clinical_significance,
             evidence_attribs
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
         $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
-        $var->ancestral_allele,
         $var->{flipped},
         $var->{class_attrib_id} || ( $var->{class_SO_term} && $self->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term})) || 18,
         $var->is_somatic,
@@ -236,7 +234,6 @@ sub update {
         UPDATE variation
            SET source_id = ?,
                name = ?,
-               ancestral_allele = ?,
                flipped = ?,
                class_attrib_id = ?,
                somatic = ?,
@@ -251,7 +248,6 @@ sub update {
     $sth->execute(
         $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
-        $var->ancestral_allele,
         $var->{flipped},
         $var->{class_attrib_id} || $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) || 18,
         $var->is_somatic,
@@ -463,7 +459,6 @@ sub _columns {
         "v.source_id AS v_source_id",
         "v.somatic AS v_somatic",
         "v.flipped AS v_flipped",
-        "v.ancestral_allele AS v_ancestral_allele",
         "vs.name AS vs_name",
         "s2.name AS vs_source_name",
         "v.minor_allele",
@@ -1370,6 +1365,47 @@ sub fetch_all_by_publication{
 
 }
 
+=head2 fetch_all_by_allele_synonym_name
+
+  Arg [1]    : string $name
+  Example    : $vars = $va->fetch_all_by_allele_synonym_name('CA75242691');
+  Description: Retrieves all variations for an allele synonym name
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw if name argument is not provided
+  Caller     : general, Variation
+  Status     : At Risk
+=cut
+
+sub fetch_all_by_allele_synonym_name {
+
+    my $self    = shift;
+    my $name    = shift;
+
+    throw('name argument expected') unless ($name);
+
+    my @var;
+    my $variation_id;
+
+    my $stmt = "SELECT  vas.variation_id
+                FROM allele_synonym vas JOIN  variation v
+                   ON vas.variation_id = v.variation_id
+                WHERE vas.name = ? ";
+
+    # Add the constraint for failed variations
+    $stmt .= " AND " .  $self->db->_exclude_failed_variations_constraint()
+        unless $self->db->include_failed_variations();
+
+    my $sth = $self->prepare($stmt);
+    $sth->execute($name);
+    $sth->bind_columns(\$variation_id);
+    while ($sth->fetch()){
+      push @var, $self->fetch_by_dbID($variation_id);
+    }
+    $sth->finish;
+    return \@var;
+}
+
+
 # Internal method
 # Fetches attributes
 sub _fetch_attribs_by_dbID {
@@ -1543,7 +1579,6 @@ sub _obj_from_row {
             -_SOURCE_ID => $row->{v_source_id},
             -IS_SOMATIC => $row->{v_somatic},
             -FLIPPED => $row->{v_flipped},
-            -ANCESTRAL_ALLELE => $row->{v_ancestral_allele},
             -FLANK_FLAG => $row->{fs_flank_flag},
             -CLASS_SO_TERM => $self->AttributeAdaptor()->attrib_value_for_id($row->{v_class_attrib_id}),
             -CLINICAL_SIGNIFICANCE => \@clin_sig,

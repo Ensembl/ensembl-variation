@@ -160,8 +160,7 @@ sub report_results{
 
 
     my $dir =  $self->required_param('pipeline_dir');
-    open my $report, ">$dir/QC_report.txt"||die "Failed to open report file for summary info :$!\n";
-
+    open(my $report, ">$dir/QC_report.txt") or die("Failed to open report file for summary info: $!\n");
 
     my $percent_missense        = format_percent( $new->{missense_variant_count},   $new->{transcript_variation_count} ) ;
     my $percent_synonymous      = format_percent( $new->{synonymous_variant_count}, $new->{transcript_variation_count} ) ;

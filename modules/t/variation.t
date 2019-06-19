@@ -82,7 +82,6 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
    -synonyms          => \%syonym,
    -alleles           => $alleles,
    -adaptor           => $variation_adaptor,
-   -ancestral_allele  => $ancestral_allele,
    -is_somatic        => 0,
    -flipped           => 0,
   );
@@ -91,7 +90,6 @@ ok($v->dbID() eq 123,             "db ID");
 ok($v->name() eq $name,           "name");
 ok($v->is_somatic() eq 0,         "is_somatic");
 ok($v->flipped() eq 0,            "flipped");
-ok($v->ancestral_allele() eq 'A', "ancestral_allele");
 # source
 ok($v->source->name() eq $source_name,                  'source' );
 ok($v->source_name eq $source_name,                     'source_name');
@@ -242,6 +240,15 @@ ok($pfs->[0]->phenotype->description eq 'ACHONDROPLASIA', 'get_all_PhenotypeFeat
 my $var_cit = $variation_adaptor->fetch_by_name('rs7698608');
 my $pubs = $var_cit->get_all_Publications();
 ok($pubs->[0]->pmid == 22779046, 'get_all_Publications');
+
+# get all AlleleSynonyms
+my $var_as = $variation_adaptor->fetch_by_name('rs509556');
+my $allele_synonyms = $var_as->get_all_AlleleSynonyms();
+ok(@{$allele_synonyms} == 2, 'get_all_AlleleSynonyms - number');
+
+my @expected_as_names = ('CA13462540','CA475368754');
+my @as_names = map {$_->name()} @{$allele_synonyms};
+is_deeply(\@as_names, \@expected_as_names, 'get_all_AlleleSynonyms - name');
 
 ## Variation Feature ##
 

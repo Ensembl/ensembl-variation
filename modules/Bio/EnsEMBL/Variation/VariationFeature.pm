@@ -95,7 +95,7 @@ package Bio::EnsEMBL::Variation::VariationFeature;
 use Scalar::Util qw(weaken isweak);
 
 use Bio::EnsEMBL::Variation::BaseVariationFeature;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
@@ -140,6 +140,9 @@ our $DEBUG = 0;
 
   Arg [-ALLELE_STRING] :
     string - the different alleles found for this variant at this feature location
+
+  Arg [-ANCESTRAL_ALLELE] :
+    string - the ancestral allele for this variation feature
 
   Arg [-VARIATION_NAME] :
     string - the name of the variant this feature is for (denormalisation
@@ -196,6 +199,7 @@ sub new {
 
   my (
       $allele_str,
+      $ancestral_allele,
       $var_name,
       $map_weight,
       $variation,
@@ -213,6 +217,7 @@ sub new {
       $display
   ) = rearrange([qw(
           ALLELE_STRING
+          ANCESTRAL_ALLELE
           VARIATION_NAME
           MAP_WEIGHT
           VARIATION
@@ -231,6 +236,7 @@ sub new {
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
+  $self->{'ancestral_allele'}       = $ancestral_allele;
   $self->{'variation_name'}         = $var_name;
   $self->{'map_weight'}             = $map_weight;
   $self->{'variation'}              = $variation;
@@ -305,6 +311,22 @@ sub allele_string{
   }
 
   return $as;
+}
+
+=head2 ancestral_allele
+  Arg [1]    : string $ancestral_allele (optional)
+  Example    : $ancestral_allele = vf->ancestral_allele();
+  Description: Getter/Setter ancestral allele associated with this variation feature
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+=cut
+
+sub ancestral_allele {
+  my $self = shift;
+  return $self->{'ancestral_allele'} = shift if(@_);
+  return $self->{'ancestral_allele'};
 }
 
 =head2 display_id
@@ -2073,6 +2095,8 @@ sub spdi_genomic{
 
   my @all_alleles = split(/\//,$self->allele_string());
   my $ref_allele = shift @all_alleles;
+
+  expand(\$ref_allele);
 
   # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
   if( $ref_allele =~ m/[^ACGT\-]$/ig ){

@@ -78,7 +78,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
 
 use Bio::EnsEMBL::Variation::Population;

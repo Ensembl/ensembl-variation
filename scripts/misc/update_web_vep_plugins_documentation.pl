@@ -57,7 +57,7 @@ usage() if ($help);
 my ($content_before, $new_content, $content_after);
 my $tmp_file    = 'vep_plugins_tmp.html';
 my $vep_plugin_url = "https://github.com/Ensembl/VEP_plugins/";
-my $vep_plugin_url_version = "https://github.com/Ensembl/VEP_plugins/blob/release/$version";
+my $vep_plugin_url_version = "https://github.com/Ensembl/VEP_plugins/blob/release/[[SPECIESDEFS::ENSEMBL_VERSION]]";
 my $plugin_conf_file = "$git_dir/plugin_config.txt";
 my $cpanm_url = 'https://metacpan.org/pod/';
 
@@ -81,13 +81,16 @@ my %plugins_to_skip = (
 
 my %class_colour = (
   'Conservation'              => '#02599C',
+  'External ID'               => '#333333',
   'Frequency data'            => '#FF7F50',
   'HGVS'                      => '#9400D3',
   'Look up'                   => '#006400',
+  'Motif'                     => '#DAA520', # goldenrod
   'Nearby features'           => '#E75480', # Dark pink
   'ND'                        => 'darkgrey',
   'Pathogenicity predictions' => '#1E90FF',
   'Phenotype'                 => '#22949B',
+  'Publication'               => '#6A5ACD', # slateblue
   'Sequence'                  => '#5F81A9',
   'Splicing predictions'      => 'red',
   'Variant data'              => '#B22222',
@@ -98,14 +101,19 @@ my %plugin_class = (
   'Downstream'       => 'Nearby features',
   'Draw'             => 'Visualisation',
   'FATHMM'           => 'Pathogenicity predictions',
+  'FlagLRG'          => 'External ID',
+  'FunMotifs'        => 'Motif',
   'GO'               => 'Phenotype',
   'G2P'              => 'Phenotype',
+  'gnomADc'          => 'Frequency data',
   'HGVSIntronOffset' => 'HGVS',
   'LocalID'          => 'Look up',
+  'NearestExonJB'    => 'Nearby features',
   'NearestGene'      => 'Nearby features',
+  'Mastermind'       => 'Publication',
   'Phenotypes'       => 'Phenotype',
   'PON_P2'           => 'Pathogenicity predictions',
-  'POSTGAP'          => 'Phenotype',
+  'PostGAP'          => 'Phenotype',
   'ProteinSeqs'      => 'Sequence',
   'ReferenceQuality' => 'Sequence',
   'SingleLetterAA'   => 'HGVS',
