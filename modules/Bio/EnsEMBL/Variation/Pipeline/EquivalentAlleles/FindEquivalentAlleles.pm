@@ -51,13 +51,14 @@ sub run {
 
   my $core_dba = $self->get_species_adaptor('core');
   my $var_dba  = $self->get_species_adaptor('variation');
+  $var_dba->include_failed_variations(1);
 
   my $sa       = $core_dba->get_SliceAdaptor();
   my $vfa      = $var_dba->get_VariationFeatureAdaptor();
 
 
   my $location = $self->required_param('location');
-$self->warning( 'starting location '. $location);
+  $self->warning( 'starting location '. $location);
   my $slice    = $sa->fetch_by_location($location, 'toplevel');
   die "No slice found for $location\n" unless defined $slice;  
 
@@ -99,6 +100,8 @@ sub store{
   my $self = shift;
   my $vars = shift;
 
+  # var_dba will include failed variations as set in the variation
+  # species adaptor in sub run
   my $var_dba  = $self->get_species_adaptor('variation');
   my $va       = $var_dba->get_VariationAdaptor();
 
