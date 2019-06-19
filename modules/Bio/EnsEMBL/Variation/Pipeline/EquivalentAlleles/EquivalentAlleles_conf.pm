@@ -78,8 +78,8 @@ sub default_options {
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
         
-    default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-    medium_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
+    default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+    medium_lsf_options  => '-qproduction-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000',
 
 
     # size of region to be checked in a single job
@@ -188,4 +188,3 @@ sub pipeline_analyses {
 }
 
 1;
-
