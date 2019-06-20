@@ -482,6 +482,7 @@ sub cdna_coords {
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
+        $vf ||= $self->variation_feature;
         my $tran = $self->transcript;
 
         $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
