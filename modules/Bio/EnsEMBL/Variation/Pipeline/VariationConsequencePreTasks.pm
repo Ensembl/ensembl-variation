@@ -71,9 +71,7 @@ sub fetch_input {
 
       # truncate tables incase TranscriptVariation is being updated for a pre-existing database
       $dbc->do("TRUNCATE TABLE variation_hgvs");
-      $dbc->do("TRUNCATE TABLE variation_genename ");
       $dbc->do("ALTER TABLE variation_hgvs DISABLE KEYS");
-      $dbc->do("ALTER TABLE variation_genename DISABLE KEYS");
 
       # remove temporary files if they exist
       my $dir = $self->param('pipeline_dir');
@@ -86,7 +84,7 @@ sub fetch_input {
         mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
       }
 
-      my @rebuild = qw(transcript_variation variation_hgvs variation_genename);
+      my @rebuild = qw(transcript_variation variation_hgvs);
 
       # set up MTMP table
       if($mtmp) {

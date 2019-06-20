@@ -95,14 +95,6 @@ sub run {
 
   my $web_index_files_dir = $self->get_files_dir($gene_id, 'web_index');
 
-  # write VFs to table file for web search indexes
-  if($gene_name) {
-    my $fh = FileHandle->new();
-    $fh->open(">" . $web_index_files_dir . "/$gene_id\_variation_genename.txt") or die "Cannot open dump file " . $web_index_files_dir . "$gene_id\_variation_genename.txt: $!";
-    print $fh "$_\t$gene_name\n" for map {$_->get_Variation_dbID()} @vfs;
-    $fh->close();
-  }
-
   $self->param('gene_stable_id', {'gene_stable_id' => $gene->stable_id, 'max_distance' => $max_distance});
 
   if (($gene->length > 1e6) ||
