@@ -50,6 +50,8 @@ sub default_options {
     hive_use_triggers => 0,
     hive_auto_rebalance_semaphores => 0, 
     hive_no_init => 0,
+    hive_debug_init => 1,
+    hive_default_max_retry_count => 0,
 
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
@@ -76,8 +78,8 @@ sub default_options {
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
         
-    default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
-    medium_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
+    default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+    medium_lsf_options  => '-qproduction-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000',
 
 
     # size of region to be checked in a single job
@@ -186,4 +188,3 @@ sub pipeline_analyses {
 }
 
 1;
-
