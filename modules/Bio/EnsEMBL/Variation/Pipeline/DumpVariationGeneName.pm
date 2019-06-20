@@ -105,7 +105,9 @@ sub run {
 
   $self->param('gene_stable_id', {'gene_stable_id' => $gene->stable_id, 'max_distance' => $max_distance});
 
-  if($gene->length > 1e6 || scalar @vfs > 500_000) {
+  if (($gene->length > 1e6) ||
+      (scalar(@vfs) > 500_000) ||
+      (scalar(@{$gene->get_all_Transcripts()}) >= 50)) {
     $self->param('is_big_gene', 1);
   } 
 
