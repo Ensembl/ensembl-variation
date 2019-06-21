@@ -52,6 +52,7 @@ use XML::Simple;
 use XML::Parser;
 use XML::Records;
 use Data::Dumper;
+use Date::Manip::Date;
 
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
@@ -94,13 +95,8 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
 ## fetch ClinVar source object
-my $source   =   get_source($data_file);
-my $omim_source = get_source($data_file, 'OMIM');
-
-#update OMIM source version with ClinVar version
-$omim_source->version($source->version);
-my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
-$source_adaptor->update_version($omim_source);
+my $source      = get_source('ClinVar');
+my $omim_source = get_source('OMIM');
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -148,6 +144,17 @@ my %special_characters = (
 ## parse file
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
+
+# parse date from within file
+my $releaseDate = $ref->get_token->attr->{Dated}; #2019-04-04
+my $versionDate = new Date::Manip::Date;
+$versionDate->parse($releaseDate);
+
+#update ClinVar and OMIM source version with ClinVar xml version
+$source->version($versionDate->printf("%Y%m")); #201904
+save_source_version($source);
+$omim_source->version($source->version);
+save_source_version($omim_source);
 
 my @records;
 
@@ -1035,28 +1042,33 @@ sub get_structural_variant{
 =head2 get_source
 
   - retrieve source object
-  - update version number
 
 =cut
+
 sub get_source{
-
-  my $file = shift;  ##ClinVarFullRelease_2016-10.xml 
   my $source_name = shift;
-
-  my $version = $file;
-  $version =~ s/\D+//g;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
   if (defined $source_name) {
     my $source = $source_adaptor->fetch_by_name( $source_name );
+    die ("Source information not held for ",$source_name, "\n") unless defined $source ;
     return $source;
   }
-  my $source = $source_adaptor->fetch_by_name( 'ClinVar' );
 
-  die "Source information not held for ClinVar\n" unless defined $source ;
+  return $source;
+}
 
-  $source->version($version);
+=head2 save_source_version
+
+  - updates source object in db
+
+=cut
+
+sub save_source_version {
+  my $source = shift;
+
+  my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
   $source_adaptor->update_version($source);
 
   return $source;
