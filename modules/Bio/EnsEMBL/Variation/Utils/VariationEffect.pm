@@ -812,7 +812,8 @@ sub _inv_start_altered {
 
 sub start_retained_variant {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-
+    
+    return 0 if $bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string  eq 'HGMD_MUTATION');
     my $pre = $bvfoa->_pre_consequence_predicates;
 
     return ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_start_codon(@_) && !_ins_del_start_altered(@_);
@@ -1096,7 +1097,9 @@ sub stop_retained {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{stop_retained})) {
-
+        
+        return 0 if $bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string  eq 'HGMD_MUTATION');
+        
         $cache->{stop_retained} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
