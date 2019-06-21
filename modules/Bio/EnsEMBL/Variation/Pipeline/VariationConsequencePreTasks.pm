@@ -79,7 +79,7 @@ sub fetch_input {
         mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
       }
 
-      foreach my $folder_name (qw/web_index transcript_effect/) {
+      foreach my $folder_name (qw/web_index transcript_effect load_log/) {
         rmtree($dir.'/'.$folder_name.'_files');
         mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
       }
