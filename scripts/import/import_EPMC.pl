@@ -153,75 +153,78 @@ sub import_citations{
 
     # get list of citations already in the db
     my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
-    my $done_list = get_current_citations($dba);
+    my $done_list = get_current_citations($dba); #MUDAR LISTA 
 
-    
+    # Get attrib id for source 
+    my $source_attrib_id = get_source_attrib_id($reg, $type); 
+
     foreach my $pub(keys %$data){
-        
+    
         ### get a set of variation objects
         my @var_obs;
         ### remove duplicate ids
         my @var_id = unique(@{$data->{$pub}->{rsid}});
-
+     
         foreach my $rsid ( @var_id ){  
-
-            ## skip citations already in the database
-            next if defined $data->{$pub}->{pmid} && $done_list->{$rsid}{$data->{$pub}->{pmid}};
-
+            my $pub_pmid = $data->{$pub}->{pmid}; 
+    
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
-                push @var_obs, $v;
+                push @var_obs, $v; 
+                
+                # Update column data_source_attrib in table variation_citation 
+                if(defined $pub_pmid && $done_list->{$rsid}{$pub_pmid}){  
+                  my $var_id = $v->dbID();  
+                  $pub_ad->update_citation_data_source($source_attrib_id, $var_id, $pub_pmid); 
+                } 
             }
             else{
                 no warnings ;
                 ### write file of variants not found in this species to use as input file for next
                 if($type eq "EPMC"){
-                  print $not_found "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid}\n"; 
+                  print $not_found "$rsid,$data->{$pub}->{pmcid},$pub_pmid\n"; 
                 }
                 elsif($type eq "UCSC") {
-                  print $not_found $rsid ."\t". $data->{$pub}->{pmid} ."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
+                  print $not_found $rsid ."\t". $pub_pmid."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
                }
                use warnings ;
-            }
+            }  
         }
-
-
-        ## don't enter publication if there are no variants found for this species
-        next unless defined $var_obs[0] ;
+    
+        # don't enter publication if there are no variants found for this species
+        next unless defined $var_obs[0];        
         
-        
-      
         ### Check if publication already known & enter if not  
         my $publication;
-
+        
         ## looking up missing data from EPMC before redundancy check
         my $ref = get_publication_info_from_epmc($data, $pub, $error_log);
-	
+        
         my $title = (defined $ref->{resultList}->{result}->{title} ? $ref->{resultList}->{result}->{title}  : $data->{$pub}->{title});
         next unless defined $title;       
         next if $title =~/Erratum/i; 
- 
+        
         ## save ids 
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
         my $doi    = $ref->{resultList}->{result}->{DOI}    || $data->{$pub}->{doi};
-
+        
         ## try looking up on doi first
         $publication = $pub_ad->fetch_by_doi( $doi )     if defined $doi;
         ## then PMID
         $publication = $pub_ad->fetch_by_pmid( $pmid )   if defined $pmid && ! defined $publication;
         ## then PMCID   
         $publication = $pub_ad->fetch_by_pmcid( $pmcid ) if defined $pmcid && ! defined $publication;
-
-
+        
+        
         if(defined $publication){
             ##  warn "Linkings vars to existing pub ". $publication->dbID() ."\n";
-            $pub_ad->update_variant_citation( $publication,\@var_obs );
+            $pub_ad->update_variant_citation( $source_attrib_id,$publication,\@var_obs );
             $pub_ad->update_ucsc_id( $publication,  $data->{$pub}->{ucsc} ) if defined $data->{$pub}->{ucsc};
         }
         else{
             ## add new publication
-
+        
             ### create new object
             my $publication = Bio::EnsEMBL::Variation::Publication->new( 
                 -title    => $title,
@@ -235,10 +238,47 @@ sub import_citations{
                 -adaptor  => $pub_ad
                 );
         
-            $pub_ad->store( $publication);
-        }
-    }
+            $pub_ad->store( $publication,$source_attrib_id );
+        } 
+    } 
     close $not_found;
+}
+
+sub get_source_attrib_id{
+  my $reg = shift; 
+  my $source = shift; 
+  
+  my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
+  
+  my $sql_type = qq{
+      SELECT  attrib_type_id  
+      FROM    attrib_type
+      WHERE   code = 'citation_source'
+  };
+
+  my $sth_type = $attrib_adaptor->dbc->prepare($sql_type);
+  $sth_type->execute;
+  my $attrib_types = $sth_type->fetchall_arrayref(); 
+  my $attrib_type_id = $attrib_types->[0]->[0];
+
+  die "No attribute of type citation source\n" unless defined $attrib_type_id;
+
+  my $sql = qq{
+      SELECT  a.attrib_id 
+      FROM    attrib a, attrib_type t
+      WHERE   a.attrib_type_id = t.attrib_type_id
+      AND     t.attrib_type_id = $attrib_type_id
+      AND     a.value = '$source' 
+  };
+
+  my $sth = $attrib_adaptor->dbc->prepare($sql);
+  $sth->execute;
+  my $attribs = $sth->fetchall_arrayref(); 
+  my $attrib_id = $attribs->[0]->[0]; 
+
+  die "No attribute '$source' found\n" unless defined $attrib_id;
+
+  return $attrib_id; 
 }
 
 sub get_publication_info_from_epmc{
@@ -274,6 +314,9 @@ sub get_publication_info_from_epmc{
     }
     elsif(defined $data->{$pub}->{pmcid}){
         $ref   = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
+        
+        print "RESULT LIST PMCID: ", $ref->{resultList}->{result}->{pmcid}, " PMCID: ", $data->{$pub}->{pmcid}, "\n"; 
+        
         ## check results of full text query
          return undef unless defined $data->{$pub}->{pmcid} &&
 	     $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
