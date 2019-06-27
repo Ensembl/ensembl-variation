@@ -314,9 +314,7 @@ sub get_publication_info_from_epmc{
     }
     elsif(defined $data->{$pub}->{pmcid}){
         $ref   = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
-        
-        print "RESULT LIST PMCID: ", $ref->{resultList}->{result}->{pmcid}, " PMCID: ", $data->{$pub}->{pmcid}, "\n"; 
-        
+ 
         ## check results of full text query
          return undef unless defined $data->{$pub}->{pmcid} &&
 	     $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  

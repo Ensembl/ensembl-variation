@@ -312,7 +312,7 @@ sub update_variant_citation {
 
     my $citation_ext_sth = $dbh->prepare(qq[ select count(*) from variation_citation where variation_id =? and publication_id =?  ]);   
     
-    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id, data_source_attrib  ) values ( ?,?,? ) ]);   
+    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id  ) values ( ?,? ) ]);   
     my $sth_update_source_attrib = $dbh->prepare(qq[ update variation_citation 
                                                set data_source_attrib = concat_ws(',', data_source_attrib, '$source_attrib_id')  
                                                where publication_id = ? and variation_id = ? 
@@ -355,7 +355,7 @@ sub update_variant_citation {
         $citation_ext_sth->execute( $var_obj->dbID(),  $pub->{dbID} );
         my $count = $citation_ext_sth->fetchall_arrayref();
         next unless $count->[0]->[0] ==0;  
-        $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID}, null );
+        $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID} );
         $sth_update_source_attrib->execute( $var_obj->dbID(), $pub->{dbID} ); 
 
 	## set cited variants to be displayable, if not already displayable

@@ -1763,7 +1763,7 @@ CREATE TABLE publication (
 CREATE TABLE variation_citation (
    variation_id INT(10) UNSIGNED NOT NULL,
    publication_id INT(10) UNSIGNED NOT NULL,
-   data_source_attrib SET('610','611','612') DEFAULT NULL; 
+   data_source_attrib SET('610','611','612') DEFAULT NULL, 
    PRIMARY KEY variation_citation_idx (variation_id, publication_id),
    KEY data_source_attrib_idx (data_source_attrib)
 );

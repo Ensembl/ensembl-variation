@@ -321,7 +321,6 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 532,'dbnsfp_revel_pred','dbNSFP REVEL prediction','dbNSFP REVEL prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 533,'dbnsfp_meta_svm_pred','dbNSFP MetaSVM prediction','dbNSFP MetaSVM prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 534,'dbnsfp_ma_pred','dbNSFP mutation assessor prediction','dbNSFP mutation assessor prediction');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 535,'citation_source','Citation','Citation source');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -845,9 +844,6 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (606, 481, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (607, 481, 'dbnsfp_mutation_assessor');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (608, 481, 'dbnsfp_revel');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (609, 481, 'cadd');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (610, 535, 'dbSNP');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (611, 535, 'EPMC');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (612, 535, 'UCSC');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
