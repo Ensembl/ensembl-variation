@@ -55,6 +55,7 @@ use Data::Dumper;
 
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -127,23 +128,6 @@ if (defined $done_file){
   close $donelist;
 }
 
-my %special_characters = (
-  'Å' => 'A',
-  'Ä' => 'A',
-  'Ö' => 'O',
-  'Ü' => 'U',
-  'ö' => 'o',
-  'ü' => 'u',
-  'ä' => 'a',
-  'í' => 'i',
-  'é' => 'e',
-  'è' => 'e',
-  'ë' => 'e',
-  'ç' => 'c',
-  '<' => 'less than',
-  '>' => 'more than',
-  '&' => 'and',
-);
 
 ## parse file
 my $ref = XML::Records->new($data_file);
@@ -670,10 +654,10 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
-  # Remove special characters from the phenotype description
-  foreach my $char (keys(%special_characters)) {
-    my $new_char = $special_characters{$char};
-    $record->{disease} =~ s/$char/$new_char/g;
+  # Remove special characters from the phenotype description and submitter name
+  $record->{disease} = replace_char( $record->{disease});
+  foreach my $sub (@{$record->{submitters}}){
+    $sub = replace_char( $sub);
   }
 
   ## look for existing or enter new phenotype object
