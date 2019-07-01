@@ -202,8 +202,13 @@ sub import_citations{
         
         my $title = (defined $ref->{resultList}->{result}->{title} ? $ref->{resultList}->{result}->{title}  : $data->{$pub}->{title});
         next unless defined $title;       
-        next if $title =~/Erratum/i; 
-        
+        next if ($title =~/Erratum/i || $title =~/Errata/i); 
+        # Delete brackets from title 
+        if($title =~ /^\[/){
+          $title =~ s/^\[//;
+          $title =~ s/\]\.//;  
+        }        
+
         ## save ids 
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
