@@ -4,3 +4,4 @@ requires 'JSON';
 requires 'Sereal';
 requires 'Set::IntervalTree';
 requires 'String::Approx';
+requires 'XML::Hash::XS';
