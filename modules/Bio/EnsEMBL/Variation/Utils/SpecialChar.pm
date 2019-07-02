@@ -50,6 +50,7 @@ our @EXPORT_OK = qw(replace_char);
 my %special_characters = (
   'Å' => 'A',
   'Ä' => 'A',
+  'Ã' => 'A',
   'Ö' => 'O',
   'Ü' => 'U',
   'ö' => 'o',
