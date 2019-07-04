@@ -124,6 +124,7 @@ else{
     die "Type $type is not recognised - must be EPMC or UCSC\n";
 }
 
+# Clean publications here 
 
 ## create report on curent status
 report_summary($dba, $species);
@@ -153,7 +154,7 @@ sub import_citations{
 
     # get list of citations already in the db
     my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
-    my $done_list = get_current_citations($dba); #MUDAR LISTA 
+    my $done_list = get_current_citations($dba); 
 
     # Get attrib id for source 
     my $source_attrib_id = get_source_attrib_id($reg, $type); 
@@ -206,8 +207,8 @@ sub import_citations{
         # Delete brackets from title 
         if($title =~ /^\[/){
           $title =~ s/^\[//;
-          $title =~ s/\]\.//;  
-        }        
+          $title =~ s/\]\.//; 
+        }  
 
         ## save ids 
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
@@ -342,6 +343,7 @@ sub get_publication_info_from_epmc{
    
     return $ref;
 }
+
 sub get_epmc_data{
 
     my $id = shift; ## specific part of URL including pmid or pmcid 
@@ -574,20 +576,23 @@ sub report_summary{
                                          and p1.pmid is not null
                                        ]);
 
-    my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
-                                         from publication p1, publication p2
-                                         where p1.pmcid = p2.pmcid
-                                         and p1.publication_id < p2.publication_id
-                                       ]);
+    # my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
+    #                                      from publication p1, publication p2
+    #                                      where p1.pmcid = p2.pmcid
+    #                                      and p1.publication_id < p2.publication_id
+    #                                      and p1.pmcid is not null
+    #                                    ]);
 
-   my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
-                                         from publication p1, publication p2
-                                         where p1.doi = p2.doi
-                                         and p1.publication_id < p2.publication_id
-                                       ]);
+   my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid FROM publication GROUP BY pmcid HAVING COUNT(*) > 1 and pmcid is not null ]);
 
+   # my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
+   #                                       from publication p1, publication p2
+   #                                       where p1.doi = p2.doi
+   #                                       and p1.publication_id < p2.publication_id
+   #                                       and p1.doi is not null
+   #                                     ]);
 
-
+    my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi FROM publication GROUP BY doi HAVING COUNT(*) > 1 and doi is not null ]);
 
     my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
                                               where title is null
