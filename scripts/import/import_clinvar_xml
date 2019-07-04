@@ -869,7 +869,9 @@ sub get_variant{
 
   if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} ||
       !defined $ref_allele || !defined $alt_allele ||
-      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele && $alt_allele eq '') ){
+      (defined $ref_allele && $ref_allele eq '') ||
+      (defined $alt_allele && $alt_allele eq '') ||
+      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele) ) {
     warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
     return undef;
   }
