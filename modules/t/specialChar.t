@@ -29,12 +29,16 @@ my $oldString = "Hôpitaux de Paris";
 my $newString = replace_char($oldString);
 ok($newString eq "Hopitaux de Paris", "special char updated");
 
-$oldString = "bmi < 30";
+$oldString = "Sjögren-Larsson syndrome";
 $newString = replace_char($oldString);
-ok($newString eq "bmi less than 30", "special char(<) updated");
+ok($newString eq "Sjogren-Larsson syndrome", "special char(ö) updated");
 
 $oldString = "bmi < 30";
 $newString = replace_char($oldString);
 ok($newString eq "bmi less than 30", "special char(<) updated");
+
+$oldString = "bmi > 30";
+$newString = replace_char($oldString);
+ok($newString eq "bmi more than 30", "special char(>) updated");
 
 done_testing();
