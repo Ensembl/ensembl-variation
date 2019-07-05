@@ -583,7 +583,9 @@ sub report_summary{
     #                                      and p1.pmcid is not null
     #                                    ]);
 
-   my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid FROM publication GROUP BY pmcid HAVING COUNT(*) > 1 and pmcid is not null ]);
+   my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid 
+                                             FROM publication 
+                                             GROUP BY pmcid HAVING COUNT(*) > 1 and pmcid is not null ]);
 
    # my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
    #                                       from publication p1, publication p2
@@ -592,39 +594,58 @@ sub report_summary{
    #                                       and p1.doi is not null
    #                                     ]);
 
-    my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi FROM publication GROUP BY doi HAVING COUNT(*) > 1 and doi is not null ]);
+    my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi 
+                                              FROM publication 
+                                              GROUP BY doi HAVING COUNT(*) > 1 and doi is not null ]);
 
+    my $dup4_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, title 
+                                              FROM publication 
+                                              GROUP BY UPPER(title),UPPER(authors) HAVING COUNT(*) > 1 ]); 
+ 
     my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
                                               where title is null
                                              ]);
 
     $dup1_ext_sth->execute()||die;
-    my $dup1 =  $dup1_ext_sth->fetchall_arrayref();
+    my $dup1 = $dup1_ext_sth->fetchall_arrayref();
 
     $dup2_ext_sth->execute()||die;
-    my $dup2 =  $dup2_ext_sth->fetchall_arrayref();
+    my $dup2 = $dup2_ext_sth->fetchall_arrayref();
 
     $dup3_ext_sth->execute()||die;
-    my $dup3 =  $dup3_ext_sth->fetchall_arrayref();
+    my $dup3 = $dup3_ext_sth->fetchall_arrayref();
+
+    $dup4_ext_sth->execute()||die;
+    my $dup4 = $dup4_ext_sth->fetchall_arrayref();
 
     $fail_ext_sth->execute() ||die;
-    my $fail =  $fail_ext_sth->fetchall_arrayref();
+    my $fail = $fail_ext_sth->fetchall_arrayref();
 
-    if (defined $dup1->[0]->[0] || defined $dup1->[0]->[0]){
-        print $report "Duplicated publications:\n";
-
-        foreach my $l (@{$dup1}){
-            print $report "$l->[0]\t$l->[1]\t$l->[2]\n";
-        }
-        foreach my $k (@{$dup2}){
-            print $report "$k->[0]\t$k->[1]\t$k->[2]\n";
-        }   
-        foreach my $m (@{$dup3}){
-            print $report "$m->[0]\t$m->[1]\t$m->[2]\n";
-        }
-
+    if (defined $dup1->[0]->[0]){
+      print $report "Duplicated publications (pmid):\n";
+      foreach my $l (@{$dup1}){
+        print $report "$l->[0]\t$l->[1]\t$l->[2]\n";
+      }
     }
-
+    if (defined $dup2->[0]->[0]){
+      print $report "Duplicated publications (pmcid):\n";
+      foreach my $k (@{$dup2}){
+        print $report "$k->[0]\t$k->[1]\n";
+      }
+    }
+    if (defined $dup3->[0]->[0]){
+    print $report "Duplicated publications (doi):\n";
+      foreach my $m (@{$dup3}){
+        print $report "$m->[0]\t$m->[1]\n";
+      }
+    }
+    if (defined $dup4->[0]->[0]){
+      print $report "Duplicated publications (title and authors):\n";
+      foreach my $i (@{$dup4}){
+        print $report "$i->[0]\t$i->[1]\n"; 
+      }
+    }
+    
     print $report "$fail->[0]->[0] publications without a title - to be deleted\n";
 
 }
@@ -640,7 +661,7 @@ sub update_meta{
                                             ]);
 
 
-    $meta_ins_sth->execute("$type citation_update", run_date() );
+    $meta_ins_sth->execute($type . "_citation_update", run_date() );
 }
 
 ## export current snapshot from database
