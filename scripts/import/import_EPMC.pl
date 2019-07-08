@@ -122,9 +122,7 @@ elsif($type eq "disease"){
 
 else{
     die "Type $type is not recognised - must be EPMC or UCSC\n";
-}
-
-# Clean publications here 
+} 
 
 ## create report on curent status
 report_summary($dba, $species);
@@ -203,9 +201,9 @@ sub import_citations{
         
         my $title = (defined $ref->{resultList}->{result}->{title} ? $ref->{resultList}->{result}->{title}  : $data->{$pub}->{title});
         next unless defined $title;       
-        next if ($title =~/Erratum/i || $title =~/Errata/i); 
-        # Delete brackets from title 
-        if($title =~ /^\[/){
+        next if ($title =~/Erratum/i || $title =~/Errata/i || $title =~/Not Available/i); 
+        # Delete brackets from title, e.g. [title]. 
+        if($title =~ /^\[ ?[A-Za-z]{2}/){
           $title =~ s/^\[//;
           $title =~ s/\]\.//; 
         }  
