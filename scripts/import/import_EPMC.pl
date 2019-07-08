@@ -576,6 +576,7 @@ sub report_summary{
                                          and p1.pmid is not null
                                        ]);
 
+    # Query is taking a few hours to run
     # my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
     #                                      from publication p1, publication p2
     #                                      where p1.pmcid = p2.pmcid
@@ -587,6 +588,7 @@ sub report_summary{
                                              FROM publication 
                                              GROUP BY pmcid HAVING COUNT(*) > 1 and pmcid is not null ]);
 
+   # Query is taking a few hours to run 
    # my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
    #                                       from publication p1, publication p2
    #                                       where p1.doi = p2.doi

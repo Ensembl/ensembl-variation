@@ -163,29 +163,6 @@ sub fetch_by_dbID {
   return ($result ? $result->[0] : undef);
 }
 
-=head2 fetch_by_title
-
-  Arg [1]    : string $title
-  Example    : $publication = $publication_adaptor->fetch_by_title("Pharmacogenomics and toxicogenomics.");
-  Description: Retrieves a publication object via its title
-  Returntype : Bio::EnsEMBL::Variation::Publication
-  Exceptions : throw if name argument is not defined
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub fetch_by_title {
-  my $self = shift;
-  my $title = shift;
-
-  throw('title argument expected') if(!defined $title );
-
-  my $result = $self->generic_fetch("p.title = \"$title\"");
-
-  return ($result ? $result->[0] : undef);
-}
-
 =head2 fetch_all_by_dbID_list
 
   Arg [1]    : listref $list
