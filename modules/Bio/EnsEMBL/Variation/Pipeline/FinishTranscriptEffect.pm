@@ -55,7 +55,7 @@ sub run {
   my $pipeline_dir = $self->param('pipeline_dir');
   my $loaded_transcript_ids = {};
   my $fh;
-  my $log_file = "$pipeline_dir/LOG_$gene_stable_id";
+  my $log_file = "$pipeline_dir/load_log_files/LOG_$gene_stable_id";
   if (-e $log_file) {
     # read successfully loaded transcripts
     $fh = FileHandle->new($log_file, 'r');
