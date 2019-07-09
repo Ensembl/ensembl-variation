@@ -579,26 +579,24 @@ sub report_summary{
     #                                      from publication p1, publication p2
     #                                      where p1.pmcid = p2.pmcid
     #                                      and p1.publication_id < p2.publication_id
-    #                                      and p1.pmcid is not null
     #                                    ]);
 
    my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid 
                                              FROM publication 
-                                             GROUP BY pmcid HAVING COUNT(*) > 1 and pmcid is not null ]);
+                                             GROUP BY pmcid,publication_id HAVING COUNT(*) > 1 ]);
 
    # Query is taking a few hours to run 
    # my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
    #                                       from publication p1, publication p2
    #                                       where p1.doi = p2.doi
    #                                       and p1.publication_id < p2.publication_id
-   #                                       and p1.doi is not null
    #                                     ]);
 
     my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi 
                                               FROM publication 
-                                              GROUP BY doi HAVING COUNT(*) > 1 and doi is not null ]);
+                                              GROUP BY doi,publication_id HAVING COUNT(*) > 1 ]);
 
-    my $dup4_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, title 
+    my $dup4_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, title, authors 
                                               FROM publication 
                                               GROUP BY UPPER(title),UPPER(authors) HAVING COUNT(*) > 1 ]); 
  
