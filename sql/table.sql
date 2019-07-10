@@ -1830,7 +1830,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|Add the column data_source in the table variation_citation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|Add the column data_source_attrib in the table variation_citation');
 
 /**
 @header  Failed tables

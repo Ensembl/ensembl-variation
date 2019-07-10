@@ -296,15 +296,29 @@ sub store{
     $pub->{dbID} = $dbh->last_insert_id(undef, undef, 'publication', 'publication_id');
 
     ## link cited variants to publication
-    $self->update_variant_citation($source_attrib_id,$pub) if defined $pub->{variants}->[0] ;
+    $self->update_variant_citation($pub,$source_attrib_id) if defined $pub->{variants}->[0] ;
 
 }
+
+=head2 update_variant_citation
+
+  Arg [1]    : Publication $pub 
+  Arg [2]    : Integer $source_attrib_id
+  Arg [3]    : Set of Bio::EnsEMBL::Variation::Variation objects (optional)
+  Description: Update variant_citation table with new Publication
+  Returntype : none
+  Exceptions : throw if pmid doesn't link to any variant
+               throw if variation is not a Bio::EnsEMBL::Variation::Variation object
+  Caller     : general
+  Status     : At Risk
+
+=cut
 
 sub update_variant_citation {
 
     my $self = shift; 
-    my $source_attrib_id = shift; 
     my $pub  = shift;
+    my $source_attrib_id = shift;
     my $var  = shift; 
 
     my $dbh = $self->dbc->db_handle;
@@ -387,6 +401,19 @@ sub update_ucsc_id {
 
 }
 
+=head2 update_citation_data_source
+
+  Arg [1]    : Integer $source_attrib_id
+  Arg [2]    : Integer $variation_id 
+  Arg [3]    : Integer $publication_pmid
+  Description: Update data_source_attrib in variation_citation table for Publication already in the db
+  Returntype : none
+  Exceptions : throw if there is no Publication with the pmid 
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
 sub update_citation_data_source{
   my $self             = shift;
   my $source_attrib_id = shift; 
@@ -398,7 +425,10 @@ sub update_citation_data_source{
   my $sth_pub_id = $dbh->prepare(qq[ select publication_id from publication where pmid = $publication_pmid ]);
   
   $sth_pub_id->execute;
-  my $publications = $sth_pub_id->fetchall_arrayref(); 
+  my $publications = $sth_pub_id->fetchall_arrayref();
+ 
+  throw("No publication defined with pmid = $publication_pmid") unless defined $publications->[0]->[0]; 
+
   my $pub_id = $publications->[0]->[0];
   
   my $sth_update_source_attrib = $dbh->prepare(qq[ update variation_citation 

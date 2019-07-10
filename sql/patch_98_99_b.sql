@@ -19,4 +19,4 @@ ALTER TABLE variation_citation ADD COLUMN data_source_attrib SET('610','611','61
 
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|Add the column data_source in the table variation_citation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|Add the column data_source_attrib in the table variation_citation');

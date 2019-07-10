@@ -223,7 +223,7 @@ sub import_citations{
         
         if(defined $publication){
             ##  warn "Linkings vars to existing pub ". $publication->dbID() ."\n";
-            $pub_ad->update_variant_citation( $source_attrib_id,$publication,\@var_obs );
+            $pub_ad->update_variant_citation( $publication,$source_attrib_id,\@var_obs );
             $pub_ad->update_ucsc_id( $publication,  $data->{$pub}->{ucsc} ) if defined $data->{$pub}->{ucsc};
         }
         else{
