@@ -1,0 +1,66 @@
+Set up your working directory
+  working_directory/gnomad/Genomes
+
+Download gnomAD files
+  sh wget_gnomad_files.sh working_directory
+
+Trim gnomAD files: Remove VEP annotation
+  sh trim_gnomad_files.sh chromosome_number working_directory/gnomad/Genomes/
+Run trim_gnomad_files.sh for all chromosomes
+  sh run_trim_gnomad_files.sh working_directory/gnomad/Genomes/
+Rename trimmed files
+  sh rename_trimmed_files.sh working_directory/gnomad/Genomes/
+
+Run CrossMap
+  dowload chain file and FASTA file
+    - GRCh38 reference genome: ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    - Chain file: ftp://ftp.ensembl.org/pub/assembly_mapping/homo_sapiens/GRCh37_to_GRCh38.chain.gz
+  create a sensible directory structure and update the scripts accordingly, for example
+    working_directory/gnomad/Genomes
+    working_directory/gnomad/Genomes/mapping_results
+    working_directory/gnomad/Genomes/crossmap_reports
+    working_directory/gnomad/FASTA 
+    working_directory/gnomad/chain_file 
+
+  sh cross_map.sh chromosome_number working_directory/gnomad/
+Run CrossMap for all chromosomes
+  sh run_cross_map.sh working_directory/gnomad/
+
+Some util scripts:
+
+  bgzip
+    sh bgzip_mapping_results.sh chromosome_number working_directory/gnomad/Genomes/mapping_results
+  Run bgzip for all chromosomes
+    sh run_bgzip_mapping_results.sh working_directory/gnomad/Genomes/mapping_results
+
+  tabix for all chromosomes
+    sh tabix.sh
+
+
+Load unmapped variants into a variation database for remapping:
+  Write unmapped variants from crossmap output to file
+    write_unmapped_variants.pl working_directory/gnomad/Genomes/mapping_results/
+
+  Create variation database and store connection details in a registry file
+    working_directory/gnomad/Genomes/remap_gnomad/genomes/ensembl.registry
+
+  Load unmapped variants
+    load_unmapped_variation.pl working_directory/gnomad/Genomes/
+  
+Run remapping pipeline
+
+Dump unique mapping results
+  filter_mapping_results.pl working_directory/gnomad/Genomes/
+
+Create VCF entry for each mapping result and find VCF fields from GRCh37 file (TODO update directories in script!)
+  unique_mapping_results_to_VCF.pl
+  Run with job array
+  run_unique_mapping_results_to_VCF.sh
+
+Append crossmap results and Ensembl remapping results (very crude script for appending Ensembl mapping results)
+  append_to_crossmap_results.pl
+  Run with job array
+  run_final_append_job_array.sh
+
+Some count statistics
+  final_variant_count_genomes.sh
