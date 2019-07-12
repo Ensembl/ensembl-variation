@@ -53,7 +53,7 @@ Bio::EnsEMBL::Variation::OverlapConsequence
         },
     );
 
-    if ($oc->predicate($transcript_variation_allele)) {
+    if ($oc->predicate->($transcript_variation_allele)) {
         print "This allele is: ", $oc->display_term, "\n";
     }
 
