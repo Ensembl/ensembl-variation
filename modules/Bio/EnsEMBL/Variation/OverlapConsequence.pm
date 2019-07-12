@@ -85,7 +85,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
 =head2 new
-    
+
   Arg [-SO_ACCESSION] : 
     The Sequence Ontology accession for this consequence type
   
