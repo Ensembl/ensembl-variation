@@ -210,7 +210,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'gene_factory',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::GeneFactory',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
 
             -parameters => {
               include_lrg => $self->o('include_lrg'),
@@ -225,7 +225,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'dump_variation_gene_name',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -parameters => {
               @common_params,
             },
@@ -238,7 +238,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'dump_variation_gene_name_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -parameters => {
               @common_params,
             },
@@ -250,7 +250,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_factory',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptFactory',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -parameters => {
               @common_params,
@@ -263,7 +263,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 60,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
@@ -275,7 +275,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
@@ -290,7 +290,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_effect_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -rc_name => 'highmem',
             -parameters => {
