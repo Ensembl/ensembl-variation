@@ -42,6 +42,7 @@ GetOptions ("data=s"        => \$data_file,
             "type=s"        => \$type,
             "species=s"     => \$species,
             "check_dbSNP:s" => \$check_dbSNP,
+            "clean:s"       => \$clean,
             "registry=s"    => \$registry_file,
             "no_evidence"   => \$no_evidence,
     );
@@ -125,10 +126,15 @@ else{
 } 
 
 ## create report on curent status
-report_summary($dba, $species);
+my $title_null = report_summary($dba, $species);
 
 ## add run date to meta table
 update_meta($dba, $type);
+
+## clean publications after import
+if(defined $clean && $clean == 1){ 
+  clean_publications($dba, $title_null);
+}
 
 sub import_citations{
 
@@ -559,6 +565,8 @@ sub report_summary{
     my $dba     = shift;
     my $species = shift;
 
+    my $title_null; 
+
     open (my $report, ">import_EPMC_$species\_"  . log_time() . ".txt") or die "Failed to open report file to write: $!\n";
 
     my $publication_count = count_rows($dba, 'publication');
@@ -572,37 +580,40 @@ sub report_summary{
                                          where p1.pmid = p2.pmid
                                          and p1.publication_id < p2.publication_id
                                          and p1.pmid is not null
-                                       ]);
+                                         ]);
 
     # Query is taking a few hours to run
-    # my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
-    #                                      from publication p1, publication p2
-    #                                      where p1.pmcid = p2.pmcid
-    #                                      and p1.publication_id < p2.publication_id
-    #                                    ]);
+    my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
+                                         from publication p1, publication p2
+                                         where p1.pmcid = p2.pmcid
+                                         and p1.publication_id < p2.publication_id
+                                         and p1.pmcid is not null
+                                         ]);
 
-   my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid 
-                                             FROM publication 
-                                             GROUP BY pmcid,publication_id HAVING COUNT(*) > 1 ]);
+   # my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid 
+   #                                           FROM publication 
+   #                                           GROUP BY pmcid,publication_id HAVING COUNT(*) > 1 ]);
 
    # Query is taking a few hours to run 
-   # my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
-   #                                       from publication p1, publication p2
-   #                                       where p1.doi = p2.doi
-   #                                       and p1.publication_id < p2.publication_id
-   #                                     ]);
+   my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
+                                         from publication p1, publication p2
+                                         where p1.doi = p2.doi
+                                         and p1.publication_id < p2.publication_id
+                                         and p1.doi is not null
+                                         ]);
 
-    my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi 
-                                              FROM publication 
-                                              GROUP BY doi,publication_id HAVING COUNT(*) > 1 ]);
+   #  my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi 
+   #                                            FROM publication 
+   #                                            GROUP BY doi,publication_id HAVING COUNT(*) > 1 ]);
 
-    my $dup4_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, title, authors 
-                                              FROM publication 
-                                              GROUP BY UPPER(title),UPPER(authors) HAVING COUNT(*) > 1 ]); 
+    my $dup4_ext_sth = $dba->dbc->prepare(qq[ select title, authors, count(*)  
+                                              from publication 
+                                              group by upper(title), upper(authors) having count(*) > 1 
+                                          ]); 
  
     my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
                                               where title is null
-                                             ]);
+                                          ]);
 
     $dup1_ext_sth->execute()||die;
     my $dup1 = $dup1_ext_sth->fetchall_arrayref();
@@ -618,34 +629,36 @@ sub report_summary{
 
     $fail_ext_sth->execute() ||die;
     my $fail = $fail_ext_sth->fetchall_arrayref();
+    $title_null = $fail->[0]->[0]; 
 
     if (defined $dup1->[0]->[0]){
-      print $report "Duplicated publications (pmid):\n";
+      print $report "\nDuplicated publications (publication 1, publication 2, pmid):\n";
       foreach my $l (@{$dup1}){
         print $report "$l->[0]\t$l->[1]\t$l->[2]\n";
       }
     }
     if (defined $dup2->[0]->[0]){
-      print $report "Duplicated publications (pmcid):\n";
+      print $report "\nDuplicated publications (publication 1, publication 2, pmcid):\n";
       foreach my $k (@{$dup2}){
-        print $report "$k->[0]\t$k->[1]\n";
+        print $report "$k->[0]\t$k->[1]\t$l->[2]\n";
       }
     }
     if (defined $dup3->[0]->[0]){
-    print $report "Duplicated publications (doi):\n";
+    print $report "\nDuplicated publications (publication 1, publication 2, doi):\n";
       foreach my $m (@{$dup3}){
-        print $report "$m->[0]\t$m->[1]\n";
+        print $report "$m->[0]\t$m->[1]\t$l->[2]\n";
       }
     }
     if (defined $dup4->[0]->[0]){
-      print $report "Duplicated publications (title and authors):\n";
+      print $report "\nDuplicated publications (title, authors, number of publications):\n";
       foreach my $i (@{$dup4}){
         print $report "$i->[0]\t$i->[1]\n"; 
       }
     }
     
-    print $report "$fail->[0]->[0] publications without a title - to be deleted\n";
+    print $report "\n$title_null publications without a title - to be deleted\n";
 
+    return $title_null; 
 }
 
 ## store rundate in meta table for each source 
@@ -660,6 +673,125 @@ sub update_meta{
 
 
     $meta_ins_sth->execute($type . "_citation_update", run_date() );
+}
+
+## clean publication and variation_citation tables after import
+## Clean brackets from titles
+## Delete publications with title 'Not Available'
+## Delete publications with unspecific titles
+## Delete publications without title  
+sub clean_publications{
+
+    my $dba  = shift; 
+    my $n_title_null = shift;
+
+    open (my $report, ">import_EPMC_$species\_clean_publications_"  . log_time() . ".txt") or die "Failed to open report file to write: $!\n";
+
+    my $publication_count = count_rows($dba, 'publication');
+    my $citation_count    = count_rows($dba, 'variation_citation');
+
+    print $report "Total publications before cleaning:\t$publication_count\n";
+    print $report "Total citations before cleaning:\t$citation_count\n\n";
+
+    my $not_available_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[Not Available%' ]);
+
+    my $title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[%' and (title like '%\]' or title like '%\.\]' or title like '%\]\.') ]);
+
+    my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' ]);
+
+    $not_available_sth->execute()||die;
+    my $not_available_titles = $not_available_sth->fetchall_arrayref();
+
+    $title_sth->execute()||die;
+    my $title_brackets =  $title_sth->fetchall_arrayref();
+
+    $wrong_title_sth->execute()||die;
+    my $wrong_title = $wrong_title_sth->fetchall_arrayref();
+
+    # Delete publications with title 'Not Available'
+    if(defined $not_available_titles->[0]->[0]){
+      print $report "\nPublications with 'not available' title deleted (publication_id, title, variation_id):\n";
+      remove_publications($dba, $report, $not_available_titles);
+    } 
+
+    # Clean brackets from publication title 
+    my $count_titles = 0;
+    if (defined $title_brackets->[0]->[0]){
+      print $report "Publications with brackets in the title - clean the brackets:\n";
+      foreach my $l (@{$title_brackets}){
+        $count_titles += 1;
+        my $pub_id = $l->[0];
+        my $title = $l->[1];
+        print $report "$pub_id\t$title\n";
+        $title =~ s/^\[//;
+        $title =~ s/\]//;
+
+        my $pub_clean_sth = $dba->dbc()->prepare(qq[ update publication set title = ? where publication_id = $pub_id ]);
+        $pub_clean_sth->execute($title);
+      }
+    }
+
+    # Delete publications with not acceptable titles
+    if(defined $wrong_title->[0]->[0]){
+      print $report "\nPublications with not acceptable title deleted (publication_id, title, variation_id):\n";
+      remove_publications($dba, $report, $wrong_title);
+    }
+
+    # If there is publications without title, delete them 
+    if($n_title_null != 0){
+      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id from publication where title is null or title = '' ]); 
+      my $title_null_sth->execute();
+      my $titles_null = $title_null_sth->fetchall_arrayref();
+ 
+      if(defined $titles->[0]->[0]){
+        print $report "\nPublications without title deleted (publication_id, title, variation_id):\n";
+        remove_publications($dba, $report, $titles_null);
+      }
+    }
+
+    $publication_count = count_rows($dba, 'publication');
+    $citation_count    = count_rows($dba, 'variation_citation');
+
+    print $report "\nTotal publications after cleaning:\t$publication_count\n";
+    print $report "Total citations after cleaning:\t$citation_count\n";
+}
+
+# Delete publication from publication and variation_citation tables
+sub remove_publications{
+  my $dba = shift;
+  my $report = shift;
+  my $publications = shift;
+
+  foreach my $p (@{$publications}){
+    my $pub_id = $p->[0];
+    my $title = $p->[1];
+
+    my $var_id_sth = $dba->dbc->prepare(qq[ select variation_id from variation_citation where publication_id = $pub_id ]);
+
+    $var_id_sth->execute()||die;
+    my $variation_ids = $var_id_sth->fetchall_arrayref();
+
+    if(defined $variation_ids->[0]->[0]){
+      foreach my $v (@{$variation_ids}){
+        my $var_id = $v->[0];
+        print $var_id, "->", $pub_id, "\n";
+        my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
+        $failed_var_sth->execute()||die;
+        my $failed_variant = $failed_var_sth->fetchall_arrayref();
+
+        print $report "$pub_id\t$title\t$var_id\n";
+
+        my $citation_delete_sth = $dba->dbc()->prepare(qq[ delete from variation_citation where publication_id = $pub_id ]);
+        my $pub_delete_sth = $dba->dbc()->prepare(qq[ delete from publication where publication_id = $pub_id ]);
+        $citation_delete_sth->execute();
+        $pub_delete_sth->execute();
+
+        if(defined $failed_variant->[0]->[0]){
+          print "DEFINED: $var_id\n";
+        }
+      }
+    }
+  }
 }
 
 ## export current snapshot from database
@@ -912,6 +1044,7 @@ sub usage {
 Options:  
           -data [file of citations]   - *required* for EPMC import
           -check_dbSNP [0/1]          - add detail to citations from dbSNP import (default:1)
+          -clean [0/1]                - clean publications after import (default:0)
           -no_evidence                - don't update variation & variation_feature evidence statuses\n\n";
 
 }

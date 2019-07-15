@@ -325,11 +325,8 @@ sub update_variant_citation {
 
     my $citation_ext_sth = $dbh->prepare(qq[ select count(*) from variation_citation where variation_id =? and publication_id =?  ]);   
     
-    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id  ) values ( ?,? ) ]);   
-    my $sth_update_source_attrib = $dbh->prepare(qq[ update variation_citation 
-                                                     set data_source_attrib = concat_ws(',', data_source_attrib, '$source_attrib_id')  
-                                                     where variation_id =? and publication_id =? ]);
-    
+    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id, data_source_attrib  ) values ( ?,?,concat_ws(',', data_source_attrib, '$source_attrib_id' ) ]);   
+
     ## ensure any variations with citations are displayed in browser tracks/ returned by default
     my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =? and display =?]);
     my $vfdisplay_upt_sth = $dbh->prepare(qq[ update variation_feature set display =? where  variation_id =? and display =? ]);
@@ -368,7 +365,6 @@ sub update_variant_citation {
         my $count = $citation_ext_sth->fetchall_arrayref();
         next unless $count->[0]->[0] ==0;  
         $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID} );
-        $sth_update_source_attrib->execute( $var_obj->dbID(), $pub->{dbID} ); 
 
 	## set cited variants to be displayable, if not already displayable
 	$vdisplay_upt_sth->execute( 1,  $var_obj->dbID(), 0);
