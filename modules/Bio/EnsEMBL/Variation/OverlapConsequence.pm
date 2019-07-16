@@ -38,22 +38,24 @@ Bio::EnsEMBL::Variation::OverlapConsequence
     
     my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(
         -display_term       => 'NON_SYNONYMOUS_CODING',
-        -SO_term            => 'non_synonymous_codon',
+        -SO_term            => 'missense',
         -SO_accession       => 'SO:0001583',
         -NCBI_term          => 'missense',
         -feature_SO_term    => 'mRNA',
-        -description        => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
-        -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
-        -label              => 'Non-synonymous coding',
-        -rank               => 7,
+        -description        => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
+        -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
+        -label              => 'missense variant',
+        -rank               => 12,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
         -impact             => 'MODERATE',
         -include            => {
           coding => 1,
+          increase_length => 0,
+          decrease_length => 0,
         },
     );
 
-    if ($oc->predicate($transcript_variation_allele)) {
+    if ($oc->predicate->($transcript_variation_allele)) {
         print "This allele is: ", $oc->display_term, "\n";
     }
 
@@ -83,7 +85,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
 =head2 new
-    
+
   Arg [-SO_ACCESSION] : 
     The Sequence Ontology accession for this consequence type
   
