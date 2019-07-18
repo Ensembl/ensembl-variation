@@ -15,6 +15,7 @@
 
 use strict;
 use warnings;
+
 use Test::More;
 use Test::Exception;
 use Test::Warnings qw(warning :no_end_test);
@@ -184,6 +185,9 @@ $ldfc = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2], $population);
 cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures with 2 VFs r2");
 cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', 0.999996, "fetch_by_VariationFeatures with 2 VFs d_prime");
 
+my $ld_hash = $ldfc->get_all_ld_values(1)->[0];
+cmp_ok($ld_hash->{variation_name1}, 'eq', 'rs1333047', "Keep order of input variants in output if running as pairwise calculation");
+
 my $vf3 = ($va->fetch_by_name('rs4977575')->get_all_VariationFeatures)->[0];
 $ldfc = $ldfca->fetch_by_VariationFeatures([$vf1, $vf2, $vf3], $population);
 cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', 0.063754, "fetch_by_VariationFeatures with 3 VFs r2");
@@ -298,7 +302,7 @@ $ld_values = $ldfc->get_all_ld_values;
 cmp_ok(scalar @{$ldfc->get_all_ld_values(0)}, '==', 0, "ld_without_rs_in_vcf_strict_name_match match variation feature by name");
 cmp_ok(scalar @{$ldfc->get_all_ld_values(1)}, '==', 14, "ld_without_rs_in_vcf_strict_name_match do not match variation feature by name");
 
-my $ld_hash = $ldfc->get_all_ld_values(1)->[0];
+$ld_hash = $ldfc->get_all_ld_values(1)->[0];
 my $variation1 = $ld_hash->{variation_name1};
 my $variation2 = $ld_hash->{variation_name2};
 ok($variation1 eq '.' && $variation2 eq '.', 'return name from vcf file');
