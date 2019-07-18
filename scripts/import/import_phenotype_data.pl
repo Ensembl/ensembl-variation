@@ -74,7 +74,7 @@ my %SOURCES = (
   
   "OMIA" => {
     description => "Online Mendelian Inheritance in Animals (OMIA) is a database of genes, inherited disorders and traits in more than 200 animal species (other than human and mouse)",
-    url => "http://omia.angis.org.au/home/",
+    url => "https://omia.org",
     type => "Gene",
   },
   
