@@ -352,7 +352,7 @@ sub fetch_by_VariationFeatures {
 
   # if pairwise store the first vf name to retain order in output
   if (scalar @$vfs == 2) {
-    $self->{_pairswise_first_vf_name} = $vfs->[0]->variation_name;
+    $self->{_pairwise_first_vf_name} = $vfs->[0]->variation_name;
   }
  
   # fetch by slice using expanded feature slice
@@ -514,7 +514,7 @@ sub _fetch_by_Slice_VCF {
         '-slices' => [$slice],
       );
       $c->{'_vf_name'} = $self->{'_vf_name'};
-      $c->{'_pairswise_first_vf_name'} = $self->{'_pairswise_first_vf_name'} if (defined $self->{'_pairswise_first_vf_name'});
+      $c->{'_pairwise_first_vf_name'} = $self->{'_pairwise_first_vf_name'} if (defined $self->{'_pairwise_first_vf_name'});
       $c->{'_pop_ids'} = {$population_id => 1};
 
       if($container) {
@@ -529,7 +529,7 @@ sub _fetch_by_Slice_VCF {
   $container->{pos2name} = \%pos2name if $container;
   delete $self->{_pairwise};
   delete $self->{_pairwise_vf_name};
-  delete $self->{_pairswise_first_vf_name};
+  delete $self->{_pairwise_first_vf_name};
 
 
   if (!$container) {

@@ -347,7 +347,7 @@ sub get_all_ld_values {
   # order variants make $vf_name the first of the two variants
   my $vf_name = undef;
   $vf_name = $self->{'_vf_name'} if (defined $self->{'_vf_name'});
-  $vf_name = $self->{'_pairswise_first_vf_name'} if (defined $self->{'_pairswise_first_vf_name'});
+  $vf_name = $self->{'_pairwise_first_vf_name'} if (defined $self->{'_pairwise_first_vf_name'});
   foreach my $key_ld (keys %{$self->{'ldContainer'}}) {
     # contains a single ld value in the container {variation_feature variation_feature d_prime r2}
     my %ld_value;  
