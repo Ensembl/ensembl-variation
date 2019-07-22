@@ -61,7 +61,7 @@ sub fetch_input {
     my $workdir = $pipeline_dir."/ImportMouse/";
     make_path($workdir);
 
-    open ($logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type);
+    open ($logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open $logFH for writing\n");
 
     #get mouse coordinate file:
     my $coord_file = "MGI_MRK_Coord.rpt";

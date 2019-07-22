@@ -33,9 +33,9 @@ limitations under the License.
 
 This module add ontology accessions for phenotype descriptions present in the database.
 
-  First pass:  Seek Zooma mappings curated by EVA for all descriptions
-  Second pass: Seek OLS exact matches for all descriptions
-  Third pass:  If no mapping, trim descriptions and seek OLS exact matches
+  First pass: Seek OLS exact matches for all descriptions
+  Second pass: If no mapping, trim descriptions and seek OLS exact matches
+  Third pass: For homo_sapiens only: If no mapping, seek Zooma mappings curated by EVA for all descriptions
   Supported ontologies: EFO, Orphanet, ORDO, HPO, VT
 
 =cut
@@ -97,13 +97,12 @@ sub run {
     my $zooma_terms  = add_zooma_matches($non_matched_phenos);
     store_terms($species, $zooma_terms);
   }
-
+  close($outFH);
 
   $self->param('output_ids', { source => $self->required_param('source'),
                       species => $self->required_param('species'),
                       workdir => $self->required_param('workdir'),
                     });
-  close $outFH;
 }
 
 sub write_output {
@@ -149,8 +148,8 @@ look up descriptions for all phenotypes to add exact matching terms
 from the supported ontologies.
 
 =cut
-sub get_all_phenos{
 
+sub get_all_phenos{
   my $dbh = shift;
 
   my $desc_ext_sth = $dbh->prepare(qq [ select phenotype_id, description from phenotype ]);
@@ -173,6 +172,7 @@ look up descriptions for phenotypes which don't have supplied or
 exact match terms of 'is' type
 
 =cut
+
 sub get_termless_phenos{
   my $dbh = shift;
 
@@ -200,9 +200,7 @@ return only eva curated matches for a phenotype description
 =cut
 
 sub get_eva_zooma_terms{
-
-  my $desc = shift;
-  my $confLevel = shift;
+  my ($desc, $confLevel) = @_;
 
   my $ontol_data = get_zooma_terms($desc);
   return undef unless defined $ontol_data;
@@ -222,6 +220,7 @@ sub get_eva_zooma_terms{
       push @terms, iri2acc($term) ;
     }
   }
+
   return undef unless defined $terms[0];
   return \@terms;
 }
@@ -234,7 +233,6 @@ look up phenotype description in OLS seeking exact match
 =cut
 
 sub get_ols_terms{
-
   my $pheno = shift;
 
   $pheno =~ s/\s+/+/g;
@@ -261,8 +259,8 @@ sub get_ols_terms{
 look up phenotype description in zooma
 
 =cut
-sub get_zooma_terms{
 
+sub get_zooma_terms{
   my $pheno = shift;
 
   $pheno =~ s/\(\w+\)//; ## for DDG2P
@@ -282,7 +280,6 @@ sub get_zooma_terms{
   }
 
  return JSON->new->decode($response->{content} );
-
 }
 
 
@@ -293,9 +290,7 @@ sub get_zooma_terms{
 =cut
 
 sub add_ols_matches{
-
-  my $phenos   = shift;
-  my $truncate = shift;
+  my ($phenos, $truncate) = @_;
 
   my %terms;
 
@@ -338,6 +333,7 @@ sub add_ols_matches{
     $terms{$id}{terms} = \@terms;
     $terms{$id}{type} = (defined $truncate ? 'OLS partial' : 'OLS exact');
   }
+
   return \%terms;
 }
 
@@ -346,8 +342,8 @@ sub add_ols_matches{
 
   use EVA curated mappings
 =cut
+
 sub add_zooma_matches{
-  
   my $phenos = shift;
 
   my %terms;
@@ -360,12 +356,19 @@ sub add_zooma_matches{
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
     $terms{$id}{type} = "Zooma exact" if defined $eva_terms;
   }
+
   return \%terms;
 }
 
-sub iri2acc{
+=head2 iri2acc
 
+  extract accession number from iri identifiers (https://cloud.identifiers.org)
+
+=cut
+
+sub iri2acc{
   my $iri = shift;
+
   my @a = split/\//, $iri;
   my $acc = pop @a;
   $acc =~ s/\_/\:/;

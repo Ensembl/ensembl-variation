@@ -87,8 +87,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -127,7 +127,8 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
+
     print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
     close ($logPipeFH);
   }
@@ -140,10 +141,10 @@ sub parse_orphanet {
   my $core_db_adaptor = shift;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
 
   my $ga = $core_db_adaptor->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;
 

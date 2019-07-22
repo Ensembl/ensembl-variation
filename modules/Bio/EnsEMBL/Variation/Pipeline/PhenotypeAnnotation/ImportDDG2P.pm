@@ -81,8 +81,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -143,7 +143,7 @@ sub parse_ddg2p {
   my $core_dba = shift;
 
   my $ga = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
@@ -153,16 +153,16 @@ sub parse_ddg2p {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open $fh, "zcat $workdir/$infile |" or die ("Could not open $infile for reading");
+    open ($fh, "zcat $workdir/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open($fh,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+    open ($fh,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   my %headers;
 
   my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
-            or die "Cannot use CSV: ".Text::CSV->error_diag ();
+            || die ("Cannot use CSV: ".Text::CSV->error_diag ()."\n");
 
   # Get columns headers
   $csv->column_names ($csv->getline ($fh));

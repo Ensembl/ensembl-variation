@@ -88,8 +88,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -139,7 +139,7 @@ sub parse_zfin {
   my $infile = shift;
 
   my $ga = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/"."log_import_err_".$infile) ;
@@ -148,10 +148,10 @@ sub parse_zfin {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $workdir/$infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir/$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

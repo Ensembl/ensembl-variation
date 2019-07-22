@@ -135,8 +135,8 @@ sub fetch_input {
 
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -181,7 +181,7 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
     print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
     close ($logPipeFH);
   }
@@ -203,7 +203,7 @@ sub split_omia {
 
   my %data;
 
-  open F, "< $workdir/$all_file" or die $!;
+  open (F, "< $workdir/$all_file") || die ("Could not open file for reading: $!\n");
   while(<F>) {
     chomp ($_);
     next if ($_ =~ /^gene_symbol/);
@@ -244,7 +244,7 @@ sub split_omia {
     $id =~ s/^domestic_//g;
 
     make_path($workdir."/"."omia_split");
-    open OUT, "> $workdir/omia_split/$prefix$id$suffix" or die $!;
+    open (OUT, "> $workdir/omia_split/$prefix$id$suffix") || die $!;
     foreach my $line (@{$data{$taxo_id}}) {
       print OUT "$line\n";
     }
@@ -266,10 +266,10 @@ sub parse_omia {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $workdir."/".$infile for reading");
+    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $workdir."/".$infile for reading");
   }
   else {
-    open(IN,'<',$workdir."/".$infile) or die ("Could not open $workdir."/".$infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $workdir."/".$infile for reading");
   }
 
   # Read through the file and parse out the desired fields

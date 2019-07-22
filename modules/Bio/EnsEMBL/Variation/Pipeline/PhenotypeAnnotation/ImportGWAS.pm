@@ -168,14 +168,14 @@ sub parse_nhgri {
   my @phenotypes;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   # Read through the file and parse out the desired fields
@@ -189,7 +189,7 @@ sub parse_nhgri {
       $headers{uc($row_data[$_])} = $_ for 0..$#row_data;
     }
     else {
-      die "ERROR: Couldn't find header data\n" unless %headers;
+      die ("ERROR: Could not find header data\n") unless %headers;
 
       my %content;
       $content{$_} = $row_data[$headers{$_}] for keys %headers;
@@ -268,7 +268,7 @@ sub parse_nhgri {
       $data{'variation_names'} = join(',',@ids);
       $data{'study'} = $self->get_pubmed_prefix() . $pubmed_id if (defined($pubmed_id));
 
-      # If we didn't get any rsIds, skip this row (this will also get rid of the header)
+      # If we did not get any rsIds, skip this row (this will also get rid of the header)
       print $errFH1 "WARNING: Could not parse any rsIds from string '$rs_id'\n" if (!scalar(@ids));
       next if (!scalar(@ids));
 

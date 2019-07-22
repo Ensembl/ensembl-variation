@@ -82,8 +82,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -105,7 +105,7 @@ sub fetch_input {
     };
     my $sth = $core_dba->dbc->prepare($st_getdata);
     $sth->execute();
-    open OUT, ">$workdir/$file_mim" or die "ERROR: Unable to write to file $workdir/$file_mim\n";
+    open (OUT, ">$workdir/$file_mim") || die ("ERROR: Unable to write to file $workdir/$file_mim\n");
     print OUT join("\t", @{$sth->{NAME}})."\n";
     while(my @row = $sth->fetchrow_array()) {
       print OUT join("\t", @row)."\n";
@@ -146,7 +146,7 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
     print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
     close ($logPipeFH);
   }
@@ -156,7 +156,7 @@ sub write_output {
 # MIM morbid specific phenotype parsing method
 sub parse_omim_gene {
   my $infile = shift;
-  open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) or die ("Could not open $infile for reading");
+  open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) || die ("Could not open $infile for reading\n");
 
   my @phenotypes;
   # first record is empty

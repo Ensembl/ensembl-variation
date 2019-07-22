@@ -82,8 +82,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open $logFH for writing\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open $errFH for writing\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -118,7 +118,7 @@ sub run {
   print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
 
   # save phenotypes
-  $self->set_skip_synonyms(1);
+  $self->skip_synonyms(1);
   $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
 
   my %param_source = (source_name => $source_info{source_name},
@@ -135,7 +135,7 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
     print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
     close ($logPipeFH);
   }

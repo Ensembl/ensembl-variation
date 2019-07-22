@@ -83,14 +83,14 @@ sub fetch_input {
   make_path($workdir);
   my $file_ega = "ega.studies.csv";
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
   #parse database connection details:
   my %database_conf;
-  open(CONF,'<',$conf_file) or die ("Could not open $conf_file for reading\n");
+  open(CONF,'<',$conf_file) || die ("Could not open $conf_file for reading\n");
   while (<CONF>) {
       chomp;                  # no newline
       s/#.*//;                # no comments
@@ -135,7 +135,7 @@ sub write_output {
   my $self = shift;
 
   if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
+    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
     print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
     close ($logPipeFH);
   }
@@ -148,10 +148,10 @@ sub get_ega_file {
   my $outfile = shift;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$outfile) ;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$outfile) || die ("Could not open file for writing: $!\n");
 
   my $studies = get_all_study_stable_ids();
-  open (FILE, ">".$workdir."/".$outfile);
+  open (FILE, ">".$workdir."/".$outfile) || die ("Could not open file for writing: $!\n");
 
   foreach my $stable_id (sort {$a cmp $b } @$studies) {
     my $study_id = get_study_id($stable_id);
@@ -284,7 +284,7 @@ sub parse_ega {
   my $asso_study_ins_sth   = $variation_dba->dbc->prepare($asso_study_ins_stmt);
 
   # Open the input file for reading
-  open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+  open(IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
 
   # Read through the file and parse out the desired fields
   my @new_studies;

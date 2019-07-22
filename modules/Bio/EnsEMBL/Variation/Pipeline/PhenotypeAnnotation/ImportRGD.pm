@@ -91,8 +91,8 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
+  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   $self->SUPER::set_logFH($logFH);
   $self->SUPER::set_errFH($errFH);
 
@@ -129,7 +129,7 @@ sub run {
   my $rgd_file = $self->required_param('qtl_file');   #GO through files and parse them in the correct format
 
   # get seq_region_ids
-  my $seq_region_ids = $self->get_seq_region_ids($variation_dba);
+  my $seq_region_ids = $self->get_seq_region_ids();
 
   # parse phenotypes
   my ($results, $version) = parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
@@ -183,14 +183,14 @@ sub parse_rgd_gene {
   my @phenotypes;
 
   my $gene_adaptor = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($gene_adaptor);
+  die("ERROR: Could not get gene adaptor\n") unless defined($gene_adaptor);
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
   
   my %rgd_coords;
@@ -218,7 +218,7 @@ sub parse_rgd_gene {
       $headers{$data_line[$_]} = $_ for 0..$#data_line;
     }
     else {
-      die "ERROR: Couldn't find header data\n" unless %headers;
+      die ("ERROR: Could not find header data\n") unless %headers;
 
       my %data;
       $data{$_} = $data_line[$headers{$_}] for keys %headers;
@@ -291,10 +291,10 @@ sub parse_rgd_qtl {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $workdir."/".$infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open(IN,'<',$workdir."/".$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   my (%headers, $line_num);
@@ -318,7 +318,7 @@ sub parse_rgd_qtl {
     if(/^QTL_RGD_ID/) {     # header
       $headers{$data[$_]} = $_ for 0..$#data;
     } else {
-      die "ERROR: Couldn't find header data\n" unless %headers;
+      die ("ERROR: Could not find header data\n") unless %headers;
 
       my %data;
       $data{$_} = $data[$headers{$_}] for keys %headers;

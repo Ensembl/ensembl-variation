@@ -63,12 +63,12 @@ sub get_mouse_phenotype_data {
 
   my $phenotype_file = "$working_dir/$data_source\_phenotypes.txt";
 
-  open(OUT, ">".$phenotype_file) or die ("Could not open $phenotype_file for writing");
+  open(OUT, ">".$phenotype_file) || die ("Could not open $phenotype_file for writing\n");
   my $http = HTTP::Tiny->new();
 
   my $i      = 0;
   my $rows   = 0;
-  my $server = 'http://www.ebi.ac.uk';
+  my $server = 'https://www.ebi.ac.uk';
   my $ext     = "$url/select?q=*:*&rows=$i&wt=json";
 
   # get total number of rows
@@ -111,7 +111,7 @@ sub get_mouse_phenotype_data_source_ids {
   my ($self, $phenotype_file, $data_source, $variation_dba) = @_;
 
   my $dbh = $variation_dba->dbc->db_handle;
-  open(IN, "<".$phenotype_file) or die ("Could not open $phenotype_file for reading");
+  open(IN, "<".$phenotype_file) || die ("Could not open $phenotype_file for reading\n");
   my $source_names = {};
   my $source_name2id = {};
 
@@ -153,7 +153,7 @@ sub update_mouse_phenotype_data_version {
 
   my $http = HTTP::Tiny->new();
 
-  my $url = 'http://www.mousephenotype.org/data/release.json';
+  my $url = 'https://www.mousephenotype.org/data/release.json';
   my $response = $http->get($url, {
     headers => { 'Content-type' => 'application/json' }
   });
@@ -187,7 +187,7 @@ sub update_mouse_phenotype_data_version {
   my $dbh = $variation_db->dbc->db_handle;
 
   foreach my $source_name (keys %$source_name2ids) {
-    $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) or die $dbh->errstr;
+    $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) || die ("Could not update source: $dbh->errstr\n");
   }
   return $version;
 }
@@ -210,7 +210,7 @@ sub get_marker_coords {
   my $markers;
   my $column_headers;
   # filter for marker accession ids (MGI)
-  open(IN, "<".$phenotype_file) or die ("Could not open $phenotype_file for reading");
+  open(IN, "<".$phenotype_file) || die ("Could not open $phenotype_file for reading\n");
   while (<IN>) {
     chomp;
     my @pairs = split("\t", $_);
@@ -224,7 +224,7 @@ sub get_marker_coords {
   }
   close IN;
 
-  open(IN, "<".$coord_file) or die ("Could not open $coord_file for reading");
+  open(IN, "<".$coord_file) || die ("Could not open $coord_file for reading\n");
   my $header;
   my $marker_coords = {};
   while (<IN>) {
@@ -282,9 +282,9 @@ sub get_marker_coords {
 }
 
 sub parse_mouse_phenotype_data {
-  my ($self, $infile, $marker_coords, $data_source, $source_name2ids, $variaiton_dba) = @_;
+  my ($self, $infile, $marker_coords, $data_source, $source_name2ids, $variaton_dba) = @_;
 
-  my $individual_adaptor = $variaiton_dba->get_IndividualAdaptor;
+  my $individual_adaptor = $variaton_dba->get_IndividualAdaptor;
 
   my @phenotypes = ();
   my $already_inserted = {};
@@ -294,7 +294,7 @@ sub parse_mouse_phenotype_data {
     'allele_accession_id',
     'marker_accession_id',);
 
-  open(IN, "<".$infile) or die ("Could not open $infile for reading");
+  open(IN, "<".$infile) || die ("Could not open $infile for reading\n");
   while (<IN>) {
     chomp;
     my %data = ();
