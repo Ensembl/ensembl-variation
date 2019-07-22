@@ -305,7 +305,7 @@ sub parse_cancer_gene_census {
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
 
-  my $ga = $basePheno->get_core_db_adaptor->get_GeneAdaptor;
+  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;

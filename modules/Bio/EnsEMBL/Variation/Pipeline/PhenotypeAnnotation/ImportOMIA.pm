@@ -53,12 +53,8 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-
-my $debug;
+my $basePheno;
 
 my %species = (
   9685  => 'cat',
@@ -73,7 +69,8 @@ my %species = (
   10090 => 'mouse',
   13616 => 'opossum',
   9601  => 'orangutan',
-  9825  => 'pig', # Sus scrofa domesticus
+#  9825  => 'pig', # Sus scrofa domesticus
+  9823  => 'pig', # Sus scrofa
   9258  => 'platypus',
   10116 => 'rat',
   9940  => 'sheep',
@@ -97,7 +94,7 @@ my %species_synonyms = (
   'mouse' => 'mus_musculus',
   'opossum' => 'monodelphis_domestica',
   'orangutan' => 'pongo_abelii',
-  'pig'  => 'sus_scrofa', # Sus scrofa domesticus
+  'pig'  => 'sus_scrofa', # Sus scrofa domesticus vs. sus scrofa
   'platypus' => 'ornithorhynchus_anatinus',
   'rat' => 'rattus_norvegicus',
   'sheep'  => 'ovis_aries',
@@ -113,16 +110,14 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $core_dba       = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $omia_url = 'https://omia.org/curate/causal_mutations/?format=gene_table';
 
   %source_info = (source_description => 'Online Mendelian Inheritance in Animals (OMIA) is a database of genes, inherited disorders and traits in more than 200 animal species (other than human and mouse)',
-                  source_url => 'http://omia.angis.org.au/home/',
+                  source_url => 'https://omia.org',
                   object_type => 'Gene',
                   #source_version  will be set based on the date of the fetched input file (year/month/day-> yyyymmdd)
                   source_name => 'OMIA',        #source name in the variation db
@@ -135,10 +130,12 @@ sub fetch_input {
 
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   #get input files OMIA gene_table, this file contains multiple species
   print $logFH "Found file (".$workdir_fetch."/".$file_omia.") and will skip new fetch\n" if -e $workdir_fetch."/".$file_omia;
@@ -161,30 +158,31 @@ sub run {
 
   my $omia_file = $self->required_param('omia_file');
 
+  # dump and clean pre-existing phenotypes
+  $basePheno->dump_phenotypes($source_info{source_name},$workdir, 1);
+
   # get phenotype data
   my $results = parse_omia($omia_file);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $basePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => [$source_info{object_type}]);
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH;
+  close($basePheno->errFH) if defined $basePheno->errFH;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
@@ -258,18 +256,18 @@ sub parse_omia {
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
-
-  my $ga = $core_dba->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
+;
+  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $workdir."/".$infile for reading");
+    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $workdir."/".$infile for reading\n");
   }
   else {
-    open (IN,'<',$workdir."/".$infile) || die ("Could not open $workdir."/".$infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $workdir."/".$infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

@@ -364,7 +364,7 @@ sub _sql_statements {
 sub get_seq_region_ids {
   my $self = shift;
 
-  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
+  my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT seq_region_id, name
     FROM seq_region
   });
@@ -379,10 +379,22 @@ sub get_seq_region_ids {
 }
 
 
+=head2 get_or_add_source
+
+  Arg [1]    : hashref $source_info
+  Example    : $obj->get_or_add_source($source_info)
+  Description: Inserts or Updates the source in the variation database and returns the source_id.
+  Returntype : Integer source_id
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_or_add_source {
   my ($self, $source_info) = @_;
 
-  my $db_adaptor = $self->{variation_dba};
+  my $db_adaptor = $self->variation_db_adaptor;
 
   my $stmt = qq{
     SELECT
@@ -455,8 +467,8 @@ sub get_or_add_source {
 sub save_phenotypes {
   my ($self, $source_info, $input_data) = @_;
 
-  my $core_dba = $self->{core_dba};
-  my $phenotype_dba =  $self->{variation_dba}->get_PhenotypeAdaptor;
+  my $core_dba = $self->core_db_adaptor;
+  my $phenotype_dba =  $self->variation_db_adaptor->get_PhenotypeAdaptor;
 
   my $set = defined($source_info->{set}) ? $source_info->{set} : undef;
   $source_info->{source_status} = 'germline' unless defined($source_info->{source_status});
@@ -502,7 +514,7 @@ sub save_phenotypes {
     }
   }
 
-  $coords ||= $self->_get_coords(\@ids,$variation_ids, $source_info->{object_type}, $source_info->{object_type} eq 'Gene' ? $self->{core_dba} : $self->{variation_dba});
+  $coords ||= $self->_get_coords(\@ids,$variation_ids, $source_info->{object_type}, $source_info->{object_type} eq 'Gene' ? $self->core_db_adaptor : $self->variation_db_adaptor);
 
   # uniquify coords
   foreach my $id (keys %$coords) {
@@ -553,14 +565,123 @@ sub save_phenotypes {
   }
 }
 
+
+=head2 dump_phenotypes
+
+    Arg [1]              : String $source_name
+    Arg [2]              : String $workdir
+    Arg [3]              : boolean $clean (optional) default: 0
+    Example              : $self->dump_phenotypes($source_id, $workdir, 1);
+    Description          : Dumps the existing phenotype_features, phenotype_feautres_attribs for the particular source and removes them if clean option selected.
+                          $clean option removes the phenotype feautre data including phenotypes and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
+    Returntype           : none
+    Exceptions           : none
+    Caller               : general
+    Status               : Stable
+
+=cut
+
+sub dump_phenotypes {
+  my ($self, $source_name, $workdir, $clean) = @_;
+
+  die ("source_name and workdir need to be specified!\n") unless defined $source_name && defined $workdir;
+  $clean ||= 0;
+
+  # Prepared statements
+  my $pfa_select_stmt = qq{
+    SELECT pfa.*
+    FROM phenotype_feature_attrib pfa, phenotype_feature pf, source s
+    WHERE pfa.phenotype_feature_id = pf.phenotype_feature_id
+        AND pf.source_id = s.source_id
+        AND s.name = \"$source_name\"
+  };
+  my $pfa_delete_stmt = qq{
+    DELETE pfa.*
+    FROM phenotype_feature_attrib pfa, phenotype_feature pf, source s
+    WHERE pfa.phenotype_feature_id = pf.phenotype_feature_id
+      AND pf.source_id = s.source_id
+      AND s.name = \"$source_name\"
+  };
+
+  my $pf_select_stmt = qq{
+    SELECT pf.*
+    FROM phenotype_feature pf, source s
+    WHERE pf.source_id = s.source_id
+    AND s.name = \"$source_name\"
+  };
+  my $pf_delete_stmt = qq{
+    DELETE pf.*
+    FROM phenotype_feature pf, source s
+    WHERE pf.source_id = s.source_id
+    AND s.name = \"$source_name\"
+  };
+
+  my $p_extra_select_stmt = qq{
+    SELECT *
+    FROM phenotype p LEFT JOIN phenotype_feature pf ON pf.phenotype_id = p.phenotype_id
+    WHERE pf.phenotype_id IS null;
+  };
+  my $p_extra_delete_stmt = qq{
+    DELETE p.*
+    FROM phenotype p LEFT JOIN phenotype_feature pf ON pf.phenotype_id = p.phenotype_id
+    WHERE pf.phenotype_id IS null;
+  };
+
+  my $poa_extra_select_stmt = qq{
+    SELECT *
+    FROM phenotype_ontology_accession poa LEFT JOIN phenotype_feature pf ON pf.phenotype_id = poa.phenotype_id
+    WHERE pf.phenotype_id IS null;
+  };
+  my $poa_extra_delete_stmt = qq{
+    DELETE poa.*
+    FROM phenotype_ontology_accession poa LEFT JOIN phenotype_feature pf ON pf.phenotype_id = poa.phenotype_id
+    WHERE pf.phenotype_id IS null;
+  };
+
+  my $db_adaptor    = $self->variation_db_adaptor;
+
+  _sql_to_file($pfa_select_stmt, $db_adaptor, $workdir."/"."pfa_".$source_name.".txt");
+  _sql_to_file($pf_select_stmt, $db_adaptor, $workdir."/"."pf_".$source_name.".txt");
+  _sql_to_file($p_extra_select_stmt, $db_adaptor, $workdir."/"."p_extra_".$source_name.".txt");
+  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $workdir."/"."poa_extra_".$source_name.".txt");
+
+  if ($clean) {
+    my $sth = $db_adaptor->dbc->prepare($pfa_delete_stmt);
+    $sth->execute();
+
+    $sth = $db_adaptor->dbc->prepare($pf_delete_stmt);
+    $sth->execute();
+
+    $sth = $db_adaptor->dbc->prepare($p_extra_delete_stmt);
+    $sth->execute();
+
+    $sth = $db_adaptor->dbc->prepare($poa_extra_delete_stmt);
+    $sth->execute();
+  }
+}
+
 #----------------------------
 # PRIVATE METHODS
+
+
+sub _sql_to_file{
+  my ($sql_stmt, $db_adaptor, $outFile) = @_;
+
+  my $sth = $db_adaptor->dbc->prepare($sql_stmt);
+  $sth->execute();
+
+  open (my $fhDump, ">", $outFile) || die ("Failed to open file".$outFile.": $!\n");
+  while (my $row = $sth->fetchrow_arrayref()) {
+      print $fhDump join( "\t", map {"\"".$_."\""} @$row), "\n"; #some values are undef e.g. study_id, this is expected
+  }
+  close($fhDump);
+}
 
 
 sub _add_phenotypes {
   my ($self, $data, $source_info) = @_;
 
-  my $db_adaptor    = $self->{variation_dba};
+  my $db_adaptor    = $self->variation_db_adaptor;
   my $special_characters = $self->get_special_characters;
 
   my $phenotypes    = $data->{phenotypes};
@@ -796,7 +917,7 @@ sub _add_phenotypes {
 sub _add_synonyms {
   my ($self, $synonyms, $variation_ids, $source_id) = @_;
 
-  my $db_adaptor = $self->{varition_dba};
+  my $db_adaptor = $self->variation_db_adaptor;
 
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
@@ -851,7 +972,7 @@ sub _add_synonyms {
 sub _add_set {
   my ($self, $set, $source_id, $set_from) = @_;
 
-  my $db_adaptor = $self->{variation_dba};
+  my $db_adaptor = $self->variation_db_adaptor;
   return if (!defined($set));
   return if (!defined($set_from) && ($set_from ne 'phenotype' || $set_from ne 'synonym'));
 
@@ -978,8 +1099,8 @@ sub _get_dbIDs {
       v.variation_id=vf.variation_id
     LIMIT 1
   };
-  my $id_sth = $self->get_variation_db_adaptor->dbc->prepare($id_stmt);
-  my $syn_sth = $self->get_variation_db_adaptor->dbc->prepare($syn_stmt);
+  my $id_sth = $self->variation_db_adaptor->dbc->prepare($id_stmt);
+  my $syn_sth = $self->variation_db_adaptor->dbc->prepare($syn_stmt);
 
   my %mapping;
 
@@ -1007,7 +1128,7 @@ sub _get_dbIDs {
 sub _get_attrib_types {
   my $self = shift;
 
-  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
+  my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT code
     FROM attrib_type
   });
@@ -1129,14 +1250,14 @@ sub _get_phenotype_id {
   }
 
   # finally if no match, do an insert
-  my $sth = $self->get_variation_db_adaptor->dbc->prepare(qq{
+  my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
   });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->bind_param(2,$description,SQL_VARCHAR);
   $sth->execute();
-  my $phenotype_id = $self->get_variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
+  my $phenotype_id = $self->variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
 
   # update cache
   $phenotype_cache{$description} = $phenotype_id;
@@ -1170,7 +1291,7 @@ sub _get_study_id {
       LIMIT 1
     };
 
-    my $st_check_sth = $self->get_variation_db_adaptor->dbc->prepare($st_check_stmt);
+    my $st_check_sth = $self->variation_db_adaptor->dbc->prepare($st_check_stmt);
     my $param_num = 1;
 
     if (defined $phenotype->{"study"}) {
@@ -1202,7 +1323,7 @@ sub _get_study_id {
       $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
       $st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
       $st_ins_sth->execute();
-      $study_id = $self->get_variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
+      $study_id = $self->variation_db_adaptor->dbc->db_handle->{'mysql_insertid'};
       $self->{study_count}++;
     }
   }
