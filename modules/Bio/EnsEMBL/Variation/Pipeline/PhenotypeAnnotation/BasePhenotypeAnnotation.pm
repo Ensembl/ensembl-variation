@@ -554,11 +554,11 @@ sub save_phenotypes {
 
   # Add the variation sets if required
   unless ($self->{skip_sets}) {
-    if (%synonym && !$self->{skip_synonyms} && $self->{skip_phenotypes}) {
+    if (%synonym && !$self->{skip_synonyms}) {
       $self->print_logFH("Adding variation sets for synonyms\n") if ($self->{debug});
       $self->_add_set($set,$source_id,'synonym');
     }
-    elsif (@phenotypes && !$self->{skip_phenotypes}) {
+    elsif (@phenotypes) {
       $self->print_logFH("Adding variation sets for phenotypes\n") if ($self->{debug});
       $self->_add_set($set,$source_id,'phenotype');
     }
