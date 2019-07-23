@@ -46,17 +46,15 @@ use LWP::Simple;
 use XML::LibXML;
 use POSIX 'strftime';
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
+
+my $basePheno;
+
 my %special_characters;
-
-my $core_dba;
-my $variation_dba;
-
-my $debug;
 
 sub fetch_input {
   my $self = shift;
@@ -64,13 +62,11 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $core_dba        = $self->get_species_adaptor('core');
-  $variation_dba   = $self->get_species_adaptor('variation');
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
-
-  %special_characters = %{$self->get_special_characters};
+  %special_characters = %{$basePheno->get_special_characters};
 
   my $orphanet_data_url = 'http://www.orphadata.org/data/xml/en_product6.xml';
 
@@ -87,10 +83,12 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   my $file_orphanet = "en_product6.xml";
   getstore($orphanet_data_url, $workdir."/".$file_orphanet) unless -e $workdir."/".$file_orphanet;
@@ -105,22 +103,20 @@ sub run {
   my $file_orphanet = $self->required_param('orphanet_file');
 
   # get phenotype data + save it (all in one method)
-  my ($results,$source_date) = parse_orphanet($workdir."/".$file_orphanet, $core_dba);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  my ($results,$source_date) = parse_orphanet($workdir."/".$file_orphanet);
+  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
 
   #save source_date
   $source_info{source_version} = $source_date;
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $basePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
@@ -138,7 +134,8 @@ sub write_output {
 # Orphanet specific phenotype parsing method
 sub parse_orphanet {
   my $infile = shift;
-  my $core_db_adaptor = shift;
+
+  my $core_db_adaptor = $basePheno->core_db_adaptor;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");

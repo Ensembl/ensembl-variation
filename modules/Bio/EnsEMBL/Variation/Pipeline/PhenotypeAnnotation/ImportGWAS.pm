@@ -46,16 +46,13 @@ use File::stat;
 use File::Basename;
 use POSIX 'strftime';
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-
-my $debug;
+my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -63,10 +60,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $core_dba    = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-
-  $debug        = $self->param('debug_mode');
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $gwas_url = 'http://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 
@@ -84,10 +80,12 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   #get input files:
   my $file_gwas;
@@ -133,36 +131,34 @@ sub run {
   my $gwas_file = $self->required_param('gwas_file');
 
   # get phenotype data
-  my $results = $self->parse_nhgri($gwas_file);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  my $results = parse_nhgri($gwas_file);
+  $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $basePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH ;
+  close($basePheno->errFH) if defined $basePheno->errFH ;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
 
 # NHGRI-EBI GWAS specific phenotype parsing method
 sub parse_nhgri {
-  my ($self, $infile) = @_;
+  my $infile = shift;
 
   my %headers;
   my @phenotypes;
@@ -266,7 +262,7 @@ sub parse_nhgri {
         push(@ids,$1);
       }
       $data{'variation_names'} = join(',',@ids);
-      $data{'study'} = $self->get_pubmed_prefix() . $pubmed_id if (defined($pubmed_id));
+      $data{'study'} = $basePheno->get_pubmed_prefix . $pubmed_id if (defined($pubmed_id));
 
       # If we did not get any rsIds, skip this row (this will also get rid of the header)
       print $errFH1 "WARNING: Could not parse any rsIds from string '$rs_id'\n" if (!scalar(@ids));

@@ -46,7 +46,8 @@ use File::Basename;
 use DateTime;
 use JSON;
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
@@ -144,7 +145,7 @@ sub run {
 
   # get phenotype data + save it (all in one method)
   my $results = parse_cancer_gene_census($file_cgc_ensembl);
-  $basePheno->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug) ;
+  $basePheno->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug);
 
   # save phenotypes
   $basePheno->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;

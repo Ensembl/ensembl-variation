@@ -46,16 +46,13 @@ use File::stat;
 use POSIX 'strftime';
 use LWP::Simple;
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-
-my $debug;
+my $mouseBasePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -64,11 +61,9 @@ sub fetch_input {
   my $species      = $self->required_param('species');
   my $coord_file   = $self->required_param('coord_file');
 
-  $core_dba    = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
+  $mouseBasePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $mouseBasePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $mouseBasePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'Mouse Genome Informatics',
                   source_url => 'http://www.informatics.jax.org/',
@@ -81,16 +76,18 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $mouseBasePheno->logFH($logFH);
+  $mouseBasePheno->errFH($errFH);
+  $mouseBasePheno->pipelogFH($pipelogFH);
 
   #get input file MGI:
   my $url = '/mi/impc/solr/mgi-phenotype';
   my $file_mgi = "MGI_phenotypes.txt";
   print $logFH "Found file (".$workdir."/".$file_mgi."), will skip new fetch\n" if -e $workdir."/".$file_mgi;
-  $file_mgi = $self->get_mouse_phenotype_data($workdir, $source_info{source_name}, $url) unless -e $workdir."/".$file_mgi;
+  $file_mgi = $mouseBasePheno->get_mouse_phenotype_data($workdir, $source_info{source_name}, $url) unless -e $workdir."/".$file_mgi;
 
   $self->param('mgi_file', $file_mgi);
 }
@@ -102,24 +99,24 @@ sub run {
   my $coord_file = $self->required_param('coord_file');
 
   #get source ids
-  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source_name},$variation_dba);
-  print $logFH $source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n" if ($debug);
+  my $mouse_phenotype_source_ids = $mouseBasePheno->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source_name});
+  $mouseBasePheno->print_logFH($source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n") if ($mouseBasePheno->debug);
 
-  $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids,$variation_dba); 
-  $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids,$variation_dba);
-  my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $coord_file,$core_dba);
+  $source_info{source_version} = $mouseBasePheno->update_mouse_phenotype_data_version($mouse_phenotype_source_ids); 
+  $mouseBasePheno->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids);
+  my $marker_coords = $mouseBasePheno->get_marker_coords($workdir."/".$file_mgi, $coord_file);
 
   # get phenotype data
-  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source_name}, $mouse_phenotype_source_ids, $variation_dba);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n" if $debug ;
+  my $results = $mouseBasePheno->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source_name}, $mouse_phenotype_source_ids);
+  $mouseBasePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($mouseBasePheno->debug);
 
   #get source id
-  my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
+  my $source_id = $mouseBasePheno->get_or_add_source(\%source_info);
+  $mouseBasePheno->print_logFH("$source_info{source_name} source_id is $source_id\n" if ($mouseBasePheno->debug);
 
   # save phenotypes
-  $self->skip_synonyms(1);
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $mouseBasePheno->skip_synonyms(1);
+  $mouseBasePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
@@ -127,18 +124,16 @@ sub run {
                                species => $self->required_param('species'),
                                workdir => $workdir
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $mouseBasePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($mouseBasePheno->debug);
+  close($mouseBasePheno->logFH) if defined $mouseBasePheno->logFH ;
+  close($mouseBasePheno->errFH) if defined $mouseBasePheno->errFH ;
+  close($mouseBasePheno->pipelogFH) if defined $mouseBasePheno->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }

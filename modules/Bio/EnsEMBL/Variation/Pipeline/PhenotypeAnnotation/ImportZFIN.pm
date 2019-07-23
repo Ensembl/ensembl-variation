@@ -46,16 +46,13 @@ use File::stat;
 use POSIX 'strftime';
 use LWP::Simple;
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-
-my $debug;
+my $basePheno;
 
 sub fetch_input {
   #create output folder structure and fetches input files
@@ -64,11 +61,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $core_dba       = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   # import specific constants
   %source_info = (source_description => 'The zebrafish model organism database',
@@ -88,10 +83,12 @@ sub fetch_input {
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   getstore($zfin_url, $workdir."/".$inputFile) unless -e $workdir."/".$inputFile;
   print $logFH "Found files (".$workdir."/".$inputFile.") and will skip new fetch\n" if -e $workdir."/".$inputFile;
@@ -108,28 +105,25 @@ sub run {
 
   # get phenotype data
   my $results = parse_zfin($input_file);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if ($basePheno->debug);
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $basePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name},
                         type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH ;
+  close($basePheno->errFH) if defined $basePheno->errFH ;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
@@ -138,7 +132,7 @@ sub write_output {
 sub parse_zfin {
   my $infile = shift;
 
-  my $ga = $core_dba->get_GeneAdaptor;
+  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;

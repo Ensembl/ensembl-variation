@@ -45,17 +45,14 @@ use POSIX 'strftime';
 use LWP::Simple;
 use DBI qw(:sql_types);
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 my %source_info;
 my $workdir;
-my ($logFH, $errFH);
+my $dbh;      #EGA connection
 
-my $core_dba;
-my $variation_dba;
-my $dbh;
-
-my $debug;
+my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -64,11 +61,9 @@ sub fetch_input {
   my $species      = $self->required_param('species');
   my $conf_file    = $self->required_param('ega_database_conf');
 
-  $core_dba    = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-
-  $debug        = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'Variants imported from the European Genome-phenome Archive with phenotype association',
                   source_url => 'https://www.ebi.ac.uk/ega/',
@@ -83,10 +78,12 @@ sub fetch_input {
   make_path($workdir);
   my $file_ega = "ega.studies.csv";
 
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   #parse database connection details:
   my %database_conf;
@@ -115,30 +112,28 @@ sub run {
   my $file_ega = $self->required_param('ega_file');
 
   #get source id
-  my $source_id = $self->get_or_add_source(\%source_info,$variation_dba);
-  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($debug);
+  my $source_id = $basePheno->get_or_add_source(\%source_info);
+  $basePheno->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($basePheno->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = $self->parse_ega($file_ega, $source_id);
-  print $logFH "Got ".(scalar @{$results->{'studies'}})." new studies \n" if $debug ;
+  my $results = parse_ega($file_ega, $source_id);
+  $basePheno->print_logFH("Got ".(scalar @{$results->{'studies'}})." new studies \n") if ($basePheno->debug);
 
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH ;
+  close($basePheno->errFH) if defined $basePheno->errFH ;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
@@ -220,8 +215,9 @@ sub get_publication {
 
 # EGA specific phenotype parsing method
 sub parse_ega {
-  my ($self, $infile, $source_id) = @_;
+  my ($infile, $source_id) = @_;
 
+  my $variation_dba = $basePheno->variation_db_adaptor;
   my $errFH2;
   open ($errFH2, ">", $workdir."/".'log_import_err_parse_'.$infile) ;
 
@@ -293,7 +289,7 @@ sub parse_ega {
     my @attributes = split(",",$_);
     next if ($attributes[1] eq '');
     my $name = $attributes[0];
-    my $pubmed = $self->get_pubmed_prefix().$attributes[1];
+    my $pubmed = $basePheno->get_pubmed_prefix.$attributes[1];
     my $url = $attributes[2];
 
     # NHGRI study
