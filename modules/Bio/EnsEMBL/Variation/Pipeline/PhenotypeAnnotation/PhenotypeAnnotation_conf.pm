@@ -106,8 +106,6 @@ sub default_options {
 
         threshold_qtl           =>  0, # default for RGD_qtl, AnimalQTL
 
-        animalqtl_input_dir     => $self->o('pipeline_dir').'/inputData',
-
         ega_database_conf       => $self->o('pipeline_dir').'/ega_database.conf',
 
         # configuration for the various resource options used in the pipeline
@@ -180,7 +178,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -flow_into  => {
                 '2->A' => [ 'import_rgd' ],
-                '3->A' => [ 'import_animal_qtldb' ],
+                '3->A' => [ 'import_animalqtldb' ],
                 '4->A' => [ 'import_zfin' ],
                 '5->A' => [ 'import_gwas' ],
                 '6->A' => [ 'import_omia' ],
@@ -209,10 +207,9 @@ sub pipeline_analyses {
             -failed_job_tolerance => 1, # tries 1 times to run a job
         },
 
-        {   -logic_name => 'import_animal_qtldb',
+        {   -logic_name => 'import_animalqtldb',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportAnimalQTL',
             -parameters => {
-                animalqtl_input_dir => $self->o('animalqtl_input_dir'),
                 threshold_qtl       => $self->o('threshold_qtl'),
                 @common_params,
             },
@@ -220,7 +217,7 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                2 => [ 'check_phenotypes']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
