@@ -46,13 +46,10 @@ use File::stat;
 use File::Basename;
 use POSIX 'strftime';
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -60,9 +57,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $gwas_url = 'http://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 
@@ -83,9 +80,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   #get input files:
   my $file_gwas;
@@ -131,11 +128,11 @@ sub run {
   my $gwas_file = $self->required_param('gwas_file');
 
   # get phenotype data
-  my $results = parse_nhgri($gwas_file);
-  $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
+  my $results = $self->parse_nhgri($gwas_file);
+  $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
@@ -147,10 +144,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH ;
-  close($basePheno->errFH) if defined $basePheno->errFH ;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
@@ -158,7 +155,7 @@ sub write_output {
 
 # NHGRI-EBI GWAS specific phenotype parsing method
 sub parse_nhgri {
-  my $infile = shift;
+  my ($self, $infile) = @_;
 
   my %headers;
   my @phenotypes;
@@ -262,7 +259,7 @@ sub parse_nhgri {
         push(@ids,$1);
       }
       $data{'variation_names'} = join(',',@ids);
-      $data{'study'} = $basePheno->get_pubmed_prefix . $pubmed_id if (defined($pubmed_id));
+      $data{'study'} = $self->get_pubmed_prefix . $pubmed_id if (defined($pubmed_id));
 
       # If we did not get any rsIds, skip this row (this will also get rid of the header)
       print $errFH1 "WARNING: Could not parse any rsIds from string '$rs_id'\n" if (!scalar(@ids));

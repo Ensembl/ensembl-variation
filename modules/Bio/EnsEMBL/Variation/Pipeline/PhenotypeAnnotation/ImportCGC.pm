@@ -46,13 +46,10 @@ use File::Basename;
 use DateTime;
 use JSON;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -60,10 +57,10 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $basePheno->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'http://cancer.sanger.ac.uk/census',
@@ -82,9 +79,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   #get input file CGC via OpenTargets, get latest published file:
   my $dt = DateTime->now;
@@ -134,21 +131,21 @@ sub run {
   my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
 
   #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
-  $basePheno->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
-  $basePheno->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
-  get_cancer_gene_census_file($file_cgc, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
-  $basePheno->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
+  $self->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
+  $self->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
+  $self->get_cancer_gene_census_file($file_cgc, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
+  $self->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
 
   #get source id
-  my $source_id = $basePheno->get_or_add_source(\%source_info);
-  $basePheno->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($basePheno->debug);
+  my $source_id = $self->get_or_add_source(\%source_info);
+  $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = parse_cancer_gene_census($file_cgc_ensembl);
-  $basePheno->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug);
+  my $results = $self->parse_cancer_gene_census($file_cgc_ensembl);
+  $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;
+  $self->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
@@ -160,10 +157,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH ;
-  close($basePheno->errFH) if defined $basePheno->errFH ;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
@@ -172,8 +169,7 @@ sub write_output {
 
 #CancerGeneCensus specific data prep
 sub get_cancer_gene_census_file {
-  my $input_file = shift;
-  my $output_file = shift;
+  my ($self, $input_file, $output_file) = @_;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) || die ("Failed to open file: $!\n");
@@ -181,9 +177,9 @@ sub get_cancer_gene_census_file {
   my %efos;
   my %data;
 
-  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
-  my $ota = $basePheno->ontology_db_adaptor->get_OntologyTermAdaptor;
+  my $ota = $self->ontology_db_adaptor->get_OntologyTermAdaptor;
   die("ERROR: Could not get ontology term adaptor\n") unless defined($ota);
 
   if($input_file =~ /gz$/) {
@@ -301,12 +297,12 @@ sub parse_publications {
 
 # CGC specific phenotype parsing method
 sub parse_cancer_gene_census {
-  my $infile = shift;
+  my ($self, $infile) = @_;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
 
-  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;

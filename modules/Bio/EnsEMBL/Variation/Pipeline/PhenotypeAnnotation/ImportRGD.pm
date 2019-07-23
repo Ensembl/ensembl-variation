@@ -43,13 +43,10 @@ use strict;
 use File::Path qw(make_path);
 use LWP::Simple;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -57,9 +54,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $rgd_ftp_url_qtl = 'ftp://ftp.rgd.mcw.edu/pub/data_release/';
   my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
@@ -89,9 +86,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   #get input files RGD eQTL, GENE:
   my $file_qtl = 'QTLS_'.$rgd_names_qtl{$species}.'.txt';
@@ -107,11 +104,11 @@ sub fetch_input {
   $self->param('gene_file', [@files_todo]);
 
   #fetch coreDB assembly:
-  my $gc =  $basePheno->core_db_adaptor->get_adaptor('GenomeContainer');
+  my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
   if ($species eq 'rattus_norvegicus'){
     my @assemblyV = split('_',$gc->get_version); #Rnor_6.0
     $self->param('species_assembly', $assemblyV[1]);  #'6.0';
-    print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($basePheno->debug);
+    print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
   }
 
 }
@@ -126,26 +123,26 @@ sub run {
   my $rgd_file = $self->required_param('qtl_file');   #GO through files and parse them in the correct format
 
   # get seq_region_ids
-  my $seq_region_ids = $basePheno->get_seq_region_ids();
+  my $seq_region_ids = $self->get_seq_region_ids();
 
   # parse phenotypes
-  my ($results, $version) = parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
-  $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
+  my ($results, $version) = $self->parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
+  $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes:
   $source_info{source} = 'rgd_qtl';
   $source_info{source_version} = $version;
 
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   #Process GENEs files
   foreach my $rgd_gene_file (@{$self->required_param('gene_file')}){
-    my ($results, $version) = parse_rgd_gene($seq_region_ids, $rgd_gene_file);
-    $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes from file $rgd_gene_file\n" if ($basePheno->debug);
+    my ($results, $version) = $self->parse_rgd_gene($seq_region_ids, $rgd_gene_file);
+    $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes from file $rgd_gene_file\n") if ($self->debug);
     $source_info{source} = 'rgd_gene';
     $source_info{object_type} = 'Gene'; # By default it is set to 'QTL
 
-    $basePheno->save_phenotypes(\%source_info, $results);
+    $self->save_phenotypes(\%source_info, $results);
   }
 
   my %param_source = (source_name => 'RGD',
@@ -158,10 +155,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH ;
-  close($basePheno->errFH) if defined $basePheno->errFH ;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
   
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
@@ -169,15 +166,14 @@ sub write_output {
 
 # RGD specific phenotype parsing method for GENE files
 sub parse_rgd_gene {
-  my $seq_region_ids = shift;
-  my $infile = shift;
+  my ($self, $seq_region_ids, $infile) = @_;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
-  my $gene_adaptor = $basePheno->core_db_adaptor->get_GeneAdaptor;
+  my $gene_adaptor = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($gene_adaptor);
 
   # Open the input file for reading
@@ -201,7 +197,7 @@ sub parse_rgd_gene {
     if (/^\#\s+GENERATED-ON:\s+(.*)/){
       $version = $1;
       $version =~ s/\///g;
-      print $errFH1 "$infile source version: ", $version, "\n" if ($basePheno->debug);
+      print $errFH1 "$infile source version: ", $version, "\n" if ($self->debug);
     }
 
     next if /^(\#|\s)/ || !$_;
@@ -275,9 +271,7 @@ sub parse_rgd_gene {
 
 # RGD specific phenotype parsing method for eQTLs
 sub parse_rgd_qtl {
-  my $seq_region_ids = shift;
-  my $infile = shift;
-  my $assembly = shift;
+  my ($self, $seq_region_ids, $infile, $assembly)  = @_ ;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
@@ -303,7 +297,7 @@ sub parse_rgd_qtl {
     if (/^\#\s+GENERATED-ON:\s+(.*)/){
       $version = $1;
       $version =~ s/\///g;
-      print $errFH1 "source version: ", $version, "\n" if ($basePheno->debug);
+      print $errFH1 "source version: ", $version, "\n" if ($self->debug);
     }
     next if (/^(\#|\s)/ || !$_) ;
 

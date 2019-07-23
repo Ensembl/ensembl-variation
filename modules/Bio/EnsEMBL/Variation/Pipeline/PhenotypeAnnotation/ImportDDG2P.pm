@@ -46,13 +46,10 @@ use POSIX 'strftime';
 use IO::Uncompress::Gunzip qw(gunzip);
 use Text::CSV;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -60,10 +57,10 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $basePheno->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
                   source_url => 'http://decipher.sanger.ac.uk/',
@@ -80,9 +77,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   #get input file DDG2P:
   my $ddg2p_url = 'http://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
@@ -104,15 +101,15 @@ sub run {
   my $file_ddg2p = $self->required_param('ddg2p_file');
 
   #get source id
-  my $source_id = $basePheno->get_or_add_source(\%source_info);
-  print $logFH "$source_info{source_name} source_id is $source_id\n" if ($basePheno->debug);
+  my $source_id = $self->get_or_add_source(\%source_info);
+  $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = parse_ddg2p($file_ddg2p, $core_dba);
-  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug);
+  my $results = $self->parse_ddg2p($file_ddg2p);
+  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
@@ -124,20 +121,19 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH ;
-  close($basePheno->errFH) if defined $basePheno->errFH ;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
 # DDG2P specific phenotype parsing method
 sub parse_ddg2p {
-  my $infile = shift;
-  my $core_dba = shift;
+  my ($self, $infile) = @_ ;
 
-  my $ga = $core_dba->get_GeneAdaptor;
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;

@@ -45,13 +45,10 @@ use File::Path qw(make_path);
 use File::stat;
 use POSIX 'strftime';
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 sub fetch_input {
   my $self = shift;
@@ -59,9 +56,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $dateStr = strftime "%Y%m%d", localtime;
 
@@ -80,9 +77,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   # get input file for MIM import
   my $file_mim = "mim_dump.txt";
@@ -100,7 +97,7 @@ sub fetch_input {
             x.xref_id = o.xref_id AND
             o.ensembl_id = g.gene_id AND e.db_name = 'MIM_MORBID'
     };
-    my $sth = $basePheno->core_db_adaptor->dbc->prepare($st_getdata);
+    my $sth = $self->core_db_adaptor->dbc->prepare($st_getdata);
     $sth->execute();
     open (OUT, ">$workdir/$file_mim") || die ("ERROR: Unable to write to file $workdir/$file_mim\n");
     print OUT join("\t", @{$sth->{NAME}})."\n";
@@ -119,15 +116,15 @@ sub run {
   my $file_mim = $self->required_param('mim_file');
 
   #get source id
-  my $source_id = $basePheno->get_or_add_source(\%source_info);
-  $basePheno->print_pipelogFH("$source_info{source_name} source_id is $source_id\n") if ($basePheno->debug);
+  my $source_id = $self->get_or_add_source(\%source_info);
+  $self->print_pipelogFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data
   my $results = parse_omim_gene($workdir."/".$file_mim);
-  $basePheno->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($basePheno->debug);
+  $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
@@ -139,10 +136,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH ;
-  close($basePheno->errFH) if defined $basePheno->errFH ;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
@@ -150,6 +147,7 @@ sub write_output {
 # MIM morbid specific phenotype parsing method
 sub parse_omim_gene {
   my $infile = shift;
+
   open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) || die ("Could not open $infile for reading\n");
 
   my @phenotypes;
