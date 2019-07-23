@@ -40,8 +40,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportZFIN;
 use strict;
 use warnings;
 
-use File::Copy;
-use File::Path qw(make_path remove_tree);
+use File::Path qw(make_path);
 use File::stat;
 use POSIX 'strftime';
 use LWP::Simple;
@@ -98,11 +97,11 @@ sub run {
   my $self = shift;
 
   #Process QTLs file
-  my $input_file = $self->required_param('zfin_file');   #GO through files and parse them in the correct format
+  my $input_file = $self->required_param('zfin_file');   #Go through files and parse them in the correct format
 
   # get phenotype data
   my $results = $self->parse_zfin($input_file);
-  $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
+  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results);
