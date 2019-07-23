@@ -52,29 +52,46 @@ use warnings;
 use File::Copy;
 use File::Path qw(make_path remove_tree);
 use File::stat;
+use LWP::Simple;
 use POSIX 'strftime';
 use PerlIO::gzip;
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+
 
 my %source_info;
 my $workdir;
-my $debug;
+
+my $basePheno;
 my $inputFile;
-my ($logFH, $errFH);
 
-my $core_dba;
-my $variation_dba;
-my $ontology_db_adaptor;
-
+# AnimalQTLdb URL set up for Ensembl: https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/
 #my $animalqtl_url = 'https://www.animalgenome.org/cgi-bin/QTLdb/index';
-#my %animalQTL_species_url = (
-#  gallus_gallus => 'https://www.animalgenome.org/cgi-bin/QTLdb/GG/download?file=gbpGG_5.0', #Gallus gallus
-#  pig => 'https://www.animalgenome.org/cgi-bin/QTLdb/SS/download?file=gbpSS_11.1', #Sus scrofa
-#  sheep => 'https://www.animalgenome.org/cgi-bin/QTLdb/OA/download?file=gbpOAR_3.1',  # Ovis aries
-#  cow => 'https://www.animalgenome.org/cgi-bin/QTLdb/BT/download?file=gbpUMD_3.1', #Bos taurus
-#  horse => 'https://www.animalgenome.org/cgi-bin/QTLdb/EC/download?file=gbpEC_2.0', #Equus caballus
-#);
+my %animalQTL_species_url = (
+  gallus_gallus => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_GG_5.0.gff.txt.gz', #Gallus gallus
+  sus_scrofa => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_SS_11.1.gff.txt.gz', #Sus scrofa
+  ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  bos_taurus => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_UMD_3.1.gff.txt.gz', #Bos taurus
+  equus_caballus => 'https://www.animalgenome.org/cgi-bin/QTLdb/EC/download?file=gbpEC_2.0', #Equus caballus
+);
+
+my %animalQTL_species_fileNames = (
+  gallus_gallus => 'gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
+  sus_scrofa => 'sus_scroafa_gbp_11.1.gff3.gz', #Sus scrofa
+  ovis_aries => 'ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  bos_taurus => 'bos_taurus_gbp_UMD3.1.gff3.gz', #Bos taurus
+  equus_caballus => 'equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
+);
+
+my %animalQTL_species_ok = (
+  gallus_gallus => 0, #Gallus gallus same Ensembl assembly as AnimalQTL
+  sus_scrofa => 1, #Sus scrofa
+  ovis_aries => 1,  # Ovis aries
+  bos_taurus => 1, #Bos taurus
+  equus_caballus => 0, #Equus caballus
+);
+
 
 sub fetch_input {
   #create output folder structure and fetches input files
@@ -82,14 +99,6 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
-  my $animalqtl_inputDir = $self->required_param('animalqtl_input_dir');
-
-  $debug = $self->param('debug_mode');
-  $self->SUPER::set_debug($self->param('debug_mode'));
-
-  $core_dba    = $self->get_species_adaptor('core');
-  $variation_dba  = $self->get_species_adaptor('variation');
-  $ontology_db_adaptor = $self->get_adaptor('multi', 'ontology');
 
   # import specific constants
   %source_info = (source_description => 'The Animal Quantitative Trait Loci (QTL) database (Animal QTLdb) is designed to house all publicly available QTL and association data on livestock animal species',
@@ -105,27 +114,59 @@ sub fetch_input {
   #create workdir folder
   $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
-  open ($logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species);
-  open ($errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species);
-  $self->SUPER::set_logFH($logFH);
-  $self->SUPER::set_errFH($errFH);
+
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  if (!$animalQTL_species_ok{$species}){
+    print $pipelogFH "Ensembl species has different assembly than AnimalQTL, will exit!\n";
+    close($pipelogFH);
+    exit(0);
+  }
+
+  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
+  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $basePheno->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
+
+  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  $basePheno->logFH($logFH);
+  $basePheno->errFH($errFH);
+  $basePheno->pipelogFH($pipelogFH);
 
   # check if the species assembly specific file exists
-  print $logFH "AnimalQTL import expects input folder with gff3 files: example format gallus_gallus.*.gff3  \n" if $debug;
-  print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if $debug;
+  my $animalqtl_inputDir = $pipeline_dir."/".$source_info{source_name_short}."/animalqtl_data";
+  print $logFH "AnimalQTL import expects input folder with gff3 files: example format gallus_gallus.*.gff3  \n" if ($basePheno->debug);
+  print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if ($basePheno->debug);
 
-  opendir(INDIR, $animalqtl_inputDir);
-  my @files = readdir(INDIR);
-  closedir(INDIR);
-  my $ok = 0;
-  foreach my $file (@files){
-    if ($file =~/^$species.*gff3$/ || $file =~/^$species.*gff3.gz$/){
-      $inputFile = $file;
-      $ok = 1;
+  # if the folder does not exist, try to fetch from ulr
+  if (! -d $animalqtl_inputDir) {
+    make_path($animalqtl_inputDir);
+    my $rescode = getstore($animalQTL_species_url{$species}, $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species}) 
+        unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
+    die ("File fetch failed code: $rescode!\n") unless $rescode == 200;
+    $inputFile = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
+#TODO: fetch using timestamp save
+  } else {
+    opendir(INDIR, $animalqtl_inputDir);
+    my @files = readdir(INDIR);
+    closedir(INDIR);
+    my $ok = 0;
+    foreach my $file (@files){
+      if ($file =~/^$species.*gff3$/ || $file =~/^$species.*gff3.gz$/){
+        $inputFile = $file;
+        $ok = 1;
+        last;
+      }
     }
+    print $errFH "ERROR: Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
+    die ("Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n") unless $ok;
   }
-  print $errFH "ERROR: Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
-  die "Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
+
+  #fetch coreDB assembly, in future this should be tested against
+  my $gc =  $basePheno->core_db_adaptor->get_adaptor('GenomeContainer');
+  $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
+  print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($basePheno->debug);
+
 
   $source_info{source_version} = strftime "%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime);
   print $logFH "Found inputDir file: $inputFile \n";
@@ -137,50 +178,54 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
+  # dump and clean pre-existing phenotypes
+  $basePheno->dump_phenotypes($source_info{source_name},$workdir, 1);
+
   # get seq_region_ids
-  my $seq_region_ids = $self->get_seq_region_ids($variation_dba);
+  my $seq_region_ids = $basePheno->get_seq_region_ids();
 
   # get phenotype data
-  my $results = $self->parse_animal_qtl($seq_region_ids, $workdir."/".$inputFile);
-  print $logFH "Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n" if $debug ;
+  my $results = parse_animal_qtl($seq_region_ids, $inputFile);
+  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
 
   # save phenotypes
-  $self->save_phenotypes(\%source_info, $results, $core_dba, $variation_dba);
+  $basePheno->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species')
                              });
-  close($logFH);
-  close($errFH);
 }
 
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe');
-    print $logPipeFH "Passing AnimalQTL import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
+  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
+  close($basePheno->logFH) if defined $basePheno->logFH ;
+  close($basePheno->errFH) if defined $basePheno->errFH ;
+  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
 # AnimalQTL specific phenotype parsing method for gff3 files
 sub parse_animal_qtl {
-  my ($self, $seq_region_ids, $infile) = @_;
+  my ($seq_region_ids, $infile) = @_;
 
-  my $ontology_term_adaptor = $ontology_db_adaptor->get_OntologyTermAdaptor;
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file ($workdir."/".'log_import_err_'.$infile) for writing $!\n") ;
+
+  my $ontology_term_adaptor = $basePheno->ontology_db_adaptor->get_OntologyTermAdaptor;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open IN, "zcat $infile |" or die ("Could not open $infile for reading");
+    open (IN, "zcat $workdir/$infile | ") || die ("Could not open $infile for reading\n");
   }
   else {
-    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields
@@ -195,7 +240,7 @@ sub parse_animal_qtl {
     $data[0] =~ s/^chr(om)?\.?//i;
 
     if(!defined($seq_region_ids->{$data[0]})) {
-      print $errFH "WARNING: Could not find seq_region_id for chromosome name $data[0]\n";
+      print $errFH1 "WARNING: Could not find seq_region_id for chromosome name $data[0]\n";
       next;
     }
 
@@ -210,12 +255,12 @@ sub parse_animal_qtl {
     }
 
     if ($extra->{'Map_Type'} eq 'Linkage' || $data[3] eq '' || $data[3] == 0) {
-      print $errFH "WARNING: Could not find a precise location for the QTL ".$extra->{QTL_ID}."\n";
+      print $errFH1 "WARNING: Could not find a precise location for the QTL ".$extra->{QTL_ID}."\n";
       next;
     }
 
     if ($data[4] !~ /^\d+$/) {
-      print $errFH "WARNING: Could not find a numeric seq_region_end for the QTL ".$extra->{QTL_ID}."\n";
+      print $errFH1 "WARNING: Could not find a numeric seq_region_end for the QTL ".$extra->{QTL_ID}."\n";
       next;
     }
 
@@ -260,7 +305,7 @@ sub parse_animal_qtl {
     }
 
     # add additional fields if found
-    $phenotype->{'study'} = $self->get_pubmed_prefix().$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'} && $extra->{'PUBMED_ID'} =~ /^\d+$/);
+    $phenotype->{'study'} = $basePheno->get_pubmed_prefix().$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'} && $extra->{'PUBMED_ID'} =~ /^\d+$/);
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
     $phenotype->{'f_stat'} = $extra->{'F-stat'} if defined($extra->{'F-stat'});
     $phenotype->{'lod_score'} = $extra->{'LOD-score'} if defined($extra->{'LOD-score'});
@@ -269,6 +314,8 @@ sub parse_animal_qtl {
 
     push @phenotypes, $phenotype;
   }
+  close(IN);
+  close ($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
   return \%result;
