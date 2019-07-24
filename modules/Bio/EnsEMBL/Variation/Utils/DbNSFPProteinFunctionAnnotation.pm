@@ -142,6 +142,7 @@ sub load_predictions_for_triplets {
       my $triplet_start = $coord->[0];
       my $triplet_end = $coord->[1];
       my $iter = $self->get_tabix_iterator($chrom, $triplet_start, $triplet_end);
+      next if (!defined $iter);
       while (my $line = $iter->next) {
         my $data = $self->get_dbNSFP_row($line);
         my $chr = $data->{'chr'};
