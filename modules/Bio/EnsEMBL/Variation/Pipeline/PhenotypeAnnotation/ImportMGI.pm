@@ -42,9 +42,6 @@ use warnings;
 use strict;
 
 use File::Path qw(make_path);
-use File::stat;
-use POSIX 'strftime';
-use LWP::Simple;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
@@ -80,7 +77,12 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
+  #fetch source version at runtime:
+  $source_info{source_version} = $self->fetch_mouse_data_version;
+
   #get input file MGI:
+  #Note: if file already exists, new fetch will be skipped, this can lead to
+  #discrepancies between file and version if a new release is out between runs
   my $url = '/mi/impc/solr/mgi-phenotype';
   my $file_mgi = "MGI_phenotypes.txt";
   print $logFH "Found file (".$workdir."/".$file_mgi."), will skip new fetch\n" if -e $workdir."/".$file_mgi;
@@ -95,21 +97,18 @@ sub run {
   my $file_mgi = $self->required_param('mgi_file');
   my $coord_file = $self->required_param('coord_file');
 
-  #get source ids
-  my $mouse_phenotype_source_ids = $self->get_mouse_phenotype_data_source_ids($workdir."/".$file_mgi, $source_info{source_name});
-  $self->print_logFH($source_info{source_name}, " source_id is ", $mouse_phenotype_source_ids->{$source_info{source_name}}, "\n") if ($self->debug);
-
-  $source_info{source_version} = $self->update_mouse_phenotype_data_version($mouse_phenotype_source_ids);
-  $self->clear_mouse_phenotype_data_from_last_release($mouse_phenotype_source_ids);
-  my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $coord_file);
-
-  # get phenotype data
-  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source_name}, $mouse_phenotype_source_ids);
-  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
+  # dump and clean pre-existing phenotypes
+  $self->dump_phenotypes($source_info{source_name},$workdir, 1);
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
+
+  my $marker_coords = $self->get_marker_coords($workdir."/".$file_mgi, $coord_file);
+
+  # get phenotype data
+  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_mgi, $marker_coords, $source_info{source_name}, $source_id);
+  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
   $self->skip_synonyms(1);

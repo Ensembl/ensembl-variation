@@ -44,20 +44,6 @@ use JSON;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
-my ($logFH, $errFH);
-
-sub set_logFH {
-  my $self = shift;
-  $logFH = shift;
-  $self->SUPER::set_logFH($logFH);
-}
-
-sub set_errFH {
-  my $self = shift;
-  $errFH = shift;
-  $self->SUPER::set_errFH($errFH);
-}
-
 sub get_mouse_phenotype_data {
   my ($self, $working_dir, $data_source, $url) = @_;
 
@@ -108,9 +94,9 @@ sub get_mouse_phenotype_data {
 }
 
 sub get_mouse_phenotype_data_source_ids {
-  my ($self, $phenotype_file, $data_source, $variation_dba) = @_;
-
-  my $dbh = $variation_dba->dbc->db_handle;
+  my ($self, $phenotype_file, $data_source) = @_;
+$DB::single=1;
+  my $dbh = $self->variation_db_adaptor->dbc->db_handle;
   open(IN, "<".$phenotype_file) || die ("Could not open $phenotype_file for reading\n");
   my $source_names = {};
   my $source_name2id = {};
@@ -140,7 +126,7 @@ sub get_mouse_phenotype_data_source_ids {
     if (defined($source_id)) {
       $source_name2id->{$source_name} = $source_id;
     } else {
-      print $errFH "WARNING: Could not fetch dbID for source name $source_name\n";
+      $self->print_errFH("WARNING: Could not fetch dbID for source name $source_name\n");
     }
     $sth->finish();
   }
@@ -148,8 +134,8 @@ sub get_mouse_phenotype_data_source_ids {
   return $source_name2id;
 }
 
-sub update_mouse_phenotype_data_version {
-  my ($self, $source_name2ids, $variation_db) = @_;
+sub fetch_mouse_data_version {
+  my $self = $_;
 
   my $http = HTTP::Tiny->new();
 
@@ -184,28 +170,13 @@ sub update_mouse_phenotype_data_version {
 
   my $version = sprintf '%d%02d%02d', $year, $month_number, $date;
 
-  my $dbh = $variation_db->dbc->db_handle;
-
-  foreach my $source_name (keys %$source_name2ids) {
-    $dbh->do(qq{UPDATE source SET version=$version WHERE name='$source_name';}) || die ("Could not update source: $dbh->errstr\n");
-  }
   return $version;
 }
 
-sub clear_mouse_phenotype_data_from_last_release {
-  my ($self,$source_name2id,$variation_db)  =  @_;
-
-  my $dbh = $variation_db->dbc->db_handle;
-  my $source_ids = join(',', values %$source_name2id);
-  print $logFH $source_ids;
-  $dbh->do(qq{ DELETE pfa FROM phenotype_feature_attrib pfa JOIN phenotype_feature pf ON pfa.phenotype_feature_id = pf.phenotype_feature_id AND pf.source_id IN ($source_ids);} );
-  $dbh->do(qq{ DELETE FROM phenotype_feature WHERE source_id IN ($source_ids);} );
-}
-
 sub get_marker_coords {
-  my ($self, $phenotype_file, $coord_file, $core_dba) = @_;
+  my ($self, $phenotype_file, $coord_file) = @_;
 
-  my $gene_adaptor = $core_dba->get_GeneAdaptor;
+  my $gene_adaptor = $self->core_db_adaptor->get_GeneAdaptor;
 
   my $markers;
   my $column_headers;
@@ -249,17 +220,17 @@ sub get_marker_coords {
         my $genes = $gene_adaptor->fetch_all_by_external_name($marker_acc);
         if (scalar @$genes != 1) {
           my $number_of_genes = scalar @$genes;
-          print $errFH "WARNING: Found $number_of_genes matching Ensembl genes for gene $marker_acc\n";
+          $self->print_errFH("WARNING: Found $number_of_genes matching Ensembl genes for gene $marker_acc\n");
           my $unique_seq_region_id = {};
           foreach my $gene (@$genes) {
             $unique_seq_region_id->{$gene->slice->get_seq_region_id} = 1;
           }
-          print $errFH "WARNING: genes $number_of_genes are on different slices\n" unless (scalar keys %$unique_seq_region_id == 1);
+          $self->print_errFH("WARNING: genes $number_of_genes are on different slices\n") unless (scalar keys %$unique_seq_region_id == 1);
         }
         next unless scalar @$genes;
 
         my $marker_type = $values[1];
-        print $errFH "WARNING: type is not Gene (type = $marker_type)\n" unless ($marker_type eq 'Gene');
+        $self->print_errFH("WARNING: type is not Gene (type = $marker_type)\n") unless ($marker_type eq 'Gene');
 
         my $chromosome = $values[5];
         my $start_coord = $values[6];
@@ -282,9 +253,9 @@ sub get_marker_coords {
 }
 
 sub parse_mouse_phenotype_data {
-  my ($self, $infile, $marker_coords, $data_source, $source_name2ids, $variaton_dba) = @_;
+  my ($self, $infile, $marker_coords, $source_name, $source_id) = @_;
 
-  my $individual_adaptor = $variaton_dba->get_IndividualAdaptor;
+  my $individual_adaptor = $self->variation_db_adaptor->get_IndividualAdaptor;
 
   my @phenotypes = ();
   my $already_inserted = {};
@@ -315,20 +286,20 @@ sub parse_mouse_phenotype_data {
     my $marker_accession_id = $hash->{marker_accession_id};
     my $description = $hash->{mp_term_name};
     if (!$description) {
-      print $errFH "WARNING: No description/mp_term_name for $_\n";
+      $self->print_errFH("WARNING: No description/mp_term_name for $_\n");
       next;
     }
     $data{description} = $description;
     $data{accession} = $hash->{mp_term_id};
 
     my $source = '';
-    if ($data_source eq 'IMPC') {
+    if ($source_name eq 'IMPC') {
       $source = $hash->{resource_name};
     } else {
       $source = $hash->{project_name};
     }
     $data{source} = $source;
-    $data{source_id} = $source_name2ids->{$source};
+    $data{source_id} = $source_id;
 
     my $pf_data           = $marker_coords->{$marker_accession_id};
     my $type              = $pf_data->{type};
