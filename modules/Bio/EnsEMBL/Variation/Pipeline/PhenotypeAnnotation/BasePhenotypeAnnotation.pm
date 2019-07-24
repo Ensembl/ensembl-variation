@@ -832,11 +832,13 @@ sub _add_phenotypes {
 
     my $study_id = $self->_get_study_id($phenotype,$source_id);
 
-    # Remove special characters from the phenotype description
+    # Replace special characters from the phenotype description
     foreach my $char (keys(%{$special_characters})) {
       my $new_char = $special_characters->{$char};
       $phenotype->{description} =~ s/$char/$new_char/g;
     }
+
+    $phenotype->{description} =~ s/[\(\)]//g; # Remove characters ( )
 
     # get phenotype ID
     my $phenotype_id = $self->_get_phenotype_id($phenotype);
