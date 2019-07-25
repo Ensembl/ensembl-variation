@@ -43,6 +43,13 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
+sub fetch_input {
+  my $self = shift;
+
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
+
+}
+
 sub run {
   my $self = shift;
 
@@ -70,13 +77,12 @@ Run all the counting SQL on the new database
 sub get_new_results{
   my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
 
-  my $var_dba = $self->get_species_adaptor('variation');
+  my $var_dba = $self->variation_db_adaptor;
   my $dbc     = $var_dba->dbc;
 
   my $source = $self->param('source');
 
   my %new;  ## hold some of the new counts to store
-
 
   ## counts based on type and source
   my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
@@ -132,7 +138,7 @@ sub report_results{
 
   foreach my $source_type ( keys %{$new->{phenotype_feature_count_details}}){
     $text_out.= "$new->{phenotype_feature_count_details}{$source_type} $source_type phenotype_feature entries";
-    $text_out.= " (previously $previous->{phenotype_feature_count_details}{$source_type} )" if defined  $previous->{phenotype_feature_count_details}{$source_type} ;
+    $text_out.= " (previously $previous->{phenotype_feature_count_details}{$source_type})" if defined  $previous->{phenotype_feature_count_details}{$source_type} ;
     $text_out.= "\n";
   }
 
@@ -276,14 +282,14 @@ sub count_results{
 sub update_meta{
   my $self = shift;
 
-  my $var_dba  = $self->get_species_adaptor('variation');
-  my $var_dbh = $var_dba->dbc->db_handle;
+  my $source_info = $self->param("source");
+  my $var_dbh = $self->variation_db_adaptor->dbc->db_handle;
 
   my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
                                               ( meta_key, meta_value) values (?,?)
                                             ]);
 
-  $update_meta_sth->execute('PhenotypeAnnotation_run_date', $self->run_date() );
+  $update_meta_sth->execute('PhenotypeAnnotation_run_date_'.$source_info->{source_name}, $self->run_date() );
 
 }
 
