@@ -184,7 +184,7 @@ sub pipeline_analyses {
                 '6->A' => [ 'import_omia' ],
                 '7->A' => [ 'import_ega' ],
                 '8->A' => [ 'import_orphanet' ],
-                '9->A' => [ 'import_mim_morbid' ],
+                '9->A' => [ 'import_mimmorbid' ],
                 '10->A'=> [ 'import_ddg2p' ],
                 '11->A'=> [ 'import_cancerGC' ],
                 '12->A'=> [ 'import_mouse' ],
@@ -293,7 +293,7 @@ sub pipeline_analyses {
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
-        {   -logic_name => 'import_mim_morbid',
+        {   -logic_name => 'import_mimmorbid',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportMIMmorbid',
             -parameters => {
                 @common_params,

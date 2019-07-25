@@ -49,7 +49,7 @@ use POSIX 'strftime';
 use LWP::Simple;
 use HTTP::Tiny;
 
-use base (' Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;

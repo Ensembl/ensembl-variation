@@ -48,50 +48,15 @@ sub fetch_input {
   my $debug = $self->param('debug_mode');
 
   open ($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
+
   unless ($run_type eq NONE) {
     my %import_species = &species;
-    if ($run_type eq RGD){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'RGD'}} ]);
-      print $logPipeFH "Setting up for RGD import: ". join(", ",@{$import_species{'RGD'}}). "\n" if $debug ;
 
-    } elsif($run_type eq AnimalQTL){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'AnimalQTL'}} ]);
-      print $logPipeFH "Setting up for AnimalQTL import: ". join(", ",@{$import_species{'AnimalQTL'}}). "\n" if $debug ;
-
-    } elsif($run_type eq ZFIN){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'ZFIN'}} ]);
-      print $logPipeFH "Setting up for ZFIN import: ". join(", ",@{$import_species{'ZFIN'}}). "\n" if $debug ;
-
-    } elsif($run_type eq GWAS){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'GWAS'}} ]);
-      print $logPipeFH "Setting up for NHGRI-EBI GWAS Catalog import: ". join(", ",@{$import_species{'GWAS'}}). "\n" if $debug ;
-
-    } elsif($run_type eq OMIA){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'OMIA'}} ]);
-      print $logPipeFH "Setting up for OMIA import: ". join(", ",@{$import_species{'OMIA'}}). "\n" if $debug ;
-
-    } elsif($run_type eq EGA){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'EGA'}} ]);
-      print $logPipeFH "Setting up for EGA import: ". join(", ",@{$import_species{'EGA'}}). "\n" if $debug ;
-
-    } elsif($run_type eq Orphanet){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'Orphanet'}} ]);
-      print $logPipeFH "Setting up for Orphanet import: ". join(", ",@{$import_species{'Orphanet'}}). "\n" if $debug ;
-
-    } elsif($run_type eq MIMmorbid){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'MIMmorbid'}} ]);
-      print $logPipeFH "Setting up for MIMmorbid import: ". join(", ",@{$import_species{'MIMmorbid'}}). "\n" if $debug ;
-
-    } elsif($run_type eq DDG2P){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'DDG2P'}} ]);
-      print $logPipeFH "Setting up for DDG2P import: ". join(", ",@{$import_species{'DDG2P'}}). "\n" if $debug ;
-
-    } elsif($run_type eq CGC){
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{'CGC'}} ]);
-      print $logPipeFH "Setting up for CancerGeneConsensus import: ". join(", ",@{$import_species{'CGC'}}). "\n" if $debug ;
-
-    } elsif($run_type eq IMPC || $run_type eq MGI ){
+    if($run_type eq IMPC || $run_type eq MGI ){
       $self->param('output_ids', [{run_type => $run_type}]);
+    } elsif ($import_species{$run_type}) {
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
+      print $logPipeFH "Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n" if $debug ;
     } else {
       print $logPipeFH "WARNING: No valid run_import_type specified: $run_type\n" if $debug ;
     }

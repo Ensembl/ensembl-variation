@@ -146,7 +146,8 @@ sub parse_input_file {
   $first_node->getAttribute('date') =~ /(\d+)-(\d{2})-(\d{2})/;
   my $date = $1.$2.$3;
 
-  my $special_chars = join('',keys(%{$self->get_special_characters}));
+  my %special_characters = %{$self->get_special_characters};
+  my $special_chars = join('',keys(%special_characters));
 
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
     my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
@@ -157,7 +158,7 @@ sub parse_input_file {
     # Replace special characters
     utf8::encode($name);
     if ($name =~ /[$special_chars]/) {
-      foreach my $char (keys(%{$self->get_special_characters})) {
+      foreach my $char (keys(%special_characters)) {
         my $new_char = $special_characters{$char};
         $name =~ s/$char/$new_char/g if ($name =~ /$char/);
       }
