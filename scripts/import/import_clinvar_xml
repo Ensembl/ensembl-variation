@@ -705,7 +705,7 @@ sub import_phenotype_feature{
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
-  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitter_ids{1} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitters->{'OMIM'} && exists $submitter_ids{$submitters->{'OMIM'}} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
 
   foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
     print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
@@ -869,7 +869,9 @@ sub get_variant{
 
   if( !defined $record->{feature_info}->{hgvs_g} || !defined $record->{feature_info}->{Chr} ||
       !defined $ref_allele || !defined $alt_allele ||
-      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele && $alt_allele eq '') ){
+      (defined $ref_allele && $ref_allele eq '') ||
+      (defined $alt_allele && $alt_allele eq '') ||
+      (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele) ) {
     warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
     return undef;
   }

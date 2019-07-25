@@ -3,6 +3,9 @@ language: perl
 os:
   - linux
 
+dist:
+  - trusty
+
 perl:
   - '5.14'
   - '5.26'

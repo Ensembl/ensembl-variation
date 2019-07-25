@@ -349,6 +349,11 @@ sub fetch_by_VariationFeatures {
     $self->{_pairwise}->{$vf->seq_region_start} = 1;
     $self->{_pairwise_vf_name}->{$vf->variation_name} = 1;
   }  
+
+  # if pairwise store the first vf name to retain order in output
+  if (scalar @$vfs == 2) {
+    $self->{_pairwise_first_vf_name} = $vfs->[0]->variation_name;
+  }
  
   # fetch by slice using expanded feature slice
   my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $population);
@@ -509,6 +514,7 @@ sub _fetch_by_Slice_VCF {
         '-slices' => [$slice],
       );
       $c->{'_vf_name'} = $self->{'_vf_name'};
+      $c->{'_pairwise_first_vf_name'} = $self->{'_pairwise_first_vf_name'} if (defined $self->{'_pairwise_first_vf_name'});
       $c->{'_pop_ids'} = {$population_id => 1};
 
       if($container) {
@@ -523,6 +529,8 @@ sub _fetch_by_Slice_VCF {
   $container->{pos2name} = \%pos2name if $container;
   delete $self->{_pairwise};
   delete $self->{_pairwise_vf_name};
+  delete $self->{_pairwise_first_vf_name};
+
 
   if (!$container) {
     warning('The population is not represented in the configured VCF file for fetching genotypes for LD computation.');
