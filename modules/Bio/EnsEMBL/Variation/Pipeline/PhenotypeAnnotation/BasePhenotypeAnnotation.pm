@@ -28,6 +28,13 @@ limitations under the License.
 
 =cut
 
+
+=head1 BasePhenotypeAnnotation
+
+This module contains the main variables and methods for the Phenotype Annotation hive pipeline.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
 
 use strict;
@@ -50,11 +57,9 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
                     (-debug   => 1,
                      -skip_synonyms => 1);
 
-  Description: Constructor. Instantiates a new BasePhenotype object.
+  Description: Constructor. Instantiates a new BasePhenotypeAnnotation object.
   Returntype : Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -102,8 +107,6 @@ sub new {
   Description: Get/set the skip_synonyms flag status
   Returntype : boolean
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -113,10 +116,28 @@ sub skip_synonyms {
   return $self->{skip_synonyms};
 }
 
+=head2 get_special_characters
+
+  Example    : $special_chars = $obj->get_special_characters()
+  Description: Get the $special_chars hashref
+  Returntype : hashref
+  Exceptions : none
+
+=cut
+
 sub get_special_characters {
   my $self = shift;
   return $self->{special_characters};
 }
+
+=head2 get_pubmed_prefix
+
+  Example    : $pmid_prefix = $obj->get_pubmed_prefix()
+  Description: Get the pubmed_prefix string ("PMID:")
+  Returntype : string
+  Exceptions : none
+
+=cut
 
 sub get_pubmed_prefix {
   my $self = shift;
@@ -131,8 +152,6 @@ sub get_pubmed_prefix {
   Description: Get/set the core_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -150,8 +169,6 @@ sub core_db_adaptor {
   Description: Get/set the variation_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -170,8 +187,6 @@ sub variation_db_adaptor {
   Description: Get/set the variation_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -190,8 +205,6 @@ sub ontology_db_adaptor {
   Description: Get/set debug mode flag
   Returntype : boolean
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -207,11 +220,9 @@ sub debug {
   Arg [1]    : FileHandle $logFH (optional)
                The new logFH
   Example    : $logF = $obj->logFH()
-  Description: Gettter/Setter the logging file handle
+  Description: Get/Set the logging file handle
   Returntype : FileHandle
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -222,14 +233,13 @@ sub logFH {
 }
 
 =head2 errFH
+
   Arg [1]    : FileHandle $errFH (optional)
                The new errFH
   Example    : $errF = $obj->errFH()
-  Description: Gettter/Setter for the error logging file handle
+  Description: Get/Set for the error logging file handle
   Returntype : FileHandle
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -245,11 +255,9 @@ sub errFH {
   Arg [1]    : FileHandle $pipelogFH (optional)
                The new logFH
   Example    : $logF = $obj->pipelogFH()
-  Description: Getter/Setter for the pipeline logging file handle
+  Description: Get/Set for the pipeline logging file handle
   Returntype : FileHandle
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -263,11 +271,9 @@ sub pipelogFH {
 =head2 print_logFH
 
   Example    : $obj->print_logFH("new log message")
-  Description: Writes message to logging file handle
+  Description: Write message to logging file handle
   Returntype : none
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -288,11 +294,9 @@ sub print_logFH {
 =head2 print_errFH
 
   Example    : $obj->print_errFH("new log message")
-  Description: Writes message to error logging file handle
+  Description: Write message to error logging file handle
   Returntype : none
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -313,11 +317,9 @@ sub print_errFH {
 =head2 print_pipelogFH
 
   Example    : $obj->print_pipelogFH("new log message")
-  Description: Writes message to pipeline logging file handle
+  Description: Write message to pipeline logging file handle
   Returntype : none
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -334,17 +336,6 @@ sub print_pipelogFH {
   }
 }
 
-# getter for the internal phenotype_cache shared between methods
-sub _phenotype_cache {
-  my $self = shift;
-  return $self->{phenotype_cache};
-}
-
-# getter for the internal sql statments handles shared between methods
-sub _sql_statements {
-  my $self = shift;
-  return $self->{sql_statements};
-}
 
 
 #----------------------------
@@ -353,11 +344,10 @@ sub _sql_statements {
 =head2 get_seq_region_ids
 
   Example    : $obj->get_seq_region_ids()
-  Description: Writes message to logging file handle
-  Returntype : none
+  Description: Fetch seq_region_id(s) from varaition db
+  Returntype : Hash of seq_region_id identifiers
   Exceptions : none
-  Caller     : general
-  Status     : Stable
+
 
 =cut
 
@@ -386,8 +376,6 @@ sub get_seq_region_ids {
   Description: Inserts or Updates the source in the variation database and returns the source_id.
   Returntype : Integer source_id
   Exceptions : none
-  Caller     : general
-  Status     : Stable
 
 =cut
 
@@ -453,14 +441,12 @@ sub get_or_add_source {
 
 =head2 save_phenotypes
 
-    Arg [1]              : hashref $source_info
-    Arg [2]              : hashref $input_data
-    Example              : $self->save_phenotypes(\%source_info, $input_data);
-    Description          : Saves the phenotype data ($input_data) for the given source ($source_info).
-    Returntype           : none
-    Exceptions           : none
-    Caller               : general
-    Status               : Stable
+  Arg [1]    : hashref $source_info
+  Arg [2]    : hashref $input_data
+  Example    : $self->save_phenotypes(\%source_info, $input_data);
+  Description: Save the phenotype data ($input_data) for the given source ($source_info).
+  Returntype : none
+  Exceptions : none
 
 =cut
 
@@ -568,16 +554,14 @@ sub save_phenotypes {
 
 =head2 dump_phenotypes
 
-    Arg [1]              : String $source_name
-    Arg [2]              : String $workdir
-    Arg [3]              : boolean $clean (optional) default: 0
-    Example              : $self->dump_phenotypes($source_id, $workdir, 1);
-    Description          : Dumps the existing phenotype_features, phenotype_feautres_attribs for the particular source and removes them if clean option selected.
-                          $clean option removes the phenotype feautre data including phenotypes and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
-    Returntype           : none
-    Exceptions           : none
-    Caller               : general
-    Status               : Stable
+  Arg [1]    : String $source_name
+  Arg [2]    : String $workdir
+  Arg [3]    : boolean $clean (optional) - delete phenotype data from db (default: 0)
+  Example    : $self->dump_phenotypes($source_id, $workdir, 1);
+  Description: Dump the existing phenotype_features, phenotype_feautres_attribs for the particular source and removes them if clean option selected.
+              $clean option removes the phenotype feautre data including phenotypes and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
+  Returntype : none
+  Exceptions : none
 
 =cut
 
@@ -663,7 +647,19 @@ sub dump_phenotypes {
 #----------------------------
 # PRIVATE METHODS
 
+# getter for the internal phenotype_cache shared between methods
+sub _phenotype_cache {
+  my $self = shift;
+  return $self->{phenotype_cache};
+}
 
+# getter for the internal sql statments handles shared between methods
+sub _sql_statements {
+  my $self = shift;
+  return $self->{sql_statements};
+}
+
+# run the sql (sql_stmt) on the given db (db_adaptor) and save results to file (outFile)
 sub _sql_to_file{
   my ($sql_stmt, $db_adaptor, $outFile) = @_;
 
@@ -672,17 +668,17 @@ sub _sql_to_file{
 
   open (my $fhDump, ">", $outFile) || die ("Failed to open file".$outFile.": $!\n");
   while (my $row = $sth->fetchrow_arrayref()) {
-      print $fhDump join( "\t", map {"\"".$_."\""} @$row), "\n"; #some values are undef e.g. study_id, this is expected
+    for(@$row) { $_ = "NULL" if !defined $_; } #some values are undef e.g. study_id, this is expected
+    print $fhDump join( "\t", map {qq($_)} @$row), "\n";
   }
   close($fhDump);
 }
 
-
+# insert the phenotype data (including phenotype feature attribs) into the db
 sub _add_phenotypes {
   my ($self, $data, $source_info) = @_;
 
   my $db_adaptor    = $self->variation_db_adaptor;
-  my $special_characters = $self->get_special_characters;
 
   my $phenotypes    = $data->{phenotypes};
   my $coords        = $data->{coords};
@@ -832,14 +828,6 @@ sub _add_phenotypes {
 
     my $study_id = $self->_get_study_id($phenotype,$source_id);
 
-    # Replace special characters from the phenotype description
-    foreach my $char (keys(%{$special_characters})) {
-      my $new_char = $special_characters->{$char};
-      $phenotype->{description} =~ s/$char/$new_char/g;
-    }
-
-    $phenotype->{description} =~ s/[\(\)]//g; # Remove characters ( )
-
     # get phenotype ID
     my $phenotype_id = $self->_get_phenotype_id($phenotype);
 
@@ -915,7 +903,7 @@ sub _add_phenotypes {
 
 }
 
-
+# insert the synonym data into variation_synonym table
 sub _add_synonyms {
   my ($self, $synonyms, $variation_ids, $source_id) = @_;
 
@@ -970,7 +958,7 @@ sub _add_synonyms {
   $self->print_logFH( "Added $alt_count synonyms for $variation_count rs-ids\n");
 }
 
-
+# update variation_set_variation
 sub _add_set {
   my ($self, $set, $source_id, $set_from) = @_;
 
@@ -1021,8 +1009,7 @@ sub _add_set {
   $sth2->execute();
 }
 
-
-
+# fetch coordinates for variation, gene, or structural_variation
 sub _get_coords {
   my ($self, $ids, $variation_ids, $type, $db_adaptor) = @_;
 
@@ -1074,7 +1061,7 @@ sub _get_coords {
   return $coords;
 }
 
-
+# look up variation ids via rsIDs and synonyms
 sub _get_dbIDs {
   my ($self, $rs_ids) = @_;
 
@@ -1127,6 +1114,7 @@ sub _get_dbIDs {
   return \%mapping;
 }
 
+# fetch attrib types from db
 sub _get_attrib_types {
   my $self = shift;
 
@@ -1146,11 +1134,12 @@ sub _get_attrib_types {
   return \@tmp_types;
 }
 
-
+# clean up + search for phenotype in db, if not found it gets inserted
 sub _get_phenotype_id {
   my ($self, $phenotype) = @_;
 
   my %phenotype_cache = %{$self->_phenotype_cache};
+  my %special_characters = %{$self->get_special_characters};
 
   my ($name, $description);
   $name = $phenotype->{name};
@@ -1159,6 +1148,13 @@ sub _get_phenotype_id {
   # Clean up
   $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
   $description =~ s/\n//g; # Remove 'new line' characters
+  $description =~ s/[\(\)]//g; # Remove characters ( )
+
+  # Replace special characters in the phenotype description
+  foreach my $char (keys(%special_characters)) {
+    my $new_char = $special_characters{$char};
+    $description =~ s/$char/$new_char/g;
+  }
 
   # Check phenotype description in the format "description; name"
   if (!defined($name) || $name eq '') {
@@ -1268,6 +1264,7 @@ sub _get_phenotype_id {
   return $phenotype_id;
 }
 
+# clean up (truncated pubmed ids) + search for study in db, if not found it gets inserted
 sub _get_study_id {
   my ($self, $phenotype, $source_id) = @_;
 
