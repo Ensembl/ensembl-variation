@@ -93,47 +93,6 @@ sub get_mouse_phenotype_data {
   return $phenotype_file;
 }
 
-sub get_mouse_phenotype_data_source_ids {
-  my ($self, $phenotype_file, $data_source) = @_;
-$DB::single=1;
-  my $dbh = $self->variation_db_adaptor->dbc->db_handle;
-  open(IN, "<".$phenotype_file) || die ("Could not open $phenotype_file for reading\n");
-  my $source_names = {};
-  my $source_name2id = {};
-
-  while (<IN>) {
-    chomp;
-    my @pairs = split("\t", $_);
-    my $hash;
-    foreach my $pair (@pairs) {
-      my ($key, $value) = split('=', $pair);
-      if ($key eq 'resource_name' && $data_source eq 'IMPC') {
-        $source_names->{$value} = 1;
-      }
-      if ($key eq 'project_name' && $data_source eq 'MGI') {
-        $source_names->{$value} = 1;
-      }
-    }
-  }
-  close IN;
-  foreach my $source_name (keys %$source_names) {
-    my $stmt = qq{ SELECT source_id FROM source WHERE name = '$source_name' LIMIT 1};
-    my $sth = $dbh->prepare($stmt);
-    $sth->execute();
-    my $source_id;
-    $sth->bind_columns(\$source_id);
-    $sth->fetch();
-    if (defined($source_id)) {
-      $source_name2id->{$source_name} = $source_id;
-    } else {
-      $self->print_errFH("WARNING: Could not fetch dbID for source name $source_name\n");
-    }
-    $sth->finish();
-  }
-
-  return $source_name2id;
-}
-
 sub fetch_mouse_data_version {
   my $self = $_;
 
@@ -180,7 +139,7 @@ sub get_marker_coords {
 
   my $markers;
   my $column_headers;
-  # filter for marker accession ids (MGI)
+  # filter for marker accession ids (MGI or IMPC)
   open(IN, "<".$phenotype_file) || die ("Could not open $phenotype_file for reading\n");
   while (<IN>) {
     chomp;

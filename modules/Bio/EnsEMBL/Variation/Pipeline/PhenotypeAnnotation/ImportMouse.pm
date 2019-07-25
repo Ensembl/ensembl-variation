@@ -47,21 +47,19 @@ use LWP::Simple;
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI NONE species);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
-my $logFH;
-my $debug;
-
 sub fetch_input {
     my $self = shift;
 
     my $pipeline_dir = $self->required_param('pipeline_dir');
     my $run_type = $self->required_param('run_type');
 
-    $debug        = $self->param('debug_mode');
+    $self->debug($self->param('debug_mode'));
 
     my $workdir = $pipeline_dir."/ImportMouse/";
     make_path($workdir);
 
-    open ($logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open $logFH for writing\n");
+    open (my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
+    $self->logFH($logFH);
 
     #get mouse coordinate file:
     my $coord_file = "MGI_MRK_Coord.rpt";
@@ -78,7 +76,7 @@ sub fetch_input {
           $spec->{pipeline_dir} = $workdir;
         }
         $self->param('output_ids', [ @speciesList ]);
-        print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if $debug ;
+        print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if ($self->debug) ;
 
       } elsif($run_type eq MGI){
         my @speciesList = map { {species => $_} } @{$import_species{'MGI'}};
@@ -87,7 +85,7 @@ sub fetch_input {
           $spec->{pipeline_dir} = $workdir;
         }
         $self->param('output_ids', [ @speciesList ]);
-        print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if $debug ;
+        print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if ($self->debug) ;
       }
     }
 }
@@ -98,14 +96,14 @@ sub write_output {
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
     if ($run_type eq IMPC){
-      print $logFH "Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n" if $self->param('debug_mode');
+      $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 2);
     } elsif ( $run_type eq MGI){
-      print $logFH "Passing on import jobs (". scalar @{$self->param('output_ids')} .") for MGI import \n" if $self->param('debug_mode');
+      $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for MGI import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 3);
     }
   }
-  close($logFH);
+  close($self->logFH) if defined $self->logFH;
 
 }
 
