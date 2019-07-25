@@ -46,15 +46,10 @@ use LWP::Simple;
 use XML::LibXML;
 use POSIX 'strftime';
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
-
-my %special_characters;
 
 sub fetch_input {
   my $self = shift;
@@ -62,11 +57,11 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  %special_characters = %{$basePheno->get_special_characters};
+
 
   my $orphanet_data_url = 'http://www.orphadata.org/data/xml/en_product6.xml';
 
@@ -86,9 +81,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   my $file_orphanet = "en_product6.xml";
   getstore($orphanet_data_url, $workdir."/".$file_orphanet) unless -e $workdir."/".$file_orphanet;
@@ -103,14 +98,14 @@ sub run {
   my $file_orphanet = $self->required_param('orphanet_file');
 
   # get phenotype data + save it (all in one method)
-  my ($results,$source_date) = parse_orphanet($workdir."/".$file_orphanet);
-  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
+  my ($results,$source_date) = $self->parse_orphanet($workdir."/".$file_orphanet);
+  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   #save source_date
   $source_info{source_version} = $source_date;
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
@@ -133,9 +128,9 @@ sub write_output {
 
 # Orphanet specific phenotype parsing method
 sub parse_orphanet {
-  my $infile = shift;
+  my ($self, $infile) = @_;
 
-  my $core_db_adaptor = $basePheno->core_db_adaptor;
+  my $core_db_adaptor = $self->core_db_adaptor;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
@@ -153,7 +148,7 @@ sub parse_orphanet {
   $first_node->getAttribute('date') =~ /(\d+)-(\d{2})-(\d{2})/;
   my $date = $1.$2.$3;
 
-  my $special_chars = join('',keys(%special_characters));
+  my $special_chars = join('',keys(%{$self->get_special_characters}));
 
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
     my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
@@ -164,7 +159,7 @@ sub parse_orphanet {
     # Replace special characters
     utf8::encode($name);
     if ($name =~ /[$special_chars]/) {
-      foreach my $char (keys(%special_characters)) {
+      foreach my $char (keys(%{$self->get_special_characters})) {
         my $new_char = $special_characters{$char};
         $name =~ s/$char/$new_char/g if ($name =~ /$char/);
       }

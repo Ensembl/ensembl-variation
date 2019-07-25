@@ -49,13 +49,10 @@ use POSIX 'strftime';
 use LWP::Simple;
 use HTTP::Tiny;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation;
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base (' Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
 my $workdir;
-
-my $basePheno;
 
 my %species = (
   9685  => 'cat',
@@ -111,9 +108,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $basePheno = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
-  $basePheno->core_db_adaptor($self->get_species_adaptor('core'));
-  $basePheno->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $self->debug($self->param('debug_mode'));
+  $self->core_db_adaptor($self->get_species_adaptor('core'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $omia_url = 'https://omia.org/curate/causal_mutations/?format=gene_table';
 
@@ -134,9 +131,9 @@ sub fetch_input {
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  $basePheno->logFH($logFH);
-  $basePheno->errFH($errFH);
-  $basePheno->pipelogFH($pipelogFH);
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
 
   #get input files OMIA gene_table, this file contains multiple species
   print $logFH "Found file (".$workdir_fetch."/".$file_omia.") and will skip new fetch\n" if -e $workdir_fetch."/".$file_omia;
@@ -160,14 +157,14 @@ sub run {
   my $omia_file = $self->required_param('omia_file');
 
   # dump and clean pre-existing phenotypes
-  $basePheno->dump_phenotypes($source_info{source_name},$workdir, 1);
+  $self->dump_phenotypes($source_info{source_name},$workdir, 1);
 
   # get phenotype data
-  my $results = parse_omia($omia_file);
-  $basePheno->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($basePheno->debug);
+  my $results = $self->parse_omia($omia_file);
+  $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
-  $basePheno->save_phenotypes(\%source_info, $results);
+  $self->save_phenotypes(\%source_info, $results);
 
   my %param_source = (source_name => $source_info{source_name_short},
                       type => [$source_info{object_type}]);
@@ -179,10 +176,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $basePheno->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($basePheno->debug);
-  close($basePheno->logFH) if defined $basePheno->logFH;
-  close($basePheno->errFH) if defined $basePheno->errFH;
-  close($basePheno->pipelogFH) if defined $basePheno->pipelogFH;
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH;
+  close($self->errFH) if defined $self->errFH;
+  close($self->pipelogFH) if defined $self->pipelogFH;
 
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
@@ -253,12 +250,12 @@ sub split_omia {
 }
 
 sub parse_omia {
-  my $infile = shift;
+  my ($self, $infile) = @_ ;
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
-;
-  my $ga = $basePheno->core_db_adaptor->get_GeneAdaptor;
+
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;
