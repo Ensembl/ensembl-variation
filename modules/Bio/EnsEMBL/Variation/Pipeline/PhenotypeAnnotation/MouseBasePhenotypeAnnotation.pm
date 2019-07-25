@@ -44,7 +44,7 @@ use JSON;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
-sub get_mouse_phenotype_data {
+sub get_input_file {
   my ($self, $working_dir, $data_source, $url) = @_;
 
   my $phenotype_file = "$working_dir/$data_source\_phenotypes.txt";
@@ -211,7 +211,7 @@ sub get_marker_coords {
   return $marker_coords;
 }
 
-sub parse_mouse_phenotype_data {
+sub parse_input_file {
   my ($self, $infile, $marker_coords, $source_name, $source_id) = @_;
 
   my $individual_adaptor = $self->variation_db_adaptor->get_IndividualAdaptor;

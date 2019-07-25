@@ -57,11 +57,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $self = Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation->new("debug" => $self->param('debug_mode'));
+  $self->debug($self->param('debug_mode'));
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-
-
 
   my $orphanet_data_url = 'http://www.orphadata.org/data/xml/en_product6.xml';
 
@@ -98,7 +96,7 @@ sub run {
   my $file_orphanet = $self->required_param('orphanet_file');
 
   # get phenotype data + save it (all in one method)
-  my ($results,$source_date) = $self->parse_orphanet($workdir."/".$file_orphanet);
+  my ($results,$source_date) = $self->parse_input_file($workdir."/".$file_orphanet);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   #save source_date
@@ -127,7 +125,7 @@ sub write_output {
 }
 
 # Orphanet specific phenotype parsing method
-sub parse_orphanet {
+sub parse_input_file {
   my ($self, $infile) = @_;
 
   my $core_db_adaptor = $self->core_db_adaptor;

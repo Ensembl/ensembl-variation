@@ -42,7 +42,6 @@ use strict;
 
 use File::Path qw(make_path);
 use POSIX 'strftime';
-use LWP::Simple;
 use DBI qw(:sql_types);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
@@ -97,9 +96,9 @@ sub fetch_input {
 
   my $dsn = "dbi:mysql:$database_conf{DATABASE}:$database_conf{HOST}:$database_conf{PORT}";
   $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
-  get_ega_file($file_ega) unless -e $workdir."/".$file_ega;
-
   print $logFH "Found files (".$workdir."/".$file_ega."), will skip new fetch\n" if -e $workdir."/".$file_ega;
+  get_input_file($file_ega) unless -e $workdir."/".$file_ega;
+
   $self->param('ega_file', $file_ega);
 }
 
@@ -113,7 +112,7 @@ sub run {
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = $self->parse_ega($file_ega, $source_id);
+  my $results = $self->parse_input_file($file_ega, $source_id);
   $self->print_logFH("Got ".(scalar @{$results->{'studies'}})." new studies \n") if ($self->debug);
 
   my %param_source = (source_name => $source_info{source_name},
@@ -136,7 +135,7 @@ sub write_output {
 
 
 # EGA specific data fetch methods
-sub get_ega_file {
+sub get_input_file {
   my $outfile = shift;
 
   my $errFH1;
@@ -211,7 +210,7 @@ sub get_publication {
 
 
 # EGA specific phenotype parsing method
-sub parse_ega {
+sub parse_input_file {
   my ($self, $infile, $source_id) = @_;
 
   my $variation_dba = $self->variation_db_adaptor;

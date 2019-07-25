@@ -121,27 +121,27 @@ sub fetch_input {
   print $logFH "INFO: Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
   `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
 
-  $self->param('cgc_file', $file_cgc_json);
+  my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
+  #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
+  $self->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
+  $self->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
+  $self->get_input_file($file_cgc_json, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
+  $self->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
+
+  $self->param('cgc_file', $file_cgc_ensembl);
 }
 
 sub run {
   my $self = shift;
 
   my $file_cgc = $self->required_param('cgc_file');
-  my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
-
-  #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
-  $self->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
-  $self->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
-  $self->get_cancer_gene_census_file($file_cgc, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
-  $self->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = $self->parse_cancer_gene_census($file_cgc_ensembl);
+  my $results = $self->parse_input_file($file_cgc);
   $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -168,7 +168,7 @@ sub write_output {
 
 
 #CancerGeneCensus specific data prep
-sub get_cancer_gene_census_file {
+sub get_input_file {
   my ($self, $input_file, $output_file) = @_;
 
   my $errFH1;
@@ -296,7 +296,7 @@ sub parse_publications {
 
 
 # CGC specific phenotype parsing method
-sub parse_cancer_gene_census {
+sub parse_input_file {
   my ($self, $infile) = @_;
 
   my $errFH1;

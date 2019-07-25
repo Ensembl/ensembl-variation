@@ -105,7 +105,7 @@ sub run {
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data + save it (all in one method)
-  my $results = $self->parse_ddg2p($file_ddg2p);
+  my $results = $self->parse_input_file($file_ddg2p);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -130,7 +130,7 @@ sub write_output {
 }
 
 # DDG2P specific phenotype parsing method
-sub parse_ddg2p {
+sub parse_input_file {
   my ($self, $infile) = @_ ;
 
   my $ga = $self->core_db_adaptor->get_GeneAdaptor;

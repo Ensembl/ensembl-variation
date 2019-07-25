@@ -160,7 +160,7 @@ sub run {
   $self->dump_phenotypes($source_info{source_name},$workdir, 1);
 
   # get phenotype data
-  my $results = $self->parse_omia($omia_file);
+  my $results = $self->parse_input_file($omia_file);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -249,7 +249,7 @@ sub split_omia {
 
 }
 
-sub parse_omia {
+sub parse_input_file {
   my ($self, $infile) = @_ ;
 
   my $errFH1;

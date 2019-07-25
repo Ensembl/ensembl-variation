@@ -126,7 +126,7 @@ sub run {
   my $seq_region_ids = $self->get_seq_region_ids();
 
   # parse phenotypes
-  my ($results, $version) = $self->parse_rgd_qtl($seq_region_ids, $rgd_file, $species_assembly);
+  my ($results, $version) = $self->parse_input_file_qtl($seq_region_ids, $rgd_file, $species_assembly);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes:
@@ -137,7 +137,7 @@ sub run {
 
   #Process GENEs files
   foreach my $rgd_gene_file (@{$self->required_param('gene_file')}){
-    my ($results, $version) = $self->parse_rgd_gene($seq_region_ids, $rgd_gene_file);
+    my ($results, $version) = $self->parse_input_file_gene($seq_region_ids, $rgd_gene_file);
     $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes from file $rgd_gene_file\n") if ($self->debug);
     $source_info{source} = 'rgd_gene';
     $source_info{object_type} = 'Gene'; # By default it is set to 'QTL
@@ -165,7 +165,7 @@ sub write_output {
 
 
 # RGD specific phenotype parsing method for GENE files
-sub parse_rgd_gene {
+sub parse_input_file_gene {
   my ($self, $seq_region_ids, $infile) = @_;
 
   my $errFH1;
@@ -270,7 +270,7 @@ sub parse_rgd_gene {
 
 
 # RGD specific phenotype parsing method for eQTLs
-sub parse_rgd_qtl {
+sub parse_input_file_qtl {
   my ($self, $seq_region_ids, $infile, $assembly)  = @_ ;
 
   my $errFH1;

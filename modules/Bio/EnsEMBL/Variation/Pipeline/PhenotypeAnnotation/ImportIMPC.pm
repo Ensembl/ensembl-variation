@@ -87,7 +87,7 @@ sub fetch_input {
   my $url ='/mi/impc/solr/genotype-phenotype';
   my $file_impc = "IMPC_phenotypes.txt";
   print $logFH "Found file (".$workdir."/".$file_impc."), will skip new fetch\n" if -e $workdir."/".$file_impc;
-  $file_impc = $self->get_mouse_phenotype_data($workdir, $source_info{source_name}, $url) unless -e $workdir."/".$file_impc;
+  $file_impc = $self->get_input_file($workdir, $source_info{source_name}, $url) unless -e $workdir."/".$file_impc;
 
   $self->param('impc_file', $file_impc);
 }
@@ -108,7 +108,7 @@ sub run {
   my $marker_coords = $self->get_marker_coords($workdir."/".$file_impc, $coord_file);
 
   # get phenotype data
-  my $results = $self->parse_mouse_phenotype_data($workdir."/".$file_impc, $marker_coords, $source_info{source_name}, $source_id);
+  my $results = $self->parse_input_file($workdir."/".$file_impc, $marker_coords, $source_info{source_name}, $source_id);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes

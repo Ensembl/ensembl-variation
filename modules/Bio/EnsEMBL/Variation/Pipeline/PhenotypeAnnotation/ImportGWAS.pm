@@ -128,7 +128,7 @@ sub run {
   my $gwas_file = $self->required_param('gwas_file');
 
   # get phenotype data
-  my $results = $self->parse_nhgri($gwas_file);
+  my $results = $self->parse_input_file($gwas_file);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -154,7 +154,7 @@ sub write_output {
 
 
 # NHGRI-EBI GWAS specific phenotype parsing method
-sub parse_nhgri {
+sub parse_input_file {
   my ($self, $infile) = @_;
 
   my %headers;

@@ -100,7 +100,7 @@ sub run {
   my $input_file = $self->required_param('zfin_file');   #Go through files and parse them in the correct format
 
   # get phenotype data
-  my $results = $self->parse_zfin($input_file);
+  my $results = $self->parse_input_file($input_file);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -125,7 +125,7 @@ sub write_output {
 
 
 # ZFIN specific phenotype parsing method for txt files
-sub parse_zfin {
+sub parse_input_file {
   my ($self, $infile) = @_;
 
   my $ga = $self->core_db_adaptor->get_GeneAdaptor;

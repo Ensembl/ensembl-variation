@@ -120,7 +120,7 @@ sub run {
   $self->print_pipelogFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data
-  my $results = parse_omim_gene($workdir."/".$file_mim);
+  my $results = parse_input_file($workdir."/".$file_mim);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -145,7 +145,7 @@ sub write_output {
 }
 
 # MIM morbid specific phenotype parsing method
-sub parse_omim_gene {
+sub parse_input_file {
   my $infile = shift;
 
   open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) || die ("Could not open $infile for reading\n");

@@ -184,7 +184,7 @@ sub run {
   my $seq_region_ids = $self->get_seq_region_ids();
 
   # get phenotype data
-  my $results = $self->parse_animal_qtl($seq_region_ids, $file_qtl);
+  my $results = $self->parse_input_file($seq_region_ids, $file_qtl);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -216,7 +216,7 @@ sub write_output {
 }
 
 # AnimalQTL specific phenotype parsing method for gff3 files
-sub parse_animal_qtl {
+sub parse_input_file {
   my ($self, $seq_region_ids, $infile) = @_;
 
   my $errFH1;
