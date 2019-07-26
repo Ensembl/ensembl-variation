@@ -31,7 +31,8 @@ limitations under the License.
 
 =head1 ImportEGA
 
-This module imports EGA (European Genome-phenome Archive) data.
+This module imports EGA (European Genome-phenome Archive) study data.
+Note: only studies are imported, no phenotype feature data.
 
 =cut
 
@@ -47,8 +48,24 @@ use DBI qw(:sql_types);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
-my $dbh;      #EGA connection
+
+
+=head2 ega_db_handler
+
+  Arg [1]    : DBI::db $db_handler (optional)
+               The new ega_db_handler
+  Example    : $ega_dbh = $obj->ega_db_handler()
+  Description: Get/set the ega_db_handler
+  Returntype : DBI::db
+  Exceptions : none
+
+=cut
+
+sub ega_db_handler {
+  my ($self, $db_handler) = @_;
+  $self->{ega_dbh} = $db_handler if defined $db_handler;
+  return $self->{ega_dbh};
+}
 
 sub fetch_input {
   my $self = shift;
@@ -70,8 +87,9 @@ sub fetch_input {
                   );
   $source_info{source_version} = strftime "%Y%m", localtime; # it is current month
 
-  $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
   my $file_ega = "ega.studies.csv";
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -95,9 +113,11 @@ sub fetch_input {
   }
 
   my $dsn = "dbi:mysql:$database_conf{DATABASE}:$database_conf{HOST}:$database_conf{PORT}";
-  $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
+  my $dbh = DBI->connect($dsn,$database_conf{USER},$database_conf{PASS});
+  $self->ega_db_handler($dbh);
+
   print $logFH "Found files (".$workdir."/".$file_ega."), will skip new fetch\n" if -e $workdir."/".$file_ega;
-  get_input_file($file_ega) unless -e $workdir."/".$file_ega;
+  $self->get_input_file($file_ega) unless -e $workdir."/".$file_ega;
 
   $self->param('ega_file', $file_ega);
 }
@@ -111,8 +131,8 @@ sub run {
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
-  # get phenotype data + save it (all in one method)
-  my $results = $self->parse_input_file($file_ega, $source_id);
+  # get study data + save into study and associate_study (all in one method)
+  my $results = $self->parse_and_add_input_file($file_ega, $source_id);
   $self->print_logFH("Got ".(scalar @{$results->{'studies'}})." new studies \n") if ($self->debug);
 
   my %param_source = (source_name => $source_info{source_name},
@@ -134,19 +154,29 @@ sub write_output {
 }
 
 
-# EGA specific data fetch methods
+=head2 get_input_file
+
+  Arg [1]    : String $outfile
+              The output file path
+  Example    : $self->get_input_file($outfile)
+  Description: Fetches EGA data and writes the data comma separated into $outfile.
+  Returntype : none.
+  Exceptions : none
+
+=cut
+
 sub get_input_file {
-  my $outfile = shift;
+  my ($self, $outfile) = @_ ;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$outfile) || die ("Could not open file for writing: $!\n");
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$outfile) || die ("Could not open file for writing: $!\n");
 
-  my $studies = get_all_study_stable_ids();
-  open (FILE, ">".$workdir."/".$outfile) || die ("Could not open file for writing: $!\n");
+  my $studies = $self->get_all_study_stable_ids();
+  open (FILE, ">".$self->workdir."/".$outfile) || die ("Could not open file for writing: $!\n");
 
   foreach my $stable_id (sort {$a cmp $b } @$studies) {
-    my $study_id = get_study_id($stable_id);
-    my $pmid = get_publication($study_id);
+    my $study_id = $self->get_study_id($stable_id);
+    my $pmid = $self->get_publication($study_id);
     if (!$pmid) {
       print $errFH1 "WARNING: Cannot find a publication for $stable_id\n";
       next;
@@ -159,10 +189,22 @@ sub get_input_file {
   close ($errFH1);
 }
 
+
+=head2 get_all_study_stable_ids
+
+  Example    : $self->get_all_study_stable_ids()
+  Description: Fetch stable_id(s) from study table in EGA
+  Returntype : arrayref of stable_id(s)
+  Exceptions : none
+
+=cut
+
 sub get_all_study_stable_ids {
+  my $self = shift ;
+
   my @studies;
 
-  my $sth = $dbh->prepare(qq[SELECT stable_id FROM study]);
+  my $sth = $self->ega_db_handler->prepare(qq[SELECT stable_id FROM study]);
   $sth->execute();
 
   while (my $id = $sth->fetchrow() ) {
@@ -174,10 +216,21 @@ sub get_all_study_stable_ids {
   return \@studies;
 }
 
-sub get_study_id {
-  my ($stable_id) = @_;
 
-  my $sth = $dbh->prepare(qq[SELECT study_id FROM study WHERE stable_id = ?]);
+=head2 get_study_id
+
+  Arg [1]    : String $stable_id
+  Example    : $self->get_study_id($stable_id)
+  Description: Fetch study_id from study table in EGA for $stable_id
+  Returntype : string study_id
+  Exceptions : none
+
+=cut
+
+sub get_study_id {
+  my ($self, $stable_id) = @_;
+
+  my $sth = $self->ega_db_handler->prepare(qq[SELECT study_id FROM study WHERE stable_id = ?]);
   $sth->execute($stable_id);
 
   my $study_id = $sth->fetchrow();
@@ -186,10 +239,21 @@ sub get_study_id {
   return $study_id;
 }
 
-sub get_publication {
-    my ($study_id) = @_;
 
-    my $sth = $dbh->prepare(qq[SELECT publication_id FROM study_publication WHERE study_id = ?]);
+=head2 get_publication
+
+  Arg [1]    : String $study_id
+  Example    : $self->get_publication($study_id)
+  Description: Fetch publication_id from study table in EGA for $study_id
+  Returntype : string publication_id
+  Exceptions : none
+
+=cut
+
+sub get_publication {
+    my ($self, $study_id) = @_;
+
+    my $sth = $self->ega_db_handler->prepare(qq[SELECT publication_id FROM study_publication WHERE study_id = ?]);
     $sth->execute($study_id);
 
     my $publication_id = $sth->fetchrow();
@@ -197,7 +261,7 @@ sub get_publication {
 
     my $pmid;
     if ($publication_id) {
-      $sth = $dbh->prepare(qq[SELECT pmid from publication WHERE publication_id = ?]);
+      $sth = $self->ega_db_handler->prepare(qq[SELECT pmid from publication WHERE publication_id = ?]);
       $sth->execute($publication_id);
 
       $pmid = $sth->fetchrow();
@@ -208,14 +272,23 @@ sub get_publication {
 }
 
 
+=head2 parse_and_add_input_file
 
-# EGA specific phenotype parsing method
-sub parse_input_file {
+  Arg [1]    : String $infile
+  Arg [2]    : String $source_id
+  Example    : $self->parse_and_add_input_file($infile, $source_id)
+  Description: Parse EGA studies file and insert new data into study and associate_study tables in variatio db.
+  Returntype : string study_id
+  Exceptions : none
+
+=cut
+
+sub parse_and_add_input_file {
   my ($self, $infile, $source_id) = @_;
 
   my $variation_dba = $self->variation_db_adaptor;
   my $errFH2;
-  open ($errFH2, ">", $workdir."/".'log_import_err_parse_'.$infile) ;
+  open ($errFH2, ">", $self->workdir."/".'log_import_err_parse_'.$infile) ;
 
   my $study_check_stmt = qq{
     SELECT
@@ -276,7 +349,7 @@ sub parse_input_file {
   my $asso_study_ins_sth   = $variation_dba->dbc->prepare($asso_study_ins_stmt);
 
   # Open the input file for reading
-  open(IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
+  open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
 
   # Read through the file and parse out the desired fields
   my @new_studies;

@@ -99,6 +99,24 @@ sub new {
   return $self;
 }
 
+=head2 workdir
+
+  Arg [1]    : string $workdir (optional)
+               The working directory path.
+  Example    : $wkdir = $obj->workdir()
+  Description: Get/set the working directory path
+  Returntype : string
+  Exceptions : none
+
+=cut
+
+sub workdir {
+  my ($self, $wkdir) = @_;
+  $self->{workdir} = $wkdir if defined $wkdir;
+  return $self->{workdir};
+}
+
+
 =head2 skip_synonyms
 
   Arg [1]    : boolean $skip_synonyms (optional)
@@ -184,7 +202,7 @@ sub variation_db_adaptor {
   Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
                The new ontology_db_adaptor
   Example    : $ontology_dba = $obj->ontology_db_adaptor()
-  Description: Get/set the variation_db_adaptor
+  Description: Get/set the ontology_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
@@ -558,8 +576,10 @@ sub save_phenotypes {
   Arg [2]    : String $workdir
   Arg [3]    : boolean $clean (optional) - delete phenotype data from db (default: 0)
   Example    : $self->dump_phenotypes($source_id, $workdir, 1);
-  Description: Dump the existing phenotype_features, phenotype_feautres_attribs for the particular source and removes them if clean option selected.
-              $clean option removes the phenotype feautre data including phenotypes and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
+  Description: Dump the existing phenotype_features, phenotype_feautres_attribs
+               for the particular source and removes them if clean option selected.
+               $clean option removes the phenotype feautre data including phenotypes
+               and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
   Returntype : none
   Exceptions : none
 
