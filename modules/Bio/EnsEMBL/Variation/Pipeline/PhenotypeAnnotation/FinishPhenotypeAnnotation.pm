@@ -137,6 +137,7 @@ sub report_results{
   my $dir =  $self->required_param('workdir');
   my $report;
   open ($report, ">$dir/REPORT_import.txt") || die ("Failed to open report file for summary info :$!\n");
+  print $report, "Running time: ", localtime, "\n";
 
   my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
 
