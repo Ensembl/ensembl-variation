@@ -49,7 +49,6 @@ use JSON;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -71,8 +70,10 @@ sub fetch_input {
                   source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
                   );
 
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
+
   my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
   # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
 
@@ -189,16 +190,16 @@ sub get_input_file {
   die("ERROR: Could not get ontology term adaptor\n") unless defined($ota);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) || die ("Failed to open file: $!\n");
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$input_file) || die ("Failed to open file: $!\n");
 
   my %efos;
   my %data;
 
   if($input_file =~ /gz$/) {
-    open (IN, "zcat $workdir/$input_file |") || die ("Could not open $input_file for reading: $!\n");
+    open (IN, "zcat ".$self->workdir."/$input_file |") || die ("Could not open $input_file for reading: $!\n");
   }
   else {
-    open (IN,'<',$workdir."/".$input_file) || die ("Could not open $input_file for reading: $!\n");
+    open (IN,'<',$self->workdir."/".$input_file) || die ("Could not open $input_file for reading: $!\n");
   }
 
   while(<IN>) {
@@ -259,7 +260,7 @@ sub get_input_file {
   }
   close(IN);
 
-  open (OUT, "> $workdir/$output_file") || die ("Could not open file for writing: $!\n");
+  open (OUT, "> ".$self->workdir."/$output_file") || die ("Could not open file for writing: $!\n");
   foreach my $gene_symbol (sort(keys(%data))) {
     foreach my $gene_id (keys(%{$data{$gene_symbol}})) {
       foreach my $phenotype (keys(%{$data{$gene_symbol}{$gene_id}})) {
@@ -351,16 +352,16 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$self->workdir."/".'log_import_err_'.$infile.": $!\n");
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat $workdir/$infile |") || die ("Could not open $infile for reading: $!\n");
+    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
+    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   # Read through the file and parse out the desired fields

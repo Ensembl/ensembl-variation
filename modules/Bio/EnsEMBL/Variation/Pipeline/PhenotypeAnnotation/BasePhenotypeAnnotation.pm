@@ -573,9 +573,8 @@ sub save_phenotypes {
 =head2 dump_phenotypes
 
   Arg [1]    : String $source_name
-  Arg [2]    : String $workdir
-  Arg [3]    : boolean $clean (optional) - delete phenotype data from db (default: 0)
-  Example    : $self->dump_phenotypes($source_id, $workdir, 1);
+  Arg [2]    : boolean $clean (optional) - delete phenotype data from db (default: 0)
+  Example    : $self->dump_phenotypes($source_id, 1);
   Description: Dump the existing phenotype_features, phenotype_feautres_attribs
                for the particular source and removes them if clean option selected.
                $clean option removes the phenotype feautre data including phenotypes
@@ -586,9 +585,9 @@ sub save_phenotypes {
 =cut
 
 sub dump_phenotypes {
-  my ($self, $source_name, $workdir, $clean) = @_;
+  my ($self, $source_name, $clean) = @_;
 
-  die ("source_name and workdir need to be specified!\n") unless defined $source_name && defined $workdir;
+  die ("source_name needs to be specified!\n") unless defined $source_name && defined $self->workdir;
   $clean ||= 0;
 
   # Prepared statements
@@ -644,10 +643,10 @@ sub dump_phenotypes {
 
   my $db_adaptor    = $self->variation_db_adaptor;
 
-  _sql_to_file($pfa_select_stmt, $db_adaptor, $workdir."/"."pfa_".$source_name.".txt");
-  _sql_to_file($pf_select_stmt, $db_adaptor, $workdir."/"."pf_".$source_name.".txt");
-  _sql_to_file($p_extra_select_stmt, $db_adaptor, $workdir."/"."p_extra_".$source_name.".txt");
-  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $workdir."/"."poa_extra_".$source_name.".txt");
+  _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/"."pfa_".$source_name.".txt");
+  _sql_to_file($pf_select_stmt, $db_adaptor, $self->workdir."/"."pf_".$source_name.".txt");
+  _sql_to_file($p_extra_select_stmt, $db_adaptor, $self->workdir."/"."p_extra_".$source_name.".txt");
+  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $self->workdir."/"."poa_extra_".$source_name.".txt");
 
   if ($clean) {
     my $sth = $db_adaptor->dbc->prepare($pfa_delete_stmt);

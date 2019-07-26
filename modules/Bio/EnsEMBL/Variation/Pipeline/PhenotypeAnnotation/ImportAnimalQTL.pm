@@ -179,7 +179,7 @@ sub run {
   my $file_qtl = $self->required_param('qtl_file');
 
   # dump and clean pre-existing phenotypes
-  $self->dump_phenotypes($source_info{source_name},$self->workdir, 1);
+  $self->dump_phenotypes($source_info{source_name}, 1);
 
   # get seq_region_ids
   my $seq_region_ids = $self->get_seq_region_ids();

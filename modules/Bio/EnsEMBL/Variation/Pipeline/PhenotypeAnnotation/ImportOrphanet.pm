@@ -49,7 +49,6 @@ use POSIX 'strftime';
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -73,8 +72,9 @@ sub fetch_input {
                   );
 
   #get input file Orphanet:
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -96,7 +96,7 @@ sub run {
   my $file_orphanet = $self->required_param('orphanet_file');
 
   # get phenotype data + save it (all in one method)
-  my ($results,$source_date) = $self->parse_input_file($workdir."/".$file_orphanet);
+  my ($results,$source_date) = $self->parse_input_file($self->workdir."/".$file_orphanet);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   #save source_date
@@ -115,12 +115,11 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">", $workdir."/".'log_import_debug_pipe') || die ("Could not open file for writing: $!\n");
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH;
+  close($self->errFH) if defined $self->errFH;
+  close($self->pipelogFH) if defined $self->pipelogFH;
 
-    print $logPipeFH "Passing $source_info{source_name} import (".$self->required_param('species').") for checks (check_phenotypes)\n";
-    close ($logPipeFH);
-  }
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 

@@ -48,7 +48,6 @@ use POSIX 'strftime';
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -71,8 +70,9 @@ sub fetch_input {
                   source_version => $dateStr,
                   );
 
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -120,7 +120,7 @@ sub run {
   $self->print_pipelogFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   # get phenotype data
-  my $results = parse_input_file($workdir."/".$file_mim);
+  my $results = parse_input_file($self->workdir."/".$file_mim);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes

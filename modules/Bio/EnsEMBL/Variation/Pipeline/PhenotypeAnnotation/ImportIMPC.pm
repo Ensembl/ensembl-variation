@@ -46,7 +46,6 @@ use File::Path qw(make_path);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -68,8 +67,9 @@ sub fetch_input {
                   #source version is set based on the EBI fetched data hash response_date
                   );
 
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -99,16 +99,16 @@ sub run {
   my $coord_file = $self->required_param('coord_file');
 
   # dump and clean pre-existing phenotypes
-  $self->dump_phenotypes($source_info{source_name},$workdir, 1);
+  $self->dump_phenotypes($source_info{source_name}, 1);
 
   #get source id and update with latest source_info data
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
-  my $marker_coords = $self->get_marker_coords($workdir."/".$file_impc, $coord_file);
+  my $marker_coords = $self->get_marker_coords($self->workdir."/".$file_impc, $coord_file);
 
   # get phenotype data
-  my $results = $self->parse_input_file($workdir."/".$file_impc, $marker_coords, $source_info{source_name}, $source_id);
+  my $results = $self->parse_input_file($self->workdir."/".$file_impc, $marker_coords, $source_info{source_name}, $source_id);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
 
   # save phenotypes
@@ -119,7 +119,7 @@ sub run {
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                               species => $self->required_param('species'),
-                              workdir => $workdir
+                              workdir => $self->workdir
                             });
 }
 

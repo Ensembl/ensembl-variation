@@ -49,7 +49,6 @@ use POSIX 'strftime';
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -73,9 +72,9 @@ sub fetch_input {
                 # source_version is set based on file name
                   );
 
-
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -86,7 +85,6 @@ sub fetch_input {
 
   #get input files:
   my $file_gwas;
-
   # first look if one already was downloaded, if not then fetch latest
   my @files = glob($workdir. '/gwas_catalog_v*-associations_e*_r*\.tsv' );
   my ($latestFile, $latestFileTime);
@@ -171,14 +169,14 @@ sub parse_input_file {
   my @phenotypes;
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $infile for reading: $!\n");
+    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
+    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   # Read through the file and parse out the desired fields
@@ -286,7 +284,6 @@ sub parse_input_file {
   close($errFH1);
 
   my %result = ('phenotypes' => \@phenotypes);
-
   return \%result;
 }
 

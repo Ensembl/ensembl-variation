@@ -48,7 +48,6 @@ use LWP::Simple;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   #create output folder structure and fetches input files
@@ -76,8 +75,9 @@ sub fetch_input {
   my $inputFile = 'phenoGeneCleanData_fish.txt';
 
   #create workdir folder
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -142,16 +142,16 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/"."log_import_err_".$infile) ;
+  open ($errFH1, ">", $self->workdir."/"."log_import_err_".$infile) ;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat $workdir/$infile |") || die ("Could not open $infile for reading\n");
+    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open (IN,'<',$workdir."/".$infile) || die ("Could not open $infile for reading\n");
+    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

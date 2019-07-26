@@ -52,7 +52,6 @@ use HTTP::Tiny;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 my %species = (
   9685  => 'cat',
@@ -126,8 +125,10 @@ sub fetch_input {
   make_path($workdir_fetch);
   my $file_omia = 'omia_gene_table.txt';
 
-  $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
+
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
   open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -157,7 +158,7 @@ sub run {
   my $omia_file = $self->required_param('omia_file');
 
   # dump and clean pre-existing phenotypes
-  $self->dump_phenotypes($source_info{source_name},$workdir, 1);
+  $self->dump_phenotypes($source_info{source_name}, 1);
 
   # get phenotype data
   my $results = $self->parse_input_file($omia_file);
@@ -279,16 +280,16 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat $workdir."/".$infile |") || die ("Could not open $workdir."/".$infile for reading\n");
+    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open ".$self->workdir."/$infile for reading\n");
   }
   else {
-    open (IN,'<',$workdir."/".$infile) || die ("Could not open $workdir."/".$infile for reading\n");
+    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open ".$self->workdir."/$infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

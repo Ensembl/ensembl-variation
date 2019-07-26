@@ -49,7 +49,6 @@ use Text::CSV;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
-my $workdir;
 
 sub fetch_input {
   my $self = shift;
@@ -71,8 +70,9 @@ sub fetch_input {
                   source_version => strftime "%Y%m%d", localtime, # it is current month
                   );
 
-  $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
   make_path($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -148,17 +148,17 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
   my $fh;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open ($fh, "zcat $workdir/$infile |") || die ("Could not open $infile for reading: $!\n");
+    open ($fh, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open ($fh,'<',$workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
+    open ($fh,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   my %headers;

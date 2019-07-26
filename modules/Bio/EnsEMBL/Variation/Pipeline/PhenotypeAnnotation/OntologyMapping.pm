@@ -51,53 +51,50 @@ use JSON;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 my $source;
-my $workdir;
-my $report;
 
-my $variation_dba;
-my $phenotype_dba;
-
-my $default_species = 'homo_sapiens';
-my ($logFH, $outFH);
-my $species;
+my $DEFAULT_SPECIES = 'homo_sapiens';
 
 sub fetch_input {
   my $self = shift;
 
-  $species = $self->required_param('species');
+  my $species = $self->required_param('species');
   $source = $self->param('source');
-  $workdir = $self->param('workdir');
+  my $workdir = $self->param('workdir');
   $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
 
-  $variation_dba  = $self->get_species_adaptor('variation');
-  $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor; 
+  $self->debug($self->param('debug_mode'));
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
+  $sefl->workdir($workdir);
 
-  open ($logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
+  open (my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
+  open (my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
+
 }
 
 sub run {
   my $self = shift;
 
-  open ($outFH, ">$workdir/import_phenotype_accessions_$species.log") || die ("Failed to open log file :$!\n");
-
   ## add exact matches where available for all phenotypes
-  my $all_phenos = get_all_phenos($variation_dba->dbc->db_handle );
+  my $all_phenos = get_all_phenos($self->variation_db_adaptor->dbc->db_handle );
 
   my $ols_terms = add_ols_matches($all_phenos);
-  store_terms($species, $ols_terms );
+  $self->store_terms( $ols_terms );
 
   ## seek matches for parent descriptions missing terms
   ## eg for 'Psoriasis 13' seek 'Psoriasis'
-  my $non_matched_phenos = get_termless_phenos($variation_dba->dbc->db_handle);
+  my $non_matched_phenos = get_termless_phenos($self->variation_db_adaptor->dbc->db_handle);
   my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
-  store_terms($species, $ols_parent_terms );
+  $self->store_terms( $ols_parent_terms );
 
-  if ($species eq $default_species) {
-    my $non_matched_phenos = get_termless_phenos($variation_dba->dbc->db_handle);
-    my $zooma_terms  = add_zooma_matches($non_matched_phenos);
-    store_terms($species, $zooma_terms);
+  if ($self->param(species) eq $DEFAULT_SPECIES) {
+    my $non_matched_phenos = get_termless_phenos($self->variation_db_adaptor->dbc->db_handle);
+    my $zooma_terms  = $self->add_zooma_matches($non_matched_phenos);
+    $self->store_terms( $zooma_terms);
   }
-  close($outFH);
 
   $self->param('output_ids', { source => $self->required_param('source'),
                       species => $self->required_param('species'),
@@ -108,28 +105,30 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  if ($self->param('debug_mode')) {
-    open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species')) || die ("Could not open file for appending: $!\n");
-    print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
-    close ($logPipeFH);
-  }
-  close($logFH);
+  $self->print_pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n") if ($self->debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }
 
 sub store_terms{
-  my ($species, $terms)   = @_;
+  my ($self, $terms)   = @_;
+
+  my $species = $self->param(species);
+  my $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor;
 
   foreach my $id (keys %{$terms}){
 
     my $pheno = $phenotype_dba->fetch_by_dbID( $id );
     die "Not in db: $id\n" unless defined $pheno; ## this should not happen
     foreach my $accession (@{$terms->{$id}->{terms}}){
-      if ($species eq $default_species) {
+      if ($species eq $DEFAULT_SPECIES) {
         next if $accession =~ /UBERON|NCBITaxon|NCIT|CHEBI|PR|MPATH|MA|PATO/; ## filter out some EFO term types
       }
-      print $outFH "$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n";
+      $self->print_logFH("$id\t$accession\t$terms->{$id}->{type}\t" . $pheno->description() ."\n");
 
       $pheno->add_ontology_accession({ accession      => $accession, 
                                        mapping_source => $terms->{$id}->{type},
@@ -200,7 +199,7 @@ return only eva curated matches for a phenotype description
 =cut
 
 sub get_eva_zooma_terms{
-  my ($desc, $confLevel) = @_;
+  my ($self, $desc, $confLevel) = @_;
 
   my $ontol_data = get_zooma_terms($desc);
   return undef unless defined $ontol_data;
@@ -216,7 +215,7 @@ sub get_eva_zooma_terms{
     next unless grep(/EFO|Orphanet|ORDO|HP/, @{$annot->{semanticTags}});
 
     foreach my $term (@{$annot->{semanticTags}} ){
-      print $outFH "$term\t$annot->{confidence}\t$desc\tEVA\n";
+      $self->print_logFH("$term\t$annot->{confidence}\t$desc\tEVA\n");
       push @terms, iri2acc($term) ;
     }
   }
@@ -313,7 +312,7 @@ sub add_ols_matches{
       $search_term =~ s/nonsyndromic //i;
 
       next if length($search_term) == length($phenos->{$id});
-      print $logFH "Seeking $search_term from $phenos->{$id}\n";
+      $self->print_errFH("Seeking $search_term from $phenos->{$id}\n");
     }
 
     my $ontol_data = get_ols_terms( $search_term );
@@ -321,9 +320,9 @@ sub add_ols_matches{
 
     my @terms;
     foreach my $doc (@{$ontol_data->{response}->{docs}}){ 
-      if ($species eq $default_species) {
+      if ($species eq $DEFAULT_SPECIES) {
         next unless $doc->{ontology_prefix} =~/EFO|Orphanet|ORDO|HP/;
-      } elsif($species ne $default_species) {
+      } elsif($species ne $DEFAULT_SPECIES) {
         next unless $doc->{ontology_prefix} =~/VT/;
       }
 
@@ -344,7 +343,7 @@ sub add_ols_matches{
 =cut
 
 sub add_zooma_matches{
-  my $phenos = shift;
+  my ($self, $phenos) = @_;
 
   my %terms;
 
@@ -352,7 +351,7 @@ sub add_zooma_matches{
     my $desc = $phenos->{$id};
     $desc =~ s/\s+\(\w+\)$//; ## remove DDG2P abbreviation 
 
-    my $eva_terms = get_eva_zooma_terms($desc, 'HIGH');
+    my $eva_terms = $self->get_eva_zooma_terms($desc, 'HIGH');
     $terms{$id}{terms} = $eva_terms if defined $eva_terms;
     $terms{$id}{type} = "Zooma exact" if defined $eva_terms;
   }
