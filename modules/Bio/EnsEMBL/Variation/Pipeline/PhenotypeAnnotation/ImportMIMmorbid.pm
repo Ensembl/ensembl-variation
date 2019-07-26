@@ -144,7 +144,18 @@ sub write_output {
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
-# MIM morbid specific phenotype parsing method
+
+=head2 parse_input_file
+
+  Arg [1]    : string $infile
+               The input file path
+  Example    : $results = parse_input_file($infile)
+  Description: Parse phenotypes from MIM morbid input file
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my $infile = shift;
 

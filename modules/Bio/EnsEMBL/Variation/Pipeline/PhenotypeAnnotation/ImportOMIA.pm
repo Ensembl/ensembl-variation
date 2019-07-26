@@ -185,7 +185,18 @@ sub write_output {
 }
 
 
-# OMIA specific phenotype parsing methods
+=head2 split_omia
+
+  Arg [1]    : string $infile
+               The input file name.
+  Example    : split_omia($workdir, $infile)
+  Description: Split the OMIA file into individual species OMIA files using NCBI taxonomoy ids.
+               Resulting files will be in 'omia_split' directory.
+  Returntype : none
+  Exceptions : none
+
+=cut
+
 sub split_omia {
   my $workdir = shift;
   my $all_file = shift;
@@ -249,14 +260,26 @@ sub split_omia {
 
 }
 
+
+=head2 parse_input_file
+
+  Arg [1]    : string $infile
+               The input file name.
+  Example    : $results = $obj->parse_input_file($infile)
+  Description: Parse phenotypes from OMIA species input file, uses gene symbols lookup in core
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my ($self, $infile) = @_ ;
 
-  my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
-
   my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
+
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 

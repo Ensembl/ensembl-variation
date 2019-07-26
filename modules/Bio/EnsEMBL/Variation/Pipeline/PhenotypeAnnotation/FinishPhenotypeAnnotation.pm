@@ -68,18 +68,22 @@ sub run {
   $self->update_meta();
 }
 
+
 =head2 get_new_results
 
-Run all the counting SQL on the new database
+  Arg [1]    : hashref $previous (optional)
+               The previous status counts of the analysis.
+  Example    : $new_counts = $obj->get_new_results()
+  Description: Run all the counting SQL on the new database.
+  Returntype : hashref of new counts
+  Exceptions : none
 
 =cut
 
 sub get_new_results{
   my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
 
-  my $var_dba = $self->variation_db_adaptor;
-  my $dbc     = $var_dba->dbc;
-
+  my $dbc     = $self->variation_db_adaptor->dbc;
   my $source = $self->param('source');
 
   my %new;  ## hold some of the new counts to store
@@ -115,7 +119,14 @@ sub get_new_results{
 
 =head2 report_results
 
-Print a report in the working directory showing current and previous data
+  Arg [1]    : hashref $new
+               The new counts of the analysis.
+  Arg [2]    : hashref $previous
+               The previous counts of the analysis.
+  Example    : $obj->report_results($new, $previous)
+  Description: Print a report in the working directory showing current and previous data.
+  Returntype : none
+  Exceptions : none
 
 =cut
 
@@ -146,10 +157,14 @@ sub report_results{
   close $report;
 }
 
+
 =head2 get_old_results
 
-Check internal production database for previous phenotype annotation import information
-for this species 
+  Example    : $obj->get_old_results()
+  Description: Check internal production database for previous phenotype annotation import information
+               for this species.
+  Returntype : hashref of previous counts
+  Exceptions : none
 
 =cut
 
@@ -184,9 +199,13 @@ sub get_old_results{
 
 =head2 update_internal_db
 
-Update internal production database with new statuses
+  Example    : $obj->update_internal_db($new)
+  Description: Update internal production database with new statuses.
+  Returntype : none
+  Exceptions : none
 
 =cut
+
 sub update_internal_db{
   my ($self, $new_counts) = @_;
 
@@ -251,12 +270,20 @@ sub update_internal_db{
   }
 }
 
+
 =head2 count_results
 
- This takes SQL statements to count the rows in a table or
- count rows grouped by an attribute in the table.
- It returns either the total number of rows in the table or 
- a hash of attribute => row count depending on input.
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBConnection $dbc
+               The new variation database connection
+  Arg [2]    : string $st
+               The SQL statement to be run.
+  Example    : $obj->count_results($dbc, $st)
+  Description: Takes SQL statements to count the rows in a table or count rows grouped
+               by an attribute in the table. It returns either the total number of rows in the
+               table or a hash of attribute => row count depending on input.
+  Returntype : interger or hashref
+  Exceptions : none
+
 =cut
 
 sub count_results{
@@ -278,7 +305,17 @@ sub count_results{
   }
 }
 
-## store the date the pipeline was run in the species meta table
+
+=head2 update_meta
+
+  Example    : $obj->update_meta()
+  Description: Store the pipeline name, date and imported source in the species meta table.
+               key=PhenotypeAnnotation_run_date_<source_name> value=run_date
+  Returntype : none
+  Exceptions : none
+
+=cut
+
 sub update_meta{
   my $self = shift;
 
@@ -292,7 +329,6 @@ sub update_meta{
   $update_meta_sth->execute('PhenotypeAnnotation_run_date_'.$source_info->{source_name}, $self->run_date() );
 
 }
-
 
 1;
 

@@ -153,7 +153,17 @@ sub write_output {
 }
 
 
-# NHGRI-EBI GWAS specific phenotype parsing method
+=head2 parse_input_file
+
+  Arg [1]    : string $infile
+               The input file name.
+  Example    : $results = $obj->parse_input_file($infile)
+  Description: Parse phenotypes from NHGRI-EBI GWAS input file
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my ($self, $infile) = @_;
 

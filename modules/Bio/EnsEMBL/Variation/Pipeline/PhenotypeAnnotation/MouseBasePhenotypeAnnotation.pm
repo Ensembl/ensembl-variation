@@ -93,7 +93,7 @@ sub get_input_file {
   return $phenotype_file;
 }
 
-sub fetch_mouse_data_version {
+sub fetch_data_version {
   my $self = $_;
 
   my $http = HTTP::Tiny->new();

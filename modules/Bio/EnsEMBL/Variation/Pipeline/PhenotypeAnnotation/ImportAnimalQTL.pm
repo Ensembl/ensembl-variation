@@ -41,6 +41,7 @@ This module import AnimalQTL data. The module relies on the existance of the fil
 # 4. get the *.txt.gz file and rename to species(_assembly)?.gff3.gz eg. gallus_gallus_GRCg6a.gff3.gz or gallus_gallus.gff3
 
 # NOTE: make sure the Animal QTL db has the data mapped to the Ensembl assembly name
+
 =cut
 
 
@@ -215,7 +216,20 @@ sub write_output {
   }
 }
 
-# AnimalQTL specific phenotype parsing method for gff3 files
+
+=head2 parse_input_file
+
+  Arg [1]    : arrayref $seq_region_ids
+               The array of string seq_region_id(s)
+  Arg [2]    : string $infile
+               The input file name.
+  Example    : $result = $self->parse_input_file($seq_region_ids, $infile)
+  Description: Specific parsing method for AnimalQTL gff3 phenotype files.
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my ($self, $seq_region_ids, $infile) = @_;
 

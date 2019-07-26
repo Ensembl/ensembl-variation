@@ -124,17 +124,26 @@ sub write_output {
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
-# Orphanet specific phenotype parsing method
+
+=head2 parse_input_file
+
+  Arg [1]    : string $infile
+               The input file name.
+  Example    : $results = $obj->parse_input_file($infile)
+  Description: Parse phenotypes from Orphanet species input file, uses gene symbols lookup in core
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my ($self, $infile) = @_;
 
-  my $core_db_adaptor = $self->core_db_adaptor;
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
-
-  my $ga = $core_db_adaptor->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my @phenotypes;
 
@@ -155,7 +164,7 @@ sub parse_input_file {
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;
 
-    # Replace special characters
+    # Replace special characters TODO: do this char replacement in BasePhenotypeAnnotation
     utf8::encode($name);
     if ($name =~ /[$special_chars]/) {
       foreach my $char (keys(%special_characters)) {

@@ -164,7 +164,19 @@ sub write_output {
 }
 
 
-# RGD specific phenotype parsing method for GENE files
+=head2 parse_input_file_gene
+
+  Arg [1]    : arrayref $seq_region_ids
+              The array of string seq_region_id(s)
+  Arg [2]    : string $infile
+               The input file name.
+  Example    : ($results,$version) = $obj->parse_input_file_gene($seq_region_ids, $infile)
+  Description: Parse phenotypes from RGD Gene input file, uses gene symbols lookup in core
+  Returntype : hashref with results (key 'phenotypes') and string date_version
+  Exceptions : none
+
+=cut
+
 sub parse_input_file_gene {
   my ($self, $seq_region_ids, $infile) = @_;
 
@@ -269,7 +281,21 @@ sub parse_input_file_gene {
 }
 
 
-# RGD specific phenotype parsing method for eQTLs
+=head2 parse_input_file_qtl
+
+  Arg [1]    : arrayref $seq_region_ids
+               The array of string seq_region_id(s)
+  Arg [2]    : string $infile
+               The input file name.
+  Arg [3]    : string $assembly
+               Specific assembly number for fetching the eQTL coordinates.
+  Example    : ($results,$version) = $obj->parse_input_file_gene($seq_region_ids, $infile)
+  Description: Parse phenotypes from RGD eQTLs input file
+  Returntype : hashref with results (key 'phenotypes') and string date_version
+  Exceptions : none
+
+=cut
+
 sub parse_input_file_qtl {
   my ($self, $seq_region_ids, $infile, $assembly)  = @_ ;
 

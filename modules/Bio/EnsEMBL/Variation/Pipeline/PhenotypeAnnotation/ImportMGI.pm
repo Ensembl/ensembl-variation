@@ -78,7 +78,7 @@ sub fetch_input {
   $self->pipelogFH($pipelogFH);
 
   #fetch source version at runtime:
-  $source_info{source_version} = $self->fetch_mouse_data_version;
+  $source_info{source_version} = $self->fetch_data_version;
 
   #get input file MGI:
   #Note: if file already exists, new fetch will be skipped, this can lead to

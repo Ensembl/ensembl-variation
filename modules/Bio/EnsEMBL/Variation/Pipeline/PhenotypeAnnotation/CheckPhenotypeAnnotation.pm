@@ -17,7 +17,6 @@ limitations under the License.
 
 =cut
 
-
 =head1 CONTACT
 
  Please email comments or questions to the public Ensembl
@@ -31,7 +30,7 @@ limitations under the License.
 
 =head1 CheckPhenotypeAnnotation
 
-This module runs checks and produces reports after the phenotype import stage
+This module runs checks and produces reports after the phenotype import stage.
 
 =cut
 
@@ -73,6 +72,8 @@ sub run {
   close $report;
 }
 
+
+
 sub write_output {
   my $self = shift;
 
@@ -97,7 +98,17 @@ sub write_output {
 }
 
 
-## check for unsupported characters in phenotype names 
+=head2 check_phenotype_description
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBConnection $dbh
+               The new variation database connection
+  Example    : check_phenotype_description($dbh)
+  Description: Check for unsupported characters in phenotype names and print to report.
+  Returntype : none
+  Exceptions : none
+
+=cut
+
 sub check_phenotype_description{
   my $dbh = shift;
 
@@ -128,6 +139,19 @@ sub check_phenotype_description{
 
 }
 
+
+=head2 checkNonTerms
+
+  Arg [1]    : string $description
+               The phenotype description to be checked.
+  Example    : checkNonTerms($description)
+  Description: Check for known default (not meaningful) phenotype descriptions,
+               returns 1 if no term was found, 0 if at least one term was matched.
+  Returntype : boolean
+  Exceptions : none
+
+=cut
+
 sub checkNonTerms {
   my $desc = shift;
 
@@ -143,6 +167,19 @@ sub checkNonTerms {
 
   return $is_ok;
 }
+
+
+=head2 checkUnsupportedChar
+
+  Arg [1]    : string $description
+               The phenotype description to be checked.
+  Example    : checkUnsupportedChar($description)
+  Description: Check for unsupported characters in the phenotype description,
+               returns 1 if nothing was found, 0 if at least one unsupported char was matched.
+  Returntype : boolean
+  Exceptions : none
+
+=cut
 
 sub checkUnsupportedChar {
   my $desc = shift;
@@ -170,7 +207,18 @@ sub checkUnsupportedChar {
   return $is_ok;
 }
 
-# basic report on imported data
+
+=head2 check_fk
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBConnection $dbh
+               The new variation database connection
+  Example    : check_fk($dbh)
+  Description: Basic foreign keys checks on all phenotype data and print to report.
+  Returntype : none
+  Exceptions : none
+
+=cut
+
 sub check_fk{
   my $dbh = shift;
 

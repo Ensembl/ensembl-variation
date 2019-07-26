@@ -167,20 +167,32 @@ sub write_output {
 }
 
 
-#CancerGeneCensus specific data prep
+=head2 get_input_file
+
+  Arg [1]    : string $infile
+               The input file name.
+  Arg [1]    : string $outfile
+               The output file name.
+  Example    : $obj->get_input_file($infile,$outfile)
+  Description: Specific parsing method for OpenTarget json file: selects Cancer Gene Census only data.
+  Returntype : none
+  Exceptions : none
+
+=cut
+
 sub get_input_file {
   my ($self, $input_file, $output_file) = @_;
+
+  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
+  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
+  my $ota = $self->ontology_db_adaptor->get_OntologyTermAdaptor;
+  die("ERROR: Could not get ontology term adaptor\n") unless defined($ota);
 
   my $errFH1;
   open ($errFH1, ">", $workdir."/".'log_import_err_'.$input_file) || die ("Failed to open file: $!\n");
 
   my %efos;
   my %data;
-
-  my $ga = $self->core_db_adaptor->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor\n") unless defined($ga);
-  my $ota = $self->ontology_db_adaptor->get_OntologyTermAdaptor;
-  die("ERROR: Could not get ontology term adaptor\n") unless defined($ota);
 
   if($input_file =~ /gz$/) {
     open (IN, "zcat $workdir/$input_file |") || die ("Could not open $input_file for reading: $!\n");
@@ -197,7 +209,7 @@ sub get_input_file {
     next unless ($source =~ /cancer_gene_census/);
 
     my $type          = $json_hash->{'type'};
-    my $gene_symbol   = $json_hash->{'target'}{'gene_info'}{'symbol'};
+    my $gene_symbol   = $json_hash->{'target'}{'gene_info'}{'symbol'}; #TODO: Q: why do we use sybmol and not geneid eg. ENSG00000156076
     my $pmids         = parse_publications($json_hash->{'literature'}{'references'});
     my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_uri'};
 
@@ -208,7 +220,7 @@ sub get_input_file {
     if ($phenotype_id =~ /^EFO/) {
       $phenotype = ($efos{$phenotype_id}) ? $efos{$phenotype_id} : get_phenotype_desc($phenotype_id, $ota);
     }
-
+    #TODO: Q: why do we use the ontology DB to fetch the phenotype description based on EFO if the data is in the original OpenTargets file?
     if (!$phenotype) {
       print $errFH1 "$gene_symbol: no phenotype desc found for $phenotype_id\n";
       $phenotype = 'ND';
@@ -216,7 +228,7 @@ sub get_input_file {
     else {
       $efos{$phenotype_id} = $phenotype;
     }
-    
+
     my $genes = $ga->fetch_all_by_external_name($gene_symbol, 'HGNC');		
     # we don't want any LRG genes
     @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
@@ -265,12 +277,26 @@ sub get_input_file {
   close ($errFH1);
 }
 
+
+=head2 get_phenotype_desc
+
+  Arg [1]    : string $phenotype_id
+               Phenotype ontology accession.
+  Arg [2]    : Bio::EnsEMBL::DBSQL::DBAdaptor $ota
+               The ontology db term adaptor file.
+  Example    : $obj->get_phenotype_desc($phenotype_id, $ota)
+  Description: Fetch phenotype description based on phenotype id from Ontology database.
+  Returntype : string phenotype description
+  Exceptions : none
+
+=cut
+
 sub get_phenotype_desc {
   my $id = shift;
   my $ota = shift;
 
   $id =~ s/ //g;
-  $id =~ s/_/:/g;
+  $id =~ s/_/:/g; #OpenTargets uses EFO_0000389 not EFO:0000389
 
   my $phenotype;
   my $term = $ota->fetch_by_accession($id);
@@ -278,6 +304,18 @@ sub get_phenotype_desc {
 
   return $phenotype;
 }
+
+
+=head2 parse_publications
+
+  Arg [1]    : string $references_json
+               Json references entry.
+  Example    : $obj->parse_publications($references_json)
+  Description: Parse the publication pmid from the reference url in the OpenTargets json record.
+  Returntype : arrayref
+  Exceptions : none
+
+=cut
 
 sub parse_publications {
   my $pubs = shift;
@@ -295,15 +333,25 @@ sub parse_publications {
 }
 
 
-# CGC specific phenotype parsing method
+=head2 parse_input_file
+
+  Arg [1]    : string $infile
+               The input file name.
+  Example    : $results = $obj->parse_input_file($infile)
+  Description: Parse the specific Cancer Genome Consensus data (from OpenTargets) reformated in tabulated file.
+  Returntype : hashref with results (key 'phenotypes')
+  Exceptions : none
+
+=cut
+
 sub parse_input_file {
   my ($self, $infile) = @_;
 
-  my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
-
   my $ga = $self->core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
+
+  my $errFH1;
+  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Failed to open file".$workdir."/".'log_import_err_'.$infile.": $!\n");
 
   my @phenotypes;
 

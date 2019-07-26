@@ -79,7 +79,7 @@ sub fetch_input {
   $self->pipelogFH($pipelogFH);
 
   #fetch source version at runtime:
-  $source_info{source_version} = $self->fetch_mouse_data_version;
+  $source_info{source_version} = $self->fetch_data_version;
 
   #get input file IMPC:
   #Note: if the file already exists, a new file fetch will be skipped, this can lead to
