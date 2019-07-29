@@ -68,7 +68,7 @@
       }
     },
     {
-      "id": "ExAC_0.3_with_duplicate_row",
+      "id": "ExAC_0.3_with_duplicated_row",
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "local",
