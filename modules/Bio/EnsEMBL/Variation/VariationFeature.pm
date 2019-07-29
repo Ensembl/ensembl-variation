@@ -99,7 +99,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -113,7 +113,6 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES);
-use Data::Dumper;
 
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
@@ -2321,9 +2320,24 @@ sub to_VCF_record {
   # in/del/unbalanced
   if($non_acgt || scalar keys %allele_lengths > 1) {
 
+    #if this is from dbSNP2.0, it may have additional common bases after the minimum change
+    @alleles = @{trim_right(\@alleles)} unless $non_acgt;
+
     unshift @alleles, '-' if scalar @alleles == 1;
 
-    my $prev_base = $self->_get_prev_base(1);
+
+    ## an anchoring base common to all alleles is required in VCF
+    my $prev_base;
+
+    ## if this is from dbSNP2.0, the base before the minimal change may be included
+    my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} @alleles;
+
+    if(scalar keys %first_bases == 1) {
+      $prev_base = '';
+    }
+    else{
+      $prev_base = $self->_get_prev_base(1);
+    }
 
     for my $i(0..$#alleles) {
       my $a = $alleles[$i];
