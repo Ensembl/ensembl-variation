@@ -264,7 +264,7 @@ sub pipeline_analyses {
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
-            -analysis_capacity  => 60,
+            -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
