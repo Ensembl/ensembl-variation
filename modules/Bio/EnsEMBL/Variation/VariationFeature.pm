@@ -2264,18 +2264,25 @@ sub display {
 
 =head2 to_VCF_record
 
+  Arg [1]    : boolean $no_trim (optional)
   Example    : $vcf_arrayref = $vf->to_VCF_record();
+               $trimmed_vcf_arrayref = $vf->to_VCF_record(1);
   Description: Converts this VariationFeature object to an arrayref
                representing the columns of a VCF line.
+               Trims common bases (used in SPDI format) from the ends of
+               insertion/deletion allele sequences, unless $no_trim is set.
   Returntype : arrayref of strings
   Exceptions : none
-  Caller     : VEP
+  Caller     : VEP, web code
   Status     : Stable
 
 =cut
 
 sub to_VCF_record {
   my $self = shift;
+  my $no_trim = shift;
+
+  $no_trim ||=0; ## right trimmed by default - switch off if not required
 
   # shortcut out if created from VCF record
   return [@{$self->{vcf_record}->{record}}[0..4]] if exists($self->{vcf_record});
@@ -2321,7 +2328,7 @@ sub to_VCF_record {
   if($non_acgt || scalar keys %allele_lengths > 1) {
 
     #if this is from dbSNP2.0, it may have additional common bases after the minimum change
-    @alleles = @{trim_right(\@alleles)} unless $non_acgt;
+    @alleles = @{trim_right(\@alleles)} unless $non_acgt || $no_trim == 1;
 
     unshift @alleles, '-' if scalar @alleles == 1;
 

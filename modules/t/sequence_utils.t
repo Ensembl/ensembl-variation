@@ -113,7 +113,7 @@ throws_ok {trim_sequences('A')} qr/Missing reference or alternate sequence/, 'tr
 throws_ok {trim_sequences()} qr/Missing reference or alternate sequence/, 'trim_sequences - no both';
 
 
-## test multi-alleleic SPDI trimming
+## test multi-allelic SPDI trimming
 ####################################
 
 my @no_change = ('GCGAGCCTGTGTGGTGCG', 'G');
@@ -137,6 +137,19 @@ is_deeply(
   'trim_right - multiple bases removed'
 );
 
+my @single_allele = ('AAAA');
+is_deeply(
+  trim_right(\@single_allele),
+  ['AAAA'],
+  'trim_right - single allele'
+);
+
+my @no_common = ('ACGTG', 'AT', 'ACGTGGA');
+is_deeply(
+  trim_right(\@no_common),
+  ['ACGTG',  'AT', 'ACGTGGA'],
+  'trim_right - no common bases to be removed'
+);
 
 ## get_matched_variant_alleles
 ##############################

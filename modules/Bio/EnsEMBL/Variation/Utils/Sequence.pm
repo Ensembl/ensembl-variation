@@ -1004,16 +1004,16 @@ sub trim_sequences {
 
 =head2 trim_right
 
-  Arg[0]      : arrayref of allele sequencess
-  Example     : my $trimmed_alleles = @{trim_right(\@alleles)}
+  Arg[1]      : arrayref of allele sequences
+  Example     : my @trimmed_alleles = @{trim_right(\@alleles)}
   Description : Takes a set of allele sequences and trims common sequence
                 from the end.
                 Reduces fully justified allele strings for VCF allele writing
-                Handles multi-alleleic variants
+                Handles multi-allelic variants
                 Stops when an allele sequence has length 1 (common bases
                 at the start are not removed to support VCF)
 
-  ReturnType  : arrayref of timmed allele sequences
+  ReturnType  : arrayref of trimmed allele sequences
   Exceptions  : throws if no allele sequences are supplied
   Caller      : VariationFeature->to_VCF_record()
 

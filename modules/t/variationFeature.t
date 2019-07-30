@@ -246,6 +246,14 @@ is_deeply(
   'to_VCF_record - fully justified allele string clipped'
 );
 
+
+is_deeply(
+  $vf->to_VCF_record(1),
+  [$chr, $sr_start -1 , $vname, 'ACGTGGACG', 'ACG,ACGTGGACGTGGACG', '.', '.', '.'],
+  'to_VCF_record - fully justified allele string  not clipped'
+);
+
+
 $vf->allele_string($allele_str);
 
 
