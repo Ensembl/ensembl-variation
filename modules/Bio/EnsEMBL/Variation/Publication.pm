@@ -264,7 +264,7 @@ sub ucsc_id{
   Arg [1]    : array ref [optional]
                an array of variations cited in the publication
   Example    : $variant_objects = $obj->variations()
-  Description: Getter/Setter for variatio_citations
+  Description: Getter/Setter for variation_citations
   Returntype : arrayref
   Exceptions : none
   Caller     : general
