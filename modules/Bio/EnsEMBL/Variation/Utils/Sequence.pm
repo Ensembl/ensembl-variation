@@ -937,7 +937,7 @@ sub align_seqs {
                 to trim from the end first, set $end_first to a true value.
 
                 A boolean flag indicating if any change was made is returned.
-  ReturnType  : arrayref:
+  ReturnType  : arrayref :
                 [
                   string $new_ref,
                   string $new_alt,
