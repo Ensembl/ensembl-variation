@@ -776,12 +776,12 @@ sub hgvs_genomic {
 
 
 =head2 hgvs_transcript
-    
+
   Description: Return a string representing the CDS-level effect of this allele in HGVS format
   Returntype : string or undef if this allele is not in the CDS
   Exceptions : none
   Status     : At Risk
-    
+
 =cut
     
     
@@ -1207,6 +1207,7 @@ sub _hgvs_tva {
   Status     : At risk
 
 =cut
+
 sub hgvs_offset {
   my $self = shift;
   return $self->{_hgvs_offset};
@@ -1220,6 +1221,7 @@ sub hgvs_offset {
   Status     : At risk
 
 =cut
+
 sub hgvs_exon_start_coordinate {
   my $self = shift;
   return $self->{_hgvs_exon_start_coordinate};
@@ -1233,6 +1235,7 @@ sub hgvs_exon_start_coordinate {
   Status     : At risk
 
 =cut
+
 sub hgvs_intron_start_offset {
   my $self = shift;
   return $self->{_hgvs_intron_start_offset};
@@ -1246,6 +1249,7 @@ sub hgvs_intron_start_offset {
   Status     : At risk
 
 =cut
+
 sub hgvs_exon_end_coordinate {
   my $self = shift;
   return $self->{_hgvs_exon_end_coordinate};
@@ -1259,6 +1263,7 @@ sub hgvs_exon_end_coordinate {
   Status     : At risk
 
 =cut
+
 sub hgvs_intron_end_offset {
   my $self = shift;
   return $self->{_hgvs_intron_end_offset};
