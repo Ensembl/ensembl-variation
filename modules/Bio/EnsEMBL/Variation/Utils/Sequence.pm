@@ -487,6 +487,7 @@ sub sequence_with_ambiguity{
   Caller      : general
 
 =cut
+
 sub hgvs_variant_notation {
   my $alt_allele = shift;
   my $ref_sequence = shift;
@@ -766,6 +767,7 @@ sub get_hgvs_alleles{
 }
 
 =head2 get_3prime_seq_offset
+
   Arg[1]     : allele sequence
   Arg[2]     : downstream flank
   Description: Compare an allele to its 3' sequence to define the most 3'
@@ -773,7 +775,9 @@ sub get_hgvs_alleles{
   Returntype : string or undef if this allele is not in the
   Exceptions : none
   Status     : Experimental
+
 =cut
+
 sub get_3prime_seq_offset{
 
   my $seq_to_check  = shift;
