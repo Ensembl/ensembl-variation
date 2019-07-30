@@ -62,7 +62,7 @@ sub fetch_input {
   $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
-                  source_url => 'http://cancer.sanger.ac.uk/census',
+                  source_url => 'https://cancer.sanger.ac.uk/census',
                   object_type => 'Gene',
                   #source_version  will be set based on the date in the file name (year/month-> yyyymm)
                   source_status => 'somatic',

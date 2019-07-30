@@ -32,7 +32,7 @@ limitations under the License.
 =head1 ImportMGI
 
 This module imports Mouse MGI data. The module fetched the data from
-http://www.mousephenotype.org.
+https://www.mousephenotype.org.
 
 =cut
 

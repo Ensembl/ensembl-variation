@@ -62,7 +62,7 @@ sub fetch_input {
   $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
-                  source_url => 'http://decipher.sanger.ac.uk/',
+                  source_url => 'https://decipher.sanger.ac.uk/',
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'DDG2P',       #source name in the variation db
@@ -82,7 +82,7 @@ sub fetch_input {
   $self->pipelogFH($pipelogFH);
 
   #get input file DDG2P:
-  my $ddg2p_url = 'http://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
+  my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
   my $dateStrURL = strftime "%d_%m_%Y", localtime;
   my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
 

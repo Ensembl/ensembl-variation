@@ -62,7 +62,7 @@ sub fetch_input {
 
   # import specific constants
   %source_info = (source_description => 'The zebrafish model organism database',
-                  source_url => 'http://www.zfin.org/',
+                  source_url => 'https://www.zfin.org/',
                   object_type => 'Gene',
                   #source_version  will be set based on the date of the fetched input file  (year/month/day-> yyyymmdd)
 
@@ -71,7 +71,7 @@ sub fetch_input {
                   source_name => 'ZFIN',        #source name in the variation db
                   source_name_short => 'ZFIN',  #source identifier in the pipeline
                   );
-  my $zfin_url = 'http://zfin.org/downloads/phenoGeneCleanData_fish.txt';
+  my $zfin_url = 'https://zfin.org/downloads/phenoGeneCleanData_fish.txt';
   my $inputFile = 'phenoGeneCleanData_fish.txt';
 
   #create workdir folder

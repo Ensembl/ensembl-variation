@@ -63,7 +63,7 @@ sub fetch_input {
   my $orphanet_data_url = 'http://www.orphadata.org/data/xml/en_product6.xml';
 
   %source_info = (source_description => 'The portal for rare diseases and drugs',
-                  source_url => 'http://www.orpha.net/',
+                  source_url => 'https://www.orpha.net/',
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'Orphanet',        #source name in the variation db

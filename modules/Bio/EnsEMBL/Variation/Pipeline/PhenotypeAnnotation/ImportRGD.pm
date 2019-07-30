@@ -61,7 +61,7 @@ sub fetch_input {
   my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
 
   %source_info = (source_description => 'QTLs from the Rat Genome Database (RGD)',
-                  source_url => 'http://rgd.mcw.edu/',
+                  source_url => 'https://rgd.mcw.edu/',
                   object_type => 'QTL', #default type, import code will switch to Gene for the Gene-type phenotypes
                   #source_version  will be set based on the date in the fetched QTL input file  (year/month/day-> yyyymmdd)
                   source_mapped_attrib_type => 'Rat Genome Database', #for ontology mapping (attr_type_id 509) entry in phenotype_ontology_accession (attr_id 588)

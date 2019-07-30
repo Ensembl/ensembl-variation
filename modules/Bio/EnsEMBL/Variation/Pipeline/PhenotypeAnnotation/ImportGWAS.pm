@@ -32,7 +32,7 @@ limitations under the License.
 =head1 ImportGWAS
 
 This module imports NHGRI-EBI GWAS catalog data. The module fetches the data from
-the API hosted at EBI: http://www.ebi.ac.uk/gwas/.
+the API hosted at EBI: https://www.ebi.ac.uk/gwas/.
 
 =cut
 
@@ -60,10 +60,10 @@ sub fetch_input {
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  my $gwas_url = 'http://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
+  my $gwas_url = 'https://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 
   %source_info = (source_description => 'Variants associated with phenotype data from the NHGRI-EBI GWAS catalog',
-                  source_url => 'http://www.ebi.ac.uk/gwas/',
+                  source_url => 'https://www.ebi.ac.uk/gwas/',
                   object_type => 'Variation',
                   source_status => 'germline',
                   set => 'ph_nhgri',

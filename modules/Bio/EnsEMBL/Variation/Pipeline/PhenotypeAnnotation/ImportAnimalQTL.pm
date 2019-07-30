@@ -94,7 +94,7 @@ sub fetch_input {
 
   # import specific constants
   %source_info = (source_description => 'The Animal Quantitative Trait Loci (QTL) database (Animal QTLdb) is designed to house all publicly available QTL and association data on livestock animal species',
-                  source_url => 'http://www.animalgenome.org/cgi-bin/QTLdb/index',
+                  source_url => 'https://www.animalgenome.org/cgi-bin/QTLdb/index',
                   object_type => 'QTL',
                   #source_version  will be set based on file date
                   source_status     => 'germline',

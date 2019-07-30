@@ -32,7 +32,7 @@ limitations under the License.
 =head1 ImportIMPC
 
 This module imports Mouse IMPC data. The module fetched the data from
-http://www.mousephenotype.org.
+https://www.mousephenotype.org.
 
 =cut
 
@@ -59,7 +59,7 @@ sub fetch_input {
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'International Mouse Phenotyping Consortium',
-                  source_url => 'http://www.mousephenotype.org/',
+                  source_url => 'https://www.mousephenotype.org/',
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'IMPC',        #source name in the variation db

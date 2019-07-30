@@ -62,7 +62,7 @@ sub fetch_input {
   my $dateStr = strftime "%Y%m%d", localtime;
 
   %source_info = (source_description => 'Online Mendelian Inheritance in Man (OMIM) database',
-                  source_url => 'http://www.omim.org/',
+                  source_url => 'https://www.omim.org/',
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'MIM morbid',      #source name in the variation db
