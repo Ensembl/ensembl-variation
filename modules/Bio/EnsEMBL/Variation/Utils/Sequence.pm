@@ -48,7 +48,7 @@ Bio::EnsEMBL::Variation::Utils::Sequence - Utility functions for sequences
 
   print "my ambiguity code is $ambig_code\n";
 
-  print "my SNP class is = variation_class($alleles)";
+  print "my SNP class is = ", variation_class($alleles), "\n";
 
 
 =head1 METHODS
