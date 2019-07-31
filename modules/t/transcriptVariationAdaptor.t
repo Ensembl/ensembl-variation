@@ -269,8 +269,12 @@ foreach my $trans_varns (@{$trans_vars_ns}){
 }
 
 #store
+
+#make a backup of the current transcript_variation table before the store test
+$multi->save('variation', 'transcript_variation');
+
 my $dbh = $vf_ad->dbc->db_handle;
-my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/); 
+my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/);
 $sth->execute;
 my ($max_tv_id_before) = $sth->fetchrow_array;
 $sth->finish();
@@ -303,6 +307,7 @@ ok($max_tv_id_after > $max_tv_id_before, 'get max transcript_variation_id');
 
 my $tv_store = $trv_ad->fetch_by_dbID($max_tv_id_after);
 ok($tv_store->display_consequence eq 'missense_variant', 'test store');
-$dbh->do(qq{DELETE FROM transcript_variation WHERE transcript_variation_id=$max_tv_id_after;}) or die $dbh->errstr;
 
+# restore the transcript_variation table from before store test
+$multi->restore('variation', 'transcript_variation');
 done_testing();
