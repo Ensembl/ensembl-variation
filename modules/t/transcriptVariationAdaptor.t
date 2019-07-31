@@ -282,17 +282,14 @@ $sth->finish();
 my $transcript_id_store = 'ENST00000470094';
 my $transcript_store = $tr_ad->fetch_by_stable_id($transcript_id_store);
 my $vf_store = $vf_ad->fetch_by_dbID(23700405);
-my @vfs = ($vf_store);
-foreach my $vf (@vfs) {
-  my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
     -transcript     => $transcript_store,
-    -variation_feature  => $vf,
+    -variation_feature  => $vf_store,
     -adaptor      => $trv_ad,
     -disambiguate_single_nucleotide_alleles => 0,
     -no_transfer    => 1,
-  );
-  $trv_ad->store($tv);
-}
+);
+$trv_ad->store($tv);
 
 sleep(10);
 
