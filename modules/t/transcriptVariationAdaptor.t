@@ -296,11 +296,13 @@ $sth->execute;
 my ($max_tv_id_after) = $sth->fetchrow_array;
 $sth->finish();
 
-ok($max_tv_id_after == $max_tv_id_before + 1, 'get max transcript_variation_id');
+# When records are deleted, the autoincrement of the table is not changed.
+# When running with database intact, the max_tv_id_after should be
+# greater than before but not necessarily one greater
+ok($max_tv_id_after > $max_tv_id_before, 'get max transcript_variation_id');
 
 my $tv_store = $trv_ad->fetch_by_dbID($max_tv_id_after);
 ok($tv_store->display_consequence eq 'missense_variant', 'test store');
-$dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$max_tv_id_after;}) or die $dbh->errstr;
+$dbh->do(qq{DELETE FROM transcript_variation WHERE transcript_variation_id=$max_tv_id_after;}) or die $dbh->errstr;
 
 done_testing();
-
