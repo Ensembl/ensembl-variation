@@ -300,7 +300,7 @@ $sth->execute;
 my ($max_tv_id_after) = $sth->fetchrow_array;
 $sth->finish();
 
-# When records are deleted, the autoincrement of the table is not changed.
+# When records are deleted, the auto_increment of the table is not changed.
 # When running with database intact, the max_tv_id_after should be
 # greater than before but not necessarily one greater
 ok($max_tv_id_after > $max_tv_id_before, 'get max transcript_variation_id');
