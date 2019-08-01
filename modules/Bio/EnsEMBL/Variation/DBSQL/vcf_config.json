@@ -315,7 +315,7 @@
         "9999001": {
           "name": "TWINSUK",
           "_raw_name": "TWINSUK_NODUP",
-          "description": "TWINSUK cohort excluding 67 sampleMmul_10monozygotic or dyzygotic twin was included in the release"
+          "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
         }
       }
     },
