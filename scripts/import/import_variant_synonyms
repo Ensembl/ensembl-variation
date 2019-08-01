@@ -103,7 +103,8 @@ elsif($source_name eq 'dbSNP') {
       '-driver'  =>  'mysql' 
     ); 
 
-  my $synonyms_output = query_synonyms_data($prod_dbc, 'rs_name,synonym_name,source_id', 'human_synonym'); 
+  my $sql_query = "SELECT rs_name,synonym_name,source_id FROM human_synonym"; 
+  my $synonyms_output = query_synonyms_data($prod_dbc, $sql_query); 
 
   my %data; # synonym_name => {rs_name} & {source_id} 
 
@@ -624,7 +625,10 @@ sub get_all_sources {
 
   my $source_adaptor = $dest_db->get_SourceAdaptor('human', 'variation'); 
 
-  my $source_output = query_synonyms_data($prod_dbc, 'source_id,name,version,description,url', 'source');  
+  # Get sources from production that are linked to human synonym data 
+  my $sql_query = "SELECT source_id,name,version,description,url FROM source WHERE source_id IN
+                   (SELECT DISTINCT(source_id) FROM human_synonym)";
+  my $source_output = query_synonyms_data($prod_dbc, $sql_query);  
 
   foreach my $result_from_source (@{$source_output}) {  
     # my $source_id = $result_from_source->[0]; 
@@ -661,10 +665,9 @@ fetch data from production database
 sub query_synonyms_data {
 
   my $prod_dbc   = shift;
-  my $params     = shift; 
-  my $table_name = shift;
+  my $sql_query  = shift; 
 
-  my $statement = $prod_dbc->prepare("SELECT $params FROM $table_name");  
+  my $statement = $prod_dbc->prepare($sql_query);  
   $statement->execute(); 
   my $source_output = $statement->fetchall_arrayref();  
   $statement->finish(); 
