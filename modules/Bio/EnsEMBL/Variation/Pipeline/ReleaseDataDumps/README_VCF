@@ -22,6 +22,8 @@ The data contained in these files is presented in VCF format. For more details a
 the format refer to:
 http://www.1000genomes.org/wiki/Analysis/Variant%%20Call%%20Format/vcf-variant-call-format-version-41
 
+We use the sum command for calculating checksums.
+
 Questions about these files can be addressed to the Ensembl helpdesk:
 helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.
 
