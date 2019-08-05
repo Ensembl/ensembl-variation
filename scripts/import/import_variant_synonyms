@@ -109,11 +109,12 @@ elsif($source_name eq 'dbSNP') {
   my %data; # synonym_name => {rs_name} & {source_id} 
 
   # get data from human_synonym table (in production db) 
+  # some synonyms name are duplicated - from different sources 
   foreach my $result (@{$synonyms_output}){  
-    $data{$result->[1]}{rs_name} = $result->[0]; 
-    $data{$result->[1]}{source_id} = $result->[2]; 
+    $data{$result->[0].' '.$result->[1]}{rs_name} = $result->[0]; 
+    $data{$result->[0].' '.$result->[1]}{source_id} = $result->[2]; 
   }
- 
+
   # get all available sources from production database  
   my $sources = get_all_sources($dba, $prod_dbc);
 
@@ -552,6 +553,8 @@ sub import_synonyms_all_sources {
   
     my $source_id = $data->{$synonym_name}->{source_id};
     my $source = $sources->{$source_id}; 
+    # Clean synonym name before insert in db - remove rsid from name  
+    $synonym_name =~ s/.*\s//g; 
     $var->add_synonym($source->name(), $synonym_name);
     $variation_adaptor->store_synonyms($var); 
 
