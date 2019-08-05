@@ -182,11 +182,11 @@ sub default_options {
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
     
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a_grch37/dbNSFP3.5a_grch37.txt.gz',
+                                      { file => $self->o('variation_data') . '/dbNSFP/3.5a_grch37/dbNSFP3.5a_grch37.txt.gz',
                                         version => '3.5a',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
+                                      { file => $self->o('variation_data') . '/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
                                         version => '3.5a',
                                       } 
                                     },
@@ -194,11 +194,11 @@ sub default_options {
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . 'CADD/v1.4/grch37/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.4/grch37/whole_genome_SNVs.tsv.gz',
                                         version => 'v1.4',
                                       },
                                    GRCh38 =>
-                                      { file => $self->o('variation_data') . 'CADD/v1.5/grch38/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.5/grch38/whole_genome_SNVs.tsv.gz',
                                         version => 'v1.5',
                                       } 
                                   },
