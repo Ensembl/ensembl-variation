@@ -18,6 +18,7 @@ use warnings;
 
 use Test::More;
 use Test::Exception;
+use Test::Warnings qw(warning :no_end_test);
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
@@ -124,14 +125,26 @@ throws_ok {get_matched_variant_alleles({})} qr/undef/, 'get_matched_variant_alle
 throws_ok {get_matched_variant_alleles([])} qr/expected.+HASH/, 'get_matched_variant_alleles - wrong ref type a';
 throws_ok {get_matched_variant_alleles({}, [])} qr/expected.+HASH/, 'get_matched_variant_alleles - wrong ref type b';
 
-throws_ok {get_matched_variant_alleles({}, {})} qr/Missing ref key.+first/, 'get_matched_variant_alleles - missing ref field a';
-throws_ok {get_matched_variant_alleles({ref => 'A'}, {})} qr/Missing ref key.+second/, 'get_matched_variant_alleles - missing ref field b';
+like(
+  (warning { get_matched_variant_alleles({}, {}) })->[0], qr/Missing ref key.+first/, 'get_matched_variant_alleles - missing ref field a'
+);
+like(
+  (warning { get_matched_variant_alleles({ref => 'A'}, {}) })->[0], qr/Missing ref key.+second/, 'get_matched_variant_alleles - missing ref field b'
+);
 
-throws_ok {get_matched_variant_alleles({ref => 'A'}, {ref => 'A'})} qr/Missing alt.+first/, 'get_matched_variant_alleles - missing alts field a';
-throws_ok {get_matched_variant_alleles({ref => 'A', alts => ['B']}, {ref => 'A'})} qr/Missing alt.+second/, 'get_matched_variant_alleles - missing alts field b';
+like(
+  (warning { get_matched_variant_alleles({ref => 'A'}, {ref => 'A'}) })->[0], qr/Missing alt.+first/, 'get_matched_variant_alleles - missing alts field a'
+);
+like(
+  (warning { get_matched_variant_alleles({ref => 'A', alts => ['B']}, {ref => 'A'}) })->[0], qr/Missing alt.+second/, 'get_matched_variant_alleles - missing alts field b'
+);
 
-throws_ok {get_matched_variant_alleles({ref => 'A', alts => ['B']}, {ref => 'A', alts => ['B']})} qr/Missing pos key.+first/, 'get_matched_variant_alleles - missing pos field a';
-throws_ok {get_matched_variant_alleles({ref => 'A', alts => ['B'], pos => 1}, {ref => 'A', alts => ['B']})} qr/Missing pos key.+second/, 'get_matched_variant_alleles - missing pos field b';
+like(
+  warning { get_matched_variant_alleles({ref => 'A', alts => ['B']}, {ref => 'A', alts => ['B'], pos => 2}) }, qr/Missing pos key.+first/, 'get_matched_variant_alleles - missing pos field a'
+);
+like(
+  warning { get_matched_variant_alleles({ref => 'A', alts => ['B'], pos => 1}, {ref => 'A', alts => ['B']}) }, qr/Missing pos key.+second/, 'get_matched_variant_alleles - missing pos field b'
+);
 
 # define tests
 # {
