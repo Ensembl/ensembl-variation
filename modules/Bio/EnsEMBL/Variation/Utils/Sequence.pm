@@ -749,7 +749,6 @@ sub get_hgvs_alleles{
       $ref_allele = $string;
     }
   }
-
   # no change
   elsif ($description =~ m/\=/i) {
     ($ref_allele) = $description =~ m/([A-Z]*)\=$/i;
@@ -1055,26 +1054,28 @@ sub get_matched_variant_alleles {
 
   # convert allele_string key
   foreach my $var($a, $b) {
-    if(my $as = $var->{allele_string}) {
-      my @alleles = split('/', $as);
+    if($var->{allele_string} && $var->{allele_string} !~ /^\/.+$/) {
+      my @alleles = split('/', $var->{allele_string});
       $var->{ref}  ||= shift @alleles;
       $var->{alts}   = \@alleles unless exists($var->{alts});
     }
   }
 
   # check ref
-  throw("Missing ref key in first variant") unless exists($a->{ref});
-  throw("Missing ref key in second variant") unless exists($b->{ref});
+  warning("Missing ref key in first variant") unless exists($a->{ref});
+  warning("Missing ref key in second variant") unless exists($b->{ref});
 
   # check alts
   $a->{alts} ||= [$a->{alt}] if defined($a->{alt});
   $b->{alts} ||= [$b->{alt}] if defined($b->{alt});
-  throw("Missing alt or alts key in first variant") unless exists($a->{alts});
-  throw("Missing alt or alts key in second variant") unless exists($b->{alts});
+  warning("Missing alt or alts key in first variant") unless exists($a->{alts});
+  warning("Missing alt or alts key in second variant") unless exists($b->{alts});
 
   # check pos
-  throw("Missing pos key in first variant") unless $a->{pos};
-  throw("Missing pos key in second variant") unless $b->{pos};
+  warning("Missing pos key in first variant") unless $a->{pos};
+  warning("Missing pos key in second variant") unless $b->{pos};
+
+  return [] if (!exists($a->{ref}) || !exists($b->{ref}) || !exists($a->{alts}) || !exists($b->{alts}) || !$a->{pos} || !$b->{pos});
 
   # munge in strand
   $a->{strand} = 1 unless exists($a->{strand});
