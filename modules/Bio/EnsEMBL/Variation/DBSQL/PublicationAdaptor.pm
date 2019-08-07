@@ -325,7 +325,7 @@ sub update_variant_citation {
 
     my $citation_ext_sth = $dbh->prepare(qq[ select count(*) from variation_citation where variation_id =? and publication_id =?  ]);   
     
-    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id, data_source_attrib  ) values ( ?,?,concat_ws(',', data_source_attrib, '$source_attrib_id' ) ]);   
+    my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id, data_source_attrib  ) values ( ?,?,concat_ws(',', data_source_attrib, '$source_attrib_id' )) ]);   
 
     ## ensure any variations with citations are displayed in browser tracks/ returned by default
     my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =? and display =?]);

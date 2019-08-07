@@ -1735,12 +1735,12 @@ CREATE TABLE submitter (
 
 CREATE TABLE publication (
   publication_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, 
-  title          VARCHAR(255),
+  title          VARCHAR(300),
   authors        VARCHAR(255) CHARACTER SET utf8mb4,
   pmid           INT(10),
   pmcid          VARCHAR(255),
   year           INT(10) UNSIGNED,
-  doi            VARCHAR(50),
+  doi            VARCHAR(80),
   ucsc_id        VARCHAR(50),
   PRIMARY KEY ( publication_id ),
   KEY pmid_idx (pmid),

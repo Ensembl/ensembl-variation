@@ -23,8 +23,6 @@ use warnings;
 use HTTP::Tiny;
 use XML::Simple;
 use Getopt::Long;
-use Data::Dumper;
-
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
@@ -786,8 +784,26 @@ sub remove_publications{
         $citation_delete_sth->execute();
         $pub_delete_sth->execute();
 
+        # Check if variant has other publications or phenotypes before changing display flag 
         if(defined $failed_variant->[0]->[0]){
-          print "DEFINED: $var_id\n";
+
+          # Check if there is other publications for variant 
+          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);          
+          $other_publications_sth->execute()||die;
+          my $other_publications = $other_publications_sth->fetchall_arrayref();
+          next unless (!defined $other_publications->[0]->[0]); 
+
+          # Check if there are phenotypes 
+          my $check_phenotype_sth = $dba->dbc->prepare(qq[ select phenotype_feature_id from phenotype_feature where object_id = $var_id ]);
+          $check_phenotype_sth->execute()||die;
+          my $phenotype_var = $check_phenotype_sth->fetchall_arrayref();
+          next unless (!defined $phenotype_var->[0]->[0]); 
+         
+          # Update display  
+          my $update_display_var_sth = $dba->dbc->prepare(qq[ update variation set display = 0 where variation_id = $var_id ]); 
+          my $update_display_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set display = 0 where variation_id = $var_id ]);      
+          $update_display_var_sth->execute()||die;
+          $update_display_vf_sth->execute()||die;
         }
       }
     }
