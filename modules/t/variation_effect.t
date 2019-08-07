@@ -1463,8 +1463,32 @@ $transcript_tests->{$incomplete_cds_t->stable_id}->{tests} = [
     }, 
 ];
 
+my $transcript = $transcript_tests->{$incomplete_cds_t->stable_id}->{transcript};
+my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+    -start          => 220462640,
+    -end            => 220462640,
+    -strand         => 1,
+    -slice          => $transcript->slice,
+    -allele_string  => 'A/G',
+    -variation_name => 'test_start_retained',
+);
+
+my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+    -variation_feature  => $vf,
+    -transcript         => $transcript,
+);
+
+my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
 
 
+my $start_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant($tva->[0]);
+is($start_retained, undef, 'start_retained works with no $bvfo & $bvf');
+
+my $stop_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained($tva->[0]);
+is($stop_retained, undef, 'stop_retained works with no $bvfo & $bvf');
+
+my $coding_unknown = Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown($tva->[0]);
+is($coding_unknown, 0, 'coding_unknown works with no $bvfo & $bvf');
 my $test_count = 1;
 
 my $def_strand  = 1;
