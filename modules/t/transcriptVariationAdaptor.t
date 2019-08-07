@@ -269,8 +269,12 @@ foreach my $trans_varns (@{$trans_vars_ns}){
 }
 
 #store
+
+#make a backup of the current transcript_variation table before the store test
+$multi->save('variation', 'transcript_variation');
+
 my $dbh = $vf_ad->dbc->db_handle;
-my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/); 
+my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/);
 $sth->execute;
 my ($max_tv_id_before) = $sth->fetchrow_array;
 $sth->finish();
@@ -278,17 +282,14 @@ $sth->finish();
 my $transcript_id_store = 'ENST00000470094';
 my $transcript_store = $tr_ad->fetch_by_stable_id($transcript_id_store);
 my $vf_store = $vf_ad->fetch_by_dbID(23700405);
-my @vfs = ($vf_store);
-foreach my $vf (@vfs) {
-  my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
     -transcript     => $transcript_store,
-    -variation_feature  => $vf,
+    -variation_feature  => $vf_store,
     -adaptor      => $trv_ad,
     -disambiguate_single_nucleotide_alleles => 0,
     -no_transfer    => 1,
-  );
-  $trv_ad->store($tv);
-}
+);
+$trv_ad->store($tv);
 
 sleep(10);
 
@@ -296,11 +297,14 @@ $sth->execute;
 my ($max_tv_id_after) = $sth->fetchrow_array;
 $sth->finish();
 
-ok($max_tv_id_after == $max_tv_id_before + 1, 'get max transcript_variation_id');
+# When records are deleted, the auto_increment of the table is not changed.
+# When running with database intact, the max_tv_id_after should be
+# greater than before but not necessarily one greater
+ok($max_tv_id_after > $max_tv_id_before, 'get max transcript_variation_id');
 
 my $tv_store = $trv_ad->fetch_by_dbID($max_tv_id_after);
 ok($tv_store->display_consequence eq 'missense_variant', 'test store');
-$dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$max_tv_id_after;}) or die $dbh->errstr;
 
+# restore the transcript_variation table from before store test
+$multi->restore('variation', 'transcript_variation');
 done_testing();
-
