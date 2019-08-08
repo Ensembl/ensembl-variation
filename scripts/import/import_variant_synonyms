@@ -109,7 +109,7 @@ elsif($source_name eq 'dbSNP') {
   my %data; # synonym_name => {rs_name} & {source_id} 
 
   # get data from human_synonym table (in production db) 
-  # some synonyms name are duplicated - from different sources 
+  # some synonyms names are duplicated - from different sources 
   foreach my $result (@{$synonyms_output}){  
     $data{$result->[0].' '.$result->[1]}{rs_name} = $result->[0]; 
     $data{$result->[0].' '.$result->[1]}{source_id} = $result->[2]; 
@@ -159,11 +159,9 @@ elsif($source_name eq 'UniProt'){
     @ids = keys(%synonym);
   }
 
-  my $variation_ids = $object_type =~ /Variation/ ? get_dbIDs(\@ids,$dba) : {}; 
-
   # Add the synonyms
-    my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
-    add_synonyms_uniprot(\%synonym, $variation_ids, $source_name, $variation_set_id, $dba, $species); 
+  my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
+  add_synonyms_uniprot(\%synonym, $source_name, $variation_set_id, $dba, $species); 
 }
 
 else{
@@ -263,71 +261,6 @@ sub parse_uniprot {
   return \%result;
 }
 
-=head2 get_dbIDs
-
-get variation ids 
-
-=cut 
-
-sub get_dbIDs {
-  my $rs_ids     = shift;
-  my $db_adaptor = shift;
-  
-  my $id_stmt = qq{
-    SELECT
-      DISTINCT
-      v.variation_id,
-      v.name
-    FROM
-      variation v,
-      variation_feature vf
-      
-    WHERE
-      v.name = ? AND
-      v.variation_id=vf.variation_id
-    LIMIT 1
-  };
-  my $syn_stmt = qq{
-    SELECT
-      DISTINCT
-      v.variation_id,
-      v.name
-    FROM
-      variation_feature vf,
-      variation_synonym vs JOIN
-      variation v ON vs.variation_id = v.variation_id
-    WHERE
-      vs.name = ? AND
-      v.variation_id=vf.variation_id
-    LIMIT 1
-  };
-  my $id_sth = $db_adaptor->dbc->prepare($id_stmt);
-  my $syn_sth = $db_adaptor->dbc->prepare($syn_stmt);
-  
-  my %mapping;
-  
-  foreach my $rs_id (@{$rs_ids}) {
-    $id_sth->bind_param(1,$rs_id,SQL_VARCHAR);
-    $id_sth->execute();
-    my ($var_id,$var_name);
-    $id_sth->bind_columns(\$var_id,\$var_name);
-    $id_sth->fetch();
-    
-    # If we couldn't find the rs_id, look in the synonym table
-    if (!defined($var_id)) {
-      $syn_sth->bind_param(1,$rs_id,SQL_VARCHAR);
-      $syn_sth->execute();
-      $syn_sth->bind_columns(\$var_id,\$var_name);
-      $syn_sth->fetch();
-    }
-    warn "$rs_id - no mapping found in variation db\n" unless $var_id ;  
-
-    $mapping{$rs_id} = [$var_id,$var_name] if $var_id && $var_name;
-  }
-  
-  return \%mapping;
-} 
-
 =head2 add_set_uniprot
 
 add UniProt variation set 
@@ -408,7 +341,6 @@ import UniProt synonyms;
 
 sub add_synonyms_uniprot {
   my $synonyms           = shift;
-  my $variation_ids      = shift;
   my $source_name        = shift;
   my $variation_set_id   = shift; 
   my $db_adaptor         = shift;
@@ -450,15 +382,15 @@ sub add_synonyms_uniprot {
   my $update_after_check_sth = $db_adaptor->dbc->prepare($stmt_update_after_check);
   my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update); 
   
-  foreach my $rs_id (keys %{$variation_ids}) {
-    my $variation_id = $variation_ids->{$rs_id}[0];    
+  foreach my $rs_id (keys %{$synonyms}) {
+    my $variation_id = $synonyms->{$rs_id}[0];    
 
     my $variation = $variation_adaptor->fetch_by_name($rs_id);
     unless($variation){
       warn "Variant $rs_id not found\n"; 
       next; 
     }
-    
+
     $variation->add_synonym($source_name, @{$synonyms->{$rs_id}}); 
     $variation_adaptor->store_synonyms($variation); 
     
