@@ -813,7 +813,7 @@ sub _inv_start_altered {
 sub start_retained_variant {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
-    return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
+    # return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
@@ -1099,7 +1099,7 @@ sub stop_retained {
 
     unless(exists($cache->{stop_retained})) {
 
-        return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');        
+        # return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
 
         $cache->{stop_retained} = 0;
 
