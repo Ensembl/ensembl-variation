@@ -113,5 +113,20 @@ is($hash->{'1411-1411-1'}->{'allele_string'}, 'C|T', 'Test allele_string');
 is($hash->{'1001-1001-1'}->{'consequence_type'}, 'downstream_gene_variant', 'Test consequence_type');
 is($hash->{'1083-1083-1'}->{'variation_name'}, 'rs73650063', 'Test variation_name');
 
+# test most_severe_OverlapConsequence for consequences with the same rank
+my $oc_1 = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+             -SO_term => 'splice_donor_variant',
+             -rank    => 3);
+
+my $oc_2 = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+              -SO_term => 'splice_acceptor_variant',
+              -rank    => 3);
+
+my $af = Bio::EnsEMBL::Variation::AlleleFeature->new
+  ( -overlap_consequences => [$oc_1, $oc_2]);
+
+my $msc_2_expected = 'splice_acceptor_variant';
+my $msc_2 = $af->most_severe_OverlapConsequence();
+is($msc_2->SO_term, $msc_2_expected, 'allele - most_severe_OverlapConsequence - same rank');
 
 done_testing();
