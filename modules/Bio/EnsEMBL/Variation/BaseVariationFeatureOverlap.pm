@@ -444,6 +444,10 @@ sub most_severe_OverlapConsequence {
                 $highest ||= $cons;
                 if ($cons->rank < $highest->rank) {
                     $highest = $cons;
+                } elsif (($cons->rank == $highest->rank)
+                            &&
+                         ($cons->SO_term lt $highest->SO_term)) {
+                    $highest = $cons;
                 }
             }
         }
@@ -499,4 +503,3 @@ sub adaptor {
 }
 
 1;
-
