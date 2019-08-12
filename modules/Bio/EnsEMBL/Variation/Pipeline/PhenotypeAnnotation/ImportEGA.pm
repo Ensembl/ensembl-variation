@@ -389,14 +389,14 @@ sub parse_and_add_input_file {
       $study_id = $variation_dba->dbc->db_handle->{'mysql_insertid'};
       push (@new_studies, $name)
     }
-    
+
     my $is_associated;
     $asso_study_check_sth->bind_param(1,$nhgri_study_id,SQL_INTEGER);
     $asso_study_check_sth->bind_param(2,$study_id,SQL_INTEGER);
     $asso_study_check_sth->execute();
     $asso_study_check_sth->bind_columns(\$is_associated);
     $asso_study_check_sth->fetch();
-    
+
     if (!defined($is_associated)) {
       $asso_study_ins_sth->bind_param(1,$nhgri_study_id,SQL_INTEGER);
       $asso_study_ins_sth->bind_param(2,$study_id,SQL_INTEGER);

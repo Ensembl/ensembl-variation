@@ -64,7 +64,7 @@ sub fetch_input {
 
   $self->debug($self->param('debug_mode'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $sefl->workdir($workdir);
+  $self->workdir($workdir);
 
   open (my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
   open (my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
@@ -81,16 +81,16 @@ sub run {
   ## add exact matches where available for all phenotypes
   my $all_phenos = get_all_phenos($self->variation_db_adaptor->dbc->db_handle );
 
-  my $ols_terms = add_ols_matches($all_phenos);
+  my $ols_terms = $self->add_ols_matches($all_phenos);
   $self->store_terms( $ols_terms );
 
   ## seek matches for parent descriptions missing terms
   ## eg for 'Psoriasis 13' seek 'Psoriasis'
   my $non_matched_phenos = get_termless_phenos($self->variation_db_adaptor->dbc->db_handle);
-  my $ols_parent_terms   = add_ols_matches($non_matched_phenos, 'parent');
+  my $ols_parent_terms   = $self->add_ols_matches($non_matched_phenos, 'parent');
   $self->store_terms( $ols_parent_terms );
 
-  if ($self->param(species) eq $DEFAULT_SPECIES) {
+  if ($self->param('species') eq $DEFAULT_SPECIES) {
     my $non_matched_phenos = get_termless_phenos($self->variation_db_adaptor->dbc->db_handle);
     my $zooma_terms  = $self->add_zooma_matches($non_matched_phenos);
     $self->store_terms( $zooma_terms);
@@ -117,8 +117,8 @@ sub write_output {
 sub store_terms{
   my ($self, $terms)   = @_;
 
-  my $species = $self->param(species);
-  my $phenotype_dba  = $variation_dba->get_PhenotypeAdaptor;
+  my $species = $self->param('species');
+  my $phenotype_dba  = $self->variation_db_adaptor->get_PhenotypeAdaptor;
 
   foreach my $id (keys %{$terms}){
 
@@ -289,8 +289,9 @@ sub get_zooma_terms{
 =cut
 
 sub add_ols_matches{
-  my ($phenos, $truncate) = @_;
+  my ($self, $phenos, $truncate) = @_;
 
+  my $species = $self->param('species');
   my %terms;
 
   foreach my $id (keys %{$phenos}){

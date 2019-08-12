@@ -142,7 +142,7 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
+  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
 
   my @phenotypes;
 

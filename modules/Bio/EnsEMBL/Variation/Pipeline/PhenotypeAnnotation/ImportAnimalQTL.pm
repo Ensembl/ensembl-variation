@@ -156,7 +156,7 @@ sub fetch_input {
   #fetch coreDB assembly, in future this should be tested against
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
-  print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
+  print $logFH 'INFO: Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
 
   $source_info{source_version} = strftime "%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime);
   print $logFH "Found inputDir file: $inputFile \n";

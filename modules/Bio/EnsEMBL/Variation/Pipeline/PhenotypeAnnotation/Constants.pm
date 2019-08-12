@@ -52,6 +52,7 @@ our @EXPORT_OK = qw(
             CGC
             IMPC
             MGI
+            Mouse
             NONE
             species);
 
@@ -66,8 +67,11 @@ use constant {
   MIMmorbid => 'MIMmorbid',
   DDG2P     => 'DDG2P',
   CGC       => 'CGC',
+
   IMPC      => 'IMPC',
   MGI       => 'MGI',
+  Mouse     => 'Mouse',
+
   NONE      => 'NONE',
 };
 

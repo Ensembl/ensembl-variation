@@ -33,7 +33,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI Mouse NONE species);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -52,7 +52,7 @@ sub fetch_input {
   unless ($run_type eq NONE) {
     my %import_species = &species;
 
-    if($run_type eq IMPC || $run_type eq MGI ){
+    if($run_type eq IMPC || $run_type eq MGI || $run_type eq Mouse ){
       $self->param('output_ids', [{run_type => $run_type}]);
     } elsif ($import_species{$run_type}) {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
@@ -99,7 +99,7 @@ sub write_output {
     } elsif ( $run_type eq CGC){
       $self->dataflow_output_id($self->param('output_ids'), 11);
       print $logPipeFH "Passing to CancerGeneConsensus import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq IMPC || $run_type eq MGI){
+    } elsif ( $run_type eq IMPC || $run_type eq MGI || $run_type eq Mouse){
       $self->dataflow_output_id($self->param('output_ids'), 12);
       print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
     }
