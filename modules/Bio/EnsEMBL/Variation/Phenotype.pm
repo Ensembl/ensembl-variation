@@ -64,7 +64,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
 =head2 new
     Arg [-DESCRIPTION] :
     phenotype description
-			
+
   Example    :
 		
     $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => 'Hemostatic factors and hematological phenotypes');
@@ -213,6 +213,7 @@ sub ontology_accessions {
   Status     : experimental
 
 =cut
+
 sub add_ontology_accession {
   my $self  = shift;
   my $data  = shift;

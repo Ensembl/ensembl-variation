@@ -1307,6 +1307,7 @@ sub get_all_PhenotypeFeatures {
   Status     : Stable
 
 =cut
+
 sub display_consequence {
     my $self = shift;
     my $term_type = shift;
@@ -1336,7 +1337,6 @@ sub display_consequence {
     return $highest->$method_name;
 }
 
-    
 =head2 get_all_Publications
 
   Args       : none
@@ -1348,6 +1348,7 @@ sub display_consequence {
   Caller     : general
 
 =cut
+
 sub get_all_Publications{
     my $self = shift;
 
@@ -1370,7 +1371,7 @@ Returntype : hashref
 Exceptions : none
 Caller     : general
 Status     : Stable
-                                                        
+
 =cut
 
 sub get_all_attributes {
@@ -1392,8 +1393,9 @@ Returntype : nono
 Exceptions : none
 Caller     : general
 Status     : Experimental
-                                                        
+
 =cut
+
 sub update_attributes{
     my $self       = shift;
     my $attributes = shift;

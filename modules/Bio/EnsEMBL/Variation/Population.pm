@@ -412,6 +412,7 @@ sub display_group_priority{
   Status     : experimental
 
 =cut
+
 sub display_group_name{
   my $self = shift;
   $self->{display_group_name} = shift @_ if @_;

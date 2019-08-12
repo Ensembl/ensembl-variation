@@ -1716,6 +1716,7 @@ sub get_all_PopulationGenotypes{
   Status      : Experimental
 
 =cut
+
 sub get_all_hgvs_notations {
 
     my $self                 = shift;
@@ -1868,6 +1869,7 @@ sub _get_flank_seq{
   Status      : Experimental
 
 =cut
+
 sub hgvs_genomic {
 
   my $self             = shift;
