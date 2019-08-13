@@ -77,7 +77,7 @@ sub tabix_vcf_files {
   closedir($dh);
   foreach my $file (@dir_content) {
     if ($file =~ m/\.vcf.gz$/) {
-      system("tabix -p vcf $working_dir/$file");
+      system("tabix -C -p vcf $working_dir/$file");
     }
   }
 }
