@@ -86,6 +86,7 @@ use vars qw(@ISA @EXPORT_OK);
     &revcomp_tandem
     &get_matched_variant_alleles
     &trim_sequences
+    &trim_right
     &raw_freqs_from_gts
     %EVIDENCE_VALUES
 );
@@ -1003,6 +1004,63 @@ sub trim_sequences {
   return [$ref, $alt, $start, $end, $changed];
 }
 
+
+=head2 trim_right
+
+  Arg[1]      : arrayref of allele sequences
+  Example     : my @trimmed_alleles = @{trim_right(\@alleles)}
+  Description : Takes a set of allele sequences and trims common sequence
+                from the end.
+                Reduces fully justified allele strings for VCF allele writing
+                Handles multi-allelic variants
+                Stops when an allele sequence has length 1 (common bases
+                at the start are not removed to support VCF)
+
+  ReturnType  : arrayref of trimmed allele sequences
+  Exceptions  : throws if no allele sequences are supplied
+  Caller      : VariationFeature->to_VCF_record()
+
+=cut
+
+sub trim_right{
+
+  my $alleles = shift;
+
+  throw("Allele sequences required") unless scalar(@{$alleles}) > 0;
+
+  ## do nothing if there is only one allele
+  return $alleles if scalar(@{$alleles}) == 1;
+
+  ## save input to return if necessary
+  my $input_alleles;
+  foreach my $s(@{$alleles}){
+    push @{$input_alleles}, $s;
+  }
+
+  my %last_bases;
+
+  foreach my $al( @{$alleles}){
+
+    ## don't trim if we are down to the last base
+    return $input_alleles if length($al) == 1;
+
+    ## clip allele & save last bases to check
+    my $end = chop($al);
+    $last_bases{$end} = 1;
+  }
+
+
+  ## if the last base is the same for all alleles, try to trim again
+  if( scalar keys %last_bases ==1){
+     no warnings 'recursion';
+     return trim_right($alleles)
+  }
+  else{
+    ## can't trim further - return input
+    return $input_alleles;
+  }
+
+}
 
 =head2 get_matched_variant_alleles
 
