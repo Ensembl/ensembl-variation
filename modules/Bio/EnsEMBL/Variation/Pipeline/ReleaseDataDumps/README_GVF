@@ -34,6 +34,8 @@ and:
 
 https://github.com/The-Sequence-Ontology/Specifications/blob/master/gvf.md
 
+We use the sum command for calculating checksums.
+
 Questions about these files can be addressed to the Ensembl helpdesk:
 helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.
 
