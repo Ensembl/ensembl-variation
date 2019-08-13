@@ -584,7 +584,7 @@ sub get_all_Alleles_by_VariationFeature {
   my $vf = shift;
   my $given_pop = shift;
   my $vcf = shift;
-  
+
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
   assert_ref($given_pop,'Bio::EnsEMBL::Variation::Population') if (defined($given_pop));
 
@@ -632,13 +632,23 @@ sub get_all_Alleles_by_VariationFeature {
     my $info = $vcf->get_info;
     my $vcf_alts = $vcf->get_alternatives;
     my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
-
-    foreach my $pop(@pops) {
+     POP : {
+     foreach my $pop(@pops) {
 
       # this allows for an empty population name to be looked up as e.g. AF
       my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
       my $suffix = $raw_name ? '_'.$raw_name : '';
       my $pop_id = $pop->dbID;
+      # Due to remapping errors of gnomAD data there are cases
+      # where there are more than one VCF line with the same alt.
+      # This check handles multiple lines with the same alt
+      # and will only consider the first VCF line and ignore the rest.
+      foreach my $allele (values %allele_map) {
+        if (exists $freqs->{$pop_id}->{$allele}) {
+          last POP;
+        }
+      }
+
 
       no warnings 'uninitialized';
       my ($ac, $an, $af) = (
@@ -699,6 +709,7 @@ sub get_all_Alleles_by_VariationFeature {
           }
         }
       }
+    } # end foreach population
     }
 
     last unless $next_ok;
