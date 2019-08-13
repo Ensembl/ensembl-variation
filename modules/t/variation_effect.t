@@ -1480,7 +1480,6 @@ my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
 
 my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
 
-
 my $start_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant($tva->[0]);
 is($start_retained, undef, 'start_retained works with no $bvfo & $bvf');
 
@@ -1489,6 +1488,20 @@ is($stop_retained, undef, 'stop_retained works with no $bvfo & $bvf');
 
 my $coding_unknown = Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown($tva->[0]);
 is($coding_unknown, 0, 'coding_unknown works with no $bvfo & $bvf');
+
+my $bvfo = $tva->[0]->base_variation_feature_overlap;
+my $bvf = $bvfo->base_variation_feature;
+$bvf->{allele_string} = 'COSMIC_MUTATION';
+my $start_retained_cosmic = Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant($tva->[0], 0, $bvfo, $bvf);
+is($start_retained_cosmic, 0, 'start_retained retuns 0 with COSMIC');
+
+delete($tva->[0]->{_predicate_cache}->{stop_retained});
+my $stop_retained_cosmic = Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained($tva->[0], 0, $bvfo, $bvf);
+is($stop_retained_cosmic, 0, 'stop_retained returns 0 with COSMIC');
+
+my $coding_unknown_cosmic = Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown($tva->[0], 0, $bvfo, $bvf);
+is($coding_unknown_cosmic, 0, 'coding_unknown returns 0 with COSMIC');
+
 my $test_count = 1;
 
 my $def_strand  = 1;
