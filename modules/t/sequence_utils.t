@@ -22,7 +22,7 @@ use Test::Warnings qw(warning :no_end_test);
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles get_hgvs_alleles));
+    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles get_hgvs_alleles trim_right));
 }
 
 
@@ -114,6 +114,43 @@ throws_ok {trim_sequences('A')} qr/Missing reference or alternate sequence/, 'tr
 throws_ok {trim_sequences()} qr/Missing reference or alternate sequence/, 'trim_sequences - no both';
 
 
+## test multi-allelic SPDI trimming
+####################################
+
+my @no_change = ('GCGAGCCTGTGTGGTGCG', 'G');
+is_deeply(
+ trim_right(\@no_change),
+  ['GCGAGCCTGTGTGGTGCG', 'G'],
+  'trim_right - no change'
+);
+
+my @one_base = ('AAAAA',  'AAAA', 'AA');
+is_deeply(
+  trim_right(\@one_base),
+  ['AAAA',  'AAA', 'A'],
+  'trim_right - reduce by one base'
+);
+
+my @multi_base = ('ACGTGGACG', 'ACG', 'ACGTGGACGTGGACG');
+is_deeply(
+  trim_right(\@multi_base),
+  ['ACGTGGA',  'A', 'ACGTGGACGTGGA'],
+  'trim_right - multiple bases removed'
+);
+
+my @single_allele = ('AAAA');
+is_deeply(
+  trim_right(\@single_allele),
+  ['AAAA'],
+  'trim_right - single allele'
+);
+
+my @no_common = ('ACGTG', 'AT', 'ACGTGGA');
+is_deeply(
+  trim_right(\@no_common),
+  ['ACGTG',  'AT', 'ACGTGGA'],
+  'trim_right - no common bases to be removed'
+);
 
 ## get_matched_variant_alleles
 ##############################

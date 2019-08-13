@@ -237,6 +237,23 @@ is_deeply(
   [],
   'to_VCF_record - unknown alleles sequence_alteration'
 );
+
+my $fully_justified_allele_str = 'ACGTGGACG/ACG/ACGTGGACGTGGACG';
+$vf->allele_string($fully_justified_allele_str);
+is_deeply(
+  $vf->to_VCF_record(),
+  [$chr, $sr_start -1 , $vname, 'ACGTGGA', 'A,ACGTGGACGTGGA', '.', '.', '.'],
+  'to_VCF_record - fully justified allele string clipped'
+);
+
+
+is_deeply(
+  $vf->to_VCF_record(1),
+  [$chr, $sr_start -1 , $vname, 'ACGTGGACG', 'ACG,ACGTGGACGTGGACG', '.', '.', '.'],
+  'to_VCF_record - fully justified allele string  not clipped'
+);
+
+
 $vf->allele_string($allele_str);
 
 
