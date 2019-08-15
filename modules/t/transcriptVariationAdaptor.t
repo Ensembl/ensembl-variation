@@ -307,4 +307,35 @@ ok($tv_store->display_consequence eq 'missense_variant', 'test store');
 
 # restore the transcript_variation table from before store test
 $multi->restore('variation', 'transcript_variation');
+# test most_severe_OverlapConsequence for consequences with the same rank
+$stable_id = 'ENST00000470094';
+$transcript = $tr_ad->fetch_by_stable_id($stable_id);
+
+my $var_msc = $var_ad->fetch_by_name('rs200814465');
+my $vfs_msc = $vf_ad->fetch_all_by_Variation($var_msc);
+my $new_vf_msc = $vfs_msc->[0];
+my $trvar_msc = Bio::EnsEMBL::Variation::TranscriptVariation->new
+  (-variation_feature => $new_vf_msc,
+   -transcript        => $transcript,
+);
+
+# The expected consequences are:
+#   rank: 12  SO_term: missense_variant
+#   rank: 22  SO_term: NMD_transcript_variant
+# For the test change to the same rank, different description
+for my $allele (@{$trvar_msc->get_all_alternate_BaseVariationFeatureOverlapAlleles}) {
+    for my $cons (@{$allele->get_all_OverlapConsequences }) {
+      if ($cons->SO_term eq 'missense_variant') {
+        $cons->SO_term('test_consequence_z');
+        $cons->rank(3);
+      } elsif ($cons->SO_term eq 'NMD_transcript_variant') {
+        $cons->SO_term ('test_consequence_a');
+        $cons->rank(3);
+      }
+    }
+}
+my $msc_2_expected = 'test_consequence_a';
+my $msc_2 = $trvar_msc->most_severe_OverlapConsequence();
+is($msc_2->SO_term, $msc_2_expected, 'tv - most_severe_OverlapConsequence - same rank');
+
 done_testing();

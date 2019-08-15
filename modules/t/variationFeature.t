@@ -441,4 +441,20 @@ $vfa->db->use_vcf(0);
   ok($conseq eq 'intergenic_variant', "fake VariationFeatureAdaptor and VariationFeature");
 }
 
+# test most_severe_OverlapConsequence for consequences with the same rank
+my $oc_1 = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+             -SO_term => 'splice_donor_variant',
+             -rank    => 3);
+
+my $oc_2 = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+              -SO_term => 'splice_acceptor_variant',
+              -rank    => 3);
+
+my $vf_msc = Bio::EnsEMBL::Variation::VariationFeature->new
+  ( -overlap_consequences => [$oc_1, $oc_2]);
+
+my $msc_2_expected = 'splice_acceptor_variant';
+my $msc_2 = $vf_msc->most_severe_OverlapConsequence();
+is($msc_2->SO_term, $msc_2_expected, 'vf - most_severe_OverlapConsequence - same rank');
+
 done_testing();
