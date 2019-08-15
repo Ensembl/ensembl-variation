@@ -93,32 +93,9 @@ my %class_colour = (
   'Publication'               => '#6A5ACD', # slateblue
   'Sequence'                  => '#5F81A9',
   'Splicing predictions'      => 'red',
+  'Structural variant data'   => '#601212',
   'Variant data'              => '#B22222',
   'Visualisation'             => 'green',
-);
-
-my %plugin_class = (
-  'Downstream'       => 'Nearby features',
-  'Draw'             => 'Visualisation',
-  'FATHMM'           => 'Pathogenicity predictions',
-  'FlagLRG'          => 'External ID',
-  'FunMotifs'        => 'Motif',
-  'GO'               => 'Phenotype',
-  'G2P'              => 'Phenotype',
-  'gnomADc'          => 'Frequency data',
-  'HGVSIntronOffset' => 'HGVS',
-  'LocalID'          => 'Look up',
-  'NearestExonJB'    => 'Nearby features',
-  'NearestGene'      => 'Nearby features',
-  'Mastermind'       => 'Publication',
-  'Phenotypes'       => 'Phenotype',
-  'PON_P2'           => 'Pathogenicity predictions',
-  'PostGAP'          => 'Phenotype',
-  'ProteinSeqs'      => 'Sequence',
-  'ReferenceQuality' => 'Sequence',
-  'SingleLetterAA'   => 'HGVS',
-  'SubsetVCF'        => 'Variant data',
-  'TSSDistance'      => 'Nearby features',
 );
 
 
@@ -157,17 +134,6 @@ while (my $file = readdir($dh)) {
   next if ($file !~ /\.pm$/ || $plugins_to_skip{$file});
   push (@files, $file);
   read_plugin_file($file);
-  
-  $file =~ /^(.+)\.pm$/;
-  my $p_name = $1;
-  if ($plugin_class{$p_name}) {
-    if ($data_section{$p_name}) {
-      $data_section{$p_name}{'section'} = $plugin_class{$p_name};
-    }
-    else {
-      $data_section{$p_name} = {'section' => $plugin_class{$p_name}};
-    }
-  }
 }
 
 
