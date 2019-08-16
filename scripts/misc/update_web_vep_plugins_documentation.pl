@@ -87,16 +87,19 @@ my %class_colour = (
   'Look up'                   => '#006400',
   'Motif'                     => '#DAA520', # goldenrod
   'Nearby features'           => '#E75480', # Dark pink
-  'ND'                        => 'darkgrey',
+  'ND'                        => '#A9A9A9', # darkgray
   'Pathogenicity predictions' => '#1E90FF',
   'Phenotype'                 => '#22949B',
   'Publication'               => '#6A5ACD', # slateblue
   'Sequence'                  => '#5F81A9',
-  'Splicing predictions'      => 'red',
+  'Splicing predictions'      => '#FF0000', # red
   'Structural variant data'   => '#601212',
   'Variant data'              => '#B22222',
-  'Visualisation'             => 'green',
+  'Visualisation'             => '#008000' # green
 );
+my %class_colour_hexa = map { $_ => 1 } values %class_colour;
+
+my @hexa_range = ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
 
 
 my %plugin_extended_names = (
@@ -162,7 +165,7 @@ foreach my $file (@sorted_files) {
   print "Plugin: $file\n";
   my $plugin_name  = $data{$file}{'name'};
   my $plugin_class = ($data_section{$plugin_name} && $data_section{$plugin_name}{'section'}) ? $data_section{$plugin_name}{'section'} : 'ND'; 
-  my $plugin_class_colour = $class_colour{$plugin_class} ? $class_colour{$plugin_class} : 'black';
+  my $plugin_class_colour = $class_colour{$plugin_class} ? $class_colour{$plugin_class} : get_random_colour($plugin_class);
   
   my $plugin_id = lc($plugin_class);
      $plugin_id =~ s/ /_/g;
@@ -382,6 +385,25 @@ sub print_into_tmp_file {
   print TMP  $after;
 }
 
+# Generate colours for categories missing an entry in %class_colour
+sub get_random_colour {
+  my $plugin_class = shift;
+
+  my $hexa = '';
+  # Trying to generate darker colours (with at least 2 components starting by a number)
+  while ($hexa !~ /^#\d\w\d/ && $hexa !~ /^#\w{2}\d\w\d/ && $hexa !~ /^#\d\w{3}\d/ && !$class_colour_hexa{$hexa}) {
+    my @hexa_parts=('','','');
+    foreach my $c (@hexa_parts){
+      my $r=int(rand(16));
+      $c=$hexa_range[$r].$hexa_range[$r];
+    }
+    $hexa = '#'.join("",@hexa_parts);
+  }
+  $class_colour{$plugin_class} = $hexa;
+  $class_colour_hexa{$hexa} = 1;
+
+  return $hexa;
+}
 
 sub usage {
   my $msg = shift;
