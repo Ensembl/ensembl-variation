@@ -102,7 +102,6 @@ sub resource_classes {
     my ($self) = @_;
     return {
           'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
           'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
     };
 }
