@@ -1698,6 +1698,10 @@ sub _get_fs_peptides {
   ### get CDS with alt variant
   my $alt_cds = $self->_get_alternate_cds();
   return undef unless defined($alt_cds);
+  unless ($alt_cds->seq =~ /([ACGT-])+/) {
+    warn('Alternate CDS not found on seq region ' . $self->variation_feature->seq_region_name . '. Are you missing a synonyms file?');
+    return undef;
+  }
 
   #### get new translation
   my $alt_trans = $alt_cds->translate()->seq();
