@@ -840,7 +840,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (602, 534, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (603, 534, 'low');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (604, 534, 'neutral');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (605, 481, 'dbnsfp_cadd');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (606, 481, 'dbnsfp_meta_svm');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (606, 481, 'dbnsfp_meta_lr');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (607, 481, 'dbnsfp_mutation_assessor');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (608, 481, 'dbnsfp_revel');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (609, 481, 'cadd');
