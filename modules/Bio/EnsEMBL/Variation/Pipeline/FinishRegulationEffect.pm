@@ -43,7 +43,7 @@ sub run {
   if ($self->param('update_vf') || $self->param('only_update_vf')) {
     my $vdba = $self->get_species_adaptor('variation');
     my $dbc = $vdba->dbc;
-
+    $dbc->reconnect_when_lost(1);
     # pre-clean-up:
     foreach my $table (qw/regulatory_region_consequences variation_feature_overlap_regulation variation_feature_consequences/) {
       $dbc->do(qq{DROP TABLE IF EXISTS $table;})
