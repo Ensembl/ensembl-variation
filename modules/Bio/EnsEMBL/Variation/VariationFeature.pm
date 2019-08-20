@@ -99,7 +99,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -113,7 +113,6 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES);
-use Data::Dumper;
 
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
@@ -1716,6 +1715,7 @@ sub get_all_PopulationGenotypes{
   Status      : Experimental
 
 =cut
+
 sub get_all_hgvs_notations {
 
     my $self                 = shift;
@@ -1868,6 +1868,7 @@ sub _get_flank_seq{
   Status      : Experimental
 
 =cut
+
 sub hgvs_genomic {
 
   my $self             = shift;
@@ -2265,18 +2266,25 @@ sub display {
 
 =head2 to_VCF_record
 
+  Arg [1]    : boolean $no_trim (optional)
   Example    : $vcf_arrayref = $vf->to_VCF_record();
+               $trimmed_vcf_arrayref = $vf->to_VCF_record(1);
   Description: Converts this VariationFeature object to an arrayref
                representing the columns of a VCF line.
+               Trims common bases (used in SPDI format) from the ends of
+               insertion/deletion allele sequences, unless $no_trim is set.
   Returntype : arrayref of strings
   Exceptions : none
-  Caller     : VEP
+  Caller     : VEP, web code
   Status     : Stable
 
 =cut
 
 sub to_VCF_record {
   my $self = shift;
+  my $no_trim = shift;
+
+  $no_trim ||=0; ## right trimmed by default - switch off if not required
 
   # shortcut out if created from VCF record
   return [@{$self->{vcf_record}->{record}}[0..4]] if exists($self->{vcf_record});
@@ -2321,9 +2329,24 @@ sub to_VCF_record {
   # in/del/unbalanced
   if($non_acgt || scalar keys %allele_lengths > 1) {
 
+    #if this is from dbSNP2.0, it may have additional common bases after the minimum change
+    @alleles = @{trim_right(\@alleles)} unless $non_acgt || $no_trim == 1;
+
     unshift @alleles, '-' if scalar @alleles == 1;
 
-    my $prev_base = $self->_get_prev_base(1);
+
+    ## an anchoring base common to all alleles is required in VCF
+    my $prev_base;
+
+    ## if this is from dbSNP2.0, the base before the minimal change may be included
+    my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} @alleles;
+
+    if(scalar keys %first_bases == 1) {
+      $prev_base = '';
+    }
+    else{
+      $prev_base = $self->_get_prev_base(1);
+    }
 
     for my $i(0..$#alleles) {
       my $a = $alleles[$i];

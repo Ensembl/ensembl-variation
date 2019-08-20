@@ -45,8 +45,12 @@ sub run {
     my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
 
     my $cdba = $self->get_adaptor($species, 'core');
+    $cdba->dbc->reconnect_when_lost(1);
     my $vdba = $self->get_adaptor($species, 'variation');
+    $vdba->dbc->reconnect_when_lost(1);
     my $fdba = $self->get_adaptor($species, 'funcgen');
+    $fdba->dbc->reconnect_when_lost(1);
+
 
     my $slice_adaptor = $cdba->get_SliceAdaptor; 
     my $regulatory_feature_adaptor = $fdba->get_RegulatoryFeatureAdaptor;
@@ -75,7 +79,10 @@ sub add_regulatory_feature_variations {
   my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles'); 
 
   my $cdba = $self->get_adaptor($species, 'core');
+  $cdba->dbc->reconnect_when_lost(1);
   my $vdba = $self->get_adaptor($species, 'variation');
+  $vdba->dbc->reconnect_when_lost(1);
+
 
   my $rfva = $vdba->get_RegulatoryFeatureVariationAdaptor;
   $rfva->db->include_failed_variations(1);
@@ -107,7 +114,9 @@ sub add_motif_feature_variations {
 
 
   my $cdba = $self->get_adaptor($species, 'core');
+  $cdba->dbc->reconnect_when_lost(1);
   my $vdba = $self->get_adaptor($species, 'variation');
+  $vdba->dbc->reconnect_when_lost(1);
 
   my $mfva = $vdba->get_MotifFeatureVariationAdaptor;
   $mfva->db->include_failed_variations(1);
@@ -116,7 +125,7 @@ sub add_motif_feature_variations {
   foreach my $motif_feature (@$motif_features) {
     my $slice = $slice_adaptor->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
 
-    for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
+    for my $vf ( @{ $slice->get_all_VariationFeatures }) {
       my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
         -motif_feature      => $motif_feature,
         -variation_feature  => $vf,

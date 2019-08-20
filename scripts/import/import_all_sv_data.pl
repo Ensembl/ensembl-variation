@@ -59,6 +59,7 @@ GetOptions('species=s'         => \$species,
            'debug!'            => \$debug,
           );
 $registry_file ||= $Bin . "/ensembl.registry";
+$source_name   ||= 'DGVa';
 
 $num_gaps = 1 unless defined $num_gaps;
 
@@ -303,13 +304,24 @@ sub source {
   debug(localtime()." Inserting into source table");
   
   # Check if the DGVa source already exists, else it create the entry
-  if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})) {
-    $dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=$version where name='DGVa';});
+  if ($source_name eq 'DGVa') {
+    if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})) {
+      $dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='https://www.ebi.ac.uk/dgva/',version=$version where name='$source_name';});
+    }
+    else {
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ($source_name,'Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version);});
+    }
   }
-  else {
-    $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',$version);});
+  # Check if the dbVar source already exists, else it create the entry
+  elsif ($source_name eq 'dbVar') {
+    if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})) {
+      $dbVar->do(qq{UPDATE IGNORE source SET description='NCBI database of human genomic structural variation',url='https://www.ncbi.nlm.nih.gov/dbvar/',version=$version where name='$source_name';});
+    }
+    else {
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ($source_name,'NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version);});
+    }
   }
-  my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})};
+  my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})};
   return $source_id[0];
 }
 
@@ -1190,8 +1202,8 @@ sub get_header_info {
   $h->{author}       = $info if ($label =~ /Display.+name/i);
   $h->{first_author} = $info if ($label =~ /First.+author/i);
   $h->{assembly}     = $info if ($label =~ /Assembly.+name/i);
-  $h->{study}        = $info if ($label =~ /Study.+accession/i);
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
+  $h->{study}        = (split(' ',$info))[0] if ($label =~ /Study.+accession/i);
   
   $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i);
   
@@ -1351,6 +1363,7 @@ sub parse_line {
   $data[0] =~ /Chr(.+)$/;
   $info->{chr} = defined($1) ? $1 : $data[0];
   $info->{SO_term} = ($data[2] eq 'alu_insertion') ? ucfirst($data[2]) : $data[2];
+  $info->{SO_term} = 'indel' if ($info->{SO_term} eq 'delins');
   $info->{start}   = $data[3];
   $info->{end}     = $data[4];
   $info->{strand}  = ($data[6] eq '.') ? 1 : ($data[6] eq '-') ? -1 : 1;
@@ -1395,7 +1408,7 @@ sub parse_9th_col {
 
   foreach my $inf (@$last_col) {
     my ($key,$value) = split('=',$inf);
-    $info->{$key} = $value; # Default
+    $info->{$key} = $value if ($key ne 'phenotype'); # Default
     
     $info->{ID} = $value if ($key eq 'Name');
     
@@ -1438,7 +1451,7 @@ sub parse_9th_col {
       }
     }
     
-    $info->{clinical}    = lc($value) if ($key eq 'clinical_significance');
+    $info->{clinical}    = lc($value) if ($key eq 'clinical_significance' || $key eq 'clinical_int');
     $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
     $info->{is_somatic}  = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
     $info->{bp_order}    = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
@@ -1471,8 +1484,15 @@ sub parse_9th_col {
     }
     
     # Phenotype
+    if ($key eq 'phenotype') {
+      $value =~ s/, /__/g;
+      foreach my $phe (split(',', $value)) {
+        $phe =~ s/__/, /g;
+        $info->{phenotype}{$phe} = 1;
+      }
+    }
     $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description');
-    $info->{phenotype_link} = $value if ($key eq 'phenotype_link');
+    $info->{phenotype_link} = $value if ($key eq 'phenotype_link' || $key eq 'phenotype_id');
   }
   
   
@@ -1676,7 +1696,7 @@ sub post_processing_phenotype {
     SELECT DISTINCT
       pf1.phenotype_id,
       svf.variation_name,
-      $source_id,
+      svf.source_id,
       svf.study_id,
       'StructuralVariation',
       svf.seq_region_id,
@@ -1698,7 +1718,7 @@ sub post_processing_phenotype {
       NOT EXISTS (SELECT pf2.phenotype_feature_id FROM $pf_table pf2 WHERE 
                     pf2.object_id=svf.variation_name AND
                     pf2.phenotype_id=pf1.phenotype_id AND
-                    pf2.source_id=$source_id AND
+                    pf2.source_id=svf.source_id AND
                     pf2.study_id=svf.study_id AND
                     pf2.seq_region_id=svf.seq_region_id AND 
                     pf2.seq_region_start=svf.seq_region_start AND
