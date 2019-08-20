@@ -21,7 +21,6 @@ use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
-use Data::Dumper; 
 
 our $verbose = 0;
 

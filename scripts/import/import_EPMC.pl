@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Variation::Utils::Date qw( run_date log_time);
 
 our $DEBUG = 0;
 
-my ($registry_file, $data_file, $species, $check_dbSNP, $type, $do_disease, $no_evidence);
+my ($registry_file, $data_file, $species, $check_dbSNP, $clean, $type, $do_disease, $no_evidence);
 
 GetOptions ("data=s"        => \$data_file,
             "type=s"        => \$type,
@@ -59,8 +59,8 @@ my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine",
                      "gallus_gallus"   =>   [ "gallus gallus", "chicken", "hen" ],
                      "canis_familiaris"=>   [ "canis familiaris", "dog", "canine"],
                      "rattus_norvegicus"=>  [ "rattus norvegicus", "rat"],
-		     "sus_scrofa"      =>   [ "sus scrofa", "pig", "porcine" ],
-		     "ovis_aries"      =>   [ "ovis aries", "sheep", "ovine"],
+                     "sus_scrofa"      =>   [ "sus scrofa", "pig", "porcine" ],
+                     "ovis_aries"      =>   [ "ovis aries", "sheep", "ovine"],
                      "equus_caballus"  =>   [ "equus caballus", "horse", "equine"],
                      "capra_hircus"    =>   [ "capra hircus", "goat", "caprine"],
     );
@@ -96,7 +96,7 @@ if( $type eq "EPMC"){
     import_citations($reg, $file_data, $type);
 
     ## update variations & variation_features to have Cited status
-    update_evidence($dba) unless defined $no_evidence;
+    ## update_evidence($dba) unless defined $no_evidence;
 }
 elsif($type eq "UCSC"){
 
@@ -106,16 +106,16 @@ elsif($type eq "UCSC"){
     ## read UCSC file, ommitting suspected errors
     $file_data = parse_UCSC_file($data_file, $avoid_list);
 
-    ##import any new publications & citations 
+    ##import any new publications & citations
     import_citations($reg, $file_data, $type);
 
     ## update variations & variation_features to have Cited status
-    update_evidence($dba) unless defined $no_evidence;
+    ## update_evidence($dba) unless defined $no_evidence;
 
 }
 
 elsif($type eq "disease"){
-    ## look for phenotype citations in EPMC for all current publications 
+    ## look for phenotype citations in EPMC for all current publications
     do_disease($reg);
 }
 
@@ -130,9 +130,12 @@ my $title_null = report_summary($dba, $species);
 update_meta($dba, $type);
 
 ## clean publications after import
-if(defined $clean && $clean == 1){ 
+if(defined $clean && $clean == 1){
   clean_publications($dba, $title_null);
 }
+
+## update variations & variation_features to have Cited status
+update_evidence($dba) unless defined $no_evidence;
 
 sub import_citations{
 
@@ -143,43 +146,43 @@ sub import_citations{
     open (my $error_log, ">>$species\_$type\_errors\_" . log_time() . "\.log") or die "Failed to open log file: $!\n";
     ## store variants not from this species
     open (my $not_found, ">>rsID\_$type\_notfound\_$species\_" . log_time() . ".csv") or die "Failed to open file: $!\n";
-    
+
     if($type eq "EPMC"){ 
-      print $not_found "rsID,PMCID,PMID\n"; 
+      print $not_found "rsID,PMCID,PMID\n";
     }
     elsif($type eq "UCSC"){
       print $not_found "rsID\tPMID\tDOI\tTitle\tAuthors\tYear\tUCSC\n";
-    }  
+    }
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
 
     # get list of citations already in the db
     my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
-    my $done_list = get_current_citations($dba); 
+    my $done_list = get_current_citations($dba);
 
-    # Get attrib id for source 
-    my $source_attrib_id = get_source_attrib_id($reg, $type); 
+    # Get attrib id for source
+    my $source_attrib_id = get_source_attrib_id($reg, $type);
 
     foreach my $pub(keys %$data){
-    
+
         ### get a set of variation objects
         my @var_obs;
         ### remove duplicate ids
         my @var_id = unique(@{$data->{$pub}->{rsid}});
-     
-        foreach my $rsid ( @var_id ){  
-            my $pub_pmid = $data->{$pub}->{pmid}; 
-    
+
+        foreach my $rsid ( @var_id ){
+            my $pub_pmid = $data->{$pub}->{pmid};
+
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
-                push @var_obs, $v; 
-                
+                push @var_obs, $v;
+
                 # Update column data_source_attrib in table variation_citation 
-                if(defined $pub_pmid && $done_list->{$rsid}{$pub_pmid}){  
-                  my $var_id = $v->dbID();  
-                  $pub_ad->update_citation_data_source($source_attrib_id, $var_id, $pub_pmid); 
-                } 
+                if(defined $pub_pmid && $done_list->{$rsid}{$pub_pmid}){
+                  my $var_id = $v->dbID();
+                  $pub_ad->update_citation_data_source($source_attrib_id, $var_id, $pub_pmid);
+                }
             }
             else{
                 no warnings ;
@@ -191,40 +194,40 @@ sub import_citations{
                   print $not_found $rsid ."\t". $pub_pmid."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
                }
                use warnings ;
-            }  
+            }
         }
-    
+
         # don't enter publication if there are no variants found for this species
-        next unless defined $var_obs[0];        
+        next unless defined $var_obs[0];
         
-        ### Check if publication already known & enter if not  
+        ### Check if publication already known & enter if not
         my $publication;
-        
+
         ## looking up missing data from EPMC before redundancy check
         my $ref = get_publication_info_from_epmc($data, $pub, $error_log);
         
         my $title = (defined $ref->{resultList}->{result}->{title} ? $ref->{resultList}->{result}->{title}  : $data->{$pub}->{title});
-        next unless defined $title;       
-        next if ($title =~/Erratum/i || $title =~/Errata/i || $title =~/Not Available/i); 
-        # Delete brackets from title, e.g. [title]. 
+        next unless defined $title;
+        next if ($title =~/Erratum/i || $title =~/Errata/i || $title =~/Not Available/i);
+        # Delete brackets from title, e.g. [title].
         if($title =~ /^\[ ?[A-Za-z]{2}/){
           $title =~ s/^\[//;
-          $title =~ s/\]\.//; 
+          $title =~ s/\]\.//;
         }  
 
-        ## save ids 
+        ## save ids
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
         my $doi    = $ref->{resultList}->{result}->{DOI}    || $data->{$pub}->{doi};
-        
+
         ## try looking up on doi first
         $publication = $pub_ad->fetch_by_doi( $doi )     if defined $doi;
         ## then PMID
         $publication = $pub_ad->fetch_by_pmid( $pmid )   if defined $pmid && ! defined $publication;
-        ## then PMCID   
+        ## then PMCID
         $publication = $pub_ad->fetch_by_pmcid( $pmcid ) if defined $pmcid && ! defined $publication;
-        
-        
+
+
         if(defined $publication){
             ##  warn "Linkings vars to existing pub ". $publication->dbID() ."\n";
             $pub_ad->update_variant_citation( $publication,$source_attrib_id,\@var_obs );
@@ -232,9 +235,9 @@ sub import_citations{
         }
         else{
             ## add new publication
-        
+
             ### create new object
-            my $publication = Bio::EnsEMBL::Variation::Publication->new( 
+            my $publication = Bio::EnsEMBL::Variation::Publication->new(
                 -title    => $title,
                 -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
                 -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
@@ -247,46 +250,22 @@ sub import_citations{
                 );
         
             $pub_ad->store( $publication,$source_attrib_id );
-        } 
-    } 
+        }
+    }
     close $not_found;
 }
 
 sub get_source_attrib_id{
-  my $reg = shift; 
-  my $source = shift; 
-  
+  my $reg = shift;
+  my $source = shift;
+
   my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
-  
-  my $sql_type = qq{
-      SELECT  attrib_type_id  
-      FROM    attrib_type
-      WHERE   code = 'citation_source'
-  };
 
-  my $sth_type = $attrib_adaptor->dbc->prepare($sql_type);
-  $sth_type->execute;
-  my $attrib_types = $sth_type->fetchall_arrayref(); 
-  my $attrib_type_id = $attrib_types->[0]->[0];
-
-  die "No attribute of type citation source\n" unless defined $attrib_type_id;
-
-  my $sql = qq{
-      SELECT  a.attrib_id 
-      FROM    attrib a, attrib_type t
-      WHERE   a.attrib_type_id = t.attrib_type_id
-      AND     t.attrib_type_id = $attrib_type_id
-      AND     a.value = '$source' 
-  };
-
-  my $sth = $attrib_adaptor->dbc->prepare($sql);
-  $sth->execute;
-  my $attribs = $sth->fetchall_arrayref(); 
-  my $attrib_id = $attribs->[0]->[0]; 
+  my $attrib_id = $attrib_adaptor->attrib_id_for_type_value('citation_source',$source);
 
   die "No attribute '$source' found\n" unless defined $attrib_id;
 
-  return $attrib_id; 
+  return $attrib_id;
 }
 
 sub get_publication_info_from_epmc{
@@ -310,30 +289,27 @@ sub get_publication_info_from_epmc{
 
 
     ### get data on publication from ePMC
-
     if( defined $data->{$pub}->{pmid} ){
-        $ref   = get_epmc_data( "search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
+      $ref = get_epmc_data( "search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
     }
     elsif( defined $data->{$pub}->{doi} ){
-        $ref   = get_epmc_data( "search?query=$data->{$pub}->{doi}" );
-        ## check results of full text query
-         return undef unless defined  $data->{$pub}->{doi} &&
-	     $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+      $ref = get_epmc_data( "search?query=$data->{$pub}->{doi}" );
+      ## check results of full text query
+      return undef unless defined  $data->{$pub}->{doi} &&
+      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
     }
     elsif(defined $data->{$pub}->{pmcid}){
-        $ref   = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
- 
-        ## check results of full text query
-         return undef unless defined $data->{$pub}->{pmcid} &&
-	     $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
-        
+      $ref = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
+      ## check results of full text query
+      return undef unless defined $data->{$pub}->{pmcid} &&
+      $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};
     }
     else{
-        print $error_log "ALL\t$pub - nothing to search on\n";
-         return undef;
+      print $error_log "ALL\t$pub - nothing to search on\n";
+      return undef;
     }
-    
-    ### check title available       
+
+    ### check title available
     unless (defined $ref->{resultList}->{result}->{title}){
         my $mess = "ALL\t";
         $mess .= "pmid:$data->{$pub}->{pmid}\t"   if defined $data->{$pub}->{pmid};
@@ -341,14 +317,14 @@ sub get_publication_info_from_epmc{
         print $error_log $mess ." as no title\n";
 
          return undef;
-    }        
-   
+    }
+
     return $ref;
 }
 
 sub get_epmc_data{
 
-    my $id = shift; ## specific part of URL including pmid or pmcid 
+    my $id = shift; ## specific part of URL including pmid or pmcid
 
     return undef unless defined $id && $id =~/\d+/;
 
@@ -393,7 +369,7 @@ sub check_species{
                 $looks_ok = 1;
             }
         }
-    }     
+    }
     return $looks_ok;
 }
 
@@ -463,15 +439,15 @@ sub get_avoid_list{
 
 ### check for citations from raw dbSNP import & add detail
 sub check_dbSNP{
-   
-    my $dba       = shift;
+
+    my $dba = shift;
 
     open (my $error_log, ">>$species\_dbSNP.log") or die "Failed to open log file:$!\n";
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
                                                where publication.title is null
-                                               and publication.pmid is not null                     
+                                               and publication.pmid is not null
                                               ]);
 
     my $pub_upd_sth = $dba->dbc()->prepare(qq[ update publication
@@ -499,7 +475,7 @@ sub check_dbSNP{
         ## dbSNP may list publications which have not been mined
         my $looks_ok  = check_species($mined ,$ref) ;
         if ($looks_ok == 0 && defined $ref->{resultList}->{result}->{title} &&
-	    $ref->{resultList}->{result}->{title} !~/$species_string/i){
+            $ref->{resultList}->{result}->{title} !~/$species_string/i){
             print $error_log "WARN dbSNP data:\t$l->[1]\t($ref->{resultList}->{result}->{title}) - species not mentioned\n"
         }
 
@@ -551,6 +527,7 @@ sub update_evidence{
         else{
             $evidence = "$attrib->[0]->[0]";
         }
+
         $var_upd_sth->execute($evidence, $l->[0]);
         $varfeat_upd_sth->execute($evidence, $l->[0]);
     }
@@ -588,11 +565,7 @@ sub report_summary{
                                          and p1.pmcid is not null
                                          ]);
 
-   # my $dup2_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, pmcid 
-   #                                           FROM publication 
-   #                                           GROUP BY pmcid,publication_id HAVING COUNT(*) > 1 ]);
-
-   # Query is taking a few hours to run 
+   # Query is taking a few hours to run
    my $dup3_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.doi
                                          from publication p1, publication p2
                                          where p1.doi = p2.doi
@@ -600,14 +573,10 @@ sub report_summary{
                                          and p1.doi is not null
                                          ]);
 
-   #  my $dup3_ext_sth = $dba->dbc->prepare(qq[ SELECT publication_id, doi 
-   #                                            FROM publication 
-   #                                            GROUP BY doi,publication_id HAVING COUNT(*) > 1 ]);
-
-    my $dup4_ext_sth = $dba->dbc->prepare(qq[ select title, authors, count(*)  
+    my $dup4_ext_sth = $dba->dbc->prepare(qq[ select title, authors, count(*)
                                               from publication 
-                                              group by upper(title), upper(authors) having count(*) > 1 
-                                          ]); 
+                                              group by upper(title), upper(authors) having count(*) > 1
+                                          ]);
  
     my $fail_ext_sth = $dba->dbc->prepare(qq[ select count(*) from publication
                                               where title is null
@@ -615,45 +584,49 @@ sub report_summary{
 
     $dup1_ext_sth->execute()||die;
     my $dup1 = $dup1_ext_sth->fetchall_arrayref();
+    my $duplicated_pub = $dup1->[0]->[0];
 
     $dup2_ext_sth->execute()||die;
     my $dup2 = $dup2_ext_sth->fetchall_arrayref();
+    my $duplicated_pub2 = $dup2->[0]->[0];
 
     $dup3_ext_sth->execute()||die;
     my $dup3 = $dup3_ext_sth->fetchall_arrayref();
+    my $duplicated_pub3 = $dup3->[0]->[0];
 
     $dup4_ext_sth->execute()||die;
     my $dup4 = $dup4_ext_sth->fetchall_arrayref();
+    my $duplicated_pub4 = $dup4->[0]->[0];
 
     $fail_ext_sth->execute() ||die;
     my $fail = $fail_ext_sth->fetchall_arrayref();
     $title_null = $fail->[0]->[0]; 
 
-    if (defined $dup1->[0]->[0]){
+    if (defined $duplicated_pub){
       print $report "\nDuplicated publications (publication 1, publication 2, pmid):\n";
       foreach my $l (@{$dup1}){
         print $report "$l->[0]\t$l->[1]\t$l->[2]\n";
       }
     }
-    if (defined $dup2->[0]->[0]){
+    if (defined $duplicated_pub2){
       print $report "\nDuplicated publications (publication 1, publication 2, pmcid):\n";
       foreach my $k (@{$dup2}){
-        print $report "$k->[0]\t$k->[1]\t$l->[2]\n";
+        print $report "$k->[0]\t$k->[1]\t$k->[2]\n";
       }
     }
-    if (defined $dup3->[0]->[0]){
+    if (defined $duplicated_pub3){
     print $report "\nDuplicated publications (publication 1, publication 2, doi):\n";
       foreach my $m (@{$dup3}){
-        print $report "$m->[0]\t$m->[1]\t$l->[2]\n";
+        print $report "$m->[0]\t$m->[1]\t$m->[2]\n";
       }
     }
-    if (defined $dup4->[0]->[0]){
+    if (defined $duplicated_pub4){
       print $report "\nDuplicated publications (title, authors, number of publications):\n";
       foreach my $i (@{$dup4}){
-        print $report "$i->[0]\t$i->[1]\n"; 
+        print $report "$i->[0]\t$i->[1]\t$i->[2]\n"; 
       }
     }
-    
+
     print $report "\n$title_null publications without a title - to be deleted\n";
 
     return $title_null; 
@@ -677,7 +650,7 @@ sub update_meta{
 ## Clean brackets from titles
 ## Delete publications with title 'Not Available'
 ## Delete publications with unspecific titles
-## Delete publications without title  
+## Delete publications without title
 sub clean_publications{
 
     my $dba  = shift; 
@@ -695,13 +668,24 @@ sub clean_publications{
 
     my $title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[%' and (title like '%\]' or title like '%\.\]' or title like '%\]\.') ]);
 
+    my $title_cr_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%\n%' ]);
+    my $authors_cr_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%\n%' ]);
+
     my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' ]);
 
     $not_available_sth->execute()||die;
     my $not_available_titles = $not_available_sth->fetchall_arrayref();
 
     $title_sth->execute()||die;
-    my $title_brackets =  $title_sth->fetchall_arrayref();
+    my $title_brackets = $title_sth->fetchall_arrayref();
+    
+    $title_cr_sth->execute()||die;
+    my $get_title_cr = $title_cr_sth->fetchall_arrayref();
+    my $title_cr = $get_title_cr->[0]->[0];
+
+    $authors_cr_sth->execute()||die;
+    my $get_authors_cr = $authors_cr_sth->fetchall_arrayref();
+    my $authors_cr = $get_authors_cr->[0]->[0];
 
     $wrong_title_sth->execute()||die;
     my $wrong_title = $wrong_title_sth->fetchall_arrayref();
@@ -729,19 +713,47 @@ sub clean_publications{
       }
     }
 
+    # Clean carriage returns in title
+    if (defined $title_cr){
+      print $report "Publications with carriage return in the title - clean:\n";
+      foreach my $t_cr (@{$get_title_cr}){
+        my $pub_id = $t_cr->[0];
+        my $title = $t_cr->[1];
+        print $report "$pub_id\t$title\n";
+        $title =~ s/\n/ /;
+        
+        my $clean_title_sth = $dba->dbc()->prepare(qq[ update publication set title = ? where publication_id = $pub_id ]);
+        $clean_title_sth->execute($title);
+      }
+    }
+    
+    # Clean carriage returns in authors
+    if (defined $authors_cr){
+      print $report "Publications with carriage return in the authors - clean:\n";
+      foreach my $a_cr (@{$get_authors_cr}){
+        my $pub_id = $a_cr->[0];
+        my $authors = $a_cr->[1];
+        print $report "$pub_id\t$authors\n";
+        $authors =~ s/\n/ /;
+        
+        my $clean_authors_sth = $dba->dbc()->prepare(qq[ update publication set authors = ? where publication_id = $pub_id ]);
+        $clean_authors_sth->execute($authors);
+      }
+    }
+
     # Delete publications with not acceptable titles
     if(defined $wrong_title->[0]->[0]){
-      print $report "\nPublications with not acceptable title deleted (publication_id, title, variation_id):\n";
+      print $report "\nDeleted publications with title not acceptable (publication_id, title, variation_id):\n";
       remove_publications($dba, $report, $wrong_title);
     }
 
     # If there is publications without title, delete them 
     if($n_title_null != 0){
-      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id from publication where title is null or title = '' ]); 
-      my $title_null_sth->execute();
+      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id from publication where title is null or title = '' ]);
+      $title_null_sth->execute();
       my $titles_null = $title_null_sth->fetchall_arrayref();
- 
-      if(defined $titles->[0]->[0]){
+
+      if(defined $titles_null->[0]->[0]){
         print $report "\nPublications without title deleted (publication_id, title, variation_id):\n";
         remove_publications($dba, $report, $titles_null);
       }
@@ -767,15 +779,17 @@ sub remove_publications{
     my $var_id_sth = $dba->dbc->prepare(qq[ select variation_id from variation_citation where publication_id = $pub_id ]);
 
     $var_id_sth->execute()||die;
-    my $variation_ids = $var_id_sth->fetchall_arrayref();
+    my $get_variation_ids = $var_id_sth->fetchall_arrayref();
+    my $variation_ids = $get_variation_ids->[0]->[0];
 
-    if(defined $variation_ids->[0]->[0]){
+    if(defined $variation_ids){
       foreach my $v (@{$variation_ids}){
         my $var_id = $v->[0];
         print $var_id, "->", $pub_id, "\n";
         my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
         $failed_var_sth->execute()||die;
-        my $failed_variant = $failed_var_sth->fetchall_arrayref();
+        my $get_failed_variant = $failed_var_sth->fetchall_arrayref();
+        my $failed_variant = $get_failed_variant->[0]->[0];
 
         print $report "$pub_id\t$title\t$var_id\n";
 
@@ -784,8 +798,8 @@ sub remove_publications{
         $citation_delete_sth->execute();
         $pub_delete_sth->execute();
 
-        # Check if variant has other publications or phenotypes before changing display flag 
-        if(defined $failed_variant->[0]->[0]){
+        # Check if variant has other publications or phenotypes before changing display flag
+        if(defined $failed_variant){
 
           # Check if there is other publications for variant 
           my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);          
@@ -805,6 +819,23 @@ sub remove_publications{
           $update_display_var_sth->execute()||die;
           $update_display_vf_sth->execute()||die;
         }
+        # Check if there are other publications for variant
+        my $other_pubs_sth = $dba->dbc->prepare(qq[ select publication_id from variation_citation where variation_id = $var_id ]);
+        $other_pubs_sth->execute()||die;
+        my $other_pubs = $other_pubs_sth->fetchall_arrayref();
+        next unless (!defined $other_pubs->[0]->[0]);
+
+        # If no more publications then remove citation evidence from variation and variation_feature
+        my $get_attrib_sth = $dba->dbc->prepare(qq[ select attrib_id from attrib where value = 'Cited' ]);
+        $get_attrib_sth->execute()||die;
+        my $get_attrib = $get_attrib_sth->fetchall_arrayref();
+        my $attrib = $get_attrib->[0]->[0];
+        die "Remove publication: not updating evidence as no attrib found\n" unless defined $attrib;        
+
+        my $update_evidence_sth = $dba->dbc->prepare(qq[ update variation set evidence_attribs = REPLACE(evidence_attribs,'$attrib','') WHERE variation_id = $var_id ]);
+        my $update_evidence_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set evidence_attribs = REPLACE(evidence_attribs,'$attrib','') WHERE variation_id = $var_id ]);
+        $update_evidence_sth->execute()||die;
+        $update_evidence_vf_sth->execute()||die;
       }
     }
   }
@@ -820,7 +851,7 @@ sub get_current_UCSC_data{
 
     my $cit_ext_sth = $dbh->prepare(qq[ SELECT pma.markerId, pa.pmid, pma.section, pa.doi, pa.title, pa.authors, pa.year, pa.extId
                                         FROM pubsMarkerAnnot pma JOIN pubsArticle pa USING
-                                        (articleId) WHERE pma.markerType="snp" 
+                                        (articleId) WHERE pma.markerType="snp"
                                       ]);
 
 
@@ -834,7 +865,7 @@ sub get_current_UCSC_data{
             || $line->[4]  eq "Contents" || $line->[4] eq "Table of Contents" || $line->[4]  eq "Volume Contents"
             || $line->[4]  eq "Cannabis" || $line->[4] eq "Index"  || $line->[4] eq "Author Index"
             || $line->[4]  =~/This Issue/i      || $line->[4]  =~/This Month in/
-            || $line->[4] eq "Ensembl 2011"; 
+            || $line->[4] eq "Ensembl 2011";
 
         print $out join("\t", @{$line}) . "\n";
     }
@@ -927,12 +958,12 @@ sub do_disease{
 
 =head  This bit does one disease only
         my $top_disease = find_disease($l->[0]);
-        ## skip paper if none found      
+        ## skip paper if none found
         next unless defined $top_disease
 
 =cut
         my $multi_disease = find_disease($l->[0]);
-        ## skip paper if none found     
+        ## skip paper if none found
         next unless defined $multi_disease->[0];
         foreach my $top_disease(@{$multi_disease}){
             $top_disease =~ s/\'//g;
@@ -957,9 +988,9 @@ sub do_disease{
                 $pheno_ids{$top_disease} =  $pheno->dbID() ;
                 ## create phenotype citation
                 $phencit_ins_sth->execute($l->[1], $pheno_ids{$top_disease})||die;
-            }               
+            }
         }
-    }        
+    }
 }
 
 sub find_disease{
@@ -971,14 +1002,14 @@ sub find_disease{
 
     my $mined = get_epmc_data( "MED/$pmid/textMinedTerms/DISEASE" );
     if( ref($mined->{semanticTypeList}->{semanticType}->{tmSummary}) eq 'ARRAY' ){
-        foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
+        foreach my $found ( @{$mined->{semanticTypeList}->{semanticType}->{tmSummary}} ){
             next if $found->{count} < 2;
             push @diesase, $found->{term};
 
         }
-        
-        
-        
+
+
+
     }
     else{
         ## if there is only one disease found, return it unless it is only mentioned once
@@ -1014,11 +1045,11 @@ sub find_disease_max{
         ## store diseases reaching this threshhold
         foreach my $disease (keys %count){
             push @diesase, $disease if $max == $count{$disease};
-            
+
         }
         return undef if scalar(@diesase) >1 ; ## give up - not specific enough
         return $diesase[0];
-        
+
     }
     else{
         ## if there is only one disease found, return it unless it is only mentioned once
@@ -1027,7 +1058,7 @@ sub find_disease_max{
 
     }
 
-    
+
 }
 
 ## find current citation in db
