@@ -135,7 +135,7 @@ $dbh->do(qq{
     DELETE  vsv
     FROM    variation_set_variation vsv, variation_set vs
     WHERE   vsv.variation_set_id = vs.variation_set_id
-    AND     vs.name = "COSMIC phenotype variants"
+    AND     vs.name LIKE "\%$source_name\%"
 });
 print "- 'variation_set_variation' entries deleted\n";
 
