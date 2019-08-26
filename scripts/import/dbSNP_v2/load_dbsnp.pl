@@ -1312,6 +1312,12 @@ sub report_summary{
   print $report "Lines processed:\t$num_lines\n";
   print $report "Batch id:\t$batch_id\n";
 
+  if (!$config->{'db_load'}) {
+    print $report "Configured for no db load\n";
+    close($report);
+    return;
+  }
+
   my $dbh = $config->{'dbh_var'};
 
   my $variation_count = count_rows_batch($dbh, 'variation', 'variation_id', $batch_id);
