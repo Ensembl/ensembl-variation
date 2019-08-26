@@ -581,11 +581,23 @@ sub get_evidence {
 sub get_map_weight {
   my ($regions, $rs_data) = @_;
   my $map_weight=0;
+  my %seen_vf;
 
-  # Loop the vfs and count the regions that are
+  # Loop through the vfs and count the regions that are top-level
+  # Only count the unique seq_region_id:seq_region_start:seq_region_end
   for my $vf (@{$rs_data->{'vfs'}}) {
     if (defined $regions->{$vf->{'seq_region_id'}}) {
-        $map_weight++;
+      # The import can contain duplicate VFs based on
+      # seq_region_id, seq_region_start, seq_region_end
+      # These can arise when NTs map to same position as NCs
+      # The duplicates are excluded in map_weight calculations
+      my $loc = join(':',
+                     $vf->{'seq_region_id'},
+                     $vf->{'seq_region_start'},
+                     $vf->{'seq_region_end'});
+      next if (defined $seen_vf{$loc});
+      $seen_vf{$loc} = 1;
+      $map_weight++;
     }
   }
   return $map_weight;
@@ -989,8 +1001,38 @@ sub import_variation_feature {
                             ?, ?, ?,
                             ?, ?, ?,
                             ?, ?)]);
+  my %seen_vf;
+
   for my $vf (@$vfs) {
     next if ($vf->{'par'});
+    # The import can contain duplicate VFs based on
+    # seq_region_id, seq_region_start, seq_region_end
+    # These can arise when NTs map to same position as NCs
+    # The duplicates are not imported into the database
+    my $loc = join(':',
+                    $vf->{'seq_region_id'},
+                    $vf->{'seq_region_start'},
+                    $vf->{'seq_region_end'});
+
+    if (defined $seen_vf{$loc}) {
+      # Keep a record of the location and alleles in the JSON file
+      import_placement_allele($dbh, $variation_id, $vf->{'alleles'});
+
+      # Log only the location not the alleles in the error file
+      my $info = join(";",
+                'seq_region_id=' . $vf->{'seq_region_id'},
+                'seq_region_start=' . $vf->{'seq_region_start'},
+                'seq_region_end=' . $vf->{'seq_region_end'},
+                'seq_id=' . $vf->{'seq_id'},
+                'position=' . $vf->{'position'},
+                'strand=' . $vf->{'seq_region_strand'});
+      log_errors($config, $vf->{'variation_name'},
+                 'duplicate_variation_feature',
+                  $info);
+      next;
+    }
+    $seen_vf{$loc} = 1;
+
     $sth->execute($vf->{'variation_name'}, $map_weight,
                   $vf->{'seq_region_id'}, $vf->{'seq_region_start'}, $vf->{'seq_region_end'},
                   $vf->{'seq_region_strand'},
