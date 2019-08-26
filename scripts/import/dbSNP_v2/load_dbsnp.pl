@@ -895,7 +895,7 @@ sub import_variation {
   # Determine the values for maf, minor_allele, minor_allele_count
   my ($maf, $minor_allele, $minor_allele_count);
   if (defined $freq) {
-      $minor_allele = $freq->{'minor_allele'};
+      $minor_allele = $freq->{'minor_allele'} || '-';
       $maf = format_frequency($freq->{'MAF'});
       $minor_allele_count = $freq->{'minor_allele_count'};
   }
@@ -944,7 +944,7 @@ sub import_variation_feature {
 
   my ($maf, $minor_allele, $minor_allele_count);
   if (defined $freq) {
-      $minor_allele = $freq->{'minor_allele'};
+      $minor_allele = $freq->{'minor_allele'} || '-';
       $maf = format_frequency($freq->{'MAF'});
       $minor_allele_count = $freq->{'minor_allele_count'};
   }
