@@ -245,7 +245,8 @@ sub parse_refsnp {
   # a flip is needed. This assumes that the assembly is GRCh38
   # TODO - add an assembly check
   #      - add a flag if flipping should be done
-  if ($data->{'1000Genomes'}->{'minor_allele'}) {
+  if (defined $data->{'1000Genomes'} &&
+      $data->{'1000Genomes'}->{'minor_allele'}) {
     my $align_diff = get_align_diff($rs_json);
     if ($align_diff) {
       my $old_minor_allele = $data->{'1000Genomes'}->{'minor_allele'};
