@@ -32,6 +32,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use File::Basename;
 use POSIX qw(strftime);
 use JSON;
+use FileHandle;
 
 my $config = configure();
 
@@ -75,6 +76,13 @@ my $lu_info = get_lu_info($dbh_var);
 
 # Parsing the data file
 my ($num_lines) = parse_dbSNP_file($config);
+
+# Close open filehandles
+for my $ma_type ('update', 'log') {
+  my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
+  $fh->close();
+}
+
 report_summary($config, $num_lines);
 
 # Set up the reporting files
@@ -105,6 +113,21 @@ sub init_reports {
   print "error_file ($config->{'error_file'})\n";
   if (-e $config->{'error_file'}) {
     die("$config->{'error_file'} already exists. Please rename or delete\n");
+  }
+
+  # Files for updates and logs of 1000Genomes minor allele flipping
+  for my $ma_type ('update', 'log') {
+    my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
+    if (-e "$rpt_dir/$filename") {
+        die("$rpt_dir/$filename already exists. Please rename or delete\n");
+    }
+    my $fh = FileHandle->new("$rpt_dir/$filename", 'w');
+    if (! $fh) {
+      die("Unable to open $rpt_dir/$filename");
+    } else {
+      print "minor allele $ma_type file = $rpt_dir/$filename\n";
+      $config->{join('-', 'ma', $ma_type, 'fh')} = $fh;
+    }
   }
 }
 
@@ -217,12 +240,114 @@ sub parse_refsnp {
 
   # 1000Genomes data
   $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+
+  # If the 1000Genomes data has a minor_allele, check if
+  # a flip is needed. This assumes that the assembly is GRCh38
+  # TODO - add an assembly check
+  #      - add a flag if flipping should be done
+  if ($data->{'1000Genomes'}->{'minor_allele'}) {
+    my $align_diff = get_align_diff($rs_json);
+    if ($align_diff) {
+      my $old_minor_allele = $data->{'1000Genomes'}->{'minor_allele'};
+      my $new_minor_allele = flip_minor_allele(
+                        $old_minor_allele,
+                        $data->{'v'}->{'name'},
+                        $align_diff,
+                        $data->{'vfs'},
+                        $config->{'ma-log-fh'});
+      if ($new_minor_allele) {
+        $data->{'1000Genomes'}->{'org_minor_allele'} = $old_minor_allele;
+        $data->{'1000Genomes'}->{'minor_allele'} = $new_minor_allele;
+        my $fh = $config->{'ma-update-fh'};
+        print $fh join("\t", $data->{'v'}->{'name'},
+                         $old_minor_allele,
+                         $new_minor_allele), "\n";
+      }
+    }
+  }
+
+
   # To the QC now
   # Check for the allele string matches
   # Check the map weight
   # Set the variant class
   return $data; 
 
+}
+
+# Flips a minor allele if there are differences in GRCh37 and GRCh38 alignment
+# Input:
+# old_minor_allele - allele from GRCh37
+# var_name         - name of the variant
+# align_diff       - alignment diff info between GRCh37 and GRCh38
+# vfs              - variation features for the variant
+# fh               - filehandle to log info and errors
+#
+# Returns:
+# new_minor_allele if flip can be done, otherwise undef
+sub flip_minor_allele {
+  my ($old_minor_allele, $var_name,
+      $align_diff, $vfs, $fh) = @_;
+
+  return if (! $old_minor_allele);
+
+  if ($align_diff->{'review_status'} ne 'ALIGN_DIFF') {
+    print $fh join("\t", $var_name, 'INFO',
+      'review_status: ' . $align_diff->{'review_status'}), "\n";
+    return;
+  }
+
+  my $grch37_loc = $align_diff->{'grch37_loc'};
+  my $grch38_loc = $align_diff->{'grch38_loc'};
+  if ($grch37_loc != $grch38_loc) {
+    print $fh join("\t", $var_name, 'SKIP',
+      "Num of GRCh37 loc ($grch37_loc) differ num of GRCh38 loc ($grch38_loc)"), "\n";
+    return;
+  }
+
+  my $new_minor_allele = $old_minor_allele;
+  reverse_comp(\$new_minor_allele);
+
+  # Check the new minor allele in $allele_string
+  if (!@$vfs) {
+    print $fh join("\t", $var_name, 'ERROR',
+               "No variation features"), "\n";
+    return;
+  }
+  my $num_vfs = @$vfs;
+  my $found = 0;
+  for my $vf (@$vfs) {
+    my $vf_found = 0;
+    my $allele_string = $vf->{'allele_string'};
+    my @alleles = split("/", $allele_string);
+    for my $allele (@alleles) {
+        if ($new_minor_allele eq $allele) {
+          $vf_found = 1;
+          last;
+        }
+    }
+    if (! $vf_found) {
+      my $loc = join(':',
+                     $vf->{'seq_region_id'},
+                     $vf->{'seq_region_start'},
+                     $vf->{'seq_region_end'});
+      print $fh join("\t", $var_name, 'ERROR',
+                    "new minor_allele ($new_minor_allele) not found in " .
+                    "allele_string ($allele_string) of variation feature " .
+                    "($loc)") . "\n";
+    }
+    $found += $vf_found;
+  }
+  if (! $found) {
+    print $fh join("\t", $var_name, 'ERROR',
+              "new minor_allele ($new_minor_allele) not found in any allele_string of variation_feature"), "\n";
+    return;
+  } elsif ($found != $num_vfs) {
+    print $fh join("\t", $var_name, 'WARNING',
+                    "new minor_allele ($new_minor_allele) only found in $found/$num_vfs variation_features"), "\n";
+  }
+
+  return $new_minor_allele;
 }
 
 # Get genomic coords
@@ -1728,6 +1853,68 @@ sub get_study_frequency {
   return $study_freq;
 
 }
+
+# Get alignment diff between GRCh37 and GRCh38
+sub get_align_diff {
+  my ($rs_json) = @_;
+
+  my $align_info;
+
+  my $refsnp = $rs_json->{'refsnp_id'};
+
+  my $psd = $rs_json->{'primary_snapshot_data'};
+  if (! $psd) {
+    return;
+  }
+
+  # Number of placements with allele for that primary snapshot data
+  my $num_pwa = @{$psd->{'placements_with_allele'}};
+  if (! $num_pwa) {
+    return;
+  }
+
+  my ($grch37_loc, $grch38_loc, $grch37_aln_opp, $grch38_aln_opp) = (0,0,0,0);
+
+  # Loop through each of the placements
+  foreach my $loc (@{$psd->{'placements_with_allele'}}) {
+    # for each placement get
+    # the seq_id, is_ptlp, number of seq_id_trait_by_assemby,is_aln_opposite_orientation
+    my $seq_id = $loc->{'seq_id'};
+
+    # Only process the NC
+    next if ($seq_id !~ /^NC/);
+    my $assembly = $loc->{'placement_annot'}->{'seq_id_traits_by_assembly'}->[0]->{'assembly_name'};
+    if ($assembly =~ /GRCh37/) {
+      $grch37_loc++;
+      $grch37_aln_opp++ if ($loc->{'placement_annot'}->{'is_aln_opposite_orientation'});
+    }
+    if ($assembly =~ /GRCh38/) {
+      $grch38_loc++;
+      $grch38_aln_opp++ if ($loc->{'placement_annot'}->{'is_aln_opposite_orientation'});
+    }
+    my $is_ptlp = $loc->{'is_ptlp'};
+  }
+
+  my $review_status;
+  if (!$grch37_loc && !$grch38_loc) {
+    $review_status = 'NO_MAPPING_GRCh37_GRCh38';
+  } elsif (!$grch37_loc && $grch38_loc) {
+    $review_status = 'ONLY_GRCh38';
+  } elsif ($grch37_loc && !$grch38_loc) {
+    $review_status = 'ONLY_GRCh37';
+  } elsif ($grch37_aln_opp != $grch38_aln_opp) {
+    $review_status = 'ALIGN_DIFF';
+  }
+  if ($review_status) {
+    $align_info->{'grch37_loc'} = $grch37_loc;
+    $align_info->{'grch38_loc'} = $grch38_loc;
+    $align_info->{'grch37_aln_opp'} = $grch37_aln_opp;
+    $align_info->{'grch38_aln_opp'} = $grch38_aln_opp;
+    $align_info->{'review_status'} = $review_status;
+  }
+  return $align_info;
+}
+
 sub get_maf {
   my ($alleles_ref) = @_;
 
