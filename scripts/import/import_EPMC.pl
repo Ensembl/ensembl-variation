@@ -178,10 +178,11 @@ sub import_citations{
             if (defined $v){
                 push @var_obs, $v;
 
-                # Update column data_source_attrib in table variation_citation 
+                # Update column data_source_attrib in table variation_citation
                 if(defined $pub_pmid && $done_list->{$rsid}{$pub_pmid}){
+                  my $source_data = $done_list->{$rsid}{$pub_pmid};
                   my $var_id = $v->dbID();
-                  $pub_ad->update_citation_data_source($source_attrib_id, $var_id, $pub_pmid);
+                  $pub_ad->update_citation_data_source($source_attrib_id, $var_id, $pub_pmid) unless $source_data =~ $source_attrib_id;
                 }
             }
             else{
@@ -487,7 +488,7 @@ sub check_dbSNP{
                                $l->[0]
             ) if defined $ref->{resultList}->{result}->{title};
     }  
-    close $error_log;  
+    close $error_log;
 }
 
 ## citation is one form of evidence used to support a variant
@@ -629,7 +630,7 @@ sub report_summary{
 
     print $report "\n$title_null publications without a title - to be deleted\n";
 
-    return $title_null; 
+    return $title_null;
 }
 
 ## store rundate in meta table for each source 
@@ -648,8 +649,7 @@ sub update_meta{
 
 ## clean publication and variation_citation tables after import
 ## Clean brackets from titles
-## Delete publications with title 'Not Available'
-## Delete publications with unspecific titles
+## Delete publications with unspecific titles including titles 'Not Available'
 ## Delete publications without title
 sub clean_publications{
 
@@ -664,7 +664,6 @@ sub clean_publications{
     print $report "Total publications before cleaning:\t$publication_count\n";
     print $report "Total citations before cleaning:\t$citation_count\n\n";
 
-    my $not_available_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[Not Available%' ]);
 
     my $title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[%' and (title like '%\]' or title like '%\.\]' or title like '%\]\.') ]);
 
@@ -672,9 +671,6 @@ sub clean_publications{
     my $authors_cr_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%\n%' ]);
 
     my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' ]);
-
-    $not_available_sth->execute()||die;
-    my $not_available_titles = $not_available_sth->fetchall_arrayref();
 
     $title_sth->execute()||die;
     my $title_brackets = $title_sth->fetchall_arrayref();
@@ -689,12 +685,6 @@ sub clean_publications{
 
     $wrong_title_sth->execute()||die;
     my $wrong_title = $wrong_title_sth->fetchall_arrayref();
-
-    # Delete publications with title 'Not Available'
-    if(defined $not_available_titles->[0]->[0]){
-      print $report "\nPublications with 'not available' title deleted (publication_id, title, variation_id):\n";
-      remove_publications($dba, $report, $not_available_titles);
-    } 
 
     # Clean brackets from publication title 
     my $count_titles = 0;
@@ -1067,7 +1057,7 @@ sub get_current_citations{
 
     my $dba = shift;
 
-    my $cit_ext_sth = $dba->dbc()->prepare(qq[ select variation.name, publication.pmid
+    my $cit_ext_sth = $dba->dbc()->prepare(qq[ select variation.name, publication.pmid, variation_citation.data_source_attrib
                                                from publication, variation, variation_citation
                                                where publication.publication_id = variation_citation.publication_id
                                                and variation_citation.variation_id = variation.variation_id
@@ -1078,7 +1068,7 @@ sub get_current_citations{
     $cit_ext_sth->execute()||die;
     my $data =  $cit_ext_sth->fetchall_arrayref();
     foreach my $l(@{$data}){
-        $citations{$l->[0]}{$l->[1]} = 1 if defined $l->[1];
+        $citations{$l->[0]}{$l->[1]} = $l->[2] if defined $l->[1];
     }
 
     return \%citations;
