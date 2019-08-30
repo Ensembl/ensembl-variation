@@ -300,9 +300,9 @@ sub flip_minor_allele {
 
   my $grch37_loc = $align_diff->{'grch37_loc'};
   my $grch38_loc = $align_diff->{'grch38_loc'};
-  if ($grch37_loc != $grch38_loc) {
+  if (($grch37_loc != $grch38_loc) || ($grch37_loc != 1)) {
     print $fh join("\t", $var_name, 'SKIP',
-      "Num of GRCh37 loc ($grch37_loc) differ num of GRCh38 loc ($grch38_loc)"), "\n";
+      "Num GRCh37 loc ($grch37_loc) and num of GRCh38 loc ($grch38_loc) both not equal to 1"), "\n";
     return;
   }
 
