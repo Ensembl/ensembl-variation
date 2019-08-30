@@ -663,19 +663,31 @@ sub get_evidence {
 
   my $subsnp_support = $rs_data->{'snp_support'};
 
+  # Determine 1000Genomes evidence: subsnp support or frequency support
+  # submitter_handle has different capitalisation for
+  # subsnp suppport (1000GENOMES)
+  # frequency support (1000Genomes)
   if (defined $subsnp_support) {
     if (defined $subsnp_support->{'1000GENOMES'}) {
       if (defined $lu_info->{'evidence_ids'}->{'1000Genomes'}) {
         push @evidence, $lu_info->{'evidence_ids'}->{'1000Genomes'};
         $freq_evidence++;
       }
+    } elsif (defined $rs_data->{'freq_support'}->{'1000Genomes'}) {
+        push @evidence, $lu_info->{'evidence_ids'}->{'1000Genomes'};
     }
 
+    # Determine ESP evidence: subsnp support or frequency support
+    # submitter_handle is different for
+    # subsnp suppport (NHLBI-ESP)
+    # and frequency support (GoESP)
     if (defined $subsnp_support->{'NHLBI-ESP'}) {
       if (defined $lu_info->{'evidence_ids'}->{'ESP'}) {
         push @evidence, $lu_info->{'evidence_ids'}->{'ESP'};
         $freq_evidence++;
       }
+    } elsif (defined $rs_data->{'freq_support'}->{'GoESP'}) {
+        push @evidence, $lu_info->{'evidence_ids'}->{'ESP'};
     }
 
     if (defined $subsnp_support->{'EVA_EXAC'}) {
@@ -697,10 +709,12 @@ sub get_evidence {
         $freq_evidence++;
       }
     }
+
     if (! $added_freq_evidence && ($freq_evidence)) {
       push @evidence, $lu_info->{'evidence_ids'}->{'Frequency'};
     }
   }
+
   return \@evidence;
 }
 
