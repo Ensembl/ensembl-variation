@@ -78,32 +78,31 @@ my @hostnames = split /,/, $hlist;
 # Loop over hosts
 foreach my $hostname (@hostnames) {
 
-  # my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
-  my $sql = qq{SHOW DATABASES LIKE '%dlemos_homo_sapiens_variation_$e_version%'};
+  my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
   my $sth_h = get_connection_and_query($database, $hostname, $sql, 1);
   my $db_found = 0;
   
   # Loop over databases
   while (my ($dbname) = $sth_h->fetchrow_array) {
-    # next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
-    # next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
 
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
     print STDERR "# $s_name - [ $dbname ]\n";
     
-    # ## Source (data types)
-    # post_process_source($hostname,$dbname);
+    ## Source (data types)
+    post_process_source($hostname,$dbname);
     
-    # ## Phenotype (related tables)
-    # post_process_phenotype($hostname,$dbname);
+    ## Phenotype (related tables)
+    post_process_phenotype($hostname,$dbname);
 
-    # ## Population (size)
-    # post_process_population($hostname,$dbname);
+    ## Population (size)
+    post_process_population($hostname,$dbname);
     
     ## Clinical significance (human only)
     if ($dbname =~ /^homo_sapiens_variation_$e_version/) {
-      # post_process_clin_sign($hostname,$dbname);
+      post_process_clin_sign($hostname,$dbname);
       post_process_publication($hostname,$dbname);
     }
   }
@@ -254,7 +253,9 @@ sub post_process_publication () {
   $reg->load_registry_from_db(
     -host => $host,
     -user => $user,
-    -verbose => '1'
+    -port => $port,
+    -pass => $pass,
+    # -db_version => $e_version # Testing
   );
 
   my $species = 'homo_sapiens';
@@ -297,13 +298,13 @@ sub post_process_publication () {
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
-      $source_attrib_id = get_source_attrib_id($reg, $study_type);
+      $source_attrib_id = get_source_attrib_id($reg, $study_type, $species);
     }
     else{
       # Get source name from source table
       my $source_obj = $source_ad->fetch_by_dbID($source_id);
       my $source_name = $source_obj->name();
-      $source_attrib_id = get_source_attrib_id($reg, $source_name);
+      $source_attrib_id = get_source_attrib_id($reg, $source_name, $species);
     }
 
     # Get publication that is not in publication table 
@@ -360,7 +361,6 @@ sub get_epmc_data{
 
   my %data;
 
-  print "Looking for $request\n\n"  if $DEBUG == 1;
   my $response = $http->get($request, {
       headers => { 'Content-type' => 'application/xml' }
                             });
@@ -374,6 +374,7 @@ sub get_epmc_data{
 sub get_source_attrib_id{
   my $reg = shift;
   my $source = shift;
+  my $species = shift;
 
   my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
 
