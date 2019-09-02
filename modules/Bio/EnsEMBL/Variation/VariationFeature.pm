@@ -2337,6 +2337,7 @@ sub to_VCF_record {
 
     ## an anchoring base common to all alleles is required in VCF
     my $prev_base;
+    my $vcf_start = $self->seq_region_start;
 
     ## if this is from dbSNP2.0, the base before the minimal change may be included
     my %first_bases = map {substr($_, 0, 1) => 1} grep {!/\*/} @alleles;
@@ -2346,6 +2347,7 @@ sub to_VCF_record {
     }
     else{
       $prev_base = $self->_get_prev_base(1);
+      $vcf_start--;
     }
 
     for my $i(0..$#alleles) {
@@ -2362,7 +2364,7 @@ sub to_VCF_record {
 
     return [
       $self->{chr} || $self->seq_region_name,
-      $self->seq_region_start - 1,
+      $vcf_start,
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
