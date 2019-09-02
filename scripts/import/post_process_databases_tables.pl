@@ -32,6 +32,8 @@ use DBI;
 use strict;
 use POSIX;
 use Getopt::Long;
+use XML::Simple;
+use HTTP::Tiny;
 
 ###############
 ### Options ###
@@ -76,31 +78,33 @@ my @hostnames = split /,/, $hlist;
 # Loop over hosts
 foreach my $hostname (@hostnames) {
 
-  my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+  # my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+  my $sql = qq{SHOW DATABASES LIKE '%dlemos_homo_sapiens_variation_$e_version%'};
   my $sth_h = get_connection_and_query($database, $hostname, $sql, 1);
   my $db_found = 0;
   
   # Loop over databases
   while (my ($dbname) = $sth_h->fetchrow_array) {
-    next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
-    next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    # next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+    # next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
 
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
     print STDERR "# $s_name - [ $dbname ]\n";
     
-    ## Source (data types)
-    post_process_source($hostname,$dbname);
+    # ## Source (data types)
+    # post_process_source($hostname,$dbname);
     
-    ## Phenotype (related tables)
-    post_process_phenotype($hostname,$dbname);
+    # ## Phenotype (related tables)
+    # post_process_phenotype($hostname,$dbname);
 
-    ## Population (size)
-    post_process_population($hostname,$dbname);
+    # ## Population (size)
+    # post_process_population($hostname,$dbname);
     
     ## Clinical significance (human only)
     if ($dbname =~ /^homo_sapiens_variation_$e_version/) {
-      post_process_clin_sign($hostname,$dbname);
+      # post_process_clin_sign($hostname,$dbname);
+      post_process_publication($hostname,$dbname);
     }
   }
   $sth_h->finish;
@@ -213,7 +217,6 @@ sub post_process_clin_sign () {
   print STDERR "\n";
 }
 
-
 # Connects and execute a query
 sub get_connection_and_query {
   my $dbname  = shift;
@@ -238,6 +241,148 @@ sub get_connection_and_query {
   }
 }
 
+sub post_process_publication () {
+  my $host_port = shift;
+  my $db        = shift;
+
+  my ($host, $port) = split /\:/, $host_port;
+
+  print STDERR "\t Publications:";
+  print "HOST: $host, DB NAME: $db\n";
+  
+  my $reg = 'Bio::EnsEMBL::Registry';
+  $reg->load_registry_from_db(
+    -host => $host,
+    -user => $user,
+    -verbose => '1'
+  );
+
+  my $species = 'homo_sapiens';
+
+  my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
+
+  ## extract all variants - cited variants failing QC are still displayed
+  $dba->include_failed_variations(1);
+
+  my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
+  my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
+  my $source_ad = $reg->get_adaptor($species, 'variation', 'source');
+
+  ## Get studies from phenotype_feature
+  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select study_id, source_id, description, external_reference, study_type
+                                                from study 
+                                                where study_id in 
+                                                (select study_id from phenotype_feature where type = 'variation' and study_id is not null) 
+                                                and external_reference is not null ]);
+  $attrib_ext_sth->execute()||die;
+  my $data = $attrib_ext_sth->fetchall_arrayref();
+
+  my $rsid_sth = $dba->dbc()->prepare(qq[ select object_id
+                                          from phenotype_feature 
+                                          where study_id = ? ]);
+
+  foreach my $l (@{$data}){
+    my $study_id = $l->[0];
+    my $source_id = $l->[1]; 
+    my $description = $l->[2];
+    my $external_reference = $l->[3];
+    $external_reference =~ s/PMID://;
+    my $study_type = $l->[4];
+
+    # Get publication with same PMID from study table
+    my $publication = $pub_ad->fetch_by_pmid($external_reference);
+
+    next unless !defined($publication);
+
+    # Get attrib id for source - some are null 
+    my $source_attrib_id;
+    if(defined $study_type){
+      $source_attrib_id = get_source_attrib_id($reg, $study_type);
+    }
+    else{
+      # Get source name from source table
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+      $source_attrib_id = get_source_attrib_id($reg, $source_name);
+    }
+
+    # Get publication that is not in publication table 
+    my $pub_data = get_epmc_data($external_reference);
+
+    if(defined $pub_data->{resultList}->{result}->{title}){
+      my $pub_title = $pub_data->{resultList}->{result}->{title};
+      my $pub_pmcid = $pub_data->{resultList}->{result}->{pmcid};
+      my $pub_author = $pub_data->{resultList}->{result}->{authorString};
+      my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
+      my $pub_doi = $pub_data->{resultList}->{result}->{doi};
+      print "TITLE: $pub_title, PMID: $external_reference, STUDY ID: $study_id, SOURCE ATTRIB: $source_attrib_id\n";
+
+      my @variant_list;
+      $rsid_sth->execute($study_id);
+      my $rsids = $rsid_sth->fetchall_arrayref();
+      
+      foreach my $rsid (@{$rsids}){
+        my $v = $var_ad->fetch_by_name($rsid->[0]);
+        if (defined $v){
+          push @variant_list, $v;
+        }
+      }
+
+      ### create new object
+      my $publication = Bio::EnsEMBL::Variation::Publication->new( 
+                -title    => $pub_title,
+                -authors  => $pub_author,
+                -pmid     => $external_reference,
+                -pmcid    => $pub_pmcid || undef,
+                -year     => $pub_year,
+                -doi      => $pub_doi,
+                -ucsc_id  => undef,
+                -variants => \@variant_list,
+                -adaptor  => $pub_ad
+                );
+
+       $pub_ad->store($publication,$source_attrib_id);
+    }
+  }
+
+}
+
+sub get_epmc_data{
+
+  my $id = shift; ## specific part of URL including pmid or pmcid
+
+  my $http = HTTP::Tiny->new();
+
+  return undef unless defined $id && $id =~/\d+/;
+
+  my $xs = XML::Simple->new();
+  my $request = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ext_id:' . $id . '%20src:med';
+
+  my %data;
+
+  print "Looking for $request\n\n"  if $DEBUG == 1;
+  my $response = $http->get($request, {
+      headers => { 'Content-type' => 'application/xml' }
+                            });
+  unless ($response->{success}){
+      warn "Failed request: $request :$!\n" ;
+      return;
+  }
+  return $xs->XMLin($response->{content} );
+}
+
+sub get_source_attrib_id{
+  my $reg = shift;
+  my $source = shift;
+
+  my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
+
+  my $attrib_id = $attrib_adaptor->attrib_id_for_type_value('citation_source',$source);
+
+  die "No attribute '$source' found\n" unless defined $attrib_id;
+
+  return $attrib_id;
+}
 
 sub usage {
   
