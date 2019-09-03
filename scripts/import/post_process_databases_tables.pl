@@ -246,9 +246,8 @@ sub post_process_publication () {
 
   my ($host, $port) = split /\:/, $host_port;
 
-  print STDERR "\t Publications:";
-  print "HOST: $host, DB NAME: $db\n";
-  
+  print STDERR "\t Publications from Phenotype feature:";
+
   my $reg = 'Bio::EnsEMBL::Registry';
   $reg->load_registry_from_db(
     -host => $host,
@@ -269,8 +268,21 @@ sub post_process_publication () {
   my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
   my $source_ad = $reg->get_adaptor($species, 'variation', 'source');
 
+  process_phenotype_feature($reg, $species, $dba, $var_ad, $pub_ad, $source_ad);
+  process_phenotype_feature_attrib($reg, $species, $dba, $var_ad, $pub_ad, $source_ad);
+
+}
+
+sub process_phenotype_feature {
+  my $reg = shift;
+  my $species = shift;
+  my $dba = shift;
+  my $var_ad = shift;
+  my $pub_ad = shift;
+  my $source_ad = shift;
+
   ## Get studies from phenotype_feature
-  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select study_id, source_id, description, external_reference, study_type
+  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select study_id, source_id, external_reference, study_type
                                                 from study 
                                                 where study_id in 
                                                 (select study_id from phenotype_feature where type = 'variation' and study_id is not null) 
@@ -284,11 +296,10 @@ sub post_process_publication () {
 
   foreach my $l (@{$data}){
     my $study_id = $l->[0];
-    my $source_id = $l->[1]; 
-    my $description = $l->[2];
-    my $external_reference = $l->[3];
+    my $source_id = $l->[1];
+    my $external_reference = $l->[2];
     $external_reference =~ s/PMID://;
-    my $study_type = $l->[4];
+    my $study_type = $l->[3];
 
     # Get publication with same PMID from study table
     my $publication = $pub_ad->fetch_by_pmid($external_reference);
@@ -301,7 +312,7 @@ sub post_process_publication () {
       $source_attrib_id = get_source_attrib_id($reg, $study_type, $species);
     }
     else{
-      # Get source name from source table
+      # Get source name from source table (dbGaP)
       my $source_obj = $source_ad->fetch_by_dbID($source_id);
       my $source_name = $source_obj->name();
       $source_attrib_id = get_source_attrib_id($reg, $source_name, $species);
@@ -316,8 +327,7 @@ sub post_process_publication () {
       my $pub_author = $pub_data->{resultList}->{result}->{authorString};
       my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
       my $pub_doi = $pub_data->{resultList}->{result}->{doi};
-      print "TITLE: $pub_title, PMID: $external_reference, STUDY ID: $study_id, SOURCE ATTRIB: $source_attrib_id\n";
-
+      
       my @variant_list;
       $rsid_sth->execute($study_id);
       my $rsids = $rsid_sth->fetchall_arrayref();
@@ -345,7 +355,115 @@ sub post_process_publication () {
        $pub_ad->store($publication,$source_attrib_id);
     }
   }
+}
 
+sub process_phenotype_feature_attrib {
+  my $reg = shift;
+  my $species = shift;
+  my $dba = shift;
+  my $var_ad = shift;
+  my $pub_ad = shift;
+  my $source_ad = shift;
+
+  my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
+                                                 from attrib_type
+                                                 where code = 'pubmed_id' ]);
+
+  $attrib_type_sth->execute()||die;
+  my $attrib_type_id = $attrib_type_sth->fetchall_arrayref();
+
+  die "No attribute type 'pubmed_id' found\n" unless defined $attrib_type_id;
+
+  my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select phenotype_feature_id, value 
+                                                   from phenotype_feature_attrib 
+                                                   where attrib_type_id = $attrib_type_id ]);
+
+  my $pheno_sth = $dba->dbc()->prepare(qq[ select source_id, object_id 
+                                           from phenotype_feature
+                                           where phenotype_feature_id = ? ]);
+
+  $pheno_feature_sth->execute()||die;
+  my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
+
+  # PMID -> list of phenotype_feature_id
+  my %new_publications;
+
+  # Create map to associate PMID with all phenotype features it's linked to
+  foreach my $pheno_data (@{$pheno_feature_data}){
+    my $pheno_feat_id = $pheno_data->[0];
+    my $value_pubid = $pheno_data->[1];
+    
+    my @value_pubid_splited = split /,/, $value_pubid;
+
+    # Get publication with same PMID from study table
+    foreach my $pmid (@value_pubid_splited){
+      my $publication = $pub_ad->fetch_by_pmid($pmid);
+
+      next unless !defined($publication);
+
+      my @feature_id;
+      if(defined $new_publications{$pmid}){
+        push(@{$new_publications{$pmid}}, $pheno_feat_id);
+      }
+      else{
+        push @feature_id, $pheno_feat_id;
+        $new_publications{$pmid} = \@feature_id;
+      }
+    }
+  }
+
+  foreach my $pmid (keys(%new_publications)){
+    my $feature_id_list = $new_publications{$pmid};
+
+    my $pub_data = get_epmc_data($pmid);
+
+    if(defined $pub_data->{resultList}->{result}->{title}){
+      my $pub_title = $pub_data->{resultList}->{result}->{title};
+      my $pub_pmcid = $pub_data->{resultList}->{result}->{pmcid};
+      my $pub_author = $pub_data->{resultList}->{result}->{authorString};
+      my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
+      my $pub_doi = $pub_data->{resultList}->{result}->{doi};
+
+      my @variant_list;
+      my $source_attrib_id;
+
+      foreach my $feature_id (@{$feature_id_list}){
+        # Get source and variant id
+        $pheno_sth->execute($feature_id)||die;
+        my $pheno_data = $pheno_sth->fetchall_arrayref();
+
+        next unless defined $pheno_data->[0]->[0];
+
+        my $source_id = $pheno_data->[0]->[0];
+        my $var_name = $pheno_data->[0]->[1];
+
+        my $v = $var_ad->fetch_by_name($var_name);
+        if (defined $v){
+          push @variant_list, $v;
+        }
+
+        # Get source name from source table (ClinVar)
+        my $source_obj = $source_ad->fetch_by_dbID($source_id);
+        my $source_name = $source_obj->name();
+        $source_attrib_id = get_source_attrib_id($reg, $source_name);
+      }
+
+      ## create new object
+      my $publication = Bio::EnsEMBL::Variation::Publication->new( 
+                -title    => $pub_title,
+                -authors  => $pub_author,
+                -pmid     => $pmid,
+                -pmcid    => $pub_pmcid || undef,
+                -year     => $pub_year,
+                -doi      => $pub_doi,
+                -ucsc_id  => undef,
+                -variants => \@variant_list,
+                -adaptor  => $pub_ad
+                );
+
+      $pub_ad->store($publication,$source_attrib_id);
+    }
+  }
 }
 
 sub get_epmc_data{
@@ -358,8 +476,6 @@ sub get_epmc_data{
 
   my $xs = XML::Simple->new();
   my $request = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ext_id:' . $id . '%20src:med';
-
-  my %data;
 
   my $response = $http->get($request, {
       headers => { 'Content-type' => 'application/xml' }
