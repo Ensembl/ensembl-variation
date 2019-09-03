@@ -299,7 +299,7 @@ sub fetch_by_VariationFeature {
   $self->{_vf_name} = $vf->variation_name;
   
   # fetch by slice using expanded feature slice
-  my $max_snp_distance = $distance || $self->{max_snp_distance} || MAX_SNP_DISTANCE;
+  my $max_snp_distance = $distance || $self->max_snp_distance || MAX_SNP_DISTANCE;
   my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
   
   # delete the cached pos
@@ -429,7 +429,8 @@ sub _fetch_by_Slice_VCF {
       my $files_arg = join(',', @files); 
       my $regions_arg = join(',', @regions);
       my $number_of_files = scalar @files;
-      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string";
+      my $window_size = $self->max_snp_distance;
+      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
 
       if ($self->{_vf_name}) {
         # if strict_name_match we can match by the given variant identifier
@@ -440,6 +441,7 @@ sub _fetch_by_Slice_VCF {
           $cmd .= " -p " . $self->{_vf_pos};
         }
       }
+      print STDERR "$cmd\n";
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
 
