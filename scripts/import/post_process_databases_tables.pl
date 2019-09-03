@@ -372,11 +372,13 @@ sub process_phenotype_feature_attrib {
   $attrib_type_sth->execute()||die;
   my $attrib_type_id = $attrib_type_sth->fetchall_arrayref();
 
-  die "No attribute type 'pubmed_id' found\n" unless defined $attrib_type_id;
+  die "No attribute type 'pubmed_id' found\n" unless defined $attrib_type_id->[0]->[0];
+
+  my $attrib_type_id_v = $attrib_type_id->[0]->[0];
 
   my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select phenotype_feature_id, value 
                                                    from phenotype_feature_attrib 
-                                                   where attrib_type_id = $attrib_type_id ]);
+                                                   where attrib_type_id = $attrib_type_id_v ]);
 
   my $pheno_sth = $dba->dbc()->prepare(qq[ select source_id, object_id 
                                            from phenotype_feature
@@ -447,6 +449,15 @@ sub process_phenotype_feature_attrib {
         my $source_name = $source_obj->name();
         $source_attrib_id = get_source_attrib_id($reg, $source_name);
       }
+
+      # Clean title before insertion
+      if($pub_title =~ /^\[ ?[A-Za-z]{2}/){
+          $pub_title =~ s/^\[//;
+          $pub_title =~ s/\]//;
+      }
+
+      # Skip publication if title 'Not Available'
+      next if ($pub_title =~ /Not Available/);
 
       ## create new object
       my $publication = Bio::EnsEMBL::Variation::Publication->new( 
