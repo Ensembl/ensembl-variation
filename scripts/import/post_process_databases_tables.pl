@@ -399,6 +399,9 @@ sub process_phenotype_feature_attrib {
 
     # Get publication with same PMID from study table
     foreach my $pmid (@value_pubid_splited){
+      # PMID already in the db with PMID=25806919
+      next if $pmid eq '25806920';
+
       my $publication = $pub_ad->fetch_by_pmid($pmid);
 
       next unless !defined($publication);
