@@ -99,7 +99,7 @@ our $TMP_PATH         = '';
 sub max_snp_distance {
   my $self = shift;
   return $self->{'max_snp_distance'} = shift if(@_);
-  return $self->{'max_snp_distance'};
+  return $self->{'max_snp_distance'} || MAX_SNP_DISTANCE;
 }
 
 =head2 min_r2
@@ -441,7 +441,6 @@ sub _fetch_by_Slice_VCF {
           $cmd .= " -p " . $self->{_vf_pos};
         }
       }
-      print STDERR "$cmd\n";
       # run LD binary and open as pipe
       open LD, "$cmd |"  or die "$!";
 
