@@ -309,7 +309,7 @@ sub source {
       $dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='https://www.ebi.ac.uk/dgva/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ($source_name,'Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version);});
     }
   }
   # Check if the dbVar source already exists, else it create the entry
@@ -318,7 +318,7 @@ sub source {
       $dbVar->do(qq{UPDATE IGNORE source SET description='NCBI database of human genomic structural variation',url='https://www.ncbi.nlm.nih.gov/dbvar/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ($source_name,'NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version);});
     }
   }
   my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})};
