@@ -122,7 +122,7 @@ my %attribs_col = ('ID'          => 'id *',
                   );
 
 
-my %display_name = ( 'COSMIC' => 'http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/' );
+my %display_name = ( 'COSMIC' => 'https://cancer.sanger.ac.uk/cosmic/' );
 
 my $add             = '';
 my $study_table     = "study$add";
