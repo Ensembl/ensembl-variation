@@ -55,6 +55,7 @@ my $source_id = get_source_id(); # COSMIC source_id
 my $variation_set_id = get_variation_set_id(); # COSMIC variation set
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
+my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym';
 
 my $default_class = 'sequence_alteration'; 
 my %class_mapping = ( 'Substitution' => 'SNV',
@@ -70,12 +71,16 @@ my $phe_suffix = 'tumour';
   
 $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
 $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
+$dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
   
 my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i', 'new_var_id i*');
 create($dbVar, "$temp_table", @cols);
 
 my @cols_phen = ('name *', 'phenotype_id i*');
 create($dbVar, "$temp_phen_table", @cols_phen);
+
+my @cols_syn = ('name *', 'old_name *');
+create($dbVar, "$temp_varSyn_table", @cols_syn);
 
 my $cosmic_ins_stmt = qq{
     INSERT INTO
@@ -109,6 +114,19 @@ my $cosmic_phe_ins_stmt = qq{
 };
 my $cosmic_phe_ins_sth = $dbh->prepare($cosmic_phe_ins_stmt);
 
+my $cosmic_syn_ins_stmt = qq{
+    INSERT INTO
+      $temp_varSyn_table (
+        name,
+        old_name
+      )
+      VALUES (
+        ?,
+        ?
+      )
+};
+my $cosmic_syn_ins_sth = $dbh->prepare($cosmic_syn_ins_stmt);
+
 my $class_attrib_ids = get_class_attrib_ids();
 my $seq_region_ids   = get_seq_region_ids();
 my $phenotype_ids    = get_phenotype_ids();
@@ -134,6 +152,7 @@ while (<IN>) {
      $chr = $chr_names{$chr} if ($chr_names{$chr});
   my $start         = shift(@line);
   my $end           = shift(@line);
+  my $cosv_id       = shift(@line);
   my $cosmic_id     = shift(@line);
   shift(@line); # Skip this column
   my $cosmic_class  = pop(@line);
@@ -149,14 +168,21 @@ while (<IN>) {
 
   my $class_attrib_id = $class_attrib_ids->{$class};
   
-  $cosmic_ins_sth->bind_param(1,$cosmic_id,SQL_VARCHAR);
+  $cosmic_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
   $cosmic_ins_sth->bind_param(2,$seq_region_id,SQL_INTEGER);
   $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
   $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
   $cosmic_ins_sth->bind_param(5,$class_attrib_id,SQL_INTEGER);
   $cosmic_ins_sth->execute();
+
+  $cosmic_syn_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
+  $cosmic_syn_ins_sth->bind_param(2,$cosmic_id,SQL_VARCHAR);
+  $cosmic_syn_ins_sth->execute();
   
   foreach my $phenotype (@line) {
+    next if $phenotype =~ /^Substitution/ || $phenotype =~ /^Insertion/
+      || $phenotype =~ /^Deletion/ || $phenotype =~ /^Complex/;
+
     $phenotype =~ s/_/ /g;
     $phenotype = ucfirst($phenotype)." $phe_suffix";
 
@@ -167,7 +193,7 @@ while (<IN>) {
       print STDERR "COSMIC $cosmic_id: phenotype '$phenotype' not found in ensembl. Phenotype added.\n";
     }
     
-    $cosmic_phe_ins_sth->bind_param(1,$cosmic_id,SQL_VARCHAR);
+    $cosmic_phe_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
     $cosmic_phe_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
     $cosmic_phe_ins_sth->execute();
   }
@@ -175,6 +201,7 @@ while (<IN>) {
 close(IN);
 $cosmic_ins_sth->finish();
 $cosmic_phe_ins_sth->finish();
+$cosmic_syn_ins_sth->finish();
 
 # Insert COSMIC in the latest release which are not in COSMIC 71
 insert_cosmic_entries();
@@ -306,6 +333,14 @@ sub insert_cosmic_entries {
   my $sth_vf  = $dbh->prepare($stmt_vf);
   $sth_vf->execute($allele, $default_strand);
   
+  # Insert variation synonym
+  my $stmt_vs = qq{INSERT IGNORE INTO variation_synonym
+                   (variation_id, source_id, name)
+                   SELECT v.variation_id, v.source_id, c.old_name
+                   FROM variation v, $temp_varSyn_table c WHERE v.name=c.name};
+  my $sth_vs  = $dbh->prepare($stmt_vs);
+  $sth_vs->execute();
+
   # Insert PF
   my $stmt_pf = qq{INSERT IGNORE INTO phenotype_feature 
                    (object_id, type, source_id, phenotype_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
