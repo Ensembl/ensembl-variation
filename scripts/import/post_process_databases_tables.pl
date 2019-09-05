@@ -240,7 +240,7 @@ sub get_connection_and_query {
   }
 }
 
-sub post_process_publication () {
+sub post_process_publication {
   my $host_port = shift;
   my $db        = shift;
 
@@ -282,11 +282,11 @@ sub process_phenotype_feature {
   my $source_ad = shift;
 
   ## Get studies from phenotype_feature
-  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select study_id, source_id, external_reference, study_type
-                                                from study 
-                                                where study_id in 
-                                                (select study_id from phenotype_feature where type = 'variation' and study_id is not null) 
-                                                and external_reference is not null ]);
+  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type
+                                                from study s 
+                                                inner join phenotype_feature p on s.study_id = p.study_id
+                                                where p.type = 'variation' and p.study_id is not null and s.external_reference is not null
+                                                group by s.study_id, s.source_id, s.external_reference, s.study_type ]);
   $attrib_ext_sth->execute()||die;
   my $data = $attrib_ext_sth->fetchall_arrayref();
 
@@ -399,7 +399,8 @@ sub process_phenotype_feature_attrib {
 
     # Get publication with same PMID from study table
     foreach my $pmid (@value_pubid_splited){
-      # PMID already in the db with PMID=25806919
+      # PMID=25806920 is the same paper as PMID=25806919
+      # PMID=25806919 is already in the publication table - faster to skip this PMID and avoid duplicated data
       next if $pmid eq '25806920';
 
       my $publication = $pub_ad->fetch_by_pmid($pmid);
