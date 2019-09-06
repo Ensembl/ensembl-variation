@@ -280,6 +280,13 @@ my %test_output = (
             "ENSP00000349297.4:p.Pro23_Gly24insArgThrTer",
             "insertion, stop gained part way through inserted seq"
             ],
+      38 => ["NC_000011.9:g.32417913_32417914delinsTT",
+            "TT",
+            "ENST00000530998.1:c.451_452delinsAA",
+            "AA",
+            "ENSP00000435307.1:p.Arg151Lys",
+            "2 base sustitution, stop gained [-1]",
+            ],
 
 );
 
@@ -471,7 +478,10 @@ my %test_input = (
             "ENST00000356839.4:c.68_69insCAGGACGTGAGGCGTGTT",
             "ENSP00000349297.4:p.Pro23_Gly24insArgThrTerGly",
             ],
-
+      38 => ["NC_000011.9:g.32417913_32417914delinsTT",
+             "ENST00000530998.1:c.451_452delinsAA",
+             "ENSP00000435307.1:p.Arg151Lys",
+             ],
 );
 
 my %test_input_shifted = (
