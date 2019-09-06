@@ -75,15 +75,18 @@ $dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
   
 my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i', 'new_var_id i*');
 create($dbVar, "$temp_table", @cols);
+$dbVar->do("ALTER TABLE $temp_table ADD PRIMARY KEY (name, seq_region_id, seq_region_start, seq_region_end);");
 
 my @cols_phen = ('name *', 'phenotype_id i*');
 create($dbVar, "$temp_phen_table", @cols_phen);
+$dbVar->do("ALTER TABLE $temp_phen_table ADD PRIMARY KEY (name, phenotype_id);");
 
 my @cols_syn = ('name *', 'old_name *');
 create($dbVar, "$temp_varSyn_table", @cols_syn);
+$dbVar->do("ALTER TABLE $temp_varSyn_table ADD PRIMARY KEY (name, old_name);");
 
 my $cosmic_ins_stmt = qq{
-    INSERT INTO
+    INSERT IGNORE INTO
       $temp_table (
         name,
         seq_region_id,
@@ -102,7 +105,7 @@ my $cosmic_ins_stmt = qq{
 my $cosmic_ins_sth = $dbh->prepare($cosmic_ins_stmt);
 
 my $cosmic_phe_ins_stmt = qq{
-    INSERT INTO
+    INSERT IGNORE INTO
       $temp_phen_table (
         name,
         phenotype_id
@@ -115,7 +118,7 @@ my $cosmic_phe_ins_stmt = qq{
 my $cosmic_phe_ins_sth = $dbh->prepare($cosmic_phe_ins_stmt);
 
 my $cosmic_syn_ins_stmt = qq{
-    INSERT INTO
+    INSERT IGNORE INTO
       $temp_varSyn_table (
         name,
         old_name
