@@ -289,7 +289,7 @@ sub get_source_id {
     $dbVar->do(qq{UPDATE IGNORE source SET version=$version where name="$source_name";});
   }
   else {
-    $dbVar->do(qq{INSERT INTO source (name,description,url,version,somatic_status,data_types) VALUES ("$source_name",'Somatic mutations found in human cancers from the COSMIC project - Public version','https://cancer.sanger.ac.uk/cosmic/',$version,'somatic','variation,phenotype_feature');});
+    $dbVar->do(qq{INSERT INTO source (name,description,url,version,somatic_status,data_types) VALUES ("$source_name",'Somatic mutations found in human cancers from the COSMIC project - Public version','https://cancer.sanger.ac.uk/cosmic/',$version,'somatic','variation,variation_synonym,phenotype_feature');});
   }
   my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name="$source_name";})};
   return $source_id[0];
