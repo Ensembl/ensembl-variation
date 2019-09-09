@@ -148,11 +148,11 @@ foreach my $ld_value (@$ld_values) {
 }
 
 # set max_snp_distance
-$ldfca->max_snp_distance(500);
-cmp_ok($ldfca->max_snp_distance, '==', 500, "set/get max_snp_distance");
+$ldfca->max_snp_distance(500_000);
+cmp_ok($ldfca->max_snp_distance, '==', 500_000, "set/get max_snp_distance");
 $ldfc = $ldfca->fetch_by_VariationFeature($vf);
 $ld_values = $ldfc->get_all_ld_values;
-cmp_ok(scalar @$ld_values, '==', 3, "Number of LD values after changing max_snp_distance");
+cmp_ok(scalar @$ld_values, '==', 6, "Number of LD values after changing max_snp_distance");
 
 my $r2 = $ldfca->min_r2;
 cmp_ok($r2, '==', 0.0, "set/get min r2");
