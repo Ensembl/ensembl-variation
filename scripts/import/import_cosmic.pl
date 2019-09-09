@@ -73,7 +73,7 @@ $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
 $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
 $dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
   
-my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i', 'new_var_id i*');
+my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i');
 create($dbVar, "$temp_table", @cols);
 $dbVar->do("ALTER TABLE $temp_table ADD PRIMARY KEY (name, seq_region_id, seq_region_start, seq_region_end);");
 
