@@ -140,6 +140,12 @@ $dbh->do(qq{
 print "- 'variation_set_variation' entries deleted\n";
 
 
+# variation_synonym
+$dbh->do(qq{
+    DELETE FROM variation_synonym WHERE source_id = $source_id
+});
+print "- 'variation_synonym' entries deleted\n";
+
 # variation
 $dbh->do(qq{
     DELETE FROM variation WHERE source_id = $source_id
