@@ -2189,7 +2189,7 @@ sub _parse_hgvs_protein_position{
   $from = $Bio::SeqUtils::ONECODE{$from} || $from;
   $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
 
-  # get genomic position 
+  # get genomic position - returns seq on transcript strand
   my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, undef, 0);  
   
   throw ("Unable to find the genomic reference sequence for protein $reference") unless defined $from_codon_ref; 
@@ -2202,12 +2202,15 @@ sub _parse_hgvs_protein_position{
 
   # check genomic codon is compatible with input HGVS
   my $check_prot   = $codon_table->translate($from_codon_ref);
+
   my @from_codons;
+  ## if the genomic sequence translates to match the input HGVS ref protein, use this
   if ($check_prot eq $from){
     push @from_codons, $from_codon_ref ;
   }
   else{
     # rev-translate input ref sequence if the genome sequence does not match
+    print "Sequence translated from reference ($from_codon_ref -> $check_prot) does not match input sequence ($from)\n" if $DEBUG ==1;
     @from_codons   = $codon_table->revtranslate($from);
   }
 
@@ -2247,18 +2250,18 @@ sub _parse_hgvs_protein_position{
   foreach my $best_path(keys %best_paths) {
 
     my ($ref_allele, $alt_allele) = ('', '');
-    my ($this_start, $this_end) = ($start, $end);
+    my ($this_start, $this_end) = $strand > 0 ? ($start, $start) : ($end, $end);
     my @path = split(/\,/, $best_path);
 
-    # coords
-	  if($strand > 0) {
-  		$this_start += (split /\_/, $path[0])[0]; 
-  		$this_end   += (split /\_/, $path[-1])[0];
-	  }
-	  else {
-    	$this_start -= (split /\_/, $path[0])[0];
-    	$this_end   -= (split /\_/, $path[-1])[0];
-	  }
+    # adjust coords to only changed bases
+    if($strand > 0) {
+      $this_start += (split /\_/, $path[0])[0];
+      $this_end   += (split /\_/, $path[-1])[0];
+    }
+    else {
+      $this_end   -= (split /\_/, $path[0])[0];
+      $this_start -= (split /\_/, $path[-1])[0];
+    }
 
     # alleles 
     $ref_allele .= (split /\_|\//, $path[$_])[1] for 0..$#path;
@@ -2302,7 +2305,7 @@ sub _parse_hgvs_protein_position_del{
     ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
   } 
 
-  # get genomic position 
+  # get genomic position & sequence on transcript strand
   my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, $pos2, 1); 
   
   throw ("Unable to find the genomic reference sequence for protein $reference") unless defined $from_codon_ref; 
@@ -2320,24 +2323,10 @@ sub get_reference{
   my $tr_mapper = $transcript->get_TranscriptMapper(); 
 
   my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
-  
+
+  my $start  = $coords[0]->start();
+  my $end    = $coords[0]->end();
   my $strand = $coords[0]->strand();
-
-  my $start; 
-  if($type_del == 1 || $strand > 0){ $start = $coords[0]->start(); } 
-  elsif($strand < 0){ $start = $coords[0]->end(); }
-
-  my $end; 
-  # it's a deletion of more than one amino acid eg. Lys1110_Gln1111del  
-  if($type_del == 1){
-    if(defined($pos2)){ $end = $coords[0]->end(); }
-    else{ $end = $coords[0]->start() + 2; } 
-  }
-  # it's a deletion of one amino acid eg. Lys1110del 
-  else{
-    if($strand > 0){ $end = $coords[0]->start(); }
-    else{ $end = $coords[0]->end(); }
-  }
 
   my $seq_length = $type_del == 1 ? ($end-$start) + 1 : 3;  
 

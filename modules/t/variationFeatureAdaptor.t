@@ -500,5 +500,11 @@ $spdi_str = 'NC_000012:102009450:GCCCCCC:CT';
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
 ok($vf->allele_string eq 'GCCCCCC/CT' , "Valid indel"); 
 
+## check ref matching
+my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
+throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Could not uniquely determine nucleotide change from ENSP00000434898.1:p.Cys6Ser/, 'Throw if HGVS does not match reference';
+my $ok_hgvs = 'ENSP00000293261.2:p.Ser455del';
+$vf = $vfa->fetch_by_hgvs_notation($ok_hgvs);
+ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
 done_testing();
 
