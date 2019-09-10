@@ -178,9 +178,11 @@ while (<IN>) {
   $cosmic_ins_sth->bind_param(5,$class_attrib_id,SQL_INTEGER);
   $cosmic_ins_sth->execute();
 
-  $cosmic_syn_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
-  $cosmic_syn_ins_sth->bind_param(2,$cosmic_id,SQL_VARCHAR);
-  $cosmic_syn_ins_sth->execute();
+  if ( $cosmic_id =~ /COSM/ ){
+    $cosmic_syn_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
+    $cosmic_syn_ins_sth->bind_param(2,$cosmic_id,SQL_VARCHAR);
+    $cosmic_syn_ins_sth->execute();
+  }
   
   foreach my $phenotype (@line) {
     next if $phenotype =~ /^Substitution/ || $phenotype =~ /^Insertion/
