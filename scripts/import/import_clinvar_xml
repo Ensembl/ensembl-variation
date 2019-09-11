@@ -924,7 +924,68 @@ sub enter_var{
 
   my $somatic = 0;
   $somatic = 1 if defined $inherit && $inherit =~ /Somatic/i;
-    
+
+  my $allele_str = $ref_allele ."/". $alt_allele;
+  my $vf_start = $data->{feature_info}->{start};
+  my $vf_end = $data->{feature_info}->{end};
+
+  ## get slice for new variationfeature
+  ## strand not reported - assumes forward
+  my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
+
+  if ($ref_allele eq '-' && $allele_str ne '-/') {
+    if ($vf_start == $vf_end){
+      $vf_start = $vf_end+1 ;
+    } elsif ( $vf_start +1 == $vf_end) {
+      $vf_start = $data->{feature_info}->{end} ;
+      $vf_end = $data->{feature_info}->{start} ;
+    } elsif ($data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #old style formated hgvs_g ..3-6dupGAGA
+      $vf_start = $vf_end + 1;
+    }
+  } elsif ($allele_str eq '-/' && $data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #new style formated hgvs_g ..3-6dup
+    my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+              $data->{feature_info}->{start}, $data->{feature_info}->{end});
+    my $ref_seq = $ref_slice->seq();
+    $allele_str = "-/".$ref_seq;
+    $vf_start= $vf_end + 1;
+  } elsif ($alt_allele =~/^$ref_allele/ && $data->{feature_info}->{hgvs_g} =~ m/\[/i ) {
+    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
+    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
+    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                    $vf_start, $vf_start + length($alt_allele) - 1);
+
+    my @refSeq = split //, $refSlice->seq;
+    my @altSeq = split //, $alt_allele;
+    my ($i,$match) = (0,1);
+    while ($i< scalar @altSeq && $match){
+      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
+      $i++;
+    }
+    next unless $match ==1; # skip duplications that don't have start/end coinciding with hgvs parsed elements
+    $ref_allele = substr($refSlice->seq, 0, $i-1);
+    $allele_str = $ref_allele ."/". $alt_allele;
+  }
+
+  # case eg. NC_000009.12:g.137233961_137234061del
+  elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
+      my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
+      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end );
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                      $vf_start, $vf_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+  }
+
+  # case eg. NC_000007.14:g.5978687_5978689delinsC
+  elsif ($data->{feature_info}->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
+      my ($start, $end, $alt) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
+      print "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end  || $alt ne $alt_allele);
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
+                      $vf_start, $vf_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+  }
+
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
@@ -933,15 +994,9 @@ sub enter_var{
     );
   $variation_adaptor->store($var);
 
-  my $allele_str = $ref_allele ."/". $alt_allele;
-
-  ## get slice for new variationfeature
-  ## strand not reported - assumes forward
-  my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
-
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
-    (-start           => $data->{feature_info}->{start},
-     -end             => $data->{feature_info}->{end},
+    (-start           => $vf_start,
+     -end             => $vf_end,
      -strand          => 1,
      -slice           => $slice,
      -variation_name  => $dbSNP,
@@ -952,60 +1007,6 @@ sub enter_var{
      -is_somatic      => 0,
      -adaptor         => $var_feat_adaptor,
     );
-  if ($ref_allele eq '-' && $allele_str ne '-/') {
-    if ($vf->start == $vf->end){
-      $vf->start($vf->end+1) ;
-    } elsif ( $vf->start +1 == $vf->end) {
-      $vf->start($data->{feature_info}->{end});
-      $vf->end($data->{feature_info}->{start});
-    } elsif ($data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #old style formated hgvs_g ..3-6dupGAGA
-      $vf->start($vf->end + 1);
-    }
-  } elsif ($allele_str eq '-/' && $data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #new style formated hgvs_g ..3-6dup
-    my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-              $data->{feature_info}->{start}, $data->{feature_info}->{end});
-    my $ref_seq = $ref_slice->seq();
-    $vf->allele_string("-/".$ref_seq);
-    $vf->start($vf->end + 1);
-  } elsif ($alt_allele =~/^$ref_allele/ && $data->{feature_info}->{hgvs_g} =~ m/\[/i ) {
-    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
-    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
-    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-                    $vf->seq_region_start, $vf->seq_region_start + length($alt_allele) - 1);
-
-    my @refSeq = split //, $refSlice->seq;
-    my @altSeq = split //, $alt_allele;
-    my ($i,$match) = (0,1);
-    while ($i< scalar @altSeq && $match){
-      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
-      $i++;
-    }
-    $ref_allele = substr($refSlice->seq, 0, $i-1);
-    $allele_str = $ref_allele ."/". $alt_allele;
-    $vf->allele_string($allele_str);
-  }
-
-  # case eg. NC_000009.12:g.137233961_137234061del
-  elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
-      my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
-      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf->seq_region_start || $end != $vf->seq_region_end );
-      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-                      $vf->seq_region_start, $vf->seq_region_end);
-      $ref_allele = $refSlice->seq;
-      $allele_str = $ref_allele ."/". $alt_allele;
-      $vf->allele_string($allele_str);
-  }
-
-  # case eg. NC_000007.14:g.5978687_5978689delinsC
-  elsif ($data->{feature_info}->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
-      my ($start, $end, $alt) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
-      print "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf->seq_region_start || $end != $vf->seq_region_end  || $alt ne $alt_allele);
-      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-                      $vf->seq_region_start, $vf->seq_region_end);
-      $ref_allele = $refSlice->seq;
-      $allele_str = $ref_allele ."/". $alt_allele;
-      $vf->allele_string($allele_str);
-  }
 
   $var_feat_adaptor->store($vf);
 
