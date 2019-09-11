@@ -72,6 +72,7 @@ strain.  It can be used to retrieve sequence or features from a strain.
 =head1 METHODS
 
 =cut
+
 use strict;
 use warnings;
 

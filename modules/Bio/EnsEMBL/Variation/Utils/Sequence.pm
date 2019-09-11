@@ -48,7 +48,7 @@ Bio::EnsEMBL::Variation::Utils::Sequence - Utility functions for sequences
 
   print "my ambiguity code is $ambig_code\n";
 
-  print "my SNP class is = variation_class($alleles)";
+  print "my SNP class is = ", variation_class($alleles), "\n";
 
 
 =head1 METHODS
@@ -86,6 +86,7 @@ use vars qw(@ISA @EXPORT_OK);
     &revcomp_tandem
     &get_matched_variant_alleles
     &trim_sequences
+    &trim_right
     &raw_freqs_from_gts
     %EVIDENCE_VALUES
 );
@@ -487,6 +488,7 @@ sub sequence_with_ambiguity{
   Caller      : general
 
 =cut
+
 sub hgvs_variant_notation {
   my $alt_allele = shift;
   my $ref_sequence = shift;
@@ -749,7 +751,6 @@ sub get_hgvs_alleles{
       $ref_allele = $string;
     }
   }
-
   # no change
   elsif ($description =~ m/\=/i) {
     ($ref_allele) = $description =~ m/([A-Z]*)\=$/i;
@@ -766,6 +767,7 @@ sub get_hgvs_alleles{
 }
 
 =head2 get_3prime_seq_offset
+
   Arg[1]     : allele sequence
   Arg[2]     : downstream flank
   Description: Compare an allele to its 3' sequence to define the most 3'
@@ -773,7 +775,9 @@ sub get_hgvs_alleles{
   Returntype : string or undef if this allele is not in the
   Exceptions : none
   Status     : Experimental
+
 =cut
+
 sub get_3prime_seq_offset{
 
   my $seq_to_check  = shift;
@@ -933,7 +937,7 @@ sub align_seqs {
                 to trim from the end first, set $end_first to a true value.
 
                 A boolean flag indicating if any change was made is returned.
-  ReturnType  : arrayref:
+  ReturnType  : arrayref :
                 [
                   string $new_ref,
                   string $new_alt,
@@ -1001,6 +1005,63 @@ sub trim_sequences {
 }
 
 
+=head2 trim_right
+
+  Arg[1]      : arrayref of allele sequences
+  Example     : my @trimmed_alleles = @{trim_right(\@alleles)}
+  Description : Takes a set of allele sequences and trims common sequence
+                from the end.
+                Reduces fully justified allele strings for VCF allele writing
+                Handles multi-allelic variants
+                Stops when an allele sequence has length 1 (common bases
+                at the start are not removed to support VCF)
+
+  ReturnType  : arrayref of trimmed allele sequences
+  Exceptions  : throws if no allele sequences are supplied
+  Caller      : VariationFeature->to_VCF_record()
+
+=cut
+
+sub trim_right{
+
+  my $alleles = shift;
+
+  throw("Allele sequences required") unless scalar(@{$alleles}) > 0;
+
+  ## do nothing if there is only one allele
+  return $alleles if scalar(@{$alleles}) == 1;
+
+  ## save input to return if necessary
+  my $input_alleles;
+  foreach my $s(@{$alleles}){
+    push @{$input_alleles}, $s;
+  }
+
+  my %last_bases;
+
+  foreach my $al( @{$alleles}){
+
+    ## don't trim if we are down to the last base
+    return $input_alleles if length($al) == 1;
+
+    ## clip allele & save last bases to check
+    my $end = chop($al);
+    $last_bases{$end} = 1;
+  }
+
+
+  ## if the last base is the same for all alleles, try to trim again
+  if( scalar keys %last_bases ==1){
+     no warnings 'recursion';
+     return trim_right($alleles)
+  }
+  else{
+    ## can't trim further - return input
+    return $input_alleles;
+  }
+
+}
+
 =head2 get_matched_variant_alleles
 
   Arg[1]      : hashref $var_a (see below for expected structure)
@@ -1055,26 +1116,28 @@ sub get_matched_variant_alleles {
 
   # convert allele_string key
   foreach my $var($a, $b) {
-    if(my $as = $var->{allele_string}) {
-      my @alleles = split('/', $as);
+    if($var->{allele_string} && $var->{allele_string} !~ /^\/.+$/) {
+      my @alleles = split('/', $var->{allele_string});
       $var->{ref}  ||= shift @alleles;
       $var->{alts}   = \@alleles unless exists($var->{alts});
     }
   }
 
   # check ref
-  throw("Missing ref key in first variant") unless exists($a->{ref});
-  throw("Missing ref key in second variant") unless exists($b->{ref});
+  warning("Missing ref key in first variant") unless exists($a->{ref});
+  warning("Missing ref key in second variant") unless exists($b->{ref});
 
   # check alts
   $a->{alts} ||= [$a->{alt}] if defined($a->{alt});
   $b->{alts} ||= [$b->{alt}] if defined($b->{alt});
-  throw("Missing alt or alts key in first variant") unless exists($a->{alts});
-  throw("Missing alt or alts key in second variant") unless exists($b->{alts});
+  warning("Missing alt or alts key in first variant") unless exists($a->{alts});
+  warning("Missing alt or alts key in second variant") unless exists($b->{alts});
 
   # check pos
-  throw("Missing pos key in first variant") unless $a->{pos};
-  throw("Missing pos key in second variant") unless $b->{pos};
+  warning("Missing pos key in first variant") unless $a->{pos};
+  warning("Missing pos key in second variant") unless $b->{pos};
+
+  return [] if (!exists($a->{ref}) || !exists($b->{ref}) || !exists($a->{alts}) || !exists($b->{alts}) || !$a->{pos} || !$b->{pos});
 
   # munge in strand
   $a->{strand} = 1 unless exists($a->{strand});

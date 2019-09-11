@@ -634,7 +634,7 @@ sub print_header {
     if (!$division) {
       $url = $ensembl_url;
     }
-    elsif ($division eq 'Ensembl') {
+    elsif ($division =~ /^EnsemblVertebrates$/i) {
       $url = 'https://e'.$schema_version.'.ensembl.org/'.$species_name;
     } else {
       $division =~ s/^Ensembl//;

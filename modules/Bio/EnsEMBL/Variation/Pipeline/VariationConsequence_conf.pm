@@ -61,8 +61,6 @@ sub default_options {
         hive_use_triggers => 0,
         hive_auto_rebalance_semaphores => 0, 
         hive_no_init => 0,
-        hive_debug_init => 1,
-        hive_default_max_retry_count => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
@@ -212,7 +210,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'gene_factory',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::GeneFactory',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
 
             -parameters => {
               include_lrg => $self->o('include_lrg'),
@@ -227,7 +225,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'dump_variation_gene_name',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -parameters => {
               @common_params,
             },
@@ -240,7 +238,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'dump_variation_gene_name_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -parameters => {
               @common_params,
             },
@@ -252,7 +250,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_factory',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptFactory',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -parameters => {
               @common_params,
@@ -265,8 +263,8 @@ sub pipeline_analyses {
           },
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
-            -analysis_capacity  => 60,
+            -hive_capacity  => 50,
+            -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
@@ -277,7 +275,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
@@ -292,7 +290,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'transcript_effect_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 150,
+            -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -rc_name => 'highmem',
             -parameters => {

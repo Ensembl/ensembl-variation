@@ -53,7 +53,7 @@ sub run {
   my $host = hostname;
 
   # do unique sort on command line, it's faster than relying on MySQL's unique index
-  foreach my $file(grep {-e "$dir/$_"} qw(variation_hgvs.txt variation_genename.txt)) {
+  foreach my $file(grep {-e "$dir/$_"} qw(variation_hgvs.txt )) {
     system("gzip -c $dir/$file > $dir/$file\_bak.gz");
     system(
       sprintf(
@@ -70,11 +70,6 @@ sub run {
     load($dbc, qw(variation_hgvs variation_id hgvs_name));
   }
 
-  if(-e $dir.'/variation_genename.txt.unique') {
-    $ImportUtils::TMP_FILE = 'variation_genename.txt.unique';
-    load($dbc, qw(variation_genename variation_id gene_name));
-  }
-
   $self->update_meta();
 
   return;
@@ -85,8 +80,6 @@ sub rejoin_table_files {
 
   my $dir = $self->required_param('pipeline_dir');
 
-  my $gene_fh = FileHandle->new();
-  $gene_fh->open(">".$dir."/variation_genename.txt") or die $!;
   my $hgvs_fh = FileHandle->new();
   $hgvs_fh->open(">".$dir."/variation_hgvs.txt") or die $!;
 
@@ -96,11 +89,11 @@ sub rejoin_table_files {
     opendir HEX, "$dir/web_index_files/$hex_stub";
     foreach my $file(grep {!/^\./} readdir HEX) {
 
-      my $fh = $file =~ /hgvs/ ? $hgvs_fh : $gene_fh;
+      next if ($file !~ /hgvs/);
 
       open IN, "$dir/web_index_files/$hex_stub/$file" or die $!;
       while(<IN>) {
-        print $fh $_;
+        print $hgvs_fh $_;
       }
       close IN;
     }

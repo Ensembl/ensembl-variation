@@ -377,7 +377,7 @@ sub hgvs_protein {
     return _hgvs_generic(@_,'protein');
 }
 
-=head 
+=head2 not implemented
 
 # We haven't implemented support for these methods yet
 
@@ -388,6 +388,7 @@ sub hgvs_rna {
 sub hgvs_mitochondrial {
     return _hgvs_generic(@_,'mitochondrial');
 }
+
 =cut
 
 sub _hgvs_generic {

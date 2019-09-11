@@ -107,11 +107,11 @@ sub default_options {
         
         # configuration for the various resource options used in the pipeline
         
-        default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        urgent_lsf_options  => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction-rh74 -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
 
@@ -167,7 +167,7 @@ sub default_options {
 
         variation_data          => '/nfs/production/panda/ensembl/variation/data', 
 
-        blastdb                 => $self->o('species_dir').'/sift5.2.2/uniref90/uniref90.fasta',
+        blastdb                 => $self->o('variation_data').'/sift5.2.2/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
@@ -182,11 +182,11 @@ sub default_options {
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
     
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a_grch37/dbNSFP3.5a_grch37.txt.gz',
+                                      { file => $self->o('variation_data') . '/dbNSFP/3.5a_grch37/dbNSFP3.5a_grch37.txt.gz',
                                         version => '3.5a',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . 'dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
+                                      { file => $self->o('variation_data') . '/dbNSFP/3.5a/dbNSFP3.5a.txt.gz',
                                         version => '3.5a',
                                       } 
                                     },
@@ -194,11 +194,11 @@ sub default_options {
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . 'CADD/v1.4/grch37/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.4/grch37/whole_genome_SNVs.tsv.gz',
                                         version => 'v1.4',
                                       },
                                    GRCh38 =>
-                                      { file => $self->o('variation_data') . 'CADD/v1.5/grch38/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.5/grch38/whole_genome_SNVs.tsv.gz',
                                         version => 'v1.5',
                                       } 
                                   },

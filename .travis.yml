@@ -27,13 +27,14 @@ services:
   - mysql
 
 before_install:
-- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
-- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
-- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
-- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-io.git
-- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
-- git clone -b release-1-6-924 --depth 1 https://github.com/bioperl/bioperl-live.git
-- git clone --branch 1.3.2 --depth 1 https://github.com/samtools/htslib.git
+- export ENSEMBL_BRANCH=master
+- git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-test.git
+- git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl.git
+- git clone --branch master          --depth 1 https://github.com/Ensembl/ensembl-hive.git
+- git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-io.git
+- git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
+- git clone --branch release-1-6-924 --depth 1 https://github.com/bioperl/bioperl-live.git
+- git clone --branch 1.9 --depth 1 https://github.com/samtools/htslib.git
 - cd htslib
 - make
 - cd ..
@@ -52,7 +53,6 @@ install:
 - export PERL5LIB=$PWD/bioperl-live:$PERL5LIB
 - export DEPS=$HOME/dependencies
 - export KENT_SRC="$DEPS/kent-335_base/src"
-- export HTSLIB_DIR="$PWD/htslib"
 - export MACHTYPE=$(uname -m)
 - export CFLAGS="-fPIC"
 - cd $DEPS
@@ -60,7 +60,6 @@ install:
 - cd $CWD
 - cpanm --quiet --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
 - cpanm --quiet --installdeps --with-recommends --notest .
-- cpanm Bio::DB::HTS
 - cpanm --quiet -n Devel::Cover::Report::Coveralls
 - cp travisci/MultiTestDB.conf.travisci  modules/t/MultiTestDB.conf
 

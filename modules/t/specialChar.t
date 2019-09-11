@@ -29,6 +29,10 @@ my $oldString = "Hôpitaux de Paris";
 my $newString = replace_char($oldString);
 ok($newString eq "Hopitaux de Paris", "special char updated");
 
+$oldString = "Auto-Immunite Rhumatoïde,Hôpitaux";
+$newString = replace_char($oldString);
+ok($newString eq "Auto-Immunite Rhumatoide,Hopitaux", "special char(ï, ô) updated");
+
 $oldString = "Sjögren-Larsson syndrome";
 $newString = replace_char($oldString);
 ok($newString eq "Sjogren-Larsson syndrome", "special char(ö) updated");

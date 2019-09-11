@@ -245,7 +245,7 @@ sub _get_filename_template {
   my $hash = shift;
   my $root_dir = $self->root_dir;
 
-  my $filename_template = $hash->{filename_template} =~ /(nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
+  my $filename_template = $hash->{filename_template} =~ /(http|nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
 
   if ($filename_template !~ /[#]+[^#]+[#]+/) {
     my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);

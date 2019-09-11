@@ -99,7 +99,7 @@ our $TMP_PATH         = '';
 sub max_snp_distance {
   my $self = shift;
   return $self->{'max_snp_distance'} = shift if(@_);
-  return $self->{'max_snp_distance'};
+  return $self->{'max_snp_distance'} || MAX_SNP_DISTANCE;
 }
 
 =head2 min_r2
@@ -299,7 +299,7 @@ sub fetch_by_VariationFeature {
   $self->{_vf_name} = $vf->variation_name;
   
   # fetch by slice using expanded feature slice
-  my $max_snp_distance = $distance || $self->{max_snp_distance} || MAX_SNP_DISTANCE;
+  my $max_snp_distance = $distance || $self->max_snp_distance || MAX_SNP_DISTANCE;
   my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand($max_snp_distance, $max_snp_distance), $pop);
   
   # delete the cached pos
@@ -349,6 +349,11 @@ sub fetch_by_VariationFeatures {
     $self->{_pairwise}->{$vf->seq_region_start} = 1;
     $self->{_pairwise_vf_name}->{$vf->variation_name} = 1;
   }  
+
+  # if pairwise store the first vf name to retain order in output
+  if (scalar @$vfs == 2) {
+    $self->{_pairwise_first_vf_name} = $vfs->[0]->variation_name;
+  }
  
   # fetch by slice using expanded feature slice
   my $ldFeatureContainer = $self->fetch_by_Slice(\@slice_objects, $population);
@@ -424,7 +429,8 @@ sub _fetch_by_Slice_VCF {
       my $files_arg = join(',', @files); 
       my $regions_arg = join(',', @regions);
       my $number_of_files = scalar @files;
-      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string";
+      my $window_size = $self->max_snp_distance;
+      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
 
       if ($self->{_vf_name}) {
         # if strict_name_match we can match by the given variant identifier
@@ -509,6 +515,7 @@ sub _fetch_by_Slice_VCF {
         '-slices' => [$slice],
       );
       $c->{'_vf_name'} = $self->{'_vf_name'};
+      $c->{'_pairwise_first_vf_name'} = $self->{'_pairwise_first_vf_name'} if (defined $self->{'_pairwise_first_vf_name'});
       $c->{'_pop_ids'} = {$population_id => 1};
 
       if($container) {
@@ -523,6 +530,8 @@ sub _fetch_by_Slice_VCF {
   $container->{pos2name} = \%pos2name if $container;
   delete $self->{_pairwise};
   delete $self->{_pairwise_vf_name};
+  delete $self->{_pairwise_first_vf_name};
+
 
   if (!$container) {
     warning('The population is not represented in the configured VCF file for fetching genotypes for LD computation.');
