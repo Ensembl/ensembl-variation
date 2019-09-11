@@ -33,6 +33,10 @@ $oldString = "Auto-Immunite Rhumatoïde,Hôpitaux";
 $newString = replace_char($oldString);
 ok($newString eq "Auto-Immunite Rhumatoide,Hopitaux", "special char(ï, ô) updated");
 
+$oldString = "Sjögren-Larsson syndrome";
+$newString = replace_char($oldString);
+ok($newString eq "Sjogren-Larsson syndrome", "special char(ö) updated");
+
 $oldString = "bmi < 30";
 $newString = replace_char($oldString);
 ok($newString eq "bmi less than 30", "special char(<) updated");
