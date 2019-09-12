@@ -957,11 +957,11 @@ sub enter_var{
     my @refSeq = split //, $refSlice->seq;
     my @altSeq = split //, $alt_allele;
     my ($i,$match) = (0,1);
+    next unless $refSeq[0] eq $altSeq[0] ; # skip duplications that don't have start coinciding with hgvs parsed elements
     while ($i< scalar @altSeq && $match){
       $match=0 if ($refSeq[$i] ne $altSeq[$i]);
       $i++;
     }
-    next unless $match ==1; # skip duplications that don't have start/end coinciding with hgvs parsed elements
     $ref_allele = substr($refSlice->seq, 0, $i-1);
     $allele_str = $ref_allele ."/". $alt_allele;
   }
