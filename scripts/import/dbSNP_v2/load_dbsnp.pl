@@ -25,7 +25,6 @@ use Pod::Usage qw(pod2usage);
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows get_evidence_attribs check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles);
 use Bio::EnsEMBL::Registry;
 use Bio::DB::HTS::Faidx;
-use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
@@ -67,10 +66,6 @@ if ($config->{'ref_check'}) {
 } else {
   print "ref checking not done\n";
 }
-my $ancestral_fai_index = Bio::DB::HTS::Faidx->new($config->{'ancestral_fasta_file'});
-die("Unable to get ancestral FASTA index") if (!$ancestral_fai_index);
-my $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $ancestral_fai_index);
-
 my $seq_regions_names = get_seq_region_names($dbh_var);
 my $nc_regions = get_nc_regions($dbh_var);
 my $nw_regions = get_nw_regions($dbh_var);
@@ -325,11 +320,6 @@ sub get_variant_features {
         $vf->{'seq_region_start'} = $vf->{'seq_region_end'} - $length_ref + 1;
       }
     }
-    my $seq_name = $seq_regions_names->{$vf->{'seq_region_id'}};
-    my $ancestral_allele = ancestral_alleles_utils($seq_name, $vf->{'seq_region_start'}, $vf->{'seq_region_end'});
-    if ($ancestral_allele) {
-      $vf->{'ancestral_allele'} = $ancestral_allele;
-    } 
     $vf->{'position'} = $position;
     $vf->{'aln_opposite'} = $aln_opposite;
     $vf->{'allele_errors'} = $allele_errors;
