@@ -26,7 +26,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
-my $fasta = "$Bin\/testdata/ancestral_fasta.fa";
+my $fasta = "$Bin\/testdata/ancestral_fasta.fa.gz";
 
 my $db = setup_fasta(-FASTA => $fasta);
 ok($db, "basic");
@@ -45,13 +45,12 @@ is($ancestral_alleles_utils->assign(4, 329, 329), 'A', "Ancestral allele at posi
 is($ancestral_alleles_utils->assign(4, 330, 330), undef, "Don't assign ancestral allele if ancestral genome contains non ACGT chars in input region");
 
 my $sequence_ids = $ancestral_alleles_utils->sequence_id_mappings;
-cmp_deeply($sequence_ids, { '4' => 'ANCESTOR_for_chromosome:GRCh38:4:1:190214555:1' }, "Get sequence_id_mappings");
+cmp_deeply($sequence_ids, { '4' => 'ANCESTOR_for_chromosome:GRCh38:4:1:190214555:1', '3' => 'ANCESTOR_for_chromosome:GRCh38:3:1:198295559:1' }, "Get sequence_id_mappings");
 
 $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => 'fasta_db');
 throws_ok(sub{$ancestral_alleles_utils->assign(4, 5, 5)},qr/ERROR: Couldn't get sequence ids from/, 'Throws if fasta db is neither Bio::DB::HTS::Faidx nor Bio::DB::Fasta');
 
-unlink("$fasta\.index");
-unlink("$fasta\.fai");
+unlink_file($fasta);
 
 $fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids.fa";
 $db = setup_fasta(-FASTA => $fasta);
@@ -61,7 +60,43 @@ ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
 $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
 throws_ok(sub{$ancestral_alleles_utils->assign(4, 5, 5)},qr/ERROR: sequence ids have changed and don't follow the expected pattern of colon separated values/, 'Throws if sequence ids in ancestral fasta file have changed.');
 
-unlink("$fasta\.index");
-unlink("$fasta\.fai");
+unlink_file($fasta);
+
+$fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids_a.fa.gz";
+$db = setup_fasta(-FASTA => $fasta);
+ok($db, "basic");
+ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
+
+$ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
+throws_ok(sub{$ancestral_alleles_utils->assign(4, 5, 5)},qr/ERROR: sequence ids have changed and don't follow the expected pattern of 6 colon separated values/, 'Throws if sequence_id does not contain 6 components.');
+
+unlink_file($fasta);
+
+$fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids_b.fa.gz";
+$db = setup_fasta(-FASTA => $fasta);
+ok($db, "basic");
+ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
+
+$ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
+throws_ok(sub{$ancestral_alleles_utils->assign(4, 5, 5)},qr/ERROR: undefined chromosome in/, 'Throws if chromosome name is empty.');
+
+unlink_file($fasta);
+
+sub unlink_file {
+  my $file = shift;
+  foreach my $type (qw/index gzi fai/) {
+    unlink("$file\.$type");
+  } 
+}
+
+
+
+
+
+
+
+
+
+
 
 done_testing();
