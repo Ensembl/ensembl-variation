@@ -173,7 +173,7 @@ sub assign {
     throw("ERROR: Don't know how to fetch sequence from a ".ref($fasta_db)."\n");
   }
 
-  return undef unless ($ancestral_allele && $ancestral_allele =~ m/^[ACGTacgt]+$/);
+  return undef unless ($ancestral_allele && $ancestral_allele =~ m/^[ACGT]+$/i);
   
   $ancestral_allele = uc $ancestral_allele;
 
