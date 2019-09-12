@@ -98,8 +98,12 @@ sub sequence_id_mappings {
 
     foreach my $sequence_id (@sequence_ids) {
       throw("ERROR: sequence ids have changed and don't follow the expected pattern of colon separated values\n") if ($sequence_id !~ m/:/);
+      # expected something like ANCESTOR_for_chromosome:GRCh38:10:1:133797422:1
       my @split = split(/:/, $sequence_id);
-      $sequence_id_2_chr_number->{$split[2]} = $sequence_id;
+      throw("ERROR: sequence ids have changed and don't follow the expected pattern of 6 colon separated values\n") if (scalar @split != 6);
+      my $chrom = $split[2];
+      throw("ERROR: undefined chromosome in $sequence_id\n") if (!$chrom);
+      $sequence_id_2_chr_number->{$chrom} = $sequence_id;
     }
     $self->{'sequence_id_mappings'} = $sequence_id_2_chr_number;
   }
@@ -127,9 +131,9 @@ sub get_fasta_sequence_id {
 =head2 assign
 
   Arg [1]    : String $chromosome_name
-  Arg [1]    : String $start
-  Arg [1]    : String $end
-  Example    : my $ancestral_allele = assign($chrom, $start, $end);
+  Arg [2]    : String $start
+  Arg [3]    : String $end
+  Example    : my $ancestral_allele = $ancestral_alleles_utils->assign($chrom, $start, $end);
   Description: Assigns the ancestral allele for the given chromosome, start and end.
                Assigns ancestral allele if:
                 - defined region is smaller than or equal to 50bp
@@ -137,8 +141,8 @@ sub get_fasta_sequence_id {
                 - returned ancestral allele only contains ACGT characters
                 - chromosome is not an alternate sequence and contained in the 
                   ancestral fasta file
-  Returntype : String $ancestral_allele if ancestral allele could be assigned.
-               Undef else.
+  Returntype : String $ancestral_allele if ancestral allele could be assigned
+               else undef.
   Exceptions : Throw error if the fasta_db object is neither of type
                Bio::DB::HTS::Faidx or Bio::DB::Fasta.
   Caller     : ensembl-variation/scripts/import/dbSNP_v2/load_dbsnp.pl
@@ -155,16 +159,16 @@ sub assign {
   return undef if (($end - $start) >= 50); 
 
   # alternative sequences are not represented in the ancestral fasta file 
-  $chrom = $self->get_fasta_sequence_id($chrom);
-  return undef if (!($chrom && $start && $end));
+  my $fasta_sequence_id = $self->get_fasta_sequence_id($chrom);
+  return undef if (!($fasta_sequence_id && $start && $end));
 
   my $ancestral_allele = undef;
 
   my $fasta_db = $self->fasta_db;
   if ($fasta_db->isa('Bio::DB::HTS::Faidx') ) {
-    $ancestral_allele = $fasta_db->get_sequence_no_length("$chrom:$start-$end");
+    $ancestral_allele = $fasta_db->get_sequence_no_length("$fasta_sequence_id:$start-$end");
   } elsif ($fasta_db->isa('Bio::DB::Fasta')) {
-    $ancestral_allele = $fasta_db->seq("$chrom:$start,$end");
+    $ancestral_allele = $fasta_db->seq("$fasta_sequence_id:$start,$end");
   } else {
     throw("ERROR: Don't know how to fetch sequence from a ".ref($fasta_db)."\n");
   }
