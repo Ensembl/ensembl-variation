@@ -61,7 +61,6 @@ sub default_options {
     rpt_dir                 => $self->o('pipeline_dir') . '/split-rpt',
     script_dir              => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts/import/dbSNP_v2',
     fasta_file              => $self->o('fasta_file'),
-    ancestral_fasta_file    => $self->o('ancestral_fasta_file'), # /nfs/production/panda/ensembl/variation/data/ancestral_alleles/homo_sapiens_ancestor_GRCh38_98.fa 
     registry_file           => $self->o('pipeline_dir') . '/' . 'ensembl.registry',
 
     pipeline_db => {
