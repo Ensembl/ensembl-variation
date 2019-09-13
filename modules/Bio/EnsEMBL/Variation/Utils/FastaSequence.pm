@@ -363,14 +363,14 @@ sub _new_slice_seq {
 
     $strand = defined($strand) ? $strand * $self->strand : $self->strand;
     
-    if($strand == 1) {  
+    if($self->strand == 1) {  
       $start = $start ? ($self->start + $start) - 1 : $self->start;
       $end   = $end   ? ($self->start + $end) - 1   : $self->end;
     }
     else{
-      my $old_end = $end;
+      my $input_end = $end;
       $end = $end ? ($self->end - $start) + 1 : $self->end;
-      $start   = $start   ? ($self->end - $old_end) + 1   : $self->start;
+      $start   = $start   ? ($self->end - $input_end) + 1   : $self->start;
     }
     
     my $sr_name = $self->seq_region_name;
