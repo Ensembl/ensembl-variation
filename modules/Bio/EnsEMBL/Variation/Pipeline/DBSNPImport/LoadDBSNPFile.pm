@@ -58,7 +58,6 @@ sub run {
   my $rpt_dir = $self->param_required('rpt_dir');
   my $registry_file = $self->param_required('ensembl_registry');
   my $fasta_file = $self->param_required('fasta_file');
-  my $ancestral_fasta_file = $self->param_required('ancestral_fasta_file');
   my $script_dir = $self->param_required('script_dir');
 
   $self->warning("filename ($filename)");
@@ -67,7 +66,6 @@ sub run {
   $self->warning("rpt_dir ($rpt_dir)");
   $self->warning("registry_file ($registry_file)");
   $self->warning("fasta_file ($fasta_file)");
-  $self->warning("ancestral_fasta_file ($ancestral_fasta_file)");
   $self->warning("script_dir ($script_dir)");
   
   my $load_script = join("/", $script_dir, 'load_dbsnp.pl');
@@ -85,8 +83,7 @@ sub run {
             '-registry' ,   $registry_file ,
             '-input_file', $input_file,
             '-rpt_dir' ,   $rpt_dir_run,
-            '-fasta_file', $fasta_file,
-            '-ancestral_fasta_file', $ancestral_fasta_file);
+            '-fasta_file', $fasta_file);
   
   $self->warning($cmd);
   # Do the system call
