@@ -153,6 +153,8 @@ sub get_fasta_sequence_id {
 sub assign {
   my ($self, $chrom, $start, $end) = @_;
 
+  return undef if (!($start && $end));
+
   # insertion
   return undef if ($start > $end);
   # allele size limit to 50bp
@@ -160,7 +162,7 @@ sub assign {
 
   # alternative sequences are not represented in the ancestral fasta file 
   my $fasta_sequence_id = $self->get_fasta_sequence_id($chrom);
-  return undef if (!($fasta_sequence_id && $start && $end));
+  return undef if (!$fasta_sequence_id);
 
   my $ancestral_allele = undef;
 
