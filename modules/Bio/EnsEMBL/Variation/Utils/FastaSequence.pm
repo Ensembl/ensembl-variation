@@ -361,9 +361,18 @@ sub _new_slice_seq {
     my ($self, $start, $end, $strand, $preserve_masking) = @_;
     my ($seq, $length) = ('', 0);
 
-    $start = $start ? ($self->start + $start) - 1 : $self->start;
-    $end   = $end   ? ($self->start + $end) - 1   : $self->end;
     $strand = defined($strand) ? $strand * $self->strand : $self->strand;
+    
+    if($strand == 1) {  
+      $start = $start ? ($self->start + $start) - 1 : $self->start;
+      $end   = $end   ? ($self->start + $end) - 1   : $self->end;
+    }
+    else{
+      my $old_end = $end;
+      $end = $end ? ($self->end - $start) + 1 : $self->end;
+      $start   = $start   ? ($self->end - $old_end) + 1   : $self->start;
+    }
+    
     my $sr_name = $self->seq_region_name;
 
     # indels
