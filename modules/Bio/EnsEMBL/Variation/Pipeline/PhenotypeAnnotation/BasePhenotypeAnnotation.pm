@@ -575,10 +575,10 @@ sub save_phenotypes {
   Arg [1]    : String $source_name
   Arg [2]    : boolean $clean (optional) - delete phenotype data from db (default: 0)
   Example    : $self->dump_phenotypes($source_id, 1);
-  Description: Dump the existing phenotype_features, phenotype_feautres_attribs
+  Description: Dump the existing phenotype_features, phenotype_features_attribs
                for the particular source and removes them if clean option selected.
-               $clean option removes the phenotype feautre data including phenotypes
-               and phenotype_ontology_accessions that is not attached to any phenotype_feautre.
+               $clean option removes the phenotype feature data including phenotypes
+               and phenotype_ontology_accessions that is not attached to any phenotype_feature.
   Returntype : none
   Exceptions : none
 
