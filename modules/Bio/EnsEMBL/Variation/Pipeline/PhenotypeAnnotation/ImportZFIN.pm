@@ -71,8 +71,8 @@ sub fetch_input {
                   source_name => 'ZFIN',        #source name in the variation db
                   source_name_short => 'ZFIN',  #source identifier in the pipeline
                   );
-  my $zfin_url = 'https://zfin.org/downloads/phenoGeneCleanData_fish.txt';
   my $inputFile = 'phenoGeneCleanData_fish.txt';
+  my $zfin_url = 'https://zfin.org/downloads/'.$inputFile;
 
   #create workdir folder
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;

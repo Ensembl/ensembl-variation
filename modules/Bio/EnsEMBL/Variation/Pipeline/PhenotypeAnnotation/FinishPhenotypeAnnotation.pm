@@ -233,10 +233,10 @@ sub update_internal_db{
     my $ens_version = pop @b;
 
     $ensdb = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ 
-      name             => $ensdb_name,
-      species          => $self->required_param('species'),
-      version          => $ens_version,
-      status_desc      => 'Created'
+      name        => $ensdb_name,
+      species     => $self->required_param('species'),
+      version     => $ens_version,
+      status_desc => 'Created'
     });
     $ensvardb_dba->store( $ensdb );
   }

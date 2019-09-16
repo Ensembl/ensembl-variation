@@ -60,12 +60,14 @@ my %source_info;
 
 # AnimalQTLdb URL set up for Ensembl: https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/
 #my $animalqtl_url = 'https://www.animalgenome.org/cgi-bin/QTLdb/index';
+my $animalqtl_baseURL='https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/';
+
 my %animalQTL_species_url = (
-  gallus_gallus => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_GG_5.0.gff.txt.gz', #Gallus gallus
-  sus_scrofa => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_SS_11.1.gff.txt.gz', #Sus scrofa
+  gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
+  sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
   ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => 'https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/QTL_BovARS_1.2.gff.txt.gz', #Bos taurus
-  equus_caballus => 'https://www.animalgenome.org/cgi-bin/QTLdb/EC/download?file=gbpEC_2.0', #Equus caballus
+  bos_taurus => $animalqtl_baseURL.'QTL_BovARS_1.2.gff.txt.gz', #Bos taurus
+  equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
 );
 
 my %animalQTL_species_fileNames = (
