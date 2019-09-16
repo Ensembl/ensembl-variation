@@ -29,7 +29,7 @@ use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 my $fasta = "$Bin\/testdata/ancestral_fasta.fa.gz";
 
 my $db = setup_fasta(-FASTA => $fasta);
-ok($db, "basic $fasta");
+ok($db, "basic ancestral_fasta.fa.gz");
 ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
 
 my $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
@@ -54,7 +54,7 @@ unlink_file($fasta);
 
 $fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids.fa";
 $db = setup_fasta(-FASTA => $fasta);
-ok($db, "basic $fasta");
+ok($db, "basic ancestral_fasta_unexpected_sequence_ids.fa");
 ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
 
 $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
@@ -64,7 +64,7 @@ unlink_file($fasta);
 
 $fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids_a.fa.gz";
 $db = setup_fasta(-FASTA => $fasta);
-ok($db, "basic $fasta");
+ok($db, "basic ancestral_fasta_unexpected_sequence_ids_a.fa.gz");
 ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
 
 $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
@@ -74,7 +74,7 @@ unlink_file($fasta);
 
 $fasta = "$Bin\/testdata/ancestral_fasta_unexpected_sequence_ids_b.fa.gz";
 $db = setup_fasta(-FASTA => $fasta);
-ok($db, "basic $fasta");
+ok($db, "basic ancestral_fasta_unexpected_sequence_ids_b.fa.gz");
 ok($db->isa('Bio::DB::HTS::Faidx') || $db->isa('Bio::DB::Fasta'), "isa");
 
 $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $db);
@@ -88,15 +88,4 @@ sub unlink_file {
     unlink("$file\.$type");
   } 
 }
-
-
-
-
-
-
-
-
-
-
-
 done_testing();
