@@ -22,7 +22,6 @@ use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
-
 our $verbose = 0;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
@@ -102,10 +101,8 @@ my $pubup = $pa->fetch_by_dbID($pub_store->dbID);
 ok($pubup->ucsc_id() eq 'updated',   'update UCSC id in db');
 
 ## update citation
-my $va = $vdb->get_VariationAdaptor();
 $var = $va->fetch_by_dbID(4770800);
-$pa->update_variant_citation($pubup, [$var]);
-
+$pa->update_variant_citation($pubup, 610, [$var]);
 ok($pubup->variations()->[0]->name() eq 'rs7569578', "citation update");
 
 

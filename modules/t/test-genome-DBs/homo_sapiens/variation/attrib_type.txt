@@ -39,3 +39,4 @@
 532	dbnsfp_revel_pred	dbNSFP REVEL prediction	dbNSFP REVEL prediction
 533	dbnsfp_meta_lr_pred	dbNSFP MetaLR prediction	dbNSFP MetaLR prediction
 534	dbnsfp_ma_pred	dbNSFP mutation assessor prediction	dbNSFP mutation assessor prediction
+542	citation_source	Citation source	Variant citation data source
