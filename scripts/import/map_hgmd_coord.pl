@@ -42,15 +42,14 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use DBI qw(:sql_types);
-our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $registry_file);
+our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $registry_file);
 
 GetOptions('species=s'     => \$species,
-             'input_file=s'  => \$input_file,
-             'source_name=s' => \$source_name,
-             'tmpdir=s'      => \$ImportUtils::TMP_DIR,
+            'input_file=s'  => \$input_file,
+            'source_name=s' => \$source_name,
+            'tmpdir=s'      => \$ImportUtils::TMP_DIR,
             'tmpfile=s'     => \$ImportUtils::TMP_FILE,
-           'mapping!'      => \$mapping,
-           'registry=s'    => \$registry_file
+            'registry=s'    => \$registry_file
           );
 
 $species ||= 'human';
@@ -83,30 +82,27 @@ my $month_hash = { 1 => 'March', 2 => 'June', 3 => 'September', 4 => 'December' 
 
 my $new_source_ref = $dbVar2->selectall_arrayref(qq{SELECT source_id FROM source WHERE name = "$source_name"});
 
-$input_file =~ /\/(\d{4})\.(\d+)-hgmd-public/;
+$input_file =~ /(\d{4})\.(\d+)-hgmd-public/;
 my $year      = $1;
-my $month_num  = $2;
+my $month_num = $2;
 my $month     = $month_hash->{$month_num} if ($month_num);
-my $remapped;
-if ($mapping) {
-  $remapped = " [remapped from build $ncbi_version]";
-}
+
 $source_description .= " $month $year" if ($year and $month);
 
 if ($new_source_ref->[0][0]) {
   $source_id = $new_source_ref->[0][0];
-  $dbVar2->do(qq{UPDATE source SET description="$source_description$remapped", version=$year$month_num 
+  $dbVar2->do(qq{UPDATE source SET description="$source_description", version=$year$month_num 
                  WHERE source_id=$source_id });
 }
 else {
   if ($year and $month) {
     $dbVar2->do(qq{INSERT INTO source(name,description,url,version)
-                   values("$source_name","$source_description$remapped","$hgmd_url",$year$month_num)
+                   values("$source_name","$source_description","$hgmd_url",$year$month_num)
                   });
   }
   else {
     $dbVar2->do(qq{INSERT INTO source(name,description,url)
-                   values("$source_name","$source_description$remapped","$hgmd_url")
+                   values("$source_name","$source_description","$hgmd_url")
                   });
   }
   $source_id = $dbVar2->{'mysql_insertid'};
@@ -133,7 +129,8 @@ while (<IN>) {
   my %data = ('var_name'    => $var_name,
               'gene_symbol' => $gene_symbol,
               'region_name' => $seq_region_name,
-              'pos'         => $pos,
+              'start'       => $pos,
+              'end'         => $pos,
               'var_type'    => $var_type,
               'strand'      => 1,
               'status'      => '\N',
@@ -142,68 +139,15 @@ while (<IN>) {
               'flags'       => '\N',
               'consequence' => 'HGMD_MUTATION'
             );
-  
-  
-  if ($mapping) {
-    my $slice_newdb_oldasm = $sa2->fetch_by_region('chromosome', $data{region_name}, undef, undef, undef, "$ncbi_version");
-    if (!$slice_newdb_oldasm) {
-      print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
-      next;
-    }
     
-    my $feat = new Bio::EnsEMBL::SimpleFeature(
-                  -START  => $data{pos},
-                  -END    => $data{pos},
-                  -STRAND => $data{strand},
-                  -SLICE  => $slice_newdb_oldasm,
-                );
-
-    #print $feat->start," ",$feat->strand," ",$feat->slice,"\n";
-    my @segments;
-
-    eval {
-      @segments = @{$feat->feature_Slice->project('chromosome','GRCh37')};
-    };
-    if ($@) {
-      print "no segments found for ".$data{var_name}."\n" if $@;
-      print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
-      next;
-    }
-  
-    my @slices_newdb_newasm = map { $_->to_Slice }  @segments;
-    @slices_newdb_newasm = sort {$a->start<=>$b->start} @slices_newdb_newasm;
-
-    #make new strand is same as old strand 
-    my $indel;
-    if (@slices_newdb_newasm) {
-      $data{start} = $slices_newdb_newasm[0]->start;
-      $data{end}   = $slices_newdb_newasm[-1]->end;
-      if ($indel) {
-        $data{start} ++;
-        $data{end} --;
-      }
-
-      $data{region_id} = $slices_newdb_newasm[0]->get_seq_region_id;
-
-      print_all_buffers(\%data);
-    }
-    else {
-      print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n") if $var_name;
-    }
+  my $slice = $sa2->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
+  if (!$slice) {
+    print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{start}) . "\n");
+    next;
   }
-  else {
-    $data{start} = $data{pos};
-    $data{end}   = $data{pos};
+  $data{region_id} = $slice->get_seq_region_id;
     
-    my $slice = $sa2->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
-    if (!$slice) {
-      print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
-      next;
-    }
-    $data{region_id} = $slice->get_seq_region_id;
-    
-    print_all_buffers(\%data);
-  }
+  print_all_buffers(\%data);
 }
 
 print_buffered($buffer);

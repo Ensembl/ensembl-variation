@@ -117,7 +117,7 @@ sub insert_source {
   # Insert the Archive dbSNP - dbsnp v1 merges
   $source_id = 2;
   $name = "Archive $dbname";
-  $description = 'Former variants names imported from dbSNP';
+  $description = 'Former dbSNP variant names, merged by variant';
   $data_types = 'variation_synonym';
   $sth->execute($source_id, $name, $description, $data_types);
   
@@ -130,7 +130,7 @@ sub insert_source {
   # Insert the Former dbSNP - dbsnp v2 merges 
   $source_id = 4;
   $name = "Former $dbname";
-  $description = 'Former dbSNP v2 names imported';
+  $description = 'Former dbSNP variant names, merged by allele';
   $sth->execute($source_id, $name, $description, $data_types);
 }
 

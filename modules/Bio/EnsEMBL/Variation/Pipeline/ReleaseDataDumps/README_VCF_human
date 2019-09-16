@@ -24,10 +24,11 @@ This directory contains sorted and bgzip-compressed VCF (Variant Call Format) fi
         drug-response or histocompatibility
 
 Additionally, we provide for human:
-    - files containing allele frequencies from several of the HapMap,
-      1000 genomes phase 3 populations and from populations from the
-      Exome Sequencing Project
-
+    - files containing allele frequencies from 1000 genomes phase 3 populations
+      and from populations from the Exome Sequencing Project
+    - NOTE: files containg allele frequencies from several of the HapMap
+      populations have been discontinued and are available from our archive sites,
+      the latest being ftp://ftp.ensembl.org/pub/release-97/variation/vcf/homo_sapiens/
 If available for this species, the file includes information on:
     - ancestral_allele
     - evidence
@@ -40,6 +41,8 @@ and polyphen (human only) predictions.
 The data contained in these files is presented in VCF format. For more details about
 the format refer to:
 http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41
+
+We use the sum command for calculating checksums.
 
 Questions about these files can be addressed to the Ensembl helpdesk:
 helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.

@@ -56,7 +56,7 @@ Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a s
 
     print $af->start(), "-", $af->end(), '(', $af->strand(), ')', "\n";
 
-    print $af->name(), ":", $af->allele_string();
+    print $af->variation_name(), ":", $af->allele_string();
 
     # Get the Variation object which this feature represents the genomic
     # position of. If not already retrieved from the DB, this will be
@@ -284,9 +284,13 @@ sub most_severe_OverlapConsequence {
             $highest ||= $cons;
             if ($cons->rank < $highest->rank) {
                 $highest = $cons;
+            } elsif (($cons->rank == $highest->rank)
+                          &&
+                     ($cons->SO_term lt $highest->SO_term)) {
+                $highest = $cons;
             }
         }
-        
+
         $self->{_most_severe_consequence} = $highest;
     }
     
@@ -489,7 +493,7 @@ sub sample {
 
 
 =head2 apply_edit
-    
+
     Arg [1]    : reference to string $seqref
     Arg [2]    : int $start of the seq_ref
     Example    : $sequence = 'ACTGAATATTTAAGGCA';
@@ -620,7 +624,7 @@ sub source{
 
 sub get_all_sources{
     my $self = shift;
-    
+
     my @sources;
     my %sources;
     if ($self->{'adaptor'}){
@@ -634,7 +638,7 @@ sub get_all_sources{
 
 sub _is_sara{
   my $self = shift;
-  
+
   if(!defined($self->{_is_sara})) {
 	my $allele_string = $self->allele_string;
 	my $ref = $self->ref_allele_string;

@@ -269,8 +269,12 @@ foreach my $trans_varns (@{$trans_vars_ns}){
 }
 
 #store
+
+#make a backup of the current transcript_variation table before the store test
+$multi->save('variation', 'transcript_variation');
+
 my $dbh = $vf_ad->dbc->db_handle;
-my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/); 
+my $sth = $dbh->prepare(qq/SELECT MAX(transcript_variation_id) FROM transcript_variation/);
 $sth->execute;
 my ($max_tv_id_before) = $sth->fetchrow_array;
 $sth->finish();
@@ -278,17 +282,14 @@ $sth->finish();
 my $transcript_id_store = 'ENST00000470094';
 my $transcript_store = $tr_ad->fetch_by_stable_id($transcript_id_store);
 my $vf_store = $vf_ad->fetch_by_dbID(23700405);
-my @vfs = ($vf_store);
-foreach my $vf (@vfs) {
-  my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
     -transcript     => $transcript_store,
-    -variation_feature  => $vf,
+    -variation_feature  => $vf_store,
     -adaptor      => $trv_ad,
     -disambiguate_single_nucleotide_alleles => 0,
     -no_transfer    => 1,
-  );
-  $trv_ad->store($tv);
-}
+);
+$trv_ad->store($tv);
 
 sleep(10);
 
@@ -296,11 +297,45 @@ $sth->execute;
 my ($max_tv_id_after) = $sth->fetchrow_array;
 $sth->finish();
 
-ok($max_tv_id_after == $max_tv_id_before + 1, 'get max transcript_variation_id');
+# When records are deleted, the auto_increment of the table is not changed.
+# When running with database intact, the max_tv_id_after should be
+# greater than before but not necessarily one greater
+ok($max_tv_id_after > $max_tv_id_before, 'get max transcript_variation_id');
 
 my $tv_store = $trv_ad->fetch_by_dbID($max_tv_id_after);
 ok($tv_store->display_consequence eq 'missense_variant', 'test store');
-$dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$max_tv_id_after;}) or die $dbh->errstr;
+
+# restore the transcript_variation table from before store test
+$multi->restore('variation', 'transcript_variation');
+# test most_severe_OverlapConsequence for consequences with the same rank
+$stable_id = 'ENST00000470094';
+$transcript = $tr_ad->fetch_by_stable_id($stable_id);
+
+my $var_msc = $var_ad->fetch_by_name('rs200814465');
+my $vfs_msc = $vf_ad->fetch_all_by_Variation($var_msc);
+my $new_vf_msc = $vfs_msc->[0];
+my $trvar_msc = Bio::EnsEMBL::Variation::TranscriptVariation->new
+  (-variation_feature => $new_vf_msc,
+   -transcript        => $transcript,
+);
+
+# The expected consequences are:
+#   rank: 12  SO_term: missense_variant
+#   rank: 22  SO_term: NMD_transcript_variant
+# For the test change to the same rank, different description
+for my $allele (@{$trvar_msc->get_all_alternate_BaseVariationFeatureOverlapAlleles}) {
+    for my $cons (@{$allele->get_all_OverlapConsequences }) {
+      if ($cons->SO_term eq 'missense_variant') {
+        $cons->SO_term('test_consequence_z');
+        $cons->rank(3);
+      } elsif ($cons->SO_term eq 'NMD_transcript_variant') {
+        $cons->SO_term ('test_consequence_a');
+        $cons->rank(3);
+      }
+    }
+}
+my $msc_2_expected = 'test_consequence_a';
+my $msc_2 = $trvar_msc->most_severe_OverlapConsequence();
+is($msc_2->SO_term, $msc_2_expected, 'tv - most_severe_OverlapConsequence - same rank');
 
 done_testing();
-

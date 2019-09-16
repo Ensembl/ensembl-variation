@@ -58,48 +58,82 @@ my $dbh = $registry->get_adaptor(
 )->dbc->db_handle;
 
 open my $INPUT, "<$import_file" or die "Can't open '$import_file'";    
+
+my $not_flipped_col = 'not_flipped_allele';
     
 # check to see if we already have the LOVD source
 
-my $src_sth = $dbh->prepare(qq{
-    SELECT  source_id
-    FROM    source
-    WHERE   name LIKE "LOVD%"
-});
+# SOURCE ID
+my $source_id;
 
+my $src_sth = $dbh->prepare(qq{ SELECT source_id FROM source WHERE name LIKE "LOVD%"});
 $src_sth->execute;
 
 my $existing_src = $src_sth->fetchrow_arrayref;
-
-my $source_id;
-my $not_flipped_col = 'not_flipped_allele';
+$src_sth->finish();
 
 if ($existing_src) {
-    $source_id = $existing_src->[0];
-    
-    print "Found existing source_id: $source_id\n";
-    my $sth = $dbh->prepare(qq{  UPDATE source SET version=? WHERE source_id=? });
-    $sth->execute($version,$source_id);
+  $source_id = $existing_src->[0];
+
+  print "Found existing source_id: $source_id\n";
+  my $sth = $dbh->prepare(qq{ UPDATE source SET version=? WHERE source_id=? });
+  $sth->execute($version,$source_id);
 }
 else {
-    # if not, add it
-    my $sth = $dbh->prepare(qq{
-        INSERT INTO source (name, description, url, somatic_status) 
-        VALUES (
-            'LOVD', 
-            'Leiden Open (source) Variation Database', 
-            'http://www.lovd.nl',
-            'germline'
-        );
-    });
+  # if not, add source
+  my $sth = $dbh->prepare(qq{
+      INSERT INTO source (name, description, url, somatic_status)
+      VALUES (
+          'LOVD',
+          'Leiden Open (source) Variation Database',
+          'http://www.lovd.nl',
+          'germline'
+      );
+  });
 
-    $sth->execute;
+  $sth->execute;
 
-    $source_id = $dbh->last_insert_id(undef, undef, undef, undef);
+  $source_id = $dbh->last_insert_id(undef, undef, undef, undef);
 
-    print "New source_id: $source_id\n";
+  print "New source_id: $source_id\n";
+
+  $sth->finish();
 }
 
+# Study ID
+
+my $study_id;
+
+my $study_sth = $dbh->prepare(qq{ SELECT study_id FROM study WHERE source_id=? });
+$study_sth->execute($source_id);
+
+my $existing_study = $study_sth->fetchrow_arrayref;
+$study_sth->finish();
+
+if ($existing_study) {
+  $study_id = $existing_study->[0];
+  print "Found existing study_id: $study_id\n";
+}
+else {
+  # if not, add study
+  my $sth = $dbh->prepare(qq{
+    INSERT INTO study (name, description, url, source_id)
+    VALUES (
+      'LOVD',
+      'Variants from Locus-specific databases (LSDBs) hosted by Leiden Open (source) Variation Database (LOVD). These are online gene-centered collections and displays of manually curated DNA variations.',
+      'http://www.lovd.nl',
+      ?
+    );
+  });
+
+  $sth->execute($source_id);
+
+  $study_id = $dbh->last_insert_id(undef, undef, undef, undef);
+
+  print "New study_id: $study_id\n";
+
+  $sth->finish();
+}
 
 
 my $attr_type_sth = $dbh->prepare(qq{ SELECT attrib_type_id FROM attrib_type WHERE code='SO_term'});
@@ -131,13 +165,13 @@ my $find_existing_svar_sth = $dbh->prepare(qq{
 });
 
 my $add_svar_sth = $dbh->prepare(qq{
-    INSERT INTO structural_variation (source_id, variation_name, class_attrib_id) VALUES (?,?,?)
+    INSERT INTO structural_variation (source_id, study_id,variation_name, class_attrib_id) VALUES (?,?,?,?)
 });
 
 my $add_svf_sth = $dbh->prepare(qq{
     INSERT IGNORE INTO structural_variation_feature (structural_variation_id, seq_region_id, seq_region_start,
-        seq_region_end, seq_region_strand, variation_name, allele_string, source_id, class_attrib_id)
-    VALUES (?,?,?,?,?,?,?,?,?)
+        seq_region_end, seq_region_strand, variation_name, allele_string, source_id, study_id, class_attrib_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?)
 });
 
 
@@ -408,7 +442,7 @@ MAIN_LOOP : while(<$INPUT>) {
         $structural_variation_id = $existing_svar->[0];
       }
       else {
-        $add_svar_sth->execute($source_id, $accession, $class_attrib_id);
+        $add_svar_sth->execute($source_id, $study_id, $accession, $class_attrib_id);
        
         $structural_variation_id = $dbh->last_insert_id(undef, undef, undef, undef);
       }
@@ -423,10 +457,10 @@ MAIN_LOOP : while(<$INPUT>) {
          $accession,
          $allele_string,
          $source_id,
+         $study_id,
          $class_attrib_id
       );
     }
-#    print "$chr\t$start\t$stop\t$strand\t$accession\t$allele_string\n";
 }
 
 # Post processing

@@ -275,7 +275,7 @@ $file_name = "species_detailed_counts.html";
 $tmp_file  = $file_name;
 
 print STDOUT localtime() . "\t# Detailed species data count ...\n";
-`perl species_list_detailed_counts.pll -v $version -o $tmp_file -hlist $hlist -phost $phost`;
+`perl species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
