@@ -1104,7 +1104,7 @@ sub stop_retained {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
 
-        # return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
+        return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
 
         $cache->{stop_retained} = 0;
 
