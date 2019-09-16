@@ -139,6 +139,7 @@ ALTER TABLE phenotype_ontology_accession ADD FOREIGN KEY (phenotype_id) REFERENC
 
 ALTER TABLE variation_citation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE variation_citation ADD FOREIGN KEY (publication_id) REFERENCES publication(publication_id);
+ALTER TABLE variation_citation ADD FOREIGN KEY (data_source_attrib) REFERENCES attrib(attrib_id); 
 
 ALTER TABLE variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);

@@ -813,7 +813,10 @@ sub _inv_start_altered {
 sub start_retained_variant {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
-    # return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
+    
+    return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
@@ -1098,8 +1101,10 @@ sub stop_retained {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     unless(exists($cache->{stop_retained})) {
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $bvf  ||= $bvfo->base_variation_feature;
 
-        # return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
+        return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
 
         $cache->{stop_retained} = 0;
 
@@ -1284,6 +1289,8 @@ sub partial_codon {
 
 sub coding_unknown {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
