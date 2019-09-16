@@ -94,8 +94,9 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
 ## fetch ClinVar source object
+my $omimstr= 'OMIM';
 my $source      = get_source('ClinVar');
-my $omim_source = get_source('OMIM');
+my $omim_source = get_source($omimstr);
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -374,11 +375,11 @@ sub get_feature{
           push @{$feature{measureXrefs}{$measure->{ID}}{$xref->{DB}} }, $xref->{ID} ;
         }
       }
-      if (defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'} &&
-      defined $feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'} &&
+      if (defined $feature{measureXrefs}{$measure->{ID}}{$omimstr} &&
+      defined $feature{measureXrefs}{$measure->{ID}}{$omimstr}{'Allelic variant'} &&
       defined $feature{measureXrefs}{$measure->{ID}}{'dbSNP'}){
         my %tmpAllelicID;
-        foreach my $allele (@{$feature{measureXrefs}{$measure->{ID}}{'OMIM'}{'Allelic variant'}}){
+        foreach my $allele (@{$feature{measureXrefs}{$measure->{ID}}{$omimstr}{'Allelic variant'}}){
           foreach my $tmpRS (@{$feature{measureXrefs}{$measure->{ID}}{'dbSNP'}{'rs'}}){
             push @{$tmpAllelicID{$allele}}, $tmpRS;
           }
@@ -576,8 +577,8 @@ sub get_submitters{
   foreach my $assert(@{$assertions}){
     push @submitters, $assert->{ClinVarSubmissionID}->{submitter};
     # if submitter OMIM then get OMIM allelic variant ID and corresponding rsID from reference record
-    next unless $assert->{ClinVarSubmissionID}->{submitter} eq 'OMIM';
-    if (defined $assert->{ExternalID} && $assert->{ExternalID}->{DB} eq 'OMIM') {
+    next unless $assert->{ClinVarSubmissionID}->{submitter} eq $omimstr;
+    if (defined $assert->{ExternalID} && $assert->{ExternalID}->{DB} eq $omimstr) {
       my $omimAlleleID = $assert->{ExternalID}->{ID};
       warn "OMIM submitter with ExternalID BUT not for variation type, assertion(", $assert->{ClinVarAccession}->{Acc}, ") id type(",$assert->{ExternalID}->{Type} ,")!!\n" if $DEBUG == 1 &&  $assert->{ExternalID}->{Type} ne 'Allelic variant';
       #iterate over the measureSet xrefs saved from the ReferenceClinVarAssertion, in case of multiple sets of xref, the one with the expected OMIM submitter allele is used
@@ -588,7 +589,7 @@ sub get_submitters{
           if (scalar @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}} > 1) {
             warn "multiple rsIDs for same OMIM allelic variant id in same measure: $tmpMeasure, rs:", join(",", @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID}}), "!\n";
           }
-          $mainXrefs->{'OMIM'} ||= $omimAlleleID;
+          $mainXrefs->{$omimstr} ||= $omimAlleleID;
           $mainXrefs->{'MIM'} = (split/\./, $omimAlleleID)[0] unless defined $mainXrefs->{'MIM'};
           # if there is a OMIM submitter record, then use the OMIM alleleID and corresponding rsID for the record (for haplotype records multiple Omim allelic ids can be mentioned in the ReferenceClinVarAssertion measures)
           $mainXrefs->{'dbSNP'} = $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'OmimAllele2dbSNP'}{$omimAlleleID} unless defined $mainXrefs->{'dbSNP'};
@@ -657,7 +658,7 @@ sub import{
 
       ## add synonym
       add_synonyms($feature_object, $record->{Acc}, $source) if defined $feature_object;
-      add_synonyms($feature_object, $record->{feature_info}{'OMIM'}, $omim_source) if defined $feature_object && defined $record->{feature_info}{'OMIM'};
+      add_synonyms($feature_object, $record->{feature_info}{$omimstr}, $omim_source) if defined $feature_object && defined $record->{feature_info}{$omimstr};
 
       ## add phenotype_feature & attrib (there may not be an alt_allele)
       import_phenotype_feature($record, $feature_object, 'Variation', $feat, $alt_allele);
@@ -724,7 +725,7 @@ sub import_phenotype_feature{
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
-  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitters->{'OMIM'} && exists $submitter_ids{$submitters->{'OMIM'}} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitters->{$omimstr} && exists $submitter_ids{$submitters->{$omimstr}} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
 
   foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
     print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
