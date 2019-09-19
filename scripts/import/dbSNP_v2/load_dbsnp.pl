@@ -25,6 +25,7 @@ use Pod::Usage qw(pod2usage);
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows get_evidence_attribs check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles);
 use Bio::EnsEMBL::Registry;
 use Bio::DB::HTS::Faidx;
+use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
@@ -67,6 +68,19 @@ if ($config->{'ref_check'}) {
 } else {
   print "ref checking not done\n";
 }
+
+my $ancestral_fai_index;
+my $ancestral_alleles_utils;
+if ($config->{'assign_ancestral_allele'}) {
+  print "ancestral allele assignment done\n";
+  $ancestral_fai_index = Bio::DB::HTS::Faidx->new($config->{'ancestral_fasta_file'});
+  $ancestral_alleles_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $ancestral_fai_index);
+  print "ancestral_fai_index done\n";
+  die("Unable to get ancestral FASTA index") if (!$ancestral_fai_index);
+} else {
+  print "ancestral allele assignment not done\n";
+}
+
 my $seq_regions_names = get_seq_region_names($dbh_var);
 my $nc_regions = get_nc_regions($dbh_var);
 my $nw_regions = get_nw_regions($dbh_var);
@@ -267,6 +281,9 @@ sub parse_refsnp {
     }
   }
 
+  if ($config->{assign_ancestral_allele}) {
+    assign_ancestral_alleles($data->{'vfs'});
+  }
 
   # To the QC now
   # Check for the allele string matches
@@ -274,6 +291,18 @@ sub parse_refsnp {
   # Set the variant class
   return $data; 
 
+}
+
+# Assigns ancestral allele for each variation feature
+# Input:
+# vfs              - variation features for the variant
+sub assign_ancestral_alleles {
+  my $vfs = shift;
+  for my $vf (@$vfs) { 
+    my $seq_name = $seq_regions_names->{$vf->{'seq_region_id'}};
+    my $ancestral_allele = ancestral_alleles_utils($seq_name, $vf->{'seq_region_start'}, $vf->{'seq_region_end'});
+    $vf->{'ancestral_allele'} = $ancestral_allele;
+  }
 }
 
 # Flips a minor allele if there are differences in GRCh37 and GRCh38 alignment
@@ -1128,7 +1157,7 @@ sub import_variation_feature {
                            (variation_name, map_weight, 
                             seq_region_id, seq_region_start, seq_region_end,
                             seq_region_strand, 
-                            variation_id, allele_string,
+                            variation_id, allele_string, ancestral_allele,
                             source_id, variation_set_id, class_attrib_id,
                             minor_allele, minor_allele_freq, minor_allele_count,
                             evidence_attribs, display
@@ -1137,7 +1166,7 @@ sub import_variation_feature {
                             ?, ?,
                             ?, ?, ?,
                             ?,
-                            ?, ?,
+                            ?, ?, ?,
                             ?, ?, ?,
                             ?, ?, ?,
                             ?, ?)]);
@@ -1176,7 +1205,7 @@ sub import_variation_feature {
     $sth->execute($vf->{'variation_name'}, $map_weight,
                   $vf->{'seq_region_id'}, $vf->{'seq_region_start'}, $vf->{'seq_region_end'},
                   $vf->{'seq_region_strand'},
-                  $variation_id, $vf->{'allele_string'},
+                  $variation_id, $vf->{'allele_string'}, $vf->{'ancestral_allele'},
                   $source_id, $sets, $vf->{'class_attrib_id'},
                   $minor_allele, $maf, $minor_allele_count,
                   $evidence_attribs_str, $data->{'display'});
@@ -1574,12 +1603,14 @@ sub configure {
     'input_file|i=s',
     'rpt_dir=s',
     'fasta_file=s',
+    'ancestral_fasta_file=s',
 
     'species=s',
     'registry|r=s',
     
     'no_db_load',
-    'no_ref_check'
+    'no_ref_check',
+    'no_assign_ancestral_allele'
     ) or pod2usage(2);
  
   # Print usage message if help requested or no args
@@ -1610,6 +1641,11 @@ sub configure {
     $config->{'ref_check'} = 0;
   } 
 
+  $config->{'assign_ancestral_allele'} = 1;
+  if (exists $config->{'no_assign_ancestral_allele'}) {
+    $config->{'assign_ancestral_allele'} = 0;
+  }
+
   # Check parameters
   if (! -e $config->{'input_file'}) {
     die("ERROR: Input file does not exist ($config->{'input_file'})\n");
@@ -1630,6 +1666,17 @@ sub configure {
                );
     } elsif (! -e $config->{'fasta_file'}) {
       die("ERROR: FASTA file does not exist ($config->{'fasta_file'})\n");
+    }
+  }
+
+  if ($config->{'assign_ancestral_allele'}) {
+    if (! defined $config->{'ancestral_fasta_file'}) {
+      pod2usage({ -message => "Mandatory argument (ancestral_fasta_file) is missing", 
+                  -exitval => 2,
+                }
+               );
+    } elsif (! -e $config->{'ancestral_fasta_file'}) {
+      die("ERROR: Ancestral FASTA file does not exist ($config->{'ancestral_fasta_file'})\n");
     }
   }
   return $config;  
@@ -2097,6 +2144,10 @@ JSON file provided by dbSNP
 
 Directory to store summary report and error logs
 
+=item B<--ancestral_fasta_file FILE>
+
+Path to FASTA file containing ancestral sequence
+
 =item B<--fasta_file FILE>
 
 Path to FASTA file containing reference sequence
@@ -2116,6 +2167,10 @@ No database load. Only parses the file. Used for testing.
 =item B<--no_ref_check>
 
 No reference checking
+
+=item B<--no_assign_ancestral_allele>
+
+No ancestral allele assignment
 
 =item B<--debug>
 
