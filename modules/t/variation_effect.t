@@ -1492,7 +1492,7 @@ for my $stable_id (keys %$transcript_tests) {
         }
 
         $DB::single = 1 if $test->{debug};
-        
+
         $test->{strand} = $def_strand unless defined $test->{strand};
 
         my $allele_string = $ref.'/'.$test->{alleles};

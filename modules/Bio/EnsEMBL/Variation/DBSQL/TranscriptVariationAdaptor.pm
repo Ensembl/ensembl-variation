@@ -649,7 +649,7 @@ sub _get_write_data {
     # use pre-predicate data to avoid running costly subs
     # we also need the HGVS tva in case shifting has changed things (this might be the original tva anyway, no extra cost)
     my $pre = $allele->_pre_consequence_predicates;
-    
+
     my (
       $codon_allele_string, $pep_allele_string,
       $hgvs_transcript, $hgvs_protein,

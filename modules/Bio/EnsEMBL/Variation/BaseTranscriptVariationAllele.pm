@@ -113,8 +113,13 @@ sub _intron_effects {
     $tv ||= $self->base_variation_feature_overlap;
     $vf ||= $self->base_variation_feature;
     my $vf_start = $vf->{start};
+
     foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
+      
+      ## To ensure that intronic consequences are correctly calculated, we check both
+      ## input and altered positions
+      
       my ($r_start_unshifted, $r_end_unshifted) = ($r_start, $r_end); 
       ($r_start_unshifted, $r_end_unshifted) = ($self->{shift_hash}->{unshifted_start} + $region->{s}, $self->{shift_hash}->{unshifted_start}+ $region->{e}) if defined($self->{shift_hash});
 

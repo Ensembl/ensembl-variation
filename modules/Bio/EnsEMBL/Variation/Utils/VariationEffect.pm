@@ -689,9 +689,7 @@ sub _get_peptide_alleles {
 sub _get_ref_pep {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    my $ref_tva = $bvfo->get_reference_TranscriptVariationAllele;
-    $ref_tva->{shift_hash} = $bvfoa->{shift_hash};
-    return $ref_tva->peptide;
+    return $bvfo->get_reference_TranscriptVariationAllele->peptide;
 }
 
 sub _get_codon_alleles {
@@ -735,6 +733,7 @@ sub _get_alleles {
 
 sub start_lost {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
@@ -1229,6 +1228,7 @@ sub _ins_del_stop_altered {
 sub frameshift {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
