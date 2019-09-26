@@ -1763,7 +1763,7 @@ CREATE TABLE publication (
 CREATE TABLE variation_citation (
    variation_id INT(10) UNSIGNED NOT NULL,
    publication_id INT(10) UNSIGNED NOT NULL,
-   data_source_attrib SET('610','611','612') DEFAULT NULL, 
+   data_source_attrib SET('615','616','617') DEFAULT NULL, 
    PRIMARY KEY variation_citation_idx (variation_id, publication_id),
    KEY data_source_attrib_idx (data_source_attrib)
 );
@@ -1834,6 +1834,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|Add the column data_source_attrib in the table variation_citation');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_c.sql|Increase the size of the title and doi columns in the publication table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_d.sql|add key data_source_attrib');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_e.sql|Fix attrib ids in table variation_citation');
 
 /**
 @header  Failed tables
