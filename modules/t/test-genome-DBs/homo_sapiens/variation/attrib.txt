@@ -374,6 +374,6 @@
 606	12	dbnsfp_meta_lr
 607	12	dbnsfp_mutation_assessor
 608	12	dbnsfp_revel
-610	542	EPMC
-611	542	UCSC
-612	542	dbSNP
+615	542	EPMC
+616	542	UCSC
+617	542	dbSNP

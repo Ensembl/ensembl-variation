@@ -102,7 +102,7 @@ ok($pubup->ucsc_id() eq 'updated',   'update UCSC id in db');
 
 ## update citation
 $var = $va->fetch_by_dbID(4770800);
-$pa->update_variant_citation($pubup, 610, [$var]);
+$pa->update_variant_citation($pubup, 615, [$var]);
 ok($pubup->variations()->[0]->name() eq 'rs7569578', "citation update");
 
 
