@@ -70,7 +70,7 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
 use Scalar::Util qw(weaken);
-
+use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
@@ -657,6 +657,10 @@ sub get_all_Alleles_by_VariationFeature {
         $info->{'AF'.$suffix} // $info->{$pop->{_af}},
       );
 
+      if (defined($ac) && $ac ne '.' && !defined($an)) {
+        my @split = split(',', $ac);
+        $an += $_ for @split;
+      }
       # log AN for later use
       $ans->{$pop_id} = $an if $an;
 
@@ -687,7 +691,6 @@ sub get_all_Alleles_by_VariationFeature {
 
       # or have AC and AN (AN must be defined and non-zero)
       elsif(defined($ac) && $ac ne '.' && $an && $an ne '.') {
-
         $total_acs->{$pop_id} ||= 0;
         my @split = split(',', $ac);
 
@@ -699,7 +702,6 @@ sub get_all_Alleles_by_VariationFeature {
         for my $i(0..$#split) {
           my $c = $split[$i];
           $total_acs->{$pop_id} += $c;
-
           if(my $allele = $allele_map{$i}) {
             $counts->{$pop_id}->{$allele} = $c;
             $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
@@ -775,6 +777,140 @@ sub get_all_Alleles_by_VariationFeature {
   }
 
   return \@alleles;
+}
+
+=head2 get_all_PopulationGenotypes_by_VariationFeature
+
+  Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Arg[3]     : (optional) Bio::EnsEMBL::IO::Parser::VCF4Tabix $vcf
+  Example    : my $population_genotypes = $collection->get_all_PopulationGenotypes_by_VariationFeature($vf)
+  Description: Get all PopulationGenotypes for a given VariationFeature object
+               PopulationGenotype counts and frequencies are only retrieved for ESP from the info field. 
+  Returntype : arrayref of Bio::EnsEMBL::Variation::PopulationGenotype
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_PopulationGenotypes_by_VariationFeature {
+  my $self = shift;
+  my $vf = shift;
+  my $given_pop = shift;
+  my $vcf = shift;
+
+  assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+  assert_ref($given_pop,'Bio::EnsEMBL::Variation::Population') if (defined($given_pop));
+
+  # if given $vcf, we don't want to call next() on it
+  # as it is a frozen copy created in VCFVF object creation
+  my $next_ok = 1;
+
+  if(!$vcf) {
+    # seek to record for VariationFeature
+    return [] unless $self->_seek_by_VariationFeature($vf);    
+    $vcf = $self->_current();
+  }
+  else {
+    $self->_current($vcf);
+    $next_ok = 0;
+  }
+  # get data from VF
+  my $vf_ref = $vf->ref_allele_string;
+  my $vf_alts = $vf->alt_alleles;
+  # check initial VCF match
+  my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
+  return [] unless @$matched;
+
+  my @pops = @{$self->get_all_Populations};
+  @pops = grep {$_->name eq $given_pop->name || ($_->{_raw_name} || '') eq $given_pop->name} @pops if $given_pop;
+
+  my $variation = $vf->variation;
+  my $population_genotype_adaptor = $self->use_db ? $self->adaptor->db->get_PopulationGenotypeAdaptor : undef;
+
+  my @population_genotypes = ();
+
+  while(1) {
+    my $info = $vcf->get_info;
+    my $vcf_alts = $vcf->get_alternatives;
+    my @alt_alleles = @$vcf_alts;
+    my $ref = $vcf->get_reference;
+    my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
+    my @sorted_gts = ();
+    my $info_gts = $info->{'GTS'};
+    if (defined $info_gts) {
+      my @gts = split(',', $info_gts);
+      foreach my $gt (@gts) {
+        my @tmp_gt = ();
+        if ($gt =~ /[ACGT]+/i) {
+          my @gt_alleles = split('', $gt);
+          foreach my $gt_allele (@gt_alleles) {
+            push @tmp_gt, $gt_allele;
+          }
+        } elsif ($gt =~ /[A|R|\d]+/) { #Observed Genotypes. For INDELs, A1, A2, or An refers to the N-th alternate allele while R refers to the reference allele.
+          my @gt_variables  = split('', $gt);
+          while (@gt_variables) {
+            my $gt_variable = shift @gt_variables; 
+            if ($gt_variable eq 'R') {
+              push @tmp_gt, $vf_ref;
+            } elsif ($gt_variable eq 'A') {
+              my $idx = shift @gt_variables;
+              if (my $allele = $allele_map{$idx - 1}) {
+                push @tmp_gt, $allele;
+              } else {
+                my $allele = $vcf_alts->[$idx - 1];
+                push @tmp_gt, $allele;
+              }
+            }  
+            else {
+              warn "Unexpected genotype variable. Expected values are R, A1, A2, An"
+            }
+          }
+        } else {
+          warn "Unexpected genotype variable. Expected values are R, A1, A2, An, or SNV represented by ACGT\n";
+        } 
+        my $sorted_gt = join('|', sort @tmp_gt);
+        push @sorted_gts, $sorted_gt;
+      }
+      POP : {
+        foreach my $pop (@pops) {
+          my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
+          my $pop_id = $pop->dbID;
+          my @gtc = split(',', $info->{$raw_name . '_GTC'});
+          my $total_gtc = 0;
+          $total_gtc += $_ for @gtc;
+          my $idx = 0;
+          foreach my $pop_gt (@sorted_gts) {
+            if ($gtc[$idx]) {
+              my @gt_alleles = sort {$a cmp $b} (split /\|/, $pop_gt);
+              my $pop_gt_obj = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
+                  genotype   => \@gt_alleles,
+                  population => $pop,
+                  variation  => $variation,
+                  frequency  => sprintf('%.4g', $gtc[$idx] / $total_gtc),
+                  count      => $gtc[$idx],
+                });
+              push @population_genotypes, $pop_gt_obj;
+            }
+            $idx++;
+          }
+        }
+      }
+    }
+    last unless $next_ok;
+
+    # get next VCF entry
+    $vcf->next();
+
+    # check a record exists
+    last unless $vcf->{record};
+
+    # check matches current VF
+    $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
+    last unless @$matched;
+  }
+  return \@population_genotypes;
 }
 
 
