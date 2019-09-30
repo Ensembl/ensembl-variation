@@ -744,7 +744,7 @@ sub clean_publications{
 
     # If there is publications without title, delete them 
     if($n_title_null != 0){
-      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id from publication where title is null or title = '' ]);
+      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id, pmid from publication where title is null or title = '' ]);
       $title_null_sth->execute();
       my $titles_null = $title_null_sth->fetchall_arrayref();
 
@@ -785,7 +785,6 @@ sub remove_publications{
 
     if(defined $variation_ids){
       foreach my $var_id (@{$variation_ids}){
-        print $var_id, "->", $pub_id, "\n";
         my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
         $failed_var_sth->execute()||die;
         my $get_failed_variant = $failed_var_sth->fetchall_arrayref();
