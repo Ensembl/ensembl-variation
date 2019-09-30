@@ -273,24 +273,43 @@ sub fetch_all_by_Variation {
   }
 
   if(!defined($cached)) {
-    
-    # Add a constraint on the variation_id column and pass to generic fetch
-    my $constraint = qq{ pg.variation_id = $variation_id };
-    
-    # If required, add a constraint on the population id
-    if (defined($population)) {
-      my $population_id = $population->dbID();
-      $constraint .= qq{ AND pg.population_id = $population_id };
+
+    my $use_vcf = $self->db->use_vcf() || 0;
+    my @from_vcf;
+
+    if($use_vcf) {
+      my $vfs = $variation->get_all_VariationFeatures;
+
+      if($vfs && @$vfs) {
+        @from_vcf =
+          map {$_->{adaptor} = $self; $_}
+          map {@{$_->get_all_PopulationGenotypes_by_VariationFeature($vfs->[0], $population)}}
+          @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+      }
+      push @$cached, @from_vcf;
     }
-  
-    $cached = $self->generic_fetch($constraint);
-    
-    # If a population was specified, attach the population to the object
-    map {$_->population($population)} @{$cached} if (defined($population));
 
     # add freqs from genotypes for human (1KG data)
     push @$cached, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
-		
+    
+    if ($use_vcf != 2) {		
+
+      # Add a constraint on the variation_id column and pass to generic fetch
+      my $constraint = qq{ pg.variation_id = $variation_id };
+    
+      # If required, add a constraint on the population id
+      if (defined($population)) {
+        my $population_id = $population->dbID();
+        $constraint .= qq{ AND pg.population_id = $population_id };
+      }
+      my @from_database =  @{$self->generic_fetch($constraint)}; 
+      push @$cached, @from_database;
+
+    }
+
+    # If a population was specified, attach the population to the object
+    map {$_->population($population)} @{$cached} if (defined($population));
+
     # don't store if population specified
     return $cached if defined($population);
     
@@ -300,7 +319,8 @@ sub fetch_all_by_Variation {
     # shift off first element to keep cache within size limit
     shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
   }
-  
+ 
+ 
   if(defined($population)) {
 		@$return = grep {$_->dbID eq $population->dbID} @{$cached};
   }
