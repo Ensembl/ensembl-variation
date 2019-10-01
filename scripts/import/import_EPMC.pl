@@ -670,7 +670,7 @@ sub clean_publications{
     my $title_cr_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%\n%' ]);
     my $authors_cr_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%\n%' ]);
 
-    my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' ]);
+    my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' or title like 'Beyond Our Pages%' or title like 'EP News%' or title like 'ACTS Abstracts%' or title like 'Poster %' ]);
 
     my $empty_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where (authors = '' or authors is null) and pmid is null and pmcid is null ]);
 
