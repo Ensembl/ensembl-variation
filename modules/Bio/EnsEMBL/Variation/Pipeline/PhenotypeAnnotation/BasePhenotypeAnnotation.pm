@@ -44,7 +44,6 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 
@@ -67,13 +66,10 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($debug, $skip_synonyms, $skip_sets) =
-        rearrange([qw(debug skip_synonyms skip_sets)],@_);
-
   my $self = bless {
-    "debug"         => $debug || 0,
-    "skip_synonyms" => $skip_synonyms || 0,
-    "skip_sets"     => $skip_sets || 0,
+    "debug"         => 0,
+    "skip_synonyms" => 0,
+    "skip_sets"     => 0,
   }, $class;
   $self->{pubmed_prefix} = "PMID:";
   my %special_characters = (
