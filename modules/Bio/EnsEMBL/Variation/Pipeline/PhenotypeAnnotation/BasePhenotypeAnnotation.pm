@@ -233,6 +233,24 @@ sub debug {
 }
 
 
+=head2 skip_sets
+
+Arg [1]    : boolean $skip_sets (optional)
+             The new skip_sets flag
+Example    : $kip_sets = $obj->skip_sets()
+Description: Get/set skip_sets flag
+Returntype : boolean
+Exceptions : none
+
+=cut
+
+sub skip_sets {
+  my ($self, $skip_set) = @_;
+  $self->{skip_sets} = $skip_set if defined $skip_set;
+  return $self->{skip_sets};
+}
+
+
 =head2 logFH
 
   Arg [1]    : FileHandle $logFH (optional)
