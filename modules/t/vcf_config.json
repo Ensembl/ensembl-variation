@@ -138,6 +138,27 @@
         }
       }
     },
+    { "id": "esp_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/testdata/test_data_ESP_GRCh37.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "population_prefix": "ESP6500:",
+      "populations": {
+        "9910000": {
+          "name": "AA",
+          "_ac": "AA_AC"
+        },
+        "9910001": {
+          "name": "EA",
+          "_ac": "EA_AC"
+        }
+      }
+    },
     {
       "annotation_type": "gerp",
       "id": "70_mammals.gerp_conservation_score",
