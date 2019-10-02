@@ -70,7 +70,7 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
 use Scalar::Util qw(weaken);
-use Data::Dumper;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
@@ -633,85 +633,87 @@ sub get_all_Alleles_by_VariationFeature {
     my $vcf_alts = $vcf->get_alternatives;
     my %allele_map = map {$_->{b_index} => $_->{a_allele}} @$matched;
      POP : {
-     foreach my $pop(@pops) {
+       foreach my $pop(@pops) {
 
-      # this allows for an empty population name to be looked up as e.g. AF
-      my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
-      my $suffix = $raw_name ? '_'.$raw_name : '';
-      my $pop_id = $pop->dbID;
-      # Due to remapping errors of gnomAD data there are cases
-      # where there are more than one VCF line with the same alt.
-      # This check handles multiple lines with the same alt
-      # and will only consider the first VCF line and ignore the rest.
-      foreach my $allele (values %allele_map) {
-        if (exists $freqs->{$pop_id}->{$allele}) {
-          last POP;
-        }
-      }
-
-
-      no warnings 'uninitialized';
-      my ($ac, $an, $af) = (
-        $info->{'AC'.$suffix} // $info->{$pop->{_ac}},
-        $info->{'AN'.$suffix} // $info->{$pop->{_an}},
-        $info->{'AF'.$suffix} // $info->{$pop->{_af}},
-      );
-
-      if (defined($ac) && $ac ne '.' && !defined($an)) {
-        my @split = split(',', $ac);
-        $an += $_ for @split;
-      }
-      # log AN for later use
-      $ans->{$pop_id} = $an if $an;
-
-      # check for AF
-      if(defined($af) && $af ne '.') {
-        $total_afs->{$pop_id} ||= 0;
-        my @split = split(',', $af);
-
-        # is ref AC included? This may have been set as ref_freq_index()
-        # or we can auto-detect by comparing size of @split to @$vcf_alts
-        $freqs->{$pop_id}->{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
-          if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
-
-        for my $i(0..$#split) {
-          my $f = $split[$i];
-          next if $f eq '.';
-          $total_afs->{$pop_id} += $f;
-
-          if(my $allele = $allele_map{$i}) {
-            $freqs->{$pop_id}->{$allele} = $f;
-            $counts->{$pop_id}->{$allele} = sprintf('%.0f', $f * $an) if $an;
-          }
-          else {
-            $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+        # this allows for an empty population name to be looked up as e.g. AF
+        my $raw_name = exists($pop->{_raw_name}) ? $pop->{_raw_name} : $pop->name;
+        my $suffix = $raw_name ? '_'.$raw_name : '';
+        my $pop_id = $pop->dbID;
+        # Due to remapping errors of gnomAD data there are cases
+        # where there are more than one VCF line with the same alt.
+        # This check handles multiple lines with the same alt
+        # and will only consider the first VCF line and ignore the rest.
+        foreach my $allele (values %allele_map) {
+          if (exists $freqs->{$pop_id}->{$allele}) {
+            last POP;
           }
         }
-      }
 
-      # or have AC and AN (AN must be defined and non-zero)
-      elsif(defined($ac) && $ac ne '.' && $an && $an ne '.') {
-        $total_acs->{$pop_id} ||= 0;
-        my @split = split(',', $ac);
 
-        # is ref AC included? This may have been set as ref_freq_index()
-        # or we can auto-detect by comparing size of @split to @$vcf_alts
-        $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1) / $an)
-          if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
+        no warnings 'uninitialized';
+        my ($ac, $an, $af) = (
+          $info->{'AC'.$suffix} // $info->{$pop->{_ac}},
+          $info->{'AN'.$suffix} // $info->{$pop->{_an}},
+          $info->{'AF'.$suffix} // $info->{$pop->{_af}},
+        );
+        if (defined($ac) && $ac ne '.' && !defined($an)) {
+          my @split = split(',', $ac);
+          $an += $_ for @split;
+        }
+        # log AN for later use
+        $ans->{$pop_id} = $an if $an;
 
-        for my $i(0..$#split) {
-          my $c = $split[$i];
-          $total_acs->{$pop_id} += $c;
-          if(my $allele = $allele_map{$i}) {
-            $counts->{$pop_id}->{$allele} = $c;
-            $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
-          }
-          else {
-            $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+        # check for AF
+        if(defined($af) && $af ne '.') {
+          $total_afs->{$pop_id} ||= 0;
+          my @split = split(',', $af);
+
+          # is ref AC included? This may have been set as ref_freq_index()
+          # or we can auto-detect by comparing size of @split to @$vcf_alts
+          $freqs->{$pop_id}->{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
+            if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
+
+          for my $i(0..$#split) {
+            my $f = $split[$i];
+            next if $f eq '.';
+            $total_afs->{$pop_id} += $f;
+
+            if(my $allele = $allele_map{$i}) {
+              $freqs->{$pop_id}->{$allele} = $f;
+              $counts->{$pop_id}->{$allele} = sprintf('%.0f', $f * $an) if $an;
+            }
+            else {
+              $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+            }
           }
         }
-      }
-    } # end foreach population
+
+        # or have AC and AN (AN must be defined and non-zero)
+        elsif(defined($ac) && $ac ne '.' && $an && $an ne '.') {
+          $total_acs->{$pop_id} ||= 0;
+          my @split = split(',', $ac);
+
+          # is ref AC included? This may have been set as ref_freq_index()
+          # or we can auto-detect by comparing size of @split to @$vcf_alts
+          if (defined($ref_freq_index) || scalar @split > scalar @$vcf_alts) {
+            my $ref_allele_count = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1);
+            $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', $ref_allele_count  / $an);
+            $counts->{$pop_id}->{$vf_ref} = $ref_allele_count;  
+          }
+ 
+          for my $i(0..$#split) {
+            my $c = $split[$i];
+            $total_acs->{$pop_id} += $c;
+            if(my $allele = $allele_map{$i}) {
+              $counts->{$pop_id}->{$allele} = $c;
+              $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
+            }
+            else {
+              $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+            }
+          }
+        }
+      } # end foreach population
     }
 
     last unless $next_ok;
@@ -733,7 +735,6 @@ sub get_all_Alleles_by_VariationFeature {
   # we need these to create allele objects
   my $variation = $vf->variation;
   my $allele_adaptor = $self->use_db ? $self->adaptor->db->get_AlleleAdaptor : undef;
-
   foreach my $pop(@pops) {
     my $pop_id = $pop->dbID;
 
@@ -746,7 +747,6 @@ sub get_all_Alleles_by_VariationFeature {
         $ans->{$pop_id},
         $total_afs->{$pop_id}
       );
-
       # have AC and AN, can work out freq and count
       if(defined($ac) && $an) {
         $counts->{$pop_id}->{$vf_ref} = $an - $ac;
@@ -843,12 +843,12 @@ sub get_all_PopulationGenotypes_by_VariationFeature {
       my @gts = split(',', $info_gts);
       foreach my $gt (@gts) {
         my @tmp_gt = ();
-        if ($gt =~ /[ACGT]+/i) {
+        if ($gt =~ /^[ACGT]+$/i) {
           my @gt_alleles = split('', $gt);
           foreach my $gt_allele (@gt_alleles) {
             push @tmp_gt, $gt_allele;
           }
-        } elsif ($gt =~ /[A|R|\d]+/) { #Observed Genotypes. For INDELs, A1, A2, or An refers to the N-th alternate allele while R refers to the reference allele.
+        } elsif ($gt =~ /[A\d|R]+/) { #Observed Genotypes. For INDELs, A1, A2, or An refers to the N-th alternate allele while R refers to the reference allele.
           my @gt_variables  = split('', $gt);
           while (@gt_variables) {
             my $gt_variable = shift @gt_variables; 
