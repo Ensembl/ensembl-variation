@@ -144,6 +144,7 @@ ok($gts && scalar @$gts == 1119, "get_all_SampleGenotypeFeatures_by_Slice count 
 ok($gts->[0]->genotype_string eq 'C|C', "get_all_SampleGenotypeFeatures_by_Slice first genotype C|C");
 
 
+
 ok($coll->assembly() eq "GRCh37", "assembly");
 ok($coll->source_name() eq "1000genomes", "source name");
 ok($coll->source_url() eq "http://www.1000genomes.org", "source URL");
@@ -167,7 +168,54 @@ $coll->use_seq_region_synonyms(1);
 $gts = $coll->get_all_SampleGenotypeFeatures_by_VariationFeature($vf);
 ok($gts && scalar @$gts == 3, "get_all_SampleGenotypeFeatures_by_VariationFeature with synonyms 3");
 
+ok($coll->vcf_collection_close, 'close VCF collection filehandle');
 
+## test ESP data query
+$v = $va->fetch_by_name('rs80359165');
+($vf) = @{$v->get_all_VariationFeatures};
+ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature for rs32954037");
+
+ok($coll->vcf_collection_close, 'close VCF collection filehandle');
+
+$coll = $vca->fetch_by_id('esp_GRCh37');
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id esp_GRCh37");
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$coll->filename_template =~ /^$dir/;
+my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @alleles
+  ],
+  [
+    'p:ESP6500:AA a:A f:1.0000 c:4406',
+    'p:ESP6500:AA a:C f:0.0000 c:0',
+    'p:ESP6500:EA a:A f:0.9999 c:8597',
+    'p:ESP6500:EA a:C f:0.0001 c:1'
+  ],
+  'get_all_Alleles_by_VariationFeature - freqs and counts ESP rs80359165'
+);
+
+my @population_genotypes = @{$coll->get_all_PopulationGenotypes_by_VariationFeature($vf)};
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' genotype:'.$_->genotype_string.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->genotype_string cmp $b->genotype_string}
+    @population_genotypes
+  ],
+  [
+    'p:ESP6500:AA genotype:A|A f:1.0000 c:2203',
+    'p:ESP6500:EA genotype:A|A f:0.9998 c:4298',
+    'p:ESP6500:EA genotype:A|C f:0.0002 c:1'
+  ],
+  'get_all_PopulationGenotypes_by_VariationFeature - freqs and counts ESP rs80359165'
+);
+
+ok($coll->vcf_collection_close, 'close VCF collection filehandle after ESP annotation');
 
 ## test exac info stuff
 
@@ -190,7 +238,7 @@ is_deeply(
 );
 
 ($vf) = @{$va->fetch_by_name('rs192076014')->get_all_VariationFeatures};
-my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+@alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
 
 is(scalar @alleles, 18, 'get_all_Alleles_by_VariationFeature - count');
 is_deeply(
