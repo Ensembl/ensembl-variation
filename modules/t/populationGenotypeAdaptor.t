@@ -118,4 +118,34 @@ unlink($tmpfile);
 
 ok(scalar @lines == 1 && $lines[0] =~ /12345/, "check dumped data");
 
+# read ESP population genotype frequencies from VCF
+my $dir = $multi->curr_dir();
+ok($vdba->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
+my $vca = $vdba->get_VCFCollectionAdaptor();
+my $coll = $vca->fetch_by_id('esp_GRCh37');
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$pgta->db->use_vcf(1);
+
+$variation = $va->fetch_by_name('rs35099512');
+my $pg4 = $pgta->fetch_all_by_Variation($variation);
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' gt:'.$_->genotype_string.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->genotype_string cmp $b->genotype_string}
+    @$pg4
+  ],
+  [
+    'p:ESP6500:AA gt:-|- f:0.9498 c:2025',
+    'p:ESP6500:AA gt:-|T f:0.0483 c:103',
+    'p:ESP6500:AA gt:T|T f:0.0019 c:4',
+    'p:ESP6500:EA gt:-|- f:0.9408 c:3876',
+    'p:ESP6500:EA gt:-|T f:0.0558 c:230',
+    'p:ESP6500:EA gt:T|T f:0.0034 c:14'
+  ],
+  'get ESP population genotype frequency from VCF'
+);
+
 done_testing();
