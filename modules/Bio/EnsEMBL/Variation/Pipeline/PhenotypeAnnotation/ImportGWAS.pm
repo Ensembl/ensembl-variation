@@ -59,7 +59,7 @@ sub fetch_input {
   $self->debug($self->param('debug_mode'));
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->skip_sets(0);
+  $self->skip_sets(0); #add variation set data
 
   my $gwas_url = 'https://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 

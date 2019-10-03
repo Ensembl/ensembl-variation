@@ -68,8 +68,8 @@ sub new {
 
   my $self = bless {
     "debug"         => 0,
-    "skip_synonyms" => 0,
-    "skip_sets"     => 0,
+    "skip_synonyms" => 1,
+    "skip_sets"     => 1,
   }, $class;
   $self->{pubmed_prefix} = "PMID:";
   my %special_characters = (
