@@ -80,8 +80,7 @@ package Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use vars qw(@ISA);
-use Data::Dumper;
-
+use Cwd;
 use POSIX;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -153,7 +152,6 @@ sub vcf_executable {
 sub temp_path {
   my $self = shift;
   $TMP_PATH = shift if @_;
-  $TMP_PATH ||= '/tmp'; 
   return $TMP_PATH;
 }
 
@@ -423,15 +421,29 @@ sub _fetch_by_Slice_VCF {
         my $vcf_file = $vc->_get_vcf_filename_by_chr($slice->seq_region_name);
         throw("ERROR: Can't get VCF file\n") unless $vcf_file;
         push @files, $vcf_file;
-        my $loc_string = sprintf("%s:%i-%i", $slice->seq_region_name, $slice->start, $slice->end);
+        my $chr = $slice->seq_region_name;
+        if ($vc->use_seq_region_synonyms) {
+          my @chr_in_vcf_file = @{$vc->_vcf_parser_obj($vcf_file)->{tabix_file}->seqnames};
+          my @synonyms = ();
+          foreach my $synonym (@{$vc->_get_synonyms_by_chr($chr)}) {
+            push @synonyms, $synonym if (grep {$_ eq $synonym} @chr_in_vcf_file);
+          }
+          $chr = $synonyms[0];
+          warn "use_seq_region_synonyms is set. Found more than one synonym for sequence name $chr" if (scalar @synonyms > 1);
+          warn "use_seq_region_synonyms is set. But didn't find synonym for sequence name $chr" if (scalar @synonyms == 0); 
+        } 
+        my $loc_string = sprintf("%s:%i-%i", $chr, $slice->start, $slice->end);
         push @regions, $loc_string;
       }
       my $files_arg = join(',', @files); 
       my $regions_arg = join(',', @regions);
       my $number_of_files = scalar @files;
       my $window_size = $self->max_snp_distance;
-      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
 
+      my $working_dir= cwd();
+      chdir $self->temp_path if ($self->temp_path);
+
+      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
       if ($self->{_vf_name}) {
         # if strict_name_match we can match by the given variant identifier
         # else we need to match by position
@@ -507,6 +519,7 @@ sub _fetch_by_Slice_VCF {
       # Close the file handle per iteration, don't reuse the
       # glob without closing it.
       close LD;
+      chdir $working_dir if ($self->temp_path);
 
       my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
         '-adaptor' => $self,
