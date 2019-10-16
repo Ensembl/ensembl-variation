@@ -288,7 +288,7 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
 -assembly => 'GRCh37',
 -type =>  'local',
 -strict_name_match => 1,
--filename_template => $dir.'/test-genome-DBs/homo_sapiens/variation/ld_no_rs_in_vcf.vcf.gz',
+-filename_template => $dir.'/testdata/ld_no_rs_in_vcf.vcf.gz',
 -chromosomes => [9],
 -sample_prefix => '1000GENOMES:phase_1:',
 -adaptor => $vca
@@ -312,7 +312,7 @@ $c = Bio::EnsEMBL::Variation::VCFCollection->new(
 -species => 'homo_sapiens',
 -assembly => 'GRCh37',
 -type =>  'local',
--filename_template => $dir.'/test-genome-DBs/homo_sapiens/variation/ld_no_rs_in_vcf.vcf.gz',
+-filename_template => $dir.'/testdata/ld_no_rs_in_vcf.vcf.gz',
 -chromosomes => [9],
 -sample_prefix => '1000GENOMES:phase_1:',
 -adaptor => $vca
@@ -337,5 +337,26 @@ foreach my $result (@$results_fetch_by_Slice) {
   cmp_ok($ldfc->get_r_square($vf1, $vf2, $population_id), '==', $r2, "$test_name ld_without_rs_in_vcf r2");
   cmp_ok($ldfc->get_d_prime($vf1, $vf2, $population_id), '==', $d_prime, "$test_name ld_without_rs_in_vcf d_prime");
 }
+
+$c = Bio::EnsEMBL::Variation::VCFCollection->new(
+-id =>  'ld_chr_synonyms',
+-species => 'homo_sapiens',
+-assembly => 'GRCh37',
+-type =>  'local',
+-filename_template => $dir.'/testdata/ld_chr_synonyms.vcf.gz',
+-use_seq_region_synonyms => 1,
+-chromosomes => [9],
+-sample_prefix => '1000GENOMES:phase_1:',
+-adaptor => $vca
+);
+
+$vca->remove_VCFCollection_by_ID('ld_without_rs_in_vcf');
+$vca->add_VCFCollection($c);
+delete $ldfca->{_cached};
+$ldfc = $ldfca->fetch_by_Slice($slice, $population);
+$ld_values = $ldfc->get_all_ld_values;
+
+cmp_ok(scalar @{$ldfc->get_all_ld_values(1)}, '==', 14, "use chr synonyms -- do not match variation feature by name");
+cmp_ok(scalar @{$ldfc->get_all_ld_values(0)}, '==', 14, "use chr synonyms -- match variation feature by name");
 
 done_testing();
