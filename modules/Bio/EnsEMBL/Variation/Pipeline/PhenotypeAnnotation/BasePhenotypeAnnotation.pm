@@ -44,6 +44,8 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 
@@ -72,25 +74,6 @@ sub new {
     "skip_sets"     => 1,
   }, $class;
   $self->{pubmed_prefix} = "PMID:";
-  my %special_characters = (
-    'Å' => 'A',
-    'Ä' => 'A',
-    'Ö' => 'O',
-    'Ü' => 'U',
-    'ö' => 'o',
-    'ü' => 'u',
-    'ä' => 'a',
-    'í' => 'i',
-    'é' => 'e',
-    'è' => 'e',
-    'ë' => 'e',
-    'ç' => 'c',
-    '<' => ' less than ',
-    '>' => ' more than ',
-    'Đ' => 'D',
-    '&' => 'and',
-  );
-  $self->{special_characters} = \%special_characters;
 
   return $self;
 }
@@ -130,19 +113,6 @@ sub skip_synonyms {
   return $self->{skip_synonyms};
 }
 
-=head2 get_special_characters
-
-  Example    : $special_chars = $obj->get_special_characters()
-  Description: Get the $special_chars hashref
-  Returntype : hashref
-  Exceptions : none
-
-=cut
-
-sub get_special_characters {
-  my $self = shift;
-  return $self->{special_characters};
-}
 
 =head2 get_pubmed_prefix
 
@@ -1172,7 +1142,6 @@ sub _get_phenotype_id {
   my ($self, $phenotype) = @_;
 
   my %phenotype_cache = %{$self->_phenotype_cache};
-  my %special_characters = %{$self->get_special_characters};
 
   my ($name, $description);
   $name = $phenotype->{name};
@@ -1184,10 +1153,7 @@ sub _get_phenotype_id {
   $description =~ s/[\(\)]//g; # Remove characters ( )
 
   # Replace special characters in the phenotype description
-  foreach my $char (keys(%special_characters)) {
-    my $new_char = $special_characters{$char};
-    $description =~ s/$char/$new_char/g;
-  }
+  $description = replace_char($description);
 
   # Check phenotype description in the format "description; name"
   if (!defined($name) || $name eq '') {
