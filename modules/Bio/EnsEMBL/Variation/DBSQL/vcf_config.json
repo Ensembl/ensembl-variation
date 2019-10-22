@@ -525,11 +525,11 @@
       "annotation_type": "gerp"
     },
     {
-      "id": "53_amniotes.gerp_conservation_score",
+      "id": "72_amniotes.gerp_conservation_score",
       "species": "gallus_gallus",
       "assembly": "GRCg6a",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/53_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/72_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
       "annotation_type": "gerp"
     },
     {
@@ -557,11 +557,11 @@
       "annotation_type": "gerp"
     },
     {
-      "id": "53_amniotes.gerp_conservation_score",
+      "id": "72_amniotes.gerp_conservation_score",
       "species": "meleagris_gallopavo",
       "assembly": "UMD2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/53_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.UMD2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/72_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.UMD2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -621,11 +621,11 @@
       "annotation_type": "gerp"
     },
     {
-      "id": "53_amniotes.gerp_conservation_score",
+      "id": "72_amniotes.gerp_conservation_score",
       "species": "taeniopygia_guttata",
       "assembly": "bTaeGut1_v1.p",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/53_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/72_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
       "annotation_type": "gerp"
     },
     {
