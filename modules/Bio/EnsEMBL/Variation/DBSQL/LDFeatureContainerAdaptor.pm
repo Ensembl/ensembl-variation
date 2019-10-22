@@ -327,8 +327,6 @@ sub fetch_by_VariationFeatures {
   my $vfs  = shift;
   my $population = shift;
 
-  $DB::single = 1;
-
   my @slice_objects = ();
   if (!ref($vfs)) {
     throw('Listref of Bio::EnsEMBL::Variation::VariationFeature args expected');
