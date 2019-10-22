@@ -354,7 +354,6 @@ $vca->remove_VCFCollection_by_ID('ld_without_rs_in_vcf');
 $vca->add_VCFCollection($c);
 delete $ldfca->{_cached};
 $ldfc = $ldfca->fetch_by_Slice($slice, $population);
-$ld_values = $ldfc->get_all_ld_values;
 
 cmp_ok(scalar @{$ldfc->get_all_ld_values(1)}, '==', 14, "use chr synonyms -- do not match variation feature by name");
 cmp_ok(scalar @{$ldfc->get_all_ld_values(0)}, '==', 14, "use chr synonyms -- match variation feature by name");
