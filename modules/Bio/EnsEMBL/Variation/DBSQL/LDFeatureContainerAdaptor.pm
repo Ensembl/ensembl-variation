@@ -427,8 +427,11 @@ sub _fetch_by_Slice_VCF {
             push @synonyms, $synonym if (grep {$_ eq $synonym} @chr_in_vcf_file);
           }
           $chr = $synonyms[0];
-          warn "use_seq_region_synonyms is set. Found more than one synonym for sequence name $chr" if (scalar @synonyms > 1);
-          warn "use_seq_region_synonyms is set. But didn't find synonym for sequence name $chr" if (scalar @synonyms == 0); 
+          if (scalar @synonyms > 1) {
+            warn "use_seq_region_synonyms is set. Found more than one synonym for sequence name $chr\n";
+          } elsif (scalar @synonyms == 0) {
+            warn "use_seq_region_synonyms is set. But didn't find synonym for sequence name $chr\n"; 
+          }
         } 
         my $loc_string = sprintf("%s:%i-%i", $chr, $slice->start, $slice->end);
         push @regions, $loc_string;
