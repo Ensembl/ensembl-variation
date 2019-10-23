@@ -442,8 +442,12 @@ sub _fetch_by_Slice_VCF {
       my $window_size = $self->max_snp_distance;
 
       my $working_dir = cwd();
-      my $return_chdir = chdir $self->temp_path if ($self->temp_path);
-      warn("ERROR: Couldn't change working directory (" . $self->temp_path . "): $!\n") if (!$return_chdir);
+      if ($self->temp_path) {
+        my $return_chdir = chdir $self->temp_path;
+        if ($return_chdir) {
+          warn("ERROR: Couldn't change working directory (" . $self->temp_path . "): $!\n");
+        }
+      }
 
       $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
       if ($self->{_vf_name}) {
@@ -521,9 +525,13 @@ sub _fetch_by_Slice_VCF {
       # Close the file handle per iteration, don't reuse the
       # glob without closing it.
       close LD;
-
-      $return_chdir = chdir $working_dir if ($self->temp_path);
-      warn("ERROR: Couldn't change working directory ($working_dir): $!\n") if (!$return_chdir);
+      
+      if ($self->temp_path) {
+        $return_chdir = chdir $working_dir;
+        if (!$return_chdir) {
+          warn("ERROR: Couldn't change back to working directory ($working_dir): $!\n");
+        }
+      }
 
       my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
         '-adaptor' => $self,
