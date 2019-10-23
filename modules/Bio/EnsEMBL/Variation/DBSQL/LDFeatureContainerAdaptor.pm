@@ -527,7 +527,7 @@ sub _fetch_by_Slice_VCF {
       close LD;
       
       if ($self->temp_path) {
-        $return_chdir = chdir $working_dir;
+        my $return_chdir = chdir $working_dir;
         if (!$return_chdir) {
           warn("ERROR: Couldn't change back to working directory ($working_dir): $!\n");
         }
