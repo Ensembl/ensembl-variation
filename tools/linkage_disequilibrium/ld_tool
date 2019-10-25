@@ -36,7 +36,7 @@ GetOptions(
   'input_file|i=s',          # input file name
   'output_file|o=s',         # default current directory date-time-calculation_type.out | inputfile_name.out
   'warnings_file|w=s',       # write warnings to file
-  'species',                 # default human 
+  'species=s',               # default human
   'population|p=s{1,}' => \@populations, # list all populations for LD computation: --populations population1 population2
   'show_populations',            # show all available populations
   'region=s{1,}' => \@regions,   # chromosome:start-end
