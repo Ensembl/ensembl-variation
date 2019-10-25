@@ -163,6 +163,9 @@ sub fetch_input {
     die ("Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n") unless $ok;
   }
 
+  #allow time between file download and file read for system to sync
+  sleep(30);
+
   #fetch coreDB assembly, in future this should be tested against
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
