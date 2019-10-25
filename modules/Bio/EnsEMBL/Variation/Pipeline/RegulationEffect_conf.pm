@@ -105,6 +105,7 @@ sub pipeline_wide_parameters {
         debug                                  => $self->o('debug'),
         split_slice                            => $self->o('split_slice'),
         split_slice_length                     => $self->o('split_slice_length'),
+        use_experimentally_validated_mf        => $self->o('use_experimentally_validated_mf'),
     };
 }
 
