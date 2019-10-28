@@ -149,6 +149,21 @@ sub vcf_executable {
   return $VCF_BINARY_FILE; 
 }
 
+=head2 temp_path
+  Arg [1]    : String $temp_path (optional)
+               The new value to set the temp_path attribute to
+  Example    : my $temp_path = $ldfca->temp_path()
+  Description: Getter/Setter for the temporary directory path used when
+               downloading indexes for remote tabix files.
+               The temporary directory path can also be set with the
+               $TMP_PATH variable:
+               $Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor::TMP_PATH 
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+               ensembl-webcode
+  Status     : Stable
+=cut
 sub temp_path {
   my $self = shift;
   $TMP_PATH = shift if @_;
