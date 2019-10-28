@@ -40,7 +40,6 @@ use strict;
 use warnings;
 
 package Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation;
-
 use Bio::EnsEMBL::Variation::Utils::BaseProteinFunctionAnnotation;
 our @ISA = ('Bio::EnsEMBL::Variation::Utils::BaseProteinFunctionAnnotation');
 
@@ -70,7 +69,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  if (! grep {$_ eq $self->annotation_file_version} ('3.5a')) {
+  if (! grep {$_ eq $self->annotation_file_version} ('3.5a', '4.0a')) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
 
@@ -91,6 +90,7 @@ my $predictions = {
     N => 'neutral',
   }
 };
+#The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
 
 # dbNSFP has assembly and version specific headers
 # If a new version is added, the new version first needs to tested and the column_names
@@ -121,8 +121,27 @@ my $column_names = {
     },
   },
   '4.0a' => {
-  # This is a placeholder for version 4.0a
-  # TODO check the assembly specific headers
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'REVEL_score',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
   }
 };
 
@@ -174,7 +193,18 @@ sub add_predictions {
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_meta_lr', $data->{meta_lr_score}, $prediction);
   }
   if ($data->{mutation_assessor_score} ne '.') {
-    my $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};
+    #The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
+    my $score = $data->{mutation_assessor_score}; 
+    my $prediction;
+    if ($score >= 0.9307) {
+      $prediction = 'high';
+    } elsif ($score >= 0.52043) {
+      $prediction = 'medium'
+    } elsif ($score >= 0.19675) {
+      $prediction = 'low'
+    } else {
+      $prediction = 'neutral';
+    }
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_mutation_assessor', $data->{mutation_assessor_score}, $prediction);
   }
 }
