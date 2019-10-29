@@ -321,6 +321,14 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 532,'dbnsfp_revel_pred','dbNSFP REVEL prediction','dbNSFP REVEL prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 533,'dbnsfp_meta_svm_pred','dbNSFP MetaSVM prediction','dbNSFP MetaSVM prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 534,'dbnsfp_ma_pred','dbNSFP mutation assessor prediction','dbNSFP mutation assessor prediction');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (535, 'MANE_Select', 'MANE Select v0.7', 'MANE Select (v0.7) is the preliminary release (phase 3) of the MANE Select data set. The Matched Annotation from NCBI and EMBL-EBI project (MANE) is a collaboration between Ensembl-GENCODE and RefSeq to select a default transcript per human protein coding locus that is representative of biology, well-supported, expressed and conserved. This transcript set matches GRCh38 and is 100% identical between RefSeq and Ensembl-GENCODE for 5\' UTR, CDS, splicing and 3\' UTR.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (536, 'Ensembl_Select', 'Ensembl Select', 'The Ensembl Select is a transcript identified by a pipeline that takes into account several criteria including transcript support (TSL), functional importance (APPRIS), representation in RefSeq and UniProt databases, length and coverage of pathogenic variants, where available.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (537, 'TAGENE_transcript', 'TAGENE pipeline transcript', 'Transcript created or extended using a model assembled from RNA-seq long reads using the TAGENE pipeline.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (538, 'legacy_biotype', 'Legacy biotype', 'Obsolete biotype previously assigned to this Ensembl object.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (539, 'KASP_markers', 'KASP_markers', 'KASP markers designed to be genome-specific with PolyMarker');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (540, 'mirna_arm', 'miRNA arm', 'Hairpin arm from which this miRNA has come from');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', '');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (542, 'citation_source', 'Citation source', 'Variant citation data source');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
