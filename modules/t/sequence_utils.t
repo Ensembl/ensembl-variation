@@ -112,7 +112,7 @@ is_deeply(
 is_deeply(
   trim_sequences(qw(A 0)),
   ['A', 0, 0, 0, 0],
-  'trim_sequences Except 0 as alt allele'
+  'trim_sequences Accept 0 as alt allele'
 );
 
 throws_ok {trim_sequences(undef, 'A')} qr/Missing reference or alternate sequence/, 'trim_sequences - no ref';
