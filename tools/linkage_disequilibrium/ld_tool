@@ -240,6 +240,7 @@ sub region {
   my @populations = @{$config->{_populations}};
   foreach my $region (@regions) {
     my ($chromosome, $start, $end) = split /\s+/, $region;
+    die "Invalid format for region. Expected chromosome:start-end." unless ($chromosome && $start && $end);
     my $slice = $slice_adaptor->fetch_by_region('chromosome', $chromosome, $start, $end);
     if ($slice) {
       foreach my $population (@populations) {
@@ -294,7 +295,10 @@ sub parse_input {
     $fh->close;
   } else {
     if ($config->{calculation} eq 'region') {
-      @input = map {s/:|-/ /g} @regions;
+      foreach my $region (@regions) {
+        $region =~ s/:|-/ /g;
+        push @input, $region;
+      }
     } else {
       @input = @variants;
     }
