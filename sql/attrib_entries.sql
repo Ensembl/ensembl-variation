@@ -844,6 +844,14 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (606, 481, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (607, 481, 'dbnsfp_mutation_assessor');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (608, 481, 'dbnsfp_revel');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (609, 481, 'cadd');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (610, 539, 'link_to_primer');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (611, 539, 'snp_type');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (612, 539, 'total_contigs');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (613, 539, 'primer_type');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (614, 539, 'ems_genotype');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (615, 542, 'EPMC');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (616, 542, 'UCSC');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (617, 542, 'dbSNP');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
