@@ -48,7 +48,7 @@ Bio::EnsEMBL::Variation::Utils::Sequence - Utility functions for sequences
 
   print "my ambiguity code is $ambig_code\n";
 
-  print "my SNP class is = ", variation_class($alleles), "\n";
+  print "my SNP class is = variation_class($alleles)";
 
 
 =head1 METHODS
@@ -488,7 +488,6 @@ sub sequence_with_ambiguity{
   Caller      : general
 
 =cut
-
 sub hgvs_variant_notation {
   my $alt_allele = shift;
   my $ref_sequence = shift;
@@ -767,7 +766,6 @@ sub get_hgvs_alleles{
 }
 
 =head2 get_3prime_seq_offset
-
   Arg[1]     : allele sequence
   Arg[2]     : downstream flank
   Description: Compare an allele to its 3' sequence to define the most 3'
@@ -775,9 +773,7 @@ sub get_hgvs_alleles{
   Returntype : string or undef if this allele is not in the
   Exceptions : none
   Status     : Experimental
-
 =cut
-
 sub get_3prime_seq_offset{
 
   my $seq_to_check  = shift;
@@ -937,7 +933,7 @@ sub align_seqs {
                 to trim from the end first, set $end_first to a true value.
 
                 A boolean flag indicating if any change was made is returned.
-  ReturnType  : arrayref :
+  ReturnType  : arrayref:
                 [
                   string $new_ref,
                   string $new_alt,
@@ -953,7 +949,7 @@ sub align_seqs {
 sub trim_sequences {
   my ($ref, $alt, $start, $end, $empty_to_dash, $end_first) = @_;
 
-  throw("Missing reference or alternate sequence") unless $ref && $alt;
+  throw("Missing reference or alternate sequence") unless defined $ref && defined $alt;
 
   $start ||= 0;
   $end ||= $start + (length($ref) - 1);
