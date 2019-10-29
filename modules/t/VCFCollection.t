@@ -173,7 +173,7 @@ ok($coll->vcf_collection_close, 'close VCF collection filehandle');
 ## test ESP data query
 $v = $va->fetch_by_name('rs80359165');
 ($vf) = @{$v->get_all_VariationFeatures};
-ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature for rs32954037");
+ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature for rs80359165");
 
 ok($coll->vcf_collection_close, 'close VCF collection filehandle');
 
