@@ -102,6 +102,7 @@ sub max_snp_distance {
 }
 
 =head2 min_r2
+
   Arg [1]    : $min_r2 (optional)
                The new value to set minimum r2 to. Only return results whose r2 is greater than or equal to min r2.
   Example    : $min_r2 = $ld_feature_container_adaptor->min_r2()
@@ -111,7 +112,6 @@ sub max_snp_distance {
   Caller     : General
   Status     : Stable
 =cut
-
 sub min_r2 {
   my ($self, $r2) = @_;
   if (defined $r2) {
@@ -121,6 +121,7 @@ sub min_r2 {
 }
 
 =head2 min_d_prime
+
   Arg [1]    : $min_d_prime (optional)
                The new value to set minimum d_prime to. Only return results whose d_prime is greater than or equal to min d_prime.
   Example    : $min_d_prime = $ld_feature_container_adaptor->min_d_prime()
@@ -130,7 +131,6 @@ sub min_r2 {
   Caller     : General
   Status     : Stable
 =cut
-
 sub min_d_prime {
   my ($self, $d_prime) = @_;
   if (defined $d_prime) {
@@ -150,6 +150,7 @@ sub vcf_executable {
 }
 
 =head2 temp_path
+
   Arg [1]    : String $temp_path (optional)
                The new value to set the temp_path attribute to
   Example    : my $temp_path = $ldfca->temp_path()
