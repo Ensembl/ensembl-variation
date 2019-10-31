@@ -211,8 +211,16 @@ sub get_input_file {
 
     my $type          = $json_hash->{'type'};
     my $gene_symbol   = $json_hash->{'target'}{'gene_info'}{'symbol'}; #TODO: Q: why do we use sybmol and not geneid eg. ENSG00000156076
-    my $pmids         = parse_publications($json_hash->{'literature'}{'references'});
-    my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_uri'};
+    my $pmids         = parse_publications($json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) if (defined $json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'});
+    my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_id'} if ( defined $json_hash->{'unique_association_fields'}{'disease_id'});
+
+    if (! defined $phenotype_url){
+      print $errFH1 "phenotype_url (json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) not found for $gene_symbol!\n";
+      next;
+    }
+    if (! defined $pmids){
+      print $errFH1 "pmids (json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) not found for $gene_symbol!\n";
+    }
 
     # Phenotype fetching and parsing
     $phenotype_url =~ /\/(\w+)$/;

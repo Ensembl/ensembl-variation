@@ -233,7 +233,7 @@ sub debug {
 
 Arg [1]    : boolean $skip_sets (optional)
              The new skip_sets flag
-Example    : $kip_sets = $obj->skip_sets()
+Example    : $skip_sets = $obj->skip_sets()
 Description: Get/set skip_sets flag
 Returntype : boolean
 Exceptions : none

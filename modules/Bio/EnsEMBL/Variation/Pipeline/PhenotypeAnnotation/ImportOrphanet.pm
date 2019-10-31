@@ -96,7 +96,7 @@ sub run {
   my $file_orphanet = $self->required_param('orphanet_file');
 
   # get phenotype data + save it (all in one method)
-  my ($results,$source_date) = $self->parse_input_file($self->workdir."/".$file_orphanet);
+  my ($results,$source_date) = $self->parse_input_file($file_orphanet);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
 
   #save source_date
@@ -147,7 +147,7 @@ sub parse_input_file {
   my @phenotypes;
 
   my $xml_parser   = XML::LibXML->new();
-  my $orphanet_doc = $xml_parser->parse_file($infile);
+  my $orphanet_doc = $xml_parser->parse_file($self->workdir."/".$infile);
 
   #get date:
   my $first_node = $orphanet_doc->findnodes('JDBOR')->get_node(1);

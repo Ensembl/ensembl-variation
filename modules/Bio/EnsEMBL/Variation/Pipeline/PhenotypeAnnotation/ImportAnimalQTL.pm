@@ -72,7 +72,7 @@ my %animalQTL_species_url = (
 
 my %animalQTL_species_fileNames = (
   gallus_gallus => 'gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
-  sus_scrofa => 'sus_scroafa_gbp_11.1.gff3.gz', #Sus scrofa
+  sus_scrofa => 'sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
   ovis_aries => 'ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
   bos_taurus => 'bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
   equus_caballus => 'equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
@@ -151,9 +151,20 @@ sub fetch_input {
         last;
       }
     }
+    # if directory exists and file not found try to fetch the file
+    if (!$ok) {
+      my $fetch_cmd = "wget --content-disposition -O $inputFile \"$url\"";
+      my $return_value = $self->run_cmd($fetch_cmd)
+        unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
+      die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
+      $ok = 1;
+    }
     print $errFH "ERROR: Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
     die ("Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n") unless $ok;
   }
+
+  #allow time between file download and file read for system to sync
+  sleep(30);
 
   #fetch coreDB assembly, in future this should be tested against
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
