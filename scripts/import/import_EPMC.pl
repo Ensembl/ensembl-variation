@@ -781,6 +781,7 @@ sub remove_publications{
 
     $var_id_sth->execute()||die;
     my $get_variation_ids = $var_id_sth->fetchall_arrayref();
+    # checks if there is variation_id for publication
     my $variation_ids = $get_variation_ids->[0];
 
     if(defined $variation_ids){
