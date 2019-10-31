@@ -38,6 +38,7 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
   
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
@@ -184,7 +185,6 @@ sub temp_path {
   Exceptions : thrown on bad argument
   Caller     : general
   Status     : Stable
-
 =cut
 sub fetch_by_Slice {
   my $self = shift;
