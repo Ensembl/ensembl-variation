@@ -953,7 +953,7 @@ sub align_seqs {
 sub trim_sequences {
   my ($ref, $alt, $start, $end, $empty_to_dash, $end_first) = @_;
 
-  throw("Missing reference or alternate sequence") unless $ref && $alt;
+  throw("Missing reference or alternate sequence") unless defined $ref && defined $alt;
 
   $start ||= 0;
   $end ||= $start + (length($ref) - 1);
