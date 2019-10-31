@@ -154,23 +154,14 @@ sub parse_input_file {
   $first_node->getAttribute('date') =~ /(\d+)-(\d{2})-(\d{2})/;
   my $date = $1.$2.$3;
 
-  my %special_characters = %{$self->get_special_characters};
-  my $special_chars = join('',keys(%special_characters));
-
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
     my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
     my $orpha_number = $orpha_number_node->to_literal;
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;
 
-    # Replace special characters TODO: do this char replacement in BasePhenotypeAnnotation
+    # Special encoding conversion
     utf8::encode($name);
-    if ($name =~ /[$special_chars]/) {
-      foreach my $char (keys(%special_characters)) {
-        my $new_char = $special_characters{$char};
-        $name =~ s/$char/$new_char/g if ($name =~ /$char/);
-      }
-    }
 
     my @gene_nodes = $disorder->findnodes('./DisorderGeneAssociationList/DisorderGeneAssociation/Gene');
 
