@@ -38,6 +38,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAn
 
 use strict;
 use warnings;
+use POSIX;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species);
@@ -59,7 +60,7 @@ sub run {
   my $dbh = $self->get_species_adaptor('variation')->dbc;
 
   open $report, ">$workdir/REPORT_QC.txt"||die "Failed to open report file for summary info :$!\n";
-  print $report, "Running time:", localtime, "\n";
+  print $report "Running time: ", strftime("%Y-%m-%d %H:%M:%S", localtime), "\n";
 
   print $report "\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n";
   check_phenotype_description($dbh);
