@@ -1,5 +1,5 @@
 885	1	xref.timestamp	2010-12-02 16:01:38
-1	\N	schema_version	99
+1	\N	schema_version	100
 2	\N	patch	patch_52_53_a.sql|schema_version
 3	\N	patch	patch_52_53_b.sql|external_db_type_enum
 4	\N	patch	patch_52_53_c.sql|identity_xref_rename
@@ -235,3 +235,4 @@
 1035	\N	patch	patch_96_97_e.sql|add_stable_id_event_type_rnaproduct
 1036	\N	patch	patch_97_98_a.sql|schema_version
 1037	\N	patch	patch_98_99_a.sql|schema_version
+1038	\N	patch	patch_99_100_a.sql|schema_version

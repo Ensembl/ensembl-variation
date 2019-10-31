@@ -2682,7 +2682,7 @@ sub rfva_to_line {
     $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
   }
 
-  $base_line->{Extra}->{BIOTYPE} = ref($rf->{feature_type}) ? $rf->{feature_type}->{so_name} : $rf->{feature_type} if defined($rf->{feature_type});
+  $base_line->{Extra}->{BIOTYPE} = ref($rf->{feature_type}) ? $rf->{feature_type}->{so_term} : $rf->{feature_type} if defined($rf->{feature_type});
 
   my $method = $allele_method.'RegulatoryFeatureVariationAlleles';
 
@@ -5742,7 +5742,7 @@ sub clean_reg_feat {
         }
     }
 
-    $rf->{feature_type} = $rf->{feature_type}->{so_name} if $rf->{feature_type};
+    $rf->{feature_type} = $rf->{feature_type}->{so_term} if $rf->{feature_type};
 
     return $rf;
 }
