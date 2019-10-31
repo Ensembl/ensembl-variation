@@ -670,7 +670,9 @@ sub clean_publications{
     my $title_cr_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%\n%' ]);
     my $authors_cr_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%\n%' ]);
 
-    my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' ]);
+    my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' or title like 'Beyond Our Pages%' or title like 'EP News%' or title like 'ACTS Abstracts%' or title like 'Poster %' ]);
+
+    my $empty_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where (authors = '' or authors is null) and pmid is null and pmcid is null ]);
 
     $title_sth->execute()||die;
     my $title_brackets = $title_sth->fetchall_arrayref();
@@ -685,6 +687,9 @@ sub clean_publications{
 
     $wrong_title_sth->execute()||die;
     my $wrong_title = $wrong_title_sth->fetchall_arrayref();
+
+    $empty_sth->execute()||die;
+    my $empty_fields = $empty_sth->fetchall_arrayref();
 
     # Clean brackets from publication title 
     my $count_titles = 0;
@@ -705,12 +710,12 @@ sub clean_publications{
 
     # Clean carriage returns in title
     if (defined $title_cr){
-      print $report "Publications with carriage return in the title - clean:\n";
+      print $report "\nPublications with carriage return in the title - clean:\n";
       foreach my $t_cr (@{$get_title_cr}){
         my $pub_id = $t_cr->[0];
         my $title = $t_cr->[1];
         print $report "$pub_id\t$title\n";
-        $title =~ s/\n/ /;
+        $title =~ s/\n/ /g;
         
         my $clean_title_sth = $dba->dbc()->prepare(qq[ update publication set title = ? where publication_id = $pub_id ]);
         $clean_title_sth->execute($title);
@@ -719,12 +724,12 @@ sub clean_publications{
     
     # Clean carriage returns in authors
     if (defined $authors_cr){
-      print $report "Publications with carriage return in the authors - clean:\n";
+      print $report "\nPublications with carriage return in the authors - clean:\n";
       foreach my $a_cr (@{$get_authors_cr}){
         my $pub_id = $a_cr->[0];
         my $authors = $a_cr->[1];
         print $report "$pub_id\t$authors\n";
-        $authors =~ s/\n/ /;
+        $authors =~ s/\n/ /g;
         
         my $clean_authors_sth = $dba->dbc()->prepare(qq[ update publication set authors = ? where publication_id = $pub_id ]);
         $clean_authors_sth->execute($authors);
@@ -739,7 +744,7 @@ sub clean_publications{
 
     # If there is publications without title, delete them 
     if($n_title_null != 0){
-      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id from publication where title is null or title = '' ]);
+      my $title_null_sth = $dba->dbc->prepare(qq[ select publication_id, pmid from publication where title is null or title = '' ]);
       $title_null_sth->execute();
       my $titles_null = $title_null_sth->fetchall_arrayref();
 
@@ -747,6 +752,12 @@ sub clean_publications{
         print $report "\nPublications without title deleted (publication_id, title, variation_id):\n";
         remove_publications($dba, $report, $titles_null);
       }
+    }
+
+    # Delete publications without authors, pmid and pmcid
+    if(defined $empty_fields->[0]->[0]){
+      print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title, variation_id)";
+      remove_publications($dba, $report, $empty_fields);
     }
 
     $publication_count = count_rows($dba, 'publication');
@@ -770,12 +781,11 @@ sub remove_publications{
 
     $var_id_sth->execute()||die;
     my $get_variation_ids = $var_id_sth->fetchall_arrayref();
-    my $variation_ids = $get_variation_ids->[0]->[0];
+    # checks if there is variation_id for publication
+    my $variation_ids = $get_variation_ids->[0];
 
     if(defined $variation_ids){
-      foreach my $v (@{$variation_ids}){
-        my $var_id = $v->[0];
-        print $var_id, "->", $pub_id, "\n";
+      foreach my $var_id (@{$variation_ids}){
         my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
         $failed_var_sth->execute()||die;
         my $get_failed_variant = $failed_var_sth->fetchall_arrayref();
