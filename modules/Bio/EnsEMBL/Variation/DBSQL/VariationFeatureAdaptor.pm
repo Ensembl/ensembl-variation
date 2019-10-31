@@ -1866,14 +1866,15 @@ sub fetch_by_hgvs_notation {
     my @transcripts;
 
     # Fetch xref transcript 
-    if(!defined($transcript) && ($reference =~ /NP/ || $reference =~ /XP/)){
+    # Also fetch transcript erroneously submitted with p. changes - 'NM'
+    if(!defined($transcript) && ($reference =~ /NP/ || $reference =~ /XP/ || $reference =~ /NM/)){
       @transcripts = @{$transcript_adaptor->fetch_all_by_external_name($reference)};
     }
 
     # support some malformed HGVS
     if(!defined($transcript)) {
       # Seeing transcripts erroneously submitted with p. changes
-      if($reference =~ /ENST|NM/){
+      if($reference =~ /ENST/){
          push @transcripts, $transcript_adaptor->fetch_by_stable_id($reference);
       }
       # Fetch as UniProt ID or gene
