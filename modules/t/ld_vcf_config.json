@@ -5,7 +5,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "local",
-      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/ld.vcf.gz",
+      "filename_template": "###t-root###/testdata/ld.vcf.gz",
       "chromosomes": [ "9" ],
       "sample_prefix": "1000GENOMES:phase_1:"
     }
