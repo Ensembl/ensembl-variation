@@ -38,6 +38,7 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
   
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
@@ -80,8 +81,7 @@ package Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use vars qw(@ISA);
-use Data::Dumper;
-
+use Cwd;
 use POSIX;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -103,6 +103,7 @@ sub max_snp_distance {
 }
 
 =head2 min_r2
+
   Arg [1]    : $min_r2 (optional)
                The new value to set minimum r2 to. Only return results whose r2 is greater than or equal to min r2.
   Example    : $min_r2 = $ld_feature_container_adaptor->min_r2()
@@ -112,7 +113,6 @@ sub max_snp_distance {
   Caller     : General
   Status     : Stable
 =cut
-
 sub min_r2 {
   my ($self, $r2) = @_;
   if (defined $r2) {
@@ -122,6 +122,7 @@ sub min_r2 {
 }
 
 =head2 min_d_prime
+
   Arg [1]    : $min_d_prime (optional)
                The new value to set minimum d_prime to. Only return results whose d_prime is greater than or equal to min d_prime.
   Example    : $min_d_prime = $ld_feature_container_adaptor->min_d_prime()
@@ -131,7 +132,6 @@ sub min_r2 {
   Caller     : General
   Status     : Stable
 =cut
-
 sub min_d_prime {
   my ($self, $d_prime) = @_;
   if (defined $d_prime) {
@@ -150,10 +150,25 @@ sub vcf_executable {
   return $VCF_BINARY_FILE; 
 }
 
+=head2 temp_path
+
+  Arg [1]    : String $temp_path (optional)
+               The new value to set the temp_path attribute to
+  Example    : my $temp_path = $ldfca->temp_path()
+  Description: Getter/Setter for the temporary directory path used when
+               downloading indexes for remote tabix files.
+               The temporary directory path can also be set with the
+               $TMP_PATH variable:
+               $Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor::TMP_PATH 
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+               ensembl-webcode
+  Status     : Stable
+=cut
 sub temp_path {
   my $self = shift;
   $TMP_PATH = shift if @_;
-  $TMP_PATH ||= '/tmp'; 
   return $TMP_PATH;
 }
 
@@ -170,7 +185,6 @@ sub temp_path {
   Exceptions : thrown on bad argument
   Caller     : general
   Status     : Stable
-
 =cut
 sub fetch_by_Slice {
   my $self = shift;
@@ -329,8 +343,6 @@ sub fetch_by_VariationFeatures {
   my $vfs  = shift;
   my $population = shift;
 
-  $DB::single = 1;
-
   my @slice_objects = ();
   if (!ref($vfs)) {
     throw('Listref of Bio::EnsEMBL::Variation::VariationFeature args expected');
@@ -423,15 +435,37 @@ sub _fetch_by_Slice_VCF {
         my $vcf_file = $vc->_get_vcf_filename_by_chr($slice->seq_region_name);
         throw("ERROR: Can't get VCF file\n") unless $vcf_file;
         push @files, $vcf_file;
-        my $loc_string = sprintf("%s:%i-%i", $slice->seq_region_name, $slice->start, $slice->end);
+        my $chr = $slice->seq_region_name;
+        if ($vc->use_seq_region_synonyms) {
+          my @chr_in_vcf_file = @{$vc->_vcf_parser_obj($vcf_file)->{tabix_file}->seqnames};
+          my @synonyms = ();
+          foreach my $synonym (@{$vc->_get_synonyms_by_chr($chr)}) {
+            push @synonyms, $synonym if (grep {$_ eq $synonym} @chr_in_vcf_file);
+          }
+          $chr = $synonyms[0];
+          if (scalar @synonyms > 1) {
+            warn "use_seq_region_synonyms is set. Found more than one synonym for sequence name $chr\n";
+          } elsif (scalar @synonyms == 0) {
+            warn "use_seq_region_synonyms is set. But didn't find synonym for sequence name $chr\n"; 
+          }
+        } 
+        my $loc_string = sprintf("%s:%i-%i", $chr, $slice->start, $slice->end);
         push @regions, $loc_string;
       }
       my $files_arg = join(',', @files); 
       my $regions_arg = join(',', @regions);
       my $number_of_files = scalar @files;
       my $window_size = $self->max_snp_distance;
-      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
 
+      my $working_dir = cwd();
+      if ($self->temp_path) {
+        my $return_chdir = chdir $self->temp_path;
+        if ($return_chdir) {
+          warn("ERROR: Couldn't change working directory (" . $self->temp_path . "): $!\n");
+        }
+      }
+
+      $cmd = "$bin -f $files_arg -r $regions_arg -s $number_of_files -l $sample_string -w $window_size";
       if ($self->{_vf_name}) {
         # if strict_name_match we can match by the given variant identifier
         # else we need to match by position
@@ -507,6 +541,13 @@ sub _fetch_by_Slice_VCF {
       # Close the file handle per iteration, don't reuse the
       # glob without closing it.
       close LD;
+      
+      if ($self->temp_path) {
+        my $return_chdir = chdir $working_dir;
+        if (!$return_chdir) {
+          warn("ERROR: Couldn't change back to working directory ($working_dir): $!\n");
+        }
+      }
 
       my $c = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
         '-adaptor' => $self,
