@@ -5742,7 +5742,7 @@ sub clean_reg_feat {
         }
     }
 
-    $rf->{feature_type} = $rf->{feature_type}->{so_name} if $rf->{feature_type};
+    $rf->{feature_type} = $rf->{feature_type}->{so_term} if $rf->{feature_type};
 
     return $rf;
 }
