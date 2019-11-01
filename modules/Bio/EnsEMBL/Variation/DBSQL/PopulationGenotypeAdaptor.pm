@@ -320,9 +320,8 @@ sub fetch_all_by_Variation {
     shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
   }
  
- 
   if(defined($population)) {
-		@$return = grep {$_->dbID eq $population->dbID} @{$cached};
+		@$return = grep {$_->population->dbID eq $population->dbID} @{$cached};
   }
   else {
     $return = $cached;
