@@ -24,7 +24,6 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use FileHandle;
-
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
@@ -147,5 +146,24 @@ is_deeply(
   ],
   'get ESP population genotype frequency from VCF'
 );
+
+my ($esp_ea_population) = grep {$_->name eq 'ESP6500:EA'} @{$coll->get_all_Populations};
+ok($esp_ea_population && $esp_ea_population->isa('Bio::EnsEMBL::Variation::Population'), "grep by population name from get_all_Populations");
+
+my $pg5 = $pgta->fetch_all_by_Variation($variation, $esp_ea_population);
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' gt:'.$_->genotype_string.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->genotype_string cmp $b->genotype_string}
+    @$pg5
+  ],
+  [
+    'p:ESP6500:EA gt:-|- f:0.9408 c:3876',
+    'p:ESP6500:EA gt:-|T f:0.0558 c:230',
+    'p:ESP6500:EA gt:T|T f:0.0034 c:14'
+  ],
+  'get ESP population genotype frequency from VCF for ESP6500:EA'
+);
+
 
 done_testing();
