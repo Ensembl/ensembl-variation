@@ -186,15 +186,15 @@ $coll->filename_template =~ /^$dir/;
 my @alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
 is_deeply(
   [
-    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4g", $_->frequency).' c:'.$_->count}
     sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
     @alleles
   ],
   [
-    'p:ESP6500:AA a:A f:1.0000 c:4406',
-    'p:ESP6500:AA a:C f:0.0000 c:0',
+    'p:ESP6500:AA a:A f:1 c:4406',
+    'p:ESP6500:AA a:C f:0 c:0',
     'p:ESP6500:EA a:A f:0.9999 c:8597',
-    'p:ESP6500:EA a:C f:0.0001 c:1'
+    'p:ESP6500:EA a:C f:0.0001163 c:1'
   ],
   'get_all_Alleles_by_VariationFeature - freqs and counts ESP rs80359165'
 );
