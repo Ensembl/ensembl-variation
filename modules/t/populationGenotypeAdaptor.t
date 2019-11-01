@@ -18,7 +18,6 @@ use warnings;
 
 use Test::More;
 use FindBin qw($Bin);
-
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Test::TestUtils;
@@ -165,5 +164,48 @@ is_deeply(
   'get ESP population genotype frequency from VCF for ESP6500:EA'
 );
 
+my $cdba = $multi->get_DBAdaptor('core');
+my $sa = $cdba->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome', 17);
+
+my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+  -seq_region_name => 17,
+  -start => 3417997,
+  -end   => 3417996,
+  -allele_string => 'CACCA/ACCA',
+  -slice => $slice,
+  -strand => 1,
+);
+my ($vcf_vf) = grep {$_->start == 3417997} @{$coll->get_all_VariationFeatures_by_Slice($slice)};
+is(ref($vcf_vf->vcf_record), 'Bio::EnsEMBL::IO::Parser::VCF4Tabix', 'is Bio::EnsEMBL::IO::Parser::VCF4Tabix object');
+my $pg6 = $coll->get_all_PopulationGenotypes_by_VariationFeature($vf, undef, $vcf_vf->vcf_record);
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' gt:'.$_->genotype_string.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->genotype_string cmp $b->genotype_string}
+    @$pg6
+  ],
+  [
+    'p:ESP6500:AA gt:ACCA|ACCA f:0.0014 c:3',
+    'p:ESP6500:AA gt:ACCA|CACCA f:0.0455 c:97',
+    'p:ESP6500:AA gt:CACCA|CACCA f:0.9507 c:2026',
+    'p:ESP6500:AA gt:CACCA|T f:0.0023 c:5',
+    'p:ESP6500:EA gt:ACCA|ACCA f:0.0024 c:10',
+    'p:ESP6500:EA gt:ACCA|CACCA f:0.0514 c:212',
+    'p:ESP6500:EA gt:ACCA|T f:0.0002 c:1',
+    'p:ESP6500:EA gt:CACCA|CACCA f:0.9423 c:3885',
+    'p:ESP6500:EA gt:CACCA|T f:0.0024 c:10',
+    'p:ESP6500:EA gt:T|T f:0.0012 c:5',
+  ],
+  'get ESP population genotype frequency from VCF use Bio::EnsEMBL::Variation::VCFVariationFeature as argument'
+);
+
+$coll = $vca->fetch_by_id('esp_GRCh37_with_error');
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$vf = $variation->get_all_VariationFeatures->[0];
+warns_like { $coll->get_all_PopulationGenotypes_by_VariationFeature($vf); } qr/Unexpected genotype variable. Expected values are R, A1, A2, An at/, 'Warn on unsupported genotype string in VCF file.';
 
 done_testing();
