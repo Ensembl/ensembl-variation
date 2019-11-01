@@ -670,8 +670,9 @@ sub get_all_Alleles_by_VariationFeature {
 
           # is ref AC included? This may have been set as ref_freq_index()
           # or we can auto-detect by comparing size of @split to @$vcf_alts
-          $freqs->{$pop_id}->{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1)
-            if defined($ref_freq_index) || scalar @split > scalar @$vcf_alts;
+          if (defined($ref_freq_index) || scalar @split > scalar @$vcf_alts) {
+            $freqs->{$pop_id}->{$vf_ref} = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1);
+          }
 
           for my $i(0..$#split) {
             my $f = $split[$i];
@@ -824,7 +825,9 @@ sub get_all_PopulationGenotypes_by_VariationFeature {
   return [] unless @$matched;
 
   my @pops = @{$self->get_all_Populations};
-  @pops = grep {$_->name eq $given_pop->name || ($_->{_raw_name} || '') eq $given_pop->name} @pops if $given_pop;
+  if ($given_pop) {
+    @pops = grep {$_->name eq $given_pop->name || ($_->{_raw_name} || '') eq $given_pop->name} @pops;
+  }
 
   my $variation = $vf->variation;
   my $population_genotype_adaptor = $self->use_db ? $self->adaptor->db->get_PopulationGenotypeAdaptor : undef;
@@ -848,7 +851,9 @@ sub get_all_PopulationGenotypes_by_VariationFeature {
           foreach my $gt_allele (@gt_alleles) {
             push @tmp_gt, $gt_allele;
           }
-        } elsif ($gt =~ /[A\d|R]+/) { #Observed Genotypes. For INDELs, A1, A2, or An refers to the N-th alternate allele while R refers to the reference allele.
+        } elsif ($gt =~ /[A\d|R]+/) { 
+          # Observed Genotypes. For INDELs, A1, A2, or An refers
+          # to the N-th alternate allele while R refers to the reference allele.
           my @gt_variables  = split('', $gt);
           while (@gt_variables) {
             my $gt_variable = shift @gt_variables; 
