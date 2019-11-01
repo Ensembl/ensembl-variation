@@ -285,8 +285,8 @@ sub fetch_all_by_Variation {
           map {$_->{adaptor} = $self; $_}
           map {@{$_->get_all_PopulationGenotypes_by_VariationFeature($vfs->[0], $population)}}
           @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+          push @$cached, @from_vcf;
       }
-      push @$cached, @from_vcf;
     }
 
     # add freqs from genotypes for human (1KG data)
