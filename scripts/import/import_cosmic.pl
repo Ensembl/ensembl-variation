@@ -53,7 +53,8 @@ my $dbVar = $dbh->db_handle;
 
 my $source_name = 'COSMIC';
 my $source_id = get_source_id(); # COSMIC source_id
-my $variation_set_id = get_variation_set_id(); # COSMIC variation set
+my $variation_set_cosmic = get_variation_set_id("COSMIC"); # COSMIC variation set
+my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
 my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym';
@@ -320,11 +321,13 @@ sub add_phenotype {
 }
 
 sub get_variation_set_id {
-  
+  my $type = shift;
+
   # Check if the COSMIC set already exists, else it create the entry
-  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE 'COSMIC%'});
+  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE '$type%'});
+
   if (!$variation_set_ids) {
-    die("Couldn't find the COSMIC variation set");
+    die("Couldn't find the '$type' variation set");
   }
   else {
     return $variation_set_ids->[0];
@@ -342,8 +345,8 @@ sub insert_cosmic_entries {
 
   # Insert VF
   my $stmt_vf = qq{INSERT IGNORE INTO variation_feature 
-                   (variation_id, variation_name, source_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
-                   SELECT v.variation_id, v.name, v.source_id, v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
+                   (variation_id, variation_name, source_id, variation_set_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
+                   SELECT v.variation_id, v.name, v.source_id,'$variation_set_pheno,$variation_set_cosmic', v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ?
                    FROM variation v, $temp_table c WHERE v.name=c.name};
   my $sth_vf  = $dbh->prepare($stmt_vf);
   $sth_vf->execute($allele, $default_strand);
@@ -368,6 +371,6 @@ sub insert_cosmic_entries {
   my $stmt_set = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
-  $sth_set->execute($variation_set_id, $source_id);
+  $sth_set->execute($variation_set_cosmic, $source_id);
 }
 
