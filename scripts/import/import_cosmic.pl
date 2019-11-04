@@ -181,8 +181,13 @@ while (<IN>) {
   
   $cosmic_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
   $cosmic_ins_sth->bind_param(2,$seq_region_id,SQL_INTEGER);
-  $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
-  $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  if ($class eq 'insertion' ){
+    $cosmic_ins_sth->bind_param(3,$end+1,SQL_INTEGER);
+    $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  } else {
+    $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
+    $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  }
   $cosmic_ins_sth->bind_param(5,$class_attrib_id,SQL_INTEGER);
   $cosmic_ins_sth->execute();
 
