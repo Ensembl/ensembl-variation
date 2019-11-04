@@ -282,7 +282,7 @@ sub parse_refsnp {
   }
 
   if ($config->{assign_ancestral_allele}) {
-    assign_ancestral_alleles($data->{'vfs'});
+    assign_ancestral_alleles($data->{'vfs'}, $ancestral_alleles_utils);
   }
 
   # To the QC now
@@ -297,10 +297,11 @@ sub parse_refsnp {
 # Input:
 # vfs              - variation features for the variant
 sub assign_ancestral_alleles {
-  my $vfs = shift;
+  my ($vfs, $ancestral_alleles_utils) = @_;
+  
   for my $vf (@$vfs) { 
     my $seq_name = $seq_regions_names->{$vf->{'seq_region_id'}};
-    my $ancestral_allele = ancestral_alleles_utils($seq_name, $vf->{'seq_region_start'}, $vf->{'seq_region_end'});
+    my $ancestral_allele = $ancestral_alleles_utils->assign($seq_name, $vf->{'seq_region_start'}, $vf->{'seq_region_end'});
     $vf->{'ancestral_allele'} = $ancestral_allele;
   }
 }
