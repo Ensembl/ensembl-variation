@@ -15,7 +15,6 @@
 
 use strict;
 use warnings;
-
 use Test::Exception;
 use Test::More;
 use FindBin qw($Bin);
@@ -25,7 +24,6 @@ use Bio::EnsEMBL::Variation::Population;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use FileHandle;
-
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
@@ -130,5 +128,59 @@ throws_ok { $aa->fetch_all; } qr/fetch_all cannot be used for Allele objects/, '
 my $al4 = $aa->fetch_all_by_subsnp_id('ss24191327');
 ok(scalar @$al4 == 24, 'fetch_all_by_subsnp_id');
 throws_ok { $aa->fetch_all_by_subsnp_id; } qr/name argument expected/, 'Throw on missing name argument';
+
+
+# read ESP allele frequencies from VCF
+my $dir = $multi->curr_dir();
+ok($vdba->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
+my $vca = $vdba->get_VCFCollectionAdaptor();
+my $coll = $vca->fetch_by_id('esp_GRCh37');
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$aa->db->use_vcf(1);
+
+$variation = $va->fetch_by_name('rs35099512');
+my $al5 = $aa->fetch_all_by_Variation($variation);
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @$al5
+  ],
+  [
+    'p:ESP6500:AA a:- f:0.9740 c:4153',
+    'p:ESP6500:AA a:T f:0.0260 c:111',
+    'p:ESP6500:EA a:- f:0.9687 c:7982',
+    'p:ESP6500:EA a:T f:0.0313 c:258'
+  ],
+  'get ESP allele frequency from VCF'
+);
+
+my $cdba = $multi->get_DBAdaptor('core');
+my $sa = $cdba->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome', 17); 
+my $vf = $variation->get_all_VariationFeatures->[0];
+my ($vcf_vf) = grep {$_->start == 3418000} @{$coll->get_all_VariationFeatures_by_Slice($slice)};
+is(ref($vcf_vf->vcf_record), 'Bio::EnsEMBL::IO::Parser::VCF4Tabix', 'is Bio::EnsEMBL::IO::Parser::VCF4Tabix object');
+my $al6 = $coll->get_all_Alleles_by_VariationFeature($vf, undef, $vcf_vf->vcf_record);
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4f", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @$al6
+  ],
+  [
+    'p:ESP6500:AA a:- f:0.9740 c:4153',
+    'p:ESP6500:AA a:T f:0.0260 c:111',
+    'p:ESP6500:EA a:- f:0.9687 c:7982',
+    'p:ESP6500:EA a:T f:0.0313 c:258'
+  ],
+  'get ESP allele frequency from VCF use Bio::EnsEMBL::Variation::VCFVariationFeature as argument'
+);
+
+
 done_testing();
 
