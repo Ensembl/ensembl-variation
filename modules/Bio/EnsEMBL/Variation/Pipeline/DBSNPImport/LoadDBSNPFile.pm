@@ -57,6 +57,7 @@ sub run {
   my $data_dir = $self->param_required('data_dir');
   my $rpt_dir = $self->param_required('rpt_dir');
   my $registry_file = $self->param_required('ensembl_registry');
+  my $ancestral_fasta_file = $self->param_required('ancestral_fasta_file');
   my $fasta_file = $self->param_required('fasta_file');
   my $script_dir = $self->param_required('script_dir');
 
@@ -65,6 +66,7 @@ sub run {
   $self->warning("data_dir ($data_dir)");
   $self->warning("rpt_dir ($rpt_dir)");
   $self->warning("registry_file ($registry_file)");
+  $self->warning("ancestral_fasta_file ($ancestral_fasta_file)");
   $self->warning("fasta_file ($fasta_file)");
   $self->warning("script_dir ($script_dir)");
   
@@ -83,6 +85,7 @@ sub run {
             '-registry' ,   $registry_file ,
             '-input_file', $input_file,
             '-rpt_dir' ,   $rpt_dir_run,
+            '-ancestral_fasta_file' , $ancestral_fasta_file,
             '-fasta_file', $fasta_file);
   
   $self->warning($cmd);
