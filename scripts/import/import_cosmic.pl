@@ -21,6 +21,7 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use ImportUtils qw(create);
 use DBI qw(:sql_types);
+use Text::CSV;
 
 my ( $infile, $registry_file, $version, $help );
 
@@ -146,11 +147,17 @@ else {
   open(IN,'<',$infile) or die ("Could not open $infile for reading");
 }
 
+my $csvP = Text::CSV->new({ sep_char => ',' });
+
 # Read through the file and parse out the desired fields
 while (<IN>) {
   chomp;
-  my @line = split(',',$_);
-  
+  if (!$csvP->parse($_)){
+    print STDERR "WARNING: could not parse line: $_\n";
+    next;
+  }
+  my @line = $csvP->fields();
+
   my $chr = shift(@line);
      $chr = $chr_names{$chr} if ($chr_names{$chr});
   my $start         = shift(@line);
@@ -158,6 +165,7 @@ while (<IN>) {
   my $cosv_id       = shift(@line);
   my $cosmic_id     = shift(@line);
   shift(@line); # Skip this column
+  my @phenos        = split(',', shift(@line));
   my $cosmic_class  = pop(@line);
   
   my $class = get_equivalent_class($cosmic_class,$start,$end);
@@ -184,10 +192,7 @@ while (<IN>) {
     $cosmic_syn_ins_sth->execute();
   }
   
-  foreach my $phenotype (@line) {
-    next if $phenotype =~ /^Substitution/ || $phenotype =~ /^Insertion/
-      || $phenotype =~ /^Deletion/ || $phenotype =~ /^Complex/;
-
+  foreach my $phenotype (@phenos) {
     $phenotype =~ s/_/ /g;
     $phenotype = ucfirst($phenotype)." $phe_suffix";
 
