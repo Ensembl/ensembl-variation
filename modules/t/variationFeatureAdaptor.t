@@ -174,13 +174,13 @@ my $vf2_name = 'rs2299222';
   my $vf2_name = 'rs2299222';
   $vfa->db->include_failed_variations(0);
   my $vfs2 = $vfa->fetch_all();
-  cmp_ok(scalar @$vfs2, "==", 1294, "vf by all - count (-failed)");
+  cmp_ok(scalar @$vfs2, "==", 1295, "vf by all - count (-failed)");
   cmp_ok($vfs2->[0]->variation_name(), "eq", $vf2_name, "vf by all - check first variation name");
 
   #test fetch all with inc failed my $vf_nameF='rs111067473';
   $vfa->db->include_failed_variations(1);
   my $vfs = $vfa->fetch_all(); 
-  cmp_ok(scalar @$vfs, "==", 1301, "vf by all - count (+failed)");
+  cmp_ok(scalar @$vfs, "==", 1302, "vf by all - count (+failed)");
 }
 
 # test fetch all somatic
@@ -283,8 +283,7 @@ my $vfs8c = $vfa->fetch_all_by_Slice_VariationSet_SO_terms($slice_set, $vs);
 ok( scalar ( grep { $_->variation_name() eq 'rs2255888' } @$vfs8c) == 1, "vf by slice & variation set");
 
 my $vfs8d = $vfa->fetch_all_by_Slice_Source($slice_set, $source);
-ok(scalar @$vfs8d == 2, "fetch_all_by_Slice_Source");
-
+ok(scalar @$vfs8d == 3, "fetch_all_by_Slice_Source");
 ## Slice Somatic ##
 
 # test fetch all somatic by Slice constraint
