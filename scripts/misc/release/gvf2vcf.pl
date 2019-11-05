@@ -48,6 +48,8 @@ my $config = {};
 my $gvf_line;
 GetOptions(
     $config,
+    'help|h',
+
     'gvf_file=s',
     'vcf_file=s',
     'species=s',
@@ -58,7 +60,6 @@ GetOptions(
     'global_maf',
     'evidence',
     'clinical_significance',
-    'validation_status',
 
     'structural_variations|svs',
 
@@ -68,14 +69,12 @@ GetOptions(
     'polyphen',
 
     'individual=s',
-    'population=s',
-    'variation_id',
-    'allele_string',
-    'set_name',
-    'somatic',
-    'debug',
 
-) or die "Error: Failed to parse command-line args. Try --help for usage instructions\n";
+) or pod2usage(1);
+
+# Print usage message if help requested or no args
+my $args = scalar @ARGV;
+pod2usage(1) if ($config->{'help'} || !$args);
 
 main($config);
 
@@ -330,11 +329,6 @@ sub parse_gvf_line {
       'ancestral_allele' => 'AA',
      };
 
-    if (0) {
-      foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
-        add_info($vcf_line, $key, $gvf_line->{$key});
-      }
-    }
     while (my ($attribute, $key) = each %$attributes) {
         if (defined $gvf_line->{$attribute}) {
             my $value = $gvf_line->{$attribute};
@@ -776,10 +770,6 @@ sub print_header {
       print $fh "##INFO=<ID=CSQ,Number=.,Type=String,Description=\"Consequence annotations from Ensembl's Variant Effect Pipeline. Format=$format\">\n";
     }
 
-    if ($config->{population}) {
-       print $fh '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">', "\n";
-    }
-
     if ($config->{structural_variations}) {
         print $fh join("\n", (
             '##INFO=<ID=SVTYPE,Number=1,Type=String,Description=“Type of structural variant”>',
@@ -803,4 +793,108 @@ sub print_header {
     }
 }
 
+__END__
 
+=head1 NAME
+
+load_dbsnp.pl
+
+=head1 DESCRIPTION
+
+The script is run as part of the GVF and VCF dumping pipeline. The pipeline generates the list of
+required arguments for the script which are required to convert a specific GVF file into a VCF file. 
+
+
+=head1 SYNOPSIS
+
+gvf2vcf.pl [arguments]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>
+
+Displays this documentation
+
+=item B<--gvf_file FILE>
+
+GVF file which will be converted into a VCF file
+
+=item B<--vcf_file FILE>
+
+New VCF file
+
+=item B<--species >
+
+Species for which to genereate VCF file
+
+=item B<--registry FILE>
+
+Registry file which provides database connections
+to core and variation databases from which the GVF
+file was dumped. Database connections are
+required for populating meta information in the VCF
+file.
+
+=item B<--ancestral_allele|aa>
+
+Parse ancestral allele from GVF file and
+store in new VCF file
+
+=item B<--ancestral_allele_file FILE>
+
+Provide the ancestral genome FASTA file for looking up
+ancestral alleles. This is required for indels where
+the allele string or position of the reference have changed
+after formatting alleles to match the VCF format
+
+=item B<--global_maf>
+
+Parse minor allele, minor allele frequency and minor allele count
+from GVF file and store in new VCF file
+
+=item B<--evidence>
+
+Parse evidence attributes (Multiple observations, Frequency, Cited,
+Phenotype or Disease, 1000 Genomes, ESP, ExAC, gnomAD, TOPMed) from GVF file and store in new VCF file
+
+=item B<--clinical_significance>
+
+Parse clinical significance attributes from GVF file and
+sotre in VCF file. Available attributes are described here:
+https://www.ensembl.org/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance
+
+=item B<--structural_variations|svs>
+
+Parse structural variants from GVF and store in VCF
+
+=item B<--incl_consequences>
+
+Parse variant consequences from GVF and store in VCF
+
+=item B<--protein_coding_details>
+
+Parse protein consequences from GVF and store in VCF
+
+=item B<--sift>
+
+Parse SIFT annotations from GVF and store in VCF
+
+=item B<--polyphen>
+
+Parse PolyPhen annotations from GVF and store in VCF
+
+=item B<--individual STRING>
+
+Individual name for which genotypes are stored in the GVF file.
+The name will be stored in the VCF header line.
+
+=back
+
+=head1 CONTACT
+  Please email comments or questions to the public Ensembl
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+  Questions may also be sent to the Ensembl help desk at
+  <https://www.ensembl.org/Help/Contact>.
+=cut
