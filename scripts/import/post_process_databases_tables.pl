@@ -269,19 +269,21 @@ sub post_process_publication {
   my $source_ad = $reg->get_adaptor($species, 'variation', 'source');
   my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
 
-  process_phenotype_feature($reg, $species, $dba, $var_ad, $pub_ad, $source_ad, $attrib_adaptor);
-  process_phenotype_feature_attrib($reg, $species, $dba, $var_ad, $pub_ad, $source_ad, $attrib_adaptor);
+  # Fetch all citation_source attribs
+  my $citation_attribs = get_citation_attribs($dba);
+
+  process_phenotype_feature($species, $dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
+  process_phenotype_feature_attrib($species, $dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
 
 }
 
 sub process_phenotype_feature {
-  my $reg = shift;
   my $species = shift;
   my $dba = shift;
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $attrib_adaptor = shift;
+  my $citation_attribs = shift;
 
   ## Get studies from phenotype_feature
   my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type
@@ -311,13 +313,15 @@ sub process_phenotype_feature {
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
-      $source_attrib_id = get_source_attrib_id($reg, $study_type, $species, $attrib_adaptor);
+      $source_attrib_id = $citation_attribs{$study_type};
+      die "No attrib of type 'citation_source' was found for '$study_type'!\n" unless defined $source_attrib_id;
     }
     else{
       # Get source name from source table (dbGaP)
       my $source_obj = $source_ad->fetch_by_dbID($source_id);
       my $source_name = $source_obj->name();
-      $source_attrib_id = get_source_attrib_id($reg, $source_name, $species, $attrib_adaptor);
+      $source_attrib_id = $citation_attribs{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
 
     # Get publication that is not in publication table 
@@ -360,13 +364,12 @@ sub process_phenotype_feature {
 }
 
 sub process_phenotype_feature_attrib {
-  my $reg = shift;
   my $species = shift;
   my $dba = shift;
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $attrib_adaptor = shift;
+  my $citation_attribs = shift;
 
   my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
                                                  from attrib_type
@@ -454,7 +457,8 @@ sub process_phenotype_feature_attrib {
         # Get source name from source table (ClinVar)
         my $source_obj = $source_ad->fetch_by_dbID($source_id);
         my $source_name = $source_obj->name();
-        $source_attrib_id = get_source_attrib_id($reg, $source_name, $attrib_adaptor);
+        $source_attrib_id = $citation_attribs{$source_name};
+        die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
       }
 
       # Clean title before insertion
@@ -505,17 +509,34 @@ sub get_epmc_data{
   return $xs->XMLin($response->{content} );
 }
 
-sub get_source_attrib_id{
-  my $reg = shift;
-  my $source = shift;
-  my $species = shift;
-  my $attrib_adaptor = shift;
+# Fetch all attribs that have type citation_source
+sub get_citation_attribs {
+  my $dba = shift;
 
-  my $attrib_id = $attrib_adaptor->attrib_id_for_type_value('citation_source',$source);
+  my %attribs;
+  my $attrib_type_id;
 
-  die "No attribute of type 'citation_source' was found for '$source'!\n" unless defined $attrib_id;
+  my $stm_1 = $dba->dbc()->prepare(qq[ SELECT attrib_type_id FROM attrib_type WHERE code = 'citation_source' ]);
+  $stm_1->execute();
+  my $attrib_type = $stm_1->fetchall_arrayref();
 
-  return $attrib_id;
+  die "No attribute of type 'citation_source' was found in attrib_type table!\n" unless defined $attrib_type->[0];
+
+  $attrib_type_id = $attrib_type->[0]->[0];
+
+  my $stm_2 = $dba->dbc()->prepare(qq[ SELECT attrib_id,value FROM attrib where attrib_type_id = $attrib_type_id ]);
+  $stm_2->execute();
+  my $citation_attribs = $stm_2->fetchall_arrayref();
+
+  die "No attribute of type 'citation_source' was found in attrib table!\n" unless defined $citation_attribs->[0];
+
+  foreach my $data (@{$citation_attribs}){
+    my $id = $data->[0];
+    my $name = $data->[1];
+    $attribs{$name} = $id;
+  }
+
+  return \%attribs;
 }
 
 sub usage {
