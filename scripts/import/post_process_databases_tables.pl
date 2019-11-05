@@ -497,6 +497,7 @@ sub get_epmc_data{
   return undef unless defined $id && $id =~/\d+/;
 
   my $xs = XML::Simple->new();
+  # Get from source medline
   my $request = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ext_id:' . $id . '%20src:med';
 
   my $response = $http->get($request, {
