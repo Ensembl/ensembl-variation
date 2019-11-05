@@ -41,7 +41,8 @@ my $species = 'human';
 my $var_table = 'HGMD_PUBLIC_variation';
 my $vf_table  = 'HGMD_PUBLIC_variation_feature';
 my $va_table  = 'HGMD_PUBLIC_variation_annotation';
-my $short_set = 'ph_hgmd_pub';
+my $short_set_hgmd = 'ph_hgmd_pub';
+my $short_set_pheno = 'ph_variants';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
@@ -56,6 +57,11 @@ my $source_id = ($select_source_sth->fetchrow_array)[0];
 die ("Source not found") if (!defined($source_id));
 die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hgmd_coord.pl' before running the current script.\n") if ($dbh->do(qq{show tables like "$var_table";}) != 1);
 
+# Get variation_set_id
+my $hgmd_set_id = get_variation_set_id($short_set_hgmd);
+my $pheno_set_id = get_variation_set_id($short_set_pheno);
+die ("HGMD set not found") if (!defined($hgmd_set_id));
+die ("All phenotype set ot found") if (!defined($pheno_set_id));
 
 # Main
 add_variation();
@@ -131,6 +137,7 @@ sub add_variation_feature {
         seq_region_end,
         seq_region_strand,
         allele_string,
+        variation_set_id,
         map_weight,
         variation_id,
         variation_name,
@@ -141,6 +148,7 @@ sub add_variation_feature {
         vf.seq_region_start,
         vf.seq_region_end,
         1,
+        '$pheno_set_id,$hgmd_set_id',
         vf.allele_string,
         vf.map_weight,
         v.new_var_id,
@@ -313,24 +321,27 @@ sub add_attrib {
   $update_vf_sth->execute($source_id) or die $!;
 }
 
+sub get_variation_set_id {
+  my $short = shift;
+
+  # Check if the COSMIC set already exists, else it create the entry
+  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT v.variation_set_id
+      FROM variation_set v, attrib a
+      WHERE v.short_name_attrib_id=a.attrib_id
+      AND a.value = $short});
+
+  if (!$variation_set_ids) {
+    die("Couldn't find the '$short' variation set");
+  }
+  else {
+    return $variation_set_ids->[0];
+  }
+}
+
 
 sub add_set {
   
-  my $variation_set_id;
-  
-  # Get variation_set_id
-  my $select_set_stmt = qq{
-        SELECT v.variation_set_id
-        FROM variation_set v, attrib a
-        WHERE v.short_name_attrib_id=a.attrib_id 
-          AND a.value = ?
-  };
-  my $sth1 = $dbh->prepare($select_set_stmt);
-  $sth1->bind_param(1,$short_set,SQL_VARCHAR);
-  $sth1->execute();
-  $sth1->bind_columns(\$variation_set_id);
-  $sth1->fetch();
-  return if (!defined($variation_set_id));
+  return if (!defined($hgmd_set_id));
   
   # Insert into variation_set_variation
   my $insert_set_stmt = qq{ 
@@ -339,7 +350,7 @@ sub add_set {
       FROM variation WHERE source_id=?
   };
   my $sth2 = $dbh->prepare($insert_set_stmt);
-  $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
+  $sth2->bind_param(1,$hgmd_set_id,SQL_INTEGER);
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
   $sth2->execute();
 }
