@@ -228,7 +228,7 @@ sub get_equivalent_class {
   my $start = shift;
   my $end   = shift;
 
-  my @type_parts = split(' ',$type);
+  my @type_parts = split(',',$type);
   $type = $type_parts[0];
 
   my $class = $default_class;
