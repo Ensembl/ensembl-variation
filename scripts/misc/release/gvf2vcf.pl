@@ -28,18 +28,20 @@
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::Slice;
-use Bio::EnsEMBL::Variation::VariationFeature;
-use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
-use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::DB::HTS::Faidx;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
+use Bio::EnsEMBL::Utils::Slice;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
-use Getopt::Long;
-use FileHandle;
+use Bio::EnsEMBL::Variation::VariationFeature;
+
 use Compress::Zlib;
+use FileHandle;
+use Getopt::Long;
 use List::Util qw(first);
+use Pod::Usage qw(pod2usage);
 $| = 1;
 
 my $config = {};
