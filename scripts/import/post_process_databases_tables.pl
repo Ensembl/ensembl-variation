@@ -267,7 +267,6 @@ sub post_process_publication {
   my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
   my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
   my $source_ad = $reg->get_adaptor($species, 'variation', 'source');
-  my $attrib_adaptor = $reg->get_adaptor($species, 'variation', 'attribute');
 
   # Fetch all citation_source attribs
   my $citation_attribs = get_citation_attribs($dba);
@@ -450,6 +449,7 @@ sub process_phenotype_feature_attrib {
         my $var_name = $pheno_data->[0]->[1];
 
         my $v = $var_ad->fetch_by_name($var_name);
+        # Add variant if it exists - avoid undef values
         if (defined $v){
           push @variant_list, $v;
         }
