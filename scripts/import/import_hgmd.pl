@@ -148,8 +148,8 @@ sub add_variation_feature {
         vf.seq_region_start,
         vf.seq_region_end,
         1,
-        '$pheno_set_id,$hgmd_set_id',
         vf.allele_string,
+        '$pheno_set_id,$hgmd_set_id',
         vf.map_weight,
         v.new_var_id,
         v.name,
@@ -324,16 +324,14 @@ sub add_attrib {
 sub get_variation_set_id {
   my $short = shift;
 
-  # Check if the COSMIC set already exists, else it create the entry
-  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT v.variation_set_id
+  my $variation_set_ids = $dbh->selectrow_arrayref(qq{SELECT v.variation_set_id
       FROM variation_set v, attrib a
       WHERE v.short_name_attrib_id=a.attrib_id
-      AND a.value = $short});
+      AND a.value = '$short'});
 
   if (!$variation_set_ids) {
     die("Couldn't find the '$short' variation set");
-  }
-  else {
+  } else {
     return $variation_set_ids->[0];
   }
 }
