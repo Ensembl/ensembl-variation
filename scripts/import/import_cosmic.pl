@@ -53,7 +53,7 @@ my $dbVar = $dbh->db_handle;
 
 my $source_name = 'COSMIC';
 my $source_id = get_source_id(); # COSMIC source_id
-my $variation_set_cosmic = get_variation_set_id("COSMIC"); # COSMIC variation set
+my $variation_set_cosmic = get_variation_set_id($source_name); # COSMIC variation set
 my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
@@ -232,7 +232,7 @@ sub get_equivalent_class {
   $type = $type_parts[0];
 
   my $class = $default_class;
-
+  # map the COSMIC class type into the predefined set of class types in %class_mapping
   if ($type eq 'Substitution') {
     $class = ($start == $end) ? $class_mapping{$type} : $class_mapping{'Indel'};
   }
@@ -323,7 +323,6 @@ sub add_phenotype {
 sub get_variation_set_id {
   my $type = shift;
 
-  # Check if the COSMIC set already exists, else it create the entry
   my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE '$type%'});
 
   if (!$variation_set_ids) {
