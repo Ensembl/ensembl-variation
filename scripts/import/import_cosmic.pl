@@ -21,6 +21,7 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use ImportUtils qw(create);
 use DBI qw(:sql_types);
+use Text::CSV;
 
 my ( $infile, $registry_file, $version, $help );
 
@@ -52,7 +53,8 @@ my $dbVar = $dbh->db_handle;
 
 my $source_name = 'COSMIC';
 my $source_id = get_source_id(); # COSMIC source_id
-my $variation_set_id = get_variation_set_id(); # COSMIC variation set
+my $variation_set_cosmic = get_variation_set_id($source_name); # COSMIC variation set
+my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
 my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym';
@@ -146,11 +148,17 @@ else {
   open(IN,'<',$infile) or die ("Could not open $infile for reading");
 }
 
+my $csvP = Text::CSV->new({ sep_char => ',' });
+
 # Read through the file and parse out the desired fields
 while (<IN>) {
   chomp;
-  my @line = split(',',$_);
-  
+  if (!$csvP->parse($_)){
+    print STDERR "WARNING: could not parse line: $_\n";
+    next;
+  }
+  my @line = $csvP->fields();
+
   my $chr = shift(@line);
      $chr = $chr_names{$chr} if ($chr_names{$chr});
   my $start         = shift(@line);
@@ -158,6 +166,7 @@ while (<IN>) {
   my $cosv_id       = shift(@line);
   my $cosmic_id     = shift(@line);
   shift(@line); # Skip this column
+  my @phenos        = split(',', shift(@line));
   my $cosmic_class  = pop(@line);
   
   my $class = get_equivalent_class($cosmic_class,$start,$end);
@@ -173,8 +182,13 @@ while (<IN>) {
   
   $cosmic_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
   $cosmic_ins_sth->bind_param(2,$seq_region_id,SQL_INTEGER);
-  $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
-  $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  if ($class eq 'insertion' ){
+    $cosmic_ins_sth->bind_param(3,$end+1,SQL_INTEGER);
+    $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  } else {
+    $cosmic_ins_sth->bind_param(3,$start,SQL_INTEGER);
+    $cosmic_ins_sth->bind_param(4,$end,SQL_INTEGER);
+  }
   $cosmic_ins_sth->bind_param(5,$class_attrib_id,SQL_INTEGER);
   $cosmic_ins_sth->execute();
 
@@ -184,10 +198,7 @@ while (<IN>) {
     $cosmic_syn_ins_sth->execute();
   }
   
-  foreach my $phenotype (@line) {
-    next if $phenotype =~ /^Substitution/ || $phenotype =~ /^Insertion/
-      || $phenotype =~ /^Deletion/ || $phenotype =~ /^Complex/;
-
+  foreach my $phenotype (@phenos) {
     $phenotype =~ s/_/ /g;
     $phenotype = ucfirst($phenotype)." $phe_suffix";
 
@@ -217,11 +228,11 @@ sub get_equivalent_class {
   my $start = shift;
   my $end   = shift;
 
-  my @type_parts = split(' ',$type);
+  my @type_parts = split(',|\s',$type);
   $type = $type_parts[0];
 
   my $class = $default_class;
-
+  # map the COSMIC class type into the predefined set of class types in %class_mapping
   if ($type eq 'Substitution') {
     $class = ($start == $end) ? $class_mapping{$type} : $class_mapping{'Indel'};
   }
@@ -310,11 +321,12 @@ sub add_phenotype {
 }
 
 sub get_variation_set_id {
-  
-  # Check if the COSMIC set already exists, else it create the entry
-  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE 'COSMIC%'});
+  my $type = shift;
+
+  my $variation_set_ids = $dbVar->selectrow_arrayref(qq{SELECT variation_set_id FROM variation_set WHERE name LIKE '$type%'});
+
   if (!$variation_set_ids) {
-    die("Couldn't find the COSMIC variation set");
+    die("Couldn't find the '$type' variation set");
   }
   else {
     return $variation_set_ids->[0];
@@ -332,8 +344,8 @@ sub insert_cosmic_entries {
 
   # Insert VF
   my $stmt_vf = qq{INSERT IGNORE INTO variation_feature 
-                   (variation_id, variation_name, source_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
-                   SELECT v.variation_id, v.name, v.source_id, v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
+                   (variation_id, variation_name, source_id, variation_set_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
+                   SELECT v.variation_id, v.name, v.source_id,'$variation_set_pheno,$variation_set_cosmic', v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ?
                    FROM variation v, $temp_table c WHERE v.name=c.name};
   my $sth_vf  = $dbh->prepare($stmt_vf);
   $sth_vf->execute($allele, $default_strand);
@@ -358,6 +370,6 @@ sub insert_cosmic_entries {
   my $stmt_set = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
-  $sth_set->execute($variation_set_id, $source_id);
+  $sth_set->execute($variation_set_cosmic, $source_id);
 }
 
