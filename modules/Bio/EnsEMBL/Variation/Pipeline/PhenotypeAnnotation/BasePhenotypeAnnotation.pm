@@ -74,6 +74,7 @@ sub new {
     "skip_sets"     => 1,
   }, $class;
   $self->{pubmed_prefix} = "PMID:";
+  $self->{gwas} = 0; #flag for GWAS specific behaviour
 
   return $self;
 }
@@ -215,6 +216,25 @@ sub skip_sets {
   $self->{skip_sets} = $skip_set if defined $skip_set;
   return $self->{skip_sets};
 }
+
+
+=head2 gwas
+
+Arg [1]    : boolean $gwas (optional)
+             The new gwas flag
+Example    : $gwas_flag = $obj->gwas()
+Description: Get/set gwas flag
+Returntype : boolean
+Exceptions : none
+
+=cut
+
+sub gwas {
+  my ($self, $gwas) = @_;
+  $self->{gwas} = $gwas if defined $gwas;
+  return $self->{gwas};
+}
+
 
 
 =head2 logFH
@@ -705,6 +725,13 @@ sub _add_phenotypes {
   my $extra_cond = '';
   my $left_join = '';
 
+  #for gwas variants
+  my ($pheno_set, $gwas_set) ='';
+  if ($self->gwas) {
+    $pheno_set = $self->_get_set_ids("ph_variants");
+    $gwas_set = $self->_get_set_ids($source_info->{set});
+  }
+
   # add special joins for checking certain sources
   if ($source_info->{source_name_short} =~ m/GWAS/i) {
     $left_join = qq{
@@ -785,12 +812,19 @@ sub _add_phenotypes {
     values (?,?,?,?)
    };
 
+  my $update_vf_stmt = qq {
+    UPDATE variation_feature vf
+    SET vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,')
+    WHERE vf.variation_feautre_id = ?
+  };
+
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
   my $pf_check_sth = $db_adaptor->dbc->prepare($pf_check_stmt);
   my $pf_ins_sth   = $db_adaptor->dbc->prepare($pf_ins_stmt);
   my $attrib_ins_sth = $db_adaptor->dbc->prepare($attrib_ins_stmt);
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
   my $ontology_accession_ins_sth = $db_adaptor->dbc->prepare($ontology_accession_ins_stmt);
+  my $vf_up_sth = $db_adaptor->dbc->prepare($update_vf_stmt);
 
   $self->{sql_statements}{st_ins_sth} = $st_ins_sth;
 
@@ -856,7 +890,7 @@ sub _add_phenotypes {
     $pf_check_sth->bind_param(5,$study_id,SQL_INTEGER);
 
     # For nhgri-ebi gwas data
-    if ($source_info->{source_name_short} =~ m/GWAS/i) {
+    if ($self->gwas) {
       $pf_check_sth->bind_param(6,$phenotype->{"p_value"},SQL_VARCHAR);
     }
 
@@ -897,6 +931,13 @@ sub _add_phenotypes {
         $sth->bind_param(3,$attrib_type,SQL_VARCHAR);
         $sth->execute();
       }
+
+      #update variation feature sets
+      if ($self->gwas) {
+        $vf_up_sth->bind_param(1,$coord->{vf_id},SQL_INTEGER);
+        $vf_up_sth->execute();
+      }
+
     }
   }
 
@@ -1018,10 +1059,12 @@ sub _get_coords {
 
   my $tables;
   my $where_clause;
+  my $id = '';
 
   my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
 
   if($type eq 'Variation') {
+    $id = 'f.variation_feature_id,' if $self->gwas;
     $tables = 'variation_feature f, variation v';
     $where_clause = 'v.variation_id = f.variation_id AND v.name = ?';
   }
@@ -1036,7 +1079,7 @@ sub _get_coords {
 
   my $sth = $db_adaptor->dbc->prepare(qq{
     SELECT
-      f.seq_region_id, f.seq_region_start, f.seq_region_end, f.seq_region_strand
+      $id f.seq_region_id, f.seq_region_start, f.seq_region_end, f.seq_region_strand
     FROM
       $tables
     WHERE
@@ -1044,19 +1087,27 @@ sub _get_coords {
   });
 
   my $coords = {};
-  my ($sr_id, $start, $end, $strand);
+  my ($f_id, $sr_id, $start, $end, $strand);
 
   foreach my $id (@object_ids) {
     $sth->bind_param(1,$id,SQL_VARCHAR);
     $sth->execute();
-    $sth->bind_columns(\$sr_id, \$start, \$end, \$strand);
+    if ($self->gwas ){
+      $sth->bind_columns(\$f_id, \$sr_id, \$start, \$end, \$strand);
+    } else {
+      $sth->bind_columns(\$sr_id, \$start, \$end, \$strand);
+    }
 
-    push @{$coords->{$id}}, {
-      seq_region_id => $sr_id,
-      seq_region_start => $start,
-      seq_region_end => $end,
-      seq_region_strand => $strand
-    } while $sth->fetch();
+    while ( $sth->fetch) {
+      my %tmp = (
+        seq_region_id => $sr_id,
+        seq_region_start => $start,
+        seq_region_end => $end,
+        seq_region_strand => $strand
+      );
+      $tmp{vf_id} = $f_id if $self->gwas;
+      push @{$coords->{$id}}, \%tmp;
+    }
   }
 
   $sth->finish();
@@ -1135,6 +1186,26 @@ sub _get_attrib_types {
   $sth->finish;
 
   return \@tmp_types;
+}
+
+# fetch set ids from db
+sub _get_set_ids {
+  my $self = shift;
+  my $short_name = shift;
+
+  my $variation_set_ids = $self->variation_db_adaptor->dbc->db_handle->selectrow_arrayref(qq{
+    SELECT variation_set_id
+    FROM variation_set vs JOIN attrib a
+    ON vs.short_name_attrib_id = a.attrib_id
+    WHERE a.value = '$short_name'
+  });
+
+  if (!$variation_set_ids) {
+    die("Couldn't find the $short_name variation set\n");
+  } else {
+    return $variation_set_ids->[0];
+  }
+
 }
 
 # clean up + search for phenotype in db, if not found it gets inserted
