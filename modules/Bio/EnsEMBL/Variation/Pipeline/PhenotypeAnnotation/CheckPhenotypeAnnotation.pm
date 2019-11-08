@@ -124,18 +124,23 @@ sub check_phenotype_description{
     print $report "WARNING: Phenotype id:$l->[0] has empty description!\n" if $l->[1] eq '';
 
     my $full = $l->[1];
-    $l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(length($l->[1]) >0);
+  #  my @matches = $l->[1] =~ /\(|\)|\/|\.|\; |\+|\'|\:|\@|\*|\%/gm;
+    # ' can be ok: example: Kupffer's vesicle
+    # / can be ok: example: G1/S transition of mitotic cell cycle
+    # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
+    my @matches = $l->[1] =~ /\(|\)|\.|\;|\+|\@|\*|\%/gm;
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
-    $l->[1] =~ /.*\n.*/;
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(length($l->[1]) >0);
+    @matches = $l->[1] =~ /.*\n.*/;
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(scalar(@matches) >0);
 
     # check for phenotype descriptions suggesting no phenotype
     print $report "WARNING: Phenotype : $full (id:$l->[0]) is not useful \n" if !checkNonTerms( $l->[1] );
 
     # check for unsupported individual character
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters \n" if !checkUnsupportedChar( $l->[1] );
+    my $unsupportedChar = getUnsupportedChar($l->[1]);
+    print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters: $unsupportedChar \n" if defined($unsupportedChar);
 
   }
 
@@ -161,7 +166,7 @@ sub checkNonTerms {
   my @junk = ("None", "Not provided", "not specified", "Not in OMIM", "Variant of unknown significance", "not_provided", "?",".", "ClinVar: phenotype not specified");
 
   for my $check (@junk){
-    if (index($desc, $check) != -1) {
+    if ( lc($desc) eq lc($check) ) {
       $is_ok  = 0;
       return $is_ok;
     }
@@ -171,19 +176,19 @@ sub checkNonTerms {
 }
 
 
-=head2 checkUnsupportedChar
+=head2 getUnsupportedChar
 
   Arg [1]    : string $description
                The phenotype description to be checked.
-  Example    : checkUnsupportedChar($description)
+  Example    : getUnsupportedChar($description)
   Description: Check for unsupported characters in the phenotype description,
-               returns 1 if nothing was found, 0 if at least one unsupported char was matched.
+               returns nothing if nothing was found or first unsupported char that was matched.
   Returntype : boolean
   Exceptions : none
 
 =cut
 
-sub checkUnsupportedChar {
+sub getUnsupportedChar {
   my $desc = shift;
 
   my $is_ok = 1;
@@ -203,10 +208,13 @@ sub checkUnsupportedChar {
       ($ascii_val  > 90 && $ascii_val < 97) ||
       $ascii_val  > 122)){
       $is_ok = 0;
-      $i++;
     }
+    if (!$is_ok) {
+      return chr($ascii_val);
+    }
+    $i++;
   }
-  return $is_ok;
+  return;
 }
 
 
