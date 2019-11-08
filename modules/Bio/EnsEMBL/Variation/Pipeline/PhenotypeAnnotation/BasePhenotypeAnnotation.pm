@@ -728,7 +728,7 @@ sub _add_phenotypes {
   my $left_join = '';
 
   #for gwas variants
-  my ($pheno_set, $gwas_set) ='';
+  my ($pheno_set, $gwas_set) = ('','');
   if ($self->gwas) {
     $pheno_set = $self->_get_set_ids("ph_variants");
     $gwas_set = $self->_get_set_ids($source_info->{set});
