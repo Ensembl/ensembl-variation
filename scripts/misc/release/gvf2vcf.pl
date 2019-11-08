@@ -44,6 +44,7 @@ use List::Util qw(first);
 use Pod::Usage qw(pod2usage);
 $| = 1;
 
+my $args = scalar @ARGV;
 my $config = {};
 my $gvf_line;
 GetOptions(
@@ -54,7 +55,7 @@ GetOptions(
     'vcf_file=s',
     'species=s',
     'registry=s',
-
+    'fasta_file=s',
     'ancestral_allele|aa',
     'ancestral_allele_file=s',
     'global_maf',
@@ -72,14 +73,21 @@ GetOptions(
 
 ) or pod2usage(1);
 
-# Print usage message if help requested or no args
-my $args = scalar @ARGV;
 pod2usage(1) if ($config->{'help'} || !$args);
 
 main($config);
 
 sub main {
-    my $config = shift;
+  my $config = shift;
+   
+  if ($config->{'fasta_file'}) {
+    my $fai_index = Bio::DB::HTS::Faidx->new($config->{'fasta_file'});
+    die("Unable to get FASTA index") if (!$fai_index);
+    $config->{fasta_index} = $fai_index;
+  } else {
+    print "ref checking not done\n";
+  } 
+
     init_db_connections($config);
     init_data($config);
     my $fh_vcf = FileHandle->new('> ' . $config->{vcf_file});
@@ -219,8 +227,8 @@ sub init_data {
         if ($ontology) {
           my $terms = $ontology->fetch_all_by_name($name, 'SO');
           foreach my $term (@$terms) {
-            $term->definition =~ m/^"(.*)\."\s\[.*\]$/;
-            $definition = $1; 
+            $definition = $term->definition;
+#            $definition =~ m/^"(.*)\."\s\[.*\]$/;
           }
         } 
         $config->{header_sv_class}->{$name} = $definition;
@@ -266,6 +274,7 @@ sub read_gvf_file {
     while (<$fh_gvf>) {
         chomp;
         my $line = $_;
+        next if ($line =~ /^##/);
         parse_gvf_line($config, $line);
     }
     $fh_gvf->close(); 
@@ -276,7 +285,6 @@ sub parse_gvf_line {
     my $config = shift;
     my $line = shift;
 
-    next if ($line =~ /^##/);
     my $gvf_line = get_gvf_line(\$line);
     my $vcf_line = {};
 
@@ -291,7 +299,7 @@ sub parse_gvf_line {
     if ($config->{structural_variations}) {
         add_svs_annotation($config, $vcf_line, $gvf_line);
         print_vcf_line($config, $vcf_line);
-        next;
+        return;
     }
 
     add_position_and_alleles($config, $vcf_line, $gvf_line);
@@ -376,8 +384,7 @@ sub add_position_and_alleles {
 
     my $seq_region_name = $gvf_line->{seq_id};
     if ($ref eq '.' || $ref eq '~') {
-        my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$start-$end");
-        $ref = $slice->seq();
+      $ref = _get_seq($config, $seq_region_name, $start, $end);
     }
 
     my $slice = _get_Slice($config, $seq_region_name);
@@ -411,6 +418,30 @@ sub add_position_and_alleles {
     $vcf_line->{REF} = $vcf_ref;
     $vcf_line->{ALT} = $vcf_alt;
     $vcf_line->{look_up} = ();
+}
+
+sub _get_seq {
+  my ($config, $seq_region_name, $start, $end) = @_;
+  my $seq;
+  my $region = "$seq_region_name:$start-$end";
+  if ($config->{fasta_index}) {
+    my $fasta_index = $config->{fasta_index};
+    $seq = $fasta_index->get_sequence_no_length($region);
+  } else {
+    my $sa = $config->{slice_adaptor};
+    my $slice = $sa->fetch_by_toplevel_location($region);
+    $seq = $slice->seq();
+  }
+  if (!defined $seq) {
+    warn "Couldn't get sequence for region $region\n";
+    my $repeat = ($end - $start + 1);
+    if ($repeat <= 0) {
+      warn "Region $region is smaller than or equal to 0\n";
+      return '';
+    }
+    $seq = 'N' x $repeat;
+  }
+  return $seq;
 }
 
 sub _get_Slice {
@@ -601,9 +632,7 @@ sub add_svs_annotation {
     if ($pos == 0) {
         $pos = 1;
     }
-    my $sa = $config->{slice_adaptor};
-    my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$pos-$pos");
-    my $base = $slice->seq() || 'N';
+    my $base = _get_seq($config, $seq_region_name, $pos, $pos);
     $vcf_line->{'#CHROM'} = $gvf_line->{seq_id};
     $vcf_line->{REF} = $base;
     $vcf_line->{POS} = $pos;
@@ -772,11 +801,11 @@ sub print_header {
 
     if ($config->{structural_variations}) {
         print $fh join("\n", (
-            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description=“Type of structural variant”>',
-            '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=“Imprecise structural variation”>',
-            '##INFO=<ID=END,Number=1,Type=Integer,Description=“End position of the variant described in this record”>',
-            '##INFO=<ID=ST_ACC,Number=.,Type=String,Description=“Study Accession. Study dbVar ID (estd or nstd)”>',
-            '##INFO=<ID=Parent,Number=.,Type=String,Description=“The structural variant id. It identifies the region of variation.”>',
+            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">',
+            '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">',
+            '##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">',
+            '##INFO=<ID=ST_ACC,Number=.,Type=String,Description="Study Accession. Study dbVar ID (estd or nstd)">',
+            '##INFO=<ID=Parent,Number=.,Type=String,Description="The structural variant id. It identifies the region of variation.">',
         )), "\n";
         foreach my $name (sort keys %{$config->{header_sv_class}}) {
           my $definition = $config->{header_sv_class}->{$name};
@@ -836,6 +865,12 @@ to core and variation databases from which the GVF
 file was dumped. Database connections are
 required for populating meta information in the VCF
 file.
+
+=item B<--fasta_file FILE>
+Provide fasta file for sequence look ups which
+otherwise would be achieved by database queries
+which are slower. It is recommended to provide
+a fasta file for human file conversions.
 
 =item B<--ancestral_allele|aa>
 
