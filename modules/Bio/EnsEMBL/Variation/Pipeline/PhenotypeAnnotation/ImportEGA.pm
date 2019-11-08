@@ -84,6 +84,7 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'EGA',        #source name in the variation db
                   source_name_short => 'EGA',  #source identifier in the pipeline
+                  data_types => 'study',
                   );
   $source_info{source_version} = strftime "%Y%m", localtime; # it is current month
 

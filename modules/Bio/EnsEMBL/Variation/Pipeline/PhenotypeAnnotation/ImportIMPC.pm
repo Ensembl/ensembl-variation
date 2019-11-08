@@ -64,6 +64,7 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'IMPC',        #source name in the variation db
                   source_name_short => 'IMPC',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   #source version is set based on the EBI fetched data hash response_date
                   );
 

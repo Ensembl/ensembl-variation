@@ -68,6 +68,7 @@ sub fetch_input {
                   source_status => 'somatic',
                   source_name => 'Cancer Gene Census',     #source name in the variation db
                   source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
+                  data_types => 'phenotype_feature,study',
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;

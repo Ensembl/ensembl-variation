@@ -119,6 +119,7 @@ sub fetch_input {
                   #source_version  will be set based on the date of the fetched input file (year/month/day-> yyyymmdd)
                   source_name => 'OMIA',        #source name in the variation db
                   source_name_short => 'OMIA',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   );
 
   my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};

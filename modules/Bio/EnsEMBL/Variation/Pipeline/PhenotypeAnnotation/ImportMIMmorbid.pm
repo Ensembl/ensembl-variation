@@ -68,6 +68,7 @@ sub fetch_input {
                   source_name => 'MIM morbid',      #source name in the variation db
                   source_name_short => 'MIMmorbid', #source identifier in the pipeline
                   source_version => $dateStr,
+                  data_types => 'phenotype_feature',
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;

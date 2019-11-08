@@ -64,6 +64,7 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'MGI',        #source name in the variation db
                   source_name_short => 'MGI',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   #source version is set based on EBI fetch data hash response_date
                   );
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;

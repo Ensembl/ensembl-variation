@@ -70,6 +70,7 @@ sub fetch_input {
 
                   source_name => 'RGD',        #source name in the variation db
                   source_name_short => 'RGD',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   );
   #NOTE: smart map between species and RGD files Currently only RAT is imported, could be extended for the rest.
   my %rgd_names_qtl = (rattus_norvegicus =>'RAT',

@@ -70,6 +70,7 @@ sub fetch_input {
 
                   source_name => 'ZFIN',        #source name in the variation db
                   source_name_short => 'ZFIN',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   );
   my $inputFile = 'phenoGeneCleanData_fish.txt';
   my $zfin_url = 'https://zfin.org/downloads/'.$inputFile;
