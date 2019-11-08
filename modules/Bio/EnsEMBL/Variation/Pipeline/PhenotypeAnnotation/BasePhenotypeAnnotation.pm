@@ -447,7 +447,8 @@ sub get_or_add_source {
       SET name=?,
         description=?,
         url=?,
-        version=?
+        version=?,
+        data_types=?
       WHERE
         source_id=?
     };
@@ -456,6 +457,7 @@ sub get_or_add_source {
                                 $source_info->{source_description},
                                 $source_info->{source_url},
                                 $source_info->{source_version},
+                                $source_info->{data_types},
                                 $source_id);
   }
 
