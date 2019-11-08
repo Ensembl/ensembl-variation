@@ -71,6 +71,7 @@ sub fetch_input {
                   set => 'ph_nhgri',
                   source_name       => 'NHGRI-EBI GWAS catalog', #source name in the variation db
                   source_name_short => 'GWAS',                   #source identifier in the pipeline
+                  data_types => 'phenotype_feature,study',
                 # source_version is set based on file name
                   );
 

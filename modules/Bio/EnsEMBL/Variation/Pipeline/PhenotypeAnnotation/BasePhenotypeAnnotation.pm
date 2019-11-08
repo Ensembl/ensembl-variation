@@ -422,15 +422,17 @@ sub get_or_add_source {
   $sth->fetch();
 
   if (!defined($source_id)) {
+    my $data_types = defined($source_info->{data_types}) ? $source_info->{data_types} : "";
     $stmt = qq{
       INSERT INTO
-        source (name, description, url, somatic_status, version )
+        source (name, description, url, somatic_status, version, data_types )
       VALUES (
         '$source_info->{source_name}',
         '$source_info->{source_description}',
         '$source_info->{source_url}',
         '$source_info->{source_status}',
-        $source_info->{source_version}
+        $source_info->{source_version},
+        '$data_types'
       )
     };
     $db_adaptor->dbc->do($stmt);
@@ -730,10 +732,8 @@ sub _add_phenotypes {
   if ($self->gwas) {
     $pheno_set = $self->_get_set_ids("ph_variants");
     $gwas_set = $self->_get_set_ids($source_info->{set});
-  }
 
-  # add special joins for checking certain sources
-  if ($source_info->{source_name_short} =~ m/GWAS/i) {
+    # add special joins for checking certain sources
     $left_join = qq{
       LEFT JOIN
       (
@@ -815,7 +815,7 @@ sub _add_phenotypes {
   my $update_vf_stmt = qq {
     UPDATE variation_feature vf
     SET vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,')
-    WHERE vf.variation_feautre_id = ?
+    WHERE vf.variation_feature_id = ?
   };
 
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
