@@ -814,7 +814,8 @@ sub _add_phenotypes {
 
   my $update_vf_stmt = qq {
     UPDATE variation_feature vf
-    SET vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,')
+    SET vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,'),
+    vf.display =1
     WHERE vf.variation_feature_id = ?
   };
 
@@ -932,8 +933,8 @@ sub _add_phenotypes {
         $sth->execute();
       }
 
-      #update variation feature sets
       if ($self->gwas) {
+        # update variation feature sets and dispaly flag
         $vf_up_sth->bind_param(1,$coord->{vf_id},SQL_INTEGER);
         $vf_up_sth->execute();
       }
