@@ -440,7 +440,12 @@ sub _bvfo_preds {
   
   # within feature
   my $wf = overlap($vf_start, $vf_end, $feat->{start}, $feat->{end}) ? 1 : 0;
-  $self->_update_preds($bvfo_preds, 'within_feature', $wf, \$pred_digest);
+  if ($wf && ($vf_start <= $feat->{start} && $vf_end >= $feat->{end})) {
+    #check if it is a total overlap
+    $self->_update_preds($bvfo_preds, 'complete_overlap', 1, \$pred_digest);
+  } else {
+    $self->_update_preds($bvfo_preds, 'within_feature', $wf, \$pred_digest);
+  }
   
   # use a complex if/else structure to avoid executing unnecessary code
   if($bvfo_preds->{within_feature}) {
