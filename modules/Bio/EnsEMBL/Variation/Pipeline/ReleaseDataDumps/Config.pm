@@ -90,7 +90,7 @@ sub write_config_file {
         $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'variation_id', 'allele_string'];
+        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
     }
     $config->{$species} = $species_config;
     
