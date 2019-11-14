@@ -1761,6 +1761,17 @@ sub fetch_by_hgvs_notation {
   throw ("Could not parse the HGVS notation $hgvs") 
       unless (defined($reference) && defined($type) && defined($description));
 
+  # ClinVar notations we don't support:
+  # 88957372-?_89042944+?dup
+  # (?145413072)(145592772_145596903)del
+  if($description =~ m/(\-\?\_.+\?)|(\(\?\_.+\))/) {
+    throw ("HGVS notation is not supported");
+  }
+
+  # Imprecise insertions are not supported
+  if($description =~ m/\(.+\_.+\)ins/) {
+    throw ("HGVS notation for insertion \'$description\' is not supported");
+  }
 
   my $extra;
   if($description =~ m/\(.+\)/) {        
@@ -1837,7 +1848,7 @@ sub fetch_by_hgvs_notation {
 
   elsif($type =~ m/g|m/i) {
     ($start, $end) = _parse_hgvs_genomic_position($description) ;  
-    
+
     throw ("Region requested must be smaller than 5kb") unless ($end - $start < 5000);
         
     ## grab reference allele; second call after "||" allows for LRG regions to be fetched
@@ -2036,7 +2047,7 @@ sub _hgvs_from_components {
   }
   elsif ($description =~ m/ins/i && $description !~ m/del/i) {
      # insertion: the start & end positions are inverted by convention
-      if($end > $start){ ($start, $end  ) = ( $end , $start); }   
+      if($end > $start){ ($start, $end  ) = ( $end , $start); }
   }
   elsif ($description =~ m/inv/i) {
     $ref_allele = $refseq_allele; 
