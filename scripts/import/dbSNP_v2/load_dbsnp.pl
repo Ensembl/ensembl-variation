@@ -92,9 +92,11 @@ my $lu_info = get_lu_info($dbh_var);
 my ($num_lines) = parse_dbSNP_file($config);
 
 # Close open filehandles
-for my $ma_type ('update', 'log') {
-  my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
-  $fh->close();
+if ($config->{'assembly'} eq 'GRCh38') {
+  for my $ma_type ('update', 'log') {
+    my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
+    $fh->close();
+  }
 }
 
 report_summary($config, $num_lines);
@@ -129,19 +131,25 @@ sub init_reports {
     die("$config->{'error_file'} already exists. Please rename or delete\n");
   }
 
+  # For GRCh38 the 1000Genomes minor allele needs flipping
   # Files for updates and logs of 1000Genomes minor allele flipping
-  for my $ma_type ('update', 'log') {
-    my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
-    if (-e "$rpt_dir/$filename") {
+  if ($config->{'assembly'} eq 'GRCh38') {
+    print "Flip of 1000Genomes minor alleles for assembly $config->{'assembly'}\n";
+    for my $ma_type ('update', 'log') {
+      my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
+      if (-e "$rpt_dir/$filename") {
         die("$rpt_dir/$filename already exists. Please rename or delete\n");
+      }
+      my $fh = FileHandle->new("$rpt_dir/$filename", 'w');
+      if (! $fh) {
+        die("Unable to open $rpt_dir/$filename");
+      } else {
+        print "minor allele $ma_type file = $rpt_dir/$filename\n";
+        $config->{join('-', 'ma', $ma_type, 'fh')} = $fh;
+      }
     }
-    my $fh = FileHandle->new("$rpt_dir/$filename", 'w');
-    if (! $fh) {
-      die("Unable to open $rpt_dir/$filename");
-    } else {
-      print "minor allele $ma_type file = $rpt_dir/$filename\n";
-      $config->{join('-', 'ma', $ma_type, 'fh')} = $fh;
-    }
+  } else {
+    print "No flip of 1000Genomes minor alleles for assembly $config->{'assembly'}\n";
   }
 }
 
@@ -255,12 +263,15 @@ sub parse_refsnp {
   # 1000Genomes data
   $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
 
-  # If the 1000Genomes data has a minor_allele, check if
-  # a flip is needed. This assumes that the assembly is GRCh38
-  # TODO - add an assembly check
-  #      - add a flag if flipping should be done
-  if (defined $data->{'1000Genomes'} &&
-      $data->{'1000Genomes'}->{'minor_allele'}) {
+  # If: 
+  # - the assembly is GRCh38
+  # - the 1000Genomes data has a minor_allele
+  # check if a flip is needed. 
+  # TODO - add a flag if flipping should be done if for GRCh38
+  #        no flip is needed
+  if (($config->{'assembly'} eq 'GRCh38') &&
+       defined $data->{'1000Genomes'} &&
+       $data->{'1000Genomes'}->{'minor_allele'}) {
     my $align_diff = get_align_diff($rs_json);
     if ($align_diff) {
       my $old_minor_allele = $data->{'1000Genomes'}->{'minor_allele'};
@@ -1608,7 +1619,7 @@ sub configure {
 
     'species=s',
     'registry|r=s',
-    
+    'assembly|a=s',
     'no_db_load',
     'no_ref_check',
     'no_assign_ancestral_allele'
@@ -1631,7 +1642,7 @@ sub configure {
   # Set defaults
   $config->{'species'} ||= 'homo_sapiens';
   $config->{'debug'} ||= 0;
-
+  $config->{'assembly'} ||= 'GRCh38';
   $config->{'db_load'} = 1;
   if (exists $config->{'no_db_load'}) {
     $config->{'db_load'} = 0;
@@ -1659,6 +1670,11 @@ sub configure {
   if (! -d $config->{'rpt_dir'}) {
     die("ERROR: Report directory does not exist ($config->{'rpt_dir'})\n");
   }
+
+  if ($config->{'assembly'} !~ /^(GRCh38|GRCh37)$/) {
+      die("ERROR: Assembly is invalid ($config->{'assembly'}). Please specify GRCh38 or GRCh37");
+  }
+
   if ($config->{'ref_check'}) {
     if (! defined $config->{'fasta_file'}) {
       pod2usage({ -message => "Mandatory argument (fasta_file) is missing", 
@@ -2144,6 +2160,10 @@ JSON file provided by dbSNP
 =item B<--rpt_dir DIR>
 
 Directory to store summary report and error logs
+
+=item B<--assembly ASSEMBLY>
+
+Specify assembly to use. GRCh38 (default) or GRCh37
 
 =item B<--ancestral_fasta_file FILE>
 
