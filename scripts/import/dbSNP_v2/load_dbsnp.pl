@@ -670,7 +670,9 @@ sub qc_refsnp {
   my ($config, $lu_info, $rs_data, $fai_index) = @_;
   $rs_data->{'evidence_attribs'} = get_evidence($lu_info, $rs_data); 
   $rs_data->{'map_weight'} = get_map_weight($ref_regions, $rs_data) if ($add_map_weight);
-  $rs_data->{'num_par'} = get_vf_par($rs_data);
+  $rs_data->{'num_par'} = get_vf_par($rs_data, $config->{'assembly'},
+                                     $lu_info->{'chrY_seq_region_id'});
+
   # Warn if map_weight = num_par
   if ($rs_data->{'num_par'} && $rs_data->{'num_par'} == $rs_data->{'map_weight'}) {
       my $info = join(";",
@@ -785,23 +787,39 @@ sub get_map_weight {
 }
 
 sub get_vf_par {
-  my ($rs_data) = @_;
+  my ($rs_data, $assembly, $Y_seq_region_id) = @_;
+
   my $num_par = 0;
+
+  my ($Y_PAR1_seq_region_start, $Y_PAR1_seq_region_end);
+  my ($Y_PAR2_seq_region_start, $Y_PAR2_seq_region_end);
+
+  if ($assembly eq 'GRCh38') {
+    $Y_PAR1_seq_region_start = 10001 ;
+    $Y_PAR1_seq_region_end = 2781479;
+    $Y_PAR2_seq_region_start = 56887903;
+    $Y_PAR2_seq_region_end = 57217415;
+  } elsif ($assembly eq 'GRCh37') {
+    $Y_PAR1_seq_region_start = 10001;
+    $Y_PAR1_seq_region_end = 2649520;
+    $Y_PAR2_seq_region_start = 59034050;
+    $Y_PAR2_seq_region_end = 59363566;
+  }
 
   # Loop the vfs and count the regions that are PAR
   for my $vf (@{$rs_data->{'vfs'}}) {
     $vf->{'par'} = 0;
-    if ($vf->{'seq_region_id'} == 131553) {
-      if ($vf->{'seq_region_start'} >= 10001
-          && $vf->{'seq_region_end'}   <= 2781479
-          && $vf->{'seq_region_start'} <= 2781479
-          && $vf->{'seq_region_end'} >= 10001) {
+    if ($vf->{'seq_region_id'} == $Y_seq_region_id) {
+      if ($vf->{'seq_region_start'} >= $Y_PAR1_seq_region_start
+          && $vf->{'seq_region_end'}   <= $Y_PAR1_seq_region_end
+          && $vf->{'seq_region_start'} <= $Y_PAR1_seq_region_end
+          && $vf->{'seq_region_end'} >= $Y_PAR1_seq_region_start) {
         $num_par++;
         $vf->{'par'} = 1;
-      } elsif ($vf->{'seq_region_start'} >= 56887903
-          && $vf->{'seq_region_end'} <=   57217415 
-          && $vf->{'seq_region_start'} <= 57217415 
-          && $vf->{'seq_region_end'} >= 56887903) {
+      } elsif ($vf->{'seq_region_start'} >= $Y_PAR2_seq_region_start
+          && $vf->{'seq_region_end'} <=   $Y_PAR2_seq_region_end
+          && $vf->{'seq_region_start'} <= $Y_PAR2_seq_region_end
+          && $vf->{'seq_region_end'} >= $Y_PAR2_seq_region_start) {
         $num_par++;
         $vf->{'par'} = 1;
       } 
@@ -1598,6 +1616,16 @@ sub get_seq_region_names {
   return (\%seq_region);
 }
 
+# For a given chr look up the seq_region
+sub get_seq_region_chr {
+  my ($dbh, $chr) = @_;
+  my $sth = $dbh->prepare(qq{SELECT seq_region_id FROM seq_region WHERE name = ?});
+  $sth->execute($chr) || die "Error getting seq_region_id for chr $chr";
+  my ($seq_region_id) = $sth->fetchrow_array();
+  $sth->finish();
+  return $seq_region_id;
+}
+
 # Get command line options
 # Get information for run
 sub configure {
@@ -1834,7 +1862,8 @@ sub get_lu_info {
   my %lu_info;
 
   $lu_info{'evidence_ids'} = get_evidence_attribs($dbh);
-  $lu_info{'failed_set_id'} = find_failed_variation_set_id($dbh);  
+  $lu_info{'failed_set_id'} = find_failed_variation_set_id($dbh);
+  $lu_info{'chrY_seq_region_id'} = get_seq_region_chr($dbh, 'Y');
   return \%lu_info;
 }
 
