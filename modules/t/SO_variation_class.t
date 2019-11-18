@@ -31,6 +31,7 @@ my %tests = (
     'AA/TT'                 => 'substitution',
     'A/YY'                  => 'indel',
     'GA/TTT/ACCCC'          => 'indel',
+    'CTT/C'                 => 'indel',  # Not a deletion as first base kept
     '-/A'                   => 'insertion',
     '-/TAAG'                => 'insertion',
     '-/(LARGEINSERTION)'    => 'insertion',
