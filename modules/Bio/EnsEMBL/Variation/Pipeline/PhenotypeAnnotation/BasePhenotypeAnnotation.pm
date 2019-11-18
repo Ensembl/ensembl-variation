@@ -479,7 +479,6 @@ sub get_or_add_source {
 sub save_phenotypes {
   my ($self, $source_info, $input_data) = @_;
 
-  my $core_dba = $self->core_db_adaptor;
   my $phenotype_dba =  $self->variation_db_adaptor->get_PhenotypeAdaptor;
 
   my $set = defined($source_info->{set}) ? $source_info->{set} : undef;
@@ -705,6 +704,7 @@ sub _sql_to_file{
 sub _add_phenotypes {
   my ($self, $data, $source_info) = @_;
 
+  my $core_dba      = $self->core_db_adaptor;
   my $db_adaptor    = $self->variation_db_adaptor;
 
   my $phenotypes    = $data->{phenotypes};
@@ -723,6 +723,20 @@ sub _add_phenotypes {
     )
     VALUES (
       $source_id, ?, ?, ?
+    )
+  };
+
+  my $st_sel_sr_stmt = qq{
+    SELECT seq_region_id, name
+    FROM seq_region
+    WHERE seq_region_id = ?
+  };
+
+  my $st_ins_sr_stmt = qq{
+    INSERT INTO
+      seq_region (seq_region_id, name)
+    VALUES (
+      ?, ?
     )
   };
 
@@ -828,6 +842,8 @@ sub _add_phenotypes {
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
   my $ontology_accession_ins_sth = $db_adaptor->dbc->prepare($ontology_accession_ins_stmt);
   my $vf_up_sth = $db_adaptor->dbc->prepare($update_vf_stmt);
+  my $sr_ins_sth    = $db_adaptor->dbc->prepare($st_ins_sr_stmt);
+  my $sr_sel_sth   = $core_dba->dbc->prepare($st_sel_sr_stmt);
 
   $self->{sql_statements}{st_ins_sth} = $st_ins_sth;
 
@@ -851,6 +867,10 @@ sub _add_phenotypes {
 
   my $total = scalar @sorted;
   my $i = 0;
+
+  # check gene seq region ID
+  my $seq_region_ids = $self->_get_seq_regions($db_adaptor);
+  my %missing_seq_regions;
 
   while (my $phenotype = shift(@sorted)) {
     $self->_progress($i++, $total);
@@ -941,10 +961,32 @@ sub _add_phenotypes {
         $vf_up_sth->execute();
       }
 
+      #check seq region id exists
+      if (! defined ($seq_region_ids->{$coord->{seq_region_id}}) ) {
+        $missing_seq_regions{$coord->{seq_region_id}} = 1;
+      }
+
+    }
+  }
+
+  foreach my $key (keys %missing_seq_regions){
+    $sr_sel_sth->bind_param(1,$key);
+    $sr_sel_sth->execute();
+    my $res = $sr_sel_sth->fetchrow_arrayref();
+
+    if ($res->[0] eq $key) {
+      $sr_ins_sth->bind_param(1, $key,SQL_INTEGER);
+      $sr_ins_sth->bind_param(2, $res->[1],SQL_VARCHAR);
+      $sr_ins_sth->execute();
+      $self->print_errFH("$key seq_region inserted in variation db\n") if ($self->{debug});
+    } else {
+      $self->print_errFH("$key seq_region missing in core and variation db!\n") if ($self->{debug});
     }
   }
 
   $self->_end_progress();
+  my $missingN = scalar keys(%missing_seq_regions);
+  $self->print_logFH("$missingN new seq_regions added\n") if ($self->{debug});
   $self->print_logFH( "$self->{study_count} new studies added\n") if ($self->{debug});
   $self->print_logFH( "$phenotype_feature_count new phenotype_features added\n") if ($self->{debug});
 
@@ -1055,6 +1097,22 @@ sub _add_set {
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
   $sth2->execute();
 }
+
+# fetch seq regions
+sub _get_seq_regions {
+  my ($self, $db_adaptor) = @_;
+
+  my $st_get_sr_stmt = qq{
+    SELECT seq_region_id, name
+    FROM seq_region
+  };
+  my $sr_get_sth = $db_adaptor->dbc->prepare($st_get_sr_stmt);
+  $sr_get_sth->execute();
+  my $result = $sr_get_sth->fetchall_hashref('seq_region_id');
+
+  return $result;
+}
+
 
 # fetch coordinates for variation, gene, or structural_variation
 sub _get_coords {
