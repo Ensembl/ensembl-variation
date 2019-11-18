@@ -377,7 +377,13 @@ sub SO_variation_class {
                     # A/-, A/(LARGEDELETION)
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
-
+                elsif (
+                    (grep {( $_ =~ /^$ref/)
+                       && length($ref) != length($_)} @alleles) ==
+                       scalar(@alleles)) {
+                    # AA/AAAA/AAAAAA
+                    $class = $ref_correct ? SO_TERM_INSERTION : SO_TERM_INDEL;
+                }
                 elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
                     # AA/TT   => SO_TERM_SUBSTITUTION
                     # AA/TTTT => SO_TERM_INDEL

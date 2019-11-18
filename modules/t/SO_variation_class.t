@@ -39,6 +39,9 @@ my %tests = (
     '-/AA/ATGCG'            => 'insertion',
     '(508 BP INSERTION)'    => 'insertion',
     '-/INSERTION'           => 'insertion',
+    'T/TT'                  => 'insertion',
+    'TT/TTTT'               => 'insertion',
+    'TT/TTTT/TTTTT'         => 'insertion',
     '-/(LARGEDELETION)'     => 'deletion', # dbSNP stylee
     '(1657 BP DELETION)/-'  => 'deletion', # COSMIC stylee
     'ATTAGC/-'              => 'deletion',
@@ -65,4 +68,3 @@ for my $allele_string (keys %tests) {
 }
 
 done_testing();
-
