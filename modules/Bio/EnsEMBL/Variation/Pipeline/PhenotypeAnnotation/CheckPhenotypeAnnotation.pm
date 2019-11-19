@@ -128,7 +128,8 @@ sub check_phenotype_description{
     # ' can be ok: example: Kupffer's vesicle
     # / can be ok: example: G1/S transition of mitotic cell cycle
     # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
-    my @matches = $l->[1] =~ /\(|\)|\.|\;|\+|\@|\*|\%/gm;
+    # . can be ok: example: Blond vs. brown hair color (from gwas)
+    my @matches = $l->[1] =~ /\(|\)|\;|\+|\@|\*|\%/gm;
     print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
