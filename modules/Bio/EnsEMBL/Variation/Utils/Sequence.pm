@@ -400,6 +400,22 @@ sub SO_variation_class {
                     }
                     $class = $same_size == 1 ? SO_TERM_SUBSTITUTION : SO_TERM_INDEL;
                 }
+                elsif (
+                    (grep { (
+                              (
+                                ($_ =~ /^$ref/)
+                                     ||
+                                ($ref =~ /${_}$/)
+                              ) && length($ref) != length($_)
+                            )
+                            ||
+                            ($_ eq '-')
+                          } @alleles ) == scalar(@alleles)) {
+                    # AA/-/AAA/ deletion and insertion
+                    # A/-/AA
+                    #
+                    $class = SO_TERM_INDEL;
+                }
             }
             elsif ($ref =~ /DEL/) {
                 unless (grep { $_ !~ /-/ } @alleles) {
