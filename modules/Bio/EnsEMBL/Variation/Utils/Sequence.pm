@@ -378,9 +378,16 @@ sub SO_variation_class {
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
                 elsif (
-                    (grep {( $ref =~ /${_}$/ || $_ eq '-')
-                       && length($ref) != length($_)} @alleles) ==
-                       scalar(@alleles)) {
+                    (grep { (
+                              (
+                                ($ref =~ /${_}$/)
+                                   ||
+                                ($ref =~ /^${_}/)
+                              ) && length($ref) != length($_)
+                            )
+                            ||
+                            ($_ eq '-')
+                          } @alleles ) == scalar(@alleles)) {
                     # AAAA/AA/- multiple deletion alleles
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
@@ -413,7 +420,6 @@ sub SO_variation_class {
                           } @alleles ) == scalar(@alleles)) {
                     # AA/-/AAA/ deletion and insertion
                     # A/-/AA
-                    #
                     $class = SO_TERM_INDEL;
                 }
             }
