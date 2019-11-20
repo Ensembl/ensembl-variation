@@ -77,7 +77,7 @@ my %tests = (
     'TTT/T/TT'              => 'deletion',  # dbSNP v2 stype indel
 );
 
-for my $allele_string (keys %tests) {
+for my $allele_string (sort keys %tests) {
     my $expected = $tests{$allele_string};
     is(SO_variation_class($allele_string, 1), $expected, "$allele_string => $expected") ;
     if ($expected =~ /insertion|deletion/) {
