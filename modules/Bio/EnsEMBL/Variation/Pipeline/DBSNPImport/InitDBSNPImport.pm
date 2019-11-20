@@ -42,7 +42,7 @@ use File::Path qw(make_path);
 use Bio::EnsEMBL::Variation::Utils::Date;
 use POSIX;
 
-my @chrs = (1..22, 'X', 'Y', 'MT', 'other');
+my @chrs = (1..22, 'X', 'Y', 'MT');
 
 sub fetch_input {
   my $self = shift;
