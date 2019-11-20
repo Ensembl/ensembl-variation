@@ -405,7 +405,7 @@ sub add_position_and_alleles {
     # We need to correct the ancestral allele accordingly
     my $ancestral_allele = $gvf_line->{ancestral_allele};
     if ($ref ne $vcf_ref || $start != $vcf_start) {
-      if ($ancestral_allele) {
+      if ($ancestral_allele && $config->{ancestral_allele_file}) {
         my $ancestral_allele_utils = $config->{ancestral_allele_utils};
         my $ancestral_allele_end = $start + length($vcf_ref) - 1;
         my $vcf_ancestral_allele = $ancestral_allele_utils->assign($seq_region_name, $start, $ancestral_allele_end);
