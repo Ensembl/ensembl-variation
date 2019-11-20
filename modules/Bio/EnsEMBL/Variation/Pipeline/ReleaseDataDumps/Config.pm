@@ -57,8 +57,6 @@ sub write_config_file {
     # somatic
     # incl consequences: protein info: sift, polyphen
     # evidence, clinical_significance, ancestral_allele, minor_allele_freq, validation_status
-    # populations:
-    # individuals:
     # sets: phenotypes, clinically_associated
     my $config = {};
 
