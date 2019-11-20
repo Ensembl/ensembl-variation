@@ -24,11 +24,15 @@ This directory contains sorted and bgzip-compressed VCF (Variant Call Format) fi
         drug-response or histocompatibility
 
 Additionally, we provide for human:
-    - files containing allele frequencies from 1000 genomes phase 3 populations
-      and from populations from the Exome Sequencing Project
-    - NOTE: files containg allele frequencies from several of the HapMap
-      populations have been discontinued and are available from our archive sites,
-      the latest being ftp://ftp.ensembl.org/pub/release-97/variation/vcf/homo_sapiens/
+    - 1000GENOMES-phase_3.vcf.gz containing allele frequencies from 1000
+      genomes phase 3 populations
+    - NOTE:
+        - files containg allele frequencies from several of the HapMap
+          populations have been discontinued and are available from our archive sites,
+          the latest being ftp://ftp.ensembl.org/pub/release-97/variation/vcf/homo_sapiens/
+        - files containing allele frequencies from populations from the
+          Exome Sequencing Project have been discontinued and are available
+          from our archive sites, the latest being ftp://ftp.ensembl.org/pub/release-98/variation/vcf/homo_sapiens/
 If available for this species, the file includes information on:
     - ancestral_allele
     - evidence
@@ -81,5 +85,6 @@ Example content from the human germline VCF dump is shown below:
 1       8512    rs16753440      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
 1       8552    rs16753441      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
 1       8610    rs14743337      A       G       .       .       dbSNP_140;TSA=SNV;E_Freq
+
 
 
