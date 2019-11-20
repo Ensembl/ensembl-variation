@@ -1528,4 +1528,129 @@ sub _iri2acc{
   return $acc;
 }
 
+
+# Methods for QC checks
+=head2 get_new_results
+
+  Arg [1]    : hashref $previous (optional)
+               The previous status counts of the analysis.
+  Example    : $new_counts = $obj->get_new_results()
+  Description: Run all the counting SQL on the new database.
+  Returntype : hashref of new counts
+  Exceptions : none
+
+=cut
+
+sub get_new_results {
+  my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
+
+  my $dbc     = $self->variation_db_adaptor->dbc;
+  my $source = $self->param('source');
+
+  my %new;  ## hold some of the new counts to store
+
+  ## counts based on type and source
+  my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
+                                          from phenotype_feature pf, source s
+                                          where pf.source_id = s.source_id
+                                          group by s.name, pf.type ];
+
+  ## counts on phenotypes relevant to all species
+  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
+  foreach my $table (@tables) {
+    my $count_st = qq[ select count(*) from $table];
+    $new{"$table\_count"}  = _count_results($dbc, $count_st);
+    unless($new{"$table\_count"} > 0){  ## report & die if total failure
+        $self->print_logFH("WARNING: no entries found in $table table\n");
+    }
+  }
+
+  # get grouped counts
+  my $sth = $dbc->prepare($phenotype_feature_grouped_count_st);
+  $sth->execute();
+  my $dat = $sth->fetchall_arrayref();
+  foreach my $l (@{$dat}){
+    $new{phenotype_feature_count_details}{$l->[0]."_".$l->[1]} = $l->[2];
+  }
+
+  return \%new;
+}
+
+=head2 get_old_results
+
+  Example    : $obj->get_old_results()
+  Description: Check internal production database for previous phenotype annotation import information
+               for this species.
+  Returntype : hashref of previous counts
+  Exceptions : none
+
+=cut
+
+sub get_old_results {
+  my  $self = shift;
+
+  return $self->{previous_result} if defined $self->{previous_result};
+
+  my $int_dba ;
+  eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
+
+  unless (defined $int_dba){
+    $self->warning('No internal database connection found to write status ');
+    return;
+  }
+
+  my %previous_result;
+
+  my $result_adaptor = $int_dba->get_ResultAdaptor();
+  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
+
+  foreach my $result (@{$res}){
+
+    if ($result->parameter()){
+      $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
+    } else {
+      $previous_result{ $result->result_type() } = $result->result_value();
+    }
+  }
+
+  $self->{previous_result} =\%previous_result;
+
+  return $self->{previous_result};
+}
+
+=head2 _count_results
+
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBConnection $dbc
+               The new variation database connection
+  Arg [2]    : string $st
+               The SQL statement to be run.
+  Example    : $obj->_count_results($dbc, $st)
+  Description: Takes SQL statements to count the rows in a table or count rows grouped
+               by an attribute in the table. It returns either the total number of rows in the
+               table or a hash of attribute => row count depending on input.
+  Returntype : interger or hashref
+  Exceptions : none
+
+=cut
+
+sub _count_results{
+  my ($dbc, $st) = @_;
+
+  my $sth = $dbc->prepare($st);
+  $sth->execute();
+  my $dat = $sth->fetchall_arrayref();
+
+  if(defined $dat->[0]->[1]){
+    my %count;
+    foreach my $l (@{$dat}){
+        $count{$l->[0]} = $l->[1];
+    }
+    return \%count;
+  }
+  else{
+    return $dat->[0]->[0];
+  }
+}
+
+
 1;

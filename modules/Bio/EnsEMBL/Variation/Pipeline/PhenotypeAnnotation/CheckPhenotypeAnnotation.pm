@@ -46,32 +46,43 @@ use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species
 my $source;
 my $workdir;
 my $report;
+my $count_ok = 1;
 
 sub fetch_input {
   my $self = shift;
-  $source = $self->required_param('source');
+
+  $source = $self->param('source');
   $workdir = $self->param('workdir');
-  $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
+  my $logPipeName;
+  if (defined $source) {
+    $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
+    $logPipeName = "log_import_debug_pipe_".$source->{source_name}."_".$self->param('species');
+  } else {
+    $workdir = $self->param('pipeline_dir');
+    $logPipeName = "log_import_debug_pipe_".$self->param('species');
+  }
+
+  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
+
+  open (my $logFH, ">", $workdir."/REPORT_QC.txt") || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
+  $self->logFH($logFH);
+  $self->pipelogFH($pipelogFH);
 }
 
 sub run {
   my $self = shift;
 
-  my $dbh = $self->get_species_adaptor('variation')->dbc;
+  my $dbh = $self->variation_db_adaptor->dbc;
+  my $time = strftime("%Y-%m-%d %H:%M:%S", localtime);
+  $self->print_logFH("Running time: $time\n");
 
-  open $report, ">$workdir/REPORT_QC.txt"||die "Failed to open report file for summary info :$!\n";
-  print $report "Running time: ", strftime("%Y-%m-%d %H:%M:%S", localtime), "\n";
+  $self->print_logFH("\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n");
+  $self->check_phenotype_description($dbh);
+  $self->print_logFH("\n");
+  $self->check_fk($dbh);
+  $self->check_source();
 
-  print $report "\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n";
-  check_phenotype_description($dbh);
-  print $report "\n";
-  check_fk($dbh);
-
-  $self->param('output_ids', { source => $self->required_param('source'),
-                      species => $self->required_param('species'),
-                      workdir => $workdir,
-                    });
-  close $report;
 }
 
 
@@ -79,24 +90,39 @@ sub run {
 sub write_output {
   my $self = shift;
 
+  #if decrease number of entries, then stop the flow
+  if (!$count_ok){
+    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
+                       "PLEASE check import and redo import if needed!");
+    close($self->logFH) if defined $self->logFH ;
+    close($self->pipelogFH) if defined $self->pipelogFH ;
+    return;
+  }
+
+  #if source specific check, then flow to next import
+  if (defined $source && $source->{source_name} eq 'IMPC'){
+    $self->dataflow_output_id($self->param('output_ids'), 1);
+    close($self->logFH) if defined $self->logFH ;
+    close($self->pipelogFH) if defined $self->pipelogFH ;
+    return;
+  }
+
   # if species is an 'ontology' term species then move to dataflow 2
   my %import_species = &species;
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
     if ($self->param('debug_mode')) {
-      open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species'));
-      print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for adding ontology accessions (ontology_mapping)\n";
-      close ($logPipeFH);
+      $self->pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for adding ontology accessions (ontology_mapping)\n");
     }
     $self->dataflow_output_id($self->param('output_ids'), 2);
   } else {
     if ($self->param('debug_mode')) {
-      open (my $logPipeFH, ">>", $workdir."/"."log_import_debug_pipe_".$source->{source_name}."_".$self->param('species')) || die ("Could not open file for appending: $!\n");
-      print $logPipeFH "Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n";
-      close ($logPipeFH);
+      $self->pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n");
     }
     $self->dataflow_output_id($self->param('output_ids'), 3);
   }
+  close($self->logFH) if defined $self->logFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 }
 
 
@@ -112,16 +138,16 @@ sub write_output {
 =cut
 
 sub check_phenotype_description{
-  my $dbh = shift;
+  my ($self,$dbh) = @_;
 
   my $pheno_ext_sth = $dbh->prepare(qq[ select phenotype_id, description from phenotype ]);
   $pheno_ext_sth->execute()||die;
 
   my $ph =  $pheno_ext_sth->fetchall_arrayref();
   foreach my $l (@{$ph}){
-    print $report "WARNING: Phenotype id:$l->[0] has no description!\n" unless defined $l->[1];
+    $self->print_logFH("WARNING: Phenotype id:$l->[0] has no description!\n") unless defined $l->[1];
     next unless defined $l->[1];
-    print $report "WARNING: Phenotype id:$l->[0] has empty description!\n" if $l->[1] eq '';
+    $self->print_logFH("WARNING: Phenotype id:$l->[0] has empty description!\n") if $l->[1] eq '';
 
     my $full = $l->[1];
   #  my @matches = $l->[1] =~ /\(|\)|\/|\.|\; |\+|\'|\:|\@|\*|\%/gm;
@@ -129,19 +155,20 @@ sub check_phenotype_description{
     # / can be ok: example: G1/S transition of mitotic cell cycle
     # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
     # . can be ok: example: Blond vs. brown hair color (from gwas)
-    my @matches = $l->[1] =~ /\(|\)|\;|\+|\@|\*|\%/gm;
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n" if(scalar(@matches) >0);
+    # + can be ok: example: decreased KLRG1+ CD8 alpha beta T cell number
+    my @matches = $l->[1] =~ /\(|\)|\;|\@|\*|\%/gm;
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n") if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
     @matches = $l->[1] =~ /.*\n.*/;
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n" if(scalar(@matches) >0);
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n") if(scalar(@matches) >0);
 
     # check for phenotype descriptions suggesting no phenotype
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) is not useful \n" if !checkNonTerms( $l->[1] );
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] );
 
     # check for unsupported individual character
     my $unsupportedChar = getUnsupportedChar($l->[1]);
-    print $report "WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters: $unsupportedChar \n" if defined($unsupportedChar);
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) has suspect start or unsupported characters: $unsupportedChar \n") if defined($unsupportedChar);
 
   }
 
@@ -231,7 +258,7 @@ sub getUnsupportedChar {
 =cut
 
 sub check_fk{
-  my $dbh = shift;
+  my ($self, $dbh) = @_;
 
   # check FKs: that all phenotypes have a phenotype_feature, all pf have a pfa, and vice versa
   my $featless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype
@@ -247,24 +274,51 @@ sub check_fk{
 
   $featless_count_ext_sth->execute()||die;
   my $featless_count = $featless_count_ext_sth->fetchall_arrayref();
-  print $report "$featless_count->[0]->[0] phenotype entries with no phenotype_feature entry (expected: 0)\n";
+  $self->print_logFH("$featless_count->[0]->[0] phenotype entries with no phenotype_feature entry (expected: 0)\n");
 
   $attribless_count_ext_sth->execute()||die;
   my $attrless_count = $attribless_count_ext_sth->fetchall_arrayref();
-  print $report "$attrless_count->[0]->[0] phenotype_feature entries with no phenotype_feature_attrib entry (can be valid cases)\n";
+  $self->print_logFH("$attrless_count->[0]->[0] phenotype_feature entries with no phenotype_feature_attrib entry (can be valid cases)\n");
 
   $featless_attrib_count_ext_sth->execute()||die;
   my $featless_attrib_count = $featless_attrib_count_ext_sth->fetchall_arrayref();
-  print $report "$featless_attrib_count->[0]->[0] phenotype_feature_attrib entries with missing phenotype_feature entry (expected: 0)\n";
+  $self->print_logFH("$featless_attrib_count->[0]->[0] phenotype_feature_attrib entries with missing phenotype_feature entry (expected: 0)\n");
 
   $phenoless_feat_count_ext_sth->execute()||die;
   my $phenoless_count = $phenoless_feat_count_ext_sth->fetchall_arrayref();
-  print $report "$phenoless_count->[0]->[0] phenotype_feature entries with missing phenotype entry (expected: 0)\n";
+  $self->print_logFH("$phenoless_count->[0]->[0] phenotype_feature entries with missing phenotype entry (expected: 0)\n");
 
   $phenoless_acc_count_ext_sth->execute()||die;
   my $phenoless_acc_count = $phenoless_acc_count_ext_sth->fetchall_arrayref();
-  print $report "$phenoless_acc_count->[0]->[0] phenotype_ontology_accession rows with missing phenotype entry (expected: 0)\n";
+  $self->print_logFH("$phenoless_acc_count->[0]->[0] phenotype_ontology_accession rows with missing phenotype entry (expected: 0)\n");
 
+}
+
+sub check_source {
+  my $self = shift;
+
+  ## retrieve old results from production db for comparison if available
+  my $previous_counts = $self->get_old_results();
+
+  ## calculate new counts from new phenotype_feature table
+  my $new_counts      = $self->get_new_results();
+
+  my $text_out = "\nSummary of results from CheckPhenotypeAnnotation (if less counts than previous)\n\n";
+
+  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
+  $count_ok = 0 if ($new_counts->{'phenotype_count'} < 5 );
+  foreach my $table (@tables) {
+    my $check_name = "$table\_count";
+
+    if (defined $previous_counts->{$check_name} &&
+        $previous_counts->{$check_name}  < $new_counts->{$check_name}){
+      $text_out.= "WARNING: ".$new_counts->{"$table\_count"}." $table entries";
+      $text_out.= " (previously ".$previous_counts->{"$table\_count"}.")" if defined  $previous_counts->{"$table\_count"} ;
+      $text_out.= "\n";
+      $count_ok = 0;
+    }
+  }
+  $self->print_logFH($text_out);
 }
 
 1;
