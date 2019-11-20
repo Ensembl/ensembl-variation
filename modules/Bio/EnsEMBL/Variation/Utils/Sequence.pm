@@ -413,6 +413,8 @@ sub SO_variation_class {
                                 ($_ =~ /^$ref/)
                                      ||
                                 ($ref =~ /${_}$/)
+                                     ||
+                                ($ref =~ /^${_}/)
                               ) && length($ref) != length($_)
                             )
                             ||

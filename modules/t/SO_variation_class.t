@@ -38,6 +38,8 @@ my %tests = (
     'CT/CTCT'               => 'insertion',
     'CT/-/CTCT'             => 'indel', # Not a sequence alteration
     'C/-/CC'                => 'indel',
+    'TCT/T/TCTG'            => 'indel',
+    'TCT/-/TCTG'            => 'indel',
     '-/A'                   => 'insertion',
     '-/TAAG'                => 'insertion',
     '-/(LARGEINSERTION)'    => 'insertion',
@@ -70,6 +72,9 @@ my %tests = (
     '(CAG)8/(CAG)9'         => 'tandem_repeat',
     '-/TGTG/(TG)10/TG(11)'  => 'tandem_repeat',
     '-/(RY)7/(RY)8'         => 'tandem_repeat',
+    'TT/T/TTT'              => 'indel',     # dbSNP v2 style indel
+    'TT/TTT/TTTT'           => 'insertion', # dbSNP v2 style indel
+    'TTT/T/TT'              => 'deletion',  # dbSNP v2 stype indel
 );
 
 for my $allele_string (keys %tests) {
