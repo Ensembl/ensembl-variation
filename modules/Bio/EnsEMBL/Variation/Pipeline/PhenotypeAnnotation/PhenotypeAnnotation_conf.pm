@@ -36,7 +36,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI NONE);
 
 
 sub default_options {
@@ -344,8 +344,9 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'import_impc'],
-                3 => [ 'import_mgi']
+                '2->A' => [ 'import_impc'],
+                '3->A' => [ 'import_mgi'],
+                'A->1' => [ 'check_phenotypes'],
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
@@ -359,7 +360,21 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => { 'check_impc' => INPUT_PLUS() },
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_impc',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 =>  { 'import_mgi' => INPUT_PLUS() },
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
@@ -372,9 +387,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_name    => 'default',
-            -flow_into  => {
-                1 => [ 'check_phenotypes']
-            },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 

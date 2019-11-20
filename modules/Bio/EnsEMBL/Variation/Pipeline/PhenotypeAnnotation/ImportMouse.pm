@@ -44,7 +44,7 @@ use File::Path qw(make_path);
 use File::stat;
 use LWP::Simple;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI Mouse NONE species);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
 sub fetch_input {
@@ -69,11 +69,12 @@ sub fetch_input {
 
     unless ($run_type eq NONE) {
       my %import_species = &species;
-      if($run_type eq IMPC){
+      if($run_type eq IMPC || $run_type eq Mouse){
         my @speciesList = map { {species => $_} } @{$import_species{'IMPC'}};
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file ;
           $spec->{pipeline_dir} = $workdir;
+          $spec->{source_name} ='IMPC_MGI';
         }
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if ($self->debug) ;
@@ -83,6 +84,7 @@ sub fetch_input {
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file;
           $spec->{pipeline_dir} = $workdir;
+          $spec->{source_name} ='MGI';
         }
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if ($self->debug) ;
@@ -95,13 +97,15 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ($run_type eq IMPC){
+    if ($run_type eq IMPC || $run_type eq Mouse){
       $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 2);
     } elsif ( $run_type eq MGI){
       $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for MGI import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 3);
     }
+    $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if ($self->debug);
+    $self->dataflow_output_id($self->param('output_ids'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 
