@@ -53,6 +53,7 @@ sub default_options {
         },    # inherit other stuff from the base class
 
         hive_auto_rebalance_semaphores => 1,
+        hive_default_max_retry_count => 0,
         hive_force_init      => 1,
         hive_use_param_stack => 1,
         ensembl_release    => $self->o('ensembl_release'),
@@ -67,7 +68,7 @@ sub default_options {
 
         pipeline_dir       => $self->o('pipeline_dir'),
         
-        registry      => $self->o('registry'),
+        ensembl_registry   => $self->o('ensembl_registry'),
 
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
@@ -89,6 +90,19 @@ sub default_options {
         max_vf_load => 2_000_000, # group slices together until the vf count exceeds max_vf_load
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 5e6, # 1e7
+
+        data_dir => '/nfs/production/panda/ensembl/variation/data/',
+
+        ancestral_alleles_file_dir => {'homo_sapiens' => {
+                                          'GRCh37' => $self->o('data_dir') . 'ancestral_alleles/GRCh37',
+                                          'GRCh38' => $self->o('data_dir') . 'ancestral_alleles/' . $self->o('ensembl_release'),
+                                        },
+                                      },
+        fasta_file  => {'homo_sapiens' => {
+                              'GRCh37' => $self->o('data_dir') . 'Homo_sapiens.GRCh37.75.dna.primary_assembly.fa',
+                              'GRCh38' => $self->o('data_dir') . 'Homo_sapiens.GRCh38.dna.toplevel.fa.gz',
+                            },
+                          },
 
         debug => 0,
 
@@ -135,7 +149,7 @@ sub pipeline_wide_parameters {
         vf_per_slice => $self->o('vf_per_slice'),
         max_split_slice_length => $self->o('max_split_slice_length'),
         division => $self->o('division'),
-        registry => $self->o('registry')
+        ensembl_registry => $self->o('ensembl_registry'),
     };
 }
 
@@ -143,7 +157,7 @@ sub pipeline_wide_parameters {
 sub beekeeper_extra_cmdline_options {
   my ($self) = @_;
   return
-      ' -reg_conf ' . $self->o('registry'),
+      ' -reg_conf ' . $self->o('ensembl_registry'),
   ;
 }
 
@@ -218,9 +232,16 @@ sub pipeline_analyses {
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
           -rc_name => 'default',
+          -flow_into      => {
+            -1 => ['submit_job_gvf_dumps_highmem'],
+          }
       },
-
-
+      {   -logic_name => 'submit_job_gvf_dumps_highmem',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+          -max_retry_count => 0,
+          -rc_name => 'highmem',
+      },
 # join split slice
 
       { -logic_name => 'join_split_slice',
@@ -266,7 +287,6 @@ sub pipeline_analyses {
         },
       },
 
-
 # cleanup gvf dumps
       { -logic_name        => 'cleanup_gvf_dumps',
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
@@ -299,6 +319,9 @@ sub pipeline_analyses {
           -parameters => {
               'file_type' => 'vcf',
               'job_type'  => 'parse',
+              'ancestral_alleles_file_dir' => $self->o('ancestral_alleles_file_dir'),
+              'fasta_file' => $self->o('fasta_file'),
+
           },
       },
       {   -logic_name => 'submit_job_gvf2vcf',
