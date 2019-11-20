@@ -60,6 +60,7 @@ sub run {
   my $ancestral_fasta_file = $self->param_required('ancestral_fasta_file');
   my $fasta_file = $self->param_required('fasta_file');
   my $script_dir = $self->param_required('script_dir');
+  my $assembly = $self->param_required('assembly');
 
   $self->warning("filename ($filename)");
   $self->warning("subdir ($sub_dir)");
@@ -69,6 +70,7 @@ sub run {
   $self->warning("ancestral_fasta_file ($ancestral_fasta_file)");
   $self->warning("fasta_file ($fasta_file)");
   $self->warning("script_dir ($script_dir)");
+  $self->warning("assembly ($assembly)");
   
   my $load_script = join("/", $script_dir, 'load_dbsnp.pl');
   my $data_dir_run = join("/", $data_dir, $sub_dir);
@@ -86,7 +88,8 @@ sub run {
             '-input_file', $input_file,
             '-rpt_dir' ,   $rpt_dir_run,
             '-ancestral_fasta_file' , $ancestral_fasta_file,
-            '-fasta_file', $fasta_file);
+            '-fasta_file', $fasta_file,
+            '-assembly', $assembly);
   
   $self->warning($cmd);
   # Do the system call
