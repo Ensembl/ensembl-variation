@@ -68,7 +68,7 @@ sub fetch_input {
                   #source version is set based on the EBI fetched data hash response_date
                   );
 
-  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short};
   make_path($workdir);
   $self->workdir($workdir);
 

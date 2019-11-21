@@ -67,7 +67,7 @@ sub fetch_input {
                   data_types => 'phenotype_feature',
                   #source version is set based on EBI fetch data hash response_date
                   );
-  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short};
   make_path($workdir);
   $self->workdir($workdir);
 
