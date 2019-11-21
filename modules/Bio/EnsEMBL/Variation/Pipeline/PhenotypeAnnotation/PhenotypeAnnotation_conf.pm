@@ -180,18 +180,26 @@ sub pipeline_analyses {
                 '2->A' => [ 'import_rgd' ],
                 '3->A' => [ 'import_animalqtldb' ],
                 '4->A' => [ 'import_zfin' ],
-                '5->A' => [ 'import_gwas' ],
-                '6->A' => [ 'import_omia' ],
-                '7->A' => [ 'import_ega' ],
-                '8->A' => [ 'import_orphanet' ],
-                '9->A' => [ 'import_mimmorbid' ],
-                '10->A'=> [ 'import_ddg2p' ],
-                '11->A'=> [ 'import_cancerGC' ],
-                '12->A'=> [ 'import_mouse' ],
+                '5->A' => [ 'import_omia' ],
+                '6->A' => [ 'import_human' ],
+                '7->A' => [ 'import_mouse' ],
                 'A->1' => [ 'finish_pipeline' ],
             },
         },
 
+        {   -logic_name => 'import_omia',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOMIA',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
         {   -logic_name => 'import_rgd',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportRGD',
             -parameters => {
@@ -236,6 +244,26 @@ sub pipeline_analyses {
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
+        {   -logic_name => 'import_human',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportHuman',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                '2->A' => [ 'import_gwas' ],
+                '3->A' => [ 'import_ega' ],
+                '4->A' => [ 'import_orphanet' ],
+                '5->A' => [ 'import_mimmorbid' ],
+                '6->A' => [ 'import_ddg2p' ],
+                '7->A' => [ 'import_cancerGC' ],
+                'A->1' => [ 'check_phenotypes'],
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
         {   -logic_name => 'import_gwas',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGWAS',
             -parameters => {
@@ -245,13 +273,13 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_gwas']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
-        {   -logic_name => 'import_omia',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportOMIA',
+        {   -logic_name => 'check_gwas',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {
                 @common_params,
             },
@@ -259,11 +287,10 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'import_ega']
             },
-            -failed_job_tolerance => 5, # tries 5 times to run a job
+            -failed_job_tolerance => 0,
         },
-
         {   -logic_name => 'import_ega',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportEGA',
             -parameters => {
@@ -274,9 +301,23 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_ega']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_ega',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'import_orphanet']
+            },
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'import_orphanet',
@@ -288,9 +329,23 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_orphanet']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_orphanet',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'import_mimmorbid']
+            },
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'import_mimmorbid',
@@ -302,9 +357,23 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_mimmorbid']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_mimmorbid',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'import_ddg2p']
+            },
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'import_ddg2p',
@@ -316,9 +385,23 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_ddg2p']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_ddg2p',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'import_cancerGC']
+            },
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'import_cancerGC',
@@ -330,9 +413,34 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                1 => [ 'check_cancerGC']
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_cancerGC',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -failed_job_tolerance => 0,
+        },
+
+        {   -logic_name => 'check_phenotypes',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                2 => [ 'ontology_mapping'],
+                3 => [ 'finish_phenotype_annotation']
+            },
         },
 
         {   -logic_name => 'import_mouse',
@@ -379,31 +487,6 @@ sub pipeline_analyses {
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
-        {   -logic_name => 'import_mgi',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportMGI',
-            -parameters => {
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_name    => 'default',
-            -failed_job_tolerance => 5, # tries 5 times to run a job
-        },
-
-        {   -logic_name => 'check_phenotypes',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
-            -parameters => {
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_name    => 'default',
-            -flow_into  => {
-                2 => [ 'ontology_mapping'],
-                3 => [ 'finish_phenotype_annotation']
-            },
-        },
-
         {   -logic_name => 'ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
             -parameters => {
@@ -415,6 +498,31 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'finish_phenotype_annotation']
             },
+        },
+
+        {   -logic_name => 'import_mgi',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportMGI',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_mgi'],
+            },
+            -failed_job_tolerance => 5, # tries 5 times to run a job
+        },
+
+        {   -logic_name => 'check_mgi',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'finish_phenotype_annotation',

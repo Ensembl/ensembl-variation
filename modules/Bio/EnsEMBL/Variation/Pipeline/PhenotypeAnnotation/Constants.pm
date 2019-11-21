@@ -53,6 +53,7 @@ our @EXPORT_OK = qw(
             IMPC
             MGI
             Mouse
+            Human
             NONE
             species);
 
@@ -60,13 +61,15 @@ use constant {
   RGD       => 'RGD',
   AnimalQTL => 'AnimalQTL',
   ZFIN      => 'ZFIN',
-  GWAS      => 'GWAS',
   OMIA      => 'OMIA',
+
+  GWAS      => 'GWAS',
   EGA       => 'EGA',
   Orphanet  => 'Orphanet',
   MIMmorbid => 'MIMmorbid',
   DDG2P     => 'DDG2P',
   CGC       => 'CGC',
+  Human     => 'Human',
 
   IMPC      => 'IMPC',
   MGI       => 'MGI',
