@@ -797,40 +797,6 @@ sub get_all_Alleles {
   return $self->{alleles};
 }
 
-
-
-=head2 ancestral_allele
-
-  Arg [1]    : string $ancestral_allele (optional)
-  Example    : $ancestral_allele = v->ancestral_allele();
-  Description: Getter/Setter ancestral allele associated with this variation.
-               If the variant has more than one mapping the ancestral allele
-               is only reported if it is the same for all mappings.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : deprecated
-
-=cut
-
-sub ancestral_allele {
-  my $self = shift;
-  return $self->{'ancestral_allele'} = shift if(@_);
-  deprecate('Bio::EnsEMBL::Variation::Variation::ancestral_allele is deprecated and will be removed in e100. Please use Bio::EnsEMBL::Variation::VariationFeature::ancestral_allele instead');
-  if (!$self->{'ancestral_allele'}) {
-    my %ancestral_alleles;
-    foreach my $vf (@{$self->get_all_VariationFeatures}) {
-      $ancestral_alleles{$vf->ancestral_allele} = 1 if (defined $vf->ancestral_allele);
-    }
-    if (scalar keys %ancestral_alleles == 1) {
-      my ($aa) = keys %ancestral_alleles;
-      $self->{'ancestral_allele'} = $aa;
-    }
-  }
-  return $self->{'ancestral_allele'};
-}
-
-
 =head2 five_prime_flanking_seq
 
   Arg [1]    : string $newval (optional) 
@@ -1074,11 +1040,11 @@ sub derived_allele_frequency{
   if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
       throw('Bio::EnsEMBL::Variation::Population argument expected.');
   }
-  my $ancestral_allele = $self->ancestral_allele();
-  if (defined $ancestral_allele){
-  #get reference allele
   my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
   my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
+  my $ancestral_allele = $vf->ancestral_allele();
+  if (defined $ancestral_allele){
+  #get reference allele
   my $ref_freq;
   #get allele in population
   my $alleles = $self->get_all_Alleles();
