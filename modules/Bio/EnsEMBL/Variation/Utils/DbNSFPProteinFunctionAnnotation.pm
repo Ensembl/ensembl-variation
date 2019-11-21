@@ -193,17 +193,24 @@ sub add_predictions {
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_meta_lr', $data->{meta_lr_score}, $prediction);
   }
   if ($data->{mutation_assessor_score} ne '.') {
-    #The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
-    my $score = $data->{mutation_assessor_score}; 
     my $prediction;
-    if ($score >= 0.9307) {
-      $prediction = 'high';
-    } elsif ($score >= 0.52043) {
-      $prediction = 'medium'
-    } elsif ($score >= 0.19675) {
-      $prediction = 'low'
+    if ($self->annotation_file_version eq '3.5a') {
+      $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
+    } elsif ($self->annotation_file_version eq '4.0a') { 
+      # In 4.0a the prediction is not always provided and we need to assign it based on the score thresholds     
+      # The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
+      my $score = $data->{mutation_assessor_score}; 
+      if ($score >= 0.9307) {
+        $prediction = 'high';
+      } elsif ($score >= 0.52043) {
+        $prediction = 'medium'
+      } elsif ($score >= 0.19675) {
+        $prediction = 'low'
+      } else {
+        $prediction = 'neutral';
+      }
     } else {
-      $prediction = 'neutral';
+      die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
     }
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_mutation_assessor', $data->{mutation_assessor_score}, $prediction);
   }
