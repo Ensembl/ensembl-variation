@@ -54,14 +54,17 @@ our @EXPORT_OK = qw(
             MGI
             Mouse
             Human
+            AnimalSet
             NONE
             species);
 
 use constant {
   RGD       => 'RGD',
-  AnimalQTL => 'AnimalQTL',
   ZFIN      => 'ZFIN',
+
+  AnimalQTL => 'AnimalQTL',
   OMIA      => 'OMIA',
+  AnimalSet => 'AnimalSet',
 
   GWAS      => 'GWAS',
   EGA       => 'EGA',
@@ -79,9 +82,10 @@ use constant {
 };
 
 use constant species => ( 'RGD'       => ['rattus_norvegicus'],
+                          'ZFIN'      => ['danio_rerio'],
+
                           'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
                                           'sus_scrofa', 'ovis_aries'],
-                          'ZFIN'      => ['danio_rerio'],
                           'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
                                           'bos_taurus','canis_familiaris','equus_caballus',
                                           'macaca_mulatta','sus_scrofa','ovis_aries'],
