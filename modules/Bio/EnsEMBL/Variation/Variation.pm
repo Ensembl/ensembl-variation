@@ -1087,7 +1087,9 @@ sub derived_allele {
      my $population = shift();
 
      my $population_dbID = $population->dbID();
-     my $ancestral_allele_str = $self->ancestral_allele();
+  my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
+  my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
+  my $ancestral_allele_str = $vf->ancestral_allele();
 
      if (not defined($ancestral_allele_str)) {
          return;
