@@ -1192,6 +1192,8 @@ CREATE TABLE structural_variation_association (
 @column somatic                          Flags whether this structural variation is known to be somatic or not
 @column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occurred for a structural variation (e.g. somatic mutations)
 @column length                           Length of the structural variant. Used for the variants with a class "insertion", when the size of the insertion is known.
+@column allele_freq                      The max allele frequency of the minor allele of this variant, as reported by gnomAD.
+@column allele_count                     The number of samples the minor allele of this variant is found in.
 
 @see structural_variation
 @see source
@@ -1231,6 +1233,8 @@ CREATE TABLE structural_variation_feature (
           '49','50','51','52','53','54','55','56',
           '57','58','59','60','61','62','63','64'
   ) NOT NULL DEFAULT '',
+  allele_freq FLOAT DEFAULT NULL,
+  allele_count INT(10) UNSIGNED DEFAULT NULL
 	
   PRIMARY KEY (structural_variation_feature_id),
 	KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
@@ -1831,6 +1835,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|add frequency to structural variation');
 
 /**
 @header  Failed tables
