@@ -13,7 +13,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# update the schema_version entry in the meta table
+# add frequency columns to structural_variation_feature table 
 ALTER TABLE structural_variation_feature ADD COLUMN allele_freq float DEFAULT NULL;
 ALTER TABLE structural_variation_feature ADD COLUMN allele_count int(10) unsigned DEFAULT NULL;
 
