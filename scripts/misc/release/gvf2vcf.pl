@@ -31,7 +31,6 @@ use warnings;
 use Bio::DB::HTS::Faidx;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
 use Bio::EnsEMBL::Utils::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
@@ -84,8 +83,6 @@ sub main {
     my $fai_index = Bio::DB::HTS::Faidx->new($config->{'fasta_file'});
     die("Unable to get FASTA index") if (!$fai_index);
     $config->{fasta_index} = $fai_index;
-  } else {
-    print "ref checking not done\n";
   } 
 
     init_db_connections($config);
@@ -127,7 +124,8 @@ sub init_data {
         $data_type = 'structural_variation';
     }
     my $source_to_desc = {};
-
+    # Get variant source and source description for VCF header
+    # Try getting sources by data_types from source table first 
     foreach my $source (@$sources) {
       my @source_data_types = @{$source->get_all_data_types};
       if (grep {$_ eq $data_type} @source_data_types) {
@@ -139,6 +137,8 @@ sub init_data {
         $source_to_desc->{$name} = $desc;
       }
     }
+    # If the data_type hasen't been set in the source table
+    # extract all sources from the variation or structural_variation table 
     if (scalar keys %$source_to_desc == 0) {
       my $sth = $dbh->prepare(qq{
           select distinct s.name, s.version, s.description from source s, $data_type v
@@ -213,6 +213,7 @@ sub init_data {
     };
     $config->{svs_gvf2vcf} = {};
     if ($config->{structural_variations}) {
+      # Get all available structural variant classes and descriptions to be stored in the VCF header
       my $sv_var_class_names = {};
       my $sth = $dbh->prepare(qq/select distinct a.value from attrib a, structural_variation_feature svf where svf.class_attrib_id = a.attrib_id;/);
       $sth->execute() or die $sth->errstr;
@@ -228,7 +229,6 @@ sub init_data {
           my $terms = $ontology->fetch_all_by_name($name, 'SO');
           foreach my $term (@$terms) {
             $definition = $term->definition;
-#            $definition =~ m/^"(.*)\."\s\[.*\]$/;
           }
         } 
         $config->{header_sv_class}->{$name} = $definition;
@@ -246,14 +246,14 @@ sub init_data {
       push @vep_consequence_info, 'PolyPhen';
     }
 
+    $config->{vep} = \@vep_consequence_info;
+
     if ($config->{ancestral_allele_file}) {
       my $ancestral_fai_index = Bio::DB::HTS::Faidx->new($config->{ancestral_allele_file});
       my $ancestral_allele_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $ancestral_fai_index);
       die("Unable to get ancestral FASTA index") if (!$ancestral_fai_index);         
       $config->{ancestral_allele_utils} = $ancestral_allele_utils;  
     }
-
-    $config->{vep} = \@vep_consequence_info;
 }
 
 sub read_gvf_file {
