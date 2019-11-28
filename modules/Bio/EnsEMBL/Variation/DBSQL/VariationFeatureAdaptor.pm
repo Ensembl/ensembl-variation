@@ -1765,7 +1765,7 @@ sub fetch_by_hgvs_notation {
   # 88957372-?_89042944+?dup
   # (?145413072)(145592772_145596903)del
   if($description =~ m/(\-\?\_.+\?)|(\(\?\_.+\))/) {
-    throw ("HGVS notation is not supported");
+    throw ("HGVS notation for variation with unknown location is not supported");
   }
 
   # Imprecise insertions are not supported
