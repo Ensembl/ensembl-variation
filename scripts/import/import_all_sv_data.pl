@@ -842,6 +842,121 @@ sub structural_variation_set {
   }
 }
 
+sub structural_variation_sample {
+  my $stmt;
+
+  debug(localtime()." Inserting into $svs_table table");
+
+  my $study_name = ($dbVar->selectrow_arrayref(qq{SELECT name FROM study WHERE study_id=$study_id;}))->[0];
+
+  # Create strain entries
+  if ($species =~ /mouse|mus/i) {
+    $stmt = qq{ SELECT DISTINCT subject FROM $temp_table 
+                WHERE subject NOT IN (SELECT DISTINCT name from individual WHERE individual_type_id=1)
+              };
+    my $rows_strains = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_strains) {
+      my $strain = $row->[0];
+      next if ($strain eq  '');
+
+      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' LIMIT 1})) {
+        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','Unknown',1)});
+      }
+      else{
+        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' AND individual_type_id!=1})) {
+          $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$strain' AND individual_type_id!=1});
+        }
+      }
+    }
+
+    # Create sample entries
+    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample WHERE study_id=$study_id AND display!="UNDISPLAYABLE")};
+    my $rows_samples = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_samples) {
+      my $sample  = $row->[0];
+      my $subject = $row->[1];
+      next if ($sample eq  '' || $subject eq '');
+
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
+    }
+  }
+  # Create individual entries (not for mouse)
+  else { 
+    $stmt = qq{ SELECT DISTINCT subject, gender FROM $temp_table WHERE is_ssv=1 AND subject NOT IN (SELECT DISTINCT name from individual)};
+    my $rows_subjects = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_subjects) {
+      my $subject = $row->[0];
+      my $gender = ($row->[1] =~ /\w+/) ? $row->[1] : 'Unknown';
+      next if ($subject eq  '');
+
+      my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
+
+      $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$subject','Subject from the DGVa study $study_name','$gender',$itype_val)});
+    }
+
+    # Create sample entries
+    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample)};
+    my $rows_samples = $dbVar->selectall_arrayref($stmt);
+    foreach my $row (@$rows_samples) {
+      my $sample  = $row->[0];
+      my $subject = $row->[1];
+      next if ($sample eq  '' || $subject eq '');
+
+      #$dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', min(individual_id) FROM individual WHERE name='$subject'});
+    }
+  }
+
+  $dbVar->do(q{OPTIMIZE TABLE sample});
+  $dbVar->do(q{OPTIMIZE TABLE individual});
+
+  my $ext1;
+  my $ext2;
+  
+  # For mouse
+  if ($species =~ /mouse|mus/i) {
+    $stmt = qq{
+      INSERT IGNORE INTO $svs_table (
+        structural_variation_id,
+        sample_id,
+        zygosity
+      )
+      SELECT DISTINCT
+        sv.structural_variation_id,
+        s.sample_id,
+        t.zygosity
+      FROM
+        $sv_table sv,
+        $temp_table t
+        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name) AND s.display!='UNDISPLAYABLE')
+      WHERE
+        sv.variation_name=t.id AND
+        (t.sample is not null OR t.subject is not null)
+      };
+  }
+  else {
+    $stmt = qq{
+      INSERT IGNORE INTO $svs_table (
+        structural_variation_id,
+        sample_id,
+        zygosity
+      )
+      SELECT DISTINCT
+        sv.structural_variation_id,
+        s.sample_id,
+        t.zygosity
+      FROM
+        $sv_table sv,
+        $temp_table t
+        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name))
+      WHERE
+        sv.variation_name=t.id AND
+        t.sample is not null
+      };
+  }
+  $dbVar->do($stmt);
+}
+
 sub phenotype_feature {
   my $stmt;
   
@@ -1797,121 +1912,6 @@ sub cleanup {
   
   debug(localtime()."\t - Table $sv_table: cleaned") if ($sv_flag == 0);
 
-}
-
-sub structural_variation_sample {
-  my $stmt;
-
-  debug(localtime()." Inserting into $svs_table table");
-
-  my $study_name = ($dbVar->selectrow_arrayref(qq{SELECT name FROM study WHERE study_id=$study_id;}))->[0];
-
-  # Create strain entries
-  if ($species =~ /mouse|mus/i) {
-    $stmt = qq{ SELECT DISTINCT subject FROM $temp_table 
-                WHERE subject NOT IN (SELECT DISTINCT name from individual WHERE individual_type_id=1)
-              };
-    my $rows_strains = $dbVar->selectall_arrayref($stmt);
-    foreach my $row (@$rows_strains) {
-      my $strain = $row->[0];
-      next if ($strain eq  '');
-
-      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' LIMIT 1})) {
-        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','Unknown',1)});
-      }
-      else{
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' AND individual_type_id!=1})) {
-          $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$strain' AND individual_type_id!=1});
-        }
-      }
-    }
-
-    # Create sample entries
-    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample WHERE study_id=$study_id AND display!="UNDISPLAYABLE")};
-    my $rows_samples = $dbVar->selectall_arrayref($stmt);
-    foreach my $row (@$rows_samples) {
-      my $sample  = $row->[0];
-      my $subject = $row->[1];
-      next if ($sample eq  '' || $subject eq '');
-
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
-    }
-  }
-  # Create individual entries (not for mouse)
-  else { 
-    $stmt = qq{ SELECT DISTINCT subject, gender FROM $temp_table WHERE is_ssv=1 AND subject NOT IN (SELECT DISTINCT name from individual)};
-    my $rows_subjects = $dbVar->selectall_arrayref($stmt);
-    foreach my $row (@$rows_subjects) {
-      my $subject = $row->[0];
-      my $gender = ($row->[1] =~ /\w+/) ? $row->[1] : 'Unknown';
-      next if ($subject eq  '');
-
-      my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
-
-      $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$subject','Subject from the DGVa study $study_name','$gender',$itype_val)});
-    }
-
-    # Create sample entries
-    $stmt = qq{ SELECT DISTINCT sample, subject FROM $temp_table WHERE is_ssv=1 AND sample NOT IN (SELECT DISTINCT name from sample)};
-    my $rows_samples = $dbVar->selectall_arrayref($stmt);
-    foreach my $row (@$rows_samples) {
-      my $sample  = $row->[0];
-      my $subject = $row->[1];
-      next if ($sample eq  '' || $subject eq '');
-
-      #$dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', min(individual_id) FROM individual WHERE name='$subject'});
-    }
-  }
-
-  $dbVar->do(q{OPTIMIZE TABLE sample});
-  $dbVar->do(q{OPTIMIZE TABLE individual});
-
-  my $ext1;
-  my $ext2;
-  
-  # For mouse
-  if ($species =~ /mouse|mus/i) {
-    $stmt = qq{
-      INSERT IGNORE INTO $svs_table (
-        structural_variation_id,
-        sample_id,
-        zygosity
-      )
-      SELECT DISTINCT
-        sv.structural_variation_id,
-        s.sample_id,
-        t.zygosity
-      FROM
-        $sv_table sv,
-        $temp_table t
-        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name) AND s.display!='UNDISPLAYABLE')
-      WHERE
-        sv.variation_name=t.id AND
-        (t.sample is not null OR t.subject is not null)
-      };
-  }
-  else {
-    $stmt = qq{
-      INSERT IGNORE INTO $svs_table (
-        structural_variation_id,
-        sample_id,
-        zygosity
-      )
-      SELECT DISTINCT
-        sv.structural_variation_id,
-        s.sample_id,
-        t.zygosity
-      FROM
-        $sv_table sv,
-        $temp_table t
-        LEFT JOIN sample s ON (s.name=t.sample AND s.sample_id IN (select min(sample_id) from sample s2 where s.name=s2.name))
-      WHERE
-        sv.variation_name=t.id AND
-        t.sample is not null
-      };
-  }
-  $dbVar->do($stmt);
 }
 
 
