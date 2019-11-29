@@ -14,8 +14,8 @@
 -- limitations under the License.
 
 # add frequency columns to structural_variation_feature table 
-ALTER TABLE structural_variation_feature ADD COLUMN allele_freq float DEFAULT NULL;
-ALTER TABLE structural_variation_feature ADD COLUMN allele_count int(10) unsigned DEFAULT NULL;
+ALTER TABLE structural_variation_feature ADD COLUMN allele_freq FLOAT DEFAULT NULL;
+ALTER TABLE structural_variation_feature ADD COLUMN allele_count INT(10) UNSIGNED DEFAULT NULL;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|add frequency to structural variation');

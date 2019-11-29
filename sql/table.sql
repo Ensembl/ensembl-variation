@@ -1234,7 +1234,7 @@ CREATE TABLE structural_variation_feature (
           '57','58','59','60','61','62','63','64'
   ) NOT NULL DEFAULT '',
   allele_freq FLOAT DEFAULT NULL,
-  allele_count INT(10) UNSIGNED DEFAULT NULL
+  allele_count INT(10) UNSIGNED DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_feature_id),
 	KEY pos_idx ( seq_region_id, seq_region_start, seq_region_end ),
