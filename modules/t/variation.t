@@ -71,7 +71,6 @@ foreach my $synonyms (@synonyms){
 my $a1 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'A', -adaptor => $variation_adaptor);
 my $a2 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'C', -adaptor => $variation_adaptor);
 my $alleles = [$a1,$a2];
-my $ancestral_allele = 'A';
 my $clin_sig = 'untested';
 
 
@@ -123,11 +122,8 @@ my $v2 = $variation_adaptor->fetch_by_dbID(112643842);
 delete($v2->{$_}) for qw(class_display_term class_SO_term);
 is($v2->var_class(), 'SNP', 'class via variation feature');
 
-
 # test getter/setters
 ok(test_getter_setter($v, 'name', 'newname'), "get/set name");
-ok(test_getter_setter($v, 'ancestral_allele','C'), "get/set ancestral_allele");
-
 
 # test add_synonym and get_all_synonym_sources
 
@@ -282,7 +278,5 @@ my $vfast =  Bio::EnsEMBL::Variation::Variation->new_fast($hash);
 
 ok($vfast->dbID() eq 123,             "fast - db ID");
 ok($vfast->name() eq $name,           "fast - name");
-ok(! $vfast->ancestral_allele()  , "no derived");
-
 
 done_testing();

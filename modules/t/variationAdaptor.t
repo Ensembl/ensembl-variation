@@ -51,7 +51,6 @@ ok($var->source_description() eq 'Variants (including SNPs and indels) imported 
 ok($var->source_version() == 138, 'source version by var id');
 ok($var->source_url() eq 'http://www.ncbi.nlm.nih.gov/projects/SNP/', 'source url by var id');
 ok($va->get_source_version('dbSNP') == 138, 'source version by var adaptor/name');
-ok($var->ancestral_allele() eq 'A',  'ancestral_allele by var id');
 ok($var->minor_allele() eq 'A',      'minor allele by var id');
 ok($var->minor_allele_count() == 358, 'minor allele count by var id');
 ok($var->minor_allele_frequency() eq '0.164371', 'minor allele frequency by var id' );
@@ -88,7 +87,6 @@ $var = $va->fetch_by_name('rs142276873');
 ok($var->name() eq 'rs142276873', "name by name");
 ok($var->dbID() == 30220007,      "id by name" );
 ok($var->source_name() eq 'dbSNP',"source by name");
-ok($var->ancestral_allele eq 'G', "ancestral allele by name");
 
 # test fetch by subsnp
 my $var_ss = $va->fetch_by_subsnp_id('ss11455892');
@@ -102,9 +100,6 @@ $var = $va->fetch_by_name('rs57302278');
 ok($var->name() eq $var_name,   "current name by synonym");
 ok($var->dbID() == $var_id,       "current id by synonym");
 ok($var->source_name() eq 'dbSNP',"source by synonym");
-ok($var->ancestral_allele eq 'A', "ancestral allele by synonym" );
-
-
 
 #test ambig_code and var_class - fix core test db & re-install
 #ok($var->ambig_code eq 'W',   "ambiguity code by synonym");
@@ -299,12 +294,5 @@ ok($varup->get_all_synonyms('dbSNP')->[0] eq 'ss55331', "fetch updated synonym")
 $var->add_synonym('turnip', 'ss55331');
 throws_ok { $va->store_synonyms($var) } qr/No source found for name turnip/, 'Throw if source not found.';
 
-# test deprecated ancestral_allele method
-
-$var = $va->fetch_by_name('rs1267742856');
-ok(! defined $var->ancestral_allele, "No ancestral_allele if mappings have different ancestral allelels");
-
-$var = $va->fetch_by_name('rs191996219');
-ok(! defined $var->ancestral_allele, "No ancestral_allele returns undef");
 
 done_testing();
