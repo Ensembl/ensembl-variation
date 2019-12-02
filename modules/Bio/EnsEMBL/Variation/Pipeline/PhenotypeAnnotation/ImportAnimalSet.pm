@@ -65,12 +65,12 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ( $run_type eq AnimalQTL || $run_type eq AnimalSet){
+    if ( $run_type eq OMIA || $run_type eq AnimalSet){
       $self->dataflow_output_id($self->param('output_ids'), 2);
-      $self->print_pipelogFH("Passing to AnimalQTL import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq OMIA){
+      $self->print_pipelogFH("Passing to OMIA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    } elsif ( $run_type eq AnimalQTL){
       $self->dataflow_output_id($self->param('output_ids'), 3);
-      $self->print_pipelogFH( "Passing to OMIA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+      $self->print_pipelogFH( "Passing to AnimalQTL import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
     }
     $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
     $self->dataflow_output_id($self->param('output_ids'), 1);

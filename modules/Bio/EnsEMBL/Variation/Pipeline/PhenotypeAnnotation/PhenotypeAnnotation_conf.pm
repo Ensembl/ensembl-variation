@@ -459,7 +459,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 '2' => [ 'import_omia' ],
                 '3' => [ 'import_animalqtldb' ],
-                '1' => [ 'check_phenotypes'],
             },
             -failed_job_tolerance => 5, # tries 5 times to run a job
         },
@@ -516,6 +515,9 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_name    => 'default',
+            -flow_into => {
+                1 => [ 'check_phenotypes']
+            },
             -failed_job_tolerance => 0,
         },
 
@@ -558,7 +560,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_name    => 'default',
-            -wait_for   => 'check_omia',
             -flow_into  => {
                 2 => [ 'ontology_mapping'],
                 3 => [ 'finish_phenotype_annotation']

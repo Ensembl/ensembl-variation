@@ -158,7 +158,7 @@ sub run {
 
   my $omia_file = $self->required_param('omia_file');
 
-  # dump and clean pre-existing phenotypes
+  # dump and clean pre-existing phenotype features
   $self->dump_phenotypes($source_info{source_name}, 1);
 
   # get phenotype data

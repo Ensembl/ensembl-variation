@@ -220,7 +220,7 @@ sub write_output {
     close($self->errFH) if (defined $self && defined $self->errFH) ;
     close($self->pipelogFH) if (defined $self && defined $self->pipelogFH) ;
 
-    $self->dataflow_output_id($self->param('output_ids'), 2);
+    $self->dataflow_output_id($self->param('output_ids'), 1);
   } else {
     open (my $pipelogFH, ">", $self->workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$self->required_param('species')) || die ("Failed to open file: $!\n");
     print $pipelogFH "Ensembl species has different assembly than AnimalQTL, will exit!\n";
