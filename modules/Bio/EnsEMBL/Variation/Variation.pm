@@ -1083,40 +1083,39 @@ sub derived_allele_frequency{
 =cut
 
 sub derived_allele {
-     my $self = shift();
-     my $population = shift();
+  my $self = shift();
+  my $population = shift();
 
-     my $population_dbID = $population->dbID();
+  my $population_dbID = $population->dbID();
   my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
   my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
   my $ancestral_allele_str = $vf->ancestral_allele();
 
-     if (not defined($ancestral_allele_str)) {
-         return;
-     }
+  if (not defined($ancestral_allele_str)) {
+    return;
+  }
 
-     my $alleles = $self->get_all_Alleles();
+  my $alleles = $self->get_all_Alleles();
 
-     my $derived_allele_str;
+  my $derived_allele_str;
 
-     foreach my $allele (@{$alleles}) {
-         my $allele_population = $allele->population();
+  foreach my $allele (@{$alleles}) {
+    my $allele_population = $allele->population();
 
-         if (defined($allele_population) and
-             $allele_population->dbID() == $population_dbID)
-         {
-             my $allele_str = $allele->allele();
+    if (defined($allele_population) and
+      $allele_population->dbID() == $population_dbID) {
+      my $allele_str = $allele->allele();
 
-             if ($ancestral_allele_str ne $allele_str) {
-                 if (defined($derived_allele_str)) {
-                     return;
-                 } else {
-                     $derived_allele_str = $allele_str;
-                 }
-             }
-         }
-     }
-     return $derived_allele_str;
+      if ($ancestral_allele_str ne $allele_str) {
+        if (defined($derived_allele_str)) {
+          return;
+        } else {
+          $derived_allele_str = $allele_str;
+        }
+      }
+    }
+  }
+  return $derived_allele_str;
 }
 
 =head2 minor_allele
