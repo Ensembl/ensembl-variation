@@ -40,10 +40,6 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportHuman;
 use warnings;
 use strict;
 
-use File::Path qw(make_path);
-use File::stat;
-use LWP::Simple;
-
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA Orphanet MIMmorbid DDG2P CGC Human NONE species);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
