@@ -50,7 +50,7 @@ sub fetch_input {
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   my $workdir = $self->param('workdir');
   $workdir ||= $self->param('pipeline_dir');
-  open (my $logFH, ">", $workdir."/REPORT_import.txt") || die ("Failed to open file: $!\n");
+  open (my $logFH, ">", $workdir."/REPORT_import_".$self->param("species").".txt") || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
 }
 
@@ -67,9 +67,7 @@ sub run {
   $self->report_results($new_counts, $previous_counts);
 
   ## updated production db for later use
-#  $self->update_internal_db($new_counts);
-
-  $self->update_meta();
+  $self->update_internal_db($new_counts);
 
   close($self->logFH) if defined $self->logFH ;
 }
@@ -194,32 +192,7 @@ sub update_internal_db{
 
 
 
-=head2 update_meta
 
-  Example    : $obj->update_meta()
-  Description: Store the pipeline name, date and imported source in the species meta table.
-               key=PhenotypeAnnotation_run_date_<source_name> value=run_date
-  Returntype : none
-  Exceptions : none
-
-=cut
-
-sub update_meta{
-  my $self = shift;
-
-  my $source_info = $self->param("source");
-  my $source_name;
-  $source_name = $source_info->{source_name} if defined $source_info;
-  $source_name ||= $self->param("source_name");
-  my $var_dbh = $self->variation_db_adaptor->dbc->db_handle;
-
-  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
-                                              ( meta_key, meta_value) values (?,?)
-                                            ]);
-
-  $update_meta_sth->execute('PhenotypeAnnotation_run_date_'.$source_name, $self->run_date() );
-
-}
 
 1;
 

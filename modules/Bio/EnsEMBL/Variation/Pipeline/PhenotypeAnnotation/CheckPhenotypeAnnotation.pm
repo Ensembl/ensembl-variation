@@ -38,13 +38,14 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAn
 
 use strict;
 use warnings;
-use POSIX;
+use POSIX 'strftime';
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species IMPC OMIA AnimalQTL);
 
 my $source;
 my $workdir;
+my $species;
 my $report;
 my $count_ok = 1;
 
@@ -53,19 +54,23 @@ sub fetch_input {
 
   $source = $self->param('source');
   $workdir = $self->param('workdir');
-  my $logPipeName;
+  $species = $self->param('species');
+
+  my ($logName, $logPipeName);
   if (defined $source) {
     $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
+    $logName = "REPORT_QC_".$source->{source_name}.".txt";
     $logPipeName = "log_import_debug_pipe_".$source->{source_name}."_".$self->param('species');
   } else {
     $workdir = $self->param('pipeline_dir');
+    $logName = "REPORT_QC_".$species.".txt";
     $logPipeName = "log_import_debug_pipe_".$self->param('species');
   }
 
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  open (my $logFH, ">", $workdir."/REPORT_QC.txt") || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
+  open (my $logFH, ">>", $workdir."/".$logName) || die ("Failed to open file: $!\n");
+  open (my $pipelogFH, ">>", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->pipelogFH($pipelogFH);
 }
@@ -82,6 +87,7 @@ sub run {
   $self->print_logFH("\n");
   $self->check_fk($dbh);
   $self->check_source();
+  $self->update_meta();
 
 }
 
@@ -99,16 +105,30 @@ sub write_output {
     return;
   }
 
+  #map of the species imported for each analysis
+  my %import_species = &species;
+  my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
+
   #if source specific check, then flow to next import
-  if (defined $source && $source->{source_name} eq 'IMPC'){
-    $self->dataflow_output_id($self->param('output_ids'), 1);
-    close($self->logFH) if defined $self->logFH ;
-    close($self->pipelogFH) if defined $self->pipelogFH ;
-    return;
+  if (defined $source){
+    if ($source->{source_name} eq IMPC){
+      $self->dataflow_output_id($self->param('output_ids'), 1);
+      close($self->logFH) if defined $self->logFH ;
+      close($self->pipelogFH) if defined $self->pipelogFH ;
+      return;
+    } elsif ($source->{source_name} eq OMIA &&
+             defined($animalQTL_species{$species}) ){
+      # if this check is from OMIA import and species has AnimalQTL date
+      # then import that: flow number 2
+      $self->param('output_ids', [{species => $species}]);
+      $self->dataflow_output_id($self->param('output_ids'), 2);
+      close($self->logFH) if defined $self->logFH ;
+      close($self->pipelogFH) if defined $self->pipelogFH ;
+      return;
+    }
   }
 
   # if species is an 'ontology' term species then move to dataflow 2
-  my %import_species = &species;
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
     if ($self->param('debug_mode')) {
@@ -150,13 +170,13 @@ sub check_phenotype_description{
     $self->print_logFH("WARNING: Phenotype id:$l->[0] has empty description!\n") if $l->[1] eq '';
 
     my $full = $l->[1];
-  #  my @matches = $l->[1] =~ /\(|\)|\/|\.|\; |\+|\'|\:|\@|\*|\%/gm;
+    #  my @matches = $l->[1] =~ /\(|\)|\/|\.|\; |\+|\'|\:|\@|\*|\%/gm;
     # ' can be ok: example: Kupffer's vesicle
     # / can be ok: example: G1/S transition of mitotic cell cycle
     # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
     # . can be ok: example: Blond vs. brown hair color (from gwas)
     # + can be ok: example: decreased KLRG1+ CD8 alpha beta T cell number
-    my @matches = $l->[1] =~ /\(|\)|\;|\@|\*|\%/gm;
+    my @matches = $l->[1] =~ /\(|\)|\;|\?|\@|\*|\%/gm;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n") if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
@@ -311,7 +331,7 @@ sub check_source {
     my $check_name = "$table\_count";
 
     if (defined $previous_counts->{$check_name} &&
-        $previous_counts->{$check_name}  < $new_counts->{$check_name}){
+        $previous_counts->{$check_name}  > $new_counts->{$check_name}){
       $text_out.= "WARNING: ".$new_counts->{"$table\_count"}." $table entries";
       $text_out.= " (previously ".$previous_counts->{"$table\_count"}.")" if defined  $previous_counts->{"$table\_count"} ;
       $text_out.= "\n";
@@ -319,6 +339,36 @@ sub check_source {
     }
   }
   $self->print_logFH($text_out);
+}
+
+=head2 update_meta
+
+  Example    : $obj->update_meta()
+  Description: Store the pipeline name, date and imported source in the species meta table.
+               key=PhenotypeAnnotation_run_date_<source_name> value=run_date
+  Returntype : none
+  Exceptions : none
+
+=cut
+
+sub update_meta{
+  my $self = shift;
+
+  # only source specific checks will update the meta table
+  my $source_info = $self->param("source");
+  return if !defined $source_info;
+
+  my $source_name;
+  $source_name = $source_info->{source_name} if defined $source_info;
+  $source_name ||= $self->param("source_name");
+  my $var_dbh = $self->variation_db_adaptor->dbc->db_handle;
+
+  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
+                                              ( meta_key, meta_value) values (?,?)
+                                            ]);
+
+  $update_meta_sth->execute('PhenotypeAnnotation_run_date_'.$source_name, $self->run_date() );
+
 }
 
 1;
