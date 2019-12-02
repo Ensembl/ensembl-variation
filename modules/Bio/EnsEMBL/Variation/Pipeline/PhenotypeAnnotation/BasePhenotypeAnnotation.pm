@@ -584,8 +584,8 @@ sub save_phenotypes {
   Example    : $self->dump_phenotypes($source_id, 1);
   Description: Dump the existing phenotype_features, phenotype_features_attribs
                for the particular source and removes them if clean option selected.
-               $clean option removes the phenotype feature data including phenotypes
-               and phenotype_ontology_accessions that is not attached to any phenotype_feature.
+               $clean option removes the phenotype feature data excluding phenotypes
+               and phenotype_ontology_accessions (these might get added again by the import).
   Returntype : none
   Exceptions : none
 
@@ -631,19 +631,9 @@ sub dump_phenotypes {
     FROM phenotype p LEFT JOIN phenotype_feature pf ON pf.phenotype_id = p.phenotype_id
     WHERE pf.phenotype_id IS null;
   };
-  my $p_extra_delete_stmt = qq{
-    DELETE p.*
-    FROM phenotype p LEFT JOIN phenotype_feature pf ON pf.phenotype_id = p.phenotype_id
-    WHERE pf.phenotype_id IS null;
-  };
 
   my $poa_extra_select_stmt = qq{
     SELECT *
-    FROM phenotype_ontology_accession poa LEFT JOIN phenotype_feature pf ON pf.phenotype_id = poa.phenotype_id
-    WHERE pf.phenotype_id IS null;
-  };
-  my $poa_extra_delete_stmt = qq{
-    DELETE poa.*
     FROM phenotype_ontology_accession poa LEFT JOIN phenotype_feature pf ON pf.phenotype_id = poa.phenotype_id
     WHERE pf.phenotype_id IS null;
   };
@@ -662,11 +652,6 @@ sub dump_phenotypes {
     $sth = $db_adaptor->dbc->prepare($pf_delete_stmt);
     $sth->execute();
 
-    $sth = $db_adaptor->dbc->prepare($p_extra_delete_stmt);
-    $sth->execute();
-
-    $sth = $db_adaptor->dbc->prepare($poa_extra_delete_stmt);
-    $sth->execute();
   }
 }
 
