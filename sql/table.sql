@@ -415,6 +415,7 @@ CREATE TABLE `phenotype` (
   `stable_id` VARCHAR(255) DEFAULT NULL,
   `name` VARCHAR(50) DEFAULT NULL,
   `description` VARCHAR(255) DEFAULT NULL,
+  `attrib_id` INT DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`),
   KEY `name_idx` (`name`),
   UNIQUE KEY `desc_idx` (`description`),
