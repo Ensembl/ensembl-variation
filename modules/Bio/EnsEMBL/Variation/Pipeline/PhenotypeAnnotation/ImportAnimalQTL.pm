@@ -171,7 +171,7 @@ sub fetch_input {
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
   print $logFH 'INFO: Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
 
-  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime);
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime));
   print $logFH "Found inputDir file: $inputFile \n";
   if ( -e $workdir."/".$inputFile) {
     print $logFH "Found file (".$workdir."/".$inputFile."), will skip new copy of inputData\n";

@@ -44,7 +44,6 @@ use strict;
 use File::Path qw(make_path);
 use LWP::Simple;
 use XML::LibXML;
-use POSIX 'strftime';
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 

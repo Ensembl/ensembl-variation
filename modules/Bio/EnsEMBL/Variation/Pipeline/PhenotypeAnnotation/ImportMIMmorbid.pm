@@ -59,7 +59,7 @@ sub fetch_input {
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  my $dateStr = strftime "%Y%m%d", localtime;
+  my $dateStr = strftime("%Y%m%d", localtime);
 
   %source_info = (source_description => 'Online Mendelian Inheritance in Man (OMIM) database',
                   source_url => 'https://www.omim.org/',
@@ -86,7 +86,7 @@ sub fetch_input {
   my $file_mim = "mim_dump.txt";
   if ( -e $workdir."/".$file_mim ){
     print $logFH "Found files (".$workdir."/".$file_mim."), will skip new fetch\n";
-    my $fileTime = strftime "%Y%m%d", localtime(stat($workdir."/".$file_mim)->mtime); #get file date
+    my $fileTime = strftime("%Y%m%d", localtime(stat($workdir."/".$file_mim)->mtime)); #get file date
     print $errFH "WARNING: File $file_mim to be imported has a different date than today!: $fileTime \n" if $fileTime ne $dateStr;
   } else {
     my $st_getdata = qq{

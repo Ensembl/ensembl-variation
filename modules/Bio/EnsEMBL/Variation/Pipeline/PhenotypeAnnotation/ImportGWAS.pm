@@ -93,13 +93,13 @@ sub fetch_input {
   my ($latestFile, $latestFileTime);
   foreach my $f (@files){
     if (defined $latestFile) {
-      my $fileTime = strftime "%Y%m%d", localtime(stat($f)->mtime); #get file date
+      my $fileTime = strftime("%Y%m%d", localtime(stat($f)->mtime)); #get file date
       if ($fileTime > $latestFileTime) {
         $latestFile = $f; $latestFileTime = $fileTime;
       }
     } else {
       $latestFile = $f;
-      $latestFileTime = strftime "%Y%m%d", localtime(stat($latestFile)->mtime);
+      $latestFileTime = strftime("%Y%m%d", localtime(stat($latestFile)->mtime));
     }
   }
   if (defined $latestFile) {
