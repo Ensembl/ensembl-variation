@@ -729,10 +729,11 @@ sub _add_phenotypes {
   my $left_join = '';
 
   #for gwas variants
-  my ($pheno_set, $gwas_set) = ('','');
+  my ($pheno_set, $gwas_set, $evidence_attrib) = ('','','');
   if ($self->gwas) {
     $pheno_set = $self->_get_set_ids("ph_variants");
     $gwas_set = $self->_get_set_ids($source_info->{set});
+    $evidence_attrib = $self->_get_attrib_ids("evidence", "Phenotype_or_Disease");
 
     # add special joins for checking certain sources
     $left_join = qq{
@@ -813,11 +814,17 @@ sub _add_phenotypes {
     values (?,?,?,?)
    };
 
-  my $update_vf_stmt = qq {
-    UPDATE variation_feature vf
-    SET vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,'),
-    vf.display =1
-    WHERE vf.variation_feature_id = ?
+  my $update_v_vf_stmt = qq {
+    UPDATE variation v, variation_feature vf
+    SET
+      v.display = 1,
+      v.evidence_attribs = CONCAT(v.evidence_attribs, ',$evidence_attrib,'),
+      vf.display =1,
+      vf.evidence_attribs = CONCAT(vf.evidence_attribs, ',$evidence_attrib,'),
+      vf.variation_set_id = CONCAT(vf.variation_set_id, ',$pheno_set,$gwas_set,')
+    WHERE
+      v.variation_id  = vf.variation_id AND
+      vf.variation_feature_id = ?
   };
 
   my $st_ins_sth   = $db_adaptor->dbc->prepare($st_ins_stmt);
@@ -826,7 +833,7 @@ sub _add_phenotypes {
   my $attrib_ins_sth = $db_adaptor->dbc->prepare($attrib_ins_stmt);
   my $attrib_ins_cast_sth = $db_adaptor->dbc->prepare($attrib_ins_cast_stmt);
   my $ontology_accession_ins_sth = $db_adaptor->dbc->prepare($ontology_accession_ins_stmt);
-  my $vf_up_sth = $db_adaptor->dbc->prepare($update_vf_stmt);
+  my $v_vf_up_sth = $db_adaptor->dbc->prepare($update_v_vf_stmt);
   my $sr_ins_sth    = $db_adaptor->dbc->prepare($st_ins_sr_stmt);
   my $sr_sel_sth   = $core_dba->dbc->prepare($st_sel_sr_stmt);
 
@@ -942,8 +949,8 @@ sub _add_phenotypes {
 
       if ($self->gwas) {
         # update variation feature sets and dispaly flag
-        $vf_up_sth->bind_param(1,$coord->{vf_id},SQL_INTEGER);
-        $vf_up_sth->execute();
+        $v_vf_up_sth->bind_param(1,$coord->{vf_id},SQL_INTEGER);
+        $v_vf_up_sth->execute();
       }
 
       #check seq region id exists
@@ -1232,6 +1239,21 @@ sub _get_attrib_types {
   $sth->finish;
 
   return \@tmp_types;
+}
+
+# fetch attrib ids from db
+sub _get_attrib_ids {
+  my ($self, $type, $value) = @_;
+
+  my $aa = $self->variation_db_adaptor->get_AttributeAdaptor();
+  my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
+
+  if (!$attrib_id){
+    die("Couldn't find the $value attrib\n");
+  } else {
+    return $attrib_id;
+  }
+
 }
 
 # fetch set ids from db
