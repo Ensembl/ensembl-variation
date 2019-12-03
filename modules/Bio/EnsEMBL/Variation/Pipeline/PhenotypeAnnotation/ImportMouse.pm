@@ -74,7 +74,7 @@ sub fetch_input {
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file ;
           $spec->{pipeline_dir} = $workdir;
-          $spec->{source_name} ='IMPC_MGI';
+          $spec->{source_name} = $run_type eq IMPC ? IMPC : 'IMPC_MGI' ;
         }
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if ($self->debug) ;
@@ -84,11 +84,13 @@ sub fetch_input {
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file;
           $spec->{pipeline_dir} = $workdir;
-          $spec->{source_name} ='MGI';
         }
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if ($self->debug) ;
       }
+
+      my @speciesNames = map { {species => $_->{species}} }  @{$self->param('output_ids')};
+      $self->param('species_names', [@speciesNames]);
     }
 }
 
@@ -105,7 +107,7 @@ sub write_output {
       $self->dataflow_output_id($self->param('output_ids'), 3);
     }
     $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if ($self->debug);
-    $self->dataflow_output_id($self->param('output_ids'), 1);
+    $self->dataflow_output_id($self->param('species_names'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 
