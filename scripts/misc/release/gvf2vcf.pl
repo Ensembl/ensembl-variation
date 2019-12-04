@@ -265,6 +265,7 @@ sub read_gvf_file {
     while ($fh_gvf->gzreadline($_) > 0) {
         chomp;
         my $line = $_;
+        next if ($line =~ /^##/);
         parse_gvf_line($config, $line);
     }
     die "Error reading $gvf_file: $gzerrno\n" if $gzerrno != Z_STREAM_END;
@@ -290,7 +291,6 @@ sub parse_gvf_line {
 
     $vcf_line->{'QUAL'} = '.';
     $vcf_line->{'FILTER'} = '.';
-
     my @dbxref = split(':', $gvf_line->{Dbxref}, 2);
     my ($variation_id, $db) = ($dbxref[1], $dbxref[0]);
     $vcf_line->{'ID'} = $variation_id;
