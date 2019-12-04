@@ -330,7 +330,8 @@ sub get_attrib_id {
 
 sub add_phenotype {
   my $phenotype = shift;
-  $dbVar->do(qq{INSERT IGNORE INTO phenotype (description) VALUES ("$phenotype")});
+  $dbVar->do(qq{INSERT IGNORE INTO phenotype (description, class_attrib_id)
+                VALUES ("$phenotype", $pheno_type_attrib_id )});
   my $phenotype_id = $dbVar->selectrow_arrayref(qq{SELECT phenotype_id FROM phenotype WHERE description="$phenotype"});
 
   # Update the list of phenotypes
