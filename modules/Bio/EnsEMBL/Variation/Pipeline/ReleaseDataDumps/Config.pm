@@ -56,7 +56,7 @@ sub write_config_file {
     # structural_variation svs
     # somatic
     # incl consequences: protein info: sift, polyphen
-    # evidence, clinical_significance, ancestral_allele, minor_allele_freq, validation_status
+    # evidence, clinical_significance, ancestral_allele, minor_allele_freq
     # sets: phenotypes, clinically_associated
     my $config = {};
 
@@ -64,7 +64,7 @@ sub write_config_file {
 
     my $species_config = {
         failed => ['failed'],
-        generic => ['evidence', 'validation_status'],
+        generic => ['evidence'],
         incl_consequences => ['incl_consequences', 'protein_coding_details', 'evidence'],
     };
     foreach my $attribute (qw/ancestral_allele global_maf clinical_significance/) {
