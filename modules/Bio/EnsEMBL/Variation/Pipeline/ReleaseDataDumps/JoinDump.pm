@@ -298,8 +298,12 @@ sub join_split_slice_files {
           $id_count++;
         }
         $fh->close();
-        `gzip $working_dir/$file_name`;
-        `mv $working_dir/$file_name.gz $tmp_dir`;
+        if ($species eq 'homo_sapiens') {
+          `gzip $working_dir/$file_name`;
+          `mv $working_dir/$file_name.gz $tmp_dir`;
+        } else {
+          `rm $working_dir/$file_name`;
+        }
       }
       $fh_join->close();
     }
