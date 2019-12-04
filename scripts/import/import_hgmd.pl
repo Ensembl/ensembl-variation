@@ -43,6 +43,7 @@ my $vf_table  = 'HGMD_PUBLIC_variation_feature';
 my $va_table  = 'HGMD_PUBLIC_variation_annotation';
 my $short_set_hgmd = 'ph_hgmd_pub';
 my $short_set_pheno = 'ph_variants';
+my $evidence_pheno = 'Phenotype_or_Disease';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
@@ -60,8 +61,11 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 # Get variation_set_id
 my $hgmd_set_id = get_variation_set_id($short_set_hgmd);
 my $pheno_set_id = get_variation_set_id($short_set_pheno);
+my $pheno_evidence_id = get_evidence_id($evidence_pheno);
+
 die ("HGMD set not found") if (!defined($hgmd_set_id));
-die ("All phenotype set ot found") if (!defined($pheno_set_id));
+die ("All phenotype set not found") if (!defined($pheno_set_id));
+die ("Phenotype evidence attrib not found") if (!defined($pheno_evidence_id));
 
 # Main
 add_variation();
@@ -81,7 +85,8 @@ sub add_variation {
   });
 
   my $insert_v_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO variation (name,source_id) VALUES (?,?);
+    INSERT IGNORE INTO variation (name,source_id,evidence_attribs, display)
+    VALUES (?,?.'$pheno_evidence_id',1);
   });
 
   my $select_v_sth = $dbh->prepare(qq{
@@ -141,6 +146,8 @@ sub add_variation_feature {
         map_weight,
         variation_id,
         variation_name,
+        evidence_attribs,
+        display,
         source_id
       ) 
       SELECT 
@@ -153,6 +160,8 @@ sub add_variation_feature {
         vf.map_weight,
         v.new_var_id,
         v.name,
+        '$pheno_evidence_id',
+        1,
         ?
         FROM $vf_table vf, $var_table v 
         WHERE v.variation_id=vf.variation_id
@@ -336,6 +345,18 @@ sub get_variation_set_id {
   }
 }
 
+sub get_evidence_id {
+  my $value = shift;
+
+  my $aa = $vdb2->get_AttributeAdaptor();
+  my $attrib_id = $aa->attrib_id_for_type_value('evidence', $value);
+
+  if (!$attrib_id){
+    die("Couldn't find the $value attrib\n");
+  } else {
+    return $attrib_id;
+  }
+}
 
 sub add_set {
   
