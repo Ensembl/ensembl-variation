@@ -55,6 +55,9 @@ my $source_name = 'COSMIC';
 my $source_id = get_source_id(); # COSMIC source_id
 my $variation_set_cosmic = get_variation_set_id($source_name); # COSMIC variation set
 my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
+my $pheno_evidence_id = get_attrib_id('evidence','Phenotype_or_Disease');
+my $pheno_type_attrib_id = get_attrib_id('phenotype_type', 'tumour');
+
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
 my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym';
@@ -308,6 +311,22 @@ sub get_source_id {
   return $source_id[0];
 }
 
+sub get_attrib_id {
+  my ($type, $value) = @_;
+  $DB::single=1;
+  #GET attrib of specific type
+  my $aid = $dbVar->selectrow_arrayref(qq{
+    SELECT a.attrib_id
+    FROM attrib a JOIN attrib_type att
+      ON a.attrib_id = att.attrib_id
+    WHERE att.code="$type" and a.value = "$value";}
+
+  if (!$aid[0]){
+    die("Couldn't find the $value attrib of $type type\n");
+  } else {
+    return $aid[0];
+  }
+}
 
 sub add_phenotype {
   my $phenotype = shift;
@@ -337,15 +356,20 @@ sub get_variation_set_id {
 sub insert_cosmic_entries {
   
   # Insert Var
-  my $stmt_var = qq{INSERT IGNORE INTO variation (name, source_id, class_attrib_id, somatic)
-                    SELECT name, ?, class, ? FROM $temp_table};
+  my $stmt_var = qq{INSERT IGNORE INTO variation
+                    (name, source_id, class_attrib_id, somatic,
+                     evidene_attribs, display)
+                    SELECT name, ?, class, ?, '$pheno_evidence_id', 1
+                    FROM $temp_table};
   my $sth_var  = $dbh->prepare($stmt_var);
   $sth_var->execute($source_id, $somatic);
 
   # Insert VF
   my $stmt_vf = qq{INSERT IGNORE INTO variation_feature 
-                   (variation_id, variation_name, source_id, variation_set_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
-                   SELECT v.variation_id, v.name, v.source_id,'$variation_set_pheno,$variation_set_cosmic', v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ?
+                   (variation_id, variation_name, source_id, variation_set_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+                   evidence_attribs, display)
+                   SELECT v.variation_id, v.name, v.source_id,'$variation_set_pheno,$variation_set_cosmic', v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ?,
+                   '$pheno_evidence_id', 1
                    FROM variation v, $temp_table c WHERE v.name=c.name};
   my $sth_vf  = $dbh->prepare($stmt_vf);
   $sth_vf->execute($allele, $default_strand);
