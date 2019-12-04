@@ -88,7 +88,7 @@ sub add_variation {
 
   my $insert_v_sth = $dbh->prepare(qq{
     INSERT IGNORE INTO variation (name,source_id,evidence_attribs, display)
-    VALUES (?,?.'$pheno_evidence_id',1);
+    VALUES (?,?,'$pheno_evidence_id',1);
   });
 
   my $select_v_sth = $dbh->prepare(qq{
