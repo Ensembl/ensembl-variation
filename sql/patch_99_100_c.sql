@@ -13,9 +13,9 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# add attrib_id column to phenotype table
-ALTER TABLE phenotype ADD COLUMN attrib_id INT DEFAULT NULL;
+# add type_attrib_id column to phenotype table
+ALTER TABLE phenotype ADD COLUMN type_attrib_id INT DEFAULT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_c.sql|add attrib_id column to phenotype');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_c.sql|add type_attrib_id column to phenotype');
 
