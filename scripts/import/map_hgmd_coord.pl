@@ -57,7 +57,6 @@ die("You need to specify an input file (option -input_file)") if (!defined($inpu
 $source_name ||= 'HGMD-PUBLIC';
 
 my $header = 'HGMD_PUBLIC';
-my $ncbi_version = 'NCBI36';
    $registry_file ||= $Bin . "/ensembl.registry";
 my $hgmd_url = 'http://www.hgmd.cf.ac.uk/ac/index.php';
 my $insertion_label = 'I';
