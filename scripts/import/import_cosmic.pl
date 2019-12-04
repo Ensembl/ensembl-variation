@@ -313,18 +313,18 @@ sub get_source_id {
 
 sub get_attrib_id {
   my ($type, $value) = @_;
-  $DB::single=1;
+
   #GET attrib of specific type
   my $aid = $dbVar->selectrow_arrayref(qq{
     SELECT a.attrib_id
     FROM attrib a JOIN attrib_type att
-      ON a.attrib_id = att.attrib_id
-    WHERE att.code="$type" and a.value = "$value";}
+      ON a.attrib_type_id = att.attrib_type_id
+    WHERE att.code="$type" and a.value = "$value";});
 
-  if (!$aid[0]){
+  if (!$aid->[0]){
     die("Couldn't find the $value attrib of $type type\n");
   } else {
-    return $aid[0];
+    return $aid->[0];
   }
 }
 
