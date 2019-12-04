@@ -13,7 +13,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# add attrib_type_id column to phenotype table
+# add attrib_id column to phenotype table
 ALTER TABLE phenotype ADD COLUMN attrib_id INT DEFAULT NULL;
 
 # patch identifier
