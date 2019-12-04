@@ -230,50 +230,50 @@ sub get_input_gvf_dumps {
 
   my @input = ();
   my $run_in_debug_mode = $self->param('debug') ? '--debug' : '';
-  my $default_params = {
+  my %default_params = (
     'species' => $species,
     'script' => "$script_dir/$script",
     'connection_args' => $connection_args,
     'debug' => $run_in_debug_mode,
-  };
+  );
   
   if ($vf_distributions) {
     foreach my $script_arg (keys %$script_args) {
       my $file_name = $script_args->{$script_arg};
       foreach my $vf_distribution (@$vf_distributions) {   
-        my $params = $default_params;
+        my %params = %default_params;
         my $file_id = $vf_distribution->{file_id};
         my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name-$file_id.$file_type";
         my $err = "$output_dir/$file_type/$species/$file_name-$file_id.err";
         my $out = "$output_dir/$file_type/$species/$file_name-$file_id.out";
-        $params->{'script_args'} = $script_arg;
+        $params{'script_args'} = $script_arg;
         if ($vf_distribution->{is_slice_piece}) {
           foreach my $param (qw/seq_region_id slice_piece_name slice_piece_start slice_piece_end/) {
-            $params->{$param} = $vf_distribution->{$param};
+            $params{$param} = $vf_distribution->{$param};
           }
-          $params->{is_slice_piece} = '--is_slice_piece';
+          $params{is_slice_piece} = '--is_slice_piece';
         } else {
-          $params->{seq_region_ids_file} = $vf_distribution->{seq_region_ids_file};
+          $params{seq_region_ids_file} = $vf_distribution->{seq_region_ids_file};
         }
-        $params->{'gvf_file'} = $output_file;
-        $params->{'err'} = $err;
-        $params->{'out'} = $out;
-        push @input, $params;
+        $params{'gvf_file'} = $output_file;
+        $params{'err'} = $err;
+        $params{'out'} = $out;
+        push @input, \%params;
       }
     }
   } else {
     foreach my $script_arg (keys %$script_args) {
-      my $params = $default_params;
+      my %params = %default_params;
       my $file_name = $script_args->{$script_arg};
       my $file_id = $vf_distributions->{file_id};
       my $output_file = "--$file_type\_file $output_dir/$file_type/$species/$file_name.$file_type";
-      $params->{'script_args'} = $script_arg;
+      $params{'script_args'} = $script_arg;
       my $err = "$output_dir/$file_type/$species/$file_name.err";
       my $out = "$output_dir/$file_type/$species/$file_name.out";
-      $params->{'gvf_file'} = $output_file;
-      $params->{'err'} = $err;
-      $params->{'out'} = $out;
-      push @input, $params;
+      $params{'gvf_file'} = $output_file;
+      $params{'err'} = $err;
+      $params{'out'} = $out;
+      push @input, \%params;
     }
   }
   return \@input;
