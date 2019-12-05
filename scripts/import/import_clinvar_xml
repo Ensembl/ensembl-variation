@@ -208,6 +208,7 @@ sub process_clinvar_set {
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq $haplotype_type;
+    $record{clinvar_variant_id} = $set->{ReferenceClinVarAssertion}->{MeasureSet}->{ID};
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
     $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
@@ -657,6 +658,7 @@ sub import{
       next unless defined $feature_object;
 
       ## add synonym
+      add_synonyms($feature_object, $record->{clinvar_variant_id}, $source) if defined $feature_object;
       add_synonyms($feature_object, $record->{Acc}, $source) if defined $feature_object;
       add_synonyms($feature_object, $record->{feature_info}{$omimstr}, $omim_source) if defined $feature_object && defined $record->{feature_info}{$omimstr};
 
