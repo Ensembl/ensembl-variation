@@ -359,7 +359,7 @@ sub insert_cosmic_entries {
   # Insert Var
   my $stmt_var = qq{INSERT IGNORE INTO variation
                     (name, source_id, class_attrib_id, somatic,
-                     evidene_attribs, display)
+                     evidence_attribs, display)
                     SELECT name, ?, class, ?, '$pheno_evidence_id', 1
                     FROM $temp_table};
   my $sth_var  = $dbh->prepare($stmt_var);
