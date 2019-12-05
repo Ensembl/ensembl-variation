@@ -151,7 +151,7 @@ sub get_variation_feature_count {
     my $vdba = $self->param('registry')->get_DBAdaptor($species_name, 'variation');
     my $registry = $self->param('registry');
     my $dbc = $vdba->dbc;
-    $vf_count = $dbc->sql_helper()->execute_single_result( -SQL =>qq/SELECT COUNT(*) FROM variation_feature;/);
+    $vf_count = $dbc->sql_helper()->execute_single_result( -SQL =>qq/select max(variation_feature_id) from variation_feature;/);
     my $fh = FileHandle->new($vf_count_file, 'w');
     print $fh "$vf_count\n";
     $fh->close();

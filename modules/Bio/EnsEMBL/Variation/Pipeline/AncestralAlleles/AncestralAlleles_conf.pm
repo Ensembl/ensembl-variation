@@ -125,8 +125,8 @@ sub pipeline_analyses {
             },
             -input_ids      => [{}],
             -rc_name        => 'default',
-            -analysis_capacity => 5,
-            -hive_capacity => 5,
+            -analysis_capacity => 45,
+            -hive_capacity => 45,
             -flow_into => { 
               '2->A' => ['assign'],
               'A->1' => ['post_processing']
@@ -134,8 +134,8 @@ sub pipeline_analyses {
         },
         {   -logic_name     => 'assign',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::AncestralAlleles::Assign',
-            -analysis_capacity => 5,
-            -hive_capacity => 5,
+            -analysis_capacity => 45,
+            -hive_capacity => 45,
             -parameters     => {
                 @common_params,
             },
