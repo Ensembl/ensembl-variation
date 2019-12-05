@@ -31,6 +31,15 @@ my %tests = (
     'AA/TT'                 => 'substitution',
     'A/YY'                  => 'indel',
     'GA/TTT/ACCCC'          => 'indel',
+    'CTCT/CTCTCT'           => 'insertion',
+    'CTCT/CT'               => 'deletion',
+    'CTCT/CTCTCT/CT'        => 'indel',
+    'CT/-'                  => 'deletion',
+    'CT/CTCT'               => 'insertion',
+    'CT/-/CTCT'             => 'indel', # Not a sequence alteration
+    'C/-/CC'                => 'indel',
+    'TCT/T/TCTG'            => 'indel',
+    'TCT/-/TCTG'            => 'indel',
     '-/A'                   => 'insertion',
     '-/TAAG'                => 'insertion',
     '-/(LARGEINSERTION)'    => 'insertion',
@@ -39,24 +48,36 @@ my %tests = (
     '-/AA/ATGCG'            => 'insertion',
     '(508 BP INSERTION)'    => 'insertion',
     '-/INSERTION'           => 'insertion',
-    '-/(LARGEDELETION)'     => 'deletion', # dbSNP stylee
-    '(1657 BP DELETION)/-'  => 'deletion', # COSMIC stylee
+    'T/TT'                  => 'insertion',
+    'TT/TTTT'               => 'insertion',
+    'TT/TTTT/TTTTT'         => 'insertion',
+    '-/(LARGEDELETION)'     => 'deletion', # dbSNP style
+    '(1657 BP DELETION)/-'  => 'deletion', # COSMIC style
     'ATTAGC/-'              => 'deletion',
     'A/-'                   => 'deletion',
     'YY/-'                  => 'deletion',
     '(LARGEDELETION)'       => 'deletion',
     'DELETION/-'            => 'deletion',
+    'TT/T'                  => 'deletion',
+    'TTT/TT/T'              => 'deletion',
+    'TT/-/T'                => 'deletion',
+    'CTT/C'                 => 'deletion',
+    'TA/T'                  => 'deletion',
+    'TCT/CT'                => 'deletion',
+    'AGCG/-/A'              => 'deletion',
     '(LARGEDELETION)/-/AT'  => 'sequence_alteration',
-    'AGCG/-/A'              => 'sequence_alteration',
     'A/-/T'                 => 'sequence_alteration',
     'A/Y/-'                 => 'sequence_alteration',
     '(CA)1/-/(CA)12'        => 'tandem_repeat',
     '(CAG)8/(CAG)9'         => 'tandem_repeat',
     '-/TGTG/(TG)10/TG(11)'  => 'tandem_repeat',
     '-/(RY)7/(RY)8'         => 'tandem_repeat',
+    'TT/T/TTT'              => 'indel',     # dbSNP v2 style indel
+    'TT/TTT/TTTT'           => 'insertion', # dbSNP v2 style indel
+    'TTT/T/TT'              => 'deletion',  # dbSNP v2 stype indel
 );
 
-for my $allele_string (keys %tests) {
+for my $allele_string (sort keys %tests) {
     my $expected = $tests{$allele_string};
     is(SO_variation_class($allele_string, 1), $expected, "$allele_string => $expected") ;
     if ($expected =~ /insertion|deletion/) {
@@ -65,4 +86,3 @@ for my $allele_string (keys %tests) {
 }
 
 done_testing();
-
