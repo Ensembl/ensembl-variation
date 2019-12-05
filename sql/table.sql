@@ -406,7 +406,7 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
 @column stable_id            Ensembl stable identifier for the phenotype
 @column name                 Phenotype short name. e.g. "CAD".
 @column description varchar  Phenotype long name. e.g. "Coronary Artery Disease".
-@column class_attrib_id      Phenotype type attribute id. e.g. for attribute non_specified
+@column class_attrib_id      Class of phenotype entry, eg trait, non_specified, tumour - used for filtering
 
 @see phenotype_feature
 */
