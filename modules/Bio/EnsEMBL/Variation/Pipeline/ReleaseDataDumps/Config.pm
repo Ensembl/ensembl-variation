@@ -67,7 +67,7 @@ sub write_config_file {
         generic => ['evidence'],
         incl_consequences => ['incl_consequences', 'protein_coding_details', 'evidence'],
     };
-    foreach my $attribute (qw/ancestral_allele global_maf clinical_significance/) {
+    foreach my $attribute (qw/ancestral_allele global_maf/) {
         if ($config->{$species}->{$attribute}) {
             push @{$species_config->{generic}}, $attribute;
             push @{$species_config->{incl_consequences}}, $attribute;
@@ -78,9 +78,6 @@ sub write_config_file {
     }
     if ($config->{$species}->{svs}) {
         $species_config->{structural_variations} = ['structural_variations'];
-        if ($config->{$species}->{clinical_significance_svs}) {
-            push @{$species_config->{structural_variations}}, 'clinical_significance';
-        }
     }
     if ($species eq 'homo_sapiens') {
         $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
@@ -110,8 +107,6 @@ sub variation_data_survey {
         sift => 'select count(*) from protein_function_predictions;',
         ancestral_allele => 'select variation_feature_id from variation_feature where ancestral_allele is not null limit 1;',
         global_maf => 'select variation_id from variation where minor_allele is not null limit 1;',
-        clinical_significance => 'select variation_id from variation where clinical_significance is not null limit 1;',
-        clinical_significance_svs => 'select structural_variation_id from structural_variation where clinical_significance is not null limit 1;',
         svs => 'select count(*) from structural_variation;',
     };
 
