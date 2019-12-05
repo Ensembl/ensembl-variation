@@ -62,12 +62,12 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 my $hgmd_set_id = get_variation_set_id($short_set_hgmd);
 my $pheno_set_id = get_variation_set_id($short_set_pheno);
 my $pheno_evidence_id = get_attrib_id('evidence',$evidence_pheno);
-my $pheno_type_attrib_id = get_attrib_id('phenotype_type', 'non_specified');
+my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'non_specified');
 
 die ("HGMD set not found") if (!defined($hgmd_set_id));
 die ("All phenotype set not found") if (!defined($pheno_set_id));
 die ("Phenotype evidence attrib not found") if (!defined($pheno_evidence_id));
-die ("Phenotype type attrib not found") if (!defined($pheno_type_attrib_id));
+die ("Phenotype type attrib not found") if (!defined($pheno_class_attrib_id));
 
 # Main
 add_variation();
@@ -87,7 +87,7 @@ sub add_variation {
   });
 
   my $insert_v_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO variation (name,source_id,evidence_attribs, display)
+    INSERT IGNORE INTO variation (name,source_id,evidence_attribs,display)
     VALUES (?,?,'$pheno_evidence_id',1);
   });
 
@@ -185,7 +185,7 @@ sub add_annotation {
   my $phenotype_id = ($select_phe_sth->fetchrow_array)[0];
   if (!defined($phenotype_id)) {
     $dbh->do(qq{INSERT INTO phenotype (name,description,class_attrib_id)
-                VALUES ('HGMD_MUTATION','Annotated by HGMD', $pheno_type_attrib_id)
+                VALUES ('HGMD_MUTATION','Annotated by HGMD',$pheno_class_attrib_id)
                });
     $phenotype_id = $dbh->{'mysql_insertid'};
   }
