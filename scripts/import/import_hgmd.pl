@@ -43,6 +43,7 @@ my $vf_table  = 'HGMD_PUBLIC_variation_feature';
 my $va_table  = 'HGMD_PUBLIC_variation_annotation';
 my $short_set_hgmd = 'ph_hgmd_pub';
 my $short_set_pheno = 'ph_variants';
+my $evidence_pheno = 'Phenotype_or_Disease';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
@@ -60,8 +61,13 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 # Get variation_set_id
 my $hgmd_set_id = get_variation_set_id($short_set_hgmd);
 my $pheno_set_id = get_variation_set_id($short_set_pheno);
+my $pheno_evidence_id = get_attrib_id('evidence',$evidence_pheno);
+my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'non_specified');
+
 die ("HGMD set not found") if (!defined($hgmd_set_id));
-die ("All phenotype set ot found") if (!defined($pheno_set_id));
+die ("All phenotype set not found") if (!defined($pheno_set_id));
+die ("Phenotype evidence attrib not found") if (!defined($pheno_evidence_id));
+die ("Phenotype type attrib not found") if (!defined($pheno_class_attrib_id));
 
 # Main
 add_variation();
@@ -81,7 +87,8 @@ sub add_variation {
   });
 
   my $insert_v_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO variation (name,source_id) VALUES (?,?);
+    INSERT IGNORE INTO variation (name,source_id,evidence_attribs,display)
+    VALUES (?,?,'$pheno_evidence_id',1);
   });
 
   my $select_v_sth = $dbh->prepare(qq{
@@ -141,6 +148,8 @@ sub add_variation_feature {
         map_weight,
         variation_id,
         variation_name,
+        evidence_attribs,
+        display,
         source_id
       ) 
       SELECT 
@@ -153,6 +162,8 @@ sub add_variation_feature {
         vf.map_weight,
         v.new_var_id,
         v.name,
+        '$pheno_evidence_id',
+        1,
         ?
         FROM $vf_table vf, $var_table v 
         WHERE v.variation_id=vf.variation_id
@@ -173,8 +184,8 @@ sub add_annotation {
   $select_phe_sth->execute();
   my $phenotype_id = ($select_phe_sth->fetchrow_array)[0];
   if (!defined($phenotype_id)) {
-    $dbh->do(qq{INSERT INTO phenotype (name,description) 
-                VALUES ('HGMD_MUTATION','Annotated by HGMD')
+    $dbh->do(qq{INSERT INTO phenotype (name,description,class_attrib_id)
+                VALUES ('HGMD_MUTATION','Annotated by HGMD',$pheno_class_attrib_id)
                });
     $phenotype_id = $dbh->{'mysql_insertid'};
   }
@@ -336,6 +347,18 @@ sub get_variation_set_id {
   }
 }
 
+sub get_attrib_id {
+  my ($type, $value) = @_;
+
+  my $aa = $vdb2->get_AttributeAdaptor();
+  my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
+
+  if (!$attrib_id){
+    die("Couldn't find the $value attrib of $type type\n");
+  } else {
+    return $attrib_id;
+  }
+}
 
 sub add_set {
   
