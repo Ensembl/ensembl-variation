@@ -56,7 +56,7 @@ my $source_id = get_source_id(); # COSMIC source_id
 my $variation_set_cosmic = get_variation_set_id($source_name); # COSMIC variation set
 my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
 my $pheno_evidence_id = get_attrib_id('evidence','Phenotype_or_Disease');
-my $pheno_type_attrib_id = get_attrib_id('phenotype_type', 'tumour');
+my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'tumour');
 
 my $temp_table      = 'MTMP_tmp_cosmic';
 my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
@@ -331,7 +331,7 @@ sub get_attrib_id {
 sub add_phenotype {
   my $phenotype = shift;
   $dbVar->do(qq{INSERT IGNORE INTO phenotype (description, class_attrib_id)
-                VALUES ("$phenotype", $pheno_type_attrib_id )});
+                VALUES ("$phenotype", $pheno_class_attrib_id )});
   my $phenotype_id = $dbVar->selectrow_arrayref(qq{SELECT phenotype_id FROM phenotype WHERE description="$phenotype"});
 
   # Update the list of phenotypes
