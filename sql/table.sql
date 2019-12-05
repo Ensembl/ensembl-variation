@@ -1192,8 +1192,8 @@ CREATE TABLE structural_variation_association (
 @column somatic                          Flags whether this structural variation is known to be somatic or not
 @column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occurred for a structural variation (e.g. somatic mutations)
 @column length                           Length of the structural variant. Used for the variants with a class "insertion", when the size of the insertion is known.
-@column allele_freq                      The max allele frequency of the minor allele of this variant, as reported by gnomAD.
-@column allele_count                     The number of samples the minor allele of this variant is found in.
+@column allele_freq                      The frequency reported for this allele in this study.
+@column allele_count                     The number of times this allele is observed in this study.
 
 @see structural_variation
 @see source
