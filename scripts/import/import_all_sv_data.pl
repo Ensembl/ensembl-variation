@@ -162,10 +162,6 @@ $target_assembly ||= $default_cs->version;
 $cs_version_number = $target_assembly;
 $cs_version_number =~ s/\D//g;
 
-# variation set
-# my %var_set = ('pilot1' => 31, 'pilot2' => 32);
-
-
 # run the mapping sub-routine if the data needs mapping
 my (%num_mapped, %num_not_mapped, %samples, %subjects, %study_done, %seq_regions);
 my $no_mapping_needed = 0;
@@ -360,8 +356,8 @@ sub study_table{
 
   my $author_desc;
   $author_desc = "$first_author $year_desc " if ($first_author and defined($year_desc));
-  # Don't think this is needed
-  # $author = (split('_',$author))[0] if ($author !~ /.+_et_al_.+/);
+
+  $author = (split('_',$author))[0] if ($author !~ /.+_et_al_.+/);
 
   #  PubMed ID
   my $pmid_desc = '';
@@ -434,12 +430,12 @@ sub study_table{
 
     my $external_link_sql;
     if ($external_link eq 'NULL') {
-      # if ($study_xref && $study_xref !~ /NULL/i && $study_xref ne '') {
+      if ($study_xref && $study_xref !~ /NULL/i && $study_xref ne '') {
         $external_link_sql = '';
-      # }
-      # else {
-      #   $external_link_sql = "external_reference='$external_link',";
-      # }
+      }
+      else {
+        $external_link_sql = "external_reference='$external_link',";
+      }
     }
     else {
       $external_link_sql = "external_reference='$external_link',";
@@ -770,7 +766,7 @@ sub structural_variation_set {
          WHERE vssv.structural_variation_id=sv.structural_variation_id AND sv.variation_name=t.id
        });
     foreach my $s_id (@$sets_1kg) {
-      push (@var_set_list,$s_id);
+      push @var_set_list,$s_id;
     }
 
   }
@@ -1898,7 +1894,7 @@ sub cleanup {
   }
   
   # Column "tmp_clinic_name" in structural_variation
-  my $sth2 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE (clinical_significance is NULL or clinical_significance = '') AND $tmp_sv_clin_col is not NULL});
+  my $sth2 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE (clinical_significance is NULL OR clinical_significance = '') AND $tmp_sv_clin_col is not NULL});
   $sth2->execute();
   my $sv_clin_count = ($sth2->fetchrow_array)[0];
   $sth2->finish;
