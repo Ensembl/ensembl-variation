@@ -208,7 +208,7 @@ sub process_clinvar_set {
     next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
                 $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq $haplotype_type;
-    $record{clinvar_variant_id} = $set->{ReferenceClinVarAssertion}->{MeasureSet}->{ID};
+    $record{clinvar_variant_id} = $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Acc};
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
     $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
