@@ -437,7 +437,16 @@ sub _bvfo_preds {
 
   my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});  
   my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
-  
+
+  if ( $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') &&
+       $vf_start <= $feat->{start} && $vf_end >= $feat->{end} ) {
+    $self->_update_preds($bvfo_preds, 'complete_overlap', 1, \$pred_digest);
+
+    $bvfo_preds->{_digest} = $pred_digest;
+
+    return $bvfo_preds;
+  }
+
   # within feature
   my $wf = overlap($vf_start, $vf_end, $feat->{start}, $feat->{end}) ? 1 : 0;
   $self->_update_preds($bvfo_preds, 'within_feature', $wf, \$pred_digest);
