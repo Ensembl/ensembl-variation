@@ -231,6 +231,16 @@ sub update {
     throw("No source ID found for source name ", $vf->{source}->name)
         unless defined($vf->{_source_id});
 
+    if( defined $vf->{evidence} && ! defined $vf->{evidence_attribs}){
+      ## store these by attrib id to allow differnt values in different species
+      my $aa = $self->db->get_AttributeAdaptor;
+
+      foreach my $ev_term( @{$vf->{evidence}} ){
+        my $ev_class_id = $aa->attrib_id_for_type_value('evidence',$ev_term);
+          push @{$vf->{evidence_attribs}},  $ev_class_id;
+        }
+      }
+
     my $sth = $dbh->prepare(q{
         UPDATE variation_feature SET
             seq_region_id = ?,
@@ -251,7 +261,8 @@ sub update {
             minor_allele = ?,
             minor_allele_freq = ?,
             minor_allele_count = ?,
-            alignment_quality = ?
+            alignment_quality = ?,
+            evidence_attribs = ?
          WHERE variation_feature_id = ?
     });
     
@@ -279,6 +290,7 @@ sub update {
         $vf->minor_allele_frequency,
         $vf->minor_allele_count,
         $vf->flank_match,
+        $vf->{evidence_attribs} ? (join ",", @{$vf->{evidence_attribs}}) : undef,
         $vf->dbID
     );
 
