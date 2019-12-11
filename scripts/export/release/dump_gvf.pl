@@ -91,13 +91,11 @@ $config,
   'input_gvf=s',
   'frequencies_dir=s', # cache_files_dir?
   'short_name=s',
-
-  'allele_string',
-  'variation_id',
 ) or die "Error: Failed to parse command-line args.\n";
 
 check_arguments($config);
 init_db_connections($config);
+my $source_lookup = init_source($config);
 init_variation_set($config) if (defined $config->{set_name});
 init_failed_variations($config) if (defined $config->{failed});
 init_sample_data($config) if (defined $config->{individual} || defined $config->{population} || $config->{sample});
@@ -142,8 +140,21 @@ sub init_db_connections {
   $config->{vf_adaptor}  = $vdba->get_VariationFeatureAdaptor;
   $config->{tv_adaptor}  = $vdba->get_TranscriptVariationAdaptor;
   $config->{variation_set_adaptor} = $vdba->get_VariationSetAdaptor;
+  $config->{src_adaptor} = $vdba->get_SourceAdaptor;
   $config->{svf_adaptor} = $vdba->get_StructuralVariationFeatureAdaptor;
   $config->{sv_adaptor} = $vdba->get_StructuralVariationAdaptor;
+}
+
+sub init_source {
+  my $config = shift;
+  my $src_adaptor = $config->{src_adaptor};
+  my $sources = $src_adaptor->fetch_all;
+  my $lookup = {};
+  foreach my $source (@$sources) {
+    $lookup->{$source->dbID}->{name} = $source->name;
+    $lookup->{$source->dbID}->{version} = $source->version;
+  }
+  return $lookup;
 }
 
 sub init_variation_set {
@@ -243,7 +254,6 @@ sub dump_svs_data {
     my $id_count = 0;
     
     foreach my $slice (@$slices) {
-        print STDERR join(' ', $slice->seq_region_name, $slice->start, $slice->end), "\n";
         my $svfs = $svfa->fetch_all_by_Slice($slice, 1);
         for my $svf (@$svfs) {
             next if ($svf->seq_region_start <= $slice->start); # avoid duplicated lines caused by vf overlapping two slice pieces
@@ -262,10 +272,13 @@ sub dump_svs_data {
             $gvf_line->{end}    = $end;
             $gvf_line->{strand} = $svf->strand == 1 ? '+' : ($svf->strand == -1 ? '-' : '.');
             $gvf_line->{type}   = $svf->class_SO_term;
-            my $source          = $svf->source_name;
-            $gvf_line->{source} = $source;
-            $source .= '_' . $svf->structural_variation->source_version if defined $svf->structural_variation->source_version;
-            $gvf_line->{attributes}->{Dbxref} = "$source:" . $svf->variation_name;
+            
+            my $source_id       = $svf->{_source_id};
+            my $source_name     = $source_lookup->{$source_id}->{name};
+            my $source_version  = $source_lookup->{$source_id}->{version};
+            $gvf_line->{source} = $source_name;
+            $source_name .= '_' . $source_version if defined $source_version;
+            $gvf_line->{attributes}->{Dbxref} = "$source_name:" . $svf->variation_name;
             $gvf_line->{score} = '.';
             $gvf_line->{phase} = '.';
 
@@ -378,6 +391,7 @@ sub dump_data {
                     print_gvf_line($config, $gvf_line) if ((scalar keys %$gvf_line) > 1);
                 }
             }
+            last if ($config->{debug});                      
         } 
     }
 }
@@ -426,10 +440,6 @@ sub annotate_vf {
     if ($config->{global_maf}) {
         add_global_maf($gvf_line, $vf);
     }
-    if ($config->{variation_id}) {
-        my $variation = $vf->variation;
-        $gvf_line->{attributes}->{variation_id} = $variation->dbID;
-    } 
 
     if (defined $gvf_line->{attributes}->{invalid_variant_strings}) {
         $gvf_line = {};
@@ -441,10 +451,12 @@ sub annotate_vf {
 
 sub add_source {
     my ($gvf_line, $vf) = @_;
-    my $source          = $vf->source->name;
-    $gvf_line->{source} = $source;
-    $source .= '_' . $vf->source_version if defined $vf->source_version;
-    $gvf_line->{attributes}->{Dbxref} = "$source:" . $vf->variation_name;
+    my $source_id = $vf->{_source_id};
+    my $source_name = $source_lookup->{$source_id}->{name};
+    $gvf_line->{source} = $source_name;
+    my $source_version = $source_lookup->{$source_id}->{version};
+    $source_name .= '_' . $source_version if defined $source_version;
+    $gvf_line->{attributes}->{Dbxref} = "$source_name:" . $vf->variation_name;
 }
 
 sub add_coords {
@@ -465,9 +477,6 @@ sub add_alleles {
     my @alleles = split /\//, $vf->allele_string;
     map {expand(\$_)} @alleles;
     $gvf_line->{allele_string} = join('/', @alleles);
-    if ($config->{allele_string}) { 
-        $gvf_line->{attributes}->{allele_string} = join(',', @alleles);
-    }
     my $ref_seq = shift @alleles unless @alleles == 1; # shift off the reference allele
 
     if ($vf->allele_string eq 'HGMD_MUTATION') {

@@ -38,9 +38,7 @@ sub run {
   my $script = $self->param('script');
   my $species = $self->param('species');
   push @args, "--species $species";
-  my $debug = $self->param('debug') ? '--debug' : '';
-  push @args, $debug;
-  foreach my $arg (qw/connection_args seq_region_file script_args output_file gvf_file vcf_file slice_piece_id seq_region_id slice_piece_name slice_piece_start slice_piece_end is_slice_piece seq_region_ids_file/) {
+  foreach my $arg (qw/ancestral_allele_file fasta_file connection_args seq_region_file script_args output_file gvf_file vcf_file slice_piece_id seq_region_id slice_piece_name slice_piece_start slice_piece_end is_slice_piece seq_region_ids_file debug/) {
     if (defined $self->param($arg)) {
       push @args, $self->param($arg);
     }
