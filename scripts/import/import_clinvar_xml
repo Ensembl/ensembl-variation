@@ -99,6 +99,7 @@ my $source      = get_source('ClinVar');
 my $omim_source = get_source($omimstr);
 
 my $phenotype_evidence = "Phenotype_or_Disease";
+my $pheno_evidence_id = get_evidence_id($phenotype_evidence);
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -299,6 +300,21 @@ sub get_set{
 
   return $set_id;
 
+}
+
+
+## get the identifier for a specific evidence
+sub get_evidence_id {
+  my $value = shift;
+
+  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
+                                       where value = ? and attrib_type_id = 497]);
+
+  $attrib_ext_sth->execute( $value);
+  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
+  die "Exiting: attrib not available for $value\n" unless defined $attrib_id->[0]->[0];
+
+  return $attrib_id->[0]->[0];
 }
 
 ## get ClinVar accession & version
@@ -754,10 +770,8 @@ sub import_phenotype_feature{
     print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
       if $DEBUG == 1;
 
-    ## add evidence to variation_feature
-    $feature->add_evidence_value($phenotype_evidence);
-    $var_feat_adaptor->update($feature);
-    update_variation_feature_set($feature);
+    ## add evidence and variation_set_id to variation_feature
+    update_variation_feature($feature);
 
     my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       -slice          => $feature->slice(),
@@ -792,22 +806,24 @@ sub update_variation_set{
 
 }
 
-=head2 update_variation_feature_set
-- update varitiation_feature variation_set_id
+=head2 update_variation_feature
+- update varitiation_feature evidence and variation_set_id
 =cut
 
-sub update_variation_feature_set{
+sub update_variation_feature{
   my $vf      = shift;
 
   my $vf_upd_sth = $dbh->prepare(qq[
       UPDATE variation_feature
-      SET variation_set_id = CONCAT_WS(",", variation_set_id, ?)
+      SET
+        variation_set_id = CONCAT_WS(",", variation_set_id, ?),
+        evidence_attribs = CONCAT_WS(",", evidence_attribs, '$pheno_evidence_id')
       WHERE variation_feature_id = ? ] );
   my $new_sets = "$pheno_set_id,$clinvar_set_id";
-  if ($omimVarSet{$vf->variation_name}) {
-    $new_sets +=",$omim_set_id";
+  if ($omimVarSet{$vf->variation->dbID}) {
+    $new_sets .=",$omim_set_id";
   }
-  $vf_upd_sth->execute( $new_sets, $vf->dbID );
+  $vf_upd_sth->execute( $new_sets,  $vf->dbID );
 
 }
 
