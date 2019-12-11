@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProces
 
 use strict;
 
-use base ('Bio::EnsEMBL::Hive::Process');
+use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 use Bio::EnsEMBL::Registry;
 
@@ -46,48 +46,6 @@ sub data_dir {
   }
   return $data_dump_dir;
 }
-
-sub get_all_species {
-    my $self = shift;
-    my $registry = 'Bio::EnsEMBL::Registry';
-    $registry->load_all($self->param('registry_file'));
-    my $vdbas = $registry->get_all_DBAdaptors(-group => 'variation');
-    my $species = {};
-    foreach my $vdba (@$vdbas) {
-        my $species_name = $vdba->species();
-        $species->{$species_name} = 1;
-    }
-    return $species;
-}
-
-sub get_species_adaptor {
-    my ($self, $species, $group) = @_;
-    return $self->get_adaptor($species, $group);
-}
-
-sub get_adaptor {
-    my ($self, $species, $group) = @_;
-    my $dba;
-    eval {
-        $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
-    };
-    unless (defined $dba) {
-        $self->_load_registry();
-        $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
-    }
-    unless (defined $dba) {
-        die "Failed to a get DBA for $species and group $group";
-    }
-    return $dba;
-}
-
-sub _load_registry {
-    my ($self) = @_;
-    my $reg_file = $self->param('registry_file');
-    Bio::EnsEMBL::Registry->load_all($reg_file, 0, 1);
-    return;
-}
-
 
 1;
 

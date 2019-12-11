@@ -26,11 +26,15 @@ This directory contains gzip compressed GVF (Genome Variation Format) files:
         drug-response or histocompatibility
 
 Additionally, we provide for human:
-    - files containing allele frequencies from 1000 genomes phase 3 populations
-      and from populations from the Exome Sequencing Project
-    - NOTE: files containg allele frequencies from several of the HapMap
-      populations have been discontinued and are available from our archive sites,
-      the latest being ftp://ftp.ensembl.org/pub/release-97/variation/gvf/homo_sapiens/
+    - 1000GENOMES-phase_3.gvf.gz containing allele frequencies from 1000
+      genomes phase 3 populations
+    - NOTE:
+        - files containing allele frequencies from several of the HapMap
+          populations have been discontinued and are available from our archive sites,
+          the latest being ftp://ftp.ensembl.org/pub/release-97/variation/gvf/homo_sapiens/
+        - files containing allele frequencies from populations from the
+          Exome Sequencing Project have been discontinued and are available
+          from our archive sites, the latest being ftp://ftp.ensembl.org/pub/release-98/variation/gvf/homo_sapiens/
 
 If available for this species, the file includes information on:
     - ancestral_allele
@@ -83,4 +87,5 @@ Example content from the human germline GVF dump is shown below:
 8       dbSNP   SNV     60323   60323   .       +       .       ID=7;Variant_seq=G;Dbxref=dbSNP_138:rs199540500;Reference_seq=C
 8       dbSNP   SNV     60341   60341   .       +       .       ID=8;Variant_seq=G;evidence_values=Multiple_observations;Dbxref=dbSNP_138:rs201908809;Reference_seq=C
 8       dbSNP   SNV     60346   60346   .       +       .       ID=9;Variant_seq=G;Dbxref=dbSNP_138:rs78893626;Reference_seq=A
+
 

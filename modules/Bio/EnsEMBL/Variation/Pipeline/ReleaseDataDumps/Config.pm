@@ -56,9 +56,7 @@ sub write_config_file {
     # structural_variation svs
     # somatic
     # incl consequences: protein info: sift, polyphen
-    # evidence, clinical_significance, ancestral_allele, minor_allele_freq, validation_status
-    # populations:
-    # individuals:
+    # evidence, clinical_significance, ancestral_allele, minor_allele_freq
     # sets: phenotypes, clinically_associated
     my $config = {};
 
@@ -66,10 +64,10 @@ sub write_config_file {
 
     my $species_config = {
         failed => ['failed'],
-        generic => ['evidence', 'validation_status'],
+        generic => ['evidence'],
         incl_consequences => ['incl_consequences', 'protein_coding_details', 'evidence'],
     };
-    foreach my $attribute (qw/ancestral_allele global_maf clinical_significance/) {
+    foreach my $attribute (qw/ancestral_allele global_maf/) {
         if ($config->{$species}->{$attribute}) {
             push @{$species_config->{generic}}, $attribute;
             push @{$species_config->{incl_consequences}}, $attribute;
@@ -80,9 +78,6 @@ sub write_config_file {
     }
     if ($config->{$species}->{svs}) {
         $species_config->{structural_variations} = ['structural_variations'];
-        if ($config->{$species}->{clinical_significance_svs}) {
-            push @{$species_config->{structural_variations}}, 'clinical_significance';
-        }
     }
     if ($species eq 'homo_sapiens') {
         $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
@@ -90,7 +85,7 @@ sub write_config_file {
         $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'variation_id', 'allele_string'];
+        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
     }
     $config->{$species} = $species_config;
     
@@ -112,8 +107,6 @@ sub variation_data_survey {
         sift => 'select count(*) from protein_function_predictions;',
         ancestral_allele => 'select variation_feature_id from variation_feature where ancestral_allele is not null limit 1;',
         global_maf => 'select variation_id from variation where minor_allele is not null limit 1;',
-        clinical_significance => 'select variation_id from variation where clinical_significance is not null limit 1;',
-        clinical_significance_svs => 'select structural_variation_id from structural_variation where clinical_significance is not null limit 1;',
         svs => 'select count(*) from structural_variation;',
     };
 
