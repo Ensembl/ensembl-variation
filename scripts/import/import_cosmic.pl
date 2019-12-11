@@ -311,6 +311,7 @@ sub get_source_id {
   return $source_id[0];
 }
 
+# get attributes based on attrib and attrib_type tables
 sub get_attrib_id {
   my ($type, $value) = @_;
 
