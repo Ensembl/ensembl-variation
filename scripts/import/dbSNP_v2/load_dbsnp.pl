@@ -133,10 +133,14 @@ sub init_reports {
     die("$config->{'error_file'} already exists. Please rename or delete\n");
   }
 
-  # For GRCh38 the 1000Genomes minor allele needs flipping
-  # Files for updates and logs of 1000Genomes minor allele flipping
+  # For GRCh37 the 1000Genomes minor allele is on the forward strand
+  # Some regions between GRCh37 and GRCh38 have been reverse complimented
+  # causing miss-matches with the minor allele.
+  # Variants with different strand mappings between GRCh37 and GRCh38
+  # are identified and the minor allele is reverse complimented.
+  # Files for updates and logs for minor allele mismatches.
   if ($config->{'assembly'} eq 'GRCh38') {
-    print "Flip of 1000Genomes minor alleles for assembly $config->{'assembly'}\n";
+    print "Flip 1000Genomes minor alleles for strand differences between assembly $config->{'assembly'} and GRCh37\n";
     for my $ma_type ('update', 'log') {
       my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
       if (-e "$rpt_dir/$filename") {
