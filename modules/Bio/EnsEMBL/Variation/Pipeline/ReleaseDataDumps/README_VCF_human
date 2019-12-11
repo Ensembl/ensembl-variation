@@ -27,7 +27,7 @@ Additionally, we provide for human:
     - 1000GENOMES-phase_3.vcf.gz containing allele frequencies from 1000
       genomes phase 3 populations
     - NOTE:
-        - files containg allele frequencies from several of the HapMap
+        - files containing allele frequencies from several of the HapMap
           populations have been discontinued and are available from our archive sites,
           the latest being ftp://ftp.ensembl.org/pub/release-97/variation/vcf/homo_sapiens/
         - files containing allele frequencies from populations from the
