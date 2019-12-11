@@ -1623,6 +1623,10 @@ sub get_seq_region_names {
 }
 
 # For a given chr look up the seq_region
+# This is currently only used to look up seq_region for Y for
+# processing of PAR.
+# It assumes that there is only one.
+# This should be checked at the start of script.
 sub get_seq_region_chr {
   my ($dbh, $chr) = @_;
   my $sth = $dbh->prepare(qq{SELECT seq_region_id FROM seq_region WHERE name = ?});
