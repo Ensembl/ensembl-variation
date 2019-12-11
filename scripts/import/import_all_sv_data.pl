@@ -1601,6 +1601,8 @@ sub decode_text {
   $text  =~ s/\÷/o/g;
   $text  =~ s/\+\¿/e/g;
   $text  =~ s/\+\¬/e/g;
+  $text  =~ s/\'\'\'\'//g;
+  $text  =~ s/&apos://g;
 
   return $text;
 }
