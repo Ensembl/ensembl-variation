@@ -91,7 +91,9 @@ my $lu_info = get_lu_info($dbh_var);
 # Parsing the data file
 my ($num_lines) = parse_dbSNP_file($config);
 
-# Close open filehandles
+# Close open filehandles used for tracking the
+# update of any minor allele changes that are only done for
+# GRCh38 imports.
 if ($config->{'assembly'} eq 'GRCh38') {
   for my $ma_type ('update', 'log') {
     my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
