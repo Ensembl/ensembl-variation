@@ -110,6 +110,9 @@ clean_old_data() if defined $clean;
 my $omim_set_id   = get_set($dbh, 'ph_omim');
 my %omimVarSet;
 
+my $pheno_set_id   = get_set($dbh, "ph_variants"); #All phenotype/disease variants
+my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
+
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
 my $haplotype_type = "Haplotype";
@@ -254,6 +257,12 @@ sub get_set{
     'ph_omim'           => {
       'desc' => 'Variants linked to entries in the Online Mendelian Inheritance in Man (OMIM) database',
       'name' => 'OMIM phenotype variants'},
+    'ph_variants'       => {
+      'desc' => 'Variants that have been associated with a phenotype or a disease',
+      'name' => 'All phenotype/disease-associated variants'},
+    'ClinVar'           => {
+      'desc' => 'Variants with ClinVar annotation',
+      'name' => 'All ClinVar'},
   };
 
   my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
@@ -276,7 +285,7 @@ sub get_set{
 
   if (defined $set_id->[0]->[0] ){
     ## remove old set content
-    $set_del_sth->execute($set_id->[0]->[0]) if defined $clean;
+    $set_del_sth->execute($set_id->[0]->[0]) if defined $clean && $set eq 'ph_omim';
     return $set_id->[0]->[0] ;
   }
 
@@ -733,7 +742,13 @@ sub import_phenotype_feature{
   }
   $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
-  update_variation_set($feature_object->dbID()) if $type ne 'StructuralVariation' && exists $submitters->{$omimstr} && exists $submitter_ids{$submitters->{$omimstr}} && ! defined $omimVarSet{$feature_object->dbID()}; #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+  #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+  if ($type ne 'StructuralVariation' &&
+      exists $submitters->{$omimstr} &&
+      exists $submitter_ids{$submitters->{$omimstr}} &&
+      ! defined $omimVarSet{$feature_object->dbID()}){
+    update_variation_set($feature_object->dbID());
+  }
 
   foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
     print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
@@ -742,6 +757,7 @@ sub import_phenotype_feature{
     ## add evidence to variation_feature
     $feature->add_evidence_value($phenotype_evidence);
     $var_feat_adaptor->update($feature);
+    update_variation_feature_set($feature);
 
     my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       -slice          => $feature->slice(),
@@ -775,6 +791,26 @@ sub update_variation_set{
   $omimVarSet{$variation_id} =1;
 
 }
+
+=head2 update_variation_feature_set
+- update varitiation_feature variation_set_id
+=cut
+
+sub update_variation_feature_set{
+  my $vf      = shift;
+
+  my $vf_upd_sth = $dbh->prepare(qq[
+      UPDATE variation_feature
+      SET variation_set_id = CONCAT_WS(",", variation_set_id, ?)
+      WHERE variation_feature_id = ? ] );
+  my $new_sets = "$pheno_set_id,$clinvar_set_id";
+  if ($omimVarSet{$vf->variation_name}) {
+    $new_sets +=",$omim_set_id";
+  }
+  $vf_upd_sth->execute( $new_sets, $vf->dbID );
+
+}
+
 
 =head2 get_phenotype
 
