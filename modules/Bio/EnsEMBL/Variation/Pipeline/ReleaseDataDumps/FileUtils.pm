@@ -46,7 +46,9 @@ sub run {
 
 sub post_gvf_dump_cleanup {
   my ($self,$data_dump_dir,$tmp_dir,$species) = @_;
-  system("gzip $data_dump_dir/gvf/$species/*.gvf");
+  if ($species !~ m/homo_sapiens/i) {
+    system("gzip $data_dump_dir/gvf/$species/*.gvf");
+  }
   system("cat $data_dump_dir/gvf/$species/Validate_* > $tmp_dir/GVF_Validate_$species");
   system("rm $data_dump_dir/gvf/$species/Validate_*");
   system("cat $data_dump_dir/gvf/$species/*.{err,out} > $tmp_dir/GVF_$species");

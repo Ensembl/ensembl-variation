@@ -96,7 +96,7 @@ sub final_join_gvf {
  
   my $covered_seq_region_ids = $self->get_covered_seq_regions; 
   my $species = $self->param('species');
-  my $cdba = $self->get_species_adaptor($species, 'core');
+  my $cdba = $self->get_adaptor($species, 'core');
   my $sa = $cdba->get_SliceAdaptor;
   my @sequence_regions = {};
   foreach my $seq_region_id (keys %$covered_seq_region_ids) {
@@ -112,7 +112,9 @@ sub final_join_gvf {
   
   my $fh_join = FileHandle->new("$dir/$file_name.gvf", 'w');
 
-  `gunzip $dir/$dump_type-$first_file_id.gvf.gz`; 
+  if (-e "$dir/$dump_type-$first_file_id.gvf.gz") {
+    `gunzip $dir/$dump_type-$first_file_id.gvf.gz`; 
+  }
 
   my $fh = FileHandle->new("$dir/$dump_type-$first_file_id.gvf", 'r');
 
@@ -137,7 +139,9 @@ sub final_join_gvf {
   my $id_count = 1; 
 
   foreach my $file_id (@input_ids) {
-    `gunzip $dir/$dump_type-$file_id.gvf.gz`; 
+    if (-e "$dir/$dump_type-$file_id.gvf.gz") {
+      `gunzip $dir/$dump_type-$file_id.gvf.gz`; 
+    }
     my $fh = FileHandle->new("$dir/$dump_type-$file_id.gvf", 'r');
     while (<$fh>) {
       chomp;
@@ -196,6 +200,9 @@ sub final_join_vcf {
   `rm $vcf_file`;
 }
 
+# Get file components for slice_split files which look like
+# homo_sapiens_generic-131555_146405131_151285302.gvf
+# file_name-seq_region_id-start-end.gvf
 sub get_slice_split_files {
   my ($self, $working_dir, $file_type) = @_;
   my $files = {};
@@ -230,7 +237,7 @@ sub join_split_slice_files {
   my $seq_region_id2name = {};
   my $sequence_regions = {};
   if ($species eq 'homo_sapiens') {
-    my $cdba = $self->get_species_adaptor($species, 'core');
+    my $cdba = $self->get_adaptor($species, 'core');
     my $sa = $cdba->get_SliceAdaptor;
     my $slices = $sa->fetch_all('chromosome');
     foreach my $slice (@$slices) {
@@ -291,8 +298,12 @@ sub join_split_slice_files {
           $id_count++;
         }
         $fh->close();
-        `gzip $working_dir/$file_name`;
-        `mv $working_dir/$file_name.gz $tmp_dir`;
+        if ($species eq 'homo_sapiens') {
+          `gzip $working_dir/$file_name`;
+          `mv $working_dir/$file_name.gz $tmp_dir`;
+        } else {
+          `rm $working_dir/$file_name`;
+        }
       }
       $fh_join->close();
     }
@@ -340,40 +351,12 @@ sub run_cmd {
   }
 }
 
-=begin
 sub get_covered_seq_regions {
   my $self = shift;
   my $species = $self->param('species');
   my $counts;
-  my $vdba = $self->get_species_adaptor($species, 'variation');
-  my $dbh = $vdba->dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT sr.seq_region_id, count(*)
-      FROM seq_region sr, variation_feature vf
-      WHERE sr.seq_region_id = vf.seq_region_id
-      GROUP BY sr.seq_region_id;
-      });
-  $sth->{'mysql_use_result'} = 1;
-  $sth->execute();
-  my ($slice_id, $count);
-  $sth->bind_columns(\$slice_id, \$count);
-  while ($sth->fetch()) {
-    if ($count > 0) {
-      $counts->{$slice_id} = $count;
-    }
-  }
-  $sth->finish();
-  return $counts;
-}
-=end
-=cut
-
-sub get_covered_seq_regions {
-  my $self = shift;
-  my $species = $self->param('species');
-  my $counts;
-  my $vdba = $self->get_species_adaptor($species, 'variation');
-  my $cdba = $self->get_species_adaptor($species, 'core');
+  my $vdba = $self->get_adaptor($species, 'variation');
+  my $cdba = $self->get_adaptor($species, 'core');
   my $toplevel_seq_region_ids = {};
   my $sa = $cdba->get_SliceAdaptor;
   my $toplevel_slices = $sa->fetch_all('toplevel');

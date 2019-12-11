@@ -156,6 +156,13 @@ sub get_assembly {
   return $genome_container_adaptor->get_version();
 }
 
+sub get_schema_version {
+  my $self = shift;
+  my $core_dba = $self->get_species_adaptor('core');
+  my $meta_container_adaptor = $core_dba->get_MetaContainerAdaptor;
+  return $meta_container_adaptor->get_schema_version();
+}
+
 sub get_species_id {
   my $self = shift;
   my $core_dba = $self->get_species_adaptor('core');

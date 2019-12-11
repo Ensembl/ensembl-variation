@@ -28,33 +28,38 @@
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Registry;
+use Bio::DB::HTS::Faidx;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Slice;
-use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils;
+use Bio::EnsEMBL::Variation::VariationFeature;
 
-use Getopt::Long;
-use FileHandle;
 use Compress::Zlib;
+use FileHandle;
+use Getopt::Long;
 use List::Util qw(first);
-
+use Pod::Usage qw(pod2usage);
 $| = 1;
 
+my $args = scalar @ARGV;
 my $config = {};
 my $gvf_line;
 GetOptions(
     $config,
+    'help|h',
+
     'gvf_file=s',
     'vcf_file=s',
     'species=s',
     'registry=s',
-
+    'fasta_file=s',
     'ancestral_allele|aa',
+    'ancestral_allele_file=s',
     'global_maf',
     'evidence',
     'clinical_significance',
-    'validation_status',
 
     'structural_variations|svs',
 
@@ -64,25 +69,28 @@ GetOptions(
     'polyphen',
 
     'individual=s',
-    'population=s',
-    'variation_id',
-    'allele_string',
-    'set_name',
-    'somatic',
-    'debug',
 
-) or die "Error: Failed to parse command-line args. Try --help for usage instructions\n";
+) or pod2usage(1);
+
+pod2usage(1) if ($config->{'help'} || !$args);
 
 main($config);
 
 sub main {
-    my $config = shift;
+  my $config = shift;
+   
+  if ($config->{'fasta_file'}) {
+    my $fai_index = Bio::DB::HTS::Faidx->new($config->{'fasta_file'});
+    die("Unable to get FASTA index") if (!$fai_index);
+    $config->{fasta_index} = $fai_index;
+  } 
+
     init_db_connections($config);
     init_data($config);
     my $fh_vcf = FileHandle->new('> ' . $config->{vcf_file});
     $config->{fh} = $fh_vcf;
     print_header($config);
-    parse_gvf_file($config);
+    read_gvf_file($config);
     my $fh = $config->{fh};
     $fh->close();
 }
@@ -106,26 +114,47 @@ sub init_data {
     my $config = shift;
 
     my $vdba = $config->{vdba};
-    my $table = 'variation';
-    if ($config->{structural_variations}) {
-        $table = 'structural_variation';
-    }
     my $dbh = $vdba->dbc->db_handle;
-    my $sth = $dbh->prepare(qq{
-        select distinct s.name, s.version, s.description from source s, $table v
-        where s.source_id = v.source_id;
-    }, {mysql_use_result => 1});
-    my $source_to_desc = {};
-    my ($source_name, $source_version, $source_desc);
-    $sth->execute();
-    $sth->bind_columns(\($source_name, $source_version, $source_desc));
-    while ($sth->fetch) {
-        my $source = ($source_version ? "$source_name\_$source_version" : $source_name);
-        $source_desc =~ s|<.+?>||g;
-        $source_to_desc->{$source} = $source_desc;
-    }
-    $sth->finish(); 
 
+    my $source_adaptor = $vdba->get_SourceAdaptor;   
+    my $sources = $source_adaptor->fetch_all;
+   
+    my $data_type = 'variation';
+    if ($config->{structural_variations}) {
+        $data_type = 'structural_variation';
+    }
+    my $source_to_desc = {};
+    # Get variant source and source description for VCF header
+    # Try getting sources by data_types from source table first 
+    foreach my $source (@$sources) {
+      my @source_data_types = @{$source->get_all_data_types};
+      if (grep {$_ eq $data_type} @source_data_types) {
+        my $name = $source->name;
+        my $desc = $source->description;
+        my $version = $source->version;
+        $name = ($version ? "$name\_$version" : $name);
+        $desc =~ s|<.+?>||g;
+        $source_to_desc->{$name} = $desc;
+      }
+    }
+    # If the data_type hasen't been set in the source table
+    # extract all sources from the variation or structural_variation table 
+    if (scalar keys %$source_to_desc == 0) {
+      my $sth = $dbh->prepare(qq{
+          select distinct s.name, s.version, s.description from source s, $data_type v
+          where s.source_id = v.source_id;
+      }, {mysql_use_result => 1});
+      my $source_to_desc = {};
+      my ($source_name, $source_version, $source_desc);
+      $sth->execute();
+      $sth->bind_columns(\($source_name, $source_version, $source_desc));
+      while ($sth->fetch) {
+          my $source = ($source_version ? "$source_name\_$source_version" : $source_name);
+          $source_desc =~ s|<.+?>||g;
+          $source_to_desc->{$source} = $source_desc;
+      }
+      $sth->finish(); 
+    }
     $config->{source_to_desc} = $source_to_desc;
 
     $config->{abbr_to_evidence_value} = {
@@ -184,6 +213,7 @@ sub init_data {
     };
     $config->{svs_gvf2vcf} = {};
     if ($config->{structural_variations}) {
+      # Get all available structural variant classes and descriptions to be stored in the VCF header
       my $sv_var_class_names = {};
       my $sth = $dbh->prepare(qq/select distinct a.value from attrib a, structural_variation_feature svf where svf.class_attrib_id = a.attrib_id;/);
       $sth->execute() or die $sth->errstr;
@@ -198,8 +228,7 @@ sub init_data {
         if ($ontology) {
           my $terms = $ontology->fetch_all_by_name($name, 'SO');
           foreach my $term (@$terms) {
-            $term->definition =~ m/^"(.*)\."\s\[.*\]$/;
-            $definition = $1; 
+            $definition = $term->definition;
           }
         } 
         $config->{header_sv_class}->{$name} = $definition;
@@ -218,92 +247,109 @@ sub init_data {
     }
 
     $config->{vep} = \@vep_consequence_info;
+
+    if ($config->{ancestral_allele_file}) {
+      my $ancestral_fai_index = Bio::DB::HTS::Faidx->new($config->{ancestral_allele_file});
+      my $ancestral_allele_utils = Bio::EnsEMBL::Variation::Utils::AncestralAllelesUtils->new(-fasta_db => $ancestral_fai_index);
+      die("Unable to get ancestral FASTA index") if (!$ancestral_fai_index);         
+      $config->{ancestral_allele_utils} = $ancestral_allele_utils;  
+    }
 }
 
+sub read_gvf_file {
+  my $config = shift;
+  my $gvf_file = $config->{gvf_file};
 
-sub parse_gvf_file {
-    my $config = shift;
-
-    my $gvf_file = $config->{gvf_file};
+  if ($gvf_file =~ /gz$/) {
     my $fh_gvf = gzopen($gvf_file, "rb") or die "Error reading $gvf_file: $gzerrno\n";
-
     while ($fh_gvf->gzreadline($_) > 0) {
         chomp;
         my $line = $_;
         next if ($line =~ /^##/);
-        my $gvf_line = get_gvf_line(\$line);
-        my $vcf_line = {};
-
-        $vcf_line->{'QUAL'} = '.';
-        $vcf_line->{'FILTER'} = '.';
-
-        my @dbxref = split(':', $gvf_line->{Dbxref}, 2);
-        my ($variation_id, $db) = ($dbxref[1], $dbxref[0]);
-        $vcf_line->{'ID'} = $variation_id;
-        push @{$vcf_line->{INFO}}, $db;
-
-        if ($config->{structural_variations}) {
-            add_svs_annotation($config, $vcf_line, $gvf_line);
-            print_vcf_line($config, $vcf_line);
-            next;
-        }
-
-        add_position_and_alleles($config, $vcf_line, $gvf_line);
-
-        my $type_of_sequence_alteration = $gvf_line->{type};
-        push @{$vcf_line->{INFO}}, "TSA=$type_of_sequence_alteration";
-
-        if ($gvf_line->{evidence_values}) {
-            push @{$vcf_line->{INFO}}, map { $config->{evidence_value_to_abbr}->{$_} } split(',', $gvf_line->{evidence_values});
-        }
-
-        if ($gvf_line->{clinical_significance}) {
-            push @{$vcf_line->{INFO}}, map { $config->{clin_significance_to_abbr}->{$_} } split(',', $gvf_line->{clinical_significance});
-        }
-
-        if ($gvf_line->{global_minor_allele_frequency}) {
-            add_gmaf($vcf_line, $gvf_line);
-        }
-
-        if ($gvf_line->{Genotype}) {
-            add_genotypes($vcf_line, $gvf_line);
-        }
-
-        if ($config->{incl_consequences} && (!defined $gvf_line->{Variant_effect}) ) {
-            push @{$vcf_line->{INFO}}, 'VE=intergenic_variant';
-        }
-
-        my $attributes = {
-          'Variant_effect' => 'VE',
-          'variant_peptide' => 'VarPep',
-          'sift_prediction' => 'Sift',
-          'polyphen_prediction' => 'Polyphen',
-          'reference_peptide' => 'RefPep',
-          'Variant_freq' => 'AF',
-          'ancestral_allele' => 'AA',
-         };
-
-        if (0) {
-          foreach my $key (qw/Reference_seq Variant_seq variation_id allele_string/) {
-            add_info($vcf_line, $key, $gvf_line->{$key});
-          }
-        }
-        while (my ($attribute, $key) = each %$attributes) {
-            if (defined $gvf_line->{$attribute}) {
-                my $value = $gvf_line->{$attribute};
-                add_info($vcf_line, $key, $value);
-            }
-        }
-
-        if ($config->{incl_consequences}) {
-          parse_consequence_info($gvf_line, $vcf_line); 
-        }
-        
-        print_vcf_line($config, $vcf_line);
+        parse_gvf_line($config, $line);
     }
-
     die "Error reading $gvf_file: $gzerrno\n" if $gzerrno != Z_STREAM_END;
     $fh_gvf->gzclose(); 
+  } else {
+    my $fh_gvf = FileHandle->new($gvf_file, 'r') or die "Error reading $gvf_file $!\n";
+    while (<$fh_gvf>) {
+        chomp;
+        my $line = $_;
+        next if ($line =~ /^##/);
+        parse_gvf_line($config, $line);
+    }
+    $fh_gvf->close(); 
+  }
+}
+
+sub parse_gvf_line {
+    my $config = shift;
+    my $line = shift;
+
+    my $gvf_line = get_gvf_line(\$line);
+    my $vcf_line = {};
+
+    $vcf_line->{'QUAL'} = '.';
+    $vcf_line->{'FILTER'} = '.';
+    my @dbxref = split(':', $gvf_line->{Dbxref}, 2);
+    my ($variation_id, $db) = ($dbxref[1], $dbxref[0]);
+    $vcf_line->{'ID'} = $variation_id;
+    push @{$vcf_line->{INFO}}, $db;
+
+    if ($config->{structural_variations}) {
+        add_svs_annotation($config, $vcf_line, $gvf_line);
+        print_vcf_line($config, $vcf_line);
+        return;
+    }
+
+    add_position_and_alleles($config, $vcf_line, $gvf_line);
+
+    my $type_of_sequence_alteration = $gvf_line->{type};
+    push @{$vcf_line->{INFO}}, "TSA=$type_of_sequence_alteration";
+
+    if ($gvf_line->{evidence_values}) {
+        push @{$vcf_line->{INFO}}, map { $config->{evidence_value_to_abbr}->{$_} } split(',', $gvf_line->{evidence_values});
+    }
+
+    if ($gvf_line->{clinical_significance}) {
+        push @{$vcf_line->{INFO}}, map { $config->{clin_significance_to_abbr}->{$_} } split(',', $gvf_line->{clinical_significance});
+    }
+
+    if ($gvf_line->{global_minor_allele_frequency}) {
+        add_gmaf($vcf_line, $gvf_line);
+    }
+
+    if ($gvf_line->{Genotype}) {
+        add_genotypes($vcf_line, $gvf_line);
+    }
+
+    if ($config->{incl_consequences} && (!defined $gvf_line->{Variant_effect}) ) {
+        push @{$vcf_line->{INFO}}, 'VE=intergenic_variant';
+    }
+
+    my $attributes = {
+      'Variant_effect' => 'VE',
+      'variant_peptide' => 'VarPep',
+      'sift_prediction' => 'Sift',
+      'polyphen_prediction' => 'Polyphen',
+      'reference_peptide' => 'RefPep',
+      'Variant_freq' => 'AF',
+      'ancestral_allele' => 'AA',
+     };
+
+    while (my ($attribute, $key) = each %$attributes) {
+        if (defined $gvf_line->{$attribute}) {
+            my $value = $gvf_line->{$attribute};
+            add_info($vcf_line, $key, $value);
+        }
+    }
+
+    if ($config->{incl_consequences}) {
+      parse_consequence_info($gvf_line, $vcf_line); 
+    }
+    
+    print_vcf_line($config, $vcf_line);
+
 }
 
 sub get_gvf_line {
@@ -323,10 +369,6 @@ sub get_gvf_line {
         $gvf_line->{$key} = $value;
       }
     }
-#    my %attributes = map { split('=', $_) } split(';', $attrib);
-#    foreach my $key (keys %attributes) {
-#        $gvf_line->{$key} = $attributes{$key};
-#    }
     return $gvf_line;
 }
 
@@ -338,53 +380,80 @@ sub add_position_and_alleles {
     my $alt = $gvf_line->{Variant_seq};
     my $start = $gvf_line->{start};
     my $end = $gvf_line->{end};
+    my $id = $gvf_line->{Dbxref};
 
     my $seq_region_name = $gvf_line->{seq_id};
     if ($ref eq '.' || $ref eq '~') {
-        my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$start-$end");
-        $ref = $slice->seq();
+      $ref = _get_seq($config, $seq_region_name, $start, $end);
     }
-    my $pos = $start;
-    my @alts = split(',', $alt);
 
-    my @alleles = ();
-    my %allele_lengths = ();
+    my $slice = _get_Slice($config, $seq_region_name);
 
-    push @alleles, $ref;
-    # if gvf contains genotypes for heterozygous site variant_seq contains all alleles
-    push @alleles, grep {$_ ne $ref} @alts;
+    $alt =~ s/,/\//g;
+    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+        -start   => $start,
+        -end     => $end,
+        -slice => $slice,
+        -strand  => 1,
+        -allele_string => "$ref/$alt",
+        -map_weight  => 1,
+    );
 
-    foreach my $allele (@alleles) {
-        $allele =~ s/\-//g;
-        $allele_lengths{ length($allele) } = 1;
+    my $vcf_record = $vf->to_VCF_record;
+    my ($vcf_start, $vcf_ref, $vcf_alt) = ($vcf_record->[1], $vcf_record->[3], $vcf_record->[4]);
+    # This can change the start and length of the reference allele
+    # We need to correct the ancestral allele accordingly
+    my $ancestral_allele = $gvf_line->{ancestral_allele};
+    if ($ref ne $vcf_ref || $start != $vcf_start) {
+      if ($ancestral_allele && $config->{ancestral_allele_file}) {
+        my $ancestral_allele_utils = $config->{ancestral_allele_utils};
+        my $ancestral_allele_end = $start + length($vcf_ref) - 1;
+        my $vcf_ancestral_allele = $ancestral_allele_utils->assign($seq_region_name, $start, $ancestral_allele_end);
+        $gvf_line->{ancestral_allele} = $vcf_ancestral_allele;
+      }
     }
-    # in/del/unbalanced
-    my $look_up = ();
-    if (scalar keys %allele_lengths > 1) {
-        # we need ref base before the variation; default to N
-        #print STDERR "$ref/$alt $seq_region_name $start $end ", $gvf_line->{Dbxref}, "\n";
-        if ($ref ne '-') {
-          $pos--;
-        }
-        my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$pos-$pos");
-        my $prev_base = $slice->seq() || 'N';
-        for my $i (0..$#alleles) {
-            $alleles[$i] =~ s/\-//g;
-            $look_up->{ $prev_base . $alleles[$i] } = $alleles[$i];
-            $alleles[$i] = $prev_base . $alleles[$i];
-        }
-        $ref = shift @alleles;
-        #print STDERR "$pos $ref ", join('/', @alleles), "\n";
-    } else {
-        shift @alleles;
-    }
-    $alt = join(',', @alleles);
 
     $vcf_line->{'#CHROM'} = $gvf_line->{seq_id};
-    $vcf_line->{POS} = $pos;
-    $vcf_line->{REF} = $ref;
-    $vcf_line->{ALT} = $alt;
-    $vcf_line->{look_up} = $look_up;
+    $vcf_line->{POS} = $vcf_start;
+    $vcf_line->{REF} = $vcf_ref;
+    $vcf_line->{ALT} = $vcf_alt;
+    $vcf_line->{look_up} = ();
+}
+
+sub _get_seq {
+  my ($config, $seq_region_name, $start, $end) = @_;
+  my $seq;
+  my $region = "$seq_region_name:$start-$end";
+  if ($config->{fasta_index}) {
+    my $fasta_index = $config->{fasta_index};
+    $seq = $fasta_index->get_sequence_no_length($region);
+  } else {
+    my $sa = $config->{slice_adaptor};
+    my $slice = $sa->fetch_by_toplevel_location($region);
+    $seq = $slice->seq();
+  }
+  if (!defined $seq) {
+    warn "Couldn't get sequence for region $region\n";
+    my $repeat = ($end - $start + 1);
+    if ($repeat <= 0) {
+      warn "Region $region is smaller than or equal to 0\n";
+      return '';
+    }
+    $seq = 'N' x $repeat;
+  }
+  return $seq;
+}
+
+sub _get_Slice {
+  my ($config, $seq_region_name) = @_;
+
+  my $slice = $config->{slice}->{$seq_region_name};
+  if (!defined $slice) {
+    my $sa = $config->{slice_adaptor};
+    my $slice = $sa->fetch_by_toplevel_location($seq_region_name);
+    $config->{slice}->{$seq_region_name} = $slice;
+  }
+  return $config->{slice}->{$seq_region_name};
 }
 
 sub add_gmaf {
@@ -563,9 +632,7 @@ sub add_svs_annotation {
     if ($pos == 0) {
         $pos = 1;
     }
-    my $sa = $config->{slice_adaptor};
-    my $slice = $sa->fetch_by_toplevel_location("$seq_region_name:$pos-$pos");
-    my $base = $slice->seq() || 'N';
+    my $base = _get_seq($config, $seq_region_name, $pos, $pos);
     $vcf_line->{'#CHROM'} = $gvf_line->{seq_id};
     $vcf_line->{REF} = $base;
     $vcf_line->{POS} = $pos;
@@ -732,17 +799,13 @@ sub print_header {
       print $fh "##INFO=<ID=CSQ,Number=.,Type=String,Description=\"Consequence annotations from Ensembl's Variant Effect Pipeline. Format=$format\">\n";
     }
 
-    if ($config->{population}) {
-       print $fh '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">', "\n";
-    }
-
     if ($config->{structural_variations}) {
         print $fh join("\n", (
-            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description=“Type of structural variant”>',
-            '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=“Imprecise structural variation”>',
-            '##INFO=<ID=END,Number=1,Type=Integer,Description=“End position of the variant described in this record”>',
-            '##INFO=<ID=ST_ACC,Number=.,Type=String,Description=“Study Accession. Study dbVar ID (estd or nstd)”>',
-            '##INFO=<ID=Parent,Number=.,Type=String,Description=“The structural variant id. It identifies the region of variation.”>',
+            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">',
+            '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">',
+            '##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">',
+            '##INFO=<ID=ST_ACC,Number=.,Type=String,Description="Study Accession. Study dbVar ID (estd or nstd)">',
+            '##INFO=<ID=Parent,Number=.,Type=String,Description="The structural variant id. It identifies the region of variation.">',
         )), "\n";
         foreach my $name (sort keys %{$config->{header_sv_class}}) {
           my $definition = $config->{header_sv_class}->{$name};
@@ -759,4 +822,114 @@ sub print_header {
     }
 }
 
+__END__
 
+=head1 NAME
+
+load_dbsnp.pl
+
+=head1 DESCRIPTION
+
+The script is run as part of the GVF and VCF dumping pipeline. The pipeline generates the list of
+required arguments for the script which are required to convert a specific GVF file into a VCF file. 
+
+
+=head1 SYNOPSIS
+
+gvf2vcf.pl [arguments]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>
+
+Displays this documentation
+
+=item B<--gvf_file FILE>
+
+GVF file which will be converted into a VCF file
+
+=item B<--vcf_file FILE>
+
+New VCF file
+
+=item B<--species >
+
+Species for which to genereate VCF file
+
+=item B<--registry FILE>
+
+Registry file which provides database connections
+to core and variation databases from which the GVF
+file was dumped. Database connections are
+required for populating meta information in the VCF
+file.
+
+=item B<--fasta_file FILE>
+Provide fasta file for sequence look ups which
+otherwise would be achieved by database queries
+which are slower. It is recommended to provide
+a fasta file for human file conversions.
+
+=item B<--ancestral_allele|aa>
+
+Parse ancestral allele from GVF file and
+store in new VCF file
+
+=item B<--ancestral_allele_file FILE>
+
+Provide the ancestral genome FASTA file for looking up
+ancestral alleles. This is required for indels where
+the allele string or position of the reference have changed
+after formatting alleles to match the VCF format
+
+=item B<--global_maf>
+
+Parse minor allele, minor allele frequency and minor allele count
+from GVF file and store in new VCF file
+
+=item B<--evidence>
+
+Parse evidence attributes (Multiple observations, Frequency, Cited,
+Phenotype or Disease, 1000 Genomes, ESP, ExAC, gnomAD, TOPMed) from GVF file and store in new VCF file
+
+=item B<--clinical_significance>
+
+Parse clinical significance attributes from GVF file and
+sotre in VCF file. Available attributes are described here:
+https://www.ensembl.org/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance
+
+=item B<--structural_variations|svs>
+
+Parse structural variants from GVF and store in VCF
+
+=item B<--incl_consequences>
+
+Parse variant consequences from GVF and store in VCF
+
+=item B<--protein_coding_details>
+
+Parse protein consequences from GVF and store in VCF
+
+=item B<--sift>
+
+Parse SIFT annotations from GVF and store in VCF
+
+=item B<--polyphen>
+
+Parse PolyPhen annotations from GVF and store in VCF
+
+=item B<--individual STRING>
+
+Individual name for which genotypes are stored in the GVF file.
+The name will be stored in the VCF header line.
+
+=back
+
+=head1 CONTACT
+  Please email comments or questions to the public Ensembl
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+  Questions may also be sent to the Ensembl help desk at
+  <https://www.ensembl.org/Help/Contact>.
+=cut

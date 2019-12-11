@@ -22,7 +22,7 @@ There are two versions ReleaseDumps_conf.pm and PopulationDumps_conf.pm:
     -hive_db_password   connection details for hive database
     -hive_db_port       connection details for hive database
     -hive_db_user       connection details for hive database
-    -registry      registry file with all species for which to create GVF and VCF dumps
+    -ensembl_registry   registry file with all species for which to create GVF and VCF dumps
     -ensembl_release    ensembl release
     -gvf_validator      location of the gvf_validator tool, e.g: GAL/bin/gvf_validator from github
     -vcf-validator      location of the vcf-validator tool
