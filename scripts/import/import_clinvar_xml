@@ -1050,6 +1050,7 @@ sub enter_var{
       $ref_allele = $refSlice->seq;
       $allele_str = $ref_allele ."/". $alt_allele;
   }
+  print "Saving allele string: $vf->allele_string()\n";
 
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
