@@ -89,7 +89,7 @@ sub default_options {
 
         # include RefSeq transcripts, and edit with accompanying BAM?
         include_refseq          => 0,
-        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh38.p12_knownrefseq_alignments_2019-01-25.bam',
+        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
 
         # GRCh37 bam
         # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
