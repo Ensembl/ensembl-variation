@@ -91,10 +91,14 @@ my $lu_info = get_lu_info($dbh_var);
 # Parsing the data file
 my ($num_lines) = parse_dbSNP_file($config);
 
-# Close open filehandles
-for my $ma_type ('update', 'log') {
-  my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
-  $fh->close();
+# Close open filehandles used for tracking the
+# update of any minor allele changes that are only done for
+# GRCh38 imports.
+if ($config->{'assembly'} eq 'GRCh38') {
+  for my $ma_type ('update', 'log') {
+    my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
+    $fh->close();
+  }
 }
 
 report_summary($config, $num_lines);
@@ -129,19 +133,29 @@ sub init_reports {
     die("$config->{'error_file'} already exists. Please rename or delete\n");
   }
 
-  # Files for updates and logs of 1000Genomes minor allele flipping
-  for my $ma_type ('update', 'log') {
-    my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
-    if (-e "$rpt_dir/$filename") {
+  # For GRCh37 the 1000Genomes minor allele is on the forward strand
+  # Some regions between GRCh37 and GRCh38 have been reverse complimented
+  # causing miss-matches with the minor allele.
+  # Variants with different strand mappings between GRCh37 and GRCh38
+  # are identified and the minor allele is reverse complimented.
+  # Files for updates and logs for minor allele mismatches.
+  if ($config->{'assembly'} eq 'GRCh38') {
+    print "Flip 1000Genomes minor alleles for strand differences between assembly $config->{'assembly'} and GRCh37\n";
+    for my $ma_type ('update', 'log') {
+      my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
+      if (-e "$rpt_dir/$filename") {
         die("$rpt_dir/$filename already exists. Please rename or delete\n");
+      }
+      my $fh = FileHandle->new("$rpt_dir/$filename", 'w');
+      if (! $fh) {
+        die("Unable to open $rpt_dir/$filename");
+      } else {
+        print "minor allele $ma_type file = $rpt_dir/$filename\n";
+        $config->{join('-', 'ma', $ma_type, 'fh')} = $fh;
+      }
     }
-    my $fh = FileHandle->new("$rpt_dir/$filename", 'w');
-    if (! $fh) {
-      die("Unable to open $rpt_dir/$filename");
-    } else {
-      print "minor allele $ma_type file = $rpt_dir/$filename\n";
-      $config->{join('-', 'ma', $ma_type, 'fh')} = $fh;
-    }
+  } else {
+    print "No flip of 1000Genomes minor alleles for assembly $config->{'assembly'}\n";
   }
 }
 
@@ -255,12 +269,15 @@ sub parse_refsnp {
   # 1000Genomes data
   $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
 
-  # If the 1000Genomes data has a minor_allele, check if
-  # a flip is needed. This assumes that the assembly is GRCh38
-  # TODO - add an assembly check
-  #      - add a flag if flipping should be done
-  if (defined $data->{'1000Genomes'} &&
-      $data->{'1000Genomes'}->{'minor_allele'}) {
+  # If: 
+  # - the assembly is GRCh38
+  # - the 1000Genomes data has a minor_allele
+  # check if a flip is needed. 
+  # TODO - add a flag if flipping should be done if for GRCh38
+  #        no flip is needed
+  if (($config->{'assembly'} eq 'GRCh38') &&
+       defined $data->{'1000Genomes'} &&
+       $data->{'1000Genomes'}->{'minor_allele'}) {
     my $align_diff = get_align_diff($rs_json);
     if ($align_diff) {
       my $old_minor_allele = $data->{'1000Genomes'}->{'minor_allele'};
@@ -659,7 +676,9 @@ sub qc_refsnp {
   my ($config, $lu_info, $rs_data, $fai_index) = @_;
   $rs_data->{'evidence_attribs'} = get_evidence($lu_info, $rs_data); 
   $rs_data->{'map_weight'} = get_map_weight($ref_regions, $rs_data) if ($add_map_weight);
-  $rs_data->{'num_par'} = get_vf_par($rs_data);
+  $rs_data->{'num_par'} = get_vf_par($rs_data, $config->{'assembly'},
+                                     $lu_info->{'chrY_seq_region_id'});
+
   # Warn if map_weight = num_par
   if ($rs_data->{'num_par'} && $rs_data->{'num_par'} == $rs_data->{'map_weight'}) {
       my $info = join(";",
@@ -774,23 +793,39 @@ sub get_map_weight {
 }
 
 sub get_vf_par {
-  my ($rs_data) = @_;
+  my ($rs_data, $assembly, $Y_seq_region_id) = @_;
+
   my $num_par = 0;
+
+  my ($Y_PAR1_seq_region_start, $Y_PAR1_seq_region_end);
+  my ($Y_PAR2_seq_region_start, $Y_PAR2_seq_region_end);
+
+  if ($assembly eq 'GRCh38') {
+    $Y_PAR1_seq_region_start = 10001 ;
+    $Y_PAR1_seq_region_end = 2781479;
+    $Y_PAR2_seq_region_start = 56887903;
+    $Y_PAR2_seq_region_end = 57217415;
+  } elsif ($assembly eq 'GRCh37') {
+    $Y_PAR1_seq_region_start = 10001;
+    $Y_PAR1_seq_region_end = 2649520;
+    $Y_PAR2_seq_region_start = 59034050;
+    $Y_PAR2_seq_region_end = 59363566;
+  }
 
   # Loop the vfs and count the regions that are PAR
   for my $vf (@{$rs_data->{'vfs'}}) {
     $vf->{'par'} = 0;
-    if ($vf->{'seq_region_id'} == 131553) {
-      if ($vf->{'seq_region_start'} >= 10001
-          && $vf->{'seq_region_end'}   <= 2781479
-          && $vf->{'seq_region_start'} <= 2781479
-          && $vf->{'seq_region_end'} >= 10001) {
+    if ($vf->{'seq_region_id'} == $Y_seq_region_id) {
+      if ($vf->{'seq_region_start'} >= $Y_PAR1_seq_region_start
+          && $vf->{'seq_region_end'}   <= $Y_PAR1_seq_region_end
+          && $vf->{'seq_region_start'} <= $Y_PAR1_seq_region_end
+          && $vf->{'seq_region_end'} >= $Y_PAR1_seq_region_start) {
         $num_par++;
         $vf->{'par'} = 1;
-      } elsif ($vf->{'seq_region_start'} >= 56887903
-          && $vf->{'seq_region_end'} <=   57217415 
-          && $vf->{'seq_region_start'} <= 57217415 
-          && $vf->{'seq_region_end'} >= 56887903) {
+      } elsif ($vf->{'seq_region_start'} >= $Y_PAR2_seq_region_start
+          && $vf->{'seq_region_end'} <=   $Y_PAR2_seq_region_end
+          && $vf->{'seq_region_start'} <= $Y_PAR2_seq_region_end
+          && $vf->{'seq_region_end'} >= $Y_PAR2_seq_region_start) {
         $num_par++;
         $vf->{'par'} = 1;
       } 
@@ -1587,6 +1622,20 @@ sub get_seq_region_names {
   return (\%seq_region);
 }
 
+# For a given chr look up the seq_region
+# This is currently only used to look up seq_region for Y for
+# processing of PAR.
+# It assumes that there is only one.
+# This should be checked at the start of script.
+sub get_seq_region_chr {
+  my ($dbh, $chr) = @_;
+  my $sth = $dbh->prepare(qq{SELECT seq_region_id FROM seq_region WHERE name = ?});
+  $sth->execute($chr) || die "Error getting seq_region_id for chr $chr";
+  my ($seq_region_id) = $sth->fetchrow_array();
+  $sth->finish();
+  return $seq_region_id;
+}
+
 # Get command line options
 # Get information for run
 sub configure {
@@ -1608,7 +1657,7 @@ sub configure {
 
     'species=s',
     'registry|r=s',
-    
+    'assembly|a=s',
     'no_db_load',
     'no_ref_check',
     'no_assign_ancestral_allele'
@@ -1631,7 +1680,7 @@ sub configure {
   # Set defaults
   $config->{'species'} ||= 'homo_sapiens';
   $config->{'debug'} ||= 0;
-
+  $config->{'assembly'} ||= 'GRCh38';
   $config->{'db_load'} = 1;
   if (exists $config->{'no_db_load'}) {
     $config->{'db_load'} = 0;
@@ -1659,6 +1708,11 @@ sub configure {
   if (! -d $config->{'rpt_dir'}) {
     die("ERROR: Report directory does not exist ($config->{'rpt_dir'})\n");
   }
+
+  if ($config->{'assembly'} !~ /^(GRCh38|GRCh37)$/) {
+      die("ERROR: Assembly is invalid ($config->{'assembly'}). Please specify GRCh38 or GRCh37");
+  }
+
   if ($config->{'ref_check'}) {
     if (! defined $config->{'fasta_file'}) {
       pod2usage({ -message => "Mandatory argument (fasta_file) is missing", 
@@ -1818,7 +1872,8 @@ sub get_lu_info {
   my %lu_info;
 
   $lu_info{'evidence_ids'} = get_evidence_attribs($dbh);
-  $lu_info{'failed_set_id'} = find_failed_variation_set_id($dbh);  
+  $lu_info{'failed_set_id'} = find_failed_variation_set_id($dbh);
+  $lu_info{'chrY_seq_region_id'} = get_seq_region_chr($dbh, 'Y');
   return \%lu_info;
 }
 
@@ -2144,6 +2199,10 @@ JSON file provided by dbSNP
 =item B<--rpt_dir DIR>
 
 Directory to store summary report and error logs
+
+=item B<--assembly ASSEMBLY>
+
+Specify assembly to use. GRCh38 (default) or GRCh37
 
 =item B<--ancestral_fasta_file FILE>
 
