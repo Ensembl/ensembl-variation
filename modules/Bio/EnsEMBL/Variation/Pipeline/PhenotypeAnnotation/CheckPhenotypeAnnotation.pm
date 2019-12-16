@@ -63,7 +63,7 @@ sub fetch_input {
     $logPipeName = "log_import_debug_pipe_".$source->{source_name}."_".$self->param('species');
   } else {
     $workdir = $self->param('pipeline_dir');
-    $logName = "REPORT_QC_".$species.".txt";
+    $logName = "REPORT_QC_". $species .".txt";
     $logPipeName = "log_import_debug_pipe_".$self->param('species');
   }
 
@@ -82,7 +82,8 @@ sub run {
   my $time = strftime("%Y-%m-%d %H:%M:%S", localtime);
   $self->print_logFH("Running time: $time\n");
 
-  $self->print_logFH("\nRunning checks on phenotype, phenotype_feature, phenotype_feature_attrib and phenotype_ontology_accession data\n");
+  $self->print_logFH("\nRunning checks on phenotype, phenotype_feature".
+                     "phenotype_feature_attrib and phenotype_ontology_accession data\n");
   $self->check_phenotype_description($dbh);
   $self->print_logFH("\n");
   $self->check_fk($dbh);
@@ -96,7 +97,7 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  #if these is a decrease number of entries, then stop the flow
+  #if these is a decrease in the number of entries, then stop the flow
   if (!$count_ok){
     $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
                        "PLEASE check import and redo import if needed!");
