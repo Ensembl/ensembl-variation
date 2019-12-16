@@ -41,47 +41,47 @@ use Const::Fast;
 
 our @EXPORT_OK = qw(
             RGD
-            AnimalQTL
+            ANIMALQTL
             ZFIN
             GWAS
             OMIA
             EGA
-            Orphanet
-            MIMmorbid
+            ORPHANET
+            MIMMORBID
             DDG2P
             CGC
             IMPC
             MGI
-            Mouse
-            Human
-            AnimalSet
+            MOUSE
+            HUMAN
+            ANIMALSET
             NONE
-            species);
+            SPECIES);
 
 use constant {
   RGD       => 'RGD',
   ZFIN      => 'ZFIN',
 
-  AnimalQTL => 'AnimalQTL',
+  ANIMALQTL => 'AnimalQTL',
   OMIA      => 'OMIA',
-  AnimalSet => 'AnimalSet',
+  ANIMALSET => 'AnimalSet',
 
   GWAS      => 'GWAS',
   EGA       => 'EGA',
-  Orphanet  => 'Orphanet',
-  MIMmorbid => 'MIMmorbid',
+  ORPHANET  => 'Orphanet',
+  MIMMORBID => 'MIMmorbid',
   DDG2P     => 'DDG2P',
   CGC       => 'CGC',
-  Human     => 'Human',
+  HUMAN     => 'Human',
 
   IMPC      => 'IMPC',
   MGI       => 'MGI',
-  Mouse     => 'Mouse',
+  MOUSE     => 'Mouse',
 
   NONE      => 'NONE',
 };
 
-use constant species => ( 'RGD'       => ['rattus_norvegicus'],
+use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ZFIN'      => ['danio_rerio'],
 
                           'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',

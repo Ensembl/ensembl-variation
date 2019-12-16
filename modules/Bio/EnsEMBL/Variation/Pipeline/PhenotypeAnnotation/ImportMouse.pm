@@ -44,7 +44,7 @@ use File::Path qw(make_path);
 use File::stat;
 use LWP::Simple;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI Mouse NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI MOUSE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
 sub fetch_input {
@@ -68,8 +68,8 @@ sub fetch_input {
     getstore($impc_file_url, $workdir."/".$coord_file) unless -e $workdir."/".$coord_file;
 
     unless ($run_type eq NONE) {
-      my %import_species = &species;
-      if($run_type eq IMPC || $run_type eq Mouse){
+      my %import_species = &SPECIES;
+      if($run_type eq IMPC || $run_type eq MOUSE){
         my @speciesList = map { {species => $_} } @{$import_species{'IMPC'}};
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file ;
@@ -99,7 +99,7 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ($run_type eq IMPC || $run_type eq Mouse){
+    if ($run_type eq IMPC || $run_type eq MOUSE){
       $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 2);
     } elsif ( $run_type eq MGI){

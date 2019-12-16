@@ -40,7 +40,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportAnimalSet;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(AnimalQTL OMIA AnimalSet NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(ANIMALQTL OMIA ANIMALSET NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 sub fetch_input {
@@ -53,8 +53,8 @@ sub fetch_input {
     $self->pipelogFH($pipelogFH);
 
     unless ($run_type eq NONE) {
-      my %import_species = &species;
-      $run_type = OMIA if $run_type eq AnimalSet; #OMIA analysis will trigger all the subsequent ones
+      my %import_species = &SPECIES;
+      $run_type = OMIA if $run_type eq ANIMALSET; #OMIA analysis will trigger all the subsequent ones
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
       $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
     }
@@ -65,10 +65,10 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ( $run_type eq OMIA || $run_type eq AnimalSet){
+    if ( $run_type eq OMIA || $run_type eq ANIMALSET){
       $self->dataflow_output_id($self->param('output_ids'), 2);
       $self->print_pipelogFH("Passing to OMIA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq AnimalQTL){
+    } elsif ( $run_type eq ANIMALQTL){
       $self->dataflow_output_id($self->param('output_ids'), 3);
       $self->print_pipelogFH( "Passing to AnimalQTL import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
     }

@@ -41,7 +41,7 @@ use warnings;
 use POSIX qw(strftime);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species IMPC OMIA AnimalQTL);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES IMPC OMIA);
 
 my $source;
 my $workdir;
@@ -107,7 +107,7 @@ sub write_output {
   }
 
   #map of the species imported for each analysis
-  my %import_species = &species;
+  my %import_species = SPECIES;
   my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
 
   #if source specific check, then flow to next import

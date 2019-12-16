@@ -40,7 +40,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportHuman;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA Orphanet MIMmorbid DDG2P CGC Human NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID DDG2P CGC HUMAN NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 sub fetch_input {
@@ -53,8 +53,8 @@ sub fetch_input {
     $self->pipelogFH($pipelogFH);
 
     unless ($run_type eq NONE) {
-      my %import_species = &species;
-      $run_type = GWAS if $run_type eq Human; #GWAS analysis will trigger all the subsequent ones
+      my %import_species = SPECIES;
+      $run_type = GWAS if $run_type eq HUMAN; #GWAS analysis will trigger all the subsequent ones
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
       $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
     }
@@ -65,16 +65,16 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ( $run_type eq GWAS || $run_type eq Human){
+    if ( $run_type eq GWAS || $run_type eq HUMAN){
       $self->dataflow_output_id($self->param('output_ids'), 2);
       $self->print_pipelogFH( "Passing to NHGRI-EBI GWAS import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
     } elsif ( $run_type eq EGA){
       $self->dataflow_output_id($self->param('output_ids'), 3);
       $self->print_pipelogFH( "Passing to EGA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq Orphanet){
+    } elsif ( $run_type eq ORPHANET){
       $self->dataflow_output_id($self->param('output_ids'), 4);
       $self->print_pipelogFH( "Passing to Orphanet import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq MIMmorbid){
+    } elsif ( $run_type eq MIMMORBID){
       $self->dataflow_output_id($self->param('output_ids'), 5);
       $self->print_pipelogFH( "Passing to MIMmorbid import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
     } elsif ( $run_type eq DDG2P){
