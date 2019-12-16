@@ -104,7 +104,7 @@ sub default_options {
 
         run_import_type         =>  NONE,
 
-        threshold_qtl           =>  0, # default for RGD_qtl, AnimalQTL
+        threshold_qtl           =>  undef, # default for RGD_qtl, AnimalQTL
 
         ega_database_conf       => $self->o('pipeline_dir').'/ega_database.conf',
 
