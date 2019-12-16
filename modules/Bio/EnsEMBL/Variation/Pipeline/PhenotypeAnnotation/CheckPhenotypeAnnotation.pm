@@ -38,7 +38,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAn
 
 use strict;
 use warnings;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(species IMPC OMIA AnimalQTL);
@@ -69,8 +69,8 @@ sub fetch_input {
 
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  open (my $logFH, ">>", $workdir."/".$logName) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">>", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">>", $workdir."/".$logName) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">>", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->pipelogFH($pipelogFH);
 }
@@ -96,7 +96,7 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  #if decrease number of entries, then stop the flow
+  #if these is a decrease number of entries, then stop the flow
   if (!$count_ok){
     $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
                        "PLEASE check import and redo import if needed!");
@@ -118,8 +118,8 @@ sub write_output {
       return;
     } elsif ($source->{source_name} eq OMIA &&
              defined($animalQTL_species{$species}) ){
-      # if this check is from OMIA import and species has AnimalQTL date
-      # then import that: flow number 2
+      # if this check is from OMIA import and species has AnimalQTL data
+      # then import the AnimalQTL data: flow number 2
       $self->param('output_ids', [{species => $species}]);
       $self->dataflow_output_id($self->param('output_ids'), 2);
       close($self->logFH) if defined $self->logFH ;
@@ -128,16 +128,20 @@ sub write_output {
     }
   }
 
-  # if species is an 'ontology' term species then move to dataflow 2
+  # if species is an 'ontology term species' then move to dataflow 2
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
     if ($self->param('debug_mode')) {
-      $self->pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for adding ontology accessions (ontology_mapping)\n");
+      $self->pipelogFH("Passing $source->{source_name} import (".
+                       $self->param('species').
+                       ") for adding ontology accessions (ontology_mapping)\n");
     }
     $self->dataflow_output_id($self->param('output_ids'), 2);
   } else {
     if ($self->param('debug_mode')) {
-      $self->pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n");
+      $self->pipelogFH("Passing $source->{source_name} import (".
+                       $self->param('species').
+                       ") for summary counts (finish_phenotype_annotation)\n");
     }
     $self->dataflow_output_id($self->param('output_ids'), 3);
   }
@@ -229,9 +233,9 @@ sub checkNonTerms {
   Arg [1]    : string $description
                The phenotype description to be checked.
   Example    : getUnsupportedChar($description)
-  Description: Check for unsupported characters in the phenotype description,
+  Description: Get unsupported characters in the phenotype description,
                returns nothing if nothing was found or first unsupported char that was matched.
-  Returntype : boolean
+  Returntype : undef or char
   Exceptions : none
 
 =cut
@@ -280,7 +284,8 @@ sub getUnsupportedChar {
 sub check_fk{
   my ($self, $dbh) = @_;
 
-  # check FKs: that all phenotypes have a phenotype_feature, all pf have a pfa, and vice versa
+  # check FKs: that all phenotypes have a phenotype_feature (pf),
+  # all pf have a phenotype_feature_attrib (pfa), and vice versa
   my $featless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype
                                                   where phenotype_id not in (select phenotype_id from phenotype_feature) ]);
   my $attribless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype_feature

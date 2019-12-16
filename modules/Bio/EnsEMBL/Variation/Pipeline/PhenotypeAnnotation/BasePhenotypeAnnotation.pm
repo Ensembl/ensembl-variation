@@ -221,7 +221,7 @@ sub skip_sets {
 =head2 gwas
 
 Arg [1]    : boolean $gwas (optional)
-             The new gwas flag
+             The gwas specific behaviour flag
 Example    : $gwas_flag = $obj->gwas()
 Description: Get/set gwas flag
 Returntype : boolean
@@ -677,7 +677,7 @@ sub _sql_to_file{
   my $sth = $db_adaptor->dbc->prepare($sql_stmt);
   $sth->execute();
 
-  open (my $fhDump, ">", $outFile) || die ("Failed to open file".$outFile.": $!\n");
+  open(my $fhDump, ">", $outFile) || die ("Failed to open file".$outFile.": $!\n");
   while (my $row = $sth->fetchrow_arrayref()) {
     for(@$row) { $_ = "NULL" if !defined $_; } #some values are undef e.g. study_id, this is expected
     print $fhDump join( "\t", map {qq($_)} @$row), "\n";
@@ -1635,7 +1635,7 @@ sub get_old_results {
   Description: Takes SQL statements to count the rows in a table or count rows grouped
                by an attribute in the table. It returns either the total number of rows in the
                table or a hash of attribute => row count depending on input.
-  Returntype : interger or hashref
+  Returntype : integer or hashref
   Exceptions : none
 
 =cut

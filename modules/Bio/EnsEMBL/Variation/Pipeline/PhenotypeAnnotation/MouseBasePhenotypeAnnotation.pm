@@ -90,7 +90,7 @@ sub get_input_file {
     $start += 100;
   }
   close OUT;
-  return "$data_source\_phenotypes.txt";
+  return $data_source."\_phenotypes.txt";
 }
 
 sub fetch_data_version {

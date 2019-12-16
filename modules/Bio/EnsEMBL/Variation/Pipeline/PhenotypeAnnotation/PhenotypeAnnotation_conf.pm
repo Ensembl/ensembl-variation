@@ -418,7 +418,7 @@ sub pipeline_analyses {
             -flow_into  => {
                 2 =>  { 'import_mgi' => INPUT_PLUS() },
             },
-            -failed_job_tolerance => 5, # tries 5 times to run a job
+            -failed_job_tolerance => 0,
         },
 
         {   -logic_name => 'import_mgi',
@@ -535,7 +535,7 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_phenotypes']
             },
-            -failed_job_tolerance => 1, # tries 1 times to run a job
+            -failed_job_tolerance => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'import_zfin',

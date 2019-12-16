@@ -47,7 +47,7 @@ sub fetch_input {
 
   my $debug = $self->param('debug_mode');
 
-  open ($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
+  open($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
 
   unless ($run_type eq NONE) {
     my %import_species = &species;

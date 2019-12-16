@@ -40,7 +40,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeA
 
 use strict;
 use warnings;
-use POSIX;
+use POSIX qw(strftime);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
@@ -50,7 +50,7 @@ sub fetch_input {
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   my $workdir = $self->param('workdir');
   $workdir ||= $self->param('pipeline_dir');
-  open (my $logFH, ">", $workdir."/REPORT_import_".$self->param("species").".txt") || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/REPORT_import_".$self->param("species").".txt") || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
 }
 

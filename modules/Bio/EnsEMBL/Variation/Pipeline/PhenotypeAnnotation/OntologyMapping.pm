@@ -58,16 +58,16 @@ sub fetch_input {
 
   my $species = $self->required_param('species');
   my $workdir = $self->param('workdir');
-  $workdir ||= $self->required_param('pipeline_dir')."/"."OntologyMap";
-  make_path($workdir);
+  $workdir ||= $self->required_param('pipeline_dir')."/OntologyMap";
+  make_path($workdir) or die "Failed to create $workdir $!\n";
 
   $self->debug($self->param('debug_mode'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);

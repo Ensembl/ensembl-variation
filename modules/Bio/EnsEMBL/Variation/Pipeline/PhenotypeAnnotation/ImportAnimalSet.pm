@@ -49,7 +49,7 @@ sub fetch_input {
     my $pipeline_dir = $self->required_param('pipeline_dir');
     my $run_type = $self->required_param('run_type');
 
-    open (my $pipelogFH, ">", $pipeline_dir."/".'log_import_debug_pipe_animalSet') || die ("Failed to open file: $!\n");
+    open(my $pipelogFH, ">", $pipeline_dir."/".'log_import_debug_pipe_animalSet') || die ("Failed to open file: $!\n");
     $self->pipelogFH($pipelogFH);
 
     unless ($run_type eq NONE) {

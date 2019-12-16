@@ -56,9 +56,9 @@ sub fetch_input {
     $self->debug($self->param('debug_mode'));
 
     my $workdir = $pipeline_dir."/ImportMouse/";
-    make_path($workdir);
+    make_path($workdir) or die "Failed to create $workdir $!\n";
 
-    open (my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
+    open(my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
     $self->logFH($logFH);
 
     #get mouse coordinate file:

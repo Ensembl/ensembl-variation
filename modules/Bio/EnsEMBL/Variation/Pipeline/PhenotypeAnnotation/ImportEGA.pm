@@ -42,7 +42,7 @@ use warnings;
 use strict;
 
 use File::Path qw(make_path);
-use POSIX 'strftime';
+use POSIX qw(strftime);
 use DBI qw(:sql_types);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
@@ -89,13 +89,13 @@ sub fetch_input {
   $source_info{source_version} = strftime("%Y%m", localtime); # it is current month
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
   my $file_ega = "ega.studies.csv";
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -170,10 +170,10 @@ sub get_input_file {
   my ($self, $outfile) = @_ ;
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$outfile) || die ("Could not open file for writing: $!\n");
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$outfile) || die ("Could not open file for writing: $!\n");
 
   my $studies = $self->get_all_study_stable_ids();
-  open (FILE, ">".$self->workdir."/".$outfile) || die ("Could not open file for writing: $!\n");
+  open(FILE, ">".$self->workdir."/".$outfile) || die ("Could not open file for writing: $!\n");
 
   foreach my $stable_id (sort {$a cmp $b } @$studies) {
     my $study_id = $self->get_study_id($stable_id);
@@ -289,7 +289,7 @@ sub parse_and_add_input_file {
 
   my $variation_dba = $self->variation_db_adaptor;
   my $errFH2;
-  open ($errFH2, ">", $self->workdir."/".'log_import_err_parse_'.$infile) ;
+  open($errFH2, ">", $self->workdir."/".'log_import_err_parse_'.$infile) ;
 
   my $study_check_stmt = qq{
     SELECT

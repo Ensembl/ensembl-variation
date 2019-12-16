@@ -81,12 +81,12 @@ sub fetch_input {
                    );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -182,7 +182,7 @@ sub parse_input_file_gene {
   my ($self, $seq_region_ids, $infile) = @_;
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
@@ -191,10 +191,10 @@ sub parse_input_file_gene {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
+    open(IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
   
   my %rgd_coords;
@@ -301,16 +301,16 @@ sub parse_input_file_qtl {
   my ($self, $seq_region_ids, $infile, $assembly)  = @_ ;
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
+    open(IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   my (%headers, $line_num);

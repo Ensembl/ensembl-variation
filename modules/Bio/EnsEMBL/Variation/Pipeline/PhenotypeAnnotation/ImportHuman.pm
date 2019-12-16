@@ -31,7 +31,7 @@ limitations under the License.
 
 =head1 ImportHuman
 
-This module triggers Human specific imports
+This module triggers Human specific phenotype imports
 
 =cut
 
@@ -49,7 +49,7 @@ sub fetch_input {
     my $pipeline_dir = $self->required_param('pipeline_dir');
     my $run_type = $self->required_param('run_type');
 
-    open (my $pipelogFH, ">", $pipeline_dir."/".'log_import_debug_pipe_human') || die ("Failed to open file: $!\n");
+    open(my $pipelogFH, ">", $pipeline_dir."/".'log_import_debug_pipe_human') || die ("Failed to open file: $!\n");
     $self->pipelogFH($pipelogFH);
 
     unless ($run_type eq NONE) {
