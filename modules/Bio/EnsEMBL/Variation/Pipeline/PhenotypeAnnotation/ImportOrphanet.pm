@@ -68,7 +68,7 @@ sub fetch_input {
                   source_name => 'Orphanet',        #source name in the variation db
                   source_name_short => 'Orphanet',  #source identifier in the pipeline
                   data_types => 'phenotype_feature',
-                #  source_version is set based on record contained in file
+                #  source_version is set later in import based on record contained in input file
                   );
 
   #get input file Orphanet:

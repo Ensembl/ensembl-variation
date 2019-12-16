@@ -72,7 +72,8 @@ sub fetch_input {
                   source_name_short => 'RGD',  #source identifier in the pipeline
                   data_types => 'phenotype_feature',
                   );
-  #NOTE: smart map between species and RGD files Currently only RAT is imported, could be extended for the rest.
+  #NOTE: smart map between species and RGD files Currently only RAT is imported,
+  #could be extended for the rest of species: human, mouse.
   my %rgd_names_qtl = (rattus_norvegicus =>'RAT',
                    rat => 'RAT',
                    );
