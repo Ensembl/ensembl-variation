@@ -68,7 +68,7 @@ sub fetch_input {
     getstore($impc_file_url, $workdir."/".$coord_file) unless -e $workdir."/".$coord_file;
 
     unless ($run_type eq NONE) {
-      my %import_species = &SPECIES;
+      my %import_species = SPECIES;
       if($run_type eq IMPC || $run_type eq MOUSE){
         my @speciesList = map { {species => $_} } @{$import_species{'IMPC'}};
         foreach my $spec (@speciesList){

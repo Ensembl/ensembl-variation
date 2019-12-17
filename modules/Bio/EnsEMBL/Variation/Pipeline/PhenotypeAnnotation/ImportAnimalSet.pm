@@ -53,7 +53,7 @@ sub fetch_input {
     $self->pipelogFH($pipelogFH);
 
     unless ($run_type eq NONE) {
-      my %import_species = &SPECIES;
+      my %import_species = SPECIES;
       $run_type = OMIA if $run_type eq ANIMALSET; #OMIA analysis will trigger all the subsequent ones
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
       $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
