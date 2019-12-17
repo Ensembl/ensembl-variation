@@ -60,6 +60,7 @@ delete $p->{dbID};
 ok($pa->store($p), "store");
 $p = $pa->fetch_by_description('test')->[0];
 ok($p && $p->name eq 'test', "fetch stored");
+ok($p && $p->class_attrib_id == 665, "store - default class_attrib_id");
 
 
 ## check ontology accession handling
