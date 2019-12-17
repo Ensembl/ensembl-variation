@@ -807,7 +807,7 @@ sub update_variation_set{
 }
 
 =head2 update_variation_feature
-- update varitiation_feature evidence and variation_set_id
+- update variation_feature evidence and variation_set_id
 =cut
 
 sub update_variation_feature{
@@ -1050,7 +1050,6 @@ sub enter_var{
       $ref_allele = $refSlice->seq;
       $allele_str = $ref_allele ."/". $alt_allele;
   }
-  print "Saving allele string: $vf->allele_string()\n";
 
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
