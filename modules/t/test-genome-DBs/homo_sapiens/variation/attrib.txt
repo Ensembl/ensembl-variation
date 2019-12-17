@@ -377,3 +377,6 @@
 615	542	EPMC
 616	542	UCSC
 617	542	dbSNP
+663	544	non_specified
+664	544	tumour
+665	544	trait

@@ -220,6 +220,7 @@ CREATE TABLE `phenotype` (
   `stable_id` varchar(255) DEFAULT NULL,
   `name` varchar(50) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
+  `class_attrib_id` integer DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`),
   UNIQUE KEY `desc_idx` (`description`),
   KEY `stable_idx` (`stable_id`),
