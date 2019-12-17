@@ -109,8 +109,9 @@ sub _is_significant_constraint {
   return $constraint if ($self->db->include_non_significant_phenotype_associations());
 
   # Otherwise, add a constraint on the phenotype_feature table
-  my $ns_constraint = qq{ pf.is_significant=1 };
-  $constraint  .= (defined($constraint)) ? " AND$ns_constraint" : $ns_constraint;
+  #Temporaray comment out for release e99
+  #my $ns_constraint = qq{ pf.is_significant=1 };
+  #$constraint  .= (defined($constraint)) ? " AND$ns_constraint" : $ns_constraint;
     
   return $constraint;
 }
