@@ -1812,11 +1812,18 @@ sub _get_flank_seq{
   my $ref_slice = $self->slice();
 
   #### find flank size needed for checking
+  
+  ## In the case of long indels, 
   my $add_length = 100;  ## allow at least 100 for 3'shifting
+  my $shift_length = 50;
+  
+  ## To ensure that the flanking sequence obtained is sufficiently long for variants that are both
+  ## long insertions/deletions and in repeated regions, we ensure that the minimal length of flanking 
+  ## sequence returned is the length of the variant + 50 bases
   my @allele = split(/\//,$self->allele_string());
   foreach my $al(@allele){ ## alleles be longer
-    if(length($al) > $add_length){
-      $add_length = length $al ;
+    if(length($al) > ($add_length - $shift_length) ){
+      $add_length = length($al) + $shift_length ;
     }
   }
 

@@ -124,7 +124,8 @@ sub feature {
   Arg [1]    : (optional) int $start
   Example    : $cdna_start = $tv->cdna_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start and 
+               cdna_end if cdna_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -133,12 +134,13 @@ sub feature {
 =cut
 
 sub cdna_start {
-    my ($self, $cdna_start) = @_;
+    my ($self, $cdna_start, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     
     $self->{cdna_start} = $cdna_start if defined $cdna_start;
     
     unless (exists $self->{cdna_start}) {
-        my $cdna_coords = $self->cdna_coords;
+        my $cdna_coords = $self->cdna_coords($shifting_offset);
         
         my ($first, $last) = ($cdna_coords->[0], $cdna_coords->[-1]);
         
@@ -154,7 +156,8 @@ sub cdna_start {
   Arg [1]    : (optional) int $end
   Example    : $cdna_end = $tv->cdna_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in cDNA coordinates.
+               transcript in cDNA coordinates. Will set both cdna_start and 
+               cdna_end if cdna_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -163,22 +166,82 @@ sub cdna_start {
 =cut
 
 sub cdna_end {
-    my ($self, $cdna_end) = @_;
+    my ($self, $cdna_end, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     
     $self->{cdna_end} = $cdna_end if defined $cdna_end;
     
     # call cdna_start to calculate the start and end
-    $self->cdna_start unless exists $self->{cdna_end};
+    $self->cdna_start(undef, $shifting_offset) unless exists $self->{cdna_end};
     
     return $self->{cdna_end};
 }
+
+=head2 cdna_start_unshifted
+
+  Arg [1]    : (optional) int $start
+  Example    : $cdna_start = $tv->cdna_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
+               transcript in cDNA coordinates. Will set both cdna_start_unshifted and 
+               cdna_end_unshifted if cdna_start_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cdna_start_unshifted {
+    my ($self, $cdna_start) = @_;
+    
+    $self->{cdna_start_unshifted} = $cdna_start if defined $cdna_start;
+    
+    unless (exists $self->{cdna_start_unshifted}) {
+        my $cdna_coords = $self->cdna_coords(0);
+        
+        my ($first, $last) = ($cdna_coords->[0], $cdna_coords->[-1]);
+        
+        $self->{cdna_start_unshifted} = $first->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $first->start;
+        $self->{cdna_end_unshifted}   = $last->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $last->end;
+    }
+    
+    return $self->{cdna_start_unshifted};
+}
+
+=head2 cdna_end_unshifted
+
+  Arg [1]    : (optional) int $end
+  Example    : $cdna_end = $tv->cdna_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
+               transcript in cDNA coordinates. Will set both cdna_start_unshifted and 
+               cdna_end_unshifted if cdna_start_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cdna_end_unshifted {
+    my ($self, $cdna_end) = @_;
+    
+    $self->{cdna_end_unshifted} = $cdna_end if defined $cdna_end;
+    
+    # call cdna_start to calculate the start and end
+    $self->cdna_start_unshifted unless exists $self->{cdna_end_unshifted};
+    
+    return $self->{cdna_end_unshifted};
+}
+
+
 
 =head2 cds_start
 
   Arg [1]    : (optional) int $start
   Example    : $cds_start = $tv->cds_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start and 
+               cds_end if cds_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -187,12 +250,12 @@ sub cdna_end {
 =cut
 
 sub cds_start {
-    my ($self, $cds_start) = @_;
-    
+    my ($self, $cds_start, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     $self->{cds_start} = $cds_start if defined $cds_start;
     
     unless (exists $self->{cds_start}) {
-        my $cds_coords = $self->cds_coords;
+        my $cds_coords = $self->cds_coords($shifting_offset);
         
         my ($first, $last) = ($cds_coords->[0], $cds_coords->[-1]);
         my $exon_phase = $self->transcript->start_Exon->phase;
@@ -209,7 +272,8 @@ sub cds_start {
   Arg [1]    : (optional) int $end
   Example    : $cds_end = $tv->cds_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in CDS coordinates.
+               transcript in CDS coordinates. Will set both cds_start and 
+               cds_end if cds_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -218,12 +282,68 @@ sub cds_start {
 =cut
 
 sub cds_end {
-    my ($self, $cds_end) = @_;
-    
+    my ($self, $cds_end, $shifting_offset) = @_;
+    $shifting_offset ||= 0;
     $self->{cds_end} = $cds_end if defined $cds_end;
     
     # call cds_start to calculate the start and end
-    $self->cds_start unless exists $self->{cds_end};
+    $self->cds_start(undef, $shifting_offset) unless exists $self->{cds_end};
+    
+    return $self->{cds_end};
+}
+
+=head2 cds_start_unshifted
+
+  Arg [1]    : (optional) int $start
+  Example    : $cds_start = $tv->cds_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
+               transcript in CDS coordinates. Will set both cds_start_unshifted and 
+               cds_end_unshifted if cds_start_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_start_unshifted {
+    my ($self, $cds_start) = @_;
+    $self->{cds_start_unshifted} = $cds_start if defined $cds_start;
+    
+    unless (exists $self->{cds_start_unshifted}) {
+        my $cds_coords = $self->cds_coords(0);
+        
+        my ($first, $last) = ($cds_coords->[0], $cds_coords->[-1]);
+        my $exon_phase = $self->transcript->start_Exon->phase;
+        
+        $self->{cds_start_unshifted} = $first->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $first->start + ($exon_phase > 0 ? $exon_phase : 0);
+        $self->{cds_end_unshifted}   = $last->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $last->end + ($exon_phase > 0 ? $exon_phase : 0);
+    }
+    
+    return $self->{cds_start_unshifted};
+}
+
+=head2 cds_end_unshifted
+
+  Arg [1]    : (optional) int $end
+  Example    : $cds_end = $tv->cds_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
+               transcript in CDS coordinates. Will set both cds_start_unshifted and 
+               cds_end_unshifted if cds_end_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_end_unshifted {
+    my ($self, $cds_end) = @_;
+
+    $self->{cds_end_unshifted} = $cds_end if defined $cds_end;
+    
+    # call cds_start to calculate the start and end
+    $self->cds_start_unshifted() unless exists $self->{cds_end_unshifted};
     
     return $self->{cds_end};
 }
@@ -233,7 +353,8 @@ sub cds_end {
   Arg [1]    : (optional) int $start
   Example    : $translation_start = $tv->translation_start;
   Description: Getter/Setter for the start position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start and 
+               translation_end if translation_start does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -242,12 +363,12 @@ sub cds_end {
 =cut
 
 sub translation_start {
-    my ($self, $translation_start) = @_;
+    my ($self, $translation_start, $shifting_offset) = @_;
     
     $self->{translation_start} = $translation_start if defined $translation_start;
-    
+
     unless (exists $self->{translation_start}) {
-        my $translation_coords = $self->translation_coords;
+        my $translation_coords = $self->translation_coords($shifting_offset);
         
         my ($first, $last) = ($translation_coords->[0], $translation_coords->[-1]);
         
@@ -264,7 +385,8 @@ sub translation_start {
   Arg [1]    : (optional) int $end
   Example    : $transaltion_end = $tv->translation_end;
   Description: Getter/Setter for the end position of this variation on the
-               transcript in peptide coordinates.
+               transcript in peptide coordinates. Will set both translation_start and 
+               translation_end if translation_end does not exist.
   Returntype : int
   Exceptions : None
   Caller     : general
@@ -283,6 +405,65 @@ sub translation_end {
     return $self->{translation_end};
 }
 
+=head2 translation_start_unshifted
+
+  Arg [1]    : (optional) int $start
+  Example    : $translation_start = $tv->translation_start_unshifted;
+  Description: Getter/Setter for the unshifted start position of this variation on the
+               transcript in peptide coordinates. Will set both translation_start_unshifted and 
+               translation_end_unshifted if translation_start_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub translation_start_unshifted {
+    my ($self, $translation_start ) = @_;
+    
+    $self->{translation_start_unshifted} = $translation_start if defined $translation_start;
+
+    unless (exists $self->{translation_start_unshifted}) {
+        my $translation_coords = $self->translation_coords(0);
+        
+        my ($first, $last) = ($translation_coords->[0], $translation_coords->[-1]);
+        
+        $self->{translation_start_unshifted} = $first->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $first->start;
+        $self->{translation_end_unshifted}   = $last->isa('Bio::EnsEMBL::Mapper::Gap') ? undef : $last->end;
+    }
+
+    return $self->{translation_start_unshifted};
+}
+
+
+=head2 translation_end_unshifted
+
+  Arg [1]    : (optional) int $end
+  Example    : $transaltion_end = $tv->translation_end_unshifted;
+  Description: Getter/Setter for the unshifted end position of this variation on the
+               transcript in peptide coordinates. Will set both translation_start_unshifted and 
+               translation_end_unshifted if translation_end_unshifted does not exist.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub translation_end_unshifted {
+    my ($self, $translation_end) = @_;
+    
+    $self->{translation_end_unshifted} = $translation_end if defined $translation_end;
+    
+    # call translation_start to calculate the start and end
+    $self->translation_start_unshifted unless exists $self->{translation_end_unshifted};
+    
+    return $self->{translation_end_unshifted};
+}
+
+
+
 =head2 cdna_coords
 
   Description: Use the TranscriptMapper to calculate the cDNA 
@@ -296,11 +477,15 @@ sub translation_end {
 
 sub cdna_coords {
     my $self = shift;
+    my $shifting_offset = shift;
+    $shifting_offset ||= 0;
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->base_variation_feature;
+        $vf ||= $self->variation_feature;
         my $tran = $self->transcript;
-        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
@@ -319,11 +504,23 @@ sub cdna_coords {
 
 sub cds_coords {
     my $self = shift;
-    
+    my $shifting_offset = shift;
+    $shifting_offset ||= 0;
+
     unless ($self->{_cds_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript;
-        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
+                
+        if(defined($self->{_cds_coords}->[0]) && $self->{_cds_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
+        {
+          my $new_cds_coords = [ $self->_mapper->genomic2cds($vf->{start}, $vf->{end}, $tran->strand) ];
+          if(!$new_cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'))
+          {
+            $self->{_cds_coords} = $new_cds_coords;
+            $self->{_boundary_shift} = 1;
+          }
+        }
     }
     
     return $self->{_cds_coords};
@@ -342,11 +539,23 @@ sub cds_coords {
 
 sub translation_coords {
     my $self = shift;
-    
+
+    my $shifting_offset = shift;
+    $shifting_offset = 0 unless defined($shifting_offset);
     unless ($self->{_translation_coords}) {
         my $vf   = $self->base_variation_feature;
         my $tran = $self->transcript; 
-        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start + $shifting_offset, $vf->seq_region_end + $shifting_offset, $tran->strand) ];
+                
+        if(defined($self->{_translation_coords}->[0]) && $self->{_translation_coords}->[0]->isa('Bio::EnsEMBL::Mapper::Gap') && $vf->{shifted_flag})
+        {
+          my $new_trans_coords = [ $self->_mapper->genomic2pep($vf->{start}, $vf->{end}, $tran->strand) ] if $vf->{shifted_flag};
+          if(!$new_trans_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'))
+          {
+            $self->{_translation_coords} = $new_trans_coords;
+            $self->{_boundary_shift} = 1;
+          }
+        }
     }
     
     return $self->{_translation_coords};

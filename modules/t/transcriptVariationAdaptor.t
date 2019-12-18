@@ -66,6 +66,10 @@ ok( $trv->cdna_start() eq 16,                               "cdna_start");
 ok( $trv->cdna_end()   eq 16,                               "cdna_end");
 ok( $trv->translation_start() eq 6,                         "translation_start");
 ok( $trv->translation_end() eq 6,                           "translation_end");
+ok( $trv->cdna_start_unshifted() eq 16,                     "cdna_start_unshifted");
+ok( $trv->cdna_end_unshifted()   eq 16,                     "cdna_end_unshifted");
+ok( $trv->translation_start_unshifted() eq 6,               "translation_start_unshifted");
+ok( $trv->translation_end_unshifted() eq 6,                 "translation_end_unshifted");
 ok( $trv->pep_allele_string() eq 'S/C',                     "pep_allele_string");
 ok( $trv->consequence_type()->[0] eq 'missense_variant',    "consequence");
 ok( $trv->variation_feature->variation_name() eq "rs80359157", "variation name ");
@@ -86,6 +90,14 @@ ok($tva->dbnsfp_revel_score == 0.315, "dbnsfp revel score");
 ok($tva->cadd_prediction eq 'likely benign', "cadd prediction");
 ok($tva->cadd_score == 23, "cadd score");
 
+$tva->clear_shifting_variables();
+ok(!defined($trv->{cds_start}), 'cleared cds_start');
+ok(!defined($trv->{cds_end}), 'cleared cds_end');
+$tva->{shift_hash}->{shift_length} = 0;
+$tva->clear_shifting_variables();
+
+ok(defined($trv->{cds_start}), 'redefined cds_start');
+ok(defined($trv->{cds_end}), 'redefined cds_end');
 # test fetch_all_by_VariationFeatures
 my $slice = $s_ad->fetch_by_region('chromosome',13,32953990,32954050);
 my $vf = $vf_ad->fetch_all_by_Slice($slice);
