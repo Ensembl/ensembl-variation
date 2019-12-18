@@ -60,7 +60,7 @@ sub run {
   $runTime_imports_sth->execute() || die ("Failed to fetch runtime stats from hive db: $!\n");
 
   my $dir =$self->required_param('pipeline_dir');
-  open (my $report, ">$dir/REPORT_hive_pipe.txt") || die ("Failed to open report file for summary info: $!\n");
+  open(my $report, ">$dir/REPORT_hive_pipe.txt") || die ("Failed to open report file for summary info: $!\n");
 
   print $report "PhenotypeAnnotation pipeline finished! \n";
   print $report "running time: $time->[0]->[0] \n";

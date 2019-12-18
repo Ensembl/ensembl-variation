@@ -42,7 +42,7 @@ use warnings;
 
 use File::Path qw(make_path);
 use File::stat;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 use LWP::Simple;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
@@ -70,25 +70,26 @@ sub fetch_input {
 
                   source_name => 'ZFIN',        #source name in the variation db
                   source_name_short => 'ZFIN',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   );
   my $inputFile = 'phenoGeneCleanData_fish.txt';
   my $zfin_url = 'https://zfin.org/downloads/'.$inputFile;
 
   #create workdir folder
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
   getstore($zfin_url, $workdir."/".$inputFile) unless -e $workdir."/".$inputFile;
   print $logFH "Found files (".$workdir."/".$inputFile.") and will skip new fetch\n" if -e $workdir."/".$inputFile;
-  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir."/".$inputFile)->mtime);
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($workdir."/".$inputFile)->mtime));
 
   $self->param('zfin_file', $inputFile);
 }
@@ -142,16 +143,16 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/"."log_import_err_".$infile) ;
+  open($errFH1, ">", $self->workdir."/"."log_import_err_".$infile) ;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
+    open(IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

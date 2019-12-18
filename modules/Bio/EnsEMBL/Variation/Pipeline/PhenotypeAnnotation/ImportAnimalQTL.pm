@@ -52,7 +52,7 @@ use warnings;
 
 use File::Path qw(make_path);
 use File::stat;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -107,7 +107,7 @@ sub fetch_input {
 
   #create workdir folder
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
   return unless $animalQTL_species_ok{$species};
@@ -117,9 +117,9 @@ sub fetch_input {
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -134,7 +134,7 @@ sub fetch_input {
 
   # if the folder does not exist, try to fetch from ulr
   if (! -d $animalqtl_inputDir) {
-    make_path($animalqtl_inputDir);
+    make_path($animalqtl_inputDir) or die "Failed to create $animalqtl_inputDir $!\n";
     my $fetch_cmd = "wget --content-disposition -O $inputFile \"$url\"";
     my $return_value = $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
@@ -171,7 +171,7 @@ sub fetch_input {
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
   print $logFH 'INFO: Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
 
-  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime);
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime));
   print $logFH "Found inputDir file: $inputFile \n";
   if ( -e $workdir."/".$inputFile) {
     print $logFH "Found file (".$workdir."/".$inputFile."), will skip new copy of inputData\n";
@@ -220,9 +220,9 @@ sub write_output {
     close($self->errFH) if (defined $self && defined $self->errFH) ;
     close($self->pipelogFH) if (defined $self && defined $self->pipelogFH) ;
 
-    $self->dataflow_output_id($self->param('output_ids'), 2);
+    $self->dataflow_output_id($self->param('output_ids'), 1);
   } else {
-    open (my $pipelogFH, ">", $self->workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$self->required_param('species')) || die ("Failed to open file: $!\n");
+    open(my $pipelogFH, ">", $self->workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$self->required_param('species')) || die ("Failed to open file: $!\n");
     print $pipelogFH "Ensembl species has different assembly than AnimalQTL, will exit!\n";
     close($pipelogFH);
     return;
@@ -247,7 +247,7 @@ sub parse_input_file {
   my ($self, $seq_region_ids, $infile) = @_;
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file (".$self->workdir."/log_import_err_".$infile.") for writing $!\n") ;
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file (".$self->workdir."/log_import_err_".$infile.") for writing $!\n") ;
 
   my $ontology_term_adaptor = $self->ontology_db_adaptor->get_OntologyTermAdaptor;
 
@@ -255,10 +255,10 @@ sub parse_input_file {
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile | ") || die ("Could not open $infile for reading\n");
+    open(IN, "zcat ".$self->workdir."/$infile | ") || die ("Could not open $infile for reading\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

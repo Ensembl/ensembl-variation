@@ -44,7 +44,7 @@ use strict;
 use File::Path qw(make_path);
 use File::stat;
 use File::Basename;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -60,6 +60,7 @@ sub fetch_input {
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   $self->skip_sets(0); #add variation set data
+  $self->gwas(1); #run on gwas specific behaviour
 
   my $gwas_url = 'https://www.ebi.ac.uk/gwas/api/search/downloads/alternative';
 
@@ -70,16 +71,17 @@ sub fetch_input {
                   set => 'ph_nhgri',
                   source_name       => 'NHGRI-EBI GWAS catalog', #source name in the variation db
                   source_name_short => 'GWAS',                   #source identifier in the pipeline
+                  data_types => 'phenotype_feature,study',
                 # source_version is set based on file name
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -91,13 +93,13 @@ sub fetch_input {
   my ($latestFile, $latestFileTime);
   foreach my $f (@files){
     if (defined $latestFile) {
-      my $fileTime = strftime "%Y%m%d", localtime(stat($f)->mtime); #get file date
+      my $fileTime = strftime("%Y%m%d", localtime(stat($f)->mtime)); #get file date
       if ($fileTime > $latestFileTime) {
         $latestFile = $f; $latestFileTime = $fileTime;
       }
     } else {
       $latestFile = $f;
-      $latestFileTime = strftime "%Y%m%d", localtime(stat($latestFile)->mtime);
+      $latestFileTime = strftime("%Y%m%d", localtime(stat($latestFile)->mtime));
     }
   }
   if (defined $latestFile) {
@@ -170,14 +172,14 @@ sub parse_input_file {
   my @phenotypes;
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) || die ("Could not open file for writing: $!\n");
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
+    open(IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   # Read through the file and parse out the desired fields

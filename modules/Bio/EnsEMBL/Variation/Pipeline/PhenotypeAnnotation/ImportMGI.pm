@@ -64,15 +64,16 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'MGI',        #source name in the variation db
                   source_name_short => 'MGI',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   #source version is set based on EBI fetch data hash response_date
                   );
-  my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  my $workdir = $pipeline_dir."/".$source_info{source_name_short};
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);

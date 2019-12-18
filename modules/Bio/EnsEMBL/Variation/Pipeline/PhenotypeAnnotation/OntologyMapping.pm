@@ -45,12 +45,11 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping;
 use strict;
 use warnings;
 
+use File::Path qw(make_path);
 use HTTP::Tiny;
 use JSON;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-
-my $source;
 
 my $DEFAULT_SPECIES = 'homo_sapiens';
 
@@ -58,17 +57,17 @@ sub fetch_input {
   my $self = shift;
 
   my $species = $self->required_param('species');
-  $source = $self->param('source');
   my $workdir = $self->param('workdir');
-  $workdir ||= $self->required_param('pipeline_dir')."/".$source->{source_name}."/".$self->required_param('species');
+  $workdir ||= $self->required_param('pipeline_dir')."/OntologyMap";
+  make_path($workdir) or die "Failed to create $workdir $!\n";
 
   $self->debug($self->param('debug_mode'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_ontologyMapping_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -96,16 +95,15 @@ sub run {
     $self->store_terms( $zooma_terms);
   }
 
-  $self->param('output_ids', { source => $self->required_param('source'),
-                      species => $self->required_param('species'),
-                      workdir => $self->required_param('workdir'),
-                    });
+  $self->param('output_ids', { species => $self->required_param('species'),
+                               workdir => $self->workdir,
+                             });
 }
 
 sub write_output {
   my $self = shift;
 
-  $self->print_pipelogFH("Passing $source->{source_name} import (".$self->param('species').") for summary counts (finish_phenotype_annotation)\n") if ($self->debug);
+  $self->print_pipelogFH("Passing ".$self->param('species').") for summary counts (finish_phenotype_annotation)\n") if ($self->debug);
   close($self->logFH) if defined $self->logFH ;
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;

@@ -43,7 +43,7 @@ use strict;
 
 use File::Path qw(make_path);
 use File::stat;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -59,7 +59,7 @@ sub fetch_input {
   $self->core_db_adaptor($self->get_species_adaptor('core'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
-  my $dateStr = strftime "%Y%m%d", localtime;
+  my $dateStr = strftime("%Y%m%d", localtime);
 
   %source_info = (source_description => 'Online Mendelian Inheritance in Man (OMIM) database',
                   source_url => 'https://www.omim.org/',
@@ -68,15 +68,16 @@ sub fetch_input {
                   source_name => 'MIM morbid',      #source name in the variation db
                   source_name_short => 'MIMmorbid', #source identifier in the pipeline
                   source_version => $dateStr,
+                  data_types => 'phenotype_feature',
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -85,7 +86,7 @@ sub fetch_input {
   my $file_mim = "mim_dump.txt";
   if ( -e $workdir."/".$file_mim ){
     print $logFH "Found files (".$workdir."/".$file_mim."), will skip new fetch\n";
-    my $fileTime = strftime "%Y%m%d", localtime(stat($workdir."/".$file_mim)->mtime); #get file date
+    my $fileTime = strftime("%Y%m%d", localtime(stat($workdir."/".$file_mim)->mtime)); #get file date
     print $errFH "WARNING: File $file_mim to be imported has a different date than today!: $fileTime \n" if $fileTime ne $dateStr;
   } else {
     my $st_getdata = qq{
@@ -99,7 +100,7 @@ sub fetch_input {
     };
     my $sth = $self->core_db_adaptor->dbc->prepare($st_getdata);
     $sth->execute();
-    open (OUT, ">$workdir/$file_mim") || die ("ERROR: Unable to write to file $workdir/$file_mim\n");
+    open(OUT, ">$workdir/$file_mim") || die ("ERROR: Unable to write to file $workdir/$file_mim\n");
     print OUT join("\t", @{$sth->{NAME}})."\n";
     while(my @row = $sth->fetchrow_array()) {
       print OUT join("\t", @row)."\n";

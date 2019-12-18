@@ -79,6 +79,7 @@ my %special_characters = (
   '&' => 'and',
   '%' => 'percent',
   'Đ' => '-',
+  '^' => '',
 );
 
 
