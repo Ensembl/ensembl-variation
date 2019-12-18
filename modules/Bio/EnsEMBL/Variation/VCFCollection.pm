@@ -1323,7 +1323,16 @@ sub _seek_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   
-  my $vcf = $self->_seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
+  my ($seek_start, $seek_end);
+  if ($vf->var_class() eq 'SNP') {
+    ## only need single location
+    $seek_start = $seek_end = $vf->seq_region_start;
+  } else {
+    $seek_start = $vf->seq_region_start - 2;
+    $seek_end =  $vf->seq_region_end + 2;
+  }
+  my $vcf = $self->_seek($vf->seq_region_name, $seek_start, $seek_end);
+
   return unless $vcf;
   
   # compare IDs
