@@ -689,7 +689,9 @@ sub _get_peptide_alleles {
 sub _get_ref_pep {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
-    return $bvfo->get_reference_TranscriptVariationAllele->peptide;
+    my $ref_tva = $bvfo->get_reference_TranscriptVariationAllele;
+    $ref_tva->{shift_hash} = $bvfoa->{shift_hash} if (defined($bvfoa->{shift_hash}));
+    return $ref_tva->peptide;
 }
 
 sub _get_codon_alleles {

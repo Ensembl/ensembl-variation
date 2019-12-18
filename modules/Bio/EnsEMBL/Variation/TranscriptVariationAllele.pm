@@ -99,7 +99,7 @@ sub new_fast {
 =head2 _return_3prime
 
   Description: Shifts an insertion/deletion as far as possible in the 3' direction, relative
-               to the transcsript.
+               to the transcript.
                Called in TranscriptVariation.pm for original mapping and in 
                TranscriptVariationAllele.pm if required for HGVS
   Exceptions : none
@@ -275,7 +275,7 @@ sub check_tva_shifting_hashes {
   Description: Calculates the maximum possible shift in the 3' direction, provides the 
                shift length, shifted allele string, and new start/end coordinates
                Requires flanking sequences, allele string, strand and feature location
-  Returntype : 5 scalars
+  Returntype : 5 scalars - shift length, shifted allele string, hgvs allele string, start position, end position
   Status     : At Risk
 
 =cut
@@ -785,7 +785,6 @@ sub peptide {
 
 sub codon {
   my ($self, $codon) = @_;
-  
   $self->{codon} = $codon if defined $codon;
 
   unless(exists($self->{codon})) {
@@ -1603,7 +1602,7 @@ sub hgvs_protein {
   }
 
   ### no HGVS protein annotation for variants outside translated region 
-  if(defined($self->{shift_hash}) && $self->{shift_hash}->{shift_length} != 0)
+  if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length}) && $self->{shift_hash}->{shift_length} != 0)
   {
     delete($tv->{translation_start});
     delete($tv->{translation_end});
@@ -1639,7 +1638,7 @@ sub hgvs_protein {
   ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method
   $ref->_return_3prime(1);
   ## get default reference & alt peptides  [changed later to hgvs format]
-  if(defined($self->{shift_hash})  && $self->{shift_hash}->{shift_length} != 0) {
+  if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})  && $self->{shift_hash}->{shift_length} != 0) {
     delete($self->{peptide});
     delete($self->{codon});
     delete($self->{feature_seq});
