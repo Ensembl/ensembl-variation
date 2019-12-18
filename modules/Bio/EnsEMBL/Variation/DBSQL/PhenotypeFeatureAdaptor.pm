@@ -111,8 +111,8 @@ sub _is_significant_constraint {
   # Otherwise, add a constraint on the phenotype_feature table
   #Temporaray comment out for release e99
   #my $ns_constraint = qq{ pf.is_significant=1 };
-  #$constraint  .= (defined($constraint)) ? " AND$ns_constraint" : $ns_constraint;
-  $constraint  = "" if (!defined($constraint));
+  my $ns_constraint =  qq{ pf.is_significant in (1,0) };
+  $constraint  .= (defined($constraint)) ? " AND$ns_constraint" : $ns_constraint;
     
   return $constraint;
 }
