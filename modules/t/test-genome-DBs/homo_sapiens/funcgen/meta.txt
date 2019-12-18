@@ -318,3 +318,5 @@
 757	\N	patch	patch_99_100_a.sql|schema_version
 758	\N	patch	patch_99_100_b.sql|rename so_name to so_term
 759	\N	patch	patch_99_100_c.sql|remove default values from text data type
+760	\N	patch	patch_99_100_d.sql|update type column on external_db table
+761	\N	patch	patch_99_100_e.sql|Make some foreign keys not mandatory
