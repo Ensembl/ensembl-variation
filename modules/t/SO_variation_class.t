@@ -68,6 +68,7 @@ my %tests = (
     '(LARGEDELETION)/-/AT'  => 'sequence_alteration',
     'A/-/T'                 => 'sequence_alteration',
     'A/Y/-'                 => 'sequence_alteration',
+    'G/*/C'                 => 'sequence_alteration',
     '(CA)1/-/(CA)12'        => 'tandem_repeat',
     '(CAG)8/(CAG)9'         => 'tandem_repeat',
     '-/TGTG/(TG)10/TG(11)'  => 'tandem_repeat',
