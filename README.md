@@ -1,8 +1,8 @@
 # Ensembl Variation API
 
-[![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/master/LICENSE)
-[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=master)](https://travis-ci.org/Ensembl/ensembl-variation)
-[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=master)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=master)
+[![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/release/100/LICENSE)
+[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=release/100)](https://travis-ci.org/Ensembl/ensembl-variation)
+[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=release/100)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=release/100)
 
 [travis]: https://travis-ci.org/Ensembl/ensembl-variation
 [coveralls]: https://coveralls.io/r/Ensembl/ensembl-variation
