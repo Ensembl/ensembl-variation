@@ -143,25 +143,29 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
 
 # fetch_all_by_Slice phenotype class
 {
+
   $sl_oa  = $sla->fetch_by_region('chromosome', 18, 721588, 86442450);
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
-  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&  $pfs->[1]->object_id eq 'ENSG00000176105' && $pfs->[1]->phenotype_class eq 665, "fetch_all_by_Slice_accession_type - phenotype class (default)");
-  $pfa->clear_cache();
-  $pfa->db->include_all_phenotype_classes(1);
-  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&  $pfs->[1]->object_id eq 'rs2299298' && $pfs->[1]->phenotype_class eq 663, "fetch_all_by_Slice_accession_type - phenotype class all ");
-  $pfa->db->include_all_phenotype_classes(0);
 
   $pfa->clear_cache();
-  $pfa->_include_only_phenotype_class('non_specified');
+  $pfa->db->use_phenotype_classes("trait");
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
-  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299298' && $pfs->[0]->phenotype_class eq 663, "fetch_all_by_Slice_accession_type - phenotype class - include 'non_specified' ");
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&  $pfs->[1]->object_id eq 'ENSG00000176105' && $pfs->[1]->phenotype_class eq 665, "fetch_all_by_Slice_accession_type - phenotype class - trait");
 
   $pfa->clear_cache();
-  $pfa->_include_only_phenotype_class('trait');
+  $pfa->db->use_phenotype_classes("non_specified");
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
-  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&  $pfs->[0]->object_id eq 'esv2751608' && $pfs->[0]->phenotype_class eq 665, "fetch_all_by_Slice_accession_type - phenotype class - include trait ");
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299298' && $pfs->[0]->phenotype_class eq 663, "fetch_all_by_Slice_accession_type - phenotype class - non_specified");
 
+  $pfa->clear_cache();
+  $pfa->db->use_phenotype_classes("trait,non_specified");
+  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&  $pfs->[0]->object_id eq 'esv2751608' && $pfs->[0]->phenotype_class eq 665, "fetch_all_by_Slice_accession_type - phenotype class - trait,non_specified ");
+
+  #reset to default
+  $pfa->db->use_phenotype_classes("trait,non_specified,tumour");
 }
 
 # fetch_all_by_phenotype_ontology_accession
@@ -237,7 +241,7 @@ ok($count && $count->{'Variation'} == 1 && $count->{'StructuralVariation'} == 2 
 
 # fetch_all
 $pfs = $pfa->fetch_all();
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 5 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 7 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
 
 # store
 my $pf = $pfs->[0];

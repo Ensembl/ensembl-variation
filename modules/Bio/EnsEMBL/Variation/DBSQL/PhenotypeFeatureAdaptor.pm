@@ -78,7 +78,6 @@ use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::PhenotypeFeature qw(%TYPES);
 use Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
@@ -120,17 +119,14 @@ sub _is_significant_constraint {
 
 =head2 _is_class_constraint
 
-  Arg [1]    : list string $constraint
+  Arg [1]    : string $constraint
   Example    : $self->_is_class_constraint($constraint)
   Description: Internal method to add a constraint on the column "class_attrib_id".
-               By default, the constraint is on the class trait value (class_attrib_id=665).
-               To remove this constraint, either set the DBAdaptor variable:
-               - to include all classes $pf->db->include_all_phenotype_classes(1) OR
-               - leave the include_all_phenotype_classes to 0 or undef and
-               include_class("tumour","non_specified")", using the method
-               "include_class("tumour","non_specified")":
-               e.g. $pfa->db->include_class("tumour","non_specified");
-               See the module Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::include_non_significant_phenotype_associations
+               By default, the constraint is to select all class values.
+               To remove this constraint, set the DBAdaptor variable using
+               method use_phenotype_classes:
+               e.g. $pfa->db->use_phenotype_classes("tumour,non_specified");
+               See the module Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::use_phenotype_classes
   Returntype : string
   Exceptions : none
   Caller     : internal
@@ -142,11 +138,8 @@ sub _is_class_constraint {
   my $self = shift;
   my $constraint = shift;
 
-  # If we should include all phenotypes, no extra condition is needed
-  return $constraint if ($self->db->include_all_phenotype_classes());
-
-  # Otherwise, add a constraint on the phenotype table
-  my $classes = $self->_include_only_phenotype_class();
+  # get a constraint on the phenotype table
+  my $classes = $self->_include_phenotype_class();
 
   # get attribute
   my $pheno_constraint = qq{ p.class_attrib_id in ($classes) };
@@ -1324,26 +1317,13 @@ sub _include_ontology {
 }
 
 
-# list of strings
-sub _include_only_phenotype_class {
+sub _include_phenotype_class {
   my $self = shift;
-  my $new_class_list = shift;
 
-  my @classes;
-  if ( defined($self->{_include_only_phenotype_class})) {
-    return $self->{_include_only_phenotype_class} if (!defined($new_class_list));
-    @classes = split(",", $new_class_list);
-  }
+  #fetch and init if it was not set
+  my $classes = $self->db->use_phenotype_classes();
 
-  $classes[0] = $DEFAULT_PHENOTYPE_CLASS if (scalar @classes == 0);
-  my $incl_class = "";
-  for my $cl (@classes){
-    my $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
-    $incl_class .= $class_attrib_id.", ";
-  }
-  $self->{_include_only_phenotype_class} = substr($incl_class,0, -2);
-
-  return $self->{_include_only_phenotype_class};
+  return $self->db->{use_phenotype_class_ids};
 }
 
 # method used by superclass to construct SQL

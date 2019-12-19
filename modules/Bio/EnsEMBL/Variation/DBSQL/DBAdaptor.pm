@@ -61,12 +61,14 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
+
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
 our $DEFAULT_INCLUDE_FAILED_VARIATIONS = 0;
 our $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES = 0;
-our $DEFAULT_INCLUDE_ALL_PHENOTYPES = 0;
+our $DEFAULT_INCLUDE_PHENOTYPES = 'trait,tumour,non_specified';
 our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 
 sub get_available_adaptors{
@@ -280,40 +282,62 @@ sub include_non_significant_phenotype_associations {
 }
 
 
-=head2 include_all_phenotype_classes
+=head2 use_phenotype_classes
 
-  Arg [1]    : int $newval (optional)
+  Arg [1]    : string list $newval (optional)
   Example    :
     # Get a DBAdaptor for the human variation database
     my $dba = $registry->get_DBAdaptor('human','phenotypefeature');
 
     # Configure the DBAdaptor to return all phenotype classes (including non specified)
     # when using fetch methods in the various object adaptors
-    $dba->include_all_phenotype_classes(1);
+    $dba->use_phenotype_classes('trait,tumour,non_specified');
 
   Description: Getter/Setter for the behaviour of the adaptors connected through this
          DBAdaptor when it comes to phenotype feature.
-         The default behaviour is to return the phenotype features with specific non cancer phenotypes only e.g. the
-         'fetch_all_by...'-type methods. If this flag is set, those methods will
-         instead also return phenotype features with cancer and non_specified phenotypes.
-  Returntype : int
+         The default behaviour is to return the phenotype features with any phenotype class.
+  Returntype : List of string
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub include_all_phenotype_classes {
+sub use_phenotype_classes {
   my $self = shift;
   my $include = shift;
 
-  # If the flag should be modified, do that
-  if (defined($include)) {$self->{'include_all_phenotype_classes'} = $include;}
+  my @classes;
+  if ( defined($self->{use_phenotype_classes})) {
+    #if call without parameter and flag has a value return it
+    return $self->{use_phenotype_classes} if (!defined($include));
+    $self->{use_phenotype_classes} = $include;
+    @classes = split(",", $include);
+  }
 
-  # In case the flag has not been set at all, set it to the default value
-  unless (exists($self->{'include_all_phenotype_classes'})) {$self->{'include_all_phenotype_classes'} = $DEFAULT_INCLUDE_ALL_PHENOTYPES;}
+  #set default if not initalised and no new values
+  if (scalar @classes == 0){
+    $self->{use_phenotype_classes} = $DEFAULT_INCLUDE_PHENOTYPES;
+    @classes = split(",", $DEFAULT_INCLUDE_PHENOTYPES);
+  }
 
-  return $self->{'include_all_phenotype_classes'};
+  #set the phenotype class attrib id
+  my $incl_class = "";
+  for my $cl (@classes){
+
+    my $class_attrib_id;
+    if ( defined($self->{class_attribs}{$cl})) {
+      $class_attrib_id = $self->{class_attribs}{$cl};
+    } else {
+      $class_attrib_id = $self->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
+      $self->{class_attribs}{$cl} = $class_attrib_id;
+    }
+    $incl_class .= $class_attrib_id.", ";
+
+  }
+  $self->{use_phenotype_class_ids} = substr($incl_class,0, -2);
+
+  return $self->{use_phenotype_classes};
 }
 
 
