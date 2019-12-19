@@ -380,9 +380,9 @@ sub SO_variation_class {
                 elsif (
                     (grep { (
                               (
-                                ($ref =~ /${_}$/)
+                                ($ref =~ /\Q${_}\E$/)
                                    ||
-                                ($ref =~ /^${_}/)
+                                ($ref =~ /^\Q${_}\E/)
                               ) && length($ref) != length($_)
                             )
                             ||
@@ -412,9 +412,9 @@ sub SO_variation_class {
                               (
                                 ($_ =~ /^$ref/)
                                      ||
-                                ($ref =~ /${_}$/)
+                                ($ref =~ /\Q${_}\E$/)
                                      ||
-                                ($ref =~ /^${_}/)
+                                ($ref =~ /^\Q${_}\E/)
                               ) && length($ref) != length($_)
                             )
                             ||
