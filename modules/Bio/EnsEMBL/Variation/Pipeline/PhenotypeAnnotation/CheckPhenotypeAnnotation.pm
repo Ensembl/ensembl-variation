@@ -73,6 +73,9 @@ sub fetch_input {
   open(my $pipelogFH, ">>", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->pipelogFH($pipelogFH);
+
+  $self->param('output_ids', [{species => $species}]);
+
 }
 
 sub run {
