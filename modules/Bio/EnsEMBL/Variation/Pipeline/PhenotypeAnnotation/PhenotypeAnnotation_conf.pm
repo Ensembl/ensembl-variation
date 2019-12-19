@@ -206,7 +206,6 @@ sub pipeline_analyses {
                 '7->A' => [ 'import_cancerGC' ],
                 'A->1' => [ 'check_phenotypes'],
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'import_gwas',
@@ -220,7 +219,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_gwas']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_gwas',
@@ -249,7 +247,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_ega']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_ega',
@@ -277,7 +274,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_orphanet']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_orphanet',
@@ -305,7 +301,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_mimmorbid']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_mimmorbid',
@@ -333,7 +328,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_ddg2p']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_ddg2p',
@@ -361,7 +355,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_cancerGC']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_cancerGC',
@@ -390,7 +383,6 @@ sub pipeline_analyses {
                 '3->A' => [ 'import_mgi'],
                 'A->1' => [ 'check_phenotypes'],
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'import_impc',
@@ -404,7 +396,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => { 'check_impc' => INPUT_PLUS() },
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_impc',
@@ -432,7 +423,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_mgi'],
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_mgi',
@@ -460,7 +450,6 @@ sub pipeline_analyses {
                 '2' => [ 'import_omia' ],
                 '3' => [ 'import_animalqtldb' ],
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'import_omia',
@@ -474,7 +463,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_omia']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_omia',
@@ -504,7 +492,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_animalqtl']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_animalqtl',
@@ -535,7 +522,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_phenotypes']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'import_zfin',
@@ -549,7 +535,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 1 => [ 'check_phenotypes']
             },
-            -max_retry_count => 5, # tries 5 times to run a job
         },
 
         {   -logic_name => 'check_phenotypes',
