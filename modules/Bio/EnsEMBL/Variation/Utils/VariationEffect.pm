@@ -691,9 +691,9 @@ sub _get_ref_pep {
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     my $ref_tva = $bvfo->get_reference_TranscriptVariationAllele;
 
-    ## The shift hash has to be added to the reference tva before calculating the peptide
-    ## This is because we don't precalculate the shift_hash for references for speed and for
-    ## variants with multiple alternate alleles with potentially different shift lengths
+    ## The shift hash has to be added to the reference tva before calculating the relevant peptide string.
+    ## This is because we don't precalculate the shift_hash for reference tvas for speed and for
+    ## variants with multiple alternate alleles with potentially different shift lengths.
     $ref_tva->{shift_hash} = $bvfoa->{shift_hash} if (defined($bvfoa->{shift_hash}));
     return $ref_tva->peptide;
 }
