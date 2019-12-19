@@ -831,8 +831,8 @@ sub start_retained_variant {
 
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
-    
-    return 0 if ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION');
+    # structural variants don't have an allele string 
+    return 0 if ($bvf->allele_string && ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION'));
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
