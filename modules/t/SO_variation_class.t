@@ -28,6 +28,7 @@ my %tests = (
     'M/K'                   => 'SNV',
     'G/C/A'                 => 'SNV',
     'G/C/W'                 => 'SNV',
+    'G/*/C'                 => 'SNV',
     'AA/TT'                 => 'substitution',
     'A/YY'                  => 'indel',
     'GA/TTT/ACCCC'          => 'indel',
