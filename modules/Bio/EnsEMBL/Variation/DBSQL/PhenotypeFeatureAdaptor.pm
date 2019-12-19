@@ -78,10 +78,12 @@ use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::PhenotypeFeature qw(%TYPES);
 use Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
+our $DEFAULT_PHENOTYPE_CLASS='trait';
 
 # internal method
 =head2 _is_significant_constraint
@@ -116,6 +118,44 @@ sub _is_significant_constraint {
 }
 
 
+=head2 _is_class_constraint
+
+  Arg [1]    : list string $constraint
+  Example    : $self->_is_class_constraint($constraint)
+  Description: Internal method to add a constraint on the column "class_attrib_id".
+               By default, the constraint is on the class trait value (class_attrib_id=665).
+               To remove this constraint, either set the DBAdaptor variable:
+               - to include all classes $pf->db->include_all_phenotype_classes(1) OR
+               - leave the include_all_phenotype_classes to 0 or undef and
+               include_class("tumour","non_specified")", using the method
+               "include_class("tumour","non_specified")":
+               e.g. $pfa->db->include_class("tumour","non_specified");
+               See the module Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::include_non_significant_phenotype_associations
+  Returntype : string
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
+sub _is_class_constraint {
+  my $self = shift;
+  my $constraint = shift;
+
+  # If we should include all phenotypes, no extra condition is needed
+  return $constraint if ($self->db->include_all_phenotype_classes());
+
+  # Otherwise, add a constraint on the phenotype table
+  my $classes = $self->_include_only_phenotype_class();
+
+  # get attribute
+  my $pheno_constraint = qq{ p.class_attrib_id in ($classes) };
+  $constraint  .= (defined($constraint)) ? " AND$pheno_constraint" : $pheno_constraint;
+
+  return $constraint;
+}
+
+
 # internal method
 sub _fetch_all_by_object {
   my $self   = shift;
@@ -129,6 +169,8 @@ sub _fetch_all_by_object {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
      
   return $self->generic_fetch($constraint);
 }
@@ -165,6 +207,8 @@ sub fetch_all_by_object_id {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
   
   return $self->generic_fetch($constraint);
 }
@@ -198,6 +242,8 @@ sub fetch_all_by_object_id_accession_type {
 
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
 
   my $ontologyFlag = $self->_include_ontology();
   $self->_include_ontology(1);
@@ -264,6 +310,8 @@ sub fetch_all_by_Slice_accession_type {
 
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
 
   my $ontologyFlag = $self->_include_ontology();
   $self->_include_ontology(1);
@@ -344,6 +392,8 @@ sub fetch_all_by_Slice_with_ontology_accession {
 
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
 
   my $result = $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
@@ -408,6 +458,8 @@ sub fetch_all_by_Variation_list {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
 
   return $self->generic_fetch($constraint);
 }
@@ -492,6 +544,8 @@ sub fetch_all_by_VariationFeature_list {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
      
   return $self->generic_fetch($constraint);
 }
@@ -525,6 +579,8 @@ sub fetch_all_by_Study {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
   
   return $self->generic_fetch("pf.study_id = ".$study->dbID());
 }
@@ -558,6 +614,8 @@ sub fetch_all_by_phenotype_name_source_name {
   
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -594,6 +652,8 @@ sub fetch_all_by_phenotype_description_source_name {
   
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -656,6 +716,8 @@ sub fetch_all_by_phenotype_id_source_name {
   
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -693,6 +755,8 @@ sub fetch_all_by_phenotype_id_feature_type {
 
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
 
   return $self->generic_fetch("$extra_sql");
 
@@ -867,6 +931,8 @@ sub fetch_all_by_associated_gene {
      $extra_sql .= " and $constraint" if ($constraint);
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -904,6 +970,8 @@ sub count_all_by_associated_gene {
      $extra_sql .= " and pf.type!='Gene'";
   # Add the constraint for significant data
   $extra_sql = $self->_is_significant_constraint($extra_sql);
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -953,6 +1021,8 @@ sub count_all_by_Gene {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
   
   return $self->generic_count($constraint);
 }
@@ -975,6 +1045,8 @@ sub count_all_by_phenotype_id {
   
   # Add the constraint for significant data
   $constraint = $self->_is_significant_constraint($constraint);
+  # Add the constraint for phenotype class
+  $constraint = $self->_is_class_constraint($constraint);
   
   return $self->generic_count($constraint);
 }
@@ -1066,6 +1138,8 @@ sub fetch_all {
   
   # Add the constraint for significant data
   my $extra_sql = $self->_is_significant_constraint();
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #my $extra_sql = $self->db->_exclude_failed_variations_constraint();
@@ -1096,6 +1170,8 @@ sub get_clinsig_alleles_by_location {
   throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
 
   my $extra_sql = $self->_is_significant_constraint();
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
 
   my $sth = $self->dbc->prepare(qq{
     SELECT
@@ -1247,6 +1323,29 @@ sub _include_ontology {
   return $self->{_include_ontology};
 }
 
+
+# list of strings
+sub _include_only_phenotype_class {
+  my $self = shift;
+  my $new_class_list = shift;
+
+  my @classes;
+  if ( defined($self->{_include_only_phenotype_class})) {
+    return $self->{_include_only_phenotype_class} if (!defined($new_class_list));
+    @classes = split(",", $new_class_list);
+  }
+
+  $classes[0] = $DEFAULT_PHENOTYPE_CLASS if (scalar @classes == 0);
+  my $incl_class = "";
+  for my $cl (@classes){
+    my $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
+    $incl_class .= $class_attrib_id.", ";
+  }
+  $self->{_include_only_phenotype_class} = substr($incl_class,0, -2);
+
+  return $self->{_include_only_phenotype_class};
+}
+
 # method used by superclass to construct SQL
 sub _tables {
   my $self = shift;
@@ -1301,7 +1400,7 @@ sub _columns {
   my @cols = qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
-    pf.phenotype_id pf.source_id s.name pf.study_id p.description
+    pf.phenotype_id pf.source_id s.name pf.study_id p.description p.class_attrib_id
   ) ;
   push @cols, ('pfa.value','at.code') if $self->_include_attrib;
   push @cols, 'poa.accession'         if $self->_include_ontology;

@@ -66,6 +66,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
 our $DEFAULT_INCLUDE_FAILED_VARIATIONS = 0;
 our $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES = 0;
+our $DEFAULT_INCLUDE_ALL_PHENOTYPES = 0;
 our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 1;
 
 sub get_available_adaptors{
@@ -276,6 +277,43 @@ sub include_non_significant_phenotype_associations {
     unless (exists($self->{'include_non_significant_phenotypes'})) {$self->{'include_non_significant_phenotypes'} = $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES;}
     
     return $self->{'include_non_significant_phenotypes'};
+}
+
+
+=head2 include_all_phenotype_classes
+
+  Arg [1]    : int $newval (optional)
+  Example    :
+    # Get a DBAdaptor for the human variation database
+    my $dba = $registry->get_DBAdaptor('human','phenotypefeature');
+
+    # Configure the DBAdaptor to return all phenotype classes (including non specified)
+    # when using fetch methods in the various object adaptors
+    $dba->include_all_phenotype_classes(1);
+
+  Description: Getter/Setter for the behaviour of the adaptors connected through this
+         DBAdaptor when it comes to phenotype feature.
+         The default behaviour is to return the phenotype features with specific non cancer phenotypes only e.g. the
+         'fetch_all_by...'-type methods. If this flag is set, those methods will
+         instead also return phenotype features with cancer and non_specified phenotypes.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub include_all_phenotype_classes {
+  my $self = shift;
+  my $include = shift;
+
+  # If the flag should be modified, do that
+  if (defined($include)) {$self->{'include_all_phenotype_classes'} = $include;}
+
+  # In case the flag has not been set at all, set it to the default value
+  unless (exists($self->{'include_all_phenotype_classes'})) {$self->{'include_all_phenotype_classes'} = $DEFAULT_INCLUDE_ALL_PHENOTYPES;}
+
+  return $self->{'include_all_phenotype_classes'};
 }
 
 
