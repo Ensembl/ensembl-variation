@@ -313,6 +313,7 @@ is(scalar keys %{{map {$_->{Allele} => 1} values %by_allele}}, 1, "minimal - all
 is($by_allele{frameshift_variant}->{Extra}->{ALLELE_NUM}, 1, "minimal - allele num where two alts resolve to same allele (frameshift)");
 is($by_allele{missense_variant}->{Extra}->{ALLELE_NUM}, 2, "minimal - allele num where two alts resolve to same allele (missense)");
 
+=begin
 $config = copy_config($base_config, {allele_number => 1});
 ($vf) = @{parse_line($config, '21 25606454 test G *,C')};
 $cons = get_all_consequences($config, [$vf]);
@@ -342,7 +343,8 @@ $config = copy_config($base_config, {
 });
 @vfs = @{parse_line($config, qq{21 25587758 rs116645811 G A . . . GT 1|1 0|0})};
 ok( scalar (grep { $_->{individual} eq 'B' } @vfs) >= 1, 'vcf format - individual data process ref homs"');
-
+=end
+=cut
 # vcf GP
 $config = copy_config($base_config, { gp => 1 });
 ($vf) = @{parse_line($config, qq{1 1 test G C . . GP=21:25606454})};
