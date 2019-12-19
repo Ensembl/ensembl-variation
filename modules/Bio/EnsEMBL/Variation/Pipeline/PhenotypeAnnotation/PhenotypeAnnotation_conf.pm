@@ -174,7 +174,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -input_ids  => [{}],
-            -rc_name    => 'long',
+            -rc_name    => 'default',
             -max_retry_count => 0,
             -flow_into  => {
                 '2->A' => [ 'import_human' ],
