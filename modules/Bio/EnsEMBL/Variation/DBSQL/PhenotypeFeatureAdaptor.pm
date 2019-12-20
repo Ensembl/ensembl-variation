@@ -79,10 +79,11 @@ use Bio::EnsEMBL::Variation::PhenotypeFeature qw(%TYPES);
 use Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
-our $DEFAULT_PHENOTYPE_CLASS='trait';
+our $DEFAULT_INCLUDE_PHENOTYPES = 'trait,tumour,non_specified';
 
 # internal method
 =head2 _is_significant_constraint
@@ -123,10 +124,9 @@ sub _is_significant_constraint {
   Example    : $self->_is_class_constraint($constraint)
   Description: Internal method to add a constraint on the column "class_attrib_id".
                By default, the constraint is to select all class values.
-               To remove this constraint, set the DBAdaptor variable using
+               To remove this constraint, set the internal variable using
                method use_phenotype_classes:
-               e.g. $pfa->db->use_phenotype_classes("tumour,non_specified");
-               See the module Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::use_phenotype_classes
+               e.g. $pfa->use_phenotype_classes("tumour,non_specified");
   Returntype : string
   Exceptions : none
   Caller     : internal
@@ -1320,10 +1320,12 @@ sub _include_ontology {
 sub _include_phenotype_class {
   my $self = shift;
 
-  #fetch and init if it was not set
-  my $classes = $self->db->use_phenotype_classes();
+  return $self->{use_phenotype_class_ids} if defined($self->{use_phenotype_class_ids});
 
-  return $self->db->{use_phenotype_class_ids};
+  #fetch and init if it was not set
+  my $classes = $self->use_phenotype_classes();
+
+  return $self->{use_phenotype_class_ids};
 }
 
 # method used by superclass to construct SQL
@@ -1704,6 +1706,61 @@ sub _get_submitter_name{
   }
   return $self->{submitter_names_lookup}->{$submitter_id};
 
+}
+
+=head2 use_phenotype_classes
+
+  Arg [1]    : string $newval (optional)
+  Example    :
+    # Configure the adaptor to return all phenotype classes (including non specified)
+    # when using fetch methods in the various object adaptors
+    $pfa->use_phenotype_classes('trait,tumour,non_specified');
+
+  Description: Getter/Setter for the behaviour of the adaptors connected through this
+         DBAdaptor when it comes to phenotype feature.
+         The default behaviour is to return the phenotype features of any phenotype class.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_phenotype_classes {
+  my $self = shift;
+  my $include = shift;
+
+  my @classes;
+  if ( defined($self->{use_phenotype_classes})) {
+    #if call without parameter and flag has a value return it
+    return $self->{use_phenotype_classes} if (!defined($include));
+    $self->{use_phenotype_classes} = $include;
+    @classes = split(",", $include);
+  }
+
+  #set default if not initalised and no new values
+  if (scalar @classes == 0){
+    $self->{use_phenotype_classes} = $DEFAULT_INCLUDE_PHENOTYPES;
+    @classes = split(",", $DEFAULT_INCLUDE_PHENOTYPES);
+  }
+
+  #set the phenotype class attrib id
+  my $incl_class = "";
+  for my $cl (@classes){
+
+    my $class_attrib_id;
+    if ( defined($self->{class_attribs}{$cl})) {
+      $class_attrib_id = $self->{class_attribs}{$cl};
+    } else {
+      $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
+      $self->{class_attribs}{$cl} = $class_attrib_id;
+    }
+    $incl_class .= $class_attrib_id.", ";
+
+  }
+  $self->{use_phenotype_class_ids} = substr($incl_class,0, -2);
+
+  return $self->{use_phenotype_classes};
 }
 
 1;
