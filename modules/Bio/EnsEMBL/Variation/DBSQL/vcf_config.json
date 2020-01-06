@@ -187,6 +187,67 @@
       }
     },
     {
+      "id": "gnomADg_r3.0_GRCh38",
+      "description": "Genome Aggregation Database genomes r3.0",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r3.0/genomes/gnomad.genomes.r3.0.sites.chr###CHR###_trimmed_info.vcf.bgz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "use_seq_region_synonyms": 1,
+      "population_prefix": "gnomADg.r3.0:",
+      "population_display_group": {
+        "display_group_name": "gnomAD genomes",
+        "display_group_priority": 1.6
+      },
+      "populations": {
+        "9900028": {
+          "name": "gnomADg:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD genomes individuals"
+        },
+        "9900029": {
+          "name": "afr",
+          "description": "African/African American"
+        },
+        "9900030": {
+          "name": "ami",
+          "description": "Amish"
+        },
+        "9900031": {
+          "name": "amr",
+          "description": "Latino/Admixed American"
+        },
+        "9900032": {
+          "name": "asj",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900033": {
+          "name": "eas",
+          "description": "East Asian"
+        },
+        "9900034": {
+          "name": "fin",
+          "description": "Finnish"
+        },
+        "9900035": {
+          "name": "nfe",
+          "description": "Non-Finnish European"
+        },
+        "9900036": {
+          "name": "sas",
+          "description": "South Asian"
+        },
+        "9900037": {
+          "name": "oth",
+          "description": "Other"
+        }
+      }
+    },
+    {
       "id": "gnomADe_GRCh38",
       "description": "Genome Aggregation Database exomes r2.1",
       "species": "homo_sapiens",
