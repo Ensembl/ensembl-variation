@@ -47,7 +47,12 @@ sub fetch_input {
   my $job_type  = $self->param('job_type'); # parse or dump
 
   $debug = $self->param('debug');
+
   my $output_dir = $self->data_dir($species);
+  if ($job_type eq 'dump') {
+    my $gvf_dir = "$output_dir/gvf/$species/";
+    $self->create_species_dir($gvf_dir);
+  }
 
   $global_vf_count_in_species = $self->param('global_vf_count_in_species') || $global_vf_count_in_species;
   $max_vf_load = $self->param('max_vf_load') || $max_vf_load; # group slices together until the vf count exceeds max_vf_load
@@ -128,6 +133,8 @@ sub get_input_gvf2vcf {
   my $fasta_file = $self->get_fasta_file($species);
 
   my $gvf_dir = "$output_dir/gvf/$species/";
+  my $vcf_dir = "$output_dir/vcf/$species/";
+  $self->create_species_dir($vcf_dir);
   opendir(my $dh, $gvf_dir) or die $!;
   my @dir_content = readdir($dh);
   closedir($dh);
