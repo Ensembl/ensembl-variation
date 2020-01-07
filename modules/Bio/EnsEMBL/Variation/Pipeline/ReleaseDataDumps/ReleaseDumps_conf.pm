@@ -79,7 +79,7 @@ sub default_options {
 
         so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
 
-        tmp_dir           => $self->o('tmp_dir'),
+        tmp_dir           => $self->o('pipeline_dir') . '/tmp_dir',
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
         gvf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF_human',
 
@@ -175,6 +175,17 @@ sub pipeline_analyses {
   my ($self) = @_;
   my @analyses;
   push @analyses, (
+      {   -logic_name => 'pre_run_checks_gvf_dumps',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+          -max_retry_count => 0,
+          -input_ids     => [{}],
+          -flow_into => {
+              1 => ['species_factory'],
+          },
+          -parameters => {
+              'file_type' => 'gvf',
+          },
+      },
       {
          -logic_name    => 'species_factory',
          -module         => 'Bio::EnsEMBL::Production::Pipeline::Common::SpeciesFactory',
@@ -184,25 +195,14 @@ sub pipeline_analyses {
            division    => $self->o('division'),
            run_all     => $self->o('run_all'),
           },
-         -input_ids     => [{}],
          -rc_name       => 'default',
          -hive_capacity => 1,
          -max_retry_count => 0,
          -flow_into     => {
              4 => WHEN(
               '#only_finish_dumps#' => 'finish_dumps',
-              ELSE 'pre_run_checks_gvf_dumps',
+              ELSE 'generate_config',
             )
-          },
-      },
-      {   -logic_name => 'pre_run_checks_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 0,
-          -flow_into => {
-              1 => ['generate_config'],
-          },
-          -parameters => {
-              'file_type' => 'gvf',
           },
       },
       {   -logic_name => 'generate_config',
@@ -295,22 +295,12 @@ sub pipeline_analyses {
           'mode'  => 'post_gvf_dump_cleanup',
         },
         -flow_into => {
-          1 => ['pre_run_checks_gvf2vcf'],
+            '2->A' => ['init_parse'],
+            'A->1' => ['summary_validate_vcf']
         },
       },
 
 # gvf2vcf
-      {   -logic_name => 'pre_run_checks_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 0,
-          -flow_into => {
-              '2->A' => ['init_parse'],
-              'A->1' => ['summary_validate_vcf']
-           },
-          -parameters => {
-              'file_type' => 'vcf',
-          },
-      },
       {   -logic_name => 'init_parse',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
           -flow_into => {
