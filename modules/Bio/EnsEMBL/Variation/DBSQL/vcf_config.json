@@ -1,5 +1,29 @@
 {
   "collections": [
+     {
+        "id": "820K",
+        "species": "triticum_aestivum",
+        "assembly": "IWGSC",
+        "type": "remote",
+        "filename_template": "ftp://ftp.ensemblgenomes.org/pub/misc_data/vcf/triticum_aestivum/820k.vcf.gz",
+        "chromosomes": [
+            "1A","1B","1D", "2A","2B","2D","3A","3B","3D","4A","4B","4D","5A","5B","5D","6A","6B","6D","7A","7B","7D","Un"
+        ],
+        "strict_name_match": 0,
+        "sample_prefix": ""
+    },
+    {
+        "id": "35K",
+        "species": "triticum_aestivum",
+        "assembly": "IWGSC",
+        "type": "remote",
+        "filename_template": "ftp://ftp.ensemblgenomes.org/pub/misc_data/vcf/triticum_aestivum/35k.vcf.gz",
+        "chromosomes": [
+            "1A","1B","1D", "2A","2B","2D","3A","3B","3D","4A","4B","4D","5A","5B","5D","6A","6B","6D","7A","7B","7D","Un"
+        ],
+        "strict_name_match": 0,
+        "sample_prefix": ""
+    },
     {
       "id": "1000genomes_phase3_GRCh37",
       "species": "homo_sapiens",
