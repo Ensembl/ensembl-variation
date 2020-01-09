@@ -144,6 +144,15 @@ sub run {
   my $files = $self->get_dump_files($stable_id, $tva);
 
   for my $transcript (@transcripts) {
+    
+    my %biotypes_to_skip = (
+      'lncRNA' => 1,
+      'processed_pseudogene' => 1,
+      'unprocessed_pseudogene' => 1,
+    );
+
+    my $biotype = $transcript->biotype;
+
     for my $vf(@vfs) {
 
       if (defined $variations_to_include) {
@@ -182,16 +191,9 @@ sub run {
         my $tv_fh = $files->{transcript_variation}->{fh};
         print $tv_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$data;
 
-	my %biotypes_to_skip = (
-          'lncRNA' => 1,
-          'processed_pseudogene' => 1,
-	  'unprocessed_pseudogene' => 1,
-        );
-
         if($mtmp) {
           my $mtmp_data = $tva->_get_mtmp_write_data_from_tv_write_data($data);
           my $mtmp_fh = $files->{MTMP_transcript_variation}->{fh};
- 	  my $biotype = $transcript->biotype;
           unless($biotypes_to_skip{$biotype}){ 
 	    print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
