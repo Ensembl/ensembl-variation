@@ -51,7 +51,7 @@ sub data_dir {
 sub create_species_dir {
   my ($self, $species_dir) = @_;
   if (-d "$species_dir") {
-    unless (is_empty("$species_dir")) {
+    unless ($self->is_empty($species_dir)) {
       die("$species_dir is not empty. Delete files before running the pipeline.");
     }
   } else {
@@ -61,7 +61,7 @@ sub create_species_dir {
 
 sub is_empty {
   my ($self, $dir) = @_;
-  opendir(my $dh, $dir) or die "Not a directory $dir";
+  opendir(my $dh, $dir) or die "Not a directory: $dir.";
   my $count =  scalar(grep { $_ ne "." && $_ ne ".." } readdir($dh)) == 0;
   closedir($dh);
   return $count;
