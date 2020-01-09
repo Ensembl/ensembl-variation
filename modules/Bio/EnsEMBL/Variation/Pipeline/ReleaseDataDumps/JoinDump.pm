@@ -43,7 +43,6 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
   - join seq_regions to complete dump file
   - adjust header lines in dump file:
     - GVF: get correct sequence_regions
-
 =end
 =cut
 
@@ -86,7 +85,6 @@ sub final_join_gvf {
   my $dump_type = $self->param('dump_type');
   my @input_ids = sort @{$self->param('input_ids')};
   my $tmp_dir = $self->param('tmp_dir');
-
  
   my $covered_seq_region_ids = $self->get_covered_seq_regions; 
   my $species = $self->param('species');
@@ -146,8 +144,13 @@ sub final_join_gvf {
       $id_count++;
     }
     $fh->close();
-    `gzip $dir/$dump_type-$file_id.gvf`;
-    `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
+
+    if ($species eq 'homo_sapiens') {
+      `gzip $dir/$dump_type-$file_id.gvf`;
+      `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
+    } else {
+      `rm $dir/$dump_type-$file_id.gvf`;
+    }
 
   }
   $fh_join->close();
