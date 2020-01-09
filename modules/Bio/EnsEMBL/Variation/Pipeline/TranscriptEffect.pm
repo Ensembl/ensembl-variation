@@ -143,14 +143,14 @@ sub run {
 
   my $files = $self->get_dump_files($stable_id, $tva);
 
+  my %biotypes_to_skip = (
+    'lncRNA' => 1,
+    'processed_pseudogene' => 1,
+    'unprocessed_pseudogene' => 1,
+  );
+
   for my $transcript (@transcripts) {
     
-    my %biotypes_to_skip = (
-      'lncRNA' => 1,
-      'processed_pseudogene' => 1,
-      'unprocessed_pseudogene' => 1,
-    );
-
     my $biotype = $transcript->biotype;
 
     for my $vf(@vfs) {
