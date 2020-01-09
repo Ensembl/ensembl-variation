@@ -345,7 +345,7 @@ sub pipeline_analyses {
         );
     }
 
-   if ($self->o('run_variation_class')) {
+   if ($self->o('run_variation_class') && $self->o('species') ne 'homo_sapiens') {
 
         push @analyses, (
 
