@@ -44,26 +44,30 @@ sub run {
   my $registry_file = $self->param_required('ensembl_registry');
   my $tmp_dir = $self->param('tmp_dir');
 
+  die "pipeline_dir ($pipeline_dir) doesn't exist" unless (-d $pipeline_dir);
+  die "script_dir ($script_dir) doesn't exist" unless (-d $script_dir);
   die "Registry file ($registry_file) doesn't exist" unless (-f $registry_file);
 
-  my $gvf_validator = $self->param('gvf_validator');
-  my $so_file = $self->param('so_file');
-  die "gvf validator not defined" unless (defined $gvf_validator);
-  my $gvf_validator_error = `which $gvf_validator 2>&1 1>/dev/null`;
-  die "$gvf_validator command not found: $gvf_validator_error" if $gvf_validator_error ne "";
-  die "so file not defined" unless (defined $so_file);
-  die "wrong location for so file" unless (-f $so_file);
-  my $vcf_validator = $self->param('vcf_validator');
-  my $vcf_validator_error = `which $vcf_validator 2>&1 1>/dev/null`;
-  die "$vcf_validator command not found: $vcf_validator_error" if $vcf_validator_error ne "";
-  my $vcf_sort = $self->param('vcf_sort');
-  my $vcf_sort_error = `which $vcf_sort 2>&1 1>/dev/null`;
-  die "$vcf_sort command not found: $vcf_sort_error" if $vcf_sort_error ne "";
-
-  # Create the tmp_dir
   if (! -d "$tmp_dir") {
     make_path("$tmp_dir") or die "Failed to create dir $tmp_dir $!";
   }
+
+  my $gvf_validator = $self->param('gvf_validator');
+  die "gvf validator not defined" unless (defined $gvf_validator);
+  my $gvf_validator_error = `which $gvf_validator 2>&1 1>/dev/null`;
+  die "$gvf_validator command not found: $gvf_validator_error" if $gvf_validator_error ne "";
+
+  my $so_file = $self->param('so_file');
+  die "so file not defined" unless (defined $so_file);
+  die "wrong location for so file" unless (-f $so_file);
+
+  my $vcf_validator = $self->param('vcf_validator');
+  my $vcf_validator_error = `which $vcf_validator 2>&1 1>/dev/null`;
+  die "$vcf_validator command not found: $vcf_validator_error" if $vcf_validator_error ne "";
+
+  my $vcf_sort = $self->param('vcf_sort');
+  my $vcf_sort_error = `which $vcf_sort 2>&1 1>/dev/null`;
+  die "$vcf_sort command not found: $vcf_sort_error" if $vcf_sort_error ne "";
 
   $self->create_species_dir_tree($division, $pipeline_dir);
 }
