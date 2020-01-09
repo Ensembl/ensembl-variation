@@ -165,10 +165,9 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>3500] rusage[mem=3500]" -M3500'},
-        'urgent'  => { 'LSF' => '-q production-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-        'highmem' => { 'LSF' => '-q production-rh74 -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
-        'long'    => { 'LSF' => '-q production-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'medium'  => { 'LSF' => '-q production-rh74 -R"select[mem>4500] rusage[mem=4500]" -M4500'},
+        'high'    => { 'LSF' => '-q production-rh74 -R"select[mem>8500] rusage[mem=8500]" -M8500'},
     };
 }
 sub pipeline_analyses {
@@ -211,7 +210,7 @@ sub pipeline_analyses {
           -rc_name => 'default',
           -flow_into     => {
           '2->A' => ['init_dump'],
-          'A->1' => ['join_split_slice'],
+          'A->1' => ['init_join_split_slice']
         }
       },
       {   -logic_name => 'init_dump',
@@ -228,7 +227,7 @@ sub pipeline_analyses {
           -rc_name => 'default',
       },
       {   -logic_name => 'submit_job_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
           -rc_name => 'default',
@@ -237,37 +236,39 @@ sub pipeline_analyses {
           }
       },
       {   -logic_name => 'submit_job_gvf_dumps_highmem',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
-          -rc_name => 'highmem',
+          -rc_name => 'medium',
       },
 # join split slice
-
-      { -logic_name => 'join_split_slice',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+      { -logic_name => 'init_join_split_slice',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitJoinDump',
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -parameters => {
-            'mode' => 'join_slice_split',
+            'mode' => 'join_split_slice',
             'file_type' => 'gvf',
           },
         -flow_into => {
-          '2->A' => ['init_validate_gvf'],
-          'A->1' => ['summary_validate_gvf'],
+          '2->A' => ['join_split_slice'],
+          'A->1' => ['init_validate_gvf'],
         },
       },
-
-
+      { -logic_name => 'join_split_slice',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+        -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+      },
 # validate 
       { -logic_name => 'init_validate_gvf',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitValidation',
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -flow_into => {
-            2 => ['validate_gvf'],
-          },
-          -parameters => {
-            'file_type' => 'gvf',
-          },
+          '2->A' => ['validate_gvf'],
+          'A->1' => ['summary_validate_gvf'],
+        },
+        -parameters => {
+          'file_type' => 'gvf',
+        },
       },
       { -logic_name => 'validate_gvf',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
@@ -315,11 +316,11 @@ sub pipeline_analyses {
           },
       },
       {   -logic_name => 'submit_job_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -flow_into => {
-              2 => ['validate_vcf'],
-          },
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+          -max_retry_count => 0,
+          -rc_name => 'default',
+          -flow_into => ['validate_vcf'],
       },
       {   -logic_name => 'validate_vcf',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
