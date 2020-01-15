@@ -238,7 +238,6 @@ sub configure {
 		'variation'                       => 1,
 		'variation_feature'               => 1,
 		'variation_synonym'               => 1,
-		'flanking_sequence'               => 1,
 		'allele'                          => 1,
 		'population_genotype'             => 1,
 		'compressed_genotype_var'         => 1,
@@ -300,20 +299,20 @@ sub configure {
 	
 	# force sample tables for sample level data
 	if($tables->{compressed_genotype_region} || $tables->{sample_genotype_multiple_bp} || $tables->{compressed_genotype_var}) {
-		$tables->{$_} = 1 for qw/population sample sample_population variation variation_synonym variation_feature flanking_sequence/;
+		$tables->{$_} = 1 for qw/population sample sample_population variation variation_synonym variation_feature/;
 	}
 	
 	if($tables->{population_genotype} || $tables->{compressed_genotype_region} || $tables->{compressed_genotype_var}) {
-		$tables->{$_} = 1 for qw/genotype_code variation variation_synonym variation_feature flanking_sequence/;
+		$tables->{$_} = 1 for qw/genotype_code variation variation_synonym variation_feature/;
 	}
 	
 	if($tables->{allele} || $tables->{genotype_code}) {
-		$tables->{$_} = 1 for qw/allele_code variation variation_synonym variation_feature flanking_sequence/;
+		$tables->{$_} = 1 for qw/allele_code variation variation_synonym variation_feature/;
 	}
 	
 	# won't be writing to these tables if only_existing mode
 	if(defined $config->{only_existing}) {
-		$tables->{$_} = 0 for qw/source variation variation_synonym variation_feature flanking_sequence/;
+		$tables->{$_} = 0 for qw/source variation variation_synonym variation_feature/;
 	}
 	
 	# check that at least one has been set
@@ -2134,7 +2133,6 @@ sub variation_feature {
 			$config->{variation_adaptor}->store($data->{variation}) unless defined($data->{variation}->{dbID});
 		}
 		
-		$config->{meta_coord}->{flanking_sequence} = undef;
 		$config->{rows_added}->{variation}++;
 		
 		# get class
