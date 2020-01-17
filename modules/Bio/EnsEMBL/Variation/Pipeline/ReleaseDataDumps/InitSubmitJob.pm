@@ -61,7 +61,7 @@ sub fetch_input {
   if ($debug) {
     $debug_fh =  FileHandle->new("$output_dir/$species\_initSubmitJob.txt", 'w');
   }
-  my $script_args = {};
+  my $script_args_to_file_name = {};
   my $input;
   foreach my $dump_type (keys %$config) { # generic, sets, incl_consequences, svs
   # config could look like this:
@@ -75,15 +75,23 @@ sub fetch_input {
         my $script_arg = join(' ', @arguments);
         $script_arg = "--set_name $set_name $script_arg";
         my $file_name = "$species\_$set_name";
-        $script_args->{$script_arg} = $file_name;
+        $script_args_to_file_name->{$script_arg} = $file_name;
       }
     } else {
       my @arguments = map {'--' . $_} @{$config->{$dump_type}};
       my $script_arg = join(' ', @arguments);
       my $file_name = "$species\_$dump_type";
-      $script_args->{$script_arg} = $file_name;
+      $script_args_to_file_name->{$script_arg} = $file_name;
     }
   }
+  # script_args_to_file_name looks like this for macaca_mulatta
+# {
+# '--failed' => 'macaca_mulatta_failed',
+# '--incl_consequences --protein_coding_details --evidence --ancestral_allele' => 'macaca_mulatta_incl_consequences',
+# '--evidence --ancestral_allele' => 'macaca_mulatta_generic',
+# '--structural_variations' => 'macaca_mulatta_structural_variations'
+# };
+
   if ($job_type eq 'dump') {  
     my $global_vf_count = $self->get_global_vf_count();
     if ($debug) {
@@ -98,12 +106,12 @@ sub fetch_input {
       if ($debug) {
         print $debug_fh "VF Distribution\n", Dumper $vf_distributions;
       }
-      $input = $self->get_input_gvf_dumps($script_args, $species, $output_dir, $vf_distributions);
+      $input = $self->get_input_gvf_dumps($script_args_to_file_name, $species, $output_dir, $vf_distributions);
     } else {
-      $input = $self->get_input_gvf_dumps($script_args, $species, $output_dir);
+      $input = $self->get_input_gvf_dumps($script_args_to_file_name, $species, $output_dir);
     }
   } elsif ($job_type eq 'parse') {
-    $input = $self->get_input_gvf2vcf($script_args, $species, $output_dir);
+    $input = $self->get_input_gvf2vcf($script_args_to_file_name, $species, $output_dir);
   } else {
     die "Job type must be parse or dump. $job_type is not recognised.";
   }
@@ -114,8 +122,7 @@ sub fetch_input {
 }
 
 sub get_input_gvf2vcf {
-  my ($self, $script_args, $species, $output_dir) = @_;
-
+  my ($self, $script_args_to_file_name, $species, $output_dir) = @_;
   my @input = ();
 
   my $ancestral_allele_file = $self->get_ancestral_allele_file($species);
@@ -131,13 +138,13 @@ sub get_input_gvf2vcf {
     next if ($gvf_file =~ m/^\./);
     next if ($gvf_file =~ m/failed/); # don't parse gvf files storing failed variants
     if ($gvf_file =~ m/\.gvf\.gz$|\.gvf$/) {
-      my $script_arg = $self->get_script_arg($gvf_file, $script_args);
+      my $script_args = $self->get_script_args($gvf_file, $script_args_to_file_name);
       my $params = {};
       my $file_name = $gvf_file;
       $file_name =~ s/\.gvf\.gz|\.gvf//;
 
       my $vcf_file = "$output_dir/vcf/$species/$file_name.vcf";
-      $params->{'script_args'}      = $script_arg;
+      $params->{'script_args'}      = $script_args;
       $params->{'gvf_file'}         = "--gvf_file $gvf_dir/$gvf_file";
       $params->{'vcf_file'}         = "--vcf_file $vcf_file";
       $params->{'ancestral_allele_file'} = "--ancestral_allele_file $ancestral_allele_file" if (defined $ancestral_allele_file);
@@ -205,35 +212,36 @@ sub _get_only_file_in_dir {
   return $files[0]; 
 }
 
-sub get_script_arg {
-  my ($self, $file_name, $script_args) = @_;
-  my $return_script_arg = '';
-  while (my ($script_arg, $dump_type) = each %$script_args) {
-    if ($file_name =~ /$dump_type/) {
-      $return_script_arg = $script_arg;
+# full_file_name for example macaca_mulatta_incl_consequences-11.gvf.gz
+sub get_script_args {
+  my ($self, $full_file_name, $script_args_to_file_name) = @_;
+  my $return_script_args = '';
+  # file_name for example macaca_mulatta_incl_consequences
+  while (my ($script_args, $file_name) = each %$script_args_to_file_name) {
+    if ($full_file_name =~ /$file_name/) {
+      $return_script_args = $script_args;
     }    
   }
-  if ($return_script_arg) {
-    return $return_script_arg;
+  if ($return_script_args) {
+    return $return_script_args;
   } else {
-    die "Could not find script arg for $file_name"; 
+    die "Could not find script arg for $full_file_name"; 
   }
 
 }
 
 sub get_input_gvf_dumps {
-  my ($self,$script_args,$species,$output_dir,$vf_distributions) = @_;
+  my ($self,$script_args_to_file_name,$species,$output_dir,$vf_distributions) = @_;
 
   my @input = ();
   if ($vf_distributions) {
-    foreach my $script_arg (keys %$script_args) {
-      my $file_name = $script_args->{$script_arg};
+    while (my ($script_args, $file_name) = each %$script_args_to_file_name) {
       foreach my $vf_distribution (@$vf_distributions) {   
         my %params = ();
         my $file_id = $vf_distribution->{file_id};
         my $output_file = "--gvf_file $output_dir/gvf/$species/$file_name-$file_id.gvf";
         $params{'gvf_file'} = $output_file;
-        $params{'script_args'} = $script_arg;
+        $params{'script_args'} = $script_args;
         if ($vf_distribution->{is_slice_piece}) {
           foreach my $param (qw/seq_region_id slice_piece_name slice_piece_start slice_piece_end/) {
             $params{$param} = $vf_distribution->{$param};
@@ -246,13 +254,12 @@ sub get_input_gvf_dumps {
       }
     }
   } else {
-    foreach my $script_arg (keys %$script_args) {
+    while (my ($script_args, $file_name) = each %$script_args_to_file_name) {
       my %params = ();
-      my $file_name = $script_args->{$script_arg};
       my $file_id = $vf_distributions->{file_id};
       my $output_file = "--gvf_file $output_dir/gvf/$species/$file_name.gvf";
       $params{'gvf_file'} = $output_file;
-      $params{'script_args'} = $script_arg;
+      $params{'script_args'} = $script_args;
       push @input, \%params;
     }
   }
