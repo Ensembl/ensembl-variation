@@ -174,7 +174,7 @@ sub pipeline_analyses {
   my ($self) = @_;
   my @analyses;
   push @analyses, (
-      {   -logic_name => 'pre_run_checks_gvf_dumps',
+      {   -logic_name => 'pre_run_checks',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
           -max_retry_count => 0,
           -input_ids     => [{}],
