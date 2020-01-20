@@ -68,6 +68,26 @@ sub run {
     . "AND sr.seq_region_id = sra.seq_region_id; ";
   $vdba->dbc()->sql_helper()->execute_update(-SQL => $sql, -PARAMS => [] );
 
+
+  my $table_columns_newasm = $self->get_table_columns($registry);
+  $registry->load_all($self->param('registry_file_oldasm'));
+  my $table_columns_oldasm = $self->get_table_columns($registry);
+
+  # Check that tables and columns are the same between assemblies or if the old databases need to be patched to the new schema
+  foreach my $db_type (qw/variation core/) {
+    if (join(',', sort keys %{$table_columns_newasm->{$db_type}}) ne join(',', sort keys %{$table_columns_oldasm->{$db_type}})) {
+      die "Lists of $db_type tables differ between assemblies. You probably need to patch the  $db_type database.\n"
+    } else {
+      foreach my $table_name (keys %{$table_columns_newasm->{$db_type}}) {
+        if ($table_columns_newasm->{$db_type}->{$table_name} ne $table_columns_oldasm->{$db_type}->{$table_name}) {
+          my $columns_oldasm = $table_columns_oldasm->{$db_type}->{$table_name};
+          my $columns_newasm = $table_columns_newasm->{$db_type}->{$table_name};
+          die "Lists of columns (old $columns_oldasm, new $columns_newasm) differ between assemblies for table $table_name. You probably need to patch the $db_type database.\n";
+        }
+      }
+    }
+  }
+
   my $pipeline_dir = $self->param('pipeline_dir');
   die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
@@ -91,8 +111,8 @@ sub run {
     can_run($self->param($tool)) or die "$tool could not be found at location: ", $self->param($tool);
   }
 
-  foreach my $file (qw/ensembl_regsitry_oldasm ensembl_regsitry_newasm/) {
-    "File $file is missing " if (! -f $self->param($file));
+  foreach my $file (qw/registry_file_oldasm registry_file_newasm/) {
+    die("File $file is missing " . $self->param($file) . "\n") if (! -f $self->param($file));
   }
 
   my @folders = qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir dump_mapped_features_dir/;
@@ -131,6 +151,33 @@ sub run {
       $self->run_cmd("rm -f $dir/*.fai");
     }
   }
+}
+
+sub get_table_columns {
+  my $self = shift;
+  my $registry = shift;
+  my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
+  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
+  my $db_type_to_table_columns = {};
+  $db_type_to_table_columns->{core} = $self->get_table_columns_for_dbh($cdba);
+  $db_type_to_table_columns->{variation} = $self->get_table_columns_for_dbh($vdba);
+  return $db_type_to_table_columns;
+}
+
+sub get_table_columns_for_dbh {
+  my $self = shift;
+  my $dba = shift;
+  my $table_name_to_columns = {};
+  my $dbname = $dba->dbc->dbname();
+  my $dbh = $dba->dbc->db_handle;
+
+  my $table_names = $self->get_table_names($dbh, $dbname);
+  my $rc_individual_ids;
+  foreach my $table_name (@$table_names) {
+    my $column_names = join(',', @{$self->get_sorted_column_names($dba, $table_name)});
+    $table_name_to_columns->{$table_name} = $column_names;
+  }
+  return $table_name_to_columns;
 }
 
 sub write_output {
