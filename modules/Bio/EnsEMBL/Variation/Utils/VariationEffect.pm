@@ -347,6 +347,7 @@ sub _after_end {
 
 sub _upstream {
     my ($bvf, $feat, $dist) = @_;
+    $dist += get_max_shift_length($bvf);
     return $feat->strand == 1 ? 
         _before_start($bvf, $feat, $dist) : 
         _after_end($bvf, $feat, $dist);
