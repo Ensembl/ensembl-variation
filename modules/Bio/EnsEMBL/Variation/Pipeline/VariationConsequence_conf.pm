@@ -186,7 +186,7 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
         pipeline_dir => $self->o('pipeline_dir'),
-        max_distance => $self->o('max_distance'),
+        max_distance => $self->o('species') =~ /homo_sapiens|human/ ? 0 : $self->o('max_distance'),
     );
    
     my @analyses;
@@ -345,7 +345,7 @@ sub pipeline_analyses {
         );
     }
 
-   if ($self->o('run_variation_class') && $self->o('species') ne 'homo_sapiens') {
+   if ($self->o('run_variation_class') && ($self->o('species') !~ /homo_sapiens|human/)) {
 
         push @analyses, (
 
