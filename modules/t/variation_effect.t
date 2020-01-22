@@ -781,7 +781,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_end-1,
         end     => $cds_end+1,
         no_shift => 0,
-	effects => [qw( 3_prime_UTR_variant)],
+        effects => [qw( 3_prime_UTR_variant)],
     }, {
         comment => 'deletion overlapping STOP and 3\' UTR, stop retained, different codon',
         alleles => '-',
@@ -1087,8 +1087,8 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-	no_shift => 0,
-	effects => [qw(protein_altering_variant)],
+        no_shift => 0,
+        effects => [qw(protein_altering_variant)],
     }, {
         alleles => '-',
         strand  => -1,
