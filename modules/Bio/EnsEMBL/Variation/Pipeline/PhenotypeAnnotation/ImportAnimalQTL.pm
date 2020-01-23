@@ -79,11 +79,11 @@ my %animalQTL_species_fileNames = (
 );
 
 my %animalQTL_species_ok = (
-  gallus_gallus => 0, #Gallus gallus same Ensembl assembly as AnimalQTL
+  gallus_gallus => 0, #Gallus gallus not same Ensembl assembly as AnimalQTL
   sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 1,  # Ovis aries
+  ovis_aries => 1,  #Ovis aries
   bos_taurus => 1, #Bos taurus
-  equus_caballus => 0, #Equus caballus
+  equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
 );
 
 
@@ -93,6 +93,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $threshold    = $self->param('threshold_qtl');
 
   # import specific constants
   %source_info = (source_description => 'The Animal Quantitative Trait Loci (QTL) database (Animal QTLdb) is designed to house all publicly available QTL and association data on livestock animal species',
@@ -102,7 +103,7 @@ sub fetch_input {
                   source_status     => 'germline',
                   source_name       => 'Animal_QTLdb', #source name in the variation db
                   source_name_short => 'AnimalQTLdb',  #source identifier in the pipeline
-                  threshold => $self->required_param('threshold_qtl'),
+                  threshold => $threshold,
                   );
 
   #create workdir folder
@@ -164,7 +165,7 @@ sub fetch_input {
   }
 
   #allow time between file download and file read for system to sync
-  sleep(30);
+  sleep(45);
 
   #fetch coreDB assembly, in future this should be tested against
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
