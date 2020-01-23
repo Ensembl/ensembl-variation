@@ -124,9 +124,13 @@ sub new {
     # rebless the alleles from vfoas to tvas
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } 
         @{ $self->get_all_BaseVariationFeatureOverlapAlleles };
-    
+   
+    ## This line controls whether TranscriptVariationAllele objects are automatically shifted in the 3' direction
+    ## 
+    ## We intend to shift by default for release 101. In the meantime, the --no_shift argument takes a value, rather than just being a flag.
+    ## If --no_shift equals 1, or is undefined, then we don't shift. This will be removed for release 101. 
     map { $_->_return_3prime } 
-            @{ $self->get_all_BaseVariationFeatureOverlapAlleles } unless $args{'-no_shift'};
+            @{ $self->get_all_BaseVariationFeatureOverlapAlleles } if (defined($args{'-no_shift'}) && !$args{'-no_shift'});
     
     return $self;
 }
