@@ -128,7 +128,6 @@ sub configure {
 		'gmaf=s',
 		'somatic',
 		
-		'flank=s',
 		'gp',
     'remap=s',
 		'ind_prefix=s',
@@ -213,7 +212,6 @@ sub configure {
 	
 	# set defaults
 	$config->{species}         ||= "human";
-	$config->{flank}           ||= 200;
 	$config->{port}            ||= 3306;
 	$config->{format}            = 'vcf';
 	$config->{ind_prefix}      ||= '';
@@ -1929,10 +1927,6 @@ sub variation {
 		# add in some hacky stuff so flanking sequence gets written
 		$var->{seq_region_id}         = $config->{seq_region_ids}->{$vf->{chr}};
 		$var->{seq_region_strand}     = 1;
-		$var->{up_seq_region_start}   = $vf->{start} - $config->{flank};
-		$var->{up_seq_region_end}     = $vf->{start} - 1;
-		$var->{down_seq_region_start} = $vf->{end} + 1;
-		$var->{down_seq_region_end}   = $vf->{end} + $config->{flank};
 		
 		# class
 		$var->{class_attrib_id} = $class_id;
