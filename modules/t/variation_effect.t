@@ -741,6 +741,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $intron_start-3,
         end     => $intron_start-1,
         effects => [qw(coding_sequence_variant splice_donor_variant)],
+        no_shift => 0,
     }, 
     
 
@@ -779,6 +780,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $cds_end-1,
         end     => $cds_end+1,
+        no_shift => 0,
         effects => [qw( 3_prime_UTR_variant)],
     }, {
         comment => 'deletion overlapping STOP and 3\' UTR, stop retained, different codon',
@@ -1085,6 +1087,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
+        no_shift => 0,
         effects => [qw(protein_altering_variant)],
     }, {
         alleles => '-',
@@ -1172,6 +1175,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
+        no_shift => 0,
         effects => [qw(3_prime_UTR_variant coding_sequence_variant)], 
         ## changed for shifting code. Different result is given here than in regular VEP because the transcript
         ## used for the tests is no longer in the gene set, and has the cds_end_NF attribute attached, preventing
@@ -1532,6 +1536,8 @@ for my $stable_id (keys %$transcript_tests) {
 
         $test->{strand} = $def_strand unless defined $test->{strand};
 
+        my $no_shift = $test->{no_shift};
+
         my $allele_string = $ref.'/'.$test->{alleles};
 
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
@@ -1546,7 +1552,8 @@ for my $stable_id (keys %$transcript_tests) {
         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
             -variation_feature  => $vf,
             -transcript         => $tran,
-        );
+            -no_shift		=> $no_shift,
+	);
 
         warn "# alleles: $allele_string\n";
         warn '# codons: ', $tv->codons, "\n" if $tv->codons;
