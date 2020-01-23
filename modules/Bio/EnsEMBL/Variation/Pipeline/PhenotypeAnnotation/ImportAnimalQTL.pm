@@ -107,7 +107,7 @@ sub fetch_input {
 
   #create workdir folder
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  make_path($workdir) or die "Failed to create $workdir $!\n" unless -e $workdir;
   $self->workdir($workdir);
 
   return unless $animalQTL_species_ok{$species};

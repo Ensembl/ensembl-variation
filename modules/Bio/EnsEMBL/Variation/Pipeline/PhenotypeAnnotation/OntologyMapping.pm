@@ -59,7 +59,7 @@ sub fetch_input {
   my $species = $self->required_param('species');
   my $workdir = $self->param('workdir');
   $workdir ||= $self->required_param('pipeline_dir')."/OntologyMap";
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  make_path($workdir) or die "Failed to create $workdir $!\n" unless -e $workdir ;
 
   $self->debug($self->param('debug_mode'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));

@@ -69,7 +69,7 @@ sub fetch_input {
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  make_path($workdir) or die "Failed to create $workdir $!\n" unless -e $workdir;
   $self->workdir($workdir);
 
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");

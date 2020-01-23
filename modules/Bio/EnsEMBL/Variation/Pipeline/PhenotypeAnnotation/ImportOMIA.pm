@@ -123,7 +123,7 @@ sub fetch_input {
                   );
 
   my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir_fetch) or die "Failed to create $workdir_fetch $!\n";
+  make_path($workdir_fetch) or die "Failed to create $workdir_fetch $!\n" unless -e $workdir_fetch;
   my $file_omia = 'omia_gene_table.txt';
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
@@ -209,6 +209,7 @@ sub split_omia {
 
   my $prefix = 'omia_';
   my $suffix = '.txt';
+  make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
 
   my %data;
 
@@ -252,7 +253,6 @@ sub split_omia {
     $id =~ s/'//g;
     $id =~ s/^domestic_//g;
 
-    make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
     open(OUT, "> $workdir/omia_split/$prefix$id$suffix") || die $!;
     foreach my $line (@{$data{$taxo_id}}) {
       print OUT "$line\n";
