@@ -143,27 +143,6 @@ sub get_column_names {
   return \@column_names;
 }
 
-sub get_sorted_column_names {
-  my ($self, $vdba, $feature_table) = @_;
-  my $dbname = $vdba->dbc->dbname();
-  my $dbh = $vdba->dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = '$dbname'
-      AND TABLE_NAME = '$feature_table';
-      });
-  $sth->execute();
-
-# QC that all necessary columns are there: e.g. seq_region_id, ...
-  my @column_names = ();
-  while (my @name = $sth->fetchrow_array) {
-    push @column_names, $name[0];
-  }
-  $sth->finish();
-  @column_names = sort @column_names;
-  return \@column_names;
-}
-
 sub get_seq_region_ids {
   my ($self, $cdba) = @_;
   my $sa = $cdba->get_SliceAdaptor;
