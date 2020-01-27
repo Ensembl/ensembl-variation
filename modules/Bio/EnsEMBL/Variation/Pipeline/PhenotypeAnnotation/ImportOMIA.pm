@@ -97,7 +97,7 @@ my %species_synonyms = (
   'rat' => 'rattus_norvegicus',
   'sheep'  => 'ovis_aries',
   'tetraodon' => 'tetraodon_nigroviridis',
-  'turkey'  => 'Meleagris_gallopavo',
+  'turkey'  => 'meleagris_gallopavo',
   'zebra_finch' => 'taeniopygia_guttata',
   'zebrafish' => 'danio_rerio'
 );
