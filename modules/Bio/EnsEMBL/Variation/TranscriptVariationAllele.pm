@@ -1355,6 +1355,7 @@ sub hgvs_transcript {
   $variation_feature_sequence = $self->{shift_hash}->{hgvs_allele_string} if defined($self->{shift_hash}) && $vf->var_class() eq 'insertion' && ($adaptor_shifting_flag != 0);
  
   my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
+  $self->{_hgvs_offset} = $offset_to_add;
   ## delete the shifting hash if we generated it for HGVS calculations
   delete($self->{shift_hash}) unless $hash_already_defined;
  
@@ -1594,6 +1595,16 @@ sub hgvs_protein {
   my $vf = $tv->base_variation_feature;
   my $tr          = $tv->transcript;
 
+  my $adaptor_shifting_flag = 1;
+
+  ## Check previous shift_hgvs_variants_3prime flag and act accordingly
+  $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
+  
+  my $hash_already_defined = defined($self->{shift_hash});
+  ## Perform HGVS shift even if no_shift is on
+  $self->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
+
+
   my $pre         = $self->_pre_consequence_predicates;
   my $shifting_offset = 0;
   if($tr->strand() > 0) {
@@ -1616,6 +1627,7 @@ sub hgvs_protein {
     $tv->translation_end(undef, $shifting_offset)
   ){
     print "Exiting hgvs_protein - variant " . $vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
+    delete($self->{shift_hash}) unless $hash_already_defined;
     return undef;
   }
        
@@ -1650,8 +1662,8 @@ sub hgvs_protein {
   my $ref = $tv->get_reference_TranscriptVariationAllele;
 
   ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method  
-  my $hash_already_defined = defined($ref->{shift_hash});
-  $ref->_return_3prime(1) unless $hash_already_defined;
+  my $ref_hash_already_defined = defined($ref->{shift_hash});
+  $ref->_return_3prime(1) unless $ref_hash_already_defined;
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})  && $self->{shift_hash}->{shift_length} != 0) {
     delete($self->{peptide});
@@ -1676,6 +1688,7 @@ sub hgvs_protein {
   
   ## delete the shifting hash if we generated it for HGVS calculations
   delete($self->{shift_hash}) unless $hash_already_defined;
+  delete($ref->{shift_hash}) unless $ref_hash_already_defined;
 
   return undef unless $hgvs_notation->{ref};   
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $self->codon() .")\n" if $DEBUG ==1;
@@ -1713,7 +1726,7 @@ sub hgvs_protein {
 
 sub hgvs_offset {
   my $self = shift;
-  return $self->{shift_hash}->{_hgvs_offset};
+  return defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : $self->{_hgvs_offset};
 }
 
 =head2 hgvs_exon_start_coordinate
