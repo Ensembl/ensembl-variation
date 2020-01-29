@@ -1726,7 +1726,7 @@ sub hgvs_protein {
 =cut
 
 sub hgvs_offset {
-  my $self = shift;i
+  my $self = shift;
   #_hgvs_offset can usually be taken directly from the shift hash, however in situations where we remove the shift_hash from the $tva object after calculating HGVS then we can access it from $self->{_hgvs_offset}
   return defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : $self->{_hgvs_offset};
 }
