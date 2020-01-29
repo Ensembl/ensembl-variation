@@ -1291,7 +1291,7 @@ sub hgvs_transcript {
   my $self = shift;
   my $notation = shift;
   my $no_shift = shift;
-
+  
   ##### set if string supplied
   $self->{hgvs_transcript} = $notation   if defined $notation;
 
@@ -1318,7 +1318,7 @@ sub hgvs_transcript {
   my $tr = $tv->transcript;
   my $tr_stable_id = $tr->stable_id;
   my $vf = $tv->base_variation_feature;
-
+    
   ### get reference sequence strand
   my $refseq_strand = $tr->strand();
 
