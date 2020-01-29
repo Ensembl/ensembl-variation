@@ -265,6 +265,7 @@ sub get_all_OverlapConsequences {
     OC: for my $oc (@oc_list) {
 
       last if $assigned_tier && $oc->{tier} > $assigned_tier;
+      ## $bvfo->{shifted} is defined in the new method of TranscriptVariation.pm
       my $shifting_offset = $bvfo->{shifted} && defined($self->{shift_hash}) ? $self->{shift_hash}->{shift_length} * $tr->strand : 0;
             
       $bvf->{start} += $shifting_offset;

@@ -1600,8 +1600,9 @@ sub hgvs_protein {
   ## Check previous shift_hgvs_variants_3prime flag and act accordingly
   $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
   
+  ## Check to see if the shift_hash is already defined, allowing us to remove it from associated $tva objects when we only want to shift HGVS
   my $hash_already_defined = defined($self->{shift_hash});
-  ## Perform HGVS shift even if no_shift is on
+  ## Perform HGVS shift even if no_shift is on - only prevent shifting if shift_hgvs_variants_3prime() has been switched off.
   $self->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
 
 
@@ -1725,7 +1726,8 @@ sub hgvs_protein {
 =cut
 
 sub hgvs_offset {
-  my $self = shift;
+  my $self = shift;i
+  #_hgvs_offset can usually be taken directly from the shift hash, however in situations where we remove the shift_hash from the $tva object after calculating HGVS then we can access it from $self->{_hgvs_offset}
   return defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : $self->{_hgvs_offset};
 }
 
