@@ -1364,7 +1364,7 @@ sub hgvs_transcript {
   
   unless (defined  $self->{_slice_start} ){
   	print "Exiting hgvs_transcript: no slice start position for $var_name in trans" . $tr_stable_id . "\n " if $DEBUG == 1 ;
-	return undef;
+  	return undef;
   }
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
@@ -1648,8 +1648,8 @@ sub hgvs_protein {
   $hgvs_notation->{end}     = $tv->translation_end();  
 
   my $ref = $tv->get_reference_TranscriptVariationAllele;
-  ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method
-  
+
+  ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method  
   my $hash_already_defined = defined($ref->{shift_hash});
   $ref->_return_3prime(1) unless $hash_already_defined;
   ## get default reference & alt peptides  [changed later to hgvs format]
