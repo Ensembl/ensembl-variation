@@ -1347,12 +1347,18 @@ sub hgvs_transcript {
   ## Check previous shift_hgvs_variants_3prime flag and act accordingly
   $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
   
+  my $hash_already_defined = defined($self->{shift_hash}); 
   ## Perform HGVS shift even if no_shift is on
   $self->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
 
   $variation_feature_sequence = $self->variation_feature_seq();
   $variation_feature_sequence = $self->{shift_hash}->{hgvs_allele_string} if defined($self->{shift_hash}) && $vf->var_class() eq 'insertion' && ($adaptor_shifting_flag != 0);
-  
+ 
+  my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
+  $self->{_hgvs_offset} = $offset_to_add;
+  ## delete the shifting hash if we generated it for HGVS calculations
+  delete($self->{shift_hash}) unless $hash_already_defined;
+ 
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $self->base_variation_feature_overlap;
   $self->look_for_slice_start unless (defined  $self->{_slice_start});
@@ -1366,12 +1372,9 @@ sub hgvs_transcript {
   if($variation_feature_sequence && $vf->strand() != $refseq_strand) {    
     reverse_comp(\$variation_feature_sequence) ;
   };
-
-  my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
-
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
-  delete($self->{_predicate_cache}) if $offset_to_add != 0; #Might save some speed if we check if '--no_shift' is on in the if statement, but I have to test first
+  delete($self->{_predicate_cache}) if $self->transcript_variation->{shifted} && $offset_to_add != 0; 
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
   
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
@@ -1592,6 +1595,17 @@ sub hgvs_protein {
   my $vf = $tv->base_variation_feature;
   my $tr          = $tv->transcript;
 
+  my $adaptor_shifting_flag = 1;
+
+  ## Check previous shift_hgvs_variants_3prime flag and act accordingly
+  $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
+  
+  ## Check to see if the shift_hash is already defined, allowing us to remove it from associated $tva objects when we only want to shift HGVS
+  my $hash_already_defined = defined($self->{shift_hash});
+  ## Perform HGVS shift even if no_shift is on - only prevent shifting if shift_hgvs_variants_3prime() has been switched off.
+  $self->_return_3prime(1) unless ($adaptor_shifting_flag == 0);
+
+
   my $pre         = $self->_pre_consequence_predicates;
   my $shifting_offset = 0;
   if($tr->strand() > 0) {
@@ -1614,6 +1628,7 @@ sub hgvs_protein {
     $tv->translation_end(undef, $shifting_offset)
   ){
     print "Exiting hgvs_protein - variant " . $vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
+    delete($self->{shift_hash}) unless $hash_already_defined;
     return undef;
   }
        
@@ -1647,8 +1662,9 @@ sub hgvs_protein {
 
   my $ref = $tv->get_reference_TranscriptVariationAllele;
 
-  ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method
-  $ref->_return_3prime(1);
+  ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method  
+  my $ref_hash_already_defined = defined($ref->{shift_hash});
+  $ref->_return_3prime(1) unless $ref_hash_already_defined;
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})  && $self->{shift_hash}->{shift_length} != 0) {
     delete($self->{peptide});
@@ -1671,6 +1687,10 @@ sub hgvs_protein {
 
   $hgvs_notation->{ref} = $ref->peptide; 
   
+  ## delete the shifting hash if we generated it for HGVS calculations
+  delete($self->{shift_hash}) unless $hash_already_defined;
+  delete($ref->{shift_hash}) unless $ref_hash_already_defined;
+
   return undef unless $hgvs_notation->{ref};   
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $self->codon() .")\n" if $DEBUG ==1;
 
@@ -1707,7 +1727,8 @@ sub hgvs_protein {
 
 sub hgvs_offset {
   my $self = shift;
-  return $self->{shift_hash}->{_hgvs_offset};
+  #_hgvs_offset can usually be taken directly from the shift hash, however in situations where we remove the shift_hash from the $tva object after calculating HGVS then we can access it from $self->{_hgvs_offset}
+  return defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : $self->{_hgvs_offset};
 }
 
 =head2 hgvs_exon_start_coordinate
