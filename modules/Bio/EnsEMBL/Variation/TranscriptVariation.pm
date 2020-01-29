@@ -129,8 +129,11 @@ sub new {
     ## 
     ## We intend to shift by default for release 101. In the meantime, the --no_shift argument takes a value, rather than just being a flag.
     ## If --no_shift equals 1, or is undefined, then we don't shift. This will be removed for release 101. 
+    $self->{shifted} = (defined($args{'-no_shift'}) && !$args{'-no_shift'});
+
     map { $_->_return_3prime } 
-            @{ $self->get_all_BaseVariationFeatureOverlapAlleles } if (defined($args{'-no_shift'}) && !$args{'-no_shift'});
+            @{ $self->get_all_BaseVariationFeatureOverlapAlleles } if $self->{shifted};
+
     
     return $self;
 }
