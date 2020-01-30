@@ -43,7 +43,6 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
   - join seq_regions to complete dump file
   - adjust header lines in dump file:
     - GVF: get correct sequence_regions
-
 =end
 =cut
 
@@ -52,24 +51,18 @@ sub run {
 
   my $species      = $self->param('species');
   my $file_type    = $self->param('file_type');	
-  my $config = $self->param('config');
-  my $division = $self->param('species_division');
 
   my $pipeline_dir = $self->data_dir($species);
-
   my $working_dir = "$pipeline_dir/$file_type/$species/";
 
   my $mode = $self->param('mode'); 
 
-  if ($mode eq 'join_slice_split') {
-    my $files = $self->get_slice_split_files($working_dir, $file_type);  
-    $self->join_split_slice_files($working_dir, $files);
-    $self->dataflow_output_id({}, 2);
-    $self->dataflow_output_id({}, 1);
+  if ($mode eq 'join_split_slice') {
+    $self->join_split_slice_files();
   } elsif ($mode eq 'final_join') {
     $self->final_join;
   } elsif ($mode eq 'no_join') {
-    $self->warning('No final join required');  
+    $self->warning('No join required');  
   } else {
     die "Unknown mode: $mode in JoinDump";
   }
@@ -92,7 +85,6 @@ sub final_join_gvf {
   my $dump_type = $self->param('dump_type');
   my @input_ids = sort @{$self->param('input_ids')};
   my $tmp_dir = $self->param('tmp_dir');
-
  
   my $covered_seq_region_ids = $self->get_covered_seq_regions; 
   my $species = $self->param('species');
@@ -152,8 +144,14 @@ sub final_join_gvf {
       $id_count++;
     }
     $fh->close();
-    `gzip $dir/$dump_type-$file_id.gvf`;
-    `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
+    # We only keep intermediate files for human because they take the longest to be generated
+    # We can rerun the pipeline for all other species if something goes wrong. 
+    if ($species eq 'homo_sapiens') {
+      `gzip $dir/$dump_type-$file_id.gvf`;
+      `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
+    } else {
+      `rm $dir/$dump_type-$file_id.gvf`;
+    }
 
   }
   $fh_join->close();
@@ -200,114 +198,82 @@ sub final_join_vcf {
   `rm $vcf_file`;
 }
 
-# Get file components for slice_split files which look like
-# homo_sapiens_generic-131555_146405131_151285302.gvf
-# file_name-seq_region_id-start-end.gvf
-sub get_slice_split_files {
-  my ($self, $working_dir, $file_type) = @_;
+sub join_split_slice_files {
+  my $self = shift;
+  my $species = $self->param('species');
+  my $working_dir = $self->param('working_dir'); 
+  my $dump_type = $self->param('dump_type');
+  my $file_type = $self->param('file_type');
+  my $seq_region_id = $self->param('seq_region_id');
   my $files = {};
-  my ($split_slice_range, $file_name);
   opendir(my $dh, $working_dir) or die $!;
   my @dir_content = readdir($dh);
   closedir($dh);
   foreach my $file (@dir_content) {
     next if ($file =~ m/^\./);
-    if ($file =~ m/\.$file_type/) {
-      $file =~ s/\.$file_type//g;
-      my @file_name_components =  split('-', $file);
-      if (scalar @file_name_components == 2) {
-        $file_name  = shift @file_name_components;
-        $split_slice_range = shift @file_name_components;
-        my @components = split('_', $split_slice_range);
-        if (scalar @components == 3) {
-          my ($seq_region_id, $start, $end) = @components; 
-          $files->{$file_name}->{$seq_region_id}->{$start} = "$file_name-$seq_region_id\_$start\_$end.$file_type";
-        }
-      } 
-    } # else .err and .out files
+    if ($file =~ m/$dump_type-$seq_region_id\_/) {
+      # Find files like macaca_mulatta_incl_consequences-5_59152801_64082201.gvf
+      if ($file =~ m/([a-z|_]+)-([0-9]+)_([0-9]+)_([0-9]+)\.$file_type/) {
+        my $start = $3; 
+        $files->{$start} = $file;
+      }
+    }
   }
-  return $files;	
-}
-
-sub join_split_slice_files {
-  my ($self, $working_dir, $files) = @_;
-
-  my $species = $self->param('species');
 
   my $seq_region_id2name = {};
   my $sequence_regions = {};
-  if ($species eq 'homo_sapiens') {
-    my $cdba = $self->get_adaptor($species, 'core');
-    my $sa = $cdba->get_SliceAdaptor;
-    my $slices = $sa->fetch_all('chromosome');
-    foreach my $slice (@$slices) {
-      $seq_region_id2name->{$slice->get_seq_region_id} = $slice->seq_region_name;
-      my $seq_region_id = $slice->get_seq_region_id;
-      $sequence_regions->{$seq_region_id}->{start} = $slice->start;
-      $sequence_regions->{$seq_region_id}->{end} = $slice->end;
-      $sequence_regions->{$seq_region_id}->{name} = $slice->seq_region_name;
-    }
-  }
+  my $cdba = $self->get_adaptor($species, 'core');
+  my $sa = $cdba->get_SliceAdaptor;
+  my $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+  my $seq_region_name = $slice->seq_region_name;
+  my $start = $slice->start;
+  my $end = $slice->end;
 
   my $tmp_dir = $self->param('tmp_dir');
-  foreach my $file_type (keys %$files) {
-    foreach my $seq_region_id (keys %{$files->{$file_type}}) {
-      my $id_count = 1;
-      my @start_positions = sort keys %{$files->{$file_type}->{$seq_region_id}};
-      my $fh_join;
-      if ($species eq 'homo_sapiens') {
-        my $seq_region_name = $seq_region_id2name->{$seq_region_id};
-        if ($seq_region_name) {
-          $fh_join = FileHandle->new("$working_dir/$file_type-chr$seq_region_name.gvf", 'w');
-        } else {
-          $self->warning("No seq_region_name for $seq_region_id"); 
-          $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
-        }
-      } else {
-        $fh_join = FileHandle->new("$working_dir/$file_type-$seq_region_id.gvf", 'w');
-      }
+  my $id_count = 1;
+  my @start_positions = sort keys %{$files};
+  my $fh_join;
+  if ($species eq 'homo_sapiens') {
+    $fh_join = FileHandle->new("$working_dir/$dump_type-chr$seq_region_name.gvf", 'w');
+  } else {
+    $fh_join = FileHandle->new("$working_dir/$dump_type-$seq_region_id.gvf", 'w');
+  }
 
-      my $first_start_position = $start_positions[0];
-      my $file_name = $files->{$file_type}->{$seq_region_id}->{$first_start_position};
-      my $fh = FileHandle->new("$working_dir/$file_name", 'r');
-      while (<$fh>)  {
-        chomp;
-        my $line = $_;
-        if ($line =~ m/^#/) {
-          next if ($line =~ m/^##sequence-region/);
-          print $fh_join $line, "\n";
-        }
-      }  
-      my $name = $sequence_regions->{$seq_region_id}->{name};
-      my $start = $sequence_regions->{$seq_region_id}->{start};
-      my $end = $sequence_regions->{$seq_region_id}->{end};
+  my $first_start_position = $start_positions[0];
+  my $file_name = $files->{$first_start_position};
+  my $fh = FileHandle->new("$working_dir/$file_name", 'r');
+  while (<$fh>)  {
+    chomp;
+    my $line = $_;
+    if ($line =~ m/^#/) {
+      next if ($line =~ m/^##sequence-region/);
+      print $fh_join $line, "\n";
+    }
+  }  
+  print $fh_join join(' ', '##sequence-region', $seq_region_name, $start, $end), "\n";
 
-      print $fh_join join(' ', '##sequence-region', $name, $start, $end), "\n";
+  $fh->close();
 
-      $fh->close();
-
-      foreach my $start_position (@start_positions) {
-        my $file_name = $files->{$file_type}->{$seq_region_id}->{$start_position};
-        my $fh = FileHandle->new("$working_dir/$file_name", 'r');
-        while (<$fh>) {
-          chomp;
-          my $line = $_;
-          next if ($line =~ m/^#/);
-          my $gvf_line = get_gvf_line($line, $id_count);
-          print $fh_join $gvf_line, "\n";   
-          $id_count++;
-        }
-        $fh->close();
-        if ($species eq 'homo_sapiens') {
-          `gzip $working_dir/$file_name`;
-          `mv $working_dir/$file_name.gz $tmp_dir`;
-        } else {
-          `rm $working_dir/$file_name`;
-        }
-      }
-      $fh_join->close();
+  foreach my $start_position (@start_positions) {
+    my $file_name = $files->{$start_position};
+    my $fh = FileHandle->new("$working_dir/$file_name", 'r');
+    while (<$fh>) {
+      chomp;
+      my $line = $_;
+      next if ($line =~ m/^#/);
+      my $gvf_line = get_gvf_line($line, $id_count);
+      print $fh_join $gvf_line, "\n";   
+      $id_count++;
+    }
+    $fh->close();
+    if ($species eq 'homo_sapiens') {
+      `gzip $working_dir/$file_name`;
+      `mv $working_dir/$file_name.gz $tmp_dir`;
+    } else {
+      `rm $working_dir/$file_name`;
     }
   }
+  $fh_join->close();
 }
 
 sub get_gvf_line {
