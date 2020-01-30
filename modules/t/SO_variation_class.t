@@ -75,7 +75,7 @@ my %tests = (
     '-/(RY)7/(RY)8'         => 'tandem_repeat',
     'TT/T/TTT'              => 'indel',     # dbSNP v2 style indel
     'TT/TTT/TTTT'           => 'indel',     # dbSNP v2 style indel
-    'TTT/T/TT'              => 'indel',     # dbSNP v2 stype indel
+    'TTT/T/TT'              => 'indel',     # dbSNP v2 style indel
 );
 
 for my $allele_string (sort keys %tests) {
