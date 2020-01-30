@@ -62,7 +62,7 @@ sub run {
 
     if ($self->param('use_experimentally_validated_mf')) {
       foreach my $rf (@regulatory_features) {
-        my $motif_features = $rf->fetch_all_MotifFeatures_with_matching_Peak();
+        my $motif_features = $rf->get_all_experimentally_verified_MotifFeatures();
         $self->add_motif_feature_variations($motif_features);
       }
     } else {
@@ -126,6 +126,7 @@ sub add_motif_feature_variations {
     my $slice = $slice_adaptor->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
 
     for my $vf ( @{ $slice->get_all_VariationFeatures }) {
+      next if ($vf->allele_string !~ /^[ACGT\/]+$/i);
       my $mfv = Bio::EnsEMBL::Variation::MotifFeatureVariation->new(
         -motif_feature      => $motif_feature,
         -variation_feature  => $vf,
