@@ -282,7 +282,9 @@ sub process_phenotype_feature {
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $citation_attribs = shift;
+  my $citation_att = shift;
+
+  my %citation_attribs = %{$citation_att};
 
   ## Get studies from phenotype_feature
   my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type
@@ -368,7 +370,9 @@ sub process_phenotype_feature_attrib {
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $citation_attribs = shift;
+  my $citation_att = shift;
+
+  my %citation_attribs = %{$citation_att};
 
   my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
                                                  from attrib_type
