@@ -34,6 +34,7 @@ use strict;
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 use Bio::EnsEMBL::Registry;
+use File::Path qw(make_path);
 
 sub data_dir {
   my ($self,$species) = @_;
@@ -45,6 +46,25 @@ sub data_dir {
     $data_dump_dir = $data_dump_dir."/".$species_division."/variation";
   }
   return $data_dump_dir;
+}
+
+sub create_species_dir {
+  my ($self, $species_dir) = @_;
+  if (-d "$species_dir") {
+    unless ($self->is_empty($species_dir)) {
+      die("$species_dir is not empty. Delete files before running the pipeline.");
+    }
+  } else {
+    make_path("$species_dir") or die "Failed to create dir $species_dir $!";
+  }
+}
+
+sub is_empty {
+  my ($self, $dir) = @_;
+  opendir(my $dh, $dir) or die "Not a directory: $dir.";
+  my $count =  scalar(grep { $_ ne "." && $_ ne ".." } readdir($dh)) == 0;
+  closedir($dh);
+  return $count;
 }
 
 1;

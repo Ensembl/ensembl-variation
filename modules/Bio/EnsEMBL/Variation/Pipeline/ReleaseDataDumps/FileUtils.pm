@@ -51,8 +51,7 @@ sub post_gvf_dump_cleanup {
   }
   system("cat $data_dump_dir/gvf/$species/Validate_* > $tmp_dir/GVF_Validate_$species");
   system("rm $data_dump_dir/gvf/$species/Validate_*");
-  system("cat $data_dump_dir/gvf/$species/*.{err,out} > $tmp_dir/GVF_$species");
-  system("rm $data_dump_dir/gvf/$species/*.{err,out,txt}");
+  system("rm $data_dump_dir/gvf/$species/*.txt");
 }
 
 sub post_gvf2vcf_cleanup {

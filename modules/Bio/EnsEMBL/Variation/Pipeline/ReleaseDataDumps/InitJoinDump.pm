@@ -40,49 +40,83 @@ sub run {
   my $self = shift;
   my $species      = $self->param('species');
   my $pipeline_dir = $self->data_dir($species);
+  my $file_type = $self->param('file_type');
+  my $working_dir = "$pipeline_dir/$file_type/$species/";
+  my $mode = $self->param('mode');
+  if ($mode eq 'join_split_slice') {
+    my $input = $self->get_split_slice_files($working_dir, $file_type);
+    $self->param('input', $input);
+  } else { 
+    my @input = ();
+    foreach my $file_type (qw/gvf vcf/) {
 
+      my $dir = "$pipeline_dir/$file_type/$species/";
+      my $files = {};
 
-  my @input = ();
- 
-  foreach my $file_type (qw/gvf vcf/) {
-
-    my $dir = "$pipeline_dir/$file_type/$species/";
-    my $files = {};
-
-    opendir(my $dh, $dir) or die $!;
-    my @dir_content = readdir($dh);
-    closedir($dh);
-    foreach my $file (@dir_content) {
-      next if ($file =~ m/^\./);
-      if ($file =~ m/\.$file_type\.gz/) {
-        my $file_name = $file;
-        $file_name =~ s/\.$file_type\.gz//;
-        my ($dump_type, $range) = split('-', $file_name);
-        push @{$files->{$dump_type}}, $range if ($range);
+      opendir(my $dh, $dir) or die $!;
+      my @dir_content = readdir($dh);
+      closedir($dh);
+      foreach my $file (@dir_content) {
+        next if ($file =~ m/^\./);
+        if ($file =~ m/\.$file_type\.gz/) {
+          my $file_name = $file;
+          $file_name =~ s/\.$file_type\.gz//;
+          my ($dump_type, $range) = split('-', $file_name);
+          push @{$files->{$dump_type}}, $range if ($range);
+        }
+      }
+      foreach my $dump_type (keys %$files) {
+        my $file_name = $dump_type;
+        next if ($dump_type eq 'homo_sapiens_generic' || $dump_type eq 'homo_sapiens_incl_consequences');
+        if ($dump_type =~ /_generic/) {
+          $file_name =~ s/_generic//;
+        }
+        if (scalar @{$files->{$dump_type}} > 0) {
+          push @input, {
+            dir => $dir,
+            file_name => $file_name,
+            dump_type => $dump_type,
+            input_ids => $files->{$dump_type},
+            file_type => $file_type,
+            mode => 'final_join',
+          };
+        }
       }
     }
-
-    foreach my $dump_type (keys %$files) {
-      my $file_name = $dump_type;
-      next if ($dump_type eq 'homo_sapiens_generic' || $dump_type eq 'homo_sapiens_incl_consequences');
-      if ($dump_type =~ /_generic/) {
-        $file_name =~ s/_generic//;
-      }
-      if (scalar @{$files->{$dump_type}} > 0) {
-        push @input, {
-          dir => $dir,
-          file_name => $file_name,
-          dump_type => $dump_type,
-          input_ids => $files->{$dump_type},
-          file_type => $file_type,
-          mode => 'final_join',
-        };
-      }
-    }
+    $self->param('input', \@input);
   }
-  $self->param('input', \@input);
 }
 
+# Get file components for slice_split files which look like
+# homo_sapiens_generic-131555_146405131_151285302.gvf
+# file_name-seq_region_id-start-end.gvf
+sub get_split_slice_files {
+  my ($self, $working_dir, $file_type) = @_;
+  my $dump_types = {};
+  my @input = ();
+  opendir(my $dh, $working_dir) or die $!;
+  my @dir_content = readdir($dh);
+  closedir($dh);
+  foreach my $file (@dir_content) {
+    if ($file =~ m/([a-z|_]+)-([0-9]+)_([0-9]+)_([0-9]+)\.$file_type/) {
+      my $dump_type = $1;
+      my $seq_region_id = $2;
+      $dump_types->{$dump_type}->{$seq_region_id} = 1;
+    }
+  }
+  foreach my $dump_type (keys %$dump_types) {
+    foreach my $seq_region_id (keys %{$dump_types->{$dump_type}}) {
+      push @input, {
+        mode => 'join_split_slice',
+        file_type => $file_type,
+        working_dir => $working_dir,
+        dump_type => $dump_type,
+        seq_region_id => $seq_region_id,
+      };
+    }
+  }
+  return \@input;
+}
 
 sub write_output {
   my $self = shift;
@@ -93,6 +127,5 @@ sub write_output {
   }
   return;
 }
-
 
 1;

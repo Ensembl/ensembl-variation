@@ -79,7 +79,7 @@ sub default_options {
 
         so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
 
-        tmp_dir           => $self->o('tmp_dir'),
+        tmp_dir           => $self->o('pipeline_dir') . '/tmp_dir',
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
         gvf_readme_human => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF_human',
 
@@ -165,16 +165,26 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>3500] rusage[mem=3500]" -M3500'},
-        'urgent'  => { 'LSF' => '-q production-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-        'highmem' => { 'LSF' => '-q production-rh74 -R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
-        'long'    => { 'LSF' => '-q production-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'medium'  => { 'LSF' => '-q production-rh74 -R"select[mem>4500] rusage[mem=4500]" -M4500'},
+        'high'    => { 'LSF' => '-q production-rh74 -R"select[mem>8500] rusage[mem=8500]" -M8500'},
     };
 }
 sub pipeline_analyses {
   my ($self) = @_;
   my @analyses;
   push @analyses, (
+      {   -logic_name => 'pre_run_checks',
+          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+          -max_retry_count => 0,
+          -input_ids     => [{}],
+          -flow_into => {
+              1 => ['species_factory'],
+          },
+          -parameters => {
+              'file_type' => 'gvf',
+          },
+      },
       {
          -logic_name    => 'species_factory',
          -module         => 'Bio::EnsEMBL::Production::Pipeline::Common::SpeciesFactory',
@@ -184,25 +194,14 @@ sub pipeline_analyses {
            division    => $self->o('division'),
            run_all     => $self->o('run_all'),
           },
-         -input_ids     => [{}],
          -rc_name       => 'default',
          -hive_capacity => 1,
          -max_retry_count => 0,
          -flow_into     => {
              4 => WHEN(
               '#only_finish_dumps#' => 'finish_dumps',
-              ELSE 'pre_run_checks_gvf_dumps',
+              ELSE 'generate_config',
             )
-          },
-      },
-      {   -logic_name => 'pre_run_checks_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 0,
-          -flow_into => {
-              1 => ['generate_config'],
-          },
-          -parameters => {
-              'file_type' => 'gvf',
           },
       },
       {   -logic_name => 'generate_config',
@@ -211,7 +210,7 @@ sub pipeline_analyses {
           -rc_name => 'default',
           -flow_into     => {
           '2->A' => ['init_dump'],
-          'A->1' => ['join_split_slice'],
+          'A->1' => ['init_join_split_slice']
         }
       },
       {   -logic_name => 'init_dump',
@@ -228,7 +227,7 @@ sub pipeline_analyses {
           -rc_name => 'default',
       },
       {   -logic_name => 'submit_job_gvf_dumps',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
           -rc_name => 'default',
@@ -237,37 +236,39 @@ sub pipeline_analyses {
           }
       },
       {   -logic_name => 'submit_job_gvf_dumps_highmem',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
-          -rc_name => 'highmem',
+          -rc_name => 'medium',
       },
 # join split slice
-
-      { -logic_name => 'join_split_slice',
-        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+      { -logic_name => 'init_join_split_slice',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitJoinDump',
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -parameters => {
-            'mode' => 'join_slice_split',
+            'mode' => 'join_split_slice',
             'file_type' => 'gvf',
           },
         -flow_into => {
-          '2->A' => ['init_validate_gvf'],
-          'A->1' => ['summary_validate_gvf'],
+          '2->A' => ['join_split_slice'],
+          'A->1' => ['init_validate_gvf'],
         },
       },
-
-
+      { -logic_name => 'join_split_slice',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::JoinDump',
+        -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
+      },
 # validate 
       { -logic_name => 'init_validate_gvf',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitValidation',
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -flow_into => {
-            2 => ['validate_gvf'],
-          },
-          -parameters => {
-            'file_type' => 'gvf',
-          },
+          '2->A' => ['validate_gvf'],
+          'A->1' => ['summary_validate_gvf'],
+        },
+        -parameters => {
+          'file_type' => 'gvf',
+        },
       },
       { -logic_name => 'validate_gvf',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
@@ -295,22 +296,12 @@ sub pipeline_analyses {
           'mode'  => 'post_gvf_dump_cleanup',
         },
         -flow_into => {
-          1 => ['pre_run_checks_gvf2vcf'],
+            '2->A' => ['init_parse'],
+            'A->1' => ['summary_validate_vcf']
         },
       },
 
 # gvf2vcf
-      {   -logic_name => 'pre_run_checks_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-          -max_retry_count => 0,
-          -flow_into => {
-              '2->A' => ['init_parse'],
-              'A->1' => ['summary_validate_vcf']
-           },
-          -parameters => {
-              'file_type' => 'vcf',
-          },
-      },
       {   -logic_name => 'init_parse',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
           -flow_into => {
@@ -325,11 +316,11 @@ sub pipeline_analyses {
           },
       },
       {   -logic_name => 'submit_job_gvf2vcf',
-          -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SubmitJob',
-          -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -flow_into => {
-              2 => ['validate_vcf'],
-          },
+          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+          -max_retry_count => 0,
+          -rc_name => 'default',
+          -flow_into => ['validate_vcf'],
       },
       {   -logic_name => 'validate_vcf',
           -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Validate',
