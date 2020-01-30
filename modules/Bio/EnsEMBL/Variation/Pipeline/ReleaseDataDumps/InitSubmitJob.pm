@@ -49,6 +49,7 @@ sub fetch_input {
 
   my $output_dir = $self->data_dir($species);
   if ($job_type eq 'dump') {
+    # Create directory for species which will contain the species specific GVF dumps
     my $gvf_dir = "$output_dir/gvf/$species/";
     $self->create_species_dir($gvf_dir);
   }
@@ -66,9 +67,12 @@ sub fetch_input {
   foreach my $dump_type (keys %$config) { # generic, sets, incl_consequences, svs
   # config could look like this:
   # "config" => {"failed" => ["failed"],"generic" => ["evidence"],"incl_consequences" => ["incl_consequences","protein_coding_details","evidence"]
+    # We only dump failed variants as GVF files. We don't convert those files to VCF and skip them here
     if ($dump_type eq 'failed') {
       next if ($job_type eq 'parse');
     }
+    # We dump two sets (clinically and phenotype associated) for human. We need to tell the dump_gvf script that we want
+    # to dump a set from the variation datbase by providing the set name for example --set_name clinically_associated
     if ($dump_type eq 'sets') {
       foreach my $set_name (keys %{$config->{sets}}) {
         my @arguments = map {'--' . $_} @{$config->{sets}->{$set_name}};
