@@ -546,12 +546,12 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'ontology_mapping'],
+                2 => [ 'import_ontology_mapping'],
                 3 => [ 'finish_phenotype_annotation']
             },
         },
 
-        {   -logic_name => 'ontology_mapping',
+        {   -logic_name => 'import_ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
             -parameters => {
                 @common_params,
