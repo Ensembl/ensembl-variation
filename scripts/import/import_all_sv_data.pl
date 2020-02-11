@@ -1193,6 +1193,7 @@ sub get_header_info {
   chomp($line);
   
   my ($label, $info);
+  # Example with more than one space: ##genome-build NCBI GRCh37
   if ($line =~ /^##/) {
     ($label, $info) = split(' ', $line);
   } 
@@ -1221,7 +1222,8 @@ sub get_header_info {
   $h->{assembly}     = $info if ($label =~ /Assembly.+name/i);
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
   $h->{study}        = (split(' ',$info))[0] if ($label =~ /Study.+accession/i);
-  
+
+  # COSMIC study_type = 'Collection'
   $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i);
   
   # Publication information
@@ -1234,7 +1236,7 @@ sub get_header_info {
       $h->{desc} = $p_info if ($p_label =~ /Paper.+title/i && $p_info && $p_info ne 'None Given');
     }
   }
-  
+
   # Study information for DGVa files
   elsif ($label eq 'Study') {
     foreach my $st (split(';',$info)) {
@@ -1267,8 +1269,9 @@ sub get_header_info {
       } 
       
       # Tissue (human)
-      if ($key eq 'sample_cell_type'){
-        $s_info =~ /Primary site=(.+),/;
+      # In COSMIC: the file from 2015 has 'cell_type'; file from 2013 has 'sample_cell_type'
+      if ($key eq 'sample_cell_type' || $key eq 'cell_type'){
+        $s_info =~ /Primary site\s*=\s*(.+),/;
         $tissue = $1;
       }
     }
@@ -1316,9 +1319,9 @@ sub get_header_info {
       $subjects{$subject} = \%subject_data;
     }
   }
-  
+
   $h->{author} =~ s/\s/_/g;
-  
+
   return $h;
 }
 
