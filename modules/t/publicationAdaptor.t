@@ -18,6 +18,7 @@ use strict;
 use warnings;
 use Test::More;
 
+use Data::Dumper;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -105,5 +106,27 @@ $var = $va->fetch_by_dbID(4770800);
 $pa->update_variant_citation($pubup, 615, [$var]);
 ok($pubup->variations()->[0]->name() eq 'rs7569578', "citation update");
 
+# Update data source
+my $var_2 = $va->fetch_by_dbID(50478027);
+$pa->update_variant_citation($pubup, 617, [$var_2]);
+$pa->update_citation_data_source(615, 50478027, 1234);
+
+## get publication source
+my $pub_1 = $pa->fetch_by_pmid(1234);
+$pub_1->get_sources();
+
+my $pub_2 = $pa->fetch_by_pmid(12007216);
+$pub_2->get_sources();
+
+my $sources_1 = $pa->fetch_sources_by_pmid(1234);
+my $sources_2 = $pa->fetch_sources_by_pmid(12007216);
+print Dumper($sources_1), "\n";
+print Dumper($sources_2), "\n";
+
+my $sources_3 = $pa->fetch_sources_variation(36250,50478027);
+print Dumper($sources_3), "\n";
+
+my $sources_4 = $pa->fetch_sources_variation(20404,26469702);
+print Dumper($sources_4), "\n";
 
 done_testing();

@@ -64,6 +64,8 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Publication;
 
+use Data::Dumper;
+
 use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 
 
@@ -226,7 +228,164 @@ sub fetch_all_by_Variation {
 
 }
 
+=head2 fetch_sources_by_pmid
 
+  Arg [1]    : string $pmid
+  Example    : $publication_adaptor->fetch_sources_by_pmid( 1234 );
+  Description: Retrieves a hashref of variants linked to publication sources via a pmid
+  Returntype : hashref
+  Exceptions : throw if pmid argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_sources_by_pmid {
+  my $self = shift;
+  my $pmid = shift;
+
+  throw("pmid must be defined") if(!defined($pmid));
+
+  my $pub = $self->fetch_by_pmid($pmid);
+  my $sources = $self->fetch_sources($pub->{dbID});
+
+  return $sources
+}
+
+=head2 fetch_sources_by_pmcid
+
+  Arg [1]    : string $pmcid
+  Example    : $publication_adaptor->fetch_sources_by_pmcid( 'PMC1234' );
+  Description: Retrieves a hashref of variants linked to publication sources via a pmcid
+  Returntype : hashref
+  Exceptions : throw if pmcid argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_sources_by_pmcid {
+  my $self = shift;
+  my $pmcid = shift;
+
+  throw("pmcid must be defined") if(!defined($pmcid));
+
+  my $pub = $self->fetch_by_pmcid($pmcid);
+  my $sources = $self->fetch_sources($pub->{dbID});
+
+  return $sources;
+}
+
+=head2 fetch_sources
+
+  Arg [1]    : string $publication_id
+  Example    : $publication_adaptor->fetch_sources( $publication_id );
+  Description: Retrieves a hashref of variants linked to publication sources via a publication_id
+  Returntype : hashref
+  Exceptions : throw if variation is not defined
+               throw if attribute is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_sources {
+  my $self   = shift;
+  my $pub_id = shift;
+
+  my $sth = $self->prepare(qq{SELECT variation_id,data_source_attrib FROM variation_citation WHERE publication_id = ? });
+  $sth->execute($pub_id);
+  my $data = $sth->fetchall_arrayref();
+
+  my %result;
+
+  foreach my $var_source (@{$data}) {
+    my $var_id = $var_source->[0];
+    my $source_ids = $var_source->[1];
+
+    # get variation name
+    my $sth_var = $self->prepare(qq{SELECT name FROM variation WHERE variation_id = ? });
+    $sth_var->execute($var_id);
+    my $var_data = $sth_var->fetchall_arrayref();
+    throw("No variation defined with id = $var_id") if(!defined($var_data->[0]->[0]));
+
+    my $var_name = $var_data->[0]->[0];
+
+    # Some publications don't have a source in variation_citation (e100)
+    if(!defined($source_ids)) {
+      $result{$var_name} = undef;
+      next;
+    }
+
+    my @source_id_splited = split /,/, $source_ids;
+
+    my @attrib_list;
+    foreach my $source_id (@source_id_splited) {
+      my $sth_attrib = $self->prepare(qq{SELECT value FROM attrib WHERE attrib_id = ? });
+      $sth_attrib->execute($source_id);
+      my $attrib_value = $sth_attrib->fetchall_arrayref();
+
+      if(defined($attrib_value->[0]->[0])) {
+        my $attrib_name = $attrib_value->[0]->[0];
+        push @attrib_list, $attrib_name;
+      }
+      else {
+        throw("No attribute defined with id = $source_id");
+      }
+    }
+    $result{$var_name} = join(',', @attrib_list);
+  }
+
+  return \%result;
+}
+
+=head2 fetch_sources_variation
+
+  Arg [1]    : string $publication_id
+  Arg [2]    : string $variation_id
+  Example    : $publication_adaptor->fetch_sources_variation( $publication_id, $variation_id );
+  Description: Retrieves a listref of publication sources via a publication_id and a variation_id
+  Returntype : listref
+  Exceptions : throw if attribute is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_sources_variation {
+  my $self   = shift;
+  my $pub_id = shift;
+  my $var_id = shift;
+
+  my @attrib_list;
+
+  my $sth = $self->prepare(qq{SELECT data_source_attrib FROM variation_citation WHERE publication_id = ? AND variation_id = ? });
+  $sth->execute($pub_id, $var_id);
+  my $data = $sth->fetchall_arrayref();
+
+  # Some citations don't have source, in this case it returns an empty listref
+
+  if(defined($data->[0]->[0])) {
+    my $source_ids = $data->[0]->[0];
+    my @source_id_splited = split /,/, $source_ids;
+
+    foreach my $source_id (@source_id_splited) {
+      my $sth_attrib = $self->prepare(qq{SELECT value FROM attrib WHERE attrib_id = ? });
+      $sth_attrib->execute($source_id);
+      my $attrib_value = $sth_attrib->fetchall_arrayref();
+
+      if(defined($attrib_value->[0]->[0])) {
+        my $attrib_name = $attrib_value->[0]->[0];
+        push @attrib_list, $attrib_name;
+      }
+      else {
+        throw("No attribute defined with id = $source_id");
+      }
+    }
+  }
+
+  return \@attrib_list;
+}
 
 sub _columns {
   return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year p.doi p.ucsc_id );
