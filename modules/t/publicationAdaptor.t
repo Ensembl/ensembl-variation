@@ -123,10 +123,10 @@ my $sources_2 = $pa->fetch_sources_by_pmid(12007216);
 print Dumper($sources_1), "\n";
 print Dumper($sources_2), "\n";
 
-my $sources_3 = $pa->fetch_sources_variation(36250,50478027);
+my $sources_3 = $pa->fetch_sources_by_variation(50478027);
 print Dumper($sources_3), "\n";
 
-my $sources_4 = $pa->fetch_sources_variation(20404,26469702);
+my $sources_4 = $pa->fetch_sources_by_variation(26469702);
 print Dumper($sources_4), "\n";
 
 done_testing();

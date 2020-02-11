@@ -352,23 +352,29 @@ sub fetch_sources {
 
 =cut
 
-sub fetch_sources_variation {
+sub fetch_sources_by_variation {
   my $self   = shift;
-  my $pub_id = shift;
   my $var_id = shift;
 
-  my @attrib_list;
+  my %result;
 
-  my $sth = $self->prepare(qq{SELECT data_source_attrib FROM variation_citation WHERE publication_id = ? AND variation_id = ? });
-  $sth->execute($pub_id, $var_id);
+  my $sth = $self->prepare(qq{SELECT publication_id,data_source_attrib FROM variation_citation WHERE variation_id = ? });
+  $sth->execute($var_id);
   my $data = $sth->fetchall_arrayref();
 
-  # Some citations don't have source, in this case it returns an empty listref
+  foreach my $pub_source (@{$data}) {
+    my $pub_id = $pub_source->[0];
+    my $source_ids = $pub_source->[1];
 
-  if(defined($data->[0]->[0])) {
-    my $source_ids = $data->[0]->[0];
+    # Some citations don't have source, in this case it returns an empty listref
+    if(!defined($source_ids)) {
+      $result{$pub_id} = undef;
+      next;
+    }
+
     my @source_id_splited = split /,/, $source_ids;
 
+    my @attrib_list;
     foreach my $source_id (@source_id_splited) {
       my $sth_attrib = $self->prepare(qq{SELECT value FROM attrib WHERE attrib_id = ? });
       $sth_attrib->execute($source_id);
@@ -382,9 +388,10 @@ sub fetch_sources_variation {
         throw("No attribute defined with id = $source_id");
       }
     }
+    $result{$pub_id} = join(',', @attrib_list);
   }
 
-  return \@attrib_list;
+  return \%result;
 }
 
 sub _columns {
