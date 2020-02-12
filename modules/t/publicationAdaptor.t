@@ -112,21 +112,28 @@ $pa->update_variant_citation($pubup, 617, [$var_2]);
 $pa->update_citation_data_source(615, 50478027, 1234);
 
 ## get publication source
-my $pub_1 = $pa->fetch_by_pmid(1234);
-$pub_1->get_sources();
+my $exp_sources_1 = {
+  'rs201200629' => 'EPMC,dbSNP',
+  'rs7569578'   => 'EPMC' 
+};
 
-my $pub_2 = $pa->fetch_by_pmid(12007216);
-$pub_2->get_sources();
+my $sources_pmid = $pa->fetch_sources_by_pmid(1234);
+is_deeply($sources_pmid, $exp_sources_1, 'fetch publication source by pmid');
+my $sources_pmcid = $pa->fetch_sources_by_pmcid('PMC1234');
+is_deeply($sources_pmcid, $exp_sources_1, 'fetch publication source by pmcid');
 
-my $sources_1 = $pa->fetch_sources_by_pmid(1234);
-my $sources_2 = $pa->fetch_sources_by_pmid(12007216);
-print Dumper($sources_1), "\n";
-print Dumper($sources_2), "\n";
+my $exp_by_var_1 = {
+  '36250' => 'EPMC, dbSNP'
+};
 
-my $sources_3 = $pa->fetch_sources_by_variation(50478027);
-print Dumper($sources_3), "\n";
+my $exp_by_var_2 = {
+  '20404' => undef,
+  '20403' => undef
+};
 
-my $sources_4 = $pa->fetch_sources_by_variation(26469702);
-print Dumper($sources_4), "\n";
+my $sources_by_var_1 = $pa->fetch_sources_by_variation(50478027);
+is_deeply($sources_by_var_1, $exp_by_var_1, 'fetch publication source by variation');
+my $sources_by_var_2 = $pa->fetch_sources_by_variation(26469702);
+is_deeply($sources_by_var_2, $exp_by_var_2, 'fetch publication source by variation (undef)');
 
 done_testing();

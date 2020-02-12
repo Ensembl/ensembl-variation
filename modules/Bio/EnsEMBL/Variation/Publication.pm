@@ -62,8 +62,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
-use Data::Dumper;
-
 our @ISA = ('Bio::EnsEMBL::Storable');
 
 
@@ -261,7 +259,6 @@ sub ucsc_id{
   return $self->{'ucsc_id'} = shift if(@_);
   return $self->{'ucsc_id'};
 }
-
 =head2 variations
 
   Arg [1]    : array ref [optional]
@@ -283,28 +280,6 @@ sub variations{
    $self->{'variants'} = $variation_adaptor->fetch_all_by_publication($self);
 
    return $self->{'variants'};
-}
-
-=head2 get_sources
-
-  Example    : $obj->get_sources()
-  Description: Get all the publication sources and the corresponding variation
-  Returntype : hashref
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub get_sources{
-  my $self = shift;
-
-  my $pub_id = $self->{dbID};
-  my $pub_adaptor = $self->{adaptor};
-
-  my $sources = $pub_adaptor->fetch_sources($pub_id);
-
-  return $sources;
 }
 
 1;

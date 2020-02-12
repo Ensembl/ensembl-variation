@@ -64,8 +64,6 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Publication;
 
-use Data::Dumper;
-
 use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 
 
@@ -230,7 +228,7 @@ sub fetch_all_by_Variation {
 
 =head2 fetch_sources_by_pmid
 
-  Arg [1]    : string $pmid
+  Arg [1]    : String $pmid
   Example    : $publication_adaptor->fetch_sources_by_pmid( 1234 );
   Description: Retrieves a hashref of variants linked to publication sources via a pmid
   Returntype : hashref
@@ -254,7 +252,7 @@ sub fetch_sources_by_pmid {
 
 =head2 fetch_sources_by_pmcid
 
-  Arg [1]    : string $pmcid
+  Arg [1]    : String $pmcid
   Example    : $publication_adaptor->fetch_sources_by_pmcid( 'PMC1234' );
   Description: Retrieves a hashref of variants linked to publication sources via a pmcid
   Returntype : hashref
@@ -278,7 +276,7 @@ sub fetch_sources_by_pmcid {
 
 =head2 fetch_sources
 
-  Arg [1]    : string $publication_id
+  Arg [1]    : String $publication_id
   Example    : $publication_adaptor->fetch_sources( $publication_id );
   Description: Retrieves a hashref of variants linked to publication sources via a publication_id
   Returntype : hashref
@@ -311,7 +309,7 @@ sub fetch_sources {
 
     my $var_name = $var_data->[0]->[0];
 
-    # Some publications don't have a source in variation_citation (e100)
+    # Some publications don't have a source in variation_citation
     if(!defined($source_ids)) {
       $result{$var_name} = undef;
       next;
@@ -339,13 +337,12 @@ sub fetch_sources {
   return \%result;
 }
 
-=head2 fetch_sources_variation
+=head2 fetch_sources_by_variation
 
-  Arg [1]    : string $publication_id
-  Arg [2]    : string $variation_id
-  Example    : $publication_adaptor->fetch_sources_variation( $publication_id, $variation_id );
-  Description: Retrieves a listref of publication sources via a publication_id and a variation_id
-  Returntype : listref
+  Arg [1]    : Integer $variation_id
+  Example    : $publication_adaptor->fetch_sources_by_variation( $variation_id );
+  Description: Retrieves a hashref of publication ids linked to their sources via a variation_id
+  Returntype : hashref
   Exceptions : throw if attribute is not defined
   Caller     : general
   Status     : At Risk
@@ -366,7 +363,7 @@ sub fetch_sources_by_variation {
     my $pub_id = $pub_source->[0];
     my $source_ids = $pub_source->[1];
 
-    # Some citations don't have source, in this case it returns an empty listref
+    # Some citations don't have source, in this case it returns the publication_id and an undef source
     if(!defined($source_ids)) {
       $result{$pub_id} = undef;
       next;
@@ -388,7 +385,7 @@ sub fetch_sources_by_variation {
         throw("No attribute defined with id = $source_id");
       }
     }
-    $result{$pub_id} = join(',', @attrib_list);
+    $result{$pub_id} = join(', ', @attrib_list);
   }
 
   return \%result;
