@@ -186,7 +186,8 @@ sub new {
     $length,
     $source,
     $study,
-    $structural_variation
+    $structural_variation,
+    $minor_allele_freq
   ) = rearrange([qw(
   VARIATION_NAME 
   _STRUCTURAL_VARIATION_ID
@@ -204,6 +205,7 @@ sub new {
   SOURCE
   STUDY
   STRUCTURAL_VARIATION
+  MINOR_ALLELE_FREQ
   )], @_);
 
 
@@ -223,6 +225,7 @@ sub new {
   $self->{'source'}                   = $source;
   $self->{'study'}                    = $study;
   $self->{'structural_variation'}     = $structural_variation;
+  $self->{'minor_allele_freq'}        = $minor_allele_freq;
   return $self;
 }
 
@@ -1208,6 +1211,25 @@ sub _finish_annotation {
   $self->{$_.'_structural_variations'} ||= {} for qw(transcript regulation);
   $self->{regulation_structural_variations}->{$_} ||= [] for qw(ExternalFeature MotifFeature RegulatoryFeature);
   $self->get_IntergenicStructuralVariation(1);
+}
+
+=head2 get_frequency_minor_allele
+
+  Example     : my @hpmaf_alleles = @{$vf->get_frequency_minor_allele()}
+  Description : Gets all Allele objects whose minor allele frequency is the
+                highest amongst all populations. The frequency of these Alleles
+                (though there will usually only be one) will be the HPMAF
+                (Highest Population Minor Allele Frequency).
+  Returntype  : arrayref of Bio::EnsEMBL::Variation::Allele
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub get_frequency_minor_allele {
+  my $self = shift;
+  print "FREQUENCY: ", ref($self), "\n";
 }
 
 1;

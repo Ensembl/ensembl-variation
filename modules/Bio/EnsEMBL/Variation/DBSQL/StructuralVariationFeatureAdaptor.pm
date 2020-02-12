@@ -586,7 +586,7 @@ sub _columns {
   return qw( svf.structural_variation_feature_id svf.seq_region_id svf.outer_start svf.seq_region_start 
              svf.inner_start svf.inner_end svf.seq_region_end svf.outer_end svf.seq_region_strand 
              svf.structural_variation_id svf.variation_name svf.source_id svf.study_id svf.class_attrib_id 
-             svf.allele_string svf.somatic svf.breakpoint_order svf.length);
+             svf.allele_string svf.somatic svf.breakpoint_order svf.length svf.minor_allele_freq);
 }
 
 sub _objs_from_sth {
@@ -607,12 +607,13 @@ sub _objs_from_sth {
     my %sr_cs_hash;
 
     my ($structural_variation_feature_id, $seq_region_id, $outer_start, $seq_region_start, $inner_start, $inner_end, 
-        $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name, $source_id, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id);
+        $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name, $source_id, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id,
+        $minor_allele_freq);
 
     $sth->bind_columns(\$structural_variation_feature_id, \$seq_region_id, \$outer_start, \$seq_region_start, 
                        \$inner_start, \$inner_end, \$seq_region_end, \$outer_end, \$seq_region_strand, 
                        \$structural_variation_id, \$variation_name, \$source_id, \$study_id, 
-                       \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order, \$length);
+                       \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order, \$length, \$minor_allele_freq);
 
     my $asm_cs;
     my $cmp_cs;
@@ -734,7 +735,8 @@ sub _objs_from_sth {
                 'allele_string'      => $allele_string,
                 'is_somatic'         => $is_somatic,
                 'breakpoint_order'   => $bp_order,
-                'length'             => $length
+                'length'             => $length,
+                'minor_allele_freq'  => $minor_allele_freq
                }
             );
         }
@@ -993,8 +995,9 @@ sub store {
             is_evidence,
             somatic,
             breakpoint_order,
-            length
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            length,
+            minor_allele_freq
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -1015,7 +1018,8 @@ sub store {
         $svf->structural_variation ? $svf->structural_variation->is_evidence : 0,
         $svf->structural_variation ? $svf->structural_variation->is_somatic :  $svf->{is_somatic},
         $svf->{breakpoint_order} || undef,
-        $svf->{length} || undef
+        $svf->{length} || undef,
+        $svf->{minor_allele_freq} || undef
     );
     
     $sth->finish;
