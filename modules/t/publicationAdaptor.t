@@ -18,8 +18,6 @@ use strict;
 use warnings;
 use Test::More;
 
-use Data::Dumper;
-
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
