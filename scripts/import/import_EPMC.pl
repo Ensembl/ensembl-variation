@@ -748,9 +748,9 @@ sub clean_publications{
       }
     }
 
-    # Replace weird characters in title
+    # Replace hexadecimal characters in title
     if (defined $title_weird){
-      print $report "\nPublications with weird characters in the title - clean:\n";
+      print $report "\nPublications with hexadecimal characters in the title - clean:\n";
       foreach my $t_weird (@{$get_title_weird}){
         my $pub_id = $t_weird->[0];
         my $title = $t_weird->[1];
@@ -762,9 +762,9 @@ sub clean_publications{
       }
     }
 
-    # Replace weird characters in authors
+    # Replace hexadecimal characters in authors
     if (defined $authors_weird){
-      print $report "\nPublications with weird characters in the authors - clean:\n";
+      print $report "\nPublications with hexadecimal characters in the authors - clean:\n";
       foreach my $a_weird (@{$get_authors_weird}){
         my $pub_id = $a_weird->[0];
         my $authors = $a_weird->[1];
