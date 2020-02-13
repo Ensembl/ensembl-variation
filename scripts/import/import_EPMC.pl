@@ -31,6 +31,7 @@ use Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
 use Bio::EnsEMBL::Variation::Utils::Date qw( run_date log_time);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_hex);
 
 our $DEBUG = 0;
 
@@ -670,6 +671,9 @@ sub clean_publications{
     my $title_cr_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%\n%' ]);
     my $authors_cr_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%\n%' ]);
 
+    my $title_weird_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%&#x%' ]);
+    my $authors_weird_sth = $dba->dbc->prepare(qq[ select publication_id, authors from publication where authors like '%&#x%' ]);
+
     my $wrong_title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '%Errata%' or title like '%Erratum%' or title like '%In This Issue%' or title like '%Oral abstracts%' or title like '%Oral Presentations%' or title like '%Proffered paper%' or title like '%Subject Index%' or title like '%Summaries of Key Journal Articles%' or title like '%This Month in The Journal%' or title like 'Index%' or title like '%Table of Contents%' or title like '%Not Available%' or title like 'Beyond Our Pages%' or title like 'EP News%' or title like 'ACTS Abstracts%' or title like 'Poster %' ]);
 
     my $empty_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where (authors = '' or authors is null) and pmid is null and pmcid is null ]);
@@ -684,6 +688,14 @@ sub clean_publications{
     $authors_cr_sth->execute()||die;
     my $get_authors_cr = $authors_cr_sth->fetchall_arrayref();
     my $authors_cr = $get_authors_cr->[0]->[0];
+
+    $title_weird_sth->execute()||die;
+    my $get_title_weird = $title_weird_sth->fetchall_arrayref();
+    my $title_weird = $get_title_weird->[0]->[0];
+
+    $authors_weird_sth->execute()||die;
+    my $get_authors_weird = $authors_weird_sth->fetchall_arrayref();
+    my $authors_weird = $get_authors_weird->[0]->[0];
 
     $wrong_title_sth->execute()||die;
     my $wrong_title = $wrong_title_sth->fetchall_arrayref();
@@ -733,6 +745,34 @@ sub clean_publications{
         
         my $clean_authors_sth = $dba->dbc()->prepare(qq[ update publication set authors = ? where publication_id = $pub_id ]);
         $clean_authors_sth->execute($authors);
+      }
+    }
+
+    # Replace weird characters in title
+    if (defined $title_weird){
+      print $report "\nPublications with weird characters in the title - clean:\n";
+      foreach my $t_weird (@{$get_title_weird}){
+        my $pub_id = $t_weird->[0];
+        my $title = $t_weird->[1];
+        print $report "$pub_id\t$title\n";
+        my $new_title = replace_hex($title);
+
+        my $clean_title_sth = $dba->dbc()->prepare(qq[ update publication set title = ? where publication_id = $pub_id ]);
+        $clean_title_sth->execute($new_title);
+      }
+    }
+
+    # Replace weird characters in authors
+    if (defined $authors_weird){
+      print $report "\nPublications with weird characters in the authors - clean:\n";
+      foreach my $a_weird (@{$get_authors_weird}){
+        my $pub_id = $a_weird->[0];
+        my $authors = $a_weird->[1];
+        print $report "$pub_id\t$authors\n";
+        my $new_authors = replace_hex($authors);
+
+        my $clean_authors_sth = $dba->dbc()->prepare(qq[ update publication set authors = ? where publication_id = $pub_id ]);
+        $clean_authors_sth->execute($new_authors);
       }
     }
 
