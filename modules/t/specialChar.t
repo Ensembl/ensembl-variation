@@ -22,7 +22,7 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Test::TestUtils;
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
 
 my $oldString = "Hôpitaux de Paris";
