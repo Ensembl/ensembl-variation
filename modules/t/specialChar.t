@@ -45,4 +45,8 @@ $oldString = "bmi > 30";
 $newString = replace_char($oldString);
 ok($newString eq "bmi more than 30", "special char(>) updated");
 
+$oldString = "isom&#xe8;res";
+$newString = replace_hex($oldString);
+ok($newString eq "isomeres", "hex replaced");
+
 done_testing();
