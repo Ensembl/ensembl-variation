@@ -35,22 +35,32 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsPro
 
 use FileHandle;
 use Bio::EnsEMBL::IO::Parser::BedTabix;
+use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 
 sub run {
   my $self = shift;
-  my $file_type = $self->param('file_type');
+  my $file_type = $self->param_required('file_type');
   $self->set_variation_col_header;
   $self->set_chr_from_filename;
   $self->set_tabix_parser;
-  $self->add_frequencies_to_gvf_file() if ($file_type eq 'gvf');
+  if ($file_type eq 'gvf') {
+    $self->add_frequencies_to_gvf_file();
+  } elsif ($file_type eq 'vcf') {
+    $self->add_frequencies_to_vcf_file();
+  } else {
+    die("File type ($file_type) is not supported. File type must be gvf or vcf.");
+  }
 }
 
 sub set_variation_col_header {
   my $self = shift;
-  my $vep_cache_dir = $self->param('vep_cache_dir');
-  my $release = $self->param('release');
-  my $assembly = $self->param('assembly');
+  my $vep_cache_dir = $self->param_required('vep_cache_dir');
+  my $release = $self->param_required('release');
+  my $assembly = $self->param_required('assembly');
   my $info_file = "$vep_cache_dir/homo_sapiens/$release\_$assembly/info.txt";
+  if (! -e $info_file) {
+    die("File ($info_file) doesn't exist.");
+  }
   my $fh = FileHandle->new($info_file, 'r');
   while (<$fh>) {
     next if /^#/;
@@ -66,38 +76,57 @@ sub set_variation_col_header {
 
 sub set_chr_from_filename {
   my $self = shift;
-  my $input_file = $self->param('input_file');
-  $input_file =~ /.*-chr(.*)\.gvf|vcf\.gz/;
+  my $input_file = $self->param_required('input_file');
+  $input_file =~ /.*-chr(.*)\.(gvf|vcf)\.gz/;
   my $chr = $1; 
+  if (!$chr) {
+    die("Could not get chromosome name from file name ($input_file).");
+  }
   $self->param('chr', $chr);
 }
 
 sub set_tabix_parser {
   my $self = shift;
-  my $vep_cache_dir = $self->param('vep_cache_dir');
-  my $release = $self->param('release');
-  my $assembly = $self->param('assembly');  
+  my $vep_cache_dir = $self->param_required('vep_cache_dir');
+  my $release = $self->param_required('release');
+  my $assembly = $self->param_required('assembly');  
   my $chr = $self->param('chr');
   my $tabix_file = "$vep_cache_dir/homo_sapiens/$release\_$assembly/$chr/all_vars.gz";
+  if (! -e $tabix_file) {
+    die("File ($tabix_file) doesn't exist.");
+  }
   my $parser = Bio::EnsEMBL::IO::Parser::BedTabix->open($tabix_file);
   $self->param('parser', $parser);
 }
 
 sub add_frequencies_to_gvf_file {
   my $self = shift;
-  my $gvf_file = $self->param('input_file');
-  my $gvf_file_with_frequencies = $self->param('output_file_name');
-  my $homo_sapiens_dump_dir = $self->param('homo_sapiens_dump_dir');
+  my $gvf_file = $self->param_required('input_file');
+  my $output_file_name = $self->param_required('output_file_name');
+
+  my $homo_sapiens_dump_dir = $self->param_required('homo_sapiens_dump_dir');
+  if (! -d $homo_sapiens_dump_dir) {
+    die("Directory ($homo_sapiens_dump_dir) doesn't exist");
+  }
+
   my $chr = $self->param('chr');
 
   my $dir = "$homo_sapiens_dump_dir/gvf/homo_sapiens/";
-  my $gvf_in = FileHandle->new("$dir/$gvf_file", 'r');
-  my $gvf_out = FileHandle->new("$dir/$gvf_file_with_frequencies-$chr.gvf", 'w');
+  if (! -d $dir) {
+    die("Directory ($dir) doesn't exist");
+  }
 
-  my $step_size = $self->param('step_size');
+  if (! -e "$dir/$gvf_file") {
+    die("File ($dir/$gvf_file) doesn't exist.");
+  }
+
+  my $gvf_in = FileHandle->new("$dir/$gvf_file", 'r');
+  my $gvf_out = FileHandle->new("$dir/$output_file_name-$chr.gvf", 'w');
+
+  my $step_size = $self->param_required('step_size');
   my $start = 0;
   my $end = $step_size;
-  my $overlap = $self->param('overlap');
+  my $overlap = $self->param_required('overlap');
 
   my $frequencies = $self->get_frequencies($chr, $start, $end);
 
@@ -130,6 +159,64 @@ sub add_frequencies_to_gvf_file {
 
   $gvf_in->close;
   $gvf_out->close;
+}
+
+sub add_frequencies_to_vcf_file {
+  my $self = shift;
+  my $vcf_file = $self->param_required('input_file');
+  my $vcf_file_with_frequencies = $self->param_required('output_file_name');
+  my $homo_sapiens_dump_dir = $self->param_required('homo_sapiens_dump_dir');
+  if (! -d $homo_sapiens_dump_dir) {
+    die("Directory ($homo_sapiens_dump_dir) doesn't exist");
+  }
+
+  my $chr = $self->param('chr');
+
+  my $dir = "$homo_sapiens_dump_dir/vcf/homo_sapiens/";
+  if (! -d $dir) {
+    die("Directory ($dir) doesn't exist");
+  }
+
+  if (! -e "$dir/$vcf_file") {
+    die("File ($dir/$vcf_file) doesn't exist.");
+  }
+
+  my $vcf_parser = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open("$dir/$vcf_file");
+
+  my $cdba = $self->get_adaptor('homo_sapiens', 'core');
+  my $sa = $cdba->get_SliceAdaptor;
+  my $slice = $sa->fetch_by_region('chromosome', $chr);
+  my $chr_end = $slice->end;
+  $vcf_parser->seek($chr, 1, $chr_end);
+  my $vcf_out = FileHandle->new("$dir/$vcf_file_with_frequencies-$chr.vcf", 'w');
+
+  my $step_size = $self->param_required('step_size');
+  my $start = 0;
+  my $end = $step_size;
+  my $overlap = $self->param_required('overlap');
+  my $frequencies = $self->get_frequencies($chr, $start, $end);
+
+  while ($vcf_parser->next) {
+    my @values = @{$vcf_parser->{record}};
+    my $variant_start = $values[1];
+    my $rs = $values[2];
+    my $ref = $values[3];
+    my $variant_end = $variant_start + length($ref) - 1;
+    if ($variant_end >= $end) {
+      $start = $variant_start;
+      $end   = $variant_end + $step_size;
+      $frequencies = $self->get_frequencies($chr, $start - $overlap, $end + $overlap);
+    }
+    my $id_2_freqs = $frequencies->{$rs};
+    next unless ($id_2_freqs);
+    my $info = $values[7];
+    $info = $info . ';' . $id_2_freqs;
+    print $vcf_out join("\t", $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $info), "\n";
+  }
+  $vcf_out->close;
+  $vcf_parser->close;
+  my $parser = $self->param('parser');
+  $parser->close;
 }
 
 sub get_frequencies {
@@ -171,6 +258,5 @@ sub get_frequencies {
   }
   return $frequencies;
 }
-
 
 1;
