@@ -55,7 +55,7 @@ sub run {
 sub set_variation_col_header {
   my $self = shift;
   my $vep_cache_dir = $self->param_required('vep_cache_dir');
-  my $release = $self->param_required('release');
+  my $release = $self->param_required('ensembl_release');
   my $assembly = $self->param_required('assembly');
   my $info_file = "$vep_cache_dir/homo_sapiens/$release\_$assembly/info.txt";
   if (! -e $info_file) {
@@ -88,7 +88,7 @@ sub set_chr_from_filename {
 sub set_tabix_parser {
   my $self = shift;
   my $vep_cache_dir = $self->param_required('vep_cache_dir');
-  my $release = $self->param_required('release');
+  my $release = $self->param_required('ensembl_release');
   my $assembly = $self->param_required('assembly');  
   my $chr = $self->param('chr');
   my $tabix_file = "$vep_cache_dir/homo_sapiens/$release\_$assembly/$chr/all_vars.gz";
