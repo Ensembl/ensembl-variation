@@ -36,6 +36,35 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path);
 
+sub compute_checksums_for_directory {
+  my ($self, $working_dir) = @_;
+  opendir(my $dh, $working_dir) or die "Cannot open directory $working_dir";
+  my @files = sort {$a cmp $b} readdir($dh);
+  closedir($dh) or die "Cannot close directory $working_dir";
+  my @checksums = ();
+  foreach my $file (@files) {
+    next if $file =~ /^\./;
+    next if $file =~ /^CHECKSUM/;
+    my $path = File::Spec->catfile($working_dir, $file);
+    my $checksum = checksum($path);
+    push(@checksums, [$checksum, $file]);
+  }
+  my $fh = FileHandle->new("$working_dir/CHECKSUMS", 'w');
+  foreach my $entry (@checksums) {
+    my $line = join("\t", @{$entry});
+    print $fh $line, "\n";
+  }
+  $fh->close();
+}
+
+sub checksum {
+  my $path = shift;
+  my $checksum = `sum $path`;
+  $checksum =~ s/\s* $path//xms;
+  chomp($checksum);
+  return $checksum;
+}
+
 sub data_dir {
   my ($self,$species) = @_;
   my $data_dump_dir = $self->param('pipeline_dir');
@@ -66,6 +95,15 @@ sub is_empty {
   closedir($dh);
   return $count;
 }
+
+sub run_system_command {
+  my ($self, $cmd) = @_; 
+  my ($return_value, $stderr, $flat_cmd) = $self->SUPER::run_system_command($cmd);
+  if ($return_value) {
+    die("there was an error running as ($flat_cmd: $stderr)");
+  }
+}
+
 
 1;
 
