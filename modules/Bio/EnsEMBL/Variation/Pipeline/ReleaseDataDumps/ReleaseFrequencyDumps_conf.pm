@@ -56,23 +56,25 @@ sub default_options {
         hive_default_max_retry_count => 0,
         hive_force_init      => 1,
         hive_use_param_stack => 1,
-        ensembl_release    => $self->o('ensembl_release'),
 
-        # include or exclude the following species from the dumps, run for a division or all the species on the server
-        species => [],
-        antispecies => [],
-        division    => [],
-        run_all     => 1,
-
+        ensembl_registry   => $self->o('ensembl_registry'),
         pipeline_name         => $self->o('pipeline_name'),
         homo_sapiens_dump_dir => $self->o('homo_sapiens_dump_dir'),
         vep_cache_dir         => $self->o('vep_cache_dir'),
         assembly              => $self->o('assembly'),
-        release               => $self->o('release'),
+        ensembl_release       => $self->o('ensembl_release'),
         step_size             => 500_000,
         overlap               => 500,
-                                 # qw/AFR AMR EAS EUR SAS AA EA gnomAD gnomAD_AFR gnomAD_AMR gnomAD_ASJ gnomAD_EAS gnomAD_FIN gnomAD_NFE gnomAD_OTH gnomAD_SAS/;
+                                 # Populations are taken from the info.txt located in the VEP cache directory e.g. homo_sapiens/99_GRCh38/info.txt  
+                                 # AFR AMR EAS EUR SAS AA EA gnomAD gnomAD_AFR gnomAD_AMR gnomAD_ASJ gnomAD_EAS gnomAD_FIN gnomAD_NFE gnomAD_OTH gnomAD_SAS
         af_keys               => ['AFR', 'AMR', 'EAS', 'EUR', 'SAS'],
+        af_keys_descriptions  => {
+                                    'AFR' => 'Allele frequency for African populations in the 1000 Genomes Project Phase 3', 
+                                    'AMR' => 'Allele frequency for populations from the Americas in the 1000 Genomes Project Phase 3',
+                                    'EAS' => 'Allele frequency for East Asian populations in the 1000 Genomes Project Phase 3',
+                                    'EUR' => 'Allele frequency for European populations in the 1000 Genomes Project Phase 3',
+                                    'SAS' => 'Allele frequency for South Asian populations in the 1000 Genomes Project Phase 3',
+                                  },
         output_file_name      => '1000GENOMES-phase_3',
        
         pipeline_wide_analysis_capacity => 25,        
@@ -139,7 +141,7 @@ sub pipeline_analyses {
           'file_type'             => 'gvf',
           'homo_sapiens_dump_dir' => $self->o('homo_sapiens_dump_dir'),
           'vep_cache_dir'         => $self->o('vep_cache_dir'),
-          'release'               => $self->o('release'),
+          'ensembl_release'       => $self->o('ensembl_release'),
           'assembly'              => $self->o('assembly'),
           'step_size'             => $self->o('step_size'),
           'overlap'               => $self->o('overlap'),
@@ -149,8 +151,52 @@ sub pipeline_analyses {
       },
       { -logic_name => 'finish_add_frequencies_gvf',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpFrequencies',
+        -flow_into => {
+           1 => [ 'init_vcf_files' ],
+        },
+        -parameters => {
+          'file_type'             => 'gvf',
+          'ensembl_registry'      => $self->o('ensembl_registry'),
+          'homo_sapiens_dump_dir' => $self->o('homo_sapiens_dump_dir'),
+          'output_file_name'      => $self->o('output_file_name'),
+        },
+      },
+      {   -logic_name => 'init_vcf_files',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+          -parameters => {
+            'homo_sapiens_dump_dir' => $self->o('homo_sapiens_dump_dir'),
+            'inputcmd'              => 'find #homo_sapiens_dump_dir#/vcf/homo_sapiens -type f -name "homo_sapiens-chr*.vcf.gz" -printf "%f\n"',
+          },
+          -flow_into  => {
+            '2->A' => {'add_frequencies_vcf' => {'input_file' => '#_0#'}},
+            'A->1' => ['finish_add_frequencies_vcf'],
+          },
+      },
+      { -logic_name => 'add_frequencies_vcf',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::DumpFrequencies',
+        -parameters => {
+          'file_type'             => 'vcf',
+          'homo_sapiens_dump_dir' => $self->o('homo_sapiens_dump_dir'),
+          'ensembl_registry'      => $self->o('ensembl_registry'),
+          'vep_cache_dir'         => $self->o('vep_cache_dir'),
+          'ensembl_release'       => $self->o('ensembl_release'),
+          'assembly'              => $self->o('assembly'),
+          'step_size'             => $self->o('step_size'),
+          'overlap'               => $self->o('overlap'),
+          'af_keys'               => $self->o('af_keys'),
+          'output_file_name'      => $self->o('output_file_name'),
+        },
+      },
+      { -logic_name => 'finish_add_frequencies_vcf',
+        -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::FinishDumpFrequencies',
+        -parameters => {
+          'file_type'             => 'vcf',
+          'af_keys_descriptions'  => $self->o('af_keys_descriptions'),
+          'ensembl_registry'      => $self->o('ensembl_registry'),
+          'homo_sapiens_dump_dir' => $self->o('homo_sapiens_dump_dir'),
+          'output_file_name'      => $self->o('output_file_name'),
+        },
       }
-
   );
   return \@analyses;
 }
