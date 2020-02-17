@@ -135,7 +135,7 @@ sub join_vcf_files {
   }
 
   $self->run_system_command("zgrep ^# $vcf_file > $vcf_dir/vcf_header");
-  $self->run_system_command("awk '!^#CHROM' $vcf_dir/vcf_header > $vcf_dir/temp");
+  $self->run_system_command("awk '!/^#CHROM/' $vcf_dir/vcf_header > $vcf_dir/temp");
   $self->run_system_command("mv $vcf_dir/temp $vcf_dir/vcf_header");
 
   open(my $fh, '>>', "$vcf_dir/vcf_header");
