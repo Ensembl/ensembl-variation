@@ -40,3 +40,4 @@
 533	dbnsfp_meta_lr_pred	dbNSFP MetaLR prediction	dbNSFP MetaLR prediction
 534	dbnsfp_ma_pred	dbNSFP mutation assessor prediction	dbNSFP mutation assessor prediction
 542	citation_source	Citation source	Variant citation data source
+544	phenotype_type	Phenotype type	Type of the phenotype information

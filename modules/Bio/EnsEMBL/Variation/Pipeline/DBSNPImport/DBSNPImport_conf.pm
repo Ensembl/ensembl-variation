@@ -56,6 +56,7 @@ sub default_options {
 
     pipeline_name           => 'dbsnp_import',
     species                 => 'homo_sapiens',
+    assembly                => $self->o('assembly'),
     pipeline_dir            => $self->o('pipeline_dir'),
     data_dir                => $self->o('pipeline_dir') . '/split-src',
     rpt_dir                 => $self->o('pipeline_dir') . '/split-rpt',
@@ -84,6 +85,7 @@ sub pipeline_wide_parameters {
     pipeline_dir         => $self->o('pipeline_dir'),
     ensembl_registry     => $self->o('registry_file'),
     species              => $self->o('species'),
+    assembly             => $self->o('assembly'),
     
     data_dir             => $self->o('data_dir'),
     rpt_dir              => $self->o('rpt_dir'),

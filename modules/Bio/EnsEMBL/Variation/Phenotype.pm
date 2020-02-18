@@ -81,11 +81,15 @@ sub new {
     my $caller = shift;
     my $class  = ref($caller) || $caller;
     my $self = $class->SUPER::new(@_);
-    my ($dbID, $description, $name) = rearrange([qw(dbID DESCRIPTION NAME)], @_);
+    my ($dbID, $description, $name, $class_attrib_id) = rearrange([qw(dbID DESCRIPTION NAME CLASS_ATTRIB_ID)], @_);
+
+    $class_attrib_id ||= 665; #trait
+
     $self = {
         'dbID'        => $dbID,
         'description' => $description,
         'name'        => $name,
+        'class_attrib_id'=> $class_attrib_id,
     };
     return bless $self, $class;
 }
@@ -147,6 +151,43 @@ sub description {
     return $self->{'description'} = shift if(@_);
     return $self->{'description'};
 }
+
+
+=head2 class_attrib
+
+  Example    : $name = $obj->class_attrib('trait')
+  Description: Getter/Setter for the class attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub class_attrib {
+    my $self = shift;
+    return $self->{'class_attrib'} = shift if(@_);
+    return $self->{'class_attrib'};
+}
+
+
+=head2 class_attrib_id
+
+  Example    : $class_attrib_id = $obj->class_attrib_id(665)
+  Description: Getter for the class attribute id
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub class_attrib_id {
+    my $self = shift;
+    return $self->{'class_attrib_id'} = shift if(@_);
+    return $self->{'class_attrib_id'};
+}
+
 
 =head2 ontology_accessions_with_source
 

@@ -76,6 +76,12 @@ sub run {
   }
   # set up the list of sub_dir
   $self->param('sub_dirs', [ map { {sub_dir => $_} } @sub_dirs]);
+
+  # Check the assembly is valid
+  my $assembly = $self->param_required('assembly');
+  if ($assembly !~ /^(GRCh37|GRCh38)/) {
+      die("Assembly ($assembly) is invalid. Please specify GRCh37 or GRCh38");
+  }
 }
 
 sub write_output {

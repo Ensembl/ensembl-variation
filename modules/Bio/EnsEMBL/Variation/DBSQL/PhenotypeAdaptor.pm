@@ -179,7 +179,7 @@ sub _tables {
 }
 
 sub _columns {
-    return qw(p.phenotype_id p.name p.description poa.accession poa.mapped_by_attrib poa.mapping_type);
+    return qw(p.phenotype_id p.name p.description p.class_attrib_id poa.accession poa.mapped_by_attrib poa.mapping_type);
 }
 
 sub _objs_from_sth {
@@ -214,6 +214,7 @@ sub _obj_from_row {
               dbID           => $row->{phenotype_id},
               name           => $row->{name},
               description    => $row->{description},
+              class_attrib_id => $row->{class_attrib_id},
               adaptor        => $self,
             }); 
 
@@ -238,13 +239,15 @@ sub store{
     my $sth = $dbh->prepare(qq{
         INSERT INTO phenotype (
              name,
-             description
-        ) VALUES (?,?)
+             description,
+             class_attrib_id
+        ) VALUES (?,?,?)
     });
 
     $sth->execute(        
         $pheno->{name},
-        $pheno->{description}        
+        $pheno->{description},
+        $pheno->{class_attrib_id}
     );
 
     $sth->finish;
