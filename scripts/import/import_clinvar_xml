@@ -116,6 +116,15 @@ my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
+my $non_specified_class = 663;
+my %non_specified_pheno = {"None"=>1,
+                     "Not provided"=> 1,
+                     "not specified" => 1,
+                     "Not in OMIM" => 1,
+                     "Variant of unknown significance" => 1,
+                     "not_provided" => 1,
+                     "ClinVar: phenotype not specified" => 1,
+                     "?" => 1, "." => 1};
 my $haplotype_type = "Haplotype";
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
@@ -846,6 +855,7 @@ sub get_phenotype{
   unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
 
     $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
+    $pheno->class_attrib_id($non_specified_class) if exists $non_specified_pheno{$pheno};
     $phenotype_adaptor->store($pheno);
   }
 
