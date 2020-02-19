@@ -53,6 +53,7 @@ use warnings;
 use File::Path qw(make_path);
 use File::stat;
 use POSIX qw(strftime);
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -108,7 +109,11 @@ sub fetch_input {
 
   #create workdir folder
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir) or die "Failed to create $workdir $!\n" unless -e $workdir;
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   $self->workdir($workdir);
 
   return unless $animalQTL_species_ok{$species};

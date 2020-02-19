@@ -48,6 +48,7 @@ use File::stat;
 use POSIX qw(strftime);
 use LWP::Simple;
 use HTTP::Tiny;
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -123,7 +124,11 @@ sub fetch_input {
                   );
 
   my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir_fetch) or die "Failed to create $workdir_fetch $!\n" unless -e $workdir_fetch;
+  unless (-d $workdir_fetch) {
+    my $err;
+    make_path($workdir_fetch, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   my $file_omia = 'omia_gene_table.txt';
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
