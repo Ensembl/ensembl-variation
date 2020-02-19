@@ -13,8 +13,8 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# fix key
+# Add new data_source attribs 
 ALTER TABLE variation_citation MODIFY data_source_attrib SET('615','616','617','618','619','620') DEFAULT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_b.sql|Add attrib ids to variation_citation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_b.sql|Add new data_source_attrib to variation_citation');
