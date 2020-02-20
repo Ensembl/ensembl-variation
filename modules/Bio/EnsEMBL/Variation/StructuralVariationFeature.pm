@@ -1217,12 +1217,14 @@ sub _finish_annotation {
 }
 
 =head2 get_allele_freq
+
   Example    : $freq = $obj->get_allele_freq()
   Description: Getter for the frequency of the allele in the study, if possible.
   Returntype : float
   Exceptions : none
   Caller     : general
   Status     : At Risk
+
 =cut
 
 sub get_allele_freq{
@@ -1231,12 +1233,14 @@ sub get_allele_freq{
 }
 
 =head2 get_allele_count
+
   Example    : $freq = $obj->get_allele_count()
   Description: Getter for the number of times the allele is observed in the study, if possible.
   Returntype : int
   Exceptions : none
   Caller     : general
   Status     : At Risk
+
 =cut
 
 sub get_allele_count{
