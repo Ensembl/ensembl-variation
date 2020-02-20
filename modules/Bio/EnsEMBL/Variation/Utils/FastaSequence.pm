@@ -360,7 +360,10 @@ sub _new_slice_seq {
   return sub {
     my ($self, $start, $end, $strand, $preserve_masking) = @_;
     my ($seq, $length) = ('', 0);
-
+    
+    my $orig_start = $start;
+    my $orig_end = $end;
+    
     $strand = defined($strand) ? $strand * $self->strand : $self->strand;
     
     if($self->strand == 1) {  
@@ -405,7 +408,7 @@ sub _new_slice_seq {
         print STDERR "USING DATABASE\n" if $DEBUG;
         return
           scalar(@_) > 1 ?
-          $self->_fasta_old_db_subseq($start, $end, $strand) :
+          $self->_fasta_old_db_subseq($orig_start, $orig_end, $strand) :
           $self->_fasta_old_db_seq();
       }
     }
