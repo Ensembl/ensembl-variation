@@ -996,7 +996,9 @@ sub store {
             is_evidence,
             somatic,
             breakpoint_order,
-            length
+            length,
+            allele_freq,
+            allele_count
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
