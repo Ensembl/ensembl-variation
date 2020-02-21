@@ -561,7 +561,7 @@
       "species": "canis_familiaris",
       "assembly": "CanFam3.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.CanFam3.1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.CanFam3.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -569,7 +569,7 @@
       "species": "capra_hircus",
       "assembly": "ARS1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -577,7 +577,7 @@
       "species": "chlorocebus_sabaeus",
       "assembly": "ChlSab1.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -585,7 +585,7 @@
       "species": "danio_rerio",
       "assembly": "GRCz11",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
       "annotation_type": "gerp"
     },
     {
@@ -593,7 +593,7 @@
       "species": "equus_caballus",
       "assembly": "EquCab3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -602,7 +602,7 @@
       "assembly": "Felis_catus_9.0",
       "type": "remote",
       "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/100_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -610,7 +610,7 @@
       "species": "gallus_gallus",
       "assembly": "GRCg6a",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
       "annotation_type": "gerp"
     },
     {
@@ -626,7 +626,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
       "annotation_type": "gerp"
     },
     {
@@ -634,7 +634,7 @@
       "species": "macaca_mulatta",
       "assembly": "Mmul_10",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
       "annotation_type": "gerp"
     },
     {
@@ -642,7 +642,7 @@
       "species": "meleagris_gallopavo",
       "assembly": "UMD2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.UMD2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.UMD2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -650,7 +650,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm38.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm38.bw",
       "annotation_type": "gerp"
     },
     {
@@ -658,7 +658,7 @@
       "species": "nomascus_leucogenys",
       "assembly": "Nleu_3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -666,7 +666,7 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -674,7 +674,7 @@
       "species": "pan_troglodytes",
       "assembly": "Pan_tro_3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -682,7 +682,7 @@
       "species": "pongo_abelii",
       "assembly": "PPYG2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.PPYG2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.PPYG2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -690,7 +690,7 @@
       "species": "rattus_norvegicus",
       "assembly": "Rnor_6.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.Rnor_6.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.Rnor_6.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -698,7 +698,7 @@
       "species": "sus_scrofa",
       "assembly": "Sscrofa11.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -706,7 +706,7 @@
       "species": "taeniopygia_guttata",
       "assembly": "bTaeGut1_v1.p",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/81_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
       "annotation_type": "gerp"
     },
     {
@@ -714,7 +714,7 @@
       "species": "tetraodon_nigroviridis",
       "assembly": "TETRAODON8",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
       "annotation_type": "gerp"
     },
     {
@@ -722,7 +722,7 @@
       "species": "salmo_salar",
       "assembly": "ICSASG_v2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-99/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.ICSASG_v2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-100/compara/conservation_scores/82_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.ICSASG_v2.bw",
       "annotation_type": "gerp"
     },
     {
