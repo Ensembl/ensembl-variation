@@ -238,6 +238,7 @@ sub pipeline_analyses {
       {   -logic_name => 'submit_job_gvf_dumps_highmem',
           -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
+          -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 0,
           -rc_name => 'medium',
       },
