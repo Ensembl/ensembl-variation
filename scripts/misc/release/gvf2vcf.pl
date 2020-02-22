@@ -60,10 +60,7 @@ GetOptions(
     'global_maf',
     'evidence',
     'clinical_significance',
-    'somatic',
-    'set_name=s',
     'structural_variations|svs',
-
     'incl_consequences',
     'protein_coding_details',
     'sift',
