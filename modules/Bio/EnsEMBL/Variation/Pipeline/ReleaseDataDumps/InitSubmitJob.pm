@@ -75,6 +75,7 @@ sub fetch_input {
     # to dump a set from the variation datbase by providing the set name for example --set_name clinically_associated
     if ($dump_type eq 'sets') {
       foreach my $set_name (keys %{$config->{sets}}) {
+        next if ($job_type eq 'parse'); # we don't need to pass --set_name to gvf2vcf.pl
         my @arguments = map {'--' . $_} @{$config->{sets}->{$set_name}};
         my $script_arg = join(' ', @arguments);
         $script_arg = "--set_name $set_name $script_arg";
@@ -82,7 +83,11 @@ sub fetch_input {
         $script_args_to_file_name->{$script_arg} = $file_name;
       }
     } else {
-      my @arguments = map {'--' . $_} @{$config->{$dump_type}};
+      my @arguments = ();
+      foreach my $argument (@{$config->{$dump_type}}) {
+        next if ($argument eq 'somatic' && ($job_type eq 'parse')); # we don't need tp pass --somatic to gvf2vcf.pl 
+        push @arguments, "--$argument";
+      }
       my $script_arg = join(' ', @arguments);
       my $file_name = "$species\_$dump_type";
       $script_args_to_file_name->{$script_arg} = $file_name;
