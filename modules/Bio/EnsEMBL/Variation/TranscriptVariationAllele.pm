@@ -1379,6 +1379,7 @@ sub hgvs_transcript {
   
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
   #return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
+  
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1416,16 +1417,19 @@ sub hgvs_transcript {
   my @attribs = @{$tr->get_all_Attributes()};
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
 
-  my $misalignment_offset = 0;
-  $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && substr($tr->stable_id, 0,3) eq 'NM_');
+  my %misalignment_offset = (
+    "snp"  => 0,
+    "all" => 0,
+  );
+  %misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
   
   if ($vf->var_class eq 'SNP' && defined($self->{pre_consequence_predicates}) && $self->{pre_consequence_predicates}->{exon} && defined($tv->cds_start) && defined($tv->cds_end)) {
-    $hgvs_notation->{start} = $tv->cds_start + $misalignment_offset;
+    $hgvs_notation->{start} = $tv->cds_start + $misalignment_offset{'snp'};
     $hgvs_notation->{end}   = $hgvs_notation->{start};
   }
   else{
-    $hgvs_notation->{start} = $self->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
-    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $self->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
+    $hgvs_notation->{start} = $self->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset{'all'});
+    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $self->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset{'all'});
   }
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 
@@ -1496,7 +1500,8 @@ sub is_polyA {
 sub get_misalignment_offset {
   my $self = shift;
   my $attrs = shift;
-  my $mlength = 0;
+  my $mlength_all = 0;
+  my $mlength_snp = 0;
   
   ## For each refseq edit transcript attribute given, isolate the insertions and deletions found 
   ## before the given variant and sum their lengths
@@ -1510,20 +1515,34 @@ sub get_misalignment_offset {
     my $var_location_start = $self->transcript_variation->cdna_start;
     $var_location_start = 0 unless defined($var_location_start);
     next if $var_location_start < $split_val[0];
-    next unless $self->transcript_variation->cds_start;
-    my $cds_region_start = $self->transcript_variation->cdna_start - $self->transcript_variation->cds_start + 1;
-    next if $split_val[1] < $cds_region_start;
 
     if ($type eq 'del')
     {
-      $mlength += -1 - ($split_val[1] - $split_val[0]);
+      $mlength_all += -1 - ($split_val[1] - $split_val[0]);
     }
     else{
-      $mlength += length($split_val[2]);
+      $mlength_all += length($split_val[2]);
     }
+    
+    next unless $self->transcript_variation->cds_start;
+    my $cds_region_start = $self->transcript_variation->cdna_start - $self->transcript_variation->cds_start + 1;
+    next if $split_val[1] < $cds_region_start;
+    
+    if ($type eq 'del')
+    {
+      $mlength_snp += -1 - ($split_val[1] - $split_val[0]);
+    }
+    else{
+      $mlength_snp += length($split_val[2]);
+    }    
   }
-  $self->{refseq_misalignment_offset} = $mlength;
-  return $mlength;
+  
+  $self->{refseq_misalignment_offset} = $mlength_snp;
+  my %mlength_hash = (
+    "snp"  => $mlength_snp,
+    "all" => $mlength_all,
+  );
+  return %mlength_hash;
   
 }
 
