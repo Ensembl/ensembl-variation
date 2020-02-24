@@ -1510,6 +1510,9 @@ sub get_misalignment_offset {
     my $var_location_start = $self->transcript_variation->cdna_start;
     $var_location_start = 0 unless defined($var_location_start);
     next if $var_location_start < $split_val[0];
+    next unless $self->transcript_variation->cds_start;
+    my $cds_region_start = $self->transcript_variation->cdna_start - $self->transcript_variation->cds_start + 1;
+    next if $split_val[1] < $cds_region_start;
 
     if ($type eq 'del')
     {
