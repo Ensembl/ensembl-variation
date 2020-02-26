@@ -96,12 +96,16 @@ my $sth_h = get_connection_and_query($database, $hname, $sql, 1);
 my $sqlPF = qq{SELECT count(*) FROM phenotype_feature};
 # Loop over databases
 while (my ($dbname) = $sth_h->fetchrow_array) {
-  next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+  next if ($dbname !~ /[a-z]+_[a-z]+_variation_\d+_\d+$/i);
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
 
   $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
   my $assembly = $2;
+
+  next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i &&
+           $dbname !~ /canis_lupus_familiaris_variation_\d+_\d+$/ );
+
   next if defined $species & !$only_species{$s_name};
   print STDERR "# $s_name - [ $dbname ]\n";
 
