@@ -113,7 +113,7 @@ sub write_output {
   #if source specific check, then flow to next import
   if (defined $source){
     if ($source->{source_name} eq IMPC){
-      $self->dataflow_output_id($self->param('output_ids'), 1);
+      $self->dataflow_output_id($self->param('output_ids'), 2);
       close($self->logFH) if defined $self->logFH ;
       close($self->pipelogFH) if defined $self->pipelogFH ;
       return;
