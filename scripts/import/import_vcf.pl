@@ -1924,10 +1924,6 @@ sub variation {
       $var->{ancestral_allele} = $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA});
     }
 		
-		# add in some hacky stuff so flanking sequence gets written
-		$var->{seq_region_id}         = $config->{seq_region_ids}->{$vf->{chr}};
-		$var->{seq_region_strand}     = 1;
-		
 		# class
 		$var->{class_attrib_id} = $class_id;
 		
