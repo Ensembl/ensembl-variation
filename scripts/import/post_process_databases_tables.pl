@@ -282,9 +282,7 @@ sub process_phenotype_feature {
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $citation_att = shift;
-
-  my %citation_attribs = %{$citation_att};
+  my $citation_attribs = shift;
 
   ## Get studies from phenotype_feature
   my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type
@@ -314,14 +312,14 @@ sub process_phenotype_feature {
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
-      $source_attrib_id = $citation_attribs{$study_type};
+      $source_attrib_id = $citation_attribs->{$study_type};
       die "No attrib of type 'citation_source' was found for '$study_type'!\n" unless defined $source_attrib_id;
     }
     else{
       # Get source name from source table (dbGaP)
       my $source_obj = $source_ad->fetch_by_dbID($source_id);
       my $source_name = $source_obj->name();
-      $source_attrib_id = $citation_attribs{$source_name};
+      $source_attrib_id = $citation_attribs->{$source_name};
       die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
 
@@ -370,9 +368,7 @@ sub process_phenotype_feature_attrib {
   my $var_ad = shift;
   my $pub_ad = shift;
   my $source_ad = shift;
-  my $citation_att = shift;
-
-  my %citation_attribs = %{$citation_att};
+  my $citation_attribs = shift;
 
   my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
                                                  from attrib_type
@@ -461,7 +457,7 @@ sub process_phenotype_feature_attrib {
         # Get source name from source table (ClinVar)
         my $source_obj = $source_ad->fetch_by_dbID($source_id);
         my $source_name = $source_obj->name();
-        $source_attrib_id = $citation_attribs{$source_name};
+        $source_attrib_id = $citation_attribs->{$source_name};
         die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
       }
 
