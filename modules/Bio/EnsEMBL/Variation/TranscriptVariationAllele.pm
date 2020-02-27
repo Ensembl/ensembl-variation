@@ -1379,7 +1379,6 @@ sub hgvs_transcript {
   
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
   #return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
-  
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1417,7 +1416,8 @@ sub hgvs_transcript {
   my @attribs = @{$tr->get_all_Attributes()};
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
   
-  my $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
+  my $misalignment_offset = 0; 
+  $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
   
   if ($vf->var_class eq 'SNP' && defined($self->{pre_consequence_predicates}) && $self->{pre_consequence_predicates}->{exon} && defined($tv->cds_start) && defined($tv->cds_end)) {
     $hgvs_notation->{start} = $tv->cds_start;
