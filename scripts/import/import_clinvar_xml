@@ -295,7 +295,7 @@ sub get_set{
 
   if (defined $set_id->[0]->[0] ){
     ## remove old set content
-    $set_del_sth->execute($set_id->[0]->[0]) if defined $clean && $set eq 'ph_omim';
+    $set_del_sth->execute($set_id->[0]->[0]) if defined $clean;
     return $set_id->[0]->[0] ;
   }
 
