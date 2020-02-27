@@ -1415,8 +1415,8 @@ sub hgvs_transcript {
   ## Mismatches between refseq transcripts and the reference genome are tracked in transcript attributes
   my @attribs = @{$tr->get_all_Attributes()};
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
-  
-  my $misalignment_offset = 0; 
+
+  my $misalignment_offset = 0;
   $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
   
   if ($vf->var_class eq 'SNP' && defined($self->{pre_consequence_predicates}) && $self->{pre_consequence_predicates}->{exon} && defined($tv->cds_start) && defined($tv->cds_end)) {
@@ -1496,7 +1496,7 @@ sub is_polyA {
 sub get_misalignment_offset {
   my $self = shift;
   my $attrs = shift;
-  my $mlength_all = 0;
+  my $mlength = 0;
   
   ## For each refseq edit transcript attribute given, isolate the insertions and deletions found 
   ## before the given variant and sum their lengths
@@ -1513,16 +1513,15 @@ sub get_misalignment_offset {
 
     if ($type eq 'del')
     {
-      $mlength_all += -1 - ($split_val[1] - $split_val[0]);
+      $mlength += -1 - ($split_val[1] - $split_val[0]);
     }
     else{
-      $mlength_all += length($split_val[2]);
+      $mlength += length($split_val[2]);
     }
   }
    
-  $self->{refseq_misalignment_offset} = $mlength_all;
-  
-  return $mlength_all;
+  $self->{refseq_misalignment_offset} = $mlength;
+  return $mlength;
   
 }
 
