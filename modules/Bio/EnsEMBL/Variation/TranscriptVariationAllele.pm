@@ -125,6 +125,9 @@ sub _return_3prime {
   ## If the associated database adaptor has switched HGVS shifting off, don't shift anything
   return if (defined($vf->adaptor) && defined($vf->adaptor->db)) && ($vf->adaptor->db->shift_hgvs_variants_3prime() == 0);
   
+  my $vf_allele_string = $vf->allele_string;
+  return if $vf_allele_string =~ /INS|DEL|HGMD|COSM|CNV/i;
+
   my $tr = $tv->transcript; 
   $self->initialise_unshifted_values;
   

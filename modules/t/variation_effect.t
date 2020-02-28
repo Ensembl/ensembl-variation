@@ -1510,6 +1510,35 @@ is($stop_retained_cosmic, 0, 'stop_retained returns 0 with COSMIC');
 my $coding_unknown_cosmic = Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown($tva->[0], 0, $bvfo, $bvf);
 is($coding_unknown_cosmic, 0, 'coding_unknown returns 0 with COSMIC');
 
+my $vf_cosmic = Bio::EnsEMBL::Variation::VariationFeature->new(
+    -start          => 20462640,
+    -end            => 20462640,
+    -strand         => 1,
+    -slice          => $transcript->slice,
+    -allele_string  => '-/COSMIC_MUTATION',
+    -variation_name => 'test_cosmic_shift',
+);
+
+$vf_cosmic->{class_display_term} = 'insertion';
+
+my $tv_cosmic = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+    -variation_feature  => $vf_cosmic,
+    -transcript         => $transcript,
+);
+
+## Check that COSMIC_MUTATIONS are not shifted
+my $tva_cosmic = $tv_cosmic->get_all_alternate_BaseVariationFeatureOverlapAlleles();
+my $bvfo_cosmic = $tva_cosmic->[0]->base_variation_feature_overlap;
+my $bvf_cosmic = $bvfo_cosmic->base_variation_feature;
+$bvf_cosmic->{tva_shift_hashes} = [];
+$tva_cosmic->[0]->_return_3prime;
+is($tva_cosmic->[0]->{shift_hash}, undef, 'COSMIC_MUTATIONs has no shift hash');
+
+$bvf_cosmic->{allele_string} = '-/G';
+$tva_cosmic->[0]->{allele_string} = '-/G';
+$tva_cosmic->[0]->_return_3prime;
+is(defined($tva_cosmic->[0]->{shift_hash}), 1, 'non-COSMIC_MUTATIONs has shift hash');
+
 my $test_count = 1;
 
 my $def_strand  = 1;
