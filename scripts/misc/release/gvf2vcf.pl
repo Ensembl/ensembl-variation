@@ -65,7 +65,8 @@ GetOptions(
     'protein_coding_details',
     'sift',
     'polyphen',
-
+    'somatic',
+    'set_name=s',
     'individual=s',
 
 ) or pod2usage(1);
