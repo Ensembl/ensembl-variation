@@ -23,7 +23,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob;
 use strict;
 use warnings;
 use FileHandle;
-use Data::Dumper;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
@@ -75,7 +74,6 @@ sub fetch_input {
     # to dump a set from the variation datbase by providing the set name for example --set_name clinically_associated
     if ($dump_type eq 'sets') {
       foreach my $set_name (keys %{$config->{sets}}) {
-        next if ($job_type eq 'parse'); # we don't need to pass --set_name to gvf2vcf.pl
         my @arguments = map {'--' . $_} @{$config->{sets}->{$set_name}};
         my $script_arg = join(' ', @arguments);
         $script_arg = "--set_name $set_name $script_arg";
@@ -85,7 +83,6 @@ sub fetch_input {
     } else {
       my @arguments = ();
       foreach my $argument (@{$config->{$dump_type}}) {
-        next if ($argument eq 'somatic' && ($job_type eq 'parse')); # we don't need tp pass --somatic to gvf2vcf.pl 
         push @arguments, "--$argument";
       }
       my $script_arg = join(' ', @arguments);
@@ -201,7 +198,13 @@ sub get_ancestral_allele_file {
       $self->run_cmd("rm -rf $pipeline_dir/ancestral_alleles");
     }
     $self->run_cmd("mkdir $pipeline_dir/ancestral_alleles");
-    $self->run_cmd("tar xzf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    if ($ancestral_allele_archive =~ /\.tar\.gz/) {
+      $self->run_cmd("tar xzf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    } elsif ($ancestral_allele_archive =~ /\.tar\.bz2/) {
+      $self->run_cmd("tar xjf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    } else {
+      die "Could not recognise tar file extension. Supported extensions are tar.gz and tar.bz2";
+    }
     my $ancestral_allele_dir = _get_only_file_in_dir("$pipeline_dir/ancestral_alleles");
     my $ancestral_allele_file = "$species\_ancestor\_$assembly.fa";
     $self->run_cmd("cat $pipeline_dir/ancestral_alleles/$ancestral_allele_dir/*.fa > $pipeline_dir/$ancestral_allele_file");
