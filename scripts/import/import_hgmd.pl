@@ -46,8 +46,8 @@ my $short_set_pheno = 'ph_variants';
 my $evidence_pheno = 'Phenotype_or_Disease';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
-my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-my $dbh = $vdb2->dbc->db_handle;
+my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $dbh = $vdb->dbc->db_handle;
 
 my $select_source_sth = $dbh->prepare(qq{
   SELECT source_id FROM source WHERE name='HGMD-PUBLIC';
@@ -303,7 +303,7 @@ sub get_variation_set_id {
 sub get_attrib_id {
   my ($type, $value) = @_;
 
-  my $aa = $vdb2->get_AttributeAdaptor();
+  my $aa = $vdb->get_AttributeAdaptor();
   my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
 
   if (!$attrib_id){
