@@ -82,12 +82,12 @@ add_set();
 sub add_variation {
 
   my $select_vh_sth = $dbh->prepare(qq{
-    SELECT distinct name FROM $var_table;
+    SELECT distinct name, class_attrib_id FROM $var_table;
   });
 
   my $insert_v_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO variation (name,source_id,evidence_attribs,display)
-    VALUES (?,?,'$pheno_evidence_id',1);
+    INSERT IGNORE INTO variation (name,source_id,class_attrib_id,evidence_attribs,display)
+    VALUES (?,?,?,'$pheno_evidence_id',1);
   });
 
   my $select_v_sth = $dbh->prepare(qq{
@@ -111,8 +111,8 @@ sub add_variation {
 
   $select_vh_sth->execute();
   while (my @res = $select_vh_sth->fetchrow_array) {
-    $insert_v_sth->execute($res[0],$source_id);
-  
+    $insert_v_sth->execute($res[0],$source_id, $res[1]);
+
     $select_v_sth->execute($res[0],$source_id);
     my $new_id = ($select_v_sth->fetchrow_array)[0];
     if (defined($new_id)) {
@@ -143,6 +143,7 @@ sub add_variation_feature {
         seq_region_end,
         seq_region_strand,
         allele_string,
+        class_attrib_id,
         variation_set_id,
         map_weight,
         variation_id,
@@ -157,6 +158,7 @@ sub add_variation_feature {
         vf.seq_region_end,
         1,
         vf.allele_string,
+        vf.class_attrib_id,
         '$pheno_set_id,$hgmd_set_id',
         vf.map_weight,
         v.new_var_id,
