@@ -74,7 +74,6 @@ add_variation();
 add_variation_feature();
 add_annotation(); # phenotype_feature & phenotype_feature_attrib
 update_features();
-add_attrib();
 add_set();
 
 
@@ -283,54 +282,6 @@ sub update_features {
 	$update_pf_sth->execute($source_id);
 }
 
-
-sub add_attrib {
-  my %attrib = ('M' => 'SNV',
-                'D' => 'deletion',
-                'I' => 'insertion',
-                'X' => 'indel',
-                'P' => 'indel',
-                'R' => 'sequence_alteration',
-                'S' => 'sequence_alteration'
-               );
-
-  my %class = ();
-
-  my $select_a_sth = $dbh->prepare(qq{
-    SELECT a.attrib_id FROM attrib a, attrib_type att 
-    WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
-  });
-
-
-  my $select_v_sth = $dbh->prepare(qq{
-    SELECT DISTINCT new_var_id,type FROM $var_table;
-  });
-
-  my $update_v_sth = $dbh->prepare(qq{
-    UPDATE variation SET class_attrib_id = ? WHERE variation_id = ?;
-  });
-
-  my $update_vf_sth = $dbh->prepare(qq{
-    UPDATE variation_feature vf, variation v SET vf.class_attrib_id = v.class_attrib_id 
-    WHERE v.variation_id = vf.variation_id AND v.source_id=?;
-  });
-
-  while (my ($k,$v) = each (%attrib)) {
-    $select_a_sth->execute($v);
-    $class{$k} = ($select_a_sth->fetchrow_array)[0];
-    print "$k: ".$class{$k}."\n";
-  }
-
-  $select_v_sth->execute();
-  while (my @res = $select_v_sth->fetchrow_array) {
-    my $att = $class{$res[1]};
-    if (defined $att) {
-      $update_v_sth->execute($att,$res[0]) or die $!;
-    }
-  }
-
-  $update_vf_sth->execute($source_id) or die $!;
-}
 
 sub get_variation_set_id {
   my $short = shift;

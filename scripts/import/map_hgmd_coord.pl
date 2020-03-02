@@ -113,6 +113,7 @@ $dbVar2->do(qq{CREATE TABLE IF NOT EXISTS `$header\_variation` (
   `source_id` int(10) unsigned not null,
   `name` varchar(255),
   `type` char(1) NOT NULL,
+  `class_attrib_id` int(10) unsigned DEFAULT NULL,
   
   primary key( `variation_id` ),
   unique ( `name` ),
@@ -161,7 +162,7 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_varia
     my $mapping_ref = $dbVar2->selectall_arrayref(qq{show tables like "$file"});
     if (!$mapping_ref->[0][0]) {
       if ($file =~ /variation_feature/) {
-        create_and_load ($dbVar2,"$file","seq_region_id i*","seq_region_start i","seq_region_end i","seq_region_strand i","variation_id i*","allele_string","variation_name","map_weight","flags","source_id i","validation_status","consequence_type");
+        create_and_load ($dbVar2,"$file","seq_region_id i*","seq_region_start i","seq_region_end i","seq_region_strand i","variation_id i*","allele_string","variation_name","map_weight","flags","source_id i","validation_status","consequence_type", "class_attrib_id");
       }
       elsif ($file =~ /variation_annotation/) {
         create_and_load ($dbVar2,"$file","variation_id i*","variation_name","associated_gene");
@@ -184,6 +185,7 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_varia
   }
 }
 updated_vf_coordinate_insertion($insertion_label);
+update_class_attrib_id();
 
 
 
@@ -209,6 +211,55 @@ sub updated_vf_coordinate_insertion {
   }
 }
 
+
+# Add class_attrib_id for the tmp variation, variation_feature tables
+sub update_class_attrib_id {
+  my %attrib = ('M' => 'SNV',
+                'D' => 'deletion',
+                'I' => 'insertion',
+                'X' => 'indel',
+                'P' => 'indel',
+                'R' => 'sequence_alteration',
+                'S' => 'sequence_alteration'
+               );
+
+  my %class = ();
+
+  my $select_a_sth = $dbVar2->prepare(qq{
+    SELECT a.attrib_id FROM attrib a, attrib_type att
+    WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
+  });
+
+  my $select_v_sth = $dbVar2->prepare(qq{
+    SELECT DISTINCT variation_id,type FROM $header\_variation;
+  });
+
+  my $update_v_sth = $dbVar2->prepare(qq{
+    UPDATE $header\_variation SET class_attrib_id = ? WHERE variation_id = ?;
+  });
+
+  my $update_vf_sth = $dbVar2->prepare(qq{
+    UPDATE $header\_variation_feature vf, $header\_variation v SET vf.class_attrib_id = v.class_attrib_id
+    WHERE v.variation_id = vf.variation_id AND v.source_id=?;
+  });
+
+  while (my ($k,$v) = each (%attrib)) {
+    $select_a_sth->execute($v);
+    $class{$k} = ($select_a_sth->fetchrow_array)[0];
+    print "$k: ".$class{$k}."\n";
+  }
+
+  $select_v_sth->execute();
+  while (my @res = $select_v_sth->fetchrow_array) {
+    my $att = $class{$res[1]};
+    if (defined $att) {
+      $update_v_sth->execute($att,$res[0]) or die $!;
+    }
+  }
+
+  $update_vf_sth->execute($source_id) or die $!;
+
+}
 
 sub print_buffered {
   my $buffer = shift;
