@@ -231,7 +231,7 @@ sub pipeline_analyses {
           -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 0,
+          -max_retry_count => 1,
           -rc_name => 'default',
           -flow_into      => {
             -1 => ['submit_job_gvf_dumps_mediummem'],
@@ -241,7 +241,7 @@ sub pipeline_analyses {
           -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 0,
+          -max_retry_count => 1,
           -rc_name => 'medium',
           -flow_into      => {
             -1 => ['submit_job_gvf_dumps_highmem'],
