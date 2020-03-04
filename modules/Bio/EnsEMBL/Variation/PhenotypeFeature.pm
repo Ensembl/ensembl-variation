@@ -40,6 +40,25 @@ phenotype.
 
 =head1 SYNOPSIS
 
+  # Phenotype feature representing a phenotype
+  my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+    -slice     => $slice,
+    -start     => 100,
+    -end       => 100,
+    -phenotype => $phenotype,
+    -type      => 'Variation',
+    -object    => $variation,
+    -source    => 'OMIM',
+    -attribs   => {
+      p_value => 0.0000023,
+    },
+  );
+
+  ...
+
+  print $pf->start(), "-", $pf->end(), '(', $pf->strand(), ')', "\n";
+
+  print $pf->phenotype_description(), ":", $pf->object_id;
 
 =head1 DESCRIPTION
 
@@ -262,6 +281,7 @@ sub phenotype_description {
 
 
 =head2 phenotype_class_id
+
   Example    : $id = $pf->phenotype_class_id();
   Description: Convenience method to get the phenotype class id
                associated with this annotation.
@@ -292,6 +312,7 @@ sub phenotype_class_id {
 
 
 =head2 phenotype_class
+
   Example    : $id = $pf->phenotype_class();
   Description: Convenience method to get the phenotype class string
                associated with this annotation.
@@ -731,6 +752,7 @@ sub study_url {
 
 
 =head2 associated_studies
+
   Example    : $name = $obj->associate_studies()
   Description: Getter/Setter for the associated_studies attribute 
               (e.g. EGA studies can be associated to NHGRI studies). 
@@ -1257,6 +1279,7 @@ sub date_last_evaluated{
 }
 
 =head2 display_id
+
   Arg [1]    : none
   Example    : print $pf->display_id();
   Description: This method returns a string that is considered to be

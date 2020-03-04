@@ -38,6 +38,7 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
 
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
@@ -1004,7 +1005,6 @@ sub count_all_by_Phenotype {
   Returntype : integer
   Exceptions : none
   Caller     : general
-
 =cut
 sub count_all_by_Gene {
   my $self = shift;
@@ -1028,7 +1028,6 @@ sub count_all_by_Gene {
   Returntype : integer
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_by_phenotype_id {
   my $self = shift;
@@ -1052,7 +1051,6 @@ sub count_all_by_phenotype_id {
   Returntype : hashref of array of types => phenotype_feature count
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_type_by_phenotype_id {
   my $self = shift;
@@ -1089,7 +1087,6 @@ sub count_all_type_by_phenotype_id {
   Returntype : hashref source name => phenotype_feature counts
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_with_source_by_Phenotype {
   my $self     = shift;
