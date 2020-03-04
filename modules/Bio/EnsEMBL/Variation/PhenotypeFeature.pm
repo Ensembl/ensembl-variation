@@ -261,9 +261,9 @@ sub phenotype_description {
 }
 
 
-=head2 phenotype_class
-  Example    : $id = $pf->phenotype_class();
-  Description: Convenience method to get the phenotype class
+=head2 phenotype_class_id
+  Example    : $id = $pf->phenotype_class_id();
+  Description: Convenience method to get the phenotype class id
                associated with this annotation.
   Returntype : integer
   Exceptions : none
@@ -271,7 +271,7 @@ sub phenotype_description {
   Status     : Stable
 =cut
 
-sub phenotype_class {
+sub phenotype_class_id {
   my $self = shift;
 
   return $self->{_phenotype_class_attrib_id} if $self->{_phenotype_class_attrib_id};
@@ -290,6 +290,35 @@ sub phenotype_class {
   }
 }
 
+
+=head2 phenotype_class
+  Example    : $id = $pf->phenotype_class();
+  Description: Convenience method to get the phenotype class string
+               associated with this annotation.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+=cut
+
+sub phenotype_class {
+  my $self = shift;
+
+  return $self->{_phenotype_class_attrib} if $self->{_phenotype_class_attrib};
+
+  if(!defined($self->{phenotype}) && defined($self->{_phenotype_id})) {
+    my $pa = $self->adaptor->db->get_PhenotypeAdaptor();
+
+    $self->{phenotype} = $pa->fetch_by_dbID($self->{_phenotype_id});
+  }
+
+  if (defined($self->{phenotype})) {
+    if ($self->{phenotype}->class_attrib) {
+      $self->{_phenotype_class_attrib} = $self->{phenotype}->class_attrib;
+      return $self->{phenotype}->class_attrib;
+    }
+  }
+}
 
 =head2 phenotype_id
 
