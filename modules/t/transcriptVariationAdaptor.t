@@ -33,6 +33,7 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $vdb = $multi->get_DBAdaptor('variation');
 my $db  = $multi->get_DBAdaptor('core');
+my $ofdb  = $multi->get_DBAdaptor('otherfeatures');
 
 $vdb->dnadb($db);
 
@@ -42,6 +43,7 @@ my $trv_ad = $vdb->get_TranscriptVariationAdaptor();
 my $tr_ad  = $db->get_TranscriptAdaptor;
 my $s_ad   = $db->get_SliceAdaptor();
 my $g_ad = $db->get_GeneAdaptor();
+my $tr_ad_of = $ofdb->get_TranscriptAdaptor();
 
 ok($trv_ad && $trv_ad->isa('Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor'));
 
@@ -349,5 +351,43 @@ for my $allele (@{$trvar_msc->get_all_alternate_BaseVariationFeatureOverlapAllel
 my $msc_2_expected = 'test_consequence_a';
 my $msc_2 = $trvar_msc->most_severe_OverlapConsequence();
 is($msc_2->SO_term, $msc_2_expected, 'tv - most_severe_OverlapConsequence - same rank');
+
+
+## RefSeq Mismatch Testing
+
+my $tr = $tr_ad_of->fetch_by_stable_id('NM_001270408.1');
+my $sl_refseq = $s_ad->fetch_by_region('chromosome', 21);
+$vf_ad->db->shift_hgvs_variants_3prime(0);
+
+my $vf_refseq = Bio::EnsEMBL::Variation::VariationFeature->new
+  (-seq_region_name => 21,
+   -start => 25700000,
+   -end   => 25700000,
+   -slice => $sl_refseq,
+   -strand => 1,
+   -variation_name => 'refseq_test',
+   -allele_string => 'G/A',
+   -adaptor     => $vf_ad
+);
+
+my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+    -transcript     => $tr,
+    -variation_feature  => $vf_refseq,
+    -adaptor      => $trv_ad,
+    -no_shift     => 1,
+);
+
+## Setting CDS coordinates allows us to set up niche case where mismatches are calculated
+my @tvas = @{ $tv->get_all_alternate_TranscriptVariationAlleles };
+$tvas[0]->{pre_consequence_predicates}->{exon} = 1;
+
+$tv->cds_start(1234);
+$tv->cds_end(1233);
+$tv->cdna_start(1000);
+$tv->transcript->{cdna_coding_start} = 234;
+
+## Coordinate within HGVS is shifted 4bp due to insertion of 4bp in transcript attribute
+ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1238N>A', 'Refseq HGVS mismatch calculated');
+
 
 done_testing();
