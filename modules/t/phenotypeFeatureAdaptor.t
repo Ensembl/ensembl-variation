@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ use warnings;
 
 use Test::Exception;
 use Test::More;
+use Test::Warnings qw(warning :no_end_test);
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
@@ -167,6 +168,11 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
     (grep {$_->object_id eq 'esv2751608'} @$pfs) &&
     (grep {$_->phenotype_class == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait,non_specified ");
+
+  # test phenotype class that does not exist
+  like(
+    warning { $pfa->use_phenotype_classes('traits,tumour') }, qr/phenotype class attrib .+ does not exist!/, 'use_phenotype_classes - not found phenotype class type'
+  );
 
   #reset to default
   $pfa->use_phenotype_classes("trait,non_specified,tumour");
