@@ -53,7 +53,7 @@ use Date::Manip::Date;
 use XML::LibXML::Reader;
 use XML::Hash::XS qw();
 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
@@ -85,7 +85,6 @@ my $dbh = $dba->dbc;
 
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
-my $allele_adaptor        = $reg->get_adaptor('homo_sapiens', 'variation', 'allele');
 my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
@@ -1061,11 +1060,14 @@ sub enter_var{
       $allele_str = $ref_allele ."/". $alt_allele;
   }
 
+  my $so_term = SO_variation_class($allele_str);
+
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
       -is_somatic        => $somatic,
       -adaptor           => $variation_adaptor,
+      -class_SO_term     => $so_term,
     );
   $variation_adaptor->store($var);
 
@@ -1081,6 +1083,7 @@ sub enter_var{
      -source          => $source,
      -is_somatic      => 0,
      -adaptor         => $var_feat_adaptor,
+     -class_so_term    => $so_term,
     );
 
   $var_feat_adaptor->store($vf);
