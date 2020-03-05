@@ -51,6 +51,14 @@ sub run {
   my $ncbi_dir        = $self->required_param('ncbi_dir');
   my $blastdb         = $self->required_param('blastdb');
 
+  if (! -e $blastdb) {
+    die("Blastdb ($blastdb) does not exist");
+  }
+
+  if (! -d $ncbi_dir) {
+    die("Ncbi_dir ($ncbi_dir) does not exist");
+  }
+
   my $dir = substr($translation_md5, 0, 2);
   my $output_dir = "$working_dir/$dir/$translation_md5";
   
