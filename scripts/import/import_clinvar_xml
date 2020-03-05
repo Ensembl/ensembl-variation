@@ -117,14 +117,14 @@ my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
 my $non_specified_class = 663;
-my %non_specified_pheno = {"None"=>1,
+my %non_specified_pheno = ("None"=>1,
                      "Not provided"=> 1,
                      "not specified" => 1,
                      "Not in OMIM" => 1,
                      "Variant of unknown significance" => 1,
                      "not_provided" => 1,
                      "ClinVar: phenotype not specified" => 1,
-                     "?" => 1, "." => 1};
+                     "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
@@ -1084,17 +1084,6 @@ sub enter_var{
     );
 
   $var_feat_adaptor->store($vf);
-
-  # save the update ref, alt allele
-  foreach my $allele ( $ref_allele, $alt_allele){
-    $allele =~s/\s+//;
-    my $al = Bio::EnsEMBL::Variation::Allele->new
-      ( -variation_id   => $var->dbID(),
-        -allele         => $allele,
-        -adaptor        => $allele_adaptor,
-      );
-    $allele_adaptor->store($al);
-  }
 
   my @vf; #return vf to attach phenotype feature to
   push @vf, $vf;
