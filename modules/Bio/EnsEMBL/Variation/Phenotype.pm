@@ -241,6 +241,7 @@ sub ontology_accessions {
 }
 
 =head2 add_ontology_accession
+
   Arg [1]    : A hash of mapping information
   Example    : $obj->add_ontology_accession({ accession      => 'Orphanet:3197', 
                                               mapping_source => 'Manual', 
