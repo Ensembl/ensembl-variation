@@ -43,8 +43,8 @@ Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
 
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
-  $pfa = $reg->get_adaptor("human","variation","phenotypefeature");
-  $va = $reg->get_adaptor("human","variation","variation");
+  $pfa = $reg->get_adaptor('human','variation','phenotypefeature');
+  $va = $reg->get_adaptor('human','variation','variation');
   
   # Get a PhenotypeFeature by its internal identifier
   $pf = $pfa->fetch_by_dbID(45);
@@ -1740,15 +1740,14 @@ sub use_phenotype_classes {
   } elsif (defined $include){
     $new_classes = $include;
   }
-  my @classes = split(",", $new_classes);
+  my @classes = split(",", $new_classes) if $new_classes;
 
   #set the phenotype class attrib id
-  my ($incl_class,$found_classes) = ("", "");
   my %final_classes=();
   for my $cl (@classes){
 
     my $class_attrib_id;
-    if ( defined($self->{class_attribs}{$cl})) {
+    if ( defined($self->{class_attribs}{$cl}) ) {
       $class_attrib_id = $self->{class_attribs}{$cl};
     } else {
       $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
@@ -1758,7 +1757,7 @@ sub use_phenotype_classes {
         warning("WARNING: phenotype class attrib '$cl' does not exist!\n");
       }
     }
-    if ($self->{class_attribs}{$cl}) {
+    if ( $self->{class_attribs}{$cl} ) {
       $final_classes{$cl} = $self->{class_attribs}{$cl};
     }
 

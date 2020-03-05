@@ -144,14 +144,14 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
 
 # fetch_all_by_Slice phenotype class
 {
-  $pfa->use_phenotype_classes("trait,non_specified,tumour");
+  $pfa->use_phenotype_classes('trait,non_specified,tumour');
   $sl_oa  = $sla->fetch_by_region('chromosome', 18, 721588, 86442450);
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
     (grep {$_->object_id eq 'rs2299298'} @$pfs) &&
     (grep {$_->phenotype_class_id == 663 } @$pfs), "fetch_all_by_Slice_accession_type - phenotype class all ");
   $pfa->clear_cache();
-  $pfa->use_phenotype_classes("trait");
+  $pfa->use_phenotype_classes('trait');
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&
     (grep {$_->object_id eq 'ENSG00000176105'} @$pfs) &&
