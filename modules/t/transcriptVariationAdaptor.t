@@ -370,7 +370,7 @@ my $vf_refseq = Bio::EnsEMBL::Variation::VariationFeature->new
    -adaptor     => $vf_ad
 );
 
-my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+$tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
     -transcript     => $tr,
     -variation_feature  => $vf_refseq,
     -adaptor      => $trv_ad,
@@ -386,8 +386,12 @@ $tv->cds_end(1233);
 $tv->cdna_start(1000);
 $tv->transcript->{cdna_coding_start} = 234;
 
-## Coordinate within HGVS is shifted 4bp due to insertion of 4bp in transcript attribute
-ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1238N>A', 'Refseq HGVS mismatch calculated');
+## Coordinate within HGVS matches cds_start as these values take mismatch into account 
+ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234N>A', 'Refseq HGVS mismatch calculated');
 
+## Misalignment offset calculated from transcript edits recognises insertion of 4BP
+my @attribs = @{$tr->get_all_Attributes()};
+my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
+ok($tvas[0]->get_misalignment_offset(\@edit_attrs) == 4, 'Misalignment offset');
 
 done_testing();
