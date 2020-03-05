@@ -15,15 +15,9 @@
 
 use strict;
 use warnings;
-use Test::Exception;
 use Test::More;
-use FindBin qw($Bin);
-
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::Population;
-use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
-use FileHandle;
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $cdba = $multi->get_DBAdaptor('core');
 my $vdba = $multi->get_DBAdaptor('variation');
