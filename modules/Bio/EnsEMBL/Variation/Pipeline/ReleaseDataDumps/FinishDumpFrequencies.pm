@@ -59,7 +59,8 @@ sub join_gvf_files {
   if (! -e $gvf_file) {
     die("File ($gvf_file) doesn't exist.");
   }
-
+  # Create a header file without the ##sequence-region line
+  # ##sequence-region lines will be added for all chromosomes
   $self->run_system_command("zgrep ^# $gvf_file > $gvf_dir/gvf_header");
   $self->run_system_command("awk '!/##sequence-region/' $gvf_dir/gvf_header > $gvf_dir/temp");
   $self->run_system_command("mv $gvf_dir/temp $gvf_dir/gvf_header");
@@ -76,7 +77,7 @@ sub join_gvf_files {
   my $output_file_name = $self->param_required('output_file_name'); 
 
   my $fh_out = FileHandle->new("$gvf_dir/$output_file_name.gvf", 'w');
-
+  # Start GVF file with header
   my $fh_header = FileHandle->new("$gvf_dir/gvf_header", 'r');
   while (<$fh_header>) {
     chomp;
@@ -94,9 +95,9 @@ sub join_gvf_files {
       next if (/^#/);
       my $line = $_;
       my $gvf_line = get_gvf_line($line);
-      delete $gvf_line->{attributes}->{variation_id};
-      delete $gvf_line->{attributes}->{allele_string};
       $gvf_line->{attributes}->{ID} = $id;
+      # GVF files contain a file-wide unique identifier
+      # We need to reassign a unique ID value because we are combining several GVF files into one
       $id++;
 
       $line = join("\t", map {$gvf_line->{$_}} (
