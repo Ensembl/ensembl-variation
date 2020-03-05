@@ -124,10 +124,13 @@ sub add_frequencies_to_gvf_file {
   my $gvf_out = FileHandle->new("$dir/$output_file_name-$chr.gvf", 'w');
 
   my $step_size = $self->param_required('step_size');
+  # start and end are used to get data from all_vars tabix file
   my $start = 0;
   my $end = $step_size;
   my $overlap = $self->param_required('overlap');
-
+  # populate a hash $frequencies which is populated from the all_vars tabix file
+  # and maps variant to frequencies: {rs372722017 => AMR=0.0588;SAS=0.0038;EUR=0.0167}; 
+  # frequencies are only reported for alt alleles
   my $frequencies = $self->get_frequencies($chr, $start, $end);
 
   while (<$gvf_in>) {
@@ -139,6 +142,9 @@ sub add_frequencies_to_gvf_file {
     if ($variant_end >= $end) {
       $start = $variant_start;
       $end   = $variant_end + $step_size;
+      # GVF file is sorted
+      # If variant_end becomes bigger than end which we used for getting data from
+      # all_vars file we need to update the $frequencies hash with new data
       $frequencies = $self->get_frequencies($chr, $start - $overlap, $end + $overlap);
     }
     my $info = $values[8];
@@ -228,9 +234,12 @@ sub get_frequencies {
   my $frequencies = {};
   while ($parser->next) {
     my @record = @{$parser->read_record};
+    # create a hash which maps column name to column values for the specific row
     my %data = map {$variation_col_header[$_] => $record[$_]} (0..$#variation_col_header);
 
     my $id = $data{variation_name};
+    # we report frequencies for alt alleles only
+    # allele strings are the same for a given variant in database and all_vars file
     my @allele_string = split('/', $data{allele_string});
     my $ref = shift @allele_string;
 
@@ -239,11 +248,13 @@ sub get_frequencies {
     foreach my $af_key (@af_keys) {
       next if ($data{$af_key} eq '.');
       foreach my $a_to_f (split(',', $data{$af_key})) {
+        # frequencies in all_vars are reported per allele: T:0.0038
         my ($a, $f) = split(':', $a_to_f);
         $allele_to_frequency->{$a} = $f;
       }
       my @results = ();
       foreach my $allele (@allele_string) {
+      # report frequencies in order of alt alleles
       if (defined $allele_to_frequency->{$allele}) {
           push @results, $allele_to_frequency->{$allele};
         } else {
@@ -253,6 +264,7 @@ sub get_frequencies {
       push @allele_frequencies, "$af_key=" . join(',', @results);
     }
     if (scalar @allele_frequencies > 0) {
+      # for example: AMR=0.0588;SAS=0.0038;EUR=0.0167
       $frequencies->{$id} = join(";", @allele_frequencies);
     }
   }
