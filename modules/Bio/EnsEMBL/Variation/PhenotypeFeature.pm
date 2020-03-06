@@ -257,7 +257,7 @@ sub phenotype {
   Example    : $desc = $pf->phenotype_description();
   Description: Convenience method to get the phenotype description
                associated with this annotation.
-  Returntype : string
+  Returntype : string or undef
   Exceptions : none
   Caller     : general
   Status     : experimental
@@ -285,7 +285,7 @@ sub phenotype_description {
   Example    : $id = $pf->phenotype_class_id();
   Description: Convenience method to get the phenotype class id
                associated with this annotation.
-  Returntype : integer
+  Returntype : integer or undef
   Exceptions : none
   Caller     : general
   Status     : Stable
