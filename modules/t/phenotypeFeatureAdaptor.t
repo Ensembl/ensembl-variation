@@ -18,6 +18,7 @@ use warnings;
 
 use Test::Exception;
 use Test::More;
+use Test::Warnings qw(warning :no_end_test);
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
@@ -141,6 +142,43 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
   throws_ok { $pfa->fetch_all_by_Slice_accession_type($sl_oa, 'Variant'); } qr/is not a valid mapping type, valid types are/, ' > Throw on wrong mapping type';
 }
 
+# fetch_all_by_Slice phenotype class
+{
+  $pfa->use_phenotype_classes('trait,non_specified,tumour');
+  $sl_oa  = $sla->fetch_by_region('chromosome', 18, 721588, 86442450);
+  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
+    (grep {$_->object_id eq 'rs2299298'} @$pfs) &&
+    (grep {$_->phenotype_class_id == 663 } @$pfs), "fetch_all_by_Slice_accession_type - phenotype class all ");
+  $pfa->clear_cache();
+  $pfa->use_phenotype_classes('trait');
+  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&
+    (grep {$_->object_id eq 'ENSG00000176105'} @$pfs) &&
+    (grep {$_->phenotype_class_id == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait");
+
+  $pfa->clear_cache();
+  $pfa->use_phenotype_classes("non_specified");
+  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299298' && $pfs->[0]->phenotype_class_id eq 663, "fetch_all_by_Slice_accession_type - phenotype class - non_specified");
+
+  $pfa->clear_cache();
+  $pfa->use_phenotype_classes("trait,non_specified");
+  $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
+    (grep {$_->object_id eq 'esv2751608'} @$pfs) &&
+    (grep {$_->phenotype_class_id == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait,non_specified ");
+
+  # test phenotype class that does not exist
+  like(
+    warning { $pfa->use_phenotype_classes('traits,tumour') }, qr/phenotype class attrib .+ does not exist!/, 'use_phenotype_classes - not found phenotype class type'
+  );
+
+  #reset to default
+  $pfa->use_phenotype_classes("trait,non_specified,tumour");
+}
+
 # fetch_all_by_phenotype_ontology_accession
 $pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs), "fetch_all_by_phenotype_accession");
@@ -214,7 +252,7 @@ ok($count && $count->{'Variation'} == 1 && $count->{'StructuralVariation'} == 2 
 
 # fetch_all
 $pfs = $pfa->fetch_all();
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 6 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 7 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
 
 # store
 my $pf = $pfs->[0];

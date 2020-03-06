@@ -78,16 +78,20 @@ our @ISA = ('Bio::EnsEMBL::Storable');
 =cut
 
 sub new {
-    my $caller = shift;
-    my $class  = ref($caller) || $caller;
-    my $self = $class->SUPER::new(@_);
-    my ($dbID, $description, $name) = rearrange([qw(dbID DESCRIPTION NAME)], @_);
-    $self = {
-        'dbID'        => $dbID,
-        'description' => $description,
-        'name'        => $name,
-    };
-    return bless $self, $class;
+  my $caller = shift;
+  my $class  = ref($caller) || $caller;
+  my $self = $class->SUPER::new(@_);
+  my ($dbID, $description, $name, $class_attrib_id) = rearrange([qw(dbID DESCRIPTION NAME CLASS_ATTRIB_ID)], @_);
+
+  $class_attrib_id ||= 665; #trait attrib_id
+
+  $self = {
+      'dbID'        => $dbID,
+      'description' => $description,
+      'name'        => $name,
+      'class_attrib_id'=> $class_attrib_id,
+  };
+  return bless $self, $class;
 }
 
 sub new_fast {
@@ -108,9 +112,9 @@ sub new_fast {
 =cut
 
 sub dbID {
-    my $self = shift;
-    return $self->{'dbID'} = shift if(@_);
-    return $self->{'dbID'};
+  my $self = shift;
+  return $self->{'dbID'} = shift if(@_);
+  return $self->{'dbID'};
 }
 
 =head2 name
@@ -125,9 +129,9 @@ sub dbID {
 =cut
 
 sub name {
-    my $self = shift;
-    return $self->{'name'} = shift if(@_);
-    return $self->{'name'};
+  my $self = shift;
+  return $self->{'name'} = shift if(@_);
+  return $self->{'name'};
 }
 
 
@@ -143,10 +147,47 @@ sub name {
 =cut
 
 sub description {
-    my $self = shift;
-    return $self->{'description'} = shift if(@_);
-    return $self->{'description'};
+  my $self = shift;
+  return $self->{'description'} = shift if(@_);
+  return $self->{'description'};
 }
+
+
+=head2 class_attrib
+
+  Example    : $name = $obj->class_attrib('trait')
+  Description: Getter/Setter for the class attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub class_attrib {
+  my $self = shift;
+  return $self->{'class_attrib'} = shift if(@_);
+  return $self->{'class_attrib'};
+}
+
+
+=head2 class_attrib_id
+
+  Example    : $class_attrib_id = $obj->class_attrib_id(665)
+  Description: Getter for the class attribute id
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub class_attrib_id {
+  my $self = shift;
+  return $self->{'class_attrib_id'} = shift if(@_);
+  return $self->{'class_attrib_id'};
+}
+
 
 =head2 ontology_accessions_with_source
 
@@ -200,6 +241,7 @@ sub ontology_accessions {
 }
 
 =head2 add_ontology_accession
+
   Arg [1]    : A hash of mapping information
   Example    : $obj->add_ontology_accession({ accession      => 'Orphanet:3197', 
                                               mapping_source => 'Manual', 

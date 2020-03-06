@@ -38,10 +38,11 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
-  
+
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
+
   $pa = $reg->get_adaptor("human","variation","phenotype");
 
   # Get a list of all phenotypes.
@@ -68,6 +69,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 =head2 fetch_by_description
+
   Arg [1]    : string $description
   Example    : $phenotype = $pheno_adaptor->fetch_all_by_description('diabetes');
   Description: Retrieves a list of Phenotype objects for a phenotype description
@@ -86,6 +88,7 @@ sub fetch_by_description {
 }
 
 =head2 fetch_by_description_accession_type
+
   Arg [1]    : string $description
   Arg [2]    : string $mapping_type - default 'is', option 'involves'
   Example    : $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes');
@@ -114,6 +117,7 @@ sub fetch_by_description_accession_type {
 }
 
 =head2 fetch_all_by_ontology_accession
+
   Arg [1]    : string ontology accession
   Arg [2]    : string mapping type (is/involves)  optional
   Example    : $phenotype = $pheno_adaptor->fetch_all_by_ontology_accession('EFO:0000712', 'is');
@@ -137,6 +141,7 @@ sub fetch_all_by_ontology_accession {
 }
 
 =head2 fetch_by_OntologyTerm
+
   Arg [1]    : Bio::EnsEMBL::OntologyTerm
   Arg [2]    : string mapping type (is/involves)  optional
   Example    : $phenotype = $pheno_adaptor->fetch_by_OntologyTerm( $ontologyterm, 'involves');
@@ -163,7 +168,7 @@ sub fetch_by_OntologyTerm {
 
 sub _left_join {
   my $self = shift;
-  
+
   my @lj = ();
   
   push @lj, (
@@ -179,12 +184,12 @@ sub _tables {
 }
 
 sub _columns {
-    return qw(p.phenotype_id p.name p.description poa.accession poa.mapped_by_attrib poa.mapping_type);
+    return qw(p.phenotype_id p.name p.description p.class_attrib_id poa.accession poa.mapped_by_attrib poa.mapping_type);
 }
 
 sub _objs_from_sth {
     my ($self, $sth) = @_;
-    
+
     my %row;
 
     $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));
@@ -214,6 +219,7 @@ sub _obj_from_row {
               dbID           => $row->{phenotype_id},
               name           => $row->{name},
               description    => $row->{description},
+              class_attrib_id => $row->{class_attrib_id},
               adaptor        => $self,
             }); 
 
@@ -238,13 +244,15 @@ sub store{
     my $sth = $dbh->prepare(qq{
         INSERT INTO phenotype (
              name,
-             description
-        ) VALUES (?,?)
+             description,
+             class_attrib_id
+        ) VALUES (?,?,?)
     });
 
     $sth->execute(        
         $pheno->{name},
-        $pheno->{description}        
+        $pheno->{description},
+        $pheno->{class_attrib_id}
     );
 
     $sth->finish;
