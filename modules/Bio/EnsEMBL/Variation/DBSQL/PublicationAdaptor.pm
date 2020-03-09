@@ -226,58 +226,60 @@ sub fetch_all_by_Variation {
 
 }
 
-=head2 fetch_sources_by_pmid
+=head2 get_variants_to_sources_by_pmid
 
   Arg [1]    : String $pmid
-  Example    : $publication_adaptor->fetch_sources_by_pmid( 1234 );
-  Description: Retrieves a hashref of variants linked to publication sources via a pmid
-  Returntype : hashref
+  Example    : $publication_adaptor->get_variants_to_sources_by_pmid( 1234 );
+  Description: Retrieves a hashref of variants linked to publication sources for a given pmid
+  Returntype : hashref - variant_id => publication sources
+               example: hashref { variant_1 => 'dbSNP,EPMC', variant_2 => 'dbSNP' }
   Exceptions : throw if pmid argument is not defined
   Caller     : general
   Status     : At Risk
 
 =cut
 
-sub fetch_sources_by_pmid {
+sub get_variants_to_sources_by_pmid {
   my $self = shift;
   my $pmid = shift;
 
   throw("pmid must be defined") if(!defined($pmid));
 
-  my $pub = $self->fetch_by_pmid($pmid);
-  my $sources = $self->fetch_sources($pub->{dbID});
+  my $publication = $self->fetch_by_pmid($pmid);
+  my $sources = $self->get_variants_to_sources($publication->{dbID});
 
   return $sources
 }
 
-=head2 fetch_sources_by_pmcid
+=head2 get_variants_to_sources_by_pmcid
 
   Arg [1]    : String $pmcid
-  Example    : $publication_adaptor->fetch_sources_by_pmcid( 'PMC1234' );
-  Description: Retrieves a hashref of variants linked to publication sources via a pmcid
-  Returntype : hashref
+  Example    : $publication_adaptor->get_variants_to_sources_by_pmcid( 'PMC1234' );
+  Description: Retrieves a hashref of variants linked to publication sources for a given pmcid
+  Returntype : hashref - variant_id => publication sources
+               example: hashref { variant_1 => 'dbSNP,EPMC', variant_2 => 'dbSNP' }
   Exceptions : throw if pmcid argument is not defined
   Caller     : general
   Status     : At Risk
 
 =cut
 
-sub fetch_sources_by_pmcid {
+sub get_variants_to_sources_by_pmcid {
   my $self = shift;
   my $pmcid = shift;
 
   throw("pmcid must be defined") if(!defined($pmcid));
 
-  my $pub = $self->fetch_by_pmcid($pmcid);
-  my $sources = $self->fetch_sources($pub->{dbID});
+  my $publication = $self->fetch_by_pmcid($pmcid);
+  my $sources = $self->get_variants_to_sources($publication->{dbID});
 
   return $sources;
 }
 
-=head2 fetch_sources
+=head2 get_variants_to_sources
 
   Arg [1]    : String $publication_id
-  Example    : $publication_adaptor->fetch_sources( $publication_id );
+  Example    : $publication_adaptor->get_variants_to_sources( $publication_id );
   Description: Retrieves a hashref of variants linked to publication sources via a publication_id
   Returntype : hashref
   Exceptions : throw if variation is not defined
@@ -287,12 +289,12 @@ sub fetch_sources_by_pmcid {
 
 =cut
 
-sub fetch_sources {
+sub get_variants_to_sources {
   my $self   = shift;
-  my $pub_id = shift;
+  my $publication_id = shift;
 
   my $sth = $self->prepare(qq{SELECT variation_id,data_source_attrib FROM variation_citation WHERE publication_id = ? });
-  $sth->execute($pub_id);
+  $sth->execute($publication_id);
   my $data = $sth->fetchall_arrayref();
 
   my %result;
@@ -337,10 +339,10 @@ sub fetch_sources {
   return \%result;
 }
 
-=head2 fetch_sources_by_variation
+=head2 get_publications_to_sources_by_variation
 
   Arg [1]    : Integer $variation_id
-  Example    : $publication_adaptor->fetch_sources_by_variation( $variation_id );
+  Example    : $publication_adaptor->get_publications_to_sources_by_variation( $variation_id );
   Description: Retrieves a hashref of publication ids linked to their sources via a variation_id
   Returntype : hashref
   Exceptions : throw if attribute is not defined
@@ -349,7 +351,7 @@ sub fetch_sources {
 
 =cut
 
-sub fetch_sources_by_variation {
+sub get_publications_to_sources_by_variation {
   my $self   = shift;
   my $var_id = shift;
 
@@ -359,13 +361,13 @@ sub fetch_sources_by_variation {
   $sth->execute($var_id);
   my $data = $sth->fetchall_arrayref();
 
-  foreach my $pub_source (@{$data}) {
-    my $pub_id = $pub_source->[0];
-    my $source_ids = $pub_source->[1];
+  foreach my $publication_source (@{$data}) {
+    my $publication_id = $publication_source->[0];
+    my $source_ids = $publication_source->[1];
 
     # Some citations don't have source, in this case it returns the publication_id and an undef source
     if(!defined($source_ids)) {
-      $result{$pub_id} = undef;
+      $result{$publication_id} = undef;
       next;
     }
 
@@ -385,7 +387,7 @@ sub fetch_sources_by_variation {
         throw("No attribute defined with id = $source_id");
       }
     }
-    $result{$pub_id} = join(', ', @attrib_list);
+    $result{$publication_id} = join(', ', @attrib_list);
   }
 
   return \%result;
