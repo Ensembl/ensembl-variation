@@ -228,6 +228,8 @@ sub init_data {
           my $terms = $ontology->fetch_all_by_name($name, 'SO');
           foreach my $term (@$terms) {
             $definition = $term->definition;
+            # trim definition remove everything between [], remove " and \ characters
+            $definition =~ s/\[.*\]|\\|"//g;
           }
         } 
         $config->{header_sv_class}->{$name} = $definition;
