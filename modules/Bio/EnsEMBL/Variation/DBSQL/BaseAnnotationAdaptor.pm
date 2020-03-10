@@ -262,6 +262,10 @@ sub _ftp_file_exists {
   my $self = shift;
   my $uri = URI->new(shift);
   my $ftp = Net::FTP->new($uri->host);
+  if (! $ftp) {
+    warn "Cannot connect to ". $uri->host . ": $@";
+    return 0;
+  }
   eval {
    $ftp->login('anonymous', 'guest');
   };
