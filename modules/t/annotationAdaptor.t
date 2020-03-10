@@ -32,6 +32,9 @@ my $dir = $multi->curr_dir();
 
 ok($vdb->vcf_config_file($dir.'/vcf_config.json') eq $dir.'/vcf_config.json', "DBAdaptor vcf_config_file");
 my $gerp_annotation_adaptor = $vdb->get_GERPAnnotationAdaptor;
+
+warns_like { $gerp_annotation_adaptor->_ftp_file_exists('ftp://ftp.ensembldoesntexist.org/pub/100_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw'); } qr/Login error/, 'Login error';
+
 my $cadd_annotation_adaptor = $vdb->get_CADDAnnotationAdaptor;
 
 ok($gerp_annotation_adaptor && $gerp_annotation_adaptor->isa('Bio::EnsEMBL::Variation::DBSQL::GERPAnnotationAdaptor'), "isa GERPAnnotationAdaptor");
