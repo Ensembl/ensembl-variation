@@ -261,13 +261,18 @@ sub _get_filename_template {
 sub _ftp_file_exists {
   my $self = shift;
   my $uri = URI->new(shift);
-
-  my $ftp = Net::FTP->new($uri->host) or die "Connection error($uri): $@";
-  $ftp->login('anonymous', 'guest') or die "Login error", $ftp->message;
-  my $exists = defined $ftp->size($uri->path);
-  $ftp->quit;
-
-  return $exists;
+  my $ftp = Net::FTP->new($uri->host);
+  eval {
+   $ftp->login('anonymous', 'guest');
+  };
+  if ($@) {
+    warn "Login error $uri. $@";
+    return 0;
+  } else {
+    my $exists = defined $ftp->size($uri->path);
+    $ftp->quit;
+    return $exists;
+  }
 }
 
 
