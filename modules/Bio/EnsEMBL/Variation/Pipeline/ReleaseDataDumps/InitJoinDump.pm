@@ -60,7 +60,7 @@ sub run {
         next if ($file =~ m/^\./);
         # homo_sapiens_structural_variations-chr10.gvf
         # homo_sapiens_structural_variations-chr10.vcf.gz 
-        if ($file =~ m/\.$file_type\.gz$|\.$file_type/) {
+        if ($file =~ m/\.($file_type\.gz|$file_type)$/) {
           my $file_name = $file;
           $file_name =~ s/\.$file_type\.gz|\.$file_type//;
           # $file_name e.g. homo_sapiens_structural_variations-chr10
