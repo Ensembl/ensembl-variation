@@ -115,9 +115,9 @@ my $exp_sources_1 = {
   'rs7569578'   => 'EPMC' 
 };
 
-my $sources_pmid = $pa->fetch_sources_by_pmid(1234);
+my $sources_pmid = $pa->get_variants_to_sources_by_pmid(1234);
 is_deeply($sources_pmid, $exp_sources_1, 'fetch publication source by pmid');
-my $sources_pmcid = $pa->fetch_sources_by_pmcid('PMC1234');
+my $sources_pmcid = $pa->get_variants_to_sources_by_pmcid('PMC1234');
 is_deeply($sources_pmcid, $exp_sources_1, 'fetch publication source by pmcid');
 
 my $exp_by_var_1 = {
@@ -129,9 +129,9 @@ my $exp_by_var_2 = {
   '20403' => undef
 };
 
-my $sources_by_var_1 = $pa->fetch_sources_by_variation(50478027);
+my $sources_by_var_1 = $pa->get_publications_to_sources_by_variation(50478027);
 is_deeply($sources_by_var_1, $exp_by_var_1, 'fetch publication source by variation');
-my $sources_by_var_2 = $pa->fetch_sources_by_variation(26469702);
+my $sources_by_var_2 = $pa->get_publications_to_sources_by_variation(26469702);
 is_deeply($sources_by_var_2, $exp_by_var_2, 'fetch publication source by variation (undef)');
 
 done_testing();
