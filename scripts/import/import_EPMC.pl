@@ -678,6 +678,8 @@ sub clean_publications{
 
     my $empty_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where (authors = '' or authors is null) and pmid is null and pmcid is null ]);
 
+    my $null_authors_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where authors = '' ]);
+
     $title_sth->execute()||die;
     my $title_brackets = $title_sth->fetchall_arrayref();
     
@@ -702,6 +704,9 @@ sub clean_publications{
 
     $empty_sth->execute()||die;
     my $empty_fields = $empty_sth->fetchall_arrayref();
+
+    $null_authors_sth->execute()||die;
+    my $null_authors = $null_authors_sth->fetchall_arrayref();
 
     # Clean brackets from publication title 
     my $count_titles = 0;
@@ -812,6 +817,18 @@ sub clean_publications{
     if(defined $empty_fields->[0]->[0]){
       print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title, variation_id)";
       remove_publications($dba, $report, $empty_fields);
+    }
+
+    if(defined $null_authors->[0]->[0]){
+      print $report "\nSet empty authors to NULL:";
+      foreach my $null_author (@{$null_authors}){
+        my $pub_id = $null_author->[0];
+        my $title = $null_author->[1];
+        print $report "$pub_id\t$title\n";
+
+        my $clean_empty_sth = $dba->dbc()->prepare(qq[ update publication set authors = NULL where publication_id = $pub_id ]);
+        $clean_empty_sth->execute();
+      }
     }
 
     $publication_count = count_rows($dba, 'publication');
