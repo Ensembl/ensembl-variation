@@ -62,7 +62,7 @@ sub run {
         # homo_sapiens_structural_variations-chr10.vcf.gz 
         if ($file =~ m/\.($file_type\.gz|$file_type)$/) {
           my $file_name = $file;
-          $file_name =~ s/\.$file_type\.gz|\.$file_type//;
+          $file_name =~ s/\.($file_type\.gz|$file_type)$//;
           # $file_name e.g. homo_sapiens_structural_variations-chr10
           my ($dump_type, $range) = split('-', $file_name);
           push @{$files->{$dump_type}}, $range if ($range);
