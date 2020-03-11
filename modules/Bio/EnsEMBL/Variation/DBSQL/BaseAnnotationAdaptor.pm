@@ -262,12 +262,29 @@ sub _ftp_file_exists {
   my $self = shift;
   my $uri = URI->new(shift);
 
-  my $ftp = Net::FTP->new($uri->host) or die "Connection error($uri): $@";
-  $ftp->login('anonymous', 'guest') or die "Login error", $ftp->message;
-  my $exists = defined $ftp->size($uri->path);
-  $ftp->quit;
+  my $ftp = Net::FTP->new($uri->host);
+  # this will catch problems where the ftp server doesn't exist
+  # it also catches 'Connection timed out' errors which are hard to reproduce
+  if (!$ftp) {
+    warn "Cannot connect to $uri: $@";
+    return 0;
+  }
+  # this is wrapped in an eval in case there is a login problem
+  # at the moment there is no test case for this
+  # however we need to be careful bcause any potential errors could cause
+  # problems for the live site when trying to read e.g. GERP scores from FTP
+  eval {
+   $ftp->login('anonymous', 'guest');
+  };
+  if ($@) {
+    warn "Login error $uri: $@";
+    return 0;
+  } else {
+    my $exists = defined $ftp->size($uri->path);
+    $ftp->quit;
+    return $exists;
+  }
 
-  return $exists;
 }
 
 
