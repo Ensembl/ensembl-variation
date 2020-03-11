@@ -17,7 +17,8 @@
 use strict;
 use warnings;
 use Test::More;
-
+use Test::Deep;
+use Test::Exception;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -105,5 +106,23 @@ $var = $va->fetch_by_dbID(4770800);
 $pa->update_variant_citation($pubup, 615, [$var]);
 ok($pubup->variations()->[0]->name() eq 'rs7569578', "citation update");
 
+# publication sources
+throws_ok { $pub_store->set_variation_id_to_source('var', 'EPMC'); } qr/variation_id is not valid/, 'Throw OK if variation id not valid';
+throws_ok { $pub_store->set_variation_id_to_source(4770800, 'Cosmic'); } qr/Source is not valid/, 'Throw OK if publication source not valid';
+$pub_store->set_variation_id_to_source(4770800, 'UCSC');
+$pub_store->set_variation_id_to_source(4770800, 'dbSNP');
+
+throws_ok { $pub_store->get_all_sources_by_Variation(); } qr/Variation argument is required/, 'Throw OK if variation object is not valid';
+my $publication_var_sources = $pub_store->get_all_sources_by_Variation($var);
+ok(scalar @$publication_var_sources == 2, 'get_all_sources_by_Variation - Number of sources');
+
+my $expected_source_1 = { 'dbSNP' => 1 };
+my $expected_source_2 = { 'EPMC' => 1,
+                          'dbSNP' => 1 };
+
+my $variation = $va->fetch_by_dbID(26469702);
+my $publications = $pa->fetch_all_by_Variation($variation);
+is_deeply($publications->[0]->{variation_id_to_source}->{26469702}, $expected_source_1, "fetch_all_by_Variation - publication sources 1");
+is_deeply($publications->[1]->{variation_id_to_source}->{26469702}, $expected_source_2, "fetch_all_by_Variation - publication sources 2");
 
 done_testing();
