@@ -225,8 +225,8 @@ sub fetch_all_by_Variation {
 
       my $publication = $self->fetch_by_dbID($publication_id);
 
-      if(defined($data_source_attrib)) {
-        
+      if($data_source_attrib) {
+
         if($data_source_attrib =~ /,/) {
           my @sources = split /,/, $data_source_attrib;
           foreach my $source_attrib (@sources) {

@@ -124,5 +124,9 @@ my $variation = $va->fetch_by_dbID(26469702);
 my $publications = $pa->fetch_all_by_Variation($variation);
 is_deeply($publications->[0]->{variation_id_to_source}->{26469702}, $expected_source_1, "fetch_all_by_Variation - publication sources 1");
 is_deeply($publications->[1]->{variation_id_to_source}->{26469702}, $expected_source_2, "fetch_all_by_Variation - publication sources 2");
+# Citation without source
+my $variation_no_citation = $va->fetch_by_dbID(39404961);
+my $publications_no_citation = $pa->fetch_all_by_Variation($variation_no_citation);
+ok(!$publications_no_citation->[0]->{variation_id_to_source}, 'fetch_all_by_Variation - source not defined');
 
 done_testing();
