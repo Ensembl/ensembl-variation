@@ -271,7 +271,7 @@ sub _ftp_file_exists {
   }
   # this is wrapped in an eval in case there is a login problem
   # at the moment there is no test case for this
-  # however we need to be careful bcause any potential errors could cause
+  # however we need to be careful because any potential errors could cause
   # problems for the live site when trying to read e.g. GERP scores from FTP
   eval {
    $ftp->login('anonymous', 'guest');
