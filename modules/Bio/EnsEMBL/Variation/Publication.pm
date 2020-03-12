@@ -319,8 +319,7 @@ sub set_variation_id_to_source{
     throw('Source is not valid');
   }
 
-  return $self->{'variation_id_to_source'}->{$variation_id}->{$source} = 1;
-
+  $self->{'variation_id_to_source'}->{$variation_id}->{$source} = 1;
 }
 
 =head2 get_all_sources_by_Variation
