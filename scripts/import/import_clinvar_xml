@@ -123,6 +123,7 @@ my %non_specified_pheno = ("None"=>1,
                      "Variant of unknown significance" => 1,
                      "not_provided" => 1,
                      "ClinVar: phenotype not specified" => 1,
+                     "See cases" => 1,
                      "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
 
