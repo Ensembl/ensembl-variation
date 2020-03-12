@@ -213,6 +213,8 @@ sub fetch_all_by_Variation {
 
     my $variation_id = $var_obj->dbID;
 
+    my $attrib_adaptor = $self->db->get_AttributeAdaptor;
+
     my @pub;
     my $publication_id;
     my $data_source_attrib;
@@ -231,12 +233,9 @@ sub fetch_all_by_Variation {
           my $source = $attrib_id_to_value->{$source_attrib};
 
           if(!defined($source)) {
-            my $sth_attrib = $self->prepare(qq{SELECT value FROM attrib WHERE attrib_id = ? });
-            $sth_attrib->execute($source_attrib);
-            my $attrib_value = $sth_attrib->fetchall_arrayref();
-            if(defined($attrib_value->[0]->[0])) {
-              my $attrib_name = $attrib_value->[0]->[0];
-              $attrib_id_to_value->{$source_attrib} = $attrib_name;
+            my $attrib_value = $attrib_adaptor->attrib_value_for_id($source_attrib);
+            if($attrib_value) {
+              $attrib_id_to_value->{$source_attrib} = $attrib_value;
             }
             else {
               throw("No attribute defined with id = $source_attrib");
