@@ -816,7 +816,9 @@ sub update_variation_feature{
   my $vf_upd_sth = $dbh->prepare(qq[
       UPDATE variation_feature
       SET
-        variation_set_id = CONCAT_WS(",", variation_set_id, ?),
+        variation_set_id = CONCAT_WS(",",
+                                     if(variation_set_id='',NULL,variation_set_id),
+                                      ?),
         evidence_attribs = CONCAT_WS(",", evidence_attribs, '$pheno_evidence_id')
       WHERE variation_feature_id = ? ] );
   my $new_sets = "$pheno_set_id,$clinvar_set_id";
