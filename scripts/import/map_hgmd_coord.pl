@@ -184,7 +184,7 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_varia
   }
 }
 updated_vf_coordinate_insertion($insertion_label);
-update_class_attrib_id();
+add_class_attrib_id();
 
 
 
@@ -212,7 +212,7 @@ sub updated_vf_coordinate_insertion {
 
 
 # Add class_attrib_id for the tmp variation, variation_feature tables
-sub update_class_attrib_id {
+sub add_class_attrib_id {
   my %attrib = ('M' => 'SNV',
                 'D' => 'deletion',
                 'I' => 'insertion',
