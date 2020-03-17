@@ -206,22 +206,50 @@ sub fetch_all_by_dbID_list {
 sub fetch_all_by_Variation {
     my $self    = shift;
     my $var_obj = shift;
-    
+
     if(!defined($var_obj) || ref($var_obj ne 'Variation')) {
-        throw("variation argument is required");
+        throw("Variation argument is required");
     }
-    
+
+    my $variation_id = $var_obj->dbID;
+
+    my $attrib_adaptor = $self->db->get_AttributeAdaptor;
+
     my @pub;
     my $publication_id;
+    my $data_source_attrib;
+    my $attrib_id_to_value = {};
 
-    my $sth = $self->prepare(qq{SELECT  publication_id from variation_citation where variation_id = ?  });
-    $sth->execute($var_obj->dbID);
-    $sth->bind_columns(\$publication_id);
+    my $sth = $self->prepare(qq{SELECT  publication_id, data_source_attrib from variation_citation where variation_id = ?  });
+    $sth->execute($variation_id);
+    $sth->bind_columns(\$publication_id, \$data_source_attrib);
     while ($sth->fetch()){
-        push @pub, $self->fetch_by_dbID($publication_id)
+
+      my $publication = $self->fetch_by_dbID($publication_id);
+
+      if($data_source_attrib) {
+        my @sources = split /,/, $data_source_attrib;
+        foreach my $source_attrib (@sources) {
+          my $source = $attrib_id_to_value->{$source_attrib};
+
+          if(!defined($source)) {
+            my $attrib_value = $attrib_adaptor->attrib_value_for_id($source_attrib);
+            if($attrib_value) {
+              $attrib_id_to_value->{$source_attrib} = $attrib_value;
+            }
+            else {
+              throw("No attribute defined with id = $source_attrib");
+            }
+          }
+          $source = $attrib_id_to_value->{$source_attrib};
+          $publication->set_variation_id_to_source($variation_id, $source);
+        }
+      }
+
+      push @pub, $publication;
     }
     $sth->finish;
-    
+
     return \@pub;
 
 }
