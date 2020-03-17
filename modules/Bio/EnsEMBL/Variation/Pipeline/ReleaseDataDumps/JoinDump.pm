@@ -144,15 +144,7 @@ sub final_join_gvf {
       $id_count++;
     }
     $fh->close();
-    # We only keep intermediate files for human because they take the longest to be generated
-    # We can rerun the pipeline for all other species if something goes wrong. 
-    if ($species eq 'homo_sapiens') {
-      `gzip $dir/$dump_type-$file_id.gvf`;
-      `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
-    } else {
-      `rm $dir/$dump_type-$file_id.gvf`;
-    }
-
+    `rm $dir/$dump_type-$file_id.gvf`;
   }
   $fh_join->close();
 }
