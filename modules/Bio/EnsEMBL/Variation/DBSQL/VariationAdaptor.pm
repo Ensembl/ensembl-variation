@@ -249,13 +249,13 @@ sub update {
         $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
         $var->{flipped},
-        $var->{class_attrib_id} || $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) || 18,
+        $var->{class_attrib_id} || ( $var->{class_SO_term} && $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) ) || 18,
         $var->is_somatic,
         $var->minor_allele,
         $var->minor_allele_frequency,
         $var->minor_allele_count,
-        join(",",@{$var->{clinical_significance}}) || undef,
-        join(",",@{$var->{evidence_attribs}}) || undef,   ### HERE
+        $var->{clinical_significance} ? join(",",@{$var->{clinical_significance}}) : undef,
+        $var->{evidence_attribs} ? join(",", @{$var->{evidence_attribs}}) : undef,
         $var->dbID
     );
     
