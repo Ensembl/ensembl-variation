@@ -71,7 +71,7 @@ my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbVar = $vdb->dbc->db_handle;
 
-my $sa2 = $cdb->get_SliceAdaptor();
+my $sa = $cdb->get_SliceAdaptor();
 my $buffer = {};
 my $source_id;
 my $source_description = 'Variants from HGMD-PUBLIC dataset';
@@ -139,7 +139,7 @@ while (<IN>) {
               'consequence' => 'HGMD_MUTATION'
             );
     
-  my $slice = $sa2->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
+  my $slice = $sa->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
   if (!$slice) {
     print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{start}) . "\n");
     next;
@@ -239,7 +239,7 @@ sub add_class_attrib_id {
 
   my $update_vf_sth = $dbVar->prepare(qq{
     UPDATE $header\_variation_feature vf, $header\_variation v SET vf.class_attrib_id = v.class_attrib_id
-    WHERE v.variation_id = vf.variation_id AND v.source_id=?;
+    WHERE v.variation_id = vf.variation_id;
   });
 
   while (my ($k,$v) = each (%attrib)) {
@@ -256,7 +256,7 @@ sub add_class_attrib_id {
     }
   }
 
-  $update_vf_sth->execute($source_id) or die $!;
+  $update_vf_sth->execute() or die $!;
 
 }
 
