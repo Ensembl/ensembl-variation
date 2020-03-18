@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,8 +46,8 @@ my $short_set_pheno = 'ph_variants';
 my $evidence_pheno = 'Phenotype_or_Disease';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
-my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-my $dbh = $vdb2->dbc->db_handle;
+my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $dbh = $vdb->dbc->db_handle;
 
 my $select_source_sth = $dbh->prepare(qq{
   SELECT source_id FROM source WHERE name='HGMD-PUBLIC';
@@ -74,7 +74,6 @@ add_variation();
 add_variation_feature();
 add_annotation(); # phenotype_feature & phenotype_feature_attrib
 update_features();
-add_attrib();
 add_set();
 
 
@@ -83,12 +82,12 @@ add_set();
 sub add_variation {
 
   my $select_vh_sth = $dbh->prepare(qq{
-    SELECT distinct name FROM $var_table;
+    SELECT distinct name, class_attrib_id FROM $var_table;
   });
 
   my $insert_v_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO variation (name,source_id,evidence_attribs,display)
-    VALUES (?,?,'$pheno_evidence_id',1);
+    INSERT IGNORE INTO variation (name,source_id,class_attrib_id,evidence_attribs,display)
+    VALUES (?,?,?,'$pheno_evidence_id',1);
   });
 
   my $select_v_sth = $dbh->prepare(qq{
@@ -112,8 +111,8 @@ sub add_variation {
 
   $select_vh_sth->execute();
   while (my @res = $select_vh_sth->fetchrow_array) {
-    $insert_v_sth->execute($res[0],$source_id);
-  
+    $insert_v_sth->execute($res[0],$source_id, $res[1]);
+
     $select_v_sth->execute($res[0],$source_id);
     my $new_id = ($select_v_sth->fetchrow_array)[0];
     if (defined($new_id)) {
@@ -144,6 +143,7 @@ sub add_variation_feature {
         seq_region_end,
         seq_region_strand,
         allele_string,
+        class_attrib_id,
         variation_set_id,
         map_weight,
         variation_id,
@@ -158,6 +158,7 @@ sub add_variation_feature {
         vf.seq_region_end,
         1,
         vf.allele_string,
+        vf.class_attrib_id,
         '$pheno_set_id,$hgmd_set_id',
         vf.map_weight,
         v.new_var_id,
@@ -284,54 +285,6 @@ sub update_features {
 }
 
 
-sub add_attrib {
-  my %attrib = ('M' => 'SNV',
-                'D' => 'deletion',
-                'I' => 'insertion',
-                'X' => 'indel',
-                'P' => 'indel',
-                'R' => 'sequence_alteration',
-                'S' => 'sequence_alteration'
-               );
-
-  my %class = ();
-
-  my $select_a_sth = $dbh->prepare(qq{
-    SELECT a.attrib_id FROM attrib a, attrib_type att 
-    WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
-  });
-
-
-  my $select_v_sth = $dbh->prepare(qq{
-    SELECT DISTINCT new_var_id,type FROM $var_table;
-  });
-
-  my $update_v_sth = $dbh->prepare(qq{
-    UPDATE variation SET class_attrib_id = ? WHERE variation_id = ?;
-  });
-
-  my $update_vf_sth = $dbh->prepare(qq{
-    UPDATE variation_feature vf, variation v SET vf.class_attrib_id = v.class_attrib_id 
-    WHERE v.variation_id = vf.variation_id AND v.source_id=?;
-  });
-
-  while (my ($k,$v) = each (%attrib)) {
-    $select_a_sth->execute($v);
-    $class{$k} = ($select_a_sth->fetchrow_array)[0];
-    print "$k: ".$class{$k}."\n";
-  }
-
-  $select_v_sth->execute();
-  while (my @res = $select_v_sth->fetchrow_array) {
-    my $att = $class{$res[1]};
-    if (defined $att) {
-      $update_v_sth->execute($att,$res[0]) or die $!;
-    }
-  }
-
-  $update_vf_sth->execute($source_id) or die $!;
-}
-
 sub get_variation_set_id {
   my $short = shift;
 
@@ -350,7 +303,7 @@ sub get_variation_set_id {
 sub get_attrib_id {
   my ($type, $value) = @_;
 
-  my $aa = $vdb2->get_AttributeAdaptor();
+  my $aa = $vdb->get_AttributeAdaptor();
   my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
 
   if (!$attrib_id){

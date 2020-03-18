@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1193,6 +1193,7 @@ sub get_header_info {
   chomp($line);
   
   my ($label, $info);
+  # Example with more than one space: ##genome-build NCBI GRCh37
   if ($line =~ /^##/) {
     ($label, $info) = split(' ', $line);
   } 
@@ -1221,9 +1222,10 @@ sub get_header_info {
   $h->{assembly}     = $info if ($label =~ /Assembly.+name/i);
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
   $h->{study}        = (split(' ',$info))[0] if ($label =~ /Study.+accession/i);
-  
-  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i);
-  
+
+  # COSMIC study_type = 'Collection' but display name = 'COSMIC'
+  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i || $h->{author} =~ /COSMIC/);
+
   # Publication information
   if ($label =~ /Publication/i && $info !~ /Not.+applicable/i) {
     foreach my $pub (split(';',$info)) {
@@ -1234,7 +1236,7 @@ sub get_header_info {
       $h->{desc} = $p_info if ($p_label =~ /Paper.+title/i && $p_info && $p_info ne 'None Given');
     }
   }
-  
+
   # Study information for DGVa files
   elsif ($label eq 'Study') {
     foreach my $st (split(';',$info)) {
@@ -1267,8 +1269,9 @@ sub get_header_info {
       } 
       
       # Tissue (human)
-      if ($key eq 'sample_cell_type'){
-        $s_info =~ /Primary site=(.+),/;
+      # In COSMIC: the file from 2015 has 'cell_type'; file from 2013 has 'sample_cell_type'
+      if ($key eq 'sample_cell_type' || $key eq 'cell_type'){
+        $s_info =~ /Primary site\s*=\s*(.+),/;
         $tissue = $1;
       }
     }
@@ -1316,9 +1319,9 @@ sub get_header_info {
       $subjects{$subject} = \%subject_data;
     }
   }
-  
+
   $h->{author} =~ s/\s/_/g;
-  
+
   return $h;
 }
 
@@ -1582,6 +1585,11 @@ sub parse_9th_col {
     my $cmd  = "grep 'parent=".$info->{ID}."' $fname";
     my $text = `$cmd`;
     $info->{is_somatic} = 1 if ($text =~ /var_origin=Somatic/i || !$text);
+  }
+
+  # COSMIC
+  if ($somatic_study && $info->{alias} =~ /^COST\d+$/) {
+    $info->{is_somatic} = 1;
   }
 
   return $info;

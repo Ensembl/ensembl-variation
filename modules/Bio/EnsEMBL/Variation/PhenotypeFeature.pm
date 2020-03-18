@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,6 +40,25 @@ phenotype.
 
 =head1 SYNOPSIS
 
+  # Phenotype feature representing a phenotype
+  my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+    -slice     => $slice,
+    -start     => 100,
+    -end       => 100,
+    -phenotype => $phenotype,
+    -type      => 'Variation',
+    -object    => $variation,
+    -source    => 'OMIM',
+    -attribs   => {
+      p_value => 0.0000023,
+    },
+  );
+
+  ...
+
+  print $pf->start(), "-", $pf->end(), '(', $pf->strand(), ')', "\n";
+
+  print $pf->phenotype_description(), ":", $pf->object_id;
 
 =head1 DESCRIPTION
 
@@ -238,7 +257,7 @@ sub phenotype {
   Example    : $desc = $pf->phenotype_description();
   Description: Convenience method to get the phenotype description
                associated with this annotation.
-  Returntype : string
+  Returntype : string or undef
   Exceptions : none
   Caller     : general
   Status     : experimental
@@ -261,17 +280,18 @@ sub phenotype_description {
 }
 
 
-=head2 phenotype_class
-  Example    : $id = $pf->phenotype_class();
-  Description: Convenience method to get the phenotype class
+=head2 phenotype_class_id
+
+  Example    : $id = $pf->phenotype_class_id();
+  Description: Convenience method to get the phenotype class id
                associated with this annotation.
-  Returntype : integer
+  Returntype : integer or undef
   Exceptions : none
   Caller     : general
   Status     : Stable
 =cut
 
-sub phenotype_class {
+sub phenotype_class_id {
   my $self = shift;
 
   return $self->{_phenotype_class_attrib_id} if $self->{_phenotype_class_attrib_id};
@@ -290,6 +310,36 @@ sub phenotype_class {
   }
 }
 
+
+=head2 phenotype_class
+
+  Example    : $id = $pf->phenotype_class();
+  Description: Convenience method to get the phenotype class string
+               associated with this annotation.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+=cut
+
+sub phenotype_class {
+  my $self = shift;
+
+  return $self->{_phenotype_class_attrib} if $self->{_phenotype_class_attrib};
+
+  if(!defined($self->{phenotype}) && defined($self->{_phenotype_id})) {
+    my $pa = $self->adaptor->db->get_PhenotypeAdaptor();
+
+    $self->{phenotype} = $pa->fetch_by_dbID($self->{_phenotype_id});
+  }
+
+  if (defined($self->{phenotype})) {
+    if ($self->{phenotype}->class_attrib) {
+      $self->{_phenotype_class_attrib} = $self->{phenotype}->class_attrib;
+      return $self->{phenotype}->class_attrib;
+    }
+  }
+}
 
 =head2 phenotype_id
 
@@ -702,6 +752,7 @@ sub study_url {
 
 
 =head2 associated_studies
+
   Example    : $name = $obj->associate_studies()
   Description: Getter/Setter for the associated_studies attribute 
               (e.g. EGA studies can be associated to NHGRI studies). 
@@ -1228,6 +1279,7 @@ sub date_last_evaluated{
 }
 
 =head2 display_id
+
   Arg [1]    : none
   Example    : print $pf->display_id();
   Description: This method returns a string that is considered to be

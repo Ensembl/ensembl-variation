@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -140,27 +140,6 @@ sub get_column_names {
     my ($name, $info) = split(',', $column_name_info, 2);
     push @column_names, $name;
   }
-  return \@column_names;
-}
-
-sub get_sorted_column_names {
-  my ($self, $vdba, $feature_table) = @_;
-  my $dbname = $vdba->dbc->dbname();
-  my $dbh = $vdba->dbc->db_handle;
-  my $sth = $dbh->prepare(qq{
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = '$dbname'
-      AND TABLE_NAME = '$feature_table';
-      });
-  $sth->execute();
-
-# QC that all necessary columns are there: e.g. seq_region_id, ...
-  my @column_names = ();
-  while (my @name = $sth->fetchrow_array) {
-    push @column_names, $name[0];
-  }
-  $sth->finish();
-  @column_names = sort @column_names;
   return \@column_names;
 }
 

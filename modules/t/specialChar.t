@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Test::TestUtils;
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
 
 my $oldString = "Hôpitaux de Paris";
@@ -44,5 +44,9 @@ ok($newString eq "bmi less than 30", "special char(<) updated");
 $oldString = "bmi > 30";
 $newString = replace_char($oldString);
 ok($newString eq "bmi more than 30", "special char(>) updated");
+
+$oldString = "isom&#xe8;res";
+$newString = replace_hex($oldString);
+ok($newString eq "isomeres", "hex replaced");
 
 done_testing();

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -124,6 +124,16 @@ sub new {
     # rebless the alleles from vfoas to tvas
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } 
         @{ $self->get_all_BaseVariationFeatureOverlapAlleles };
+   
+    ## This line controls whether TranscriptVariationAllele objects are automatically shifted in the 3' direction
+    ## 
+    ## We intend to shift by default for release 101. In the meantime, the --no_shift argument takes a value, rather than just being a flag.
+    ## If --no_shift equals 1, or is undefined, then we don't shift. This will be removed for release 101. 
+    $self->{shifted} = (defined($args{'-no_shift'}) && !$args{'-no_shift'});
+
+    map { $_->_return_3prime } 
+            @{ $self->get_all_BaseVariationFeatureOverlapAlleles } if $self->{shifted};
+
     
     return $self;
 }

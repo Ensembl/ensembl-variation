@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,19 +67,18 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
-my $cdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
-my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-my $dbCore2 = $cdb2->dbc->db_handle;
-my $dbVar2 = $vdb2->dbc->db_handle;
+my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $dbVar = $vdb->dbc->db_handle;
 
-my $sa2 = $cdb2->get_SliceAdaptor();
+my $sa = $cdb->get_SliceAdaptor();
 my $buffer = {};
 my $source_id;
 my $source_description = 'Variants from HGMD-PUBLIC dataset';
 
 my $month_hash = { 1 => 'March', 2 => 'June', 3 => 'September', 4 => 'December' };
 
-my $new_source_ref = $dbVar2->selectall_arrayref(qq{SELECT source_id FROM source WHERE name = "$source_name"});
+my $new_source_ref = $dbVar->selectall_arrayref(qq{SELECT source_id FROM source WHERE name = "$source_name"});
 
 $input_file =~ /(\d{4})\.(\d+)-hgmd-public/;
 my $year      = $1;
@@ -90,29 +89,30 @@ $source_description .= " $month $year" if ($year and $month);
 
 if ($new_source_ref->[0][0]) {
   $source_id = $new_source_ref->[0][0];
-  $dbVar2->do(qq{UPDATE source SET description="$source_description", version=$year$month_num 
+  $dbVar->do(qq{UPDATE source SET description="$source_description", version=$year$month_num 
                  WHERE source_id=$source_id });
 }
 else {
   if ($year and $month) {
-    $dbVar2->do(qq{INSERT INTO source(name,description,url,version)
+    $dbVar->do(qq{INSERT INTO source(name,description,url,version)
                    values("$source_name","$source_description","$hgmd_url",$year$month_num)
                   });
   }
   else {
-    $dbVar2->do(qq{INSERT INTO source(name,description,url)
+    $dbVar->do(qq{INSERT INTO source(name,description,url)
                    values("$source_name","$source_description","$hgmd_url")
                   });
   }
-  $source_id = $dbVar2->{'mysql_insertid'};
+  $source_id = $dbVar->{'mysql_insertid'};
 }
 
 
-$dbVar2->do(qq{CREATE TABLE IF NOT EXISTS `$header\_variation` (
+$dbVar->do(qq{CREATE TABLE IF NOT EXISTS `$header\_variation` (
   `variation_id` int(10) unsigned not null auto_increment, # PK
   `source_id` int(10) unsigned not null,
   `name` varchar(255),
   `type` char(1) NOT NULL,
+  `class_attrib_id` int(10) unsigned DEFAULT NULL,
   
   primary key( `variation_id` ),
   unique ( `name` ),
@@ -139,7 +139,7 @@ while (<IN>) {
               'consequence' => 'HGMD_MUTATION'
             );
     
-  my $slice = $sa2->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
+  my $slice = $sa->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
   if (!$slice) {
     print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{start}) . "\n");
     next;
@@ -158,45 +158,46 @@ foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_varia
     system("mv $file  $TMP_DIR/$TMP_FILE") ;
     $file =~ s/$TMP_DIR\///;
     $file =~ s/\-/\_/g;
-    my $mapping_ref = $dbVar2->selectall_arrayref(qq{show tables like "$file"});
+    my $mapping_ref = $dbVar->selectall_arrayref(qq{show tables like "$file"});
     if (!$mapping_ref->[0][0]) {
       if ($file =~ /variation_feature/) {
-        create_and_load ($dbVar2,"$file","seq_region_id i*","seq_region_start i","seq_region_end i","seq_region_strand i","variation_id i*","allele_string","variation_name","map_weight","flags","source_id i","validation_status","consequence_type");
+        create_and_load ($dbVar,"$file","seq_region_id i*","seq_region_start i","seq_region_end i","seq_region_strand i","variation_id i*","allele_string","variation_name","map_weight","flags","source_id i","validation_status","consequence_type", "class_attrib_id");
       }
       elsif ($file =~ /variation_annotation/) {
-        create_and_load ($dbVar2,"$file","variation_id i*","variation_name","associated_gene");
+        create_and_load ($dbVar,"$file","variation_id i*","variation_name","associated_gene");
       }
       elsif ($file =~ /error/) {
-        create_and_load ($dbVar2,"$file","variation_name *","seq_region_name","seq_region_start");
+        create_and_load ($dbVar,"$file","variation_name *","seq_region_name","seq_region_start");
       }
     }
     else {
       if ($file =~ /variation_feature/) {
-        load ($dbVar2,"$file","seq_region_id","seq_region_start","seq_region_end","seq_region_strand","variation_id","allele_string","variation_name","map_weight","flags","source_id","validation_status","consequence_type");
+        load ($dbVar,"$file","seq_region_id","seq_region_start","seq_region_end","seq_region_strand","variation_id","allele_string","variation_name","map_weight","flags","source_id","validation_status","consequence_type");
       }
       elsif ($file =~ /variation_annotation/) {
-        load ($dbVar2,"$file","variation_id","variation_name","associated_gene");
+        load ($dbVar,"$file","variation_id","variation_name","associated_gene");
       }
       elsif ($file =~ /error/) {
-        load ($dbVar2,"$file","variation_name","seq_region_name","seq_region_start");
+        load ($dbVar,"$file","variation_name","seq_region_name","seq_region_start");
       }
     }
   }
 }
 updated_vf_coordinate_insertion($insertion_label);
+add_class_attrib_id();
 
 
 
 # Change the coordinates for the variation where the class is "insertion"
 sub updated_vf_coordinate_insertion {
   my $insertion_class = shift;
-  my $select_vf_sth = $dbVar2->prepare(qq{
+  my $select_vf_sth = $dbVar->prepare(qq{
     SELECT distinct v.name,vf.seq_region_end 
     FROM $header\_variation v, $header\_variation_feature vf 
     WHERE v.type='$insertion_class' AND v.name=vf.variation_name
   });
 
-  my $update_vf_sth = $dbVar2->prepare(qq{
+  my $update_vf_sth = $dbVar->prepare(qq{
     UPDATE $header\_variation_feature  
      SET seq_region_end = ?
      WHERE variation_name = ?;
@@ -209,6 +210,55 @@ sub updated_vf_coordinate_insertion {
   }
 }
 
+
+# Add class_attrib_id for the tmp variation, variation_feature tables
+sub add_class_attrib_id {
+  my %attrib = ('M' => 'SNV',
+                'D' => 'deletion',
+                'I' => 'insertion',
+                'X' => 'indel',
+                'P' => 'indel',
+                'R' => 'sequence_alteration',
+                'S' => 'sequence_alteration'
+               );
+
+  my %class = ();
+
+  my $select_a_sth = $dbVar->prepare(qq{
+    SELECT a.attrib_id FROM attrib a, attrib_type att
+    WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
+  });
+
+  my $select_v_sth = $dbVar->prepare(qq{
+    SELECT DISTINCT variation_id,type FROM $header\_variation;
+  });
+
+  my $update_v_sth = $dbVar->prepare(qq{
+    UPDATE $header\_variation SET class_attrib_id = ? WHERE variation_id = ?;
+  });
+
+  my $update_vf_sth = $dbVar->prepare(qq{
+    UPDATE $header\_variation_feature vf, $header\_variation v SET vf.class_attrib_id = v.class_attrib_id
+    WHERE v.variation_id = vf.variation_id;
+  });
+
+  while (my ($k,$v) = each (%attrib)) {
+    $select_a_sth->execute($v);
+    $class{$k} = ($select_a_sth->fetchrow_array)[0];
+    print "$k: ".$class{$k}."\n";
+  }
+
+  $select_v_sth->execute();
+  while (my @res = $select_v_sth->fetchrow_array) {
+    my $att = $class{$res[1]};
+    if (defined $att) {
+      $update_v_sth->execute($att,$res[0]) or die $!;
+    }
+  }
+
+  $update_vf_sth->execute() or die $!;
+
+}
 
 sub print_buffered {
   my $buffer = shift;
@@ -244,8 +294,8 @@ sub print_all_buffers {
   my $var_type = $data->{var_type};
   my $start    = $data->{start};
   
-  $dbVar2->do(qq{INSERT INTO $header\_variation(source_id,name,type)values($source_id,"$var_name","$var_type")});
-  my $variation_id = $dbVar2->{'mysql_insertid'};
+  $dbVar->do(qq{INSERT INTO $header\_variation(source_id,name,type)values($source_id,"$var_name","$var_type")});
+  my $variation_id = $dbVar->{'mysql_insertid'};
 
   print_buffered($buffer,"$TMP_DIR/$header\_variation_feature",join ("\t",$data->{region_id},$start,$data->{end},$data->{strand},"$variation_id\t".$data->{allele}."\t$var_name\t".$data->{map_weight}."\t".$data->{flags}."\t$source_id\t".$data->{status}."\t".$data->{consequence}."\n"));
   print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$data->{allele}) . "\n");

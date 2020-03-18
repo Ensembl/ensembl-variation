@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,6 +66,10 @@ ok( $trv->cdna_start() eq 16,                               "cdna_start");
 ok( $trv->cdna_end()   eq 16,                               "cdna_end");
 ok( $trv->translation_start() eq 6,                         "translation_start");
 ok( $trv->translation_end() eq 6,                           "translation_end");
+ok( $trv->cdna_start_unshifted() eq 16,                     "cdna_start_unshifted");
+ok( $trv->cdna_end_unshifted()   eq 16,                     "cdna_end_unshifted");
+ok( $trv->translation_start_unshifted() eq 6,               "translation_start_unshifted");
+ok( $trv->translation_end_unshifted() eq 6,                 "translation_end_unshifted");
 ok( $trv->pep_allele_string() eq 'S/C',                     "pep_allele_string");
 ok( $trv->consequence_type()->[0] eq 'missense_variant',    "consequence");
 ok( $trv->variation_feature->variation_name() eq "rs80359157", "variation name ");
@@ -86,6 +90,14 @@ ok($tva->dbnsfp_revel_score == 0.315, "dbnsfp revel score");
 ok($tva->cadd_prediction eq 'likely benign', "cadd prediction");
 ok($tva->cadd_score == 23, "cadd score");
 
+$tva->clear_shifting_variables();
+ok(!defined($trv->{cds_start}), 'cleared cds_start');
+ok(!defined($trv->{cds_end}), 'cleared cds_end');
+$tva->{shift_hash}->{shift_length} = 0;
+$tva->clear_shifting_variables();
+
+ok(defined($trv->{cds_start}), 'redefined cds_start');
+ok(defined($trv->{cds_end}), 'redefined cds_end');
 # test fetch_all_by_VariationFeatures
 my $slice = $s_ad->fetch_by_region('chromosome',13,32953990,32954050);
 my $vf = $vf_ad->fetch_all_by_Slice($slice);
@@ -337,5 +349,74 @@ for my $allele (@{$trvar_msc->get_all_alternate_BaseVariationFeatureOverlapAllel
 my $msc_2_expected = 'test_consequence_a';
 my $msc_2 = $trvar_msc->most_severe_OverlapConsequence();
 is($msc_2->SO_term, $msc_2_expected, 'tv - most_severe_OverlapConsequence - same rank');
+
+# Testing for transcript_variation.hgvs_genomic 'NULL' (string)
+# and NULL (value)
+#
+# An existing database record is used for testing
+# A backup of transcript_variation done at start of test
+# and restored at end of test.
+{
+  # Backup the table before test
+  $multi->save('variation', 'transcript_variation');
+
+  # Data used for test
+  # transcript_variation_id: 92216616
+  #          variation_name: rs7949754
+  #           allele_string: G/A
+  #    variation_feature_id: 4806434
+  # transcript_variation_id: 92216616
+  #            hgvs_genomic: 11:g.66328199G>A
+  my $dbID = 92216616;
+  my $variant = 'rs7949754';
+  my $expected_hgvs_genomic = 'NC_000011.9:g.66328199G>A';
+  my $dbh = $trv_ad->dbc->db_handle();
+
+  # Test setting transcript_variation.hgvs_genomic
+  # to 'NULL' (the string)
+  my $sql = qq{
+    UPDATE transcript_variation
+    SET hgvs_genomic = 'NULL'
+    WHERE transcript_variation_id = $dbID
+  };
+
+  my $count = $dbh->do($sql);
+  ok($count == 1 , "Update to 'NULL' string for testing");
+
+  # Fetch by dbID
+  my $tv_by_dbID = $trv_ad->fetch_by_dbID($dbID);
+  my $hgvs_db = $tv_by_dbID->{alt_alleles}->[0]->{hgvs_genomic};
+  is($hgvs_db, undef, "hgvs_genomic set to undefined when 'NULL'");
+
+  # Fetch all TranscriptVariations related to a VariationFeature
+  my $var = $var_ad->fetch_by_name($variant);
+  my $vf = $vf_ad->fetch_all_by_Variation($var_ad->fetch_by_name($variant))->[0];
+  my $tv = @{$trv_ad->fetch_all_by_VariationFeatures([$vf])}[0];
+  my $hgvs_genomic = $tv->hgvs_genomic->{'A'};
+  is($hgvs_genomic, $expected_hgvs_genomic, "Lookup hgvs_genomic when 'NULL' in TV");
+
+  # Testing setting transcript_variation.hgvs_genomic to NULL (the value)
+  $sql = qq{
+    UPDATE transcript_variation
+    SET hgvs_genomic = NULL
+    WHERE transcript_variation_id = $dbID
+  };
+
+  $count = $dbh->do($sql);
+  ok($count == 1 , "Update to NULL for testing");
+
+  $tv_by_dbID = $trv_ad->fetch_by_dbID($dbID);
+  $hgvs_db = $tv_by_dbID->{alt_alleles}->[0]->{hgvs_genomic};
+  is($hgvs_db, undef, 'hgvs_genomic set to undefined when NULL');
+
+  # Fetch all TranscriptVariations related to a VariationFeature
+  my $tv_2 = @{$trv_ad->fetch_all_by_VariationFeatures([$vf])}[0];
+  $hgvs_genomic = $tv_2->hgvs_genomic->{'A'};
+  is($hgvs_genomic, $expected_hgvs_genomic, "Lookup hgvs_genomic when NULL in TV");
+
+  # Restore table to what it was at start of test
+  $multi->restore('variation', 'transcript_variation');
+}
+
 
 done_testing();

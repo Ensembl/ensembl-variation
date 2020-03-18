@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
 
 =head1 SYNOPSIS
+
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org', -user => 'anonymous');
 
@@ -453,6 +454,12 @@ sub _objs_from_sth {
     # there is no / in the string
     $alt_pep ||= $ref_pep;
     
+    # If hgvs_genomic has been set to 'NULL' string
+    # instead of NULL value, set it to undefined
+    if ($hgvs_genomic && ($hgvs_genomic eq 'NULL')) {
+        undef $hgvs_genomic;
+    }
+
     # for TranscriptVariations with multiple alternative alleles
     # there will be multiple rows in the database, so we construct
     # the TV object and the reference allele object when we see 
@@ -649,7 +656,6 @@ sub _get_write_data {
     # use pre-predicate data to avoid running costly subs
     # we also need the HGVS tva in case shifting has changed things (this might be the original tva anyway, no extra cost)
     my $pre = $allele->_pre_consequence_predicates;
-    my $hgvs_pre = $allele->_hgvs_tva ? $allele->_hgvs_tva->_pre_consequence_predicates : {};
 
     my (
       $codon_allele_string, $pep_allele_string,
@@ -680,11 +686,11 @@ sub _get_write_data {
     }
 
     # HGVS-specific
-    if($hgvs_pre->{within_feature}) {
+    if($pre->{within_feature}) {
       $hgvs_transcript = $allele->hgvs_transcript;
     }
 
-    if($hgvs_pre->{coding}) {
+    if($pre->{coding}) {
       $hgvs_protein = $allele->hgvs_protein;
     }
 

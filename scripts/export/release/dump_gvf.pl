@@ -2,7 +2,7 @@
 =head1 LICENSE
 
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -288,6 +288,10 @@ sub dump_svs_data {
                 next;
             }
             my $sv = $svf->structural_variation;
+            if ($config->{clinical_significance}) {
+              add_clinical_significance_sv($gvf_line, $sv);
+            }
+
             $gvf_line->{attributes}->{study_accession} = $svf->study->name if $svf->study;
 
             if ((defined $svf->inner_start) && (defined $svf->outer_start) && ($svf->inner_start != $svf->outer_start)) {
@@ -547,6 +551,14 @@ sub add_clinical_significance {
     my ($gvf_line, $vf) = @_;
     my $variation = $vf->variation;
     my @states = @{$variation->get_all_clinical_significance_states};
+    if (scalar @states) {
+        $gvf_line->{attributes}->{clinical_significance} = join(',', @states);
+    }
+}
+
+sub add_clinical_significance_sv {
+    my ($gvf_line, $sv) = @_;
+    my @states = @{$sv->get_all_clinical_significance_states};
     if (scalar @states) {
         $gvf_line->{attributes}->{clinical_significance} = join(',', @states);
     }

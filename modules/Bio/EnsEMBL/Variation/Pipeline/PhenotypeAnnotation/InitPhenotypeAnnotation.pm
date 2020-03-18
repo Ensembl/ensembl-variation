@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD AnimalQTL ZFIN GWAS OMIA EGA Orphanet MIMmorbid DDG2P CGC IMPC MGI Mouse NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -47,12 +47,17 @@ sub fetch_input {
 
   my $debug = $self->param('debug_mode');
 
-  open ($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
+  open($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
 
   unless ($run_type eq NONE) {
-    my %import_species = &species;
+    my %import_species = SPECIES;
 
-    if($run_type eq IMPC || $run_type eq MGI || $run_type eq Mouse ){
+    #MOUSE, HUMAN and specific AnimalSet have separate init analysis
+    if($run_type eq MOUSE || $run_type eq IMPC || $run_type eq MGI ||
+       $run_type eq HUMAN || $run_type eq GWAS || $run_type eq EGA ||
+       $run_type eq ORPHANET || $run_type eq MIMMORBID || $run_type eq DDG2P ||
+       $run_type eq CGC ||
+       $run_type eq ANIMALSET || $run_type eq ANIMALQTL || $run_type eq OMIA){
       $self->param('output_ids', [{run_type => $run_type}]);
     } elsif ($import_species{$run_type}) {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
@@ -70,37 +75,21 @@ sub write_output {
 
   unless ($run_type eq NONE) {
     if ($run_type eq RGD){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      print $logPipeFH "Passing to RGD import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq AnimalQTL){
-      $self->dataflow_output_id($self->param('output_ids'), 3);
-      print $logPipeFH "Passing to AnimalQTL import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq ZFIN){
-      $self->dataflow_output_id($self->param('output_ids'), 4);
-      print $logPipeFH "Passing to ZFIN import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq GWAS){
       $self->dataflow_output_id($self->param('output_ids'), 5);
-      print $logPipeFH "Passing to NHGRI-EBI GWAS import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq OMIA){
+      print $logPipeFH "Passing to RGD import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq ZFIN){
       $self->dataflow_output_id($self->param('output_ids'), 6);
-      print $logPipeFH "Passing to OMIA import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq EGA){
-      $self->dataflow_output_id($self->param('output_ids'), 7);
-      print $logPipeFH "Passing to EGA import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq Orphanet){
-      $self->dataflow_output_id($self->param('output_ids'), 8);
-      print $logPipeFH "Passing to Orphanet import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq MIMmorbid){
-      $self->dataflow_output_id($self->param('output_ids'), 9);
-      print $logPipeFH "Passing to MIMmorbid import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq DDG2P){
-      $self->dataflow_output_id($self->param('output_ids'), 10);
-      print $logPipeFH "Passing to DDG2P import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq CGC){
-      $self->dataflow_output_id($self->param('output_ids'), 11);
-      print $logPipeFH "Passing to CancerGeneConsensus import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq IMPC || $run_type eq MGI || $run_type eq Mouse){
-      $self->dataflow_output_id($self->param('output_ids'), 12);
+      print $logPipeFH "Passing to ZFIN import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } elsif ( $run_type eq ANIMALQTL || $run_type eq OMIA || $run_type eq ANIMALSET){
+      $self->dataflow_output_id($self->param('output_ids'), 4);
+      print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
+    } elsif ( $run_type eq HUMAN || $run_type eq GWAS || $run_type eq EGA ||
+              $run_type eq ORPHANET || $run_type eq MIMMORBID ||
+              $run_type eq DDG2P || $run_type eq CGC ){
+      $self->dataflow_output_id($self->param('output_ids'), 2);
+      print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
+    } elsif ( $run_type eq IMPC || $run_type eq MGI || $run_type eq MOUSE){
+      $self->dataflow_output_id($self->param('output_ids'), 3);
       print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
     }
   }

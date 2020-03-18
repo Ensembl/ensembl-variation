@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -149,7 +149,7 @@ sub get_all_VariationFeatures {
     my $tvs_by_vfid = $container->_get_transcript_variations_hash;
 
     foreach my $key(keys %{$self->{_contributing_vfs}}) {
-      my $allele = (split('|', $key))[0];
+      my $allele = (split('\|', $key))[0];
       $allele ||= '-';
 
       my $vf = $self->{_contributing_vfs}->{$key};

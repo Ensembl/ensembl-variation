@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -45,9 +45,10 @@ use strict;
 
 use File::Path qw(make_path);
 use File::stat;
-use POSIX 'strftime';
+use POSIX qw(strftime);
 use LWP::Simple;
 use HTTP::Tiny;
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -83,7 +84,7 @@ my %species_synonyms = (
   'chimpanzee'  => 'pan_troglodytes',
   'chimp' => 'pan_troglodytes',
   'cow'  => 'bos_taurus',
-  'dog'  => 'canis_familiaris',
+  'dog'  => 'canis_lupus_familiaris',
   'gibbon' => 'nomascus_leucogenys',
   'goat'  => 'capra_hircus',
   'horse' => 'equus_caballus',
@@ -119,19 +120,24 @@ sub fetch_input {
                   #source_version  will be set based on the date of the fetched input file (year/month/day-> yyyymmdd)
                   source_name => 'OMIA',        #source name in the variation db
                   source_name_short => 'OMIA',  #source identifier in the pipeline
+                  data_types => 'phenotype_feature',
                   );
 
   my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir_fetch);
+  unless (-d $workdir_fetch) {
+    my $err;
+    make_path($workdir_fetch, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   my $file_omia = 'omia_gene_table.txt';
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Could not open file for writing: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
@@ -139,7 +145,7 @@ sub fetch_input {
   #get input files OMIA gene_table, this file contains multiple species
   print $logFH "Found file (".$workdir_fetch."/".$file_omia.") and will skip new fetch\n" if -e $workdir_fetch."/".$file_omia;
   getstore($omia_url, $workdir_fetch."/".$file_omia) unless -e $workdir_fetch."/".$file_omia;
-  $source_info{source_version} = strftime "%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime);
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime));
 
   #get section specific for this species
   print $logFH "Found folder (".$workdir_fetch."/omia_split) and will skip new split\n" if -e $workdir_fetch."/omia_split";
@@ -157,7 +163,7 @@ sub run {
 
   my $omia_file = $self->required_param('omia_file');
 
-  # dump and clean pre-existing phenotypes
+  # dump and clean pre-existing phenotype features
   $self->dump_phenotypes($source_info{source_name}, 1);
 
   # get phenotype data
@@ -208,10 +214,11 @@ sub split_omia {
 
   my $prefix = 'omia_';
   my $suffix = '.txt';
+  make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
 
   my %data;
 
-  open (F, "< $workdir/$all_file") || die ("Could not open file for reading: $!\n");
+  open(F, "< $workdir/$all_file") || die ("Could not open file for reading: $!\n");
   while(<F>) {
     chomp ($_);
     next if ($_ =~ /^gene_symbol/);
@@ -251,8 +258,7 @@ sub split_omia {
     $id =~ s/'//g;
     $id =~ s/^domestic_//g;
 
-    make_path($workdir."/"."omia_split");
-    open (OUT, "> $workdir/omia_split/$prefix$id$suffix") || die $!;
+    open(OUT, "> $workdir/omia_split/$prefix$id$suffix") || die $!;
     foreach my $line (@{$data{$taxo_id}}) {
       print OUT "$line\n";
     }
@@ -280,16 +286,16 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open (IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open ".$self->workdir."/$infile for reading\n");
+    open(IN, "zcat ".$self->workdir."/$infile |") || die ("Could not open ".$self->workdir."/$infile for reading\n");
   }
   else {
-    open (IN,'<',$self->workdir."/".$infile) || die ("Could not open ".$self->workdir."/$infile for reading\n");
+    open(IN,'<',$self->workdir."/".$infile) || die ("Could not open ".$self->workdir."/$infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields

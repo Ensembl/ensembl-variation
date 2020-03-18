@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,12 +96,15 @@ my $sth_h = get_connection_and_query($database, $hname, $sql, 1);
 my $sqlPF = qq{SELECT count(*) FROM phenotype_feature};
 # Loop over databases
 while (my ($dbname) = $sth_h->fetchrow_array) {
-  next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
+
+  next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i &&
+           $dbname !~ /canis_lupus_familiaris_variation_\d+_\d+$/ );
 
   $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
   my $assembly = $2;
+
   next if defined $species & !$only_species{$s_name};
   print STDERR "# $s_name - [ $dbname ]\n";
 

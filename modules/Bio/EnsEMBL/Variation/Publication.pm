@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,6 +64,16 @@ use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
+# valid source names
+# this must correspond the citation sources defined in attrib table
+our %SOURCES = (
+  'dbSNP'   => 1,
+  'EPMC'    => 1,
+  'UCSC'    => 1,
+  'ClinVar' => 1,
+  'dbGaP'   => 1,
+  'GWAS'    => 1,
+);
 
 =head2 new
 
@@ -280,6 +290,67 @@ sub variations{
    $self->{'variants'} = $variation_adaptor->fetch_all_by_publication($self);
 
    return $self->{'variants'};
+}
+
+=head2 set_variation_id_to_source
+
+  Arg [1]    : Integer $variation_id
+               String $source
+  Example    : $obj->set_variation_id_to_source(1234, 'dbSNP')
+  Description: Setter for the publication sources
+  Returntype : none
+  Exceptions : throw if variation_id is not valid
+               throw if source is not valid
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub set_variation_id_to_source{
+  my $self         = shift;
+  my $variation_id = shift;
+  my $source       = shift;
+
+  if($variation_id !~ /^\d+$/ || !defined($variation_id)) {
+    throw('variation_id is not valid');
+  }
+
+  if(!defined($source) || !defined($SOURCES{$source})) {
+    throw('Source is not valid');
+  }
+
+  $self->{'variation_id_to_source'}->{$variation_id}->{$source} = 1;
+}
+
+=head2 get_all_sources_by_Variation
+
+  Arg [1]    : Variation object
+  Example    : my $sources = $obj->get_all_sources_by_Variation($variation)
+  Description: Get all publication sources for a given variation object
+  Returntype : listref
+               example: ['EPMC', 'dbSNP']
+  Exceptions : throw if variation object is not valid
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_sources_by_Variation{
+  my $self      = shift;
+  my $variation = shift;
+
+  if( !defined($variation) || (defined($variation) && ref($variation ne 'Variation')) ) {
+    throw('Variation argument is required');
+  }
+
+  my $variation_id = $variation->dbID();
+  if($self->{'variation_id_to_source'}->{$variation_id}) {
+    my @sources = keys %{$self->{'variation_id_to_source'}->{$variation_id}};
+    return \@sources;
+  }
+  else {
+    return [];
+  }
 }
 
 1;

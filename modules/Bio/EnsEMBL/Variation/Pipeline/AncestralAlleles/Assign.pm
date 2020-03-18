@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -55,7 +55,7 @@ sub setup {
   my $species_dir = $self->param('species_dir');
   my $ancestral_file_targz = $self->param('ancestral_file');
   my $ancestral_file_notargz = $ancestral_file_targz;
-  $ancestral_file_notargz =~ s/\.tar\.gz//;
+  $ancestral_file_notargz =~ s/\.tar\.gz|\.tar\.bz2//;
   # create temp directory for storing and uncompressing ancestral fasta file 
   unless (-d "$species_dir/fasta_$id") {
     my $err;
@@ -65,7 +65,13 @@ sub setup {
   # cp  ancestral fasta file from compara dir to temp directory
   $self->run_cmd("cp $compara_dir/$ancestral_file_targz $species_dir/fasta_$id");
   # uncompress ancestral fasta file
-  $self->run_cmd("tar xzf $species_dir/fasta_$id/$ancestral_file_targz -C $species_dir/fasta_$id/");
+  if ($ancestral_file_targz =~ /\.tar\.gz/) {
+    $self->run_cmd("tar xzf $species_dir/fasta_$id/$ancestral_file_targz -C $species_dir/fasta_$id/");
+  } elsif ($ancestral_file_targz =~ /\.tar\.bz2/) {
+    $self->run_cmd("tar xjf $species_dir/fasta_$id/$ancestral_file_targz -C $species_dir/fasta_$id/");
+  } else {
+    die "Could not recognise tar file extension. Supported extensions are tar.gz and tar.bz2";
+  }
   # rm bed files
   $self->run_cmd("rm $species_dir/fasta_$id/$ancestral_file_notargz/*.bed");
   my $fasta_files_dir = "$species_dir/fasta_$id/$ancestral_file_notargz"; 
@@ -132,7 +138,7 @@ sub assign_ancestral_alleles {
     if ($start > $end) {
       print $err "Insertion $vf_id\n";
     }
-    elsif (($end - $start) > 50) {
+    elsif (($end - $start) >= 50) {
       print $err "Longer than 50bp $vf_id\n";
     } else {
       my $chrom_name = $sequence_id_2_chr_number{$chrom};

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,10 +38,11 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
-  
+
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
-  
+
   $pa = $reg->get_adaptor("human","variation","phenotype");
 
   # Get a list of all phenotypes.
@@ -68,6 +69,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 =head2 fetch_by_description
+
   Arg [1]    : string $description
   Example    : $phenotype = $pheno_adaptor->fetch_all_by_description('diabetes');
   Description: Retrieves a list of Phenotype objects for a phenotype description
@@ -86,6 +88,7 @@ sub fetch_by_description {
 }
 
 =head2 fetch_by_description_accession_type
+
   Arg [1]    : string $description
   Arg [2]    : string $mapping_type - default 'is', option 'involves'
   Example    : $phenotype = $pheno_adaptor->fetch_by_description_accession_type('diabetes');
@@ -114,6 +117,7 @@ sub fetch_by_description_accession_type {
 }
 
 =head2 fetch_all_by_ontology_accession
+
   Arg [1]    : string ontology accession
   Arg [2]    : string mapping type (is/involves)  optional
   Example    : $phenotype = $pheno_adaptor->fetch_all_by_ontology_accession('EFO:0000712', 'is');
@@ -137,6 +141,7 @@ sub fetch_all_by_ontology_accession {
 }
 
 =head2 fetch_by_OntologyTerm
+
   Arg [1]    : Bio::EnsEMBL::OntologyTerm
   Arg [2]    : string mapping type (is/involves)  optional
   Example    : $phenotype = $pheno_adaptor->fetch_by_OntologyTerm( $ontologyterm, 'involves');
@@ -163,7 +168,7 @@ sub fetch_by_OntologyTerm {
 
 sub _left_join {
   my $self = shift;
-  
+
   my @lj = ();
   
   push @lj, (
@@ -184,7 +189,7 @@ sub _columns {
 
 sub _objs_from_sth {
     my ($self, $sth) = @_;
-    
+
     my %row;
 
     $sth->bind_columns( \( @row{ @{$sth->{NAME_lc} } } ));

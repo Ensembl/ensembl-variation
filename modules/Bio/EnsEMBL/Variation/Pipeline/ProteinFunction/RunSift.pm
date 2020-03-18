@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,6 +50,14 @@ sub run {
   my $working_dir     = $self->required_param('sift_working');
   my $ncbi_dir        = $self->required_param('ncbi_dir');
   my $blastdb         = $self->required_param('blastdb');
+
+  if (! -e $blastdb) {
+    die("Blastdb ($blastdb) does not exist");
+  }
+
+  if (! -d $ncbi_dir) {
+    die("Ncbi_dir ($ncbi_dir) does not exist");
+  }
 
   my $dir = substr($translation_md5, 0, 2);
   my $output_dir = "$working_dir/$dir/$translation_md5";

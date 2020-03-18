@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,6 +34,36 @@ use strict;
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 use Bio::EnsEMBL::Registry;
+use File::Path qw(make_path);
+
+sub compute_checksums_for_directory {
+  my ($self, $working_dir) = @_;
+  opendir(my $dh, $working_dir) or die "Cannot open directory $working_dir";
+  my @files = sort {$a cmp $b} readdir($dh);
+  closedir($dh) or die "Cannot close directory $working_dir";
+  my @checksums = ();
+  foreach my $file (@files) {
+    next if $file =~ /^\./;
+    next if $file =~ /^CHECKSUM/;
+    my $path = File::Spec->catfile($working_dir, $file);
+    my $checksum = checksum($path);
+    push(@checksums, [$checksum, $file]);
+  }
+  my $fh = FileHandle->new("$working_dir/CHECKSUMS", 'w');
+  foreach my $entry (@checksums) {
+    my $line = join("\t", @{$entry});
+    print $fh $line, "\n";
+  }
+  $fh->close();
+}
+
+sub checksum {
+  my $path = shift;
+  my $checksum = `sum $path`;
+  $checksum =~ s/\s* $path//xms;
+  chomp($checksum);
+  return $checksum;
+}
 
 sub data_dir {
   my ($self,$species) = @_;
@@ -46,6 +76,34 @@ sub data_dir {
   }
   return $data_dump_dir;
 }
+
+sub create_species_dir {
+  my ($self, $species_dir) = @_;
+  if (-d "$species_dir") {
+    unless ($self->is_empty($species_dir)) {
+      die("$species_dir is not empty. Delete files before running the pipeline.");
+    }
+  } else {
+    make_path("$species_dir") or die "Failed to create dir $species_dir $!";
+  }
+}
+
+sub is_empty {
+  my ($self, $dir) = @_;
+  opendir(my $dh, $dir) or die "Not a directory: $dir.";
+  my $count =  scalar(grep { $_ ne "." && $_ ne ".." } readdir($dh)) == 0;
+  closedir($dh);
+  return $count;
+}
+
+sub run_system_command {
+  my ($self, $cmd) = @_; 
+  my ($return_value, $stderr, $flat_cmd) = $self->SUPER::run_system_command($cmd);
+  if ($return_value) {
+    die("there was an error running as ($flat_cmd: $stderr)");
+  }
+}
+
 
 1;
 

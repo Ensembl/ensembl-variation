@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ use warnings;
 
 use Test::Exception;
 use Test::More;
+use Test::Warnings qw(warning :no_end_test);
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
@@ -143,22 +144,23 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
 
 # fetch_all_by_Slice phenotype class
 {
+  $pfa->use_phenotype_classes('trait,non_specified,tumour');
   $sl_oa  = $sla->fetch_by_region('chromosome', 18, 721588, 86442450);
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
     (grep {$_->object_id eq 'rs2299298'} @$pfs) &&
-    (grep {$_->phenotype_class == 663 } @$pfs), "fetch_all_by_Slice_accession_type - phenotype class all ");
+    (grep {$_->phenotype_class_id == 663 } @$pfs), "fetch_all_by_Slice_accession_type - phenotype class all ");
   $pfa->clear_cache();
-  $pfa->use_phenotype_classes("trait");
+  $pfa->use_phenotype_classes('trait');
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&
     (grep {$_->object_id eq 'ENSG00000176105'} @$pfs) &&
-    (grep {$_->phenotype_class == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait");
+    (grep {$_->phenotype_class_id == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait");
 
   $pfa->clear_cache();
   $pfa->use_phenotype_classes("non_specified");
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
-  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299298' && $pfs->[0]->phenotype_class eq 663, "fetch_all_by_Slice_accession_type - phenotype class - non_specified");
+  ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299298' && $pfs->[0]->phenotype_class_id eq 663, "fetch_all_by_Slice_accession_type - phenotype class - non_specified");
 
   $pfa->clear_cache();
   $pfa->use_phenotype_classes("trait,non_specified");
@@ -166,7 +168,12 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
 
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
     (grep {$_->object_id eq 'esv2751608'} @$pfs) &&
-    (grep {$_->phenotype_class == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait,non_specified ");
+    (grep {$_->phenotype_class_id == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait,non_specified ");
+
+  # test phenotype class that does not exist
+  like(
+    warning { $pfa->use_phenotype_classes('traits,tumour') }, qr/phenotype class attrib .+ does not exist!/, 'use_phenotype_classes - not found phenotype class type'
+  );
 
   #reset to default
   $pfa->use_phenotype_classes("trait,non_specified,tumour");

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -377,27 +377,7 @@ sub SO_variation_class {
                     # A/-, A/(LARGEDELETION)
                     $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
-                elsif (
-                    (grep { (
-                              (
-                                ($ref =~ /${_}$/)
-                                   ||
-                                ($ref =~ /^${_}/)
-                              ) && length($ref) != length($_)
-                            )
-                            ||
-                            ($_ eq '-')
-                          } @alleles ) == scalar(@alleles)) {
-                    # AAAA/AA/- multiple deletion alleles
-                    $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
-                }
-                elsif (
-                    (grep {( $_ =~ /^$ref/)
-                       && length($ref) != length($_)} @alleles) ==
-                       scalar(@alleles)) {
-                    # AA/AAAA/AAAAAA
-                    $class = $ref_correct ? SO_TERM_INSERTION : SO_TERM_INDEL;
-                }
+
                 elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
                     # AA/TT   => SO_TERM_SUBSTITUTION
                     # AA/TTTT => SO_TERM_INDEL
@@ -406,23 +386,6 @@ sub SO_variation_class {
                         $same_size = 0 unless length($alleles[$n]) eq length($ref);
                     }
                     $class = $same_size == 1 ? SO_TERM_SUBSTITUTION : SO_TERM_INDEL;
-                }
-                elsif (
-                    (grep { (
-                              (
-                                ($_ =~ /^$ref/)
-                                     ||
-                                ($ref =~ /${_}$/)
-                                     ||
-                                ($ref =~ /^${_}/)
-                              ) && length($ref) != length($_)
-                            )
-                            ||
-                            ($_ eq '-')
-                          } @alleles ) == scalar(@alleles)) {
-                    # AA/-/AAA/ deletion and insertion
-                    # A/-/AA
-                    $class = SO_TERM_INDEL;
                 }
             }
             elsif ($ref =~ /DEL/) {

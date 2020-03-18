@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ use warnings;
 use strict;
 
 use File::Path qw(make_path);
-use POSIX 'strftime';
+use POSIX qw(strftime);
 use IO::Uncompress::Gunzip qw(gunzip);
 use Text::CSV;
 
@@ -67,23 +67,23 @@ sub fetch_input {
                   source_status => 'germline',
                   source_name => 'DDG2P',       #source name in the variation db
                   source_name_short => 'DDG2P', #source identifier in the pipeline
-                  source_version => strftime "%Y%m%d", localtime, # it is current month
+                  source_version => strftime("%Y%m%d", localtime), # it is current month
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-  make_path($workdir);
+  make_path($workdir) or die "Failed to create $workdir $!\n";
   $self->workdir($workdir);
 
-  open (my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
-  open (my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
+  open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
   #get input file DDG2P:
   my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
-  my $dateStrURL = strftime "%d_%m_%Y", localtime;
+  my $dateStrURL = strftime("%d_%m_%Y", localtime);
   my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
 
   print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
@@ -148,17 +148,17 @@ sub parse_input_file {
   die("ERROR: Could not get gene adaptor\n") unless defined($ga);
 
   my $errFH1;
-  open ($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
+  open($errFH1, ">", $self->workdir."/".'log_import_err_'.$infile) ;
 
   my @phenotypes;
   my $fh;
 
   # Open the input file for reading
   if($infile =~ /gz$/) {
-    open ($fh, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
+    open($fh, "zcat ".$self->workdir."/$infile |") || die ("Could not open $infile for reading: $!\n");
   }
   else {
-    open ($fh,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
+    open($fh,'<',$self->workdir."/".$infile) || die ("Could not open $infile for reading: $!\n");
   }
 
   my %headers;

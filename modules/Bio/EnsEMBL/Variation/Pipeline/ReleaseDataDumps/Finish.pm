@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -107,32 +107,8 @@ sub compute_checksums {
   my ($self, $data_dir, $species) = @_;
   foreach my $file_type (qw/vcf gvf/) {
     my $working_dir = "$data_dir/$file_type/$species/";
-    opendir(my $dh, $working_dir) or die "Cannot open directory $working_dir";
-    my @files = sort {$a cmp $b} readdir($dh);
-    closedir($dh) or die "Cannot close directory $working_dir";
-    my @checksums = ();
-    foreach my $file (@files) {
-      next if $file =~ /^\./;
-      next if $file =~ /^CHECKSUM/;
-      my $path = File::Spec->catfile($working_dir, $file);
-      my $checksum = checksum($path);
-      push(@checksums, [$checksum, $file]);
-    }
-    my $fh = FileHandle->new("$working_dir/CHECKSUMS", 'w');
-    foreach my $entry (@checksums) {
-      my $line = join("\t", @{$entry});
-      print $fh $line, "\n";
-    }
-    $fh->close();
+    $self->compute_checksums_for_directory($working_dir);
   }
-}
-
-sub checksum {
-  my $path = shift;
-  my $checksum = `sum $path`;
-  $checksum =~ s/\s* $path//xms;
-  chomp($checksum);
-  return $checksum;
 }
 
 sub lc_dir {

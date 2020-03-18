@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -186,7 +186,9 @@ sub new {
     $length,
     $source,
     $study,
-    $structural_variation
+    $structural_variation,
+    $allele_freq,
+    $allele_count
   ) = rearrange([qw(
   VARIATION_NAME 
   _STRUCTURAL_VARIATION_ID
@@ -204,6 +206,8 @@ sub new {
   SOURCE
   STUDY
   STRUCTURAL_VARIATION
+  ALLELE_FREQ
+  ALLELE_COUNT
   )], @_);
 
 
@@ -223,6 +227,8 @@ sub new {
   $self->{'source'}                   = $source;
   $self->{'study'}                    = $study;
   $self->{'structural_variation'}     = $structural_variation;
+  $self->{'allele_freq'}              = $allele_freq;
+  $self->{'allele_count'}             = $allele_count;
   return $self;
 }
 
@@ -1208,6 +1214,38 @@ sub _finish_annotation {
   $self->{$_.'_structural_variations'} ||= {} for qw(transcript regulation);
   $self->{regulation_structural_variations}->{$_} ||= [] for qw(ExternalFeature MotifFeature RegulatoryFeature);
   $self->get_IntergenicStructuralVariation(1);
+}
+
+=head2 get_allele_freq
+
+  Example    : $freq = $obj->get_allele_freq()
+  Description: Getter for the frequency of the allele in the study, if possible.
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_allele_freq{
+  my $self = shift;
+  return $self->{'allele_freq'} if (defined($self->{'allele_freq'}));
+}
+
+=head2 get_allele_count
+
+  Example    : $freq = $obj->get_allele_count()
+  Description: Getter for the number of times the allele is observed in the study, if possible.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_allele_count{
+  my $self = shift;
+  return $self->{'allele_count'} if (defined($self->{'allele_count'}));
 }
 
 1;

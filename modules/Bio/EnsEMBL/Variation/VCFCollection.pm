@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1323,7 +1323,16 @@ sub _seek_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   
-  my $vcf = $self->_seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
+  my ($seek_start, $seek_end);
+  if ($vf->var_class() eq 'SNP') {
+    ## only need single location
+    $seek_start = $seek_end = $vf->seq_region_start;
+  } else {
+    $seek_start = $vf->seq_region_start - 2;
+    $seek_end =  $vf->seq_region_end + 2;
+  }
+  my $vcf = $self->_seek($vf->seq_region_name, $seek_start, $seek_end);
+
   return unless $vcf;
   
   # compare IDs

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ sub run {
   $runTime_imports_sth->execute() || die ("Failed to fetch runtime stats from hive db: $!\n");
 
   my $dir =$self->required_param('pipeline_dir');
-  open (my $report, ">$dir/REPORT_hive_pipe.txt") || die ("Failed to open report file for summary info: $!\n");
+  open(my $report, ">$dir/REPORT_hive_pipe.txt") || die ("Failed to open report file for summary info: $!\n");
 
   print $report "PhenotypeAnnotation pipeline finished! \n";
   print $report "running time: $time->[0]->[0] \n";

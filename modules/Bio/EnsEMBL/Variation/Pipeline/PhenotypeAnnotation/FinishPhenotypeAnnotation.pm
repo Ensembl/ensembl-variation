@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeA
 
 use strict;
 use warnings;
+use POSIX qw(strftime);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
@@ -47,7 +48,10 @@ sub fetch_input {
   my $self = shift;
 
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-
+  my $workdir = $self->param('workdir');
+  $workdir ||= $self->param('pipeline_dir');
+  open(my $logFH, ">", $workdir."/REPORT_import_".$self->param("species").".txt") || die ("Failed to open file: $!\n");
+  $self->logFH($logFH);
 }
 
 sub run {
@@ -65,57 +69,10 @@ sub run {
   ## updated production db for later use
   $self->update_internal_db($new_counts);
 
-  $self->update_meta();
+  close($self->logFH) if defined $self->logFH ;
 }
 
 
-=head2 get_new_results
-
-  Arg [1]    : hashref $previous (optional)
-               The previous status counts of the analysis.
-  Example    : $new_counts = $obj->get_new_results()
-  Description: Run all the counting SQL on the new database.
-  Returntype : hashref of new counts
-  Exceptions : none
-
-=cut
-
-sub get_new_results{
-  my ($self, $previous) = @_; ## previous status only available if production db connection details supplied
-
-  my $dbc     = $self->variation_db_adaptor->dbc;
-  my $source = $self->param('source');
-
-  my %new;  ## hold some of the new counts to store
-
-  ## counts based on type and source
-  my $phenotype_feature_grouped_count_st = qq[select s.name, pf.type, count(*)
-                                          from phenotype_feature pf, source s
-                                          where pf.source_id = s.source_id
-                                          group by s.name, pf.type ];
-
-  ## counts on phenotypes relevant to all species
-  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
-  foreach my $table (@tables) {
-    my $count_st = qq[ select count(*) from $table];
-    $new{"$table\_count"}  = count_results($dbc, $count_st);
-    unless($new{"$table\_count"} > 0){  ## report & die if total failure
-        $self->warning("WARNING: no entries found in the table $table\n");
-        die unless ($table eq 'phenotype_feature_attrib' ||
-                    $table eq 'phenotype_ontology_accession');
-    }
-  }
-
-  # get grouped counts
-  my $sth = $dbc->prepare($phenotype_feature_grouped_count_st);
-  $sth->execute();
-  my $dat = $sth->fetchall_arrayref();
-  foreach my $l (@{$dat}){
-    $new{phenotype_feature_count_details}{$l->[0]."_".$l->[1]} = $l->[2];
-  }
-
-  return \%new;
-}
 
 =head2 report_results
 
@@ -133,11 +90,8 @@ sub get_new_results{
 sub report_results{
   my ($self, $new, $previous) = @_;
 
-
-  my $dir =  $self->required_param('workdir');
-  my $report;
-  open ($report, ">$dir/REPORT_import.txt") || die ("Failed to open report file for summary info :$!\n");
-  print $report, "Running time: ", localtime, "\n";
+  my $time = strftime("%Y-%m-%d %H:%M:%S", localtime);
+  $self->print_logFH("Running time: $time\n");
 
   my $text_out = "\nSummary of results from CheckPhenotypeAnnotation\n\n";
 
@@ -154,48 +108,11 @@ sub report_results{
     $text_out.= "\n";
   }
 
-  print $report $text_out;
-  close $report;
+  $self->print_logFH($text_out);
 }
 
 
-=head2 get_old_results
 
-  Example    : $obj->get_old_results()
-  Description: Check internal production database for previous phenotype annotation import information
-               for this species.
-  Returntype : hashref of previous counts
-  Exceptions : none
-
-=cut
-
-sub get_old_results{
-  my  $self = shift;
-
-  my $int_dba ;
-  eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
-
-  unless (defined $int_dba){
-    $self->warning('No internal database connection found to write status ');
-    return;
-  }
-
-  my %previous_result;
-
-  my $result_adaptor = $int_dba->get_ResultAdaptor();
-  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
-
-  foreach my $result (@{$res}){
-
-    if ($result->parameter()){
-      $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
-    } else {
-      $previous_result{ $result->result_type() } = $result->result_value();
-    }
-  }
-
-  return \%previous_result;
-}
 
 
 =head2 update_internal_db
@@ -273,64 +190,9 @@ sub update_internal_db{
 }
 
 
-=head2 count_results
-
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBConnection $dbc
-               The new variation database connection
-  Arg [2]    : string $st
-               The SQL statement to be run.
-  Example    : $obj->count_results($dbc, $st)
-  Description: Takes SQL statements to count the rows in a table or count rows grouped
-               by an attribute in the table. It returns either the total number of rows in the
-               table or a hash of attribute => row count depending on input.
-  Returntype : interger or hashref
-  Exceptions : none
-
-=cut
-
-sub count_results{
-  my ($dbc, $st) = @_;
-
-  my $sth = $dbc->prepare($st);
-  $sth->execute();
-  my $dat = $sth->fetchall_arrayref();
-
-  if(defined $dat->[0]->[1]){
-    my %count;
-    foreach my $l (@{$dat}){
-        $count{$l->[0]} = $l->[1];
-    }
-    return \%count;
-  }
-  else{
-    return $dat->[0]->[0];
-  }
-}
 
 
-=head2 update_meta
 
-  Example    : $obj->update_meta()
-  Description: Store the pipeline name, date and imported source in the species meta table.
-               key=PhenotypeAnnotation_run_date_<source_name> value=run_date
-  Returntype : none
-  Exceptions : none
-
-=cut
-
-sub update_meta{
-  my $self = shift;
-
-  my $source_info = $self->param("source");
-  my $var_dbh = $self->variation_db_adaptor->dbc->db_handle;
-
-  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
-                                              ( meta_key, meta_value) values (?,?)
-                                            ]);
-
-  $update_meta_sth->execute('PhenotypeAnnotation_run_date_'.$source_info->{source_name}, $self->run_date() );
-
-}
 
 1;
 

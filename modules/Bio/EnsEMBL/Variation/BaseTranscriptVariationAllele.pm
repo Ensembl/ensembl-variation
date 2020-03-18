@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -113,9 +113,15 @@ sub _intron_effects {
     $tv ||= $self->base_variation_feature_overlap;
     $vf ||= $self->base_variation_feature;
     my $vf_start = $vf->{start};
-    
+
     foreach my $region(@{$self->_get_differing_regions($tv)}) {
       my ($r_start, $r_end) = ($vf_start + $region->{s}, $vf_start + $region->{e});
+      
+      ## To ensure that intronic consequences are correctly calculated, we check both
+      ## input and altered positions
+      
+      my ($r_start_unshifted, $r_end_unshifted) = ($r_start, $r_end); 
+      ($r_start_unshifted, $r_end_unshifted) = ($self->{shift_hash}->{unshifted_start} + $region->{s}, $self->{shift_hash}->{unshifted_start}+ $region->{e}) if defined($self->{shift_hash});
 
       my $insertion = $r_start == $r_end + 1;
       
@@ -135,9 +141,11 @@ sub _intron_effects {
         }
 
         if (
-          overlap($r_start, $r_end, $intron_start+2, $intron_end-2) or 
-          ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
-        ) {
+        overlap($r_start, $r_end, $intron_start+2, $intron_end-2) || 
+        ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
+       || overlap($r_start_unshifted, $r_end_unshifted, $intron_start+2, $intron_end-2) || 
+      ($insertion && ($r_start_unshifted == $intron_start+2 || $r_end_unshifted == $intron_end-2))
+    ) {
           $intron_effects->{intronic} = 1;
         }
       }

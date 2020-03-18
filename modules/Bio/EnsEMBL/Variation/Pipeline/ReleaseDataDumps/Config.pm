@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -86,6 +86,7 @@ sub write_config_file {
         $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
         $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+        $species_config->{structural_variations} = ['structural_variations', 'clinical_significance'];
     }
     $config->{$species} = $species_config;
     

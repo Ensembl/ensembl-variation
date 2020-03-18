@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -256,14 +256,20 @@ sub get_all_OverlapConsequences {
     my $bvfo = $self->base_variation_feature_overlap;
     my $bvf  = $bvfo->base_variation_feature;
     my $feat = $bvfo->feature;
-    
-    my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
 
+    my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
+    
+    my @oc_list = @{$self->_get_oc_list($pre)};
+    my $tr = $self->transcript if defined($self->{shift_hash});
     # loop over all the consequences determined for this pre hash
-    OC: for my $oc (@{$self->_get_oc_list($pre)}) {
+    OC: for my $oc (@oc_list) {
 
       last if $assigned_tier && $oc->{tier} > $assigned_tier;
-      
+      ## $bvfo->{shifted} is defined in the new method of TranscriptVariation.pm
+      my $shifting_offset = $bvfo->{shifted} && defined($self->{shift_hash}) ? $self->{shift_hash}->{shift_length} * $tr->strand : 0;
+            
+      $bvf->{start} += $shifting_offset;
+      $bvf->{end} += $shifting_offset;
       if($oc->predicate->($self, $feat, $bvfo, $bvf)) {
         push @$cons, $oc;
 
@@ -272,6 +278,8 @@ sub get_all_OverlapConsequences {
           $assigned_tier = $tier;
         }
       }
+      $bvf->{start} -= $shifting_offset;
+      $bvf->{end} -= $shifting_offset;
     }
 
     $cons = [$DEFAULT_OVERLAP_CONSEQUENCE] unless @$cons;
@@ -291,7 +299,6 @@ sub _get_oc_list {
   unless(exists($cache->{$digest})) {
     my $dummy_feat = bless {}, $pre->{feature_class};
     my $dummy_vf   = bless {}, $pre->{vf_class};
-
     $cache->{$digest} ||= [
       map {$_->{SO_term}}
       grep {
@@ -329,7 +336,7 @@ sub _skip_oc {
 # used to work out whether to execute predicates in get_all_OverlapConsequences
 sub _pre_consequence_predicates {
   my ($self, $feat, $bvfo, $bvf) = @_;
-  
+
   unless(exists($self->{pre_consequence_predicates})) {
     $bvfo ||= $self->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
@@ -435,7 +442,9 @@ sub _bvfo_preds {
   my $bvfo_preds = {};
   my $pred_digest = '';
 
-  my ($vf_start, $vf_end) = ($bvf->{start}, $bvf->{end});  
+  my $shifting_offset = defined($self->{shift_hash}) ? $self->{shift_hash}->{shift_length} * $self->transcript->strand : 0;
+
+  my ($vf_start, $vf_end) = ($bvf->{start} + $shifting_offset, $bvf->{end} + $shifting_offset);  
   my ($min_vf, $max_vf) = $vf_start > $vf_end ? ($vf_end, $vf_start) : ($vf_start, $vf_end);
 
   if ( $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') &&

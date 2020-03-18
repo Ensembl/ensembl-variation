@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -2714,9 +2714,9 @@ sub mfva_to_line {
   return undef unless $mf->stable_id;
   # check that the motif has a binding matrix, if not there's not
   # much we can do so don't return anything
-  return undef unless keys %{$mf->binding_matrix->{elements}} > 0;
+  return undef unless keys %{$mf->get_BindingMatrix->{elements}} > 0;
 
-  my $matrix = ($mf->binding_matrix->stable_id ? $mf->binding_matrix->stable_id : '');
+  my $matrix = ($mf->get_BindingMatrix->stable_id ? $mf->get_BindingMatrix->stable_id : '');
   $matrix =~ s/\s+/\_/g;
 
   my $base_line = {
@@ -5685,7 +5685,7 @@ sub cache_reg_feats {
                           %cl =
                             map {$_->[0] => $_->[1]}
                             map {$_->[0] =~ s/ /\_/g; $_}
-                            map {[$_->get_Epigenome->display_label, $_->activity]}
+                            map {[$_->get_Epigenome->short_name, $_->activity]}
                             @{$rf->regulatory_activity};
                         }
 
@@ -5694,7 +5694,7 @@ sub cache_reg_feats {
                           %cl =
                             map {$_->[0] => $_->[1]}
                             map {$_->[0] =~ s/ /\_/g; $_}
-                            map {[$_->get_Epigenome->display_label, $_->activity]}
+                            map {[$_->get_Epigenome->short_name, $_->activity]}
                             map {@{$_->regulatory_activity}}
                             @{$config->{'RegulatoryFeature_adaptor'}->fetch_all_by_attribute_feature($rf)};
                         }
@@ -5731,8 +5731,8 @@ sub clean_reg_feat {
 
     if(defined($rf->{binding_matrix})) {
         if ($rf->stable_id) {
-          $rf->binding_matrix->_elements;
-          $rf->binding_matrix->_min_max_sequence_similarity_score;
+          $rf->get_BindingMatrix->_elements;
+          $rf->get_BindingMatrix->_min_max_sequence_similarity_score;
           $rf->{binding_matrix}->{associated_transcription_factor_complexes} = [];
         }
         $rf->{_variation_effect_feature_cache}->{seq} = $rf->seq;
@@ -6395,7 +6395,7 @@ sub write_cache_info {
     my @cell_types = 
       sort
       map {s/ /\_/g; $_}
-      map {$_->display_label}
+      map {$_->short_name}
       @{$regulatory_build->get_all_Epigenomes};
 
     print OUT "cell_types\t".(join ",", @cell_types);

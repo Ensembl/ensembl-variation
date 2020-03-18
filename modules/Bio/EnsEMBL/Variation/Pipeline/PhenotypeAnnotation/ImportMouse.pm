@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ use File::Path qw(make_path);
 use File::stat;
 use LWP::Simple;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI NONE species);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI MOUSE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
 sub fetch_input {
@@ -56,9 +56,9 @@ sub fetch_input {
     $self->debug($self->param('debug_mode'));
 
     my $workdir = $pipeline_dir."/ImportMouse/";
-    make_path($workdir);
+    make_path($workdir) or die "Failed to create $workdir $!\n";
 
-    open (my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
+    open(my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
     $self->logFH($logFH);
 
     #get mouse coordinate file:
@@ -68,12 +68,13 @@ sub fetch_input {
     getstore($impc_file_url, $workdir."/".$coord_file) unless -e $workdir."/".$coord_file;
 
     unless ($run_type eq NONE) {
-      my %import_species = &species;
-      if($run_type eq IMPC){
+      my %import_species = SPECIES;
+      if($run_type eq IMPC || $run_type eq MOUSE){
         my @speciesList = map { {species => $_} } @{$import_species{'IMPC'}};
         foreach my $spec (@speciesList){
           $spec->{coord_file} = $workdir."/".$coord_file ;
           $spec->{pipeline_dir} = $workdir;
+          $spec->{source_name} = $run_type eq IMPC ? IMPC : 'IMPC_MGI' ;
         }
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if ($self->debug) ;
@@ -87,6 +88,9 @@ sub fetch_input {
         $self->param('output_ids', [ @speciesList ]);
         print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if ($self->debug) ;
       }
+
+      my @speciesNames = map { {species => $_->{species}} }  @{$self->param('output_ids')};
+      $self->param('species_names', [@speciesNames]);
     }
 }
 
@@ -95,13 +99,15 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ($run_type eq IMPC){
+    if ($run_type eq IMPC || $run_type eq MOUSE){
       $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 2);
     } elsif ( $run_type eq MGI){
       $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for MGI import \n") if ($self->debug);
       $self->dataflow_output_id($self->param('output_ids'), 3);
     }
+    $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if ($self->debug);
+    $self->dataflow_output_id($self->param('species_names'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 

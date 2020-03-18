@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -342,7 +342,6 @@ $config = copy_config($base_config, {
 });
 @vfs = @{parse_line($config, qq{21 25587758 rs116645811 G A . . . GT 1|1 0|0})};
 ok( scalar (grep { $_->{individual} eq 'B' } @vfs) >= 1, 'vcf format - individual data process ref homs"');
-
 # vcf GP
 $config = copy_config($base_config, { gp => 1 });
 ($vf) = @{parse_line($config, qq{1 1 test G C . . GP=21:25606454})};

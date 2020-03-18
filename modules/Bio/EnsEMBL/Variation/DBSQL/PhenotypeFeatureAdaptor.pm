@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,12 +38,13 @@ limitations under the License.
 Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
 
 =head1 SYNOPSIS
+
   $reg = 'Bio::EnsEMBL::Registry';
-  
+
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
-  $pfa = $reg->get_adaptor("human","variation","phenotypefeature");
-  $va = $reg->get_adaptor("human","variation","variation");
+  $pfa = $reg->get_adaptor('human','variation','phenotypefeature');
+  $va = $reg->get_adaptor('human','variation','variation');
   
   # Get a PhenotypeFeature by its internal identifier
   $pf = $pfa->fetch_by_dbID(45);
@@ -83,7 +84,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
-our $DEFAULT_INCLUDE_PHENOTYPES = 'trait,tumour,non_specified';
+our $DEFAULT_INCLUDE_PHENOTYPE_CLASS = 'trait,tumour,non_specified';
 
 # internal method
 =head2 _is_significant_constraint
@@ -1004,7 +1005,6 @@ sub count_all_by_Phenotype {
   Returntype : integer
   Exceptions : none
   Caller     : general
-
 =cut
 sub count_all_by_Gene {
   my $self = shift;
@@ -1028,7 +1028,6 @@ sub count_all_by_Gene {
   Returntype : integer
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_by_phenotype_id {
   my $self = shift;
@@ -1052,7 +1051,6 @@ sub count_all_by_phenotype_id {
   Returntype : hashref of array of types => phenotype_feature count
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_type_by_phenotype_id {
   my $self = shift;
@@ -1089,7 +1087,6 @@ sub count_all_type_by_phenotype_id {
   Returntype : hashref source name => phenotype_feature counts
   Exceptions : none
   Caller     : web
-
 =cut
 sub count_all_with_source_by_Phenotype {
   my $self     = shift;
@@ -1320,6 +1317,7 @@ sub _include_ontology {
 sub _include_phenotype_class {
   my $self = shift;
 
+  #use_phenotype_class_ids is set in use_phenotype_classes method
   return $self->{use_phenotype_class_ids} if defined($self->{use_phenotype_class_ids});
 
   #fetch and init if it was not set
@@ -1710,7 +1708,7 @@ sub _get_submitter_name{
 
 =head2 use_phenotype_classes
 
-  Arg [1]    : string $newval (optional)
+  Arg [1]    : string $new_classes (optional)
   Example    :
     # Configure the adaptor to return all phenotype classes (including non specified)
     # when using fetch methods in the various object adaptors
@@ -1730,35 +1728,42 @@ sub use_phenotype_classes {
   my $self = shift;
   my $include = shift;
 
-  my @classes;
-  if ( defined($self->{use_phenotype_classes})) {
-    #if call without parameter and flag has a value return it
-    return $self->{use_phenotype_classes} if (!defined($include));
-    $self->{use_phenotype_classes} = $include;
-    @classes = split(",", $include);
+  #if call without parameter and variable has a value return it
+  if ( defined($self->{use_phenotype_classes}) && !defined($include)) {
+    return $self->{use_phenotype_classes};
   }
 
-  #set default if not initalised and no new values
-  if (scalar @classes == 0){
-    $self->{use_phenotype_classes} = $DEFAULT_INCLUDE_PHENOTYPES;
-    @classes = split(",", $DEFAULT_INCLUDE_PHENOTYPES);
+  my $new_classes;
+  if ( !defined($self->{use_phenotype_classes}) && !defined($include)) {
+    #set default if not initalised and no new values
+    $new_classes = $DEFAULT_INCLUDE_PHENOTYPE_CLASS;
+  } elsif (defined $include){
+    $new_classes = $include;
   }
+  my @classes = split(",", $new_classes) if $new_classes;
 
   #set the phenotype class attrib id
-  my $incl_class = "";
+  my %final_classes=();
   for my $cl (@classes){
 
     my $class_attrib_id;
-    if ( defined($self->{class_attribs}{$cl})) {
+    if ( defined($self->{class_attribs}{$cl}) ) {
       $class_attrib_id = $self->{class_attribs}{$cl};
     } else {
       $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
-      $self->{class_attribs}{$cl} = $class_attrib_id;
+      if (defined ($class_attrib_id)){
+        $self->{class_attribs}{$cl} = $class_attrib_id;
+      } else {
+        warning("WARNING: phenotype class attrib '$cl' does not exist!\n");
+      }
     }
-    $incl_class .= $class_attrib_id.", ";
+    if ( $self->{class_attribs}{$cl} ) {
+      $final_classes{$cl} = $self->{class_attribs}{$cl};
+    }
 
   }
-  $self->{use_phenotype_class_ids} = substr($incl_class,0, -2);
+  $self->{use_phenotype_class_ids} = join(",", values %final_classes);
+  $self->{use_phenotype_classes} = join(",", keys %final_classes);
 
   return $self->{use_phenotype_classes};
 }
