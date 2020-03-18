@@ -275,9 +275,6 @@ sub get_set{
       'name' => 'All ClinVar'},
   };
 
-  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
-                                       where value = ? and attrib_type_id = 477]);
-
   my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id
                                       from variation_set, attrib
                                       where variation_set.short_name_attrib_id = attrib.attrib_id
@@ -300,11 +297,9 @@ sub get_set{
   }
 
   ### enter new set record
-  $attrib_ext_sth->execute( $set);
-  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
-  die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
+  my $attrib_id = get_attrib_id('short_name',$set);
 
-  $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] );
+  $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id );
   $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
 
   return $set_id;
