@@ -115,7 +115,7 @@ my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
-my $non_specified_class = 663;
+my $non_specified_class_id = get_attrib_id('phenotype_type', 'non_specified');
 my %non_specified_pheno = ("None"=>1,
                      "Not provided"=> 1,
                      "not specified" => 1,
@@ -857,7 +857,7 @@ sub get_phenotype{
   unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
 
     $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
-    $pheno->class_attrib_id($non_specified_class) if exists $non_specified_pheno{$pheno};
+    $pheno->class_attrib_id($non_specified_class_id) if exists $non_specified_pheno{$pheno};
     $phenotype_adaptor->store($pheno);
   }
 
@@ -1182,6 +1182,20 @@ sub add_synonyms{
 
 
 }
+
+sub get_attrib_id {
+  my ($type, $value) = @_;
+
+  my $aa = $dba->get_AttributeAdaptor();
+  my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
+
+  if (!$attrib_id){
+    die("Couldn't find the $value attrib of $type type\n");
+  } else {
+    return $attrib_id;
+  }
+}
+
 
 ## delete previous ClinVar data
 ## a few entries are withdrawn each time
