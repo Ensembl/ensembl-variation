@@ -189,7 +189,7 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
         pipeline_dir => $self->o('pipeline_dir'),
-        max_distance => ($self->o('species') =~ /homo_sapiens|human/ && ! $self->o('human_default_override')) ? 0 : $self->o('max_distance'),
+        max_distance => ($self->o('species') =~ /homo_sapiens|human/ && (! $self->o('human_default_override'))) ? 0 : $self->o('max_distance'),
     );
    
     my @analyses;
