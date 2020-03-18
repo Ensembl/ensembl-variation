@@ -42,7 +42,7 @@ CREATE TABLE `attrib` (
   `value` text NOT NULL,
   PRIMARY KEY (`attrib_id`),
   UNIQUE KEY `type_val_idx` (`attrib_type_id`,`value`(40))
-) ENGINE=MyISAM AUTO_INCREMENT=618 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=666 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `attrib_set` (
   `attrib_set_id` int(11) unsigned NOT NULL DEFAULT '0',
@@ -186,7 +186,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=126 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=128 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -220,12 +220,12 @@ CREATE TABLE `phenotype` (
   `stable_id` varchar(255) DEFAULT NULL,
   `name` varchar(50) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
-  `class_attrib_id` INT DEFAULT NULL,
+  `class_attrib_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`),
   UNIQUE KEY `desc_idx` (`description`),
   KEY `stable_idx` (`stable_id`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `phenotype_feature` (
   `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -245,7 +245,7 @@ CREATE TABLE `phenotype_feature` (
   KEY `type_idx` (`type`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
   KEY `source_idx` (`source_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `phenotype_feature_attrib` (
   `phenotype_feature_id` int(11) unsigned NOT NULL,
@@ -471,8 +471,8 @@ CREATE TABLE `structural_variation_feature` (
   `breakpoint_order` tinyint(4) DEFAULT NULL,
   `length` int(10) DEFAULT NULL,
   `variation_set_id` set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64') NOT NULL DEFAULT '',
-  allele_freq FLOAT DEFAULT NULL,
-  allele_count INT(10) UNSIGNED DEFAULT NULL,
+  `allele_freq` float DEFAULT NULL,
+  `allele_count` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`structural_variation_feature_id`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
   KEY `structural_variation_idx` (`structural_variation_id`),
@@ -607,7 +607,7 @@ CREATE TABLE `variation_attrib` (
 CREATE TABLE `variation_citation` (
   `variation_id` int(10) unsigned NOT NULL,
   `publication_id` int(10) unsigned NOT NULL,
-  `data_source_attrib` set('615','616','617') DEFAULT NULL,
+  `data_source_attrib` set('615','616','617','618','619','620') DEFAULT NULL,
   PRIMARY KEY (`variation_id`,`publication_id`),
   KEY `data_source_attrib_idx` (`data_source_attrib`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
