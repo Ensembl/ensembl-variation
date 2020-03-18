@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,7 +23,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob;
 use strict;
 use warnings;
 use FileHandle;
-use Data::Dumper;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
 
@@ -82,7 +81,10 @@ sub fetch_input {
         $script_args_to_file_name->{$script_arg} = $file_name;
       }
     } else {
-      my @arguments = map {'--' . $_} @{$config->{$dump_type}};
+      my @arguments = ();
+      foreach my $argument (@{$config->{$dump_type}}) {
+        push @arguments, "--$argument";
+      }
       my $script_arg = join(' ', @arguments);
       my $file_name = "$species\_$dump_type";
       $script_args_to_file_name->{$script_arg} = $file_name;
@@ -196,7 +198,13 @@ sub get_ancestral_allele_file {
       $self->run_cmd("rm -rf $pipeline_dir/ancestral_alleles");
     }
     $self->run_cmd("mkdir $pipeline_dir/ancestral_alleles");
-    $self->run_cmd("tar xzf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    if ($ancestral_allele_archive =~ /\.tar\.gz/) {
+      $self->run_cmd("tar xzf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    } elsif ($ancestral_allele_archive =~ /\.tar\.bz2/) {
+      $self->run_cmd("tar xjf $path/$ancestral_allele_archive -C $pipeline_dir/ancestral_alleles");
+    } else {
+      die "Could not recognise tar file extension. Supported extensions are tar.gz and tar.bz2";
+    }
     my $ancestral_allele_dir = _get_only_file_in_dir("$pipeline_dir/ancestral_alleles");
     my $ancestral_allele_file = "$species\_ancestor\_$assembly.fa";
     $self->run_cmd("cat $pipeline_dir/ancestral_alleles/$ancestral_allele_dir/*.fa > $pipeline_dir/$ancestral_allele_file");

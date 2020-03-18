@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -144,15 +144,7 @@ sub final_join_gvf {
       $id_count++;
     }
     $fh->close();
-    # We only keep intermediate files for human because they take the longest to be generated
-    # We can rerun the pipeline for all other species if something goes wrong. 
-    if ($species eq 'homo_sapiens') {
-      `gzip $dir/$dump_type-$file_id.gvf`;
-      `mv $dir/$dump_type-$file_id.gvf.gz $tmp_dir`;
-    } else {
-      `rm $dir/$dump_type-$file_id.gvf`;
-    }
-
+    `rm $dir/$dump_type-$file_id.gvf`;
   }
   $fh_join->close();
 }

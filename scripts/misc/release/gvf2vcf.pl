@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,14 +60,13 @@ GetOptions(
     'global_maf',
     'evidence',
     'clinical_significance',
-
     'structural_variations|svs',
-
     'incl_consequences',
     'protein_coding_details',
     'sift',
     'polyphen',
-
+    'somatic',
+    'set_name=s',
     'individual=s',
 
 ) or pod2usage(1);
@@ -229,6 +228,8 @@ sub init_data {
           my $terms = $ontology->fetch_all_by_name($name, 'SO');
           foreach my $term (@$terms) {
             $definition = $term->definition;
+            # trim definition remove everything between [], remove " and \ characters
+            $definition =~ s/\[.*\]|\\|"//g;
           }
         } 
         $config->{header_sv_class}->{$name} = $definition;

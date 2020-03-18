@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ use File::stat;
 use POSIX qw(strftime);
 use LWP::Simple;
 use HTTP::Tiny;
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -83,7 +84,7 @@ my %species_synonyms = (
   'chimpanzee'  => 'pan_troglodytes',
   'chimp' => 'pan_troglodytes',
   'cow'  => 'bos_taurus',
-  'dog'  => 'canis_familiaris',
+  'dog'  => 'canis_lupus_familiaris',
   'gibbon' => 'nomascus_leucogenys',
   'goat'  => 'capra_hircus',
   'horse' => 'equus_caballus',
@@ -123,7 +124,11 @@ sub fetch_input {
                   );
 
   my $workdir_fetch = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir_fetch) or die "Failed to create $workdir_fetch $!\n";
+  unless (-d $workdir_fetch) {
+    my $err;
+    make_path($workdir_fetch, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   my $file_omia = 'omia_gene_table.txt';
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
@@ -209,6 +214,7 @@ sub split_omia {
 
   my $prefix = 'omia_';
   my $suffix = '.txt';
+  make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
 
   my %data;
 
@@ -252,7 +258,6 @@ sub split_omia {
     $id =~ s/'//g;
     $id =~ s/^domestic_//g;
 
-    make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
     open(OUT, "> $workdir/omia_split/$prefix$id$suffix") || die $!;
     foreach my $line (@{$data{$taxo_id}}) {
       print OUT "$line\n";

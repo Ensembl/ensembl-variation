@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ use warnings;
 use File::Path qw(make_path);
 use HTTP::Tiny;
 use JSON;
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
@@ -59,7 +60,11 @@ sub fetch_input {
   my $species = $self->required_param('species');
   my $workdir = $self->param('workdir');
   $workdir ||= $self->required_param('pipeline_dir')."/OntologyMap";
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
 
   $self->debug($self->param('debug_mode'));
   $self->variation_db_adaptor($self->get_species_adaptor('variation'));

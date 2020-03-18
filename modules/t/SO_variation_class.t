@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,15 +31,15 @@ my %tests = (
     'AA/TT'                 => 'substitution',
     'A/YY'                  => 'indel',
     'GA/TTT/ACCCC'          => 'indel',
-    'CTCT/CTCTCT'           => 'insertion',
-    'CTCT/CT'               => 'deletion',
+    'CTCT/CTCTCT'           => 'indel',
+    'CTCT/CT'               => 'indel',
     'CTCT/CTCTCT/CT'        => 'indel',
     'CT/-'                  => 'deletion',
-    'CT/CTCT'               => 'insertion',
-    'CT/-/CTCT'             => 'indel', # Not a sequence alteration
-    'C/-/CC'                => 'indel',
+    'CT/CTCT'               => 'indel',
+    'CT/-/CTCT'             => 'sequence_alteration',
+    'C/-/CC'                => 'sequence_alteration',
     'TCT/T/TCTG'            => 'indel',
-    'TCT/-/TCTG'            => 'indel',
+    'TCT/-/TCTG'            => 'sequence_alteration',
     '-/A'                   => 'insertion',
     '-/TAAG'                => 'insertion',
     '-/(LARGEINSERTION)'    => 'insertion',
@@ -48,9 +48,9 @@ my %tests = (
     '-/AA/ATGCG'            => 'insertion',
     '(508 BP INSERTION)'    => 'insertion',
     '-/INSERTION'           => 'insertion',
-    'T/TT'                  => 'insertion',
-    'TT/TTTT'               => 'insertion',
-    'TT/TTTT/TTTTT'         => 'insertion',
+    'T/TT'                  => 'indel',
+    'TT/TTTT'               => 'indel',
+    'TT/TTTT/TTTTT'         => 'indel',
     '-/(LARGEDELETION)'     => 'deletion', # dbSNP style
     '(1657 BP DELETION)/-'  => 'deletion', # COSMIC style
     'ATTAGC/-'              => 'deletion',
@@ -58,13 +58,13 @@ my %tests = (
     'YY/-'                  => 'deletion',
     '(LARGEDELETION)'       => 'deletion',
     'DELETION/-'            => 'deletion',
-    'TT/T'                  => 'deletion',
-    'TTT/TT/T'              => 'deletion',
-    'TT/-/T'                => 'deletion',
-    'CTT/C'                 => 'deletion',
-    'TA/T'                  => 'deletion',
-    'TCT/CT'                => 'deletion',
-    'AGCG/-/A'              => 'deletion',
+    'TT/T'                  => 'indel',
+    'TTT/TT/T'              => 'indel',
+    'TT/-/T'                => 'sequence_alteration',
+    'CTT/C'                 => 'indel',
+    'TA/T'                  => 'indel',
+    'TCT/CT'                => 'indel',
+    'AGCG/-/A'              => 'sequence_alteration',
     '(LARGEDELETION)/-/AT'  => 'sequence_alteration',
     'A/-/T'                 => 'sequence_alteration',
     'A/Y/-'                 => 'sequence_alteration',
@@ -74,8 +74,8 @@ my %tests = (
     '-/TGTG/(TG)10/TG(11)'  => 'tandem_repeat',
     '-/(RY)7/(RY)8'         => 'tandem_repeat',
     'TT/T/TTT'              => 'indel',     # dbSNP v2 style indel
-    'TT/TTT/TTTT'           => 'insertion', # dbSNP v2 style indel
-    'TTT/T/TT'              => 'deletion',  # dbSNP v2 stype indel
+    'TT/TTT/TTTT'           => 'indel',     # dbSNP v2 style indel
+    'TTT/T/TT'              => 'indel',     # dbSNP v2 style indel
 );
 
 for my $allele_string (sort keys %tests) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1223,9 +1223,9 @@ sub get_header_info {
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
   $h->{study}        = (split(' ',$info))[0] if ($label =~ /Study.+accession/i);
 
-  # COSMIC study_type = 'Collection'
-  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i);
-  
+  # COSMIC study_type = 'Collection' but display name = 'COSMIC'
+  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i || $h->{author} =~ /COSMIC/);
+
   # Publication information
   if ($label =~ /Publication/i && $info !~ /Not.+applicable/i) {
     foreach my $pub (split(';',$info)) {
@@ -1585,6 +1585,11 @@ sub parse_9th_col {
     my $cmd  = "grep 'parent=".$info->{ID}."' $fname";
     my $text = `$cmd`;
     $info->{is_somatic} = 1 if ($text =~ /var_origin=Somatic/i || !$text);
+  }
+
+  # COSMIC
+  if ($somatic_study && $info->{alias} =~ /^COST\d+$/) {
+    $info->{is_somatic} = 1;
   }
 
   return $info;

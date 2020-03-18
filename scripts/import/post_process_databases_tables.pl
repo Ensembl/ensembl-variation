@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2019] EMBL-European Bioinformatics Institute
+# Copyright [2016-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -312,14 +312,14 @@ sub process_phenotype_feature {
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
-      $source_attrib_id = $citation_attribs{$study_type};
+      $source_attrib_id = $citation_attribs->{$study_type};
       die "No attrib of type 'citation_source' was found for '$study_type'!\n" unless defined $source_attrib_id;
     }
     else{
       # Get source name from source table (dbGaP)
       my $source_obj = $source_ad->fetch_by_dbID($source_id);
       my $source_name = $source_obj->name();
-      $source_attrib_id = $citation_attribs{$source_name};
+      $source_attrib_id = $citation_attribs->{$source_name};
       die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
 
@@ -457,7 +457,7 @@ sub process_phenotype_feature_attrib {
         # Get source name from source table (ClinVar)
         my $source_obj = $source_ad->fetch_by_dbID($source_id);
         my $source_name = $source_obj->name();
-        $source_attrib_id = $citation_attribs{$source_name};
+        $source_attrib_id = $citation_attribs->{$source_name};
         die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
       }
 

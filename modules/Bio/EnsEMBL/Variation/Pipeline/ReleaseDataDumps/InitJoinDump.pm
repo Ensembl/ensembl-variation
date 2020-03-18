@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,9 +58,12 @@ sub run {
       closedir($dh);
       foreach my $file (@dir_content) {
         next if ($file =~ m/^\./);
-        if ($file =~ m/\.$file_type\.gz/) {
+        # homo_sapiens_structural_variations-chr10.gvf
+        # homo_sapiens_structural_variations-chr10.vcf.gz 
+        if ($file =~ m/\.($file_type\.gz|$file_type)$/) {
           my $file_name = $file;
-          $file_name =~ s/\.$file_type\.gz//;
+          $file_name =~ s/\.($file_type\.gz|$file_type)$//;
+          # $file_name e.g. homo_sapiens_structural_variations-chr10
           my ($dump_type, $range) = split('-', $file_name);
           push @{$files->{$dump_type}}, $range if ($range);
         }
@@ -68,9 +71,6 @@ sub run {
       foreach my $dump_type (keys %$files) {
         my $file_name = $dump_type;
         next if ($dump_type eq 'homo_sapiens_generic' || $dump_type eq 'homo_sapiens_incl_consequences');
-        if ($dump_type =~ /_generic/) {
-          $file_name =~ s/_generic//;
-        }
         if (scalar @{$files->{$dump_type}} > 0) {
           push @input, {
             dir => $dir,
