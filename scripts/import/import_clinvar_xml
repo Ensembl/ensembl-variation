@@ -86,7 +86,7 @@ my $dbh = $dba->dbc;
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
 my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
-my $aa                    = $dba->get_AttributeAdaptor();
+my $attrib_adaptor        = $dba->get_AttributeAdaptor();
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
 my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
@@ -1170,7 +1170,7 @@ sub add_synonyms{
 sub get_attrib_id {
   my ($type, $value) = @_;
 
-  my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
+  my $attrib_id = $attrib_adaptor->attrib_id_for_type_value($type, $value);
 
   if (!$attrib_id){
     die("Couldn't find the $value attrib of $type type\n");
