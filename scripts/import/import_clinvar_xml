@@ -53,7 +53,7 @@ use Date::Manip::Date;
 use XML::LibXML::Reader;
 use XML::Hash::XS qw();
 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
@@ -85,8 +85,8 @@ my $dbh = $dba->dbc;
 
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
-my $allele_adaptor        = $reg->get_adaptor('homo_sapiens', 'variation', 'allele');
 my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
+my $attrib_adaptor        = $dba->get_AttributeAdaptor();
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
 my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
@@ -98,8 +98,8 @@ my $omimstr= 'OMIM';
 my $source      = get_source('ClinVar');
 my $omim_source = get_source($omimstr);
 
-my $phenotype_evidence = "Phenotype_or_Disease";
-my $pheno_evidence_id = get_evidence_id($phenotype_evidence);
+my $phenotype_evidence = 'Phenotype_or_Disease';
+my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -116,6 +116,16 @@ my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
+my $non_specified_class_id = get_attrib_id('phenotype_type', 'non_specified');
+my %non_specified_pheno = ("None"=>1,
+                     "Not provided"=> 1,
+                     "not specified" => 1,
+                     "Not in OMIM" => 1,
+                     "Variant of unknown significance" => 1,
+                     "not_provided" => 1,
+                     "ClinVar: phenotype not specified" => 1,
+                     "See cases" => 1,
+                     "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
@@ -266,9 +276,6 @@ sub get_set{
       'name' => 'All ClinVar'},
   };
 
-  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
-                                       where value = ? and attrib_type_id = 477]);
-
   my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id
                                       from variation_set, attrib
                                       where variation_set.short_name_attrib_id = attrib.attrib_id
@@ -291,31 +298,15 @@ sub get_set{
   }
 
   ### enter new set record
-  $attrib_ext_sth->execute( $set);
-  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
-  die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
+  my $attrib_id = get_attrib_id('short_name',$set);
 
-  $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] );
+  $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id );
   $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
 
   return $set_id;
 
 }
 
-
-## get the identifier for a specific evidence
-sub get_evidence_id {
-  my $value = shift;
-
-  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
-                                       where value = ? and attrib_type_id = 497]);
-
-  $attrib_ext_sth->execute( $value);
-  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
-  die "Exiting: attrib not available for $value\n" unless defined $attrib_id->[0]->[0];
-
-  return $attrib_id->[0]->[0];
-}
 
 ## get ClinVar accession & version
 sub get_accession{
@@ -848,6 +839,7 @@ sub get_phenotype{
   unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
 
     $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
+    $pheno->class_attrib_id($non_specified_class_id) if exists $non_specified_pheno{$pheno};
     $phenotype_adaptor->store($pheno);
   }
 
@@ -1053,11 +1045,14 @@ sub enter_var{
       $allele_str = $ref_allele ."/". $alt_allele;
   }
 
+  my $so_term = SO_variation_class($allele_str);
+
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
       -is_somatic        => $somatic,
       -adaptor           => $variation_adaptor,
+      -class_SO_term     => $so_term,
     );
   $variation_adaptor->store($var);
 
@@ -1073,20 +1068,10 @@ sub enter_var{
      -source          => $source,
      -is_somatic      => 0,
      -adaptor         => $var_feat_adaptor,
+     -class_so_term    => $so_term,
     );
 
   $var_feat_adaptor->store($vf);
-
-  # save the update ref, alt allele
-  foreach my $allele ( $ref_allele, $alt_allele){
-    $allele =~s/\s+//;
-    my $al = Bio::EnsEMBL::Variation::Allele->new
-      ( -variation_id   => $var->dbID(),
-        -allele         => $allele,
-        -adaptor        => $allele_adaptor,
-      );
-    $allele_adaptor->store($al);
-  }
 
   my @vf; #return vf to attach phenotype feature to
   push @vf, $vf;
@@ -1179,6 +1164,21 @@ sub add_synonyms{
 
 
 }
+
+## get the identifier for a specific attrib_type and value
+## eg. 'Phenotype_or_Disease' attrib of type 'evidence'
+sub get_attrib_id {
+  my ($type, $value) = @_;
+
+  my $attrib_id = $attrib_adaptor->attrib_id_for_type_value($type, $value);
+
+  if (!$attrib_id){
+    die("Couldn't find the $value attrib of $type type\n");
+  } else {
+    return $attrib_id;
+  }
+}
+
 
 ## delete previous ClinVar data
 ## a few entries are withdrawn each time
