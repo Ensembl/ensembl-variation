@@ -355,7 +355,7 @@ sub _pre_consequence_predicates {
     $self->_update_preds($preds, 'vf_class', ref($bvf), \$pred_digest);
     
     # get BVF (variant genomic location) preds, copy to "main"
-    $bvf->{pre_consequence_predicates} ||= $self->_bvf_preds($feat, $bvfo, $bvf, $preds);
+    $bvf->{pre_consequence_predicates} = $self->_bvf_preds($feat, $bvfo, $bvf, $preds);
     @$preds{keys %{$bvf->{pre_consequence_predicates}}} = values %{$bvf->{pre_consequence_predicates}};
     $pred_digest .= $bvf->{pre_consequence_predicates}->{_digest};
     
