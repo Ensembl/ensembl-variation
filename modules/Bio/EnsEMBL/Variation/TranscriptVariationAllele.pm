@@ -1428,7 +1428,7 @@ sub hgvs_transcript {
   }
   else{
     $hgvs_notation->{start} = $self->_get_cDNA_position( $hgvs_notation->{start} + $misalignment_offset);
-    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $self->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset);
+    $hgvs_notation->{end}   = $same_pos ? $hgvs_notation->{start} : $self->_get_cDNA_position( $hgvs_notation->{end} + $misalignment_offset );
   }
   return undef unless defined  $hgvs_notation->{start}  && defined  $hgvs_notation->{end} ;
 

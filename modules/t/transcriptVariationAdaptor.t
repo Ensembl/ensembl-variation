@@ -353,7 +353,7 @@ my $msc_2 = $trvar_msc->most_severe_OverlapConsequence();
 is($msc_2->SO_term, $msc_2_expected, 'tv - most_severe_OverlapConsequence - same rank');
 
 ## RefSeq Mismatch Testing
-
+$DB::single = 1;
 my $tr = $tr_ad_of->fetch_by_stable_id('NM_001270408.1');
 my $sl_refseq = $s_ad->fetch_by_region('chromosome', 21);
 $vf_ad->db->shift_hgvs_variants_3prime(0);
@@ -378,6 +378,9 @@ $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
 
 ## Setting CDS coordinates allows us to set up niche case where mismatches are calculated
 my @tvas = @{ $tv->get_all_alternate_TranscriptVariationAlleles };
+
+## The following predicate is normally set in _bvfo_preds, however due to the limited quantity of data within the test database
+## then calling the method is insufficient right now. Rather than rewriting chunks of the test db, I've added in the predicate value here
 $tvas[0]->{pre_consequence_predicates}->{exon} = 1;
 
 $tv->cds_start(1234);
@@ -392,7 +395,8 @@ ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234N>A', 'Refseq HGVS mismatc
 my @attribs = @{$tr->get_all_Attributes()};
 my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
 ok($tvas[0]->get_misalignment_offset(\@edit_attrs) == 4, 'Misalignment offset');
-=======
+
+
 # Testing for transcript_variation.hgvs_genomic 'NULL' (string)
 # and NULL (value)
 #
