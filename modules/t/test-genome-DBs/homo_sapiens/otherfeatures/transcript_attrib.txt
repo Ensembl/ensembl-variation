@@ -22,6 +22,7 @@
 1234194	459	No whole transcript or CDS match to Ensembl model found for RefSeq model: NR_024092.1 (1141686), RefSeq slice chromosome:GRCh38:21:25582775:25583224:1
 1234194	451	RefSeq transcript seq to mRNA seq non-match. Check for associated attrib codes for greater detail: rseq_5p_mismatch, rseq_cds_mismatch, rseq_3p_mismatch, rseq_nctran_mismatch, rseq_no_comparison
 1234194	455	Imperfect match for whole sequence (no CDS defined). Length: 450, match bp: 449, mismatch bp: 1, indel count: 1, total indel length: 9. Stable id: NR_024092.1, RefSeq accession: NR_024092.1 CIGAR: 450M9I, MD: MD:Z:404C45
+1234211	145	145 145 AAAA
 1234199	458	CDS only match to Ensembl model found for RefSeq model: NM_017446.3 (1172206), RefSeq slice chromosome:GRCh38:21:25585656:25607489:1 ,total match count 1, matching Ensembl stable ids ENST00000352957
 1234199	451	RefSeq transcript seq to mRNA seq non-match. Check for associated attrib codes for greater detail: rseq_5p_mismatch, rseq_cds_mismatch, rseq_3p_mismatch, rseq_nctran_mismatch, rseq_no_comparison
 1234199	453	Imperfect match for CDS. Length: 1017, match bp: 1016, mismatch bp: 1, indel count: 0, total indel length: 0. Stable id: NM_017446.3, RefSeq accession: NM_017446.3 CIGAR: 1017M, MD: MD:Z:90T926
