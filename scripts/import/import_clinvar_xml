@@ -86,6 +86,7 @@ my $dbh = $dba->dbc;
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
 my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
+my $aa                    = $dba->get_AttributeAdaptor();
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
 my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
@@ -97,8 +98,8 @@ my $omimstr= 'OMIM';
 my $source      = get_source('ClinVar');
 my $omim_source = get_source($omimstr);
 
-my $phenotype_evidence = "Phenotype_or_Disease";
-my $pheno_evidence_id = get_evidence_id($phenotype_evidence);
+my $phenotype_evidence = 'Phenotype_or_Disease';
+my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 
 ## pre-load submitter ids - shortcutting the API for speed
 my $submitters = get_submitter_ids($dba);
@@ -307,19 +308,6 @@ sub get_set{
 }
 
 
-## get the identifier for a specific evidence
-sub get_evidence_id {
-  my $value = shift;
-
-  my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib
-                                       where value = ? and attrib_type_id = 497]);
-
-  $attrib_ext_sth->execute( $value);
-  my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
-  die "Exiting: attrib not available for $value\n" unless defined $attrib_id->[0]->[0];
-
-  return $attrib_id->[0]->[0];
-}
 
 ## get ClinVar accession & version
 sub get_accession{
@@ -1178,10 +1166,11 @@ sub add_synonyms{
 
 }
 
+## get the identifier for a specific attrib_type and value
+## eg. 'Phenotype_or_Disease' attrib of type 'evidence'
 sub get_attrib_id {
   my ($type, $value) = @_;
 
-  my $aa = $dba->get_AttributeAdaptor();
   my $attrib_id = $aa->attrib_id_for_type_value($type, $value);
 
   if (!$attrib_id){
