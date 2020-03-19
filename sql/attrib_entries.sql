@@ -330,6 +330,22 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', '');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (542, 'citation_source', 'Citation source', 'Variant citation data source');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (544, 'phenotype_type', 'Phenotype type', 'Type of the phenotype information');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (545, 'external_plant_links', 'external_plant_links', 'Links to external plant related sources');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (546, 'coord_system_tag', 'coord_system_tag', 'Coord_system_tag -- a way to store information about  seq_region\'s virtual coord_system names for single level assemblies.
+I.e., we have an assembly with toplevel seq_regions ("primary_assembly") only,
+and we want to store the initial type of  seq_regions like contig, scaffold, supercontig, chromosome, etc.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (547, 'sequence_location', 'sequence_location', 'To identify  sequence locations / cellular compartments  DNA sequence comes from.
+
+Values are supposed to be SO compliant (children of the plastid_sequence SO:0000740 and nuclear_sequence SO:0000738 ):
+"apicoplast_chromosome",
+"chloroplast_chromosome",
+"chromoplast_chromosome",
+"cyanelle_chromosome",
+"leucoplast_chromosome",
+"macronuclear_chromosome",
+"micronuclear_chromosome",
+"mitochondrial_chromosome",
+"nuclear_chromosome"');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -903,6 +919,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (662, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (663, 544, 'non_specified');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (664, 544, 'tumour');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (665, 544, 'trait');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (666, 545, 'cerealsdb_external_links');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
