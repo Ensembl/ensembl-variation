@@ -20,6 +20,8 @@ use Test::More;
 use Test::Deep;
 use Test::Exception;
 
+use Data::Dumper;
+
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
@@ -77,6 +79,21 @@ $va->db->include_failed_variations(1);
 my $varfs = $va->fetch_all_by_publication($pubs->[0]);
 ok(scalar(@{$varfs}) ==2,   "variation count by publication - inc fails");
 
+## store NULL authors
+my $pub_store_null = Bio::EnsEMBL::Variation::Publication->new( 
+                -title    => "ABCD",
+                -authors  => "",
+                -pmid     => 57,
+                -pmcid    => "PMC57",
+                -ucsc_id  => "12345",
+                -year     => 2020,
+                -doi      => "doi:12345",
+                -adaptor  => $pa
+                );
+
+$pa->store($pub_store_null);
+my $publication = $pa->fetch_by_dbID($pub_store_null->dbID);
+ok(!defined $publication->authors(), "authors NULL");
 
 ## store
 my $pub_store = Bio::EnsEMBL::Variation::Publication->new( 
