@@ -20,8 +20,6 @@ use Test::More;
 use Test::Deep;
 use Test::Exception;
 
-use Data::Dumper;
-
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
