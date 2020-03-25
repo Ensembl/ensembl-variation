@@ -72,15 +72,51 @@ sub attrib_value_for_id {
         undef;
 }
 
-sub attrib_id_for_type_value {
-    my ($self, $type, $value) = @_;
-    
-    unless ($self->{attrib_ids}) {
-        # call this method to populate the attrib hash
-        $self->attrib_value_for_id;
+=head2 attrib_values_for_attrib_type_code
+
+  Arg [1]    : string $attrib_type_code
+  Example    : $self->attrib_values_for_attrib_type_code($attrib_type_code)
+  Description: Return all attributes of a given attribute type based on the code name.
+               e.g. $aa->attrib_values_for_attrib_type_code('phenotype_type');
+  Returntype : hash ref of attribs (key) and attrib_ids (value)
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub attrib_values_for_attrib_type_code {
+  my ($self, $attrib_type_code) = @_;
+
+  unless ($self->{attrib_ids}) {
+
+    my $attribs;
+    my $attrib_ids;
+
+    my $sql = qq{
+        SELECT  a.attrib_id, t.code, a.value
+        FROM    attrib a, attrib_type t
+        WHERE   a.attrib_type_id = t.attrib_type_id
+    };
+
+    my $sth = $self->prepare($sql);
+
+    $sth->execute;
+
+    while (my ($attrib_id, $type, $value) = $sth->fetchrow_array) {
+        $attribs->{$attrib_id}->{type}  = $type;
+        $attribs->{$attrib_id}->{value} = $value;
+        $attrib_ids->{$type}->{$value} = $attrib_id;
     }
-    
-    return $self->{attrib_ids}->{$type}->{$value};
+
+    $self->{attribs}    = $attribs;
+    $self->{attrib_ids} = $attrib_ids;
+  }
+
+
+  return defined $attrib_type_code ? 
+      $self->{attrib_ids}->{$attrib_type_code} : 
+      undef;
 }
 
 sub attrib_id_for_type_code {
