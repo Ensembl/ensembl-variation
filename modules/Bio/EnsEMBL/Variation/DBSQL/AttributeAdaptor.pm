@@ -72,6 +72,17 @@ sub attrib_value_for_id {
         undef;
 }
 
+sub attrib_id_for_type_value {
+    my ($self, $type, $value) = @_;
+    
+    unless ($self->{attrib_ids}) {
+        # call this method to populate the attrib hash
+        $self->attrib_value_for_id;
+    }
+    
+    return $self->{attrib_ids}->{$type}->{$value};
+}
+
 =head2 attrib_values_for_attrib_type_code
 
   Arg [1]    : string $attrib_type_code
