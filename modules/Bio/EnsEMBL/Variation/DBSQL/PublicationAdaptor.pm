@@ -312,7 +312,7 @@ sub store{
     my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year, doi, ucsc_id ) values ( ?,?,?,?,?,?,? ) ]);   
     
     $pub_ins_sth->execute( $pub->{title},
-                           $pub->{authors},
+                           $pub->{authors} || undef,
                            $pub->{pmid}    || undef,
                            $pub->{pmcid}   || undef,
                            $pub->{year},
