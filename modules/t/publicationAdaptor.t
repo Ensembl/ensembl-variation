@@ -77,8 +77,6 @@ $va->db->include_failed_variations(1);
 my $varfs = $va->fetch_all_by_publication($pubs->[0]);
 ok(scalar(@{$varfs}) ==2,   "variation count by publication - inc fails");
 
-$multi->hide('variation', 'publication'); #make a backup of the current publication table
-
 ## Authors stored as NULL when value not provided ("" or 0)
 my $pub_store_null = Bio::EnsEMBL::Variation::Publication->new( 
                 -title    => "ABCD",
@@ -94,8 +92,6 @@ my $pub_store_null = Bio::EnsEMBL::Variation::Publication->new(
 $pa->store($pub_store_null);
 my $publication = $pa->fetch_by_dbID($pub_store_null->dbID);
 ok(!defined $publication->authors(), "authors NULL");
-
-$multi->restore('variation', 'publication'); #restore the previous table
 
 ## store
 my $pub_store = Bio::EnsEMBL::Variation::Publication->new( 
