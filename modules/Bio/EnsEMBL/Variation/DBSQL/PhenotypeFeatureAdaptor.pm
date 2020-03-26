@@ -1704,7 +1704,7 @@ sub _get_submitter_name{
 
 }
 
-=head2 fetch_default_phenotype_classes
+=head2 fetch_defined_phenotype_classes
 
   Example    :
     $pfa->fetch_defined_phenotype_classes();
@@ -1762,20 +1762,16 @@ sub use_phenotype_classes {
     @classes = split(",", $include);
   }
 
+  $self->fetch_defined_phenotype_classes() if !defined($self->{phenotype_classes});
+
   #set the phenotype class attrib id
   my %final_classes=();
   for my $cl (@classes){
 
-    my $class_attrib_id;
     if ( defined($self->{phenotype_classes}{$cl}) ) {
-      $class_attrib_id = $self->{phenotype_classes}{$cl};
+      $final_classes{$cl} = $self->{phenotype_classes}{$cl};
     } else {
-      $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
-      if (defined ($class_attrib_id)){
-        $self->{phenotype_classes}{$cl} = $class_attrib_id;
-      } else {
-        warning("WARNING: phenotype class attrib '$cl' does not exist!\n");
-      }
+      warning("WARNING: phenotype class attrib '$cl' does not exist!\n");
     }
     if ( $self->{phenotype_classes}{$cl} ) {
       $final_classes{$cl} = $self->{phenotype_classes}{$cl};
