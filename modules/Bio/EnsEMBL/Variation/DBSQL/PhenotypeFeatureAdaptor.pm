@@ -1757,7 +1757,7 @@ sub use_phenotype_classes {
   my @classes;
   if ( !defined($self->{use_phenotype_classes}) && !defined($include)) {
     #set default if not initalised and no new values
-    @classes = keys $self->fetch_defined_phenotype_classes();
+    @classes = keys %{$self->fetch_defined_phenotype_classes()};
   } elsif (defined $include){
     @classes = split(",", $include);
   }
