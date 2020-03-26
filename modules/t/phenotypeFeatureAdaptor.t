@@ -179,6 +179,10 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
   $pfa->use_phenotype_classes("trait,non_specified,tumour");
 }
 
+# fetch_defined_phenotype_classes
+my $pclasses = $pfa->fetch_defined_phenotype_classes();
+ok(ref($pclasses) eq 'HASH' && scalar keys $pclasses == 3 && (grep {$_ eq 'trait'} keys $pclasses), "fetch_defined_phenotype_classes");
+
 # fetch_all_by_phenotype_ontology_accession
 $pfs = $pfa->fetch_all_by_phenotype_accession_source('Orphanet:130');
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && (grep {$_->object_id eq 'rs2299299'} @$pfs), "fetch_all_by_phenotype_accession");

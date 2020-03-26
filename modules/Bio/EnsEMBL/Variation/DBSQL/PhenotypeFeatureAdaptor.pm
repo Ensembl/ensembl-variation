@@ -84,8 +84,6 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TYPE_PHENOTYPE_TYPE);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
-our $DEFAULT_INCLUDE_PHENOTYPE_CLASS = 'trait,tumour,non_specified';
-
 # internal method
 =head2 _is_significant_constraint
 
@@ -1706,6 +1704,29 @@ sub _get_submitter_name{
 
 }
 
+=head2 fetch_default_phenotype_classes
+
+  Example    :
+    $pfa->fetch_defined_phenotype_classes();
+
+  Description: Fetch the phenotype classes defined in the underlying database.
+         The default behaviour is to return phenotype features of any phenotype class.
+  Returntype : array of string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_defined_phenotype_classes {
+  my $self = shift;
+
+  if (!defined($self->{phenotype_classes})) {
+    $self->{phenotype_classes} = $self->db->get_AttributeAdaptor->attrib_values_for_attrib_type_code(ATTRIB_TYPE_PHENOTYPE_TYPE);
+  }
+  return $self->{phenotype_classes};
+}
+
 =head2 use_phenotype_classes
 
   Arg [1]    : string $new_classes (optional)
@@ -1733,32 +1754,31 @@ sub use_phenotype_classes {
     return $self->{use_phenotype_classes};
   }
 
-  my $new_classes;
+  my @classes;
   if ( !defined($self->{use_phenotype_classes}) && !defined($include)) {
     #set default if not initalised and no new values
-    $new_classes = $DEFAULT_INCLUDE_PHENOTYPE_CLASS;
+    @classes = keys $self->fetch_defined_phenotype_classes();
   } elsif (defined $include){
-    $new_classes = $include;
+    @classes = split(",", $include);
   }
-  my @classes = split(",", $new_classes) if $new_classes;
 
   #set the phenotype class attrib id
   my %final_classes=();
   for my $cl (@classes){
 
     my $class_attrib_id;
-    if ( defined($self->{class_attribs}{$cl}) ) {
-      $class_attrib_id = $self->{class_attribs}{$cl};
+    if ( defined($self->{phenotype_classes}{$cl}) ) {
+      $class_attrib_id = $self->{phenotype_classes}{$cl};
     } else {
       $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value(ATTRIB_TYPE_PHENOTYPE_TYPE, $cl);
       if (defined ($class_attrib_id)){
-        $self->{class_attribs}{$cl} = $class_attrib_id;
+        $self->{phenotype_classes}{$cl} = $class_attrib_id;
       } else {
         warning("WARNING: phenotype class attrib '$cl' does not exist!\n");
       }
     }
-    if ( $self->{class_attribs}{$cl} ) {
-      $final_classes{$cl} = $self->{class_attribs}{$cl};
+    if ( $self->{phenotype_classes}{$cl} ) {
+      $final_classes{$cl} = $self->{phenotype_classes}{$cl};
     }
 
   }
