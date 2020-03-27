@@ -501,7 +501,7 @@
     },
     {
       "id": "dog_EVA_PRJEB24066",
-      "species": "canis_familiaris",
+      "species": "canis_lupus_familiaris",
       "assembly": "CanFam3.1",
       "type": "remote",
       "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24066/dogs.557.publicSamples.ann.vcf.gz",
@@ -558,7 +558,7 @@
     },
     {
       "id": "103_mammals.gerp_conservation_score",
-      "species": "canis_familiaris",
+      "species": "canis_lupus_familiaris",
       "assembly": "CanFam3.1",
       "type": "remote",
       "filename_template" : "ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-100/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.CanFam3.1.bw",
