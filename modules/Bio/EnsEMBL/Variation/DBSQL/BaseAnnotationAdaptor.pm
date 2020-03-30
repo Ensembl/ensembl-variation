@@ -59,6 +59,7 @@ package Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor;
 use JSON;
 use Cwd;
 use Net::FTP;
+use HTTP::Tiny;
 use URI;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -259,6 +260,19 @@ sub _get_filename_template {
 
 # Internal method checking if a remote VCF file exists
 sub _ftp_file_exists {
+  my ($self, $uri) = @_;
+
+  if ($uri =~ /^ftp:\/\//) {
+    return $self->_check_file_over_ftp($uri);
+  } elsif ($uri =~ /^https?:\/\//) {
+    return $self->_check_file_over_http($uri);
+  } else {
+    warn "Could not process remote uri: $uri.";
+    return 0;
+  }
+}
+
+sub _check_file_over_ftp {
   my $self = shift;
   my $uri = URI->new(shift);
   my $ftp = Net::FTP->new($uri->host);
@@ -279,5 +293,12 @@ sub _ftp_file_exists {
   }
 }
 
+sub _check_file_over_http {
+  my ($self, $uri) = @_;
+  my $ua = HTTP::Tiny->new();
+  my $response = $ua->head($uri);
+
+  return $response->{success};
+}
 
 1;
