@@ -1838,7 +1838,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type',
 # Patch IDs for new release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_a.sql|schema version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_b.sql|Add new data_source_attrib to variation_citation');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_c.sql|Increase the size of author column in publication table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_c.sql|Increase the size of authors column in publication table');
 
 /**
 @header  Failed tables
