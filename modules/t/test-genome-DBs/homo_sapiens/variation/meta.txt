@@ -118,3 +118,4 @@
 125	\N	patch	patch_99_100_c.sql|add class_attrib_id column to phenotype
 126	\N	patch	patch_100_101_a.sql|schema version
 127	\N	patch	patch_100_101_b.sql|Add new data_source_attrib to variation_citation
+127	\N	patch	patch_100_101_c.sql|Increase the size of authors column in publication table
