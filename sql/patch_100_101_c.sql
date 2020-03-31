@@ -14,7 +14,7 @@
 -- limitations under the License.
 
 # Increase the size of the author column in the publication table
-ALTER TABLE publication MODIFY author VARCHAR(500) CHARACTER SET utf8mb4;
+ALTER TABLE publication MODIFY authors VARCHAR(500) CHARACTER SET utf8mb4;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_c.sql|Increase the size of authors column in publication table');
