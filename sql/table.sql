@@ -1742,7 +1742,7 @@ CREATE TABLE submitter (
 CREATE TABLE publication (
   publication_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, 
   title          VARCHAR(300),
-  authors        VARCHAR(255) CHARACTER SET utf8mb4,
+  authors        VARCHAR(500) CHARACTER SET utf8mb4,
   pmid           INT(10),
   pmcid          VARCHAR(255),
   year           INT(10) UNSIGNED,
