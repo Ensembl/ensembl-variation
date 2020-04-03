@@ -35,7 +35,7 @@ use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_hex);
 
 our $DEBUG = 0;
 
-my ($registry_file, $data_file, $species, $check_dbSNP, $clean, $type, $do_disease, $no_evidence);
+my ($registry_file, $data_file, $species, $check_dbSNP, $clean, $type, $no_evidence);
 
 GetOptions ("data=s"        => \$data_file,
             "type=s"        => \$type,
@@ -47,7 +47,7 @@ GetOptions ("data=s"        => \$data_file,
     );
 
 ## an export file is needed for EPMC data
-usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC" || $type eq "disease") ;
+usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC");
 
 
 my $http = HTTP::Tiny->new();
@@ -96,8 +96,6 @@ if( $type eq "EPMC"){
     ##import any new publications & citations
     import_citations($reg, $file_data, $type);
 
-    ## update variations & variation_features to have Cited status
-    ## update_evidence($dba) unless defined $no_evidence;
 }
 elsif($type eq "UCSC"){
 
@@ -110,14 +108,6 @@ elsif($type eq "UCSC"){
     ##import any new publications & citations
     import_citations($reg, $file_data, $type);
 
-    ## update variations & variation_features to have Cited status
-    ## update_evidence($dba) unless defined $no_evidence;
-
-}
-
-elsif($type eq "disease"){
-    ## look for phenotype citations in EPMC for all current publications
-    do_disease($reg);
 }
 
 else{
@@ -971,149 +961,6 @@ sub parse_UCSC_file{
 
     return \%data;
 }
- 
-
-sub do_disease{
-
-    my $reg = shift;
-
-    my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
-   # my $pheno_adaptor = $reg->get_adaptor($species, 'variation', 'phenotype');
-
-
-    my $phencit_ins_sth = $dba->dbc()->prepare(qq[ insert into phenotype_citation ( publication_id, phenotype_id ) values ( ?, ?) ]);
-    my $phencit_ext_sth = $dba->dbc()->prepare(qq[ select publication_id from phenotype_citation where publication_id = ? and  phenotype_id = ? ]);
-
-
-    my $pheno_ext_sth = $dba->dbc()->prepare(qq[ select phenotype_id, description from phenotype]);
-
-
-    my $pub_ext_sth = $dba->dbc()->prepare(qq[ select pmid, publication_id
-                                               from publication 
-                                               where publication_id not in 
-                                              (select publication_id from phenotype_citation)
-                                               and pmid is not null
-                                             ]);
-
-    my %pheno_ids;
-    $pheno_ext_sth->execute()||die;
-    my $curr_pheno = $pheno_ext_sth->fetchall_arrayref();
-    foreach my $l (@{$curr_pheno}){
-        $pheno_ids{"\U$l->[1]"} = $l->[0];
-    }
-
-
-    $pub_ext_sth->execute()||die;
-    my $dat =  $pub_ext_sth->fetchall_arrayref();
-
-    foreach my $l (@{$dat}){
-        #warn "looking for disease for $l->[0]\n";
-        ## extract disease info
-
-=head  This bit does one disease only
-        my $top_disease = find_disease($l->[0]);
-        ## skip paper if none found
-        next unless defined $top_disease
-
-=cut
-        my $multi_disease = find_disease($l->[0]);
-        ## skip paper if none found
-        next unless defined $multi_disease->[0];
-        foreach my $top_disease(@{$multi_disease}){
-            $top_disease =~ s/\'//g;
-            $top_disease = "\U$top_disease";
-            #warn "looking for/adding $top_disease\n";
-            
-            if(defined  $pheno_ids{$top_disease}){
-                
-                $phencit_ext_sth->execute( $l->[1], $pheno_ids{$top_disease} )||die;
-                my $already_done = $phencit_ext_sth->fetchall_arrayref();
-                
-                unless(defined $already_done ->[0]->[0]){
-                    ## create phenotype citation
-                    $phencit_ins_sth->execute($l->[1], $pheno_ids{$top_disease} )||die;
-                }
-            }
-            else{
-            ## enter if new phenotype - warn for quick rubbish scanning
-                #warn "Entering new phenotype  $top_disease\n";
-                my $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $top_disease);
-                $pheno_adaptor->store($pheno );
-                $pheno_ids{$top_disease} =  $pheno->dbID() ;
-                ## create phenotype citation
-                $phencit_ins_sth->execute($l->[1], $pheno_ids{$top_disease})||die;
-            }
-        }
-    }
-}
-
-sub find_disease{
-
-    my $pmid = shift;
-
-    my %count;
-    my @diesase;
-
-    my $mined = get_epmc_data( "MED/$pmid/textMinedTerms/DISEASE" );
-    if( ref($mined->{semanticTypeList}->{semanticType}->{tmSummary}) eq 'ARRAY' ){
-        foreach my $found ( @{$mined->{semanticTypeList}->{semanticType}->{tmSummary}} ){
-            next if $found->{count} < 2;
-            push @diesase, $found->{term};
-
-        }
-
-
-
-    }
-    else{
-        ## if there is only one disease found, return it unless it is only mentioned once
-        return undef if $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{count} < 2;
-        push @diesase, $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term};
-
-    }
-    return \@diesase;
-    
-}
-
-
-sub find_disease_max{
-
-    my $pmid = shift;
-
-    my %count;
-    my @diesase;
-
-    my $mined = get_epmc_data( "MED/$pmid/textMinedTerms/DISEASE" );
-    if( ref($mined->{semanticTypeList}->{semanticType}->{tmSummary}) eq 'ARRAY' ){
-        foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
-            next if $found->{count} < 2;
-            $count{ $found->{term}} = $found->{count} ;
-        }
-        
-        my $max = 0;
-        ## find highest number of disease mentions in publication
-        foreach my $disease (keys %count){
-            $max = $count{$disease} if $max < $count{$disease};     
-        }
-
-        ## store diseases reaching this threshhold
-        foreach my $disease (keys %count){
-            push @diesase, $disease if $max == $count{$disease};
-
-        }
-        return undef if scalar(@diesase) >1 ; ## give up - not specific enough
-        return $diesase[0];
-
-    }
-    else{
-        ## if there is only one disease found, return it unless it is only mentioned once
-        return undef if $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{count} < 2;
-        return $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term};
-
-    }
-
-
-}
 
 ## find current citation in db
 ## and skip these lines in the file.
@@ -1140,7 +987,7 @@ sub get_current_citations{
 
 sub usage {
     
-    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC or disease] -species [name] -registry [registry file]
+    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC] -species [name] -registry [registry file]
 
 Options:  
           -data [file of citations]   - *required* for EPMC import
