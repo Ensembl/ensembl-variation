@@ -76,8 +76,6 @@ $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
 ## extract all variants - cited variants failing QC are still displayed
 $dba->include_failed_variations(1);
-our $pheno_adaptor = $reg->get_adaptor($species, 'variation', 'phenotype');
-
 
 ## if new dbSNP release has been imported, pull out full info for citations
 my $dbSNP_data = check_dbSNP($dba) unless defined $check_dbSNP && $check_dbSNP ==0;
