@@ -327,7 +327,7 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (538, 'legacy_biotype', 'Legacy biotype', 'Obsolete biotype previously assigned to this Ensembl object.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (539, 'KASP_markers', 'KASP_markers', 'KASP markers designed to be genome-specific with PolyMarker');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (540, 'mirna_arm', 'miRNA arm', 'Hairpin arm from which this miRNA has come from');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', '');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', NULL);
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (542, 'citation_source', 'Citation source', 'Variant citation data source');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (544, 'phenotype_type', 'Phenotype type', 'Type of the phenotype information');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (545, 'external_plant_links', 'external_plant_links', 'Links to external plant related sources');
