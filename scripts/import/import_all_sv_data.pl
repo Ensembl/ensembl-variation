@@ -852,7 +852,7 @@ sub structural_variation_sample {
       my $subject = $row->[1];
       next if ($sample eq  '' || $subject eq '');
 
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYABLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
     }
   }
   # Create individual entries (not for mouse)
