@@ -379,6 +379,10 @@ sub study_table{
   }
   my $external_link = ($display_name{$author}) ? $display_name{$author} : $pubmed;
 
+  if ($external_link && $external_link eq 'NULL' && $external_link eq '') {
+    $external_link = undef;
+  }
+
   # URL
   $study =~ /(\w+\d+)\.?\d*/;
   my $study_ftp = $1;
@@ -427,10 +431,6 @@ sub study_table{
       $study_desc = $1;
     }
 
-    if ($external_link && $external_link eq 'NULL' && $external_link eq '') {
-      $external_link = undef;
-    }
-
     $stmt = $dbVar->prepare(qq[ UPDATE $study_table SET description = ?, external_reference = ?, study_type = ?, url = ? WHERE study_id = ? ]);
     $stmt->execute($study_desc,
                   $external_link || undef,
@@ -442,9 +442,6 @@ sub study_table{
   }
   # INSERT
   else {
-    if($external_link && $external_link eq 'NULL') {
-      $external_link = undef;
-    }
 
     my $description;
     if($author_desc) {
