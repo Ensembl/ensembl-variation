@@ -163,6 +163,7 @@ sub init_db_connections {
         -port   => $config->{vport_oldasm},
         -dbname => $config->{vdbname_oldasm},
         ); 
+    $vdba_oldasm->dbc->reconnect_when_lost(1);
     $config->{vdba_oldasm} = $vdba_oldasm;
   }
   my $vdba_newasm = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
@@ -172,6 +173,7 @@ sub init_db_connections {
       -port   => $config->{vport_newasm},
       -dbname => $config->{vdbname_newasm},
       ); 
+  $vdba_newasm->dbc->reconnect_when_lost(1);
   $config->{vdba_newasm} = $vdba_newasm;
 
   my $cdba_oldasm = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -180,6 +182,7 @@ sub init_db_connections {
       -port   => $config->{cport_oldasm},
       -dbname => $config->{cdbname_oldasm},
       );
+  $cdba_oldasm->dbc->reconnect_when_lost(1);
   $config->{cdba_oldasm} = $cdba_oldasm;
 
   my $cdba_newasm = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -188,6 +191,7 @@ sub init_db_connections {
       -port   => $config->{cport_newasm},
       -dbname => $config->{cdbname_newasm},
       );
+  $cdba_newasm->dbc->reconnect_when_lost(1);
   $config->{cdba_newasm} = $cdba_newasm;
 }
 
