@@ -53,6 +53,7 @@ sub default_options {
     map_to_chrom_only       => 1,
     entries_per_file        => 200000,
     run_qc                  => 1,
+    skip_table_and_column_comparison => 0,
     seq_region_name_mappings_file => '',
     qc_failure_reasons      => $self->o('pipeline_dir') . '/qc_failure_reasons',
     qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
@@ -64,6 +65,7 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
+        skip_table_and_column_comparison => $self->o('skip_table_and_column_comparison'),
         seq_region_name_mappings_file => $self->o('seq_region_name_mappings_file'),
         flank_seq_length              => $self->o('flank_seq_length'),	
         feature_table                 => $self->o('feature_table'),
