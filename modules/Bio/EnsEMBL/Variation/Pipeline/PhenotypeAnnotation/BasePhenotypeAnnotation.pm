@@ -376,6 +376,8 @@ sub print_pipelogFH {
 sub get_seq_region_ids {
   my $self = shift;
 
+  return $self->{seq_region_ids} if (defined $self->{seq_region_ids});
+
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT seq_region_id, name
     FROM seq_region
@@ -387,7 +389,8 @@ sub get_seq_region_ids {
   $seq_region_ids{$name} = $id while $sth->fetch();
   $sth->finish;
 
-  return \%seq_region_ids;
+  $self->{seq_region_ids} = \%seq_region_ids;
+  return $self->{seq_region_ids};
 }
 
 
