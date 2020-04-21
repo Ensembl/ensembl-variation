@@ -379,7 +379,7 @@ sub study_table{
   }
   my $external_link = ($display_name{$author}) ? $display_name{$author} : $pubmed;
 
-  if ($external_link && $external_link eq 'NULL' && $external_link eq '') {
+  if ($external_link && ($external_link eq 'NULL' || $external_link eq '')) {
     $external_link = undef;
   }
 
