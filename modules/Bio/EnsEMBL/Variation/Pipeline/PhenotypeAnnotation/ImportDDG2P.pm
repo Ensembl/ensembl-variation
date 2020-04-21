@@ -57,9 +57,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
                   source_url => 'https://decipher.sanger.ac.uk/',

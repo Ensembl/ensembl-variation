@@ -57,9 +57,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'https://cancer.sanger.ac.uk/census',

@@ -141,8 +141,10 @@ sub get_pubmed_prefix {
 =cut
 
 sub core_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{core_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{core_dba} = $self->get_species_adaptor("core") if !defined $self->{core_dba};
+
   return $self->{core_dba};
 }
 
@@ -158,8 +160,10 @@ sub core_db_adaptor {
 =cut
 
 sub variation_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{variation_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{variation_dba} =  $self->get_species_adaptor("variation") if !defined $self->{variation_dba};
+
   return $self->{variation_dba};
 }
 
@@ -177,7 +181,9 @@ sub variation_db_adaptor {
 
 sub ontology_db_adaptor {
   my ($self, $db_adaptor) = @_;
-  $self->{ontology_dba} = $db_adaptor if defined $db_adaptor;
+
+  $self->{ontology_dba} =  $self->get_adaptor('multi', 'ontology') if !defined $self->{ontology_dba};
+
   return $self->{ontology_dba};
 }
 
