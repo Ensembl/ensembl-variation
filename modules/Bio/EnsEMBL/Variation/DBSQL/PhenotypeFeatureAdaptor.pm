@@ -98,7 +98,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
   Returntype : string
   Exceptions : none
   Caller     : internal
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -129,7 +129,7 @@ sub _is_significant_constraint {
   Returntype : string
   Exceptions : none
   Caller     : internal
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -181,7 +181,7 @@ sub _fetch_all_by_object {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -216,7 +216,7 @@ sub fetch_all_by_object_id {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -256,7 +256,7 @@ sub fetch_all_by_object_id_accession_type {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -286,7 +286,7 @@ sub fetch_all_by_Slice_type {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -325,7 +325,7 @@ sub fetch_all_by_Slice_accession_type {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -364,7 +364,7 @@ sub fetch_all_by_Slice_Study {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -404,7 +404,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -428,7 +428,7 @@ sub fetch_all_by_Variation {
   Returntype : reference to a list of Bio::EnsEMBL::Variation::PhenotypeFeature objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -465,7 +465,7 @@ sub fetch_all_by_Variation_list {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -490,7 +490,7 @@ sub fetch_all_by_StructuralVariation {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -514,7 +514,7 @@ sub fetch_all_by_Gene {
   Returntype : reference to a list Bio::EnsEMBL::Variation::PhenotypeFeature objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -551,7 +551,7 @@ sub fetch_all_by_VariationFeature_list {
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -846,7 +846,7 @@ sub fetch_all_by_phenotype_accession_type_source {
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw if the $gene_name and the $phenotype arguments are not defined
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -873,7 +873,7 @@ sub fetch_all_by_associated_gene_phenotype_description {
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw if the $gene_name is not defined
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -904,7 +904,7 @@ sub fetch_all_by_associated_gene_accession_type {
   Returntype : list of ref of Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw if the gene_name argument is not defined
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -1704,25 +1704,26 @@ sub _get_submitter_name{
 
 }
 
-=head2 fetch_defined_phenotype_classes
+=head2 get_all_phenotype_classes
 
   Example    :
-    $pfa->fetch_defined_phenotype_classes();
+    $pfa->get_all_phenotype_classes();
 
-  Description: Fetch the phenotype classes defined in the underlying database.
+  Description: Fetch the phenotype classes defined in the underlying database (e.g. trait, tumour, non_specified).
          The default behaviour is to return phenotype features of any phenotype class.
-  Returntype : array of string
+  Returntype : list ref
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
-sub fetch_defined_phenotype_classes {
+sub get_all_phenotype_classes {
   my $self = shift;
 
   if (!defined($self->{phenotype_classes})) {
-    $self->{phenotype_classes} = $self->db->get_AttributeAdaptor->attrib_values_for_attrib_type_code(ATTRIB_TYPE_PHENOTYPE_TYPE);
+    my $attrib_dba = $self->db->get_AttributeAdaptor;
+    $self->{phenotype_classes} = $attrib_dba->attrib_values_for_attrib_type_code(ATTRIB_TYPE_PHENOTYPE_TYPE) if defined $attrib_dba;
   }
   return $self->{phenotype_classes};
 }
@@ -1741,7 +1742,7 @@ sub fetch_defined_phenotype_classes {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : stable
 
 =cut
 
@@ -1757,12 +1758,12 @@ sub use_phenotype_classes {
   my @classes;
   if ( !defined($self->{use_phenotype_classes}) && !defined($include)) {
     #set default if not initalised and no new values
-    @classes = keys %{$self->fetch_defined_phenotype_classes()};
+    @classes = keys %{$self->get_all_phenotype_classes()};
   } elsif (defined $include){
     @classes = split(",", $include);
   }
 
-  $self->fetch_defined_phenotype_classes() if !defined($self->{phenotype_classes});
+  $self->get_all_phenotype_classes() if !defined($self->{phenotype_classes});
 
   #set the phenotype class attrib id
   my %final_classes=();

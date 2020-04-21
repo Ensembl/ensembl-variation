@@ -110,8 +110,8 @@ my $p_by_OT_type = $pa->fetch_by_OntologyTerm( $terms->[0], 'involves' );
 ok(scalar @{$p_by_OT_type} ==0, "fetch by OntologyTerm & mapping type");
 
 ## check what are the phenotype classes
-my $pheno_classes = $pa->fetch_phenotype_class_types();
-ok(scalar $pheno_classes == 3, "fetch phenotype classes");
+my $pheno_classes = $pa->get_all_phenotype_class_types();
+ok(scalar $pheno_classes == 3, "get phenotype classes");
 
 done_testing();
 

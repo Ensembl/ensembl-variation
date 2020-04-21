@@ -240,17 +240,17 @@ sub _obj_from_row {
                                    mapping_type   => $row->{mapping_type} }) if defined $row->{accession} ;
 }
 
-=head2 fetch_phenotype_class_types
+=head2 get_all_phenotype_class_types
 
-  Example    : $phenotype_classes = $pheno_adaptor->fetch_phenotype_class_types();
-  Description: Retrieves the list of existing Phenotype class attribs
+  Example    : $phenotype_classes = $pheno_adaptor->get_all_phenotype_class_types();
+  Description: Retrieves the list of existing phenotype class attribs
                If no phenotype class type exists undef is returned.
   Returntype : list ref of string
   Exceptions : none
   Caller     : general
 =cut
 
-sub fetch_phenotype_class_types {
+sub get_all_phenotype_class_types {
   my $self = shift;
 
   my $phenos= $self->generic_fetch();
