@@ -147,6 +147,7 @@ foreach my $dir (qw/tmp_dir dir_oldasm dir_newasm/) {
 # Start projection ------------------------------------------------
 init_db_connections($config);
 init_synonyms($config);
+init_column_names($config);
 dump_features($config);
 project_features($config);
 load_features($config, 'projection');
@@ -163,6 +164,7 @@ sub init_db_connections {
         -port   => $config->{vport_oldasm},
         -dbname => $config->{vdbname_oldasm},
         ); 
+    $vdba_oldasm->dbc->reconnect_when_lost(1);
     $config->{vdba_oldasm} = $vdba_oldasm;
   }
   my $vdba_newasm = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
@@ -172,6 +174,7 @@ sub init_db_connections {
       -port   => $config->{vport_newasm},
       -dbname => $config->{vdbname_newasm},
       ); 
+  $vdba_newasm->dbc->reconnect_when_lost(1);
   $config->{vdba_newasm} = $vdba_newasm;
 
   my $cdba_oldasm = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -180,6 +183,7 @@ sub init_db_connections {
       -port   => $config->{cport_oldasm},
       -dbname => $config->{cdbname_oldasm},
       );
+  $cdba_oldasm->dbc->reconnect_when_lost(1);
   $config->{cdba_oldasm} = $cdba_oldasm;
 
   my $cdba_newasm = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -188,6 +192,7 @@ sub init_db_connections {
       -port   => $config->{cport_newasm},
       -dbname => $config->{cdbname_newasm},
       );
+  $cdba_newasm->dbc->reconnect_when_lost(1);
   $config->{cdba_newasm} = $cdba_newasm;
 }
 
@@ -217,7 +222,7 @@ sub init_synonyms {
   $config->{synonyms} = $seq_names_synonyms;
 }
 
-sub dump_features {
+sub init_column_names {
   my $config = shift;
 
   my $feature_table = $config->{feature_table_name_oldasm};
@@ -249,6 +254,25 @@ sub dump_features {
   my $column_names_concat = join(',', @column_names); 
   $config->{sorted_column_names} = $column_names_concat;
   $sth->finish();
+}
+
+sub dump_features {
+  my $config = shift;
+
+  my $feature_table = $config->{feature_table_name_oldasm};
+  my $column_names_concat = $config->{sorted_column_names};
+  my @column_names = split(",", $column_names_concat);
+
+  my ($dbname, $vdba);
+  if ($config->{use_new_vdb_only}) {
+    $dbname = $config->{vdbname_newasm};
+    $vdba   = $config->{vdba_newasm};
+  } else {
+    $dbname = $config->{vdbname_oldasm};
+    $vdba   = $config->{vdba_oldasm};
+  }
+
+  my $dbh          = $vdba->dbc->db_handle;
 
   my $dir_oldasm = $config->{dir_oldasm};
 
@@ -262,7 +286,7 @@ sub dump_features {
     $slices = $sa_old->fetch_all('chromosome', undef, 0); 
   }
 
-  $sth = $dbh->prepare(qq{
+  my $sth = $dbh->prepare(qq{
     SELECT $column_names_concat FROM $feature_table WHERE seq_region_id = ?;
   }, {mysql_use_result => 1}); 
 
