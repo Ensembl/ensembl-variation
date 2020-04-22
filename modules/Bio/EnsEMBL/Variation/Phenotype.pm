@@ -57,6 +57,7 @@ package Bio::EnsEMBL::Variation::Phenotype;
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(ATTRIB_TRAIT);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
@@ -66,7 +67,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
     phenotype description
 
   Example    :
-		
+
     $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => 'Hemostatic factors and hematological phenotypes');
 
   Description: Constructor. Instantiates a new Phenotype object.
@@ -81,15 +82,15 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
-  my ($dbID, $description, $name, $class_attrib_id) = rearrange([qw(dbID DESCRIPTION NAME CLASS_ATTRIB_ID)], @_);
+  my ($dbID, $description, $name, $class_attrib) = rearrange([qw(dbID DESCRIPTION NAME CLASS_ATTRIB)], @_);
 
-  $class_attrib_id ||= 665; #trait attrib_id
+  $class_attrib ||= ATTRIB_TRAIT; #default phenotype class type
 
   $self = {
       'dbID'        => $dbID,
       'description' => $description,
       'name'        => $name,
-      'class_attrib_id'=> $class_attrib_id,
+      'class_attrib'=> $class_attrib,
   };
   return bless $self, $class;
 }

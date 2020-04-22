@@ -61,4 +61,10 @@ ok($aa->SO_accession_for_SO_term($SO_term) eq $SO_accession,           'SO acces
 ok($aa->SO_term_for_SO_accession($SO_accession) eq $SO_term,           'SO term by SO accession');
 ok($aa->display_term_for_SO_accession($SO_accession) eq $display_term, 'Display term by SO accession');
 
+# fetch all attribs of a type
+my $attrib_type = 'phenotype_type';
+my $attribs = $aa->attrib_values_for_attrib_type_code($attrib_type);
+ok(scalar keys %$attribs == 3, "count attribs of specific type");
+ok(defined($attribs->{trait}) && $attribs->{trait} == 665, "count attribs of specific type - check one attrib");
+
 done_testing();
