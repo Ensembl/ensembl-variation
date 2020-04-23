@@ -122,8 +122,10 @@ sub write_output {
   if (defined $source){
     my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
 
+    my $run_type = $self->required_param('run_import_type');
+
     if ($source->{source_name} eq IMPC ||
-        $source->{source_name} eq HUMAN ){
+        $run_type eq HUMAN ){
       $self->dataflow_output_id($self->param('output_ids'), 2);
       close($self->logFH) if defined $self->logFH ;
       close($self->pipelogFH) if defined $self->pipelogFH ;
