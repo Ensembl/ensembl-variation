@@ -99,9 +99,8 @@ sub run {
     $self->store_terms( $zooma_terms);
   }
 
-  $self->param('output_ids', { species => $self->required_param('species'),
-                               workdir => $self->workdir,
-                             });
+  $self->param('output_ids', [{species => $self->param('species')}]);
+
 }
 
 sub write_output {
