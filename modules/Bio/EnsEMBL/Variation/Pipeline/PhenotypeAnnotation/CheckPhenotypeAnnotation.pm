@@ -43,7 +43,7 @@ use File::Path qw(make_path);
 use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES IMPC OMIA HUMAN);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES IMPC OMIA HUMAN ANIMALSET);
 
 my $source;
 my $workdir;
@@ -131,8 +131,10 @@ sub write_output {
       close($self->pipelogFH) if defined $self->pipelogFH ;
       return;
     } elsif ($source->{source_name} eq OMIA &&
+             $run_type eq ANIMALSET &&
              defined($animalQTL_species{$species}) ){
       # if this check is from OMIA import and species has AnimalQTL data
+      # and the run type is to import all
       # then import the AnimalQTL data: flow number 2
       $self->param('output_ids', [{species => $species}]);
       $self->dataflow_output_id($self->param('output_ids'), 2);
