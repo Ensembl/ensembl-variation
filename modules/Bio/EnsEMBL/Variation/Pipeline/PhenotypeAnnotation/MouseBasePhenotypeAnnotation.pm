@@ -107,7 +107,7 @@ sub fetch_data_version {
   die "data_release_date not defined\n" unless $data_release_date;
 
  # e.g. 20 October 2015
-  my ($date, $month, $year) = split(' ', $hash->{data_release_date}) ;
+  my ($date, $month, $year) = split(/[\s-]/, $hash->{data_release_date}) ;
 
   my $months = {
     'January' => '01',
