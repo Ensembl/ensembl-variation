@@ -164,6 +164,7 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         pipeline_dir        => $self->o('pipeline_dir'),
         debug_mode          => $self->o('debug_mode'),
+        run_type            => $self->o('run_import_type')
     );
 
     return [

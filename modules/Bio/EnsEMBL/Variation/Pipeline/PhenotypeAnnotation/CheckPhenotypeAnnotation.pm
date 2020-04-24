@@ -121,7 +121,7 @@ sub write_output {
   if (defined $source){
     my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
 
-    my $run_type = $self->param('run_import_type') // '';
+    my $run_type = $self->param('run_type') // '';
 
     if ($run_type eq MOUSE || $source->{source_name} eq IMPC ||
         $run_type eq HUMAN ){
