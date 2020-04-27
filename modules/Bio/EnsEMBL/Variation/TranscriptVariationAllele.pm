@@ -111,7 +111,7 @@ sub _return_3prime {
   ## Will create a "shift_hash", containing info on precisely how the variant should be shifted when required
   my $self = shift;
   my $hgvs_only = shift;
- $DB::single = 1; 
+  
   ## Return if we have already calculated a shifting hash for this allele
   return if defined($self->{shift_hash}) || ($self->is_reference && !$hgvs_only);
   
@@ -146,7 +146,7 @@ sub _return_3prime {
 
   return unless (defined($tv->cdna_start) && defined($tv->cdna_end) && defined($tv->cds_start) && defined($tv->cds_end)) 
   || (defined($tv->cdna_start_unshifted) && defined($tv->cdna_end_unshifted) && defined($tv->cds_start_unshifted) && defined($tv->cds_end_unshifted));
- $DB::single = 1; 
+  
   return if ($tr->stable_id =~ /ENST/);
   my @attribs = @{$tr->get_all_Attributes()};
   
