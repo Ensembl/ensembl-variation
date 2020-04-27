@@ -12,7 +12,7 @@ my %samples;
 my %info;
 my %alt;
 
-die "\nUsage: nextstrain_geno2vcf.pl  [genome.fa]  [variants file] \n\n" unless scalar(@ARGV)==2;
+die "\nUsage: nextstrain_geno2vcf.pl [variants file] [genome.fa] \n\n" unless scalar(@ARGV)==2;
 
 ## use sequence accession
 my $seq_name = "MN908947.3";
@@ -37,6 +37,10 @@ while(<$in>){
   $samples{$samp}{$pos}{ref} = $ref;
 
   $alt{$pos}{$alt} = 1;
+  ## the reference allele may be the alt wrt the reference assembly
+  ## saving this for checking purposes
+  $alt{$pos}{$ref} = 1;
+
 
   $info{$pos}{gene} = $gene if $gene ne ".";
 
@@ -44,7 +48,7 @@ while(<$in>){
   $info{$pos}{nuc}{$name} = 1 ;
 
   ## protein changes by alt
-  $info{$pos}{prot}{$alt} = $prot if $prot ne ".";
+  $info{$pos}{prot}{$alt} = $prot;
 
   ## could be on different banches
   $info{$pos}{clade}{$clade} = 1 if defined $clade; 
@@ -65,24 +69,24 @@ foreach my $var( sort sort_num(keys %info)){
 
   ### deal with alleles - could be multi-allelic
   my $n =1; 
-  my %alt2code;
-  my %code2alt;
+  my %al2code;
+  my %code2al;
 
   ## fix genomic ref as 0
-  $alt2code{$ref_seq} = 0;
-  $code2alt{0} = $ref_seq;
+  $al2code{$ref_seq} = 0;
+  $code2al{0} = $ref_seq;
 
-  foreach my $alt (keys %{$alt{$var}}){
-    next if $alt2code{$alt} eq "0"; ## skip ref
-    $alt2code{$alt} = $n ;
-    $code2alt{$n} = $alt;
+  foreach my $alt (keys %{$alt{$var}} ){
+    next if defined $al2code{$alt} && $al2code{$alt} == 0; ## skip ref
+    $al2code{$alt} = $n ;
+    $code2al{$n} = $alt;
     $n++;
   }
 
   ## collect alts
   my @ordered_alts;
-  foreach ( my $n=1; $n < (keys %code2alt); $n++){
-    push @ordered_alts, $code2alt{$n};
+  foreach ( my $n=1; $n < (keys %code2al); $n++){
+    push @ordered_alts, $code2al{$n};
   }
 
   print $out "$ref_seq\t". join(",",@ordered_alts) . "\t.\tPASS\t";
@@ -99,7 +103,7 @@ foreach my $var( sort sort_num(keys %info)){
   foreach my $a(@ordered_alts){
     push @prot, $info{$var}{prot}{$a};
   }
-  push @info, "Prot=".join(",",@prot) ;
+  push @info, "Prot=".join(",",@prot) if scalar(@prot >0);;
    
 
   ## clades are NOT ordered
@@ -113,7 +117,7 @@ foreach my $var( sort sort_num(keys %info)){
   
 
   ## count alleles and store genotypes
-  my($ac, $an, $genos) =  format_genotypes(\%samples, \%alt2code, $var); 
+  my($ac, $an, $genos) =  format_genotypes(\%samples, \%al2code, $var);
 
   ## add allele counts to info
   push @info, "AN=$an";
@@ -153,26 +157,34 @@ sub format_header{
 ## encode genotypes & calculate alleles  
 sub format_genotypes{
 
-  my ($samples, $alt2code, $var) = @_;
+  my ($samples, $al2code, $var) = @_;
 
   my %counts;
   my $an;
   my $genos;
+  my $swap = 0;
 
   foreach my $sam (sort(keys %$samples)){
+
+    ## count total alleles
     $an++;
+
     if (defined $samples->{$sam}{$var}{ref} ){
 
       ### check ref swap
-      if($alt2code->{ $samples->{$sam}{$var}{ref} } ne 0){
-        print "Ref swap:\t$var\t$samples->{$sam}{$var}{ref}\t$samples->{$sam}{$var}{alt}\n";
+      if($al2code->{ $samples->{$sam}{$var}{ref} } ne "0"){
+        $swap++;
+      #  print "Ref swap:\t$var\t$sam\t$samples->{$sam}{$var}{ref}\t$samples->{$sam}{$var}{alt}\n";
       }
       ## save geno to write
-      $genos .= "$alt2code->{ $samples->{$sam}{$var}{alt} }\t";
+      unless( defined $al2code->{ $samples->{$sam}{$var}{alt}} ){
+        die "no code for $sam $var ($samples->{$sam}{$var}{alt}})\n";
+      }
+      $genos .= "$al2code->{ $samples->{$sam}{$var}{alt} }\t";
 
       ## allow for multi-allelic; skipping reference
-      $counts{ $alt2code->{ $samples->{$sam}{$var}{alt} } }++
-        unless $alt2code->{ $samples->{$sam}{$var}{alt} } eq "0";
+      $counts{ $al2code->{ $samples->{$sam}{$var}{alt} } }++
+        unless $al2code->{ $samples->{$sam}{$var}{alt} } eq "0";
 
     }
     else{
@@ -180,6 +192,7 @@ sub format_genotypes{
       $genos .= "0\t";
     }
   }
+  print "$var $swap reference swaps\n" if $swap > 0;
 
   ## order alt allele counts;
   my @ac;
@@ -187,7 +200,6 @@ sub format_genotypes{
     push @ac, $counts{$n};
   }
   my $ac =  join(",", @ac);
-
 
   return ($ac, $an, $genos);
 }
