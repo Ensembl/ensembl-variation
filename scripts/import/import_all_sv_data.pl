@@ -299,6 +299,7 @@ sub load_file_data{
   $dbVar->do(qq{UPDATE $temp_table SET start=outer_start, end=inner_start, 
                 outer_end=inner_start, inner_start=NULL, inner_end=NULL
                 WHERE outer_start=outer_end AND inner_start=inner_end;});
+
 }
 
 sub source {
@@ -861,12 +862,17 @@ sub structural_variation_sample {
     my $rows_subjects = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_subjects) {
       my $subject = $row->[0];
-      my $gender = ($row->[1] =~ /\w+/) ? $row->[1] : 'Unknown';
       next if ($subject eq  '');
+
+      my $gender = 'Unknown';
+      if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
+        $gender = get_gender($row->[1]);
+      }
 
       my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
 
       $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$subject','Subject from the DGVa study $study_name','$gender',$itype_val)});
+
     }
 
     # Create sample entries
@@ -932,6 +938,15 @@ sub structural_variation_sample {
   $dbVar->do($stmt);
 }
 
+# Get gender for each value
+sub get_gender {
+  my $row = shift;
+
+  my %genders = ('F' => 'Female', 'M' => 'Male');
+
+  return $genders{$row};
+}
+
 sub phenotype_feature {
   my $stmt;
   
@@ -952,9 +967,16 @@ sub phenotype_feature {
   while (my $row = shift(@$rows)) {
     my $phenotype = $row->[0];
     next if ($phenotype eq '');
-    
+
+    if($phenotype eq 'NULL') {
+      $phenotype = undef;
+    }
+
     $phenotype =~ s/'/\\'/g;
-    $dbVar->do(qq{ INSERT INTO phenotype (description) VALUES ('$phenotype')});  
+
+    my $stmt_phenotype = $dbVar->prepare(qq[ INSERT INTO phenotype (description) VALUES (?) ]);
+    $stmt_phenotype->execute($phenotype || undef);
+
   }
     
   $stmt = qq{
