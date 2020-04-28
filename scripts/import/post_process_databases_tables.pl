@@ -274,6 +274,8 @@ sub post_process_publication {
   process_phenotype_feature($species, $dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
   process_phenotype_feature_attrib($species, $dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
 
+  print STDERR " update done";
+  print STDERR "\n";
 }
 
 sub process_phenotype_feature {
