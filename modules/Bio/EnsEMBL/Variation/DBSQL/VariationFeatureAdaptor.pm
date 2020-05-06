@@ -2470,7 +2470,7 @@ sub fetch_by_spdi_notation{
   )], @_);
 
   ########################### Check & split input ########################### 
-  my ($sequence_id, $position, $deleted_seq, $inserted_seq) = split /:/, $spdi; 
+  my ($sequence_id, $position, $deleted_seq, $inserted_seq) = split /:/, $spdi;
 
   # count number of elements   
   my $count_separator = () = $spdi =~ m/\:/g; 
@@ -2507,9 +2507,12 @@ sub fetch_by_spdi_notation{
   $start = $position + 1; 
   $strand = 1; ## strand should be genome strand for SPDI genomic notation
 
+  my ($highest_cs) = @{$self->db->get_CoordSystemAdaptor->fetch_all()};
+  my $assembly = $highest_cs->name();
+
   # Get a slice adaptor to enable check of supplied reference allele
   my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor(); 
-  my $slice = $slice_adaptor->fetch_by_region('chromosome', $sequence_id ) || $slice_adaptor->fetch_by_region(undef, $sequence_id);  
+  my $slice = $slice_adaptor->fetch_by_region($assembly, $sequence_id );
 
   # First checks if deleted and inserted sequences are not 0 (invalid notation)  
   if($deleted_seq eq '0' && $inserted_seq eq '0'){
@@ -2529,14 +2532,14 @@ sub fetch_by_spdi_notation{
     if($check_deleted_seq_letters){
       $ref_allele = uc $deleted_seq;
       $end = $position + length($deleted_seq); 
-      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id);
+      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly);
 
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)") 
         unless ($ref_allele eq $refseq_allele);
     } 
     else{
       $end = $position + $deleted_seq;
-      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id);
+      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly);
     }   
     $alt_allele = '-';
   } 
@@ -2549,7 +2552,7 @@ sub fetch_by_spdi_notation{
       $ref_allele = uc $deleted_seq; 
       $end = ($check_deleted_seq_digit) ? $position : $position + length($deleted_seq); 
 
-      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id); 
+      my $refseq_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly);
       
       throw ("Reference allele extracted from $sequence_id:$start-$end ($refseq_allele) does not match reference allele given by SPDI notation $spdi ($ref_allele)")
         unless ($ref_allele eq $refseq_allele); 
@@ -2562,7 +2565,7 @@ sub fetch_by_spdi_notation{
         unless ($inserted_seq_length == $deleted_seq);
  
       $end = $position + $deleted_seq; 
-      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id); # get the correct reference allele  
+      $ref_allele = get_reference_allele($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly); # get the correct reference allele
     } 
 
     $alt_allele = uc $inserted_seq; 
@@ -2587,10 +2590,10 @@ sub fetch_by_spdi_notation{
 
 # Get the reference allele for the genomic position 
 sub get_reference_allele{ 
-  my ($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id) = @_;
+  my ($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly) = @_;
 
   # get a slice for the variant genomic coordinate 
-  my $slice = $slice_adaptor->fetch_by_region('chromosome',$sequence_id,$start,$end);
+  my $slice = $slice_adaptor->fetch_by_region($assembly,$sequence_id,$start,$end);
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw("Sequence name $raw_sequence_id not valid"); 
