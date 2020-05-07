@@ -109,7 +109,7 @@ elsif($type eq "UCSC"){
 }
 elsif($type eq "phenotype"){
 
-  print STDERR "\t Publications from Phenotype feature table:";
+  print STDERR "\tPublications from Phenotype feature table:";
 
   my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
   my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -122,7 +122,7 @@ elsif($type eq "phenotype"){
   process_phenotype_feature_attrib($species, $dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
 }
 else{
-    die "Type $type is not recognised - must be EPMC or UCSC or phenotype\n";
+    die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
 }
 
 ## create report on curent status
@@ -1251,7 +1251,7 @@ sub get_citation_attribs {
 
 sub usage {
     
-    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC or phenotype] -species [name] -registry [registry file]
+    die "\n\tUsage: import_EPMC.pl -type [ EPMC, UCSC or phenotype] -species [name] -registry [registry file]
 
 Options:  
           -data [file of citations]   - *required* for EPMC import
