@@ -1055,7 +1055,7 @@ sub process_phenotype_feature {
     }
 
     # Get publication that is not in publication table 
-    my $pub_data = get_epmc_data($external_reference);
+    my $pub_data = get_epmc_data("search?query=ext_id:$external_reference%20src:med");
 
     if(defined $pub_data->{resultList}->{result}->{title}){
       my $pub_title = $pub_data->{resultList}->{result}->{title};
@@ -1156,7 +1156,7 @@ sub process_phenotype_feature_attrib {
   foreach my $pmid (keys(%new_publications)){
     my $feature_id_list = $new_publications{$pmid};
 
-    my $pub_data = get_epmc_data($pmid);
+    my $pub_data = get_epmc_data("search?query=ext_id:$pmid%20src:med");
 
     if(defined $pub_data->{resultList}->{result}->{title}){
       my $pub_title = $pub_data->{resultList}->{result}->{title};
