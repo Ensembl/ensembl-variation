@@ -2512,7 +2512,7 @@ sub fetch_by_spdi_notation{
 
   # Get a slice adaptor to enable check of supplied reference allele
   my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor(); 
-  my $slice = $slice_adaptor->fetch_by_region($assembly, $sequence_id );
+  my $slice = $slice_adaptor->fetch_by_region($assembly, $sequence_id) || $slice_adaptor->fetch_by_region(undef, $sequence_id);
 
   # First checks if deleted and inserted sequences are not 0 (invalid notation)  
   if($deleted_seq eq '0' && $inserted_seq eq '0'){
@@ -2593,7 +2593,7 @@ sub get_reference_allele{
   my ($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $assembly) = @_;
 
   # get a slice for the variant genomic coordinate 
-  my $slice = $slice_adaptor->fetch_by_region($assembly,$sequence_id,$start,$end);
+  my $slice = $slice_adaptor->fetch_by_region($assembly,$sequence_id,$start,$end) || $slice_adaptor->fetch_by_region(undef,$sequence_id,$start,$end);
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw("Sequence name $raw_sequence_id not valid"); 
