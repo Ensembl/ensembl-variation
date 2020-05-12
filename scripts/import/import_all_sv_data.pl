@@ -827,7 +827,7 @@ sub structural_variation_sample {
 
   # Create strain entries
   if ($species =~ /mouse|mus/i) {
-    $stmt = qq{ SELECT DISTINCT subject FROM $temp_table 
+    $stmt = qq{ SELECT DISTINCT subject, gender FROM $temp_table
                 WHERE subject NOT IN (SELECT DISTINCT name from individual WHERE individual_type_id=1)
               };
     my $rows_strains = $dbVar->selectall_arrayref($stmt);
@@ -835,8 +835,13 @@ sub structural_variation_sample {
       my $strain = $row->[0];
       next if ($strain eq  '');
 
+      my $gender = 'Unknown';
+      if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
+        $gender = get_gender($row->[1]);
+      }
+
       if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' LIMIT 1})) {
-        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','Unknown',1)});
+        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','$gender',1)});
       }
       else{
         if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' AND individual_type_id!=1})) {
