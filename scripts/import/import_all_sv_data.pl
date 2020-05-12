@@ -971,16 +971,12 @@ sub phenotype_feature {
   my $rows = $dbVar->selectall_arrayref($stmt);
   while (my $row = shift(@$rows)) {
     my $phenotype = $row->[0];
-    next if ($phenotype eq '');
-
-    if($phenotype eq 'NULL') {
-      $phenotype = undef;
-    }
+    next if ($phenotype eq '' || $phenotype eq 'NULL');
 
     $phenotype =~ s/'/\\'/g;
 
     my $stmt_phenotype = $dbVar->prepare(qq[ INSERT INTO phenotype (description) VALUES (?) ]);
-    $stmt_phenotype->execute($phenotype || undef);
+    $stmt_phenotype->execute($phenotype);
 
   }
     
