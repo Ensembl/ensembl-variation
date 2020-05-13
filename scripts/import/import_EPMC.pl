@@ -1016,17 +1016,29 @@ sub process_phenotype_feature {
   my $citation_attribs = shift;
 
   ## Get studies from phenotype_feature
-  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type
-                                                from study s 
+  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id
+                                                from study s
                                                 inner join phenotype_feature p on s.study_id = p.study_id
                                                 where p.type = 'variation' and p.study_id is not null and s.external_reference is not null
-                                                group by s.study_id, s.source_id, s.external_reference, s.study_type ]);
+                                                group by s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id ]);
   $attrib_ext_sth->execute()||die;
   my $data = $attrib_ext_sth->fetchall_arrayref();
 
-  my $rsid_sth = $dba->dbc()->prepare(qq[ select object_id
-                                          from phenotype_feature 
-                                          where study_id = ? ]);
+  my %study_to_rsids;
+
+  foreach my $l (@{$data}){
+    my $study_id = $l->[0];
+    my $rsid = $l->[4];
+
+    if(defined $study_to_rsids{$study_id}) {
+      push @{$study_to_rsids{$study_id}}, $rsid;
+    }
+    else {
+      my @rsids;
+      push @rsids, $rsid;
+      $study_to_rsids{$study_id} = \@rsids;
+    }
+  }
 
   foreach my $l (@{$data}){
     my $study_id = $l->[0];
@@ -1037,9 +1049,9 @@ sub process_phenotype_feature {
 
     # Get publication with same PMID from study table
     my $publication = $pub_ad->fetch_by_pmid($external_reference);
-
+  
     next unless !defined($publication);
-
+  
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
@@ -1053,23 +1065,22 @@ sub process_phenotype_feature {
       $source_attrib_id = $citation_attribs->{$source_name};
       die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
-
+  
     # Get publication that is not in publication table 
     my $pub_data = get_epmc_data("search?query=ext_id:$external_reference%20src:med");
-
+  
     if(defined $pub_data->{resultList}->{result}->{title}){
       my $pub_title = $pub_data->{resultList}->{result}->{title};
       my $pub_pmcid = $pub_data->{resultList}->{result}->{pmcid};
       my $pub_author = $pub_data->{resultList}->{result}->{authorString};
       my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
       my $pub_doi = $pub_data->{resultList}->{result}->{doi};
-      
+
       my @variant_list;
-      $rsid_sth->execute($study_id);
-      my $rsids = $rsid_sth->fetchall_arrayref();
-      
+      my $rsids = $study_to_rsids{$study_id};
+
       foreach my $rsid (@{$rsids}){
-        my $v = $var_ad->fetch_by_name($rsid->[0]);
+        my $v = $var_ad->fetch_by_name($rsid);
         if (defined $v){
           push @variant_list, $v;
         }
@@ -1111,25 +1122,30 @@ sub process_phenotype_feature_attrib {
 
   my $attrib_type_id_v = $attrib_type_id->[0]->[0];
 
-  my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select phenotype_feature_id, value 
-                                                   from phenotype_feature_attrib 
-                                                   where attrib_type_id = $attrib_type_id_v ]);
-
-  my $pheno_sth = $dba->dbc()->prepare(qq[ select source_id, object_id 
-                                           from phenotype_feature
-                                           where phenotype_feature_id = ? ]);
+  my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select pfa.phenotype_feature_id, pfa.value, pf.source_id, pf.object_id
+                                                   from phenotype_feature_attrib pfa
+                                                   inner join phenotype_feature pf on pfa.phenotype_feature_id = pf.phenotype_feature_id
+                                                   where pfa.attrib_type_id = $attrib_type_id_v ]);
 
   $pheno_feature_sth->execute()||die;
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
 
   # PMID -> list of phenotype_feature_id
   my %new_publications;
+  my %source_to_variation;
 
   # Create map to associate PMID with all phenotype features it's linked to
   foreach my $pheno_feat_data (@{$pheno_feature_data}){
     my $pheno_feat_id = $pheno_feat_data->[0];
     my $value_pubid = $pheno_feat_data->[1];
-    
+    my $source_id = $pheno_feat_data->[2];
+    my $var_name = $pheno_feat_data->[3];
+
+    $source_to_variation{$pheno_feat_id}->{source_id} = $source_id;
+    $source_to_variation{$pheno_feat_id}->{var_name} = $var_name;
+
+    $source_to_variation{$source_id} = $var_name;
+
     my @value_pubid_splited = split /,/, $value_pubid;
 
     # Get publication with same PMID from study table
@@ -1169,15 +1185,8 @@ sub process_phenotype_feature_attrib {
       my $source_attrib_id;
 
       foreach my $feature_id (@{$feature_id_list}){
-        # Get source and variant id
-        $pheno_sth->execute($feature_id)||die;
-        my $pheno_data = $pheno_sth->fetchall_arrayref();
-
-        next unless defined $pheno_data->[0]->[0];
-
-        my $source_id = $pheno_data->[0]->[0];
-        my $var_name = $pheno_data->[0]->[1];
-
+        my $source_id = $source_to_variation{$feature_id}->{source_id};
+        my $var_name = $source_to_variation{$feature_id}->{var_name};
         my $v = $var_ad->fetch_by_name($var_name);
         # Add variant if it exists - avoid undef values
         if (defined $v){
@@ -1224,19 +1233,12 @@ sub get_citation_attribs {
   my $dba = shift;
 
   my %attribs;
-  my $attrib_type_id;
 
-  my $stm_1 = $dba->dbc()->prepare(qq[ SELECT attrib_type_id FROM attrib_type WHERE code = 'citation_source' ]);
-  $stm_1->execute();
-  my $attrib_type = $stm_1->fetchall_arrayref();
-
-  die "No attribute of type 'citation_source' was found in attrib_type table!\n" unless defined $attrib_type->[0];
-
-  $attrib_type_id = $attrib_type->[0]->[0];
-
-  my $stm_2 = $dba->dbc()->prepare(qq[ SELECT attrib_id,value FROM attrib where attrib_type_id = $attrib_type_id ]);
-  $stm_2->execute();
-  my $citation_attribs = $stm_2->fetchall_arrayref();
+  my $attrib_value_sth = $dba->dbc()->prepare(qq[ SELECT a.attrib_id, a.value FROM attrib a
+                                                  JOIN attrib_type at ON a.attrib_type_id = at.attrib_type_id
+                                                  WHERE at.code = 'citation_source' ]);
+  $attrib_value_sth->execute();
+  my $citation_attribs = $attrib_value_sth->fetchall_arrayref();
 
   die "No attribute of type 'citation_source' was found in attrib table!\n" unless defined $citation_attribs->[0];
 
