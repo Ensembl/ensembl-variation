@@ -46,18 +46,35 @@ sub run {
   my $fh = FileHandle->new("$pipeline_dir/QC_ComparePreviousAssembly", 'w');
   my @seq_regions = uniq (keys %$counts_prev_assembly, keys %$counts_new_assembly);
 
+  my $count_old2new_loss = 0;
+  my $count_old2new_gain = 0;
+  my $count_suspicious_decrease = 0;
+  my $count_suspicious_increase = 0;
+
   print $fh "seq_region count_prev count_new ratio\n";
   foreach my $seq_region (@seq_regions) {
     my $count_prev = $counts_prev_assembly->{$seq_region} || 'NA';
     my $count_new =  $counts_new_assembly->{$seq_region} || 'NA';
+    $count_old2new_loss++ if ($count_new eq 'NA');
+    $count_old2new_gain++ if ($count_prev eq 'NA');
     if ("$count_prev" ne 'NA' && "$count_new" ne 'NA') {
       my $ratio = $count_new / $count_prev;
+      $count_suspicious_increase++ if ($ratio > 1.2);
+      $count_suspicious_decrease++ if ($ratio < 0.8);
       print $fh "$seq_region $count_prev $count_new $ratio\n";
     } else {
       print $fh "$seq_region $count_prev $count_new\n";
     }
   } 
   $fh->close; 
+
+  $fh = FileHandle->new("$pipeline_dir/QC_ComparePreviousAssembly_report", 'w');
+  print $fh "Lost variants on $count_old2new_loss seq_regions\n" if ($count_old2new_loss);
+  print $fh "Gained variants on $count_old2new_gain seq_regions\n" if ($count_old2new_gain);
+  print $fh "$count_suspicious_decrease seq_regions with suspiciously high decrease in number of variants\n" if ($count_suspicious_decrease);
+  print $fh "$count_suspicious_increase seq_regions with suspiciously high increase in number of variants\n" if ($count_suspicious_increase);
+
+  $fh->close;
 }
 
 sub get_feature_counts_by_seq_region {
