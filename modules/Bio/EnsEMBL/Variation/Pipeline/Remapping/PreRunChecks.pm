@@ -70,21 +70,32 @@ sub run {
 
 
   my $table_columns_newasm = $self->get_table_columns($registry);
+  my $patches_newasm = $self->get_patches($registry);
   $registry->load_all($self->param('registry_file_oldasm'));
   my $table_columns_oldasm = $self->get_table_columns($registry);
 
   # Check that tables and columns are the same between assemblies or if the old databases need to be patched to the new schema
-  foreach my $db_type (qw/variation core/) {
-    if (join(',', sort keys %{$table_columns_newasm->{$db_type}}) ne join(',', sort keys %{$table_columns_oldasm->{$db_type}})) {
-      die "Lists of $db_type tables differ between assemblies. You probably need to patch the  $db_type database.\n"
-    } else {
-      foreach my $table_name (keys %{$table_columns_newasm->{$db_type}}) {
-        if ($table_columns_newasm->{$db_type}->{$table_name} ne $table_columns_oldasm->{$db_type}->{$table_name}) {
-          my $columns_oldasm = $table_columns_oldasm->{$db_type}->{$table_name};
-          my $columns_newasm = $table_columns_newasm->{$db_type}->{$table_name};
-          die "Lists of columns (old $columns_oldasm, new $columns_newasm) differ between assemblies for table $table_name. You probably need to patch the $db_type database.\n";
+  if (!$self->param('skip_table_and_column_comparison')) {
+    foreach my $db_type (qw/variation core/) {
+      if (join(',', sort keys %{$table_columns_newasm->{$db_type}}) ne join(',', sort keys %{$table_columns_oldasm->{$db_type}})) {
+        die "Lists of $db_type tables differ between assemblies. You probably need to patch the  $db_type database.\n"
+      } else {
+        foreach my $table_name (keys %{$table_columns_newasm->{$db_type}}) {
+          if ($table_columns_newasm->{$db_type}->{$table_name} ne $table_columns_oldasm->{$db_type}->{$table_name}) {
+            my $columns_oldasm = $table_columns_oldasm->{$db_type}->{$table_name};
+            my $columns_newasm = $table_columns_newasm->{$db_type}->{$table_name};
+            die "Lists of columns (old $columns_oldasm, new $columns_newasm) differ between assemblies for table $table_name. You probably need to patch the $db_type database.\n";
+          }
         }
       }
+    }
+  }
+  my $patches_oldasm = $self->get_patches($registry);
+
+  # compare patches
+  foreach my $patch (keys %{$patches_newasm}) {
+    if (! $patches_oldasm->{$patch}) {
+      die "Patch $patch is missing from old variation database. Both variation databases need to contain the same patches.\n";
     }
   }
 
@@ -151,6 +162,21 @@ sub run {
       $self->run_cmd("rm -f $dir/*.fai");
     }
   }
+}
+
+sub get_patches {
+  my $self = shift;
+  my $registry = shift;
+  my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
+  my $dbh = $vdba->dbc->db_handle;
+  my $sth = $dbh->prepare(qq{SELECT meta_value from meta where meta_key='patch';});
+  my $patches = {};
+  $sth->execute();
+  while (my $row = $sth->fetchrow_arrayref) {
+    $patches->{$row->[0]} = 1;
+  }
+  $sth->finish();
+  return $patches;
 }
 
 sub get_table_columns {

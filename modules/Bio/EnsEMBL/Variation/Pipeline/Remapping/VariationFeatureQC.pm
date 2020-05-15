@@ -58,6 +58,29 @@ sub run {
     vdba_oldasm => $vdba_oldasm,
   };
   qc_mapped_vf($config);
+
+  # Check that there are no duplicated entries in variation_feature after remapping
+
+  my $dbh = $vdba->dbc->db_handle();
+  my $sth = $dbh->prepare(qq{
+    SELECT count(vf1.variation_feature_id)
+    FROM $feature_table vf1
+    JOIN $feature_table vf2
+    ON (vf2.variation_id = vf1.variation_id
+      AND vf2.variation_feature_id > vf1.variation_feature_id
+      AND vf2.seq_region_id = vf1.seq_region_id
+      AND vf2.seq_region_start = vf1.seq_region_start
+      AND vf2.seq_region_end = vf1.seq_region_end
+      AND vf2.seq_region_strand = vf1.seq_region_strand
+    );
+  }, {mysql_use_result => 1});
+
+  $sth->execute() or die $sth->errstr;
+  my $row = $sth->fetchrow_arrayref;
+  $sth->finish();
+  if ($row->[0] > 0) {
+    die "$feature_table contains duplicates after remapping.\n";
+  }
 }
 
 1;
