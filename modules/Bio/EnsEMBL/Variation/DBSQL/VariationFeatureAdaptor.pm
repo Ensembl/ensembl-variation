@@ -2593,8 +2593,6 @@ sub fetch_by_spdi_notation{
 sub get_reference_allele{ 
   my ($slice_adaptor, $sequence_id, $start, $end, $raw_sequence_id, $coord_system) = @_;
 
-  print "SEQUENCE: $sequence_id, START-END: $start-$end, $raw_sequence_id, $coord_system\n";
-
   # get a slice for the variant genomic coordinate 
   my $slice = $slice_adaptor->fetch_by_region($coord_system,$sequence_id,$start,$end) || $slice_adaptor->fetch_by_region(undef,$sequence_id,$start,$end);
 
