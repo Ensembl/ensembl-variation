@@ -118,8 +118,9 @@ elsif($type eq "phenotype"){
   # Fetch all citation source attribs
   my $citation_attribs = get_citation_attribs($dba);
 
-  process_phenotype_feature($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
-  process_phenotype_feature_attrib($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
+  my $citations_pheno_feature = process_phenotype_feature($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
+  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
+  check_outdated_citations($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
 }
 else{
     die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
@@ -866,7 +867,7 @@ sub remove_publications{
         if(defined $failed_variant){
 
           # Check if there is other publications for variant 
-          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);          
+          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);
           $other_publications_sth->execute()||die;
           my $other_publications = $other_publications_sth->fetchall_arrayref();
           next unless (!defined $other_publications->[0]->[0]); 
@@ -1015,6 +1016,8 @@ sub process_phenotype_feature {
   my $source_ad = shift;
   my $citation_attribs = shift;
 
+  my %list_citations_pheno_feature;
+
   ## Get studies from phenotype_feature
   my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id
                                                 from study s
@@ -1046,6 +1049,9 @@ sub process_phenotype_feature {
     my $external_reference = $l->[2];
     $external_reference =~ s/PMID://;
     my $study_type = $l->[3];
+    my $rsid = $l->[4];
+
+    $list_citations_pheno_feature{$rsid.'-'.$external_reference} = $source_id;
 
     # Get publication with same PMID from study table
     my $publication = $pub_ad->fetch_by_pmid($external_reference);
@@ -1102,6 +1108,7 @@ sub process_phenotype_feature {
        $pub_ad->store($publication,$source_attrib_id);
     }
   }
+  return \%list_citations_pheno_feature;
 }
 
 sub process_phenotype_feature_attrib {
@@ -1110,6 +1117,8 @@ sub process_phenotype_feature_attrib {
   my $pub_ad = shift;
   my $source_ad = shift;
   my $citation_attribs = shift;
+
+  my %list_citations_pheno_feature_attrib;
 
   my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
                                                  from attrib_type
@@ -1155,6 +1164,8 @@ sub process_phenotype_feature_attrib {
       next if $pmid eq '25806920';
 
       my $publication = $pub_ad->fetch_by_pmid($pmid);
+
+      $list_citations_pheno_feature_attrib{$var_name.'-'.$pmid} = $source_id;
 
       next unless !defined($publication);
 
@@ -1225,6 +1236,54 @@ sub process_phenotype_feature_attrib {
       $pub_ad->store($publication,$source_attrib_id);
     }
   }
+  return \%list_citations_pheno_feature_attrib;
+}
+
+# The citations imported from the Phenotype tables (phenotype_feature and phenotype_feature_attrib) could be removed from the phenotype import in the future.
+# To avoid having outdated citations we check if all citations from the 3 sources (ClinVar, GWAS and dbGaP) are still in the Phenotype tables.
+sub check_outdated_citations {
+  my $dba = shift;
+  my $var_ad = shift;
+  my $pub_ad = shift;
+  my $source_ad = shift;
+  my $citation_attribs = shift;
+  my $citations_pheno_feature = shift;
+  my $citations_pheno_feature_attrib = shift;
+
+  open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
+  print $wrt "RSID\tPMID\n";
+
+  # get all citations from the sources 'ClinVar', 'dbGaP' and 'GWAS' - imported from the phenotype tables
+  my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
+  my $attrib_id_gwas = $citation_attribs->{'GWAS'};
+  my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
+
+  my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
+                                               from variation_citation
+                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' or data_source_attrib like '%$attrib_id_dbgap%' ]);
+
+  $citations_sth->execute()||die;
+  my $citations_data = $citations_sth->fetchall_arrayref();
+
+  foreach my $c (@{$citations_data}){
+    my $variation_id = $c->[0];
+    my $publication_id = $c->[1];
+    my $attrib_id = $c->[2];
+
+    my $variation = $var_ad->fetch_by_dbID($variation_id);
+    die "No variation found for '$variation_id'!\n" unless defined $variation;
+
+    my $publication = $pub_ad->fetch_by_dbID($publication_id);
+    die "No variation found for '$publication_id'!\n" unless defined $publication;
+
+    my $variation_rsid = $variation->name();
+    my $publication_pmid = $publication->pmid();
+
+    if(!$citations_pheno_feature->{$variation_rsid.'-'.$publication_pmid} && !$citations_pheno_feature_attrib->{$variation_rsid.'-'.$publication_pmid}) {
+      print $wrt "$variation_rsid\t$publication_pmid\n";
+    }
+  }
+  close($wrt);
 }
 
 # Fetch all attribs that have type citation_source
