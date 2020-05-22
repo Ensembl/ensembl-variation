@@ -2512,11 +2512,11 @@ sub fetch_by_spdi_notation{
 
   # Get a slice adaptor to enable check of supplied reference allele
   my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor(); 
-  # fetch_by_region(undef,$seq) is used when slice is not found when using highest ranking cs name
+  # Use fetch_by_region(undef, $sequence_id) to fetch LRG regions
   my $slice = $slice_adaptor->fetch_by_region($coord_system, $sequence_id) || $slice_adaptor->fetch_by_region(undef, $sequence_id);
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-    throw("Sequence name $sequence_id not valid");
+    throw("Sequence name $raw_sequence_id not valid");
   }
 
   # First checks if deleted and inserted sequences are not 0 (invalid notation)  
