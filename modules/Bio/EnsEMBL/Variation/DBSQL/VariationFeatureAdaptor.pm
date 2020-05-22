@@ -2515,6 +2515,10 @@ sub fetch_by_spdi_notation{
   # fetch_by_region(undef,$seq) is used when slice is not found when using highest ranking cs name
   my $slice = $slice_adaptor->fetch_by_region($coord_system, $sequence_id) || $slice_adaptor->fetch_by_region(undef, $sequence_id);
 
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw("Sequence name $sequence_id not valid");
+  }
+
   # First checks if deleted and inserted sequences are not 0 (invalid notation)  
   if($deleted_seq eq '0' && $inserted_seq eq '0'){
     throw ("Could not parse the SPDI notation $spdi. SPDI notation not supported."); 
