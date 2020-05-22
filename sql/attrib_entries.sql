@@ -909,6 +909,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (663, 544, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (664, 544, 'tumour');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (665, 544, 'trait');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (666, 545, 'cerealsdb_external_links');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (667, 477, 'SARS_CoV-2_2alt');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
