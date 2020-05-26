@@ -147,6 +147,7 @@ sub _return_3prime {
   return unless (defined($tv->cdna_start) && defined($tv->cdna_end) && defined($tv->cds_start) && defined($tv->cds_end)) 
   || (defined($tv->cdna_start_unshifted) && defined($tv->cdna_end_unshifted) && defined($tv->cds_start_unshifted) && defined($tv->cds_end_unshifted));
   
+  return if ($tr->stable_id =~ /ENS/);
   my @attribs = @{$tr->get_all_Attributes()};
   
   ## Checks to see if the underlying sequence has been edited
