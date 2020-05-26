@@ -118,26 +118,30 @@ elsif($type eq "phenotype"){
   # Fetch all citation source attribs
   my $citation_attribs = get_citation_attribs($dba);
 
-  my $citations_pheno_feature = process_phenotype_feature($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
-  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs);
-  check_outdated_citations($dba, $var_ad, $pub_ad, $source_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+  my $citations_pheno_feature = process_phenotype_feature($dba, $source_ad, $citation_attribs);
+  import_citations($reg, $citations_pheno_feature, $type);
+
+  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $citation_attribs);
+  import_citations($reg, $citations_pheno_feature_attrib, $type);
+
+  check_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
 }
 else{
     die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
 }
 
-## create report on curent status
+# create report on curent status
 my $title_null = report_summary($dba, $species);
 
-## add run date to meta table
+# add run date to meta table
 update_meta($dba, $type) unless $type eq "phenotype";
 
-## clean publications after import
+# clean publications after import
 if(defined $clean && $clean == 1){
   clean_publications($dba, $title_null);
 }
 
-## update variations & variation_features to have Cited status
+# update variations & variation_features to have Cited status
 update_evidence($dba) unless defined $no_evidence;
 
 sub import_citations{
@@ -156,6 +160,9 @@ sub import_citations{
     elsif($type eq "UCSC"){
       print $not_found "rsID\tPMID\tDOI\tTitle\tAuthors\tYear\tUCSC\n";
     }
+    elsif($type eq "phenotype"){
+      print $not_found "rsID,PMID\n";
+    }
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -164,8 +171,8 @@ sub import_citations{
     my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
     my $done_list = get_current_citations($dba);
 
-    # Get attrib id for source
-    my $source_attrib_id = get_source_attrib_id($reg, $type);
+    # Get attrib id for source EPMC and UCSC
+    my $source_attrib_id = get_source_attrib_id($reg, $type) unless ($type eq 'phenotype');
 
     foreach my $pub(keys %$data){
 
@@ -176,6 +183,7 @@ sub import_citations{
 
         foreach my $rsid ( @var_id ){
             my $pub_pmid = $data->{$pub}->{pmid};
+            $source_attrib_id = $data->{$pub}->{source} if($type eq 'phenotype');
 
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
@@ -196,7 +204,10 @@ sub import_citations{
                 }
                 elsif($type eq "UCSC") {
                   print $not_found $rsid ."\t". $pub_pmid."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
-               }
+                }
+                elsif($type eq "phenotype") {
+                  print $not_found "$rsid,$pub_pmid\n";
+                }
                use warnings ;
             }
         }
@@ -1011,37 +1022,19 @@ sub get_current_citations{
 
 sub process_phenotype_feature {
   my $dba = shift;
-  my $var_ad = shift;
-  my $pub_ad = shift;
   my $source_ad = shift;
   my $citation_attribs = shift;
 
   my %list_citations_pheno_feature;
 
-  ## Get studies from phenotype_feature
-  my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id
+  ## Get citations from phenotype_feature
+  my $pheno_citations_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id
                                                 from study s
                                                 inner join phenotype_feature p on s.study_id = p.study_id
                                                 where p.type = 'variation' and p.study_id is not null and s.external_reference is not null
                                                 group by s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id ]);
-  $attrib_ext_sth->execute()||die;
-  my $data = $attrib_ext_sth->fetchall_arrayref();
-
-  my %study_to_rsids;
-
-  foreach my $l (@{$data}){
-    my $study_id = $l->[0];
-    my $rsid = $l->[4];
-
-    if(defined $study_to_rsids{$study_id}) {
-      push @{$study_to_rsids{$study_id}}, $rsid;
-    }
-    else {
-      my @rsids;
-      push @rsids, $rsid;
-      $study_to_rsids{$study_id} = \@rsids;
-    }
-  }
+  $pheno_citations_sth->execute()||die;
+  my $data = $pheno_citations_sth->fetchall_arrayref();
 
   foreach my $l (@{$data}){
     my $study_id = $l->[0];
@@ -1051,13 +1044,14 @@ sub process_phenotype_feature {
     my $study_type = $l->[3];
     my $rsid = $l->[4];
 
-    $list_citations_pheno_feature{$rsid.'-'.$external_reference} = $source_id;
+    my $tag = $rsid . "_" . $external_reference;
 
-    # Get publication with same PMID from study table
-    my $publication = $pub_ad->fetch_by_pmid($external_reference);
-  
-    next unless !defined($publication);
-  
+    $list_citations_pheno_feature{$tag}{pmid} = $external_reference;
+    $list_citations_pheno_feature{$tag}{pmid} = undef unless $external_reference =~ /\d+/;
+
+    $list_citations_pheno_feature{$tag}{pmcid} = undef;
+    push @{$list_citations_pheno_feature{$tag}{rsid}}, $rsid;
+
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
@@ -1071,51 +1065,15 @@ sub process_phenotype_feature {
       $source_attrib_id = $citation_attribs->{$source_name};
       die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
-  
-    # Get publication that is not in publication table 
-    my $pub_data = get_epmc_data("search?query=ext_id:$external_reference%20src:med");
-  
-    if(defined $pub_data->{resultList}->{result}->{title}){
-      my $pub_title = $pub_data->{resultList}->{result}->{title};
-      my $pub_pmcid = $pub_data->{resultList}->{result}->{pmcid};
-      my $pub_author = $pub_data->{resultList}->{result}->{authorString};
-      my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
-      my $pub_doi = $pub_data->{resultList}->{result}->{doi};
 
-      my @variant_list;
-      my $rsids = $study_to_rsids{$study_id};
-
-      foreach my $rsid (@{$rsids}){
-        my $v = $var_ad->fetch_by_name($rsid);
-        if (defined $v){
-          push @variant_list, $v;
-        }
-      }
-
-      ### create new object
-      my $publication = Bio::EnsEMBL::Variation::Publication->new( 
-                -title    => $pub_title,
-                -authors  => $pub_author,
-                -pmid     => $external_reference,
-                -pmcid    => $pub_pmcid || undef,
-                -year     => $pub_year,
-                -doi      => $pub_doi,
-                -ucsc_id  => undef,
-                -variants => \@variant_list,
-                -adaptor  => $pub_ad
-                );
-
-       $pub_ad->store($publication,$source_attrib_id);
-    }
+    $list_citations_pheno_feature{$tag}{source} = $source_attrib_id;
   }
+
   return \%list_citations_pheno_feature;
 }
 
 sub process_phenotype_feature_attrib {
   my $dba = shift;
-  my $var_ad = shift;
-  my $pub_ad = shift;
-  my $source_ad = shift;
   my $citation_attribs = shift;
 
   my %list_citations_pheno_feature_attrib;
@@ -1139,21 +1097,12 @@ sub process_phenotype_feature_attrib {
   $pheno_feature_sth->execute()||die;
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
 
-  # PMID -> list of phenotype_feature_id
-  my %new_publications;
-  my %source_to_variation;
-
   # Create map to associate PMID with all phenotype features it's linked to
   foreach my $pheno_feat_data (@{$pheno_feature_data}){
-    my $pheno_feat_id = $pheno_feat_data->[0];
+    # my $pheno_feat_id = $pheno_feat_data->[0];
     my $value_pubid = $pheno_feat_data->[1];
     my $source_id = $pheno_feat_data->[2];
     my $var_name = $pheno_feat_data->[3];
-
-    $source_to_variation{$pheno_feat_id}->{source_id} = $source_id;
-    $source_to_variation{$pheno_feat_id}->{var_name} = $var_name;
-
-    $source_to_variation{$source_id} = $var_name;
 
     my @value_pubid_splited = split /,/, $value_pubid;
 
@@ -1163,79 +1112,24 @@ sub process_phenotype_feature_attrib {
       # PMID=25806919 is already in the publication table - faster to skip this PMID and avoid duplicated data
       next if $pmid eq '25806920';
 
-      my $publication = $pub_ad->fetch_by_pmid($pmid);
+      my $tag = $var_name . "_" . $pmid;
 
-      $list_citations_pheno_feature_attrib{$var_name.'-'.$pmid} = $source_id;
+      $list_citations_pheno_feature_attrib{$tag}{pmid} = $pmid;
+      $list_citations_pheno_feature_attrib{$tag}{pmid} = undef unless $pmid =~ /\d+/;
 
-      next unless !defined($publication);
+      $list_citations_pheno_feature_attrib{$tag}{pmcid} = undef;
+      push @{$list_citations_pheno_feature_attrib{$tag}{rsid}}, $var_name;
 
-      my @feature_id;
-      if(defined $new_publications{$pmid}){
-        push(@{$new_publications{$pmid}}, $pheno_feat_id);
-      }
-      else{
-        push @feature_id, $pheno_feat_id;
-        $new_publications{$pmid} = \@feature_id;
-      }
+      # Get source name from source table (ClinVar)
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+     $list_citations_pheno_feature_attrib{$tag}{source} = $source_attrib_id;
     }
   }
 
-  foreach my $pmid (keys(%new_publications)){
-    my $feature_id_list = $new_publications{$pmid};
-
-    my $pub_data = get_epmc_data("search?query=ext_id:$pmid%20src:med");
-
-    if(defined $pub_data->{resultList}->{result}->{title}){
-      my $pub_title = $pub_data->{resultList}->{result}->{title};
-      my $pub_pmcid = $pub_data->{resultList}->{result}->{pmcid};
-      my $pub_author = $pub_data->{resultList}->{result}->{authorString};
-      my $pub_year = $pub_data->{resultList}->{result}->{pubYear};
-      my $pub_doi = $pub_data->{resultList}->{result}->{doi};
-
-      my @variant_list;
-      my $source_attrib_id;
-
-      foreach my $feature_id (@{$feature_id_list}){
-        my $source_id = $source_to_variation{$feature_id}->{source_id};
-        my $var_name = $source_to_variation{$feature_id}->{var_name};
-        my $v = $var_ad->fetch_by_name($var_name);
-        # Add variant if it exists - avoid undef values
-        if (defined $v){
-          push @variant_list, $v;
-        }
-
-        # Get source name from source table (ClinVar)
-        my $source_obj = $source_ad->fetch_by_dbID($source_id);
-        my $source_name = $source_obj->name();
-        $source_attrib_id = $citation_attribs->{$source_name};
-        die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
-      }
-
-      # Clean title before insertion
-      if($pub_title =~ /^\[ ?[A-Za-z]{2}/){
-          $pub_title =~ s/^\[//;
-          $pub_title =~ s/\]//;
-      }
-
-      # Skip publication if title 'Not Available'
-      next if ($pub_title =~ /Not Available/);
-
-      ## create new object
-      my $publication = Bio::EnsEMBL::Variation::Publication->new( 
-                -title    => $pub_title,
-                -authors  => $pub_author,
-                -pmid     => $pmid,
-                -pmcid    => $pub_pmcid || undef,
-                -year     => $pub_year,
-                -doi      => $pub_doi,
-                -ucsc_id  => undef,
-                -variants => \@variant_list,
-                -adaptor  => $pub_ad
-                );
-
-      $pub_ad->store($publication,$source_attrib_id);
-    }
-  }
   return \%list_citations_pheno_feature_attrib;
 }
 
@@ -1245,7 +1139,6 @@ sub check_outdated_citations {
   my $dba = shift;
   my $var_ad = shift;
   my $pub_ad = shift;
-  my $source_ad = shift;
   my $citation_attribs = shift;
   my $citations_pheno_feature = shift;
   my $citations_pheno_feature_attrib = shift;
@@ -1279,9 +1172,8 @@ sub check_outdated_citations {
     my $variation_rsid = $variation->name();
     my $publication_pmid = $publication->pmid();
 
-    if(!$citations_pheno_feature->{$variation_rsid.'-'.$publication_pmid} && !$citations_pheno_feature_attrib->{$variation_rsid.'-'.$publication_pmid}) {
-      print $wrt "$variation_rsid\t$publication_pmid\n";
-    }
+    print $wrt "$variation_rsid\t$publication_pmid\n" unless ($citations_pheno_feature->{$variation_rsid.'-'.$publication_pmid} || $citations_pheno_feature_attrib->{$variation_rsid.'-'.$publication_pmid});
+
   }
   close($wrt);
 }
