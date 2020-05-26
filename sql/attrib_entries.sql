@@ -826,6 +826,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (570, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (571, 477, 'HapMap_WEC');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (572, 477, 'HapMap_GBS');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (573, 497, 'TOPMed');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (575, 470, 'SVA_insertion');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (578, 477, 'IHVs_AB');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (579, 477, 'IHVs_AD');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (580, 477, 'IHVs_BD');
