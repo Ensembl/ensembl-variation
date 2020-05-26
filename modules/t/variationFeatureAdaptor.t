@@ -444,7 +444,7 @@ $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 
 print "\n# Test - fetch_by_spdi_notation\n";
-my $spdi_str = 'NC_000016.10:68644751::';
+my $spdi_str = 'NC_000013.10:32954017::';
 throws_ok {$vfa->fetch_by_spdi_notation($spdi_str); } qr/Could not parse the SPDI notation $spdi_str/, 'Throw on invalid SPDI notation.';
 $spdi_str = 'N_000013.10:32954017:G:A';
 throws_ok {$vfa->fetch_by_spdi_notation($spdi_str); } qr/Sequence name N_000013.10 not valid/, 'Throw on invalid sequence id.';
@@ -500,6 +500,9 @@ ok($vf->seq_region_start eq '66321303' && $vf->seq_region_end eq '66321304', "Va
 $spdi_str = 'NC_000012:102009450:GCCCCCC:CT'; 
 $vf = $vfa->fetch_by_spdi_notation($spdi_str);
 ok($vf->allele_string eq 'GCCCCCC/CT' , "Valid indel"); 
+my $spdi_lrg = 'LRG_293:69534:N:G';
+$vf = $vfa->fetch_by_spdi_notation($spdi_lrg);
+ok($vf->allele_string eq 'N/G', "LRG - Valid insertion 'LRG_293:69534:N:G'");
 
 ## check ref matching
 my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
