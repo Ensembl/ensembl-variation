@@ -613,7 +613,6 @@
       "species": "felis_catus",
       "assembly": "Felis_catus_9.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-101/compara/conservation_scores/100_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
       "filename_template" : "ftp://ftp.ensembl.org/pub/release-101/compara/conservation_scores/103_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
       "annotation_type": "gerp"
     },
