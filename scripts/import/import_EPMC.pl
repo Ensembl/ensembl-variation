@@ -121,7 +121,7 @@ elsif($type eq "phenotype"){
   my $citations_pheno_feature = process_phenotype_feature($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature, $type);
 
-  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $citation_attribs);
+  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature_attrib, $type);
 
   check_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
@@ -1044,14 +1044,6 @@ sub process_phenotype_feature {
     my $study_type = $l->[3];
     my $rsid = $l->[4];
 
-    my $tag = $rsid . "_" . $external_reference;
-
-    $list_citations_pheno_feature{$tag}{pmid} = $external_reference;
-    $list_citations_pheno_feature{$tag}{pmid} = undef unless $external_reference =~ /\d+/;
-
-    $list_citations_pheno_feature{$tag}{pmcid} = undef;
-    push @{$list_citations_pheno_feature{$tag}{rsid}}, $rsid;
-
     # Get attrib id for source - some are null 
     my $source_attrib_id;
     if(defined $study_type){
@@ -1066,6 +1058,14 @@ sub process_phenotype_feature {
       die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
     }
 
+    my $tag = $source_attrib_id . "_" . $external_reference;
+
+    $list_citations_pheno_feature{$tag}{pmid} = $external_reference;
+    $list_citations_pheno_feature{$tag}{pmid} = undef unless $external_reference =~ /\d+/;
+
+    $list_citations_pheno_feature{$tag}{pmcid} = undef;
+    push @{$list_citations_pheno_feature{$tag}{rsid}}, $rsid;
+
     $list_citations_pheno_feature{$tag}{source} = $source_attrib_id;
   }
 
@@ -1074,6 +1074,7 @@ sub process_phenotype_feature {
 
 sub process_phenotype_feature_attrib {
   my $dba = shift;
+  my $source_ad = shift;
   my $citation_attribs = shift;
 
   my %list_citations_pheno_feature_attrib;
@@ -1112,19 +1113,19 @@ sub process_phenotype_feature_attrib {
       # PMID=25806919 is already in the publication table - faster to skip this PMID and avoid duplicated data
       next if $pmid eq '25806920';
 
-      my $tag = $var_name . "_" . $pmid;
+      # Get source name from source table (ClinVar)
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+      my $tag = $source_attrib_id . "_" . $pmid;
 
       $list_citations_pheno_feature_attrib{$tag}{pmid} = $pmid;
       $list_citations_pheno_feature_attrib{$tag}{pmid} = undef unless $pmid =~ /\d+/;
 
       $list_citations_pheno_feature_attrib{$tag}{pmcid} = undef;
       push @{$list_citations_pheno_feature_attrib{$tag}{rsid}}, $var_name;
-
-      # Get source name from source table (ClinVar)
-      my $source_obj = $source_ad->fetch_by_dbID($source_id);
-      my $source_name = $source_obj->name();
-      my $source_attrib_id = $citation_attribs->{$source_name};
-      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
 
      $list_citations_pheno_feature_attrib{$tag}{source} = $source_attrib_id;
     }
