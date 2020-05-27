@@ -1145,7 +1145,7 @@ sub check_outdated_citations {
   my $citations_pheno_feature_attrib = shift;
 
   open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
-  print $wrt "RSID\tPMID\n";
+  print $wrt "RSID\tPMID\tSource\n";
 
   # get all citations from the sources 'ClinVar', 'dbGaP' and 'GWAS' - imported from the phenotype tables
   my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
@@ -1173,7 +1173,11 @@ sub check_outdated_citations {
     my $variation_rsid = $variation->name();
     my $publication_pmid = $publication->pmid();
 
-    print $wrt "$variation_rsid\t$publication_pmid\n" unless ($citations_pheno_feature->{$variation_rsid.'-'.$publication_pmid} || $citations_pheno_feature_attrib->{$variation_rsid.'-'.$publication_pmid});
+    my @split_attrib_id = split /,/, $attrib_id;
+
+    foreach my $attrib (@split_attrib_id) {
+      print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n" unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid});
+    }
 
   }
   close($wrt);
