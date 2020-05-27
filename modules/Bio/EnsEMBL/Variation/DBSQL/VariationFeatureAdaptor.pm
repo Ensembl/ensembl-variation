@@ -2215,15 +2215,13 @@ sub _parse_hgvs_protein_position{
   # check genomic codon is compatible with input HGVS
   my $check_prot   = $codon_table->translate($from_codon_ref);
 
-  my @from_codons;
+  my @from_codons = ();
   ## if the genomic sequence translates to match the input HGVS ref protein, use this
   if ($check_prot eq $from){
     push @from_codons, $from_codon_ref ;
   }
   else{
-    # rev-translate input ref sequence if the genome sequence does not match
     print "Sequence translated from reference ($from_codon_ref -> $check_prot) does not match input sequence ($from)\n" if $DEBUG ==1;
-    @from_codons   = $codon_table->revtranslate($from);
   }
 
   # rev-translate alt sequence
