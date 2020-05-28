@@ -506,8 +506,6 @@ ok($vf->allele_string eq 'N/G', "LRG - Valid insertion 'LRG_293:69534:N:G'");
 $vf = $vfa->fetch_by_spdi_notation('NT_004487:127830:N:C');
 ok($vf->allele_string eq 'N/C', "NT - Valid substitution 'NT_004487:127830:N:C'");
 
-throws_ok {$vfa->fetch_by_spdi_notation('NT_0044:127830:N:C');} qr/Sequence name NT_0044 not valid/, 'NT - Wrong reference NT_0044:127830:N:C';
-
 ## check ref matching
 my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
 throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Could not uniquely determine nucleotide change from ENSP00000434898.1:p.Cys6Ser/, 'Throw if HGVS does not match reference';
