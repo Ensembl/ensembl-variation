@@ -1682,17 +1682,27 @@ sub _parse_hgvs_transcript_position {
     }
     # Convert the cDNA coordinates to genomic coordinates.
     my @coords = $tr_mapper->cdna2genomic($cds_start,$cds_end);
+
     if($DEBUG ==1){
       print "In parser: cdna2genomic coords: ". $coords[0]->start() . "-". $coords[0]->end() . " and strand ". $coords[0]->strand()." from $cds_start,$cds_end\n";}
     
     #Throw an error if we didn't get an unambiguous coordinate back
-    throw ("Unable to map the cDNA coordinates $start\-$end to genomic coordinates for Transcript " .$transcript->stable_id()) if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
-    
-    my  $strand = $coords[0]->strand();    
-    
-    ### overwrite exonic location with genomic coordinates
-    $start = $coords[0]->start(); 
-    $end   = $coords[0]->end();
+    throw ("Unable to map the cDNA coordinates $start\-$end to genomic coordinates for Transcript " .$transcript->stable_id()) if (!$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+
+    my  $strand = $coords[0]->strand();
+
+    # Handle multi-exon location
+    if(scalar(@coords) != 1){
+      my $n_coord = scalar(@coords);
+
+      $start = $strand == 1 ? $coords[0]->start() : $coords[$n_coord-1]->start();
+      $end = $strand == 1 ? $coords[$n_coord-1]->end() : $coords[0]->end();
+    }
+    else{
+      ### overwrite exonic location with genomic coordinates
+      $start = $coords[0]->start();
+      $end   = $coords[0]->end();
+    }
 
     #### intronic variants are described as after or before the nearest exon 
     #### - add this offset to genomic start & end positions
