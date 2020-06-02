@@ -16,6 +16,7 @@
 
 
 ## script to read data export from Europe PMC & UCSC and import as variation_citations
+## the script also imports citations from phenotype tables (phenotype_feature and phenotype_feature_attrib) only for human
 
 use strict;
 use warnings;
