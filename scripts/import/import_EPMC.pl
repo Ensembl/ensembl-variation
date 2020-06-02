@@ -49,7 +49,6 @@ GetOptions ("data=s"        => \$data_file,
 ## an export file is needed for EPMC data
 usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC" || $type eq "phenotype");
 
-
 my $http = HTTP::Tiny->new();
 
 
@@ -68,6 +67,12 @@ my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine",
 
 our $species_string = join "|", @{$check_species{$species}} if defined $check_species{$species};
 print "Checking species $species_string\n";
+
+# phenotype option is only available for human
+# print error message
+if($type eq 'phenotype' && $species_string !~/human|homo/) {
+  die "Type $type is only available for human\n";
+}
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->no_version_check(1); 
@@ -1036,6 +1041,25 @@ sub process_phenotype_feature {
   $pheno_citations_sth->execute()||die;
   my $data = $pheno_citations_sth->fetchall_arrayref();
 
+  my %source_id_list;
+
+  foreach my $pheno_data (@{$data}){
+    my $source_id = $pheno_data->[1];
+    my $study_type = $pheno_data->[3];
+
+    next if(defined $study_type);
+
+    if(!defined $source_id_list{$source_id}) {
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+      $source_id_list{$source_id} = $source_attrib_id;
+    }
+  }
+
   foreach my $l (@{$data}){
     my $study_id = $l->[0];
     my $source_id = $l->[1];
@@ -1052,16 +1076,12 @@ sub process_phenotype_feature {
     }
     else{
       # Get source name from source table (dbGaP)
-      my $source_obj = $source_ad->fetch_by_dbID($source_id);
-      my $source_name = $source_obj->name();
-      $source_attrib_id = $citation_attribs->{$source_name};
-      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+      $source_attrib_id = $source_id_list{$source_id};
     }
 
     my $tag = $source_attrib_id . "_" . $external_reference;
 
     $list_citations_pheno_feature{$tag}{pmid} = $external_reference;
-    $list_citations_pheno_feature{$tag}{pmid} = undef unless $external_reference =~ /\d+/;
 
     $list_citations_pheno_feature{$tag}{pmcid} = undef;
     push @{$list_citations_pheno_feature{$tag}{rsid}}, $rsid;
@@ -1079,24 +1099,29 @@ sub process_phenotype_feature_attrib {
 
   my %list_citations_pheno_feature_attrib;
 
-  my $attrib_type_sth = $dba->dbc()->prepare(qq[ select attrib_type_id
-                                                 from attrib_type
-                                                 where code = 'pubmed_id' ]);
-
-  $attrib_type_sth->execute()||die;
-  my $attrib_type_id = $attrib_type_sth->fetchall_arrayref();
-
-  die "No attribute type 'pubmed_id' found\n" unless defined $attrib_type_id->[0]->[0];
-
-  my $attrib_type_id_v = $attrib_type_id->[0]->[0];
-
   my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select pfa.phenotype_feature_id, pfa.value, pf.source_id, pf.object_id
                                                    from phenotype_feature_attrib pfa
                                                    inner join phenotype_feature pf on pfa.phenotype_feature_id = pf.phenotype_feature_id
-                                                   where pfa.attrib_type_id = $attrib_type_id_v ]);
+                                                   join attrib_type att on pfa.attrib_type_id = att.attrib_type_id
+                                                   where att.code = 'pubmed_id' ]);
 
   $pheno_feature_sth->execute()||die;
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
+
+  my %source_id_list;
+
+  foreach my $pheno_feat_data (@{$pheno_feature_data}){
+    my $source_id = $pheno_feat_data->[2];
+
+    if(!defined $source_id_list{$source_id}) {
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+      $source_id_list{$source_id} = $source_attrib_id;
+    }
+  }
 
   # Create map to associate PMID with all phenotype features it's linked to
   foreach my $pheno_feat_data (@{$pheno_feature_data}){
@@ -1114,15 +1139,11 @@ sub process_phenotype_feature_attrib {
       next if $pmid eq '25806920';
 
       # Get source name from source table (ClinVar)
-      my $source_obj = $source_ad->fetch_by_dbID($source_id);
-      my $source_name = $source_obj->name();
-      my $source_attrib_id = $citation_attribs->{$source_name};
-      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+      my $source_attrib_id = $source_id_list{$source_id};
 
       my $tag = $source_attrib_id . "_" . $pmid;
 
       $list_citations_pheno_feature_attrib{$tag}{pmid} = $pmid;
-      $list_citations_pheno_feature_attrib{$tag}{pmid} = undef unless $pmid =~ /\d+/;
 
       $list_citations_pheno_feature_attrib{$tag}{pmcid} = undef;
       push @{$list_citations_pheno_feature_attrib{$tag}{rsid}}, $var_name;
@@ -1168,7 +1189,7 @@ sub check_outdated_citations {
     die "No variation found for '$variation_id'!\n" unless defined $variation;
 
     my $publication = $pub_ad->fetch_by_dbID($publication_id);
-    die "No variation found for '$publication_id'!\n" unless defined $publication;
+    die "No publication found for '$publication_id'!\n" unless defined $publication;
 
     my $variation_rsid = $variation->name();
     my $publication_pmid = $publication->pmid();
