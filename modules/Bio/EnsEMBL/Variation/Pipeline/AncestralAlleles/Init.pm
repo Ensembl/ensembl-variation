@@ -64,14 +64,15 @@ sub run {
         $self->warning("No core database for $species_name");
       }
   }
-  $self->warning(Dumper($run_pipeline));
 
   my @input = ();
   my @post_processing_input = ();
   foreach my $species_name (keys %$run_pipeline) {
     my $species_dir = $self->create_species_dir($species_name);
-    $self->store_previous_release_stats($species_name, $species_dir);
-    my $batches = $self->get_batches($species_name);
+    if ($self->param('create_stats')) {
+      $self->store_previous_release_stats($species_name, $species_dir);
+    }
+    my $batches = $self->get_batches($species_name, $self->param('none_dbSNP_only'));
     push @post_processing_input, {
       species_name => $species_name,
       species_dir => $species_dir, 
@@ -124,21 +125,36 @@ sub store_previous_release_stats {
 sub get_batches {
   my $self = shift;
   my $species_name = shift;
+  my $none_dbSNP_only = shift;
   my $batch_size = $self->param('batch_size');
-  my $variation_feature_count = $self->get_variation_feature_count($species_name);
-
-  my $start = 1;
-  my $end = $batch_size;
   my @batches = ();
+  my ($vf_start, $vf_end);
+  if ($none_dbSNP_only) {
+    ($vf_start, $vf_end) = @{$self->get_variation_feature_start_end_for_non_dbSNP($species_name)};
+  } else {
+    $vf_start = 1;
+    $vf_end = $self->get_variation_feature_count($species_name);
+  }
+  my $end = $vf_start + $batch_size; 
   my $id = 1;
-  while ($end < $variation_feature_count) {
-    push @batches, {start => $start, end => $end, id => $id};
-    $start = $end + 1;
+  while ($end < $vf_end) {
+    push @batches, {start => $vf_start, end => $end, id => $id};
+    $vf_start = $end + 1;
     $end = $end + $batch_size;
     $id++;
   }
-  push @batches, {start => $start, end => $variation_feature_count, id => $id};
+  push @batches, {start => $vf_start, end => $vf_end, id => $id};
   return \@batches;
+}
+
+sub get_variation_feature_start_end_for_non_dbSNP {
+  my $self = shift;
+  my $species_name = shift;
+  my $vdba = $self->param('registry')->get_DBAdaptor($species_name, 'variation');
+  my $registry = $self->param('registry');
+  my $dbc = $vdba->dbc;
+  my $start_end = $dbc->sql_helper()->execute( -SQL =>qq/select min(variation_feature_id), max(variation_feature_id) from variation_feature where source_id != 1;/);
+  return $start_end->[0];
 }
 
 sub get_variation_feature_count {
