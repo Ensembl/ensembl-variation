@@ -220,6 +220,7 @@ sub update_variation{
 	## only variants with associated statuses to go into set
 	$assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
+      $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
 	push @{$class{$l->[0]}}, $l->[1];
     }
 
