@@ -41,8 +41,8 @@ my $opts = $cli_helper->process_args( $optsd, \&usage );
 
 my ($variation_dbas, $core_dbas);
 if (defined $opts->{dbname}) {
-  $variation_dbas = get_dbas($opts);
   die "Variation database required" unless ($opts->{dbname} =~ m/variation/);
+  $variation_dbas = get_dbas($opts);
 } else {
   my $version = $opts->{version};
   die "Version argument is required" unless ($version);
