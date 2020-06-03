@@ -77,6 +77,8 @@ sub default_options {
 
         reg_file                => $self->o('pipeline_dir') . '/ensembl.registry',
         batch_size => 1_000_000,
+        create_stats => 0,
+        none_dbSNP_only => 0,
         
         
         default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
@@ -114,6 +116,9 @@ sub pipeline_analyses {
         pipeline_dir     => $self->o('pipeline_dir'),
         compara_dir      => $self->o('compara_dir'),
         batch_size       => $self->o('batch_size'),
+        create_stats     => $self->o('create_stats'),
+        none_dbSNP_only  => $self->o('none_dbSNP_only'),
+
     );
    
     my @analyses;
