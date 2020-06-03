@@ -108,6 +108,7 @@ sub run_variation_checks {
     $failed_set_ext_sth->execute( "fail_all");
     my $set_id = $failed_set_ext_sth->fetchall_arrayref();
 
+    my %clinvar_vars = ();
     foreach my $l (@{$var_feat_list}){
         my %var = ( "start"       =>  $l->[3],
                     "end"         =>  $l->[4],
@@ -118,6 +119,11 @@ sub run_variation_checks {
                     "name"        =>  $l->[1],
                     "id"          =>  $l->[0],
             );
+
+        $clinvar_vars{$var{name}} =1;
+        #check for rsID sanity
+        my $number = $var{name}  =~ s/rs//r;
+        warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if $number < 650000000;
 
         $var{fail_reasons} = run_checks(\%var);
 
@@ -141,6 +147,7 @@ sub run_variation_checks {
         }
     }
     warn "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
+    warn "ClinVar imported variant names: \n", join "\n", keys %clinvar_vars, "\n";
 }
 
 ## call standard QC checks & return string of failure reasons
