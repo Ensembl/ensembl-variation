@@ -29,4 +29,4 @@ ALTER TABLE structural_variation MODIFY clinical_significance
   DEFAULT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_101_102_b.sql|Add new clinical_significance to variation and variation_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_101_102_b.sql|Add new clinical_significance to variation, variation_feature and structural_variation');
