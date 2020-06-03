@@ -125,7 +125,9 @@ foreach my $variation_dbname (keys %$variation_dbas) {
 sub get_dbas { 
   my $opts = shift;
   my $dbas = {};
+  # use the command line options to get an array of database details
   for my $db_args ( @{ $cli_helper->get_dba_args_for_opts( $opts, 0 ) } ) {
+    # use the args to create a DBA
     my $dba = new Bio::EnsEMBL::DBSQL::DBAdaptor(%$db_args);
     my $dbname = $dba->dbc()->dbname();
     $dbas->{$dbname} = $dba;
@@ -157,6 +159,9 @@ This script will update
 - the variation seq_region.coord_system_id with core seq_region.coord_system_id
 - the variation coord_system table with coord_system records
   that are in variation seq_region.coord_system_id from core coord_system
+
+The script expects the core and variation database to be on the same db host.
+
 USAGE_END
 
 }
