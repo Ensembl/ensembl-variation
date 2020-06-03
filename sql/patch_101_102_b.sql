@@ -13,13 +13,18 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# Add new clinical_significance 
+# Add new clinical_significance
 ALTER TABLE variation MODIFY clinical_significance 
   SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects')
   DEFAULT NULL;
 
-# Add new data_source attribs 
+# Add new clinical_significance
 ALTER TABLE variation_feature MODIFY clinical_significance 
+  SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects')
+  DEFAULT NULL;
+
+# Add new clinical_significance
+ALTER TABLE structural_variation MODIFY clinical_significance
   SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects')
   DEFAULT NULL;
 
