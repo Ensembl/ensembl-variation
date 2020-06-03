@@ -2103,7 +2103,7 @@ sub spdi_genomic{
   expand(\$ref_allele);
 
   # Throw exception if reference allele contains weird characters. Example reference allele: (53 BP INSERTION) 
-  if( $ref_allele =~ m/[^ACGT\-]$/ig ){
+  if( $ref_allele =~ m/[^ACGTN\-]$/ig ){
     throw("No supported SPDI genomic is available for Variation Feature $reference_name:$vf_start-$vf_end ($vf_strand)"); 
   } 
 
@@ -2117,7 +2117,7 @@ sub spdi_genomic{
     expand(\$alt_allele);
 
     # Skip if the allele contains weird characters
-    next if $alt_allele =~ m/[^ACGT\-]/ig;
+    next if $alt_allele =~ m/[^ACGTN\-]/ig;
 
     ##### vf strand is relative to slice
     my $flip_allele = 0;
@@ -2158,7 +2158,7 @@ sub spdi_genomic{
 
     # If variation feature is on the reverse strand then flip alleles (SPDI format is only reported on forward strand)
     # If variation is a deletion >20 bp then the deleted allele is represented by the sequence length (NC_000002:47403326:29:) and it doesn't need to be flipped  
-    if($flip_allele == 1 && $spdi_ref_allele =~ m/^[ACGT]*$/i){ 
+    if($flip_allele == 1 && $spdi_ref_allele =~ m/^[ACGTN]*$/i){
       reverse_comp(\$spdi_ref_allele) if( $spdi_ref_allele );  
       reverse_comp(\$spdi_alt_allele) if( $spdi_alt_allele );
     } 
