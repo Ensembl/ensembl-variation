@@ -506,7 +506,8 @@ ok($vf->allele_string eq 'N/G', "LRG - Valid insertion 'LRG_293:69534:N:G'");
 
 ## check ref matching
 my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
-throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Could not determine nucleotide change from peptide change C -> S/, 'Throw if HGVS does not match reference';
+throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Sequence translated from reference \(TCT -> S\) does not match input sequence \(C\)/, 'Throw if HGVS does not match reference';
+
 my $ok_hgvs = 'ENSP00000293261.2:p.Ser455del';
 $vf = $vfa->fetch_by_hgvs_notation($ok_hgvs);
 ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
