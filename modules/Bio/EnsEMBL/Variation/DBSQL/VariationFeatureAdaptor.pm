@@ -1886,7 +1886,8 @@ sub fetch_by_hgvs_notation {
     if(!defined($transcript)) {
       # Seeing transcripts erroneously submitted with p. changes
       if($reference =~ /ENST/){
-         push @transcripts, $transcript_adaptor->fetch_by_stable_id($reference);
+         my $given_transcript = $transcript_adaptor->fetch_by_stable_id($reference);
+         push @transcripts, $given_transcript if defined $given_transcript;
       }
       # Fetch as UniProt ID or gene
       else {
@@ -2191,7 +2192,6 @@ sub _pick_likely_transcript {
 sub _parse_hgvs_protein_position{
 
   my ($description, $reference, $transcript ) = @_;
-
   ## only supporting the parsing of hgvs substitutions [eg. Met213Ile]
   my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
 
@@ -2215,15 +2215,13 @@ sub _parse_hgvs_protein_position{
   # check genomic codon is compatible with input HGVS
   my $check_prot   = $codon_table->translate($from_codon_ref);
 
-  my @from_codons;
+  my @from_codons = ();
   ## if the genomic sequence translates to match the input HGVS ref protein, use this
   if ($check_prot eq $from){
     push @from_codons, $from_codon_ref ;
   }
   else{
-    # rev-translate input ref sequence if the genome sequence does not match
-    print "Sequence translated from reference ($from_codon_ref -> $check_prot) does not match input sequence ($from)\n" if $DEBUG ==1;
-    @from_codons   = $codon_table->revtranslate($from);
+    throw("Sequence translated from reference ($from_codon_ref -> $check_prot) does not match input sequence ($from)");
   }
 
   # rev-translate alt sequence
