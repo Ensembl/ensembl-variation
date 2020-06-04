@@ -508,8 +508,9 @@ ok($vf->allele_string eq 'N/G', "LRG - Valid insertion 'LRG_293:69534:N:G'");
 my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
 throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Sequence translated from reference \(TCT -> S\) does not match input sequence \(C\)/, 'Throw if HGVS does not match reference';
 
+throws_ok {$vfa->fetch_by_hgvs_notation('ENST00000470094.1:c.59A>G'); }qr/Reference allele extracted from ENST00000470094:32954035-32954035 \(G\) does not match reference allele given by HGVS notation ENST00000470094\.1:c\.59A>G \(A\)/, 'Throws if reference allele does not match';
+
 my $ok_hgvs = 'ENSP00000293261.2:p.Ser455del';
 $vf = $vfa->fetch_by_hgvs_notation($ok_hgvs);
 ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
 done_testing();
-
