@@ -1032,30 +1032,6 @@ sub add_OverlapConsequence {
     push @{ $self->{overlap_consequences} ||= [] }, $oc;
 }
 
-=head2 add_consequence_type
-
-    Status : Deprecated, use add_OverlapConsequence instead
-
-=cut
-
-sub add_consequence_type{
-    my $self = shift;
-    warning('Deprecated method, use add_OverlapConsequence instead');
-    return $self->add_OverlapConsequence(@_);
-}
-
-=head2 get_consequence_type
-
-    Status : Deprecated, use consequence_type instead
-
-=cut
-
-sub get_consequence_type {
-    my $self = shift;
-    warning('Deprecated method, use consequence_type instead');
-    return $self->consequence_type;
-}
-
 # used by VEP - fills out the consequence type hash keys
 # so that the API doesn't try to go to the DB to fill them
 sub _finish_annotation {
