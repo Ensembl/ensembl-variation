@@ -123,7 +123,7 @@ sub run_variation_checks {
         $clinvar_vars{$var{name}} =1;
         #check for rsID sanity:
         #the expectation is that any new rsID that has to be inserted is a new one (not in dbSNP import)
-        #given that approx. 650mil variatns are already known, the new rsID should have a bigger numebr than that
+        #given that approx. 650mil variation is already known, the new rsID should have a bigger number than that
         my $number = $var{name}  =~ s/rs//r;
         warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if $number < 650000000;
 
