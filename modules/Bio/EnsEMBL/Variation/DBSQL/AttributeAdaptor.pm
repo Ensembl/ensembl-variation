@@ -83,6 +83,32 @@ sub attrib_id_for_type_value {
     return $self->{attrib_ids}->{$type}->{$value};
 }
 
+=head2 attrib_values_for_attrib_type_code
+
+  Arg [1]    : string $attrib_type_code
+  Example    : $self->attrib_values_for_attrib_type_code($attrib_type_code)
+  Description: Return all attributes of a given attribute type based on the code name.
+               e.g. $aa->attrib_values_for_attrib_type_code('phenotype_type');
+  Returntype : hash ref of attribs (key) and attrib_ids (value) or undef if type code not found
+  Exceptions : none
+  Caller     : general
+  Status     : stable
+
+=cut
+
+sub attrib_values_for_attrib_type_code {
+  my ($self, $attrib_type_code) = @_;
+
+  unless ($self->{attrib_ids}) {
+    # call this method to populate the attrib hash
+    $self->attrib_value_for_id;
+  }
+
+  return defined $attrib_type_code ?
+    $self->{attrib_ids}->{$attrib_type_code} :
+    undef;
+}
+
 sub attrib_id_for_type_code {
     my ($self, $type) = @_;
 

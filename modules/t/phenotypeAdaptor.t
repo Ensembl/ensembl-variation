@@ -40,6 +40,7 @@ ok($pa && $pa->isa('Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor'), "get phe
 
 my $p = $pa->fetch_by_dbID(1);
 ok($p && $p->name eq 'ACH', "fetch_by_dbID");
+ok($p->class_attrib eq 'trait', "fetch_by_dbID - class attrib");
 
 $p = $pa->fetch_by_description('ACHONDROPLASIA')->[0];
 ok($p && $p->name eq 'ACH', "fetch_by_description");
@@ -108,6 +109,9 @@ ok($p_by_OT->description() eq 'BRUGADA SYNDROME', "fetch by OntologyTerm synonym
 my $p_by_OT_type = $pa->fetch_by_OntologyTerm( $terms->[0], 'involves' );
 ok(scalar @{$p_by_OT_type} ==0, "fetch by OntologyTerm & mapping type");
 
+## check what are the phenotype classes
+my $pheno_classes = $pa->get_all_phenotype_class_types();
+ok(scalar $pheno_classes == 3, "get phenotype classes");
 
 done_testing();
 

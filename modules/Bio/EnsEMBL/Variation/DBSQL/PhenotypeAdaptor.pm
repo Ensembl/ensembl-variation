@@ -172,7 +172,8 @@ sub _left_join {
   my @lj = ();
   
   push @lj, (
-    [ 'phenotype_ontology_accession', 'p.phenotype_id = poa.phenotype_id' ]
+    [ 'phenotype_ontology_accession', 'p.phenotype_id = poa.phenotype_id' ],
+    [ 'attrib', 'p.class_attrib_id = a.attrib_id']
   ) ;
   
   return @lj;
@@ -180,11 +181,12 @@ sub _left_join {
 
 sub _tables {
     return (['phenotype', 'p'],
-            ['phenotype_ontology_accession', 'poa'] );
+            ['phenotype_ontology_accession', 'poa'],
+            ['attrib', 'a'] );
 }
 
 sub _columns {
-    return qw(p.phenotype_id p.name p.description p.class_attrib_id poa.accession poa.mapped_by_attrib poa.mapping_type);
+    return qw(p.phenotype_id p.name p.description p.class_attrib_id a.value poa.accession poa.mapped_by_attrib poa.mapping_type);
 }
 
 sub _objs_from_sth {
@@ -226,6 +228,8 @@ sub _obj_from_row {
       $self->{_temp_objs}{$row->{phenotype_id}} = $obj;
 
     }
+    # Add class attrib value if available
+    $obj->class_attrib( $row->{value}) if defined $row->{value} ;
 
     # Add a ontology accession if available
     my $link_source = $self->db->get_AttributeAdaptor->attrib_value_for_id($row->{mapped_by_attrib})
@@ -234,6 +238,28 @@ sub _obj_from_row {
     $obj->add_ontology_accession({ accession      => $row->{accession}, 
                                    mapping_source => $link_source,
                                    mapping_type   => $row->{mapping_type} }) if defined $row->{accession} ;
+}
+
+=head2 get_all_phenotype_class_types
+
+  Example    : $phenotype_classes = $pheno_adaptor->get_all_phenotype_class_types();
+  Description: Retrieves the list of existing phenotype class attribs
+               If no phenotype class type exists undef is returned.
+  Returntype : list ref of string
+  Exceptions : none
+  Caller     : general
+=cut
+
+sub get_all_phenotype_class_types {
+  my $self = shift;
+
+  my $phenos= $self->generic_fetch();
+  my %pheno_class_attribs=();
+  foreach my $pheno (@$phenos){
+    $pheno_class_attribs{$pheno->class_attrib} = 1;
+  }
+
+  return values %pheno_class_attribs;
 }
 
 sub store{

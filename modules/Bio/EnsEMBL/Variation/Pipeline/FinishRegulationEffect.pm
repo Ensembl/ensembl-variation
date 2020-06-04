@@ -58,7 +58,7 @@ sub run {
       variation_feature_id int(10), 
       consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
       key variation_feature_idx(variation_feature_id)
-    );});
+    )engine=MyISAM;});
 
     for my $table (@regulatory_tables) {
       $dbc->do(qq{
@@ -75,7 +75,7 @@ sub run {
       variation_feature_id int(10), 
       consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
       key variation_feature_idx(variation_feature_id)
-    );});
+    )engine=MyISAM;});
 
     $dbc->do(qq{
       INSERT INTO variation_feature_overlap_regulation(variation_feature_id, consequence_types)

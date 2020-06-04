@@ -299,6 +299,7 @@ sub load_file_data{
   $dbVar->do(qq{UPDATE $temp_table SET start=outer_start, end=inner_start, 
                 outer_end=inner_start, inner_start=NULL, inner_end=NULL
                 WHERE outer_start=outer_end AND inner_start=inner_end;});
+
 }
 
 sub source {
@@ -338,13 +339,12 @@ sub study_table{
   my $study        = $data->{study};
   my $assembly     = $data->{assembly};
   my $study_desc   = $data->{desc};
-  my $study_type   = $data->{study_type};
   my $pmid         = $data->{pubmed};
   my $first_author = $data->{first_author};
   my $year         = $data->{year};
   my $author       = $data->{author};
   my $author_info  = $data->{author};
-  my $study_type   = ($data->{study_type}) ? $data->{study_type} : 'NULL';
+  my $study_type   = ($data->{study_type}) ? $data->{study_type} : undef;
 
   # Author
   $author_info =~ s/_/ /g;
@@ -379,7 +379,11 @@ sub study_table{
     }
   }
   my $external_link = ($display_name{$author}) ? $display_name{$author} : $pubmed;
-  
+
+  if ($external_link && ($external_link eq 'NULL' || $external_link eq '')) {
+    $external_link = undef;
+  }
+
   # URL
   $study =~ /(\w+\d+)\.?\d*/;
   my $study_ftp = $1;
@@ -395,7 +399,7 @@ sub study_table{
   $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s
               WHERE s.source_id=st.source_id AND s.name='$source_name' and st.name='$study'};
   my $rows = $dbVar->selectall_arrayref($stmt);    
-  
+
   my $assembly_desc;
 
 
@@ -428,62 +432,38 @@ sub study_table{
       $study_desc = $1;
     }
 
-    my $external_link_sql;
-    if ($external_link eq 'NULL') {
-      if ($study_xref && $study_xref !~ /NULL/i && $study_xref ne '') {
-        $external_link_sql = '';
-      }
-      else {
-        $external_link_sql = "external_reference='$external_link',";
-      }
-    }
-    else {
-      $external_link_sql = "external_reference='$external_link',";
-    }
+    $stmt = $dbVar->prepare(qq[ UPDATE $study_table SET description = ?, external_reference = ?, study_type = ?, url = ? WHERE study_id = ? ]);
+    $stmt->execute($study_desc,
+                  $external_link || undef,
+                  $study_type || undef,
+                  $study_ftp || undef,
+                  $study_id
+                  );
 
-    $stmt = qq{ UPDATE $study_table SET 
-                  description='$study_desc',
-                  $external_link_sql
-                  study_type="$study_type",
-                  url="$study_ftp"
-                WHERE study_id=$study_id
-              };
-
-    $dbVar->do($stmt);
   }
   # INSERT
   else {
-    if ($external_link && $external_link ne 'NULL' && $external_link ne '') {
-      $external_link = "'$external_link'";
-    }
-    $stmt = qq{
-      INSERT INTO `$study_table` (
-        `name`,
-        `description`,
-        `url`,
-        `source_id`,
-        `external_reference`,
-        `study_type`
-      )
-      VALUES (
-        '$study',
-        CONCAT(
-          '$author_desc',
-          '"',
-          "$study_desc",
-          '" $pmid_desc',
-          '$assembly_desc'),
-        '$study_ftp',
-        $source_id,
-        $external_link,
-        '$study_type'
-      )
-    };
 
-    $dbVar->do($stmt);
+    my $description;
+    if($author_desc) {
+      $description = $author_desc.' "'."$study_desc".'" '.$pmid_desc.' '.$assembly_desc;
+    }
+    else {
+      $description = $study_desc.' '.$pmid_desc.' '.$assembly_desc;
+    }
+
+    $stmt = $dbVar->prepare(qq[ INSERT INTO $study_table (name, description, url, source_id, external_reference, study_type) VALUES (?,?,?,?,?,?) ]);
+    $stmt->execute($study,
+                   $description,
+                   $study_ftp,
+                   $source_id,
+                   $external_link || undef,
+                   $study_type || undef
+                   );
+
     $study_id = $dbVar->{'mysql_insertid'};
   }
-  
+
   # Avoid to replace a study twice, when a second file with the patched assembly is also imported.
   $study_done{$study} = 1;
 }
@@ -847,7 +827,7 @@ sub structural_variation_sample {
 
   # Create strain entries
   if ($species =~ /mouse|mus/i) {
-    $stmt = qq{ SELECT DISTINCT subject FROM $temp_table 
+    $stmt = qq{ SELECT DISTINCT subject, gender FROM $temp_table
                 WHERE subject NOT IN (SELECT DISTINCT name from individual WHERE individual_type_id=1)
               };
     my $rows_strains = $dbVar->selectall_arrayref($stmt);
@@ -855,8 +835,13 @@ sub structural_variation_sample {
       my $strain = $row->[0];
       next if ($strain eq  '');
 
+      my $gender = 'Unknown';
+      if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
+        $gender = get_gender($row->[1]);
+      }
+
       if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' LIMIT 1})) {
-        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','Unknown',1)});
+        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$strain','Strain from the DGVa study $study_name','$gender',1)});
       }
       else{
         if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$strain' AND individual_type_id!=1})) {
@@ -873,7 +858,7 @@ sub structural_variation_sample {
       my $subject = $row->[1];
       next if ($sample eq  '' || $subject eq '');
 
-      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYBLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
+      $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYABLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
     }
   }
   # Create individual entries (not for mouse)
@@ -882,12 +867,17 @@ sub structural_variation_sample {
     my $rows_subjects = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_subjects) {
       my $subject = $row->[0];
-      my $gender = ($row->[1] =~ /\w+/) ? $row->[1] : 'Unknown';
       next if ($subject eq  '');
+
+      my $gender = 'Unknown';
+      if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
+        $gender = get_gender($row->[1]);
+      }
 
       my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
 
       $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$subject','Subject from the DGVa study $study_name','$gender',$itype_val)});
+
     }
 
     # Create sample entries
@@ -953,6 +943,15 @@ sub structural_variation_sample {
   $dbVar->do($stmt);
 }
 
+# Get gender for each value
+sub get_gender {
+  my $row = shift;
+
+  my %genders = ('F' => 'Female', 'M' => 'Male');
+
+  return $genders{$row};
+}
+
 sub phenotype_feature {
   my $stmt;
   
@@ -972,10 +971,13 @@ sub phenotype_feature {
   my $rows = $dbVar->selectall_arrayref($stmt);
   while (my $row = shift(@$rows)) {
     my $phenotype = $row->[0];
-    next if ($phenotype eq '');
-    
+    next if ($phenotype eq '' || $phenotype eq 'NULL');
+
     $phenotype =~ s/'/\\'/g;
-    $dbVar->do(qq{ INSERT INTO phenotype (description) VALUES ('$phenotype')});  
+
+    my $stmt_phenotype = $dbVar->prepare(qq[ INSERT INTO phenotype (description) VALUES (?) ]);
+    $stmt_phenotype->execute($phenotype);
+
   }
     
   $stmt = qq{
@@ -1191,6 +1193,7 @@ sub get_header_info {
   my $h    = shift;
   
   chomp($line);
+  $line = decode_text($line);
   
   my ($label, $info);
   # Example with more than one space: ##genome-build NCBI GRCh37
@@ -1247,6 +1250,12 @@ sub get_header_info {
       }
       $h->{s_desc} = $s_info if ($s_label =~ /Description/i);
       $somatic_study = 1 if ($s_label =~ /Contains/i && $s_info =~ /somatic/i);
+    }
+
+    # 1000 Genomes description
+    if($h->{author} =~ /1000.+Genomes/) {
+      $h->{desc} = $h->{author};
+      $h->{desc} =~ s/_/ /g;
     }
   }
 
@@ -1611,6 +1620,7 @@ sub decode_text {
   $text  =~ s/\+\¬/e/g;
   $text  =~ s/\'\'\'\'//g;
   $text  =~ s/&apos://g;
+  $text  =~ s/&lt;/</g;
 
   return $text;
 }

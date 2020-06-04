@@ -31,21 +31,21 @@ my $pa = $vdb->get_PhenotypeAdaptor();
 # test constructor
 my $dbID = 4;
 my $desc = 'ClinVar: phenotype not specified';
-my $class_attrib_id = 663;
+my $class_attrib = 'non_specified';
 
 my $clinvar_pheno = Bio::EnsEMBL::Variation::Phenotype->new
   (-dbID => $dbID,
    -description => $desc,
-   -class_attrib_id => $class_attrib_id);
+   -class_attrib => $class_attrib);
 
 ok($clinvar_pheno->dbID() == $dbID,                       'dbID');
 ok($clinvar_pheno->description() eq $desc,                'description');
-ok($clinvar_pheno->class_attrib_id() == $class_attrib_id, 'class_attrib_id');
-ok(! defined ($clinvar_pheno->class_attrib()),            'class_attrib');
+ok($clinvar_pheno->class_attrib eq $class_attrib,         'class_attrib');
+ok(! defined ($clinvar_pheno->class_attrib_id()),         'class_attrib_id');
 
 # test getter/setters
 ok(test_getter_setter($clinvar_pheno, 'dbID', 5), 'setter/getter dbID');
 ok(test_getter_setter($clinvar_pheno, 'description', 'Test Setter' ), 'setter/getter description');
-ok(test_getter_setter($clinvar_pheno, 'class_attrib', 'trait'), 'setter/getter size');
+ok(test_getter_setter($clinvar_pheno, 'class_attrib_id', 663), 'setter/getter size');
 
 done_testing();
