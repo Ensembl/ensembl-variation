@@ -513,7 +513,7 @@
     },
     {
       "id": "dog_EVA_PRJEB24066",
-      "species": "canis_familiaris",
+      "species": "canis_lupus_familiaris",
       "assembly": "CanFam3.1",
       "type": "remote",
       "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24066/dogs.557.publicSamples.ann.vcf.gz",
