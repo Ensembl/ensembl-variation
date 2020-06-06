@@ -131,10 +131,8 @@ sub get_pubmed_prefix {
 
 =head2 core_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $core_dba = $obj->core_db_adaptor()
-  Description: Get/set the core_db_adaptor
+  Description: Get the core_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
@@ -150,10 +148,8 @@ sub core_db_adaptor {
 
 =head2 variation_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $variation_dba = $obj->variation_db_adaptor()
-  Description: Get/set the variation_db_adaptor
+  Description: Get the variation_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
@@ -170,10 +166,8 @@ sub variation_db_adaptor {
 
 =head2 ontology_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new ontology_db_adaptor
   Example    : $ontology_dba = $obj->ontology_db_adaptor()
-  Description: Get/set the ontology_db_adaptor
+  Description: Get the ontology_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
