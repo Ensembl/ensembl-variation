@@ -56,8 +56,6 @@ sub fetch_input {
   my $coord_file   = $self->required_param('coord_file');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'International Mouse Phenotyping Consortium',
                   source_url => 'https://www.mousephenotype.org/',

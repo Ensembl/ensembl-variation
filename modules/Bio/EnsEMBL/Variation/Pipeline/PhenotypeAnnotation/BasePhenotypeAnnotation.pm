@@ -131,45 +131,43 @@ sub get_pubmed_prefix {
 
 =head2 core_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $core_dba = $obj->core_db_adaptor()
-  Description: Get/set the core_db_adaptor
+  Description: Get the core_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
 =cut
 
 sub core_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{core_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{core_dba} = $self->get_species_adaptor("core") if !defined $self->{core_dba};
+
   return $self->{core_dba};
 }
 
 =head2 variation_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $variation_dba = $obj->variation_db_adaptor()
-  Description: Get/set the variation_db_adaptor
+  Description: Get the variation_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
 =cut
 
 sub variation_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{variation_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{variation_dba} =  $self->get_species_adaptor("variation") if !defined $self->{variation_dba};
+
   return $self->{variation_dba};
 }
 
 
 =head2 ontology_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new ontology_db_adaptor
   Example    : $ontology_dba = $obj->ontology_db_adaptor()
-  Description: Get/set the ontology_db_adaptor
+  Description: Get the ontology_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
@@ -177,7 +175,9 @@ sub variation_db_adaptor {
 
 sub ontology_db_adaptor {
   my ($self, $db_adaptor) = @_;
-  $self->{ontology_dba} = $db_adaptor if defined $db_adaptor;
+
+  $self->{ontology_dba} =  $self->get_adaptor('multi', 'ontology') if !defined $self->{ontology_dba};
+
   return $self->{ontology_dba};
 }
 
@@ -376,6 +376,8 @@ sub print_pipelogFH {
 sub get_seq_region_ids {
   my $self = shift;
 
+  return $self->{seq_region_ids} if (defined $self->{seq_region_ids});
+
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT seq_region_id, name
     FROM seq_region
@@ -387,7 +389,8 @@ sub get_seq_region_ids {
   $seq_region_ids{$name} = $id while $sth->fetch();
   $sth->finish;
 
-  return \%seq_region_ids;
+  $self->{seq_region_ids} = \%seq_region_ids;
+  return $self->{seq_region_ids};
 }
 
 

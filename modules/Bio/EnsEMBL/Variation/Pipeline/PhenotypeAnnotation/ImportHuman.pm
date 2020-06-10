@@ -54,9 +54,11 @@ sub fetch_input {
 
     unless ($run_type eq NONE) {
       my %import_species = SPECIES;
-      $run_type = GWAS if $run_type eq HUMAN; #GWAS analysis will trigger all the subsequent ones
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
-      $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
+      #if HUMAN runtype, then select species by looking up MIMMORBID species
+      # expectation is that MIMMORBID will always be only homo_sapiens
+      my $type = ($run_type eq HUMAN) ? 'MIMMORBID' : $run_type;
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$type}} ]);
+      $self->print_pipelogFH("Setting up for $type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
     }
 }
 

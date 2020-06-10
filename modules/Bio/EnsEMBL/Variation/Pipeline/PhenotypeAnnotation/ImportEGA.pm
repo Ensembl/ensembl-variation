@@ -75,8 +75,6 @@ sub fetch_input {
   my $conf_file    = $self->required_param('ega_database_conf');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'Variants imported from the European Genome-phenome Archive with phenotype association',
                   source_url => 'https://www.ebi.ac.uk/ega/',
