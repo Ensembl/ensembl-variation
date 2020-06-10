@@ -119,9 +119,6 @@ sub fetch_input {
   return unless $animalQTL_species_ok{$species};
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");

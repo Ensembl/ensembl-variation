@@ -56,8 +56,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $dateStr = strftime("%Y%m%d", localtime);
 
