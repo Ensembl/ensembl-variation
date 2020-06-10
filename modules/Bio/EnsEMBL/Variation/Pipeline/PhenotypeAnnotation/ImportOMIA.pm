@@ -97,7 +97,7 @@ my %species_synonyms = (
   'rat' => 'rattus_norvegicus',
   'sheep'  => 'ovis_aries',
   'tetraodon' => 'tetraodon_nigroviridis',
-  'turkey'  => 'Meleagris_gallopavo',
+  'turkey'  => 'meleagris_gallopavo',
   'zebra_finch' => 'taeniopygia_guttata',
   'zebrafish' => 'danio_rerio'
 );
@@ -109,8 +109,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $omia_url = 'https://omia.org/curate/causal_mutations/?format=gene_table';
 
