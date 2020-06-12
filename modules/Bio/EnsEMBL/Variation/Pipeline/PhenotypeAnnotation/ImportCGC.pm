@@ -64,7 +64,7 @@ sub fetch_input {
                   #source_version  will be set based on the date in the file name (year/month-> yyyymm)
                   source_status => 'somatic',
                   source_name => 'Cancer Gene Census',     #source name in the variation db
-                  source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
+                  source_name_short => 'CGC', #source identifier in the pipeline
                   data_types => 'phenotype_feature,study',
                   );
 
