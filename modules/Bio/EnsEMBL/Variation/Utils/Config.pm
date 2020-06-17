@@ -251,6 +251,48 @@ our @VARIATION_CLASSES = (
         type => 'sv',
     },
     {
+        SO_accession => 'SO:0002070',
+        SO_term => 'Alu_deletion',
+        display_term => 'Alu deletion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002067',
+        SO_term => 'HERV_deletion',
+        display_term => 'HERV deletion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002187',
+        SO_term => 'HERV_insertion',
+        display_term => 'HERV insertion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002069',
+        SO_term => 'LINE1_deletion',
+        display_term => 'LINE1 deletion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002064',
+        SO_term => 'LINE1_insertion',
+        display_term => 'LINE1 insertion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002068',
+        SO_term => 'SVA_deletion',
+        display_term => 'SVA deletion',
+        type => 'sv',
+    },
+    {
+        SO_accession => 'SO:0002065',
+        SO_term => 'SVA_insertion',
+        display_term => 'SVA insertion',
+        type => 'sv',
+    },
+    {
         SO_accession => 'SO:1000005',
         SO_term => 'complex_substitution',
         display_term => 'complex substitution',
