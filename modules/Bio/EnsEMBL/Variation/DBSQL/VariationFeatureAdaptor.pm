@@ -66,7 +66,7 @@ Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
     print $vf->seq_region_name(), $vf->seq_region_start(), '-',
           $vf->seq_region_end(), "\n";
   }
-  
+
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for VariationFeature objects.
@@ -454,6 +454,7 @@ sub fetch_all_somatic_by_Slice {
 }
 
 =head2 fetch_all_somatic_by_Slice_Source
+
   Arg [1]    : Bio::EnsEMBL::Slice $slice the slice from which to obtain features
   Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return somatic mutations for the given source
   Example    : my $vfs = $vfa->fetch_all_somatic_by_Slice_Source($slice, $source);
@@ -462,6 +463,7 @@ sub fetch_all_somatic_by_Slice {
   Exceptions : throw on incorrect argument
   Caller     : Bio::EnsEMBL::Slice
   Status     : Stable
+
 =cut
 
 sub fetch_all_somatic_by_Slice_Source {
@@ -487,6 +489,7 @@ sub fetch_all_somatic_by_Slice_Source {
 
 
 =head2 fetch_all_by_Slice_Source
+
   Arg [1]    : Bio::EnsEMBL::Slice $slice the slice from which to obtain features
   Arg [2]    : Bio::EnsEMBL::Variation::Source $source only return variation features for the given source
   Example    : my $vfs = $vfa->fetch_all_by_Slice_Source($slice, $source);
@@ -495,6 +498,7 @@ sub fetch_all_somatic_by_Slice_Source {
   Exceptions : throw on incorrect argument
   Caller     : Bio::EnsEMBL::Slice
   Status     : Stable
+
 =cut
 
 sub fetch_all_by_Slice_Source {
@@ -2395,7 +2399,7 @@ sub fetch_by_dbID {
 =head2 fetch_all_by_location_identifier
 
   Arg [1]    : string $location_identifier
-  Example    : $vf = $adaptor->fetch_by_dbID('1:230710048:A_G');
+  Example    : $vf = $adaptor->fetch_all_by_location_identifier('1:230710048:A_G');
   Description: Fetches VariationFeatures by location identifier.
                Primarily used to fetch variants from VCFCollections
                as optional 4th component is source_name or
