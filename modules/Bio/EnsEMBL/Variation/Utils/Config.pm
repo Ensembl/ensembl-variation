@@ -247,7 +247,7 @@ our @VARIATION_CLASSES = (
     {
         SO_accession => 'SO:0002063',
         SO_term => 'Alu_insertion',
-        display_term => 'Alu insertion', 
+        display_term => 'Alu insertion',
         type => 'sv',
     },
     {
