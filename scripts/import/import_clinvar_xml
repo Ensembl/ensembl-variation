@@ -1241,7 +1241,7 @@ sub clean_old_data{
 
   my $synonym_del_sth    = $dba->dbc->do(qq[ delete from variation_synonym where source_id in (select source_id from source where name in ('ClinVar', 'OMIM') ) ]);
 
-  my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=\\N ]);
+  my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=NULL ]);
 
 
 }
