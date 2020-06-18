@@ -82,6 +82,7 @@ my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
 ## only merging records by name, so include fails
 $dba->include_failed_variations(1);
 my $dbh = $dba->dbc;
+$dbh->reconnect_when_lost(1);
 
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
@@ -92,6 +93,7 @@ my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
 
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
+$slice_adaptor->dbc->reconnect_when_lost(1);
 
 ## fetch ClinVar source object
 my $omimstr= 'OMIM';
@@ -684,7 +686,7 @@ sub import{
         @{$record->{feature_info}}{qw/hgvs_g Chr start end gene/} = @{$record->{feature_info}->{$rsID}}{qw/hgvs_g Chr start end gene/};
       }
 
-      ($feature_object,  $feat, $alt_allele) = get_variant($record, $rs);
+      ($feature_object, $feat, $alt_allele) = get_variant($record, $rs);
       next unless defined $feature_object;
 
       add_clinvar_data($feature_object, $feat, $alt_allele, $record);
@@ -989,7 +991,7 @@ sub get_variant{
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP, $record->{inheritance_type});
     return ($new_var_ob,  $var_feat, $alt_allele);
 
-  } else {
+  } elsif (defined $ref_allele && defined $alt_allele ) {
     # try to match existing rsIDs in variation DB on location and allele string
     my $location_str = $record->{feature_info}->{Chr} . ":".
                     $record->{feature_info}->{start} . ":".
@@ -1000,7 +1002,11 @@ sub get_variant{
       return ($var_feats->[0]->variation(), $var_feats, $alt_allele);
     } else {
       warn "no variation feature found for $location_str\n" if $DEBUG ==1;
+      return undef;
     }
+  } else {
+    warn "No ref or alt allele found \n" if $DEBUG == 1;
+    return undef;
   }
 
 }
