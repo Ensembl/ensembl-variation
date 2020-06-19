@@ -241,7 +241,7 @@ sub process_clinvar_set {
       if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
          warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
          import( \%record);
-      } elsif (exists $record{feature_info}{Chr}) {
+      } elsif (exists $record{feature_info}{Chr} && exists $record{feature_info}{start}) {
         warn "Importing Var based on location+allele_ref\n";
         import( \%record, 1);
       }
@@ -742,6 +742,9 @@ sub import_phenotype_feature{
   my $feat           = shift;
   my $alt_allele     = shift;
 
+  # deal with risk alleles longer than varchar 255
+  $alt_allele = '' if defined $alt_allele && length($alt_allele) > 255;
+
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
   $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
@@ -991,7 +994,8 @@ sub get_variant{
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP, $record->{inheritance_type});
     return ($new_var_ob,  $var_feat, $alt_allele);
 
-  } elsif (defined $ref_allele && defined $alt_allele ) {
+  } elsif (defined $ref_allele && defined $alt_allele &&
+      defined $record->{feature_info}->{Chr} && defined $record->{feature_info}->{start}) {
     # try to match existing rsIDs in variation DB on location and allele string
     my $location_str = $record->{feature_info}->{Chr} . ":".
                     $record->{feature_info}->{start} . ":".
@@ -1005,7 +1009,7 @@ sub get_variant{
       return undef;
     }
   } else {
-    warn "No ref or alt allele found \n" if $DEBUG == 1;
+    warn "No ref or alt allele or location found\n" if $DEBUG == 1;
     return undef;
   }
 
