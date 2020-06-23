@@ -31,7 +31,7 @@ use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 
 use FindBin qw( $Bin );
 use Getopt::Long;
@@ -1534,6 +1534,8 @@ sub parse_9th_col {
       foreach my $phe (split(',', $value)) {
 
         $phe = decode_text($phe);
+        # Some descriptions contain 'é'
+        $phe = replace_char($phe);
 
         $phe =~ s/__/, /g;
         $info->{phenotype}{$phe} = 1;
@@ -1603,28 +1605,6 @@ sub parse_9th_col {
 
   return $info;
 }
-
-# Replace weird characters
-# dbVar weird characters are still in the files - replace them here
-sub decode_text {
-  my $text = shift;
-
-  $text  =~ s/%3B/;/g;
-  $text  =~ s/%3D/=/g;
-  $text  =~ s/%25/%/g;
-  $text  =~ s/%26/&/g;
-  $text  =~ s/%2C/,/g;
-  $text  =~ s/\+\¦/o/g;
-  $text  =~ s/\÷/o/g;
-  $text  =~ s/\+\¿/e/g;
-  $text  =~ s/\+\¬/e/g;
-  $text  =~ s/\'\'\'\'//g;
-  $text  =~ s/&apos://g;
-  $text  =~ s/&lt;/</g;
-
-  return $text;
-}
-
 
 #### Pre processing ####
 sub pre_processing {
