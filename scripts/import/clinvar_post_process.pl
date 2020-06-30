@@ -24,6 +24,7 @@
 use strict;
 use warnings;
 
+use Try::Tiny;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(get_reference_base check_variant_size check_for_ambiguous_alleles check_illegal_characters);
@@ -230,14 +231,26 @@ sub update_variation{
 	$assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
       $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+      $l->[1]  =~ s/\,\s+/\,/ ; # convert 'likely benign, other' to 'likely benign, other'
+      #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
+        #for the purpose of variation, variation_feature clin_sig entry
+      $l->[1]  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
+      #similar replace of 'association not found' to 'other'
+      $l->[1]  =~ s/association not found/other/g;
 	push @{$class{$l->[0]}}, $l->[1];
     }
 
     foreach my $var (keys %class){
 	my @statuses = unique( @{$class{$var}});
 	my $statuses = join",", @statuses;
-	$var_upd_sth->execute($statuses, $var);
-	$varf_upd_sth->execute($statuses, $var);
+      try {
+        $var_upd_sth->execute($statuses, $var);
+        $varf_upd_sth->execute($statuses, $var);
+      } catch {
+        warn "var:$var<>statuses:$statuses<\n";
+        warn "issue with:@_\n";
+        next;
+      }
     }
 
     return \%assoc;
