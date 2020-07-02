@@ -1271,7 +1271,7 @@ sub usage{
     die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]
 
 \t\toptions: -structvar  (only import ClinVar statuses for structural variations)
-\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation_set_variation (OMIM set), clinical_significance and synonym data)
+\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feture (ClinVar), variation_set_variation (OMIM set), clinical_significance and synonym data)
 \n\n";
 
 }
