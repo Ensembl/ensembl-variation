@@ -22,6 +22,7 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Variation::Phenotype;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
@@ -112,6 +113,16 @@ ok(scalar @{$p_by_OT_type} ==0, "fetch by OntologyTerm & mapping type");
 ## check what are the phenotype classes
 my $pheno_classes = $pa->get_all_phenotype_class_types();
 ok(scalar $pheno_classes == 3, "get phenotype classes");
+
+## check create new phenotype and store
+$multi->hide('variation', 'phenotype');
+my $new_pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => "test_pheno_desc" );
+ok($new_pheno->class_attrib eq 'trait', "default class attrib - trait");
+ok(! defined $new_pheno->class_attrib_id , "default class attrib id - undef");
+$pa->store($new_pheno);
+my $class_attr_id = $new_pheno->class_attrib_id;
+ok(defined $class_attr_id && $class_attr_id eq '665', "class attrib id - 665(trait)");
+$multi->restore('variation', 'phenotype');
 
 done_testing();
 
