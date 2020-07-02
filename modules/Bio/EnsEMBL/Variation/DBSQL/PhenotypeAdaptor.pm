@@ -265,6 +265,12 @@ sub get_all_phenotype_class_types {
 sub store{
    my ($self, $pheno) = @_;
 
+   # check if phenotype class_attrib_id is present if class_attrib is
+   if (defined $pheno->{class_attrib} && ! defined $pheno->{class_attrib_id}){
+    my $class_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value('phenotype_type', $pheno->{class_attrib});
+    $pheno->{class_attrib_id} = $class_attrib_id;
+   }
+
     my $dbh = $self->dbc->db_handle;
 
     my $sth = $dbh->prepare(qq{
