@@ -51,14 +51,14 @@ sub default_options {
 
         pipeline_name         => $self->o('pipeline_name'),
         main_dir              => $self->o('main_dir'), # main_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline'
-        tmp_split_vcf_dir     => $self->o('main_dir') . '/split_vcf',
-        split_vcf_input_dir   => $self->o('main_dir') . '/split_vcf_input',
-        tmp_output_dir        => $self->o('main_dir') . '/tmp_output', # output_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline/tmp_output'
-        output_dir            => $self->o('main_dir') . '/output', # output_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline/output'
+        tmp_split_vcf_dir     => $self->o('main_dir') . '/tmp_split_vcf', # contains vcf input splited without headers
+        split_vcf_input_dir   => $self->o('main_dir') . '/tmp_split_vcf_input', # contains vcf input splited with headers, these are the files used to run SpliceAI
+        tmp_output_dir        => $self->o('main_dir') . '/tmp_output', # temporary output files, still splited
+        output_dir            => $self->o('main_dir') . '/output', # final output files already merged by chromosome
         fasta_file            => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
         gene_annotation       => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
-        step_size             => $self->o('step_size'),
-        check                 => $self->o('check_transcripts'),
+        step_size             => $self->o('step_size'), # number of variants used to split the main vcf files
+        check                 => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
         output_file_name      => 'spliceai_scores_',
 
         pipeline_wide_analysis_capacity => 100,

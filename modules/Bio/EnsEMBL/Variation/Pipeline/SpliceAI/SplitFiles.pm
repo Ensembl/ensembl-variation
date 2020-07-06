@@ -152,45 +152,45 @@ sub check_split_vcf_file {
     die("File ($vcf_file_path) doesn't exist.");
   }
 
+  # prepare input vcf file for tabix
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bgzip $vcf_file_path");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("tabix -p vcf $vcf_file_path.gz");
+
   # Create directory to store the input file only with the variants of interest (overlapping new transcripts)
-  my $vcf_file_path_2 = $main_dir . '/input_vcf_files_2';
-  if (! -e $vcf_file_path_2) {
-    $self->create_dir($vcf_file_path_2);
+  my $vcf_file_path_subset = $main_dir . '/input_vcf_files_subset';
+  if (! -e $vcf_file_path_subset) {
+    $self->create_dir($vcf_file_path_subset);
   }
 
-  $self->param('input_dir_2', $vcf_file_path_2);
+  $self->param('input_dir_2', $vcf_file_path_subset);
 
-  open(my $write, '>', $vcf_file_path_2 . '/' . $vcf_file) or die $!;
+  open(my $write, '>', $vcf_file_path_subset . '/' . $vcf_file) or die $!;
   print $write "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
 
-  open(my $fh, '<:encoding(UTF-8)', $input_dir . '/' . $vcf_file)
-    or die "Could not open file '$input_dir/$vcf_file' $!";
+  my $positions_of_interest = $transcripts->{$chr};
+  foreach my $position (@$positions_of_interest) {
+    my @positions = split /-/, $position;
+    my $transcript_start = $positions[0];
+    my $transcript_end = $positions[1];
 
-  while (my $row = <$fh>) {
-    chomp $row;
-    next if($row =~ /^#/);
+    my $pos_string = sprintf("%s:%i-%i", $chr, $transcript_start, $transcript_end);
 
-    my @columns = split /\t/, $row;
-    my $chr = $columns[0];
-    my $start = $columns[1];
+    (open my $read, "tabix  " . $input_dir . "/" . $vcf_file . ".gz $pos_string |")
+      || die "Failed to read from input vcf file " . $input_dir . "/" . $vcf_file . ".gz \n" ;
 
-    my $positions_of_interest = $transcripts->{$chr};
+    while (my $row = <$read>) {
+      chomp $row;
+      next if($row =~ /^#/);
 
-    foreach my $position (@$positions_of_interest) {
-      my @positions = split /-/, $position;
-      my $transcript_start = $positions[0];
-      my $transcript_end = $positions[1];
-
-      if($start >= $transcript_start && $start <= $transcript_end) {
-        my @alt_splited = split /,/, $columns[4];
-        foreach my $x (@alt_splited) {
-          print $write $chr . "\t" . $start . "\t" . $columns[2] . "\t" . $columns[3] . "\t" . $x . "\t.\t.\t.\n";
-        }
+      my @columns = split /\t/, $row;
+      my @alt_splited = split /,/, $columns[4];
+      foreach my $x (@alt_splited) {
+        print $write $columns[0] . "\t" . $columns[1] . "\t" . $columns[2] . "\t" . $columns[3] . "\t" . $x . "\t.\t.\t.\n";
       }
     }
+    close($read);
   }
   close($write);
-  close($fh);
 
 }
 
