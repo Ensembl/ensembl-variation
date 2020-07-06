@@ -97,7 +97,7 @@ sub default_options {
 
         # shifting variants within repeated regions in the 3' direction is switched off by default.
 	
-        prevent_shifting => 0,
+        prevent_shifting => 1,
 
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
