@@ -95,6 +95,10 @@ sub default_options {
         
         disambiguate_single_nucleotide_alleles => 0,
 
+        # shifting variants within repeated regions in the 3' direction is switched off by default.
+	
+        prevent_shifting => 0,
+
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
         # the command line to suit your farm. The names of each option hopefully
