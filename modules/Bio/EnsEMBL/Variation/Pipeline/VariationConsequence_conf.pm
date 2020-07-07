@@ -95,6 +95,10 @@ sub default_options {
         
         disambiguate_single_nucleotide_alleles => 0,
 
+        # shifting variants within repeated regions in the 3' direction is switched off by default.
+	
+        prevent_shifting => 1,
+
         # configuration for the various resource options used in the pipeline
         # Users of other farms should change these here, or override them on
         # the command line to suit your farm. The names of each option hopefully
@@ -272,6 +276,7 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              prevent_shifting => $self->o('prevent_shifting'),
               @common_params,
             },
             -rc_name   => 'default',
@@ -284,6 +289,7 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              prevent_shifting => $self->o('prevent_shifting'),
               @common_params,
             },
             -rc_name   => 'medmem',
@@ -300,6 +306,7 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+              prevent_shifting => $self->o('prevent_shifting'),
               @common_params,
             },
           },
