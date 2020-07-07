@@ -53,11 +53,11 @@ sub default_options {
     map_to_chrom_only       => 1,
     entries_per_file        => 200000,
     run_qc                  => 1,
-    skip_table_and_column_comparison => 0,
     seq_region_name_mappings_file => '',
     qc_failure_reasons      => $self->o('pipeline_dir') . '/qc_failure_reasons',
     qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
     qc_update_features      => $self->o('pipeline_dir') . '/qc_update_features',
+    hive_db_name            => $ENV{'USER'} . '_ehive_remapping_vf_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
   };
 }
 
