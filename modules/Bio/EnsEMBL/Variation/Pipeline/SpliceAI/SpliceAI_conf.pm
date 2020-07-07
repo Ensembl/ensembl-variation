@@ -132,7 +132,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
           -input_ids  => [],
           -parameters => {
-            'input_dir' => $self->o('main_dir') . '/split_vcf_input/' . '#input_chr_dir#',
+            'input_dir' => $self->o('main_dir') . '/tmp_split_vcf_input/' . '#input_chr_dir#',
             'inputcmd'  => 'find #input_dir# -type f -name "all_snps_ensembl_38_*.vcf" -printf "%f\n"',
           },
           -flow_into  => {
