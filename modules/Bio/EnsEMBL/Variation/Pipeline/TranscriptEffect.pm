@@ -169,7 +169,7 @@ sub run {
         -adaptor      => $tva,
         -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
         -no_transfer    => 1,
-	-no_shift	=> $prevent_shifting, 
+        -no_shift	=> $prevent_shifting, 
       );
 
       # if the variation has no effect on the transcript $tv will be undef
