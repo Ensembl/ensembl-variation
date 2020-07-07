@@ -59,6 +59,7 @@ sub default_options {
         gene_annotation       => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
         step_size             => $self->o('step_size'), # number of variants used to split the main vcf files
         check                 => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
+        registry              => $self->o('registry'),
         output_file_name      => 'spliceai_scores_',
 
         pipeline_wide_analysis_capacity => 100,
@@ -112,6 +113,7 @@ sub pipeline_analyses {
           'output_dir'        => $self->o('tmp_output_dir'),
           'step_size'         => $self->o('step_size'),
           'check'             => $self->o('check_transcripts'),
+          'registry'          => $self->o('registry'),
         },
       },
       { -logic_name => 'get_chr_dir',

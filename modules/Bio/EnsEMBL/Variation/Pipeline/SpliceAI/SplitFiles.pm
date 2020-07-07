@@ -40,6 +40,7 @@ use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 sub run {
   my $self = shift;
   $self->set_chr_from_filename();
+  my $check = $self->param_required('check');
 
   # check new Mane transcripts
   if($check){
@@ -63,6 +64,7 @@ sub set_chr_from_filename {
 
 sub split_vcf_file {
   my $self = shift;
+  my $check = $self->param_required('check');
   my $vcf_file = $self->param_required('vcf_file');
   my $tmp_split_vcf_dir = $self->param_required('tmp_split_vcf_dir');
   my $input_dir = $check ? $self->param('input_dir_2') : $self->param_required('input_directory');
@@ -141,6 +143,7 @@ sub check_split_vcf_file {
   my $input_dir = $self->param_required('input_directory');
   my $step_size = $self->param_required('step_size');
   my $transcripts = $self->param('transcripts');
+  my $chr = $self->param('chr');
 
   my $vcf_file_path = $input_dir . '/' . $vcf_file;
 
@@ -201,8 +204,8 @@ sub get_new_transcripts {
   my %new_transcripts;
 
   my $registry = 'Bio::EnsEMBL::Registry';
-  my $registry_file = $self->param('ensembl_registry');
-  $registry->load_all($self->param('ensembl_registry'));
+  my $registry_file = $self->param('registry');
+  $registry->load_all($registry_file);
   # Only for human
   my $cdba =  $registry->get_DBAdaptor('Homo_sapiens', 'core');
   my $dbh = $cdba->dbc->db_handle;
