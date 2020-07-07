@@ -154,6 +154,7 @@ sub pipeline_analyses {
           'gene_annotation'       => $self->o('gene_annotation'),
           'output_file_name'      => $self->o('output_file_name'),
         },
+        -max_retry_count => 3,
       },
       { -logic_name => 'init_merge_files',
         -module => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
