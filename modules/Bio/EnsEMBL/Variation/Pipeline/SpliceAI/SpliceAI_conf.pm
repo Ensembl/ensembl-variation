@@ -49,18 +49,19 @@ sub default_options {
         hive_force_init      => 1,
         hive_use_param_stack => 1,
 
-        pipeline_name         => $self->o('pipeline_name'),
-        main_dir              => $self->o('main_dir'), # main_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline'
-        tmp_split_vcf_dir     => $self->o('main_dir') . '/tmp_split_vcf', # contains vcf input splited without headers
-        split_vcf_input_dir   => $self->o('main_dir') . '/tmp_split_vcf_input', # contains vcf input splited with headers, these are the files used to run SpliceAI
-        tmp_output_dir        => $self->o('main_dir') . '/tmp_output', # temporary output files, still splited
-        output_dir            => $self->o('main_dir') . '/output', # final output files already merged by chromosome
-        fasta_file            => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
-        gene_annotation       => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
-        step_size             => $self->o('step_size'), # number of variants used to split the main vcf files
-        check                 => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
-        registry              => $self->o('registry'),
-        output_file_name      => 'spliceai_scores_',
+        pipeline_name           => $self->o('pipeline_name'),
+        main_dir                => $self->o('main_dir'), # main_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline'
+        tmp_split_vcf_dir       => $self->o('main_dir') . '/tmp_split_vcf', # contains vcf input splited without headers
+        tmp_split_vcf_input_dir => $self->o('main_dir') . '/tmp_split_vcf_input', # contains vcf input splited with headers, these are the files used to run SpliceAI
+        tmp_output_dir          => $self->o('main_dir') . '/tmp_output', # temporary output files, still splited
+        output_dir              => $self->o('main_dir') . '/output', # final output files already merged by chromosome
+        fasta_file              => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
+        gene_annotation         => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
+        step_size               => $self->o('step_size'), # number of variants used to split the main vcf files
+        check                   => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
+        registry                => $self->o('registry'), # database where new MANE transcripts are going to be checked
+        transcripts_file        => $self->o('transcripts_file'), # Instead of checking the new transcripts from the database, it can run only for transcripts from this file
+        output_file_name        => 'spliceai_scores_',
 
         pipeline_wide_analysis_capacity => 100,
 
@@ -109,7 +110,7 @@ sub pipeline_analyses {
           'main_dir'          => $self->o('main_dir'),
           'input_directory'   => $self->o('input_directory'),
           'tmp_split_vcf_dir' => $self->o('tmp_split_vcf_dir'),
-          'split_vcf_dir'     => $self->o('split_vcf_input_dir'),
+          'split_vcf_dir'     => $self->o('tmp_split_vcf_input_dir'),
           'output_dir'        => $self->o('tmp_output_dir'),
           'step_size'         => $self->o('step_size'),
           'check'             => $self->o('check_transcripts'),
@@ -120,7 +121,7 @@ sub pipeline_analyses {
         -module => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
         -input_ids  => [],
         -parameters => {
-          'input_dir' => $self->o('split_vcf_input_dir'),
+          'input_dir' => $self->o('tmp_split_vcf_input_dir'),
           'inputcmd'  => 'ls #input_dir#',
         },
         -flow_into => { 
@@ -147,7 +148,7 @@ sub pipeline_analyses {
         -rc_name => '4Gb_8c_job',
         -parameters => {
           'main_dir'              => $self->o('main_dir'),
-          'split_vcf_input_dir'   => $self->o('split_vcf_input_dir'),
+          'split_vcf_input_dir'   => $self->o('tmp_split_vcf_input_dir'),
           'output_dir'            => $self->o('tmp_output_dir'),
           'fasta_file'            => $self->o('fasta_file'),
           'gene_annotation'       => $self->o('gene_annotation'),
@@ -182,7 +183,7 @@ sub pipeline_analyses {
         -input_ids  => [],
         -parameters => {
           'tmp_split_vcf_dir'   => $self->o('tmp_split_vcf_dir'),
-          'split_vcf_input_dir' => $self->o('split_vcf_input_dir'),
+          'split_vcf_input_dir' => $self->o('tmp_split_vcf_input_dir'),
           'input_dir'           => $self->o('tmp_output_dir'),
         },
       }

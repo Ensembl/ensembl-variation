@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::SpliceAI::RunSpliceAI;
 
 use strict;
 use warnings;
-use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseSplitFiles');
+use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseSpliceAI');
 
 use FileHandle;
 use Bio::EnsEMBL::IO::Parser::BedTabix;

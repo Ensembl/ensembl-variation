@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::SpliceAI::SplitFiles;
 
 use strict;
 use warnings;
-use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseSplitFiles');
+use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseSpliceAI');
 
 use FileHandle;
 use Bio::EnsEMBL::IO::Parser::BedTabix;
@@ -67,7 +67,7 @@ sub split_vcf_file {
   my $check = $self->param_required('check');
   my $vcf_file = $self->param_required('vcf_file');
   my $tmp_split_vcf_dir = $self->param_required('tmp_split_vcf_dir');
-  my $input_dir = $check ? $self->param('input_dir_2') : $self->param_required('input_directory');
+  my $input_dir = $check ? $self->param('input_dir_subset') : $self->param_required('input_directory');
   my $output_dir = $self->param_required('output_dir');
   my $step_size = $self->param_required('step_size');
   my $split_vcf_input_dir = $self->param_required('split_vcf_dir');
@@ -165,7 +165,7 @@ sub check_split_vcf_file {
     $self->create_dir($vcf_file_path_subset);
   }
 
-  $self->param('input_dir_2', $vcf_file_path_subset);
+  $self->param('input_dir_subset', $vcf_file_path_subset);
 
   open(my $write, '>', $vcf_file_path_subset . '/' . $vcf_file) or die $!;
   print $write "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";

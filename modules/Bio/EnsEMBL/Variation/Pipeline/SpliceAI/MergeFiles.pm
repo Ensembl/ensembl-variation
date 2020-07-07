@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::SpliceAI::MergeFiles;
 
 use strict;
 use warnings;
-use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseMergeFiles');
+use base ('Bio::EnsEMBL::Variation::Pipeline::SpliceAI::BaseSpliceAI');
 
 use FileHandle;
 
