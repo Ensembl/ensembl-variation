@@ -60,7 +60,7 @@ sub default_options {
         step_size               => $self->o('step_size'), # number of variants used to split the main vcf files
         check                   => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
         registry                => $self->o('registry'), # database where new MANE transcripts are going to be checked
-        transcripts_file        => $self->o('transcripts_file'), # Instead of checking the new transcripts from the database, it can run only for transcripts from this file
+        # transcripts_file        => $self->o('transcripts_file'), # Instead of checking the new transcripts from the database, it can run only for transcripts from this file
         output_file_name        => 'spliceai_scores_',
 
         pipeline_wide_analysis_capacity => 100,
@@ -114,6 +114,7 @@ sub pipeline_analyses {
           'output_dir'        => $self->o('tmp_output_dir'),
           'step_size'         => $self->o('step_size'),
           'check'             => $self->o('check_transcripts'),
+          # 'transcripts_file'  => $self->o('transcripts_file'),
           'registry'          => $self->o('registry'),
         },
       },

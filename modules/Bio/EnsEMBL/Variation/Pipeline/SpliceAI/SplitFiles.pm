@@ -40,6 +40,7 @@ use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 sub run {
   my $self = shift;
   $self->set_chr_from_filename();
+  # check = 0 (don't check transcripts); check = 1 (check transcripts)
   my $check = $self->param_required('check');
 
   # check new Mane transcripts
@@ -53,7 +54,7 @@ sub run {
 sub set_chr_from_filename {
   my $self = shift;
   my $vcf_file = $self->param_required('vcf_file');
-  #all_snps_ensembl_38_13.vcf
+  #all_snps_ensembl_38_chr13.vcf
   $vcf_file =~ /.*_chr(.*)\.vcf$/;
   my $chr = $1;
   if (!$chr) {
@@ -210,16 +211,7 @@ sub get_new_transcripts {
   my $cdba =  $registry->get_DBAdaptor('Homo_sapiens', 'core');
   my $dbh = $cdba->dbc->db_handle;
 
-  # Get new MANE transcripts
-  # my $sth = $dbh->prepare(qq{ SELECT s.name,t.seq_region_id,t.seq_region_start,t.seq_region_end,t.seq_region_strand,x.display_label,e.seq_region_start,e.seq_region_end FROM transcript t
-  #                             JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
-  #                             JOIN xref x ON t.display_xref_id = x.xref_id
-  #                             JOIN exon_transcript et ON t.transcript_id = et.transcript_id
-  #                             JOIN seq_region s ON t.seq_region_id = s.seq_region_id
-  #                             JOIN exon e ON e.exon_id = et.exon_id
-  #                             WHERE t.created_date like '2020%' and t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and ta.attrib_type_id = 535 });
-
-  # Get new transcripts which need to have the scores recalculated
+  # Get new transcripts which need to have the scores re-calculated
   my $sth = $dbh->prepare(qq{ SELECT s.name,t.stable_id,t.version,g.seq_region_start,g.seq_region_end FROM transcript t
                               JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
                               JOIN seq_region s ON t.seq_region_id = s.seq_region_id
@@ -234,9 +226,6 @@ sub get_new_transcripts {
     my $gene_start = $row->[3];
     my $gene_end = $row->[4];
 
-    # $new_transcripts{$transcript_id.'.'.$transcript_version}{chr} = $chr;
-    # $new_transcripts{$transcript_id.'.'.$transcript_version}{gene_start} = $gene_start;
-    # $new_transcripts{$transcript_id.'.'.$transcript_version}{gene_end} = $gene_end;
     if(!$new_transcripts{$chr}) {
       my @positions;
       push @positions, $gene_start.'-'.$gene_end;
@@ -250,11 +239,5 @@ sub get_new_transcripts {
 
   $self->param('transcripts', \%new_transcripts);
 }
-
-# sub write_output {
-#   my $self = shift;
-#   my $split_vcf_dir =  $self->param('new_input_dir');
-#   $self->dataflow_output_id({'new_input_dir' => $split_vcf_dir}, 1);
-# }
 
 1;
