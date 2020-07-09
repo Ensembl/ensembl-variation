@@ -87,6 +87,11 @@ my $inheritance_attrib_type = 'inheritance_type';
 my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$inheritance_attrib_type'};
 my $inheritance_attrib_type_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
 
+# Phenotype class attrib id
+my $phenotype_attrib = 'trait';
+my $stmt = qq{ SELECT attrib_id FROM attrib WHERE value='$phenotype_attrib'};
+my $phenotype_attrib_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
+
 
 # run the mapping sub-routine if the data needs mapping
 my (%num_mapped, %num_not_mapped, %samples, %subjects, %study_done);
@@ -370,7 +375,7 @@ sub phenotype_feature {
     next if ($phenotype eq '');
     
     $phenotype =~ s/'/\\'/g;
-    $dbVar->do(qq{ INSERT IGNORE INTO phenotype (description) VALUES ('$phenotype')});  
+    $dbVar->do(qq{ INSERT IGNORE INTO phenotype (description, class_attrib_id) VALUES ('$phenotype', $phenotype_attrib_id)});
   }
     
   $stmt = qq{
