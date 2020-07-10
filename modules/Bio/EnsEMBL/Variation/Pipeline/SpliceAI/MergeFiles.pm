@@ -59,14 +59,22 @@ sub merge_vcf_files {
 
     $self->warning('File: ' . $tmp_vcf);
 
+    # Some variants don't have a score - the main reason is because the transcript is not in the gene annotation file
+    # Before merging the files, the variants without scores need to be deleted
+    my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("sed -i '/\t\.\t\.\t\./d' $input_dir_chr/$tmp_vcf");
+
     my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bgzip $input_dir_chr/$tmp_vcf");
     my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("tabix -p vcf $input_dir_chr/$tmp_vcf.gz");
 
   }
   close($read_dir);
 
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bcftools merge -m none $input_dir_chr/*.vcf.gz -Oz -o $output_dir/$output_file_name$chr_dir.vcf.gz");
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("gunzip $output_dir/$output_file_name$chr_dir.vcf.gz");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("ls $input_dir_chr/*.vcf | split -l 1000 - split2merge");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("for f in split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bcftools merge -m none -Oz -o final.vcf.gz tmp_*.vcf.gz");
+
+  # my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bcftools merge -m none $input_dir_chr/*.vcf.gz -Oz -o $output_dir/$output_file_name$chr_dir.vcf.gz");
+  # my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("gunzip $output_dir/$output_file_name$chr_dir.vcf.gz");
 
 }
 

@@ -196,6 +196,11 @@ sub check_split_vcf_file {
   }
   close($write);
 
+  # Sort new vcf file
+  my $vcf_file_subset = $vcf_file_path_subset . '/' . $vcf_file;
+  my $vcf_file_subset_sorted = $vcf_file_path_subset . '/sorted_' . $vcf_file;
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("sort -t $'\t' -k1,1 -k2,2n $vcf_file_subset > $vcf_file_subset_sorted");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("rm $vcf_file_subset");
 }
 
 # Check if there are new MANE transcripts since last release
