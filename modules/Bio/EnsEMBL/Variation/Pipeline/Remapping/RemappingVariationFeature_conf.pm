@@ -65,7 +65,6 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-        skip_table_and_column_comparison => $self->o('skip_table_and_column_comparison'),
         seq_region_name_mappings_file => $self->o('seq_region_name_mappings_file'),
         flank_seq_length              => $self->o('flank_seq_length'),	
         feature_table                 => $self->o('feature_table'),
