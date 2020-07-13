@@ -58,7 +58,7 @@ sub run_spliceai {
   my $self = shift;
   my $main_dir = $self->param_required('main_dir');
   # my $vcf_input_dir = $main_dir."/splited_files_input/".$self->param('new_input_dir'); # $main_dir/splited_files_input/chr$chr
-  my $vcf_input_dir = $self->param('split_vcf_input_dir'); # $self->o('main_dir') . '/split_vcf_input'
+  my $vcf_input_dir = $self->param('split_vcf_input_dir'); # $self->o('main_dir') . '/tmp_split_vcf_input'
   my $vcf_file = $self->param('input_file');
   my $output_dir = $self->param_required('output_dir');
   my $fasta_file = $self->param_required('fasta_file');

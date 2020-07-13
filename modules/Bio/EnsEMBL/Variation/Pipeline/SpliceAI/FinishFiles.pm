@@ -37,17 +37,17 @@ use FileHandle;
 
 sub run {
   my $self = shift;
-  $self->merge_vcf_files();
+  $self->clean_dir();
 }
 
-sub merge_vcf_files {
+sub clean_dir {
   my $self = shift;
   my $input_dir = $self->param_required('input_dir');
   my $splited_input_dir = $self->param_required('split_vcf_input_dir');
   my $tmp_split_vcf_dir = $self->param_required('tmp_split_vcf_dir');
 
   # Remove files
-  # my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("rm -rf $input_dir");
+  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("rm -rf $input_dir");
   my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("rm -rf $tmp_split_vcf_dir");
   my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("rm -rf $splited_input_dir");
 
