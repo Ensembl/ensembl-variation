@@ -58,7 +58,7 @@ sub default_options {
         fasta_file              => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
         gene_annotation         => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
         step_size               => $self->o('step_size'), # number of variants used to split the main vcf files
-        check                   => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
+        check_transcripts       => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
         registry                => $self->o('registry'), # database where new MANE transcripts are going to be checked
         # transcripts_file        => $self->o('transcripts_file'), # Instead of checking the new transcripts from the database, it can run only for transcripts from this file
         output_file_name        => 'spliceai_scores_',
@@ -113,7 +113,7 @@ sub pipeline_analyses {
           'split_vcf_dir'     => $self->o('tmp_split_vcf_input_dir'),
           'output_dir'        => $self->o('tmp_output_dir'),
           'step_size'         => $self->o('step_size'),
-          'check'             => $self->o('check_transcripts'),
+          'check_transcripts' => $self->o('check_transcripts'),
           # 'transcripts_file'  => $self->o('transcripts_file'),
           'registry'          => $self->o('registry'),
         },
