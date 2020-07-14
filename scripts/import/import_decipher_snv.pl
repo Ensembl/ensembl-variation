@@ -76,8 +76,8 @@ my $inheritance_attrib_type_id = ($dbh->selectall_arrayref($stmt))->[0][0];
 
 # Phenotype class attrib id
 my $phenotype_attrib = 'trait';
-my $stmt = qq{ SELECT attrib_id FROM attrib WHERE value='$phenotype_attrib'};
-my $phenotype_attrib_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
+$stmt = qq{ SELECT attrib_id FROM attrib WHERE value='$phenotype_attrib'};
+my $phenotype_attrib_id = ($dbh->selectall_arrayref($stmt))->[0][0];
 
 my $find_existing_var_sth = $dbh->prepare(qq{
     SELECT variation_id FROM variation WHERE name = ?
