@@ -743,7 +743,10 @@ sub import_phenotype_feature{
   my $alt_allele     = shift;
 
   # deal with risk alleles longer than varchar 255
-  $alt_allele = '' if defined $alt_allele && length($alt_allele) > 255;
+  if ( defined $alt_allele && length($alt_allele) > 255 ) {
+    warn "alt_allele longer than 255 and will be removed from risk_allele: $alt_allele\n";
+    $alt_allele = '';
+  }
 
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -1002,8 +1005,14 @@ sub get_variant{
                     $ref_allele."_".$alt_allele ;
     my $var_feats = $var_feat_adaptor->fetch_all_by_location_identifier($location_str);
 
-    if ( scalar @$var_feats > 0 ){ #TODO: check that variation will always have same name for multiple variation features!
+    if ( scalar @$var_feats == 1 ){
       return ($var_feats->[0]->variation(), $var_feats, $alt_allele);
+    } elsif (scalar @$var_feats > 1) {
+      # check that variation will always have same name for multiple variation features!
+      warn "multiple variation_features found for $location_str : \n";
+      foreach my $vf (@$var_feats){
+        warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
+      }
     } else {
       warn "no variation feature found for $location_str\n" if $DEBUG ==1;
       return undef;
@@ -1271,7 +1280,7 @@ sub usage{
     die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]
 
 \t\toptions: -structvar  (only import ClinVar statuses for structural variations)
-\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feture (ClinVar), variation_set_variation (OMIM set), clinical_significance and synonym data)
+\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feature (ClinVar), variation_set_variation (sets: ClinVar, OMIM, All phenotypes set ), clinical_significance and synonym data)
 \n\n";
 
 }
