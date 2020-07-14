@@ -43,7 +43,7 @@ use File::Path qw(make_path);
 use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES MOUSE IMPC OMIA HUMAN ANIMALSET RGD ZFIN);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES MOUSE IMPC OMIA HUMAN GWAS ANIMALSET RGD ZFIN);
 
 my $source;
 my $workdir;
@@ -124,7 +124,9 @@ sub write_output {
     my $run_type = $self->param('run_type') // '';
 
     if ($run_type eq MOUSE || $source->{source_name} eq IMPC ||
-        $run_type eq HUMAN ){
+        $run_type eq HUMAN ||
+        ($run_type ne HUMAN && $source->{source_name} ne GWAS)
+        ){
       $self->dataflow_output_id($self->param('output_ids'), 2);
       close($self->logFH) if defined $self->logFH ;
       close($self->pipelogFH) if defined $self->pipelogFH ;

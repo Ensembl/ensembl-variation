@@ -153,7 +153,7 @@ sub parse_input_file {
   my $date = $1.$2.$3;
 
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
-    my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
+    my ($orpha_number_node) = $disorder->findnodes('./OrphaCode');
     my $orpha_number = $orpha_number_node->to_literal;
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;
