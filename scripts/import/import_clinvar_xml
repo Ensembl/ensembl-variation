@@ -130,6 +130,10 @@ my %non_specified_pheno = ("None"=>1,
                      "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
 
+## accepted clinsig values:
+my @def_clinsig = ('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects');
+my %known_clinsig = map { $_ => 1  } @def_clinsig ;
+
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
 if (defined $done_file){
@@ -752,6 +756,11 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
   $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
+
+  ## check for new clin_sig
+  if ( ! defined $known_clinsig{$record->{Desc}} ) {
+    warn "clin_sig not known: >". $record->{Desc} ."< feature: ". $feature_object->name ."\n";
+  }
 
   # Remove special characters from the phenotype description and submitter name
   $record->{disease} = replace_char( $record->{disease});
