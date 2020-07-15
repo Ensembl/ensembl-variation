@@ -54,7 +54,7 @@ use XML::LibXML::Reader;
 use XML::Hash::XS qw();
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -767,6 +767,7 @@ sub import_phenotype_feature{
   }
 
   # Remove special characters from the phenotype description and submitter name
+  $record->{disease} = decode_text( $record->{disease});
   $record->{disease} = replace_char( $record->{disease});
   foreach my $sub (@{$record->{submitters}}){
     $sub = replace_char( $sub);
