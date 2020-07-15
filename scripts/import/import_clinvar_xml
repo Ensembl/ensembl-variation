@@ -994,7 +994,7 @@ sub get_variant{
     }
 
     ## enter new records
-    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $dbSNP, $record->{inheritance_type});
+    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     return ($new_var_ob,  $var_feat, $alt_allele);
 
   } elsif (defined $ref_allele && defined $alt_allele &&
@@ -1036,8 +1036,15 @@ sub enter_var{
   my $data       = shift;
   my $ref_allele = shift;
   my $alt_allele = shift;
-  my $dbSNP      = shift;
+  my $rs_id      = shift;
   my $inherit    = shift;
+
+  unless (defined $rs_id) {
+    warn "ERROR: no rs_id for ". $data->{feature_info}->{hgvs_g} ."\n";
+    return undef;
+  }
+
+  my $dbSNP = 'rs'.$rs_id;
 
    unless (defined $ref_allele && defined $alt_allele){
      warn "ERROR: missing alleles for $data->{feature_info}->{hgvs_g} / $dbSNP\n";
