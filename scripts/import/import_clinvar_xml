@@ -758,7 +758,8 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
   ## check for new clin_sig
-  if ( ! defined $known_clinsig{$record->{Desc}} ) {
+  my $found = check_known_clinsig($record->{Desc});
+  if ( ! $found ){
     warn "clin_sig not known: >". $record->{Desc} ."< feature: ". $feature_object->name ."\n";
   }
 
@@ -1291,6 +1292,25 @@ sub clean_old_data{
 
 }
 
+sub check_known_clinsig {
+  my $current_clinsig = shift;
+
+  my $tmpClinsig = $current_clinsig;
+  $tmpClinsig  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+  $tmpClinsig  =~ s/\,\s+/\,/ ; # convert 'likely benign, other' to 'likely benign,other'
+  #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
+    #for the purpose of variation, variation_feature clin_sig entry
+  $tmpClinsig  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
+  #similar replace of 'association not found' to 'other'
+  $tmpClinsig  =~ s/association not found/other/g;
+  my @tmpClinsigs = split(",", $tmpClinsig);
+  my $found = 1;
+  foreach my $clinsig (@tmpClinsigs) {
+     $found = 0 if ( ! defined $known_clinsig{ $clinsig } ) ;
+  }
+
+  return $found;
+}
 
 sub usage{
 
