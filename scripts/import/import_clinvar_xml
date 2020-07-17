@@ -246,7 +246,7 @@ sub process_clinvar_set {
          warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
          import( \%record);
       } elsif (exists $record{feature_info}{Chr} && exists $record{feature_info}{start}) {
-        warn "Importing Var based on location+allele_ref\n";
+        warn "Importing Var based on location+allele_ref lookup of existing match in DB\n";
         import( \%record, 1);
       }
       else{
