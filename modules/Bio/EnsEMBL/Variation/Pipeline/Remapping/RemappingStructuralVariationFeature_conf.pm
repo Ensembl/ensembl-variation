@@ -52,6 +52,7 @@ sub default_options {
       feature_table           => 'structural_variation_feature',
       feature_table_mapping_results => 'structural_variation_feature_mapping_results',
       qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
+      hive_db_name            => $ENV{'USER'} . '_ehive_remapping_sv_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
     };
 }
 
