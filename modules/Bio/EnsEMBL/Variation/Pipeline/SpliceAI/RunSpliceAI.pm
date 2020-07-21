@@ -43,21 +43,9 @@ sub run {
   $self->run_spliceai();
 }
 
-sub set_chr_from_filename {
-  my $self = shift;
-  my $vcf_file = $self->param('input_file');
-  $vcf_file =~ /.*chr(.*)\.[a-z]+.vcf/;
-  my $chr = $1; 
-  if (!$chr) {
-    die("Could not get chromosome name from file name ($vcf_file).");
-  }
-  $self->param('chr', $chr);
-}
-
 sub run_spliceai {
   my $self = shift;
   my $main_dir = $self->param_required('main_dir');
-  # my $vcf_input_dir = $main_dir."/splited_files_input/".$self->param('new_input_dir'); # $main_dir/splited_files_input/chr$chr
   my $vcf_input_dir = $self->param('split_vcf_input_dir'); # $self->o('main_dir') . '/tmp_split_vcf_input'
   my $vcf_file = $self->param('input_file');
   my $output_dir = $self->param_required('output_dir');
@@ -84,7 +72,7 @@ sub run_spliceai {
   my $out = $out_files_dir."/".$vcf_file.".out";
 
   my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation";
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+  $self->run_system_command($cmd);
   
   $self->warning('Error: ' . $stderr . ' Code: ' . $exit_code);
 }

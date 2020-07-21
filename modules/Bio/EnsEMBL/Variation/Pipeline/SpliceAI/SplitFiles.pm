@@ -51,18 +51,6 @@ sub run {
   $self->split_vcf_file();
 }
 
-sub set_chr_from_filename {
-  my $self = shift;
-  my $vcf_file = $self->param_required('vcf_file');
-  #all_snps_ensembl_38_chr13.vcf
-  $vcf_file =~ /.*_chr(.*)\.vcf$/;
-  my $chr = $1;
-  if (!$chr) {
-    die("Could not get chromosome name from file name ($vcf_file).");
-  }
-  $self->param('chr', $chr);
-}
-
 sub split_vcf_file {
   my $self = shift;
   my $check = $self->param_required('check_transcripts');
@@ -91,7 +79,7 @@ sub split_vcf_file {
   $self->create_dir($tmp_split_vcf_chr_dir);
   $self->run_system_command("split -l $step_size --additional-suffix=.vcf $vcf_file_path $new_file");
 
-  # Files splited by number of lines (from input)
+  # Files splitted by number of lines (from input)
   # These files contain vcf header
   # Files that are going to be used as input for SpliceAI
   my $split_vcf_dir = $split_vcf_input_dir.'/chr'.$chr;
@@ -116,8 +104,8 @@ sub split_vcf_file {
 
       my @columns = split /\t/, $row;
 
-      my @alt_splited = split /,/, $columns[4];
-      foreach my $x (@alt_splited) {
+      my @alt_splitted = split /,/, $columns[4];
+      foreach my $x (@alt_splitted) {
         print $write $columns[0] . "\t" . $columns[1] . "\t" . $columns[2] . "\t" . $columns[3] . "\t" . $x . "\t.\t.\t.\n";
       }
     }
@@ -169,7 +157,6 @@ sub check_split_vcf_file {
   $self->param('input_dir_subset', $vcf_file_path_subset);
 
   open(my $write, '>', $vcf_file_path_subset . '/' . $vcf_file) or die $!;
-  # print $write "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
 
   my $positions_of_interest = $transcripts->{$chr};
   foreach my $position (@$positions_of_interest) {
@@ -187,8 +174,8 @@ sub check_split_vcf_file {
       next if($row =~ /^#/);
 
       my @columns = split /\t/, $row;
-      my @alt_splited = split /,/, $columns[4];
-      foreach my $x (@alt_splited) {
+      my @alt_splitted = split /,/, $columns[4];
+      foreach my $x (@alt_splitted) {
         print $write $columns[0] . "\t" . $columns[1] . "\t" . $columns[2] . "\t" . $columns[3] . "\t" . $x . "\t.\t.\t.\n";
       }
     }

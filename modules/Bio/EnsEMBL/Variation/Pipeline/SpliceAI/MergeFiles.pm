@@ -44,34 +44,30 @@ sub merge_vcf_files {
   my $self = shift;
   my $input_dir = $self->param_required('input_dir');
   my $chr_dir = $self->param_required('chr_dir');
-  my $output_dir = $self->param_required('output_dir'); # output_dir
+  my $output_dir = $self->param_required('output_dir');
   my $output_file_name = $self->param_required('output_file_name');
 
   my $input_dir_chr = $input_dir . '/' . $chr_dir . '/vcf_files';
   $self->param('input_dir_chr', $input_dir_chr);
-
-  # $self->warning('Dir: ' . $input_dir_chr);
 
   opendir(my $read_dir, $input_dir_chr) or die $!;
 
   while(my $tmp_vcf = readdir($read_dir)) {
     next if ($tmp_vcf =~ m/^\./);
 
-    # $self->warning('File: ' . $tmp_vcf);
-
     # Some variants don't have a score - the main reason is because the transcript is not in the gene annotation file
     # Before merging the files, the variants without scores need to be deleted
-    my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("sed -i '/\t\.\t\.\t\./d' $input_dir_chr/$tmp_vcf");
+    $self->run_system_command("sed -i '/\t\.\t\.\t\./d' $input_dir_chr/$tmp_vcf");
 
-    my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bgzip $input_dir_chr/$tmp_vcf");
-    my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("tabix -p vcf $input_dir_chr/$tmp_vcf.gz");
+    $self->run_system_command("bgzip $input_dir_chr/$tmp_vcf");
+    $self->run_system_command("tabix -p vcf $input_dir_chr/$tmp_vcf.gz");
 
   }
   close($read_dir);
 
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("ls $input_dir_chr/*.vcf | split -l 1000 - split2merge");
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("for f in split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bcftools merge -m none -Oz -o final.vcf.gz tmp_*.vcf.gz");
+  $self->run_system_command("ls $input_dir_chr/*.vcf | split -l 1000 - split2merge");
+  $self->run_system_command("for f in split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
+  $self->run_system_command("bcftools merge -m none -Oz -o final.vcf.gz tmp_*.vcf.gz");
 }
 
 1;
