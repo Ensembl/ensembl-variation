@@ -1818,7 +1818,17 @@ sub _get_hgvs_protein_format {
     $aa_til_stop = "?" unless defined $aa_til_stop ;
 
     $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
-    $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
+
+    # 2020-07-14
+    if( length($hgvs_notation->{ref}) >3 && $hgvs_notation->{type} eq "del" ) {
+      my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
+      my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+      $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} .$hgvs_notation->{alt} ;
+    }
+    else{
+      $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
+    }
+
   } 
 
   elsif( $hgvs_notation->{type} eq "dup"){
@@ -2490,7 +2500,7 @@ sub _shift_3prime{
   ## set new HGVS string
   $hgvs_notation->{alt} = $seq_to_check if $hgvs_notation->{type} eq 'ins';
   $hgvs_notation->{ref} = $seq_to_check if $hgvs_notation->{type} eq 'del';
-  
+
   return $hgvs_notation;
 }
 =head
