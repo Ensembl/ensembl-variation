@@ -103,7 +103,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
 
                           'ontology'  => ['homo_sapiens', 'gallus_gallus',
                                           'sus_scrofa', 'bos_taurus',
-                                          'equus_caballus', 'ovis_aries',
+                                          'equus_caballus', 'ovis_aries', 'ovis_aries_rambouillet',
                                           'capra_hircus', 'canis_lupus_familiaris']
                         );
 

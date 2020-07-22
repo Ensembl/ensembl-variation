@@ -704,13 +704,16 @@ sub _add_phenotypes {
   my $source_id   = $source_info->{source_id};
   my $threshold   = $source_info->{threshold};
 
+  # get default phenotype class attrib:
+  my $phenotype_class_id = $self->_get_attrib_ids("phenotype_type", "trait");
+
   # Prepared statements
   my $st_ins_stmt = qq{
     INSERT INTO
-      study ( source_id, external_reference, study_type, description
+      study ( source_id, external_reference, study_type, description, class_attrib_id
     )
     VALUES (
-      $source_id, ?, ?, ?
+      $source_id, ?, ?, ?, $phenotype_class_id
     )
   };
 
