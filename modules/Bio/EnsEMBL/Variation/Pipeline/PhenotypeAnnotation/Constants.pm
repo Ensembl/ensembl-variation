@@ -88,7 +88,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                                           'sus_scrofa', 'ovis_aries'],
                           'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
                                           'bos_taurus','canis_lupus_familiaris','equus_caballus',
-                                          'macaca_mulatta','sus_scrofa','ovis_aries',
+                                          'macaca_mulatta','sus_scrofa','ovis_aries', 'ovis_aries_rambouillet',
                                           'meleagris_gallopavo', 'pan_troglodytes'],
 
                           'GWAS'      => ['homo_sapiens'],

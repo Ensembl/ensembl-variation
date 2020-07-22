@@ -147,7 +147,7 @@ sub fetch_input {
 
   #get section specific for this species
   print $logFH "Found folder (".$workdir_fetch."/omia_split) and will skip new split\n" if -e $workdir_fetch."/omia_split";
-  split_omia($workdir_fetch,$file_omia) unless -e $workdir_fetch."/"."omia_split";
+  $self->split_omia($workdir_fetch,$file_omia) unless -e $workdir_fetch."/"."omia_split";
 
   my $org_path = $pipeline_dir."/".$source_info{source_name_short}."/omia_split/omia_".$species.".txt";
   my $new_link = $workdir."/omia_".$species.".txt";
@@ -203,6 +203,7 @@ sub write_output {
 =cut
 
 sub split_omia {
+  my $self = shift;
   my $workdir = shift;
   my $all_file = shift;
 
@@ -263,6 +264,11 @@ sub split_omia {
     close(OUT);
   }
 
+  #sheep is exception where it stands for ovis_aries and ovis_aries_rambouillet
+  if (-e  "$workdir/omia_split/$prefix"."ovis_aries".$suffix) {
+    my $cmd = "cp -p $workdir/omia_split/$prefix"."ovis_aries$suffix $workdir/omia_split/$prefix"."ovis_aries_rambouillet$suffix";
+    $self->run_system_command($cmd);
+  }
 }
 
 
