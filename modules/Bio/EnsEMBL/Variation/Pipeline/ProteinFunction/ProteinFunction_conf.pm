@@ -193,11 +193,11 @@ sub default_options {
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch37/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch37/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz',
                                         version => 'v1.6',
                                       },
                                    GRCh38 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/whole_genome_SNVs.tsv.gz',
+                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch38/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz',
                                         version => 'v1.6',
                                       } 
                                   },
