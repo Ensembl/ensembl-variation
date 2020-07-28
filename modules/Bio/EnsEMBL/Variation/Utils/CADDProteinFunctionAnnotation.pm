@@ -70,7 +70,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  if (! grep {$_ eq $self->annotation_file_version} ('v1.3', 'v1.4', 'v1.5')) {
+  if (! grep {$_ eq $self->annotation_file_version} ('v1.3', 'v1.4', 'v1.5', 'v1.6')) {
     die "CADD version " . $self->annotation_file_version . " is not supported.";
   }
 
