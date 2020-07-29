@@ -1361,8 +1361,10 @@ sub hgvs_transcript {
   my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
   $self->{_hgvs_offset} = $offset_to_add;
   ## delete the shifting hash if we generated it for HGVS calculations
-  delete($self->{shift_hash}) unless $hash_already_defined;
- 
+  unless ($hash_already_defined) {
+    _hgvs_only_shift_cleanup($self);
+  }
+
   ## return if a new transcript_variation_allele is not available - variation outside transcript
   return undef unless defined $self->base_variation_feature_overlap;
   $self->look_for_slice_start unless (defined  $self->{_slice_start});
@@ -1633,7 +1635,9 @@ sub hgvs_protein {
     $tv->translation_end(undef, $shifting_offset)
   ){
     print "Exiting hgvs_protein - variant " . $vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
-    delete($self->{shift_hash}) unless $hash_already_defined;
+    unless ($hash_already_defined) {
+      _hgvs_only_shift_cleanup($self);
+    }
     return undef;
   }
        
@@ -1693,8 +1697,10 @@ sub hgvs_protein {
   $hgvs_notation->{ref} = $ref->peptide; 
   
   ## delete the shifting hash if we generated it for HGVS calculations
-  delete($self->{shift_hash}) unless $hash_already_defined;
-  delete($ref->{shift_hash}) unless $ref_hash_already_defined;
+  unless ($hash_already_defined) {
+    _hgvs_only_shift_cleanup($self);
+    _hgvs_only_shift_cleanup($ref);
+  }
 
   return undef unless $hgvs_notation->{ref};   
   print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $self->codon() .")\n" if $DEBUG ==1;
@@ -1718,6 +1724,23 @@ sub hgvs_protein {
   ##### String formatting
   return $self->_get_hgvs_protein_format($hgvs_notation);
 }
+
+=head2 _hgvs_only_shift_cleanup
+
+  Description: Resets shift hash and feature_seq info to non-shifted values when 
+               only HGVS is shifted
+  Returntype : none
+  Exceptions : none
+  Status     : At risk
+
+=cut
+
+sub _hgvs_only_shift_cleanup {
+  my $tva = shift;
+  $tva->{variation_feature_seq} = $tva->{shift_hash}->{alt_orig_allele_string} if defined($tva->{shift_hash});
+  delete($tva->{shift_hash});
+}
+
 
 
 =head2 hgvs_offset
