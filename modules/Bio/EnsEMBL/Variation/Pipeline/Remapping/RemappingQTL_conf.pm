@@ -53,6 +53,7 @@ sub default_options {
     feature_table           => 'phenotype_feature',
     feature_table_mapping_results => 'phenotype_feature_mapping_results',
     qc_mapped_features      => $self->o('pipeline_dir') . '/qc_mapped_features',
+    hive_db_name            => $ENV{'USER'} . '_ehive_remapping_qtl_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
   };
 }
 

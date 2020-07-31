@@ -58,6 +58,7 @@ sub default_options {
         map_to_chrom_only       => 1,
         entries_per_file        => 200000,
         dump_multi_map          => 1,
+        skip_patch_comparison   => 0,
 
         bwa                     => 'bwa',
         samtools                => 'samtools',
@@ -83,7 +84,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name'),
+            -dbname => $self->o('hive_db_name'),
             -driver => 'mysql',
         },
     };
