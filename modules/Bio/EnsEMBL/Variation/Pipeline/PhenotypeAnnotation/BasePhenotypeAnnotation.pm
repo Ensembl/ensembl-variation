@@ -359,6 +359,18 @@ sub print_pipelogFH {
 }
 
 
+sub default_phenotype_class {
+  my ($self, $pheno_class) = @_;
+
+  if (defined $pheno_class ){
+    $self->{phenotype_type} = $pheno_class ;
+  } elsif (! defined $self->{phenotype_type}){
+     $self->{phenotype_type} = $self->_get_attrib_ids("phenotype_type", "trait");
+  }
+
+  return $self->{phenotype_type};
+}
+
 
 #----------------------------
 # PUBLIC METHODS
@@ -704,16 +716,13 @@ sub _add_phenotypes {
   my $source_id   = $source_info->{source_id};
   my $threshold   = $source_info->{threshold};
 
-  # get default phenotype class attrib:
-  my $phenotype_class_id = $self->_get_attrib_ids("phenotype_type", "trait");
-
   # Prepared statements
   my $st_ins_stmt = qq{
     INSERT INTO
-      study ( source_id, external_reference, study_type, description, class_attrib_id
+      study ( source_id, external_reference, study_type, description
     )
     VALUES (
-      $source_id, ?, ?, ?, $phenotype_class_id
+      $source_id, ?, ?, ?
     )
   };
 
@@ -1391,9 +1400,12 @@ sub _get_phenotype_id {
     $description = $description_bak;
   }
 
+  # get default phenotype class attrib:
+  my $phenotype_class_id = $self->default_phenotype_class;
+
   # finally if no match, do an insert
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
-    INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
+    INSERT IGNORE INTO phenotype ( name, description , class_attrib_id ) VALUES ( ?,? , $phenotype_class_id )
   });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
@@ -1615,7 +1627,7 @@ sub get_old_results {
   my %previous_result;
 
   my $result_adaptor = $int_dba->get_ResultAdaptor();
-  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
+  my $res = $result_adaptor->fetch_all_current_by_species($self->param('species') );
 
   foreach my $result (@{$res}){
 
