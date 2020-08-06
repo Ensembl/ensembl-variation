@@ -67,16 +67,18 @@ my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
   sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
   ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => $animalqtl_baseURL.'QTL_BovARS_1.2.gff.txt.gz', #Bos taurus
+  bos_taurus => $animalqtl_baseURL.'QTL_ARS-UCD_1.2.gff.txt.gz', #Bos taurus
   equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
+  ovis_aries_rambouillet => "",
 );
 
 my %animalQTL_species_fileNames = (
-  gallus_gallus => 'gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
-  sus_scrofa => 'sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
-  ovis_aries => 'ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => 'bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
-  equus_caballus => 'equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
+  gallus_gallus => 'QTL_gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
+  sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
+  ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  bos_taurus => 'QTL_bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
+  equus_caballus => 'QTL_equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
+  ovis_aries_rambouillet => 'QTL_',
 );
 
 my %animalQTL_species_ok = (
@@ -85,6 +87,7 @@ my %animalQTL_species_ok = (
   ovis_aries => 1,  #Ovis aries
   bos_taurus => 1, #Bos taurus
   equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
+  ovis_aries_rambouillet => 0,
 );
 
 
@@ -116,7 +119,13 @@ sub fetch_input {
   }
   $self->workdir($workdir);
 
-  return unless $animalQTL_species_ok{$species};
+  # if not new data imported, still update source date check
+  if ( ! $animalQTL_species_ok{$species}){
+    # Get or add a source data_types : phenotype_feature,study
+    $source_info{source_version} = strftime("%Y%m%d", localtime);
+    my $source_id = $self->get_or_add_source(\%source_info);
+    return;
+  }
 
   $self->debug($self->param('debug_mode'));
 
@@ -129,7 +138,7 @@ sub fetch_input {
 
   # check if the species assembly specific file exists
   my $animalqtl_inputDir = $pipeline_dir."/".$source_info{source_name_short}."/animalqtl_data";
-  print $logFH "AnimalQTL import expects input folder with gff3 files: example format gallus_gallus.*.gff3  \n" if ($self->debug);
+  print $logFH "AnimalQTL import expects input folder with gff3 files: example format QTL_gallus_gallus.*.gff3  \n" if ($self->debug);
   print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if ($self->debug);
 
   my $inputFile = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
@@ -148,7 +157,7 @@ sub fetch_input {
     closedir(INDIR);
     my $ok = 0;
     foreach my $file (@files){
-      if ($file =~/^$species.*gff3$/ || $file =~/^$species.*gff3.gz$/){
+      if ($file =~/^QTL_$species.*gff3$/ || $file =~/^QTL_$species.*gff3.gz$/){
         $inputFile = $file;
         $ok = 1;
         last;
