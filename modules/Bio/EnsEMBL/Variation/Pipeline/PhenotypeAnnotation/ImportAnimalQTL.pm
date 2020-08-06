@@ -107,6 +107,7 @@ sub fetch_input {
                   source_status     => 'germline',
                   source_name       => 'Animal_QTLdb', #source name in the variation db
                   source_name_short => 'AnimalQTLdb',  #source identifier in the pipeline
+                  data_types        => 'phenotype_feature',
                   threshold => $threshold,
                   );
 
