@@ -487,13 +487,15 @@ sub _get_synonyms_by_chr {
 
   if(!exists($cache->{$chr})) {
     my @synonyms = ();
-
     if(my $db = $self->adaptor->db) {
       if(my $sa = $db->dnadb->get_SliceAdaptor()) {
         if(my $s = $sa->fetch_by_region(undef, $chr)) {
           @synonyms = map {$_->name} @{$s->get_all_synonyms};
         }
       }
+    }
+    if (!$self->use_db) {
+      push @synonyms, 'chr'.$chr;
     }
 
     $cache->{$chr} = \@synonyms;
