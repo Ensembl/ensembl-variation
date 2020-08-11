@@ -46,9 +46,9 @@ sub run {
 sub run_spliceai {
   my $self = shift;
   my $main_dir = $self->param_required('main_dir');
-  my $vcf_input_dir = $self->param('split_vcf_input_dir'); # $self->o('main_dir') . '/tmp_split_vcf_input'
+  my $vcf_input_dir = $self->param('split_vcf_input_dir');
   my $vcf_file = $self->param('input_file');
-  my $output_dir = $self->param_required('output_dir');
+  my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
   my $fasta_file = $self->param_required('fasta_file');
   my $gene_annotation = $self->param_required('gene_annotation');
 
@@ -60,20 +60,16 @@ sub run_spliceai {
     die("Directory ($vcf_input_dir_chr) doesn't exist");
   }
 
-  my $output_dir_chr = $output_dir."/chr".$chr;
-  my $out_files_dir = $output_dir_chr."/out_files";
-  my $output_vcf_files_dir = $output_dir_chr."/vcf_files";
+  my $split_vcf_output_dir_chr = $split_vcf_output_dir."/chr".$chr;
+  my $output_vcf_files_dir = $split_vcf_output_dir_chr."/vcf_files";
 
   if (! -d $output_vcf_files_dir) {
     die("Directory ($output_vcf_files_dir) doesn't exist");
   }
 
-  my $err = $out_files_dir."/".$vcf_file.".err";
-  my $out = $out_files_dir."/".$vcf_file.".out";
-
   my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation";
   $self->run_system_command($cmd);
-  
+
   $self->warning('Error: ' . $stderr . ' Code: ' . $exit_code);
 }
 

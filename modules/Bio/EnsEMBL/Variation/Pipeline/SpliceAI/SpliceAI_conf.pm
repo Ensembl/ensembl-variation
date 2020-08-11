@@ -50,11 +50,12 @@ sub default_options {
         hive_use_param_stack => 1,
 
         ensembl_release            => $self->o('ensembl_release'),
+        assembly                   => $self->o('assembly'),
         pipeline_name              => $self->o('pipeline_name'),
         main_dir                   => $self->o('main_dir'), # main_dir = '/hps/nobackup2/production/ensembl/dlemos/tmp_spliceai_pipeline'
-        splitted_vcf_no_header_dir => $self->o('main_dir') . '/splitted_vcf_no_header', # contains vcf input splitted without headers
-        splitted_vcf_input_dir     => $self->o('main_dir') . '/splitted_vcf_input', # contains vcf input splitted with headers, these are the files used to run SpliceAI
-        splitted_vcf_output_dir    => $self->o('main_dir') . '/splitted_vcf_output', # temporary output files, still splitted
+        split_vcf_no_header_dir    => $self->o('main_dir') . '/split_vcf_no_header', # contains vcf input splitted without headers
+        split_vcf_input_dir        => $self->o('main_dir') . '/split_vcf_input', # contains vcf input splitted with headers, these are the files used to run SpliceAI
+        split_vcf_output_dir       => $self->o('main_dir') . '/split_vcf_output', # temporary output files, still splitted
         output_dir                 => $self->o('main_dir') . '/output', # final output files already merged by chromosome
         fasta_file                 => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
         gene_annotation            => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
@@ -70,7 +71,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),
-            -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release'),
+            -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly'),
             -driver => 'mysql',
         },
     };
@@ -107,9 +108,9 @@ sub pipeline_analyses {
         -parameters => {
           'main_dir'                   => $self->o('main_dir'),
           'input_directory'            => $self->o('input_directory'),
-          'splitted_vcf_no_header_dir' => $self->o('splitted_vcf_no_header_dir'),
-          'split_vcf_dir'              => $self->o('splitted_vcf_input_dir'),
-          'output_dir'                 => $self->o('splitted_vcf_output_dir'),
+          'split_vcf_no_header_dir'    => $self->o('split_vcf_no_header_dir'),
+          'split_vcf_input_dir'        => $self->o('split_vcf_input_dir'),
+          'split_vcf_output_dir'       => $self->o('split_vcf_output_dir'),
           'step_size'                  => $self->o('step_size'),
           'check_transcripts'          => $self->o('check_transcripts'),
           'registry'                   => $self->o('registry'),
@@ -119,7 +120,7 @@ sub pipeline_analyses {
         -module => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
         -input_ids  => [],
         -parameters => {
-          'input_dir' => $self->o('splitted_vcf_input_dir'),
+          'input_dir' => $self->o('split_vcf_input_dir'),
           'inputcmd'  => 'ls #input_dir#',
         },
         -flow_into => { 
@@ -131,8 +132,8 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
           -input_ids  => [],
           -parameters => {
-            'input_dir' => $self->o('main_dir') . '/' . $self->o('splitted_vcf_input_dir') . '/' . '#input_chr_dir#',
-            'inputcmd'  => 'find #input_dir# -type f -name "all_snps_ensembl_38_*.vcf" -printf "%f\n"',
+            'input_dir' => $self->o('main_dir') . '/' . $self->o('split_vcf_input_dir') . '/' . '#input_chr_dir#',
+            'inputcmd'  => 'find #input_dir# -type f -name "*.vcf" -printf "%f\n"',
           },
           -flow_into  => {
             2 => {'run_spliceai' => {'input_file' => '#_0#'}},
@@ -145,12 +146,11 @@ sub pipeline_analyses {
         -input_ids  => [],
         -rc_name => '4Gb_8c_job',
         -parameters => {
-          'main_dir'              => $self->o('main_dir'),
-          'split_vcf_input_dir'   => $self->o('splitted_vcf_input_dir'),
-          'output_dir'            => $self->o('splitted_vcf_output_dir'),
-          'fasta_file'            => $self->o('fasta_file'),
-          'gene_annotation'       => $self->o('gene_annotation'),
-          'output_file_name'      => $self->o('output_file_name'),
+          'main_dir'             => $self->o('main_dir'),
+          'split_vcf_input_dir'  => $self->o('split_vcf_input_dir'),
+          'split_vcf_output_dir' => $self->o('split_vcf_output_dir'),
+          'fasta_file'           => $self->o('fasta_file'),
+          'gene_annotation'      => $self->o('gene_annotation'),
         },
         -max_retry_count => 3,
       },
@@ -158,7 +158,7 @@ sub pipeline_analyses {
         -module => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
         -input_ids  => [],
         -parameters => {
-          'input_dir' => $self->o('splitted_vcf_output_dir'),
+          'input_dir' => $self->o('split_vcf_output_dir'),
           'inputcmd'  => 'ls #input_dir#',
         },
         -flow_into => { 
@@ -169,7 +169,7 @@ sub pipeline_analyses {
         -module => 'Bio::EnsEMBL::Variation::Pipeline::SpliceAI::MergeFiles',
         -input_ids  => [],
         -parameters => {
-          'input_dir'        => $self->o('splitted_vcf_output_dir'),
+          'input_dir'        => $self->o('split_vcf_output_dir'),
           'output_dir'       => $self->o('output_dir'),
           'output_file_name' => $self->o('output_file_name'),
         },
@@ -181,9 +181,9 @@ sub pipeline_analyses {
         -module => 'Bio::EnsEMBL::Variation::Pipeline::SpliceAI::FinishFiles',
         -input_ids  => [],
         -parameters => {
-          'splitted_vcf_no_header_dir'   => $self->o('splitted_vcf_no_header_dir'),
-          'split_vcf_input_dir'          => $self->o('splitted_vcf_input_dir'),
-          'input_dir'                    => $self->o('splitted_vcf_output_dir'),
+          'split_vcf_no_header_dir'   => $self->o('split_vcf_no_header_dir'),
+          'split_vcf_input_dir'       => $self->o('split_vcf_input_dir'),
+          'split_vcf_output_dir'      => $self->o('split_vcf_output_dir'),
         },
       }
   );

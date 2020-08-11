@@ -42,14 +42,14 @@ sub run {
 
 sub clean_dir {
   my $self = shift;
-  my $input_dir = $self->param_required('input_dir');
-  my $splitted_input_dir = $self->param_required('split_vcf_input_dir');
-  my $tmp_split_vcf_dir = $self->param_required('tmp_split_vcf_dir');
+  my $split_vcf_no_header_dir = $self->param_required('split_vcf_no_header_dir');
+  my $split_vcf_input_dir = $self->param_required('split_vcf_input_dir');
+  my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
 
   # Remove files
-  $self->run_system_command("rm -rf $input_dir");
-  $self->run_system_command("rm -rf $tmp_split_vcf_dir");
-  $self->run_system_command("rm -rf $splitted_input_dir");
+  $self->run_system_command("rm -rf $split_vcf_no_header_dir");
+  $self->run_system_command("rm -rf $split_vcf_input_dir");
+  $self->run_system_command("rm -rf $split_vcf_output_dir");
 
 }
 

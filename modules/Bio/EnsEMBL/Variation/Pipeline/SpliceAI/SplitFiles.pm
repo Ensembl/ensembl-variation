@@ -51,15 +51,17 @@ sub run {
   $self->split_vcf_file();
 }
 
+# "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n"
+
 sub split_vcf_file {
   my $self = shift;
   my $check = $self->param_required('check_transcripts');
-  my $vcf_file = $self->param_required('vcf_file');
-  my $tmp_split_vcf_dir = $self->param_required('tmp_split_vcf_dir');
-  my $input_dir = $check ? $self->param('input_dir_subset') : $self->param_required('input_directory');
-  my $output_dir = $self->param_required('output_dir');
+  my $vcf_file = $self->param_required('vcf_file'); # input vcf which is inside the input_directory
+  my $split_vcf_no_header_dir = $self->param_required('split_vcf_no_header_dir');
+  my $split_vcf_input_dir = $self->param_required('split_vcf_input_dir');
+  my $input_dir = $check ? $self->param('input_dir_subset') : $self->param_required('input_directory'); # the input directory is 'input_dir_subset' if check_transcripts = 1 (the input file will only contain the regions for the new transcripts); is the normal 'input_directory' if check_transcripts = 0
+  my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
   my $step_size = $self->param_required('step_size');
-  my $split_vcf_input_dir = $self->param_required('split_vcf_dir');
 
   my $vcf_file_path = $input_dir . '/' . $vcf_file;
 
@@ -73,30 +75,30 @@ sub split_vcf_file {
 
   my $chr = $self->param('chr');
 
-  my $tmp_split_vcf_chr_dir = $tmp_split_vcf_dir.'/chr'.$chr;
-  my $new_file = $tmp_split_vcf_chr_dir.'/all_snps_ensembl_38_chr'.$chr.'.';
+  my $split_vcf_no_header_dir_chr = $split_vcf_no_header_dir.'/chr'.$chr; # Create chromosome directory inside 'split_vcf_no_header_dir'
+  my $new_file = $split_vcf_no_header_dir_chr.'/all_snps_ensembl_chr'.$chr.'.';
 
-  $self->create_dir($tmp_split_vcf_chr_dir);
-  $self->run_system_command("split -l $step_size --additional-suffix=.vcf $vcf_file_path $new_file");
+  $self->create_dir($split_vcf_no_header_dir_chr);
+  $self->run_system_command("split -l $step_size -d --additional-suffix=.vcf $vcf_file_path $new_file");
 
   # Files splitted by number of lines (from input)
   # These files contain vcf header
   # Files that are going to be used as input for SpliceAI
-  my $split_vcf_dir = $split_vcf_input_dir.'/chr'.$chr;
+  my $split_vcf_input_dir_chr = $split_vcf_input_dir.'/chr'.$chr;
 
-  $self->create_dir($split_vcf_dir);
+  $self->create_dir($split_vcf_input_dir_chr);
 
   # Read files from /main_dir/split_vcf (missing header) and write new files to /main_dir/split_vcf_input (ready to be used as input for SpliceAI)
-  opendir(my $read_dir, $tmp_split_vcf_chr_dir) or die $!;
+  opendir(my $read_no_header_dir, $split_vcf_no_header_dir_chr) or die $!;
 
-  while(my $tmp_split_vcf = readdir($read_dir)) {
-    next if ($tmp_split_vcf =~ m/^\./);
+  while(my $split_vcf_no_header_file = readdir($read_no_header_dir)) {
+    next if ($split_vcf_no_header_file =~ m/^\./);
 
-    open(my $write, '>', $split_vcf_dir . '/' . $tmp_split_vcf) or die $!;
-    print $write "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
+    open(my $write, '>', $split_vcf_input_dir_chr . '/' . $split_vcf_no_header_file) or die $!;
+    print $write "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
 
-    open(my $fh, '<:encoding(UTF-8)', $tmp_split_vcf_chr_dir . '/' . $tmp_split_vcf)
-      or die "Could not open file '$tmp_split_vcf_chr_dir/$tmp_split_vcf' $!";
+    open(my $fh, '<:encoding(UTF-8)', $split_vcf_no_header_dir_chr . '/' . $split_vcf_no_header_file)
+      or die "Could not open file '$split_vcf_no_header_dir_chr/$split_vcf_no_header_file' $!";
 
     while (my $row = <$fh>) {
       chomp $row;
@@ -112,15 +114,13 @@ sub split_vcf_file {
     close($write);
     close($fh);
   }
-  close($read_dir);
+  close($read_no_header_dir);
 
   # Create output directory
-  my $output_dir_chr = $output_dir.'/chr'.$chr;
-  $self->create_dir($output_dir_chr);
+  my $split_vcf_output_dir_chr = $split_vcf_output_dir.'/chr'.$chr;
+  $self->create_dir($split_vcf_output_dir_chr);
 
-  my $out_files_dir = $output_dir_chr.'/out_files';
-  my $output_vcf_files_dir = $output_dir_chr.'/vcf_files';
-  $self->create_dir($out_files_dir);
+  my $output_vcf_files_dir = $split_vcf_output_dir_chr.'/vcf_files';
   $self->create_dir($output_vcf_files_dir);
 }
 
@@ -145,8 +145,8 @@ sub check_split_vcf_file {
   }
 
   # prepare input vcf file for tabix
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("bgzip $vcf_file_path");
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("tabix -p vcf $vcf_file_path.gz");
+  $self->run_system_command("bgzip $vcf_file_path");
+  $self->run_system_command("tabix -p vcf $vcf_file_path.gz");
 
   # Create directory to store the input file only with the variants of interest (overlapping new transcripts)
   my $vcf_file_path_subset = $main_dir . '/input_vcf_files_subset';
@@ -186,8 +186,8 @@ sub check_split_vcf_file {
   # Sort new vcf file
   my $vcf_file_subset = $vcf_file_path_subset . '/' . $vcf_file;
   my $vcf_file_subset_sorted = $vcf_file_path_subset . '/sorted_' . $vcf_file;
-  my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("sort -t \$'\t' -k1,1 -k2,2n $vcf_file_subset > $vcf_file_subset_sorted");
-  ($exit_code, $stderr, $flat_cmd) = $self->run_system_command("mv $vcf_file_subset_sorted $vcf_file_subset");
+  $self->run_system_command("sort -t \$'\t' -k1,1 -k2,2n $vcf_file_subset > $vcf_file_subset_sorted");
+  $self->run_system_command("mv $vcf_file_subset_sorted $vcf_file_subset");
 }
 
 # Check if there are new MANE transcripts since last release
@@ -230,6 +230,13 @@ sub get_new_transcripts {
   $sth->finish();
 
   $self->param('transcripts', \%new_transcripts);
+}
+
+sub count_lines {
+  my $self = shift;
+  my $filename = shift;
+
+  
 }
 
 1;
