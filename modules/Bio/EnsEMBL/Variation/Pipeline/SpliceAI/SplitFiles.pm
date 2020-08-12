@@ -95,7 +95,16 @@ sub split_vcf_file {
     next if ($split_vcf_no_header_file =~ m/^\./);
 
     open(my $write, '>', $split_vcf_input_dir_chr . '/' . $split_vcf_no_header_file) or die $!;
-    print $write "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
+    my $header_line = '##fileformat=VCFv4.2\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n'.
+    '##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n'.
+    '##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n'.
+    '##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n'.
+    '##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n'.
+    '##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n'.
+    '##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n'.
+    '##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n'.
+    '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n';
+    print $write $header_line;
 
     open(my $fh, '<:encoding(UTF-8)', $split_vcf_no_header_dir_chr . '/' . $split_vcf_no_header_file)
       or die "Could not open file '$split_vcf_no_header_dir_chr/$split_vcf_no_header_file' $!";
@@ -206,9 +215,10 @@ sub get_new_transcripts {
   # Get new transcripts which need to have the scores re-calculated
   my $sth = $dbh->prepare(qq{ SELECT s.name,t.stable_id,t.version,g.seq_region_start,g.seq_region_end FROM transcript t
                               JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                              JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
                               JOIN seq_region s ON t.seq_region_id = s.seq_region_id
                               JOIN gene g ON g.gene_id = t.gene_id
-                              WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and ta.attrib_type_id = 535 and t.modified_date >= DATE_SUB(NOW(), INTERVAL 4 MONTH) });
+                              WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and atr.code = 'MANE_Select' and t.modified_date >= DATE_SUB(NOW(), INTERVAL 4 MONTH) });
 
   $sth->execute();
   while (my $row = $sth->fetchrow_arrayref) {
