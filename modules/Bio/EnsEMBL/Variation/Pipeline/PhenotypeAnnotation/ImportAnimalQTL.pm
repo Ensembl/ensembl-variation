@@ -78,7 +78,7 @@ my %animalQTL_species_fileNames = (
   ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
   bos_taurus => 'QTL_bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
   equus_caballus => 'QTL_equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
-  ovis_aries_rambouillet => 'QTL_',
+  ovis_aries_rambouillet => 'QTL_', # place holder, as ovis aries data was remapped
 );
 
 my %animalQTL_species_ok = (
@@ -107,7 +107,7 @@ sub fetch_input {
                   source_status     => 'germline',
                   source_name       => 'Animal_QTLdb', #source name in the variation db
                   source_name_short => 'AnimalQTLdb',  #source identifier in the pipeline
-                  data_types        => 'phenotype_feature',
+                  data_types        => 'phenotype_feature,study',
                   threshold => $threshold,
                   );
 
@@ -122,7 +122,7 @@ sub fetch_input {
 
   # if not new data imported, still update source date check
   if ( ! $animalQTL_species_ok{$species}){
-    # Get or add a source data_types : phenotype_feature,study
+    # Get or add a source
     $source_info{source_version} = strftime("%Y%m%d", localtime);
     my $source_id = $self->get_or_add_source(\%source_info);
     return;

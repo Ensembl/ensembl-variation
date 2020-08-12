@@ -363,12 +363,13 @@ sub default_phenotype_class {
   my ($self, $pheno_class) = @_;
 
   if (defined $pheno_class ){
-    $self->{phenotype_type} = $pheno_class ;
-  } elsif (! defined $self->{phenotype_type}){
-     $self->{phenotype_type} = $self->_get_attrib_ids("phenotype_type", "trait");
+    $self->{default_phenotype_class} = $pheno_class ;
+  } elsif (! defined $self->{default_phenotype_class}){
+    # phenotype class is similar to variation class as it contains an attrib_id of specific attrib_type
+    $self->{default_phenotype_class} = $self->_get_attrib_ids("phenotype_type", "trait");
   }
 
-  return $self->{phenotype_type};
+  return $self->{default_phenotype_class};
 }
 
 
@@ -1627,7 +1628,7 @@ sub get_old_results {
   my %previous_result;
 
   my $result_adaptor = $int_dba->get_ResultAdaptor();
-  my $res = $result_adaptor->fetch_all_current_by_species($self->param('species') );
+  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
 
   foreach my $result (@{$res}){
 

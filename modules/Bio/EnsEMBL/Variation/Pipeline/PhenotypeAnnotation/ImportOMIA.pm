@@ -267,7 +267,10 @@ sub split_omia {
   #sheep is exception where it stands for ovis_aries and ovis_aries_rambouillet
   if (-e  "$workdir/omia_split/$prefix"."ovis_aries".$suffix) {
     my $cmd = "cp -p $workdir/omia_split/$prefix"."ovis_aries$suffix $workdir/omia_split/$prefix"."ovis_aries_rambouillet$suffix";
-    $self->run_system_command($cmd);
+    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+    if ($return_value) {
+      die("there was an error running as ($flat_cmd: $stderr)");
+    }
   }
 }
 
