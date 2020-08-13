@@ -359,6 +359,19 @@ sub print_pipelogFH {
 }
 
 
+sub default_phenotype_class {
+  my ($self, $pheno_class) = @_;
+
+  if (defined $pheno_class ){
+    $self->{default_phenotype_class} = $pheno_class ;
+  } elsif (! defined $self->{default_phenotype_class}){
+    # phenotype class is similar to variation class as it contains an attrib_id of specific attrib_type
+    $self->{default_phenotype_class} = $self->_get_attrib_ids("phenotype_type", "trait");
+  }
+
+  return $self->{default_phenotype_class};
+}
+
 
 #----------------------------
 # PUBLIC METHODS
@@ -1388,9 +1401,12 @@ sub _get_phenotype_id {
     $description = $description_bak;
   }
 
+  # get default phenotype class attrib:
+  my $phenotype_class_id = $self->default_phenotype_class;
+
   # finally if no match, do an insert
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
-    INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
+    INSERT IGNORE INTO phenotype ( name, description , class_attrib_id ) VALUES ( ?,? , $phenotype_class_id )
   });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);

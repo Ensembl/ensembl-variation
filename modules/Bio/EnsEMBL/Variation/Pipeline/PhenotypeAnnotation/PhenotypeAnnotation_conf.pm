@@ -460,6 +460,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
                 1 => [ 'check_omia']
@@ -473,6 +474,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
                 2 => [ 'import_animalqtldb'],
@@ -489,6 +491,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
                 1 => [ 'check_animalqtl']
@@ -502,6 +505,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into => {
                 1 => [ 'check_phenotypes']
@@ -559,6 +563,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
                 1 => [ 'finish_phenotype_annotation']
@@ -572,6 +577,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -hive_capacity  => 1,
+            -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into      => {},
             -failed_job_tolerance => 0,
