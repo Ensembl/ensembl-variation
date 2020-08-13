@@ -56,7 +56,7 @@ sub fetch_input {
     die "make_path failed: ".Dumper($err) if $err && @$err;
   }
 
-  open(my $logFH, ">", $workdir."/REPORT_import_".$self->required_param('species').".txt") || die ("Failed to open file: $!\n");
+  open(my $logFH, ">>", $workdir."/REPORT_import_".$self->required_param('species').".txt") || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
 }
 

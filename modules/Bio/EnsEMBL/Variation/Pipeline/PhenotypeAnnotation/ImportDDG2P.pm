@@ -65,6 +65,7 @@ sub fetch_input {
                   source_name => 'DDG2P',       #source name in the variation db
                   source_name_short => 'DDG2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
+                  data_types        => 'phenotype_feature',
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
