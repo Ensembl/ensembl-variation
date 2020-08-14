@@ -251,6 +251,73 @@
         }
       }
     },
+    { "id": "ALFA_GRCh38",
+      "description": "NCBI ALFA (Allele Frequency Aggregator)",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ALFA/b154/dbSNP154_ALFA_GRCh38_chr###CHR###_20200812.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y", "MT"
+      ],
+      "use_seq_region_synonyms": 1,
+      "population_prefix": "ALFA:",
+      "population_display_group": {
+        "display_group_name": "NCBI ALFA",
+        "display_group_priority": 1.8
+      },
+      "populations": {
+        "9980010": {
+          "name": "SAMN10492705",
+          "description": "Total"
+        },
+        "9980011": {
+          "name": "SAMN10492695",
+          "description": "European"
+        },
+        "9980012": {
+          "name": "SAMN10492698",
+          "description": "African American"
+        },
+        "9980013": {
+          "name": "SAMN10492696",
+          "description": "African Others"
+        },
+        "9980014": {
+          "name": "SAMN10492703",
+          "description": "African"
+        },
+        "9980015": {
+          "name": "SAMN10492697",
+          "description": "East Asian"
+        },
+        "9980016": {
+          "name": "SAMN10492702",
+          "description": "South Asian"
+        },
+        "9980017": {
+          "name": "SAMN10492701",
+          "description": "Other Asian"
+        },
+        "9980018": {
+          "name": "SAMN10492704",
+          "description": "Asian"
+        },
+        "9980019": {
+          "name": "SAMN10492699",
+          "description": "Latin American 1"
+        },
+        "9980020": {
+          "name": "SAMN10492700",
+          "description": "Latin American 2"
+        },
+        "9980021": {
+        "name": "SAMN11605645",
+        "description": "Other"
+        }
+      }
+    },
     {
       "id": "gambian_genome_variation_project_GRCh38",
       "species": "homo_sapiens",
