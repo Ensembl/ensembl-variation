@@ -101,11 +101,10 @@ use Scalar::Util qw(looks_like_number);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
-
+our $DEBUG =0;
 
 ## Used for the itterator function
 my $DEFAULT_ITERATOR_CACHE_SIZE = 10_000;
-our $DEBUG =0;
 
 sub store {
     my ($self, $vf) = @_;
