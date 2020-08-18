@@ -701,8 +701,7 @@ sub import{
     ($feature_object, $feat, $alt_allele) = get_variant($record, undef);
     if (! defined $feature_object){
       warn "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n";
-      no warnings 'exiting';
-      next;
+      return undef;
     }
 
     add_clinvar_data($feature_object, $feat, $alt_allele, $record);
