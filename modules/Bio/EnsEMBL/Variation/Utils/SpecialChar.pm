@@ -223,6 +223,13 @@ sub decode_text {
   $text  =~ s/\'\'\'\'//g;
   $text  =~ s/&apos://g;
   $text  =~ s/&lt;/</g;
+  $text  =~ s/Ã¶/o/g;
+  $text  =~ s/Ã¨/e/g;
+  $text  =~ s/Ã«/e/g;
+  $text  =~ s/Ã©/e/g;
+  $text  =~ s/Ã¼/u/g;
+  $text  =~ s/Ã¤/a/g;
+  $text  =~ s/Ð/-/g;
 
   return $text;
 }
