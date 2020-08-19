@@ -1,0 +1,583 @@
+<html>
+<head>
+  <title>Variant sets</title>
+</head>
+
+<body>
+
+  <h1 style="margin-top:15px">Ensembl Variation - Variant sets</h1>
+
+<p>
+We use the concept of variant sets to group variants that share some property together. For example, we have grouped the variants identified in the 1000 Genomes phase 3 sets, these are divided into subsets based on population. For example, the set representing variants identified in the 1000 Genomes phase 3 study is named
+'1000 Genomes 3 - All' and has several subsets like: '1000 Genomes 3 - AFR', '1000 Genomes 3 - AMR', '1000 Genomes 3 - EAS', '1000 Genomes 3 - EUR' and '1000 Genomes 3 - SAS'.
+The variant sets can be displayed as separate tracks on the location view. This behaviour is controlled from the 'Variation' section on the configuration panel which is accessed by
+clicking the 'Configure this page' link in the left hand side navigation.
+</p>
+
+<p>
+The sets are constructed during production and are stored in the database. The table below lists the available
+variant sets in the Ensembl variation database (subsets are indicated by bullet points).
+</p>
+
+<!-- Data variation_sets - start -->
+
+  <h2 id="commom_set">Variant sets common to all species</h2>
+  <div style="margin:6px 0px 30px">
+    <table id="variation_set_table" class="ss">
+    
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+  </tr>
+
+  <tr>
+    <td><b>Failed variations</b></td>
+    <td>fail_all</td>
+    <td>Variations that have failed the Ensembl QC checks</td>
+  </tr>
+    </table>
+  </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Homo_sapiens/Info/Index" title="Human Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Homo_sapiens.png" alt="Human" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Homo_sapiens" style="display:inline;color:#333">Human<span class="small vdoc_species_sci_name"> (Homo sapiens)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>1000 Genomes 3 - All</b></td>
+    <td>1kg_3</td>
+    <td>Variants genotyped by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - AFR</li></ul></td>
+    <td>1kg_3_afr</td>
+    <td>Variants genotyped in African individuals by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_afr=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - AFR - common</li></ul></td>
+    <td>1kg_3_afr_com</td>
+    <td>Variants genotyped in African individuals by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_afr_com=normal;r=19:62886-62987;v=rs534193774" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs534193774" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - AMR</li></ul></td>
+    <td>1kg_3_amr</td>
+    <td>Variants genotyped in admixed American individuals by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_amr=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - AMR - common</li></ul></td>
+    <td>1kg_3_amr_com</td>
+    <td>Variants genotyped in admixed American individuals by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_amr_com=normal;r=19:69934-70034;v=rs372156287" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs372156287" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - All - common</li></ul></td>
+    <td>1kg_3_com</td>
+    <td>Variants genotyped by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_com=normal;r=19:69934-70034;v=rs372156287" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs372156287" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - EAS</li></ul></td>
+    <td>1kg_3_eas</td>
+    <td>Variants genotyped in East Asian individuals by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_eas=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - EAS - common</li></ul></td>
+    <td>1kg_3_eas_com</td>
+    <td>Variants genotyped in East Asian individuals by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_eas_com=normal;r=19:80791-80894;v=rs201816663" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs201816663" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - EUR</li></ul></td>
+    <td>1kg_3_eur</td>
+    <td>Variants genotyped in European individuals by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_eur=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - EUR - common</li></ul></td>
+    <td>1kg_3_eur_com</td>
+    <td>Variants genotyped in European individuals by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_eur_com=normal;r=19:69934-70034;v=rs372156287" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs372156287" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - SAS</li></ul></td>
+    <td>1kg_3_sas</td>
+    <td>Variants genotyped in South Asian individuals by the 1000 Genomes project (phase 3)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_sas=normal;r=19:60792-60892;v=rs541392352" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs541392352" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">1000 Genomes 3 - SAS - common</li></ul></td>
+    <td>1kg_3_sas_com</td>
+    <td>Variants genotyped in East Asian individuals by the 1000 Genomes project (phase 3) with frequency of at least 1%</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_1kg_3_sas_com=normal;r=19:80791-80894;v=rs201816663" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs201816663" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><b>All LSDB-associated variants</b></td>
+    <td>lsdb_variants</td>
+    <td>Variants association from one or several Locus Specific DataBase (LSDB)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_lsdb_variants=normal;r=19:38433672-38433772;v=rs4632259" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs4632259" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">HbVar</li></ul></td>
+    <td>HbVar</td>
+    <td>Variants for the Human Hemoglobin Variants and Thalassemias database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HbVar=normal;r=16:172863-172963;v=rs121909803" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs121909803" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Infevers</li></ul></td>
+    <td>Infevers</td>
+    <td>Variants from the registry of Hereditary Auto-inflammatory Disorders Mutations</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Infevers=normal;r=19:53798290-53798390;v=rs104895570" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs104895570" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">KAT6BDB</li></ul></td>
+    <td>KAT6BDB</td>
+    <td>Variants from the K(lysine) acetyltransferase 6B database, BCM</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_KAT6BDB=normal;r=10:74843334-74843434;v=rs199470467" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs199470467" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">LMDD</li></ul></td>
+    <td>LMDD</td>
+    <td>Variants from the Leiden Muscular Dystrophy Database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_LMDD=normal;r=19:38433672-38433772;v=rs4632259" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs4632259" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">OIVD</li></ul></td>
+    <td>OIVD</td>
+    <td>Variants from the Osteogenesis Imperfecta Variant Database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_OIVD=normal;r=12:53328340-53328440;v=rs137853893" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs137853893" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">PAHdb</li></ul></td>
+    <td>PAHdb</td>
+    <td>Variants from the Phenylalanine hydroxylase database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_PAHdb=normal;r=12:102839127-102839227;v=rs199475669" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs199475669" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">dbPEX</li></ul></td>
+    <td>dbPEX</td>
+    <td>Variants from the PEX Gene Database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_dbPEX=normal;r=2:61048445-61048545;v=rs61752113" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs61752113" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><b>All phenotype/disease-associated variants</b></td>
+    <td>ph_variants</td>
+    <td>Variants that have been associated with a phenotype or a disease</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_variants=normal;r=19:107063-107163;v=COSV58842107" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=COSV58842107" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">All ClinVar</li></ul></td>
+    <td>ClinVar</td>
+    <td>Variants with ClinVar annotation</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ClinVar=normal;r=19:580378-580478;v=rs104894669" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs104894669" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">COSMIC phenotype variants</li></ul></td>
+    <td>ph_cosmic</td>
+    <td>Phenotype annotations of somatic mutations found in human cancers from the COSMIC project</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_cosmic=normal;r=19:107063-107163;v=COSV58842107" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=COSV58842107" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Clinically associated variants</li></ul></td>
+    <td>clin_assoc</td>
+    <td>Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_clin_assoc=normal;r=19:852330-852430;v=rs797045007" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs797045007" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">HGMD-PUBLIC variants</li></ul></td>
+    <td>ph_hgmd_pub</td>
+    <td>Variants annotated by HGMD</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_hgmd_pub=normal;r=19:580378-580478;v=CM973366" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=CM973366" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">NHGRI-EBI catalog phenotype variants</li></ul></td>
+    <td>ph_nhgri</td>
+    <td>Variants associated with phenotype data from the NHGRI-EBI GWAS catalog [http://www.ebi.ac.uk/gwas/]</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_nhgri=normal;r=19:807392-807492;v=rs123698" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs123698" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">OMIM phenotype variants</li></ul></td>
+    <td>ph_omim</td>
+    <td>Variants linked to entries in the Online Mendelian Inheritance in Man (OMIM) database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_omim=normal;r=19:580378-580478;v=rs104894669" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs104894669" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">PhenCode</li></ul></td>
+    <td>phencode</td>
+    <td>Variants from the PhenCode Project</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_phencode=normal;r=19:580378-580478;v=rs104894669" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs104894669" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><b>ESP_6500</b></td>
+    <td>esp_6500</td>
+    <td>Variants from the NHLBI Exome Sequencing Project (investigating heart, lung and blood disorders)</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_esp_6500=normal;r=19:110610-110710;v=rs372121956" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs372121956" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><b>ExAC</b></td>
+    <td>exac</td>
+    <td>Variants identified by the Exome Aggregation Consortium (ExAC) - release 0.3</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_exac=normal;r=19:70876-70975;v=rs536984462" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs536984462" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_all_chips=normal;r=19:72725-72825;v=rs2418684" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs2418684" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Affy GeneChip 500K</li></ul></td>
+    <td>Affy_500K</td>
+    <td>Variants from the Affymetrix GeneChip Human Mapping 500K Array Set</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Affy_500K=normal;r=19:260983-261083;v=rs8105536" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs8105536" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Affy GenomeWideSNP_6.0</li></ul></td>
+    <td>Affy_SNP6</td>
+    <td>Variants from the Affymetrix Genome-Wide Human SNP Array 6.0</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Affy_SNP6=normal;r=19:260862-260962;v=rs8100066" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs8100066" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">HumanCoreExome-12</li></ul></td>
+    <td>HumanCoreExome</td>
+    <td>Variants from the Illumina HumanCoreExome-12 v1 genotyping chip.</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanCoreExome=normal;r=19:110580-110680;v=rs867704559" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs867704559" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">HumanOmniExpress</li></ul></td>
+    <td>HumanOmniExpress</td>
+    <td>Variants from the Illumina HumanOmniExpress 12v1-1_a whole genome genotyping array</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanOmniExpress=normal;r=19:260862-260962;v=rs8100066" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs8100066" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_1M-duo</li></ul></td>
+    <td>Illumina_1M-duo</td>
+    <td>Variants from the Illumina Human1M-duo v3 whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Illumina_1M-duo=normal;r=19:95931-96031;v=rs8110113" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs8110113" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_Cardio-Metabo_Chip</li></ul></td>
+    <td>Cardio-Metabo_Chip</td>
+    <td>Variants from the Illumina Cardio-Metabo_Chip genotyping array designed to target variants of interest for metabolic and cardiovascular disease traits</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Cardio-Metabo_Chip=normal;r=19:292890-292990;v=rs895343" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs895343" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_CytoSNP12v1</li></ul></td>
+    <td>Illumina_CytoSNP12v1</td>
+    <td>Variants from the Illumina Cyto SNP-12 v1 whole genome SNP genotyping chip designed for cytogenetic analysis</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Illumina_CytoSNP12v1=normal;r=19:366754-366854;v=rs1020384" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs1020384" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_ExomeChip</li></ul></td>
+    <td>ExomeChip</td>
+    <td>Variants from the Illumina ExomeChip genotyping array designed to target variants within exons</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ExomeChip=normal;r=19:110733-110833;v=rs148836883" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs148836883" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_Human610_Quad</li></ul></td>
+    <td>Human610_Quad</td>
+    <td>Variants from the Illumina Human610_Quad v1_B whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Human610_Quad=normal;r=19:95931-96031;v=rs8110113" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs8110113" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_Human660W-quad</li></ul></td>
+    <td>Illumina_660Q</td>
+    <td>Variants from the Illumina Human660W-quad whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_Illumina_660Q=normal;r=19:89232-89332;v=rs11084984" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs11084984" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_HumanHap550</li></ul></td>
+    <td>HumanHap550</td>
+    <td>Variants from the Illumina Human550 v3.0 whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanHap550=normal;r=19:265984-266084;v=rs2312724" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs2312724" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_HumanHap650Y</li></ul></td>
+    <td>HumanHap650Y</td>
+    <td>Variants from the Illumina HumanHap650Y v3.0 whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanHap650Y=normal;r=19:265984-266084;v=rs2312724" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs2312724" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_HumanOmni1-Quad</li></ul></td>
+    <td>HumanOmni1-Quad</td>
+    <td>Variants from the Illumina HumanOmni1-Quad whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanOmni1-Quad=normal;r=19:72725-72825;v=rs2418684" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs2418684" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_HumanOmni2.5</li></ul></td>
+    <td>HumanOmni2.5</td>
+    <td>Variants from the Illumina HumanOmni2.5 4v1 whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanOmni2.5=normal;r=19:254456-254556;v=rs74489596" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs74489596" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_HumanOmni5</li></ul></td>
+    <td>HumanOmni5</td>
+    <td>Variants from the Illumina HumanOmni5v1 whole genome genotyping array designed for association studies</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_HumanOmni5=normal;r=19:246852-246952;v=rs76159333" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs76159333" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_ImmunoChip</li></ul></td>
+    <td>ImmunoChip</td>
+    <td>Variants from the Illumina ImmunoChip genotyping array designed to target variants of interest for autoimmune and inflammatory diseases</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ImmunoChip=normal;r=19:352610-352710;v=rs34965934" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs34965934" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><b>gnomAD</b></td>
+    <td>gnomAD</td>
+    <td>Variants reported by the Genome Aggregation Database</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_gnomAD=normal;r=19:60115-60215;v=rs1415141782" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs1415141782" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><b>Uniprot variants</b></td>
+    <td>ph_uniprot</td>
+    <td>Variants with annotations provided by UniProt</td>
+    <td><a href="/Homo_sapiens/Location/View?contigviewbottom=variation_set_ph_uniprot=normal;r=19:282703-282803;v=rs1138439" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Homo_sapiens/Variation/Explore?v=rs1138439" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="background-color:#F0F0F0;margin:75px 0px 35px;padding:5px;border-top:2px solid #336;border-bottom:1px solid #336">
+      <h2 style="display:inline;color:#000">Variant sets for the non-human species</h2>
+    </div>
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Gallus_gallus/Info/Index" title="Chicken Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Gallus_gallus.png" alt="Chicken" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Gallus_gallus" style="display:inline;color:#333">Chicken<span class="small vdoc_species_sci_name"> (Gallus gallus)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Gallus_gallus/Location/View?contigviewbottom=variation_set_all_chips=normal;r=18:12294-12394;v=rs313541118" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Gallus_gallus/Variation/Explore?v=rs313541118" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Affymetrix Chicken600K Array</li></ul></td>
+    <td>Chicken600K</td>
+    <td>Variants from the Affymetrix Chicken600K genotyping array</td>
+    <td><a href="/Gallus_gallus/Location/View?contigviewbottom=variation_set_Chicken600K=normal;r=18:12294-12394;v=rs313541118" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Gallus_gallus/Variation/Explore?v=rs313541118" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Bos_taurus/Info/Index" title="Cow Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Bos_taurus.png" alt="Cow" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Bos_taurus" style="display:inline;color:#333">Cow<span class="small vdoc_species_sci_name"> (Bos taurus)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Bos_taurus/Location/View?contigviewbottom=variation_set_all_chips=normal;r=1:435913-436013;v=rs42778024" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Bos_taurus/Variation/Explore?v=rs42778024" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina BovineHD BeadChip</li></ul></td>
+    <td>BovineHD</td>
+    <td>Variants from the Illumina BovineHD BeadChip genotyping array</td>
+    <td><a href="/Bos_taurus/Location/View?contigviewbottom=variation_set_BovineHD=normal;r=1:530948-531048;v=rs134551099" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Bos_taurus/Variation/Explore?v=rs134551099" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina BovineLD BeadChip</li></ul></td>
+    <td>BovineLD</td>
+    <td>Variants from the Illumina BovineLD BeadChip genotyping array</td>
+    <td><a href="/Bos_taurus/Location/View?contigviewbottom=variation_set_BovineLD=normal;r=1:776181-776281;v=rs41609588" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Bos_taurus/Variation/Explore?v=rs41609588" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina BovineSNP50 BeadChip</li></ul></td>
+    <td>BovineSNP50</td>
+    <td>Variants from the Illumina BovineSNP50 BeadChip genotyping array</td>
+    <td><a href="/Bos_taurus/Location/View?contigviewbottom=variation_set_BovineSNP50=normal;r=1:435913-436013;v=rs42778024" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Bos_taurus/Variation/Explore?v=rs42778024" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Capra_hircus/Info/Index" title="Goat Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Capra_hircus.png" alt="Goat" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Capra_hircus" style="display:inline;color:#333">Goat<span class="small vdoc_species_sci_name"> (Capra hircus)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Capra_hircus/Location/View?contigviewbottom=variation_set_all_chips=normal;r=LWLT01000066.1:49274-49374;v=rs268235113" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Capra_hircus/Variation/Explore?v=rs268235113" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_GoatSNP50</li></ul></td>
+    <td>GoatSNP50</td>
+    <td>Variants from the Illumina GoatSNP50 genotyping array</td>
+    <td><a href="/Capra_hircus/Location/View?contigviewbottom=variation_set_GoatSNP50=normal;r=LWLT01000066.1:49274-49374;v=rs268235113" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Capra_hircus/Variation/Explore?v=rs268235113" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Equus_caballus/Info/Index" title="Horse Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Equus_caballus.png" alt="Horse" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Equus_caballus" style="display:inline;color:#333">Horse<span class="small vdoc_species_sci_name"> (Equus caballus)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Equus_caballus/Location/View?contigviewbottom=variation_set_all_chips=normal;r=1:33835-33935;v=rs68475564" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Equus_caballus/Variation/Explore?v=rs68475564" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina EquineSNP50 BeadChip</li></ul></td>
+    <td>Illumina_EquineSNP50</td>
+    <td>Variants from the Illumina EquineSNP50 BeadChip genotyping array</td>
+    <td><a href="/Equus_caballus/Location/View?contigviewbottom=variation_set_Illumina_EquineSNP50=normal;r=1:33835-33935;v=rs68475564" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Equus_caballus/Variation/Explore?v=rs68475564" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Mus_musculus/Info/Index" title="Mouse Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Mus_musculus.png" alt="Mouse" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Mus_musculus" style="display:inline;color:#333">Mouse<span class="small vdoc_species_sci_name"> (Mus musculus)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Mouse Genomes Project</b></td>
+    <td>MGP</td>
+    <td>Variants genotyped by the Mouse Genomes Project</td>
+    <td><a href="/Mus_musculus/Location/View?contigviewbottom=variation_set_MGP=normal;r=2:3050793-3050893;v=rs33890228" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Mus_musculus/Variation/Explore?v=rs33890228" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Sus_scrofa/Info/Index" title="Pig Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Sus_scrofa.png" alt="Pig" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Sus_scrofa" style="display:inline;color:#333">Pig<span class="small vdoc_species_sci_name"> (Sus scrofa)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Sus_scrofa/Location/View?contigviewbottom=variation_set_all_chips=normal;r=AEMK02000361.1:168765-168865;v=WU_10_2_GL893904_1_1266" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Sus_scrofa/Variation/Explore?v=WU_10_2_GL893904_1_1266" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">Axiom Genotyping Array</li></ul></td>
+    <td>Affy_PorcineHD</td>
+    <td>Axiom Porcine Genotyping Array from Affymetrix</td>
+    <td><a href="/Sus_scrofa/Location/View?contigviewbottom=variation_set_Affy_PorcineHD=normal;r=AEMK02000361.1:168765-168865;v=WU_10_2_GL893904_1_1266" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Sus_scrofa/Variation/Explore?v=WU_10_2_GL893904_1_1266" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">GGP Porcine HD</li></ul></td>
+    <td>PorcineHD</td>
+    <td>GeneSeek Genomic Profiler Porcine - HD</td>
+    <td><a href="/Sus_scrofa/Location/View?contigviewbottom=variation_set_PorcineHD=normal;r=9:67938-68038;v=rs81223860" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Sus_scrofa/Variation/Explore?v=rs81223860" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">GGP Porcine LD</li></ul></td>
+    <td>PorcineLD</td>
+    <td>GeneSeek Genomic Profiler Porcine - LD BeadChip</td>
+    <td><a href="/Sus_scrofa/Location/View?contigviewbottom=variation_set_PorcineLD=normal;r=9:90939-91039;v=rs81310106" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Sus_scrofa/Variation/Explore?v=rs81310106" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">Illumina_PorcineSNP60</li></ul></td>
+    <td>PorcineSNP60</td>
+    <td>PorcineSNP60 BeadChip</td>
+    <td><a href="/Sus_scrofa/Location/View?contigviewbottom=variation_set_PorcineSNP60=normal;r=9:2309-2409;v=rs81345069" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Sus_scrofa/Variation/Explore?v=rs81345069" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+
+    <div style="padding-left:0px;padding-bottom:3px">
+      <a href="/Ovis_aries/Info/Index" title="Sheep (texel) Ensembl Home page" style="vertical-align:middle" target="_blank"><img src="/i/species/Ovis_aries.png" alt="Sheep (texel)" class="badge-48" style="float:none;margin-right:4px;vertical-align:middle" /></a>
+      <h2 id="Ovis_aries" style="display:inline;color:#333">Sheep (texel)<span class="small vdoc_species_sci_name"> (Ovis aries)</span</h2>
+    </div>
+    <div style="margin:6px 0px 30px">
+      <table class="ss">
+      
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+    <th colspan="2" style="width:140px">Examples</th>
+  </tr>
+  <tr>
+    <td><b>Genotyping chip variants</b></td>
+    <td>all_chips</td>
+    <td>Variants which have assays on commercial chips held in ensembl</td>
+    <td><a href="/Ovis_aries/Location/View?contigviewbottom=variation_set_all_chips=normal;r=26:37314-37414;v=rs419964571" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Ovis_aries/Variation/Explore?v=rs419964571" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr class="bg2">
+    <td><ul style="margin:0px"><li style="margin:0px">IlluminaOvineHDSNP</li></ul></td>
+    <td>OvineHDSNP</td>
+    <td>Illumina Ovine Infinium HD SNP BeadChip</td>
+    <td><a href="/Ovis_aries/Location/View?contigviewbottom=variation_set_OvineHDSNP=normal;r=26:37314-37414;v=rs419964571" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Ovis_aries/Variation/Explore?v=rs419964571" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+  <tr>
+    <td><ul style="margin:0px"><li style="margin:0px">IlluminaOvineSNP50</li></ul></td>
+    <td>OvineSNP50</td>
+    <td>Illumina OvineSNP50 BeadChip</td>
+    <td><a href="/Ovis_aries/Location/View?contigviewbottom=variation_set_OvineSNP50=normal;r=26:166466-166566;v=rs428214520" target="_blank" title="See a track example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> track</a></td><td><a href="/Ovis_aries/Variation/Explore?v=rs428214520" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" style="vertical-align:middle" alt="Link"/> variant</a></td>
+  </tr>
+      </table>
+    </div>
+<!-- Data variation_sets - end -->
+
+</body>
+</html>

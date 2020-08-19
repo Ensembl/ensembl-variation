@@ -1,0 +1,265 @@
+
+<html>
+<head>
+  <title>Detailed species data count</title>
+  <script type="text/javascript">
+    window.onload = function() {
+      $('.ht').helptip({'track': true});
+    };
+  </script>
+</head>
+
+<body>
+
+<div>
+
+
+  <!-- Right hand side legend -->
+  <div style="float:right;max-width:220px;top:20px">
+    <div class="vdoc_menu vdoc_menu_phen">
+      <div class="vdoc_menu_header vdoc_menu_header_phen">
+        <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
+        Colour legend
+      </div>
+      <table>
+
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_million_0"></span>
+        </td>
+        <td style="padding-top:4px">From 100 million</td>
+      </tr>
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_million_1"></span>
+        </td>
+        <td style="padding-top:4px">From 10 to 99.9 million</td>
+      </tr>
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_million_2"></span>
+        </td>
+        <td style="padding-top:4px">From 1 million to 9.9 million</td>
+      </tr>
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_thousand"></span>
+        </td>
+        <td style="padding-top:4px">From 1,000 to 999,999</td>
+      </tr>
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_hundred"></span>
+        </td>
+        <td style="padding-top:4px">From 1 to 999</td>
+      </tr>
+      <tr>
+        <td style="padding-top:4px;text-align:center">
+          <span class="vdoc_count_legend vdoc_zero"></span>
+        </td>
+        <td style="padding-top:4px">No data</td>
+      </tr>    </table>
+  </div>
+</div>
+
+  <div style="float:left;width:80%">
+    <h1 style="margin-top:15px">Ensembl Variation - Detailed species data count</h1>
+
+    <h2>List of data counts by category and species - Ensembl 101</h2>
+
+    <div>
+      <a href="sources_documentation.html">See documentation for all the variant sources &rarr;</a>
+    </div>
+
+
+  <h2 id="structural_variant" style="margin-top:40px">Structural variant data</h2><p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">1</span> species with structural variant data in the Ensembl Variation databases:</p>
+
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="background-color:#BBB">Species</th>  
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Structural variant</th>
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Structural variant count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Supporting evidence</th>
+        
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Supporting evidence count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+      </tr>
+    <tr style="vertical-align:middle">
+      <td>
+        <div>
+          <div style="float:left">
+            <a href="/Homo_sapiens/Info/Index" title="Homo sapiens Ensembl Home page" style="vertical-align:middle" target="_blank">
+              <img src="/i/species/Homo_sapiens.png" alt="Homo sapiens" class="badge-32" style="vertical-align:middle" />
+            </a>
+           </div>
+           <div style="float:left;margin-left:6px;padding-top:2px">
+             <div class="bigtext">Human</div>
+             <div class="small" style="font-style:italic">Homo sapiens</div>
+           </div>
+           <div style="clear:both"></div>
+         </div>
+      </td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_million_2" title="Over 5 million structural variants">5 M</span></td>
+      <td style="text-align:right">-</td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_million_1" title="Over 24 million supporting evidences">24 M</span></td>
+      <td style="text-align:right">-</td>
+  </tr></table>
+
+  <h2 id="genotype" style="margin-top:40px">Genotype data</h2><p>This doesn't include the genotypes from projects such as:<ul><li>1000 Genomes Project</li><li>ExAC Project</li><li>gnomAD Project</li><li>TOPMed Project</li><li>UK10K Project</li><li>Mouse Genomes Project</li><li>NextGen Project</li></ul> because they are fetched directly from VCF files.</p><p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">0</span> species with genotype data in the Ensembl Variation databases:</p>
+
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="background-color:#BBB">Species</th>  
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Variants with sample genotype</th>
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Variants with sample genotype count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Variants with population genotype</th>
+        
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Variants with population genotype count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+      </tr></table>
+
+  <h2 id="phenotype" style="margin-top:40px">Phenotype data</h2><p>The list of phenotype/disease/trait association sources by species is available in the page <a href="../phenotype/sources_phenotype_documentation.html">Phenotype sources</a>.</p><p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">1</span> species with phenotype data in the Ensembl Variation databases:</p>
+
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="background-color:#BBB">Species</th>  
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Phenotype</th>
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Phenotype count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Phenotype association</th>
+        
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Phenotype association count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+      </tr>
+    <tr style="vertical-align:middle">
+      <td>
+        <div>
+          <div style="float:left">
+            <a href="/Homo_sapiens/Info/Index" title="Homo sapiens Ensembl Home page" style="vertical-align:middle" target="_blank">
+              <img src="/i/species/Homo_sapiens.png" alt="Homo sapiens" class="badge-32" style="vertical-align:middle" />
+            </a>
+           </div>
+           <div style="float:left;margin-left:6px;padding-top:2px">
+             <div class="bigtext">Human</div>
+             <div class="small" style="font-style:italic">Homo sapiens</div>
+           </div>
+           <div style="clear:both"></div>
+         </div>
+      </td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_thousand" title="Over 25,000 phenotypes">25 K</span></td>
+      <td style="text-align:right"><span style="color:#090" title="653 more phenotypes"><small>(+653)</small></span></td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_million_1" title="Over 13 million phenotype associations">13 M</span></td>
+      <td style="text-align:right"><span style="color:#090" title="Over 64,000 more phenotype associations"><small>(+64,000)</small></span></td>
+  </tr></table>
+
+  <h2 id="citation" style="margin-top:40px">Citation data</h2><p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">1</span> species with citation data in the Ensembl Variation databases:</p>
+
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="background-color:#BBB">Species</th>  
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Cited sequence variant</th>
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Cited sequence variant count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Publication</th>
+        
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Publication count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+      </tr>
+    <tr style="vertical-align:middle">
+      <td>
+        <div>
+          <div style="float:left">
+            <a href="/Homo_sapiens/Info/Index" title="Homo sapiens Ensembl Home page" style="vertical-align:middle" target="_blank">
+              <img src="/i/species/Homo_sapiens.png" alt="Homo sapiens" class="badge-32" style="vertical-align:middle" />
+            </a>
+           </div>
+           <div style="float:left;margin-left:6px;padding-top:2px">
+             <div class="bigtext">Human</div>
+             <div class="small" style="font-style:italic">Homo sapiens</div>
+           </div>
+           <div style="clear:both"></div>
+         </div>
+      </td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_thousand" title="Over 334,000 cited sequence variants">334 K</span></td>
+      <td style="text-align:right"><span style="color:#090" title="Over 7,000 more cited sequence variants"><small>(+7,000)</small></span></td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_thousand" title="Over 127,000 publications">127 K</span></td>
+      <td style="text-align:right"><span style="color:#090" title="Over 1,000 more publications"><small>(+1,000)</small></span></td>
+  </tr></table>
+
+  <h2 id="prediction" style="margin-top:40px">Prediction data</h2><p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">1</span> species with prediction data in the Ensembl Variation databases:</p>
+
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="background-color:#BBB">Species</th>  
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Variants with SIFT data</th>
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Variants with SIFT data count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+        <th style="background-color:#BBB;border-left:1px solid #DDD">Variants with PolyPhen data</th>
+        
+        <th style="background-color:#BBB;padding-left:0px">
+          <span class="_ht ht" title="Variants with PolyPhen data count difference with the previous Ensembl release (v.100)">
+            <small>(e!100 &rarr; e!101)</small>
+          </span>
+        </th>
+      </tr>
+    <tr style="vertical-align:middle">
+      <td>
+        <div>
+          <div style="float:left">
+            <a href="/Homo_sapiens/Info/Index" title="Homo sapiens Ensembl Home page" style="vertical-align:middle" target="_blank">
+              <img src="/i/species/Homo_sapiens.png" alt="Homo sapiens" class="badge-32" style="vertical-align:middle" />
+            </a>
+           </div>
+           <div style="float:left;margin-left:6px;padding-top:2px">
+             <div class="bigtext">Human</div>
+             <div class="small" style="font-style:italic">Homo sapiens</div>
+           </div>
+           <div style="clear:both"></div>
+         </div>
+      </td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_million_2" title="Over 7.6 million variants with sift data">7.6 M</span></td>
+      <td style="text-align:right"><span style="color:#090" title="819 more variants with sift datas"><small>(+819)</small></span></td>
+      <td style="text-align:right"><span class="vdoc_var_count vdoc_million_2" title="Over 7.7 million variants with polyphen data">7.7 M</span></td>
+      <td style="text-align:right"><span style="color:#090" title="Over 2,000 more variants with polyphen datas"><small>(+2,000)</small></span></td>
+  </tr></table>
+
+<p style="padding-top:15px">The <b>full list of species</b> with their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>
+
+  </div>
+</div>
+</body>
+</html>

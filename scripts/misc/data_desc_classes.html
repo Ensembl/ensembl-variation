@@ -1,0 +1,604 @@
+<html>
+<head>
+<title>Variant classification</title>
+</head>
+
+<body>
+
+  <h1 style="margin-top:15px">Ensembl Variation - Variant classification</h1>
+
+  <!-- Sequence variants -->
+  <h2 id="seq">Sequence variants</h2>
+  <table id="var_desc" class="ss" style="width:750px;border-radius:5px">
+    <tr>
+      <th style="background-color:#8b9bc1;color:#FFF;border-top-left-radius:4px">Type</th>
+      <th style="background-color:#8b9bc1;color:#FFF">Description</th>
+      <th colspan="2" style="background-color:#8b9bc1;color:#FFF;width:50%;border-top-right-radius:4px">Example (Reference / Alternative)</th>
+    </tr>
+    <tr>
+      <td style="font-weight:bold">SNP</td>
+      <td>Single Nucleotide Polymorphism</td>
+      <td>Ref: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#00C;font-weight:bold">A</span>CGTA...</pre></td>
+      <td>Alt: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#C00;font-weight:bold">G</span>CGTA...</pre></td>
+    </tr>
+    <tr>
+      <td class="bg2" style="font-weight:bold">Insertion</td>
+      <td class="bg2">Insertion of one or several nucleotides</td>
+      <td class="bg2">Ref: <pre style="display:inline;font-size:1.2em">...TTGACGTA...</pre></td>
+      <td class="bg2">Alt: <pre style="display:inline;font-size:1.2em">...TTGA<span style="color:#C00;font-weight:bold">TG</span>CGTA...</pre></td>
+    </tr>  
+    <tr>
+      <td style="font-weight:bold">Deletion</td>
+      <td>Deletion of one or several nucleotides</td>
+      <td>Ref: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#00C;font-weight:bold">AC</span>GTA...</pre></td>
+      <td>Alt: <pre style="display:inline;font-size:1.2em">...TTGGTA...</pre></td>
+    </tr>  
+    <tr>
+      <td class="bg2" style="font-weight:bold">Indel</td>
+      <td class="bg2">An insertion and a deletion, affecting 2 or more nucleotides</td>
+      <td class="bg2">Ref: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#00C;font-weight:bold">A</span>CGTA...</pre></td>
+      <td class="bg2">Alt: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#C00;font-weight:bold">GCT</span>CGTA...</pre></td>
+    </tr>
+    <tr>
+        <td style="font-weight:bold">Substitution</td>
+      <td>A sequence alteration where the length of the change in the variant is the same as that of the reference.</td>
+      <td>Ref: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#00C;font-weight:bold">AC</span>GTA...</pre></td>
+      <td>Alt: <pre style="display:inline;font-size:1.2em">...TTG<span style="color:#C00;font-weight:bold">TA</span>GTA...</pre></td>
+    </tr>
+  </table>
+
+  <!-- Structural variants -->
+  <h2 id="struct">Structural variants</h2>
+  <table id="var_desc" class="ss" style="width:750px;border-radius:5px">
+      <tr>
+      <th style="background-color:#8b9bc1;color:#FFF;border-top-left-radius:4px">Type</th>
+      <th style="background-color:#8b9bc1;color:#FFF">Description</th>
+      <th colspan="2" style=" background-color:#8b9bc1;color:#FFF;width:50%;border-top-right-radius:4px">Example (Reference / Alternative)</th>
+    </tr>
+    <tr>
+      <td style="font-weight:bold">CNV</td>
+      <td>Copy Number Variation: increases or decreases the copy number of a given region</td>
+      <td>Reference:<br />
+        <div style="margin-top:2px">
+          <div style="float:left;width:43px;height:10px;background-color:#000"></div>
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div>  
+          <div style="float:left;width:30px;height:10px;background-color:#000;border-left:1px solid #888"></div>  
+        </div>
+      </td>
+      <td>"Gain" of one copy:<br />
+        <div style="margin-top:2px">
+          <div style="float:left;width:43px;height:10px;background-color:#000"></div>
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div>  
+          <div style="float:left;width:15px;height:10px;background-color:#C00;border-left:1px solid #888"></div>
+          <div style="float:left;width:30px;height:10px;background-color:#000;border-left:1px solid #888"></div>  
+        </div>
+        <br />
+        "Loss" of one copy:
+        <div style="margin-top:2px">
+          <div style="float:left;width:43px;height:10px;background-color:#000"></div>
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:15px;height:10px;background-color:#00C;border-left:1px solid #888"></div> 
+          <div style="float:left;width:30px;height:10px;background-color:#000;border-left:1px solid #888"></div>  
+        </div>
+      </td>
+    </tr>
+    <tr class="bg2">
+      <td class="bg2" style="font-weight:bold">Inversion</td>
+      <td class="bg2">A continuous nucleotide sequence is inverted in the same position</td>
+      <td class="bg2">Reference:<br />
+        <div style="margin-top:2px">
+          <div style="float:left;width:50px;height:10px;background-color:#000;border-right:2px solid #0C0"></div>
+          <div style="float:left;width:50px;height:10px;background-color:#00C">
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:10px solid #DDD"></div>
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:10px solid #DDD"></div>
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:10px solid #DDD"></div>
+          </div> 
+          <div style="float:left;width:18px;height:10px;background-color:#000;border-left:2px solid #FFFF00"></div>  
+        </div>
+      </td>
+      <td class="bg2">Alternative:<br />
+         <div style="margin-top:2px">
+          <div style="float:left;width:50px;height:10px;background-color:#000;border-right:2px solid #FFFF00"></div>
+          <div style="float:left;width:50px;height:10px;background-color:#C00">
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:10px solid #DDD"></div>
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:10px solid #DDD"></div>
+            <div style="float:left;margin-left:5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:10px solid #DDD"></div>
+          </div> 
+          <div style="float:left;width:18px;height:10px;background-color:#000;border-left:2px solid #0C0"></div>  
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold">Translocation</td>
+      <td>A region of nucleotide sequence that has translocated to a new position</td>
+      <td>Reference:<br />
+        <div style="margin-top:2px">
+          <div style="float:left;width:20px;height:10px;background-color:#000;border-right:1px solid #888"></div>
+          <div style="float:left;width:40px;height:10px;background-color:#00C"></div> 
+          <div style="float:left;width:60px;height:10px;background-color:#000;border-left:1px solid #888"></div>  
+        </div>
+      </td>
+      <td>Alternative:<br />
+        <div style="margin-top:2px">
+          <div style="float:left;width:70px;height:10px;background-color:#000;border-right:1px solid #888"></div>
+          <div style="float:left;width:40px;height:10px;background-color:#C00"></div> 
+          <div style="float:left;width:10px;height:10px;background-color:#000;border-left:1px solid #888"></div>  
+        </div>
+      </td>
+    </tr>
+  </table>
+
+<br />
+<hr style="margin-bottom:4px" />
+
+<h2 id="classes">Variant classes</h2>
+
+<p>
+We call the class of a variant according to its component alleles and its mapping 
+to the reference genome, and then display this information on the website. Internally 
+we use <a href="http://www.sequenceontology.org/">Sequence Ontology</a> terms, but we 
+map these to our own 'display' terms where common usage differs from the SO 
+definition (e.g. our term SNP is closer to the SO term SNV). All the classes we call, 
+along with their equivalent SO term, are shown in the table below. We also differentiate 
+somatic mutations from germline variants in the display term, prefixing the term with
+'somatic'. If you are working with the API, you can fetch either the SO term or the display term.
+</p>
+
+<br />
+  
+  <!-- Data classes - start -->
+
+<table id="variation_classes" class="ss">
+  <tr>
+    <th style="width:8px;padding-left:0px;padding-right:0px;text-align:center">*</th>
+    <th>SO term</th>
+    <th>SO description</th>
+    <th>SO accession</th>
+    <th colspan="2">Called for (e.g.)</th>
+  </tr>
+
+  <tr>
+    <td style="padding:0px;margin:0px;"></td>
+    <td style="font-weight:bold">SNV</td>
+    <td>SNVs are single nucleotide positions in genomic DNA at which different sequence alternatives exist.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001483">SO:0001483</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs224" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;"></td>
+    <td style="font-weight:bold">substitution</td>
+    <td>A sequence alteration where the length of the change in the variant is the same as that of the reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000002">SO:1000002</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs78932649" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">Alu_deletion</td>
+    <td>A deletion of an Alu mobile element with respect to a reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002070">SO:0002070</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319085" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">Alu_insertion</td>
+    <td>An insertion of sequence from the Alu family of mobile elements.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002063">SO:0002063</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv1162620" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">HERV_deletion</td>
+    <td>A deletion of the HERV mobile element with respect to  a reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002067">SO:0002067</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319481" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">HERV_insertion</td>
+    <td>An insertion of sequence from the HERV family of mobile elements with respect to a reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002187">SO:0002187</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319674" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">LINE1_deletion</td>
+    <td>A deletion of a LINE1 mobile element with respect to a reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002069">SO:0002069</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319117" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">LINE1_insertion</td>
+    <td>An insertion from the Line1 family of mobile elements.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002064">SO:0002064</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv4312464" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">SVA_deletion</td>
+    <td>A deletion of an SVA mobile element.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002068">SO:0002068</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319108" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">SVA_insertion</td>
+    <td>An insertion of sequence from the SVA family of mobile elements.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002065">SO:0002065</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv4332739" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#007FFF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">complex_structural_alteration</td>
+    <td>A structural sequence alteration or rearrangement encompassing one or more genome fragments, with 4 or more breakpoints.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001784">SO:0001784</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv275549" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#007FFF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">complex_substitution</td>
+    <td>When no simple or well defined DNA mutation event describes the observed DNA change, the keyword "complex" should be used. Usually there are multiple equally plausible explanations for the change.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000005">SO:1000005</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv511117" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#0000CC;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">copy_number_gain</td>
+    <td>A sequence alteration whereby the copy number of a given regions is greater than the reference sequence.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001742">SO:0001742</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv1004360" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">copy_number_loss</td>
+    <td>A sequence alteration whereby the copy number of a given region is less than the reference sequence.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001743">SO:0001743</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv991724" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#8601AF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">copy_number_variation</td>
+    <td>A variation that increases or decreases the copy number of a given region.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001019">SO:0001019</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv275461" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#0000CC;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">duplication</td>
+    <td>An insertion which derives from, or is identical in sequence to, nucleotides present at a known location in the genome.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000035">SO:1000035</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv2830426" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#000000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">interchromosomal_breakpoint</td>
+    <td>A rearrangement breakpoint between two different chromosomes.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001873">SO:0001873</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3801363" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#C3A4FF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">interchromosomal_translocation</td>
+    <td>A translocation where the regions involved are from different chromosomes.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002060">SO:0002060</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv1150170" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#000000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">intrachromosomal_breakpoint</td>
+    <td>A rearrangement breakpoint within the same chromosome.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001874">SO:0001874</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3782910" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#C3A4FF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">intrachromosomal_translocation</td>
+    <td>A translocation where the regions involved are from the same chromosome.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002061">SO:0002061</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv1152656" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#C530FF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">inversion</td>
+    <td>A continuous nucleotide sequence is inverted in the same position.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000036">SO:1000036</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv996586" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#8601AF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">loss_of_heterozygosity</td>
+    <td>A functional variant whereby the sequence alteration causes a loss of function of one allele of a gene.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001786">SO:0001786</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv2768232" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">mobile_element_deletion</td>
+    <td>A deletion of a mobile element when comparing a reference sequence (has mobile element) to a individual sequence (does not have mobile element).</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002066">SO:0002066</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv3319085" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">mobile_element_insertion</td>
+    <td>A kind of insertion where the inserted sequence is a mobile element.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001837">SO:0001837</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3309266" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#000080;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">novel_sequence_insertion</td>
+    <td>An insertion the sequence of which cannot be mapped to the reference genome.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001838">SO:0001838</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3310477" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#732E00;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">short_tandem_repeat_variation</td>
+    <td>A variation that expands or contracts a tandem repeat with regard to a reference.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0002096">SO:0002096</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv2726918" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#732E00;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">tandem_duplication</td>
+    <td>A duplication consisting of 2 identical adjacent regions.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000173">SO:1000173</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3302857" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#C3A4FF;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">translocation</td>
+    <td>A region of nucleotide sequence that has translocated to a new position. The observed adjacency of two previously separated regions.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0000199">SO:0000199</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=nsv1157267" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#CC0000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">deletion</td>
+    <td>The point at which one or more contiguous nucleotides were excised.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0000159">SO:0000159</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs77776273" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div><div style="padding-top:1px"><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv989436" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:gold;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">indel</td>
+    <td>A sequence alteration which included an insertion and a deletion, affecting 2 or more bases.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:1000032">SO:1000032</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs333" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div><div style="padding-top:1px"><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv3627597" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#000099;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">insertion</td>
+    <td>The sequence of one or more nucleotides added between two adjacent nucleotides in the sequence.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0000667">SO:0000667</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs77777371" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div><div style="padding-top:1px"><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv991325" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr class="bg2">
+    <td style="padding:0px;margin:0px;;background-color:#000000;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">sequence_alteration</td>
+    <td>A sequence_alteration is a sequence_feature whose extent is the deviation from another sequence.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0001059">SO:0001059</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">Variant</li><li style="margin:4px 0px 0px"><span class="_ht ht" title="Structural variant">SV</span></li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/Variation/Explore?v=rs74177880" target="_blank" title="See a variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div><div style="padding-top:1px"><a href="/Homo_sapiens/StructuralVariation/Explore?sv=esv24160" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr>
+  <tr>
+    <td style="padding:0px;margin:0px;;background-color:#4682B4;border-top:1px solid #FFF"></td>
+    <td style="font-weight:bold">probe</td>
+    <td>A DNA sequence used experimentally to detect the presence or absence of a complementary nucleic acid.</td>
+    <td><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/SO:0000051">SO:0000051</a></td>
+    <td>
+      <ul style="margin:0px;padding-left:1em">
+        <li style="margin:0px">CNV probe</li>
+      </ul>
+    </td>
+    <td style="padding-left:0px;width:16px"><div><a href="/Homo_sapiens/StructuralVariation/Explore?sv=cnvi0111251" target="_blank" title="See a structural variant example"><img src="/i/16/internal_link.png" alt="Link"/></a></div></td>
+  </tr></table>
+
+<p>
+<b>*</b> Corresponding colours for the Ensembl web displays (only for Structural variants). 
+The colours were originally based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
+<p>
+
+<div class="js_panel" id="pie_chart_panel" style="margin-top:15px;margin-bottom:20px">
+  <input class="panel_type" type="hidden" value="Piechart">
+  <input class="graph_config" type="hidden" name="legendpos" value="'east'" />
+  <input class="graph_dimensions" type="hidden" value="[90,80,80]" />
+  
+  <input type="hidden" class="graph_data" value="[[616687911,'SNV'],[43672398,'indel'],[12213237,'deletion'],[3848779,'insertion'],[716833,'sequence_alteration'],[260463,'substitution']]" />
+  
+  <div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #CCC;border-radius:8px;box-shadow:0 1px 3px #666">
+     <h3 style="padding:10px 10px 5px">Human variant class distribution - Ensembl 101</h4>
+     <div id="graphHolder0"></div>
+  </div>
+</div>
+  <!-- Data classes - end -->
+ 
+ 
+<br />
+<hr style="margin-bottom:4px" />
+
+<h2 id="indel">Insertion and Deletion coordinates </h2>
+
+<p> In Ensembl, an insertion is indicated by start coordinate = end coordinate +
+1. For example, an insertion of 'C' between nucleotides 12600 and
+12601 on the forward strand is indicated with start and end coordinates as
+follows:</p>
+
+<pre>
+   12601     12600   
+</pre>
+<p>A deletion is indicated by the exact nucleotide coordinates. For
+example, a three base pair deletion of nucleotides 12600, 12601, and
+12602 of the reverse strand will have start and end coordinates of :</p>
+
+<pre>
+   12600     12602    
+</pre>
+
+
+</body>
+</html>

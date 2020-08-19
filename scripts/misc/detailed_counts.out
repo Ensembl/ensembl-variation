@@ -1,0 +1,37 @@
+
+------------------------------------------------------------
+Sender: LSF System <lsf@hx-noah-07-04>
+Subject: Job 5356430: <webdoc> in cluster <EBI> Exited
+
+Job <webdoc> was submitted from host <noah-login-01> by user <aparton> in cluster <EBI> at Tue Jul  7 18:09:27 2020
+Job was executed on host(s) <hx-noah-07-04>, in queue <production-rh74>, as user <aparton> in cluster <EBI> at Tue Jul  7 18:09:27 2020
+</homes/aparton> was used as the home directory.
+</homes/aparton/git/ensembl-variation/scripts/misc> was used as the working directory.
+Started at Tue Jul  7 18:09:27 2020
+Terminated at Tue Jul 14 11:00:19 2020
+Results reported at Tue Jul 14 11:00:19 2020
+Cannot open your job file: /homes/aparton/.lsbatch/1594141767.5356430
+TERM_OWNER: job killed by owner.
+Exited with exit code 130.
+
+Resource usage summary:
+
+    CPU time :                                   292.54 sec.
+    Max Memory :                                 21 MB
+    Average Memory :                             17.10 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   215 MB
+    Max Processes :                              3
+    Max Threads :                                4
+    Run time :                                   579048 sec.
+    Turnaround time :                            579052 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <detailed_counts.err> for stderr output of this job.
+

@@ -1,0 +1,62 @@
+Wed Mar  4 17:34:59 2020	# Start species list...
+Wed Mar  4 17:48:00 2020		> Species list - finished
+Wed Mar  4 17:48:00 2020	# Start variant classes ...
+Wed Mar  4 20:47:26 2020		> Variant classes - finished
+Wed Mar  4 20:47:26 2020	# Start populations ...
+Wed Mar  4 20:47:35 2020		> Populations - finished
+Wed Mar  4 20:47:35 2020	# Start variant sets ...
+Wed Mar  4 22:04:53 2020		> Variant sets - finished
+Wed Mar  4 22:04:53 2020	# Start clinical significance ...
+Thu Mar  5 15:22:50 2020		> Clinical significance - finished
+Thu Mar  5 15:22:50 2020	# Start phenotype ontology ...
+Thu Mar  5 15:22:50 2020		> Phenotype ontology - finished
+Thu Mar  5 15:22:50 2020	# Start sources list ...
+Fri Mar  6 03:45:51 2020		> Sources list - finished
+# Phenotype sources list ...
+Fri Mar  6 03:46:50 2020		> Phenotype sources list - finished
+Fri Mar  6 03:46:50 2020	# Detailed species data count ...
+Fri Mar  6 03:46:50 2020		> Detailed species data count - finished
+
+Fri Mar  6 03:46:50 2020	>>> End of script
+
+------------------------------------------------------------
+Sender: LSF System <lsf@hx-noah-23-03>
+Subject: Job 6040910: <webdoc> in cluster <EBI> Done
+
+Job <webdoc> was submitted from host <hx-noah-21-03> by user <aparton> in cluster <EBI> at Wed Mar  4 17:34:58 2020
+Job was executed on host(s) <hx-noah-23-03>, in queue <production-rh74>, as user <aparton> in cluster <EBI> at Wed Mar  4 17:34:59 2020
+</homes/aparton> was used as the home directory.
+</homes/aparton/git/ensembl-variation/scripts/misc> was used as the working directory.
+Started at Wed Mar  4 17:34:59 2020
+Terminated at Fri Mar  6 03:46:51 2020
+Results reported at Fri Mar  6 03:46:51 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   52.81 sec.
+    Max Memory :                                 94 MB
+    Average Memory :                             54.12 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   346 MB
+    Max Processes :                              4
+    Max Threads :                                5
+    Run time :                                   123111 sec.
+    Turnaround time :                            123113 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <report_webdoc.err> for stderr output of this job.
+

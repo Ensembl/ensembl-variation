@@ -1,0 +1,41 @@
+Tue Jun 23 16:52:57 2020	# Start species list...
+Tue Jun 23 17:03:17 2020		> Species list - finished
+Tue Jun 23 17:03:17 2020	# Start variant classes ...
+Tue Jun 23 18:42:03 2020		> Variant classes - finished
+Tue Jun 23 18:42:03 2020	# Start populations ...
+
+------------------------------------------------------------
+Sender: LSF System <lsf@hx-noah-08-01>
+Subject: Job 1070545: <webdoc> in cluster <EBI> Exited
+
+Job <webdoc> was submitted from host <noah-login-01> by user <aparton> in cluster <EBI> at Tue Jun 23 16:52:55 2020
+Job was executed on host(s) <hx-noah-08-01>, in queue <production-rh74>, as user <aparton> in cluster <EBI> at Tue Jun 23 16:52:56 2020
+</homes/aparton> was used as the home directory.
+</homes/aparton/git/ensembl-variation/scripts/misc> was used as the working directory.
+Started at Tue Jun 23 16:52:56 2020
+Terminated at Tue Jun 23 18:42:03 2020
+Results reported at Tue Jun 23 18:42:03 2020
+Cannot open your job file: /homes/aparton/.lsbatch/1592927575.1070545
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   4.00 sec.
+    Max Memory :                                 72 MB
+    Average Memory :                             67.88 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   325 MB
+    Max Processes :                              4
+    Max Threads :                                5
+    Run time :                                   6547 sec.
+    Turnaround time :                            6548 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <report_webdoc_101.err> for stderr output of this job.
+
