@@ -203,7 +203,10 @@ sub process_clinvar_set {
     warn "processing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
-    next if $done{$record{Acc}};
+    if ($done{$record{Acc}}){
+      print "INFO: skipping $record{Acc}\n";
+      return undef;
+    }
 
     ## clinical significance
     $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance});
@@ -224,12 +227,18 @@ sub process_clinvar_set {
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
-    print "WARNING: No MeasureSet found for $record{Acc}.\n" if !defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
     print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
-    next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet};
-    next unless defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} &&
-                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq "Variant" ||
-                $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} eq $haplotype_type;
+    if (! defined $set->{ReferenceClinVarAssertion}->{MeasureSet} ||
+      !defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type}){
+        print "WARNING: No MeasureSet Type found for $record{Acc}.\n" ;
+        return undef;
+    }
+    if ( $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne "Variant" &&
+      $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne $haplotype_type ) {
+        print "WARNING: Unsupported MeasureSet Type found for $record{Acc}: $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} .\n";
+        return undef;
+    }
+
     $record{clinvar_variant_id} = $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Acc};
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
@@ -725,7 +734,7 @@ sub add_clinvar_data{
   my $alt_allele       = shift;
   my $record           = shift;
 
-  next unless defined $variation_object;
+  return undef if ! defined $variation_object;
 
   ## add phenotype evidence attrib to variation (either existing one or a newly inserted one)
   $variation_object->add_evidence_value($phenotype_evidence);
@@ -1100,7 +1109,12 @@ sub enter_var{
     my @refSeq = split //, $refSlice->seq;
     my @altSeq = split //, $alt_allele;
     my ($i,$match) = (0,1);
-    next unless $refSeq[0] eq $altSeq[0] ; # skip duplications that don't have start coinciding with hgvs parsed elements
+
+    # skip duplications that don't have start coinciding with hgvs parsed elements
+    if ($refSeq[0] ne $altSeq[0]) {
+      print "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{feature_info}->{hgvs_g} \n" ;
+    }
+
     while ($i< scalar @altSeq && $match){
       $match=0 if ($refSeq[$i] ne $altSeq[$i]);
       $i++;
