@@ -121,7 +121,7 @@ foreach my $hostname (@hostnames) {
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$e_version\_\d+$/i);
+    next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
@@ -448,7 +448,7 @@ sub get_species_data_tables {
 
       # loop over databases
       while (my ($dbname) = $sth->fetchrow_array) {
-        next if ($dbname !~ /^[a-z]+_[a-z]+_$db_type\_$e_version\_\d+$/i);
+        next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
         next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
 
         $dbname =~ /^(.+)_$db_type/;

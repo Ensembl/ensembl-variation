@@ -257,9 +257,8 @@ foreach my $type (@sql_order) {
 
     # loop over databases
     while (my ($dbname) = $sth->fetchrow_array) {
-      next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+      next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
       next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-      
       print $dbname;
       $dbname =~ /^(.+)_variation/;
       my $s_name = $1;
