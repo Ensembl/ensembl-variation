@@ -103,10 +103,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 our $MAX_VARIATION_SET_ID = 64;
 our $DEBUG =0;
 
-
 ## Used for the itterator function
 my $DEFAULT_ITERATOR_CACHE_SIZE = 10_000;
-
 
 sub store {
     my ($self, $vf) = @_;
@@ -1782,8 +1780,10 @@ sub fetch_by_hgvs_notation {
     throw ("HGVS notation for variation with unknown location is not supported");
   }
 
-  # Imprecise insertions are not supported
-  if($description =~ m/\(.+\_.+\)ins/) {
+  # Imprecise insertions are not supported:
+  # NC_000013.11:g.(99982241_99982249)insTC - insertion of TC at an unknown position between 99982241-99982249
+  # NC_000013.11:g.99982241_99982242ins56 or NC_000013.11:g.99982241_99982242ins(56) - insertion of not specified nucleotides
+  if($description =~ m/\(.+\_.+\)ins|ins\(?\d+\)?/g) {
     throw ("HGVS notation for insertion \'$description\' is not supported");
   }
 

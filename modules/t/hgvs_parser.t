@@ -813,7 +813,9 @@ ok( $hgvs_genomic_3->{'-'} eq 'NC_000019.9:g.48836478_48836480del', "hgvs genomi
 #ok( $hgvs_genomic_4->{'T'} eq 'NC_000021.8:g.26170678N>A', "RefSeq transcript");
 
 my $hgvs_ins = "NC_000003.11:g.(10191482_10191493)insT";
-dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_ins ) } 'fetch_by_hgvs_notation Throw unsupported insertion';
+dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_ins ) } 'fetch_by_hgvs_notation Throw unsupported insertion: uncertain position';
+my $hgvs_ins_2 = "NC_000003.11:g.10191482_10191483ins56";
+dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_ins_2 ) } 'fetch_by_hgvs_notation Throw unsupported insertion: incomplete description';
 my $hgvs_u = "NC_000002.11:g.(?_46746507)(?46746514)del";
 dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_u ) } 'Throw on unsupported HGVS notation';
 
