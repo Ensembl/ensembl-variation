@@ -1113,6 +1113,7 @@ sub enter_var{
     # skip duplications that don't have start coinciding with hgvs parsed elements
     if ($refSeq[0] ne $altSeq[0]) {
       print "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{feature_info}->{hgvs_g} \n" ;
+      return undef;
     }
 
     while ($i< scalar @altSeq && $match){
@@ -1336,6 +1337,7 @@ sub usage{
 
 \t\toptions: -structvar  (only import ClinVar statuses for structural variations)
 \t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feature (ClinVar), variation_set_variation (sets: ClinVar, OMIM, All phenotypes set ), clinical_significance and synonym data)
+\t\toptions: -done_file  (tsv file containing RCVs to be skipped, expected format: header and 2nd column containing RCVs)
 \n\n";
 
 }
