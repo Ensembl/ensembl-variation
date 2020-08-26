@@ -51,7 +51,17 @@ sub run {
   $self->split_vcf_file();
 }
 
-# "##fileformat=VCFv4.2\n##fileDate=20200313\n##reference=GRCh38/hg38\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n"
+sub set_chr_from_filename {
+  my $self = shift;
+  my $vcf_file = $self->param_required('vcf_file');
+  #all_snps_ensembl_38_chr13.vcf
+  $vcf_file =~ /.*_chr(.*)\.vcf$/;
+  my $chr = $1;
+  if (!$chr) {
+    die("Could not get chromosome name from file name ($vcf_file).");
+  }
+  $self->param('chr', $chr);
+}
 
 sub split_vcf_file {
   my $self = shift;
