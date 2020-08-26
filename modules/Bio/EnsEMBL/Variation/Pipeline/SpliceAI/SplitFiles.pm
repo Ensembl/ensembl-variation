@@ -54,7 +54,7 @@ sub run {
 sub set_chr_from_filename {
   my $self = shift;
   my $vcf_file = $self->param_required('vcf_file');
-  #all_snps_ensembl_38_chr13.vcf
+  #all_snps_ensembl_chr13.vcf
   $vcf_file =~ /.*_chr(.*)\.vcf$/;
   my $chr = $1;
   if (!$chr) {
