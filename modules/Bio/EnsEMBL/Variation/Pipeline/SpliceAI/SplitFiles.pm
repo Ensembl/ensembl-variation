@@ -51,18 +51,6 @@ sub run {
   $self->split_vcf_file();
 }
 
-sub set_chr_from_filename {
-  my $self = shift;
-  my $vcf_file = $self->param_required('vcf_file');
-  #all_snps_ensembl_chr13.vcf
-  $vcf_file =~ /.*_chr(.*)\.vcf$/;
-  my $chr = $1;
-  if (!$chr) {
-    die("Could not get chromosome name from file name ($vcf_file).");
-  }
-  $self->param('chr', $chr);
-}
-
 sub split_vcf_file {
   my $self = shift;
   my $check = $self->param_required('check_transcripts');
