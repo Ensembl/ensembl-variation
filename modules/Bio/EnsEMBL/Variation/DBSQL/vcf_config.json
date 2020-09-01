@@ -812,6 +812,14 @@
       "annotation_type": "gerp"
     },
     {
+      "id": "CADD_GRCh37_whole_genome_SNVs",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
+      "annotation_type": "cadd"
+    },
+    {
       "id": "CADD_GRCh38_whole_genome_SNVs",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
