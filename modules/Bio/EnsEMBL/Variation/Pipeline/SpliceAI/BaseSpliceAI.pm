@@ -74,8 +74,9 @@ sub run_system_command {
 sub set_chr_from_filename {
   my $self = shift;
   my $vcf_file = $self->param('input_file');
-  $vcf_file =~ /.*chr(.*)\.[a-z]+.vcf/;
-  my $chr = $1; 
+  $vcf_file =~ /.*chr(.*).vcf/;
+  my $chr = $1;
+  $chr =~ s/\..*//;
   if (!$chr) {
     die("Could not get chromosome name from file name ($vcf_file).");
   }
