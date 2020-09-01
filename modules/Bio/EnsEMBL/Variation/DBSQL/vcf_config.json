@@ -816,7 +816,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_whole_genome_SNVs.tsv.gz",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
       "annotation_type": "cadd"
     }
   ]
