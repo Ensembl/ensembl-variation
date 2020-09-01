@@ -495,7 +495,9 @@ sub _get_synonyms_by_chr {
         }
       }
     }
-
+    if (!$self->use_db) {
+      push @synonyms, 'chr'.$chr;
+    }
     $cache->{$chr} = \@synonyms;
   }
 
