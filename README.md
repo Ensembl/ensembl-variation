@@ -1,8 +1,8 @@
 # Ensembl Variation API
 
-[![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/master/LICENSE)
-[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=master)](https://travis-ci.org/Ensembl/ensembl-variation)
-[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=master)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=master)
+[![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/release/103/LICENSE)
+[![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=release/103)](https://travis-ci.org/Ensembl/ensembl-variation)
+[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=release/103)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=release/103)
 
 [travis]: https://travis-ci.org/Ensembl/ensembl-variation
 [coveralls]: https://coveralls.io/r/Ensembl/ensembl-variation
@@ -30,7 +30,7 @@ http://www.ensembl.org/info/docs/api/variation/variation_tutorial.html
 
 ## Contributions
 
-If you wish to contribute to this repository or any Ensembl repository, please refer to [our contribution guide](https://github.com/Ensembl/ensembl/blob/master/CONTRIBUTING.md).
+If you wish to contribute to this repository or any Ensembl repository, please refer to [our contribution guide](https://github.com/Ensembl/ensembl/blob/release/103/CONTRIBUTING.md).
 
 
 ## Contact us
