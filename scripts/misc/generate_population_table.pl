@@ -542,9 +542,6 @@ sub get_project_label {
   elsif ($label =~ /sheep_genome_consortium/) {
     $label = "International Sheep Genome Consortium (ISGC)";
   }
-  elsif ($label =~ /gambian_genome_variation_project/) {
-    $label = "Gambian Genome Variation Project";
-  }
   elsif ($project->{'source_name'}) {
     $label = $project->{'source_name'};
   }
