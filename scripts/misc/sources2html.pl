@@ -80,6 +80,7 @@ my $ecaption = 'Ensembl';
 my $previous_host = $phost;
 my @hostnames = split /,/, $hlist;
 my $eva_url = 'https://www.ebi.ac.uk/eva/?eva-study=###ID###';
+my $vcf_info ='Variant (from VCF)';
 
 my %vcf_desc = (
   'PRJEB34225'    => 'Whole genome variants for 80 North American Atlantic salmon',
@@ -385,7 +386,9 @@ sub source_table {
 
   
   my @name_parts = split('_', $name);
-  if (@name_parts > 2) {
+  if (@name_parts > 3) {
+    # names are expected to be most out of 2 parts eg. homo_sapiens, with the exception of canis_lupus_familiaris
+    print STDERR "$name has more than 3 parts, $display_name will be used\n";
     $name = $display_name;
   }
   my $s_name = ucfirst($name);
@@ -462,7 +465,7 @@ sub source_table {
     my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
     $s_header .= '"></td>';
 
-    my $row = set_row($s_header,$vcf_sample,'-',$s_description,'','','');
+    my $row = set_row($s_header,$vcf_sample,'-',$s_description,$vcf_info,'','');
 
     $source_table .= qq{
       <tr class="bg$bg">
