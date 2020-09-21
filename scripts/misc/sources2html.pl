@@ -248,7 +248,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-    
+
     $db_found ++;
     print STDERR $dbname;
     $dbname =~ /^(.+)_variation/;
@@ -393,7 +393,7 @@ sub source_table {
   }
   my $s_name = ucfirst($name);
   my $species = $s_name;
-     $species =~ s/_/ /;
+     $species =~ s/_/ /g;
   my $s_name_id = $name;
   
   if ($top_species{$name}) {
