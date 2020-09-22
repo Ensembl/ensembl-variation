@@ -233,7 +233,7 @@ my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHE
 my $sql4b = $sql2b;
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 my $sql_variation = qq{SELECT meta_value FROM meta WHERE meta_key="variation_source.vcf" LIMIT 1};
-my $sql_3 = qq{SELECT display_name FROM display_group LIMIT 1};
+my $sql_display_group = qq{SELECT display_name FROM display_group LIMIT 1};
 
 
 # Get the list of species and their common names
@@ -453,7 +453,7 @@ sub source_table {
   if ($is_vcf ) {
     #need Source name, version =-, Description  + data_types
     # get vcf information:
-    my $sth3 = get_connection_and_query($db_name, $hostname, $sql_3);
+    my $sth3 = get_connection_and_query($db_name, $hostname, $sql_display_group);
     my $vcf_sample = $sth3->fetchrow_array;
 
     # currently assumed EVA is source of VCFs
