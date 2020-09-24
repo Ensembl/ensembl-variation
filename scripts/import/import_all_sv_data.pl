@@ -128,18 +128,17 @@ my %attribs_col = ('ID'          => 'id *',
 
 my %display_name = ( 'COSMIC' => 'https://cancer.sanger.ac.uk/cosmic/' );
 
-my $add             = '';
-my $study_table     = "study$add";
-my $sv_table        = "structural_variation$add";
-my $svf_table       = "structural_variation_feature$add";
-my $sva_table       = "structural_variation_association$add";
-my $sv_failed       = "failed_structural_variation$add";
-my $set_table       = "variation_set_structural_variation$add";
-my $svs_table       = "structural_variation_sample$add";
-my $pf_table        = "phenotype_feature$add";
-my $temp_table      = "temp_sv$add";
-my $temp_phen_table = "temp_sv_phenotype$add";
-my $temp_clin_table = "temp_sv_clin_sign$add";
+my $study_table     = "study";
+my $sv_table        = "structural_variation";
+my $svf_table       = "structural_variation_feature";
+my $sva_table       = "structural_variation_association";
+my $sv_failed       = "failed_structural_variation";
+my $set_table       = "variation_set_structural_variation";
+my $svs_table       = "structural_variation_sample";
+my $pf_table        = "phenotype_feature";
+my $temp_table      = "temp_sv";
+my $temp_phen_table = "temp_sv_phenotype";
+my $temp_clin_table = "temp_sv_clin_sign";
 
 my $tmp_sv_col      = 'tmp_class_name';
 my $tmp_sv_clin_col = 'tmp_clinic_name';
@@ -304,14 +303,17 @@ sub load_file_data{
 
 sub source {
   debug(localtime()." Inserting into source table");
-  
+
+  my $data_types = 'structural_variation,phenotype_feature,study';
+  my $somatic_status = 'mixed';
+
   # Check if the DGVa source already exists, else it create the entry
   if ($source_name eq 'DGVa') {
     if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})) {
       $dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='https://www.ebi.ac.uk/dgva/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version,data_types,somatic_status) VALUES ('$source_name','Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version,'$data_types','$somatic_status');});
     }
   }
   # Check if the dbVar source already exists, else it create the entry
@@ -320,7 +322,7 @@ sub source {
       $dbVar->do(qq{UPDATE IGNORE source SET description='NCBI database of human genomic structural variation',url='https://www.ncbi.nlm.nih.gov/dbvar/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version,data_types,somatic_status) VALUES ('$source_name','NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version,'$data_types','$somatic_status');});
     }
   }
   my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})};
@@ -1530,8 +1532,19 @@ sub parse_9th_col {
     
     # Phenotype
     if ($key eq 'phenotype') {
+      # Some phenotypes contain a comma in the description
+      # Replace the comma before splitting by comma
+      # Example: '46,XX Testicular Disorders of Sex Development'
+      if($value =~ /46,/) {
+        $value =~ s/46,/46-/g;
+      }
+
       $value =~ s/, /__/g;
       foreach my $phe (split(',', $value)) {
+        #Change back to comma
+        if($phe =~ /46-/) {
+          $phe =~ s/46-/46,/g;
+        }
 
         $phe = decode_text($phe);
         # Some descriptions contain 'é'
@@ -1956,7 +1969,7 @@ sub generate_data_row {
       $info->{bp_order} = undef;
     }
   }
-  $info->{phenotype} = decode_text($info->{phenotype}); 
+  $info->{phenotype} = decode_text($info->{phenotype}) if($info->{phenotype}); 
 
   my @row = map { $info->{$_} } @attribs;
 
