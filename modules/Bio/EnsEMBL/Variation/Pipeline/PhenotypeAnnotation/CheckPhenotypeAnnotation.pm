@@ -211,15 +211,16 @@ sub check_phenotype_description{
     # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
     # . can be ok: example: Blond vs. brown hair color (from gwas)
     # + can be ok: example: decreased KLRG1+ CD8 alpha beta T cell number
-    my @matches = $l->[1] =~ /\(|\)|\;|\?|\@|\*|\%/gm;
+    # () are currently tolerated, but not desired
+    my @matches = $l->[1] =~ /|\;|\?|\@|\*|\%/gm;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n") if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
     @matches = $l->[1] =~ /.*\n.*/;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n") if(scalar(@matches) >0);
 
-    # check for phenotype descriptions suggesting no phenotype
-    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] );
+    # check for phenotype descriptions suggesting no phenotype; these are now accepted
+    #$self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] );
 
     # check for unsupported individual character
     my $unsupportedChar = getUnsupportedChar($l->[1]);
