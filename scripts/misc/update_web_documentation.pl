@@ -198,6 +198,30 @@ copy_updated_file($copy2subdir,$file_name,$tmp_file);
 print STDOUT localtime() . "\t\t> Clinical significance - finished\n";
 
 
+#### Generates the "Phenotype class" table documentation
+
+# Settings
+$section = 'pheno_class';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "phenotype_annotation.html";
+$subdir      = $subdirs{$file_name};
+
+print STDOUT localtime() . "\t# Start phenotype class ...\n";
+`cp $input_dir/$subdir/$file_name $tmp_file`;
+$content_before = get_content($section,'start');
+$content_after  = get_content($section,'end');
+`perl generate_pheno_class_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
+$new_content = `cat $tmp_section`;
+`rm -f $tmp_section`;
+print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
+
+$copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
+copy_updated_file($copy2subdir,$file_name,$tmp_file);
+
+print STDOUT localtime() . "\t\t> Phenotype class - finished\n";
+
+
 #### Update the ontology versions
 
 # Settings

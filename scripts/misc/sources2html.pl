@@ -79,6 +79,13 @@ my $server_name = 'http://static.ensembl.org';
 my $ecaption = 'Ensembl';
 my $previous_host = $phost;
 my @hostnames = split /,/, $hlist;
+my $eva_url = 'https://www.ebi.ac.uk/eva/?eva-study=###ID###';
+my $vcf_info ='Variant (from VCF)';
+
+my %vcf_desc = (
+  'PRJEB34225'    => 'Whole genome variants for 80 North American Atlantic salmon',
+  'PRJEB22989'    => 'Effect annotated whole genome variants for 163 vervet monkeys (SNPs, Indels, and macaque fixed differences)',
+);
 
 if ($site) {
   $server_name = $site;
@@ -225,6 +232,8 @@ my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHE
                 AND name NOT IN (SELECT name FROM source)};
 my $sql4b = $sql2b;
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
+my $sql_variation = qq{SELECT meta_value FROM meta WHERE meta_key="variation_source.vcf" LIMIT 1};
+my $sql_display_group = qq{SELECT display_name FROM display_group LIMIT 1};
 
 
 # Get the list of species and their common names
@@ -239,7 +248,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-    
+
     $db_found ++;
     print STDERR $dbname;
     $dbname =~ /^(.+)_variation/;
@@ -290,6 +299,10 @@ foreach my $display_name (sort { $top_display{$a} cmp $top_display{$b} || $a cmp
 
   print STDERR "- $display_name ($s_name) ...";
 
+  # Check if db is only on vcf
+  my $sth_var = get_connection_and_query($dbname, $hostname, $sql_variation);
+  my $db_vcf = $sth_var->fetchrow_array;
+
   # Get list of sources from the new databases
   my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
   $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types,\$s_order);
@@ -325,10 +338,10 @@ foreach my $display_name (sort { $top_display{$a} cmp $top_display{$b} || $a cmp
     
   # Display the species at the top of the list
   if ($top_species{$s_name}) {
-    $html_top_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
+    $html_top_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$db_vcf,$dbname,$hostname,\%p_list,\%p_set_list);
   }
   else {
-    $html_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
+    $html_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$db_vcf,$dbname,$hostname,\%p_list,\%p_set_list);
   }
   print STDERR " done\n";
 }
@@ -365,6 +378,7 @@ sub source_table {
   my $sth          = shift;
   my $sth_set      = shift;
   my $is_new       = shift;
+  my $is_vcf       = shift;
   my $db_name      = shift;
   my $hostname     = shift;
   my $p_list       = shift;
@@ -372,12 +386,14 @@ sub source_table {
 
   
   my @name_parts = split('_', $name);
-  if (@name_parts > 2) {
+  if (@name_parts > 3) {
+    # names are expected to be most out of 2 parts eg. homo_sapiens, with the exception of canis_lupus_familiaris
+    print STDERR "$name has more than 3 parts, $display_name will be used\n";
     $name = $display_name;
   }
   my $s_name = ucfirst($name);
   my $species = $s_name;
-     $species =~ s/_/ /;
+     $species =~ s/_/ /g;
   my $s_name_id = $name;
   
   if ($top_species{$name}) {
@@ -433,6 +449,30 @@ sub source_table {
   
   ########## Sources ##########    
   
+  # For variation dbs where data is based on VCF
+  if ($is_vcf ) {
+    #need Source name, version =-, Description  + data_types
+    # get vcf information:
+    my $sth3 = get_connection_and_query($db_name, $hostname, $sql_display_group);
+    my $vcf_sample = $sth3->fetchrow_array;
+
+    # currently assumed EVA is source of VCFs
+    my $source_url = $eva_url;
+    $source_url =~ s/###ID###/$vcf_sample/;
+    my $s_description = $vcf_desc{$vcf_sample} // '-';
+    $vcf_sample = qq{<a href="$source_url" style="text-decoration:none" target="_blank">$vcf_sample</a>};
+
+    my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
+    $s_header .= '"></td>';
+
+    my $row = set_row($s_header,$vcf_sample,'-',$s_description,$vcf_info,'','');
+
+    $source_table .= qq{
+      <tr class="bg$bg">
+        $row
+      </tr>};
+  }
+
   while ($sth->fetch) {
   
     # Check if the source or its version is new
