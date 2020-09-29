@@ -60,6 +60,11 @@ sub fetch_input {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$type}} ]);
       $self->print_pipelogFH("Setting up for $type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
     }
+
+    # if gene imports are performed then check first that the seq_region ids are in sync
+    if ($run_type ne GWAS && $run_type ne EGA){
+      update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor, 0);
+    }
 }
 
 sub write_output {
