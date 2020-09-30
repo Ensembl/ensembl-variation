@@ -128,17 +128,18 @@ my %attribs_col = ('ID'          => 'id *',
 
 my %display_name = ( 'COSMIC' => 'https://cancer.sanger.ac.uk/cosmic/' );
 
-my $study_table     = "study";
-my $sv_table        = "structural_variation";
-my $svf_table       = "structural_variation_feature";
-my $sva_table       = "structural_variation_association";
-my $sv_failed       = "failed_structural_variation";
-my $set_table       = "variation_set_structural_variation";
-my $svs_table       = "structural_variation_sample";
-my $pf_table        = "phenotype_feature";
-my $temp_table      = "temp_sv";
-my $temp_phen_table = "temp_sv_phenotype";
-my $temp_clin_table = "temp_sv_clin_sign";
+my $add             = '';
+my $study_table     = "study$add";
+my $sv_table        = "structural_variation$add";
+my $svf_table       = "structural_variation_feature$add";
+my $sva_table       = "structural_variation_association$add";
+my $sv_failed       = "failed_structural_variation$add";
+my $set_table       = "variation_set_structural_variation$add";
+my $svs_table       = "structural_variation_sample$add";
+my $pf_table        = "phenotype_feature$add";
+my $temp_table      = "temp_sv$add";
+my $temp_phen_table = "temp_sv_phenotype$add";
+my $temp_clin_table = "temp_sv_clin_sign$add";
 
 my $tmp_sv_col      = 'tmp_class_name';
 my $tmp_sv_clin_col = 'tmp_clinic_name';
@@ -1532,8 +1533,9 @@ sub parse_9th_col {
     
     # Phenotype
     if ($key eq 'phenotype') {
-      # Some phenotypes contain a comma in the description
-      # Replace the comma before splitting by comma
+      # The input is a string of multiple phenotypes separated by comma
+      # However, some phenotypes contain a comma in the description
+      # Replace the comma before splitting the multiple phenotypes
       # Example: '46,XX Testicular Disorders of Sex Development'
       if($value =~ /46,/) {
         $value =~ s/46,/46-/g;
