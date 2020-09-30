@@ -1533,18 +1533,20 @@ sub parse_9th_col {
     
     # Phenotype
     if ($key eq 'phenotype') {
-      # The input is a string of multiple phenotypes separated by comma and space ', '
-      # Some phenotypes contain a comma in the description (without a space)
+      # The input is a string of multiple phenotypes separated by comma
+      # Some phenotypes contain a comma in the description
       # Replace the comma before splitting the multiple phenotypes
       # Example: '46,XX Testicular Disorders of Sex Development'
+      if($value =~ /46,/) {
+        $value =~ s/46,/46-/g;
+      }
 
       $value =~ s/, /__/g;
-      $value =~ s/,/---/g;
 
       foreach my $phe (split(',', $value)) {
         #Change back to comma
-        if($phe =~ /---/) {
-          $phe =~ s/---/,/g;
+        if($phe =~ /46-/) {
+          $phe =~ s/46-/46,/g;
         }
 
         $phe = decode_text($phe);
