@@ -102,7 +102,7 @@ sub default_options {
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
 
-        run_import_type         =>  NONE,
+        run_type                =>  NONE,
 
         threshold_qtl           =>  undef, # default for RGD_qtl, AnimalQTL
 
@@ -164,7 +164,7 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         pipeline_dir        => $self->o('pipeline_dir'),
         debug_mode          => $self->o('debug_mode'),
-        run_type            => $self->o('run_import_type')
+        run_type            => $self->o('run_type')
     );
 
     return [
