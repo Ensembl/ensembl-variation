@@ -87,7 +87,7 @@ my %animalQTL_species_ok = (
   ovis_aries => 1,  #Ovis aries
   bos_taurus => 1, #Bos taurus
   equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 0,
+  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries
 );
 
 
@@ -120,13 +120,8 @@ sub fetch_input {
   }
   $self->workdir($workdir);
 
-  # if not new data imported, still update source date check
-  if ( ! $animalQTL_species_ok{$species}){
-    # Get or add a source
-    $source_info{source_version} = strftime("%Y%m%d", localtime);
-    my $source_id = $self->get_or_add_source(\%source_info);
-    return;
-  }
+  # if assembly does not match, don't import data
+  return unless $animalQTL_species_ok{$species};
 
   $self->debug($self->param('debug_mode'));
 
