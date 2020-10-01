@@ -43,7 +43,7 @@ use File::Path qw(make_path);
 use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES MOUSE IMPC OMIA HUMAN GWAS ANIMALSET RGD ZFIN);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES MOUSE MGI OMIA HUMAN HUMAN_VAR HUMAN_GENE CGC EGA ANIMALSET ANIMALQTL RGD ZFIN);
 
 my $source;
 my $workdir;
@@ -52,9 +52,11 @@ my $report;
 my $count_ok = 1;
 
 my %groups_end_source = (
-  HUMAN_VAR => EGA,
-  ANIMALSET => AnimalQTL,
-  MOUSE     => MGI,
+  Human      => CGC,
+  HUMAN_GENE => CGC,
+  HUMAN_VAR  => EGA,
+  ANIMALSET  => ANIMALQTL,
+  MOUSE      => MGI,
 );
 
 sub fetch_input {
