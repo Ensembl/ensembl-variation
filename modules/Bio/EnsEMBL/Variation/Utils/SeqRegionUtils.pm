@@ -44,7 +44,7 @@ use warnings;
 
   Arg[1]      : core DB adaptor
   Arg[2]      : variation DB adaptor
-  Arg[3]      : (optional) dry_run, default 1
+  Arg[3]      : (optional) dry_run: only list the sql updates that would be applied; default 0
   Example     :  use Bio::EnsEMBL::Variation::Pipeline::Utils::SeqRegionUtils qw(update_seq_region_ids);
                 update_seq_region_ids($core_dba, $variation_dba, 0)
   Description : checks that seq_region name and seq_region_id are in sync
@@ -57,7 +57,7 @@ use warnings;
 sub update_seq_region_ids {
   my $core_dba = shift;
   my $variation_dba = shift;
-  my $dry_run = shift // 1;
+  my $dry_run = shift // 0;
 
   my $dbname = $core_dba->dbc->dbname;
   my $core_species = $core_dba->species;

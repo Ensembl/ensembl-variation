@@ -63,7 +63,7 @@ sub fetch_input {
 
     # if gene imports are performed then check first that the seq_region ids are in sync
     if ($run_type ne GWAS && $run_type ne EGA){
-      update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor, 0);
+      update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor);
     }
 }
 
