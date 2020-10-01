@@ -66,6 +66,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $run_type = $self->required_param('run_type');
+  $run_type =uc($run_type);
 
   my $debug = $self->param('debug_mode');
 
@@ -92,6 +93,7 @@ sub write_output {
   my $self = shift;
 
   my $run_type = $self->param('run_type');
+  $run_type =uc($run_type);
 
   unless ($run_type eq NONE) {
     if ($source2branch{$run_type}){
