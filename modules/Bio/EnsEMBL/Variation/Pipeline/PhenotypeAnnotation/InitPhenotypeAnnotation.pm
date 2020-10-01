@@ -33,31 +33,51 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES GROUP_RUN_TYPES);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $logPipeFH;
 
+my %source2branch = (
+  HUMAN     => 2,
+  GWAS      => 2,
+  EGA       => 2,
+  ORPHANET  => 2,
+  MIMMORBID => 2,
+  DDG2P     => 2,
+  CGC       => 2,
+
+  MOUSE     => 3,
+  IMPC      => 3,
+  MGI       => 3,
+
+  ANIMALSET => 4,
+  OMIA      => 4,
+  ANIMALQTL => 4,
+
+  RGD       => 5,
+  ZFIN      => 6
+);
+
+
 sub fetch_input {
   my $self = shift;
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
-  my $run_type = $self->required_param('run_import_type');
+  my $run_type = $self->required_param('run_type');
 
   my $debug = $self->param('debug_mode');
 
   open($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
 
+  # fetch species to be annotated
   unless ($run_type eq NONE) {
     my %import_species = SPECIES;
+    my %group_runs = GROUP_RUN_TYPES;
 
     #MOUSE, HUMAN and specific AnimalSet have separate init analysis
-    if($run_type eq MOUSE || $run_type eq IMPC || $run_type eq MGI ||
-       $run_type eq HUMAN || $run_type eq GWAS || $run_type eq EGA ||
-       $run_type eq ORPHANET || $run_type eq MIMMORBID || $run_type eq DDG2P ||
-       $run_type eq CGC ||
-       $run_type eq ANIMALSET || $run_type eq ANIMALQTL || $run_type eq OMIA){
+    if ($group_runs{$run_type}){
       $self->param('output_ids', [{run_type => $run_type}]);
     } elsif ($import_species{$run_type}) {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
@@ -71,26 +91,14 @@ sub fetch_input {
 sub write_output {
   my $self = shift;
 
-  my $run_type = $self->param('run_import_type');
+  my $run_type = $self->param('run_type');
 
   unless ($run_type eq NONE) {
-    if ($run_type eq RGD){
-      $self->dataflow_output_id($self->param('output_ids'), 5);
-      print $logPipeFH "Passing to RGD import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq ZFIN){
-      $self->dataflow_output_id($self->param('output_ids'), 6);
-      print $logPipeFH "Passing to ZFIN import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
-    } elsif ( $run_type eq ANIMALQTL || $run_type eq OMIA || $run_type eq ANIMALSET){
-      $self->dataflow_output_id($self->param('output_ids'), 4);
-      print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
-    } elsif ( $run_type eq HUMAN || $run_type eq GWAS || $run_type eq EGA ||
-              $run_type eq ORPHANET || $run_type eq MIMMORBID ||
-              $run_type eq DDG2P || $run_type eq CGC ){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
-    } elsif ( $run_type eq IMPC || $run_type eq MGI || $run_type eq MOUSE){
-      $self->dataflow_output_id($self->param('output_ids'), 3);
-      print $logPipeFH "Passing to $run_type import \n" if $self->param('debug_mode');
+    if ($source2branch{$run_type}){
+      $self->dataflow_output_id($self->param('output_ids'), $source2branch{$run_type});
+      print $logPipeFH "Passing to $run_type import: ".scalar @{$self->param('output_ids')}." species\n" if $self->param('debug_mode');
+    } else {
+      print $logPipeFH "Run type $run_type not supported!\n";
     }
   }
   close($logPipeFH);

@@ -171,7 +171,6 @@ sub pipeline_analyses {
         {   -logic_name => 'init_import_phenotype',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnnotation',
             -parameters => {
-                run_import_type   => $self->o('run_import_type'),
                 @common_params,
             },
             -input_ids  => [{}],

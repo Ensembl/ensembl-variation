@@ -54,7 +54,10 @@ our @EXPORT_OK = qw(
             MGI
             MOUSE
             HUMAN
+            HUMAN_VAR
+            HUMAN_GENE
             ANIMALSET
+            GROUP_RUN_TYPES
             NONE
             SPECIES);
 
@@ -73,6 +76,8 @@ use constant {
   DDG2P     => 'DDG2P',
   CGC       => 'CGC',
   HUMAN     => 'Human',
+  HUMAN_VAR => 'Human_var', #perform all variants only imports
+  HUMAN_GENE => 'Human_gene', #perform all gene phenotype only imports
 
   IMPC      => 'IMPC',
   MGI       => 'MGI',
@@ -80,6 +85,16 @@ use constant {
 
   NONE      => 'NONE',
 };
+
+use constant GROUP_RUN_TYPES => (ANIMALSET => ['OMIA','AnimalQTL'],
+                                MOUSE     => ['IMPC', 'MGI'],
+                                HUMAN     => ['GWAS', 'EGA',
+                                              'Orhpanet', 'MIMmorbid',
+                                              'DDG2P', 'CGC'],
+                                HUMAN_VAR => ['GWAS', 'EGA'],
+                                HUMAN_GENE => ['Orphanet', 'MIMmorbid',
+                                              'DDG2P', 'CGC'],
+                                        );
 
 use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ZFIN'      => ['danio_rerio'],

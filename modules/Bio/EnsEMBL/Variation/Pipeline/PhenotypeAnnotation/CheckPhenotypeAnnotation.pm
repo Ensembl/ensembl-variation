@@ -51,6 +51,12 @@ my $species;
 my $report;
 my $count_ok = 1;
 
+my %groups_end_source = (
+  HUMAN_VAR => EGA,
+  ANIMALSET => AnimalQTL,
+  MOUSE     => MGI,
+);
+
 sub fetch_input {
   my $self = shift;
 
@@ -117,46 +123,44 @@ sub write_output {
   #map of the species imported for each analysis
   my %import_species = SPECIES;
 
-  #if source specific check, then flow to next import
+  #if parent job was source specific import, then it is part of
+  # source specific run_type or a group run_type
   if (defined $source){
-    my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
+    my $run_type = $self->required_param('run_type'); #global parameter
 
-    my $run_type = $self->param('run_type') // '';
-
-    if ($run_type eq MOUSE || $source->{source_name} eq IMPC ||
-        $run_type eq HUMAN ||
-        ($run_type ne HUMAN && $source->{source_name} ne GWAS)
-        ){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      close($self->logFH) if defined $self->logFH ;
-      close($self->pipelogFH) if defined $self->pipelogFH ;
-      return;
-    } elsif ($source->{source_name} eq OMIA ) {
-      $self->param('output_ids', [{species => $species}]);
-      if ( $run_type eq ANIMALSET &&
-          defined($animalQTL_species{$species}) ){
-        # if this check is from OMIA import and species has AnimalQTL data
-        # and the run type is to import all
-        # then import the AnimalQTL data: flow number 2
-          $self->dataflow_output_id($self->param('output_ids'), 2);
-      } else {
-          $self->dataflow_output_id($self->param('output_ids'), 3);
-      }
-      close($self->logFH) if defined $self->logFH ;
-      close($self->pipelogFH) if defined $self->pipelogFH ;
-      return;
-    } elsif ($source->{source_name} ne ZFIN &&
-          $source->{source_name} ne RGD ) {
-      #run only a source at a time
+    # source only check run OR final source in set
+    if ( ($run_type eq $source->{source_name}) ||
+      ($groups_end_source{$run_type}
+      && $groups_end_source{$run_type} eq $source->{source_name}) ) {
       $self->print_pipelogFH("Finished source only import ($source->{source_name} ".
                        $self->param('species').
                        ")\n");
-      close($self->logFH) if defined $self->logFH ;
-      close($self->pipelogFH) if defined $self->pipelogFH ;
-      return;
     }
+    elsif ($groups_end_source{$run_type}
+         && $groups_end_source{$run_type} ne $source->{source_name}) {
+
+      #source check and flow to next import, if not already at the end
+      my $fwd = 1;
+
+      if ($run_type eq ANIMALSET && $source->{source_name} eq OMIA) {
+        my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
+        #if this OMIA species does not have an AnimalQTL import then skip it
+        $fwd = 0 if (!defined($animalQTL_species{$species}));
+      }
+
+      if ($fwd) {
+        $self->param('output_ids', [{species => $species}]);
+        $self->dataflow_output_id($self->param('output_ids'), 2);
+      } else {
+        $self->dataflow_output_id($self->param('output_ids'), 3);
+      }
+    }
+    close($self->logFH) if defined $self->logFH ;
+    close($self->pipelogFH) if defined $self->pipelogFH ;
+    return;
   }
 
+  # check job was post import - final species check run
   # if species is an 'ontology term species' then move to dataflow 2
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
