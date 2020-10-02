@@ -356,7 +356,6 @@ sub get_epmc_data{
     return undef unless defined $id && $id =~/\d+/;
 
     my $xs   = XML::Simple->new();
-    # my $server = 'https://www.ebi.ac.uk/europepmc/webservices/rest/';
     my $server = 'https://www.ebi.ac.uk/europepmc/';
     my $request  = $server . $id;
 
@@ -499,7 +498,6 @@ sub check_dbSNP{
 
     foreach my $l (@{$dat}){ 
 
-        # my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
         my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=MED:$l->[1]&type=Organisms&format=XML" );
         my $ref   = get_epmc_data("webservices/rest/search?query=ext_id:$l->[1]%20src:med");
         unless(defined $mined && defined $ref){
