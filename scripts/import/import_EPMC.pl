@@ -303,7 +303,9 @@ sub get_publication_info_from_epmc{
 
     ### check is species mentioned if not human?
     if ($species_string !~/human|homo/ && defined $data->{$pub}->{pmcid} ){         
-        my $mined = get_epmc_data( "webservices/rest/PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );        
+        my $pmcid = $data->{$pub}->{pmcid};
+        $pmcid  =~ s/PMC//;
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=PMC:$pmcid&type=Organisms&format=XML" );        
         my $looks_ok = check_species($mined ,$data) ;
         
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
