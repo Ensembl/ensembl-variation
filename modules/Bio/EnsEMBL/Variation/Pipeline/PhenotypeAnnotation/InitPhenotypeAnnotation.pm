@@ -33,7 +33,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES GROUP_RUN_TYPES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES GROUP_RUN_TYPES SOURCES_IN_RUN_TYPES);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -41,6 +41,8 @@ my $logPipeFH;
 
 my %source2branch = (
   HUMAN     => 2,
+  HUMAN_VAR => 2,
+  HUMAN_GENE=> 2,
   GWAS      => 2,
   EGA       => 2,
   ORPHANET  => 2,
@@ -76,9 +78,10 @@ sub fetch_input {
   unless ($run_type eq NONE) {
     my %import_species = SPECIES;
     my %group_runs = GROUP_RUN_TYPES;
+    my %source_runs = SOURCES_IN_RUN_TYPES;
 
     #MOUSE, HUMAN and specific AnimalSet have separate init analysis
-    if ($group_runs{$run_type}){
+    if ($group_runs{$run_type} || $source_runs{$run_type}){
       $self->param('output_ids', [{run_type => $run_type}]);
     } elsif ($import_species{$run_type}) {
       $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);

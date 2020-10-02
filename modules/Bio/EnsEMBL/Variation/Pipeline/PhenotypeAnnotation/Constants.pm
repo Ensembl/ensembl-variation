@@ -58,6 +58,7 @@ our @EXPORT_OK = qw(
             HUMAN_GENE
             ANIMALSET
             GROUP_RUN_TYPES
+            SOURCES_IN_RUN_TYPES
             NONE
             SPECIES);
 
@@ -65,9 +66,9 @@ use constant {
   RGD       => 'RGD',
   ZFIN      => 'ZFIN',
 
-  ANIMALQTL => 'AnimalQTL',
+  ANIMALQTL => 'ANIMALQTL',
   OMIA      => 'OMIA',
-  ANIMALSET => 'AnimalSet',
+  ANIMALSET => 'ANIMALSET',
 
   GWAS      => 'GWAS',
   EGA       => 'EGA',
@@ -75,13 +76,13 @@ use constant {
   MIMMORBID => 'MIMmorbid',
   DDG2P     => 'DDG2P',
   CGC       => 'CGC',
-  HUMAN     => 'Human',
-  HUMAN_VAR => 'Human_var', #perform all variants only imports
-  HUMAN_GENE => 'Human_gene', #perform all gene phenotype only imports
+  HUMAN     => 'HUMAN',
+  HUMAN_VAR => 'HUMAN_VAR', #perform all variants only imports
+  HUMAN_GENE => 'HUMAN_GENE', #perform all gene phenotype only imports
 
   IMPC      => 'IMPC',
   MGI       => 'MGI',
-  MOUSE     => 'Mouse',
+  MOUSE     => 'MOUSE',
 
   NONE      => 'NONE',
 };
@@ -96,10 +97,23 @@ use constant GROUP_RUN_TYPES => (ANIMALSET => ['OMIA','AnimalQTL'],
                                               'DDG2P', 'CGC'],
                                         );
 
+use constant SOURCES_IN_RUN_TYPES => ( OMIA      => 'ANIMALSET',
+                                       ANIMALQTL => 'ANIMALSET',
+                                       IMPC      => 'MOUSE',
+                                       MGI       => 'MOUSE',
+
+                                       GWAS      => 'HUMAN',
+                                       EGA       => 'HUMAN',
+                                       ORPHANET  => 'HUMAN',
+                                       MIMMORBID => 'HUMAN',
+                                       DDG2P     => 'HUMAN',
+                                       CGC       => 'HUMAN',
+                                      );
+
 use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ZFIN'      => ['danio_rerio'],
 
-                          'AnimalQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
+                          'ANIMALQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
                                           'sus_scrofa', 'ovis_aries', 'ovis_aries_rambouillet'],
                           'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
                                           'bos_taurus','canis_lupus_familiaris','equus_caballus',
@@ -108,10 +122,14 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
 
                           'GWAS'      => ['homo_sapiens'],
                           'EGA'       => ['homo_sapiens'],
-                          'Orphanet'  => ['homo_sapiens'],
-                          'MIMmorbid' => ['homo_sapiens'],
+                          'ORPHANET'  => ['homo_sapiens'],
+                          'MIMMORBID' => ['homo_sapiens'],
                           'DDG2P'     => ['homo_sapiens'],
                           'CGC'       => ['homo_sapiens'],
+                          'HUMAN'     => ['homo_sapiens'],
+                          'HUMAN_VAR' => ['homo_sapiens'],
+                          'HUMAN_GENE'=> ['homo_sapiens'],
+
 
                           'IMPC'      => ['mus_musculus'],
                           'MGI'       => ['mus_musculus'],

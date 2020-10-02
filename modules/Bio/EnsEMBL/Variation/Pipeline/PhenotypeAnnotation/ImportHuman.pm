@@ -52,6 +52,10 @@ my %source2branch = (
   MIMMORBID => 5,
   DDG2P     => 6,
   CGC       => 7,
+
+  HUMAN     => 2,
+  HUMAN_VAR => 2,
+  HUMAN_GENE=> 4,
 );
 
 sub fetch_input {
@@ -67,15 +71,16 @@ sub fetch_input {
       my %import_species = SPECIES;
       #if HUMAN runtype, then select species by looking up MIMMORBID species
       # expectation is that MIMMORBID will always be only homo_sapiens
-      my $type = ($run_type eq HUMAN) ? 'MIMMORBID' : $run_type;
-      die ("$run_type not defined in ImportHuman!\n") if (!$source2branch{$type});
+      die ("$run_type not defined in ImportHuman!\n") if (!$source2branch{$run_type});
 
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$type}} ]);
-      $self->print_pipelogFH("Setting up for $type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
+      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
+      $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
     }
 
     # if gene imports are performed then check first that the seq_region ids are in sync
     if ($run_type ne GWAS && $run_type ne EGA && $run_type ne HUMAN_VAR){
+      # species parameter needs to be set for the core db, variation db adaptor fetch
+      $self->param('species', 'homo_sapiens');
       update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor);
     }
 }

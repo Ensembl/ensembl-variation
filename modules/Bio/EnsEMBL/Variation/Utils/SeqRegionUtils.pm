@@ -40,6 +40,11 @@ package Bio::EnsEMBL::Variation::Utils::SeqRegionUtils;
 use strict;
 use warnings;
 
+use base qw(Exporter);
+
+our @EXPORT_OK = qw(update_seq_region_ids);
+
+
 =head2 update_seq_region_ids
 
   Arg[1]      : core DB adaptor
@@ -53,7 +58,6 @@ use warnings;
 
 =cut
 
-
 sub update_seq_region_ids {
   my $core_dba = shift;
   my $variation_dba = shift;
@@ -62,7 +66,7 @@ sub update_seq_region_ids {
   my $dbname = $core_dba->dbc->dbname;
   my $core_species = $core_dba->species;
   my $variation_species = $variation_dba->species;
-  next if (!$variation_species ne $core_species);
+  next if ($variation_species ne $core_species);
 
   my $dbh = $core_dba->dbc->db_handle;
   my $max_mapping_set_id = get_max_mapping_set_id($dbh, $dbname); 
