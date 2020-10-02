@@ -34,9 +34,7 @@ use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
 use Bio::EnsEMBL::Variation::Utils::Date qw( run_date log_time);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_hex);
 
-use Data::Dumper;
-
-our $DEBUG = 1;
+our $DEBUG = 0;
 
 my ($registry_file, $data_file, $species, $check_dbSNP, $clean, $type, $no_evidence);
 
@@ -381,23 +379,27 @@ sub check_species{
     my ($mined ,$data)=@_ ;
     my $looks_ok = 0;
 
-    print "MINED: ", Dumper($mined);
-
-    if(defined $mined->{semanticTypeList}->{semanticType}->{total}  &&
-       $mined->{semanticTypeList}->{semanticType}->{total} ==1){
-
-        print "found spec ". $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} . "\n"  if $DEBUG == 1;
-        if ($mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} =~ /$species_string/i){
-            $looks_ok = 1;
+    if(defined $mined->{item}->{annotations}->{annotation}  &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'ARRAY'){
+      foreach my $found (@{$mined->{item}->{annotations}->{annotation}}) {
+        if ($found->{exact} =~ /$species_string/i){
+          $looks_ok = 1;
         }
+      }
     }
-    else{
-        foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
-            print "found spec ". $found->{term} . "\n"  if $DEBUG == 1;
-            if ($found->{term} =~ /$species_string/i){
-                $looks_ok = 1;
-            }
+    elsif(defined $mined->{item}->{annotations}->{annotation} &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'HASH'){
+      foreach my $key (keys %{$mined->{item}->{annotations}->{annotation}}){
+        if(ref($mined->{item}->{annotations}->{annotation}->{$key}) eq 'HASH' &&
+          $mined->{item}->{annotations}->{annotation}->{$key}->{exact}){
+          if($mined->{item}->{annotations}->{annotation}->{$key}->{exact} =~ /$species_string/i){
+            $looks_ok = 1;
+          }
         }
+        if($key eq 'exact' && $mined->{item}->{annotations}->{annotation}->{$key} =~ /$species_string/i){
+          $looks_ok = 1;
+        }
+      }
     }
     return $looks_ok;
 }
@@ -496,7 +498,7 @@ sub check_dbSNP{
     foreach my $l (@{$dat}){ 
 
         # my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
-        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=MED:$l->[1]&type=Organisms" );
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=MED:$l->[1]&type=Organisms&format=XML" );
         my $ref   = get_epmc_data("webservices/rest/search?query=ext_id:$l->[1]%20src:med");
         unless(defined $mined && defined $ref){
             print $error_log "NO EPMC data for PMID:$l->[1] - skipping\n";
