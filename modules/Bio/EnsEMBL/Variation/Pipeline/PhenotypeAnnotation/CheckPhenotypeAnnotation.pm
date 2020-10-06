@@ -62,9 +62,10 @@ my %groups_end_source = (
 sub fetch_input {
   my $self = shift;
 
-  $species = $self->param('species');
+  $species = $self->required_param('species');
   $source = $self->param('source');
   $workdir = $self->param('workdir');
+  my $run_type =  $self->required_param('run_type');
 
   my ($logName, $logPipeName);
   if (defined $source) {
@@ -87,7 +88,7 @@ sub fetch_input {
   $self->logFH($logFH);
   $self->pipelogFH($pipelogFH);
 
-  $self->param('output_ids', [{species => $species}]);
+  $self->param('output_ids', [{run_type => $run_type, species => $species}]);
 
 }
 
@@ -125,10 +126,10 @@ sub write_output {
   #map of the species imported for each analysis
   my %import_species = SPECIES;
 
-  #if parent job was source specific import, then it is part of
+  #if parent job was source specific import: check if it is part of
   # source specific run_type or a group run_type
   if (defined $source){
-    my $run_type = $self->required_param('run_type'); #global parameter
+    my $run_type = $self->param('run_type');
 
     # source only check run OR final source in set
     if ( ($run_type eq $source->{source_name}) ||
@@ -145,21 +146,26 @@ sub write_output {
       my $fwd = 1;
 
       if ($run_type eq ANIMALSET && $source->{source_name} eq OMIA) {
-        my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
-        #if this OMIA species does not have an AnimalQTL import then skip it
+        my %animalQTL_species = map { $_ => 1 } @{$import_species{ANIMALQTL}};
+        # only forward jobs to AniamlQTL for AnimalQTL species
         $fwd = 0 if (!defined($animalQTL_species{$species}));
       }
 
       if ($fwd) {
-        $self->param('output_ids', [{species => $species}]);
+        #generally another import_source module
         $self->dataflow_output_id($self->param('output_ids'), 2);
       } else {
+        #either check_phenotypes or disappear into the ether
         $self->dataflow_output_id($self->param('output_ids'), 3);
       }
     }
-    close($self->logFH) if defined $self->logFH ;
-    close($self->pipelogFH) if defined $self->pipelogFH ;
-    return;
+
+    #If not RGD, ZFIN imports, then this is the end of source related check - module
+    if ($source->{source_name} ne RGD || $source->{source_name} ne RGD){
+      close($self->logFH) if defined $self->logFH ;
+      close($self->pipelogFH) if defined $self->pipelogFH ;
+      return;
+    }
   }
 
   # check job was post import - final species check run
@@ -218,7 +224,7 @@ sub check_phenotype_description{
     # . can be ok: example: Blond vs. brown hair color (from gwas)
     # + can be ok: example: decreased KLRG1+ CD8 alpha beta T cell number
     # () are currently tolerated, but not desired
-    my @matches = $l->[1] =~ /|\;|\?|\@|\*|\%/gm;
+    my @matches = $l->[1] =~ /\;|\?|\@|\*|\%/gm;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n") if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
