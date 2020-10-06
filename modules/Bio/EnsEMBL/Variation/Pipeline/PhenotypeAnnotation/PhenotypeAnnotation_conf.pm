@@ -164,7 +164,6 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         pipeline_dir        => $self->o('pipeline_dir'),
         debug_mode          => $self->o('debug_mode'),
-        run_type            => $self->o('run_type')
     );
 
     return [
@@ -172,6 +171,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnnotation',
             -parameters => {
                 @common_params,
+                run_type => $self->o('run_type'),
             },
             -input_ids  => [{}],
             -rc_name    => 'default',
