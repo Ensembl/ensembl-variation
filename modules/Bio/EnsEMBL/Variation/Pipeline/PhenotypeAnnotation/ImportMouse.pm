@@ -47,6 +47,13 @@ use LWP::Simple;
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(IMPC MGI MOUSE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::MouseBasePhenotypeAnnotation');
 
+my %source2branch = (
+  IMPC => 2,
+  MGI  => 3,
+);
+
+my $type;
+
 sub fetch_input {
     my $self = shift;
 
@@ -69,25 +76,16 @@ sub fetch_input {
 
     unless ($run_type eq NONE) {
       my %import_species = SPECIES;
-      if($run_type eq IMPC || $run_type eq MOUSE){
-        my @speciesList = map { {species => $_} } @{$import_species{'IMPC'}};
-        foreach my $spec (@speciesList){
-          $spec->{coord_file} = $workdir."/".$coord_file ;
-          $spec->{pipeline_dir} = $workdir;
-          $spec->{source_name} = $run_type eq IMPC ? IMPC : 'IMPC_MGI' ;
-        }
-        $self->param('output_ids', [ @speciesList ]);
-        print $logFH "Setting up for IMPC import: ". join(", ",@{$import_species{'IMPC'}}). "\n" if ($self->debug) ;
-
-      } elsif($run_type eq MGI){
-        my @speciesList = map { {species => $_} } @{$import_species{'MGI'}};
-        foreach my $spec (@speciesList){
-          $spec->{coord_file} = $workdir."/".$coord_file;
-          $spec->{pipeline_dir} = $workdir;
-        }
-        $self->param('output_ids', [ @speciesList ]);
-        print $logFH "Setting up for MGI import: ". join(", ",@{$import_species{'MGI'}}). "\n" if ($self->debug) ;
+      $type = ($run_type eq MOUSE) ? 'IMPC' : $run_type;
+      my @speciesList = map { {species => $_} } @{$import_species{$type}};
+      foreach my $spec (@speciesList){
+        $spec->{coord_file} = $workdir."/".$coord_file ;
+        $spec->{pipeline_dir} = $workdir;
+        $spec->{run_type} = $run_type;
       }
+
+      $self->param('output_ids', [ @speciesList ]);
+      $self->print_logFH("Setting up for $run_type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
 
       my @speciesNames = map { {species => $_->{species}} }  @{$self->param('output_ids')};
       $self->param('species_names', [@speciesNames]);
@@ -99,15 +97,15 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ($run_type eq IMPC || $run_type eq MOUSE){
-      $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for IMPC import \n") if ($self->debug);
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-    } elsif ( $run_type eq MGI){
-      $self->print_logFH("Passing on import jobs (". scalar @{$self->param('output_ids')} .") for MGI import \n") if ($self->debug);
-      $self->dataflow_output_id($self->param('output_ids'), 3);
+    if ($source2branch{$type}){
+      $self->dataflow_output_id($self->param('output_ids'), $source2branch{$type});
+      $self->print_logFH( "Passing to $type import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    } else {
+      $self->print_logFH("Runtype $type not supproted!\n");
     }
-    $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if ($self->debug);
-    $self->dataflow_output_id($self->param('species_names'), 1);
+
+    $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
+    $self->dataflow_output_id($self->param('output_ids'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 

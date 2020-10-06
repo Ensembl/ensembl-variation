@@ -117,7 +117,8 @@ sub run {
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species'),
-                               workdir => $self->workdir
+                               workdir => $self->workdir,
+                               run_type => $self->required_param('run_type')
                              });
 }
 
