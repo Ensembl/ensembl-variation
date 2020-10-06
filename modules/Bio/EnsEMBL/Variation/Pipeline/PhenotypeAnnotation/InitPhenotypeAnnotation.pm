@@ -84,7 +84,7 @@ sub fetch_input {
     if ($group_runs{$run_type} || $source_runs{$run_type}){
       $self->param('output_ids', [{run_type => $run_type}]);
     } elsif ($import_species{$run_type}) {
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
+      $self->param('output_ids',  [ map { {run_type=> $run_type, species => $_} } @{$import_species{$run_type}} ]);
       print $logPipeFH "Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n" if $debug ;
     } else {
       print $logPipeFH "WARNING: No valid run_import_type specified: $run_type\n" if $debug ;
