@@ -62,7 +62,7 @@ sub fetch_input {
     unless ($run_type eq NONE) {
       my %import_species = SPECIES;
       $type = ($run_type eq ANIMALSET) ? 'OMIA' : $run_type;
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$type}} ]);
+      $self->param('output_ids',  [ map { {run_type => $run_type, species => $_} } @{$import_species{$type}} ]);
       $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
     }
 }
@@ -78,8 +78,6 @@ sub write_output {
     } else {
       $self->print_pipelogFH("Runtype $type not supproted!\n");
     }
-    $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
-    $self->dataflow_output_id($self->param('output_ids'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 
