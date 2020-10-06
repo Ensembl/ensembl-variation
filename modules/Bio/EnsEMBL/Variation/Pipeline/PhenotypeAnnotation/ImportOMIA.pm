@@ -107,6 +107,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $run_type     = $self->required_param('run_type'); #checking it is there
 
   $self->debug($self->param('debug_mode'));
 
@@ -160,6 +161,7 @@ sub run {
   my $self = shift;
 
   my $omia_file = $self->required_param('omia_file');
+  my $run_type = $self->required_param('run_type');
 
   # dump and clean pre-existing phenotype features
   $self->dump_phenotypes($source_info{source_name}, 1);
@@ -174,7 +176,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => [$source_info{object_type}]);
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $run_type,
                              });
 }
 
