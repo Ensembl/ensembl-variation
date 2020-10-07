@@ -114,6 +114,8 @@ sub run {
 sub write_output {
   my $self = shift;
 
+  my $run_type = $self->param('run_type');
+
   #if these is a decrease in the number of entries, then stop the flow
   if (!$count_ok){
     $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
@@ -129,8 +131,6 @@ sub write_output {
   #if parent job was source specific import: check if it is part of
   # source specific run_type or a group run_type
   if (defined $source){
-    my $run_type = $self->param('run_type');
-
     # source only check run OR final source in set
     if ( ($run_type eq $source->{source_name}) ||
       ($groups_end_source{$run_type}
@@ -161,12 +161,15 @@ sub write_output {
     }
 
     #If not RGD, ZFIN imports, then this is the end of source related check - module
-    if ($source->{source_name} ne RGD || $source->{source_name} ne RGD){
+    if ($source->{source_name} ne RGD && $source->{source_name} ne ZFIN){
       close($self->logFH) if defined $self->logFH ;
       close($self->pipelogFH) if defined $self->pipelogFH ;
       return;
     }
   }
+
+  # don't proceed with ontology mapping if only human variants were imported
+  return if $run_type eq HUMAN_VAR;
 
   # check job was post import - final species check run
   # if species is an 'ontology term species' then move to dataflow 2
