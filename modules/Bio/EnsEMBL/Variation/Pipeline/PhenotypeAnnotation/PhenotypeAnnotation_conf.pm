@@ -177,13 +177,12 @@ sub pipeline_analyses {
             -rc_name    => 'default',
             -max_retry_count => 0,
             -flow_into  => {
-                '2->A' => [ 'import_human' ],
-                '3->A' => [ 'import_mouse' ],
-                '4->A' => [ 'import_animalset' ],
+                '2' => [ 'import_human' ],
+                '3' => [ 'import_mouse' ],
+                '4' => [ 'import_animalset' ],
 
-                '5->A' => [ 'import_rgd' ],
-                '6->A' => [ 'import_zfin' ],
-                'A->1' => [ 'finish_pipeline' ],
+                '5' => [ 'import_rgd' ],
+                '6' => [ 'import_zfin' ],
             },
         },
 
