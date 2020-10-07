@@ -73,7 +73,7 @@ sub fetch_input {
       # expectation is that MIMMORBID will always be only homo_sapiens
       die ("$run_type not defined in ImportHuman!\n") if (!$source2branch{$run_type});
 
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
+      $self->param('output_ids',  [ map { {run_type => $run_type, species => $_} } @{$import_species{$run_type}} ]);
       $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
     }
 

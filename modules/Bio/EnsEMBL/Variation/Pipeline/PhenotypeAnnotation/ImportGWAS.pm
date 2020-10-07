@@ -55,6 +55,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
   $self->skip_sets(0); #add variation set data
@@ -136,7 +137,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
