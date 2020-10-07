@@ -53,6 +53,7 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
   my $threshold    = $self->param('threshold_qtl');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
 
@@ -150,6 +151,7 @@ sub run {
                       type => ['QTL', 'Gene']);
   $self->param('output_ids', { source => \%param_source, 
                                species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -160,7 +162,7 @@ sub write_output {
   close($self->logFH) if defined $self->logFH ;
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
-  
+
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
