@@ -376,6 +376,36 @@ sub default_phenotype_class {
 #----------------------------
 # PUBLIC METHODS
 
+=head2 update_meta_coord
+
+  Example    : $obj->update_meta_coord()
+  Description: Update phenotype_feature meta_coord entries in varaition db
+  Returntype : none
+  Exceptions : none
+
+=cut
+
+sub update_meta_coord {
+  my $self = shift;
+
+  my $core_db_name = $self->core_db_adaptor->dbc()->dbname();
+  my $vdbh =  $self->variation_db_adaptor->dbc();
+  my $table_name ='phenotype_feature';
+
+  # delete previous phenotype_feature entries in update_meta_coord
+  my $mc_del_sth = $vdbh->do(qq[ DELETE * FROM meta_coord WHERE table_name ='$table_name' ]);
+
+  # insert new phenotype_feature meta_coord entries
+  my $mc_ins_sth = $vdbh->do(qq[ INSERT INTO meta_coord SELECT '$table_name', s.coord_system_id,
+              MAX( 1 + cast( t.seq_region_end as signed) - cast( t.seq_region_start as signed) )
+              FROM $table_name t, $core_db_name.seq_region s, $core_db_name.coord_system c
+              WHERE t.seq_region_id = s.seq_region_id AND c.coord_system_id=s.coord_system_id AND c.species_id=1
+              GROUP BY s.coord_system_id ]);
+
+}
+
+
+
 =head2 get_seq_region_ids
 
   Example    : $obj->get_seq_region_ids()
