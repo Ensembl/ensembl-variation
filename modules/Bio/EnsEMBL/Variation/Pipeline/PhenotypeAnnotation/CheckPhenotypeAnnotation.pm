@@ -122,7 +122,7 @@ sub write_output {
                        "PLEASE check import and redo import if needed!");
     close($self->logFH) if defined $self->logFH ;
     close($self->pipelogFH) if defined $self->pipelogFH ;
-    return;
+    die "Failed check_counts: decrease in one of the tables: phenotype, phenotype_feature, phenotype_feature_attrib, phenotype_ontology_accession  a get DBA for $species and group $group";
   }
 
   #map of the species imported for each analysis
