@@ -45,6 +45,10 @@ $oldString = "bmi > 30";
 $newString = replace_char($oldString);
 ok($newString eq "bmi more than 30", "special char(>) updated");
 
+$oldString = '3-@METHYLGLUTACONIC ACIDURIA, TYPE I';
+$newString = replace_char($oldString);
+ok($newString eq "3-METHYLGLUTACONIC ACIDURIA, TYPE I", "special char(@) removed");
+
 $oldString = "isom&#xe8;res";
 $newString = replace_hex($oldString);
 ok($newString eq "isomeres", "hex replaced");
