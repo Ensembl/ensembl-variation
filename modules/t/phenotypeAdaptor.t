@@ -42,9 +42,11 @@ ok($pa && $pa->isa('Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor'), "get phe
 my $p = $pa->fetch_by_dbID(1);
 ok($p && $p->name eq 'ACH', "fetch_by_dbID");
 ok($p->class_attrib eq 'trait', "fetch_by_dbID - class attrib");
+ok($p->stable_id eq 'test_stable_id', "fetch_by_dbID - stable_id");
 
 $p = $pa->fetch_by_description('ACHONDROPLASIA')->[0];
 ok($p && $p->name eq 'ACH', "fetch_by_description");
+ok($p && $p->stable_id eq 'test_stable_id', "fetch_by_description - get stable_id");
 
 {
   my $p = $pa->fetch_by_description_accession_type('BRUGADA SYNDROME')->[0];
@@ -57,12 +59,13 @@ ok($p && $p->name eq 'ACH', "fetch_by_description");
 $p->name('test');
 $p->description('test');
 delete $p->{dbID};
-
+delete $p->{stable_id};
 
 ok($pa->store($p), "store");
 $p = $pa->fetch_by_description('test')->[0];
 ok($p && $p->name eq 'test', "fetch stored");
 ok($p && $p->class_attrib_id == 665, "store - default class_attrib_id");
+ok($p && ! defined($p->stable_id), "store - default stable_id");
 
 
 ## check ontology accession handling
