@@ -121,7 +121,7 @@ sub dbID {
 
 =head2 stable_id
 
-  Example    : $name = $obj->stable_id()
+  Example    : $stable_id = $obj->stable_id()
   Description: Getter/Setter for the stable_id
   Returntype : string
   Exceptions : none
