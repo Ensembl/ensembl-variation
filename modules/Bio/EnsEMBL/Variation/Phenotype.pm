@@ -82,7 +82,7 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
-  my ($dbID, $stable_id, $description, $name, $class_attrib) = rearrange([qw(dbID stable_id DESCRIPTION NAME CLASS_ATTRIB)], @_);
+  my ($dbID, $stable_id, $description, $name, $class_attrib) = rearrange([qw(dbID STABLE_ID DESCRIPTION NAME CLASS_ATTRIB)], @_);
 
   $class_attrib ||= ATTRIB_TRAIT; #default phenotype class type
 
