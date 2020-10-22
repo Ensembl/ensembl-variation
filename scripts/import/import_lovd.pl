@@ -82,12 +82,13 @@ if ($existing_src) {
 else {
   # if not, add source
   my $sth = $dbh->prepare(qq{
-      INSERT INTO source (name, description, url, somatic_status)
+      INSERT INTO source (name, description, url, somatic_status, data_types)
       VALUES (
           'LOVD',
           'Leiden Open (source) Variation Database',
           'http://www.lovd.nl',
-          'germline'
+          'germline',
+          'variation,structural_variation'
       );
   });
 
