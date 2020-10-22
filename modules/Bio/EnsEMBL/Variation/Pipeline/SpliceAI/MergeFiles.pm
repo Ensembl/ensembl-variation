@@ -54,7 +54,6 @@ sub merge_vcf_files {
 
   while(my $tmp_vcf = readdir($read_dir)) {
     next if ($tmp_vcf =~ m/^\./ || $tmp_vcf =~ m/\.gz/);
-    # next if ($tmp_vcf =~ m/\.gz/);
 
     # Some variants don't have a score - the main reason is because the transcript is not in the gene annotation file
     # Before merging the files, the variants without scores need to be deleted
@@ -66,9 +65,8 @@ sub merge_vcf_files {
   }
   close($read_dir);
 
-  $self->run_system_command("ls $input_dir_chr/*.vcf.gz | split -l 10 - $input_dir_chr/split2merge");
-  # for f in split2merge*; do bcftools merge -l $f -m none -Oz -o tmp_$f.vcf.gz; done
-  $self->run_system_command("for f in $input_dir_chr/split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
+  # $self->run_system_command("ls $input_dir_chr/*.vcf.gz | split -l 10 - $input_dir_chr/split2merge");
+  # $self->run_system_command("for f in $input_dir_chr/split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
   # $self->run_system_command("bcftools merge -m none -Oz -o $output_file_name$chr_dir.vcf.gz $input_dir_chr/tmp_*.vcf.gz");
 }
 
