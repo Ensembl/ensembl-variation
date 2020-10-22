@@ -67,6 +67,13 @@ ok($p && $p->name eq 'test', "fetch stored");
 ok($p && $p->class_attrib_id == 665, "store - default class_attrib_id");
 ok($p && ! defined($p->stable_id), "store - default stable_id");
 
+my $p2 = $pa->fetch_by_dbID(2);
+$p2->description('test2');
+$p2->stable_id('test_id');
+delete $p2->{dbID};
+ok($pa->store($p2), "store");
+my $p3 = $pa->fetch_by_description('test2')->[0];
+ok($p3 && $p3->stable_id eq 'test_id', "store - expected stable_id");
 
 ## check ontology accession handling
 my $map_data = { accession      => 'Orphanet:15', 
