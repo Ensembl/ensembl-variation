@@ -379,7 +379,7 @@ sub default_phenotype_class {
 =head2 update_meta_coord
 
   Example    : $obj->update_meta_coord()
-  Description: Update phenotype_feature meta_coord entries in varaition db
+  Description: Update phenotype_feature meta_coord entries in variation db
   Returntype : none
   Exceptions : none
 

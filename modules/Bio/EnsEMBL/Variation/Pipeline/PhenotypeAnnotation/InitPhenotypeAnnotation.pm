@@ -72,7 +72,7 @@ sub fetch_input {
 
   my $debug = $self->param('debug_mode');
 
-  open($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe');
+  open($logPipeFH, ">", $pipeline_dir."/".'log_import_debug_pipe') || die ("Failed to open file: $!\n");
 
   # fetch species to be annotated
   unless ($run_type eq NONE) {

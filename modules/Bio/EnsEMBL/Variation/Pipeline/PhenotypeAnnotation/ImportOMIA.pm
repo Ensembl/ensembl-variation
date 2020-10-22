@@ -107,7 +107,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
-  my $run_type     = $self->required_param('run_type'); #checking it is there
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
 

@@ -147,7 +147,7 @@ sub write_output {
 
       if ($run_type eq ANIMALSET && $source->{source_name} eq OMIA) {
         my %animalQTL_species = map { $_ => 1 } @{$import_species{ANIMALQTL}};
-        # only forward jobs to AniamlQTL for AnimalQTL species
+        # only forward jobs to AnimalQTL for AnimalQTL species
         $fwd = 0 if (!defined($animalQTL_species{$species}));
       }
 
@@ -235,7 +235,7 @@ sub check_phenotype_description{
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n") if(scalar(@matches) >0);
 
     # check for phenotype descriptions suggesting no phenotype; these are now accepted
-    #$self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] );
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] ) && $self->param('debug_mode');
 
     # check for unsupported individual character
     my $unsupportedChar = getUnsupportedChar($l->[1]);

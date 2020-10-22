@@ -87,7 +87,7 @@ my %animalQTL_species_ok = (
   ovis_aries => 1,  #Ovis aries
   bos_taurus => 1, #Bos taurus
   equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries
+  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries (ovis_aries_variation)
 );
 
 

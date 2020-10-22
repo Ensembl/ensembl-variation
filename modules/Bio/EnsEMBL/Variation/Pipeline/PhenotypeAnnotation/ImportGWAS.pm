@@ -218,7 +218,7 @@ sub parse_input_file {
       $gene =~ s/\s+//g;
       $gene =~ s/–/-/g;
       $gene =~ s/[^\x00-\x7F]//g; # Remove non ASCII characters
-      $gene = '' if $gene eq '-' or $gene eq 'NR'; #Skip uninformative entries
+      $gene = '' if $gene eq '-' or $gene eq 'NR'; #Skip uninformative entries, missing data in original curation see GWAS catalog curation
 
       my %data = (
         'study_type' => 'GWAS',
