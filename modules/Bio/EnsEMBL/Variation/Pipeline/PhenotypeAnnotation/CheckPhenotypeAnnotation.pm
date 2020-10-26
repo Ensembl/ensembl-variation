@@ -52,7 +52,7 @@ my $report;
 my $count_ok = 1;
 
 my %groups_end_source = (
-  Human      => CGC,
+  HUMAN      => CGC,
   HUMAN_GENE => CGC,
   HUMAN_VAR  => EGA,
   ANIMALSET  => ANIMALQTL,

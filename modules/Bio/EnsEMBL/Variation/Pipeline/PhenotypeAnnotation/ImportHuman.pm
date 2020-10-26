@@ -94,13 +94,15 @@ sub write_output {
       $self->dataflow_output_id($self->param('output_ids'), $source2branch{$run_type});
       $self->print_pipelogFH( "Passing to $run_type import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
     } else {
-      $self->print_pipelogFH("Runtype $run_type not supproted!\n");
+      $self->print_pipelogFH("Runtype $run_type not supported!\n");
+      close($self->pipelogFH) if defined $self->pipelogFH;
+      die("Unsupported $run_type\n");
     }
 
     $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
     $self->dataflow_output_id($self->param('output_ids'), 1);
   }
-  close($self->logFH) if defined $self->logFH;
+  close($self->pipelogFH) if defined $self->pipelogFH;
 
 }
 

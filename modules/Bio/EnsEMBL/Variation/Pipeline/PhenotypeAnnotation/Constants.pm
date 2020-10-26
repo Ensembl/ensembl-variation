@@ -90,7 +90,7 @@ use constant {
 use constant GROUP_RUN_TYPES => (ANIMALSET => ['OMIA','AnimalQTL'],
                                 MOUSE     => ['IMPC', 'MGI'],
                                 HUMAN     => ['GWAS', 'EGA',
-                                              'Orhpanet', 'MIMmorbid',
+                                              'Orphanet', 'MIMmorbid',
                                               'DDG2P', 'CGC'],
                                 HUMAN_VAR => ['GWAS', 'EGA'],
                                 HUMAN_GENE => ['Orphanet', 'MIMmorbid',

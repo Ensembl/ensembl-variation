@@ -56,6 +56,7 @@ our @EXPORT_OK = qw(update_seq_region_ids);
                 with the core db and applies any needed updates.
                 Note: currently used in the phenotype import pipeline for human import.
   Exceptions  : None
+  Caller      : Phenotype import pipeline for human import
 
 =cut
 
