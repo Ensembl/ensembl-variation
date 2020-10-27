@@ -160,7 +160,7 @@ my %colours = ( 'hundred_million' => { 'order' => 1, 'colour' => 'vdoc_million_0
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 
-my @genotype_projects = ('1000 Genomes', 'ExAC', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
+my @genotype_projects = ('1000 Genomes', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
 my $genotypes_list = qq{<ul><li>}.join(' Project</li><li>',@genotype_projects).qq{ Project</li></ul>};
 
 my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
