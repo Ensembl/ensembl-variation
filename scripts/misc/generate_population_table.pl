@@ -81,6 +81,9 @@ my %project_urls = (
   'MGP'             => 'http://www.sanger.ac.uk/resources/mouse/genomes/',
   'NextGen Project' => 'http://projects.ensembl.org/nextgen/',
   'EVA'             => 'https://www.ebi.ac.uk/eva/?eva-study=###ID###',
+  'Gambian Genome Variation Project' => 'https://www.internationalgenome.org/data-portal/data-collection/ggvp-grch38',
+  'NCBI ALFA'       => 'https://www.ncbi.nlm.nih.gov/snp/docs/gsr/alfa/',
+  'NHLBI Exome Sequencing Project' => 'https://evs.gs.washington.edu/EVS/',
   'ISGC'            => 'http://www.sheephapmap.org/'
 );
 
@@ -540,6 +543,9 @@ sub get_project_label {
   }
   elsif ($label =~ /sheep_genome_consortium/) {
     $label = "International Sheep Genome Consortium (ISGC)";
+  }
+  elsif ($label =~ /gambian_genome_variation_project/) {
+    $label = "Gambian Genome Variation Project";
   }
   elsif ($project->{'source_name'}) {
     $label = $project->{'source_name'};
