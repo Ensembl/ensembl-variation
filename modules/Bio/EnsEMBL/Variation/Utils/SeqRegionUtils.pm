@@ -54,7 +54,6 @@ our @EXPORT_OK = qw(update_seq_region_ids);
                 update_seq_region_ids($core_dba, $variation_dba, 0)
   Description : checks that seq_region name and seq_region_id are in sync
                 with the core db and applies any needed updates.
-                Note: currently used in the phenotype import pipeline for human import.
   Exceptions  : None
   Caller      : Phenotype import pipeline for human import
 
