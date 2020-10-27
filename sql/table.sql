@@ -505,9 +505,6 @@ CREATE TABLE submitter_handle (
 @column allele_code_id	Primary key, internal identifier.
 @column allele      	String representing the allele. Has a unique constraint on the first 1000 characters (max allowed by MySQL).
 
-@example See below the first entries in the allele_code table:
-         @sql SELECT * FROM allele_code LIMIT 6;
-
 @see allele
 @see genotype_code
 */
