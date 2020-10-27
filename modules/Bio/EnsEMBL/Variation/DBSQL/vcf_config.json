@@ -256,7 +256,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/gambian_genome_variation_project/release/20200217_biallelic_SNV/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ggvp/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
       "sample_prefix": "GGVP:",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
