@@ -303,7 +303,9 @@ sub get_publication_info_from_epmc{
 
     ### check is species mentioned if not human?
     if ($species_string !~/human|homo/ && defined $data->{$pub}->{pmcid} ){         
-        my $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );        
+        my $pmcid = $data->{$pub}->{pmcid};
+        $pmcid  =~ s/PMC//;
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=PMC:$pmcid&type=Organisms&format=XML" );        
         my $looks_ok = check_species($mined ,$data) ;
         
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
@@ -315,16 +317,16 @@ sub get_publication_info_from_epmc{
 
     ### get data on publication from ePMC
     if( defined $data->{$pub}->{pmid} ){
-      $ref = get_epmc_data( "search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
+      $ref = get_epmc_data( "webservices/rest/search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
     }
     elsif( defined $data->{$pub}->{doi} ){
-      $ref = get_epmc_data( "search?query=$data->{$pub}->{doi}" );
+      $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{doi}" );
       ## check results of full text query
       return undef unless defined  $data->{$pub}->{doi} &&
       $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
     }
     elsif(defined $data->{$pub}->{pmcid}){
-      $ref = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
+      $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{pmcid}" );
       ## check results of full text query
       return undef unless defined $data->{$pub}->{pmcid} &&
       $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};
@@ -354,7 +356,7 @@ sub get_epmc_data{
     return undef unless defined $id && $id =~/\d+/;
 
     my $xs   = XML::Simple->new();
-    my $server = 'https://www.ebi.ac.uk/europepmc/webservices/rest/';
+    my $server = 'https://www.ebi.ac.uk/europepmc/';
     my $request  = $server . $id;
 
     my %data;
@@ -378,21 +380,27 @@ sub check_species{
     my ($mined ,$data)=@_ ;
     my $looks_ok = 0;
 
-    if(defined $mined->{semanticTypeList}->{semanticType}->{total}  &&
-       $mined->{semanticTypeList}->{semanticType}->{total} ==1){
-
-        print "found spec ". $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} . "\n"  if $DEBUG == 1;
-        if ($mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} =~ /$species_string/i){
-            $looks_ok = 1;
+    if(defined $mined->{item}->{annotations}->{annotation}  &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'ARRAY'){
+      foreach my $found (@{$mined->{item}->{annotations}->{annotation}}) {
+        if ($found->{exact} =~ /$species_string/i){
+          $looks_ok = 1;
         }
+      }
     }
-    else{
-        foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
-            print "found spec ". $found->{term} . "\n"  if $DEBUG == 1;
-            if ($found->{term} =~ /$species_string/i){
-                $looks_ok = 1;
-            }
+    elsif(defined $mined->{item}->{annotations}->{annotation} &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'HASH'){
+      foreach my $key (keys %{$mined->{item}->{annotations}->{annotation}}){
+        if(ref($mined->{item}->{annotations}->{annotation}->{$key}) eq 'HASH' &&
+          $mined->{item}->{annotations}->{annotation}->{$key}->{exact}){
+          if($mined->{item}->{annotations}->{annotation}->{$key}->{exact} =~ /$species_string/i){
+            $looks_ok = 1;
+          }
         }
+        if($key eq 'exact' && $mined->{item}->{annotations}->{annotation}->{$key} =~ /$species_string/i){
+          $looks_ok = 1;
+        }
+      }
     }
     return $looks_ok;
 }
@@ -490,8 +498,8 @@ sub check_dbSNP{
 
     foreach my $l (@{$dat}){ 
 
-        my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
-        my $ref   = get_epmc_data("search?query=ext_id:$l->[1]%20src:med");
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=MED:$l->[1]&type=Organisms&format=XML" );
+        my $ref   = get_epmc_data("webservices/rest/search?query=ext_id:$l->[1]%20src:med");
         unless(defined $mined && defined $ref){
             print $error_log "NO EPMC data for PMID:$l->[1] - skipping\n";
             next;
