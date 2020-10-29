@@ -393,7 +393,7 @@ sub update_meta_coord {
   my $table_name ='phenotype_feature';
 
   # delete previous phenotype_feature entries in update_meta_coord
-  my $mc_del_sth = $vdbh->do(qq[ DELETE * FROM meta_coord WHERE table_name ='$table_name' ]);
+  my $mc_del_sth = $vdbh->do(qq[ DELETE FROM meta_coord WHERE table_name ='$table_name' ]);
 
   # insert new phenotype_feature meta_coord entries
   my $mc_ins_sth = $vdbh->do(qq[ INSERT INTO meta_coord SELECT '$table_name', s.coord_system_id,
