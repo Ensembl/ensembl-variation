@@ -817,6 +817,8 @@ sub _inv_start_altered {
         my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
         $cdna_start += $shifting_offset;
         $cdna_end += $shifting_offset;
+
+        return 0 if length($utr_and_translateable) < $cdna_end;
         
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
