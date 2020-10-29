@@ -50,24 +50,35 @@ sub merge_vcf_files {
   my $input_dir_chr = $input_dir . '/' . $chr_dir . '/vcf_files';
   $self->param('input_dir_chr', $input_dir_chr);
 
+  my $final_file = $output_dir . '/' . $output_file_name . $chr_dir . '.vcf';
+  my $final_file_sorted = $output_dir . '/sorted_' . $output_file_name . $chr_dir . '.vcf';
+
+  open(my $write, '>', $final_file) or die $!;
+  my $header_line = "##fileformat=VCFv4.2\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n".
+    "##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n".
+    "##contig=<ID=6,length=170805979>\n##contig=<ID=7,length=159345973>\n##contig=<ID=8,length=145138636>\n".
+    "##contig=<ID=9,length=138394717>\n##contig=<ID=10,length=133797422>\n##contig=<ID=11,length=135086622>\n".
+    "##contig=<ID=12,length=133275309>\n##contig=<ID=13,length=114364328>\n##contig=<ID=14,length=107043718>\n".
+    "##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n".
+    "##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n".
+    "##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n".
+    "##INFO=<ID=SpliceAI,Number=.,Type=String,Description=\"SpliceAIv1.3 variant annotation. These include delta scores (DS) and delta positions (DP) for acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL\">\n".
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
+  print $write $header_line;
+  close($write);
+
   opendir(my $read_dir, $input_dir_chr) or die $!;
 
   while(my $tmp_vcf = readdir($read_dir)) {
-    next if ($tmp_vcf =~ m/^\./ || $tmp_vcf =~ m/\.gz/);
+    next if ($tmp_vcf =~ m/^\./);
 
-    # Some variants don't have a score - the main reason is because the transcript is not in the gene annotation file
-    # Before merging the files, the variants without scores need to be deleted
-    # $self->run_system_command("sed -i \"/\t\.\t\.\t\./d\" $input_dir_chr/$tmp_vcf");
-
-    $self->run_system_command("bgzip $input_dir_chr/$tmp_vcf");
-    $self->run_system_command("tabix -p vcf $input_dir_chr/$tmp_vcf.gz");
+    $self->run_system_command("grep \"^[^#]\" $input_dir_chr/$tmp_vcf >> $final_file ");
 
   }
   close($read_dir);
 
-  # $self->run_system_command("ls $input_dir_chr/*.vcf.gz | split -l 10 - $input_dir_chr/split2merge");
-  # $self->run_system_command("for f in $input_dir_chr/split2merge*; do bcftools merge -l \$f -m none -Oz -o tmp_\$f.vcf.gz; done");
-  # $self->run_system_command("bcftools merge -m none -Oz -o $output_file_name$chr_dir.vcf.gz $input_dir_chr/tmp_*.vcf.gz");
+  # Sort final file
+  $self->run_system_command("bcftools sort -o $final_file_sorted $final_file");
 }
 
 1;

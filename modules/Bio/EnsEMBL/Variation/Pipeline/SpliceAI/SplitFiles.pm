@@ -112,7 +112,7 @@ sub split_vcf_file {
     "##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n".
     "##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n".
     "##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n".
-    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\n";
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
     print $write $header_line;
 
     open(my $fh, '<:encoding(UTF-8)', $split_vcf_no_header_dir_chr . '/' . $split_vcf_no_header_file)
