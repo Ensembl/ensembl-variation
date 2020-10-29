@@ -50,9 +50,12 @@ sub merge_vcf_files {
   my $input_dir_chr = $input_dir . '/' . $chr_dir . '/vcf_files';
   $self->param('input_dir_chr', $input_dir_chr);
 
+  # Final file + final file after it is sorted
   my $final_file = $output_dir . '/' . $output_file_name . $chr_dir . '.vcf';
   my $final_file_sorted = $output_dir . '/sorted_' . $output_file_name . $chr_dir . '.vcf';
 
+  # Write final file header
+  # Header contains the INFO for SpliceAI scores
   open(my $write, '>', $final_file) or die $!;
   my $header_line = "##fileformat=VCFv4.2\n##contig=<ID=1,length=248956422>\n##contig=<ID=2,length=242193529>\n".
     "##contig=<ID=3,length=198295559>\n##contig=<ID=4,length=190214555>\n##contig=<ID=5,length=181538259>\n".
@@ -72,6 +75,7 @@ sub merge_vcf_files {
   while(my $tmp_vcf = readdir($read_dir)) {
     next if ($tmp_vcf =~ m/^\./);
 
+    # Append the file content (excluding the headers) into final file
     $self->run_system_command("grep \"^[^#]\" $input_dir_chr/$tmp_vcf >> $final_file ");
 
   }
