@@ -82,12 +82,13 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
-  my ($dbID, $description, $name, $class_attrib) = rearrange([qw(dbID DESCRIPTION NAME CLASS_ATTRIB)], @_);
+  my ($dbID, $stable_id, $description, $name, $class_attrib) = rearrange([qw(dbID STABLE_ID DESCRIPTION NAME CLASS_ATTRIB)], @_);
 
   $class_attrib ||= ATTRIB_TRAIT; #default phenotype class type
 
   $self = {
       'dbID'        => $dbID,
+      'stable_id'   => $stable_id,
       'description' => $description,
       'name'        => $name,
       'class_attrib'=> $class_attrib,
@@ -116,6 +117,23 @@ sub dbID {
   my $self = shift;
   return $self->{'dbID'} = shift if(@_);
   return $self->{'dbID'};
+}
+
+=head2 stable_id
+
+  Example    : $stable_id = $obj->stable_id()
+  Description: Getter/Setter for the stable_id
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub stable_id {
+  my $self = shift;
+  return $self->{'stable_id'} = shift if(@_);
+  return $self->{'stable_id'};
 }
 
 =head2 name
