@@ -137,7 +137,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -149,6 +150,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
