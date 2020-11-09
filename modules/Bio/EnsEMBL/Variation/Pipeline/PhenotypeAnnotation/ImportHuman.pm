@@ -40,8 +40,23 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportHuman;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID DDG2P CGC HUMAN NONE SPECIES);
+use Bio::EnsEMBL::Variation::Utils::SeqRegionUtils qw(update_seq_region_ids);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID DDG2P CGC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
+
+# branch numbers from config file
+my %source2branch = (
+  GWAS      => 2,
+  EGA       => 3,
+  ORPHANET  => 4,
+  MIMMORBID => 5,
+  DDG2P     => 6,
+  CGC       => 7,
+
+  HUMAN     => 2,
+  HUMAN_VAR => 2,
+  HUMAN_GENE=> 4,
+);
 
 sub fetch_input {
     my $self = shift;
@@ -56,9 +71,17 @@ sub fetch_input {
       my %import_species = SPECIES;
       #if HUMAN runtype, then select species by looking up MIMMORBID species
       # expectation is that MIMMORBID will always be only homo_sapiens
-      my $type = ($run_type eq HUMAN) ? 'MIMMORBID' : $run_type;
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$type}} ]);
-      $self->print_pipelogFH("Setting up for $type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
+      die ("$run_type not defined in ImportHuman!\n") if (!$source2branch{$run_type});
+
+      $self->param('output_ids',  [ map { {run_type => $run_type, species => $_} } @{$import_species{$run_type}} ]);
+      $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
+    }
+
+    # if gene imports are performed then check first that the seq_region ids are in sync
+    if ($run_type ne GWAS && $run_type ne EGA && $run_type ne HUMAN_VAR){
+      # species parameter needs to be set for the core db, variation db adaptor fetch
+      $self->param('species', 'homo_sapiens');
+      update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor);
     }
 }
 
@@ -67,30 +90,21 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ( $run_type eq GWAS || $run_type eq HUMAN){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      $self->print_pipelogFH( "Passing to NHGRI-EBI GWAS import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq EGA){
-      $self->dataflow_output_id($self->param('output_ids'), 3);
-      $self->print_pipelogFH( "Passing to EGA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq ORPHANET){
-      $self->dataflow_output_id($self->param('output_ids'), 4);
-      $self->print_pipelogFH( "Passing to Orphanet import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq MIMMORBID){
-      $self->dataflow_output_id($self->param('output_ids'), 5);
-      $self->print_pipelogFH( "Passing to MIMmorbid import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq DDG2P){
-      $self->dataflow_output_id($self->param('output_ids'), 6);
-      $self->print_pipelogFH( "Passing to DDG2P import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq CGC){
-      $self->dataflow_output_id($self->param('output_ids'), 7);
-      $self->print_pipelogFH( "Passing to CGC import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    if ($source2branch{$run_type}){
+      $self->dataflow_output_id($self->param('output_ids'), $source2branch{$run_type});
+      $self->print_pipelogFH( "Passing to $run_type import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    } else {
+      $self->print_pipelogFH("Runtype $run_type not supported!\n");
+      close($self->pipelogFH) if defined $self->pipelogFH;
+      die("Unsupported $run_type\n");
     }
 
     $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
+
+    #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
     $self->dataflow_output_id($self->param('output_ids'), 1);
   }
-  close($self->logFH) if defined $self->logFH;
+  close($self->pipelogFH) if defined $self->pipelogFH;
 
 }
 

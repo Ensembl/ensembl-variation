@@ -63,6 +63,9 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
+  ## before finishing, meta_coord needs updating
+  $self->update_meta_coord();
+
   ## retrieve old results from production db for comparison if available
   my $previous_counts = $self->get_old_results();
 
