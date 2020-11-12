@@ -1072,7 +1072,7 @@ sub get_variant{
     }
 
     my $location_identifier = $var_feat->location_identifier();
-    warn "search SPDI_location_Str: $location_identifier\n";
+    warn "search SPDI_location_identifier: $location_identifier\n";
 
     my $vfs_from_db = $var_feat_adaptor->fetch_all_by_location_identifier($location_identifier);
     # check for > 1 here
