@@ -1133,7 +1133,7 @@ sub get_variant_by_slice_allele{
   foreach my $vf (@$var_feats){
 
     my %dballeles;
-    my @alleles = split/\//, $var_feats->[0]->allele_string;
+    my @alleles = split/\//, $vf->allele_string;
     foreach my $a(@alleles){ $dballeles{$a} = 1;}
 
     if( $dballeles{$cv_allele}){
