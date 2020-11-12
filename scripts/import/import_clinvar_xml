@@ -115,6 +115,8 @@ my %omimVarSet;
 
 my $pheno_set_id   = get_set($dbh, "ph_variants"); #All phenotype/disease variants
 my $clinvar_set_id = get_set($dbh, "ClinVar"); #All ClinVar variants
+my $clinassoc_set_id = get_set($dbh, "clin_assoc"); #ClinVar pathogenic variants
+
 
 ## default ClinVar phenotype description if non available
 my $default_pheno  = "ClinVar: phenotype not specified";
@@ -292,6 +294,11 @@ sub get_set{
     'ClinVar'           => {
       'desc' => 'Variants with ClinVar annotation',
       'name' => 'All ClinVar'},
+    'clin_assoc' => {
+      'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
+      'name' => 'Clinically associated variants'
+     },
+
   };
 
   my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id
@@ -824,7 +831,7 @@ sub import_phenotype_feature{
       if $DEBUG == 1;
 
     ## add evidence and variation_set_id to variation_feature
-    update_variation_feature($feature);
+    update_variation_feature($feature, $attribs{clinvar_clin_sig});
 
     my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
       -slice          => $feature->slice(),
@@ -865,6 +872,7 @@ sub update_variation_set{
 
 sub update_variation_feature{
   my $vf      = shift;
+  my $clinsig = shift;
 
   my $vf_upd_sth = $dbh->prepare(qq[
       UPDATE variation_feature
@@ -878,6 +886,7 @@ sub update_variation_feature{
   if ($omimVarSet{$vf->variation->dbID}) {
     $new_sets .=",$omim_set_id";
   }
+  $new_sets .=",$clinassoc_set_id " if ($clinsig =~ /pathogenic|drug-response|histocompatibility/i && $clinsig !~ /non/);
   $vf_upd_sth->execute( $new_sets,  $vf->dbID );
 
 }
@@ -1020,7 +1029,8 @@ sub get_variant{
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     return ($new_var_ob,  $var_feat, $alt_allele);
 
-  } elsif (defined $ref_allele && defined $alt_allele &&
+  }  ## no rs id - try to look up based on positon & alleles
+  elsif (defined $ref_allele && defined $alt_allele &&
       defined $record->{feature_info}->{Chr} && defined $record->{feature_info}->{start}) {
     # try to match existing rsIDs in variation DB on location and allele string
     my $location_str = $record->{feature_info}->{Chr} . ":".
@@ -1036,16 +1046,72 @@ sub get_variant{
       foreach my $vf (@$var_feats){
         warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
       }
-    } else {
-      warn "no variation feature found for $location_str\n" if $DEBUG ==1;
-      return undef;
     }
-  } else {
+    else{
+      ## try to match to multi-allelic variants by location
+      return get_variant_by_slice_allele($record, $alt_allele);
+    }
+  }
+  else {
     warn "No ref or alt allele or location found\n" if $DEBUG == 1;
     return undef;
   }
-
 }
+
+
+=head2 get_variant_by_slice_allele
+
+  - look up variants at the same location as a ClinVar assertion
+  - only handles single base variants
+  - compare ClinVar allele to variation_feature.allele_string
+  - returns variation & variation_feature objects & associated allele (same as caller)
+
+=cut
+sub get_variant_by_slice_allele{
+
+  my $record    = shift;
+  my $cv_allele = shift;
+
+  return undef unless defined $cv_allele;
+
+  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end};
+
+  if(!defined $record->{feature_info}->{end} || $record->{feature_info}->{start} != $record->{feature_info}->{end}) {
+     warn "too long for slice look up: $location_string\n";
+     return undef;
+   }
+
+   my $slice =  $slice_adaptor->fetch_by_region( 'chromosome',
+                                                  $record->{feature_info}->{Chr},
+                                                  $record->{feature_info}->{start},
+                                                  $record->{feature_info}->{end} );
+   unless ($slice){
+     warn "No slice found at $location_string\n";
+     return undef;
+   }
+
+  my $var_feats = $var_feat_adaptor->fetch_all_by_Slice($slice);
+  if (scalar @{$var_feats} > 1) {
+     warn "multiple variation_features found for slice $location_string - picking first with matching alleles\n";
+  }
+
+  foreach my $vf (@$var_feats){
+
+    my %dballeles;
+    my @alleles = split/\//, $var_feats->[0]->allele_string;
+    foreach my $a(@alleles){ $dballeles{$a} = 1;}
+
+    if( $dballeles{$cv_allele}){
+      return ($vf->variation(), [$vf], $cv_allele);
+    }
+  }
+
+  ## if we get here there is no matching variant
+  warn "No var feats for this slice $location_string\n";
+  return undef;
+}
+
+
 
 =head2 enter_var
 
