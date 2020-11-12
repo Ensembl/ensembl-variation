@@ -1084,6 +1084,8 @@ sub get_variant{
       foreach my $vf (@$vfs_from_db){
         warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
       }
+    } else {
+      warn "no variation feature found via search by SPDI + location identifier\n";
     }
   } else {
     warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
