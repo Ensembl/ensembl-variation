@@ -1051,7 +1051,7 @@ sub get_variant{
         warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
       }
     } else {
-      warn "no variation feature found for via search by location identifier: $location_str\n" if $DEBUG ==1;
+      warn "no variation feature found via search by location identifier: $location_str\n" if $DEBUG ==1;
     }
   } else {
     warn "no ref or alt or chr or start, skipping lookup by location identifier\n";
@@ -1063,6 +1063,7 @@ sub get_variant{
     my $spdi_str = $record->{feature_info}->{canonicalSPDI};
     my $var_feat;
     eval {
+      #NOTE: this var_feat will have source 'Parsed from SPDI notation' and dbID undef
       $var_feat = $var_feat_adaptor->fetch_by_spdi_notation($spdi_str);
     };
     if ($@) {
@@ -1073,14 +1074,14 @@ sub get_variant{
     my $location_identifier = $var_feat->location_identifier();
     warn "search SPDI_location_Str: $location_identifier\n";
 
-    my $var_from_db = $var_feat_adaptor->fetch_all_by_location_identifier($location_identifier);
+    my $vfs_from_db = $var_feat_adaptor->fetch_all_by_location_identifier($location_identifier);
     # check for > 1 here
-    if ( scalar @$var_from_db == 1 ){
-      return ($var_from_db->[0]->variation(), $var_feats, $alt_allele);
-    } elsif (scalar @$var_from_db > 1) {
+    if ( scalar @$vfs_from_db == 1 ){
+      return ($vfs_from_db->[0]->variation(), $vfs_from_db, $alt_allele);
+    } elsif (scalar @$vfs_from_db > 1) {
       # check that variation will always have same name for multiple variation features!
       warn "multiple variation_features found for $spdi_str : \n";
-      foreach my $vf (@$var_from_db){
+      foreach my $vf (@$vfs_from_db){
         warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
       }
     }
