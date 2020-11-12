@@ -1053,6 +1053,8 @@ sub get_variant{
     } else {
       warn "no variation feature found for via search by location identifier: $location_str\n" if $DEBUG ==1;
     }
+  } else {
+    warn "no ref or alt or chr or start, skipping lookup by location identifier\n";
   }
 
   #try to match by SPDI: longest allele format
@@ -1083,14 +1085,12 @@ sub get_variant{
       }
     }
   } else {
-    warn "no SPDI available for entry\n";
+    warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
   }
 
   ## try to match to multi-allelic variants by location
   return get_variant_by_slice_allele($record, $alt_allele);
 
-  warn "No ref or alt allele or location found\n" if $DEBUG == 1;
-  return undef;
 }
 
 
