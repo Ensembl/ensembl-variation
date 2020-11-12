@@ -173,7 +173,7 @@ while($reader->read) {
       $versionDate->parse($releaseDate);
 
       #update ClinVar and OMIM source version with ClinVar xml version
-      $source->version($versionDate->warnf("%Y%m")); #201904
+      $source->version($versionDate->printf("%Y%m")); #201904
       save_source_version($source);
       $omim_source->version($source->version);
       save_source_version($omim_source);
