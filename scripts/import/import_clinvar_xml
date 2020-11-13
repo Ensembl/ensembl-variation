@@ -1058,6 +1058,30 @@ sub get_variant{
   }
 
   #try to match by SPDI: longest allele format
+  #returns undef for ref==alt SPDIs
+  my $result = get_variant_via_SPDI ($record, $alt_allele);
+  return $result unless !defined($result);
+
+  ## try to match to multi-allelic variants by location
+  return get_variant_by_slice_allele($record, $alt_allele);
+
+}
+
+
+=head2 get_variant_via_SPDI
+
+  - create a variation feature object based on ClinVar canonical SPDI
+  - use the variation feature object to create a location identifier
+  - search using the location identifier for any matching entries in the DB
+  - returns variation & variation_feature objects & associated allele (same as caller)
+
+=cut
+sub get_variant_via_SPDI{
+  my $record     = shift;
+  my $alt_allele = shift;
+
+  return undef unless defined $record && defined $alt_allele;
+
   if (defined $record->{feature_info}->{canonicalSPDI} ) {
     warn "search via SPDI + location\n";
     my $spdi_str = $record->{feature_info}->{canonicalSPDI};
@@ -1090,12 +1114,8 @@ sub get_variant{
   } else {
     warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
   }
-
-  ## try to match to multi-allelic variants by location
-  return get_variant_by_slice_allele($record, $alt_allele);
-
+  return undef;
 }
-
 
 =head2 get_variant_by_slice_allele
 
