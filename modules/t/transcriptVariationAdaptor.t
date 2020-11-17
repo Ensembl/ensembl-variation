@@ -80,8 +80,13 @@ ok( $trv->cdna_allele_string() eq 'C/G',                     "cdna_allele_string
 ok( $trv->affects_peptide() eq '1',                          "affects_peptide");
 ok( $trv->hgvs_transcript()->{'G'} eq  'ENST00000470094.1:c.16C>G', "hgvs c");
 ok( $trv->hgvs_protein()->{'G'}    eq  'ENSP00000434898.1:p.Ser6Cys', "hgvs p");
+
 my $tvas = $trv->get_all_alternate_TranscriptVariationAlleles();
 my $tva = $tvas->[0];
+$tva->{remove_hgvsp_version} = 1;
+delete($tva->{hgvs_protein});
+ok( $trv->hgvs_protein()->{'G'}    eq  'ENSP00000434898:p.Ser6Cys', "hgvs p no version");
+delete($tva->{remove_hgvsp_version});
 ok( $tva->sift_prediction eq 'deleterious',            "sift prediction");
 ok($tva->dbnsfp_meta_lr_prediction eq 'tolerated', "dbnsfp meta_lr prediction");
 ok($tva->dbnsfp_meta_lr_score == 0.459, "dbnsfp meta_lr score");
