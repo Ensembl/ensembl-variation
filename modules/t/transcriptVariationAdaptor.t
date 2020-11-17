@@ -282,6 +282,38 @@ foreach my $trans_varns (@{$trans_vars_ns}){
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset');
 }
 
+#Test shifting without db adaptor
+
+$vf_ad->db->shift_hgvs_variants_3prime(0) ;
+my $vf3 = Bio::EnsEMBL::Variation::VariationFeature->new
+  (-seq_region_name => $chr,
+   -start => $end,
+   -end   => $start,
+   -slice => $sl,
+   -strand => $strand,
+   -variation_name => $vname,
+   -allele_string => $allele_str,
+   -variation => $v,
+   -source => $source,
+   -is_somatic => $is_somatic,
+   -adaptor     => $vf_ad
+);
+
+my $trans_vars_ns2 = $vf3->get_all_TranscriptVariations( [$trans] );
+
+delete($vf3->{adaptor});
+$Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME = 0;
+
+foreach my $trans_varns (@{$trans_vars_ns2}){
+
+  next unless $trans_varns->transcript->stable_id() eq $trans_name;
+  my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles();
+
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location without adaptor' );
+  ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset without adaptor');
+}
+
+
 #store
 
 #make a backup of the current transcript_variation table before the store test
