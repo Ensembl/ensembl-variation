@@ -102,7 +102,7 @@ sub default_options {
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
 
-        run_import_type         =>  NONE,
+        run_type                =>  NONE,
 
         threshold_qtl           =>  undef, # default for RGD_qtl, AnimalQTL
 
@@ -164,27 +164,25 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         pipeline_dir        => $self->o('pipeline_dir'),
         debug_mode          => $self->o('debug_mode'),
-        run_type            => $self->o('run_import_type')
     );
 
     return [
         {   -logic_name => 'init_import_phenotype',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnnotation',
             -parameters => {
-                run_import_type   => $self->o('run_import_type'),
                 @common_params,
+                run_type => $self->o('run_type'),
             },
             -input_ids  => [{}],
             -rc_name    => 'default',
             -max_retry_count => 0,
             -flow_into  => {
-                '2->A' => [ 'import_human' ],
-                '3->A' => [ 'import_mouse' ],
-                '4->A' => [ 'import_animalset' ],
+                '2' => [ 'import_human' ],
+                '3' => [ 'import_mouse' ],
+                '4' => [ 'import_animalset' ],
 
-                '5->A' => [ 'import_rgd' ],
-                '6->A' => [ 'import_zfin' ],
-                'A->1' => [ 'finish_pipeline' ],
+                '5' => [ 'import_rgd' ],
+                '6' => [ 'import_zfin' ],
             },
         },
 

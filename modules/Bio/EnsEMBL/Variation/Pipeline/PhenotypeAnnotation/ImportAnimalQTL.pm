@@ -87,7 +87,7 @@ my %animalQTL_species_ok = (
   ovis_aries => 1,  #Ovis aries
   bos_taurus => 1, #Bos taurus
   equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 0,
+  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries (ovis_aries_variation)
 );
 
 
@@ -120,13 +120,8 @@ sub fetch_input {
   }
   $self->workdir($workdir);
 
-  # if not new data imported, still update source date check
-  if ( ! $animalQTL_species_ok{$species}){
-    # Get or add a source
-    $source_info{source_version} = strftime("%Y%m%d", localtime);
-    my $source_id = $self->get_or_add_source(\%source_info);
-    return;
-  }
+  # if assembly does not match, don't import data
+  return unless $animalQTL_species_ok{$species};
 
   $self->debug($self->param('debug_mode'));
 
@@ -220,26 +215,30 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
 sub write_output {
   my $self = shift;
 
+  # default branch is also check source branch
   if ($animalQTL_species_ok{$self->required_param('species')}){
     $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
     close($self->logFH) if (defined $self && defined $self->logFH) ;
     close($self->errFH) if (defined $self && defined $self->errFH) ;
     close($self->pipelogFH) if (defined $self && defined $self->pipelogFH) ;
 
-    $self->dataflow_output_id($self->param('output_ids'), 1);
   } else {
     open(my $pipelogFH, ">", $self->workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$self->required_param('species')) || die ("Failed to open file: $!\n");
     print $pipelogFH "Ensembl species has different assembly than AnimalQTL, will exit!\n";
     close($pipelogFH);
-    return;
   }
+
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
+  $self->dataflow_output_id($self->param('output_ids'), 1);
+
 }
 
 
