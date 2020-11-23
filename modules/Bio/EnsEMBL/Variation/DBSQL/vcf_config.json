@@ -583,7 +583,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm39",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
@@ -595,7 +595,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm39",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
