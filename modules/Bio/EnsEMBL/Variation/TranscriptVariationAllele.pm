@@ -1646,9 +1646,6 @@ sub _hgvs_protein {
     $tv->translation_end(undef, $shifting_offset)
   ){
     print "Exiting hgvs_protein - variant " . $vf->variation_name() . "not within translation\n"  if $DEBUG == 1;
-    unless ($hash_already_defined) {
-      _hgvs_only_shift_cleanup($self);
-    }
     return undef;
   }
        
