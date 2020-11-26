@@ -157,10 +157,10 @@ sub core_db_adaptor {
 
 sub variation_db_adaptor {
   my $self = shift;
+  
+  # no caching on purpose
+  return $self->get_species_adaptor("variation");
 
-  $self->{variation_dba} =  $self->get_species_adaptor("variation") if !defined $self->{variation_dba};
-
-  return $self->{variation_dba};
 }
 
 
