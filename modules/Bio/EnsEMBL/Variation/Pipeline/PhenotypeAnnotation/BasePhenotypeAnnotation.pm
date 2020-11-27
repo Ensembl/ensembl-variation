@@ -141,9 +141,9 @@ sub get_pubmed_prefix {
 sub core_db_adaptor {
   my $self = shift;
 
-  $self->{core_dba} = $self->get_species_adaptor("core") if !defined $self->{core_dba};
+  # no caching on purpose
+  return $self->get_species_adaptor("core");
 
-  return $self->{core_dba};
 }
 
 =head2 variation_db_adaptor
@@ -157,7 +157,7 @@ sub core_db_adaptor {
 
 sub variation_db_adaptor {
   my $self = shift;
-  
+
   # no caching on purpose
   return $self->get_species_adaptor("variation");
 
