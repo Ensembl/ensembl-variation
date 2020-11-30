@@ -1864,9 +1864,12 @@ sub fetch_by_hgvs_notation {
     ($start, $end) = _parse_hgvs_genomic_position($description) ;  
 
     throw ("Region requested must be smaller than 5kb") unless ($end - $start < 5000);
+
+    my ($highest_cs) = @{$self->db->get_CoordSystemAdaptor->fetch_all()};
+    my $coord_system = $highest_cs->name();
         
     ## grab reference allele; second call after "||" allows for LRG regions to be fetched
-    $slice = $slice_adaptor->fetch_by_region('chromosome', $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);    
+    $slice = $slice_adaptor->fetch_by_region($coord_system, $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);
     $strand =1; ## strand should be genome strand for HGVS genomic notation
     ($ref_allele, $alt_allele) = get_hgvs_alleles($hgvs);
 

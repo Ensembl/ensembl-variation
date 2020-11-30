@@ -516,4 +516,9 @@ throws_ok {$vfa->fetch_by_hgvs_notation('ENST00000470094.1:c.59A>G'); }qr/Refere
 my $ok_hgvs = 'ENSP00000293261.2:p.Ser455del';
 $vf = $vfa->fetch_by_hgvs_notation($ok_hgvs);
 ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
+
+my $lrg_hgvsg = 'LRG_293:g.69535N>G';
+$vf = $vfa->fetch_by_hgvs_notation($lrg_hgvsg);
+ok($vf->allele_string eq 'N/G', "HGVSg LRG");
+
 done_testing();
