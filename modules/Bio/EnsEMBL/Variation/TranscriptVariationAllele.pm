@@ -1564,10 +1564,11 @@ sub hgvs_transcript_reference {
 
 sub hgvs_protein {
   my $self     = shift;
-  $self->_hgvs_protein();
+  my $hgvs_protein = $self->_hgvs_protein();
   if ($self->{hgvs_only_shift}) {
     _hgvs_only_shift_cleanup($self);
   }
+  return $hgvs_protein;
 }
 
 
