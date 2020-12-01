@@ -45,7 +45,7 @@ use warnings;
 use base qw(Exporter);
 
 
-our @EXPORT_OK = qw(replace_char replace_hex);
+our @EXPORT_OK = qw(replace_char replace_hex decode_text);
 
 my %special_characters = (
   'Å' => 'A',
@@ -193,6 +193,49 @@ sub replace_hex {
   $text  =~ s/&#x0159;/r/g;
   $text  =~ s/&#x017d;/Z/g;
   $text  =~ s/&#8594;/->/g;
+
+  return $text;
+}
+
+=head2 decode_text
+
+
+  Example     : my $new_string = decode_text($old_string);
+  Description : returns the old_string with characters replaced in a standard format
+  ReturnType  : String
+  Exceptions  : None
+  Caller      : General
+
+=cut
+
+sub decode_text {
+  my $text = shift;
+
+  $text  =~ s/%3B/;/g;
+  $text  =~ s/%3D/=/g;
+  $text  =~ s/%25/%/g;
+  $text  =~ s/%26/&/g;
+  $text  =~ s/%2C/,/g;
+  $text  =~ s/\+\¦/o/g;
+  $text  =~ s/\÷/o/g;
+  $text  =~ s/\+\¿/e/g;
+  $text  =~ s/\+\¬/e/g;
+  $text  =~ s/\'\'\'\'//g;
+  $text  =~ s/&apos://g;
+  $text  =~ s/&lt;/</g;
+  $text  =~ s/Ã¶/o/g;
+  $text  =~ s/A¶/o/g;
+  $text  =~ s/Ã¨/e/g;
+  $text  =~ s/A¨/e/g;
+  $text  =~ s/Ã«/e/g;
+  $text  =~ s/A«/e/g;
+  $text  =~ s/Ã©/e/g;
+  $text  =~ s/A©/e/g;
+  $text  =~ s/Ã¼/u/g;
+  $text  =~ s/A¼/u/g;
+  $text  =~ s/Ã¤/a/g;
+  $text  =~ s/A¤/a/g;
+  $text  =~ s/Ð/-/g;
 
   return $text;
 }

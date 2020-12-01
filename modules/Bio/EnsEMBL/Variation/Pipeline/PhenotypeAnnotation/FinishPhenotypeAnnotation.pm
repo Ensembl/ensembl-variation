@@ -41,21 +41,30 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeA
 use strict;
 use warnings;
 use POSIX qw(strftime);
+use File::Path qw(make_path);
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
   my $self = shift;
 
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  my $workdir = $self->param('workdir');
-  $workdir ||= $self->param('pipeline_dir');
-  open(my $logFH, ">", $workdir."/REPORT_import_".$self->param("species").".txt") || die ("Failed to open file: $!\n");
+  my $workdir = $self->param('pipeline_dir')."/FinalChecks";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
+
+  open(my $logFH, ">>", $workdir."/REPORT_import_".$self->required_param('species').".txt") || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
 }
 
 sub run {
   my $self = shift;
+
+  ## before finishing, meta_coord needs updating
+  $self->update_meta_coord();
 
   ## retrieve old results from production db for comparison if available
   my $previous_counts = $self->get_old_results();

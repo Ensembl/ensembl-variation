@@ -54,10 +54,9 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $orphanet_data_url = 'http://www.orphadata.org/data/xml/en_product6.xml';
 
@@ -108,7 +107,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -120,6 +120,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH;
   close($self->pipelogFH) if defined $self->pipelogFH;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
@@ -155,7 +156,7 @@ sub parse_input_file {
   my $date = $1.$2.$3;
 
   foreach my $disorder ($orphanet_doc->findnodes('JDBOR/DisorderList/Disorder')) {
-    my ($orpha_number_node) = $disorder->findnodes('./OrphaNumber');
+    my ($orpha_number_node) = $disorder->findnodes('./OrphaCode');
     my $orpha_number = $orpha_number_node->to_literal;
     my ($name_node) = $disorder->findnodes('./Name');
     my $name = $name_node->to_literal;

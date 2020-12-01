@@ -16,6 +16,7 @@
 
 
 ## script to read data export from Europe PMC & UCSC and import as variation_citations
+## the script also imports citations from phenotype tables (phenotype_feature and phenotype_feature_attrib) only for human
 
 use strict;
 use warnings;
@@ -47,8 +48,7 @@ GetOptions ("data=s"        => \$data_file,
     );
 
 ## an export file is needed for EPMC data
-usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC");
-
+usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC" || $type eq "phenotype");
 
 my $http = HTTP::Tiny->new();
 
@@ -68,6 +68,12 @@ my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine",
 
 our $species_string = join "|", @{$check_species{$species}} if defined $check_species{$species};
 print "Checking species $species_string\n";
+
+# phenotype option is only available for human
+# print error message
+if($type eq 'phenotype' && $species_string !~/human|homo/) {
+  die "Type $type is only available for human\n";
+}
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->no_version_check(1); 
@@ -107,23 +113,41 @@ elsif($type eq "UCSC"){
     import_citations($reg, $file_data, $type);
 
 }
+elsif($type eq "phenotype"){
 
+  print STDERR "Publications from Phenotype feature table:\n";
+
+  my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
+  my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
+  my $source_ad = $reg->get_adaptor($species, 'variation', 'source');
+
+  # Fetch all citation source attribs
+  my $citation_attribs = get_citation_attribs($dba);
+
+  my $citations_pheno_feature = process_phenotype_feature($dba, $source_ad, $citation_attribs);
+  import_citations($reg, $citations_pheno_feature, $type);
+
+  my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
+  import_citations($reg, $citations_pheno_feature_attrib, $type);
+
+  check_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+}
 else{
-    die "Type $type is not recognised - must be EPMC or UCSC\n";
-} 
+    die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
+}
 
-## create report on curent status
+# create report on curent status
 my $title_null = report_summary($dba, $species);
 
-## add run date to meta table
-update_meta($dba, $type);
+# add run date to meta table
+update_meta($dba, $type) unless $type eq "phenotype";
 
-## clean publications after import
+# clean publications after import
 if(defined $clean && $clean == 1){
   clean_publications($dba, $title_null);
 }
 
-## update variations & variation_features to have Cited status
+# update variations & variation_features to have Cited status
 update_evidence($dba) unless defined $no_evidence;
 
 sub import_citations{
@@ -142,6 +166,9 @@ sub import_citations{
     elsif($type eq "UCSC"){
       print $not_found "rsID\tPMID\tDOI\tTitle\tAuthors\tYear\tUCSC\n";
     }
+    elsif($type eq "phenotype"){
+      print $not_found "rsID,PMID\n";
+    }
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -150,8 +177,8 @@ sub import_citations{
     my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
     my $done_list = get_current_citations($dba);
 
-    # Get attrib id for source
-    my $source_attrib_id = get_source_attrib_id($reg, $type);
+    # Get attrib id for source EPMC and UCSC
+    my $source_attrib_id = get_source_attrib_id($reg, $type) unless ($type eq 'phenotype');
 
     foreach my $pub(keys %$data){
 
@@ -162,6 +189,7 @@ sub import_citations{
 
         foreach my $rsid ( @var_id ){
             my $pub_pmid = $data->{$pub}->{pmid};
+            $source_attrib_id = $data->{$pub}->{source} if($type eq 'phenotype');
 
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
@@ -182,7 +210,10 @@ sub import_citations{
                 }
                 elsif($type eq "UCSC") {
                   print $not_found $rsid ."\t". $pub_pmid."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
-               }
+                }
+                elsif($type eq "phenotype") {
+                  print $not_found "$rsid,$pub_pmid\n";
+                }
                use warnings ;
             }
         }
@@ -272,7 +303,9 @@ sub get_publication_info_from_epmc{
 
     ### check is species mentioned if not human?
     if ($species_string !~/human|homo/ && defined $data->{$pub}->{pmcid} ){         
-        my $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );        
+        my $pmcid = $data->{$pub}->{pmcid};
+        $pmcid  =~ s/PMC//;
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=PMC:$pmcid&type=Organisms&format=XML" );        
         my $looks_ok = check_species($mined ,$data) ;
         
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
@@ -284,16 +317,16 @@ sub get_publication_info_from_epmc{
 
     ### get data on publication from ePMC
     if( defined $data->{$pub}->{pmid} ){
-      $ref = get_epmc_data( "search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
+      $ref = get_epmc_data( "webservices/rest/search?query=ext_id:$data->{$pub}->{pmid}%20src:med" );
     }
     elsif( defined $data->{$pub}->{doi} ){
-      $ref = get_epmc_data( "search?query=$data->{$pub}->{doi}" );
+      $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{doi}" );
       ## check results of full text query
       return undef unless defined  $data->{$pub}->{doi} &&
       $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
     }
     elsif(defined $data->{$pub}->{pmcid}){
-      $ref = get_epmc_data( "search?query=$data->{$pub}->{pmcid}" );
+      $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{pmcid}" );
       ## check results of full text query
       return undef unless defined $data->{$pub}->{pmcid} &&
       $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};
@@ -323,7 +356,7 @@ sub get_epmc_data{
     return undef unless defined $id && $id =~/\d+/;
 
     my $xs   = XML::Simple->new();
-    my $server = 'https://www.ebi.ac.uk/europepmc/webservices/rest/';
+    my $server = 'https://www.ebi.ac.uk/europepmc/';
     my $request  = $server . $id;
 
     my %data;
@@ -342,27 +375,32 @@ sub get_epmc_data{
 
 ## check if species is available in mined information
 ## essential for non-humans
-
 sub check_species{
 
     my ($mined ,$data)=@_ ;
     my $looks_ok = 0;
 
-    if(defined $mined->{semanticTypeList}->{semanticType}->{total}  &&
-       $mined->{semanticTypeList}->{semanticType}->{total} ==1){
-
-        print "found spec ". $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} . "\n"  if $DEBUG == 1;
-        if ($mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} =~ /$species_string/i){
-            $looks_ok = 1;
+    if(defined $mined->{item}->{annotations}->{annotation}  &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'ARRAY'){
+      foreach my $found (@{$mined->{item}->{annotations}->{annotation}}) {
+        if ($found->{exact} =~ /$species_string/i){
+          $looks_ok = 1;
         }
+      }
     }
-    else{
-        foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
-            print "found spec ". $found->{term} . "\n"  if $DEBUG == 1;
-            if ($found->{term} =~ /$species_string/i){
-                $looks_ok = 1;
-            }
+    elsif(defined $mined->{item}->{annotations}->{annotation} &&
+      ref($mined->{item}->{annotations}->{annotation}) eq 'HASH'){
+      foreach my $key (keys %{$mined->{item}->{annotations}->{annotation}}){
+        if(ref($mined->{item}->{annotations}->{annotation}->{$key}) eq 'HASH' &&
+          $mined->{item}->{annotations}->{annotation}->{$key}->{exact}){
+          if($mined->{item}->{annotations}->{annotation}->{$key}->{exact} =~ /$species_string/i){
+            $looks_ok = 1;
+          }
         }
+        if($key eq 'exact' && $mined->{item}->{annotations}->{annotation}->{$key} =~ /$species_string/i){
+          $looks_ok = 1;
+        }
+      }
     }
     return $looks_ok;
 }
@@ -460,8 +498,8 @@ sub check_dbSNP{
 
     foreach my $l (@{$dat}){ 
 
-        my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
-        my $ref   = get_epmc_data("search?query=ext_id:$l->[1]%20src:med");
+        my $mined = get_epmc_data( "annotations_api/annotationsByArticleIds?articleIds=MED:$l->[1]&type=Organisms&format=XML" );
+        my $ref   = get_epmc_data("webservices/rest/search?query=ext_id:$l->[1]%20src:med");
         unless(defined $mined && defined $ref){
             print $error_log "NO EPMC data for PMID:$l->[1] - skipping\n";
             next;
@@ -854,7 +892,7 @@ sub remove_publications{
         if(defined $failed_variant){
 
           # Check if there is other publications for variant 
-          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);          
+          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);
           $other_publications_sth->execute()||die;
           my $other_publications = $other_publications_sth->fetchall_arrayref();
           next unless (!defined $other_publications->[0]->[0]); 
@@ -993,9 +1031,215 @@ sub get_current_citations{
     return \%citations;
 }
 
+###
+# Get citations from phenotype tables
+
+sub process_phenotype_feature {
+  my $dba = shift;
+  my $source_ad = shift;
+  my $citation_attribs = shift;
+
+  my %list_citations_pheno_feature;
+
+  ## Get citations from phenotype_feature
+  my $pheno_citations_sth = $dba->dbc()->prepare(qq[ select s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id
+                                                from study s
+                                                inner join phenotype_feature p on s.study_id = p.study_id
+                                                where p.type = 'variation' and p.study_id is not null and s.external_reference is not null
+                                                group by s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id ]);
+  $pheno_citations_sth->execute()||die;
+  my $data = $pheno_citations_sth->fetchall_arrayref();
+
+  my %source_id_list;
+
+  foreach my $pheno_data (@{$data}){
+    my $source_id = $pheno_data->[1];
+    my $study_type = $pheno_data->[3];
+
+    next if(defined $study_type);
+
+    if(!defined $source_id_list{$source_id}) {
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+      $source_id_list{$source_id} = $source_attrib_id;
+    }
+  }
+
+  foreach my $l (@{$data}){
+    my $study_id = $l->[0];
+    my $source_id = $l->[1];
+    my $external_reference = $l->[2];
+    $external_reference =~ s/PMID://;
+    my $study_type = $l->[3];
+    my $rsid = $l->[4];
+
+    # Get attrib id for source - some are null 
+    my $source_attrib_id;
+    if(defined $study_type){
+      $source_attrib_id = $citation_attribs->{$study_type};
+      die "No attrib of type 'citation_source' was found for '$study_type'!\n" unless defined $source_attrib_id;
+    }
+    else{
+      # Get source name from source table (dbGaP)
+      $source_attrib_id = $source_id_list{$source_id};
+    }
+
+    my $tag = $source_attrib_id . "_" . $external_reference;
+
+    $list_citations_pheno_feature{$tag}{pmid} = $external_reference;
+
+    $list_citations_pheno_feature{$tag}{pmcid} = undef;
+    push @{$list_citations_pheno_feature{$tag}{rsid}}, $rsid;
+
+    $list_citations_pheno_feature{$tag}{source} = $source_attrib_id;
+  }
+
+  return \%list_citations_pheno_feature;
+}
+
+sub process_phenotype_feature_attrib {
+  my $dba = shift;
+  my $source_ad = shift;
+  my $citation_attribs = shift;
+
+  my %list_citations_pheno_feature_attrib;
+
+  my $pheno_feature_sth = $dba->dbc()->prepare(qq[ select pfa.phenotype_feature_id, pfa.value, pf.source_id, pf.object_id
+                                                   from phenotype_feature_attrib pfa
+                                                   inner join phenotype_feature pf on pfa.phenotype_feature_id = pf.phenotype_feature_id
+                                                   join attrib_type att on pfa.attrib_type_id = att.attrib_type_id
+                                                   where att.code = 'pubmed_id' ]);
+
+  $pheno_feature_sth->execute()||die;
+  my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
+
+  my %source_id_list;
+
+  foreach my $pheno_feat_data (@{$pheno_feature_data}){
+    my $source_id = $pheno_feat_data->[2];
+
+    if(!defined $source_id_list{$source_id}) {
+      my $source_obj = $source_ad->fetch_by_dbID($source_id);
+      my $source_name = $source_obj->name();
+      my $source_attrib_id = $citation_attribs->{$source_name};
+      die "No attrib of type 'citation_source' was found for '$source_name'!\n" unless defined $source_attrib_id;
+
+      $source_id_list{$source_id} = $source_attrib_id;
+    }
+  }
+
+  # Create map to associate PMID with all phenotype features it's linked to
+  foreach my $pheno_feat_data (@{$pheno_feature_data}){
+    # my $pheno_feat_id = $pheno_feat_data->[0];
+    my $value_pubid = $pheno_feat_data->[1];
+    my $source_id = $pheno_feat_data->[2];
+    my $var_name = $pheno_feat_data->[3];
+
+    my @value_pubid_splited = split /,/, $value_pubid;
+
+    # Get publication with same PMID from study table
+    foreach my $pmid (@value_pubid_splited){
+      # PMID=25806920 is the same paper as PMID=25806919
+      # PMID=25806919 is already in the publication table - faster to skip this PMID and avoid duplicated data
+      next if $pmid eq '25806920';
+
+      # Get source name from source table (ClinVar)
+      my $source_attrib_id = $source_id_list{$source_id};
+
+      my $tag = $source_attrib_id . "_" . $pmid;
+
+      $list_citations_pheno_feature_attrib{$tag}{pmid} = $pmid;
+
+      $list_citations_pheno_feature_attrib{$tag}{pmcid} = undef;
+      push @{$list_citations_pheno_feature_attrib{$tag}{rsid}}, $var_name;
+
+     $list_citations_pheno_feature_attrib{$tag}{source} = $source_attrib_id;
+    }
+  }
+
+  return \%list_citations_pheno_feature_attrib;
+}
+
+# The citations imported from the Phenotype tables (phenotype_feature and phenotype_feature_attrib) could be removed from the phenotype import in the future.
+# To avoid having outdated citations we check if all citations from the 3 sources (ClinVar, GWAS and dbGaP) are still in the Phenotype tables.
+sub check_outdated_citations {
+  my $dba = shift;
+  my $var_ad = shift;
+  my $pub_ad = shift;
+  my $citation_attribs = shift;
+  my $citations_pheno_feature = shift;
+  my $citations_pheno_feature_attrib = shift;
+
+  open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
+  print $wrt "RSID\tPMID\tSource\n";
+
+  # get all citations from the sources 'ClinVar', 'dbGaP' and 'GWAS' - imported from the phenotype tables
+  my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
+  my $attrib_id_gwas = $citation_attribs->{'GWAS'};
+  my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
+
+  my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
+                                               from variation_citation
+                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' or data_source_attrib like '%$attrib_id_dbgap%' ]);
+
+  $citations_sth->execute()||die;
+  my $citations_data = $citations_sth->fetchall_arrayref();
+
+  foreach my $c (@{$citations_data}){
+    my $variation_id = $c->[0];
+    my $publication_id = $c->[1];
+    my $attrib_id = $c->[2];
+
+    my $variation = $var_ad->fetch_by_dbID($variation_id);
+    die "No variation found for '$variation_id'!\n" unless defined $variation;
+
+    my $publication = $pub_ad->fetch_by_dbID($publication_id);
+    die "No publication found for '$publication_id'!\n" unless defined $publication;
+
+    my $variation_rsid = $variation->name();
+    my $publication_pmid = $publication->pmid();
+
+    my @split_attrib_id = split /,/, $attrib_id;
+
+    foreach my $attrib (@split_attrib_id) {
+      print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n" unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid});
+    }
+
+  }
+  close($wrt);
+}
+
+# Fetch all attribs that have type citation_source
+# Method used by type = 'phenotype'
+sub get_citation_attribs {
+  my $dba = shift;
+
+  my %attribs;
+
+  my $attrib_value_sth = $dba->dbc()->prepare(qq[ SELECT a.attrib_id, a.value FROM attrib a
+                                                  JOIN attrib_type at ON a.attrib_type_id = at.attrib_type_id
+                                                  WHERE at.code = 'citation_source' ]);
+  $attrib_value_sth->execute();
+  my $citation_attribs = $attrib_value_sth->fetchall_arrayref();
+
+  die "No attribute of type 'citation_source' was found in attrib table!\n" unless defined $citation_attribs->[0];
+
+  foreach my $data (@{$citation_attribs}){
+    my $id = $data->[0];
+    my $name = $data->[1];
+    $attribs{$name} = $id;
+  }
+
+  return \%attribs;
+}
+
 sub usage {
     
-    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC] -species [name] -registry [registry file]
+    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC or phenotype] -species [name] -registry [registry file]
 
 Options:  
           -data [file of citations]   - *required* for EPMC import

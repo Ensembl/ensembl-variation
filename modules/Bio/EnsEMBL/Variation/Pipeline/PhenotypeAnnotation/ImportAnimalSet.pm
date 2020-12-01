@@ -43,6 +43,13 @@ use strict;
 use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(ANIMALQTL OMIA ANIMALSET NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
+my %source2branch = (
+  OMIA      => 2,
+  ANIMALQTL => 3,
+);
+
+my $type;
+
 sub fetch_input {
     my $self = shift;
 
@@ -54,9 +61,9 @@ sub fetch_input {
 
     unless ($run_type eq NONE) {
       my %import_species = SPECIES;
-      $run_type = OMIA if $run_type eq ANIMALSET; #OMIA analysis will trigger all the subsequent ones
-      $self->param('output_ids',  [ map { {species => $_} } @{$import_species{$run_type}} ]);
-      $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$run_type}}). "\n") if $self->param('debug_mode') ;
+      $type = ($run_type eq ANIMALSET) ? 'OMIA' : $run_type;
+      $self->param('output_ids',  [ map { {run_type => $run_type, species => $_} } @{$import_species{$type}} ]);
+      $self->print_pipelogFH("Setting up for $run_type import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
     }
 }
 
@@ -65,15 +72,12 @@ sub write_output {
 
   my $run_type = $self->param('run_type');
   unless ($run_type eq NONE) {
-    if ( $run_type eq OMIA || $run_type eq ANIMALSET){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      $self->print_pipelogFH("Passing to OMIA import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
-    } elsif ( $run_type eq ANIMALQTL){
-      $self->dataflow_output_id($self->param('output_ids'), 3);
-      $self->print_pipelogFH( "Passing to AnimalQTL import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    if ($source2branch{$type}){
+      $self->dataflow_output_id($self->param('output_ids'), $source2branch{$type});
+      $self->print_pipelogFH( "Passing to $type import: ".scalar @{$self->param('output_ids')}." species\n") if $self->param('debug_mode');
+    } else {
+      $self->print_pipelogFH("Runtype $type not supproted!\n");
     }
-    $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
-    $self->dataflow_output_id($self->param('output_ids'), 1);
   }
   close($self->logFH) if defined $self->logFH;
 

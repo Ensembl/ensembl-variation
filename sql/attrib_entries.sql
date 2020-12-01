@@ -321,15 +321,20 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 532,'dbnsfp_revel_pred','dbNSFP REVEL prediction','dbNSFP REVEL prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 533,'dbnsfp_meta_lr_pred','dbNSFP MetaLR prediction','dbNSFP MetaLR prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 534,'dbnsfp_ma_pred','dbNSFP mutation assessor prediction','dbNSFP mutation assessor prediction');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (535, 'MANE_Select', 'MANE Select v0.7', 'MANE Select (v0.7) is the preliminary release (phase 3) of the MANE Select data set. The Matched Annotation from NCBI and EMBL-EBI project (MANE) is a collaboration between Ensembl-GENCODE and RefSeq to select a default transcript per human protein coding locus that is representative of biology, well-supported, expressed and conserved. This transcript set matches GRCh38 and is 100% identical between RefSeq and Ensembl-GENCODE for 5\' UTR, CDS, splicing and 3\' UTR.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (535, 'MANE_Select', 'MANE Select v0.9', 'MANE Select (v0.9) is the preliminary release (phase 5) of the MANE Select data set. The Matched Annotation from NCBI and EMBL-EBI project (MANE) is a collaboration between Ensembl-GENCODE and RefSeq to select a default transcript per human protein coding locus that is representative of biology, well-supported, expressed and conserved. This transcript set matches GRCh38 and is 100% identical between RefSeq and Ensembl-GENCODE for 5\' UTR, CDS, splicing and 3\' UTR.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (536, 'Ensembl_Select', 'Ensembl Select', 'The Ensembl Select is a transcript identified by a pipeline that takes into account several criteria including transcript support (TSL), functional importance (APPRIS), representation in RefSeq and UniProt databases, length and coverage of pathogenic variants, where available.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (537, 'TAGENE_transcript', 'TAGENE pipeline transcript', 'Transcript created or extended using a model assembled from RNA-seq long reads using the TAGENE pipeline.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (538, 'legacy_biotype', 'Legacy biotype', 'Obsolete biotype previously assigned to this Ensembl object.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (539, 'KASP_markers', 'KASP_markers', 'KASP markers designed to be genome-specific with PolyMarker');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (540, 'mirna_arm', 'miRNA arm', 'Hairpin arm from which this miRNA has come from');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', '');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (541, '_stop_codon_rt', 'Stop Codon Readthrough', NULL);
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (542, 'citation_source', 'Citation source', 'Variant citation data source');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (544, 'phenotype_type', 'Phenotype type', 'Type of the phenotype information');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (545,'external_plant_links','external_plant_links','Links to external plant related sources');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (546,'coord_system_tag','coord_system_tag','Coord_system_tag -- a way to store information about  seq_region\'s virtual coord_system names for single level assemblies.\r\nI.e., we have an assembly with toplevel seq_regions (\"primary_assembly\") only,\r\nand we want to store the initial type of  seq_regions like contig, scaffold, supercontig, chromosome, etc.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (547,'sequence_location','sequence_location','To identify  sequence locations / cellular compartments  DNA sequence comes from.\r\n\r\nValues are supposed to be SO compliant (children of the plastid_sequence SO:0000740 and nuclear_sequence SO:0000738 ):\r\n\"apicoplast_chromosome\",\r\n\"chloroplast_chromosome\",\r\n\"chromoplast_chromosome\",\r\n\"cyanelle_chromosome\",\r\n\"leucoplast_chromosome\",\r\n\"macronuclear_chromosome\",\r\n\"micronuclear_chromosome\",\r\n\"mitochondrial_chromosome\",\r\n\"nuclear_chromosome\"');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (548,'BRC4_seq_region_name','BRC4_seq_region_name','seq_region name for the BRC4 project');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (549,'EBI_seq_region_name','EBI_seq_region_name','EBI seq_region name for the BRC4 project data roundtripping');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -821,6 +826,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (570, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (571, 477, 'HapMap_WEC');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (572, 477, 'HapMap_GBS');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (573, 497, 'TOPMed');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (575, 470, 'SVA_insertion');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (578, 477, 'IHVs_AB');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (579, 477, 'IHVs_AD');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (580, 477, 'IHVs_BD');
@@ -903,6 +909,9 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (662, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (663, 544, 'non_specified');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (664, 544, 'tumour');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (665, 544, 'trait');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (666, 545, 'cerealsdb_external_links');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (667, 477, 'SARS_CoV-2_2alt');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (668, 480, 'affects');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);

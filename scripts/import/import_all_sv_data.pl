@@ -31,7 +31,7 @@ use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 
 use FindBin qw( $Bin );
 use Getopt::Long;
@@ -304,14 +304,17 @@ sub load_file_data{
 
 sub source {
   debug(localtime()." Inserting into source table");
-  
+
+  my $data_types = 'structural_variation,phenotype_feature,study';
+  my $somatic_status = 'mixed';
+
   # Check if the DGVa source already exists, else it create the entry
   if ($source_name eq 'DGVa') {
     if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})) {
       $dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='https://www.ebi.ac.uk/dgva/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version,data_types,somatic_status) VALUES ('$source_name','Database of Genomic Variants Archive','https://www.ebi.ac.uk/dgva/',$version,'$data_types','$somatic_status');});
     }
   }
   # Check if the dbVar source already exists, else it create the entry
@@ -320,7 +323,7 @@ sub source {
       $dbVar->do(qq{UPDATE IGNORE source SET description='NCBI database of human genomic structural variation',url='https://www.ncbi.nlm.nih.gov/dbvar/',version=$version where name='$source_name';});
     }
     else {
-      $dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('$source_name','NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version);});
+      $dbVar->do(qq{INSERT INTO source (name,description,url,version,data_types,somatic_status) VALUES ('$source_name','NCBI database of human genomic structural variation','https://www.ncbi.nlm.nih.gov/dbvar/',$version,'$data_types','$somatic_status');});
     }
   }
   my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='$source_name';})};
@@ -1530,10 +1533,25 @@ sub parse_9th_col {
     
     # Phenotype
     if ($key eq 'phenotype') {
+      # The input is a string of multiple phenotypes separated by comma
+      # Some phenotypes contain a comma in the description
+      # Replace the comma before splitting the multiple phenotypes
+      # Example: '46,XX Testicular Disorders of Sex Development'
+      if($value =~ /46,/) {
+        $value =~ s/46,/46-/g;
+      }
+
       $value =~ s/, /__/g;
+
       foreach my $phe (split(',', $value)) {
+        #Change back to comma
+        if($phe =~ /46-/) {
+          $phe =~ s/46-/46,/g;
+        }
 
         $phe = decode_text($phe);
+        # Some descriptions contain 'é'
+        $phe = replace_char($phe);
 
         $phe =~ s/__/, /g;
         $info->{phenotype}{$phe} = 1;
@@ -1603,28 +1621,6 @@ sub parse_9th_col {
 
   return $info;
 }
-
-# Replace weird characters
-# dbVar weird characters are still in the files - replace them here
-sub decode_text {
-  my $text = shift;
-
-  $text  =~ s/%3B/;/g;
-  $text  =~ s/%3D/=/g;
-  $text  =~ s/%25/%/g;
-  $text  =~ s/%26/&/g;
-  $text  =~ s/%2C/,/g;
-  $text  =~ s/\+\¦/o/g;
-  $text  =~ s/\÷/o/g;
-  $text  =~ s/\+\¿/e/g;
-  $text  =~ s/\+\¬/e/g;
-  $text  =~ s/\'\'\'\'//g;
-  $text  =~ s/&apos://g;
-  $text  =~ s/&lt;/</g;
-
-  return $text;
-}
-
 
 #### Pre processing ####
 sub pre_processing {
@@ -1976,7 +1972,7 @@ sub generate_data_row {
       $info->{bp_order} = undef;
     }
   }
-  $info->{phenotype} = decode_text($info->{phenotype}); 
+  $info->{phenotype} = decode_text($info->{phenotype}) if($info->{phenotype}); 
 
   my @row = map { $info->{$_} } @attribs;
 

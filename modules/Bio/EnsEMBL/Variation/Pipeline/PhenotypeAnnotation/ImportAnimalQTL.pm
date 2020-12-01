@@ -67,24 +67,27 @@ my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
   sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
   ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => $animalqtl_baseURL.'QTL_BovARS_1.2.gff.txt.gz', #Bos taurus
+  bos_taurus => $animalqtl_baseURL.'QTL_ARS-UCD_1.2.gff.txt.gz', #Bos taurus
   equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
+  ovis_aries_rambouillet => "",
 );
 
 my %animalQTL_species_fileNames = (
-  gallus_gallus => 'gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
-  sus_scrofa => 'sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
-  ovis_aries => 'ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => 'bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
-  equus_caballus => 'equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
+  gallus_gallus => 'QTL_gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
+  sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
+  ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  bos_taurus => 'QTL_bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
+  equus_caballus => 'QTL_equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
+  ovis_aries_rambouillet => 'QTL_', # place holder, as ovis aries data was remapped
 );
 
 my %animalQTL_species_ok = (
   gallus_gallus => 0, #Gallus gallus not same Ensembl assembly as AnimalQTL
   sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 1,  #Ovis aries
+  ovis_aries => 0,  #Ovis aries: not same Ensembl assembly as AnimalQTL
   bos_taurus => 1, #Bos taurus
   equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
+  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries (ovis_aries_variation)
 );
 
 
@@ -104,6 +107,7 @@ sub fetch_input {
                   source_status     => 'germline',
                   source_name       => 'Animal_QTLdb', #source name in the variation db
                   source_name_short => 'AnimalQTLdb',  #source identifier in the pipeline
+                  data_types        => 'phenotype_feature,study',
                   threshold => $threshold,
                   );
 
@@ -116,12 +120,10 @@ sub fetch_input {
   }
   $self->workdir($workdir);
 
+  # if assembly does not match, don't import data
   return unless $animalQTL_species_ok{$species};
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -132,7 +134,7 @@ sub fetch_input {
 
   # check if the species assembly specific file exists
   my $animalqtl_inputDir = $pipeline_dir."/".$source_info{source_name_short}."/animalqtl_data";
-  print $logFH "AnimalQTL import expects input folder with gff3 files: example format gallus_gallus.*.gff3  \n" if ($self->debug);
+  print $logFH "AnimalQTL import expects input folder with gff3 files: example format QTL_gallus_gallus.*.gff3  \n" if ($self->debug);
   print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if ($self->debug);
 
   my $inputFile = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
@@ -151,7 +153,7 @@ sub fetch_input {
     closedir(INDIR);
     my $ok = 0;
     foreach my $file (@files){
-      if ($file =~/^$species.*gff3$/ || $file =~/^$species.*gff3.gz$/){
+      if ($file =~/^QTL_$species.*gff3$/ || $file =~/^QTL_$species.*gff3.gz$/){
         $inputFile = $file;
         $ok = 1;
         last;
@@ -213,26 +215,30 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
 sub write_output {
   my $self = shift;
 
+  # default branch is also check source branch
   if ($animalQTL_species_ok{$self->required_param('species')}){
     $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
     close($self->logFH) if (defined $self && defined $self->logFH) ;
     close($self->errFH) if (defined $self && defined $self->errFH) ;
     close($self->pipelogFH) if (defined $self && defined $self->pipelogFH) ;
 
-    $self->dataflow_output_id($self->param('output_ids'), 1);
   } else {
     open(my $pipelogFH, ">", $self->workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$self->required_param('species')) || die ("Failed to open file: $!\n");
     print $pipelogFH "Ensembl species has different assembly than AnimalQTL, will exit!\n";
     close($pipelogFH);
-    return;
   }
+
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
+  $self->dataflow_output_id($self->param('output_ids'), 1);
+
 }
 
 

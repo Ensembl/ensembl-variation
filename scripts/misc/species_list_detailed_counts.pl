@@ -160,7 +160,7 @@ my %colours = ( 'hundred_million' => { 'order' => 1, 'colour' => 'vdoc_million_0
 
 my $sql = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 
-my @genotype_projects = ('1000 Genomes', 'ExAC', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
+my @genotype_projects = ('1000 Genomes', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Genomes', 'NextGen');
 my $genotypes_list = qq{<ul><li>}.join(' Project</li><li>',@genotype_projects).qq{ Project</li></ul>};
 
 my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
@@ -257,9 +257,8 @@ foreach my $type (@sql_order) {
 
     # loop over databases
     while (my ($dbname) = $sth->fetchrow_array) {
-      next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i);
+      next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
       next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-      
       print $dbname;
       $dbname =~ /^(.+)_variation/;
       my $s_name = $1;

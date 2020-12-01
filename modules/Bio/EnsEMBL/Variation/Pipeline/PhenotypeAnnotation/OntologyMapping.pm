@@ -67,7 +67,6 @@ sub fetch_input {
   }
 
   $self->debug($self->param('debug_mode'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
   $self->workdir($workdir);
 
   open(my $logFH, ">", $workdir."/".'log_import_out_ontologyMapping_'.$species) || die ("Could not open file for writing: $!\n");
@@ -100,9 +99,8 @@ sub run {
     $self->store_terms( $zooma_terms);
   }
 
-  $self->param('output_ids', { species => $self->required_param('species'),
-                               workdir => $self->workdir,
-                             });
+  $self->param('output_ids', [{species => $self->param('species')}]);
+
 }
 
 sub write_output {
@@ -113,6 +111,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }

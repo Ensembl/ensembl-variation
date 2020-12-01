@@ -55,8 +55,6 @@ sub fetch_input {
   my $coord_file   = $self->required_param('coord_file');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'Mouse Genome Informatics',
                   source_url => 'http://www.informatics.jax.org/',
@@ -119,7 +117,8 @@ sub run {
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                                species => $self->required_param('species'),
-                               workdir => $self->workdir
+                               workdir => $self->workdir,
+                               run_type => $self->required_param('run_type')
                              });
 }
 
@@ -131,6 +130,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }

@@ -456,7 +456,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`(50)),
   KEY `species_value_idx` (`species_id`,`meta_value`(50))
-) ENGINE=MyISAM AUTO_INCREMENT=763 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=766 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -812,7 +812,7 @@ CREATE TABLE `regulatory_feature` (
   UNIQUE KEY `uniqueness_constraint_idx` (`feature_type_id`,`seq_region_id`,`seq_region_strand`,`seq_region_start`,`seq_region_end`,`stable_id`,`bound_start_length`,`bound_end_length`,`regulatory_build_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=64 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=65 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation` (
   `segmentation_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
@@ -913,13 +913,6 @@ CREATE TABLE `transcription_factor_complex_composition` (
   KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
   KEY `transcription_factor_id_idx` (`transcription_factor_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=773 DEFAULT CHARSET=latin1;
-
-CREATE TABLE `underlying_structure` (
-  `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
-  `regulatory_feature_id` int(11) unsigned NOT NULL,
-  `motif_feature_id` int(11) unsigned NOT NULL,
-  PRIMARY KEY (`underlying_structure_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `unmapped_object` (
   `unmapped_object_id` int(10) unsigned NOT NULL AUTO_INCREMENT,

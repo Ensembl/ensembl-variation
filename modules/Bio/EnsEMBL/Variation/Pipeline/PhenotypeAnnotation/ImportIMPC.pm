@@ -54,10 +54,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
   my $coord_file   = $self->required_param('coord_file');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   %source_info = (source_description => 'International Mouse Phenotyping Consortium',
                   source_url => 'https://www.mousephenotype.org/',
@@ -103,6 +102,7 @@ sub run {
 
   my $file_impc = $self->required_param('impc_file');
   my $coord_file = $self->required_param('coord_file');
+  my $run_type = $self->required_param('run_type');
 
   # dump and clean pre-existing phenotypes
   $self->dump_phenotypes($source_info{source_name}, 1);
@@ -125,7 +125,8 @@ sub run {
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
                               species => $self->required_param('species'),
-                              workdir => $self->workdir
+                              workdir => $self->workdir,
+                              run_type => $self->required_param('run_type'),
                             });
 }
 
@@ -137,6 +138,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }

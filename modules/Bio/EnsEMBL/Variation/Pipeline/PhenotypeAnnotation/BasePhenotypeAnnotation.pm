@@ -131,45 +131,43 @@ sub get_pubmed_prefix {
 
 =head2 core_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $core_dba = $obj->core_db_adaptor()
-  Description: Get/set the core_db_adaptor
+  Description: Get the core_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
 =cut
 
 sub core_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{core_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{core_dba} = $self->get_species_adaptor("core") if !defined $self->{core_dba};
+
   return $self->{core_dba};
 }
 
 =head2 variation_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new core_db_adaptor
   Example    : $variation_dba = $obj->variation_db_adaptor()
-  Description: Get/set the variation_db_adaptor
+  Description: Get the variation_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
 =cut
 
 sub variation_db_adaptor {
-  my ($self, $db_adaptor) = @_;
-  $self->{variation_dba} = $db_adaptor if defined $db_adaptor;
+  my $self = shift;
+
+  $self->{variation_dba} =  $self->get_species_adaptor("variation") if !defined $self->{variation_dba};
+
   return $self->{variation_dba};
 }
 
 
 =head2 ontology_db_adaptor
 
-  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor $db_adaptor (optional)
-               The new ontology_db_adaptor
   Example    : $ontology_dba = $obj->ontology_db_adaptor()
-  Description: Get/set the ontology_db_adaptor
+  Description: Get the ontology_db_adaptor
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
   Exceptions : none
 
@@ -177,7 +175,9 @@ sub variation_db_adaptor {
 
 sub ontology_db_adaptor {
   my ($self, $db_adaptor) = @_;
-  $self->{ontology_dba} = $db_adaptor if defined $db_adaptor;
+
+  $self->{ontology_dba} =  $self->get_adaptor('multi', 'ontology') if !defined $self->{ontology_dba};
+
   return $self->{ontology_dba};
 }
 
@@ -359,9 +359,52 @@ sub print_pipelogFH {
 }
 
 
+sub default_phenotype_class {
+  my ($self, $pheno_class) = @_;
+
+  if (defined $pheno_class ){
+    $self->{default_phenotype_class} = $pheno_class ;
+  } elsif (! defined $self->{default_phenotype_class}){
+    # phenotype class is similar to variation class as it contains an attrib_id of specific attrib_type
+    $self->{default_phenotype_class} = $self->_get_attrib_ids("phenotype_type", "trait");
+  }
+
+  return $self->{default_phenotype_class};
+}
+
 
 #----------------------------
 # PUBLIC METHODS
+
+=head2 update_meta_coord
+
+  Example    : $obj->update_meta_coord()
+  Description: Update phenotype_feature meta_coord entries in variation db
+  Returntype : none
+  Exceptions : none
+
+=cut
+
+sub update_meta_coord {
+  my $self = shift;
+
+  my $core_db_name = $self->core_db_adaptor->dbc()->dbname();
+  my $vdbh =  $self->variation_db_adaptor->dbc();
+  my $table_name ='phenotype_feature';
+
+  # delete previous phenotype_feature entries in update_meta_coord
+  my $mc_del_sth = $vdbh->do(qq[ DELETE FROM meta_coord WHERE table_name ='$table_name' ]);
+
+  # insert new phenotype_feature meta_coord entries
+  my $mc_ins_sth = $vdbh->do(qq[ INSERT INTO meta_coord SELECT '$table_name', s.coord_system_id,
+              MAX( 1 + cast( t.seq_region_end as signed) - cast( t.seq_region_start as signed) )
+              FROM $table_name t, $core_db_name.seq_region s, $core_db_name.coord_system c
+              WHERE t.seq_region_id = s.seq_region_id AND c.coord_system_id=s.coord_system_id AND c.species_id=1
+              GROUP BY s.coord_system_id ]);
+
+}
+
+
 
 =head2 get_seq_region_ids
 
@@ -376,6 +419,8 @@ sub print_pipelogFH {
 sub get_seq_region_ids {
   my $self = shift;
 
+  return $self->{seq_region_ids} if (defined $self->{seq_region_ids});
+
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT seq_region_id, name
     FROM seq_region
@@ -387,7 +432,8 @@ sub get_seq_region_ids {
   $seq_region_ids{$name} = $id while $sth->fetch();
   $sth->finish;
 
-  return \%seq_region_ids;
+  $self->{seq_region_ids} = \%seq_region_ids;
+  return $self->{seq_region_ids};
 }
 
 
@@ -1385,9 +1431,12 @@ sub _get_phenotype_id {
     $description = $description_bak;
   }
 
+  # get default phenotype class attrib:
+  my $phenotype_class_id = $self->default_phenotype_class;
+
   # finally if no match, do an insert
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
-    INSERT IGNORE INTO phenotype ( name, description ) VALUES ( ?,? )
+    INSERT IGNORE INTO phenotype ( name, description , class_attrib_id ) VALUES ( ?,? , $phenotype_class_id )
   });
 
   $sth->bind_param(1,$name,SQL_VARCHAR);

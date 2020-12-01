@@ -1347,9 +1347,13 @@ sub hgvs_transcript {
 
   my $variation_feature_sequence;
   my $adaptor_shifting_flag = 1;
-  
   ## Check previous shift_hgvs_variants_3prime flag and act accordingly
-  $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
+  if (defined($vf->adaptor) && defined($vf->adaptor->db)) {
+    $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime();
+  }
+  elsif(defined($Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME)){
+    $adaptor_shifting_flag = $Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME;
+  }
   
   my $hash_already_defined = defined($self->{shift_hash}); 
   ## Perform HGVS shift even if no_shift is on
@@ -1613,9 +1617,13 @@ sub _hgvs_protein {
   my $tr          = $tv->transcript;
 
   my $adaptor_shifting_flag = 1;
-
   ## Check previous shift_hgvs_variants_3prime flag and act accordingly
-  $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime() if (defined($vf->adaptor) && defined($vf->adaptor->db));
+  if (defined($vf->adaptor) && defined($vf->adaptor->db)) {
+    $adaptor_shifting_flag = $vf->adaptor->db->shift_hgvs_variants_3prime();
+  }
+  elsif(defined($Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME)){
+    $adaptor_shifting_flag = $Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME;
+  }
   
   ## Check to see if the shift_hash is already defined, allowing us to remove it from associated $tva objects when we only want to shift HGVS
   my $hash_already_defined = defined($self->{shift_hash});
@@ -1689,16 +1697,16 @@ sub _hgvs_protein {
     delete($self->{codon});
     delete($self->{feature_seq});
     $self->shift_feature_seqs();
-  }
-  
-  if(defined($ref->{shift_hash})  && $self->{shift_hash}->{shift_length} != 0) {
-    delete($ref->{peptide});
-    delete($ref->{codon});
-    delete($ref->{feature_seq});
 
-    $ref->{variation_feature_seq} = $self->{shift_hash}->{ref_orig_allele_string};
-    $ref->{variation_feature_seq} = $self->{shift_hash}->{shifted_allele_string} if $vf->var_class eq 'deletion';  
-    $ref->{shifted_feature_seqs} = 1;
+    if(defined($ref->{shift_hash})) {
+      delete($ref->{peptide});
+      delete($ref->{codon});
+      delete($ref->{feature_seq});
+
+      $ref->{variation_feature_seq} = $self->{shift_hash}->{ref_orig_allele_string};
+      $ref->{variation_feature_seq} = $self->{shift_hash}->{shifted_allele_string} if $vf->var_class eq 'deletion';
+      $ref->{shifted_feature_seqs} = 1;
+    }
   }
   
   $hgvs_notation->{alt} = $self->peptide;
@@ -1860,7 +1868,17 @@ sub _get_hgvs_protein_format {
     $aa_til_stop = "?" unless defined $aa_til_stop ;
 
     $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
-    $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
+
+    # 2020-07-14
+    if( length($hgvs_notation->{ref}) >3 && $hgvs_notation->{type} eq "del" ) {
+      my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
+      my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+      $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} .$hgvs_notation->{alt} ;
+    }
+    else{
+      $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
+    }
+
   } 
 
   elsif( $hgvs_notation->{type} eq "dup"){
@@ -2532,7 +2550,7 @@ sub _shift_3prime{
   ## set new HGVS string
   $hgvs_notation->{alt} = $seq_to_check if $hgvs_notation->{type} eq 'ins';
   $hgvs_notation->{ref} = $seq_to_check if $hgvs_notation->{type} eq 'del';
-  
+
   return $hgvs_notation;
 }
 =head

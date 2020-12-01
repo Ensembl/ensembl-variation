@@ -22,7 +22,7 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Test::TestUtils;
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex decode_text);
 
 
 my $oldString = "Hôpitaux de Paris";
@@ -48,5 +48,9 @@ ok($newString eq "bmi more than 30", "special char(>) updated");
 $oldString = "isom&#xe8;res";
 $newString = replace_hex($oldString);
 ok($newString eq "isomeres", "hex replaced");
+
+$oldString = "Marinesco-Sj+¦gren syndrome";
+$newString = decode_text($oldString);
+ok($newString eq "Marinesco-Sjogren syndrome", "text replaced");
 
 done_testing();

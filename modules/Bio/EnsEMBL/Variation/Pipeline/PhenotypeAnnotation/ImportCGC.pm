@@ -57,9 +57,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'https://cancer.sanger.ac.uk/census',
@@ -67,7 +64,7 @@ sub fetch_input {
                   #source_version  will be set based on the date in the file name (year/month-> yyyymm)
                   source_status => 'somatic',
                   source_name => 'Cancer Gene Census',     #source name in the variation db
-                  source_name_short => 'CancerGeneCensus', #source identifier in the pipeline
+                  source_name_short => 'CGC', #source identifier in the pipeline
                   data_types => 'phenotype_feature,study',
                   );
 
@@ -152,7 +149,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -164,6 +162,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 
 }

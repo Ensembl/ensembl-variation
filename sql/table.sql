@@ -69,7 +69,7 @@ CREATE TABLE variation (
   minor_allele VARCHAR(50) DEFAULT NULL,
   minor_allele_freq FLOAT DEFAULT NULL,
   minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
-  clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective'),
+  clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
   evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
   display INT(1) DEFAULT 1,
 
@@ -213,7 +213,7 @@ CREATE TABLE variation_feature (
     minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
     evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
-    clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
+    clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
     display INT(1) DEFAULT 1,
 
    	PRIMARY KEY ( variation_feature_id ),
@@ -504,9 +504,6 @@ CREATE TABLE submitter_handle (
 
 @column allele_code_id	Primary key, internal identifier.
 @column allele      	String representing the allele. Has a unique constraint on the first 1000 characters (max allowed by MySQL).
-
-@example See below the first entries in the allele_code table:
-         @sql SELECT * FROM allele_code LIMIT 6;
 
 @see allele
 @see genotype_code
@@ -1131,7 +1128,7 @@ CREATE TABLE structural_variation (
 	source_id INT(10) UNSIGNED NOT NULL,
   study_id INT(10) UNSIGNED DEFAULT NULL,
 	class_attrib_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
-	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
+	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
@@ -1832,12 +1829,11 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '101');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '103');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_b.sql|Add new data_source_attrib to variation_citation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_102_103_a.sql|schema version');
 
 /**
 @header  Failed tables

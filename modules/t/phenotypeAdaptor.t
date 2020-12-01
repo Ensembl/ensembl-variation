@@ -22,6 +22,7 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Variation::Phenotype;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
@@ -41,9 +42,11 @@ ok($pa && $pa->isa('Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor'), "get phe
 my $p = $pa->fetch_by_dbID(1);
 ok($p && $p->name eq 'ACH', "fetch_by_dbID");
 ok($p->class_attrib eq 'trait', "fetch_by_dbID - class attrib");
+ok($p->stable_id eq 'test_stable_id', "fetch_by_dbID - stable_id");
 
 $p = $pa->fetch_by_description('ACHONDROPLASIA')->[0];
 ok($p && $p->name eq 'ACH', "fetch_by_description");
+ok($p && $p->stable_id eq 'test_stable_id', "fetch_by_description - get stable_id");
 
 {
   my $p = $pa->fetch_by_description_accession_type('BRUGADA SYNDROME')->[0];
@@ -53,16 +56,17 @@ ok($p && $p->name eq 'ACH', "fetch_by_description");
   throws_ok { $pa->fetch_by_description_accession_type('BRUGADA SYNDROME','badType'); } qr/badType is not a valid mapping type, valid types are: 'is','involves'/, 'fetch_by_description_accession_type - badType';
 }
 
+## test store default values
 $p->name('test');
 $p->description('test');
 delete $p->{dbID};
-
+delete $p->{stable_id};
 
 ok($pa->store($p), "store");
 $p = $pa->fetch_by_description('test')->[0];
 ok($p && $p->name eq 'test', "fetch stored");
 ok($p && $p->class_attrib_id == 665, "store - default class_attrib_id");
-
+ok($p && ! defined($p->stable_id), "store - default stable_id");
 
 ## check ontology accession handling
 my $map_data = { accession      => 'Orphanet:15', 
@@ -112,6 +116,27 @@ ok(scalar @{$p_by_OT_type} ==0, "fetch by OntologyTerm & mapping type");
 ## check what are the phenotype classes
 my $pheno_classes = $pa->get_all_phenotype_class_types();
 ok(scalar $pheno_classes == 3, "get phenotype classes");
+
+## check create new phenotype and store
+$multi->hide('variation', 'phenotype');
+my $new_pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => "test_pheno_desc" );
+ok($new_pheno->class_attrib eq 'trait', "default class attrib - trait");
+ok(! defined $new_pheno->class_attrib_id , "default class attrib id - undef");
+$pa->store($new_pheno);
+my $class_attr_id = $new_pheno->class_attrib_id;
+ok(defined $class_attr_id && $class_attr_id eq '665', "class attrib id - 665(trait)");
+$multi->restore('variation', 'phenotype');
+
+## test store stable_id
+my $p2 = $pa->fetch_by_dbID(2);
+$p2->description('test2');
+$p2->stable_id('test_id');
+delete $p2->{dbID};
+$multi->hide('variation', 'phenotype');
+ok($pa->store($p2), "store");
+my $p3 = $pa->fetch_by_description('test2')->[0];
+ok($p3 && $p3->stable_id eq 'test_id', "store - expected stable_id");
+$multi->restore('variation', 'phenotype');
 
 done_testing();
 

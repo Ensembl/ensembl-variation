@@ -74,6 +74,11 @@ my $inheritance_attrib_type = 'inheritance_type';
 my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$inheritance_attrib_type'};
 my $inheritance_attrib_type_id = ($dbh->selectall_arrayref($stmt))->[0][0];
 
+# Phenotype class attrib id
+my $phenotype_attrib = 'trait';
+$stmt = qq{ SELECT attrib_id FROM attrib WHERE value='$phenotype_attrib'};
+my $phenotype_attrib_id = ($dbh->selectall_arrayref($stmt))->[0][0];
+
 my $find_existing_var_sth = $dbh->prepare(qq{
     SELECT variation_id FROM variation WHERE name = ?
 });
@@ -99,8 +104,8 @@ my $select_phe_sth = $dbh->prepare(qq{
 });
 
 my $add_phe_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO phenotype (description)
-    VALUES (?)
+    INSERT IGNORE INTO phenotype (description, class_attrib_id)
+    VALUES (?, $phenotype_attrib_id)
 });
 
 my $find_existing_pf_sth = $dbh->prepare(qq{

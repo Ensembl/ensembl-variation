@@ -53,6 +53,8 @@ sub run {
   my $mtmp = $self->param('mtmp_table');
   my $max_distance = $self->param('max_distance');
   my $by_transcript = ($self->param('analysis') eq 'by_transcript') ? 1 : 0;
+  my $prevent_shifting = $self->param('prevent_shifting');
+
 
   my $variations_to_include;
   # if (my $vars = $self->param('variations_to_include')) {
@@ -167,6 +169,7 @@ sub run {
         -adaptor      => $tva,
         -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
         -no_transfer    => 1,
+        -no_shift	=> $prevent_shifting, 
       );
 
       # if the variation has no effect on the transcript $tv will be undef

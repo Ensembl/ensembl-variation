@@ -97,7 +97,7 @@ my %species_synonyms = (
   'rat' => 'rattus_norvegicus',
   'sheep'  => 'ovis_aries',
   'tetraodon' => 'tetraodon_nigroviridis',
-  'turkey'  => 'Meleagris_gallopavo',
+  'turkey'  => 'meleagris_gallopavo',
   'zebra_finch' => 'taeniopygia_guttata',
   'zebrafish' => 'danio_rerio'
 );
@@ -107,10 +107,9 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $omia_url = 'https://omia.org/curate/causal_mutations/?format=gene_table';
 
@@ -149,7 +148,7 @@ sub fetch_input {
 
   #get section specific for this species
   print $logFH "Found folder (".$workdir_fetch."/omia_split) and will skip new split\n" if -e $workdir_fetch."/omia_split";
-  split_omia($workdir_fetch,$file_omia) unless -e $workdir_fetch."/"."omia_split";
+  $self->split_omia($workdir_fetch,$file_omia) unless -e $workdir_fetch."/"."omia_split";
 
   my $org_path = $pipeline_dir."/".$source_info{source_name_short}."/omia_split/omia_".$species.".txt";
   my $new_link = $workdir."/omia_".$species.".txt";
@@ -162,6 +161,7 @@ sub run {
   my $self = shift;
 
   my $omia_file = $self->required_param('omia_file');
+  my $run_type = $self->required_param('run_type');
 
   # dump and clean pre-existing phenotype features
   $self->dump_phenotypes($source_info{source_name}, 1);
@@ -176,7 +176,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name_short},
                       type => [$source_info{object_type}]);
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $run_type,
                              });
 }
 
@@ -188,6 +189,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH;
   close($self->pipelogFH) if defined $self->pipelogFH;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
@@ -205,6 +207,7 @@ sub write_output {
 =cut
 
 sub split_omia {
+  my $self = shift;
   my $workdir = shift;
   my $all_file = shift;
 
@@ -265,6 +268,14 @@ sub split_omia {
     close(OUT);
   }
 
+  #sheep is exception where it stands for ovis_aries and ovis_aries_rambouillet
+  if (-e  "$workdir/omia_split/$prefix"."ovis_aries".$suffix) {
+    my $cmd = "cp -p $workdir/omia_split/$prefix"."ovis_aries$suffix $workdir/omia_split/$prefix"."ovis_aries_rambouillet$suffix";
+    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+    if ($return_value) {
+      die("there was an error running as ($flat_cmd: $stderr)");
+    }
+  }
 }
 
 

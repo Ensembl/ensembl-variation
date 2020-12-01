@@ -39,9 +39,11 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAn
 use strict;
 use warnings;
 use POSIX qw(strftime);
+use File::Path qw(make_path);
+use Data::Dumper;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES IMPC OMIA);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(SPECIES MOUSE MGI OMIA HUMAN HUMAN_VAR HUMAN_GENE CGC EGA ANIMALSET ANIMALQTL RGD ZFIN);
 
 my $source;
 my $workdir;
@@ -49,12 +51,21 @@ my $species;
 my $report;
 my $count_ok = 1;
 
+my %groups_end_source = (
+  HUMAN      => CGC,
+  HUMAN_GENE => CGC,
+  HUMAN_VAR  => EGA,
+  ANIMALSET  => ANIMALQTL,
+  MOUSE      => MGI,
+);
+
 sub fetch_input {
   my $self = shift;
 
+  $species = $self->required_param('species');
   $source = $self->param('source');
   $workdir = $self->param('workdir');
-  $species = $self->param('species');
+  my $run_type =  $self->required_param('run_type');
 
   my ($logName, $logPipeName);
   if (defined $source) {
@@ -62,17 +73,23 @@ sub fetch_input {
     $logName = "REPORT_QC_".$source->{source_name}.".txt";
     $logPipeName = "log_import_debug_pipe_".$source->{source_name}."_".$self->param('species');
   } else {
-    $workdir = $self->param('pipeline_dir');
+    $workdir ||= $self->required_param('pipeline_dir')."/FinalChecks";
+    unless (-d $workdir) {
+      my $err;
+      make_path($workdir, {error => \$err});
+      die "make_path failed: ".Dumper($err) if $err && @$err;
+    }
     $logName = "REPORT_QC_". $species .".txt";
     $logPipeName = "log_import_debug_pipe_".$self->param('species');
   }
-
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   open(my $logFH, ">>", $workdir."/".$logName) || die ("Failed to open file: $!\n");
   open(my $pipelogFH, ">>", $workdir."/".$logPipeName) || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
   $self->pipelogFH($pipelogFH);
+
+  $self->param('output_ids', [{run_type => $run_type, species => $species}]);
+
 }
 
 sub run {
@@ -97,50 +114,78 @@ sub run {
 sub write_output {
   my $self = shift;
 
+  my $run_type = $self->param('run_type');
+
   #if these is a decrease in the number of entries, then stop the flow
   if (!$count_ok){
     $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
                        "PLEASE check import and redo import if needed!");
     close($self->logFH) if defined $self->logFH ;
     close($self->pipelogFH) if defined $self->pipelogFH ;
-    return;
+    die "Failed check_counts: decrease in one of the tables: phenotype, phenotype_feature, phenotype_feature_attrib, phenotype_ontology_accession a get DBA for $species \n";
   }
 
   #map of the species imported for each analysis
   my %import_species = SPECIES;
-  my %animalQTL_species = map { $_ => 1 } @{$import_species{AnimalQTL}};
 
-  #if source specific check, then flow to next import
+  #if parent job was source specific import: check if it is part of
+  # source specific run_type or a group run_type
   if (defined $source){
-    if ($source->{source_name} eq IMPC){
-      $self->dataflow_output_id($self->param('output_ids'), 2);
-      close($self->logFH) if defined $self->logFH ;
-      close($self->pipelogFH) if defined $self->pipelogFH ;
-      return;
-    } elsif ($source->{source_name} eq OMIA &&
-             defined($animalQTL_species{$species}) ){
-      # if this check is from OMIA import and species has AnimalQTL data
-      # then import the AnimalQTL data: flow number 2
-      $self->param('output_ids', [{species => $species}]);
-      $self->dataflow_output_id($self->param('output_ids'), 2);
+    # source only check run OR final source in set
+    if ( ($run_type eq $source->{source_name}) ||
+      ($groups_end_source{$run_type}
+      && $groups_end_source{$run_type} eq $source->{source_name}) ) {
+      $self->print_pipelogFH("Finished source only import ($source->{source_name} ".
+                       $self->param('species').
+                       ")\n");
+    }
+    elsif ($groups_end_source{$run_type}
+         && $groups_end_source{$run_type} ne $source->{source_name}) {
+
+      #source check and flow to next import, if not already at the end
+      my $fwd = 1;
+
+      if ($run_type eq ANIMALSET && $source->{source_name} eq OMIA) {
+        my %animalQTL_species = map { $_ => 1 } @{$import_species{ANIMALQTL}};
+        # only forward jobs to AnimalQTL for AnimalQTL species
+        $fwd = 0 if (!defined($animalQTL_species{$species}));
+      }
+
+      if ($fwd) {
+        #generally another import_source module
+        $self->dataflow_output_id($self->param('output_ids'), 2);
+      } else {
+        #either check_phenotypes or disappear into the ether
+        $self->dataflow_output_id($self->param('output_ids'), 3);
+      }
+    }
+
+    #If not RGD, ZFIN imports, then this is the end of source related check - module
+    if ($source->{source_name} ne RGD && $source->{source_name} ne ZFIN){
       close($self->logFH) if defined $self->logFH ;
       close($self->pipelogFH) if defined $self->pipelogFH ;
       return;
     }
   }
 
+  # don't proceed with ontology mapping if only human variants were imported
+  return if $run_type eq HUMAN_VAR;
+
+  # check job was post import - final species check run
   # if species is an 'ontology term species' then move to dataflow 2
   my %ontology_species = map { $_ => 1 } @{$import_species{'ontology'}};
   if (defined ($ontology_species{$self->param('species')})) {
     if ($self->param('debug_mode')) {
-      $self->pipelogFH("Passing $source->{source_name} import (".
+      my $source = $source->{source_name} // '';
+      $self->print_pipelogFH("Passing $source import (".
                        $self->param('species').
                        ") for adding ontology accessions (ontology_mapping)\n");
     }
     $self->dataflow_output_id($self->param('output_ids'), 2);
   } else {
     if ($self->param('debug_mode')) {
-      $self->pipelogFH("Passing $source->{source_name} import (".
+      my $source = $source->{source_name} // '';
+      $self->print_pipelogFH("Passing $source import (".
                        $self->param('species').
                        ") for summary counts (finish_phenotype_annotation)\n");
     }
@@ -181,15 +226,16 @@ sub check_phenotype_description{
     # : can be ok: example: UDP-glucose:hexose-1-phosphate uridylyltransferase activity
     # . can be ok: example: Blond vs. brown hair color (from gwas)
     # + can be ok: example: decreased KLRG1+ CD8 alpha beta T cell number
-    my @matches = $l->[1] =~ /\(|\)|\;|\?|\@|\*|\%/gm;
+    # () are currently tolerated, but not desired
+    my @matches = $l->[1] =~ /\;|\?|\@|\*|\%/gm;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) looks suspect!\n") if(scalar(@matches) >0);
 
     # check for characters which will be interpreted a new lines
     @matches = $l->[1] =~ /.*\n.*/;
     $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) contains a newline \n") if(scalar(@matches) >0);
 
-    # check for phenotype descriptions suggesting no phenotype
-    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] );
+    # check for phenotype descriptions suggesting no phenotype; these are now accepted
+    $self->print_logFH("WARNING: Phenotype : $full (id:$l->[0]) is not useful \n") if !checkNonTerms( $l->[1] ) && $self->param('debug_mode');
 
     # check for unsupported individual character
     my $unsupportedChar = getUnsupportedChar($l->[1]);
@@ -332,7 +378,6 @@ sub check_source {
   my $text_out = "\nSummary of results from CheckPhenotypeAnnotation (if less counts than previous)\n\n";
 
   my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
-  $count_ok = 0 if ($new_counts->{'phenotype_count'} < 5 );
   foreach my $table (@tables) {
     my $check_name = "$table\_count";
 

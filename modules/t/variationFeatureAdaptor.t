@@ -442,6 +442,7 @@ my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC
 throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
 $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
+ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
 
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000013.10:32954017::';
@@ -503,12 +504,16 @@ ok($vf->allele_string eq 'GCCCCCC/CT' , "Valid indel");
 my $spdi_lrg = 'LRG_293:69534:N:G';
 $vf = $vfa->fetch_by_spdi_notation($spdi_lrg);
 ok($vf->allele_string eq 'N/G', "LRG - Valid insertion 'LRG_293:69534:N:G'");
+$vf = $vfa->fetch_by_spdi_notation('NT_004487:127830:N:C');
+ok($vf->allele_string eq 'N/C', "NT - Valid substitution 'NT_004487:127830:N:C'");
 
 ## check ref matching
 my $bad_hgvs = 'ENSP00000434898.1:p.Cys6Ser';
-throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Could not uniquely determine nucleotide change from ENSP00000434898.1:p.Cys6Ser/, 'Throw if HGVS does not match reference';
+throws_ok {$vfa->fetch_by_hgvs_notation($bad_hgvs); }qr/Sequence translated from reference \(TCT -> S\) does not match input sequence \(C\)/, 'Throw if HGVS does not match reference';
+
+throws_ok {$vfa->fetch_by_hgvs_notation('ENST00000470094.1:c.59A>G'); }qr/Reference allele extracted from ENST00000470094:32954035-32954035 \(G\) does not match reference allele given by HGVS notation ENST00000470094\.1:c\.59A>G \(A\)/, 'Throws if reference allele does not match';
+
 my $ok_hgvs = 'ENSP00000293261.2:p.Ser455del';
 $vf = $vfa->fetch_by_hgvs_notation($ok_hgvs);
 ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
 done_testing();
-

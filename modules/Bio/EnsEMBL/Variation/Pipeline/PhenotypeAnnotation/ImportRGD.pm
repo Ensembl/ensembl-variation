@@ -53,10 +53,9 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
   my $threshold    = $self->param('threshold_qtl');
+  my $run_type     = $self->required_param('run_type');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
 
   my $rgd_ftp_url_qtl = 'ftp://ftp.rgd.mcw.edu/pub/data_release/';
   my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
@@ -152,6 +151,7 @@ sub run {
                       type => ['QTL', 'Gene']);
   $self->param('output_ids', { source => \%param_source, 
                                species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -162,7 +162,8 @@ sub write_output {
   close($self->logFH) if defined $self->logFH ;
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
-  
+
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 

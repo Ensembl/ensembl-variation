@@ -57,9 +57,6 @@ sub fetch_input {
   my $species      = $self->required_param('species');
 
   $self->debug($self->param('debug_mode'));
-  $self->core_db_adaptor($self->get_species_adaptor('core'));
-  $self->variation_db_adaptor($self->get_species_adaptor('variation'));
-  $self->ontology_db_adaptor($self->get_adaptor('multi', 'ontology'));
 
   %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
                   source_url => 'https://decipher.sanger.ac.uk/',
@@ -68,6 +65,7 @@ sub fetch_input {
                   source_name => 'DDG2P',       #source name in the variation db
                   source_name_short => 'DDG2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
+                  data_types        => 'phenotype_feature',
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
@@ -114,7 +112,8 @@ sub run {
   my %param_source = (source_name => $source_info{source_name},
                       type => $source_info{object_type});
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type'),
                              });
 }
 
@@ -126,6 +125,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
+  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
   $self->dataflow_output_id($self->param('output_ids'), 1);
 }
 
