@@ -1,0 +1,37 @@
+1	\N	schema_type	variation
+2	\N	schema_version	103
+3	\N	patch	patch_90_91_a.sql|schema version
+4	\N	patch	patch_90_91_b.sql|extend the characters supported in the publication.authors column
+30	\N	patch	patch_91_92_c.sql|Change the column zygosity in the table structural_variation_sample
+29	\N	patch	patch_91_92_b.sql|Add index on feature_stable_id in regulatory_feature_variation and motif_feature_variation
+28	\N	patch	patch_91_92_a.sql|schema version
+23	\N	patch	patch_90_91_c.sql|Add new column zygosity in the table structural_variation_sample
+31	\N	patch	patch_91_92_d.sql|create table to store names of submitters to ClinVar etc
+34	\N	patch	patch_92_93_a.sql|schema version
+35	\N	patch	patch_92_93_b.sql|Extend phenotype_ontology_accession mapped_by_attrib predefined set
+36	\N	patch	patch_92_93_c.sql|Add new evidence attribs to the variation and variation_feature tables
+37	\N	patch	patch_93_94_a.sql|schema version
+38	\N	patch	patch_94_95_a.sql|schema version
+39	\N	patch	patch_94_95_b.sql|create table to store allele synonyms
+47	\N	patch	patch_95_96_a.sql|schema version
+48	\N	patch	patch_95_96_b.sql|modify index on variation_synonym
+49	\N	patch	patch_95_96_c.sql|add new entries to the failed_description table
+50	\N	patch	patch_95_96_d.sql|create table to store failed variation features
+51	\N	patch	patch_95_96_e.sql|Rename motif_name to binding_matrix_stable_id.
+52	\N	patch	patch_96_97_a.sql|schema version
+53	\N	patch	patch_96_97_b.sql|move ancestral allele column to variation_feature
+54	\N	patch	patch_96_97_c.sql|add an unique index on the name column
+57	\N	patch	patch_97_98_a.sql|schema version
+60	\N	patch	patch_98_99_a.sql|schema version
+61	\N	patch	patch_98_99_b.sql|Add the column data_source_attrib in the table variation_citation
+62	\N	patch	patch_98_99_c.sql|Increase the size of the title and doi columns in the publication table
+63	\N	patch	patch_98_99_d.sql|add key data_source_attrib
+64	\N	patch	patch_98_99_e.sql|Fix attrib ids in table variation_citation
+66	\N	patch	patch_99_100_a.sql|schema version
+67	\N	patch	patch_99_100_b.sql|add frequency to structural variation
+68	\N	patch	patch_99_100_c.sql|add class_attrib_id column to phenotype
+71	\N	patch	patch_100_101_a.sql|schema version
+72	\N	patch	patch_100_101_b.sql|Add new data_source_attrib to variation_citation
+75	\N	patch	patch_101_102_a.sql|schema version
+76	\N	patch	patch_101_102_b.sql|Add new clinical_significance to variation, variation_feature and structural_variation
+80	\N	patch	patch_102_103_a.sql|schema version

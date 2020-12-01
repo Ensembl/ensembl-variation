@@ -1,0 +1,5 @@
+1	dbSNP	150	Variants (including SNPs and indels) imported from dbSNP [remapped to ARS-UCD1.2]	https://www.ncbi.nlm.nih.gov/snp/	\N	mixed	variation
+2	Archive dbSNP	150	Former variants names imported from dbSNP	https://www.ncbi.nlm.nih.gov/snp/	\N	mixed	variation_synonym
+3	DGVa	201807	Database of Genomic Variants Archive [remapped to ARS-UCD1.2]	http://www.ebi.ac.uk/dgva/	\N	germline	structural_variation,study
+4	OMIA	20201120	Online Mendelian Inheritance in Animals (OMIA) is a database of genes, inherited disorders and traits in more than 200 animal species (other than human and mouse)	https://omia.org	\N	germline	phenotype_feature
+5	Animal_QTLdb	20201120	The Animal Quantitative Trait Loci (QTL) database (Animal QTLdb) is designed to house all publicly available QTL and association data on livestock animal species	https://www.animalgenome.org/cgi-bin/QTLdb/index	\N	germline	phenotype_feature,study

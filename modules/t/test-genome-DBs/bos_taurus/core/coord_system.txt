@@ -1,0 +1,1 @@
+1	1	primary_assembly	ARS-UCD1.2	1	default_version,sequence_level

@@ -1,0 +1,1 @@
+3	protein_align_feature	396

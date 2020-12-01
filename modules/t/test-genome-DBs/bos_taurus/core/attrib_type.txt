@@ -1,0 +1,12 @@
+1	embl_acc	European Nucleotide Archive (was EMBL) accession	ENA
+6	toplevel	Top Level	Top Level Non-Redundant Sequence Region
+10	SNPCount	Short Variants	Total Number of SNPs
+64	coding_cnt	Coding genes	Number of protein coding Genes
+67	pseudogene_cnt	Pseudogenes	Number of pseudogenes
+142	GeneGC	Gene GC	Percentage GC content for this gene
+353	noncoding_cnt	Non coding genes	Number of non coding genes
+367	karyotype_rank	Rank in the karyotype	For a given seq_region, if it is part of the species karyotype, will indicate its rank
+389	noncoding_cnt_s	Small non coding genes	Number of small non coding genes
+390	noncoding_cnt_l	Long non coding genes	Number of long non coding genes
+427	appris	APPRIS	APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. APPRIS also selects one of the CDS for each gene as the principal isoform. APPRIS defines the principal variant by combining protein structural and functional information and information from the conservation of related species. principal1 - APPRIS principal isoform. principal2 - APPRIS candidate isoform (CCDS). principal3 - APPRIS candidate isoform (earliest CCDS). principal4 - APPRIS candidate isoform (longest CCDS). principal5 - APPRIS candidate isoform (longest coding sequence). alternative1 - APPRIS candidate isoform that is conserved in at least three tested species. alternative2 - APPRIS candidate isoform that appears to be conserved in fewer than three tested species
+444	noncoding_cnt_m	Misc non coding genes	Number of unclassified (miscellaneous) non coding genes

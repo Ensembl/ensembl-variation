@@ -1,0 +1,5 @@
+1	All failed variations	Variations that have failed the Ensembl QC checks	179
+2	Genotyping chip variants	Variants which have assays on commercial chips held in ensembl	360
+3	Illumina BovineHD BeadChip	Variants from the Illumina BovineHD BeadChip genotyping array	350
+4	Illumina BovineLD BeadChip	Variants from the Illumina BovineLD BeadChip genotyping array	351
+5	Illumina BovineSNP50 BeadChip	Variants from the Illumina BovineSNP50 BeadChip genotyping array	352
