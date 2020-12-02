@@ -309,10 +309,20 @@ sub parse_input_file {
       next;
     }
 
+    my $phenotype_description= $extra->{Name};
+    if ($phenotype_description eq '' && defined ($extra->{trait})){
+      $phenotype_description = $extra->{trait};
+    }
+
+    if ($phenotype_description eq '') {
+      print $errFH1 "WARNING: Could not find a phenotype description for the QTL ".$extra->{QTL_ID}."\n";
+      next;
+    }
+
     # create phenotype hash
     my $phenotype = {
       'id' => $extra->{QTL_ID},
-      'description' => $extra->{Name},
+      'description' => $phenotype_description,
       'seq_region_id' => $seq_region_ids->{$data[0]},
       'seq_region_start' => $data[3] || 1,
       'seq_region_end' => $data[4],
