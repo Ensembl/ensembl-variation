@@ -1,2 +1,0 @@
-477	short_name	Short name	A shorter name for an instance, e.g. a VariationSet
-497	evidence	Variant evidence status	Evidence status for a variant

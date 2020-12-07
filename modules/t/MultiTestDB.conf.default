@@ -11,10 +11,6 @@
       'otherfeatures' => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
       'funcgen'       => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
     },
-    'bos_taurus' => {
-      'core'          => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
-      'variation'     => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor',
-    },
     'test_collection' => {
       'core' => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
     },

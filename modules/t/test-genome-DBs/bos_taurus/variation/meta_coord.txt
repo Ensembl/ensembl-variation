@@ -1,3 +1,0 @@
-phenotype_feature	1	364327
-variation_feature	1	724
-structural_variation_feature	1	152419506

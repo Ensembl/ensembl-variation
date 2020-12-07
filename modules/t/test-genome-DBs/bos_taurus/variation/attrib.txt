@@ -1,6 +1,0 @@
-179	477	fail_all
-350	477	BovineHD
-351	477	BovineLD
-352	477	BovineSNP50
-360	477	all_chips
-367	497	Multiple_observations

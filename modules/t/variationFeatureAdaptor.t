@@ -521,20 +521,4 @@ my $lrg_hgvsg = 'LRG_293:g.69535N>G';
 $vf = $vfa->fetch_by_hgvs_notation($lrg_hgvsg);
 ok($vf->allele_string eq 'N/G', "HGVSg LRG");
 
-## TEST ANOTHER SPECIES
-#########################
-my $multi_cow = Bio::EnsEMBL::Test::MultiTestDB->new('bos_taurus');
-my $vdb_cow = $multi->get_DBAdaptor('variation');
-my $db_cow  = $multi->get_DBAdaptor('core');
-$vdb_cow->dnadb($db_cow);
-my $vfa_cow = $vdb_cow->get_VariationFeatureAdaptor();
-
-my $hgvsg_cow = '1:g.346786N>C';
-my $vf_cow = $vfa_cow->fetch_by_hgvs_notation($hgvsg_cow);
-ok($vf_cow->allele_string eq 'N/C', "Cow - fetch by HGVS genomic");
-
-my $spdi_cow = '1:346785:N:C';
-my $vf_cow_2 = $vfa_cow->fetch_by_spdi_notation($spdi_cow);
-ok($vf_cow_2->allele_string eq 'N/C', "Cow - fetch by SPDI");
-
 done_testing();
