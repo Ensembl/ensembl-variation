@@ -83,6 +83,5 @@ sub set_chr_from_filename {
   $self->param('chr', $chr);
 }
 
-
 1;
 
