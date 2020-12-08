@@ -456,7 +456,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`(50)),
   KEY `species_value_idx` (`species_id`,`meta_value`(50))
-) ENGINE=MyISAM AUTO_INCREMENT=766 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=767 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
