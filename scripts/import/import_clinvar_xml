@@ -1059,11 +1059,11 @@ sub get_variant{
 
   #try to match by SPDI: longest allele format
   #returns undef for ref==alt SPDIs
-  my $result = get_variant_via_SPDI ($record, $alt_allele);
-  return $result unless !defined($result);
+  my ($var, $var_feats) = get_variant_via_SPDI ($record);
+  return ($var, $var_feats, $alt_allele) unless !defined($var);
 
   ## try to match to multi-allelic variants by location
-  return get_variant_by_slice_allele($record, $alt_allele);
+  return get_variant_by_slice_allele($record, $ref_allele, $alt_allele);
 
 }
 
@@ -1078,9 +1078,8 @@ sub get_variant{
 =cut
 sub get_variant_via_SPDI{
   my $record     = shift;
-  my $alt_allele = shift;
 
-  return undef unless defined $record && defined $alt_allele;
+  return undef unless defined $record;
 
   if (defined $record->{feature_info}->{canonicalSPDI} ) {
     warn "search via SPDI + location\n";
@@ -1101,7 +1100,7 @@ sub get_variant_via_SPDI{
     my $vfs_from_db = $var_feat_adaptor->fetch_all_by_location_identifier($location_identifier);
     # check for > 1 here
     if ( scalar @$vfs_from_db == 1 ){
-      return ($vfs_from_db->[0]->variation(), $vfs_from_db, $alt_allele);
+      return ($vfs_from_db->[0]->variation(), $vfs_from_db);
     } elsif (scalar @$vfs_from_db > 1) {
       # check that variation will always have same name for multiple variation features!
       warn "multiple variation_features found for $spdi_str : \n";
@@ -1128,6 +1127,7 @@ sub get_variant_via_SPDI{
 sub get_variant_by_slice_allele{
 
   my $record    = shift;
+  my $cv_ref    = shift;
   my $cv_allele = shift;
 
   return undef unless defined $cv_allele;
@@ -1157,10 +1157,16 @@ sub get_variant_by_slice_allele{
 
     my %dballeles;
     my @alleles = split/\//, $vf->allele_string;
+    my $db_ref = shift @alleles;
+
     foreach my $a(@alleles){ $dballeles{$a} = 1;}
 
     if( $dballeles{$cv_allele}){
-      return ($vf->variation(), [$vf], $cv_allele);
+      if ($cv_ref eq $db_ref){
+        return ($vf->variation(), [$vf], $cv_allele);
+      } else {
+        warn "Variation feature with REF missmatch\n";
+      }
     }
   }
 
