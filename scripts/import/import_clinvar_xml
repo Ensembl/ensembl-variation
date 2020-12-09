@@ -178,7 +178,7 @@ while($reader->read) {
       $omim_source->version($source->version);
       save_source_version($omim_source);
     } else {
-      warn "WARNING: no source version found in input xml therefore no update to db source version.\n";
+      print "WARNING: no source version found in input xml therefore no update to db source version.\n";
     }
   } else {
     my $xml = $reader->readOuterXml;
@@ -206,7 +206,7 @@ sub process_clinvar_set {
 
     ## recover from partial loads with file of accessions already loaded
     if ($done{$record{Acc}}){
-      warn "INFO: skipping $record{Acc}\n";
+      print "INFO: skipping $record{Acc}\n";
       return undef;
     }
 
@@ -229,15 +229,15 @@ sub process_clinvar_set {
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
 
     ## Variant name, HGVS, OMIM id and location
-    warn "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
+    print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
     if (! defined $set->{ReferenceClinVarAssertion}->{MeasureSet} ||
       !defined $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type}){
-        warn "WARNING: No MeasureSet Type found for $record{Acc}.\n" ;
+        print "WARNING: No MeasureSet Type found for $record{Acc}.\n" ;
         return undef;
     }
     if ( $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne "Variant" &&
       $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne $haplotype_type ) {
-        warn "WARNING: Unsupported MeasureSet Type found for $record{Acc}: $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} .\n";
+        print "WARNING: Unsupported MeasureSet Type found for $record{Acc}: $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} .\n";
         return undef;
     }
 
@@ -507,7 +507,7 @@ sub get_feature{
              $feature{$varID}{hgvs_g} != $feature{measureXrefs}{$measure->{ID}}{hgvs_g}) ){
 
               # these phenotypes will end up not being imported unless the rsID already exists
-             warn "WARNING: removing location/hgvs for rsID with multiple locations/hgvs, as either of them can be correct: rs$rsID\n";
+             print "WARNING: removing location/hgvs for rsID with multiple locations/hgvs, as either of them can be correct: rs$rsID\n";
              delete @{$feature{$varID}}{qw/Chr start end hgvs_g gene/}; # $feature{'rs'.$rsID} left in palce as a mark
              delete @feature{qw/Chr start end hgvs_g gene/};
         } else {
@@ -829,7 +829,7 @@ sub import_phenotype_feature{
   }
 
   foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
-    warn "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
+    print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n"
       if $DEBUG == 1;
 
     ## add evidence and variation_set_id to variation_feature
@@ -1003,7 +1003,7 @@ sub get_variant{
   warn "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
 
   unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
-    warn "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
+    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
   }
 
   if (defined $rs_id) {
@@ -1014,7 +1014,7 @@ sub get_variant{
       my @features = $var_ob->get_all_VariationFeatures();
       return ($var_ob, @features , $alt_allele);
     }
-    warn "No record found for $dbSNP\n" if $DEBUG ==1;
+    print "No record found for $dbSNP\n" if $DEBUG ==1;
 
     ## ClinVar can be ahead of dbSNP - is there enough data to create a variation record?
 
@@ -1023,7 +1023,7 @@ sub get_variant{
         (defined $ref_allele && $ref_allele eq '') ||
         (defined $alt_allele && $alt_allele eq '') ||
         (defined $ref_allele && defined $alt_allele && $ref_allele eq $alt_allele) ) {
-      warn "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
+      print "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n";
       return undef;
     }
 
@@ -1242,7 +1242,7 @@ sub enter_var{
 
     # skip duplications that don't have start coinciding with hgvs parsed elements
     if ($refSeq[0] ne $altSeq[0]) {
-      warn "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{feature_info}->{hgvs_g} \n" ;
+      print "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{feature_info}->{hgvs_g} \n" ;
       return undef;
     }
 
@@ -1257,7 +1257,7 @@ sub enter_var{
   # case eg. NC_000009.12:g.137233961_137234061del
   elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
       my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
-      warn "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end );
+      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end );
       my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
                       $vf_start, $vf_end);
       $ref_allele = $refSlice->seq;
@@ -1267,7 +1267,7 @@ sub enter_var{
   # case eg. NC_000007.14:g.5978687_5978689delinsC
   elsif ($data->{feature_info}->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
       my ($start, $end, $alt) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
-      warn "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end  || $alt ne $alt_allele);
+      print "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end  || $alt ne $alt_allele);
       my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
                       $vf_start, $vf_end);
       $ref_allele = $refSlice->seq;
@@ -1329,7 +1329,7 @@ sub get_structural_variant{
 
   unless (defined $struct_var_ob && $struct_var_ob ne ''){
 
-    warn "Not entering SV: $record->{feature_info}->{dbVar}->[0] as not in db \n";
+    print "Not entering SV: $record->{feature_info}->{dbVar}->[0] as not in db \n";
     return undef;
   }
   my @features = $struct_var_ob->get_all_StructuralVariationFeatures();
@@ -1414,7 +1414,7 @@ sub get_attrib_id {
 
 sub clean_old_data{
 
-  warn "Deleting old phenotype, synonym and clinical_significance data\n";
+  print "Deleting old phenotype, synonym and clinical_significance data\n";
 
   my $phenfeatat_del_sth = $dba->dbc->do(qq[ delete from phenotype_feature_attrib where phenotype_feature_id in
                                              ( select phenotype_feature.phenotype_feature_id from phenotype_feature, source
