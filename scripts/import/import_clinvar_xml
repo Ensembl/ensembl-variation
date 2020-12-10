@@ -459,6 +459,8 @@ sub get_feature{
       $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
     }
 
+    ## save SPDI canonical
+    $feature{canonicalSPDI} = $measure->{CanonicalSPDI} if defined $measure->{CanonicalSPDI};
 
     ## HGVS genomic - used for allele extraction for novel variants 
     my $assembly_number  = $assembly; ## uses assembly without GRCh
@@ -1029,8 +1031,10 @@ sub get_variant{
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     return ($new_var_ob,  $var_feat, $alt_allele);
 
-  }  ## no rs id - try to look up based on positon & alleles
-  elsif (defined $ref_allele && defined $alt_allele &&
+  }
+
+  ## no rs id - try to look up based on positon & alleles : shortest allele format
+  if (defined $ref_allele && defined $alt_allele &&
       defined $record->{feature_info}->{Chr} && defined $record->{feature_info}->{start}) {
     # try to match existing rsIDs in variation DB on location and allele string
     my $location_str = $record->{feature_info}->{Chr} . ":".
@@ -1046,18 +1050,71 @@ sub get_variant{
       foreach my $vf (@$var_feats){
         warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
       }
+    } else {
+      warn "no variation feature found via search by location identifier: $location_str\n" if $DEBUG ==1;
     }
-    else{
-      ## try to match to multi-allelic variants by location
-      return get_variant_by_slice_allele($record, $alt_allele);
-    }
+  } else {
+    warn "no ref or alt or chr or start, skipping lookup by location identifier\n";
   }
-  else {
-    warn "No ref or alt allele or location found\n" if $DEBUG == 1;
-    return undef;
-  }
+
+  #try to match by SPDI: longest allele format
+  #returns undef for ref==alt SPDIs
+  my ($var, $var_feats) = get_variant_via_SPDI ($record);
+  return ($var, $var_feats, $alt_allele) unless !defined($var);
+
+  ## try to match to multi-allelic variants by location
+  return get_variant_by_slice_allele($record, $ref_allele, $alt_allele);
+
 }
 
+
+=head2 get_variant_via_SPDI
+
+  - create a variation feature object based on ClinVar canonical SPDI
+  - use the variation feature object to create a location identifier
+  - search using the location identifier for any matching entries in the DB
+  - returns variation & variation_feature objects & associated allele (same as caller)
+
+=cut
+sub get_variant_via_SPDI{
+  my $record     = shift;
+
+  return undef unless defined $record;
+
+  if (defined $record->{feature_info}->{canonicalSPDI} ) {
+    warn "search via SPDI + location\n";
+    my $spdi_str = $record->{feature_info}->{canonicalSPDI};
+    my $var_feat;
+    eval {
+      #NOTE: this var_feat will have source 'Parsed from SPDI notation' and dbID undef
+      $var_feat = $var_feat_adaptor->fetch_by_spdi_notation($spdi_str);
+    };
+    if ($@) {
+      warn "SPDI error: " . $@;
+      return undef;
+    }
+
+    my $location_identifier = $var_feat->location_identifier();
+    warn "search SPDI_location_identifier: $location_identifier\n";
+
+    my $vfs_from_db = $var_feat_adaptor->fetch_all_by_location_identifier($location_identifier);
+    # check for > 1 here
+    if ( scalar @$vfs_from_db == 1 ){
+      return ($vfs_from_db->[0]->variation(), $vfs_from_db);
+    } elsif (scalar @$vfs_from_db > 1) {
+      # check that variation will always have same name for multiple variation features!
+      warn "multiple variation_features found for $spdi_str : \n";
+      foreach my $vf (@$vfs_from_db){
+        warn "vf:". $vf->name . " allele string: ". $vf->allele_string . "\n";
+      }
+    } else {
+      warn "no variation feature found via search by SPDI + location identifier\n";
+    }
+  } else {
+    warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
+  }
+  return undef;
+}
 
 =head2 get_variant_by_slice_allele
 
@@ -1070,6 +1127,7 @@ sub get_variant{
 sub get_variant_by_slice_allele{
 
   my $record    = shift;
+  my $cv_ref    = shift;
   my $cv_allele = shift;
 
   return undef unless defined $cv_allele;
@@ -1098,11 +1156,17 @@ sub get_variant_by_slice_allele{
   foreach my $vf (@$var_feats){
 
     my %dballeles;
-    my @alleles = split/\//, $var_feats->[0]->allele_string;
+    my @alleles = split/\//, $vf->allele_string;
+    my $db_ref = shift @alleles;
+
     foreach my $a(@alleles){ $dballeles{$a} = 1;}
 
     if( $dballeles{$cv_allele}){
-      return ($vf->variation(), [$vf], $cv_allele);
+      if ($cv_ref eq $db_ref){
+        return ($vf->variation(), [$vf], $cv_allele);
+      } else {
+        warn "Variation feature with REF missmatch\n";
+      }
     }
   }
 
