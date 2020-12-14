@@ -83,6 +83,7 @@ my %project_urls = (
   'EVA'             => 'https://www.ebi.ac.uk/eva/?eva-study=###ID###',
   'Gambian Genome Variation Project' => 'https://www.internationalgenome.org/data-portal/data-collection/ggvp-grch38',
   'NCBI ALFA'       => 'https://www.ncbi.nlm.nih.gov/snp/docs/gsr/alfa/',
+  'GEM-J'           => 'https://togovar.biosciencedbc.jp/doc/datasets/gem_j_wga',
   'NHLBI Exome Sequencing Project' => 'https://evs.gs.washington.edu/EVS/',
   'ISGC'            => 'http://www.sheephapmap.org/'
 );
@@ -596,4 +597,3 @@ sub usage {
   } . "\n";
   exit(0);
 }
-
