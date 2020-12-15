@@ -173,7 +173,7 @@ sub pipeline_analyses {
                 @common_params,
                 run_type => $self->o('run_type'),
             },
-            -input_ids  => [{}],
+            -input_ids  => [],
             -rc_name    => 'default',
             -max_retry_count => 0,
             -flow_into  => {
