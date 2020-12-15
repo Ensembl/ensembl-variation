@@ -108,8 +108,7 @@ sub write_output {
 
     $self->print_logFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
 
-    #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
-    $self->dataflow_output_id($self->param('output_ids'), 1);
+    $self->dataflow_output_id($self->param('output_ids'), 4);
   }
   close($self->logFH) if defined $self->logFH;
 

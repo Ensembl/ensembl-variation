@@ -81,6 +81,7 @@ sub fetch_input {
     if ($run_type ne GWAS && $run_type ne EGA && $run_type ne HUMAN_VAR){
       # species parameter needs to be set for the core db, variation db adaptor fetch
       $self->param('species', 'homo_sapiens');
+      $DB::single=1;
       update_seq_region_ids($self->core_db_adaptor, $self->variation_db_adaptor);
     }
 }

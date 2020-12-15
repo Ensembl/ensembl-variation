@@ -173,7 +173,7 @@ sub pipeline_analyses {
                 @common_params,
                 run_type => $self->o('run_type'),
             },
-            -input_ids  => [],
+            -input_ids  => [], #default
             -rc_name    => 'default',
             -max_retry_count => 0,
             -flow_into  => {
@@ -193,7 +193,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -212,11 +212,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_gwas']
+                2 => [ 'check_gwas']
             },
         },
 
@@ -225,7 +225,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -240,11 +240,11 @@ sub pipeline_analyses {
                 ega_database_conf => $self->o('ega_database_conf'),
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_ega']
+                2 => [ 'check_ega']
             },
         },
 
@@ -253,7 +253,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -267,11 +267,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_orphanet']
+                2 => [ 'check_orphanet']
             },
         },
 
@@ -280,7 +280,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -294,11 +294,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_mimmorbid']
+                2 => [ 'check_mimmorbid']
             },
         },
 
@@ -307,7 +307,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -321,11 +321,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_ddg2p']
+                2 => [ 'check_ddg2p']
             },
         },
 
@@ -334,7 +334,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -348,11 +348,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_cancerGC']
+                2 => [ 'check_cancerGC']
             },
         },
 
@@ -361,7 +361,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -max_retry_count => 0,
@@ -374,13 +374,13 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
                 '2->A' => [ 'import_impc'],
                 '3->A' => [ 'import_mgi'],
-                'A->1' => [ 'check_phenotypes'],
+                'A->4' => [ 'check_phenotypes'],
             },
         },
 
@@ -389,11 +389,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => { 'check_impc' => INPUT_PLUS() },
+                2 => { 'check_impc' => INPUT_PLUS() },
             },
         },
 
@@ -402,7 +402,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -416,11 +416,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_mgi'],
+                2 => [ 'check_mgi'],
             },
         },
 
@@ -429,7 +429,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -max_retry_count => 0,
@@ -442,7 +442,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -456,12 +456,12 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_omia']
+                2 => [ 'check_omia']
             },
         },
 
@@ -470,7 +470,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
@@ -487,12 +487,12 @@ sub pipeline_analyses {
                 threshold_qtl       => $self->o('threshold_qtl'),
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_animalqtl']
+                2 => [ 'check_animalqtl']
             },
         },
 
@@ -501,12 +501,12 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into => {
-                1 => [ 'check_phenotypes']
+                2 => [ 'check_phenotypes']
             },
             -max_retry_count => 0,
         },
@@ -519,11 +519,11 @@ sub pipeline_analyses {
                 threshold_qtl   => $self->o('threshold_qtl'),
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                2 => [ 'check_phenotypes']
             },
         },
 
@@ -532,11 +532,11 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'check_phenotypes']
+                2 => [ 'check_phenotypes']
             },
         },
 
@@ -545,7 +545,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
@@ -559,12 +559,12 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                1 => [ 'finish_phenotype_annotation']
+                2 => [ 'finish_phenotype_annotation']
             },
         },
 
@@ -573,7 +573,7 @@ sub pipeline_analyses {
             -parameters => {
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -analysis_capacity => 1,
             -rc_name    => 'default',
@@ -588,10 +588,10 @@ sub pipeline_analyses {
                 pipeline_name => $self->o('pipeline_name'),
                 @common_params,
             },
-            -input_ids      => [],
+            -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
-            -flow_into      => {},
+            -flow_into      => {}, #default
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
         },
