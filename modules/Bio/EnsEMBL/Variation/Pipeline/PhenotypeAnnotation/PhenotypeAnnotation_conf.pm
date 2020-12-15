@@ -203,7 +203,7 @@ sub pipeline_analyses {
                 '5->A' => [ 'import_mimmorbid' ],
                 '6->A' => [ 'import_ddg2p' ],
                 '7->A' => [ 'import_cancerGC' ],
-                'A->1' => [ 'check_phenotypes'],
+                'A->8' => [ 'check_phenotypes'],
             },
         },
 
