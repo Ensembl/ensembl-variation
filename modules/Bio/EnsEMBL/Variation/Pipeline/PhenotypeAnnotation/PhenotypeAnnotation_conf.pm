@@ -83,7 +83,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $login . '/' . $self->o('pipeline_name')."_".$self->o('ensembl_release') ,
+        pipeline_dir            => '/hps/nobackup2/production/ensembl/' . $login . '/' . $self->o('pipeline_name')."_".$self->o('ensembl_release') ,
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
