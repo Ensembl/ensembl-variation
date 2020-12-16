@@ -209,6 +209,9 @@ sub parse_input_file {
       my $ratio_info     = $content{'95% CI (TEXT)'};
       my @accessions     = split/\,/, $content{'MAPPED_TRAIT_URI'};
 
+      print $errFH1 "WARNING: 'DISEASE/TRAIT' entry is empty for '$rs_id'\n" if ($phenotype eq '');
+      next if ($phenotype eq '');
+
       my $risk_frequency = '';
       if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\w+)\s*$/i) {
         $rs_risk_allele = $1;
