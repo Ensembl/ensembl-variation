@@ -993,7 +993,7 @@ sub get_variant{
       $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{Chr} . ":" . $record->{feature_info}->{hgvs_g} :
       ($record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g} );
   }
-  print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
+  print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . " for RCV:". $record->{Acc} ." VCV: $record->{clinvar_variant_id}".."\n" if $DEBUG ==1;
 
   my ($ref_allele, $alt_allele);
   eval{
@@ -1003,7 +1003,8 @@ sub get_variant{
   warn "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
 
   unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
-    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
+    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} .
+          ") RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n";
   }
 
   if (defined $rs_id) {
