@@ -202,7 +202,7 @@ sub process_clinvar_set {
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
-    warn "processing $record{Acc}\n" if $DEBUG == 1;
+    print "processing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     if ($done{$record{Acc}}){
@@ -254,10 +254,10 @@ sub process_clinvar_set {
     }
     else{
       if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
-         warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
+         print "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
          import( \%record);
       } elsif (exists $record{feature_info}{Chr} && exists $record{feature_info}{start}) {
-        warn "Importing Var based on location+allele_ref lookup of existing match in DB\n";
+        print "Importing Var based on location+allele_ref lookup of existing match in DB\n";
         import( \%record, 1);
       }
       else{
@@ -266,7 +266,7 @@ sub process_clinvar_set {
     	$message .= " on chr: $record{feature_info}->{Chr} "      if defined $record{feature_info}->{Chr} ;
     	$message .= " with HGVS: $record{feature_info}->{hgvs_g}" if defined $record{feature_info}->{hgvs_g} ;
     	$message .= " due to missing data ($record{Acc})\n";
-    	warn $message if $DEBUG == 1;
+      print $message if $DEBUG == 1;
       }
     }
   };
@@ -718,7 +718,7 @@ sub import{
   elsif(!defined $structvar && $try_match ){
     ($feature_object, $feat, $alt_allele) = get_variant($record, undef);
     if (! defined $feature_object){
-      warn "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n";
+      print "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n";
       return undef;
     }
 
@@ -1054,7 +1054,7 @@ sub get_variant{
       warn "no variation feature found via search by location identifier: $location_str\n" if $DEBUG ==1;
     }
   } else {
-    warn "no ref or alt or chr or start, skipping lookup by location identifier\n";
+    print "no ref or alt or chr or start, skipping lookup by location identifier\n";
   }
 
   #try to match by SPDI: longest allele format
@@ -1111,7 +1111,7 @@ sub get_variant_via_SPDI{
       warn "no variation feature found via search by SPDI + location identifier\n";
     }
   } else {
-    warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
+    print "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
   }
   return undef;
 }
