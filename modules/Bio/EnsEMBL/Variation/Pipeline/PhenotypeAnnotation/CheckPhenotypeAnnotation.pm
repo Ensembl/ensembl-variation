@@ -383,8 +383,11 @@ sub check_source {
   if (defined $source && defined $previous_counts->{phenotype_feature_count_details} ){
 
     my @check_names= grep {/$source->{source_name}/ } keys $previous_counts->{phenotype_feature_count_details};
-    $text_out.= "WARNING:".scalar(@check_names). " check results found, where 1 expected:".@check_names." \n" if (scalar(@check_names) != 1);
-    next if (scalar(@check_names) != 1);
+    if (scalar(@check_names) != 1) {
+      $text_out.= "WARNING:".scalar(@check_names). " check results found for '".$source->{source_name}."', where 1 expected (0 is expected for EGA): ".@check_names." \n";
+      $self->print_logFH($text_out);
+      return;
+    }
 
     my $check_name =$check_names[0];
     if (defined $previous_counts->{phenotype_feature_count_details}{$check_name} &&
