@@ -142,6 +142,29 @@ my $column_names = {
         pos => 'pos(1-based)'
       },
     },
+  },
+  '4.1a' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'REVEL_score',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
   }
 };
 
@@ -196,7 +219,7 @@ sub add_predictions {
     my $prediction;
     if ($self->annotation_file_version eq '3.5a') {
       $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
-    } elsif ($self->annotation_file_version eq '4.0a') { 
+    } elsif ($self->annotation_file_version eq '4.0a' || $self->annotation_file_version eq '4.1a') { 
       # In 4.0a the prediction is not always provided and we need to assign it based on the score thresholds     
       # The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
       my $score = $data->{mutation_assessor_score}; 
@@ -235,6 +258,9 @@ sub get_dbNSFP_row {
   my $dbnsfp_version = $self->annotation_file_version;
   my %raw_data = map {$header->[$_] => $split[$_]} (0..(scalar @{$header} - 1));
   my $data = {};
+  if (!defined $column_names->{$dbnsfp_version}) {
+    die "dbNSFP file column names are not specified for  version $dbnsfp_version";
+  }
   my $assembly_unspecific = $column_names->{$dbnsfp_version}->{assembly_unspecific};
   foreach my $column_name (keys %{$assembly_unspecific}) {
     $data->{$column_name} = $raw_data{$assembly_unspecific->{$column_name}};
