@@ -37,6 +37,7 @@ sub run {
     $self->param('species', $species_name);
     my $vdba = $self->get_species_adaptor('variation');
     my $dbc = $vdba->dbc;
+die;
     $self->update_ancestral_alleles($species_dir, $dbc);
     if ($self->param('create_stats')) {
       $self->compare_previous_release_stats($species_dir, $dbc);
@@ -68,6 +69,11 @@ sub compare_previous_release_stats {
   my $self = shift;
   my $species_dir = shift;
   my $dbc = shift;
+  my $non_dbSNP_only = $self->param('non_dbSNP_only');
+  my $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature GROUP BY ancestral_allele;/;
+  if ($non_dbSNP_only) {
+    $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature WHERE source_id != 1 GROUP BY ancestral_allele;/;
+  }
   my $previous_release_stats = {};
   my $fh = FileHandle->new("$species_dir/previous_release_stats", 'r');
   while (<$fh>) {
@@ -77,7 +83,7 @@ sub compare_previous_release_stats {
   }
   $fh->close;
   my $new_alleles = {};
-  my $ancestral_allele_counts = $dbc->sql_helper()->execute( -SQL =>qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature GROUP BY ancestral_allele;/);
+  my $ancestral_allele_counts = $dbc->sql_helper()->execute( -SQL => $sql);
   $fh = FileHandle->new("$species_dir/cmp_previous_release_stats", 'w');
   print $fh "allele old_count new_count new_count/old_count\n";
   foreach (sort {$b->[1] <=> $a->[1]} @$ancestral_allele_counts) {
