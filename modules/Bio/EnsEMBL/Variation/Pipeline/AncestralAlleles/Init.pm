@@ -70,9 +70,9 @@ sub run {
   foreach my $species_name (keys %$run_pipeline) {
     my $species_dir = $self->create_species_dir($species_name);
     if ($self->param('create_stats')) {
-      $self->store_previous_release_stats($species_name, $species_dir);
+      $self->store_previous_release_stats($species_name, $species_dir, $self->param('non_dbSNP_only'));
     }
-    my $batches = $self->get_batches($species_name, $self->param('none_dbSNP_only'));
+    my $batches = $self->get_batches($species_name, $self->param('non_dbSNP_only'));
     push @post_processing_input, {
       species_name => $species_name,
       species_dir => $species_dir, 
@@ -107,11 +107,17 @@ sub store_previous_release_stats {
   my $self = shift;
   my $species_name = shift;
   my $species_dir = shift;
+  my $non_dbSNP_only = shift;
+  my $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature GROUP BY ancestral_allele;/;
+  if ($non_dbSNP_only) {
+    $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature WHERE source_id != 1 GROUP BY ancestral_allele;/;
+  }
+
   if (! -e "$species_dir/previous_release_stats") {
     my $vdba = $self->param('registry')->get_DBAdaptor($species_name, 'variation');
     my $registry = $self->param('registry');
     my $dbc = $vdba->dbc;
-    my $ancestral_allele_counts = $dbc->sql_helper()->execute( -SQL =>qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature GROUP BY ancestral_allele;/);
+    my $ancestral_allele_counts = $dbc->sql_helper()->execute( -SQL => $sql);
     my $fh = FileHandle->new("$species_dir/previous_release_stats", 'w');
     foreach (sort {$b->[1] <=> $a->[1]} @$ancestral_allele_counts) {
       my $allele = $_->[0] || 'NULL';
@@ -125,11 +131,11 @@ sub store_previous_release_stats {
 sub get_batches {
   my $self = shift;
   my $species_name = shift;
-  my $none_dbSNP_only = shift;
+  my $non_dbSNP_only = shift;
   my $batch_size = $self->param('batch_size');
   my @batches = ();
   my ($vf_start, $vf_end);
-  if ($none_dbSNP_only) {
+  if ($non_dbSNP_only) {
     ($vf_start, $vf_end) = @{$self->get_variation_feature_start_end_for_non_dbSNP($species_name)};
   } else {
     $vf_start = 1;
@@ -210,6 +216,5 @@ sub get_species_id {
   my $species_id = $dbc->sql_helper()->execute_simple( -SQL =>qq/select species_id from $current_db_name.meta where meta_key = 'species.production_name' and meta_value ='$species';/);
   return $species_id->[0];
 }
-
 
 1;
