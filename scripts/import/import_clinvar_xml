@@ -792,7 +792,14 @@ sub import_phenotype_feature{
   }
 
   ## look for existing or enter new phenotype object
-  my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
+  my $pheno="";
+  eval {
+    $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
+  };
+  if ($@) {
+    warn "EXCEPTION in fetch of phenotype (RCV: ". $record->{Acc} .", VCV:". $record->{clinvar_variant_id}.") via SQL statement: $@";
+    return;
+  }
 
   my %attribs;
   $attribs{review_status}    = $record->{Status};
