@@ -95,10 +95,10 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 $slice_adaptor->dbc->reconnect_when_lost(1);
 
-## fetch ClinVar source object
+## fetch ClinVar source object and update version based on input file name
 my $omimstr= 'OMIM';
-my $source      = get_source('ClinVar');
-my $omim_source = get_source($omimstr);
+my $source      = get_source($data_file, 'ClinVar');
+my $omim_source = get_source($data_file, $omimstr);
 
 my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
@@ -171,14 +171,7 @@ while($reader->read) {
     if (defined $releaseDate) {
       my $versionDate = new Date::Manip::Date;
       $versionDate->parse($releaseDate);
-
-      #update ClinVar and OMIM source version with ClinVar xml version
-      $source->version($versionDate->printf("%Y%m%d")); #20190404
-      save_source_version($source);
-      $omim_source->version($source->version);
-      save_source_version($omim_source);
-    } else {
-      print "WARNING: no source version found in input xml therefore no update to db source version.\n";
+      print "INFO: ReleaseSet version $releaseDate.\n";
     }
   } else {
     my $xml = $reader->readOuterXml;
@@ -1352,17 +1345,26 @@ sub get_structural_variant{
 =cut
 
 sub get_source{
+  my $file = shift;  ##ClinVarFullRelease_2016-10.xml
   my $source_name = shift;
+
+  my $version = $file;
+  $version =~ s/\D+//g;
+  warn "VERSION looks suspicious: $version\n" if length($version) >6;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
   if (defined $source_name) {
     my $source = $source_adaptor->fetch_by_name( $source_name );
     die ("Source information not held for ",$source_name, "\n") unless defined $source ;
+
+    $source->version($version);
+    $source_adaptor->update_version($source);
+
     return $source;
   }
 
-  return $source;
+  return;
 }
 
 =head2 save_source_version
