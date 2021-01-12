@@ -245,6 +245,63 @@ is_deeply(
 
 ok($coll->vcf_collection_close, 'close VCF collection filehandle after ESP annotation');
 
+# Test using AC when AF, AN and AC in the VCF file
+# If AC not used and AC calculated by (AF * AN)
+# The calculated AC may not match the AC in the VCF due to rounding
+
+# Testing bi-allelic
+my $rsid_test = 'rs6720296';
+$v = $va->fetch_by_name($rsid_test);
+($vf) = @{$v->get_all_VariationFeatures};
+ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature for ${rsid_test}");
+
+$coll = $vca->fetch_by_id('freq_GRCh37');
+$coll->use_db(0);
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id freq_GRCh37");
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+$coll->filename_template =~ /^$dir/;
+@alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4g", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @alleles
+  ],
+  [
+    'p:test_freq a:A f:0.6251 c:9489',
+    'p:test_freq a:C f:0.3749 c:5691',
+  ],
+  "get_all_Alleles_by_VariationFeature - freqs and counts test_freq $rsid_test - test rounding"
+);
+
+# Testing multi-allelic
+$rsid_test='rs370058043';
+$v = $va->fetch_by_name($rsid_test);
+($vf) = @{$v->get_all_VariationFeatures};
+ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature for ${rsid_test}");
+
+@alleles = @{$coll->get_all_Alleles_by_VariationFeature($vf)};
+
+is_deeply(
+  [
+    map {'p:'.$_->population->name.' a:'.$_->allele.' f:'.sprintf("%.4g", $_->frequency).' c:'.$_->count}
+    sort {$a->population->name cmp $b->population->name || $a->allele cmp $b->allele}
+    @alleles
+  ],
+  [
+    'p:test_freq a:C f:8.288e-05 c:6',
+    'p:test_freq a:G f:0.9998 c:72376',
+    'p:test_freq a:T f:0.0001381 c:10',
+  ],
+  "get_all_Alleles_by_VariationFeature - freqs and counts test_freq $rsid_test - test rounding"
+);
+
+ok($coll->vcf_collection_close, 'close VCF collection filehandle after freq_test');
+
+
 ## test exac info stuff
 
 # fetch by ID
