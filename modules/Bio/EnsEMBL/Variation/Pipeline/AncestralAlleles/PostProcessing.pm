@@ -37,7 +37,6 @@ sub run {
     $self->param('species', $species_name);
     my $vdba = $self->get_species_adaptor('variation');
     my $dbc = $vdba->dbc;
-die;
     $self->update_ancestral_alleles($species_dir, $dbc);
     if ($self->param('create_stats')) {
       $self->compare_previous_release_stats($species_dir, $dbc);
