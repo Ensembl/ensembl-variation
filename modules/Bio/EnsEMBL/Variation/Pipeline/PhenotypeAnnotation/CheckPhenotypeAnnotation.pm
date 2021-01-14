@@ -370,6 +370,7 @@ sub check_source {
   my $self = shift;
 
   my $source = $self->param('source');
+  my $assembly = $self->get_assembly;
 
   ## retrieve old results from production db for comparison if available
   my $previous_counts = $self->get_old_results();
@@ -395,7 +396,8 @@ sub check_source {
       $text_out.= "WARNING: ".$new_counts->{phenotype_feature_count_details}{$check_name}." $check_name entries";
       $text_out.= " (previously ".$previous_counts->{phenotype_feature_count_details}{$check_name}.")" ;
       $text_out.= "\n";
-      $count_ok = 0;
+      #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
+      $count_ok = 0 unless $assembly eq 'GRCh37';
     }
   } else {
     my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
@@ -407,7 +409,8 @@ sub check_source {
         $text_out.= "WARNING: ".$new_counts->{"$table\_count"}." $table entries";
         $text_out.= " (previously ".$previous_counts->{"$table\_count"}.")" if defined  $previous_counts->{"$table\_count"} ;
         $text_out.= "\n";
-        $count_ok = 0;
+        #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
+        $count_ok = 0 unless $assembly eq 'GRCh37';
       }
     }
   }
