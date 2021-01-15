@@ -203,6 +203,29 @@
       }
     },
     {
+      "id": "freq_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/testdata/test_vcf_freq.vcf.gz",
+      "chromosomes": [
+        "2", "11"
+      ],
+      "strict_name_match": 0,
+      "source_name": "test_freq",
+      "population_display_group": {
+        "display_group_name": "test_freq",
+        "display_group_priority": 2.0
+      },
+      "populations": {
+        "9970000": {
+          "name" : "test_freq",
+          "_raw_name" : "",
+          "description": "Test frequency data"
+        }
+      }
+    },
+    {
       "annotation_type": "gerp",
       "id": "70_mammals.gerp_conservation_score",
       "species": "homo_sapiens",
