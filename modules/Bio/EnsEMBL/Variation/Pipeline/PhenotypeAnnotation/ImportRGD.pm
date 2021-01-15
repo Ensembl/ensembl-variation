@@ -124,6 +124,9 @@ sub run {
   #Process QTLs file
   my $rgd_file = $self->required_param('qtl_file');   #GO through files and parse them in the correct format
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   # get seq_region_ids
   my $seq_region_ids = $self->get_seq_region_ids();
 

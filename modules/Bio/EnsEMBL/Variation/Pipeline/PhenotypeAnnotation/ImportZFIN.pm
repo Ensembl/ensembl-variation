@@ -99,6 +99,9 @@ sub run {
   #Process QTLs file
   my $input_file = $self->required_param('zfin_file');   #Go through files and parse them in the correct format
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   # get phenotype data
   my $results = $self->parse_input_file($input_file);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
