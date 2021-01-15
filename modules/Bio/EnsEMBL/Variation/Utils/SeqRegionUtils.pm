@@ -67,10 +67,20 @@ sub update_seq_region_ids {
   my $dbname = $core_dba->dbc->dbname;
   my $core_species = $core_dba->species;
   my $variation_species = $variation_dba->species;
-  next if ($variation_species ne $core_species);
+  return if ($variation_species ne $core_species);
 
   my $dbh = $core_dba->dbc->db_handle;
-  my $max_mapping_set_id = get_max_mapping_set_id($dbh, $dbname); 
+  my $max_mapping_set_id = get_max_mapping_set_id($dbh, $dbname);
+  return if $max_mapping_set_id == 0;
+
+  # check the mapping set contains applicable records
+  my $sthCheck = $dbh->prepare("SELECT internal_schema_build, external_schema_build FROM mapping_set WHERE mapping_set_id=$max_mapping_set_id;");
+  $sthCheck->execute();
+  my @row = $sthCheck->fetchrow_array;
+  my @name_parts = split('_', $dbname);
+  my $current_db = $name_parts[-2] . "_". $name_parts[-1];
+  return if $row[0] ne $current_db;
+
   my $id_mapping = {};
   my $sth = $dbh->prepare("SELECT external_seq_region_id, internal_seq_region_id FROM seq_region_mapping WHERE mapping_set_id=$max_mapping_set_id;");
   $sth->execute();
