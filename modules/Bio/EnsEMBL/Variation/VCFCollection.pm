@@ -663,8 +663,33 @@ sub get_all_Alleles_by_VariationFeature {
         # log AN for later use
         $ans->{$pop_id} = $an if $an;
 
+        # Have AC and AN (AN must be defined and non-zero)
+        # Used first - instead of using AF first
+        if (defined($ac) && $ac ne '.' && $an && $an ne '.') {
+          $total_acs->{$pop_id} ||= 0;
+          my @split = split(',', $ac);
+          # is ref AC included? This may have been set as ref_freq_index()
+          # or we can auto-detect by comparing size of @split to @$vcf_alts
+          if (defined($ref_freq_index) || scalar @split > scalar @$vcf_alts) {
+            my $ref_allele_count = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1);
+            $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', $ref_allele_count  / $an);
+            $counts->{$pop_id}->{$vf_ref} = $ref_allele_count;
+          }
+
+          for my $i(0..$#split) {
+            my $c = $split[$i];
+            $total_acs->{$pop_id} += $c;
+            if(my $allele = $allele_map{$i}) {
+              $counts->{$pop_id}->{$allele} = $c;
+              $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
+            }
+            else {
+              $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
+            }
+          }
+        }
         # check for AF
-        if(defined($af) && $af ne '.') {
+        elsif (defined($af) && $af ne '.') {
           $total_afs->{$pop_id} ||= 0;
           my @split = split(',', $af);
 
@@ -682,32 +707,6 @@ sub get_all_Alleles_by_VariationFeature {
             if(my $allele = $allele_map{$i}) {
               $freqs->{$pop_id}->{$allele} = $f;
               $counts->{$pop_id}->{$allele} = sprintf('%.0f', $f * $an) if $an;
-            }
-            else {
-              $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
-            }
-          }
-        }
-
-        # or have AC and AN (AN must be defined and non-zero)
-        elsif(defined($ac) && $ac ne '.' && $an && $an ne '.') {
-          $total_acs->{$pop_id} ||= 0;
-          my @split = split(',', $ac);
-
-          # is ref AC included? This may have been set as ref_freq_index()
-          # or we can auto-detect by comparing size of @split to @$vcf_alts
-          if (defined($ref_freq_index) || scalar @split > scalar @$vcf_alts) {
-            my $ref_allele_count = splice(@split, defined($ref_freq_index) ? $ref_freq_index : -1, 1);
-            $freqs->{$pop_id}->{$vf_ref} = sprintf('%.4g', $ref_allele_count  / $an);
-            $counts->{$pop_id}->{$vf_ref} = $ref_allele_count;  
-          }
- 
-          for my $i(0..$#split) {
-            my $c = $split[$i];
-            $total_acs->{$pop_id} += $c;
-            if(my $allele = $allele_map{$i}) {
-              $counts->{$pop_id}->{$allele} = $c;
-              $freqs->{$pop_id}->{$allele} = sprintf('%.4g', $c / $an);
             }
             else {
               $missing_alleles->{$pop_id}->{$vcf_alts->[$i]} = 1;
