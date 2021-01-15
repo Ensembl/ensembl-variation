@@ -127,6 +127,9 @@ sub run {
 
   my $gwas_file = $self->required_param('gwas_file');
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   # get phenotype data
   my $results = $self->parse_input_file($gwas_file);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);

@@ -94,6 +94,9 @@ sub run {
 
   my $file_orphanet = $self->required_param('orphanet_file');
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   # get phenotype data + save it (all in one method)
   my ($results,$source_date) = $self->parse_input_file($file_orphanet);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
