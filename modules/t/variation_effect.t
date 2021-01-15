@@ -1526,6 +1526,27 @@ my $tv_cosmic = Bio::EnsEMBL::Variation::TranscriptVariation->new(
     -transcript         => $transcript,
 );
 
+## Check that hgvs_transcript tidies up after shifting
+my $vf_clean = Bio::EnsEMBL::Variation::VariationFeature->new(
+    -start          => 64,
+    -end            => 63,
+    -strand         => 1,
+    -slice          => $transcript->slice,
+    -allele_string  => '-/GAG',
+    -variation_name => 'test_shift_cleanup',
+);
+
+my $tv_clean = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+    -variation_feature  => $vf_clean,
+    -transcript         => $transcript,
+);
+my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
+
+my $pre_sequence = $tva->[0]->variation_feature_seq;
+$tv->hgvs_transcript();
+my $post_sequence = $tva->[0]->variation_feature_seq;
+is($pre_sequence, $post_sequence, 'hgvs_transcript cleans up variation_feature_seq');
+
 ## Check that COSMIC_MUTATIONS are not shifted
 my $tva_cosmic = $tv_cosmic->get_all_alternate_BaseVariationFeatureOverlapAlleles();
 my $bvfo_cosmic = $tva_cosmic->[0]->base_variation_feature_overlap;
