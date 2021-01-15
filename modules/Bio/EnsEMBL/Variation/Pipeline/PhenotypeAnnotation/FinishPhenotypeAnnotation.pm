@@ -144,6 +144,10 @@ sub update_internal_db{
     return;
   }
 
+  my $meta_dba = $self->get_species_adaptor('core')->get_MetaContainerAdaptor;
+  my @mapping_info = @{ $meta_dba->list_value_by_key('assembly.default') };
+  my $genome_assembly = $mapping_info[0];
+
   my $var_dba = $self->get_species_adaptor('variation');
   my $ensdb_name = $var_dba->dbc->dbname;
 
@@ -164,6 +168,7 @@ sub update_internal_db{
       version     => $ens_version,
       status_desc => 'Created'
     });
+    $ensdb->genome_reference($genome_assembly) if defined $genome_assembly;
     $ensvardb_dba->store( $ensdb );
   }
   $ensvardb_dba->update_status( $ensdb, 'phenotype_annotation_run' );
