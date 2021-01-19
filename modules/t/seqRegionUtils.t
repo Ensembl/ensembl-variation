@@ -28,11 +28,6 @@ my $cdb = $multi->get_DBAdaptor('core');
 my $vdb = $multi->get_DBAdaptor('variation');
 
 ## check no seq_region update performed when last is not related to current release
-$multi->hide('core', 'mapping_set');
-my $cdbh = $cdb->dbc->db_handle;
-my $ins_sth = $cdbh->prepare("INSERT into mapping_set(internal_schema_build, external_schema_build)
-                            VALUES ('103_38', '102_38');");
-
 my $dbname = $vdb->dbc->dbname;
 my $dbh = $vdb->dbc->db_handle;
 my $sthCheck = $dbh->prepare("SELECT UPDATE_TIME
@@ -46,6 +41,5 @@ $sthCheck->execute();
 my ($update_time_after) = $sthCheck->fetchrow_array();
 ok($update_time_before eq $update_time_after, "no update");
 
-$multi->restore('core', 'mapping_set');
 
 done_testing();
