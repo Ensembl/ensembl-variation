@@ -144,12 +144,9 @@ sub update_internal_db{
     return;
   }
 
-  my $meta_dba = $self->get_species_adaptor('core')->get_MetaContainerAdaptor;
-  my @mapping_info = @{ $meta_dba->list_value_by_key('assembly.default') };
-  my $genome_assembly = $mapping_info[0];
-
   my $var_dba = $self->get_species_adaptor('variation');
   my $ensdb_name = $var_dba->dbc->dbname;
+  my $genome_assembly = $self->get_assembly;
 
   my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
   my $result_dba    =  $int_dba->get_ResultAdaptor();
