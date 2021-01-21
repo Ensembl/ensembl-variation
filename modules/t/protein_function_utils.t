@@ -33,11 +33,89 @@ my $pfpma = $vdb->get_ProteinFunctionPredictionMatrixAdaptor;
 
 $vdb->dnadb($db);
 
+my $tr_ad  = $db->get_TranscriptAdaptor;
+my $transcript_stable_id = 'ENST00000238738';
+my $transcript = $tr_ad->fetch_by_stable_id($transcript_stable_id); #get the Transcript object
+my $translation = $transcript->translation;
 my $dir = $multi->curr_dir();
+
+# Test reading from dbNSFP file for different dbNSFP file versions and assemblies:
+# The tests use a codon from ENST00000238738 and all the mutated versions of that codon
+# The results are the predicitions from dbNSFP for each of the resulting amino acid changes
+my $coords = {
+  'GRCh37' => [[ 46770246, 46770248 ]],
+  'GRCh38' => [[ 46543107, 46543109 ]],
+};
+my $triplet = {
+  'triplet_seq' => 'GGC',
+  'aa_position' => 21,
+  'chrom' => '2',
+  'new_triplets' => {
+    'GGC' => {
+      '0' => {
+        'A' => 'AGC',
+        'T' => 'TGC',
+        'C' => 'CGC',
+        'G' => 'GGC'
+      },
+      '1' => {
+        'A' => 'GAC',
+        'T' => 'GTC',
+        'C' => 'GCC',
+        'G' => 'GGC'
+      },
+      '2' => {
+        'A' => 'GGA',
+        'T' => 'GGT',
+        'C' => 'GGC',
+        'G' => 'GGG'
+      }
+    }
+  },
+  'aa' => 'G'
+};
+
+my @file_versions = ('3.5a', '4.0a', '4.1a');
+my @assemblies = ('GRCh37', 'GRCh38');
+my $expected_results = {
+  'GRCh37' => {
+    '3.5a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99261' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
+    '4.0a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
+    '4.1a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
+  },
+  'GRCh38' => {
+    '3.5a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99261' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
+    '4.0a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
+    '4.1a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
+  }
+};
+
+foreach my $file_version (@file_versions) {
+  foreach my $assembly (@assemblies) {
+    my %dbNSFP_params = (
+      -working_dir => $dir,
+      -species => 'Homo_sapiens',
+      -annotation_file => "$dir/testdata/test_data_dbNSFP$file_version\_$assembly.txt.gz",
+      -assembly => $assembly,
+      -annotation_file_version => $file_version,
+      -pipeline_mode => 1,
+      -write_mode => 0,
+      -debug_mode => 1,
+    );
+
+    my $dbNSFP = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->new(%dbNSFP_params);
+    $dbNSFP->init_protein_matrix($translation, 'md5');
+    $dbNSFP->init_header();
+    $triplet->{'coords'} = $coords->{$assembly};
+    $dbNSFP->load_predictions_for_triplets([$triplet]);
+    cmp_deeply($dbNSFP->{debug_data}, $expected_results->{$assembly}->{$file_version}, "dbNSFP - Read from file and store precitions: $assembly, $file_version");
+  }
+}
+
 my %dbNSFP_params = (
   -working_dir => $dir,
   -species => 'Homo_sapiens',
-  -annotation_file => $dir . '/testdata/test_data_dbNSFP3.5a_grch37.txt.gz',
+  -annotation_file => $dir . '/testdata/test_data_dbNSFP3.5a_GRCh37.txt.gz',
   -assembly => 'GRCh37',
   -annotation_file_version => '3.5a',
   -pipeline_mode => 1,
@@ -49,7 +127,7 @@ my $dbNSFP = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->ne
 ok($dbNSFP->working_dir eq $dir, 'working_dir');
 $dbNSFP->run('19c20411fb8a4a65deae8f1492bae6d4', {'19c20411fb8a4a65deae8f1492bae6d4' => 'ENSP00000436292'});
 my $debug_data = get_debug_data($dbNSFP, '19c20411fb8a4a65deae8f1492bae6d4', 22, 'M');
-my $expected_results = [
+$expected_results = [
   {
     'new_score' => '0.215',
     'new_pred' => 'tolerated',
