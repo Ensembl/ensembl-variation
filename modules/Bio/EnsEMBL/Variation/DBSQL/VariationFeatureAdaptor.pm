@@ -2491,8 +2491,9 @@ sub fetch_by_spdi_notation{
   elsif($count_separator < 3){ throw ("Could not parse the SPDI notation $spdi. Too few elements present"); } 
 
   my $raw_sequence_id = $sequence_id;
-  # strip version number from reference 
-  if($sequence_id =~ m/\./i){
+  # strip version number from reference (only LRG and NT)
+  # NC_ should have a version number, example for mouse: NC_000068.8:3115317:T:C
+  if($sequence_id =~ m/\./i && ($sequence_id =~ m/^LRG/i || $sequence_id =~ m/^NT/i)){
     $sequence_id =~ s/\.\d+//g;
   } 
 
