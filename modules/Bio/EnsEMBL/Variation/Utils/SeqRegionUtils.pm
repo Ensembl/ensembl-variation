@@ -78,7 +78,7 @@ sub update_seq_region_ids {
   $sthCheck->execute();
   my @row = $sthCheck->fetchrow_array;
   my @name_parts = split('_', $dbname); # dbname is eg. bos_taurus_variation_104_12
-  my $current_db_schema_version = $name_parts[-2] . "_". $name_parts[-1]; #current_db will be 104_12
+  my $current_db_schema_version = $name_parts[-2] . "_". $name_parts[-1]; #$current_db_schema_version will be 104_12
   return if $row[0] ne $current_db_schema_version;
 
   my $id_mapping = {};
