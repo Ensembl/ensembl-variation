@@ -77,9 +77,9 @@ sub update_seq_region_ids {
   my $sthCheck = $dbh->prepare("SELECT internal_schema_build, external_schema_build FROM mapping_set WHERE mapping_set_id=$max_mapping_set_id;");
   $sthCheck->execute();
   my @row = $sthCheck->fetchrow_array;
-  my @name_parts = split('_', $dbname);
-  my $current_db = $name_parts[-2] . "_". $name_parts[-1];
-  return if $row[0] ne $current_db;
+  my @name_parts = split('_', $dbname); # dbname is eg. bos_taurus_variation_104_12
+  my $current_db_schema_version = $name_parts[-2] . "_". $name_parts[-1]; #current_db will be 104_12
+  return if $row[0] ne $current_db_schema_version;
 
   my $id_mapping = {};
   my $sth = $dbh->prepare("SELECT external_seq_region_id, internal_seq_region_id FROM seq_region_mapping WHERE mapping_set_id=$max_mapping_set_id;");

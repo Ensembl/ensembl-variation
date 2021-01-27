@@ -27,7 +27,8 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $cdb = $multi->get_DBAdaptor('core');
 my $vdb = $multi->get_DBAdaptor('variation');
 
-## check no seq_region update performed when last is not related to current release
+## check no seq_region update performed when last mapping_set entry is not related to current release
+# NOTE: test databases do not have the release and assembly on dbname
 my $dbname = $vdb->dbc->dbname;
 my $dbh = $vdb->dbc->db_handle;
 my $sthCheck = $dbh->prepare("SELECT UPDATE_TIME
@@ -40,6 +41,5 @@ update_seq_region_ids($cdb,$vdb);
 $sthCheck->execute();
 my ($update_time_after) = $sthCheck->fetchrow_array();
 ok($update_time_before eq $update_time_after, "no update");
-
 
 done_testing();
