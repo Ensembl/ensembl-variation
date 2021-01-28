@@ -385,7 +385,7 @@ sub check_source {
 
     my @check_names= grep {/$source->{source_name}/ } keys $previous_counts->{phenotype_feature_count_details};
     if (scalar(@check_names) != 1) {
-      $text_out.= "WARNING:".scalar(@check_names). " check results found for '".$source->{source_name}."', where 1 expected (0 is expected for EGA): ".@check_names." \n";
+      $text_out .= "WARNING:".scalar(@check_names) . " check results found for '" . $source->{source_name} . "', where 1 expected (0 is expected for EGA): " . @check_names . " \n";
       $self->print_logFH($text_out);
       return;
     }
@@ -393,9 +393,9 @@ sub check_source {
     my $check_name =$check_names[0];
     if (defined $previous_counts->{phenotype_feature_count_details}{$check_name} &&
         $previous_counts->{phenotype_feature_count_details}{$check_name}  > $new_counts->{phenotype_feature_count_details}{$check_name}){
-      $text_out.= "WARNING: ".$new_counts->{phenotype_feature_count_details}{$check_name}." $check_name entries";
-      $text_out.= " (previously ".$previous_counts->{phenotype_feature_count_details}{$check_name}.")" ;
-      $text_out.= "\n";
+      $text_out .= "WARNING: " . $new_counts->{phenotype_feature_count_details}{$check_name} . " $check_name entries";
+      $text_out .= " (previously " . $previous_counts->{phenotype_feature_count_details}{$check_name} . ")" ;
+      $text_out .= "\n";
       #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
       $count_ok = 0 unless $assembly eq 'GRCh37';
     }
@@ -406,9 +406,9 @@ sub check_source {
 
       if (defined $previous_counts->{$check_name} &&
           $previous_counts->{$check_name}  > $new_counts->{$check_name}){
-        $text_out.= "WARNING: ".$new_counts->{"$table\_count"}." $table entries";
-        $text_out.= " (previously ".$previous_counts->{"$table\_count"}.")" if defined  $previous_counts->{"$table\_count"} ;
-        $text_out.= "\n";
+        $text_out .= "WARNING: " . $new_counts->{"$table\_count"} . " $table entries";
+        $text_out .= " (previously " . $previous_counts->{"$table\_count"} . ")" if defined  $previous_counts->{"$table\_count"} ;
+        $text_out .= "\n";
         #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
         $count_ok = 0 unless $assembly eq 'GRCh37';
       }
