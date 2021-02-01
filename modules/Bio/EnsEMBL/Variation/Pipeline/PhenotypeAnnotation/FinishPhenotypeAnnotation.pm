@@ -146,6 +146,7 @@ sub update_internal_db{
 
   my $var_dba = $self->get_species_adaptor('variation');
   my $ensdb_name = $var_dba->dbc->dbname;
+  my $genome_assembly = $self->get_assembly;
 
   my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
   my $result_dba    =  $int_dba->get_ResultAdaptor();
@@ -164,6 +165,7 @@ sub update_internal_db{
       version     => $ens_version,
       status_desc => 'Created'
     });
+    $ensdb->genome_reference($genome_assembly) if defined $genome_assembly;
     $ensvardb_dba->store( $ensdb );
   }
   $ensvardb_dba->update_status( $ensdb, 'phenotype_annotation_run' );

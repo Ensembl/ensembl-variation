@@ -127,6 +127,9 @@ sub run {
 
   my $gwas_file = $self->required_param('gwas_file');
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   # get phenotype data
   my $results = $self->parse_input_file($gwas_file);
   $self->print_pipelogFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
@@ -150,8 +153,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
-  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
-  $self->dataflow_output_id($self->param('output_ids'), 1);
+  $self->dataflow_output_id($self->param('output_ids'), 2);
 }
 
 
@@ -209,6 +211,9 @@ sub parse_input_file {
       my $ratio          = $content{'OR OR BETA'};
       my $ratio_info     = $content{'95% CI (TEXT)'};
       my @accessions     = split/\,/, $content{'MAPPED_TRAIT_URI'};
+
+      print $errFH1 "WARNING: 'DISEASE/TRAIT' entry is empty for '$rs_id'\n" if ($phenotype eq '');
+      next if ($phenotype eq '');
 
       my $risk_frequency = '';
       if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\w+)\s*$/i) {

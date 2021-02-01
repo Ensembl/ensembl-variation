@@ -114,6 +114,9 @@ sub run {
 
   my $file_mim = $self->required_param('mim_file');
 
+  # dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
+
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_pipelogFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
@@ -141,8 +144,7 @@ sub write_output {
   close($self->errFH) if defined $self->errFH ;
   close($self->pipelogFH) if defined $self->pipelogFH ;
 
-  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
-  $self->dataflow_output_id($self->param('output_ids'), 1);
+  $self->dataflow_output_id($self->param('output_ids'), 2);
 }
 
 

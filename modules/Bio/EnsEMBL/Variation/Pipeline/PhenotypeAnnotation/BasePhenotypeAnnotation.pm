@@ -141,9 +141,11 @@ sub get_pubmed_prefix {
 sub core_db_adaptor {
   my $self = shift;
 
-  $self->{core_dba} = $self->get_species_adaptor("core") if !defined $self->{core_dba};
+  # no caching on purpose see eHive docs, worker will only compile the Runable once;
+  # Runnable object itself  $self->{}), global objects (e.g. StatementHandles)
+  # and singletons (including the Registry) persist across eHive worker jobs
+  return $self->get_species_adaptor("core");
 
-  return $self->{core_dba};
 }
 
 =head2 variation_db_adaptor
@@ -158,9 +160,9 @@ sub core_db_adaptor {
 sub variation_db_adaptor {
   my $self = shift;
 
-  $self->{variation_dba} =  $self->get_species_adaptor("variation") if !defined $self->{variation_dba};
+  # no caching on purpose same as core_db_adaptor
+  return $self->get_species_adaptor("variation");
 
-  return $self->{variation_dba};
 }
 
 
@@ -176,7 +178,8 @@ sub variation_db_adaptor {
 sub ontology_db_adaptor {
   my ($self, $db_adaptor) = @_;
 
-  $self->{ontology_dba} =  $self->get_adaptor('multi', 'ontology') if !defined $self->{ontology_dba};
+  # no caching on purpose same as core_db_adaptor
+  $self->{ontology_dba} =  $self->get_adaptor('multi', 'ontology');
 
   return $self->{ontology_dba};
 }
@@ -364,7 +367,8 @@ sub default_phenotype_class {
 
   if (defined $pheno_class ){
     $self->{default_phenotype_class} = $pheno_class ;
-  } elsif (! defined $self->{default_phenotype_class}){
+  } else {
+    # no caching on purpose same as core_db_adaptor
     # phenotype class is similar to variation class as it contains an attrib_id of specific attrib_type
     $self->{default_phenotype_class} = $self->_get_attrib_ids("phenotype_type", "trait");
   }
@@ -419,7 +423,7 @@ sub update_meta_coord {
 sub get_seq_region_ids {
   my $self = shift;
 
-  return $self->{seq_region_ids} if (defined $self->{seq_region_ids});
+  # no caching on purpose same as core_db_adaptor
 
   my $sth = $self->variation_db_adaptor->dbc->prepare(qq{
     SELECT seq_region_id, name
@@ -1645,7 +1649,7 @@ sub get_new_results {
 sub get_old_results {
   my  $self = shift;
 
-  return $self->{previous_result} if defined $self->{previous_result};
+  # no caching on purpose same as core_db_adaptor
 
   my $int_dba ;
   eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
