@@ -236,8 +236,7 @@ sub write_output {
     close($pipelogFH);
   }
 
-  #WARNING: this will overwrite the autoflow, see eHive 2.5 manual
-  $self->dataflow_output_id($self->param('output_ids'), 1);
+  $self->dataflow_output_id($self->param('output_ids'), 2);
 
 }
 
