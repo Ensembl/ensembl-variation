@@ -369,6 +369,9 @@ sub check_fk{
 sub check_source {
   my $self = shift;
 
+  my $source = $self->param('source');
+  my $assembly = $self->get_assembly;
+
   ## retrieve old results from production db for comparison if available
   my $previous_counts = $self->get_old_results();
 
@@ -377,16 +380,38 @@ sub check_source {
 
   my $text_out = "\nSummary of results from CheckPhenotypeAnnotation (if less counts than previous)\n\n";
 
-  my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
-  foreach my $table (@tables) {
-    my $check_name = "$table\_count";
+  # check only source specific if source specific check
+  if (defined $source && defined $previous_counts->{phenotype_feature_count_details} ){
 
-    if (defined $previous_counts->{$check_name} &&
-        $previous_counts->{$check_name}  > $new_counts->{$check_name}){
-      $text_out.= "WARNING: ".$new_counts->{"$table\_count"}." $table entries";
-      $text_out.= " (previously ".$previous_counts->{"$table\_count"}.")" if defined  $previous_counts->{"$table\_count"} ;
-      $text_out.= "\n";
-      $count_ok = 0;
+    my @check_names= grep {/$source->{source_name}/ } keys $previous_counts->{phenotype_feature_count_details};
+    if (scalar(@check_names) != 1) {
+      $text_out .= "WARNING:".scalar(@check_names) . " check results found for '" . $source->{source_name} . "', where 1 expected (0 is expected for EGA): " . @check_names . " \n";
+      $self->print_logFH($text_out);
+      return;
+    }
+
+    my $check_name =$check_names[0];
+    if (defined $previous_counts->{phenotype_feature_count_details}{$check_name} &&
+        $previous_counts->{phenotype_feature_count_details}{$check_name}  > $new_counts->{phenotype_feature_count_details}{$check_name}){
+      $text_out .= "WARNING: " . $new_counts->{phenotype_feature_count_details}{$check_name} . " $check_name entries";
+      $text_out .= " (previously " . $previous_counts->{phenotype_feature_count_details}{$check_name} . ")" ;
+      $text_out .= "\n";
+      #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
+      $count_ok = 0 unless $assembly eq 'GRCh37';
+    }
+  } else {
+    my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
+    foreach my $table (@tables) {
+      my $check_name = "$table\_count";
+
+      if (defined $previous_counts->{$check_name} &&
+          $previous_counts->{$check_name}  > $new_counts->{$check_name}){
+        $text_out .= "WARNING: " . $new_counts->{"$table\_count"} . " $table entries";
+        $text_out .= " (previously " . $previous_counts->{"$table\_count"} . ")" if defined  $previous_counts->{"$table\_count"} ;
+        $text_out .= "\n";
+        #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
+        $count_ok = 0 unless $assembly eq 'GRCh37';
+      }
     }
   }
   $self->print_logFH($text_out);
