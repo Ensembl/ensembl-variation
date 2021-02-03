@@ -71,7 +71,8 @@ sub compare_previous_release_stats {
   my $non_dbSNP_only = $self->param('non_dbSNP_only');
   my $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature GROUP BY ancestral_allele;/;
   if ($non_dbSNP_only) {
-    $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature WHERE source_id != 1 GROUP BY ancestral_allele;/;
+    my $dbSNP_source_id = $self->get_source_id('dbSNP');
+    $sql = qq/SELECT ancestral_allele, COUNT(*) FROM variation_feature WHERE source_id != $dbSNP_source_id GROUP BY ancestral_allele;/;
   }
   my $previous_release_stats = {};
   my $fh = FileHandle->new("$species_dir/previous_release_stats", 'r');
