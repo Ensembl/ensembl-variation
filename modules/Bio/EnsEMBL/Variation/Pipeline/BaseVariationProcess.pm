@@ -170,4 +170,16 @@ sub get_species_id {
   return $meta_container_adaptor->species_id();
 }
 
+sub get_source_id {
+  my $self = shift;
+  my $source_name = shift;
+  my $variation_dba = $self->get_species_adaptor('variation');
+  my $source_adaptor = $variation_dba->get_SourceAdaptor; 
+  my $source = $source_adaptor->fetch_by_name($source_name);
+  if (!defined $source) {
+    die "Could not fetch source for name: $source_name" 
+  }
+  return $source->dbID();
+} 
+
 1;
