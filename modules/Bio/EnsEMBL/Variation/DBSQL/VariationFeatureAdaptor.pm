@@ -2663,4 +2663,59 @@ sub _spdi_from_components {
   return $variation_feature;
 } 
 
+=head2 fetch_all_by_caid
+
+    Arg[1]      : String $caid
+    Example     : my $caid = 'CA127784';
+                  @vfs = @{$vf_adaptor->fetch_all_by_caid($caid)};
+    Description : Retrieves all variation features for a given
+                  ClinGen Canonical Allele Identifier (CAid).
+                  Most CAid will only return a single variation feature.
+                  Where variation feature alleles have the same HGVS
+                  multiple variation features are returned.
+    Returntype  : reference to list Bio::EnsEMBL::Variation::VariationFeature
+    Exceptions  : throw on bad argument
+    Caller      : general
+    Status      : Stable
+
+=cut
+
+sub fetch_all_by_caid {
+  my $self = shift;
+  my $caid = shift;
+
+  throw('No CAid provided. Expected CAid with format CA\d{1,} e.g. CA127784')
+    unless (defined($caid) && $caid);
+
+  if ($caid !~ /^CA\d{1,}$/) {
+    throw('CAid has an invalid format. Expected format CA\d{1,} e.g. CA127784');
+  }
+
+  my $asa = $self->db->get_AlleleSynonymAdaptor();
+  my $va = $self->db->get_VariationAdaptor();
+
+  # Fetch all allele synonyms by name
+  my $allele_synonyms = $asa->fetch_all_by_name($caid);
+
+  return [] if (! @$allele_synonyms);
+
+  my @vfs;
+
+  for my $allele_synonym (@{$allele_synonyms}) {
+    my $v = $allele_synonym->variation();
+    foreach my $vf ( @{ $self->fetch_all_by_Variation($v) } ) {
+      my $hgvs_genomic = $vf->hgvs_genomic();
+      for my $allele (keys %$hgvs_genomic) {
+        if ($hgvs_genomic->{$allele} eq $allele_synonym->hgvs_genomic()) {
+            $vf->allele_string(join("/", $vf->ref_allele_string(), $allele));
+            push @vfs, $vf;
+            last;
+        }
+      }
+    }
+  }
+
+  return \@vfs;
+}
+
 1;
