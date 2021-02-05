@@ -383,7 +383,9 @@ sub check_source {
   # check only source specific if source specific check
   if (defined $source && defined $previous_counts->{phenotype_feature_count_details} ){
 
-    my @check_names= grep {/$source->{source_name}/ } keys $previous_counts->{phenotype_feature_count_details};
+    my $source_name = $source->{source_name};
+    $source_name = 'Animal_QTLdb_QTL' if $source_name eq 'AnimalQTLdb';
+    my @check_names= grep {/$source_name/ } keys $previous_counts->{phenotype_feature_count_details};
     if (scalar(@check_names) != 1) {
       $text_out .= "WARNING:".scalar(@check_names) . " check results found for '" . $source->{source_name} . "', where 1 expected (0 is expected for EGA): " . @check_names . " \n";
       $self->print_logFH($text_out);
