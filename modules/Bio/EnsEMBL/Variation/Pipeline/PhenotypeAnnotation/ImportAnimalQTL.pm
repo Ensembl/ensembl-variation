@@ -67,27 +67,28 @@ my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
   sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
   ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
-  bos_taurus => $animalqtl_baseURL.'QTL_ARS-UCD_1.2.gff.txt.gz', #Bos taurus
+  bos_taurus => $animalqtl_baseURL.'QTL_ARS_UCD1.gff.txt.gz', #Bos taurus
   equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
   ovis_aries_rambouillet => "",
 );
 
 my %animalQTL_species_fileNames = (
-  gallus_gallus => 'QTL_gallus_gallus_gbp_5.0.gff3.gz', #Gallus gallus
+  gallus_gallus => 'QTL_gallus_gallus_gbp_6.0.gff3.gz', #Gallus gallus, remapped file
   sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
-  ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries, remapped file
   bos_taurus => 'QTL_bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
-  equus_caballus => 'QTL_equus_caballus_gbp_2.0.gff3.gz', #Equus caballus
-  ovis_aries_rambouillet => 'QTL_', # place holder, as ovis aries data was remapped
+  equus_caballus => 'QTL_equus_caballus_gbp_3.0.gff3.gz', #Equus caballus, remapped file
+  ovis_aries_rambouillet => 'QTL_ovis_aries_rambouillet_gbp_1.0.gff3.gz', # remapped from ovis aries data
 );
 
+# use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
-  gallus_gallus => 0, #Gallus gallus not same Ensembl assembly as AnimalQTL
+  gallus_gallus => 1, #Gallus gallus, remapped data, not same Ensembl assembly as AnimalQTL
   sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 0,  #Ovis aries: not same Ensembl assembly as AnimalQTL
+  ovis_aries => 1,  #Ovis aries: remapped data, not same Ensembl assembly as AnimalQTL
   bos_taurus => 1, #Bos taurus
-  equus_caballus => 0, #Equus caballus: not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 0, #data needs to be remapped from Ovis aries (ovis_aries_variation)
+  equus_caballus => 1, #Equus caballus: remapped data, not same Ensembl assembly as AnimalQTL
+  ovis_aries_rambouillet => 1, #remapped data from Ovis aries (ovis_aries_variation)
 );
 
 
@@ -143,7 +144,7 @@ sub fetch_input {
   # if the folder does not exist, try to fetch from ulr
   if (! -d $animalqtl_inputDir) {
     make_path($animalqtl_inputDir) or die "Failed to create $animalqtl_inputDir $!\n";
-    my $fetch_cmd = "wget --content-disposition -O $inputFile \"$url\"";
+    my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
     my $return_value = $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
     die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
@@ -161,7 +162,7 @@ sub fetch_input {
     }
     # if directory exists and file not found try to fetch the file
     if (!$ok) {
-      my $fetch_cmd = "wget --content-disposition -O $inputFile \"$url\"";
+      my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
       my $return_value = $self->run_cmd($fetch_cmd)
         unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
       die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
