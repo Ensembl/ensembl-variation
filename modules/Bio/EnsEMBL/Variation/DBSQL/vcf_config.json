@@ -700,6 +700,30 @@
       "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
     },
     {
+      "id": "nile_tilapia_EVA_PRJEB38548",
+      "source_name": "PRJEB38548",
+      "description": "Variants from EVA study PRJEB38548",
+      "species": "oreochromis_niloticus",
+      "assembly": "O_niloticus_UMD_NMBU",
+      "type": "remote",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 1,
+      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB38548/tilapia_snp_array.vcf.gz",
+      "chromosomes": [
+        "LG1", "LG2","LG3","LG4","LG5","LG6","LG7","LG8","LG9","LG10","LG11","LG12","LG13","LG14","LG15","LG16","LG17","LG18","LG19","LG20","LG21","LG22","LG23"
+      ],
+      "population_display_group": {
+        "display_group_name": "PRJEB38764",
+        "display_group_priority": "1"
+      },
+      "populations": {
+        "1": {
+          "name": "PRJEB38764",
+          "_af": "AF"
+        }
+      }
+    },
+    {
       "id": "90_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
