@@ -95,13 +95,17 @@ sub default_options {
         # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
         
         # connection details for the hive's own database
+        hive_db_host    => 'mysql-ens-var-prod-2.ebi.ac.uk',
+        hive_db_port    => 4521,
+        hive_db_user    => 'ensadmin',
+        hive_db_name    => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
 
         pipeline_db => {
-            -host   => 'mysql-ens-var-prod-2.ebi.ac.uk',
-            -port   => 4521,
-            -user   => 'ensadmin',
+            -host   => $self->o('hive_db_host'),
+            -port   => $self->o('hive_db_port'),
+            -user   => $self->o('hive_db_user'),
             -pass   => $self->o('password'),            
-            -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
+            -dbname => $self->o('hive_db_name'),
             -driver => 'mysql',
         },
         
