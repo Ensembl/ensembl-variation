@@ -758,6 +758,16 @@
       ]
     },
     {
+      "id": "great_tit_EVA_PRJEB24964",
+      "source_name": "PRJEB24964",
+      "description": "Variants from EVA study PRJEB24964",
+      "species": "parus_major",
+      "assembly": "Parus_major1.1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
+    },
+    {
       "id": "90_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
