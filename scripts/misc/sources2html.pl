@@ -83,9 +83,12 @@ my $eva_url = 'https://www.ebi.ac.uk/eva/?eva-study=###ID###';
 my $vcf_info ='Variant (from VCF)';
 
 my %vcf_desc = (
-  'PRJEB34225'    => 'Whole genome variants for 80 North American Atlantic salmon',
-  'PRJEB22989'    => 'Effect annotated whole genome variants for 163 vervet monkeys (SNPs, Indels, and macaque fixed differences)',
-  'PRJEB27278'    => 'Genetic Basis for Disease Occurrence and Onset in the Craniosynostotic Rabbit',
+  'PRJEB34225'  => 'Whole genome variants for 80 North American Atlantic salmon',
+  'PRJEB22989'  => 'Effect annotated whole genome variants for 163 vervet monkeys (SNPs, Indels, and macaque fixed differences)',
+  'PRJEB27278'  => 'Genetic Basis for Disease Occurrence and Onset in the Craniosynostotic Rabbit',
+  'PRJEB38548'  => 'Enhance selective breeding of Nile tilapia, with a focus on disease resistance',
+  'PRJEB26368'  => 'Genotyping-by-sequencing of 2,496 mink from Aarhus University farm',
+  'PRJEB24964'  => 'Genotyping Great tit populations and its application to studying the genetic architecture of exploration behaviour'
 );
 
 if ($site) {
