@@ -133,13 +133,14 @@ sub default_options {
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,
         hive_db_user    => 'ensadmin',
+        hive_db_name    => $ENV{'USER'}.'_ehive_'.$self->o('pipeline_name').'_'.$self->o('ensembl_release'),
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),
-            -dbname => $ENV{'USER'}.'_ehive_'.$self->o('pipeline_name').'_'.$self->o('ensembl_release'),
+            -dbname => $self->o('hive_db_name'),
             -driver => 'mysql',
         },
     };
