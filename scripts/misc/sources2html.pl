@@ -85,6 +85,7 @@ my $vcf_info ='Variant (from VCF)';
 my %vcf_desc = (
   'PRJEB34225'    => 'Whole genome variants for 80 North American Atlantic salmon',
   'PRJEB22989'    => 'Effect annotated whole genome variants for 163 vervet monkeys (SNPs, Indels, and macaque fixed differences)',
+  'PRJEB27278'    => 'Genetic Basis for Disease Occurrence and Onset in the Craniosynostotic Rabbit',
 );
 
 if ($site) {
