@@ -744,6 +744,20 @@
       }
     },
     {
+      "id": "rabbit_EVA_PRJEB27278",
+      "source_name": "PRJEB27278",
+      "description": "Variants from EVA study PRJEB27278",
+      "species": "oryctolagus_cuniculus",
+      "assembly": "OryCun2.0",
+      "type": "remote",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 1,
+      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB27278/Craniosnyostotic_Rabbit_Colony_eva08062018.vcf.gz",
+      "chromosomes": [
+        "1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","X"
+      ]
+    },
+    {
       "id": "90_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
