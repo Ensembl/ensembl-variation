@@ -162,6 +162,7 @@ sub configure {
 		
 		'cache=s',
 		'fasta=s',
+                'chr_synonyms=s',
 		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
@@ -554,6 +555,11 @@ sub main {
 	}
 	
 	die("ERROR: seq_region not populated\n") unless scalar keys %{$config->{seq_region_ids}};
+
+        # Open chromosome synonyms file (for mastermind import)
+        if(defined($config->{chr_synonyms})) {
+          $config->{chr_synonyms_list} = read_chr_synonyms($config);
+        }
 	
 	# get/set source_id
 	die("ERROR: no source specified\n") if !(defined $config->{source}) && !defined($config->{only_existing});
@@ -731,16 +737,22 @@ sub main {
           next;
         }
       }
+
+                       my $chromosome = $data->{tmp_vf}->{chr};
+                       if(defined($config->{chr_synonyms_list})) {
+                          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+                        }
+
 			
-			if(!defined($config->{seq_region_ids}->{$data->{tmp_vf}->{chr}})) {
+			if(!defined($config->{seq_region_ids}->{$chromosome})) {
 				$config->{skipped}->{missing_seq_region}++;
 				$last_skipped++;
 				next;
 			}
 			
 			# copy seq region ID
-			$data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$data->{tmp_vf}->{chr}};
-			
+                        $data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$chromosome};
+
 			# could be a structural variation feature
 			next unless $data->{tmp_vf}->isa('Bio::EnsEMBL::Variation::VariationFeature');
       
@@ -774,13 +786,29 @@ sub main {
       elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
         $data->{ID} = 'ss'.$data->{SS_ID};
       }
-			
+
+      if($source eq 'Mastermind') {
+        my $var_name = $data->{info}->{HGVSG};
+        $var_name =~ s/,.*//;
+
+        # Mastermid - skip variants bigger than 50bp
+        # Otherwise, There is an issue with truncated variation alleles
+        if(length($data->{ALT}) > 50 || length($data->{REF}) > 50) {
+          print "SKIP: $var_name\n";
+          next;
+        }
+      }
+
 			# make a var name if none exists
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
-				$data->{ID} =
-					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
+                          if($source eq 'Mastermind') {
+                            $data->{ID} = $var_name;
+                          }
+                          else {
+                            $data->{ID} = ($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
 					'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
-				$data->{made_up_name} = 1;
+                          }
+                           $data->{made_up_name} = 1;
 			}
 			
 			$data->{tmp_vf}->{variation_name} = $data->{ID};
@@ -1993,11 +2021,13 @@ sub variation_feature {
 	
 	# get VF entries either from variation object or VCF locus
 	my $existing_vfs = [];
-  
-  $existing_vfs = $var_in_db ?
+ 
+        my $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
+ 
+        $existing_vfs = $var_in_db ?
 		$vfa->fetch_all_by_Variation($data->{variation}) :
 		$vfa->_fetch_all_by_coords(
-			$config->{seq_region_ids}->{$vf->{chr}},
+			$config->{seq_region_ids}->{$chromosome},
 			$vf->{start},
 			$vf->{end},
 			$config->{somatic}
@@ -2416,12 +2446,14 @@ sub allele {
 		
 		@objs = @final_objs;
 	}
+
+        if(@objs) {	
+	  $config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	  #my $fh = get_tmp_file_handle($config, 'allele');
+	  #$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
 	
-	$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
-	#my $fh = get_tmp_file_handle($config, 'allele');
-	#$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
-	
-	$config->{rows_added}->{allele} += scalar @objs;
+	  $config->{rows_added}->{allele} += scalar @objs;
+        }
 }
 
 
@@ -2788,6 +2820,31 @@ sub print_file{
 	}
 }
 
+
+# Mastermind - read chromosome synonyms file
+sub read_chr_synonyms {
+  my $config = shift;
+
+  my %chr_synonyms_list;
+
+  my $seq_region = $config->{seq_region_ids};
+
+  my $file = $config->{chr_synonyms};
+
+  open(my $fh, '<:encoding(UTF-8)', $file)
+    or die "Could not open file '$file' $!";
+
+  while (my $row = <$fh>) {
+    chomp $row;
+    my ($chr1, $chr2) = split /\t/, $row;
+    if($seq_region->{$chr1} && $chr2 =~ /^NC/) {
+      $chr_synonyms_list{$chr2} = $chr1;
+    }
+  }
+
+  return \%chr_synonyms_list;
+}
+
 # prints usage message
 sub usage {
 	my $usage =<<END;
@@ -2830,6 +2887,10 @@ Options
 --species             Species to use [default: "human"]
 --source              Name of source [required]
 --source_description  Description of source [optional]
+
+--chr_synonyms        File that contains the chromosome synonyms. Only needed for
+                      Mastermind import.
+
 --population          Name of population for all samples in file
 --panel               Panel file containing sample population membership. One or
                       more of --population or --panel is required. Frequencies are
