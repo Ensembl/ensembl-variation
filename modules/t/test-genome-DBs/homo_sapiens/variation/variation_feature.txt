@@ -1302,3 +1302,4 @@
 997738294	27504	62987612	62987612	1	112643978	C/G	C	rs1267742856	1	\N	1	non_coding_transcript_variant,NMD_transcript_variant,intron_variant		2	0	\N	\N	\N	1		\N	1
 997738295	27513	76134861	76134861	1	112643979	(T)9/(T)10	\N	rs8192742	1	\N	1	non_coding_transcript_variant,intron_variant		16	0	\N	\N	\N	1		\N	1
 997738296	27509	3418000	3417999	1	112643980	-/T	\N	rs35099512	1	\N	1			10	0	T	0.0559105	280	1	\N	368,370,372,421,585	1
+997738466	27506	151409154	151409154	1	112643982	G/A	G	rs7811371_dup	1	\N	1	non_coding_transcript_variant,NMD_transcript_variant,intron_variant,regulatory_region_variant,TF_binding_site_variant	8,14,19,20,21,23,24,25,26,32,34,37,40,41,42,43,44	2	0	A	0.0316804	69	1	\N	367,368,369,370	1
