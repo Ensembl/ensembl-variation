@@ -174,13 +174,13 @@ my $vf2_name = 'rs2299222';
   my $vf2_name = 'rs2299222';
   $vfa->db->include_failed_variations(0);
   my $vfs2 = $vfa->fetch_all();
-  cmp_ok(scalar @$vfs2, "==", 1295, "vf by all - count (-failed)");
+  cmp_ok(scalar @$vfs2, "==", 1296, "vf by all - count (-failed)");
   cmp_ok($vfs2->[0]->variation_name(), "eq", $vf2_name, "vf by all - check first variation name");
 
   #test fetch all with inc failed my $vf_nameF='rs111067473';
   $vfa->db->include_failed_variations(1);
   my $vfs = $vfa->fetch_all(); 
-  cmp_ok(scalar @$vfs, "==", 1302, "vf by all - count (+failed)");
+  cmp_ok(scalar @$vfs, "==", 1303, "vf by all - count (+failed)");
 }
 
 # test fetch all somatic
@@ -520,5 +520,59 @@ ok($vf->allele_string eq 'AGC/-', "HGVSp matches reference");
 my $lrg_hgvsg = 'LRG_293:g.69535N>G';
 $vf = $vfa->fetch_by_hgvs_notation($lrg_hgvsg);
 ok($vf->allele_string eq 'N/G', "HGVSg LRG");
+
+print "\n# Test - fetch_all_by_caid\n";
+my $caid;
+
+throws_ok {$vfa->fetch_all_by_caid(); } qr/No CAid provided/,
+  'Throw on no CAid';
+
+throws_ok {$vfa->fetch_all_by_caid(''); } qr/No CAid provided/,
+  'Throw on empty CAid';
+
+throws_ok {$vfa->fetch_all_by_caid('CAXXX'); } qr/CAid has an invalid format/,
+  'Throw on invalid CAid format';
+
+$caid = 'CA124';
+$vfs = $vfa->fetch_all_by_caid($caid);
+ok(@$vfs == 0, "CAid ($caid) - no vf found");
+
+# CAid for biallelic SNV
+$caid = 'CA6124251';
+$vfs = $vfa->fetch_all_by_caid($caid);
+ok(@$vfs == 1, "CAid ($caid) - biallelic single vf found");
+cmp_ok($vfs->[0]->variation_name(), 'eq', 'rs490998', "CAid ($caid) - biallelic single vf -> vf_name");
+cmp_ok($vfs->[0]->allele_string(), 'eq', 'G/A', "CAid ($caid) - biallelic single vf -> vf_allele_string");
+
+# CAid for multi-allelic SNV
+$caid = 'CA6124851';
+$vfs = $vfa->fetch_all_by_caid($caid);
+ok(@$vfs == 1, "CAid ($caid) - multi-allelic single vf found");
+cmp_ok($vfs->[0]->variation_name(), 'eq', 'rs377076795', "CAid ($caid) - multi-allelic single vf -> vf_name");
+cmp_ok($vfs->[0]->allele_string(), 'eq', 'C/T', "CAid ($caid) - multi-allelic single vf -> vf_allele_string");
+
+# CAid for multiple variants
+$caid = 'CA169452307';
+$vfs = $vfa->fetch_all_by_caid($caid);
+my @vfs_sort = sort {$a->variation_name() cmp $b->variation_name} @{$vfs};
+ok(@vfs_sort == 2, "CAid ($caid) - multiple vf found");
+cmp_ok($vfs_sort[0]->variation_name(), 'eq', 'rs7811371', "CAid ($caid) - first vf -> vf_name");
+cmp_ok($vfs_sort[1]->variation_name(), 'eq', 'rs7811371_dup', "CAid ($caid) - second vf -> vf_name");
+cmp_ok($vfs_sort[0]->allele_string(), 'eq', 'G/A', "CAid ($caid) - first vf -> vf_allele_string");
+cmp_ok($vfs_sort[1]->allele_string(), 'eq', 'G/A', "CAid ($caid) - second vf -> vf_allele_string");
+
+# CAid for failed variant
+$caid = 'CA025949';
+$vfa->db->include_failed_variations(0);
+$caid = 'CA025949';
+$vfs = $vfa->fetch_all_by_caid($caid);
+ok(@$vfs == 0, "CAid ($caid) - exclude failed vf");
+
+$vfa->db->include_failed_variations(1);
+$caid = 'CA025949';
+$vfs = $vfa->fetch_all_by_caid($caid);
+ok(@$vfs == 1, "CAid ($caid) - include failed vf");
+cmp_ok($vfs->[0]->variation_name(), 'eq', 'rs80359157', "CAid ($caid) - failed vf -> vf_name");
+cmp_ok($vfs->[0]->allele_string(), 'eq', 'C/G', "CAid ($caid) - failed vf -> vf_allele_string");
 
 done_testing();
