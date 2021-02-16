@@ -566,7 +566,7 @@ sub main {
 	$config->{source_id} = get_source_id($config) unless defined($config->{only_existing});
 	
 	# get population object
-	if($config->{tables}->{population}) {
+	if($config->{tables}->{population} && $config->{source} ne 'Mastermind') {
 		die("ERROR: no population specified\n") unless defined $config->{population} || defined $config->{panel};
 		$config->{populations} = population($config);
 	}
@@ -787,8 +787,9 @@ sub main {
         $data->{ID} = 'ss'.$data->{SS_ID};
       }
 
-      if($source eq 'Mastermind') {
-        my $var_name = $data->{info}->{HGVSG};
+      my $var_name;
+      if($config->{source} eq 'Mastermind') {
+        $var_name = $data->{info}->{HGVSG};
         $var_name =~ s/,.*//;
 
         # Mastermid - skip variants bigger than 50bp
@@ -801,7 +802,7 @@ sub main {
 
 			# make a var name if none exists
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
-                          if($source eq 'Mastermind') {
+                          if($config->{source} eq 'Mastermind') {
                             $data->{ID} = $var_name;
                           }
                           else {
