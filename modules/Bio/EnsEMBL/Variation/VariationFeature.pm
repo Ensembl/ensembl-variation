@@ -2435,7 +2435,7 @@ sub reset_consequence_data {
   Example    : print $vf->get_var_synonyms(), "\n";
   Description: Returns the variant synonyms
                for this VariationFeature
-  Returntype : Hash of variant synonyms
+  Returntype : Array of variant synonyms
   Exceptions : none
   Caller     : general
   Status     : Stable
