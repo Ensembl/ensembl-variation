@@ -143,7 +143,10 @@ sub fetch_input {
 
   # if the folder does not exist, try to fetch from ulr
   if (! -d $animalqtl_inputDir) {
-    make_path($animalqtl_inputDir) or die "Failed to create $animalqtl_inputDir $!\n";
+    my $err;
+    make_path($animalqtl_inputDir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+
     my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
     my $return_value = $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};

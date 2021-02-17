@@ -66,7 +66,11 @@ sub fetch_input {
                   #source version is set based on EBI fetch data hash response_date
                   );
   my $workdir = $pipeline_dir."/".$source_info{source_name_short};
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   $self->workdir($workdir);
 
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
