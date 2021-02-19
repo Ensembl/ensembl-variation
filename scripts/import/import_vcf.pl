@@ -790,7 +790,9 @@ sub main {
       my $var_name;
       if($config->{source} eq 'Mastermind') {
         $var_name = $data->{info}->{HGVSG};
-        $var_name =~ s/,.*//;
+        if($var_name =~ /,/) {
+          $var_name =~ s/.*,//;
+        }
 
         # Mastermid - skip variants bigger than 50bp
         # Otherwise, There is an issue with truncated variation alleles
