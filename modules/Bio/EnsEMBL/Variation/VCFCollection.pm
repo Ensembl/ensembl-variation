@@ -433,11 +433,13 @@ sub get_all_VariationFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $dont_fetch_vf_overlaps = shift;
-  
+  # variants from a VCF file are always on the forward strand
+  if ($slice->strand == -1) {
+    $slice = $slice->invert;
+  }
   return [] unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
-  my $sr_slice = $slice->seq_region_Slice();
   my $vfa = $self->use_db ? $self->adaptor->db->get_VariationFeatureAdaptor : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($self->species);
   
   my @vfs;
