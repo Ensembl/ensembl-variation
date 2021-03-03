@@ -71,6 +71,7 @@ $config,
   'evidence',
   'clinical_significance',	
   'validation_status',
+  'dbsnp_synonyms',
 
   'structural_variations|svs',
 
@@ -444,7 +445,9 @@ sub annotate_vf {
     if ($config->{global_maf}) {
         add_global_maf($gvf_line, $vf);
     }
-
+    if ($config->{dbsnp_synonyms}) {
+      add_dbsnp_synonyms($gvf_line, $vf);
+    }
     if (defined $gvf_line->{attributes}->{invalid_variant_strings}) {
         $gvf_line = {};
     } else {
@@ -578,6 +581,19 @@ sub add_global_maf {
                     $variation->minor_allele_count,);
         }
     }
+}
+
+sub add_dbsnp_synonyms {
+  my ($gvf_line, $vf) = @_;
+  my $variation = $vf->variation;
+  my $archive_ids = $variation->get_all_synonyms('Archive dbSNP');
+  if (scalar @$archive_ids > 0) {
+    $gvf_line->{attributes}->{archive_dbsnp_ids} = join(',', @$archive_ids);
+  }
+  my $former_ids = $variation->get_all_synonyms('Former dbSNP');
+  if (scalar @$former_ids > 0) {
+    $gvf_line->{attributes}->{former_dbsnp_ids} = join(',', @$former_ids);
+  }
 }
 
 sub add_variant_effect {
