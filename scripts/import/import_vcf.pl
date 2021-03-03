@@ -751,8 +751,8 @@ sub main {
 			}
 			
 			# copy seq region ID
-                        $data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$chromosome};
-
+			$data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$chromosome};
+			
 			# could be a structural variation feature
 			next unless $data->{tmp_vf}->isa('Bio::EnsEMBL::Variation::VariationFeature');
       
@@ -2027,7 +2027,7 @@ sub variation_feature {
  
         my $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
  
-        $existing_vfs = $var_in_db ?
+  $existing_vfs = $var_in_db ?
 		$vfa->fetch_all_by_Variation($data->{variation}) :
 		$vfa->_fetch_all_by_coords(
 			$config->{seq_region_ids}->{$chromosome},
