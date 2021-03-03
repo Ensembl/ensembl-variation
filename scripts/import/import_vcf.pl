@@ -162,7 +162,7 @@ sub configure {
 		
 		'cache=s',
 		'fasta=s',
-                'chr_synonyms=s',
+    'chr_synonyms=s',
 		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
@@ -210,6 +210,8 @@ sub configure {
 		
 		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id}, " PID ", $config->{pid});
 	}
+	
+	die "ERROR: Cannot import Mastermind data without the chromosome synonyms file\n" if($config->{source} ne 'Mastermind' && !$config->{chr_synonyms});
 	
 	# set defaults
 	$config->{species}         ||= "human";
@@ -789,6 +791,10 @@ sub main {
 
       my $var_name;
       if($config->{source} eq 'Mastermind') {
+        # We only use GRCh37 HGVS - Mastermind doesn't support GRCh38. The HGVS is going to be used to built the URL.
+        # The VCF file (GRCh38) has two HGVS separated by a comma. The first HGVS is for GRCh38 and the second is GRCh37. We want to keep the second.
+        # Example VCF GRCh38: 'HGVSG=NC_000001.11:g.450843C>G,NC_000001.10:g.368494C>G;'
+        # Example VCF GRCh37: 'HGVSG=NC_000001.10:g.368494C>G;'
         $var_name = $data->{info}->{HGVSG};
         if($var_name =~ /,/) {
           $var_name =~ s/.*,//;
@@ -803,15 +809,15 @@ sub main {
       }
 
 			# make a var name if none exists
-			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
-                          if($config->{source} eq 'Mastermind') {
-                            $data->{ID} = $var_name;
-                          }
-                          else {
-                            $data->{ID} = ($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
-					'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
-                          }
-                           $data->{made_up_name} = 1;
+						if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
+							$data->{ID} =
+								($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
+								'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
+							$data->{made_up_name} = 1;
+						}
+			
+			if($config->{source} eq 'Mastermind') {
+				$data->{ID} = $var_name;
 			}
 			
 			$data->{tmp_vf}->{variation_name} = $data->{ID};
@@ -2025,7 +2031,8 @@ sub variation_feature {
 	# get VF entries either from variation object or VCF locus
 	my $existing_vfs = [];
  
-        my $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
+	my $chromosome = $vf->{chr};
+	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if($config->{source} eq 'Mastermind');
  
   $existing_vfs = $var_in_db ?
 		$vfa->fetch_all_by_Variation($data->{variation}) :
@@ -2450,13 +2457,13 @@ sub allele {
 		@objs = @final_objs;
 	}
 
-        if(@objs) {	
-	  $config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
-	  #my $fh = get_tmp_file_handle($config, 'allele');
-	  #$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
-	
-	  $config->{rows_added}->{allele} += scalar @objs;
-        }
+	if(@objs) {	
+		$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+		#my $fh = get_tmp_file_handle($config, 'allele');
+		#$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
+		
+		$config->{rows_added}->{allele} += scalar @objs;
+	}
 }
 
 
@@ -2854,8 +2861,6 @@ sub usage {
 Usage:
 perl import_vcf.pl [arguments]
 
-Documentation: http://www.ensembl.org/info/docs/variation/import_vcf.html
-
 Options
 -h | --help           Display this message and quit
 
@@ -2913,7 +2918,9 @@ Options
 --pop_prefix          Prefix added to population names [default: not used]
 --var_prefix          Prefix added to constructed variation names [default: not used]
 
---create_name         Always create a new variation name i.e. don't use ID column
+--create_name         Always create a new variation name i.e. don't use ID column.
+                      It doesn't apply to Mastermind.
+
 --chrom_regexp        Limit processing to CHROM columns matching regexp
 
 --flank               Size of flanking sequence [default: 200]
