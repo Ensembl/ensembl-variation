@@ -80,12 +80,12 @@ sub write_config_file {
         $species_config->{structural_variations} = ['structural_variations'];
     }
     if ($species eq 'homo_sapiens') {
-        $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{sets}->{phenotype_associated} =  ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
-        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
+        $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
+        $species_config->{sets}->{phenotype_associated} =  ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
+        $species_config->{incl_consequences} =  ['sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
+        $species_config->{somatic_incl_consequences} =  ['somatic', 'sift', 'polyphen', 'incl_consequences', 'protein_coding_details', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
+        $species_config->{somatic} = ['somatic', 'evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
+        $species_config->{generic} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf', 'dbsnp_synonyms'];
         $species_config->{structural_variations} = ['structural_variations', 'clinical_significance'];
     }
     $config->{$species} = $species_config;
