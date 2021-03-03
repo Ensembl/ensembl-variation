@@ -60,6 +60,7 @@ GetOptions(
     'global_maf',
     'evidence',
     'clinical_significance',
+    'dbsnp_synonyms',
     'structural_variations|svs',
     'incl_consequences',
     'protein_coding_details',
@@ -314,6 +315,14 @@ sub parse_gvf_line {
 
     if ($gvf_line->{clinical_significance}) {
         push @{$vcf_line->{INFO}}, map { $config->{clin_significance_to_abbr}->{$_} } split(',', $gvf_line->{clinical_significance});
+    }
+
+    if ($gvf_line->{archive_dbsnp_ids}) {
+        push @{$vcf_line->{INFO}}, "ARCHIVE_DBSNP=" . $gvf_line->{archive_dbsnp_ids};
+    }
+
+    if ($gvf_line->{former_dbsnp_ids}) {
+        push @{$vcf_line->{INFO}}, "FORMER_DBSNP=" . $gvf_line->{former_dbsnp_ids};
     }
 
     if ($gvf_line->{global_minor_allele_frequency}) {
@@ -739,6 +748,11 @@ sub print_header {
         }
     }
 
+    if ($config->{dbsnp_synonyms}) {
+      print $fh "##INFO=<ID=ARCHIVE_DBSNP,Number=.,Type=String,Description=\"Former dbSNP variant names, merged by variant\">\n";
+      print $fh "##INFO=<ID=FORMER_DBSNP,Number=.,Type=String,Description=\"Former dbSNP variant names, merged by allele.\">\n";
+    }
+
     if ($config->{global_maf}) {
         print $fh "##INFO=<ID=MA,Number=1,Type=String,Description=\"Minor Allele\">\n";
         print $fh "##INFO=<ID=MAF,Number=1,Type=Float,Description=\"Minor Allele Frequency\">\n";
@@ -898,8 +912,13 @@ Phenotype or Disease, 1000 Genomes, ESP, ExAC, gnomAD, TOPMed) from GVF file and
 =item B<--clinical_significance>
 
 Parse clinical significance attributes from GVF file and
-sotre in VCF file. Available attributes are described here:
+store in VCF file. Available attributes are described here:
 https://www.ensembl.org/info/genome/variation/phenotype/phenotype_annotation.html#clin_significance
+
+=item B<--dbsnp_synonyms>
+
+Parse archive_dbsnp_ids and former_dbsnp_ids attributes from GVF file
+and sotre in VCF file.
 
 =item B<--structural_variations|svs>
 
