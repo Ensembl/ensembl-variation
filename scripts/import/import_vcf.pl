@@ -2841,7 +2841,7 @@ sub read_chr_synonyms {
 
   my $file = $config->{chr_synonyms};
 
-  open(my $fh, '<:encoding(UTF-8)', $file)
+  open(my $fh, $file)
     or die "Could not open file '$file' $!";
 
   while (my $row = <$fh>) {
