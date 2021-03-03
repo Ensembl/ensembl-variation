@@ -876,7 +876,7 @@
       "species": "neovison_vison",
       "assembly": "NNQGG.v01",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-104/compara/conservation_scores/90_mammals.gerp_conservation_score/90_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-104/compara/conservation_scores/90_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
       "annotation_type": "gerp"
     },
     {
