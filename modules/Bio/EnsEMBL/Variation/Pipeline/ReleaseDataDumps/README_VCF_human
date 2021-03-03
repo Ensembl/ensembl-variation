@@ -38,6 +38,7 @@ If available for this species, the file includes information on:
     - evidence
     - clinical_significance
     - global minor allele, frequency and count
+    - dbSNP synonyms including archive and former IDs
 Incl_consequences files include sift (if available for this species)
 and polyphen (human only) predictions.
 
