@@ -809,12 +809,12 @@ sub main {
       }
 
 			# make a var name if none exists
-						if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
-							$data->{ID} =
-								($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
-								'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
-							$data->{made_up_name} = 1;
-						}
+			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
+				$data->{ID} =
+					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
+					'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
+				$data->{made_up_name} = 1;
+			}
 			
 			if($config->{source} eq 'Mastermind') {
 				$data->{ID} = $var_name;
@@ -2458,11 +2458,11 @@ sub allele {
 	}
 
 	if(@objs) {	
-		$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
-		#my $fh = get_tmp_file_handle($config, 'allele');
-		#$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
-		
-		$config->{rows_added}->{allele} += scalar @objs;
+	  $config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	  #my $fh = get_tmp_file_handle($config, 'allele');
+	  #$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
+	  
+	  $config->{rows_added}->{allele} += scalar @objs;
 	}
 }
 
