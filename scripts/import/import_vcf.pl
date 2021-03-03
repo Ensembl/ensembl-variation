@@ -211,7 +211,7 @@ sub configure {
 		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id}, " PID ", $config->{pid});
 	}
 	
-	die "ERROR: Cannot import Mastermind data without the chromosome synonyms file\n" if($config->{source} ne 'Mastermind' && !$config->{chr_synonyms});
+	die "ERROR: Cannot import Mastermind data without the chromosome synonyms file\n" if($config->{source} eq 'Mastermind' && !$config->{chr_synonyms});
 	
 	# set defaults
 	$config->{species}         ||= "human";
