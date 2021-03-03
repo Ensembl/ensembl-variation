@@ -162,7 +162,7 @@ sub configure {
 		
 		'cache=s',
 		'fasta=s',
-    'chr_synonyms=s',
+		'chr_synonyms=s',
 		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
@@ -740,10 +740,10 @@ sub main {
         }
       }
 
-                       my $chromosome = $data->{tmp_vf}->{chr};
-                       if(defined($config->{chr_synonyms_list})) {
-                          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
-                        }
+      my $chromosome = $data->{tmp_vf}->{chr};
+      if(defined($config->{chr_synonyms_list})) {
+        $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+      }
 
 			
 			if(!defined($config->{seq_region_ids}->{$chromosome})) {
