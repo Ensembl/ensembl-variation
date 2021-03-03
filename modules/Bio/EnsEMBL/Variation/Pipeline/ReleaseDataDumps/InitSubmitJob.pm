@@ -22,6 +22,7 @@ package Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob;
 
 use strict;
 use warnings;
+use Data::Dumper;
 use FileHandle;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
