@@ -193,6 +193,7 @@ sub update_internal_db{
       my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
                                                              result_value => $new_counts->{$type},
                                                              result_type  => $type,
+                                                             parameter    => 'All',
                                                              adaptor      => $result_dba
                                                            });
       $result_dba->store($result);
