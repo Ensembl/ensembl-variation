@@ -144,6 +144,7 @@ sub update_internal_db{
     return;
   }
 
+  my $species = $self->required_param('species');
   my $var_dba = $self->get_species_adaptor('variation');
   my $ensdb_name = $var_dba->dbc->dbname;
   my $genome_assembly = $self->get_assembly;
@@ -170,40 +171,42 @@ sub update_internal_db{
   }
   $ensvardb_dba->update_status( $ensdb, 'phenotype_annotation_run' );
 
-  foreach my $type ( keys %{$new_counts}){
-
-    if ($type eq 'phenotype_feature_count_details'){
-      ## set any previous results to non current for this check type and species
-      $result_dba->set_non_current_by_species_and_type($self->required_param('species') , 'phenotype_feature_count');
-
-      my $details = $new_counts->{$type};
-      foreach my $source_type ( keys %{$details}){
-        my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
-                                                               result_value => $details->{$source_type},
-                                                               result_type  => 'phenotype_feature_count',
-                                                               parameter => $source_type,
-                                                               adaptor      => $result_dba
-                                                             });
-        $result_dba->store($result);
-      }
+  my @counts = ('phenotype_count', 'phenotype_feature_count',
+                'phenotype_feature_attrib_count', 'phenotype_ontology_accession_count');
+  foreach my $type (@counts) {
+    if (!defined $new_counts->{$type}){
+      $self->print_logFH("$type count not found in current db!\n");
+      next;
+    }
+    ## set any previous results to non current for this check type and species
+    if ($species eq 'homo_sapiens') {
+      $result_dba->set_non_current_by_species_assembly_and_type($species, $genome_assembly, $type);
     } else {
-      ## set any previous results to non current for this check type and species
-      $result_dba->set_non_current_by_species_and_type($self->required_param('species') , $type);
+      $result_dba->set_non_current_by_species_and_type($species , $type);
+    }
+    my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                           result_value => $new_counts->{$type},
+                                                           result_type  => $type,
+                                                           parameter    => 'All',
+                                                           adaptor      => $result_dba
+                                                         });
+    $result_dba->store($result);
+  }
 
-      my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
-                                                             result_value => $new_counts->{$type},
-                                                             result_type  => $type,
-                                                             parameter    => 'All',
-                                                             adaptor      => $result_dba
-                                                           });
-      $result_dba->store($result);
-      }
+  # save grouped counts
+  # previous release phenotype_feature_count details already set to not current in above loop
+  my $type = 'phenotype_feature_count_details';
+  my $details = $new_counts->{$type};
+  foreach my $source_type ( keys %{$details}){
+    my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                           result_value => $details->{$source_type},
+                                                           result_type  => 'phenotype_feature_count',
+                                                           parameter => $source_type,
+                                                           adaptor      => $result_dba
+                                                         });
+    $result_dba->store($result);
   }
 }
-
-
-
-
 
 
 1;
