@@ -398,8 +398,8 @@ sub check_source {
       $text_out .= "WARNING: " . $new_counts->{phenotype_feature_count_details}{$check_name} . " $check_name entries";
       $text_out .= " (previously " . $previous_counts->{phenotype_feature_count_details}{$check_name} . ")" ;
       $text_out .= "\n";
-      #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
-      $count_ok = 0 unless $assembly eq 'GRCh37';
+      # a 5% discrepancy is accepted in order to proceed with the other imports
+      $count_ok = 0 unless $previous_counts->{phenotype_feature_count_details}{$check_name} * 0.95 < $new_counts->{phenotype_feature_count_details}{$check_name};
     }
   } else {
     my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
@@ -411,8 +411,8 @@ sub check_source {
         $text_out .= "WARNING: " . $new_counts->{"$table\_count"} . " $table entries";
         $text_out .= " (previously " . $previous_counts->{"$table\_count"} . ")" if defined  $previous_counts->{"$table\_count"} ;
         $text_out .= "\n";
-        #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
-        $count_ok = 0 unless $assembly eq 'GRCh37';
+        # a 5% discrepancy is accepted in order to proceed with the other imports
+        $count_ok = 0 unless $previous_counts->{$check_name} * 0.95 < $new_counts->{$check_name};
       }
     }
   }
