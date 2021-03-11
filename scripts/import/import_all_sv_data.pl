@@ -241,8 +241,8 @@ foreach my $in_file (@files) {
   my $attrib_id;
   if($phenotype_data) {
     $attrib_id = get_attrib_id();
+    phenotype_feature($attrib_id);
   }
-  phenotype_feature($attrib_id);
 
   drop_tmp_table() if (!defined($debug));
   debug(localtime()." Done!\n");
@@ -970,7 +970,7 @@ sub get_attrib_id {
   $stmt->execute() || die;
   my $attrib_id = ($stmt->fetchrow_array)[0];
 
-  debug(localtime()." No attribute 'trait' was found in attrib table!\n") unless defined $attrib_id;
+  die(localtime()." ERROR: No attribute 'trait' was found in attrib table!\nCleanup the tmp tables 'tmp_sv' and 'tmp_sv_phenotype' before importing again.\n") unless defined $attrib_id;
 
   return $attrib_id;
 }
@@ -1584,7 +1584,10 @@ sub parse_9th_col {
 
         $phe =~ s/__/, /g;
 
+        # $phenotype_data is set to 1 when there's valid phenotypes
+        # the attrib_id is going to be fetched only if we have valid phenotype data (#L242)
         $phenotype_data = 1;
+        # if a phenotype is invalid we do not store it and set $skip_phenotype to 1 to skip it in the next lines (#L1594-1595)
         $info->{phenotype}{$phe} = 1 unless $skip_phenotype;
       }
     }
