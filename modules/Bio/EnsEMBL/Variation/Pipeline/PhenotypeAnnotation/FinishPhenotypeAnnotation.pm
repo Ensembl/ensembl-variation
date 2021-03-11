@@ -155,7 +155,7 @@ sub update_internal_db{
   my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
   unless (defined $ensdb ){
 
-    ## add new db  *** NOT setting last to non-current - fix this ***
+    ## add new db
     my @b = split/\_/,$ensdb_name;
     pop @b;
     my $ens_version = pop @b;
