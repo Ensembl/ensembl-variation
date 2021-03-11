@@ -1160,8 +1160,8 @@ sub _get_seq_regions {
 sub _get_coords {
   my ($self, $ids, $variation_ids, $type, $db_adaptor) = @_;
 
-  my $tables;
-  my $where_clause;
+  my $tables = '';
+  my $where_clause = '';
   my $id = '';
 
   my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
