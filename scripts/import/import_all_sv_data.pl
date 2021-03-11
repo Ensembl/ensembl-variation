@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 # 
-#      http://www.apache.org/licenses/LICENSE-2.0
+#      https://www.apache.org/licenses/LICENSE-2.0
 # 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,10 +19,10 @@
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+  developers list at <https://lists.ensembl.org/mailman/listinfo/dev>.
 
-  Questions may also be sent to the Ensembl help desk at
-  <http://www.ensembl.org/Help/Contact>.
+  Questions may also be sent to the Ensembl helpdesk at
+  <https://www.ensembl.org/Help/Contact>.
 
 =cut
 
@@ -170,6 +170,7 @@ my $failed = [];
 my $study_id;
 my $somatic_study;
 my $fname;
+my $phenotype_data;
 
 my $source_id = source();
 
@@ -235,7 +236,14 @@ foreach my $in_file (@files) {
   somatic_study_processing() if ($somatic_study == 1);
   structural_variation_set() if ($var_set_id);
   structural_variation_sample();
-  phenotype_feature();
+
+  # Fetch the default attrib id (only if there's phenotype data)
+  my $attrib_id;
+  if($phenotype_data) {
+    $attrib_id = get_attrib_id();
+    phenotype_feature($attrib_id);
+  }
+
   drop_tmp_table() if (!defined($debug));
   debug(localtime()." Done!\n");
 
@@ -955,7 +963,21 @@ sub get_gender {
   return $genders{$row};
 }
 
+# Get the phenotype attrib id
+# By default, attrib = 'trait'
+sub get_attrib_id {
+  my $stmt = $dbVar->prepare(qq { SELECT attrib_id FROM attrib WHERE value = 'trait' });
+  $stmt->execute() || die;
+  my $attrib_id = ($stmt->fetchrow_array)[0];
+
+  die(localtime()." ERROR: No attribute 'trait' was found in attrib table!\nCleanup the tmp tables 'tmp_sv' and 'tmp_sv_phenotype' before importing again.\n") unless defined $attrib_id;
+
+  return $attrib_id;
+}
+
 sub phenotype_feature {
+  my $class_attrib_id = shift;
+
   my $stmt;
   
   # Check if there is some phenotype entries
@@ -978,8 +1000,8 @@ sub phenotype_feature {
 
     $phenotype =~ s/'/\\'/g;
 
-    my $stmt_phenotype = $dbVar->prepare(qq[ INSERT INTO phenotype (description) VALUES (?) ]);
-    $stmt_phenotype->execute($phenotype);
+    my $stmt_phenotype = $dbVar->prepare(qq[ INSERT INTO phenotype (description, class_attrib_id) VALUES (?,?) ]);
+    $stmt_phenotype->execute($phenotype, $class_attrib_id);
 
   }
     
@@ -1531,6 +1553,9 @@ sub parse_9th_col {
       $info->{_bp_range}  = $value if ($key =~ /Breakpoint_range/i);
     }
     
+    my $skip_phenotype;
+    
+
     # Phenotype
     if ($key eq 'phenotype') {
       # The input is a string of multiple phenotypes separated by comma
@@ -1539,6 +1564,10 @@ sub parse_9th_col {
       # Example: '46,XX Testicular Disorders of Sex Development'
       if($value =~ /46,/) {
         $value =~ s/46,/46-/g;
+      }
+
+      if($value =~ /not_reported/ || $value =~ /not reported/ || $value =~ /not specified/ || $value =~ /not_specified/ || $value =~ /not_provided/ || $value =~ /not provided/) {
+        $skip_phenotype = 1;
       }
 
       $value =~ s/, /__/g;
@@ -1554,11 +1583,16 @@ sub parse_9th_col {
         $phe = replace_char($phe);
 
         $phe =~ s/__/, /g;
-        $info->{phenotype}{$phe} = 1;
+
+        # $phenotype_data is set to 1 when there's valid phenotypes
+        # the attrib_id is going to be fetched only if we have valid phenotype data (#L242)
+        $phenotype_data = 1;
+        # if a phenotype is invalid we do not store it and set $skip_phenotype to 1 to skip it in the next lines (#L1594-1595)
+        $info->{phenotype}{$phe} = 1 unless $skip_phenotype;
       }
     }
-    $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description');
-    $info->{phenotype_link} = $value if ($key eq 'phenotype_link' || $key eq 'phenotype_id');
+    $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description' && !$skip_phenotype);
+    $info->{phenotype_link} = $value if (($key eq 'phenotype_link' || $key eq 'phenotype_id') && !$skip_phenotype);
 
     # Allele count and frequency
     if ($key eq 'allele_count') {
@@ -1915,7 +1949,12 @@ sub cleanup {
   my $sv_clin_count = ($sth2->fetchrow_array)[0];
   $sth2->finish;
   if ($sv_clin_count != 0) {
-    print STDERR "\tThe table $sv_table has $sv_clin_count variants with clinical_significance values which don't match the authorized values!\nPlease, look at the column '$tmp_sv_clin_col'\n";
+    # Which terms are not supported?
+    my $sth_not_supported = $dbVar->prepare(qq{ SELECT distinct($tmp_sv_clin_col) FROM $sv_table WHERE (clinical_significance is NULL OR clinical_significance = '') AND $tmp_sv_clin_col is not NULL});
+    $sth_not_supported->execute();
+    my @clin_not_supported = $sth_not_supported->fetchrow_array;
+
+    print STDERR "\tThe table $sv_table has $sv_clin_count variants with clinical_significance values which don't match the authorized values! Please, look at the column '$tmp_sv_clin_col'. Terms not supported are: " . join (", ", @clin_not_supported) . "\n";
     $sv_flag = 1;
   } 
   else {
@@ -1923,6 +1962,14 @@ sub cleanup {
   }
   
   debug(localtime()."\t - Table $sv_table: cleaned") if ($sv_flag == 0);
+
+  # Phenotypes
+  my $sth_pheno = $dbVar->prepare(qq{ SELECT count(*) FROM phenotype WHERE phenotype_id NOT IN (SELECT phenotype_id FROM phenotype_feature)});
+  $sth_pheno->execute() || die;
+  my $n_phenotype = ($sth_pheno->fetchrow_array)[0];
+  if($n_phenotype != 0) {
+    print STDERR "Warning: there are $n_phenotype phenotype entries with no phenotype_feature entry.\n";
+  }
 
 }
 
