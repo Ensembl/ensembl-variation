@@ -95,10 +95,10 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 $slice_adaptor->dbc->reconnect_when_lost(1);
 
-## fetch ClinVar source object
+## fetch ClinVar source object and update version based on input file name
 my $omimstr= 'OMIM';
-my $source      = get_source('ClinVar');
-my $omim_source = get_source($omimstr);
+my $source      = get_source($data_file, 'ClinVar');
+my $omim_source = get_source($data_file, $omimstr);
 
 my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
@@ -171,14 +171,7 @@ while($reader->read) {
     if (defined $releaseDate) {
       my $versionDate = new Date::Manip::Date;
       $versionDate->parse($releaseDate);
-
-      #update ClinVar and OMIM source version with ClinVar xml version
-      $source->version($versionDate->printf("%Y%m")); #201904
-      save_source_version($source);
-      $omim_source->version($source->version);
-      save_source_version($omim_source);
-    } else {
-      print "WARNING: no source version found in input xml therefore no update to db source version.\n";
+      print "INFO: ReleaseSet version $releaseDate.\n";
     }
   } else {
     my $xml = $reader->readOuterXml;
@@ -202,7 +195,7 @@ sub process_clinvar_set {
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
-    warn "processing $record{Acc}\n" if $DEBUG == 1;
+    print "processing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     if ($done{$record{Acc}}){
@@ -254,10 +247,10 @@ sub process_clinvar_set {
     }
     else{
       if( exists $record{feature_info}->{dbSNP} && $record{feature_info}->{dbSNP}->[0] =~/\d+/ ){
-         warn "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
+         print "Importing Var :  $record{feature_info}->{dbSNP}->[0] ($record{Acc})\n" if $DEBUG == 1;
          import( \%record);
       } elsif (exists $record{feature_info}{Chr} && exists $record{feature_info}{start}) {
-        warn "Importing Var based on location+allele_ref lookup of existing match in DB\n";
+        print "Importing Var based on location+allele_ref lookup of existing match in DB\n";
         import( \%record, 1);
       }
       else{
@@ -266,7 +259,7 @@ sub process_clinvar_set {
     	$message .= " on chr: $record{feature_info}->{Chr} "      if defined $record{feature_info}->{Chr} ;
     	$message .= " with HGVS: $record{feature_info}->{hgvs_g}" if defined $record{feature_info}->{hgvs_g} ;
     	$message .= " due to missing data ($record{Acc})\n";
-    	warn $message if $DEBUG == 1;
+      print $message if $DEBUG == 1;
       }
     }
   };
@@ -718,7 +711,7 @@ sub import{
   elsif(!defined $structvar && $try_match ){
     ($feature_object, $feat, $alt_allele) = get_variant($record, undef);
     if (! defined $feature_object){
-      warn "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n";
+      print "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n";
       return undef;
     }
 
@@ -792,7 +785,14 @@ sub import_phenotype_feature{
   }
 
   ## look for existing or enter new phenotype object
-  my $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
+  my $pheno="";
+  eval {
+    $pheno = get_phenotype($record->{disease}, $record->{ontology_accession});
+  };
+  if ($@) {
+    warn "EXCEPTION in fetch of phenotype (RCV: ". $record->{Acc} .", VCV:". $record->{clinvar_variant_id}.") via SQL statement: $@";
+    return;
+  }
 
   my %attribs;
   $attribs{review_status}    = $record->{Status};
@@ -993,7 +993,7 @@ sub get_variant{
       $record->{feature_info}->{hgvs_g} = $record->{feature_info}->{Chr} . ":" . $record->{feature_info}->{hgvs_g} :
       ($record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g} );
   }
-  print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . "\n" if $DEBUG ==1;
+  print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . " for RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n" if $DEBUG ==1;
 
   my ($ref_allele, $alt_allele);
   eval{
@@ -1003,7 +1003,8 @@ sub get_variant{
   warn "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
 
   unless (defined $ref_allele && defined  $alt_allele && $ref_allele ne $alt_allele){
-    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} . ") \n";
+    print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} .
+          ") RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n";
   }
 
   if (defined $rs_id) {
@@ -1054,7 +1055,7 @@ sub get_variant{
       warn "no variation feature found via search by location identifier: $location_str\n" if $DEBUG ==1;
     }
   } else {
-    warn "no ref or alt or chr or start, skipping lookup by location identifier\n";
+    print "no ref or alt or chr or start, skipping lookup by location identifier\n";
   }
 
   #try to match by SPDI: longest allele format
@@ -1111,7 +1112,7 @@ sub get_variant_via_SPDI{
       warn "no variation feature found via search by SPDI + location identifier\n";
     }
   } else {
-    warn "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
+    print "no SPDI available for entry, skipping lookup by SPDI + location identifier\n";
   }
   return undef;
 }
@@ -1344,17 +1345,26 @@ sub get_structural_variant{
 =cut
 
 sub get_source{
+  my $file = shift;  ##ClinVarFullRelease_2016-10.xml
   my $source_name = shift;
+
+  my $version = $file;
+  $version =~ s/\D+//g;
+  warn "VERSION looks suspicious: $version\n" if length($version) >6;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
   if (defined $source_name) {
     my $source = $source_adaptor->fetch_by_name( $source_name );
     die ("Source information not held for ",$source_name, "\n") unless defined $source ;
+
+    $source->version($version);
+    $source_adaptor->update_version($source);
+
     return $source;
   }
 
-  return $source;
+  return;
 }
 
 =head2 save_source_version
