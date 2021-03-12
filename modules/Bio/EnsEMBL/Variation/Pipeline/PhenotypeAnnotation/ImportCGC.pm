@@ -69,7 +69,11 @@ sub fetch_input {
                   );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name_short}."/".$species;
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   $self->workdir($workdir);
 
   my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';

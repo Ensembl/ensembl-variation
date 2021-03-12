@@ -220,7 +220,11 @@ sub split_omia {
 
   my $prefix = 'omia_';
   my $suffix = '.txt';
-  make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
+  unless (-d $workdir."/omia_split") {
+    my $err;
+    make_path($workdir."/omia_split", {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
 
   my %data;
 

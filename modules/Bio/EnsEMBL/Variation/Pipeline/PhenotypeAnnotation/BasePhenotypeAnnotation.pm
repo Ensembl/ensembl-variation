@@ -1160,8 +1160,8 @@ sub _get_seq_regions {
 sub _get_coords {
   my ($self, $ids, $variation_ids, $type, $db_adaptor) = @_;
 
-  my $tables;
-  my $where_clause;
+  my $tables = '';
+  my $where_clause = '';
   my $id = '';
 
   my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
@@ -1661,12 +1661,19 @@ sub get_old_results {
 
   my %previous_result;
 
+  my $species  = $self->required_param('species');
+  my $assembly = $self->get_assembly();
   my $result_adaptor = $int_dba->get_ResultAdaptor();
-  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
+  my $res;
+  if ($species eq 'homo_sapiens'){
+    $res = $result_adaptor->fetch_all_current_by_species_and_assembly($species, $assembly);
+  } else {
+    $res = $result_adaptor->fetch_all_current_by_species( $species );
+  }
 
   foreach my $result (@{$res}){
 
-    if ($result->parameter()){
+    if ($result->parameter() && $result->parameter() ne 'All'){
       $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
     } else {
       $previous_result{ $result->result_type() } = $result->result_value();

@@ -87,7 +87,11 @@ sub fetch_input {
   $source_info{source_version} = strftime("%Y%m", localtime); # it is current month
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   $self->workdir($workdir);
   my $file_ega = "ega.studies.csv";
 

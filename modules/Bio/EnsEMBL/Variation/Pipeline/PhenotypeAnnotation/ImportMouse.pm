@@ -63,7 +63,11 @@ sub fetch_input {
     $self->debug($self->param('debug_mode'));
 
     my $workdir = $pipeline_dir."/ImportMouse/";
-    make_path($workdir) or die "Failed to create $workdir $!\n";
+    unless (-d $workdir) {
+      my $err;
+      make_path($workdir, {error => \$err});
+      die "make_path failed: ".Dumper($err) if $err && @$err;
+    }
 
     open(my $logFH, ">", $workdir."/".'log_import_out_ImportMouse_'.$run_type) || die ("Could not open file for writing $!\n");
     $self->logFH($logFH);

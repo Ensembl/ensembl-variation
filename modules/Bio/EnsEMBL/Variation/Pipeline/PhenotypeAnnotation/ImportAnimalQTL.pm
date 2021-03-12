@@ -66,7 +66,7 @@ my $animalqtl_baseURL='https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/';
 my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
   sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
-  ovis_aries => 'https://www.animalgenome.org/QTLdb/tmp/QTL_OAR_3.1.gff.txt.gz',  # Ovis aries #TODO: replace with the one in export once it is there
+  ovis_aries => $animalqtl_baseURL.'QTL_OAR_4.0.gff.txt.gz',  # Ovis aries
   bos_taurus => $animalqtl_baseURL.'QTL_ARS_UCD1.gff.txt.gz', #Bos taurus
   equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
   ovis_aries_rambouillet => "",
@@ -83,12 +83,12 @@ my %animalQTL_species_fileNames = (
 
 # use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
-  gallus_gallus => 1, #Gallus gallus, remapped data, not same Ensembl assembly as AnimalQTL
+  gallus_gallus => 0, #Gallus gallus, remapped data, not same Ensembl assembly as AnimalQTL
   sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 1,  #Ovis aries: remapped data, not same Ensembl assembly as AnimalQTL
+  ovis_aries => 0,  #Ovis aries: remapped data, not same Ensembl assembly as AnimalQTL
   bos_taurus => 1, #Bos taurus
-  equus_caballus => 1, #Equus caballus: remapped data, not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 1, #remapped data from Ovis aries (ovis_aries_variation)
+  equus_caballus => 0, #Equus caballus: remapped data, not same Ensembl assembly as AnimalQTL
+  ovis_aries_rambouillet => 0, #remapped data from Ovis aries (ovis_aries_variation)
 );
 
 
@@ -143,7 +143,10 @@ sub fetch_input {
 
   # if the folder does not exist, try to fetch from ulr
   if (! -d $animalqtl_inputDir) {
-    make_path($animalqtl_inputDir) or die "Failed to create $animalqtl_inputDir $!\n";
+    my $err;
+    make_path($animalqtl_inputDir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+
     my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
     my $return_value = $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
