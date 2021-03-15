@@ -138,6 +138,14 @@ ok($sources[0] eq 'TSC' &&
 my @dbsnp_syns = @{$v->get_all_synonyms('dbSNP')};
 ok(@{$v->get_all_synonyms()} == 4, "count synonyms");
 
+# test get_variation_synonyms - doesn't return dbSNP
+my $var_syn_1 = $variation_adaptor->fetch_by_name('rs121908760');
+my $variation_synonyms_1 = $var_syn_1->get_variation_synonyms();
+ok(@$variation_synonyms_1[0] eq 'LSDB: NM_000492.3:c.2125C>T', 'get_variation_synonyms valid');
+
+my $var_syn_2 = $variation_adaptor->fetch_by_name('rs117161559');
+my $variation_synonyms_2 = $var_syn_2->get_variation_synonyms();
+ok(@$variation_synonyms_2 == 0, 'get_variation_synonyms - no variant synonyms');
 
 
 # test add_Allele, get_all_Alleles

@@ -372,17 +372,6 @@ my $vf12_spdi = $var12->get_all_VariationFeatures()->[0];
 my $spdi_notation_12 = $vf12_spdi->spdi_genomic();
 ok($spdi_notation_12->{'TTTTTTTTTT'} eq 'NC_000013.10:76134860:TTTTTTTTT:TTTTTTTTTT', 'SPDI tandem repeat');
 
-# test variation synonyms
-my $syn_1 = $va->fetch_by_name('rs121908760');
-my $vf_syn1 = $syn_1->get_all_VariationFeatures()->[0];
-my $variation_synonyms = $vf_syn1->get_var_synonyms();
-ok(@$variation_synonyms[0] eq 'LSDB: NM_000492.3:c.2125C>T', 'get_var_synonyms valid');
-
-my $syn_2 = $va->fetch_by_name('rs117161559');
-my $vf_syn2 = $syn_2->get_all_VariationFeatures()->[0];
-my $variation_synonyms_2 = $vf_syn2->get_var_synonyms();
-ok(@$variation_synonyms_2 == 0, 'get_var_synonyms - no variant synonyms');
-
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
 
