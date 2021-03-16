@@ -438,7 +438,7 @@ sub get_all_synonyms {
   Arg [1]    : none
   Example    : my @var_synonyms = $v->get_variation_synonyms;
   Description: Retrieves a list of all the variation synonyms of this
-               Variation exluding synonyms from dbSNP.
+               Variation. The output includes the source and the synonyms.
   Returntype : Listref of strings
   Exceptions : none
   Caller     : general
@@ -452,7 +452,6 @@ sub get_variation_synonyms {
   my @var_synonyms;
 
   foreach my $source (keys %{$self->{'synonyms'}}) {
-    next if($source =~ /dbSNP/);
     my @list_synonyms = keys %{$self->{'synonyms'}->{$source}};
     push(@var_synonyms, $source . ': ' . join(',', @list_synonyms));
   }

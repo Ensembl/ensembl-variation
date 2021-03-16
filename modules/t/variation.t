@@ -141,11 +141,15 @@ ok(@{$v->get_all_synonyms()} == 4, "count synonyms");
 # test get_variation_synonyms - doesn't return dbSNP
 my $var_syn_1 = $variation_adaptor->fetch_by_name('rs121908760');
 my $variation_synonyms_1 = $var_syn_1->get_variation_synonyms();
-ok(@$variation_synonyms_1[0] eq 'LSDB: NM_000492.3:c.2125C>T', 'get_variation_synonyms valid');
+ok(@$variation_synonyms_1[0] eq 'LSDB: NM_000492.3:c.2125C>T', 'get_variation_synonyms valid (source LSDB)');
 
-my $var_syn_2 = $variation_adaptor->fetch_by_name('rs117161559');
+my $var_syn_2 = $variation_adaptor->fetch_by_name('rs2299222');
 my $variation_synonyms_2 = $var_syn_2->get_variation_synonyms();
-ok(@$variation_synonyms_2 == 0, 'get_variation_synonyms - no variant synonyms');
+ok(@$variation_synonyms_2[0] eq 'Archive dbSNP: rs60739517,rs17765152', 'get_variation_synonyms valid (source Archive dbSNP)');
+
+my $var_syn_3 = $variation_adaptor->fetch_by_name('rs117161559');
+my $variation_synonyms_3 = $var_syn_3->get_variation_synonyms();
+ok(@$variation_synonyms_3 == 0, 'get_variation_synonyms - no variant synonyms');
 
 
 # test add_Allele, get_all_Alleles
