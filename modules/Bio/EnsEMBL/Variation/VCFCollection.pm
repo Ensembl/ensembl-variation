@@ -435,7 +435,7 @@ sub get_all_VariationFeatures_by_Slice {
   my $dont_fetch_vf_overlaps = shift;
   # variants from a VCF file are always on the forward strand
   if ($slice->strand == -1) {
-    my $sa = $self->db->dnadb->get_SliceAdaptor();
+    my $sa = $self->adaptor->db->dnadb->get_SliceAdaptor();
     $slice = $sa->fetch_by_region($slice->coord_system_name, $slice->seq_region_name, $slice->start, $slice->end);
   }
   return [] unless $self->_seek_by_Slice($slice);
