@@ -294,7 +294,7 @@ my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, 1);
 is($vfs->[0]->variation->var_class, 'insertion', 'var class - insertion');
 is($vfs->[1]->class_SO_term, 'deletion', 'var class - deletion');
 
-# report consequences correclty when fetching for reverse strand slice
+# Check consequences when fetching for reverse strand slice
 # this is called by the webcode: ensembl-webcode/modules/EnsEMBL/Web/Component/VariationTable::_get_variation_features
 my $transcript = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000527775');
 is_deeply(
@@ -308,7 +308,7 @@ is_deeply(
     '11:32438056:T_C:ExAC synonymous_variant',
     '11:32438063:G_A:ExAC missense_variant'
   ],
-  'VCFV - fetch from reverse strand'
+  'VCFVF - fetch from reverse strand'
 );
 ## fetch via transcript
 # my $tr = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000502692');
