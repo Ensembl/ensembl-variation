@@ -433,11 +433,19 @@ sub get_all_VariationFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $dont_fetch_vf_overlaps = shift;
-  
+  # Variants from a VCF file are always on the forward strand. If a slice on the reverse strand is passed to the sub we
+  # create the same slice but on the forward strand using fetch_by_region and attach it to the VCFVariationFeature object.
+  # Attaching the slice on the reverse strand to the VCFVariationFeature object would cause problems when
+  # calculating the consequence for an overlapping transcript which is also on the reverse strand. The variant alleles would not be reverse complemented
+  # correctly because the code assumes based on the negative slice that the alleles are already reverse complemented. This can lead to wrongly calculated
+  # consequences.
+  if ($slice->strand == -1) {
+    my $sa = $self->adaptor->db->dnadb->get_SliceAdaptor();
+    $slice = $sa->fetch_by_region($slice->coord_system_name, $slice->seq_region_name, $slice->start, $slice->end);
+  }
   return [] unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
-  my $sr_slice = $slice->seq_region_Slice();
   my $vfa = $self->use_db ? $self->adaptor->db->get_VariationFeatureAdaptor : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($self->species);
   
   my @vfs;
