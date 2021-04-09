@@ -265,27 +265,27 @@ is($vf->display_consequence, 'intergenic_variant', 'consequence - bypass - displ
 is_deeply($vf->$_, [], 'consequence - bypass - '.$_) for map {'get_all_'.$_.'Variations'} qw(Transcript RegulatoryFeature MotifFeature);
 
 # get for real
-$vf = $coll->get_all_VariationFeatures_by_Slice($slice)->[0];
+($vf) = grep {$_->variation_name eq 'rs547901734'} @{$coll->get_all_VariationFeatures_by_Slice($slice)};
 is_deeply([sort @{$vf->consequence_type}], ['3_prime_UTR_variant', 'NMD_transcript_variant', 'synonymous_variant'], 'consequence - consequence_type');
 
 # do a multi fetch for thorough-ness
 $slice = $sa->fetch_by_region('chromosome', 11, 66318811, 66318825);
+
 is_deeply(
   [
-    map { sprintf('%i %s', $_->seq_region_start, $_->display_consequence) }
+    map { sprintf('%i %s', $_->seq_region_start, $_->display_consequence) } sort {$a->seq_region_start <=> $b->seq_region_start || $a->display_consequence cmp $b->display_consequence}
     @{$coll->get_all_VariationFeatures_by_Slice($slice)}
   ],
   [
     '66318811 synonymous_variant',
-    '66318814 synonymous_variant',
     '66318814 missense_variant',
+    '66318814 synonymous_variant',
     '66318815 missense_variant',
     '66318819 missense_variant',
     '66318824 missense_variant'
   ],
   'consequence - multi fetch'
 );
-
 
 ## check var class
 $slice = $sa->fetch_by_region('chromosome', 11, 66319825, 66319836);
@@ -294,7 +294,22 @@ my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, 1);
 is($vfs->[0]->variation->var_class, 'insertion', 'var class - insertion');
 is($vfs->[1]->class_SO_term, 'deletion', 'var class - deletion');
 
-
+# Check consequences when fetching for reverse strand slice
+# this is called by the webcode: ensembl-webcode/modules/EnsEMBL/Web/Component/VariationTable::_get_variation_features
+my $transcript = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000527775');
+is_deeply(
+  [
+    map { sprintf('%s %s', $_->variation_name, $_->display_consequence) } sort {$a->variation_name cmp $b->variation_name}
+    @{$coll->get_all_VariationFeatures_by_Slice($transcript->feature_Slice)}
+  ],
+  [
+    '11:32438039:C_T:ExAC missense_variant',
+    '11:32438042:T_C:ExAC missense_variant',
+    '11:32438056:T_C:ExAC synonymous_variant',
+    '11:32438063:G_A:ExAC missense_variant'
+  ],
+  'VCFVF - fetch from reverse strand'
+);
 ## fetch via transcript
 # my $tr = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000502692');
 # my $tva = $vdb->get_TranscriptVariationAdaptor;
