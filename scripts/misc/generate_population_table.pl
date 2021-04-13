@@ -137,7 +137,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
-    
+
     print "$dbname\n";
     $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1; 
@@ -219,6 +219,7 @@ foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(
       # Loop over the populations and add a row for each
       foreach my $pop (@pop_list) {
         next if ($pop_seen{$pop});
+        next if ($species eq 'Parus major' && $pop_data{$pop}{'size'} eq '-');
 
         # Avoid duplicated entries within the same project
         $pop_seen{$pop} = 1;
@@ -228,7 +229,9 @@ foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(
           $new_bg = ($pop =~ /all$/i) ? ' class="supergroup"' : ' class="subgroup"';
         }
         my $p_name = $pop_data{$pop}{'label'};
-           $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>} if (!$pop_tree{$pop} && %pop_tree);
+        if (!$pop_tree{$pop} && %pop_tree && $sub_pops{$pop}) {
+           $p_name = qq{<ul style="margin:0px"><li style="margin:0px">$p_name</li></ul>};
+        }
         my $desc   = $pop_data{$pop}{'desc'};
         my $size   = $pop_data{$pop}{'size'};
 
@@ -526,7 +529,7 @@ sub get_project_label {
 
   my $label =  $project->{'id'};
      $label =~ s/_GRCh38//i;
-  
+
   if ($project->{'population_display_group'} && $project->{'population_display_group'}{'display_group_name'}) {
     $label = $project->{'population_display_group'}{'display_group_name'};
   }
@@ -536,7 +539,7 @@ sub get_project_label {
   elsif ($label =~ /^nextgen/) {
     $label = 'NextGen Project';
   }
-  elsif ($label =~ /EVA_(.+)$/) {
+  elsif ($label =~ /EVA_(.+)$/i) {
     $label = "EVA study $1";
   }
   elsif ($label =~ /mouse_genome_project/) {
