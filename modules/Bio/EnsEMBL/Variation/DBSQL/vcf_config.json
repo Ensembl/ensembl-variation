@@ -769,12 +769,12 @@
         "LG1", "LG2","LG3","LG4","LG5","LG6","LG7","LG8","LG9","LG10","LG11","LG12","LG13","LG14","LG15","LG16","LG17","LG18","LG19","LG20","LG21","LG22","LG23"
       ],
       "population_display_group": {
-        "display_group_name": "PRJEB38764",
+        "display_group_name": "PRJEB38548",
         "display_group_priority": "1"
       },
       "populations": {
         "1": {
-          "name": "PRJEB38764",
+          "name": "PRJEB38548",
           "_af": "AF"
         }
       }
