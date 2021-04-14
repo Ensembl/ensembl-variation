@@ -533,14 +533,18 @@ sub get_project_label {
   if ($project->{'population_display_group'} && $project->{'population_display_group'}{'display_group_name'}) {
     $label = $project->{'population_display_group'}{'display_group_name'};
   }
-  elsif ($label =~ /^1000/) {
+
+  if ($label =~ /^1000/) {
     $label = '1000 Genomes Project';
   }
   elsif ($label =~ /^nextgen/) {
     $label = 'NextGen Project';
   }
-  elsif ($label =~ /EVA_(.+)$/i) {
+  elsif ($label =~ /EVA_(.+)$/) {
     $label = "EVA study $1";
+  }
+  elsif ($label =~ /^PRJEB(.+)/) {
+    $label = "EVA study $label";
   }
   elsif ($label =~ /mouse_genome_project/) {
     $label = "Mouse Genomes Project (MGP)";
