@@ -96,6 +96,7 @@ my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 $slice_adaptor->dbc->reconnect_when_lost(1);
 
 ## fetch ClinVar source object and update version based on input file name
+# fetch ClinVar and OMIM and updates version for both
 my $omimstr= 'OMIM';
 my $source      = get_source($data_file, 'ClinVar');
 my $omim_source = get_source($data_file, $omimstr);
@@ -104,6 +105,7 @@ my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 
 ## pre-load submitter ids - shortcutting the API for speed
+## get ClinVar submitters names from the database
 my $submitters = get_submitter_ids($dba);
 
 ## remove old data
@@ -148,7 +150,7 @@ if (defined $done_file){
 }
 
 
-## parse file
+## parse input file
 my $data_file_fh;
 if ($data_file =~/.gz/) {
   open ($data_file_fh, '<:gzip', $data_file )
@@ -219,7 +221,7 @@ sub process_clinvar_set {
     ($record{disease}, $record{ontology_accession}) = get_disease($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}, $record{Acc});
 
     ## extract arrayref of PMIDs for citations
-    $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn} );
+    $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn}, $set->{ClinVarAssertion});
 
     ## Variant name, HGVS, OMIM id and location
     print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
@@ -585,6 +587,7 @@ sub get_disease{
 sub get_citations{
 
   my $structure = shift;
+  my $structure_ca = shift;
 
   my @citations;
  
@@ -605,6 +608,24 @@ sub get_citations{
       }
     }
   }
+
+  my $observed_in_ca = to_array($structure_ca);
+  foreach my $observed_in (@{$observed_in_ca}) {
+
+    my $observed_data = to_array($observed_in->{ClinicalSignificance});
+    foreach my $obs(@{$observed_data}){
+      if ($obs->{Citation}){
+        my $citations = to_array($obs->{Citation});
+        foreach my $cit(@{$citations}){
+          my $ids = to_array($cit->{ID});
+          foreach my $id (@{$ids}){
+            push @citations, $id->{content} if $id->{Source} && $id->{Source} eq 'PubMed';
+          }
+        }
+      }
+    }
+  }
+
   return \@citations;
 }
 
