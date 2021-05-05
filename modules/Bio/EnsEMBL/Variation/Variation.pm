@@ -403,8 +403,11 @@ sub get_VariationFeature_by_dbID{
 
   Arg [1]    : (optional) string $source - the source of the synonyms to
                return.
+  Arg [2]    : (optional) integer $include_source - include the source of the synonyms in
+               the output.
   Example    : @dbsnp_syns = @{$v->get_all_synonyms('dbSNP')};
                @all_syns = @{$v->get_all_synonyms()};
+               @all_syns_with_source = @{$v->get_all_synonyms('', 1)};
   Description: Retrieves synonyms for this Variation. If a source argument
                is provided all synonyms from that source are returned,
                otherwise all synonyms are returned.
@@ -418,6 +421,7 @@ sub get_VariationFeature_by_dbID{
 sub get_all_synonyms {
     my $self = shift;
     my $source = shift;
+    my $include_source = shift;
 
     if ($source) {
         $source = [$source];
@@ -427,11 +431,19 @@ sub get_all_synonyms {
     }
     
     my @synonyms;
-    map {push(@synonyms,keys(%{$self->{synonyms}{$_}}))} @{$source};
+
+    if(!$include_source) {
+      map {push(@synonyms,keys(%{$self->{synonyms}{$_}}))} @{$source};
+    }
+    else {
+      foreach my $source (keys %{$self->{'synonyms'}}) {
+        my @list_synonyms = keys %{$self->{'synonyms'}->{$source}};
+        push(@synonyms, $source . ': ' . join(',', @list_synonyms));
+      }
+    }
 
     return \@synonyms;
 }
-
 
 
 =head2 get_all_synonym_sources
