@@ -36,7 +36,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Getopt::Long;
 use FileHandle;
 
-my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats);
+my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db);
 
 GetOptions(
   'host=s'   => \$host,
@@ -47,6 +47,7 @@ GetOptions(
   'species=s' => \$chosen_species,
   'dir=s'      => \$dir,
   'formats=s'  => \$formats,
+  'write_to_db' => \$write_to_db,
 );
 
 if(defined($host) && $host =~ /staging|variation|livemirror/) {
@@ -325,6 +326,11 @@ SPECIES: foreach my $species(@all_species) {
     print OUT sprintf("%-17s = %s\n", $key, join('\n', @{$web_data{$key}}));
   }
   close OUT;
+
+  if ($write_to_db) {
+    write_to_db($species, \%web_data);
+  }
+
   # exit 0;
   }
 }
@@ -591,4 +597,22 @@ sub convert_to_spdi {
   @return = grep {defined($_)} @return;
 
   return [$return[0] || undef];
+}
+
+sub write_to_db {
+  my $species = shift;
+  my $web_data = shift;
+
+  my $mca = $reg->get_adaptor($species, 'core', 'MetaContainer');
+
+  foreach my $key(keys %$web_data) {
+    my $meta_key = 'sample.'.lc($key);
+    # Note that the newline is intentionally not interpreted;
+    # we want the literal '\n' embedded in the database value,
+    # the webcode will subsequently treat that as a proper newline.
+    my $meta_value = join('\n', @{$$web_data{$key}});
+
+    $mca->delete_key($meta_key);
+    $mca->store_key_value($meta_key, $meta_value);
+  }
 }
