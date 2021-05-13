@@ -139,9 +139,9 @@ my @dbsnp_syns = @{$v->get_all_synonyms('dbSNP')};
 ok(@{$v->get_all_synonyms()} == 4, "count synonyms");
 
 # test variation synonyms - get_all_synonyms() returns the source name and the variation synonyms
-my $var_syn_1 = $variation_adaptor->fetch_by_name('rs2299222');
+my $var_syn_1 = $variation_adaptor->fetch_by_name('rs7569578');
 my $variation_synonyms_1 = $var_syn_1->get_all_synonyms('',1);
-ok(@$variation_synonyms_1[0] eq 'Archive dbSNP: rs60739517,rs17765152', 'get_all_synonyms include source - valid (source Archive dbSNP)');
+ok(@$variation_synonyms_1[0] eq 'Archive dbSNP: rs57302278', 'get_all_synonyms include source - valid (source Archive dbSNP)');
 
 my $var_syn_3 = $variation_adaptor->fetch_by_name('rs117161559');
 my $variation_synonyms_3 = $var_syn_3->get_all_synonyms('',1);
