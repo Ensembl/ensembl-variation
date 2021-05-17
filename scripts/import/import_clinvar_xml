@@ -221,7 +221,9 @@ sub process_clinvar_set {
     ($record{disease}, $record{ontology_accession}) = get_disease($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}, $record{Acc});
 
     ## extract arrayref of PMIDs for citations
-    $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn}, $set->{ClinVarAssertion});
+    $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn}, "ObservedData");
+    my $extra_citations = get_citations($set->{ClinVarAssertion}, "ClinicalSignificance");
+    push(@{$record{citations}}, @{$extra_citations});
 
     ## Variant name, HGVS, OMIM id and location
     print "WARNING: Found GenotypeSet(type: $set->{ReferenceClinVarAssertion}->{GenotypeSet}->{Type}) found for $record{Acc}.\n" if defined $set->{ReferenceClinVarAssertion}->{GenotypeSet};
@@ -587,33 +589,16 @@ sub get_disease{
 sub get_citations{
 
   my $structure = shift;
-  my $structure_ca = shift;
+  my $label = shift;
 
   my @citations;
  
   my $observed_in = to_array($structure );
   foreach my $observed_in (@{$observed_in}){
 
-    my $observed_data = to_array($observed_in->{ObservedData});
+    my $observed_data = to_array($observed_in->{$label});
     foreach my $obs( @{$observed_data} ){
 
-      if ($obs->{Citation}){
-        my $citations = to_array($obs->{Citation});
-        foreach my $cit(@{$citations}){
-          my $ids = to_array($cit->{ID});
-          foreach my $id (@{$ids}){
-            push @citations, $id->{content} if $id->{Source} && $id->{Source} eq 'PubMed';
-          }
-        }
-      }
-    }
-  }
-
-  my $observed_in_ca = to_array($structure_ca);
-  foreach my $observed_in (@{$observed_in_ca}) {
-
-    my $observed_data = to_array($observed_in->{ClinicalSignificance});
-    foreach my $obs(@{$observed_data}){
       if ($obs->{Citation}){
         my $citations = to_array($obs->{Citation});
         foreach my $cit(@{$citations}){
