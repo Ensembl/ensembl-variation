@@ -148,7 +148,7 @@
       "use_seq_region_synonyms": 1,
       "population_prefix": "gnomADg:",
       "population_display_group": {
-        "display_group_name": "gnomAD genomes",
+        "display_group_name": "gnomAD genomes r3.0",
         "display_group_priority": 1.6
       },
       "populations": {
