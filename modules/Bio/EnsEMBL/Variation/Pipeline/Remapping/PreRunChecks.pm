@@ -60,8 +60,8 @@ sub run {
 
   my $core_dbname = $cdba->dbc->dbname;
   $vdba->dbc()->sql_helper()->execute_update(-SQL => "DELETE FROM seq_region;", -PARAMS => [] );
-  my $sql = "INSERT INTO seq_region(seq_region_id, name)"
-    . "SELECT sr.seq_region_id, sr.name "
+  my $sql = "INSERT INTO seq_region(seq_region_id, name, coord_system_id) "
+    . "SELECT sr.seq_region_id, sr.name, sr.coord_system_id "
     . "FROM $core_dbname.seq_region_attrib sra, $core_dbname.attrib_type at, $core_dbname.seq_region sr "
     . "WHERE sra.attrib_type_id=at.attrib_type_id "
     . "AND at.code='toplevel' " 
