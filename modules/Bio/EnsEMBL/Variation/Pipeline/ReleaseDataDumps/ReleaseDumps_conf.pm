@@ -70,14 +70,16 @@ sub default_options {
         
         ensembl_registry   => $self->o('ensembl_registry'),
 
-        script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
+        hive_root_dir        => '/hps/software/users/ensembl/repositories/' . $ENV{'USER'} . '/ensembl-hive',
+        ensembl_cvs_root_dir => '/hps/software/users/ensembl/repositories/' . $ENV{'USER'},
+        script_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
         gvf_validator      => 'gvf_validator',
 
         vcf_validator      => 'vcf-validator',
         vcf_sort           => 'vcf-sort',
 
-        so_file            => '/nfs/panda/ensembl/production/ensprod/obo_files/SO.obo',
+        so_file            => $self->o('ensembl_cvs_root_dir') . '/SO-Ontologies/Ontology_Files/so.obo',
 
         tmp_dir           => $self->o('pipeline_dir') . '/tmp_dir',
         gvf_readme => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/modules/Bio/EnsEMBL/Variation/Pipeline/ReleaseDataDumps/README_GVF',
@@ -166,9 +168,9 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>1500] rusage[mem=1500]" -M1500'},
-        'medium'  => { 'LSF' => '-q production-rh74 -R"select[mem>4500] rusage[mem=4500]" -M4500'},
-        'high'    => { 'LSF' => '-q production-rh74 -R"select[mem>8500] rusage[mem=8500]" -M8500'},
+        'default' => { 'LSF' => '-q production -R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'medium'  => { 'LSF' => '-q production -R"select[mem>4500] rusage[mem=4500]" -M4500'},
+        'high'    => { 'LSF' => '-q production -R"select[mem>8500] rusage[mem=8500]" -M8500'},
     };
 }
 sub pipeline_analyses {
