@@ -38,9 +38,6 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub default_options {
   my ($self) = @_;
 
-  my $login = `whoami`;
-  chomp $login;
-
   return {
 
     # general pipeline options that you should change to suit your environment
@@ -55,15 +52,15 @@ sub default_options {
 
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin/',
-    hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive', 
+    ensembl_cvs_root_dir    => $self->o('ensembl_cvs_root_dir'),
+    hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
 
     pipeline_name           => 'equivalent_alleles',
 
     # a directory to keep hive output files and your registry file, you should
     # create this if it doesn't exist
 
-    pipeline_dir            => '/gpfs/nobackup/ensembl/'. $login .'/'. $self->o('pipeline_name') . '/'.  $self->o('species'),
+    pipeline_dir            => $self->o('pipeline_dir'),
 
     # a directory where hive workers will dump STDOUT and STDERR for their jobs
         
@@ -78,8 +75,8 @@ sub default_options {
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
         
-    default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-    medium_lsf_options  => '-qproduction-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000',
+    default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+    medium_lsf_options  => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
 
 
     # size of region to be checked in a single job
