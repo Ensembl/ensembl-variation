@@ -109,7 +109,7 @@ sub default_options {
         -port   => $self->o('hive_db_port'),
         -user   => $self->o('hive_db_user'),
         -pass   => $self->o('hive_db_password'),            
-        -dbname => $ENV{'USER'} . '_ehive_equivalent_alleles_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
+        -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
         -driver => 'mysql',
     },
   };
