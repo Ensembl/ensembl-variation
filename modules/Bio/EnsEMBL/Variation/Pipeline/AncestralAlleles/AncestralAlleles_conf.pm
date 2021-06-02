@@ -63,7 +63,6 @@ sub default_options {
         hive_no_init => 0,
 
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        ensembl_cvs_root_dir    => $ENV{'ENSEMBL_CVS_ROOT_DIR'} || '/hps/software/users/ensembl/repositories/' . $ENV{'USER'},
         hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
 
         # a name for your pipeline (will also be used in the name of the hive database)
