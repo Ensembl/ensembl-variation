@@ -83,15 +83,6 @@ sub pipeline_wide_parameters {
     };
 }
 
-sub resource_classes {
-    my ($self) = @_;
-    return {
-        %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'default_mem' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
-            'high_mem'    => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500'}, 
-    };
-}
-
 sub pipeline_analyses {
   my ($self) = @_;
   my @analyses;

@@ -46,8 +46,7 @@ sub default_options {
         hive_use_triggers       => 0,
         hive_auto_rebalance_semaphores => 0,  # do not attempt to rebalance semaphores periodically by default
         hive_no_init            => 0, # setting it to 1 will skip pipeline_create_commands (useful for topping up)
-        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
+        hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
         debug                   => 0,
         run_variant_qc          => 1,
         use_fasta_files         => 0,
@@ -126,9 +125,9 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'default_mem' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
-            'high_mem'    => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500'},
-            'extra_mem'   => { 'LSF' => '-R"select[mem>12500] rusage[mem=12500]" -M12500'},			
+            'default_mem' => { 'LSF' => '-q production -R"select[mem>2500] rusage[mem=2500]" -M2500'},
+            'high_mem'    => { 'LSF' => '-q production -R"select[mem>5500] rusage[mem=5500]" -M5500'},
+            'extra_mem'   => { 'LSF' => '-q production -R"select[mem>12500] rusage[mem=12500]" -M12500'},
     };
 }
 
