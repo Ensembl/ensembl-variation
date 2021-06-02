@@ -70,8 +70,8 @@ sub default_options {
         
         ensembl_registry   => $self->o('ensembl_registry'),
 
-        hive_root_dir        => '/hps/software/users/ensembl/repositories/' . $ENV{'USER'} . '/ensembl-hive',
         ensembl_cvs_root_dir => '/hps/software/users/ensembl/repositories/' . $ENV{'USER'},
+        hive_root_dir        => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
         script_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
         gvf_validator      => 'gvf_validator',
