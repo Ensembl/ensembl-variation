@@ -354,7 +354,7 @@ sub get_publication_info_from_epmc{
 }
 
 # Format authors list
-# only store the first 6 authors
+# only store the first 4 authors
 sub format_authors{
   my $authors_final = shift;
 
