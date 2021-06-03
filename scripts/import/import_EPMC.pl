@@ -362,8 +362,8 @@ sub format_authors{
 
   if(defined $authors_final){
     my @author_list = split /, /, $authors_final;
-    if(scalar @author_list > 6) {
-      $new_authors = join(', ', @author_list[0..5]) . ', et al';
+    if(scalar @author_list > 4) {
+      $new_authors = join(', ', @author_list[0..3]) . ', et al';
     }
   }
 
