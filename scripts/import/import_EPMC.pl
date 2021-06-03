@@ -346,7 +346,28 @@ sub get_publication_info_from_epmc{
          return undef;
     }
 
+    ### format authors list
+    my $new_authors = format_authors($ref->{resultList}->{result}->{authorString});
+    $ref->{resultList}->{result}->{authorString} = $new_authors unless !$new_authors;
+
     return $ref;
+}
+
+# Format authors list
+# only store the first 6 authors
+sub format_authors{
+  my $authors_final = shift;
+
+  my $new_authors;
+
+  if(defined $authors_final){
+    my @author_list = split /, /, $authors_final;
+    if(scalar @author_list > 6) {
+      $new_authors = join(', ', @author_list[0..5]) . ', et al';
+    }
+  }
+
+  return $new_authors;
 }
 
 sub get_epmc_data{
@@ -510,6 +531,10 @@ sub check_dbSNP{
             $ref->{resultList}->{result}->{title} !~/$species_string/i){
             print $error_log "WARN dbSNP data:\t$l->[1]\t($ref->{resultList}->{result}->{title}) - species not mentioned\n"
         }
+
+        # format authors list
+        my $new_authors = format_authors($ref->{resultList}->{result}->{authorString});
+        $ref->{resultList}->{result}->{authorString} = $new_authors unless !$new_authors;
 
         $pub_upd_sth->execute( $ref->{resultList}->{result}->{title},
                                $ref->{resultList}->{result}->{pmcid},
@@ -980,6 +1005,10 @@ sub parse_UCSC_file{
         #my ($rs, $pmid, $section, $doi, $title, $authors, $year ) = split/\s+\|\s+|\t/;
         my ($rs, $pmid, $section, $doi, $title, $authors, $year, $extId ) = split/\t/;
         next if $section =~/refs|ack/; ## not in this publication
+
+        # format authors list
+        my $new_authors = format_authors($authors);
+        $authors = $new_authors unless !$new_authors;
 
         $pmid = "" if $pmid eq "0";  ## nulls are set to 0 in UCSC database
 
