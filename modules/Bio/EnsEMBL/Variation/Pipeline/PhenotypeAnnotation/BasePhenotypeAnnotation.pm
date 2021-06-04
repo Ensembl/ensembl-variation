@@ -769,9 +769,9 @@ sub _add_phenotypes {
 
   my $st_ins_sr_stmt = qq{
     INSERT INTO
-      seq_region (seq_region_id, name)
+      seq_region (seq_region_id, name, coord_system_id)
     VALUES (
-      ?, ?
+      ?, ?, ?
     )
   };
 
@@ -1017,8 +1017,16 @@ sub _add_phenotypes {
     my $res = $sr_sel_sth->fetchrow_arrayref();
 
     if ($res->[0] eq $key) {
+
+      my $coord_dba = $core_dba->get_CoordSystemAdaptor();
+      my ($highest_cs) = @{$coord_dba->fetch_all()};
+      my $coord_system = $highest_cs->name();
+      my $cs = $coord_dba->fetch_by_name($coord_system);
+      my $coord_system_id = $cs->dbID();
+
       $sr_ins_sth->bind_param(1, $key,SQL_INTEGER);
       $sr_ins_sth->bind_param(2, $res->[1],SQL_VARCHAR);
+      $sr_ins_sth->bind_param(3, $coord_system_id,SQL_INTEGER);
       $sr_ins_sth->execute();
       $self->print_errFH("$key seq_region inserted in variation db\n") if ($self->{debug});
     } else {
