@@ -13,7 +13,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# Add new data_source attribs 
+# Increase title size 
 ALTER TABLE publication MODIFY title VARCHAR(400);
 
 # patch identifier
