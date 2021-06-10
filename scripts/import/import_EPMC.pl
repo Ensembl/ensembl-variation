@@ -347,27 +347,27 @@ sub get_publication_info_from_epmc{
     }
 
     ### format authors list
-    my $new_authors = format_authors($ref->{resultList}->{result}->{authorString});
-    $ref->{resultList}->{result}->{authorString} = $new_authors unless !$new_authors;
+    my $trimmed_author_list = trim_author_list($ref->{resultList}->{result}->{authorString});
+    $ref->{resultList}->{result}->{authorString} = $trimmed_author_list if $trimmed_author_list;
 
     return $ref;
 }
 
 # Format authors list
 # only store the first 4 authors
-sub format_authors{
+sub trim_author_list{
   my $authors_final = shift;
 
-  my $new_authors;
+  my $trimmed_authors;
 
   if(defined $authors_final){
     my @author_list = split /, /, $authors_final;
     if(scalar @author_list > 4) {
-      $new_authors = join(', ', @author_list[0..3]) . ', et al';
+      $trimmed_authors = join(', ', @author_list[0..3]) . ', et al';
     }
   }
 
-  return $new_authors;
+  return $trimmed_authors;
 }
 
 sub get_epmc_data{
@@ -533,8 +533,8 @@ sub check_dbSNP{
         }
 
         # format authors list
-        my $new_authors = format_authors($ref->{resultList}->{result}->{authorString});
-        $ref->{resultList}->{result}->{authorString} = $new_authors unless !$new_authors;
+        my $trimmed_author_list = trim_author_list($ref->{resultList}->{result}->{authorString});
+        $ref->{resultList}->{result}->{authorString} = $trimmed_author_list if $trimmed_author_list;
 
         $pub_upd_sth->execute( $ref->{resultList}->{result}->{title},
                                $ref->{resultList}->{result}->{pmcid},
@@ -1007,8 +1007,8 @@ sub parse_UCSC_file{
         next if $section =~/refs|ack/; ## not in this publication
 
         # format authors list
-        my $new_authors = format_authors($authors);
-        $authors = $new_authors unless !$new_authors;
+        my $trimmed_author_list = trim_author_list($authors);
+        $authors = $trimmed_author_list if $trimmed_author_list;
 
         $pmid = "" if $pmid eq "0";  ## nulls are set to 0 in UCSC database
 
