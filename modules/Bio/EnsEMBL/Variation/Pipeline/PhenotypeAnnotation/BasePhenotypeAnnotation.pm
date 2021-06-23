@@ -992,6 +992,13 @@ sub _add_phenotypes {
       # add attribs
       foreach my $attrib_type(grep {defined($phenotype->{$_}) && $phenotype->{$_} ne ''} @attrib_types) {
         my $value = $phenotype->{$attrib_type};
+        if (length($value) > 255) {
+          my $old_length = length($value);
+          my $old_value = $value;
+          $value = trim_value_string($value,255);
+          my $new_length  = length($value);
+          $self->print_errFH(join("\t", $pf_id, $attrib_type, $old_length, $new_length, "trimmed_string", $old_value, $value) . "\n");
+        }
         my $sth = $value =~ m/^\d+(\.\d+)?$/ ? $attrib_ins_cast_sth : $attrib_ins_sth;
         $sth->bind_param(1,$pf_id,SQL_INTEGER);
         $sth->bind_param(2,$value,SQL_VARCHAR);
@@ -1043,6 +1050,39 @@ sub _add_phenotypes {
   $self->print_logFH( "$phenotype_feature_count new phenotype_features added\n") if ($self->{debug});
 
 }
+
+# Trim a string that contains values separated by commas or semi-colons
+# to not exceed a maximum length
+sub trim_value_string {
+  my ($value, $max_length) = @_;
+  my @separators = (',', ';');
+
+  $max_length ||= 255;
+  if (length($value) <= $max_length) {
+    return $value;
+  }
+
+  my $trim_value = substr($value, 0, $max_length);
+
+  # If first removed character is a separator
+  # assume value between separators has not been truncated
+  my $first_del_char = substr($value, $max_length, 1);
+  foreach my $sep (@separators) {
+    if ($first_del_char eq $sep) {
+      return $trim_value;
+    }
+   }
+
+  # Remove the last separator and following characters so
+  # that values between separators are not truncated
+  foreach my $sep (@separators) {
+    if ($trim_value =~ s/${sep}([^${sep}]*$)//) {
+      return $trim_value;
+    }
+  }
+  return $trim_value;
+}
+
 
 # insert the synonym data into variation_synonym table
 sub _add_synonyms {
