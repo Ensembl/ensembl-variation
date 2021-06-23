@@ -868,10 +868,12 @@ sub _add_phenotypes {
     UPDATE variation v, variation_feature vf
     SET
       v.display = 1,
-      v.evidence_attribs = CONCAT_WS(',',v.evidence_attribs, ',$evidence_attrib,'),
+      v.evidence_attribs = CONCAT_WS(',',v.evidence_attribs, '$evidence_attrib'),
       vf.display =1,
-      vf.evidence_attribs = CONCAT_WS(',',vf.evidence_attribs, ',$evidence_attrib,'),
-      vf.variation_set_id = CONCAT_WS(',',vf.variation_set_id, ',$pheno_set,$gwas_set,')
+      vf.evidence_attribs = CONCAT_WS(',',vf.evidence_attribs, '$evidence_attrib'),
+      vf.variation_set_id = TRIM(TRAILING ',' FROM
+                              TRIM(LEADING ',' FROM
+                               CONCAT_WS(',', vf.variation_set_id, '$pheno_set,$gwas_set')))
     WHERE
       v.variation_id  = vf.variation_id AND
       vf.variation_feature_id = ?
