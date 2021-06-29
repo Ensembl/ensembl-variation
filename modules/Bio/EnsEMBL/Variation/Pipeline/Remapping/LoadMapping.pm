@@ -65,10 +65,10 @@ sub load_read_coverage {
   my @column_names = @{$self->get_sorted_column_names($vdba, $result_table)};
   my $column_names_concat = join(',', @column_names);
 
-  opendir(IND_DIR, $load_features_dir) or die $!;
-  while (my $individual_dir = readdir(IND_DIR))  {
-    next if ($individual_dir =~ /^\./);
-    my $dir = "$load_features_dir/$individual_dir";
+  opendir(SAMPLE_DIR, $load_features_dir) or die $!;
+  while (my $sample_dir = readdir(SAMPLE_DIR))  {
+    next if ($sample_dir =~ /^\./);
+    my $dir = "$load_features_dir/$sample_dir";
     opendir(DIR, $dir) or die $!;
     while (my $file = readdir(DIR)) {
       if ($file =~ /^(.+)\.txt$/) {
@@ -86,6 +86,8 @@ sub load_read_coverage {
   closedir(IND_DIR);
 
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
+
+  $self->rename_mapped_feature_table;
 }
 
 sub load_mapping_results {
