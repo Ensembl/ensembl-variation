@@ -95,6 +95,9 @@ use constant SO_TERM_DOWNSTREAM_GENE_VARIANT => 'downstream_gene_variant';
 use constant SO_TERM_SPLICE_DONOR_VARIANT => 'splice_donor_variant';
 use constant SO_TERM_SPLICE_ACCEPTOR_VARIANT => 'splice_acceptor_variant';
 use constant SO_TERM_SPLICE_REGION_VARIANT => 'splice_region_variant';
+use constant SO_TERM_SPLICE_DONOR_5TH_BASE_VARIANT => 'splice_donor_5th_base_variant';
+use constant SO_TERM_SPLICE_DONOR_REGION_VARIANT => 'splice_donor_region_variant';
+use constant SO_TERM_SPLICE_POLYPYRIMIDINE_TRACT_VARIANT => 'splice_polypyrimidine_tract_variant';
 use constant SO_TERM_INTRON_VARIANT => 'intron_variant';
 use constant SO_TERM_5_PRIME_UTR_VARIANT => '5_prime_UTR_variant';
 use constant SO_TERM_3_PRIME_UTR_VARIANT => '3_prime_UTR_variant';
@@ -493,6 +496,60 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'splice region variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
+  'rank' => '13',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_donor_5th_base_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001787',
+  'SO_term' => 'splice_donor_5th_base_variant',
+  'description' => 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice donor 5th base variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_5th_base_variant',
+  'rank' => '4',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_donor_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0002170',
+  'SO_term' => 'splice_donor_region_variant',
+  'description' => 'A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5\' end of intron).',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice donor region variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_region_variant',
+  'rank' => '14',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_polypyrimidine_tract_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001630',
+  'SO_term' => 'splice_polypyrimidine_tract_variant',
+  'description' => 'A sequence variant that falls in the polypyrimidine tract at 3\' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice polypyrimidine tract variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
   'rank' => '13',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'

@@ -170,6 +170,31 @@ sub _intron_effects {
           $intron_effects->{end_splice_site} = 1;
         }
         
+        if (overlap($r_start, $r_end, $intron_start+4, $intron_start+4)) {
+          $intron_effects->{fifth_base_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+5)) {
+          $intron_effects->{donor_region_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-16, $intron_end-2)) {
+          $intron_effects->{polypyrimidine_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-4, $intron_end-4)) {
+          $intron_effects->{fifth_base_splice_site_reverse} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-5, $intron_end-2)) {
+          $intron_effects->{donor_region_splice_site_reverse} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+16)) {
+          $intron_effects->{polypyrimidine_splice_site_reverse} = 1;
+        }
+        
+        
         # the definition of splice_region (SO:0001630) is "within 1-3 bases 
         # of the exon or 3-8 bases of the intron", the intron start is the 
         # first base of the intron so we only need to add or subtract 7 from 

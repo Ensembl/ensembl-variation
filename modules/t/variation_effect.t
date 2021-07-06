@@ -437,7 +437,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_start+2,
         end     => $intron_start+2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_donor_region_variant intron_variant)],
     }, {
         start   => $intron_start+7,
         end     => $intron_start+7,
@@ -483,11 +483,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_end - 7,
         end     => $intron_end - 7,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_end - 2,
         end     => $intron_end - 2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_end - 1,
         end     => $intron_end - 1,
@@ -531,19 +531,19 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'A',
         start   => $intron_end-6,
         end     => $intron_end-7,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
-        comment => 'insertion between last bases 8 & 9 is just an intron_variant',
+        comment => 'insertion between last bases 8 & 9 is just an intron_variant and splice_polypyrimidine_tract_variant',
         alleles => 'A',
         start   => $intron_end-7,
         end     => $intron_end-8,
-        effects => [qw(intron_variant)],
+        effects => [qw(intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         comment => 'whole exon deletion',
         alleles => '-',
         start   => $exon_start-10,
         end     => $exon_end+10,
-        effects => [qw(intron_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
+        effects => [qw(intron_variant splice_donor_5th_base_variant splice_polypyrimidine_tract_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
     }, {
         comment => 'long sequence var where middle is identical but overlaps splice site',
         alleles => 'ATGTACTGCCTATGTGTGCTGTGAGTATGATACGGTGGACT',
@@ -751,12 +751,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start+2,
-        effects => [qw( splice_donor_variant coding_sequence_variant intron_variant)],
+        effects => [qw( splice_donor_variant splice_donor_region_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
-        effects => [qw( splice_acceptor_variant coding_sequence_variant  intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant splice_polypyrimidine_tract_variant intron_variant)],
     }, {
         comment => 'deletion overlapping UTR and start site, start lost 1',
         alleles => '-',
@@ -941,7 +941,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {
         start   => $intron_end - 2,
         end     => $intron_end - 2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_donor_region_variant intron_variant)],
     }, {
         start   => $intron_end - 7,
         end     => $intron_end - 7,
@@ -987,11 +987,11 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {
         start   => $intron_start + 7,
         end     => $intron_start + 7,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_start + 2,
         end     => $intron_start + 2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_start + 1,
         end     => $intron_start + 1,
@@ -1035,13 +1035,13 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => 'A',
         start   => $intron_start + 7,
         end     => $intron_start + 6,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant splice_polypyrimidine_tract_variant)],
     }, {
-        comment => 'insertion between last bases 8 & 9 is just an intron_variant',
+        comment => 'insertion between last bases 8 & 9 is an intron_variant and splice_polypyrimidine_tract_variant',
         alleles => 'A',
         start   => $intron_start + 8,
         end     => $intron_start + 7,
-        effects => [qw(intron_variant)],
+        effects => [qw(intron_variant splice_polypyrimidine_tract_variant)],
     }, 
 
     # check the CDS 
@@ -1237,12 +1237,12 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_end - 2,
         end     => $intron_end + 3,
-        effects => [qw(splice_donor_variant coding_sequence_variant intron_variant)],
+        effects => [qw(splice_donor_variant splice_donor_region_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_start - 3,
         end     => $intron_start + 2,
-        effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant splice_polypyrimidine_tract_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_end - 2,
@@ -1287,11 +1287,11 @@ $transcript_tests->{$t3->stable_id}->{tests} = [
     }, {
         start   => $intron_start+2,
         end     => $intron_start+2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_donor_region_variant intron_variant)],
     }, {
         start   => $intron_end - 2,
         end     => $intron_end - 2,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant splice_polypyrimidine_tract_variant intron_variant)],
     }, {
         start   => $intron_end - 1,
         end     => $intron_end - 1,
