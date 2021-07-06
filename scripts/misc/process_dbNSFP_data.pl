@@ -14,37 +14,79 @@
 # limitations under the License.
 
 
-
 =head1 CONTACT
-  Please email comments or questions to the public Ensembl
-  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
-  Questions may also be sent to the Ensembl help desk at
-  <http://www.ensembl.org/Help/Contact>.
+
+Please email comments or questions to the public Ensembl
+developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+Questions may also be sent to the Ensembl help desk at
+<http://www.ensembl.org/Help/Contact>.
+
+=head1 NAME
+
+process_dbNSFP_data.pl 
+
+=head1 DESCRIPTION
+
+After a new dbNSFP release, this script can be used to merge, sort and compress
+the chromosome level dbNSFP files into a single file. The file is then tabixed.
+The script generates files for GRCh37 and GRCh38.
+
+=head1 SYNOPSIS
+
+process_dbNSFP_data.pl [arguments]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>
+
+Displays this documentation
+
+=item B<--dbNSFP_dir DIR>
+
+Directory which contains the new dbNSFP files.
+
+=item B<--dbNSFP_version>
+
+The new dbNSFP version.
+
+=item B<--tmp_dir DIR >
+
+A directory which can be used by the linux sort
+program for storing temporary files that a created
+in the sorting process.
+
+=back
+
 =cut
 
 use strict;
 use warnings;
 
 use Getopt::Long;
+use Pod::Usage qw(pod2usage);
 
+my $args = scalar @ARGV;
 my $config = {};
 GetOptions(
   $config,
-  'tmp_dir|t',
-  'dbNSFP_version|v',
-  'dbNSFP_dir|d',
+  'tmp_dir=s',
+  'dbNSFP_version=s',
+  'dbNSFP_dir=s',
 );
 
-print $ENV{USER}, "\n";
-#foreach my $arg (qw/tmp_dir dbNSFP_version dbNSFP_dir/) {
-#  if (!$config->{$arg}) {
-#    die("Argument --$arg is required.");
-#  }
-#}
+pod2usage(1) if ($config->{'help'} || !$args);
 
-my $tmp_dir = $config->{tmp_dir} || '/hps/nobackup2/production/ensembl/anja';
-my $dir = $config->{dbNSFP_dir} || '/nfs/production/panda/ensembl/variation/data/dbNSFP/4.2a';
-my $version = $config->{dbNSFP_version} || '4.2a';
+foreach my $arg (qw/tmp_dir dbNSFP_version dbNSFP_dir/) {
+  if (!$config->{$arg}) {
+    die("Argument --$arg is required.");
+  }
+}
+
+my $tmp_dir = $config->{tmp_dir};
+my $dir = $config->{dbNSFP_dir};
+my $version = $config->{dbNSFP_version};
 
 my @assemblies = qw/grch37 grch38/;
 
@@ -56,7 +98,11 @@ if (!-e "$dir/dbNSFP$version\_variant.chr1.gz") {
 # create header file
 run_system_cmd("zcat $dir/dbNSFP$version\_variant.chr1.gz | head -n1 > $dir/h");
 
-my $args = {
+my $cmd_args = {
+  'extra' => {
+    'grch37' => '| awk \'$8 != "." \'',
+    'grch38' => '',
+  },
   'sort' => {
     'grch37' => '-k8,8 -k9,9n',
     'grch38' => '-k1,1 -k2,2n',
@@ -68,14 +114,18 @@ my $args = {
 };
 
 foreach my $assembly (@assemblies) {
-  my $tabix_args = $args->{tabix}->{$assembly};
-  my $sort_args = $args->{sort}->{$assembly};
-  run_system_cmd("zgrep -h -v ^#chr $dir/dbNSFP$version\_variant.chr* | sort -T $tmp_dir $sort_args - | cat $dir/h - | bgzip -c > $dir/dbNSFP$version\_$assembly.gz");
-  run_system_cmd("tabix $tabix_args $dir/dbNSFP$version\_$assembly.gz");
+  my $tabix_arg = $cmd_args->{tabix}->{$assembly};
+  my $sort_arg = $cmd_args->{sort}->{$assembly};
+  my $extra_arg = $cmd_args->{extra}->{$assembly};
+  run_system_cmd("zgrep -h -v ^#chr $dir/dbNSFP$version\_variant.chr* $extra_arg | sort -T $tmp_dir $sort_arg - | cat $dir/h - | bgzip -c > $dir/dbNSFP$version\_$assembly.gz");
+  run_system_cmd("tabix $tabix_arg $dir/dbNSFP$version\_$assembly.gz");
 }
 
 sub run_system_cmd {
   my $cmd = shift;
-  print "$cmd\n"; 
-
+  print STDERR "Run CMD: $cmd\n";
+  my $rc = system($cmd);
+  if ($rc != 0) {
+    die "Command failed: $cmd\n";
+  }
 }
