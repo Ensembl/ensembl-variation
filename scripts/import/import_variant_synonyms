@@ -157,6 +157,7 @@ elsif($source_name eq 'UniProt'){
     %synonym = %{$result->{'synonyms'}};
     # To get all the ids of the source (Uniprot)
     @ids = keys(%synonym);
+    warn "There are no UniProt synonyms to import: check if data file has the correct format.\n" if !@ids;
   }
 
   # Add the synonyms
@@ -241,7 +242,7 @@ sub parse_uniprot {
     }
     
     # Main regexp to extract relevant variation information
-    if ($_ =~ m/^(\S+)\s+\S+\s+(VAR\_\d+)\s+\w\.\S+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s*(.*)$/) {
+    if ($_ =~ m/^(\S+)\s+\S+\s+(VAR\_\d+)\s+\w\.\S+\s+(LP\/P|LB\/B|US)\s+(\-|rs\d*)\s*(.*)$/) {
       
       # Get the data that was caught by the regexp
       my $gene = $1;
