@@ -154,6 +154,7 @@ sub replace_hex {
   $text  =~ s/&#xf4;/o/g;
   $text  =~ s/&#xf2;/o/g;
   $text  =~ s/&#xf5;/o/g;
+  $text  =~ s/&#x0151;/o/g;
   $text  =~ s/&#xd6;/O/g;
   $text  =~ s/&#xd8;/O/g;
   $text  =~ s/&#xed;/i/g;
@@ -164,8 +165,10 @@ sub replace_hex {
   $text  =~ s/&#xfa;/u/g;
   $text  =~ s/&#xfb;/u/g;
   $text  =~ s/&#xfc;/u/g;
+  $text  =~ s/&#x016b;/u/g;
   $text  =~ s/&#xdc;/U/g;
   $text  =~ s/&#xa0;/ /g;
+  $text  =~ s/&#x02d9;/ /g;
   $text  =~ s/&#x2122;//g;
   $text  =~ s/&#xae;//g;
   $text  =~ s/&#xf1;/n/g;
@@ -179,6 +182,7 @@ sub replace_hex {
   $text  =~ s/&#xe7;/c/g;
   $text  =~ s/&#xc7;/C/g;
   $text  =~ s/&#x0107;/c/g;
+  $text  =~ s/&#x010d;/c/g;
   $text  =~ s/&#x2264;/≤/g;
   $text  =~ s/&#x2265;/≥/g;
   $text  =~ s/&#x025b;/ɛ/g;
@@ -188,12 +192,17 @@ sub replace_hex {
   $text  =~ s/&#x015a;/S/g;
   $text  =~ s/&#x0160;/S/g;
   $text  =~ s/&#x204e;/⁎/g;
+  $text  =~ s/&#x2217;/*/g;
   $text  =~ s/&#xfd;/y/g;
   $text  =~ s/&#x015f;/s/g;
   $text  =~ s/&#x0161;/s/g;
   $text  =~ s/&#x0159;/r/g;
   $text  =~ s/&#x017d;/Z/g;
   $text  =~ s/&#8594;/->/g;
+  $text  =~ s/&#x03b1;/α/g;
+  $text  =~ s/&#x03b4;/δ/g;
+  $text  =~ s/&#x2026;/.../g;
+  $text  =~ s/&#x0131;/ı/g;
 
   return $text;
 }
