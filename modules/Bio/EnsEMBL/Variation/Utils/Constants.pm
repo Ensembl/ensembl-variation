@@ -538,7 +538,7 @@ our %OVERLAP_CONSEQUENCES = (
 }
 ),
 'splice_polypyrimidine_tract_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001630',
+  'SO_accession' => 'SO:0002169',
   'SO_term' => 'splice_polypyrimidine_tract_variant',
   'description' => 'A sequence variant that falls in the polypyrimidine tract at 3\' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)',
   'display_term' => 'SPLICE_SITE',
