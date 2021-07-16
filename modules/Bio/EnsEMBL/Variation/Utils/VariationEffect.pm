@@ -505,6 +505,34 @@ sub essential_splice_site {
     return ( acceptor_splice_site(@_) or donor_splice_site(@_) );
 }
 
+sub splice_donor_5th_base_variant {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
+
+    return $feat->strand == 1 ? $ie->{fifth_base_splice_site} : $ie->{fifth_base_splice_site_reverse};
+}
+
+sub splice_donor_region_variant {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
+    
+    return 0 if splice_donor_5th_base_variant(@_);
+    return $feat->strand == 1 ? $ie->{donor_region_splice_site} : $ie->{donor_region_splice_site_reverse};
+}
+
+sub splice_polypyrimidine_tract_variant  {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
+
+    return $feat->strand == 1 ? $ie->{polypyrimidine_splice_site} : $ie->{polypyrimidine_splice_site_reverse};
+}
+
 sub splice_region {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
@@ -512,7 +540,9 @@ sub splice_region {
     return 0 if donor_splice_site(@_);
     return 0 if acceptor_splice_site(@_);
     return 0 if essential_splice_site(@_);
-
+    return 0 if splice_donor_region_variant(@_);
+    return 0 if splice_donor_5th_base_variant(@_);
+    
     return $bvfoa->_intron_effects($feat, $bvfo, $bvf)->{splice_region};
 }
 
