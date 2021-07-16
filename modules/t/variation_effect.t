@@ -479,7 +479,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_end - 8,
         end     => $intron_end - 8,
-        effects => [qw(intron_variant)],
+        effects => [qw(intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_end - 7,
         end     => $intron_end - 7,
@@ -983,7 +983,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {
         start   => $intron_start + 8,
         end     => $intron_start + 8,
-        effects => [qw(intron_variant)],
+        effects => [qw(intron_variant splice_polypyrimidine_tract_variant)],
     }, {
         start   => $intron_start + 7,
         end     => $intron_start + 7,
