@@ -546,13 +546,13 @@ our %OVERLAP_CONSEQUENCES = (
   'feature_class' => 'Bio::EnsEMBL::Transcript',
   'impact' => 'LOW',
   'include' => {
-                 'intron_boundary' => 1
+                 'intron' => 1
                },
   'label' => 'splice polypyrimidine tract variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
   'rank' => '13',
   'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
 'intron_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({

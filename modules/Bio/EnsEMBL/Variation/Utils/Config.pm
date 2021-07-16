@@ -475,7 +475,7 @@ our @OVERLAP_CONSEQUENCES = (
         label => 'splice polypyrimidine tract variant',
         impact => 'LOW',
         include => {
-            intron_boundary => 1
+            intron => 1
         },
     },
     {

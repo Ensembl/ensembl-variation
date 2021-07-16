@@ -145,8 +145,16 @@ sub _intron_effects {
         ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
        || overlap($r_start_unshifted, $r_end_unshifted, $intron_start+2, $intron_end-2) || 
       ($insertion && ($r_start_unshifted == $intron_start+2 || $r_end_unshifted == $intron_end-2))
-    ) {
+      ) {
           $intron_effects->{intronic} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-16, $intron_end-2)) {
+          $intron_effects->{polypyrimidine_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+16)) {
+          $intron_effects->{polypyrimidine_splice_site_reverse} = 1;
         }
       }
 
