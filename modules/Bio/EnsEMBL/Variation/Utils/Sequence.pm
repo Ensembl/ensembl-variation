@@ -1385,7 +1385,7 @@ sub raw_freqs_from_gts {
 =head2 ga4gh_vrs_from_spdi
 
   Arg[1]      : SPDI
-  Example     : use Bio::EnsEMBL::Variation::Pipeline::Utils::SeqRegionUtils qw(ga4gh_vrs_from_spdi);
+  Example     : use Bio::EnsEMBL::Variation::Utils::Sequence qw(ga4gh_vrs_from_spdi);
                 $ga4gh_vrs_obj = ga4gh_vrs_from_spdi('NC_000001.11:g.230710048A>G')
   Description : Parse SPDI expression in to a GA4GH Allele.
                 Assumes SPDI has been normalised
