@@ -50,19 +50,19 @@ sub write_output {
   my $bam_files_dir   = $self->param('bam_files_dir');
   my @jobs = ();
 
-  opendir (IND_DIR, $fasta_files_dir) or die $!;
-  while (my $individual_dir = readdir(IND_DIR)) {
-    next if ($individual_dir =~ /^\./);
-    make_path("$bam_files_dir/$individual_dir") or die "Failed to create dir $bam_files_dir/$individual_dir $!";;
-    opendir(DIR, "$fasta_files_dir/$individual_dir") or die $!;
+  opendir (SAMPLE_DIR, $fasta_files_dir) or die $!;
+  while (my $sample_dir = readdir(SAMPLE_DIR)) {
+    next if ($sample_dir =~ /^\./);
+    make_path("$bam_files_dir/$sample_dir") or die "Failed to create dir $bam_files_dir/$sample_dir $!";;
+    opendir(DIR, "$fasta_files_dir/$sample_dir") or die $!;
     while (my $file = readdir(DIR)) {
       if ($file =~ /^(.+)\.fa$/) {
         my $file_number = $1;
-        my $bam_files_dir = "$bam_files_dir/$individual_dir/";
+        my $bam_files_dir = "$bam_files_dir/$sample_dir/";
         push @jobs, {
           'file_number'   => $file_number,
           'bam_files_dir' => $bam_files_dir,
-          'fasta_file'    => "$fasta_files_dir/$individual_dir/$file_number.fa",
+          'fasta_file'    => "$fasta_files_dir/$sample_dir/$file_number.fa",
           'sam_file'      => "$bam_files_dir/$file_number.sam",
           'bam_file'      => "$bam_files_dir/$file_number.bam",
           'err_file'      => "$bam_files_dir/$file_number.err",
@@ -80,7 +80,7 @@ sub write_output {
 sub generate_remap_read_coverage_input {
   my $self = shift;
 
-  my $old_assembly_fasta_file_dir = $self->param('old_assembly_fasta_file_dir');
+  my $old_assembly_fasta_file_dir = $self->param('old_assembly_dir');
   my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
   $self->param('fasta_db', $fasta_db);
 
@@ -91,16 +91,16 @@ sub generate_remap_read_coverage_input {
   my $fh_report_non_ref_entries = FileHandle->new("$pipeline_dir/report_non_ref_entries.txt", 'w'); 
 
   my $strand = 1;
-  opendir (IND_DIR, $dump_features_dir) or die $!;
-  while (my $individual_dir = readdir(IND_DIR)) {
-    next if ($individual_dir =~ /^\./);
-    make_path("$fasta_files_dir/$individual_dir") or die "Failed to create dir $fasta_files_dir/$individual_dir $!";;
-    opendir(DIR, "$dump_features_dir/$individual_dir") or die $!;
+  opendir (SAMPLE_DIR, $dump_features_dir) or die $!;
+  while (my $sample_dir = readdir(SAMPLE_DIR)) {
+    next if ($sample_dir =~ /^\./);
+    make_path("$fasta_files_dir/$sample_dir") or die "Failed to create dir $fasta_files_dir/$sample_dir $!";;
+    opendir(DIR, "$dump_features_dir/$sample_dir") or die $!;
     while (my $file = readdir(DIR)) {
       if ($file =~ /^(.+)\.txt$/) {
         my $file_number = $1;
-        my $fh = FileHandle->new("$dump_features_dir/$individual_dir/$file", 'r');
-        my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$individual_dir/$file_number.fa", 'w');
+        my $fh = FileHandle->new("$dump_features_dir/$sample_dir/$file", 'r');
+        my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$sample_dir/$file_number.fa", 'w');
         while (<$fh>) {
           chomp;
           my $data = $self->read_line($_);
@@ -148,94 +148,40 @@ sub generate_remap_read_coverage_input {
 sub dump_read_coverage {
   my $self = shift;
 
-  my $vdba = $self->param('vdba');
+  my $vdba = $self->param('vdba_oldasm');
   my $dbname = $vdba->dbc->dbname();
   my $dbh = $vdba->dbc->db_handle;
 
-  # get individiual_ids in old read coverage table
-  my $individual_id = 'sample_id';
-  my $individual_table = 'sample';
-  my $table_names = get_table_names($dbh, $dbname);
-  my $rc_individual_ids;
-  if (grep /read_coverage/, @$table_names) {
-    my $column_names = get_column_names($dbh, $dbname, 'read_coverage');
-    if (grep /individual_id/, @$column_names) {
-      $individual_id = 'individual_id';
-      $individual_table = 'individual';
-    }
-  # get strain names and number of reads
-    my $query = qq{
-      SELECT distinct $individual_id FROM read_coverage
-    };
-    $rc_individual_ids = run_query($dbh, $query);
-  }
-  my $rc_individual_ids_hash = {};
-  foreach my $id (@$rc_individual_ids) {
-    $rc_individual_ids_hash->{$id} = 1;
-  }
-
-  my $name_to_id = {};
-
-  my @individual_names = split(',', $self->param('individuals'));
-  if (scalar @individual_names > 0) {
-    foreach my $name (@individual_names) {
-      my $ids = $self->get_individual_ids($name);
-      my $count = 0;
-      foreach my $id (@$ids) {
-        if ($rc_individual_ids_hash->{$id}) {
-          $name_to_id->{$name} = $id;
-          $count++;
-        } 
-      }
-      die "Too many individual ids in table for $name" unless ($count == 1);
-    } 
-  } else {
-    foreach my $id (keys %$rc_individual_ids_hash) {
-      my $name = $self->get_individual_name($id);
-      $name_to_id->{$name} = $id;
-      push @individual_names, $name;
-    }
-  }
-
-  $individual_id = 'sample_id';
-  $individual_table = 'sample';
-  $table_names = get_table_names($dbh, $dbname);
-  if (grep /read_coverage/, @$table_names) {
-    my $column_names = get_column_names($dbh, $dbname, 'read_coverage');
-    if (grep /individual_id/, @$column_names) {
-      $individual_id = 'individual_id';
-      $individual_table = 'individual';
-    }
-  } else {
-    die "No read_coverage table in $dbname";
-  }
+  my $query = qq{
+    SELECT distinct sample_id FROM read_coverage
+  };
+  my $sample_ids = $self->run_query($dbh, $query);
 
   my $sth = $dbh->prepare(qq{
-      SELECT rc.seq_region_id, rc.seq_region_start, rc.seq_region_end, rc.level, rc.$individual_id, i.name, sr.name
-      FROM read_coverage rc, seq_region sr, $individual_table i
+      SELECT rc.seq_region_id, rc.seq_region_start, rc.seq_region_end, rc.level, rc.sample_id, s.name, sr.name
+      FROM read_coverage rc, seq_region sr, sample s
       WHERE rc.seq_region_id = sr.seq_region_id
-      AND rc.$individual_id = i.$individual_id
-      AND i.name = ?; 
+      AND rc.sample_id = s.sample_id
+      AND s.sample_id = ?;
       }, {mysql_use_result => 1});
   $sth->execute();
 
-  my @keys = ('seq_region_id', 'seq_region_start', 'seq_region_end', 'level', 'individual_id', 'individual_name', 'seq_region_name');
+  my @keys = ('seq_region_id', 'seq_region_start', 'seq_region_end', 'level', 'sample_id', 'sample_name', 'seq_region_name');
 
   my $dump_features_dir = $self->param('dump_features_dir');
   my $entry = 1;
-  foreach my $individual_name (@individual_names) {
+  foreach my $sample_id (@$sample_ids) {
     my $file_count = 1;
     my $entries_per_file = $self->param('entries_per_file');
     my $count_entries = 0;
-    my $individual_id = $name_to_id->{$individual_name};
 
-    unless (-d "$dump_features_dir/$individual_id") {
-      make_path("$dump_features_dir/$individual_id") or die "Failed to create dir $dump_features_dir/$individual_id $!";;
+    unless (-d "$dump_features_dir/$sample_id") {
+      make_path("$dump_features_dir/$sample_id") or die "Failed to create dir $dump_features_dir/$sample_id $!";;
     }
 
-    my $fh = FileHandle->new("$dump_features_dir/$individual_id/$file_count.txt", 'w');
+    my $fh = FileHandle->new("$dump_features_dir/$sample_id/$file_count.txt", 'w');
 
-    $sth->execute($individual_name);
+    $sth->execute($sample_id);
     while (my $row = $sth->fetchrow_arrayref) {
       my @values = map { defined $_ ? $_ : '\N' } @$row;
       my @pairs = ();
@@ -247,7 +193,7 @@ sub dump_read_coverage {
       if ($count_entries >= $entries_per_file) {
         $fh->close();
         $file_count++;
-        $fh = FileHandle->new("$dump_features_dir/$individual_id/$file_count.txt", 'w');
+        $fh = FileHandle->new("$dump_features_dir/$sample_id/$file_count.txt", 'w');
         $count_entries = 0;
       }
       $count_entries++;
@@ -256,62 +202,6 @@ sub dump_read_coverage {
     $fh->close();
     $sth->finish();
   }
-}
-
-sub get_individual_ids {
-  my $self = shift;
-  my $individual_name = shift;
-  $self->warning($individual_name);
-  my $vdba = $self->param('vdba');
-
-  my $dbname = $vdba->dbc->dbname();
-  my $dbh = $vdba->dbc->db_handle();
-
-  my $column = 'sample_id';
-  my $table = 'sample';
-
-  my $column_names = get_column_names($dbh, $dbname, 'individual');
-  if (grep /individual_id/, @$column_names) {
-    $column = 'individual_id';
-    $table = 'individual';
-  }
-  my $sth = $dbh->prepare(qq{SELECT $column FROM $table where name='$individual_name';});
-
-  my @ids = ();
-  $sth->execute();
-  while (my $row = $sth->fetchrow_arrayref) {
-    push @ids, $row->[0];
-  }
-  $sth->finish();
-  return \@ids;
-}
-
-sub get_individual_name {
-  my $self = shift;
-  my $individual_id = shift;
-  $self->warning($individual_id);
-  my $vdba = $self->param('vdba');
-
-  my $dbname = $vdba->dbc->dbname();
-  my $dbh = $vdba->dbc->db_handle();
-
-  my $column = 'sample_id';
-  my $table = 'sample';
-
-  my $column_names = get_column_names($dbh, $dbname, 'individual');
-  if (grep /individual_id/, @$column_names) {
-    $column = 'individual_id';
-    $table = 'individual';
-  }
-  my $sth = $dbh->prepare(qq{SELECT name FROM $table where $column=$individual_id;});
-
-  my @names = ();
-  $sth->execute();
-  while (my $row = $sth->fetchrow_arrayref) {
-    push @names, $row->[0];
-  }
-  $sth->finish();
-  return $names[0];
 }
 
 1;

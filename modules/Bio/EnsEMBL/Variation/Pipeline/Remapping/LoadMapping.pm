@@ -65,10 +65,10 @@ sub load_read_coverage {
   my @column_names = @{$self->get_sorted_column_names($vdba, $result_table)};
   my $column_names_concat = join(',', @column_names);
 
-  opendir(IND_DIR, $load_features_dir) or die $!;
-  while (my $individual_dir = readdir(IND_DIR))  {
-    next if ($individual_dir =~ /^\./);
-    my $dir = "$load_features_dir/$individual_dir";
+  opendir(SAMPLE_DIR, $load_features_dir) or die $!;
+  while (my $sample_dir = readdir(SAMPLE_DIR))  {
+    next if ($sample_dir =~ /^\./);
+    my $dir = "$load_features_dir/$sample_dir";
     opendir(DIR, $dir) or die $!;
     while (my $file = readdir(DIR)) {
       if ($file =~ /^(.+)\.txt$/) {
@@ -86,6 +86,16 @@ sub load_read_coverage {
   closedir(IND_DIR);
 
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
+
+  $self->rename_mapped_feature_table;
+
+  # We can end up with multiple mappings for the same read. In that
+  # case we only keep one copy and remove all duplicates.
+
+  $dbc->do(qq{ RENAME TABLE $feature_table TO $feature_table\_dup;});
+  $dbc->do(qq{ CREATE TABLE $feature_table LIKE $feature_table\_dup;});
+  $dbc->do(qq{ INSERT INTO $feature_table SELECT DISTINCT * FROM $feature_table\_dup;});
+  $dbc->do(qq{ DROP TABLE $feature_table\_dup;});
 }
 
 sub load_mapping_results {
