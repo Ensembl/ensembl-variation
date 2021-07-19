@@ -88,6 +88,7 @@ use vars qw(@ISA @EXPORT_OK);
     &trim_sequences
     &trim_right
     &raw_freqs_from_gts
+    &ga4gh_vrs_from_spdi
     %EVIDENCE_VALUES
 );
 
@@ -1381,5 +1382,61 @@ sub raw_freqs_from_gts {
   };
 }
 
+=head2 ga4gh_vrs_from_spdi
+
+  Arg[1]      : SPDI
+  Example     : use Bio::EnsEMBL::Variation::Pipeline::Utils::SeqRegionUtils qw(ga4gh_vrs_from_spdi);
+                $ga4gh_vrs_obj = ga4gh_vrs_from_spdi('NC_000001.11:g.230710048A>G')
+  Description : Parse SPDI expression in to a GA4GH Allele.
+                Assumes SPDI has been normalised
+  Exceptions  : None
+  Caller      : VEP, Variant Recoder
+
+=cut
+
+# Based on: https://github.com/ga4gh/vrs-python/blob/0c80d489004d9abdbc9e180568bbf92e21f9c2b2/src/ga4gh/vrs/extras/translator.py#L233
+sub ga4gh_vrs_from_spdi {
+  my ($spdi) = @_;
+
+  return if (! $spdi);
+  return if ($spdi !~ /^NC/);
+
+  # Check a valid SPDI format
+  my $match =  ($spdi =~ /^([^:]+):(\d+):([^:]*):(\w*)$/);
+  return if !$match;
+
+  my $ac = $1;
+  my $pos = $2;
+  my $del_len_or_seq = $3;
+  my $ins_seq = $4;
+
+  my $sequence_id = $ac;
+  my $start = $pos;
+  my $del_len;
+  if ($del_len_or_seq =~ /^\d+$/) {
+      $del_len = $del_len_or_seq;
+  } else {
+      $del_len = length($del_len_or_seq);
+  }
+  my $end = $start + $del_len;
+
+  my $ga4gh_vrs_obj = {
+    "location" => {
+            "type" => "SequenceLocation",
+            "interval" => {
+                "type"  => "SimpleInterval",
+                "start" => $start,
+                "end"   => $end,
+            },
+            'sequence_id' => "refseq:$sequence_id"
+    },
+    "state" => {
+        "type" => "SequenceState",
+        "sequence" =>  $ins_seq,
+    },
+    "type" => "Allele",
+  };
+  return $ga4gh_vrs_obj;
+}
 
 1;
