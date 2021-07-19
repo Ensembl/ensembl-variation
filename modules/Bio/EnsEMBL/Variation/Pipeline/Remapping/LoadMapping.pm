@@ -88,6 +88,14 @@ sub load_read_coverage {
   $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
 
   $self->rename_mapped_feature_table;
+
+  # We can end up with multiple mappings for the same read. In that
+  # case we only keep one copy and remove all duplicates.
+
+  $dbc->do(qq{ RENAME TABLE $feature_table TO $feature_table\_dup;});
+  $dbc->do(qq{ CREATE TABLE $feature_table LIKE $feature_table\_dup;});
+  $dbc->do(qq{ INSERT INTO $feature_table SELECT DISTINCT * FROM $feature_table\_dup;});
+  $dbc->do(qq{ DROP TABLE $feature_table\_dup;});
 }
 
 sub load_mapping_results {
