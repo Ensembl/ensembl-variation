@@ -22,7 +22,7 @@ use Test::Warnings qw(warning :no_end_test);
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles get_hgvs_alleles trim_right));
+    use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(sequence_with_ambiguity align_seqs trim_sequences get_matched_variant_alleles get_hgvs_alleles trim_right ga4gh_vrs_from_spdi));
 }
 
 
@@ -728,7 +728,56 @@ my $exp = 'NWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
 ok($seq->isa('Bio::EnsEMBL::Slice'), "sequence_with_ambiguity isa slice");
 is($seq->seq, $exp, "sequence_with_ambiguity seq");
 
+## ga4gh_vrs_from_spdi
+my $spdi_1 = undef;
+my $exp_ga4gh_vrs_1 = ga4gh_vrs_from_spdi($spdi_1);
+is($exp_ga4gh_vrs_1, undef, 'ga4gh_vrs is undef when no SPDI');
 
+my $spdi_2 = 'NM_000029.3:1310:T:C';
+my $exp_ga4gh_vrs_2 = ga4gh_vrs_from_spdi($spdi_2);
+is($exp_ga4gh_vrs_2, undef, 'ga4gh_vrs is undef when non chromosomal SPDI');
+
+my $spdi_3 = 'NC_000001.11:230710047:A';
+my $exp_ga4gh_vrs_3 = ga4gh_vrs_from_spdi($spdi_3);
+is($exp_ga4gh_vrs_2, undef, 'ga4gh_vrs is undef when invalid SPDI format');
+
+my $spdi_4 = 'NC_000001.11:230710047:A:G';
+my $exp_ga4gh_vrs_4 = {
+    'location' => {
+                    'sequence_id' => 'refseq:NC_000001.11',
+                    'type' => 'SequenceLocation',
+                    'interval' => {
+                                    'type' => 'SimpleInterval',
+                                    'end' => 230710048,
+                                    'start' => 230710047
+                                  }
+                  },
+    'type'     => 'Allele',
+    'state'    => {
+                   'sequence' => 'G',
+                   'type' => 'SequenceState'
+                 }
+  };
+is_deeply(ga4gh_vrs_from_spdi($spdi_4), $exp_ga4gh_vrs_4, 'ga4gh_vrs from SNV SPDI');
+
+my $spdi_5 = "NC_000012.11:101997654:25:";
+my $spdi_5 = 'NC_000019.10:60479:16:';
+my $exp_ga4gh_vrs_5 = {
+    'location' => {
+                    'sequence_id' => 'refseq:NC_000019.10',
+                    'type' => 'SequenceLocation',
+                    'interval' => {
+                                    'type' => 'SimpleInterval',
+                                    'end' => 60495,
+                                    'start' => 60479
+                                  }
+                    },
+    'type'     => 'Allele',
+    'state'    => {
+                    'sequence' => '',
+                    'type' => 'SequenceState'
+                  }
+    };
+is_deeply(ga4gh_vrs_from_spdi($spdi_5), $exp_ga4gh_vrs_5, 'ga4gh_vrs from deletion variant SPDI');
 
 done_testing();
-
