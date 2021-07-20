@@ -219,7 +219,6 @@ foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(
       # Loop over the populations and add a row for each
       foreach my $pop (@pop_list) {
         next if ($pop_seen{$pop});
-        next if ($species eq 'Parus major' && $pop_data{$pop}{'size'} eq '-');
 
         # Avoid duplicated entries within the same project
         $pop_seen{$pop} = 1;
