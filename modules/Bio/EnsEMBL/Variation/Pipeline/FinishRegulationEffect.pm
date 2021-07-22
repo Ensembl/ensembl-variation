@@ -90,7 +90,11 @@ sub run {
     # combine consequences for all variation_features in regulatory_region_consequences
     my $tmp_table = 'variation_feature_consequences';
 
-    $dbc->do(qq{CREATE TABLE IF NOT EXISTS $tmp_table LIKE variation_feature;});
+    $dbc->do(qq{CREATE TABLE IF NOT EXISTS $tmp_table(
+	    variation_feature_id int(10),
+	    consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
+	    key variation_feature_idx(variation_feature_id)
+	   )engine=MyISAM;});
 
     $dbc->do(qq{
      INSERT INTO $tmp_table (variation_feature_id, consequence_types)
