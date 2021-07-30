@@ -1854,6 +1854,8 @@ sub post_processing_clinical_significance {
   $sth_stmt->execute();
   my $all_clin_sign = $sth_stmt->fetchall_arrayref();
 
+  my $sth_insert_temp = $dbVar->prepare(qq{ INSERT INTO $temp_clin_table (sv_id, clin_sign) values (?, ?) });
+
   foreach my $data (@{$all_clin_sign}){
     my $sv_id = $data->[0];
     my $clin_sign_dup = $data->[1];
@@ -1865,7 +1867,6 @@ sub post_processing_clinical_significance {
     my @new_clin_sign_unique = keys %unique_clin_sign;
     my $clin_sign_unique_final = join ',', @new_clin_sign_unique;
 
-    my $sth_insert_temp = $dbVar->prepare(qq{ INSERT INTO $temp_clin_table (sv_id, clin_sign) values (?, ?) });
     $sth_insert_temp->execute($sv_id, $clin_sign_unique_final);
   }
 
