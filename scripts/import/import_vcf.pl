@@ -791,13 +791,13 @@ sub main {
 
       my $var_name;
       if($config->{source} eq 'Mastermind') {
-        # We only use GRCh37 HGVS - Mastermind doesn't support GRCh38. The HGVS is going to be used to built the URL.
-        # The VCF file (GRCh38) has two HGVS separated by a comma. The first HGVS is for GRCh38 and the second is GRCh37. We want to keep the second.
+        # The VCF file (GRCh38) has two HGVS separated by a comma. The first HGVS is for GRCh38 and the second is GRCh37.
         # Example VCF GRCh38: 'HGVSG=NC_000001.11:g.450843C>G,NC_000001.10:g.368494C>G;'
         # Example VCF GRCh37: 'HGVSG=NC_000001.10:g.368494C>G;'
         $var_name = $data->{info}->{HGVSG};
         if($var_name =~ /,/) {
-          $var_name =~ s/.*,//;
+          $var_name =~ s/,.*//;
+          $var_name =~ s/HGVSG=//;
         }
 
         # Mastermid - skip variants bigger than 50bp
