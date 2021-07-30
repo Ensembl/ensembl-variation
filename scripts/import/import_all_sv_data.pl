@@ -413,7 +413,6 @@ sub study_table{
 
   my $assembly_desc;
 
-
   # UPDATE
   if (scalar (@$rows)) {
     $study_id   = $rows->[0][0];
@@ -454,7 +453,6 @@ sub study_table{
   }
   # INSERT
   else {
-
     my $description;
     if($author_desc) {
       $description = $author_desc.' "'."$study_desc".'" '.$pmid_desc.' '.$assembly_desc;
@@ -1841,8 +1839,6 @@ sub post_processing_clinical_significance {
   $dbVar->do(qq{CREATE TABLE $temp_clin_table (sv_id int(10), clin_sign varchar(255), primary key (sv_id))});
 
   my $stmt = qq{
-    INSERT INTO
-    $temp_clin_table (sv_id, clin_sign)
     SELECT
       sva.structural_variation_id,
       GROUP_CONCAT(distinct sv.clinical_significance ORDER BY sv.clinical_significance DESC SEPARATOR ',')
@@ -1854,7 +1850,25 @@ sub post_processing_clinical_significance {
       sv.clinical_significance is not null
     GROUP BY sva.structural_variation_id;
   };
-  $dbVar->do($stmt);
+  my $sth_stmt = $dbVar->prepare($stmt);
+  $sth_stmt->execute();
+  my $all_clin_sign = $sth_stmt->fetchall_arrayref();
+
+  my $sth_insert_temp = $dbVar->prepare(qq{ INSERT INTO $temp_clin_table (sv_id, clin_sign) values (?, ?) });
+
+  foreach my $data (@{$all_clin_sign}){
+    my $sv_id = $data->[0];
+    my $clin_sign_dup = $data->[1];
+    my @clin_sign_list = split ',', $clin_sign_dup;
+    my %unique_clin_sign;
+    foreach my $key (@clin_sign_list) {
+      $unique_clin_sign{$key} = 1;
+    }
+    my @new_clin_sign_unique = keys %unique_clin_sign;
+    my $clin_sign_unique_final = join ',', @new_clin_sign_unique;
+
+    $sth_insert_temp->execute($sv_id, $clin_sign_unique_final);
+  }
 
   my $stmt2 = qq{
     UPDATE $sv_table sv, $temp_clin_table t SET sv.clinical_significance=t.clin_sign WHERE sv.structural_variation_id=t.sv_id;
