@@ -116,7 +116,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ANIMALQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
                                           'sus_scrofa', 'ovis_aries', 'ovis_aries_rambouillet'],
                           'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
-                                          'bos_taurus','canis_lupus_familiaris','equus_caballus',
+                                          'bos_taurus','canis_lupus_familiaris','equus_caballus','canis_lupus_familiarisboxer',
                                           'macaca_mulatta','sus_scrofa','ovis_aries', 'ovis_aries_rambouillet',
                                           'meleagris_gallopavo', 'pan_troglodytes'],
 
@@ -137,7 +137,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ontology'  => ['homo_sapiens', 'gallus_gallus',
                                           'sus_scrofa', 'bos_taurus',
                                           'equus_caballus', 'ovis_aries', 'ovis_aries_rambouillet',
-                                          'capra_hircus', 'canis_lupus_familiaris']
-                        );
+                                          'capra_hircus', 'canis_lupus_familiaris','canis_lupus_familiarisboxer']
+    );
 
 1;
