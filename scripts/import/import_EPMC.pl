@@ -240,6 +240,14 @@ sub import_citations{
           $title =~ s/\]\.//;
         }  
 
+	# Some publication have newline in the title
+	# Clean the title before it's inserted
+	# example: PMID = 33498513
+        if($title =~ /\n/) {
+	  $title =~ s/\n//;
+          $title =~ s/\s\s+/ /;
+        }
+
         ## save ids
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
@@ -266,7 +274,7 @@ sub import_citations{
                 -title    => $title,
                 -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
                 -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
-                -pmcid    => $ref->{resultList}->{result}->{pmcid}          || undef,
+                -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
                 -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
                 -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
                 -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
@@ -428,9 +436,8 @@ sub check_species{
 
 ## read input
 ##
-## expected format:  rsID,PMCID,PMID
-##                   rs10016388,PMC1513515,16770606
-##                   RS10028945,PMC1513515,16770606
+## expected format:  refsnp,PMCID,EXTID,SOURCE
+##                   "rs1914711",PMC6909262,31872004,MED
 
 sub parse_EPMC_file{
 
@@ -440,30 +447,39 @@ sub parse_EPMC_file{
     my %data;
     open (my $file, $pubmed_file) or die "Failed to open file of PubMed ids $pubmed_file : $!\n";
     while (<$file>){
-        ## basic check that format is as expected
-        next unless /rs\d+\,/i;
-        chomp;
-        s/RS/rs/;
+      ## basic check that format is as expected
+      next unless /\"rs\d+\"\,/i;
+      chomp;
+      s/"//g;
 
-        my ($rs, $pmcid, $pmid) = split/\,/;      
+      my ($rs, $pmcid, $pmid, $source) = split/\,/;
 
-        ## remove known errors
-         if ($avoid_list->{$rs}->{$pmcid} || $avoid_list->{$rs}->{$pmid}){
-            print "Removing suspected error : $rs in $pmcid\n";
-            next;
-        }
-        ## Group by publication; may have pmid, pmcid or both
-        my $tag = $pmcid . "_" .$pmid;
+      next if($source ne "MED");
 
+      my $is_pmcid;
+      if ($pmcid =~ /PMC\d+/) {
+        $is_pmcid = 1;
+      }
+      else {
+        print "PMID $rs, $pmcid, $pmid, $source\n";
+      }
 
-        $data{$tag}{pmid} = $pmid;
-        $data{$tag}{pmid} = undef unless $pmid =~ /\d+/;
+      ## remove known errors
+      if ($is_pmcid && ($avoid_list->{$rs}->{$pmcid} || $avoid_list->{$rs}->{$pmid})){
+        print "Removing suspected error : $rs in $pmcid\n";
+        next;
+      }
+      ## Group by publication; may have pmid, pmcid or both
+      my $tag = $pmcid . "_" .$pmid;
 
-        $data{$tag}{pmcid} = $pmcid;
-        push @{$data{$tag}{rsid}}, $rs;
-    }
+      $data{$tag}{pmid} = $pmid;
+      $data{$tag}{pmid} = undef unless $pmid =~ /\d+/;
 
-    return \%data;
+      $data{$tag}{pmcid} = $is_pmcid ? $pmcid : undef;
+      push @{$data{$tag}{rsid}}, $rs;
+  }
+
+  return \%data;
 }
 
 ## look up manually curated list of suspect citations
@@ -1029,6 +1045,10 @@ sub parse_UCSC_file{
         $data{$tag}{title}   = $title;
         $data{$tag}{authors} = $authors;
         $data{$tag}{year}    = $year;
+        $data{$tag}{pmcid}   = undef;
+        if($extId =~ /^PMC\d+/) {
+          $data{$tag}{pmcid} = $extId;
+        }
         $data{$tag}{ucsc}    = $extId;
 
         push @{$data{$tag}{rsid}}, $rs;
@@ -1283,4 +1303,3 @@ sub unique {
   map { $a{$_} = 1; } @_;
   return sort keys %a;
 }
-
