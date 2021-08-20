@@ -268,10 +268,21 @@ sub import_citations{
         }
         else{
             ## add new publication
+	    my $new_title = $title;
+
+            ## check title size
+            if(length($title) >= 300){
+              # truncate title
+              my $aux = substr($title, 0, 296);
+              my @list_title = split(' ', $aux);
+              pop @list_title;
+              $new_title = join(' ', @list_title);
+              $new_title .= '...';
+            }
 
             ### create new object
             my $publication = Bio::EnsEMBL::Variation::Publication->new(
-                -title    => $title,
+                -title    => $new_title,
                 -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
                 -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
                 -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
@@ -347,7 +358,7 @@ sub get_publication_info_from_epmc{
     ### check title available
     unless (defined $ref->{resultList}->{result}->{title}){
         my $mess = "ALL\t";
-        $mess .= "pmid:$data->{$pub}->{pmid}\t"   if defined $data->{$pub}->{pmid};
+        $mess .= "pmid:$data->{$pub}->{pmid}\t" if defined $data->{$pub}->{pmid};
         $mess .= "pmcid:$data->{$pub}->{pcmid}\t" if defined $data->{$pub}->{pmcid};
         print $error_log $mess ." as no title\n";
 
@@ -386,14 +397,17 @@ sub get_epmc_data{
 
     my $xs   = XML::Simple->new();
     my $server = 'https://www.ebi.ac.uk/europepmc/';
-    my $request  = $server . $id;
+    my $request  = $server . $id . '&format=xml';
 
     my %data;
 
     print "Looking for $request\n\n"  if $DEBUG == 1;
     my $response = $http->get($request, {
-        headers => { 'Content-type' => 'application/xml' }
-                              });
+        headers => {
+         'Accept' => 'application/xml'
+        }
+    });
+
     unless ($response->{success}){
         warn "Failed request: $request :$!\n" ;
         return;
@@ -460,9 +474,6 @@ sub parse_EPMC_file{
       if ($pmcid =~ /PMC\d+/) {
         $is_pmcid = 1;
       }
-      else {
-        print "PMID $rs, $pmcid, $pmid, $source\n";
-      }
 
       ## remove known errors
       if ($is_pmcid && ($avoid_list->{$rs}->{$pmcid} || $avoid_list->{$rs}->{$pmid})){
@@ -474,8 +485,8 @@ sub parse_EPMC_file{
 
       $data{$tag}{pmid} = $pmid;
       $data{$tag}{pmid} = undef unless $pmid =~ /\d+/;
-
       $data{$tag}{pmcid} = $is_pmcid ? $pmcid : undef;
+
       push @{$data{$tag}{rsid}}, $rs;
   }
 
