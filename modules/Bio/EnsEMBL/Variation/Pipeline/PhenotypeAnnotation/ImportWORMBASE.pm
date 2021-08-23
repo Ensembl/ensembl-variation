@@ -110,7 +110,8 @@ source_version => $self->param('source_version')
                       type => $source_info{object_type});
 
   $self->param('output_ids', { source => \%param_source,
-                               species => $self->required_param('species')
+                               species => $self->required_param('species'),
+                               run_type => $self->required_param('run_type')
                              });
 }
 
