@@ -777,10 +777,10 @@
     },
     {
       "id": "91_mammals.gerp_conservation_score",
-      "species": "canis_familiaris",
-      "assembly": "CanFam3.1",
+      "species": "canis_lupus_familiaris",
+      "assembly": "ROS_Cfam_1.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.CanFam3.1.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.ROS_Cfam_1.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -858,9 +858,9 @@
     {
       "id": "58_amniotes.gerp_conservation_score",
       "species": "meleagris_gallopavo",
-      "assembly": "UMD2",
+      "assembly": "Turkey_5.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.UMD2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.Turkey_5.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -938,17 +938,17 @@
     {
       "id": "91_mammals.gerp_conservation_score",
       "species": "pongo_abelii",
-      "assembly": "PPYG2",
+      "assembly": "Susie_PABv2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.PPYG2.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.Susie_PABv2.bw",
       "annotation_type": "gerp"
     },
     {
       "id": "91_mammals.gerp_conservation_score",
       "species": "rattus_norvegicus",
-      "assembly": "Rnor_6.0",
+      "assembly": "mRatBN7.2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.Rnor_6.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.mRatBN7.2.bw",
       "annotation_type": "gerp"
     },
     {
