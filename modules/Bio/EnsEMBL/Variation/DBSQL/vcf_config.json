@@ -780,7 +780,15 @@
       "species": "canis_lupus_familiaris",
       "assembly": "ROS_Cfam_1.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_familiaris.ROS_Cfam_1.0.bw",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiaris.ROS_Cfam_1.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "canis_lupus_familiarisboxer",
+      "assembly": "Dog10K_Boxer_Tasha",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/release-105/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiarisboxer.Dog10K_Boxer_Tasha.bw",
       "annotation_type": "gerp"
     },
     {
