@@ -149,11 +149,14 @@ sub _intron_effects {
           $intron_effects->{intronic} = 1;
         }
         
-        if (overlap($r_start, $r_end, $intron_end-16, $intron_end-2)) {
+        my ($start, $end) = ($r_start, $r_end);
+        ($start, $end) = ($end, $start) if $start > $end;
+
+        if (overlap($start, $end, $intron_end-16, $intron_end-2)) {
           $intron_effects->{polypyrimidine_splice_site} = 1;
         }
         
-        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+16)) {
+        if (overlap($start, $end, $intron_start+2, $intron_start+16)) {
           $intron_effects->{polypyrimidine_splice_site_reverse} = 1;
         }
       }
