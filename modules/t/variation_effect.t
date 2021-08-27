@@ -463,7 +463,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'A',
         start   => $intron_start+2,
         end     => $intron_start+1,
-        effects => [qw(splice_region_variant splice_polypyrimidine_tract_variant intron_variant)],
+        effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between bases 7 & 8 is still splice_region',
         alleles => 'A',
@@ -1029,7 +1029,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => 'A',
         start   => $intron_start + 2,
         end     => $intron_start + 1,
-        effects => [qw(splice_region_variant intron_variant)],
+        effects => [qw(splice_region_variant splice_polypyrimidine_tract_variant intron_variant)],
     }, {
         comment => 'insertion between last bases 7 & 8 is still splice_region',
         alleles => 'A',
