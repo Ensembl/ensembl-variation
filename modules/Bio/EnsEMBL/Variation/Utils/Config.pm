@@ -428,6 +428,57 @@ our @OVERLAP_CONSEQUENCES = (
         },
     },
     {
+        SO_accession => 'SO:0001787',
+        SO_term => 'splice_donor_5th_base_variant',
+        display_term => 'SPLICE_SITE',
+        feature_SO_term => 'primary_transcript',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        rank => '4',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_5th_base_variant',
+        description => 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+        label => 'splice donor 5th base variant',
+        impact => 'LOW',
+        include => {
+            intron_boundary => 1
+        },
+    },
+    {
+        SO_accession => 'SO:0002170',
+        SO_term => 'splice_donor_region_variant',
+        display_term => 'SPLICE_SITE',
+        feature_SO_term => 'primary_transcript',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        rank => '14',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_region_variant',
+        description => 'A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5\' end of intron).',
+        label => 'splice donor region variant',
+        impact => 'LOW',
+        include => {
+            intron_boundary => 1
+        },
+    },
+    {
+        SO_accession => 'SO:0002169',
+        SO_term => 'splice_polypyrimidine_tract_variant',
+        display_term => 'SPLICE_SITE',
+        feature_SO_term => 'primary_transcript',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        rank => '13',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
+        description => 'A sequence variant that falls in the polypyrimidine tract at 3\' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)',
+        label => 'splice polypyrimidine tract variant',
+        impact => 'LOW',
+        include => {
+            intron => 1
+        },
+    },
+    {
         SO_accession => 'SO:0001627',
         SO_term => 'intron_variant',
         display_term => 'INTRONIC',

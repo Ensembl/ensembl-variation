@@ -145,8 +145,19 @@ sub _intron_effects {
         ($insertion && ($r_start == $intron_start+2 || $r_end == $intron_end-2))
        || overlap($r_start_unshifted, $r_end_unshifted, $intron_start+2, $intron_end-2) || 
       ($insertion && ($r_start_unshifted == $intron_start+2 || $r_end_unshifted == $intron_end-2))
-    ) {
+      ) {
           $intron_effects->{intronic} = 1;
+        }
+        
+        my ($start, $end) = ($r_start, $r_end);
+        ($start, $end) = ($end, $start) if $start > $end;
+
+        if (overlap($start, $end, $intron_end-16, $intron_end-2)) {
+          $intron_effects->{polypyrimidine_splice_site} = 1;
+        }
+        
+        if (overlap($start, $end, $intron_start+2, $intron_start+16)) {
+          $intron_effects->{polypyrimidine_splice_site_reverse} = 1;
         }
       }
 
@@ -169,6 +180,31 @@ sub _intron_effects {
         if (overlap($r_start, $r_end, $intron_end-1, $intron_end)) {
           $intron_effects->{end_splice_site} = 1;
         }
+        
+        if (overlap($r_start, $r_end, $intron_start+4, $intron_start+4)) {
+          $intron_effects->{fifth_base_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+5)) {
+          $intron_effects->{donor_region_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-16, $intron_end-2)) {
+          $intron_effects->{polypyrimidine_splice_site} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-4, $intron_end-4)) {
+          $intron_effects->{fifth_base_splice_site_reverse} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_end-5, $intron_end-2)) {
+          $intron_effects->{donor_region_splice_site_reverse} = 1;
+        }
+        
+        if (overlap($r_start, $r_end, $intron_start+2, $intron_start+16)) {
+          $intron_effects->{polypyrimidine_splice_site_reverse} = 1;
+        }
+        
         
         # the definition of splice_region (SO:0001630) is "within 1-3 bases 
         # of the exon or 3-8 bases of the intron", the intron start is the 
