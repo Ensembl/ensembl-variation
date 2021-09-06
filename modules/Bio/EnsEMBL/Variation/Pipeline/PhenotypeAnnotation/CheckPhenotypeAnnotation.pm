@@ -118,7 +118,7 @@ sub write_output {
 
   #if these is a decrease in the number of entries, then stop the flow
   if (!$count_ok){
-    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
+    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggered!\n".
                        "PLEASE check import and redo import if needed!");
     close($self->logFH) if defined $self->logFH ;
     close($self->pipelogFH) if defined $self->pipelogFH ;
@@ -382,7 +382,6 @@ sub check_source {
 
   # check only source specific if source specific check
   if (defined $source && defined $previous_counts->{phenotype_feature_count_details} ){
-
     my $source_name = $source->{source_name};
     $source_name = 'Animal_QTLdb_QTL' if $source_name eq 'AnimalQTLdb';
     my @check_names= grep {/$source_name/ } keys $previous_counts->{phenotype_feature_count_details};
@@ -450,4 +449,3 @@ sub update_meta{
 }
 
 1;
-

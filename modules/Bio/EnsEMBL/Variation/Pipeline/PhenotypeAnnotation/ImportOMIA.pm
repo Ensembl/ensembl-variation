@@ -283,6 +283,15 @@ sub split_omia {
       die("there was an error running as ($flat_cmd: $stderr)");
     }
   }
+
+  #dog stands for canis_lupus_familiaris and canis_lupus_familiarisboxer
+  if (-e  "$workdir/omia_split/$prefix"."canis_lupus_familiaris".$suffix) {
+    my $cmd = "cp -p $workdir/omia_split/$prefix"."canis_lupus_familiaris$suffix $workdir/omia_split/$prefix"."canis_lupus_familiarisboxer$suffix";
+    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+    if ($return_value) {
+      die("there was an error running as ($flat_cmd: $stderr)");
+    }
+  }
 }
 
 
