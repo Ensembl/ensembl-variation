@@ -63,8 +63,8 @@ sub default_options {
         hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
-        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive', 
+        ensembl_cvs_root_dir    => '/hps/software/users/ensembl/repositories/'. $login . '/src',
+        hive_root_dir           => '/hps/software/users/ensembl/repositories/'. $login . '/src/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'variation_consequence',
@@ -72,7 +72,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/hps/nobackup/production/ensembl/' . $login . '/' . $self->o('pipeline_name') . '/' . $self->o('species'),
+        pipeline_dir            => '/hps/nobackup/flicek/ensembl/' . $login . '/' . $self->o('pipeline_name') . '/' . $self->o('species'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -105,9 +105,9 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>5000] rusage[mem=5000]" -M5000',
-        highmem_lsf_options => '-qproduction-rh74 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction -R"select[mem>5000] rusage[mem=5000]" -M5000',
+        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species

@@ -112,8 +112,9 @@ sub fetch_input {
   #fetch coreDB assembly:
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
   if ($species eq 'rattus_norvegicus'){
-    my @assemblyV = split('_',$gc->get_version); #Rnor_6.0
-    $self->param('species_assembly', $assemblyV[1]);  #'6.0';
+    my $assembly_version = $gc->get_version;
+    $assembly_version =~ s/[a-z]+//i; #mRatBN7.2
+    $self->param('species_assembly', $assembly_version);  #'7.2';
     print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
   }
 
