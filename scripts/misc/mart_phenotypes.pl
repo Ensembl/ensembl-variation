@@ -31,7 +31,7 @@ It stores gene phenotype associations in MTMP_phenotypes.
 =end
 =cut
 
-
+use Bio::EnsEMBL::DBSQL::DBConnection;
 use DBI;
 use Getopt::Long;
 use ImportUtils qw(load);
@@ -73,12 +73,16 @@ $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
 foreach my $db (@db_list) {
-	my $dbc = DBI->connect(
-		sprintf(
-			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
-			$config->{host}, $config->{port}, $db
-		), $config->{user}, $config->{password},
-	);
+
+  my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(
+    -user   => $config->{user},
+    -dbname => $db,
+    -host   => $config->{host},
+    -pass => $config->{password},
+    -driver => 'mysql',
+    -port => $config->{port},
+  );
+
 	$dbc->do(qq{DROP TABLE IF EXISTS MTMP_phenotype;});
 
 	$dbc->do(qq{
