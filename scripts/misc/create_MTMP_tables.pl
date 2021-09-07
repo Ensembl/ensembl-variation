@@ -36,6 +36,7 @@
 
 use strict;
 use warnings;
+use Bio::EnsEMBL::DBSQL::DBConnection;
 use DBI;
 use Getopt::Long;
 
@@ -87,9 +88,14 @@ sub create_mtmp_evidence{
   my $databases =shift;
 
   foreach my $db_name (@{$databases}){
-    
-    my $dbh = DBI->connect( "dbi:mysql:$db_name\:$host\:$port", $user, $pass, undef) || die "Failed to connect to $db_name\n";
-
+    my $dbh = Bio::EnsEMBL::DBSQL::DBConnection->new(
+      -user   => $user,
+      -dbname => $db_name,
+      -host   => $host,
+      -pass => $pass,
+      -driver => 'mysql',
+      -port => $port,
+    );
     $dbh->do(qq[drop table if exists MTMP_evidence]);    
 
     ## fetch current list of evidence types & database ids
