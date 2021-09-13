@@ -105,32 +105,6 @@ sub run_cmd {
   }
 }
 
-sub get_individual_name {
-  my $self = shift;
-  my $individual_id = shift;
-  my $vdba = $self->param('vdba_oldasm');
-  my $dbname = $vdba->dbc->dbname();
-  my $dbh = $vdba->dbc->db_handle();
-
-  my $column = 'sample_id';
-  my $table = 'sample';
-  my $column_names = $self->get_column_names($dbh, $dbname, 'individual');
-  if (grep /individual_id/, @$column_names) {
-    $column = 'individual_id';
-    $table = 'individual';
-  }
-
-  my $sth = $dbh->prepare(qq{SELECT name FROM $table where $column=$individual_id;});
-  my @names = ();
-  $sth->execute();
-  while (my $row = $sth->fetchrow_arrayref) {
-    push @names, $row->[0];
-  }
-  $sth->finish();
-  die ("Wrong number of names for individiual_id: $individual_id in DB: $dbname: " . scalar @names) if ((scalar @names) != 1);
-  return $names[0];
-}
-
 sub get_column_names {
   my ($self, $dbh, $dbname, $table_name) = @_;
   my $query = qq{SHOW columns FROM $dbname.$table_name};

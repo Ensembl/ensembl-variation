@@ -43,13 +43,13 @@ sub fetch_input {
     fasta_files_dir       => 'fasta_file',
   };
   my $file_number = $self->param('file_number');
-  my $individual_dir = '';
+  my $sample_dir = '';
   if ($self->param('mode') eq 'remap_read_coverage') {
-    my $individual_id = $self->param('individual_id');
-    $individual_dir = "/$individual_id/";
+    my $sample_id = $self->param('sample_id');
+    $sample_dir = "/$sample_id/";
   }
   foreach my $param (keys %$params) {
-    my $dir = $self->param($param) . $individual_dir;
+    my $dir = $self->param($param) . $sample_dir;
     if ($param =~ /mapping_results_dir/) {
       my $file_mappings = "$dir/mappings_$file_number.txt";
       my $file_failed_mappings = "$dir/failed_mapping_$file_number.txt";
@@ -140,7 +140,6 @@ sub print_complete_feature_line {
   my $variation_feature_id = $data->{variation_feature_id};
   $data->{variation_feature_id_old} = $variation_feature_id;
   my @output = ();
-#  $self->warning(join(', ', keys %$data));
   foreach my $column_name (sort keys %$data) {
     unless ($column_name =~ /^variation_feature_id$/ || $column_name =~ /^seq_region_name$/) {
       if ($self->param('mode') eq 'remap_QTL') {
