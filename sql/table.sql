@@ -1738,7 +1738,7 @@ CREATE TABLE submitter (
 
 CREATE TABLE publication (
   publication_id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, 
-  title          VARCHAR(300),
+  title          VARCHAR(400),
   authors        VARCHAR(255) CHARACTER SET utf8mb4,
   pmid           INT(10),
   pmcid          VARCHAR(255),
@@ -1829,11 +1829,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '104');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '105');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_103_104_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_104_105_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_104_105_b.sql|Increase publication title size');
 
 /**
 @header  Failed tables

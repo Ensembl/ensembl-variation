@@ -220,7 +220,11 @@ sub split_omia {
 
   my $prefix = 'omia_';
   my $suffix = '.txt';
-  make_path($workdir."/omia_split") or die "Failed to create $workdir/omia_split $!\n";
+  unless (-d $workdir."/omia_split") {
+    my $err;
+    make_path($workdir."/omia_split", {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
 
   my %data;
 
@@ -274,6 +278,15 @@ sub split_omia {
   #sheep is exception where it stands for ovis_aries and ovis_aries_rambouillet
   if (-e  "$workdir/omia_split/$prefix"."ovis_aries".$suffix) {
     my $cmd = "cp -p $workdir/omia_split/$prefix"."ovis_aries$suffix $workdir/omia_split/$prefix"."ovis_aries_rambouillet$suffix";
+    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+    if ($return_value) {
+      die("there was an error running as ($flat_cmd: $stderr)");
+    }
+  }
+
+  #dog stands for canis_lupus_familiaris and canis_lupus_familiarisboxer
+  if (-e  "$workdir/omia_split/$prefix"."canis_lupus_familiaris".$suffix) {
+    my $cmd = "cp -p $workdir/omia_split/$prefix"."canis_lupus_familiaris$suffix $workdir/omia_split/$prefix"."canis_lupus_familiarisboxer$suffix";
     my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
     if ($return_value) {
       die("there was an error running as ($flat_cmd: $stderr)");

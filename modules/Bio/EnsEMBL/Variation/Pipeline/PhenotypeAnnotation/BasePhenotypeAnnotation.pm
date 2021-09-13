@@ -769,9 +769,9 @@ sub _add_phenotypes {
 
   my $st_ins_sr_stmt = qq{
     INSERT INTO
-      seq_region (seq_region_id, name)
+      seq_region (seq_region_id, name, coord_system_id)
     VALUES (
-      ?, ?
+      ?, ?, ?
     )
   };
 
@@ -868,10 +868,12 @@ sub _add_phenotypes {
     UPDATE variation v, variation_feature vf
     SET
       v.display = 1,
-      v.evidence_attribs = CONCAT_WS(',',v.evidence_attribs, ',$evidence_attrib,'),
+      v.evidence_attribs = CONCAT_WS(',',v.evidence_attribs, '$evidence_attrib'),
       vf.display =1,
-      vf.evidence_attribs = CONCAT_WS(',',vf.evidence_attribs, ',$evidence_attrib,'),
-      vf.variation_set_id = CONCAT_WS(',',vf.variation_set_id, ',$pheno_set,$gwas_set,')
+      vf.evidence_attribs = CONCAT_WS(',',vf.evidence_attribs, '$evidence_attrib'),
+      vf.variation_set_id = TRIM(TRAILING ',' FROM
+                              TRIM(LEADING ',' FROM
+                               CONCAT_WS(',', vf.variation_set_id, '$pheno_set,$gwas_set')))
     WHERE
       v.variation_id  = vf.variation_id AND
       vf.variation_feature_id = ?
@@ -990,6 +992,13 @@ sub _add_phenotypes {
       # add attribs
       foreach my $attrib_type(grep {defined($phenotype->{$_}) && $phenotype->{$_} ne ''} @attrib_types) {
         my $value = $phenotype->{$attrib_type};
+        if (length($value) > 255) {
+          my $old_length = length($value);
+          my $old_value = $value;
+          $value = trim_value_string($value,255);
+          my $new_length  = length($value);
+          $self->print_errFH(join("\t", $pf_id, $attrib_type, $old_length, $new_length, "trimmed_string", $old_value, $value) . "\n");
+        }
         my $sth = $value =~ m/^\d+(\.\d+)?$/ ? $attrib_ins_cast_sth : $attrib_ins_sth;
         $sth->bind_param(1,$pf_id,SQL_INTEGER);
         $sth->bind_param(2,$value,SQL_VARCHAR);
@@ -1017,8 +1026,16 @@ sub _add_phenotypes {
     my $res = $sr_sel_sth->fetchrow_arrayref();
 
     if ($res->[0] eq $key) {
+
+      my $coord_dba = $core_dba->get_CoordSystemAdaptor();
+      my ($highest_cs) = @{$coord_dba->fetch_all()};
+      my $coord_system = $highest_cs->name();
+      my $cs = $coord_dba->fetch_by_name($coord_system);
+      my $coord_system_id = $cs->dbID();
+
       $sr_ins_sth->bind_param(1, $key,SQL_INTEGER);
       $sr_ins_sth->bind_param(2, $res->[1],SQL_VARCHAR);
+      $sr_ins_sth->bind_param(3, $coord_system_id,SQL_INTEGER);
       $sr_ins_sth->execute();
       $self->print_errFH("$key seq_region inserted in variation db\n") if ($self->{debug});
     } else {
@@ -1033,6 +1050,39 @@ sub _add_phenotypes {
   $self->print_logFH( "$phenotype_feature_count new phenotype_features added\n") if ($self->{debug});
 
 }
+
+# Trim a string that contains values separated by commas or semi-colons
+# to not exceed a maximum length
+sub trim_value_string {
+  my ($value, $max_length) = @_;
+  my @separators = (',', ';');
+
+  $max_length ||= 255;
+  if (length($value) <= $max_length) {
+    return $value;
+  }
+
+  my $trim_value = substr($value, 0, $max_length);
+
+  # If first removed character is a separator
+  # assume value between separators has not been truncated
+  my $first_del_char = substr($value, $max_length, 1);
+  foreach my $sep (@separators) {
+    if ($first_del_char eq $sep) {
+      return $trim_value;
+    }
+   }
+
+  # Remove the last separator and following characters so
+  # that values between separators are not truncated
+  foreach my $sep (@separators) {
+    if ($trim_value =~ s/${sep}([^${sep}]*$)//) {
+      return $trim_value;
+    }
+  }
+  return $trim_value;
+}
+
 
 # insert the synonym data into variation_synonym table
 sub _add_synonyms {
@@ -1160,8 +1210,8 @@ sub _get_seq_regions {
 sub _get_coords {
   my ($self, $ids, $variation_ids, $type, $db_adaptor) = @_;
 
-  my $tables;
-  my $where_clause;
+  my $tables = '';
+  my $where_clause = '';
   my $id = '';
 
   my @object_ids = ($type eq 'Variation') ? map { $variation_ids->{$_}[1] } keys(%$variation_ids): @$ids;
@@ -1661,12 +1711,19 @@ sub get_old_results {
 
   my %previous_result;
 
+  my $species  = $self->required_param('species');
+  my $assembly = $self->get_assembly();
   my $result_adaptor = $int_dba->get_ResultAdaptor();
-  my $res = $result_adaptor->fetch_all_current_by_species($self->required_param('species') );
+  my $res;
+  if ($species eq 'homo_sapiens'){
+    $res = $result_adaptor->fetch_all_current_by_species_and_assembly($species, $assembly);
+  } else {
+    $res = $result_adaptor->fetch_all_current_by_species( $species );
+  }
 
   foreach my $result (@{$res}){
 
-    if ($result->parameter()){
+    if ($result->parameter() && $result->parameter() ne 'All'){
       $previous_result{ $result->result_type()."_details" }{$result->parameter()} = $result->result_value();
     } else {
       $previous_result{ $result->result_type() } = $result->result_value();

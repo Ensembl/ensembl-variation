@@ -118,7 +118,7 @@ sub write_output {
 
   #if these is a decrease in the number of entries, then stop the flow
   if (!$count_ok){
-    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggerd!\n".
+    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggered!\n".
                        "PLEASE check import and redo import if needed!");
     close($self->logFH) if defined $self->logFH ;
     close($self->pipelogFH) if defined $self->pipelogFH ;
@@ -382,7 +382,6 @@ sub check_source {
 
   # check only source specific if source specific check
   if (defined $source && defined $previous_counts->{phenotype_feature_count_details} ){
-
     my $source_name = $source->{source_name};
     $source_name = 'Animal_QTLdb_QTL' if $source_name eq 'AnimalQTLdb';
     my @check_names= grep {/$source_name/ } keys $previous_counts->{phenotype_feature_count_details};
@@ -398,8 +397,8 @@ sub check_source {
       $text_out .= "WARNING: " . $new_counts->{phenotype_feature_count_details}{$check_name} . " $check_name entries";
       $text_out .= " (previously " . $previous_counts->{phenotype_feature_count_details}{$check_name} . ")" ;
       $text_out .= "\n";
-      #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
-      $count_ok = 0 unless $assembly eq 'GRCh37';
+      # a 5% discrepancy is accepted in order to proceed with the other imports
+      $count_ok = 0 unless $previous_counts->{phenotype_feature_count_details}{$check_name} * 0.95 < $new_counts->{phenotype_feature_count_details}{$check_name};
     }
   } else {
     my @tables = ('phenotype', 'phenotype_feature', 'phenotype_feature_attrib', 'phenotype_ontology_accession');
@@ -411,8 +410,8 @@ sub check_source {
         $text_out .= "WARNING: " . $new_counts->{"$table\_count"} . " $table entries";
         $text_out .= " (previously " . $previous_counts->{"$table\_count"} . ")" if defined  $previous_counts->{"$table\_count"} ;
         $text_out .= "\n";
-        #for grch37 do not fail the job as prev counts are retrieved by species and not by assembly and grch38 are always reported
-        $count_ok = 0 unless $assembly eq 'GRCh37';
+        # a 5% discrepancy is accepted in order to proceed with the other imports
+        $count_ok = 0 unless $previous_counts->{$check_name} * 0.95 < $new_counts->{$check_name};
       }
     }
   }
@@ -450,4 +449,3 @@ sub update_meta{
 }
 
 1;
-

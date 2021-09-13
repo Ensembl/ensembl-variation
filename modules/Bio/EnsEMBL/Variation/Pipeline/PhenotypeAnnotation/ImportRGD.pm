@@ -82,7 +82,11 @@ sub fetch_input {
                    );
 
   my $workdir = $pipeline_dir."/".$source_info{source_name}."/".$species;
-  make_path($workdir) or die "Failed to create $workdir $!\n";
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, {error => \$err});
+    die "make_path failed: ".Dumper($err) if $err && @$err;
+  }
   $self->workdir($workdir);
 
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -108,8 +112,9 @@ sub fetch_input {
   #fetch coreDB assembly:
   my $gc =  $self->core_db_adaptor->get_adaptor('GenomeContainer');
   if ($species eq 'rattus_norvegicus'){
-    my @assemblyV = split('_',$gc->get_version); #Rnor_6.0
-    $self->param('species_assembly', $assemblyV[1]);  #'6.0';
+    my $assembly_version = $gc->get_version;
+    $assembly_version =~ s/[a-z]+//i; #mRatBN7.2
+    $self->param('species_assembly', $assembly_version);  #'7.2';
     print $logFH 'Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
   }
 

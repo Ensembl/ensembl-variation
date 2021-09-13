@@ -6,7 +6,7 @@
 
 # The Travis API endpoint. .com and .org are the commercial and free versions,
 # respectively; enterprise users will have their own hostname.
-endpoint=https://api.travis-ci.org
+endpoint=https://api.travis-ci.com
 
 #############
 # Functions #
@@ -14,7 +14,7 @@ endpoint=https://api.travis-ci.org
 
 # Get this repo ID
 repo_id () {
-    curl -s -X GET -H "Authorization: token $AUTH_TOKEN" -H "Travis-API-Version: 3" https://api.travis-ci.org/repo/$1 | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])"
+    curl -s -X GET -H "Authorization: token $AUTH_TOKEN" -H "Travis-API-Version: 3" https://api.travis-ci.com/repo/$1 | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])"
 }
 
 # Make an API request using the auth token set above. First argument is the path

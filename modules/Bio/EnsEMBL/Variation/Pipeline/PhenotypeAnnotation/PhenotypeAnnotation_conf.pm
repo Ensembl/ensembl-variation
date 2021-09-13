@@ -70,8 +70,7 @@ sub default_options {
 
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
 
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
-        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
+        hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
 
         # release number used in the name of default workdir and hive database
         ensembl_release         => 95,
@@ -83,7 +82,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/hps/nobackup2/production/ensembl/' . $login . '/' . $self->o('pipeline_name')."_".$self->o('ensembl_release') ,
+        pipeline_dir            => '/hps/nobackup/flicek/ensembl/variation/' . $login . '/' . $self->o('pipeline_name')."_".$self->o('ensembl_release') ,
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -114,11 +113,11 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
 
-        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000',
-        urgent_lsf_options  => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh74 -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
+        urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database

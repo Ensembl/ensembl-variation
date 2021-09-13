@@ -61,17 +61,15 @@ sub default_options {
         hive_use_triggers => 0,
         hive_auto_rebalance_semaphores => 0, 
         hive_no_init => 0,
+
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
-        hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive', 
+        hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
+
         # a name for your pipeline (will also be used in the name of the hive database)
-        
         pipeline_name           => 'ancestral_alleles',
 
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
-
         pipeline_dir            => $self->o('pipeline_dir'),
         compara_dir             => $self->o('compara_dir'),
 
@@ -81,8 +79,8 @@ sub default_options {
         non_dbSNP_only => 0,
         
         
-        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>5000] rusage[mem=5000]" -M5000',
+        default_lsf_options => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-q production -R"select[mem>5000] rusage[mem=5000]" -M5000',
 
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,

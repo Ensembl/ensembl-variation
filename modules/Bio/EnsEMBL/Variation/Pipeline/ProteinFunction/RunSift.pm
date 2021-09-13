@@ -51,7 +51,7 @@ sub run {
   my $ncbi_dir        = $self->required_param('ncbi_dir');
   my $blastdb         = $self->required_param('blastdb');
 
-  if (! -e $blastdb) {
+  if (! -e $blastdb && !glob("$blastdb*")) {
     die("Blastdb ($blastdb) does not exist");
   }
 

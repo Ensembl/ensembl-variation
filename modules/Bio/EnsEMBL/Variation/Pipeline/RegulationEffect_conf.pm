@@ -47,8 +47,8 @@ sub default_options {
         hive_auto_rebalance_semaphores => 0,
         hive_no_init                   => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        ensembl_cvs_root_dir           => $ENV{'HOME'} . '/bin',
-        hive_root_dir                  => $ENV{'HOME'} . '/bin/ensembl-hive',
+        ensembl_cvs_root_dir           => $self->o('ensembl_cvs_root_dir'),
+        hive_root_dir                  => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
 
         pipeline_name                  => $self->o('pipeline_name'),
         species                        => $self->o('species'),
@@ -88,8 +88,8 @@ sub resource_classes {
     # requirements, queue parameters etc.) to suit your own data
 
     return {
-      'default' => { 'LSF' => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-      'highmem' => { 'LSF' => '-qproduction-rh74 -R"select[mem>15000] rusage[mem=15000]" -M15000'},
+      'default' => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+      'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000'},
     };
 }
 
