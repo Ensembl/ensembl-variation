@@ -36,7 +36,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN WORMBASE GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
 
 
 sub default_options {
@@ -183,6 +183,7 @@ sub pipeline_analyses {
 
                 '5' => [ 'import_rgd' ],
                 '6' => [ 'import_zfin' ],
+		'14' => [ 'import_wormbase' ],
             },
         },
 
@@ -539,7 +540,6 @@ sub pipeline_analyses {
                 2 => [ 'check_phenotypes']
             },
         },
-
         {   -logic_name => 'check_phenotypes',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {
@@ -553,7 +553,19 @@ sub pipeline_analyses {
                 3 => [ 'finish_phenotype_annotation']
             },
         },
-
+        {   -logic_name => 'import_wormbase',
+	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
+	    -parameters => {
+	            source_version => "$ENV{WORMBASE_VERSION}",
+		    @common_params,
+            },
+	    -input_ids  => [],
+	    -hive_capacity  => 1,
+	    -rc_name    => 'default',
+	    -flow_into  => {
+		1 => [ 'check_phenotypes']
+	    },
+        },    
         {   -logic_name => 'import_ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
             -parameters => {
