@@ -42,29 +42,26 @@ sub write_output {
   my $statistics_dir = $self->param('statistics_dir');
   if ($self->param('mode') eq 'remap_read_coverage') {
     my @input = ();
-    opendir (IND_DIR, $mapping_results_dir) or die $!;
-    while (my $individual_dir = readdir(IND_DIR)) {
-      next if ($individual_dir =~ /^\./);
-      my $individual_name = $self->get_individual_name($individual_dir);
-      die "Couldn't fetch individual with ID: $individual_dir" unless($individual_dir);
-      make_path("$filtered_mappings_dir/$individual_dir") or die "Failed to create $filtered_mappings_dir/$individual_dir $!";
-      make_path("$load_features_dir/$individual_dir") or die "Failed to create $load_features_dir/$individual_dir $!";
-      make_path("$statistics_dir/$individual_dir") or die "Failed to create $statistics_dir/$individual_dir $!";
+    opendir (SAMPLE_DIR, $mapping_results_dir) or die $!;
+    while (my $sample_dir = readdir(SAMPLE_DIR)) {
+      next if ($sample_dir =~ /^\./);
+      make_path("$filtered_mappings_dir/$sample_dir") or die "Failed to create $filtered_mappings_dir/$sample_dir $!";
+      make_path("$load_features_dir/$sample_dir") or die "Failed to create $load_features_dir/$sample_dir $!";
+      make_path("$statistics_dir/$sample_dir") or die "Failed to create $statistics_dir/$sample_dir $!";
 
-      my $count_mappings_files =  $self->compare_file_counts("$mapping_results_dir/$individual_dir");
+      my $count_mappings_files =  $self->compare_file_counts("$mapping_results_dir/$sample_dir");
       my $file_number = 1;
       while ($file_number <= $count_mappings_files) {
-        die "No such file $mapping_results_dir/$individual_dir/mappings_$file_number.txt" unless (-e "$mapping_results_dir/$individual_dir/mappings_$file_number.txt");
-        die "No such file $mapping_results_dir/$individual_dir/failed_mapping_$file_number.txt" unless (-e "$mapping_results_dir/$individual_dir/failed_mapping_$file_number.txt");
+        die "No such file $mapping_results_dir/$sample_dir/mappings_$file_number.txt" unless (-e "$mapping_results_dir/$sample_dir/mappings_$file_number.txt");
+        die "No such file $mapping_results_dir/$sample_dir/failed_mapping_$file_number.txt" unless (-e "$mapping_results_dir/$sample_dir/failed_mapping_$file_number.txt");
         push @input, {
           'file_number' => $file_number,
-          'individual_id' => $individual_dir,
-          'individual_name' => $individual_name,
+          'sample_id' => $sample_dir,
         };
         $file_number++;
       }
     }
-    closedir(IND_DIR);
+    closedir(SAMPLE_DIR);
     $self->dataflow_output_id(\@input, 2);
   } else {
     my $count_mappings_files = $self->compare_file_counts($mapping_results_dir);

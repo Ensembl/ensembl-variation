@@ -32,6 +32,7 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::Remapping::FilterMapping');
 
 sub fetch_input {
   my $self = shift;
+  $self->SUPER::fetch_input;
 }
 
 sub run {
@@ -72,36 +73,12 @@ sub join_read_coverage_data {
 
 # get new seq_region_ids
   my $seq_region_ids = {};
-  my $cdba = $self->param('cdba');
+  my $cdba = $self->get_newasm_core_database_connection;
   my $sa = $cdba->get_SliceAdaptor;
   my $slices = $sa->fetch_all('toplevel', undef, 1);
   foreach my $slice (@$slices) {
     $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
   }
-
-# new individual_id
-  my $individual_name_oldasm = $self->param('individual_name');
-  my $old_individual_id = $self->param('individual_id');
-
-  my $vdba = $self->param('vdba');
-  my $ia = $vdba->get_IndividualAdaptor;
-
-  my $individuals_newasm = $ia->fetch_all_by_name($individual_name_oldasm);
-#  my $individual_newasm = $individuals_newasm->[0];    
-#  my $new_individual_id = $individual_newasm->dbID();
-  my $individual_newasm;
-  my $new_individual_id;
-
-  if ((scalar @$individuals_newasm) > 1) {
-    $individual_newasm = $ia->fetch_by_dbID($old_individual_id); 
-    if ($individual_newasm->name eq $individual_name_oldasm) {
-      $new_individual_id = $old_individual_id;
-    } else {
-      die "More than one name for $individual_name_oldasm in new database";
-    }
-  }
-  $individual_newasm = $individuals_newasm->[0];    
-  $new_individual_id = $individual_newasm->dbID();
 
 # join feature data with mapping data:
   my $file_load_features = $self->param('file_load_features');
@@ -121,11 +98,10 @@ sub join_read_coverage_data {
     $data->{seq_region_id} = $seq_region_id;
     $data->{seq_region_start} = $start;
     $data->{seq_region_end} = $end;
-    $data->{individual_id} = $new_individual_id;
 
     my @output = ();
     foreach my $column_name (sort keys %$data) {
-      unless ($column_name =~ /^individual_name$/ || $column_name =~ /^seq_region_name$/ || $column_name =~ /^entry$/) {
+      unless ($column_name =~ /^sample_name$/ || $column_name =~ /^seq_region_name$/ || $column_name =~ /^entry$/) {
         push @output, $data->{$column_name};
       }
     }
