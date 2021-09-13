@@ -98,7 +98,7 @@ sub fetch_input {
 sub run {
   my $self = shift;
   my $input_file = $self->required_param('RNAi_file');
-source_version => $self->param('source_version')
+  source_version => $self->param('source_version');
   # get phenotype data
   my $results = $self->parse_input_file($input_file);
   $self->print_logFH("Got ".(scalar @{$results->{'phenotypes'}})." phenotypes \n") if ($self->debug);
