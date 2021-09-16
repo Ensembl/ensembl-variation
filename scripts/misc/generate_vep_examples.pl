@@ -36,7 +36,9 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Getopt::Long;
 use FileHandle;
 
-my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db);
+use Data::Dumper;
+
+my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $vr_formats, $write_to_db);
 
 GetOptions(
   'host=s'   => \$host,
@@ -47,7 +49,8 @@ GetOptions(
   'species=s' => \$chosen_species,
   'dir=s'      => \$dir,
   'formats=s'  => \$formats,
-  'write_to_db' => \$write_to_db,
+  'vr_formats=s'  => \$vr_formats,
+  'write_to_db'   => \$write_to_db,
 );
 
 if(defined($host) && $host =~ /staging|variation|livemirror/) {
@@ -75,8 +78,10 @@ $reg->load_registry_from_db(
 
 $dir ||= '.';
 $formats ||= 'ensembl,vcf,id,hgvs,spdi';
+$vr_formats ||= 'hgvsg,hgvsp';
 
 my @formats = split(',', $formats);
+my @vr_formats = split(',', $vr_formats);
 
 # special case ID
 my $doing_id = 0;
@@ -141,7 +146,14 @@ SPECIES: foreach my $species(@all_species) {
     my $fn = $dir.'/'.$species.'_'.$assembly.'.'.$format;
     $files{$format}->open('>'.$fn) or die("ERROR: Could not open file $fn\n");
   }
-  
+
+  my %vr_files;
+  foreach my $vr_format(@vr_formats) {
+    $vr_files{$vr_format} = FileHandle->new;
+    my $fn = $dir.'/'.$species.'_'.$assembly.'.'.$vr_format;
+    $vr_files{$vr_format}->open('>'.$fn) or die("ERROR: Could not open file $fn\n");
+  }
+
   my @slices = sort {
     $b->seq_region_name =~ /^[\d+]$/ <=> $a->seq_region_name =~ /^[\d+]$/ ||
     $b->seq_region_name =~ /^[MXY+]$/ <=> $a->seq_region_name =~ /^[MXY+]$/ ||
@@ -181,7 +193,7 @@ SPECIES: foreach my $species(@all_species) {
       seq_region_start => $slice->seq_region_start,
       seq_region_end   => $slice->seq_region_end
     });
-    dump_vf($tmp_vf_snp, \%files, \%web_data);
+    dump_vf($tmp_vf_snp, \%files, \%vr_files, \%web_data);
 
     # create a frameshift in a different transcript on the same slice (for bacteria most of the time there is one single top level slice)
     $tr = undef;
@@ -203,7 +215,7 @@ SPECIES: foreach my $species(@all_species) {
       seq_region_end   => $slice->seq_region_end
     });
 
-    dump_vf($tmp_vf_fs, \%files, \%web_data);
+    dump_vf($tmp_vf_fs, \%files, \%vr_files, \%web_data);
   } else {
   SLICE:
   my ($slice, $trs);
@@ -242,7 +254,7 @@ SPECIES: foreach my $species(@all_species) {
   }
   
   if($con =~ /missense/) {
-    dump_vf($tmp_vf, \%files, \%web_data);
+    dump_vf($tmp_vf, \%files, \%vr_files, \%web_data);
     # printf("%s %s %i %i %s\/%s 1\n", $species, $slice->seq_region_name, $pos, $pos, $ref_seq, $alt);
   }
   else {
@@ -282,7 +294,7 @@ SPECIES: foreach my $species(@all_species) {
   }
   
   if($con =~ /intron/) {
-    dump_vf($tmp_vf, \%files, \%web_data);
+    dump_vf($tmp_vf, \%files, \%vr_files, \%web_data);
     # printf("%s %s %i %i %s\/%s 1\n", $species, $slice->seq_region_name, $pos, $pos, $ref_seq, $alt);
   }
   
@@ -316,7 +328,7 @@ SPECIES: foreach my $species(@all_species) {
   }
   
   if($con =~ /frameshift/) {
-    dump_vf($tmp_vf, \%files, \%web_data);
+    dump_vf($tmp_vf, \%files, \%vr_files, \%web_data);
     # printf("%s %s %i %i %s\/%s 1\n", $species, $slice->seq_region_name, $pos, $pos, $ref_seq, '-');
   }
 
@@ -338,18 +350,33 @@ SPECIES: foreach my $species(@all_species) {
 sub dump_vf {
   my $vf = shift;
   my $files = shift;
+  my $vr_files = shift;
   my $web_data = shift;
   
   foreach my $format(keys %$files) {
+    print "(1) FORMAT: $format\n";
     my $method = 'convert_to_'.lc($format);
     my $method_ref = \&$method;
     my $file = $files->{$format};
     my @ret = grep {defined($_)} @{&$method_ref({}, $vf)};
+    # print "REF: ", ref($vf), "\n";
+    # print "(1) ", Dumper(\@ret);
     print $file join("\t", @ret)."\n";
 
     push @{$web_data->{"VEP_".uc($format)}}, join(" ", @ret);
   }
-  
+
+  # Generate Variant Recoder examples:
+  # hgvs genomic (hgvsg) and hgvs protein (hgvsp)
+  foreach my $vr_format(keys %$vr_files) {
+    my $method = 'convert_to_hgvs';
+    my $method_type = $vr_format eq 'hgvsg' ? 'g' : 'p';
+    my $method_ref = \&$method;
+    my $file = $vr_files->{$vr_format};
+    my @ret_vr = grep {defined($_)} @{&$method_ref({}, $vf, $method_type)};
+    print $file join("\t", @ret_vr)."\n";
+  }
+
   return;
 }
 
@@ -485,6 +512,7 @@ sub convert_to_pileup {
 sub convert_to_hgvs {
   my $config = shift;
   my $vf = shift;
+  my $is_vr = shift;
     
   # ensure we have a slice
   # $vf->{slice} ||= get_slice($config, $vf->{chr}, undef, 1);
@@ -494,8 +522,9 @@ sub convert_to_hgvs {
   my @return;# = values %{$vf->get_all_hgvs_notations()};
     
   if(defined($tvs)) {
-    push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'c')}} @$tvs;
-    # push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'p')}} @$tvs;
+    push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'c')}} @$tvs if(!$is_vr);
+    push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'p')}} @$tvs if($is_vr && $is_vr eq 'p');
+    push @return, map {values %{$vf->get_all_hgvs_notations(undef, 'g')}} @$tvs if($is_vr && $is_vr eq 'g');
   }
   
   @return = grep {defined($_)} @return;
