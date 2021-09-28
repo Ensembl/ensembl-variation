@@ -391,6 +391,7 @@ sub select_slice {
   # we want a slice with transcripts on
   while(scalar @$trs == 0) {
     $slice = shift @$slices;
+    return [$slice, $trs] if (! $slice);
     $trs = $ta->fetch_all_by_Slice($slice);
   }
   
