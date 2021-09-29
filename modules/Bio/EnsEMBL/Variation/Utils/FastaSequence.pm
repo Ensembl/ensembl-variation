@@ -81,6 +81,11 @@ our %PARS = (
       start => 10001, # start of region on Y
       end => 2649520, # end of region on Y
       adj => 50000    # how much to adjust Y coords by to get X coords
+    },
+    {
+      start => 59034050, # start of region on Y
+      end   => 59363566, # end of region on Y
+      adj   => 95896994  # how much to adjust Y coords by to get X coords
     }
   ],
   GRCh38 => [
