@@ -27,6 +27,7 @@ Questions may also be sent to the Ensembl help desk at
 =cut
 
 
+use Bio::EnsEMBL::DBSQL::DBConnection;
 use DBI;
 use Getopt::Long;
 use ImportUtils qw(load);
@@ -97,14 +98,14 @@ for my $source_table (split(/\s+/, $table_input)) {
 
   foreach my $db (@$filtered_db_list) {
     print "\nProcessing database $db\n";
-    my $dbc = DBI->connect(
-        sprintf(
-          "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
-          $config->{host},
-          $config->{port},
-          $db,
-          ), $config->{user}, $config->{password}
-        );
+    my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(
+      -user   => $config->{user},
+      -dbname => $db,
+      -host   => $config->{host},
+      -pass   => $config->{password},
+      -driver => 'mysql',
+      -port   => $config->{port},
+    );
 
     print "Getting column definition\n";
 
