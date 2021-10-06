@@ -105,6 +105,7 @@ sub motif_start {
         # check that we're in bounds
 
         return undef if $mf_start > $mf->length;
+        return undef if $mf_start < 1;
         $self->{motif_start} = $mf_start;
     }
     return $self->{motif_start};
