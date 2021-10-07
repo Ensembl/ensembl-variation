@@ -36,8 +36,6 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Getopt::Long;
 use FileHandle;
 
-use Data::Dumper;
-
 my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $vr_formats, $write_to_db);
 
 GetOptions(
@@ -352,9 +350,8 @@ sub dump_vf {
   my $files = shift;
   my $vr_files = shift;
   my $web_data = shift;
-  
+
   foreach my $format(keys %$files) {
-    print "(1) FORMAT: $format\n";
     my $method = 'convert_to_'.lc($format);
     my $method_ref = \&$method;
     my $file = $files->{$format};
@@ -374,7 +371,11 @@ sub dump_vf {
     my $method_ref = \&$method;
     my $file = $vr_files->{$vr_format};
     my @ret_vr = grep {defined($_)} @{&$method_ref({}, $vf, $method_type)};
-    print $file join("\t", @ret_vr)."\n";
+    
+    if(scalar(@ret_vr) >= 1) {
+      print $file join("\t", @ret_vr)."\n";
+      push @{$web_data->{"VR_".uc($vr_format)}}, join(" ", @ret_vr);
+    }
   }
 
   return;
@@ -522,9 +523,15 @@ sub convert_to_hgvs {
   my @return;# = values %{$vf->get_all_hgvs_notations()};
     
   if(defined($tvs)) {
-    push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'c')}} @$tvs if(!$is_vr);
-    push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'p')}} @$tvs if($is_vr && $is_vr eq 'p');
-    push @return, map {values %{$vf->get_all_hgvs_notations(undef, 'g')}} @$tvs if($is_vr && $is_vr eq 'g');
+    if(!$is_vr) {
+      push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'c')}} @$tvs;
+    }
+    elsif($is_vr && $is_vr eq 'p') {
+      push @return, map {values %{$vf->get_all_hgvs_notations($_->transcript, 'p')}} @$tvs;
+    }
+    elsif($is_vr && $is_vr eq 'g') {
+      push @return, map {values %{$vf->get_all_hgvs_notations(undef, 'g')}} @$tvs;
+    }
   }
   
   @return = grep {defined($_)} @return;
