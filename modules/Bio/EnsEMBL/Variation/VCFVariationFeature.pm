@@ -59,7 +59,7 @@ package Bio::EnsEMBL::Variation::VCFVariationFeature;
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::VCFVariation;
-
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES);
 use Bio::EnsEMBL::Variation::VariationFeature;
 
 our @ISA = ('Bio::EnsEMBL::Variation::VariationFeature');
@@ -206,6 +206,62 @@ sub variation {
   return $self->{variation};
 }
 
+=head2 get_all_OverlapConsequences
+
+  Description : Get a list of all the unique OverlapConsequences of this VariationFeature,
+                calculating them on the fly from the TranscriptVariations if necessary
+  Returntype  : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions  : none
+  Status      : Stable
+
+=cut
+
+sub get_all_OverlapConsequences {
+  my $self = shift;
+
+  unless ($self->{overlap_consequences}) {
+    my %overlap_cons;
+    my $vcf_record = $self->vcf_record;
+    my $info = $vcf_record->get_info;
+    my $vcf_info_field = 'CSQ';
+    if (!exists($info->{$vcf_info_field})){
+      $vcf_info_field = 'ANN';
+    }
+    my @vcf_cons = split(',',$info->{$vcf_info_field});
+    my $metadata_info = $vcf_record->{metadata}->{INFO};
+    my $desc;
+    foreach my $val ( @{$metadata_info} ){
+      foreach my $key ( keys %{$val} ){
+        if($val->{ID} eq $vcf_info_field){
+        $desc = $val->{Description} ;
+        }
+      }
+    }
+    my @description = split(/Format:/,$desc);
+    my @info_format = split('\|', $description[1]);
+    my $cons_index;
+    for my $index ( 0 .. $#{info_format} ){
+      if($info_format[$index] eq 'Consequence') {
+        $cons_index = $index;
+        last;
+      }
+    }
+    for my $vcf_con ( @vcf_cons ) {
+      my @cons_ = split('\|',$vcf_con);
+      my $cons_col = $cons_[$cons_index];
+      my $new_cons = Bio::EnsEMBL::Variation::OverlapConsequence->new(-SO_term=> $cons_col) ;
+      $overlap_cons{$new_cons->SO_term} = $new_cons;
+    }
+    
+    # if we don't have any consequences we use a default from Constants.pm
+    # (currently set to the intergenic consequence)
+
+    $self->{overlap_consequences} = [
+      %overlap_cons ? values %overlap_cons : $DEFAULT_OVERLAP_CONSEQUENCE
+      ];
+    }
+  return $self->{overlap_consequences};
+}
 
 =head2 get_all_SampleGenotypes
 
