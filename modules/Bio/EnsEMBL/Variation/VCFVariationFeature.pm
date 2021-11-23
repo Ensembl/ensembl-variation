@@ -206,6 +206,7 @@ sub variation {
   return $self->{variation};
 }
 
+
 =head2 get_all_OverlapConsequences
 
   Description : Get a list of all the unique OverlapConsequences of this VariationFeature,
@@ -262,6 +263,7 @@ sub get_all_OverlapConsequences {
     }
   return $self->{overlap_consequences};
 }
+
 
 =head2 get_all_SampleGenotypes
 
