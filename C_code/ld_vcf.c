@@ -581,7 +581,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  char *files[numregions];
+  char *files[MAX_REGIONS];
   int file_index = 0;
   char *token = strtok(filestr, ",");
   files[file_index++] = token;
@@ -591,7 +591,7 @@ int main(int argc, char *argv[]) {
     files[file_index++] = token;
   }
 
-  char *regions[numregions];
+  char *regions[MAX_REGIONS];
   int region_index = 0;
   token = strtok(regionstr, ",");
   regions[region_index++] = token;
