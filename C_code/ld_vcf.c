@@ -584,21 +584,19 @@ int main(int argc, char *argv[]) {
   char *files[MAX_REGIONS];
   int file_index = 0;
   char *token = strtok(filestr, ",");
-  files[file_index++] = token;
-  // Keep printing tokens while one of the delimiters present in str[].
   while (token != NULL) {
+    files[file_index++] = strdup(token);
+    // Keep printing tokens while one of the delimiters present in str[].
     token = strtok(NULL, ",");
-    files[file_index++] = token;
   }
 
   char *regions[MAX_REGIONS];
   int region_index = 0;
   token = strtok(regionstr, ",");
-  regions[region_index++] = token;
-  // Keep printing tokens while one of the delimiters present in str[].
   while (token != NULL) {
+    regions[region_index++] = strdup(token);
+    // Keep printing tokens while one of the delimiters present in str[].
     token = strtok(NULL, ",");
-    regions[region_index++] = token;
   }
 
   if (file_index > MAX_REGIONS) {
