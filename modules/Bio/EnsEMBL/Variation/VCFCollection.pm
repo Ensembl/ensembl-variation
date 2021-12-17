@@ -505,19 +505,19 @@ sub get_all_VariationFeatures_by_Slice {
         my @vcf_transcripts = $info->{$vcf_info_field};
         foreach my $vcf_transcript ( @vcf_transcripts ) {
           my @cons_ = split(',',$vcf_transcript);
-            foreach my $field ( @cons_ ){
-              my @field_split = split('\|',$field);
-              my @cons_col = split('&',$field_split[$cons_index]);
-              foreach my $con (@cons_col){
-                if ( exists $OVERLAP_CONSEQUENCES{$con} ){
-                  my $new_cons = $OVERLAP_CONSEQUENCES{$con};
-                  $vf->add_OverlapConsequence($new_cons);
-                }
-                else{
-                  print("The cons is not available:",$con,"\n");
-	        }
+          foreach my $field ( @cons_ ){
+            my @field_split = split('\|',$field);
+            my @cons_col = split('&',$field_split[$cons_index]);
+            foreach my $con (@cons_col){
+              if ( exists $OVERLAP_CONSEQUENCES{$con} ){
+                my $new_cons = $OVERLAP_CONSEQUENCES{$con};
+                $vf->add_OverlapConsequence($new_cons);
+              }
+              else{
+                print("The cons is not available:",$con,"\n");
 	      }
 	    }
+	  }
         }
       }
       else{ 
