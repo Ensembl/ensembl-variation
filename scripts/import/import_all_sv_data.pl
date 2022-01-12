@@ -968,7 +968,7 @@ sub get_attrib_id {
   $stmt->execute() || die;
   my $attrib_id = ($stmt->fetchrow_array)[0];
 
-  die(localtime()." ERROR: No attribute 'trait' was found in attrib table!\nCleanup the tmp tables 'tmp_sv' and 'tmp_sv_phenotype' before importing again.\n") unless defined $attrib_id;
+  die(localtime()." ERROR: No attribute 'trait' was found in attrib table!\nCleanup the tmp tables 'temp_sv' and 'temp_sv_phenotype' before importing again.\n") unless defined $attrib_id;
 
   return $attrib_id;
 }
