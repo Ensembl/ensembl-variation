@@ -94,9 +94,9 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q production-rh74 -R"select[mem>1500] rusage[mem=1500]" -M1500'},
-        'medium'  => { 'LSF' => '-q production-rh74 -R"select[mem>4500] rusage[mem=4500]" -M4500'},
-        'high'    => { 'LSF' => '-q production-rh74 -R"select[mem>8500] rusage[mem=8500]" -M8500'},
+        'default' => { 'LSF' => '-q production -R"select[mem>1500] rusage[mem=1500]" -M1500'},
+        'medium'  => { 'LSF' => '-q production -R"select[mem>4500] rusage[mem=4500]" -M4500'},
+        'high'    => { 'LSF' => '-q production -R"select[mem>8500] rusage[mem=8500]" -M8500'},
     };
 }
 
