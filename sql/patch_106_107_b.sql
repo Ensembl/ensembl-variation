@@ -100,5 +100,5 @@ ALTER TABLE transcript_variation CHANGE consequence_types consequence_types SET 
 
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_106_107_b.sql|add start_retained_variant to consequence_types in variation_feature and transcript_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_106_107_b.sql|add consequences');
 
