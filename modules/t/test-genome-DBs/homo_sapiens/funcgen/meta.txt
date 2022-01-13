@@ -328,3 +328,4 @@
 767	\N	patch	patch_104_105_a.sql|schema_version
 768	\N	patch	patch_104_105_b.sql|New indices
 769	\N	patch	patch_105_106_a.sql|schema_version
+770     \N	patch   patch_106_107_a.sql|schema_version
