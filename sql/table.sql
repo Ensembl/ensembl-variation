@@ -195,9 +195,9 @@ CREATE TABLE variation_feature (
         'TF_binding_site_variant',
         'protein_altering_variant',
         'start_retained_variant',
-	'splice_donor_5th_base_variant',
-    	'splice_donor_region_variant',
-    	'splice_polypyrimidine_tract_variant'
+		'splice_donor_5th_base_variant',
+		'splice_donor_region_variant',
+		'splice_polypyrimidine_tract_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET(
             '1','2','3','4','5','6','7','8',
@@ -1450,9 +1450,9 @@ CREATE TABLE transcript_variation (
                                             'feature_truncation',
                                             'protein_altering_variant',
                                             'start_retained_variant',
-	        			    'splice_donor_5th_base_variant',
-    					    'splice_donor_region_variant',
-    					    'splice_polypyrimidine_tract_variant'
+										'splice_donor_5th_base_variant',
+										'splice_donor_region_variant',
+										'splice_polypyrimidine_tract_variant'
                                         ),
     cds_start                           INT(11) UNSIGNED,
     cds_end                             INT(11) UNSIGNED,
