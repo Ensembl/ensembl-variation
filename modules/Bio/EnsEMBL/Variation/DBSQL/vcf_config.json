@@ -135,12 +135,12 @@
       }
     },
     {
-      "id": "gnomADg_r3.0_GRCh38",
-      "description": "Genome Aggregation Database genomes r3.0",
+      "id": "gnomADg_v3.1.2_GRCh38",
+      "description": "Genome Aggregation Database genomes v3.1.2",
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r3.0/gnomad.genomes.r3.0.sites.chr###CHR###_trimmed_info.vcf.bgz",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/v3.1.2/gnomad.genomes.v3.1.2.sites.chr###CHR###_trimmed_info.vcf.bgz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -148,7 +148,7 @@
       "use_seq_region_synonyms": 1,
       "population_prefix": "gnomADg:",
       "population_display_group": {
-        "display_group_name": "gnomAD genomes r3.0",
+        "display_group_name": "gnomAD genomes v3.1.2",
         "display_group_priority": 1.6
       },
       "populations": {
@@ -192,6 +192,10 @@
         "9900037": {
           "name": "oth",
           "description": "Other"
+        },
+        "9900038": {
+          "name": "mid",
+          "description": "Middle Eastern"
         }
       }
     },
