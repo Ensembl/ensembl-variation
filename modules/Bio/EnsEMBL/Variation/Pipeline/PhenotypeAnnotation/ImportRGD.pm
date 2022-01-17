@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2021] EMBL-European Bioinformatics Institute
+Copyright [2016-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -57,8 +57,8 @@ sub fetch_input {
 
   $self->debug($self->param('debug_mode'));
 
-  my $rgd_ftp_url_qtl = 'ftp://ftp.rgd.mcw.edu/pub/data_release/';
-  my $rgd_ftp_url_gene= 'ftp://ftp.rgd.mcw.edu/pub/data_release/annotated_rgd_objects_by_ontology/with_terms/';
+  my $rgd_ftp_url_qtl = 'https://download.rgd.mcw.edu/data_release/';
+  my $rgd_ftp_url_gene= 'https://download.rgd.mcw.edu/data_release/annotated_rgd_objects_by_ontology/with_terms/';
 
   %source_info = (source_description => 'QTLs from the Rat Genome Database (RGD)',
                   source_url => 'https://rgd.mcw.edu/',

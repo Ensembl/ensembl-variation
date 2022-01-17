@@ -2,7 +2,7 @@
 
 /*
  Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
- Copyright [2016-2021] EMBL-European Bioinformatics Institute
+ Copyright [2016-2022] EMBL-European Bioinformatics Institute
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -581,24 +581,22 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  char *files[numregions];
+  char *files[MAX_REGIONS];
   int file_index = 0;
   char *token = strtok(filestr, ",");
-  files[file_index++] = token;
-  // Keep printing tokens while one of the delimiters present in str[].
   while (token != NULL) {
+    files[file_index++] = strdup(token);
+    // Keep printing tokens while one of the delimiters present in str[].
     token = strtok(NULL, ",");
-    files[file_index++] = token;
   }
 
-  char *regions[numregions];
+  char *regions[MAX_REGIONS];
   int region_index = 0;
   token = strtok(regionstr, ",");
-  regions[region_index++] = token;
-  // Keep printing tokens while one of the delimiters present in str[].
   while (token != NULL) {
+    regions[region_index++] = strdup(token);
+    // Keep printing tokens while one of the delimiters present in str[].
     token = strtok(NULL, ",");
-    regions[region_index++] = token;
   }
 
   if (file_index > MAX_REGIONS) {

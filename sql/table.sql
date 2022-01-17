@@ -1,5 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- Copyright [2016-2021] EMBL-European Bioinformatics Institute
+-- Copyright [2016-2022] EMBL-European Bioinformatics Institute
 -- 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -194,7 +194,10 @@ CREATE TABLE variation_feature (
         'regulatory_region_variant',
         'TF_binding_site_variant',
         'protein_altering_variant',
-        'start_retained_variant'
+        'start_retained_variant',
+		'splice_donor_5th_base_variant',
+		'splice_donor_region_variant',
+		'splice_polypyrimidine_tract_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET(
             '1','2','3','4','5','6','7','8',
@@ -1446,7 +1449,10 @@ CREATE TABLE transcript_variation (
                                             'feature_elongation',
                                             'feature_truncation',
                                             'protein_altering_variant',
-                                            'start_retained_variant'
+                                            'start_retained_variant',
+										'splice_donor_5th_base_variant',
+										'splice_donor_region_variant',
+										'splice_polypyrimidine_tract_variant'
                                         ),
     cds_start                           INT(11) UNSIGNED,
     cds_end                             INT(11) UNSIGNED,
@@ -1829,11 +1835,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '106');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '107');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_105_106_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_106_107_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_106_107_b.sql|consequences update');
 
 /**
 @header  Failed tables

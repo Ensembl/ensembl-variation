@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2021] EMBL-European Bioinformatics Institute
+Copyright [2016-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -81,6 +81,11 @@ our %PARS = (
       start => 10001, # start of region on Y
       end => 2649520, # end of region on Y
       adj => 50000    # how much to adjust Y coords by to get X coords
+    },
+    {
+      start => 59034050, # start of region on Y
+      end   => 59363566, # end of region on Y
+      adj   => 95896994  # how much to adjust Y coords by to get X coords
     }
   ],
   GRCh38 => [
