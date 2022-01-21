@@ -70,7 +70,7 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
 use Scalar::Util qw(weaken);
-
+use List::MoreUtils qw/zip/;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
@@ -492,31 +492,38 @@ sub get_all_VariationFeatures_by_Slice {
     }
     my @description = split(/Format:/,$desc);
     my @info_format = split('\|', $description[1]);
-    my $cons_index;
-    for my $index ( 0 .. $#{info_format} ){
-      if($info_format[$index] eq 'Consequence') {
-        $cons_index = $index;
-        last;
-      }
-    }
     foreach my $vf (@vfs) { 
-      if ( $cons_index ){
+      if ( $vcf_info_field ){
         my $info = $vf->{vcf_record}->get_info;
-        my @vcf_transcripts = $info->{$vcf_info_field};
-        foreach my $vcf_transcript ( @vcf_transcripts ) {
-          my @cons_ = split(',',$vcf_transcript);
-          foreach my $field ( @cons_ ){
-            my @field_split = split('\|',$field);
-            my @cons_col = split('&',$field_split[$cons_index]);
-            foreach my $con (@cons_col){
-              if ( exists $OVERLAP_CONSEQUENCES{$con} ){
-                my $new_cons = $OVERLAP_CONSEQUENCES{$con};
-                $vf->add_OverlapConsequence($new_cons);
+        my @vcf_variants = $info->{$vcf_info_field};
+        foreach my $vcf_variant ( @vcf_variants ) {
+          my @transcript_vars = split(',',$vcf_variant);
+          foreach my $transcript_var ( @transcript_vars ){
+	    my @transcript_split = split('\|',$transcript_var);
+	    my %transcript_map = zip @info_format, @transcript_split;
+	    if ( $transcript_map{'Feature_type'} eq 'Transcript') {
+	      my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
+                      variation_feature  => $vf,
+		      _feature_stable_id => $transcript_map{'Feature'}
+	      });
+	      #Add variation Feature seq from transcript map
+	      my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
+		      variation_feature_seq => $transcript_split[0],
+		      is_reference               => 0
+	      });
+	      my @cons_list = split('&',$transcript_map{'Consequence'});
+              foreach my $con (@cons_list){
+                if ( exists $OVERLAP_CONSEQUENCES{$con} ){
+		  my $new_cons = $OVERLAP_CONSEQUENCES{$con};
+		  $tva->add_OverlapConsequence($new_cons);
+                }
+                else{
+                  print("The consequence is not available:",$con,"\n");
+                }
               }
-              else{
-                print("The cons is not available:",$con,"\n");
-	      }
-	    }
+	      $tv->add_TranscriptVariationAllele($tva);
+	      $vf->add_TranscriptVariation($tv);
+  	    }
 	  }
         }
       }
@@ -546,7 +553,7 @@ sub get_all_VariationFeatures_by_Slice {
       \@vfs,
       \@transcripts
     ) if @transcripts;
-
+    $DB::single=2; # insert at line 9! 
     # funcgen types
     foreach my $type(qw(RegulatoryFeature MotifFeature)) {
       if(
