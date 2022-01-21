@@ -154,6 +154,7 @@ sub run {
   for my $transcript (@transcripts) {
     
     my $biotype = $transcript->biotype;
+    my $is_mane = $transcript->is_mane();
 
     for my $vf(@vfs) {
 
@@ -199,7 +200,7 @@ sub run {
         if($mtmp) {
           my $mtmp_data = $tva->_get_mtmp_write_data_from_tv_write_data($data);
           my $mtmp_fh = $files->{MTMP_transcript_variation}->{fh};
-          unless($biotypes_to_skip{$biotype}){ 
+          unless($biotypes_to_skip{$biotype} || !$is_mane){
 	    print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
 	}
