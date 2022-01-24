@@ -499,32 +499,32 @@ sub get_all_VariationFeatures_by_Slice {
         foreach my $vcf_variant ( @vcf_variants ) {
           my @transcript_vars = split(',',$vcf_variant);
           foreach my $transcript_var ( @transcript_vars ){
-	    my @transcript_split = split('\|',$transcript_var);
-	    my %transcript_map = zip @info_format, @transcript_split;
-	    if ( $transcript_map{'Feature_type'} eq 'Transcript') {
-	      my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
-                      variation_feature  => $vf,
-		      _feature_stable_id => $transcript_map{'Feature'}
-	      });
-	      #Add variation Feature seq from transcript map
-	      my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
-		      variation_feature_seq => $transcript_split[0],
-		      is_reference               => 0
-	      });
-	      my @cons_list = split('&',$transcript_map{'Consequence'});
+	          my @transcript_split = split('\|',$transcript_var);
+	          my %transcript_map = zip @info_format, @transcript_split;
+	          if ( $transcript_map{'Feature_type'} eq 'Transcript') {
+	            my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
+                variation_feature  => $vf,
+		            _feature_stable_id => $transcript_map{'Feature'}
+	            });  
+	            #Add variation Feature seq from transcript map
+	            my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
+                variation_feature_seq => $transcript_split[0],
+		            is_reference               => 0
+	            });
+	            my @cons_list = split('&',$transcript_map{'Consequence'});
               foreach my $con (@cons_list){
-                if ( exists $OVERLAP_CONSEQUENCES{$con} ){
-		  my $new_cons = $OVERLAP_CONSEQUENCES{$con};
-		  $tva->add_OverlapConsequence($new_cons);
+                if ( exists $OVERLAP_CONSEQUENCES{$con} ) {
+		              my $new_cons = $OVERLAP_CONSEQUENCES{$con};
+		              $tva->add_OverlapConsequence($new_cons);
                 }
                 else{
                   print("The consequence is not available:",$con,"\n");
                 }
               }
-	      $tv->add_TranscriptVariationAllele($tva);
-	      $vf->add_TranscriptVariation($tv);
-  	    }
-	  }
+	            $tv->add_TranscriptVariationAllele($tva);
+	            $vf->add_TranscriptVariation($tv);
+  	        }
+	        }
         }
       }
       else{ 
