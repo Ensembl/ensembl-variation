@@ -63,9 +63,9 @@ sub default_options {
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
-        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
-        
+	ensembl_cvs_root_dir    => $ENV{'ENSEMBL_ROOT_DIR'} || $self->o('ensembl_cvs_root_dir'),
+	hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
+
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
@@ -89,7 +89,7 @@ sub default_options {
 
         # include RefSeq transcripts, and edit with accompanying BAM?
         include_refseq          => 0,
-        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
+        bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
 
         # GRCh37 bam
         # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
@@ -169,7 +169,7 @@ sub default_options {
         
         # the protein database used to build alignments if you're not using compara
 
-        variation_data          => '/nfs/production/panda/ensembl/variation/data',
+        variation_data          => '/nfs/production/flicek/ensembl/variation/data',
 
         blastdb                 => $self->o('variation_data').'/sift5.2.2/uniref90/uniref90.fasta',
 
