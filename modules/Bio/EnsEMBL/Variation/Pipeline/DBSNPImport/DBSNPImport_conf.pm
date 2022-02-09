@@ -49,8 +49,8 @@ sub default_options {
     hive_no_init            => 0, # setting it to 1 will skip pipeline_create_commands (useful for topping up)
 
     # the location of your checkout of the ensembl API
-    hive_root_dir           => $ENV{'HOME'} . '/bin/ensembl-hive',
-    ensembl_cvs_root_dir    => $ENV{'HOME'} . '/bin',
+    ensembl_cvs_root_dir    => $ENV{'ENSEMBL_ROOT_DIR'} || $self->o('ensembl_cvs_root_dir'),
+    hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
 
     debug                   => 0,
 
@@ -99,10 +99,10 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'test_mem'    => { 'LSF' => '-R"select[mem>100] rusage[mem=100]" -M100'},
-            'default_mem' => { 'LSF' => '-R"select[mem>1000] rusage[mem=1000]" -M1000'},
-            'medium_mem'  => { 'LSF' => '-R"select[mem>4000] rusage[mem=4000]" -M4000'},
-            'high_mem'    => { 'LSF' => '-R"select[mem>8000] rusage[mem=8000]" -M8000'},
+            'test_mem'    => { 'LSF' => '-qproduction -R"select[mem>100] rusage[mem=100]" -M100'},
+            'default_mem' => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000'},
+            'medium_mem'  => { 'LSF' => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000'},
+            'high_mem'    => { 'LSF' => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000'},
     };
 }
 
