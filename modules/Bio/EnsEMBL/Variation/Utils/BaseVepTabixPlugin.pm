@@ -381,7 +381,7 @@ sub _get_data_hts {
     next unless $iter;
 
     while(my $line = $iter->next) {
-      my $parsed = $self->parse_data($line);
+      my $parsed = $self->parse_data($line,$file);
 
       push @data, [$self->identify_data($line), $parsed] if $parsed;
     }
@@ -403,7 +403,7 @@ sub _get_data_pm {
     next unless $iter && $iter->{_};
 
     while(my $line = $tabix_obj->read($iter)) {
-      my $parsed = $self->parse_data($line);
+      my $parsed = $self->parse_data($line,$file);
 
       push @data, [$self->identify_data($line), $parsed] if $parsed;
     }
@@ -431,7 +431,7 @@ sub _get_data_cl {
       chomp;
       s/\r$//g;
 
-      my $parsed = $self->parse_data($_);
+      my $parsed = $self->parse_data($_,$file);
       
       push @data, [$self->identify_data($_), $parsed] if $parsed;
     }
