@@ -94,7 +94,7 @@ my ($num_lines) = parse_dbSNP_file($config);
 # Close open filehandles used for tracking the
 # update of any minor allele changes that are only done for
 # GRCh38 imports.
-if ($config->{'assembly'} eq 'GRCh38') {
+if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
   for my $ma_type ('update', 'log') {
     my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
     $fh->close();
@@ -139,7 +139,7 @@ sub init_reports {
   # Variants with different strand mappings between GRCh37 and GRCh38
   # are identified and the minor allele is reverse complimented.
   # Files for updates and logs for minor allele mismatches.
-  if ($config->{'assembly'} eq 'GRCh38') {
+  if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
     print "Flip 1000Genomes minor alleles for strand differences between assembly $config->{'assembly'} and GRCh37\n";
     for my $ma_type ('update', 'log') {
       my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
@@ -269,6 +269,9 @@ sub parse_refsnp {
   # 1000Genomes data
   # Do not add 1000Genomes data
   # $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  if ($config->{'add_maf'}) {
+    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  }
 
   # If: 
   # - the assembly is GRCh38
@@ -276,7 +279,8 @@ sub parse_refsnp {
   # check if a flip is needed. 
   # TODO - add a flag if flipping should be done if for GRCh38
   #        no flip is needed
-  if (($config->{'assembly'} eq 'GRCh38') &&
+  if ( ($config->{'add_maf'}) &&
+       ($config->{'assembly'} eq 'GRCh38') &&
        defined $data->{'1000Genomes'} &&
        $data->{'1000Genomes'}->{'minor_allele'}) {
     my $align_diff = get_align_diff($rs_json);
@@ -1695,7 +1699,8 @@ sub configure {
     'assembly|a=s',
     'no_db_load',
     'no_ref_check',
-    'no_assign_ancestral_allele'
+    'no_assign_ancestral_allele',
+    'add_maf',
     ) or pod2usage(2);
  
   # Print usage message if help requested or no args
@@ -1769,6 +1774,13 @@ sub configure {
       die("ERROR: Ancestral FASTA file does not exist ($config->{'ancestral_fasta_file'})\n");
     }
   }
+
+  if (exists $config->{'add_maf'}) {
+    $config->{'add_maf'} = 1;
+  } else {
+    $config->{'add_maf'} = 0;
+  }
+
   return $config;  
 }
 
