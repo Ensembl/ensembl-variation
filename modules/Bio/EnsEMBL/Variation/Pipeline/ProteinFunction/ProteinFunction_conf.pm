@@ -121,7 +121,7 @@ sub default_options {
 
         # location of the software
 
-        pph_dir                 => '/hps/software/polyphen/polyphen-2.2.2',
+        pph_dir                 => '/nfs/production/flicek/ensembl/variation/data/polyphen-2.2.2-sanger',
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
@@ -159,7 +159,7 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/hps/software/users/ensembl/variation/sift5.2.2',
+        sift_dir                => '/hps/software/users/ensembl/variation/sift',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
