@@ -974,8 +974,8 @@ sub remove_publications{
         my $attrib = $get_attrib->[0]->[0];
         die "Remove publication: not updating evidence as no attrib found\n" unless defined $attrib;        
 
-        my $update_evidence_sth = $dba->dbc->prepare(qq[ update variation set evidence_attribs = REPLACE(evidence_attribs,'$attrib','') WHERE variation_id = $var_id ]);
-        my $update_evidence_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set evidence_attribs = REPLACE(evidence_attribs,'$attrib','') WHERE variation_id = $var_id ]);
+        my $update_evidence_sth = $dba->dbc->prepare(qq[ update variation set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
+        my $update_evidence_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
         $update_evidence_sth->execute()||die;
         $update_evidence_vf_sth->execute()||die;
       }
