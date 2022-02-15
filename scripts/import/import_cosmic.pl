@@ -162,13 +162,15 @@ while (<IN>) {
   }
   my @line = $csvP->fields();
 
+  # File format (cosmic v95):
+  # 1,100001572,100001572,COSV63379341,COSN6400737,"liver","Substitution - intronic"
+
   my $chr = shift(@line);
      $chr = $chr_names{$chr} if ($chr_names{$chr});
   my $start         = shift(@line);
   my $end           = shift(@line);
   my $cosv_id       = shift(@line);
   my $cosmic_id     = shift(@line);
-  shift(@line); # Skip this column
   my @phenos        = split(',', shift(@line));
   my $cosmic_class  = pop(@line);
   
