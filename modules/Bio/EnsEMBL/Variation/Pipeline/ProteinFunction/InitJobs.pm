@@ -369,7 +369,8 @@ sub get_refseq_transcripts {
 
     else {
         for my $slice (@{$slices}) {
-            for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
+	    # Only fetch RefSeq genes, logic_name = 'refseq_import'
+            for my $gene (@{ $slice->get_all_Genes('refseq_import', undef, 1) }) {
                 for my $transcript (grep {$_->stable_id =~ /^NM_/ && $_->source eq 'BestRefSeq'} @{ $gene->get_all_Transcripts }) {
                     $vep_obj->apply_edits($transcript) if $vep_obj;
                     if (my $translation = $transcript->translation) {
