@@ -161,7 +161,7 @@ sub import_citations{
     open (my $not_found, ">>rsID\_$type\_notfound\_$species\_" . log_time() . ".csv") or die "Failed to open file: $!\n";
 
     if($type eq "EPMC"){ 
-      print $not_found "rsID,PMCID,PMID\n";
+      print $not_found "refsnp,PMCID,EXTID,SOURCE\n";
     }
     elsif($type eq "UCSC"){
       print $not_found "rsID\tPMID\tDOI\tTitle\tAuthors\tYear\tUCSC\n";
@@ -206,7 +206,7 @@ sub import_citations{
                 no warnings ;
                 ### write file of variants not found in this species to use as input file for next
                 if($type eq "EPMC"){
-                  print $not_found "$rsid,$data->{$pub}->{pmcid},$pub_pmid\n"; 
+                  print $not_found "\"$rsid\",$data->{$pub}->{pmcid},$pub_pmid,MED\n";
                 }
                 elsif($type eq "UCSC") {
                   print $not_found $rsid ."\t". $pub_pmid."\t-\t". $data->{$pub}->{doi} ."\t". $data->{$pub}->{title}."\t". $data->{$pub}->{authors} ."\t". $data->{$pub}->{year} ."\t".  $data->{$pub}->{ucsc} . "\n";
