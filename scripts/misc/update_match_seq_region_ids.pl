@@ -103,8 +103,9 @@ foreach my $cdba (@$cdbas) {
   # Remove old seq_region_id from vdb and create a new one based on core
   unless (defined($config->{dry_run})) {
     $vdbh->do("ALTER TABLE seq_region drop seq_region_id") or die $dbh->errstr;
-    $vdbh->do("ALTER TABLE seq_region ADD seq_region_id INT NOT NULL") or die $dbh->errstr;
-    $vdbh->do("ALTER TABLE seq_region MODIFY COLUMN seq_region_id INT FIRST") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region ADD seq_region_id INT") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region ADD constraint Primarykeyname PRIMARY KEY (seq_region_id)") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region MODIFY COLUMN seq_region_id INT UNSIGNED NOT NULL FIRST") or die $dbh->errstr;
   }
 
   print "Checking if table exists and is populated in Variation ... \n";
