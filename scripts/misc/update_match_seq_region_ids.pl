@@ -82,9 +82,16 @@ foreach my $cdba (@$cdbas) {
   while (my @row = $sth->fetchrow_array) {
     my $internal_seq_region_id = $row[0];
     my $internal_seq_region_name = $row[1];
-    $vd_mapping->{$internal_seq_region_name} = $internal_seq_region_id; 
+
+    # Check if Variation and Core are equal in a name
+    next if ($id_mapping->{$internal_seq_region_name} eq $internal_seq_region_id);
+
+    $vd_mapping->{$internal_seq_region_name} = $internal_seq_region_id;
   }
   $sth->finish();
+
+  # Core vs. Variation seq_region_id's
+  die ("All seq_region_id's has a correct match - Variation vs. Core\n") if (defined($vd_mapping));
 
   # Check if all Variation DB seq_region name values are in Core DB
   print "Checking if all Variation seq_region.name is in Core ... ";
@@ -97,6 +104,7 @@ foreach my $cdba (@$cdbas) {
   unless (defined($config->{dry_run})) {
     $vdbh->do("ALTER TABLE seq_region drop seq_region_id") or die $dbh->errstr;
     $vdbh->do("ALTER TABLE seq_region ADD seq_region_id INT NOT NULL") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region MODIFY COLUMN seq_region_id INT FIRST") or die $dbh->errstr;
   }
 
   print "Checking if table exists and is populated in Variation ... \n";
