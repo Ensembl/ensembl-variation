@@ -94,7 +94,7 @@ my ($num_lines) = parse_dbSNP_file($config);
 # Close open filehandles used for tracking the
 # update of any minor allele changes that are only done for
 # GRCh38 imports.
-if ($config->{'assembly'} eq 'GRCh38') {
+if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
   for my $ma_type ('update', 'log') {
     my $fh = $config->{join('-', 'ma', $ma_type, 'fh')};
     $fh->close();
@@ -139,7 +139,7 @@ sub init_reports {
   # Variants with different strand mappings between GRCh37 and GRCh38
   # are identified and the minor allele is reverse complimented.
   # Files for updates and logs for minor allele mismatches.
-  if ($config->{'assembly'} eq 'GRCh38') {
+  if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
     print "Flip 1000Genomes minor alleles for strand differences between assembly $config->{'assembly'} and GRCh37\n";
     for my $ma_type ('update', 'log') {
       my $filename = join('-', $base_filename, 'ma', $ma_type) . '.txt';
@@ -267,7 +267,11 @@ sub parse_refsnp {
   ($data->{'snp_support'}, $data->{'freq_support'})  = get_support($rs_json);
 
   # 1000Genomes data
-  $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  # Do not add 1000Genomes data
+  # $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  if ($config->{'add_maf'}) {
+    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  }
 
   # If: 
   # - the assembly is GRCh38
@@ -275,7 +279,8 @@ sub parse_refsnp {
   # check if a flip is needed. 
   # TODO - add a flag if flipping should be done if for GRCh38
   #        no flip is needed
-  if (($config->{'assembly'} eq 'GRCh38') &&
+  if ( ($config->{'add_maf'}) &&
+       ($config->{'assembly'} eq 'GRCh38') &&
        defined $data->{'1000Genomes'} &&
        $data->{'1000Genomes'}->{'minor_allele'}) {
     my $align_diff = get_align_diff($rs_json);
@@ -1221,7 +1226,7 @@ sub import_variation_feature {
 
     if (defined $seen_vf{$loc}) {
       # Keep a record of the location and alleles in the JSON file
-      import_placement_allele($dbh, $variation_id, $vf->{'alleles'});
+      import_placement_allele($dbh, $variation_id, $vf->{'alleles'}, $vf->{'variation_name'});
 
       # Log only the location not the alleles in the error file
       my $info = join(";",
@@ -1264,7 +1269,7 @@ sub import_variation_feature {
     }
 
     # insert the placement allele
-    import_placement_allele($dbh, $variation_id, $vf->{'alleles'});
+    import_placement_allele($dbh, $variation_id, $vf->{'alleles'}, $vf->{'variation_name'});
     
     # Log those with aln_opposite but seq_region_strand +1
     if ($vf->{'aln_opposite'} && ($vf->{'seq_region_strand'} == 1)) {
@@ -1280,7 +1285,7 @@ sub import_variation_feature {
 }
 
 sub import_placement_allele {
-  my ($dbh, $variation_id, $alleles) = @_;
+  my ($dbh, $variation_id, $alleles, $var_name) = @_;
 
   debug("import_placement_allele") if ($debug);
  
@@ -1326,14 +1331,48 @@ sub import_placement_allele {
     #print "insereted sequence = $spdi->{'inserted_sequence'}\n";
     #print "hgvs = $allele->{'hgvs'}\n";
 
+    # The placement_allele table defines deleted_sequence, inserted_sequence
+    # and hgvs to varchar(255)
+    # Only the first 255 characters of these fields are stored and truncations flagged
+    # TODO - alter the schema for placement allele
+    #
+    check_spdi_lengths($spdi, $variation_id, $var_name);
+
+    my $pa_hgvs = $allele->{'hgvs'};
+    if (length($pa_hgvs) > 255) {
+      $pa_hgvs = substr($pa_hgvs,0,255);
+      my $msg = 'truncated_pa_hgvs';
+      my $info = join(";", 'variant_id='. $variation_id,
+                           'hgvs=' . $pa_hgvs);
+      log_errors($config, $var_name, $msg, $info);
+    }
+
     $sth->execute($variation_id,
                   $spdi->{'seq_id'},
                   $spdi->{'position'},
                   $spdi->{'deleted_sequence'},
                   $spdi->{'inserted_sequence'},
-                  $allele->{'hgvs'});
+                  $pa_hgvs);
   }
 }
+
+
+sub check_spdi_lengths {
+  my ($spdi, $var_id, $var_name) = @_;
+
+  my $msg = 'spdi_seq_gt_255';
+
+  my @fields = ('deleted_sequence', 'inserted_sequence');
+  for my $field (@fields) {
+    if (length($spdi->{$field}) > 255) {
+      $spdi->{$field} = substr($spdi->{$field}, 0,255);
+      my $info = join(";", 'variant_id='. $var_id,
+                         $field . '=' . $spdi->{$field});
+      log_errors($config, $var_name, $msg, $info);
+    }
+  }
+}
+
 
 # Stores the SPDI allele errors - for local use only
 sub import_failed_alleles {
@@ -1660,7 +1699,8 @@ sub configure {
     'assembly|a=s',
     'no_db_load',
     'no_ref_check',
-    'no_assign_ancestral_allele'
+    'no_assign_ancestral_allele',
+    'add_maf',
     ) or pod2usage(2);
  
   # Print usage message if help requested or no args
@@ -1734,6 +1774,13 @@ sub configure {
       die("ERROR: Ancestral FASTA file does not exist ($config->{'ancestral_fasta_file'})\n");
     }
   }
+
+  if (exists $config->{'add_maf'}) {
+    $config->{'add_maf'} = 1;
+  } else {
+    $config->{'add_maf'} = 0;
+  }
+
   return $config;  
 }
 
