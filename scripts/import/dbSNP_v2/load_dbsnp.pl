@@ -2009,7 +2009,7 @@ sub get_study_frequency {
   if (@{$study_freq->{'alleles'}} <= 1) {
     $allele_errors{4}++;
   } else {
-    my ($maf, $minor_allele, $minor_allele_count) = get_maf($study_freq->{'alleles'});
+    my ($maf, $minor_allele, $minor_allele_count) = get_maf($study_freq->{'alleles'}, $data->{'refsnp_id'});
     $study_freq->{'MAF'} = $maf;
     $study_freq->{'minor_allele'} = $minor_allele;
     $study_freq->{'minor_allele_count'} = $minor_allele_count;
@@ -2081,7 +2081,7 @@ sub get_align_diff {
 }
 
 sub get_maf {
-  my ($alleles_ref) = @_;
+  my ($alleles_ref, $rsid) = @_;
 
   #print Dumper($alleles_ref);
   my @sorted_alleles = sort {
@@ -2093,6 +2093,18 @@ sub get_maf {
   my $maf = sprintf("%.6f", $sorted_alleles[1]->{'allele_count'}/$sorted_alleles[1]->{'total_count'});
   my $minor_allele = $sorted_alleles[1]->{'observation'}->{'inserted_sequence'};
   my $minor_allele_count = $sorted_alleles[1]->{'allele_count'};
+
+  my $var_name = "rs$rsid";
+
+  if (length($minor_allele) > 50) {
+    my $msg = 'truncated_minor_allele';
+    my $info = join(";", 'rsid='. $var_name,
+                          'minor_allele=' . $minor_allele);
+    $minor_allele = substr($minor_allele,0,50);
+    log_errors($config, $var_name, $msg, $info);
+  }
+
+
   #print "Minor Allele Frequence = ($maf)\n";
   #print "Minor allelele = ($minor_allele)\n";
   #print "Minor allele count = ($minor_allele_count)\n";
@@ -2278,6 +2290,10 @@ No reference checking
 =item B<--no_assign_ancestral_allele>
 
 No ancestral allele assignment
+
+=item B<--no_maf>
+
+Not include MAF information
 
 =item B<--debug>
 
