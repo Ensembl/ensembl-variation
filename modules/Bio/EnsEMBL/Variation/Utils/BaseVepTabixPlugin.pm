@@ -48,7 +48,8 @@ Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin
 
   sub get_header_info {
     return {
-      FUNKY_PLUGIN => "Description of funky plugin"
+      # Same name as in parse_data() result hash
+      PLUGIN_SCORE => "Description of funky plugin"
     };
   }
 
@@ -65,6 +66,9 @@ Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin
   
   sub parse_data {
     my ($self, $line) = @_;
+    # This should parse every non-header line based on a delimiter, i.e for `\t`,
+    # `CHROM   POS   REF   ALT   SCORE`
+    # `1   1234567   A   T   0.95` <<<--- starts here
     my ($chrom, $start, $ref, $alt, $score) = split /\t/, $line;
     
     ... # parse data
@@ -75,6 +79,7 @@ Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin
       alt => $alt,
       start => $start,
       result => {
+        # Same name as in get_header_info() description
         PLUGIN_SCORE => $score
       }
     };
