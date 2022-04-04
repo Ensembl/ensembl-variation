@@ -170,6 +170,18 @@ sub get_user_params {
   }
 }
 
+=head2 get_header_info
+
+  Description: Return a hashref with any Extra column keys as keys and a
+               description of the data as a value, this will be included
+               in the VEP output file header to help explain the results
+               of this plugin. Plugins that do not want to include
+               anything in the header should return undef.
+  Returntype : hashref or undef
+  Status     : Experimental
+
+=cut
+
 =head2 files
 
   Description: Return valid Tabix file paths from plugin parameters
