@@ -66,7 +66,7 @@ Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin
   
   sub parse_data {
     my ($self, $line) = @_;
-    # This should parse every non-header line based on a delimiter, i.e for `\t`,
+    # Parse every non-header line based on a delimiter, i.e for `\t`,
     # `CHROM   POS   REF   ALT   SCORE`
     # `1   1234567   A   T   0.95` <<<--- starts here
     my ($chrom, $start, $ref, $alt, $score) = split /\t/, $line;
@@ -133,13 +133,13 @@ BEGIN {
 =head2 new
 
   Arg [1]    : a VEP configuration hashref
-  Arg [>1]   : any parameters passed on the VEP command line, will be stored
-               as a listref in $self->{params}
+  Arg [>1]   : any parameters passed on the VEP command line, will be
+               stored as a listref in $self->{params}
   Description: Creates and returns a new instance of this plugin based on
                the constructor from
                Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
-  Returntype : Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin instance
-               (most likely a user-defined subclass)
+  Returntype : Bio::EnsEMBL::Variation::Utils::BaseVepTabixPlugin
+               instance (most likely a user-defined subclass)
   Status     : Experimental
   
 =cut
@@ -175,16 +175,16 @@ sub get_user_params {
   Description: Return valid Tabix file paths from plugin parameters
                
                Plugin parameters are potential files if:
-                 1. Their keys start with "file" and a digit (e.g. file1).
+                 1. Their keys start with "file" and digits (e.g. file1).
                     The user would pass the parameters like so:
                       "--plugin MyPlugin,file1=ex1,file2=ex2".
                  2. Parameters end in ".gz" or if their filenames exist
-                    (this step is skipped if step 1 already found matching
-                    parameters).
+                    (this step is skipped if step 1 already found
+                    matching parameters).
                
                Finally, check_file() is used to confirm the existence of
-               Tabix files and their indexes in the same path. Raises error
-               if any potential file does not exist.
+               Tabix files and their indexes in the same path. Raises
+               error if any potential file does not exist.
   Returntype : arrayref
   Status     : Experimental
   
@@ -224,9 +224,9 @@ sub files {
   Arg[1]     : file path
   Description: Validate and append Tabix file path to $self->{_files}
   
-               check_file() is used to confirm the existence of Tabix files
-               and their indexes in the same path. Raises error if any
-               tested file does not exist.
+               check_file() is used to confirm the existence of Tabix
+               files and their indexes in the same path. Raises error if
+               any tested file does not exist.
   Returntype : boolean
   Status     : Experimental
   
@@ -267,9 +267,8 @@ sub check_file {
 =head2 expand_left
 
   Arg[1]     : positions to expand to the left (optional)
-  Description: Get expand left position and store it in
-               $self->{_expand_left}
-               In case of no argument, value is set to $DEFAULT_EXPAND_LEFT
+  Description: Store expand left position in $self->{_expand_left}
+               Without arguments, value is set to $DEFAULT_EXPAND_LEFT
   Returntype : scalar
   Status     : Experimental
   
@@ -287,9 +286,8 @@ sub expand_left {
 =head2 expand_right
 
   Arg[1]     : positions to expand to the right (optional)
-  Description: Get expand right position and store it in
-               $self->{_expand_right}
-               In case of no argument, value is set to $DEFAULT_EXPAND_RIGHT
+  Description: Store expand right position in $self->{_expand_right}
+               Without arguments, value is set to $DEFAULT_EXPAND_RIGHT
   Returntype : scalar
   Status     : Experimental
   
@@ -457,18 +455,18 @@ sub cache {
   Description: Data parsing logic (replace this method in a new plugin)
   
                This method runs before the run() method from
-               Bio::EnsEMBL::Variation::Utils::BaseVepPlugin and allows to
-               customise how data is parsed per line of a Tabix file.
+               Bio::EnsEMBL::Variation::Utils::BaseVepPlugin and allows
+               to customise how data is parsed per line of a Tabix file.
   
                When implementing parse_data() in a new plugin, start by
                splitting the line by tabs (or another delimeter) into
                different variables, for instance:
                  
                  my ($self, $line) = @_;
-                 my ($chr, $start, $ref, $alt, $score) = split /\t/, $line;
+                 my ($chr, $start, $ref, $alt, $score)=split /\t/, $line;
                  
-               After manipulating the parsed data as needed, return a hash
-               of column names and values, such as:
+               Manipulate parsed data as needed and return hash of column
+               names and values, such as:
                  
                   return {
                     ref => $ref,
@@ -479,7 +477,7 @@ sub cache {
                     }
                   };
                
-               Parsed data will be available inside method run() by using:
+               Parsed data will be accessible in method run() by using:
                  
                  my @data = @{$self->get_data(...)}
                  
