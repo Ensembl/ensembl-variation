@@ -14,6 +14,18 @@
       "created": "1432745640000",
       "updated": "1432745640000",
       "is_remapped": "1"
+    }, 
+    {
+      "id": "ExAC_0.3_corrected_INFO",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/exac_test.vcf.gz",
+      "chromosomes": ["11"],
+      "source_name": "ExAC",
+      "source_version": "0.3",
+      "source_url": "http://exac.broadinstitute.org/",
+      "is_remapped": "0"
     },
     {
       "id": "ExAC_0.3",
