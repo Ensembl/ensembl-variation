@@ -30,9 +30,9 @@ before_install:
 - export ENSEMBL_BRANCH=release/106
 - git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-test.git
 - git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl.git
-- git clone --branch master          --depth 1 https://github.com/Ensembl/ensembl-hive.git
+- git clone --branch main          --depth 1 https://github.com/Ensembl/ensembl-hive.git
 - git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-io.git
-- git clone --branch main --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
+- git clone --branch $ENSEMBL_BRANCH --depth 1 https://github.com/Ensembl/ensembl-funcgen.git
 - git clone --branch release-1-6-924 --depth 1 https://github.com/bioperl/bioperl-live.git
 - git clone --branch 1.9 --depth 1 https://github.com/samtools/htslib.git
 - cd htslib
