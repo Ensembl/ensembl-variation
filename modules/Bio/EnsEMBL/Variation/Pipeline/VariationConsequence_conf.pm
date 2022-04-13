@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::VariationConsequence_conf;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Hive::Version 2.5;
+use Bio::EnsEMBL::Hive::Version 2.6;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
@@ -163,7 +163,7 @@ sub default_options {
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,
         hive_db_user    => 'ensadmin',
-        hive_db_name    => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_'.$self->o('species'),
+        hive_db_name    => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
 
 
         pipeline_db => {
