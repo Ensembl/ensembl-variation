@@ -1449,13 +1449,13 @@ sub clean_old_data{
                                                     (select variation_id from variation v, source s
                                                     where v.source_id = s.source_id and s.name ='ClinVar')
                                                 ]);
-  $var_syn_sel_sth->execute();
+  $var_syn_sel_sth->execute() || die "Error selecting allele synonyms to be removed\n";
   my $data = $var_syn_sel_sth->fetchall_arrayref();
   # remove entries from allele_synonym
   foreach my $allele_syn (@{$data}){
     my $allele_syn_id = $allele_syn->[0];
     my $allele_syn_delete_sth = $dba->dbc()->prepare(qq[ delete from allele_synonym where allele_synonym_id = $allele_syn_id ]);
-    $allele_syn_delete_sth->execute();
+    $allele_syn_delete_sth->execute() || die "Could not delete entry id $allele_syn_id from allele_synonym\n";
   }
 
   # remove from other tables
