@@ -84,7 +84,8 @@ foreach my $cdba (@$cdbas) {
     my $internal_seq_region_name = $row[1];
 
     # Check if Variation and Core are equal in a name
-    next if ($id_mapping->{$internal_seq_region_name} eq $internal_seq_region_id);
+    die "ERROR: '$internal_seq_region_name' is not listed in $cd_dbname.seq_region name column\n." unless defined($id_mapping->{$internal_seq_region_name});
+    next if (defined($id_mapping->{$internal_seq_region_name}) && $id_mapping->{$internal_seq_region_name} eq $internal_seq_region_id);
 
     $vd_mapping->{$internal_seq_region_name} = $internal_seq_region_id;
   }
@@ -92,13 +93,6 @@ foreach my $cdba (@$cdbas) {
 
   # Core vs. Variation seq_region_id's
   die ("All seq_region_id's has a correct match - Variation vs. Core\n") if (defined($vd_mapping));
-
-  # Check if all Variation DB seq_region name values are in Core DB
-  print "Checking if all Variation seq_region.name is in Core ... ";
-  foreach my $vd_seq_region_name ( keys %$vd_mapping) {
-      die ( "Error: '$vd_seq_region_name' is not listed in $cd_dbname.seq_region name column\n" ) if ( ! grep $_ eq $vd_seq_region_name, keys %$id_mapping);
-  }
-  print "OK\n";
 
   # Remove old seq_region_id from vdb and create a new one based on core
   unless (defined($config->{dry_run})) {
