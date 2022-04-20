@@ -123,7 +123,7 @@ foreach my $cdba (@$cdbas) {
     my $old_seq_region_id = $vd_mapping->{$prev_seq_region_name};
 
     # Skip if old and new are the same
-    next if ($old_seq_region_id eq $new_seq_region_id);
+    next if (!$old_seq_region_id || $old_seq_region_id eq $new_seq_region_id);
 
     if ($config->{dry_run}) {
       print "Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name'\n";
