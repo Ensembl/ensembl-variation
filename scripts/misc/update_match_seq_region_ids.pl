@@ -108,7 +108,7 @@ foreach my $cdba (@$cdbas) {
   foreach my $table (@tables){
     my $count = check_if_exists($vdba, $table);
     if ($count == 0) {
-      print "Removing table '$table' is empty\n";
+      print "Skipping empty table '$table'\n";
       next;
     }
 
