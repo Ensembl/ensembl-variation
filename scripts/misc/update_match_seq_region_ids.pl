@@ -76,7 +76,7 @@ foreach my $cdba (@$cdbas) {
   my $vdbh = $vdba->dbc->db_handle;
 
   my $vd_dbname = $vdba->dbc->dbname;
-  my $vd_mapping = {};
+  my %vd_mapping = ();
   $sth = $vdbh->prepare("SELECT seq_region_id, name FROM seq_region;");
   $sth->execute();
   while (my @row = $sth->fetchrow_array) {
@@ -87,19 +87,17 @@ foreach my $cdba (@$cdbas) {
     die "ERROR: '$internal_seq_region_name' is not listed in $cd_dbname.seq_region name column\n." unless defined($id_mapping->{$internal_seq_region_name});
     next if (defined($id_mapping->{$internal_seq_region_name}) && $id_mapping->{$internal_seq_region_name} eq $internal_seq_region_id);
 
-    $vd_mapping->{$internal_seq_region_name} = $internal_seq_region_id;
+    $vd_mapping{$internal_seq_region_name} = $internal_seq_region_id;
   }
   $sth->finish();
 
   # Core vs. Variation seq_region_id's
-  die ("All seq_region_id's has a correct match - Variation vs. Core\n") if (defined($vd_mapping));
+  die ("Variation vs Core: all seq_region ids match\n") unless (%vd_mapping);
 
-  # Remove old seq_region_id from vdb and create a new one based on core
+  # Remove old seq_region_id from Variation db and create a new one based on core
   unless (defined($config->{dry_run})) {
-    $vdbh->do("ALTER TABLE seq_region drop seq_region_id") or die $dbh->errstr;
-    $vdbh->do("ALTER TABLE seq_region ADD seq_region_id INT") or die $dbh->errstr;
-    $vdbh->do("ALTER TABLE seq_region MODIFY COLUMN seq_region_id INT UNSIGNED NOT NULL FIRST") or die $dbh->errstr;
-    $vdbh->do("ALTER TABLE seq_region ADD PRIMARY KEY (seq_region_id)") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region drop seq_region_id;") or die $dbh->errstr;
+    $vdbh->do("ALTER TABLE seq_region ADD seq_region_id INT UNSIGNED NOT NULL FIRST") or die $dbh->errstr;
   }
 
   print "Checking if table exists and is populated in Variation ... \n";
@@ -120,7 +118,7 @@ foreach my $cdba (@$cdbas) {
 
   foreach my $prev_seq_region_name ( keys %$id_mapping) {
     my $new_seq_region_id = $id_mapping->{$prev_seq_region_name};
-    my $old_seq_region_id = $vd_mapping->{$prev_seq_region_name};
+    my $old_seq_region_id = $vd_mapping{$prev_seq_region_name};
 
     # Skip if old and new are the same
     next if (!$old_seq_region_id || $old_seq_region_id eq $new_seq_region_id);
@@ -139,6 +137,11 @@ foreach my $cdba (@$cdbas) {
       }
     }
   }
+
+  unless (defined($config->{dry_run})) {
+    $vdbh->do("ALTER TABLE seq_region ADD PRIMARY KEY (seq_region_id);") or die $dbh->errstr;
+  }
+
 }
 
 sub usage {
