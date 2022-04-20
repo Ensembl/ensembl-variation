@@ -771,10 +771,13 @@ sub get_all_Alleles_by_VariationFeature {
     }
 
     foreach my $a(keys %{$freqs->{$pop_id}}) {
+
+      my $count = $counts && $counts->{$pop_id} ? ($counts->{$pop_id}->{$a} || 0) : undef;
+
       push @alleles, Bio::EnsEMBL::Variation::Allele->new_fast({
         allele     => $a,
-        count      => $counts && $counts->{$pop_id} ? ($counts->{$pop_id}->{$a} || 0) : undef,
-        frequency  => $freqs->{$pop_id}->{$a},
+        count      => $count,
+        frequency  => defined $count && $count > 0 ? $freqs->{$pop_id}->{$a} : undef,
         population => $pop,
         variation  => $variation,
         adaptor    => $allele_adaptor,
