@@ -20,7 +20,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "local",
-      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/exac_test.vcf.gz",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/exac-test.vcf.gz",
       "chromosomes": ["11"],
       "source_name": "ExAC",
       "source_version": "0.3",

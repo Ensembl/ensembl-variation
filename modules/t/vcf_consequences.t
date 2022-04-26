@@ -66,9 +66,9 @@ my $slice = $sa->fetch_by_region('chromosome', '11');
 my $dont_fetch_vf_overlaps=1;
 my @vfs = @{$coll->get_all_VariationFeatures_by_Slice($slice,$dont_fetch_vf_overlaps)};
 ok(@vfs eq 2, "get variants");
-my $cons = $vfs[0]->get_all_OverlapConsequences();
+my $cons = $vfs[1]->get_all_OverlapConsequences();
 if ($dont_fetch_vf_overlaps)
 {
-  ok(@{$cons} eq 4, "get consequences");
+  ok(scalar @{$cons} eq 4, "get consequences");
 }
 done_testing()
