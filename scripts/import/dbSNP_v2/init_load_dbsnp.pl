@@ -267,7 +267,7 @@ sub usage {
 
   Creates seq region lookup tables for dbsnp-v2 import.
   
-  Poplulates seq_region table and creates tables for synonym lookups (NC, NW, NT)
+  Populates the seq_region table and creates tables for synonym lookups (NC, NW, NT)
 
   Options:
   -h | --help          Displays this message and quit
