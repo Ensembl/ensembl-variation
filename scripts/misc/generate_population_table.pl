@@ -21,6 +21,7 @@ use strict;
 use POSIX;
 use Getopt::Long;
 use JSON;
+use File::Basename;
 
 ###############
 ### Options ###
@@ -58,7 +59,10 @@ if (!$user) {
 }
 usage() if ($help);
 
-my $vcf_config_file = '../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+# Get the dir this script is residing in
+my $dirname = dirname(__FILE__);
+
+my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
 
 # read config from JSON config file
 open IN, $vcf_config_file or throw("ERROR: Could not read from config file $vcf_config_file");
