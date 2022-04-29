@@ -65,7 +65,7 @@ usage("Host providing the ontology database must be specified") unless ($ohost);
 my $dirname = dirname(__FILE__);
 
 # Check if output directory exists
-die "Could not find output dir $output_dir - please create it first" unless -d $output_dir;
+die "Could not find output dir $output_dir - please create it first\n" unless -d $output_dir;
 
 $species ||= 'Homo_sapiens';
 
