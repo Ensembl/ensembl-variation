@@ -14,7 +14,7 @@ There is a [web tool](http://www.ensembl.org/Multi/Tools/LD) version with an int
 ---
 <a name="usage"></a>
 ### Usage
-The script wraps around the LD calculation code in the Ensembl Variation API. Before running the ld_tool script follow the [installation instructions](https://github.com/Ensembl/ensembl-variation/blob/master/C_code/README.txt).
+The script wraps around the LD calculation code in the Ensembl Variation API. Before running the ld_tool script follow the [installation instructions](https://github.com/Ensembl/ensembl-variation/blob/main/C_code/README.txt).
 
 #### Running the script
 ```bash
