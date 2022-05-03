@@ -47,9 +47,9 @@ endspin() {
    printf "\r%s\n" "$@"
 }
 
-# Only run for master builds. Pull request builds have the branch set to master,
+# Only run for main builds. Pull request builds have the branch set to main,
 # so ignore those too.
-if [ "${TRAVIS_BRANCH}" != "master" ] || [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
+if [ "${TRAVIS_BRANCH}" != "main" ] || [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
   exit 0
 fi
 
