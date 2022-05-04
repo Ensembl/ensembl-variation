@@ -27,7 +27,8 @@ my $script_opts = [{args => ['host', 'dbhost', 'h'], type => '=s'},
         {args => ['pass', 'dbpass', 'p'], type => ':s'},
         {args => ['dbname',  'D'],         type => ':s'},
         {args => ['version'],    type => ':i'},
-        {args => ['dry_run'], type=>'!'}, ];
+        {args => ['dry_run'], type=>'!'}, ],
+        {args => ['truncate'], type=>'!'}, ],;
 
 if (scalar(@ARGV) == 0) {
   usage();
@@ -58,6 +59,16 @@ foreach my $variation_dbname (keys %$variation_dbas) {
   my $vdba = $variation_dbas->{$variation_dbname};
   next unless ($vdba);
   
+  # Coord system need to be truncated?
+  if ($opts->{truncate}) {
+    my $sql_truncate = qq{
+      TRUNCATE table coord_system
+    };
+    my $trunc = $vdba->dbc()->sql_helper()->execute(
+                                         -SQL => $sql_truncate);
+    print "Total of $trunc rows in coord_system set\n";
+  }
+
   # Are there foreign key failures between seq_region and coord_system?
   my $fk_count = count_fk_failures($vdba);
   if ($fk_count == 0) {
