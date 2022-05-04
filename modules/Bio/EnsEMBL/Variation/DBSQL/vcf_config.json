@@ -557,6 +557,17 @@
       "population_prefix": "NextGen:"
     },
     {
+      "id": "gallus_gallus_EVA_PRJEB44919",
+      "source_name": "PRJEB44919",
+      "description": "Variants from EVA study PRJEB44919",
+      "species": "gallus_gallus",
+      "assembly": "bGalGal1.mat.broiler.GRCg7b",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
+      "use_as_source": 0,
+      "strict_name_match": 0
+    },
+    {
       "id": "nextgen_sheep_iroa",
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
