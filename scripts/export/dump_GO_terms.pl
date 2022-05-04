@@ -90,29 +90,30 @@ $registry->load_registry_from_db(
 
 my %only_species = map { $_ => 1 } split(",",$species) if defined $species;
 
-my $sql = qq{SHOW DATABASES LIKE '%core_$e_version%'};
+# Get variation databases 
+my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
 my $sth_h = get_connection_and_query($database, $hname, $sql, 1);
 
-my $sqlGO = qq{SELECT * FROM xref x JOIN external_db db ON x.external_db_id = db.external_db_id WHERE db.db_name = "GO" AND x.dbprimary_acc LIKE "GO:%"};
-
-# Loop over databases
+# Loop over variation databases
 my $total = 0;
 while (my ($dbname) = $sth_h->fetchrow_array) {
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
 
-#   next if ($dbname !~ /^[a-z]+_[a-z]+_core_\d+_\d+$/i &&
-#            $dbname !~ /ovis_aries_rambouillet_core_\d+_\d+$/ &&
-#            $dbname !~ /canis_lupus_familiaris_core_\d+_\d+$/ );
-
-  $dbname =~ /^(.+)_core_.+_(.+)/;
+  $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
   my $assembly = $2;
 
+  # Check for GO terms in core database
+  my $dbcore = $dbname;
+  $dbcore =~ s/variation/core/g;
   next if defined $species & !$only_species{$s_name};
-  print STDERR "\n# $s_name - [ $dbname ]\n";
+  print STDERR "\n# $s_name - [ $dbcore ]\n";
 
-  ## check for GO terms
-  my $sth_go = get_connection_and_query($dbname, $hname, $sqlGO, 1);
+  my $sqlGO = qq{
+    SELECT * FROM xref x
+    JOIN external_db db ON x.external_db_id = db.external_db_id
+    WHERE db.db_name = "GO" AND x.dbprimary_acc LIKE "GO:%" };
+  my $sth_go = get_connection_and_query($dbcore, $hname, $sqlGO, 1);
   my ($count) = $sth_go->fetchrow_array();
   print "Found $count GO terms\n";
   next unless $count > 0;
