@@ -103,12 +103,19 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   my $s_name = $1;
   my $assembly = $2;
 
-  # Check for GO terms in core database
+  # Check core database
   my $dbcore = $dbname;
   $dbcore =~ s/variation/core/g;
   next if defined $species & !$only_species{$s_name};
   print STDERR "\n# $s_name - [ $dbcore ]\n";
 
+  # Skip monodelphis domestica that gives an error when creating tabix index
+  if ($s_name eq "monodelphis_domestica") {
+    warn "Skipping $s_name because of large genome size\n";
+    next;
+  }
+
+  # Check for GO terms in core database
   my $sqlGO = qq{
     SELECT * FROM xref x
     JOIN external_db db ON x.external_db_id = db.external_db_id
