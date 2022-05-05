@@ -109,7 +109,7 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   next if defined $species & !$only_species{$s_name};
   print STDERR "\n# $s_name - [ $dbcore ]\n";
 
-  # Skip monodelphis domestica that gives an error when creating tabix index
+  # Skip Monodelphis domestica that gives an error when creating tabix index
   if ($s_name eq "monodelphis_domestica") {
     warn "Skipping $s_name because of large genome size\n";
     next;
