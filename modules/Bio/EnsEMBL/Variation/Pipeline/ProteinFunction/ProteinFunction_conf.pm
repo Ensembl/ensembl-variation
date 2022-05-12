@@ -121,7 +121,7 @@ sub default_options {
 
         # location of the software
 
-        pph_dir                 => '/hps/software/polyphen/polyphen-2.2.2',
+        pph_dir                 => '/hps/nobackup/flicek/ensembl/variation/dlemos/testing/polyphen',
         # where we will keep polyphen's working files etc. as the pipeline runs
 
         pph_working             => $self->o('species_dir').'/polyphen_working',
@@ -129,9 +129,9 @@ sub default_options {
         # specify the Weka classifier models here, if you don't want predictions from 
         # one of the classifier models set the value to the empty string
 
-        humdiv_model            => $self->o('pph_dir').'/models/HumDiv.UniRef100.NBd.f11.model',
+        humdiv_model            => '/hps/software/polyphen/polyphen-2.2.2/models/HumDiv.UniRef100.NBd.f11.model',
         
-        humvar_model            => $self->o('pph_dir').'/models/HumVar.UniRef100.NBd.f11.model',
+        humvar_model            => '/hps/software/polyphen/polyphen-2.2.2/models/HumVar.UniRef100.NBd.f11.model',
 
         # the run type for polyphen (& sift) can be one of FULL to run predictions for
         # all translations regardless of whether we already have predictions in the

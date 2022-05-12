@@ -89,7 +89,17 @@ sub run {
 
         my $error_file  = "${model_name}.err";
 
-        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
+        my $data_dir="/nfs/production/flicek/ensembl/variation/data/polyphen_data";
+        my $pph="/opt/pph2";
+        my $dssp="$data_dir/dssp:$pph/dssp";
+        my $wwpdb="$data_dir/wwpdb:$pph/wwpdb";
+        my $precomputed="$data_dir/precomputed:$pph/precomputed";
+        my $nrdb="$data_dir/nrdb:$pph/nrdb";
+        my $pdb2fasta="$data_dir/pdb2fasta:$pph/pdb2fasta";
+        my $ucsc="$data_dir/ucsc:$pph/ucsc";
+        my $uniprot="$data_dir/uniprot:$pph/uniprot";
+
+        my $cmd = "singularity exec --bind $dssp,$wwpdb,$precomputed,$nrdb,$pdb2fasta,$ucsc,$uniprot $pph_dir/pph2.sif /opt/pph2/bin/run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
 
         system($cmd) == 0 or die "Failed to run $cmd: $?";
 
