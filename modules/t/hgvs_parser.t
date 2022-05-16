@@ -530,9 +530,9 @@ my %test_input_shifted = (
 
 ## results which change on left-shifting - not shifted
 my %test_output_no_shift = ( 
-     1 => ["X:g.131215393dup",
+     1 => ["X:g.132083511dup",
            "A",
-           "ENST00000298542.4:c.905+997dup", 
+           "ENST00000298542.9:c.741+981dup", 
            "T",
            "",
            "duplication, intronic rc transcript"
@@ -586,8 +586,8 @@ my %test_output_no_shift = (
 
 
 my %test_input_no_shift = ( 
-     1 => ["X:g.131215393dup",
-           "ENST00000298542.4:c.905+997dup", 
+     1 => ["X:g.132083511dup",
+           "ENST00000298542.9:c.741+981dup", 
           ],    
      2 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
