@@ -200,10 +200,17 @@ sub run {
         if($mtmp) {
           my $mtmp_data = $tva->_get_mtmp_write_data_from_tv_write_data($data);
           my $mtmp_fh = $files->{MTMP_transcript_variation}->{fh};
-          unless($biotypes_to_skip{$biotype} || !$is_mane){
-	    print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
+          
+          # Check species
+          my $species = $self->param('species');
+          # MANE is only available for human
+          my $is_human = $species =~ /homo_sapiens|human/ ? 1 : 0;
+          my $write_mtmp = ($is_human && $is_mane) || !$is_human ? 1 : 0;
+          
+          unless($biotypes_to_skip{$biotype} || !$write_mtmp){
+          print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
-	}
+        }
         ## end block
 
       
