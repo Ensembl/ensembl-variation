@@ -33,6 +33,7 @@ use strict;
 use warnings;
 use DBI;
 use Getopt::Long;
+use File::Basename;
 
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
@@ -59,6 +60,12 @@ usage("Host, port and version must be specified") unless ($host && $port && $ver
 usage("Hosts list, user must be specified") unless ($hlist && $user);
 usage("Previous host must be specified") unless ($phost);
 usage("Host providing the ontology database must be specified") unless ($ohost);
+
+# Get the dir that this script is residing in
+my $dirname = dirname(__FILE__);
+
+# Check if output directory exists
+die "Could not find output dir $output_dir - please create it first\n" unless -d $output_dir;
 
 $species ||= 'Homo_sapiens';
 
@@ -91,7 +98,7 @@ print STDOUT localtime() . "\t# Start species list...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
+`perl $dirname/species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -115,7 +122,7 @@ print STDOUT localtime() . "\t# Start variant classes ...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -ohost $ohost -species $species`;
+`perl $dirname/generate_classes_table.pl -v $version -o $tmp_section -host $host -port $port -ohost $ohost -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -139,7 +146,7 @@ print STDOUT localtime() . "\t# Start populations ...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
+`perl $dirname/generate_population_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -163,7 +170,7 @@ print STDOUT localtime() . "\t# Start variant sets ...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_variation_set_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
+`perl $dirname/generate_variation_set_table.pl -v $version -o $tmp_section -hlist $hlist -user $user`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -187,7 +194,7 @@ print STDOUT localtime() . "\t# Start clinical significance ...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
+`perl $dirname/generate_clin_significance_tables.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -211,7 +218,7 @@ print STDOUT localtime() . "\t# Start phenotype class ...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl generate_pheno_class_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
+`perl $dirname/generate_pheno_class_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -269,7 +276,7 @@ $file_name = "sources_documentation.html";
 $tmp_file  = $file_name;
 
 print STDOUT localtime() . "\t# Start sources list ...\n";
-`perl sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
+`perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
@@ -284,7 +291,7 @@ $file_name = "sources_phenotype_documentation.html";
 $tmp_file  = $file_name;
 
 print "# Phenotype sources list ...\n";
-`perl phensources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
+`perl $dirname/phensources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
@@ -298,7 +305,7 @@ print STDOUT localtime() . "\t\t> Phenotype sources list - finished\n";
 $file_name = "species_detailed_counts.html";
 $tmp_file  = $file_name;
 print STDOUT localtime() . "\t# Detailed species data count ...\n";
-`perl species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro`;
+`perl $dirname/species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
