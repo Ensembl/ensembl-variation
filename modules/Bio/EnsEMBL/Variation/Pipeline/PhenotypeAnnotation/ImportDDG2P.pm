@@ -63,7 +63,7 @@ sub fetch_input {
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'G2P',       #source name in the variation db
-                  source_name_short => 'G2P', #source identifier in the pipeline
+                  source_name_short => 'DDG2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
                   data_types        => 'phenotype_feature',
                   );
@@ -97,7 +97,7 @@ sub fetch_input {
   print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
   foreach my $url (@urls) {
     foreach my $file (@files){
-      my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $url -o $workdir/$dateStrURL.$file} unless -e $workdir."/".$dateStrURL.$file ;
+      my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $url -o $workdir/$dateStrURL."_".$file} unless -e $workdir."/".$dateStrURL."_".$file ;
       print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
     }
   }
@@ -106,12 +106,11 @@ sub fetch_input {
   #my $file_ddg2p = "DDG2P.csv";
   foreach my $file (@files){
     foreach my $unzipped (@unzipped_files){
-      gunzip $workdir."/".$dateStrURL.$file => $workdir."/".$unzipped;
+      gunzip $workdir."/".$dateStrURL."_".$file => $workdir."/".$unzipped;
       $self->param($unzipped."file", $unzipped);
     }
   }
-  use Data::Dumper;
-  print Dumper($self->param);
+  
 }
 
 sub run {
