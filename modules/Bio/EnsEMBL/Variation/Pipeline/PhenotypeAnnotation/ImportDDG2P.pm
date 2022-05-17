@@ -89,9 +89,9 @@ sub fetch_input {
   #get input file of other panels 
   my @other_url = ('https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
    'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz')
-  open my $DD '>>', $ddg2p_url; # to open the file for us to append the other files into 
+  open my $DD, '>>', $ddg2p_url; # to open the file for us to append the other files into 
   foreach my $file (@other_url){ # for loop to read the line one by one 
-    if (open my $in '<', $file){ # opening the file to be read 
+    if (open my $in, '<', $file){ # opening the file to be read 
       while (my $line = <$in>){ 
         print $out $line;
       }
