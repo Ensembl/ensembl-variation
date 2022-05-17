@@ -58,12 +58,12 @@ sub fetch_input {
 
   $self->debug($self->param('debug_mode'));
 
-  %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
-                  source_url => 'https://decipher.sanger.ac.uk/',
+  %source_info = (source_description => 'Genotype-to-Phenotype(G2P) Database',
+                  source_url => 'https://www.ebi.ac.uk/gene2phenotype',
                   object_type => 'Gene',
                   source_status => 'germline',
-                  source_name => 'DDG2P',       #source name in the variation db
-                  source_name_short => 'DDG2P', #source identifier in the pipeline
+                  source_name => 'G2P',       #source name in the variation db
+                  source_name_short => 'G2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
                   data_types        => 'phenotype_feature',
                   );
@@ -84,32 +84,34 @@ sub fetch_input {
   $self->pipelogFH($pipelogFH);
 
   #get input file DDG2P:
-  my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
+  #my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
 
   #get input file of other panels 
-  my @other_url = ('https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
+  my @urls = ('https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
    'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz', 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz');
-  open (my $DD, '>>', $ddg2p_url); # to open the file for us to append the other files into 
-  foreach my $file (@other_url){ # for loop to read the line one by one 
-    if (open my $in, '<', $file){ # opening the file to be read 
-      while (my $line = <$in>){ 
-        print $DD $line;
-      }
-      close $in;
-    }
-  close $DD; 
-  }
 
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
-  my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
+  my @files = ('DDG2P.csv.gz', 'CancerG2P.csv.gz', 'CardiacG2P.csv.gz', 'SkinG2P.csv.gz', 'EyeG2P.csv.gz');
+  #my $file_gz = "DDG2P_$dateStrURL.csv.gz";
 
   print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
-  my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $ddg2p_url -o $workdir/$file_ddg2p_gz} unless -e $workdir."/".$file_ddg2p_gz ;
-  print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
-
-  my $file_ddg2p = "DDG2P.csv";
-  gunzip $workdir."/".$file_ddg2p_gz => $workdir."/".$file_ddg2p;
-  $self->param('ddg2p_file', $file_ddg2p);
+  foreach my $url (@urls) {
+    foreach my $file (@files){
+      my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $url -o $workdir/$dateStrURL.$file} unless -e $workdir."/".$dateStrURL.$file ;
+      print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
+    }
+  }
+  
+  my @unzipped_files = ('DDG2P.csv', 'CancerG2P.csv', 'CardiacG2P.csv', 'SkinG2P.csv', 'EyeG2P.csv');;
+  #my $file_ddg2p = "DDG2P.csv";
+  foreach my $file (@files){
+    foreach my $unzipped (@unzipped_files){
+      gunzip $workdir."/".$dateStrURL.$file => $workdir."/".$unzipped;
+      $self->param($unzipped."file", $unzipped);
+    }
+  }
+  use Data::Dumper;
+  print Dumper($self->param);
 }
 
 sub run {
