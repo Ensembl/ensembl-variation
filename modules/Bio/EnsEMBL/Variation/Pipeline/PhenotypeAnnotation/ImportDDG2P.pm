@@ -93,11 +93,11 @@ sub fetch_input {
   foreach my $file (@other_url){ # for loop to read the line one by one 
     if (open my $in, '<', $file){ # opening the file to be read 
       while (my $line = <$in>){ 
-        print $out $line;
+        print $DD $line;
       }
       close $in;
     }
-  close $out; 
+  close $DD; 
   }
 
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
