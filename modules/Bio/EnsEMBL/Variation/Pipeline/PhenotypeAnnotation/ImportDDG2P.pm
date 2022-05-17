@@ -94,10 +94,10 @@ sub fetch_input {
   my @files = ('DDG2P.csv.gz', 'CancerG2P.csv.gz', 'CardiacG2P.csv.gz', 'SkinG2P.csv.gz', 'EyeG2P.csv.gz');
   #my $file_gz = "DDG2P_$dateStrURL.csv.gz";
 
-  print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
+  #print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
   foreach my $url (@urls) {
     foreach my $file (@files){
-      my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $url -o $workdir/$dateStrURL."_".$file} unless -e $workdir."/".$dateStrURL."_".$file ;
+      my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $url -o $workdir/$dateStrURL"_"$file} unless -e $workdir."/".$dateStrURL"_"$file ;
       print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
     }
   }
@@ -106,7 +106,7 @@ sub fetch_input {
   #my $file_ddg2p = "DDG2P.csv";
   foreach my $file (@files){
     foreach my $unzipped (@unzipped_files){
-      gunzip $workdir."/".$dateStrURL."_".$file => $workdir."/".$unzipped;
+      gunzip $workdir."/".$dateStrURL"_"$file => $workdir."/".$unzipped;
       $self->param($unzipped."file", $unzipped);
     }
   }
