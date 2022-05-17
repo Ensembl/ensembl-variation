@@ -557,6 +557,43 @@
       "population_prefix": "NextGen:"
     },
     {
+      "id": "gallus_gallus_EVA_PRJEB44919",
+      "source_name": "PRJEB44919",
+      "description": "Variants from EVA study PRJEB44919",
+      "species": "gallus_gallus",
+      "assembly": "bGalGal1.mat.broiler.GRCg7b",
+      "type": "remote",
+      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
+      "use_as_source": 0,
+      "strict_name_match": 0
+    },
+    {
+      "id": "dog_EVA_PRJEB24066",
+      "species": "canis_lupus_familiarisboxer",
+      "source_name": "PRJEB24066",
+      "description": "Variants remmaped from EVA study PRJEB24066",
+      "assembly": "Dog10K_Boxer_Tasha",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+        "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X"
+      ]
+    },
+    {
+      "id": "dog_EVA_PRJEB24066",
+      "species": "canis_lupus_familiaris",
+      "source_name": "PRJEB24066",
+      "description": "Variants remapped from EVA study PRJEB24066",
+      "assembly": "ROS_Cfam_1.0",
+      "type": "remote",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+        "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X", "Y"
+      ]
+    }, 
+    {
       "id": "nextgen_sheep_iroa",
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
@@ -671,14 +708,12 @@
       "source_name": "PRJEB34225",
       "description": "Variants from EVA study PRJEB34225",
       "species": "salmo_salar",
-      "assembly": "ICSASG_v2",
+      "assembly": "Ssal_v3.1",
       "type": "remote",
       "use_as_source" : 1,
-      "use_seq_region_synonyms": 1,
-      "strict_name_match" : 0,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB34225/Salmon_SNP_80_samples_freebayes_EBI_noINFO.vcf.gz",
+      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/salmo_salar/Ssal_v3.1/variation_genotype/Salmon_SNP_80_samples_freebayes_EBI_noINFO.vcf.gz",
       "chromosomes": [
-        "ssa01", "ssa02", "ssa03", "ssa04", "ssa05", "ssa06", "ssa07", "ssa08", "ssa09", "ssa10", "ssa11", "ssa12", "ssa13", "ssa14", "ssa15", "ssa16", "ssa17", "ssa18", "ssa19", "ssa20", "ssa21", "ssa22", "ssa23", "ssa24", "ssa25", "ssa26", "ssa27", "ssa28", "ssa29"
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
       ]
     },
     {
