@@ -158,7 +158,7 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/hps/software/users/ensembl/variation/sift',
+        sift_dir                => '/hps/software/users/ensembl/variation/sift6.2.1',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
@@ -170,7 +170,7 @@ sub default_options {
 
         variation_data          => '/nfs/production/flicek/ensembl/variation/data',
 
-        blastdb                 => $self->o('variation_data').'/sift5.2.2/uniref90/uniref90.fasta',
+        blastdb                 => $self->o('variation_data').'/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
