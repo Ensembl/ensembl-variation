@@ -1678,6 +1678,9 @@ sub hgvs_protein {
   ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method  
   my $ref_hash_already_defined = defined($ref->{shift_hash});
   $ref->_return_3prime(1) unless $ref_hash_already_defined;
+
+  my $previous_vfs = $self->{variation_feature_seq};
+
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})  && $self->{shift_hash}->{shift_length} != 0) {
     delete($self->{peptide});
@@ -1724,7 +1727,10 @@ sub hgvs_protein {
   }
 
   ##### String formatting
-  return $self->_get_hgvs_protein_format($hgvs_notation);
+  my $hgvs_notation_output = $self->_get_hgvs_protein_format($hgvs_notation);
+  # Undo variation_feature_seq alteration
+  $self->{variation_feature_seq} = $previous_vfs;
+  return $hgvs_notation_output;
 }
 
 
