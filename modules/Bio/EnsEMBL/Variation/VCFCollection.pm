@@ -70,7 +70,7 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 
 use Cwd;
 use Scalar::Util qw(weaken);
-
+use List::MoreUtils qw/zip/;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(check_ref assert_ref);
@@ -78,6 +78,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -86,6 +87,7 @@ use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
 use Bio::EnsEMBL::Variation::VCFVariationFeature;
 use Bio::EnsEMBL::Variation::IntergenicVariation;
+use Bio::EnsEMBL::Variation::OverlapConsequence; 
 
 use base qw(Bio::EnsEMBL::Variation::BaseAnnotation);
 
@@ -444,12 +446,10 @@ sub get_all_VariationFeatures_by_Slice {
     $slice = $sa->fetch_by_region($slice->coord_system_name, $slice->seq_region_name, $slice->start, $slice->end);
   }
   return [] unless $self->_seek_by_Slice($slice);
-  
   my $vcf = $self->_current();
   my $vfa = $self->use_db ? $self->adaptor->db->get_VariationFeatureAdaptor : Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($self->species);
   
   my @vfs;
-  
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
     
     my $copy = $vcf->get_frozen_copy();
@@ -468,18 +468,71 @@ sub get_all_VariationFeatures_by_Slice {
       
       push @vfs, $vcf_vf;
     }
-    
     $vcf->next();
   }
 
-  if($dont_fetch_vf_overlaps || !$self->use_db) {
-    foreach my $vf(@vfs) {
-      $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
-        -variation_feature  => $vf,
-        -no_ref_check       => 1,
-      );
-      weaken($vf->{intergenic_variation}->{base_variation_feature});
-
+  if($dont_fetch_vf_overlaps || !$self->use_db) {   
+    my $metadata_info = $vcf->{metadata}->{INFO};
+    my $desc;
+    my $vcf_info_field;
+    foreach my $val ( @{$metadata_info} ){
+      if($val->{ID} eq 'CSQ'){
+        $desc = $val->{Description};
+        $vcf_info_field = 'CSQ';
+        last;
+      }
+      elsif($val->{ID} eq 'ANN'){
+        $desc = $val->{Description};
+        $vcf_info_field = 'ANN';
+        last;
+      } 
+    }
+    my @description = split(/Format:/,$desc);
+    my @info_format = split('\|', $description[1]);
+    foreach my $vf (@vfs) { 
+      if ( $vcf_info_field ){
+        my $info = $vf->{vcf_record}->get_info;
+        my @vcf_variants = $info->{$vcf_info_field};
+        foreach my $vcf_variant ( @vcf_variants ) {
+          if ( defined($vcf_variant) ){
+            my @transcript_vars = split(',',$vcf_variant);
+            foreach my $transcript_var ( @transcript_vars ){
+              my @transcript_split = split('\|',$transcript_var);
+              my %transcript_map = zip @info_format, @transcript_split;
+              if ( $transcript_map{'Feature_type'} eq 'Transcript') {
+                my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
+                  variation_feature  => $vf,
+                  _feature_stable_id => $transcript_map{'Feature'}
+                });  
+                #Add variation Feature seq from transcript map
+                my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
+                  variation_feature_seq => $transcript_split[0],
+                  is_reference               => 0
+                });
+                my @cons_list = split('&',$transcript_map{'Consequence'});
+                foreach my $con (@cons_list){
+                  if ( exists $OVERLAP_CONSEQUENCES{$con} ) {
+                    my $new_cons = $OVERLAP_CONSEQUENCES{$con};
+                    $tva->add_OverlapConsequence($new_cons);
+                  }
+                  else{
+                    print("The consequence is not available:",$con,"\n");
+                  }
+                }
+                $tv->add_TranscriptVariationAllele($tva);
+                $vf->add_TranscriptVariation($tv);
+              }
+            }
+          }
+        }
+      }
+      else{ 
+        $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
+          -variation_feature  => $vf,
+          -no_ref_check       => 1,
+        );
+        weaken($vf->{intergenic_variation}->{base_variation_feature});
+      }
       $vf->_finish_annotation();
     }
   }
@@ -490,7 +543,6 @@ sub get_all_VariationFeatures_by_Slice {
     ## this prevents the API loading them per-variant later at great cost in speed
     ## not an easy way to do this generically in a loop, so done type-by-type
     my $db = $self->adaptor->db;
-
     # transcripts
     my @transcripts =
       map {$_->transfer($slice)}
@@ -500,7 +552,6 @@ sub get_all_VariationFeatures_by_Slice {
       \@vfs,
       \@transcripts
     ) if @transcripts;
-
     # funcgen types
     foreach my $type(qw(RegulatoryFeature MotifFeature)) {
       if(
