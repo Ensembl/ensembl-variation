@@ -1365,6 +1365,7 @@ sub hgvs_transcript {
   my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
   $self->{_hgvs_offset} = $offset_to_add;
   ## delete the shifting hash if we generated it for HGVS calculations
+  $self->{variation_feature_seq} = $self->{shift_hash}->{alt_orig_allele_string} if defined($self->{shift_hash});
   delete($self->{shift_hash}) unless $hash_already_defined;
  
   ## return if a new transcript_variation_allele is not available - variation outside transcript
@@ -1678,9 +1679,6 @@ sub hgvs_protein {
   ## Incase the user wants shifted HGVS but not shifted consequences, we run the shifting method  
   my $ref_hash_already_defined = defined($ref->{shift_hash});
   $ref->_return_3prime(1) unless $ref_hash_already_defined;
-
-  my $previous_vfs = $self->{variation_feature_seq};
-
   ## get default reference & alt peptides  [changed later to hgvs format]
   if(defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})  && $self->{shift_hash}->{shift_length} != 0) {
     delete($self->{peptide});
@@ -1704,6 +1702,7 @@ sub hgvs_protein {
   $hgvs_notation->{ref} = $ref->peptide; 
   
   ## delete the shifting hash if we generated it for HGVS calculations
+  $self->{variation_feature_seq} = $self->{shift_hash}->{alt_orig_allele_string} if defined($self->{shift_hash});
   delete($self->{shift_hash}) unless $hash_already_defined;
   delete($ref->{shift_hash}) unless $ref_hash_already_defined;
 
@@ -1728,8 +1727,6 @@ sub hgvs_protein {
 
   ##### String formatting
   my $hgvs_notation_output = $self->_get_hgvs_protein_format($hgvs_notation);
-  # Undo variation_feature_seq alteration
-  $self->{variation_feature_seq} = $previous_vfs;
   return $hgvs_notation_output;
 }
 
