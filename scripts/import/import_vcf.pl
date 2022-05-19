@@ -2850,6 +2850,9 @@ sub read_chr_synonyms {
     if($seq_region->{$chr1} && $chr2 =~ /^NC/) {
       $chr_synonyms_list{$chr2} = $chr1;
     }
+    elsif($seq_region->{$chr2} && $chr1 =~ /^NC/) {
+      $chr_synonyms_list{$chr1} = $chr2;
+    }
   }
 
   return \%chr_synonyms_list;
