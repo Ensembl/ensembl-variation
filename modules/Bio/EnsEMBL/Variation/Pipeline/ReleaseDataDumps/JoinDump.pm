@@ -205,7 +205,7 @@ sub join_split_slice_files {
     next if ($file =~ m/^\./);
     if ($file =~ m/$dump_type-$seq_region_id\_/) {
       # Find files like macaca_mulatta_incl_consequences-5_59152801_64082201.gvf
-      if ($file =~ m/([a-z|_]+)-([0-9]+)_([0-9]+)_([0-9]+)\.$file_type/) {
+      if ($file =~ m/([a-z0-9|_]+)-([0-9]+)_([0-9]+)_([0-9]+)\.$file_type/) {
         my $start = $3; 
         $files->{$start} = $file;
       }
