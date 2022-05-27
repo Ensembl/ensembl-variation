@@ -21,6 +21,7 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use ImportUtils qw(create);
 use DBI qw(:sql_types);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
 my ( $infile, $registry_file, $version, $help );
@@ -50,12 +51,24 @@ my $dbh = $registry->get_adaptor(
 )->dbc;
 my $dbVar = $dbh->db_handle;
 
+my $dba = $registry->get_DBAdaptor('homo_sapiens','variation');
+my $variation_adaptor = $dba->get_VariationAdaptor('human', 'variation', );
+my $var_feat_adaptor = $dba->get_VariationFeatureAdaptor('human', 'variation', );
+my $source_adaptor  = $dba->get_SourceAdaptor('homo_sapiens', 'variation',);
+# my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
+my $attrib_adaptor = $dba->get_AttributeAdaptor('homo_sapiens', 'variation',);
+my $tva = $dba->get_TranscriptVariationAdaptor('human', 'variation', );
+
+my $dbc = $registry->get_DBAdaptor('homo_sapiens','core');
+my $slice_adaptor = $dbc->get_SliceAdaptor('human', 'core', );
 
 my $source_name = 'COSMIC';
+my $source_obj = $source_adaptor->fetch_by_name($source_name);
 my $source_id = get_source_id(); # COSMIC source_id
 my $variation_set_cosmic = get_variation_set_id($source_name); # COSMIC variation set
 my $variation_set_pheno = get_variation_set_id("All phenotype/disease-associated variants"); #All phenotype/disease variants
-my $pheno_evidence_id = get_attrib_id('evidence','Phenotype_or_Disease');
+my $phenotype_evidence = 'Phenotype_or_Disease';
+my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'tumour');
 
 my $temp_table      = 'MTMP_tmp_cosmic';
@@ -358,26 +371,105 @@ sub get_variation_set_id {
 
 
 sub insert_cosmic_entries {
-  
-  # Insert Var
-  my $stmt_var = qq{INSERT IGNORE INTO variation
-                    (name, source_id, class_attrib_id, somatic,
-                     evidence_attribs, display)
-                    SELECT name, ?, class, ?, '$pheno_evidence_id', 1
-                    FROM $temp_table};
-  my $sth_var  = $dbh->prepare($stmt_var);
-  $sth_var->execute($source_id, $somatic);
+  # Evidence
+  my @evidence_list;
+  push @evidence_list, $phenotype_evidence;
 
-  # Insert VF
-  my $stmt_vf = qq{INSERT IGNORE INTO variation_feature 
-                   (variation_id, variation_name, source_id, variation_set_id, class_attrib_id, somatic, allele_string, seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
-                   evidence_attribs, display)
-                   SELECT v.variation_id, v.name, v.source_id,'$variation_set_pheno,$variation_set_cosmic', v.class_attrib_id, v.somatic, ?, c.seq_region_id, c.seq_region_start, c.seq_region_end, ?,
-                   '$pheno_evidence_id', 1
-                   FROM variation v, $temp_table c WHERE v.name=c.name};
-  my $sth_vf  = $dbh->prepare($stmt_vf);
-  $sth_vf->execute($allele, $default_strand);
-  
+  # Transcript variation - biotypes to skip
+  my %biotypes_to_skip = (
+    'lncRNA' => 1,
+    'processed_pseudogene' => 1,
+    'unprocessed_pseudogene' => 1,
+  );
+
+  # Fetch data from tmp tables
+  # Create Variation, VariationFeature and TranscriptVariation objects from the data fetched from the
+  # tmp tables
+  my $stmt_get_var = qq{ SELECT name, seq_region_id, seq_region_start, seq_region_end, class
+                         FROM $temp_table };
+  my $sth_get_var = $dbh->prepare($stmt_get_var);
+  $sth_get_var->execute();
+  my $data_var = $sth_get_var->fetchall_arrayref();
+  foreach my $var_tmp (@{$data_var}) {
+    # Get SO term
+    my $so_term = $attrib_adaptor->attrib_value_for_id($var_tmp->[4]);
+
+    # Create variation
+    my $var = Bio::EnsEMBL::Variation::Variation->new
+      ( -name              => $var_tmp->[0],
+        -source            => $source_obj,
+        -is_somatic        => 1,
+        -adaptor           => $variation_adaptor,
+        -class_SO_term     => $so_term,
+        -evidence          => \@evidence_list,
+      );
+
+    $variation_adaptor->store($var);
+
+    # my $slice = $slice_adaptor->fetch_by_dbID($var_tmp->[1]);
+    my $sth_seq_region = $dbh->prepare(qq{ SELECT name from seq_region WHERE seq_region_id = ?
+                                          });
+    $sth_seq_region->execute($var_tmp->[1]);
+    my $seq_region_data = $sth_seq_region->fetchall_arrayref();
+    my $seq_region_name = $seq_region_data->[0]->[0];
+
+    my $slice = $slice_adaptor->fetch_by_region('chromosome', $seq_region_name);
+
+    # # Create variation feature
+    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+      (-start           => $var_tmp->[2],
+       -end             => $var_tmp->[3],
+       -strand          => 1,
+       -slice           => $slice,
+       -variation_name  => $var_tmp->[0],
+       -map_weight      => 0,
+       -allele_string   => $allele,
+       -variation       => $var,
+       -source          => $source_obj,
+       -class_SO_term   => $so_term,
+       -is_somatic      => 1,
+       -adaptor         => $var_feat_adaptor,
+       -evidence        => \@evidence_list,
+      );
+
+    $var_feat_adaptor->store($vf);
+
+    # Get all transcript variations to insert into transcript_variation table
+    my $all_tv = $vf->get_all_TranscriptVariations();
+    foreach my $tv (@{$all_tv}) {
+      # Do not include upstream and downstream consequences
+      next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+      # only include valid biotypes
+      my $biotype = $tv->transcript->biotype;
+      next if($biotypes_to_skip{$biotype});
+
+      # write to MTMP table if transcript is MANE (GRCh38)
+      # add check if assembly is GRCh37
+      my $mtmp = $tv->transcript->is_mane ? 1 : 0;
+      $tva->store($tv, $mtmp);
+    }
+
+    # Update consequence_types in variation_feature table
+    # get variation_feature_id
+    my $vf_dbid = $vf->dbID;
+
+    my $tv_sth = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+                                             FROM transcript_variation
+                                             WHERE variation_feature_id = ?
+                                             GROUP BY variation_feature_id;
+                                            ]);
+
+    $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
+    my $data_tv = $tv_sth->fetchall_arrayref();
+    if (defined $data_tv->[0]->[0]) {
+      my $update_vf_sth = $dba->dbc()->prepare(qq[ UPDATE variation_feature
+                                                   SET consequence_types = ?
+                                                   WHERE variation_feature_id = ?
+                                                 ]);
+      $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+    }
+  }
+
   # Insert variation synonym
   my $stmt_vs = qq{INSERT IGNORE INTO variation_synonym
                    (variation_id, source_id, name)
@@ -399,5 +491,5 @@ sub insert_cosmic_entries {
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
   $sth_set->execute($variation_set_cosmic, $source_id);
+  
 }
-
