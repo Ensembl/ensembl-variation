@@ -1347,9 +1347,9 @@ sub enter_var{
   if (defined $data_tv->[0]->[0]) {
     my $update_vf_sth = $dba->dbc()->prepare(qq[ UPDATE variation_feature
                                                  SET consequence_types = ?
-						 WHERE variation_feature_id = ?
-                                             ]);
-    $update_vf_sth->execute($data->[0]->[1], $data->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+                                                 WHERE variation_feature_id = ?
+                                                ]);
+    $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
   }
 
   my @vf; #return vf to attach phenotype feature to
