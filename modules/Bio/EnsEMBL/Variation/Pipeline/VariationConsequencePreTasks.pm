@@ -61,6 +61,7 @@ sub fetch_input {
     }) if $self->param('sort_variation_feature');
 
 
+  unless ($self->param('update_run')){
       # truncate the table because we don't want duplicates
       $dbc->do("TRUNCATE TABLE transcript_variation");
 
@@ -72,22 +73,23 @@ sub fetch_input {
       # truncate tables incase TranscriptVariation is being updated for a pre-existing database
       $dbc->do("TRUNCATE TABLE variation_hgvs");
       $dbc->do("ALTER TABLE variation_hgvs DISABLE KEYS");
+  }
 
-      # remove temporary files if they exist
-      my $dir = $self->param('pipeline_dir');
-      unless(-d $dir) {
-        mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
-      }
+    # remove temporary files if they exist
+    my $dir = $self->param('pipeline_dir');
+    unless(-d $dir) {
+      mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
+    }
 
-      foreach my $folder_name (qw/web_index transcript_effect load_log/) {
-        rmtree($dir.'/'.$folder_name.'_files');
-        mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
-      }
+    foreach my $folder_name (qw/web_index transcript_effect load_log/) {
+      rmtree($dir.'/'.$folder_name.'_files');
+      mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
+    }
 
-      my @rebuild = qw(transcript_variation variation_hgvs);
+    my @rebuild = qw(transcript_variation variation_hgvs);
 
       # set up MTMP table
-      if($mtmp) {
+    if($mtmp) {
         my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
         my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
 
