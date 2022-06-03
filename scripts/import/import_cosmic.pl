@@ -453,6 +453,12 @@ sub insert_cosmic_entries {
     # get variation_feature_id
     my $vf_dbid = $vf->dbID;
 
+    # By default group_concat has maximum length 1024
+    # some variants have consequence_types longer than 1024
+    my $stmt_len = qq {set session group_concat_max_len = 100000};
+    my $sth_len = $dbh->prepare($stmt_len);
+    $sth_len->execute();
+
     my $tv_sth = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
                                              FROM transcript_variation
                                              WHERE variation_feature_id = ?
@@ -466,6 +472,7 @@ sub insert_cosmic_entries {
                                                    SET consequence_types = ?
                                                    WHERE variation_feature_id = ?
                                                  ]);
+      # print "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
       $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
     }
   }
