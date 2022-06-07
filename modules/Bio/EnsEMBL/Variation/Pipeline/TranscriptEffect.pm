@@ -98,6 +98,9 @@ sub run {
   my $slice;
   my $stable_id;
   my @transcripts = ();
+
+  my @transcripts_output;
+
   if ($by_transcript) {
     my $transcript_stable_id = $self->param('transcript_stable_id');
     $stable_id = $transcript_stable_id;
@@ -176,7 +179,7 @@ sub run {
       # if the variation has no effect on the transcript $tv will be undef
       if ($tv) {#} && ( scalar(@{ $tv->consequence_type }) > 0) ) {
 
-	next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
+	    next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
@@ -273,11 +276,20 @@ sub run {
 
   print STDERR "All done\n" if $DEBUG;
 
+  for my $transcript (@transcripts){
+    push @transcripts_output, {transcripts => $transcript->dbID}
+  }
+
+  # push @transcripts_output, {transcripts => \@teste};
+  $self->param('transcripts', @transcripts_output);
+
   return;
 }
 
 sub write_output {
   my $self = shift;
+  $self->dataflow_output_id($self->param('transcripts'), 2);
+  return;
 }
 
 sub dump_hgvs_var {
