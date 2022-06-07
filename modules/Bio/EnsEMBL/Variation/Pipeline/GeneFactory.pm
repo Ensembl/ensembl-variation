@@ -56,8 +56,24 @@ sub fetch_input {
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
     my @genes;
+    my @gene_output_ids; 
+    my $gene_count = 0;
 
-    if ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
+
+    if (-e $self->param('update_diff')){
+
+      my $file = $self->param('update_diff');
+      open (DIFF, $file) or die "Can't open file $file: $!";
+      while (<DIFF>){
+	      chomp;
+        next if /^transcript_id/;
+        my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
+        push @gene_output_ids, {
+          gene_stable_id  => $gene_id,
+        };
+      }
+
+    } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
        @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
 
@@ -70,9 +86,6 @@ sub fetch_input {
         # fetch the LRG genes as well
         push @genes, @{ $ga->fetch_all_by_biotype('LRG_gene') }
     }
-
-    my @gene_output_ids; 
-    my $gene_count = 0;
 
     for my $gene (@genes) {
       $gene_count++;
@@ -103,7 +116,7 @@ sub fetch_input {
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id($self->param('gene_output_ids'), 2);
+  $self->dataflow_output_id($self->param('gene_output_ids'), 1);
   return;
 }
 
