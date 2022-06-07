@@ -144,7 +144,10 @@ sub default_options {
         # these flags control which parts of the pipeline are run
         run_transcript_effect   => 1,
         run_variation_class     => 1,
+
+        # these flags control update running parts of pipeline
         update_run              => 0,
+        update_diff             => '',
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
@@ -226,12 +229,13 @@ sub pipeline_analyses {
             -parameters => {
               include_lrg => $self->o('include_lrg'),
               limit_biotypes => $self->o('limit_biotypes'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
             -flow_into => { 
               '2->A' => ['dump_variation_gene_name'], 
-              'A->1' => ['web_index_load'], 
+              'A->1' => ['web_index_load'],
             },
           },
           { -logic_name => 'dump_variation_gene_name',
@@ -284,6 +288,9 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
+            -flow_into => {
+              2 => {'update_variation_feature' => INPUT_PLUS},
+            },
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
@@ -299,6 +306,7 @@ sub pipeline_analyses {
             -rc_name   => 'medmem',
             -flow_into => {
               -1 => ['transcript_effect_highmem'],
+              2 => {'update_variation_feature' => INPUT_PLUS},
             },
           },
           { -logic_name => 'transcript_effect_highmem',
@@ -352,6 +360,7 @@ sub pipeline_analyses {
           { -logic_name => 'check_transcript_variation',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
             -parameters => {
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
