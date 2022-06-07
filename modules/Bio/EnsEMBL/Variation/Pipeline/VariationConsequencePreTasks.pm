@@ -151,7 +151,7 @@ sub write_output {
 
 ## check for out of date seq_regions in variation database
 ## human patches can change between releases. such differences break TranscriptEffect
-sub check_seq_region{
+sub check_seq_region {
 
    my $self = shift;
 
