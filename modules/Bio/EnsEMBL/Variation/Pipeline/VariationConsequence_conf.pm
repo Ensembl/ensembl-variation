@@ -146,7 +146,6 @@ sub default_options {
         run_variation_class     => 1,
 
         # these flags control update running parts of pipeline
-        update_run              => 0,
         update_diff             => '',
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
@@ -182,6 +181,14 @@ sub default_options {
     };
 }
 
+sub pipeline_wide_parameters {  # these parameter values are visible to all analyses, can be overridden by parameters{} and input_id{}
+    my ($self) = @_;
+    return {
+        %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
+
+        'update_diff'     => $self->o('update_diff'),
+    };
+}
 
 sub resource_classes {
     my ($self) = @_;
@@ -212,13 +219,13 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               sort_variation_feature => $self->o('sort_variation_feature'),
-              update_run => $self->o('update_run'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
             -flow_into => {
-              1 => ['gene_factory'],
-              2 => ['rebuild_tv_indexes'],
+              1 => ['gene_factory', 'check_transcript_variation'],
+              2 => WHEN('not #update_diff#' => 'web_index_load'),
             },
             -input_ids  => [{}],
           },
@@ -234,8 +241,7 @@ sub pipeline_analyses {
             },
             -rc_name   => 'default',
             -flow_into => { 
-              '2->A' => ['dump_variation_gene_name'], 
-              'A->1' => ['web_index_load'],
+              1 => ['dump_variation_gene_name'],
             },
           },
           { -logic_name => 'dump_variation_gene_name',
@@ -331,6 +337,9 @@ sub pipeline_analyses {
           },
           { -logic_name => 'web_index_load',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::LoadWebIndexFiles',
+            -flow_into => {
+              1 => ['rebuild_tv_indexes'],
+            },
             -parameters => {
               @common_params,
             },
@@ -342,7 +351,6 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
-            -wait_for => 'web_index_load',
             -flow_into => {
               1 => ['update_variation_feature'],
             },
@@ -353,14 +361,11 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
-            -flow_into => {
-              1 => ['check_transcript_variation']
-            },
           },
           { -logic_name => 'check_transcript_variation',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
+            -wait_for => 'update_variation_feature',
             -parameters => {
-              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
