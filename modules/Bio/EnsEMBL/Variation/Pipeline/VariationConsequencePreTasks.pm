@@ -61,7 +61,7 @@ sub fetch_input {
     }) if $self->param('sort_variation_feature');
 
 
-  unless ($self->param('update_run')){
+  unless (-e $self->param('update_diff')){
       # truncate the table because we don't want duplicates
       $dbc->do("TRUNCATE TABLE transcript_variation");
 
