@@ -43,12 +43,22 @@ use strict;
 
 use File::Path qw(make_path);
 use POSIX qw(strftime);
-use IO::Uncompress::Gunzip qw(gunzip);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Text::CSV;
+use File::Slurp;
+use IO::Compress::Gzip qw(gzip $GzipError);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
+
+my %input_files_url = (
+  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz',
+  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz',
+  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz',
+  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
+  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz',
+);
 
 sub fetch_input {
   my $self = shift;
@@ -83,17 +93,27 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
+
+
+
   #get input file DDG2P:
-  my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
+  
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
-  my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
+  my @gunzipped_files;
 
-  print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
-  my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $ddg2p_url -o $workdir/$file_ddg2p_gz} unless -e $workdir."/".$file_ddg2p_gz ;
-  print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
+  for (keys %input_files_url){
+    my $file = $dateStrURL.$_."csv.gz";
+    print $logFH "Found files (".$workdir."/".$file."), will skip new fetch\n" if -e $workdir."/".$file;
+    my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $input_files_url{$_} -o $workdir/$file} unless -e $workdir."/".$file;
+    print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
+    push (@gunzipped_files, $file);
+  }
+    
 
-  my $file_ddg2p = "DDG2P.csv";
-  gunzip $workdir."/".$file_ddg2p_gz => $workdir."/".$file_ddg2p;
+  my $file_ddg2p = "G2P.csv";
+  gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
+  or die "gunzip failed: $GunzipError\n";
+  
   $self->param('ddg2p_file', $file_ddg2p);
 }
 
