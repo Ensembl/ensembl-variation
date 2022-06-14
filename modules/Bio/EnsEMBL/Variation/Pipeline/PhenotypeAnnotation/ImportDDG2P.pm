@@ -99,22 +99,35 @@ sub fetch_input {
   #get input file DDG2P:
   
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
-  my @gunzipped_files;
+  my @unzipped_files;
 
   for (keys %input_files_url){
     my $file = $dateStrURL.$_."csv.gz";
     print $logFH "Found files (".$workdir."/".$file."), will skip new fetch\n" if -e $workdir."/".$file;
     my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $input_files_url{$_} -o $workdir/$file} unless -e $workdir."/".$file;
     print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
-    push (@gunzipped_files, $file);
-  }
     
-
-  my $file_ddg2p = "G2P.csv";
+  }
+  my $file_ddg2p = "G2P.txt";
   gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
   or die "gunzip failed: $GunzipError\n";
-  
-  $self->param('ddg2p_file', $file_ddg2p);
+
+   
+  my @rows;
+  my $g2p_csv =  "G2P.csv";
+  my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
+  foreach my $file (glob "$workdir/*.csv"){
+    open my $infile, "<:encoding(utf8)", $file;
+    while (my $row = $csv->getline ($infile)) {
+    push @rows, $row;
+    }
+    close $infile;
+  }
+  open my $fh, ">:encoding(utf8)", "$workdir/$g2p_csv";
+  $csv->say($fh, $_) for @rows;
+  close $fh or die "$workdir/$g2p_csv: $!";
+
+  $self->param('ddg2p_file', $g2p_csv);
 }
 
 sub run {
@@ -189,22 +202,22 @@ sub parse_input_file {
 
   my %headers;
 
-  my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
+  my $csv = Text::CSV->new ( { binary => 1, eol => $/, sep_char => ","} )  # should set binary attribute.
             || die ("Cannot use CSV: ".Text::CSV->error_diag ()."\n");
 
   # Get columns headers
   $csv->column_names ($csv->getline ($fh));
-
+  
   # Read through the file and parse out the desired fields
   while (my $content = $csv->getline_hr ($fh)) {
 
     # get data from the line
-    my $symbol  = $content->{'gene symbol'};
-    my $allelic = $content->{'allelic requirement'};
-    my $mode    = $content->{'mutation consequence'};
-    my $phen    = $content->{'disease name'};
-    my $id      = $content->{'disease mim'};
-    my @accns   = split/\;/,$content->{'phenotypes'};
+    my $symbol  = $content->{"gene symbol"};
+    my $allelic = $content->{"allelic requirement"};
+    my $mode    = $content->{"mutation consequence"};
+    my $phen    = $content->{"disease name"};
+    my $id      = $content->{"disease mim"};
+    my @accns   = split/\;/,$content->{"phenotypes"};
 
     if ($symbol && $phen) {
       $phen =~ s/\_/ /g;
