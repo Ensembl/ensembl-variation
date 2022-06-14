@@ -30,7 +30,7 @@ http://www.ensembl.org/info/docs/api/variation/variation_tutorial.html
 
 ## Contributions
 
-If you wish to contribute to this repository or any Ensembl repository, please refer to [our contribution guide](https://github.com/Ensembl/ensembl/blob/master/CONTRIBUTING.md).
+If you wish to contribute to this repository or any Ensembl repository, please refer to [our contribution guide](https://github.com/Ensembl/ensembl/blob/main/CONTRIBUTING.md).
 
 
 ## Contact us

@@ -79,14 +79,14 @@ for dep_repo in "${dep_repos[@]}"; do
 }}"
 
     # Make the request to trigger the build and get the ID of the request
-    dep_repo_master_build_request_id=`travis_api /repo/$dep_repo/requests -H 'Accept: application/json' -X POST -d "$body" | python3 -c "import sys, json; print(json.load(sys.stdin)['request']['id'])"`
-    echo "Build request ID: $dep_repo_master_build_request_id"
+    dep_repo_main_build_request_id=`travis_api /repo/$dep_repo/requests -H 'Accept: application/json' -X POST -d "$body" | python3 -c "import sys, json; print(json.load(sys.stdin)['request']['id'])"`
+    echo "Build request ID: $dep_repo_main_build_request_id"
 
     # Wait until request is approved or max amount of time has passed
     i=0
-    echo "Waiting for build request $dep_repo_master_build_request_id to be approved "
+    echo "Waiting for build request $dep_repo_main_build_request_id to be approved "
     build_request_approved=""
-    until travis_api /repo/$dep_repo/request/$dep_repo_master_build_request_id | grep -q '"result": "approved"'; do
+    until travis_api /repo/$dep_repo/request/$dep_repo_main_build_request_id | grep -q '"result": "approved"'; do
 	spin
 	sleep 5
 	
@@ -100,9 +100,9 @@ for dep_repo in "${dep_repos[@]}"; do
     endspin
     echo "Build request approved."
 
-    # Get the ID of the master build.
-    dep_repo_master_build_id=`travis_api /repo/$dep_repo/request/$dep_repo_master_build_request_id | python3 -c "import sys, json; print(json.load(sys.stdin)['builds'][0]['id'])"`
-    echo "Build on $dep_repo master branch created (ID: $dep_repo_master_build_id)"
+    # Get the ID of the main build.
+    dep_repo_main_build_id=`travis_api /repo/$dep_repo/request/$dep_repo_main_build_request_id | python3 -c "import sys, json; print(json.load(sys.stdin)['builds'][0]['id'])"`
+    echo "Build on $dep_repo main branch created (ID: $dep_repo_main_build_id)"
 
     # # Set the three environment variables needed, and capture their IDs so that they
     # # can be removed later.
@@ -112,9 +112,9 @@ for dep_repo in "${dep_repos[@]}"; do
     
     # Wait for the build to start using the new environment variables.
     i=0
-    printf "Waiting for build $dep_repo_master_build_id to start  "
+    printf "Waiting for build $dep_repo_main_build_id to start  "
     build_started=""
-    until travis_api /build/$dep_repo_master_build_id | grep -q '"state": "started"'; do
+    until travis_api /build/$dep_repo_main_build_id | grep -q '"state": "started"'; do
 	spin
 	sleep 5
 	
@@ -127,7 +127,7 @@ for dep_repo in "${dep_repos[@]}"; do
 	fi
     done
     endspin
-    echo "Build $dep_repo_master_build_id $build_started started"
+    echo "Build $dep_repo_main_build_id $build_started started"
 
     # Remove all of the environment variables set above. This does mean that if this
     # script is terminated for whatever reason, these will need to be cleaned up
