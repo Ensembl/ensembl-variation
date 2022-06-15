@@ -70,7 +70,13 @@ sub fetch_input {
         my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
         push @gene_output_ids, {
           gene_stable_id  => $gene_id,
-        };
+        } if $status ne "deleted";
+
+        # Remove deleted transcripts
+        $dbc->do(qq{
+              DELETE FROM  transcript_variation
+              WHERE   feature_stable_id = "$transcript_id"
+        }) if $status eq "deleted";
       }
 
     } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
