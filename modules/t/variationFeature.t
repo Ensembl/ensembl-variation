@@ -363,7 +363,7 @@ ok($spdi_notation_9->{'CA'} eq '11:66321302:TG:CA', 'SPDI genomic valid indel');
 my $var10 = $va->fetch_by_name('rs1480172069');
 my $vf10_spdi = $var10->get_all_VariationFeatures()->[0];
 my $spdi_notation_10 = $vf10_spdi->spdi_genomic();
-ok($spdi_notation_10->{'-'} eq '12:48835629:ATTT:', 'SPDI genomic valid deletion - reverse strand'); 
+ok($spdi_notation_10->{'-'} eq '19:48835629:ATTT:', 'SPDI genomic valid deletion - reverse strand'); 
 my $var11 = $va->fetch_by_name('rs1321600644');
 my $vf11_spdi = $var11->get_all_VariationFeatures()->[0];
 my $spdi_notation_11 = $vf11_spdi->spdi_genomic();
