@@ -1726,8 +1726,7 @@ sub hgvs_protein {
   }
 
   ##### String formatting
-  my $hgvs_notation_output = $self->_get_hgvs_protein_format($hgvs_notation);
-  return $hgvs_notation_output;
+  return $self->_get_hgvs_protein_format($hgvs_notation);
 }
 
 
