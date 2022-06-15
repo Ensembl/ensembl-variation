@@ -48,8 +48,7 @@ my $DEBUG   = 0;
 sub run {
   my $self = shift;
 
-  my $disambiguate_sn_alleles = 
-    $self->param('disambiguate_single_nucleotide_alleles');
+  my $disambiguate_sn_alleles = $self->param('disambiguate_single_nucleotide_alleles');
   my $mtmp = $self->param('mtmp_table');
   my $max_distance = $self->param('max_distance');
   my $by_transcript = ($self->param('analysis') eq 'by_transcript') ? 1 : 0;
@@ -72,6 +71,8 @@ sub run {
 
   my $var_dba = $self->get_species_adaptor('variation');
   $var_dba->dbc->reconnect_when_lost(1);
+
+  my $dbc = $var_dba->dbc();
   
   my $sa = $core_dba->get_SliceAdaptor;
   
@@ -181,6 +182,18 @@ sub run {
 
 	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
+        if (-e $self->param('update_diff')){
+
+          my $vf_id = $vf->dbID();
+
+          push @transcripts_output, {transcripts => $vf_id};
+
+          $dbc->do(qq{
+              DELETE FROM  transcript_variation
+              WHERE   variation_feature_id = $vf_id
+              });
+        }
+
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
         
@@ -219,7 +232,6 @@ sub run {
       
         ## populate tables for website index building
         my $var_id = $vf->get_Variation_dbID();
-        push @transcripts_output, {transcripts => $vf->dbID()};
 
         for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
 
