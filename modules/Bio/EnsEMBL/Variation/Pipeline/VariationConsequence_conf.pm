@@ -144,6 +144,7 @@ sub default_options {
         # these flags control which parts of the pipeline are run
         run_transcript_effect   => 1,
         run_variation_class     => 1,
+        update_run              => 0,
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
@@ -208,6 +209,7 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               sort_variation_feature => $self->o('sort_variation_feature'),
+              update_run => $self->o('update_run'),
               @common_params,
             },
             -rc_name   => 'default',
