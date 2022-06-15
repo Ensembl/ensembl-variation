@@ -360,6 +360,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'update_variation_feature',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+            -analysis_capacity => 100,
             -parameters => {
               @common_params,
             },
@@ -367,7 +368,7 @@ sub pipeline_analyses {
           },
           { -logic_name => 'check_transcript_variation',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
-            -wait_for => ['by_gene_transcript_effect', 'finish_transcript_effect', 'update_variation_feature'],
+            -wait_for => ['by_gene_transcript_effect', 'update_variation_feature'],
             -parameters => {
               @common_params,
             },
