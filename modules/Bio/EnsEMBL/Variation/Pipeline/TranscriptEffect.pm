@@ -179,7 +179,7 @@ sub run {
       # if the variation has no effect on the transcript $tv will be undef
       if ($tv) {#} && ( scalar(@{ $tv->consequence_type }) > 0) ) {
 
-	    next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
+	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
@@ -219,6 +219,7 @@ sub run {
       
         ## populate tables for website index building
         my $var_id = $vf->get_Variation_dbID();
+        push @transcripts_output, {transcripts => $vf->dbID()};
 
         for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
 
@@ -276,12 +277,7 @@ sub run {
 
   print STDERR "All done\n" if $DEBUG;
 
-  for my $transcript (@transcripts){
-    push @transcripts_output, {transcripts => $transcript->dbID}
-  }
-
-  # push @transcripts_output, {transcripts => \@teste};
-  $self->param('transcripts', @transcripts_output);
+  $self->param('transcripts', \@transcripts_output);
 
   return;
 }
