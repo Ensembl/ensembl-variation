@@ -68,12 +68,12 @@ sub fetch_input {
 
   $self->debug($self->param('debug_mode'));
 
-  %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
-                  source_url => 'https://decipher.sanger.ac.uk/',
+  %source_info = (source_description => 'Genotype-to-Phenotype Database',
+                  source_url => 'https://www.ebi.ac.uk/gene2phenotype',
                   object_type => 'Gene',
                   source_status => 'germline',
-                  source_name => 'DDG2P',       #source name in the variation db
-                  source_name_short => 'DDG2P', #source identifier in the pipeline
+                  source_name => 'G2P',       #source name in the variation db
+                  source_name_short => 'G2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
                   data_types        => 'phenotype_feature',
                   );
@@ -216,7 +216,8 @@ sub parse_input_file {
     my $allelic = $content->{"allelic requirement"};
     my $mode    = $content->{"mutation consequence"};
     my $phen    = $content->{"disease name"};
-    my $id      = $content->{"disease mim"};
+    my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
+    my @pubmeds = split/\;/,$content->{"pmids"};
     my @accns   = split/\;/,$content->{"phenotypes"};
 
     if ($symbol && $phen) {
@@ -243,13 +244,14 @@ sub parse_input_file {
         push @phenotypes, {
           'id' => $gene->stable_id,
           'description' => $phen,
-          'external_id' => $id,
+          'MIM' => $id,
           'seq_region_id' => $gene->slice->get_seq_region_id,
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
           'seq_region_strand' => $gene->seq_region_strand,
           'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
+          'pubmed_id' => \@pubmeds,
           'accessions' => \@accns,
           ontology_mapping_type =>'involves' 
         };
