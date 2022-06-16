@@ -2070,7 +2070,9 @@ sub spdi_genomic{
   my $vf_strand = $self->strand();
 
   # set up sequence reference
-  my $syn = $ref_slice->get_all_synonyms('RefSeq_genomic');
+  # Quick fix to spdi flag works, needs to be investigated
+  # my syn = $ref_slice->get_all_synonyms('RefSeq_genomic');
+  my $syn = ();
   my $reference_name = (defined $syn->[0] ? $syn->[0]->name() : $self->seq_region_name());
 
   my @all_alleles = split(/\//,$self->allele_string());
