@@ -72,8 +72,8 @@ sub fetch_input {
                   source_url => 'https://www.ebi.ac.uk/gene2phenotype',
                   object_type => 'Gene',
                   source_status => 'germline',
-                  source_name => 'G2P',       #source name in the variation db
-                  source_name_short => 'G2P', #source identifier in the pipeline
+                  source_name => 'DDG2P',       #source name in the variation db
+                  source_name_short => 'DDG2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
                   data_types        => 'phenotype_feature',
                   );
@@ -108,15 +108,17 @@ sub fetch_input {
     print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
     
   }
-  my $file_ddg2p = "G2P.txt";
-  gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
-  or die "gunzip failed: $GunzipError\n";
+
+  
+  #my $file_ddg2p = "G2P.txt";
+  #gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
+  #or die "gunzip failed: $GunzipError\n";
 
    
   my @rows;
   my $g2p_csv =  "G2P.csv";
   my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
-  foreach my $file (glob "$workdir/*.csv"){
+  foreach my $file (glob "$workdir/*csv.gz"){
     open my $infile, "<:encoding(utf8)", $file;
     while (my $row = $csv->getline ($infile)) {
     push @rows, $row;
@@ -217,8 +219,9 @@ sub parse_input_file {
     my $mode    = $content->{"mutation consequence"};
     my $phen    = $content->{"disease name"};
     my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
-    my @pubmeds = split/\;/,$content->{"pmids"};
     my @accns   = split/\;/,$content->{"phenotypes"};
+    my @pubmeds   = split/\;/,$content->{"pmids"};
+  
 
     if ($symbol && $phen) {
       $phen =~ s/\_/ /g;
@@ -251,7 +254,7 @@ sub parse_input_file {
           'seq_region_strand' => $gene->seq_region_strand,
           'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
-          'pubmed_id' => \@pubmeds,
+          'pubmed_id'  => @pubmeds,
           'accessions' => \@accns,
           ontology_mapping_type =>'involves' 
         };
