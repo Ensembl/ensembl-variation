@@ -279,10 +279,12 @@ sub configure {
 		
 		# set skip tables
 		foreach my $table(split /\,/, $config->{skip_tables}) {
-			$tables->{$table} = 0 if defined($tables->{$table});
+			$tables{$table} = 0 if (exists $tables{$table});
 		}
 	}
 	
+
+
 	# force some back in
 	$tables->{$_} = 1 for qw/source meta_coord/;
 	
