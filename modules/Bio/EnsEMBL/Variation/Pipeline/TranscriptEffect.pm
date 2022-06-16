@@ -72,6 +72,8 @@ sub run {
   my $var_dba = $self->get_species_adaptor('variation');
   $var_dba->dbc->reconnect_when_lost(1);
 
+  my $dbc = $var_dba->dbc();
+
   my $sa = $core_dba->get_SliceAdaptor;
   
   my $tva = $var_dba->get_TranscriptVariationAdaptor;
@@ -157,6 +159,7 @@ sub run {
     
     my $biotype = $transcript->biotype;
     my $is_mane = $transcript->is_mane();
+    my $stable_id = $transcript->stable_id;
 
     for my $vf(@vfs) {
 
@@ -180,7 +183,19 @@ sub run {
 
 	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
-        push @transcripts_output, {transcripts => $vf->dbID()} if (-e $self->param('update_diff'));
+        if (-e $self->param('update_diff')){
+
+          my $vf_id = $vf->dbID();
+
+          push @transcripts_output, {transcripts => $vf_id};
+
+          $dbc->do(qq{
+                DELETE FROM  transcript_variation
+                WHERE   variation_feature_id = $vf_id
+                AND     feature_stable_id = "$stable_id"
+          });
+
+        }
 
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
