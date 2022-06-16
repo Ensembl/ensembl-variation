@@ -183,6 +183,8 @@ sub run {
 
 	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
+        # In update-mode, this should add transcripts that will be updated
+        # and delete from transcript_variation table updated transcripts (avoid duplication)
         if (-e $self->param('update_diff')){
 
           my $vf_id = $vf->dbID();
