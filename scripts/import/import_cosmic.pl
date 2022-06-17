@@ -415,14 +415,15 @@ sub insert_cosmic_entries {
 
     my $slice = $slice_adaptor->fetch_by_region('chromosome', $seq_region_name);
 
-    # # Create variation feature
+    # Create variation feature
+    # The map_weight is the number of times this feature variation was mapped to the genome.
     my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
       (-start           => $var_tmp->[2],
        -end             => $var_tmp->[3],
        -strand          => 1,
        -slice           => $slice,
        -variation_name  => $var_tmp->[0],
-       -map_weight      => 0,
+       -map_weight      => 1,
        -allele_string   => $allele,
        -variation       => $var,
        -source          => $source_obj,
@@ -472,10 +473,16 @@ sub insert_cosmic_entries {
                                                    SET consequence_types = ?
                                                    WHERE variation_feature_id = ?
                                                  ]);
-      # print "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
       $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
     }
   }
+
+  # Update variation_set in variation_feature table
+  my $vf_set_upd_sth = $dbh->prepare(qq[ UPDATE variation_feature
+                                         SET variation_set_id = '$variation_set_cosmic,$variation_set_pheno'
+                                         WHERE source_id = $source_id
+                                       ]);
+  $vf_set_upd_sth->execute() || die "Error updating variation_set_id in variation_feature\n";
 
   # Insert variation synonym
   my $stmt_vs = qq{INSERT IGNORE INTO variation_synonym
