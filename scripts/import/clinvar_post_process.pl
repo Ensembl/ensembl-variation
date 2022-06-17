@@ -231,6 +231,7 @@ sub update_variation{
 	$assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
       $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+      $l->[1]  =~ s/\;\s+/\,/g ; # convert 'uncertain significance; risk factor' to 'uncertain significance,risk factor'
       $l->[1]  =~ s/\,\s+/\,/g ; # convert 'likely benign, other' to 'likely benign,other' or 'benign, association, risk factor' to 'benign,association,risk factor'
       #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
         #for the purpose of variation, variation_feature clin_sig entry
