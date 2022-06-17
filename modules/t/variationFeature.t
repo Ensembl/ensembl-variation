@@ -343,35 +343,35 @@ ok($mfvs->[0]->feature_stable_id eq 'ENSR00000636355', 'get_all_MotifFeatureVari
 # test spdi genomic
 # To do: SPDI annotation should be updated from chrom number to synonym, i.e: 13 -> NC_000013.10
 my $spdi_notation_3 = $vf3->spdi_genomic();
-ok($spdi_notation_3->{'T'} eq '13:32954008:C:T', 'SPDI genomic valid substitution - alt allele 1');
-ok($spdi_notation_3->{'G'} eq '13:32954008:C:G', 'SPDI genomic valid substitution - alt allele 2');
+ok($spdi_notation_3->{'T'} eq 'NC_000013.10:32954008:C:T', 'SPDI genomic valid substitution - alt allele 1');
+ok($spdi_notation_3->{'G'} eq 'NC_000013.10:32954008:C:G', 'SPDI genomic valid substitution - alt allele 2');
 my $var7 = $va->fetch_by_name('rs35370278');
 my $vf7_spdi = $var7->get_all_VariationFeatures()->[0];
 my $spdi_notation_7 = $vf7_spdi->spdi_genomic();
-ok($spdi_notation_7->{'-'} eq '11:66315558:G:', 'SPDI genomic valid deletion');
+ok($spdi_notation_7->{'-'} eq 'NC_000011.9:66315558:G:', 'SPDI genomic valid deletion');
 my $spdi_notation_7_ref_allele = $vf7_spdi->spdi_genomic(1);
-ok($spdi_notation_7_ref_allele->{'G'} eq '11:66315558:G:G', 'SPDI genomic valid deletion - ref allele');
+ok($spdi_notation_7_ref_allele->{'G'} eq 'NC_000011.9:66315558:G:G', 'SPDI genomic valid deletion - ref allele');
 throws_ok {$vf7_spdi->spdi_genomic(2); } qr/Include reference allele must be a numeric value '1' or '0'./, 'Throw invalid input'; 
 my $var8 = $va->fetch_by_name('rs370045702');
 my $vf8_spdi = $var8->get_all_VariationFeatures()->[0];
 my $spdi_notation_8 = $vf8_spdi->spdi_genomic();
-ok($spdi_notation_8->{'AA'} eq '11:66317203::AA', 'SPDI genomic valid insertion');
+ok($spdi_notation_8->{'AA'} eq 'NC_000011.9:66317203::AA', 'SPDI genomic valid insertion');
 my $var9 = $va->fetch_by_name('rs35794957');
 my $vf9_spdi = $var9->get_all_VariationFeatures()->[0];
 my $spdi_notation_9 = $vf9_spdi->spdi_genomic();
-ok($spdi_notation_9->{'CA'} eq '11:66321302:TG:CA', 'SPDI genomic valid indel');
+ok($spdi_notation_9->{'CA'} eq 'NC_000011.9:66321302:TG:CA', 'SPDI genomic valid indel');
 my $var10 = $va->fetch_by_name('rs1480172069');
 my $vf10_spdi = $var10->get_all_VariationFeatures()->[0];
 my $spdi_notation_10 = $vf10_spdi->spdi_genomic();
-ok($spdi_notation_10->{'-'} eq '19:48835629:ATTT:', 'SPDI genomic valid deletion - reverse strand'); 
+ok($spdi_notation_10->{'-'} eq 'NC_000019.9:48835629:ATTT:', 'SPDI genomic valid deletion - reverse strand'); 
 my $var11 = $va->fetch_by_name('rs1321600644');
 my $vf11_spdi = $var11->get_all_VariationFeatures()->[0];
 my $spdi_notation_11 = $vf11_spdi->spdi_genomic();
-ok($spdi_notation_11->{'-'} eq '12:101997654:25:', 'SPDI genomic valid deletion >20 bp'); 
+ok($spdi_notation_11->{'-'} eq 'NC_000012.11:101997654:25:', 'SPDI genomic valid deletion >20 bp'); 
 my $var12 = $va->fetch_by_name('rs8192742');
 my $vf12_spdi = $var12->get_all_VariationFeatures()->[0];
 my $spdi_notation_12 = $vf12_spdi->spdi_genomic();
-ok($spdi_notation_12->{'TTTTTTTTTT'} eq '13:76134860:TTTTTTTTT:TTTTTTTTTT', 'SPDI tandem repeat');
+ok($spdi_notation_12->{'TTTTTTTTTT'} eq 'NC_000013.10:76134860:TTTTTTTTT:TTTTTTTTTT', 'SPDI tandem repeat');
 
 #test deprecated methods
 print "\n## Test deprecated methods ##\n";
