@@ -24,21 +24,24 @@ use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
-my ( $infile, $registry_file, $version, $help );
+my ( $infile, $registry_file, $version, $help, $index, $force );
 
 GetOptions(
   "import|i=s"   => \$infile,
   "registry|r=s" => \$registry_file,
   "version=s"    => \$version,
   "help|h"       => \$help,
+  "index=s"      => \$index,
+  "force|f"      => \$force,
 );
 
+$index = "" unless defined($index);
 unless (defined($registry_file) && defined($infile) && defined($version)) {
-    print "Must supply an import file, a registry file and a version ...\n" unless $help;
+    warn "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
 }
 if ($help) {
-    print "Usage: $0 --import <input_file> --registry <reg_file> --version <cosmic_version>\n";
+    warn "Usage: $0 --import <input_file> --registry <reg_file> --version <cosmic_version>\n";
     exit(0);
 }
 
@@ -71,9 +74,9 @@ my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'tumour');
 
-my $temp_table      = 'MTMP_tmp_cosmic';
-my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype';
-my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym';
+my $temp_table      = 'MTMP_tmp_cosmic' . $index;
+my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype' . $index;
+my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym' . $index;
 
 my $default_class = 'sequence_alteration'; 
 my %class_mapping = ( 'Substitution' => 'SNV',
@@ -86,10 +89,14 @@ my $default_strand = 1;
 my $somatic = 1;
 my $allele  = 'COSMIC_MUTATION';
 my $phe_suffix = 'tumour';
-  
-$dbVar->do("DROP TABLE IF EXISTS $temp_table;");
-$dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
-$dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
+
+if ($force) {
+    $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
+    $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
+    $dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
+}
+
+warn "Creating $temp_table table...\n";
   
 my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i');
 create($dbVar, "$temp_table", @cols);
@@ -120,6 +127,7 @@ my $cosmic_ins_stmt = qq{
         ?
       )
 };
+warn "Preparing $temp_table table...\n";
 my $cosmic_ins_sth = $dbh->prepare($cosmic_ins_stmt);
 
 my $cosmic_phe_ins_stmt = qq{
@@ -133,6 +141,7 @@ my $cosmic_phe_ins_stmt = qq{
         ?
       )
 };
+warn "Preparing $temp_phen_table table...\n";
 my $cosmic_phe_ins_sth = $dbh->prepare($cosmic_phe_ins_stmt);
 
 my $cosmic_syn_ins_stmt = qq{
@@ -146,10 +155,17 @@ my $cosmic_syn_ins_stmt = qq{
         ?
       )
 };
+
+warn "Preparing $temp_varSyn_table table...\n";
 my $cosmic_syn_ins_sth = $dbh->prepare($cosmic_syn_ins_stmt);
 
+warn "Getting class attribute ids...\n";
 my $class_attrib_ids = get_class_attrib_ids();
+
+warn "Getting seq region ids...\n";
 my $seq_region_ids   = get_seq_region_ids();
+
+warn "Getting phenotype ids...\n";
 my $phenotype_ids    = get_phenotype_ids();
 
 my %chr_names = ( '23' => 'X',
@@ -170,7 +186,7 @@ my $csvP = Text::CSV->new({ sep_char => ',' });
 while (<IN>) {
   chomp;
   if (!$csvP->parse($_)){
-    print STDERR "WARNING: could not parse line: $_\n";
+    warn "WARNING: could not parse line: $_\n";
     next;
   }
   my @line = $csvP->fields();
@@ -192,7 +208,7 @@ while (<IN>) {
   my $seq_region_id = $seq_region_ids->{$chr};
 
   if (!$seq_region_id) {
-    print STDERR "COSMIC $cosmic_id: chromosome '$chr' not found in ensembl. Entry skipped.\n";
+    warn "COSMIC $cosmic_id: chromosome '$chr' not found in ensembl. Entry skipped.\n";
     next;
   }
 
@@ -224,7 +240,7 @@ while (<IN>) {
     
     if (!$phenotype_id) {
       $phenotype_id = add_phenotype($phenotype);
-      print STDERR "COSMIC $cosmic_id: phenotype '$phenotype' not found in ensembl. Phenotype added.\n";
+      warn "COSMIC $cosmic_id: phenotype '$phenotype' not found in ensembl. Phenotype added.\n";
     }
     
     $cosmic_phe_ins_sth->bind_param(1,$cosv_id,SQL_VARCHAR);
@@ -237,6 +253,7 @@ $cosmic_ins_sth->finish();
 $cosmic_phe_ins_sth->finish();
 $cosmic_syn_ins_sth->finish();
 
+warn "Inserting COSMIC entries...\n";
 # Insert COSMIC in the latest release which are not in COSMIC 71
 insert_cosmic_entries();
 
@@ -473,6 +490,7 @@ sub insert_cosmic_entries {
                                                    SET consequence_types = ?
                                                    WHERE variation_feature_id = ?
                                                  ]);
+      # warn "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
       $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
     }
   }
@@ -485,6 +503,7 @@ sub insert_cosmic_entries {
   $vf_set_upd_sth->execute() || die "Error updating variation_set_id in variation_feature\n";
 
   # Insert variation synonym
+  warn "Inserting variation synonyms...\n";
   my $stmt_vs = qq{INSERT IGNORE INTO variation_synonym
                    (variation_id, source_id, name)
                    SELECT v.variation_id, v.source_id, c.old_name
@@ -493,6 +512,7 @@ sub insert_cosmic_entries {
   $sth_vs->execute();
 
   # Insert PF
+  warn "Inserting phenotype features...\n";
   my $stmt_pf = qq{INSERT IGNORE INTO phenotype_feature 
                    (object_id, type, source_id, phenotype_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
                    SELECT v.name, "Variation", v.source_id, pc.phenotype_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
@@ -501,6 +521,7 @@ sub insert_cosmic_entries {
   $sth_pf->execute($default_strand);
   
   # Insert Set
+  warn "Inserting variation sets...\n";
   my $stmt_set = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
