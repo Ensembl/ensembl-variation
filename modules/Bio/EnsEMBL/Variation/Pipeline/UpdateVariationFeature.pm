@@ -43,28 +43,6 @@ sub run {
     my $dbc = $var_dba->dbc;
     my $dbh = $dbc->db_handle;
 
-    if (defined($self->required_param('transcripts'))){
-
-        my $transcript = $self->required_param('transcripts');
-
-        my $sth = $dbh->prepare("select GROUP_CONCAT(DISTINCT(consequence_types)) from transcript_variation where variation_feature_id = $transcript");
-        $sth->execute();
-
-        my $consequence_type;
-
-        while (my @row = $sth->fetchrow_array) {
-            my $consequence_type = $row[0];
-        }
-
-        $dbc->do(qq{
-            UPDATE  variation_feature
-            SET     consequence_types = $consequence_type
-            WHERE   variation_feature_id = $transcript
-        }) if defined($consequence_type);
-
-        return;
-
-    }
     
     # first set the default consequence type
 

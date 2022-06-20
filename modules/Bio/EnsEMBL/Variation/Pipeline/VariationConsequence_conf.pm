@@ -224,8 +224,7 @@ sub pipeline_analyses {
             },
             -rc_name   => 'default',
             -flow_into => {
-              1 => ['gene_factory', 'check_transcript_variation'],
-              2 => WHEN('not #update_diff#' => 'web_index_load'),
+              1 => ['gene_factory'],
             },
             -input_ids  => [{}],
           },
@@ -241,7 +240,8 @@ sub pipeline_analyses {
             },
             -rc_name   => 'default',
             -flow_into => { 
-              1 => ['dump_variation_gene_name'],
+              '2->A' => ['dump_variation_gene_name'], 
+              'A->1' => ['web_index_load'], 
             },
           },
           { -logic_name => 'dump_variation_gene_name',
@@ -295,9 +295,6 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
-            -flow_into => {
-              2 => {'update_variation_feature' => INPUT_PLUS},
-            },
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
@@ -314,7 +311,6 @@ sub pipeline_analyses {
             -rc_name   => 'medmem',
             -flow_into => {
               -1 => ['transcript_effect_highmem'],
-              2 => {'update_variation_feature' => INPUT_PLUS},
             },
           },
           { -logic_name => 'transcript_effect_highmem',
@@ -365,10 +361,12 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
+            -flow_into => {
+              1 => ['check_transcript_variation']
+            },
           },
           { -logic_name => 'check_transcript_variation',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
-            -wait_for => ['by_gene_transcript_effect', 'update_variation_feature'],
             -parameters => {
               @common_params,
             },

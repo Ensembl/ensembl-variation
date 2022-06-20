@@ -122,7 +122,7 @@ sub fetch_input {
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id($self->param('gene_output_ids'), 1);
+  $self->dataflow_output_id($self->param('gene_output_ids'), 2);
   return;
 }
 

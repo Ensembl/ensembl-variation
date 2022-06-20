@@ -294,14 +294,11 @@ sub run {
 
   print STDERR "All done\n" if $DEBUG;
 
-  $self->param('transcripts', \@transcripts_output);
-
   return;
 }
 
 sub write_output {
   my $self = shift;
-  $self->dataflow_output_id($self->param('transcripts'), 2);
   return;
 }
 
