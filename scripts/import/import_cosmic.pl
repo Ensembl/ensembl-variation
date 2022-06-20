@@ -392,7 +392,7 @@ sub insert_cosmic_entries {
   my @evidence_list;
   push @evidence_list, $phenotype_evidence;
 
-  # Transcript variation - biotypes to skip
+  # MTMP transcript variation - biotypes to skip
   my %biotypes_to_skip = (
     'lncRNA' => 1,
     'processed_pseudogene' => 1,
@@ -421,7 +421,16 @@ sub insert_cosmic_entries {
         -evidence          => \@evidence_list,
       );
 
-    $variation_adaptor->store($var);
+    my $skip_var;
+    if($var_tmp->[0] eq 'COSV67297583') {
+      my $tmp_var = $variation_adaptor->fetch_by_name($var_tmp->[0]);
+      if($tmp_var) {
+        $var = $tmp_var;
+	$skip_var = 1;
+      }
+    }
+
+    $variation_adaptor->store($var) unless $skip_var;
 
     # my $slice = $slice_adaptor->fetch_by_dbID($var_tmp->[1]);
     my $sth_seq_region = $dbh->prepare(qq{ SELECT name from seq_region WHERE seq_region_id = ?
@@ -457,13 +466,13 @@ sub insert_cosmic_entries {
     foreach my $tv (@{$all_tv}) {
       # Do not include upstream and downstream consequences
       next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
-      # only include valid biotypes
-      my $biotype = $tv->transcript->biotype;
-      next if($biotypes_to_skip{$biotype});
 
+      # only include valid biotypes in MTMP_transcript_variation
+      my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
       # write to MTMP table if transcript is MANE (GRCh38)
       # add check if assembly is GRCh37
-      my $mtmp = $tv->transcript->is_mane ? 1 : 0;
+      my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+      my $mtmp = $write_mane && $write_biotype;
       $tva->store($tv, $mtmp);
     }
 
