@@ -49,7 +49,7 @@ GetOptions(
      'output_dir|o=s'  => \$output_dir,
      'force|f'         => \$force,
      'quiet|q'         => \$quiet,
-     "species|s=s"       => \$species,
+     "species|s=s"     => \$species,
      'v=s'             => \$e_version,
      'user|u=s'        => \$user,
      'hname=s'         => \$hname,
@@ -99,8 +99,8 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
 
   next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i &&
-           $dbname !~ /ovis_aries_rambouillet_variation_\d+_\d+$/ &&
-           $dbname !~ /canis_lupus_familiaris_variation_\d+_\d+$/ );
+           $dbname !~ /^ovis_aries_rambouillet_variation_\d+_\d+$/ &&
+           $dbname !~ /^canis_lupus_familiaris(boxer)?_variation_\d+_\d+$/ &&
 
   $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
