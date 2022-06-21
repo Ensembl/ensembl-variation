@@ -183,21 +183,17 @@ sub run {
 
 	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
+        my $vf_id = $vf->dbID();
+
+        $dbc->do(qq{
+              DELETE FROM  transcript_variation
+              WHERE   variation_feature_id = $vf_id
+              AND     feature_stable_id = "$stable_id"
+        });
+
         # In update-mode, this should add transcripts that will be updated
         # and delete from transcript_variation table updated transcripts (avoid duplication)
-        if (-e $self->param('update_diff')){
-
-          my $vf_id = $vf->dbID();
-
-          push @transcripts_output, {transcripts => $vf_id};
-
-          $dbc->do(qq{
-                DELETE FROM  transcript_variation
-                WHERE   variation_feature_id = $vf_id
-                AND     feature_stable_id = "$stable_id"
-          });
-
-        }
+        push @transcripts_output, {transcripts => $vf_id} if (-e $self->param('update_diff'));
 
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
