@@ -229,7 +229,7 @@ sub run {
           my $write_mtmp = ($is_human && $is_mane) || !$is_human ? 1 : 0;
           
           unless($biotypes_to_skip{$biotype} || !$write_mtmp){
-          print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
+            print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
         }
 
