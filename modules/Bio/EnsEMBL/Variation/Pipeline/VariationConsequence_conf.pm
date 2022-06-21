@@ -247,6 +247,7 @@ sub pipeline_analyses {
           { -logic_name => 'dump_variation_gene_name',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -parameters => {
               @common_params,
             },
@@ -285,6 +286,7 @@ sub pipeline_analyses {
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
@@ -299,6 +301,7 @@ sub pipeline_analyses {
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
@@ -316,6 +319,7 @@ sub pipeline_analyses {
           { -logic_name => 'transcript_effect_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -rc_name => 'highmem',
             -parameters => {
