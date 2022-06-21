@@ -232,6 +232,9 @@ sub run {
           print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
         }
+
+        next if (-e $self->param('update_diff'));
+
         ## end block
 
       
