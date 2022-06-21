@@ -146,7 +146,7 @@ sub default_options {
         run_variation_class     => 1,
 
         # these flags control update running parts of pipeline
-        update_diff             => '',
+        update_diff             => undef,
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
