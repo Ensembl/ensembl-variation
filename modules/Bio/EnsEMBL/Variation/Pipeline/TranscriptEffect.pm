@@ -215,6 +215,13 @@ sub run {
         print $tv_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$data;
 
         if($mtmp) {
+
+          $dbc->do(qq{
+              DELETE FROM  MTMP_transcript_variation
+              WHERE   variation_feature_id = $vf_id
+              AND     feature_stable_id = "$stable_id"
+          });
+
           my $mtmp_data = $tva->_get_mtmp_write_data_from_tv_write_data($data);
           my $mtmp_fh = $files->{MTMP_transcript_variation}->{fh};
           

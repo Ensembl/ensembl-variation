@@ -89,7 +89,7 @@ sub fetch_input {
     my @rebuild = qw(transcript_variation variation_hgvs);
 
       # set up MTMP table
-    if($mtmp) {
+    if($mtmp && !-e $self->param('update_diff')) {
         my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
         my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
 
