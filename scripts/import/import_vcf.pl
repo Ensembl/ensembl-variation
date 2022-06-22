@@ -141,14 +141,15 @@ sub configure {
 		'add_tables=s',
 		
 		'only_existing',
-    'no_merge',
+    	'no_merge',
 		'skip_n',
 		'mart_genotypes',
 		
 		'create_name',
 		'chrom_regexp=s',
 		'force_no_var',
-    'ss_ids',
+    	'ss_ids',
+		'chrom_naming',
 		
 		'fork=i',
 		'test=i',
@@ -279,7 +280,7 @@ sub configure {
 		
 		# set skip tables
 		foreach my $table(split /\,/, $config->{skip_tables}) {
-			$tables{$table} = 0 if (exists $tables{$table});
+			$tables->{$table} = 0 if (exists $tables->{$table});
 		}
 	}
 	
@@ -1673,18 +1674,29 @@ sub get_seq_region_ids{
 	my $sth = $dbVar->prepare(qq{SELECT seq_region_id, name FROM seq_region});
 	$sth->execute;
 	$sth->bind_columns(\$seq_region_id, \$chr_name);
-	$seq_region_ids{$chr_name} = $seq_region_id while $sth->fetch;
+    $seq_region_ids{$chr_name} = $seq_region_id while $sth->fetch;
 	$sth->finish;
 	
 	if(defined($config->{test})) {
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
 	}
-	
+    
+	if(defined($config->{chrom_naming})) {
+	  my @chr_name = keys %seq_region_ids;
+	  foreach my $chr (@chr_name){
+        my $chrom_name = "chr".$chr;
+		$seq_region_ids{$chrom_name} = $seq_region_ids{$chr};
+		delete $seq_region_ids{$chr};
+	  }
+	}
+
+	use Data::Dumper;
+	print Dumper (\%seq_region_ids);
 	return \%seq_region_ids;
 }
 
 
-
+ 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
 	my $config = shift;
