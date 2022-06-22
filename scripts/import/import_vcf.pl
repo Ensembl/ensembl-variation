@@ -52,6 +52,7 @@ use Socket;
 use IO::Handle;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
+use List::Util qw(any);
 use ImportUtils qw(load);
 use Digest::MD5 qw(md5_hex);
 use Cwd 'abs_path';
@@ -764,9 +765,12 @@ sub main {
       # ssIDs as IDs?
       if(defined($config->{ss_ids})) {
         my ($ss_id) = grep {$_ =~ /^\d+$/} split(/\;/, $data->{ID});
+		use Data::Dumper;
+		print Dumper ($ss_id);
         
         if(defined($ss_id)) {
           $data->{SS_ID} = $ss_id;
+		  
         }
       }
 			
@@ -1690,8 +1694,6 @@ sub get_seq_region_ids{
 	  }
 	}
 
-	use Data::Dumper;
-	print Dumper (\%seq_region_ids);
 	return \%seq_region_ids;
 }
 
@@ -1794,12 +1796,17 @@ sub population{
 		# attempt fetch by name
 		my $pop = $pa->fetch_by_name($pop_name);
 		
+		my @tables = split /\,/, $config->{skip_tables} if defined ($config->{skip_tables});
+
 		# not found, create one
-		if(!defined($pop)) {
-			$pop = Bio::EnsEMBL::Variation::Population->new(
-				-name    => $pop_name,
-				-adaptor => $pa,
-			);
+       
+	    if (any { $_ ne 'population' } @tables || !defined (@tables))  {
+		 
+	      if(!defined($pop) &&  ) {
+			  $pop = Bio::EnsEMBL::Variation::Population->new(
+				  -name    => $pop_name,
+				  -adaptor => $pa,
+			  );
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Writing population object named $pop_name");
@@ -1810,6 +1817,8 @@ sub population{
 			
 			$config->{rows_added}->{sample}++;
 			$config->{rows_added}->{population}++;
+		  }
+		
 		}
 		
 		push @return, $pop;
