@@ -1800,9 +1800,9 @@ sub population{
 
 		# not found, create one
        
-	    if (any { $_ ne 'population' } @tables || !defined (@tables))  {
+	    if (any { $_ ne 'population' } @tables || !@tables)  {
 		 
-	      if(!defined($pop) &&  ) {
+	      if(!defined($pop)) {
 			  $pop = Bio::EnsEMBL::Variation::Population->new(
 				  -name    => $pop_name,
 				  -adaptor => $pa,
