@@ -146,7 +146,7 @@ foreach my $hostname (@hostnames) {
     $species_list{$s_name}{'count'} = round_count($count_var);
 
     my $label_name = ucfirst($s_name);
-       $label_name =~ s/gca[0-9v]+//g;	# remove any gca from name 
+       $label_name =~ s/_gca[0-9]{9}[v0-9]*+$//g;	# remove any gca from name 
        $label_name =~ s/_/ /g;
     $species_list{$s_name}{label} = $label_name;
     
