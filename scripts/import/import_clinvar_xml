@@ -1285,6 +1285,7 @@ sub enter_var{
 
   my $so_term = SO_variation_class($allele_str);
 
+  # MTMP transcript variation - biotypes to skip
   my %biotypes_to_skip = (
     'lncRNA' => 1,
     'processed_pseudogene' => 1,
@@ -1323,12 +1324,18 @@ sub enter_var{
     # Do not include upstream and downstream consequences
     next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
 
-    # only include valid biotypes
-    my $biotype = $tv->transcript->biotype;
-    next if($biotypes_to_skip{$biotype});
+    # only include valid biotypes in MTMP_transcript_variation
+    my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
 
     # write to MTMP table if transcript is MANE (GRCh38)
-    my $mtmp = $tv->transcript->is_mane ? 1 : 0;
+    my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+    my $mtmp = $write_mane && $write_biotype;
+
+    # MANE is not available for GRCh37
+    if($assembly =~ /GRCh37/) {
+      $mtmp = $write_biotype;
+    }
+
     $tva->store($tv, $mtmp);
   }
 
@@ -1522,7 +1529,7 @@ sub clean_old_data{
 
   print "Deleting old data from other tables\n";
   # remove from other tables
-  my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation/;
+  my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation variation_hgvs/;
   for my $table (@tables){
     my $var_recs_del_sth    = $dba->dbc->do(qq[ delete from $table where variation_id in
                                                     (select variation_id from variation v, source s
