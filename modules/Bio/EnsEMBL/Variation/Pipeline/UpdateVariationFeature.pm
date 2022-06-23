@@ -41,15 +41,13 @@ sub run {
     my $var_dba = $self->get_species_adaptor('variation');
     $var_dba->dbc->reconnect_when_lost(1);   
     my $dbc = $var_dba->dbc;
-    my $dbh = $dbc->db_handle;
-
     
     # first set the default consequence type
 
     $dbc->do(qq{
         UPDATE  variation_feature
         SET     consequence_types = 'intergenic_variant'
-    }) or die "Failed to reset consequence_types on variation_feature";
+    }) or die "Failed to reset consequence_types on variation_feature" if (!-e $self->param('update_diff'));
 
     # create a temp table (dropping it if it exists)
 
@@ -71,13 +69,38 @@ sub run {
 
    
     # concatenate the consequence types from transcript_variation 
+    if (-e $self->param('update_diff')){
 
-    $dbc->do(qq{
-        INSERT INTO $temp_table (variation_feature_id, consequence_types)
-        SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
-        FROM    transcript_variation 
-        GROUP BY variation_feature_id
-    }) or die "Populating temp table failed";
+        my $file = $self->param('update_diff');
+        my @update_transcripts = ();
+        open (DIFF, $file) or die "Can't open file $file: $!";
+        while (<DIFF>){
+            chomp;
+            next if /^transcript_id/;
+            my ($transcript_id, $status, $other_info) = split(/\t/);
+            push @update_transcripts, $transcript_id if $status ne "deleted";
+        }
+
+        my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
+
+        $dbc->do(qq{
+            INSERT INTO $temp_table (variation_feature_id, consequence_types)
+            SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
+            FROM    transcript_variation 
+            WHERE   feature_stable_id IN ($joined_ids)
+            GROUP BY variation_feature_id
+        }) or die "Populating temp table failed";
+
+    } else {
+
+        $dbc->do(qq{
+            INSERT INTO $temp_table (variation_feature_id, consequence_types)
+            SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
+            FROM    transcript_variation 
+            GROUP BY variation_feature_id
+        }) or die "Populating temp table failed";
+
+    }
 
     # update variation_feature
     
