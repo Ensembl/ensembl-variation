@@ -100,8 +100,6 @@ sub run {
   my $stable_id;
   my @transcripts = ();
 
-  my @transcripts_output;
-
   if ($by_transcript) {
     my $transcript_stable_id = $self->param('transcript_stable_id');
     $stable_id = $transcript_stable_id;
@@ -143,7 +141,6 @@ sub run {
   my $hgvs_fh = FileHandle->new();
   $hgvs_fh->open(">" . $web_index_files_dir . "/$stable_id\_variation_hgvs.txt") or die "Cannot open dump file " . $web_index_files_dir . "/$stable_id\_variation_hgvs.txt: $!";
 
-#  my @write_data;
   my $hgvs_by_var = {};
   my $var_count = 0;
 
@@ -160,6 +157,7 @@ sub run {
     my $biotype = $transcript->biotype;
     my $is_mane = $transcript->is_mane();
     my $stable_id = $transcript->stable_id;
+    my @vf_ids = ();
 
     for my $vf(@vfs) {
 
@@ -183,17 +181,7 @@ sub run {
 
 	      next if (!scalar(@{ $tv->consequence_type }) && ($tv->distance_to_transcript > $max_distance));
 
-        my $vf_id = $vf->dbID();
-
-        $dbc->do(qq{
-              DELETE FROM  transcript_variation
-              WHERE   variation_feature_id = $vf_id
-              AND     feature_stable_id = "$stable_id"
-        });
-
-        # In update-mode, this should add transcripts that will be updated
-        # and delete from transcript_variation table updated transcripts (avoid duplication)
-        push @transcripts_output, {transcripts => $vf_id} if (-e $self->param('update_diff'));
+        push @vf_ids, $vf->dbID();
 
         # store now or save to store later? Uncomment out the behaviour you want
         # save to store later uses more memory but means you don't have to sort human TV after the run
@@ -216,12 +204,6 @@ sub run {
 
         if($mtmp) {
 
-          $dbc->do(qq{
-              DELETE FROM  MTMP_transcript_variation
-              WHERE   variation_feature_id = $vf_id
-              AND     feature_stable_id = "$stable_id"
-          });
-
           my $mtmp_data = $tva->_get_mtmp_write_data_from_tv_write_data($data);
           my $mtmp_fh = $files->{MTMP_transcript_variation}->{fh};
           
@@ -235,8 +217,6 @@ sub run {
             print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }
         }
-
-        next if (-e $self->param('update_diff'));
 
         ## end block
 
@@ -263,6 +243,22 @@ sub run {
           $hgvs_by_var = {};
         }
       }                       
+    }
+
+    # Delete Updated
+     if (-e $self->param('update_diff')){
+        my $joined_vf_ids = join(',', @vf_ids);
+        $dbc->do(qq{
+                  DELETE FROM  transcript_variation
+                  WHERE   variation_feature_id IN ($joined_vf_ids)
+                  AND     feature_stable_id = "$stable_id"
+        });
+
+        $dbc->do(qq{
+                  DELETE FROM  MTMP_transcript_variation
+                  WHERE   variation_feature_id IN ($joined_vf_ids)
+                  AND     feature_stable_id = "$stable_id"
+        }) if($mtmp);
     }
   }
 
