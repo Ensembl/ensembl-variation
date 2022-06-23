@@ -43,12 +43,22 @@ sub fetch_input {
    
     my $self = shift;
 
-    my $mtmp = $self->param('mtmp_table');
-    
+    # remove temporary files if they exist
+    my $dir = $self->param('pipeline_dir');
+    unless(-d $dir) {
+      mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
+    }
+
+    foreach my $folder_name (qw/web_index transcript_effect load_log/) {
+      rmtree($dir.'/'.$folder_name.'_files');
+      mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
+    }
 
     # check for out of date seq_regions in variation database
     my $sequences_ok = $self->check_seq_region();
     die "Seq region ids are not compatible. Run ensembl-variation/scripts/misc/update_seq_region_ids.pl\n" unless $sequences_ok == 1;
+
+    return if (-e $self->param('update_diff'));
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
@@ -61,32 +71,21 @@ sub fetch_input {
     }) if $self->param('sort_variation_feature');
 
 
-  unless (-e $self->param('update_diff')){
-      # truncate the table because we don't want duplicates
-      $dbc->do("TRUNCATE TABLE transcript_variation");
+    # truncate the table because we don't want duplicates
+    $dbc->do("TRUNCATE TABLE transcript_variation");
 
-      # disable the indexes on the table we're going to insert into as
-      # this significantly speeds up the TranscriptEffect process
+    # disable the indexes on the table we're going to insert into as
+    # this significantly speeds up the TranscriptEffect process
 
-      $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
+    $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
 
-      # truncate tables incase TranscriptVariation is being updated for a pre-existing database
-      $dbc->do("TRUNCATE TABLE variation_hgvs");
-      $dbc->do("ALTER TABLE variation_hgvs DISABLE KEYS");
-  }
-
-    # remove temporary files if they exist
-    my $dir = $self->param('pipeline_dir');
-    unless(-d $dir) {
-      mkpath($dir) or die "ERROR: Could not create directory $dir (required for dump files)\n";
-    }
-
-    foreach my $folder_name (qw/web_index transcript_effect load_log/) {
-      rmtree($dir.'/'.$folder_name.'_files');
-      mkdir($dir.'/'.$folder_name.'_files') or die "ERROR: Could not make directory $dir/$folder_name\_files\n";
-    }
+    # truncate tables incase TranscriptVariation is being updated for a pre-existing database
+    $dbc->do("TRUNCATE TABLE variation_hgvs");
+    $dbc->do("ALTER TABLE variation_hgvs DISABLE KEYS");
 
     my @rebuild = qw(transcript_variation variation_hgvs);
+
+    my $mtmp = $self->param('mtmp_table');
 
       # set up MTMP table
     if($mtmp && !-e $self->param('update_diff')) {
