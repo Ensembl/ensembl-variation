@@ -150,7 +150,8 @@ sub configure {
 		'chrom_regexp=s',
 		'force_no_var',
     	'ss_ids',
-		'chrom_naming',
+		'use_chr',
+		'merge_all_types',
 		
 		'fork=i',
 		'test=i',
@@ -571,8 +572,7 @@ sub main {
 	die("ERROR: no source specified\n") if !(defined $config->{source}) && !defined($config->{only_existing});
 	$config->{source_id} = get_source_id($config) unless defined($config->{only_existing});
 	
-	# get population object
-	if($config->{tables}->{population} && $config->{source} ne 'Mastermind') {
+    if($config->{tables}->{population} && $config->{source} ne 'Mastermind') {
 		die("ERROR: no population specified\n") unless defined $config->{population} || defined $config->{panel};
 		$config->{populations} = population($config);
 	}
@@ -765,11 +765,11 @@ sub main {
       # ssIDs as IDs?
       if(defined($config->{ss_ids})) {
         my ($ss_id) = grep {$_ =~ /^\d+$/} split(/\;/, $data->{ID});
-		use Data::Dumper;
-		print Dumper ($ss_id);
+	
         
         if(defined($ss_id)) {
           $data->{SS_ID} = $ss_id;
+	
 		  
         }
       }
@@ -777,6 +777,7 @@ sub main {
 			# sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
 			if($data->{ID} =~ /\;/) {
         my @ids = split(';', $data->{ID});
+      
         my @rs_ids = sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} grep {/^rs/} @ids;
         my @other_ids = grep {!/^rs/} @ids;
         
@@ -840,6 +841,7 @@ sub main {
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
+
 
       # add synonyms
       variation_synonym($config, $data) if $config->{tables}->{variation_synonym} && $data->{synonyms};
@@ -1685,7 +1687,7 @@ sub get_seq_region_ids{
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
 	}
     
-	if(defined($config->{chrom_naming})) {
+	if(defined($config->{use_chr})) {
 	  my @chr_name = keys %seq_region_ids;
 	  foreach my $chr (@chr_name){
         my $chrom_name = "chr".$chr;
@@ -1796,17 +1798,13 @@ sub population{
 		# attempt fetch by name
 		my $pop = $pa->fetch_by_name($pop_name);
 		
-		my @tables = split /\,/, $config->{skip_tables} if defined ($config->{skip_tables});
-
-		# not found, create one
-       
-	    if (any { $_ ne 'population' } @tables || !@tables)  {
+	
 		 
-	      if(!defined($pop)) {
-			  $pop = Bio::EnsEMBL::Variation::Population->new(
-				  -name    => $pop_name,
-				  -adaptor => $pa,
-			  );
+	    if(!defined($pop)) {
+			$pop = Bio::EnsEMBL::Variation::Population->new(
+				-name    => $pop_name,
+				-adaptor => $pa,
+			);
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Writing population object named $pop_name");
@@ -1817,7 +1815,7 @@ sub population{
 			
 			$config->{rows_added}->{sample}++;
 			$config->{rows_added}->{population}++;
-		  }
+		  
 		
 		}
 		
@@ -2040,6 +2038,7 @@ sub variation_feature {
 	
 	my $dbVar = $config->{dbVar};
 	my $vf = $data->{tmp_vf};
+
 	
 	my @new_alleles = split /\//, $vf->allele_string;
 	
@@ -2057,14 +2056,12 @@ sub variation_feature {
 	my $chromosome = $vf->{chr};
 	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if($config->{source} eq 'Mastermind');
  
-  $existing_vfs = $var_in_db ?
-		$vfa->fetch_all_by_Variation($data->{variation}) :
-		$vfa->_fetch_all_by_coords(
-			$config->{seq_region_ids}->{$chromosome},
-			$vf->{start},
-			$vf->{end},
-			$config->{somatic}
-		) if !defined($config->{no_merge});
+   
+	
+	$existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
+    
+	
+  
 	
 	# flag to indicate if we've added a synonym
 	my $added_synonym = 0;
@@ -2077,8 +2074,11 @@ sub variation_feature {
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
 		
+	
 		my @existing_alleles = split /\//, $existing_vf->allele_string;
     my @new_alleles_copy = @new_alleles;
+
+
     
     if($existing_vf->seq_region_strand < 0) {
       reverse_comp(\$_) for @new_alleles_copy;
@@ -2094,7 +2094,10 @@ sub variation_feature {
 			next if defined $config->{only_existing};
 			
 			# don't want to merge any in/del types
-			next if grep {$_ =~ /\-/} keys %combined_alleles;
+			if (!defined ($config->{merge_all_types})){
+              next if grep {$_ =~ /\-/} keys %combined_alleles;
+			}
+			
 			
 			# create new allele string and update variation_feature
 			# not really ideal to be doing direct SQL here but will do for now
@@ -2102,6 +2105,8 @@ sub variation_feature {
 				$existing_vf->allele_string.
 				'/'.
 				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles_copy);
+
+		
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
