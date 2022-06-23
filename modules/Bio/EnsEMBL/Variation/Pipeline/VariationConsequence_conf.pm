@@ -233,6 +233,7 @@ sub pipeline_analyses {
             -hive_capacity  => 50,
 
             -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
               include_lrg => $self->o('include_lrg'),
               limit_biotypes => $self->o('limit_biotypes'),
               update_diff => $self->o('update_diff'),
