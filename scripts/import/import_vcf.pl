@@ -52,7 +52,6 @@ use Socket;
 use IO::Handle;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
-use List::Util qw(any);
 use ImportUtils qw(load);
 use Digest::MD5 qw(md5_hex);
 use Cwd 'abs_path';
@@ -765,19 +764,15 @@ sub main {
       # ssIDs as IDs?
       if(defined($config->{ss_ids})) {
         my ($ss_id) = grep {$_ =~ /^\d+$/} split(/\;/, $data->{ID});
-	
-        
+
         if(defined($ss_id)) {
-          $data->{SS_ID} = $ss_id;
-	
-		  
+          $data->{SS_ID} = $ss_id;  
         }
       }
 			
 			# sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
 			if($data->{ID} =~ /\;/) {
         my @ids = split(';', $data->{ID});
-      
         my @rs_ids = sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} grep {/^rs/} @ids;
         my @other_ids = grep {!/^rs/} @ids;
         
@@ -1796,10 +1791,7 @@ sub population{
 	foreach my $pop_name(@pops) {
 		
 		# attempt fetch by name
-		my $pop = $pa->fetch_by_name($pop_name);
-		
-	
-		 
+		my $pop = $pa->fetch_by_name($pop_name); 
 	    if(!defined($pop)) {
 			$pop = Bio::EnsEMBL::Variation::Population->new(
 				-name    => $pop_name,
@@ -1815,8 +1807,6 @@ sub population{
 			
 			$config->{rows_added}->{sample}++;
 			$config->{rows_added}->{population}++;
-		  
-		
 		}
 		
 		push @return, $pop;
@@ -2038,8 +2028,6 @@ sub variation_feature {
 	
 	my $dbVar = $config->{dbVar};
 	my $vf = $data->{tmp_vf};
-
-	
 	my @new_alleles = split /\//, $vf->allele_string;
 	
 	# remove Ns?
@@ -2094,11 +2082,9 @@ sub variation_feature {
 			next if defined $config->{only_existing};
 			
 			# don't want to merge any in/del types
-			if (!defined ($config->{merge_all_types})){
-              next if grep {$_ =~ /\-/} keys %combined_alleles;
-			}
 			
-			
+            next if grep {$_ =~ /\-/} keys %combined_alleles && !defined ($config->{merge_all_types}) ;
+		
 			# create new allele string and update variation_feature
 			# not really ideal to be doing direct SQL here but will do for now
 			my $new_allele_string =
@@ -2106,8 +2092,6 @@ sub variation_feature {
 				'/'.
 				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles_copy);
 
-		
-			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
 			}
