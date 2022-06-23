@@ -45,6 +45,8 @@ sub fetch_input {
    
     my $self = shift;
 
+    my $mtmp = $self->param('mtmp_table');
+
     my $include_lrg = $self->param('include_lrg');
     my $biotypes = $self->param('limit_biotypes');
 
@@ -58,6 +60,7 @@ sub fetch_input {
     my @genes;
     my @gene_output_ids; 
     my $gene_count = 0;
+    my @delete_transcripts = ();
 
 
     if (-e $self->param('update_diff')){
@@ -72,11 +75,7 @@ sub fetch_input {
           gene_stable_id  => $gene_id,
         } if $status ne "deleted";
 
-        # Remove Deleted transcripts
-        $dbc->do(qq{
-              DELETE FROM  transcript_variation
-              WHERE   feature_stable_id = "$transcript_id"
-        }) if $status eq "deleted";
+        push @delete_transcripts, $transcript_id if $status eq "deleted";
       }
 
     } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
@@ -115,6 +114,19 @@ sub fetch_input {
       }
     } 
 
+    # Remove Deleted transcripts
+    if (-e $self->param('update_diff')){
+        my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+        $dbc->do(qq{
+                  DELETE FROM  transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids)
+        });
+
+        $dbc->do(qq{
+                  DELETE FROM  MTMP_transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids)
+        }) if($mtmp);
+    }
 
     $self->param('gene_output_ids', \@gene_output_ids);
 
