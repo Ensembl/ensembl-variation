@@ -2063,15 +2063,12 @@ sub variation_feature {
 		my @existing_alleles = split /\//, $existing_vf->allele_string;
     my @new_alleles_copy = @new_alleles;
 
-
-    
     if($existing_vf->seq_region_strand < 0) {
       reverse_comp(\$_) for @new_alleles_copy;
     }
 		
 		my %combined_alleles;
 		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles_copy);
-		
 		# new alleles, need to merge
 		if(scalar keys %combined_alleles > scalar @existing_alleles) {
 			
@@ -2088,7 +2085,7 @@ sub variation_feature {
 				$existing_vf->allele_string.
 				'/'.
 				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles_copy);
-
+          
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
 			}
