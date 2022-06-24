@@ -246,7 +246,7 @@ sub run {
     }
 
     # Delete Updated
-     if (-e $self->param('update_diff')){
+     if (-e $self->param('update_diff' && !@vf_ids)){
         my $joined_vf_ids = join(',', @vf_ids);
         $dbc->do(qq{
                   DELETE FROM  transcript_variation
