@@ -114,9 +114,12 @@ sub fetch_input {
       }
     } 
 
+    $self->param('gene_output_ids', \@gene_output_ids);
+
     # Remove Deleted transcripts
-    if (-e $self->param('update_diff') && @delete_transcripts){
+    if (-e $self->param('update_diff')){
         my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+        return if $joined_ids == "";
         $dbc->do(qq{
                   DELETE FROM  transcript_variation
                   WHERE   feature_stable_id IN ($joined_ids)
@@ -145,8 +148,6 @@ sub fetch_input {
         });
 
     }
-
-    $self->param('gene_output_ids', \@gene_output_ids);
 
 }
 
