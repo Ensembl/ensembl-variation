@@ -2935,8 +2935,9 @@ Options
 
 --create_name         Always create a new variation name i.e. don't use ID column.
                       It doesn't apply to Mastermind.
+
 --use_chr			  Fetches chromosome name and seq region id from the seq_region
-					  and adds chr to the chromosome name, important to call this
+                      and adds chr to the chromosome name, important to call this
 					  when importing EVA
 --merge_all_types     Merges all types including indels, if not used indels 
   					  will not be merged in the variation feature table
