@@ -139,6 +139,7 @@ sub configure {
 		'tables=s',
 		'skip_tables=s',
 		'add_tables=s',
+		'version'
 		
 		'only_existing',
     	'no_merge',
@@ -1702,6 +1703,7 @@ sub get_source_id{
 	my $dbVar  = $config->{dbVar};
 	my $source = $config->{source};
 	my $desc   = $config->{source_description};
+	my $version = $config->{version};
 	
 	my $source_id;
 	
@@ -1717,8 +1719,8 @@ sub get_source_id{
 			debug($config, "(TEST) Writing source name $source to source table");
 		}
 		else {
-			$sth = $dbVar->prepare(qq{insert into source(name, description) values(?,?)});
-			$sth->execute($source, $desc);
+			$sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?)});
+			$sth->execute($source, $version, $desc);
 			$sth->finish();
 			$source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
 		}
@@ -2906,6 +2908,7 @@ Options
                       of the line content (without newline character)
 --no_recover          Disable session recovery - this will result in a slight speed
                       increase
+--version             Usually the date of import in the format YYYYMMDAY
 
 --species             Species to use [default: "human"]
 --source              Name of source [required]
@@ -2942,7 +2945,7 @@ Options
 
 --merge_all_types     Merges all types including indels, if not used indels 
                       will not be merged in the variation feature table
-					  
+
 --chrom_regexp        Limit processing to CHROM columns matching regexp
 
 --flank               Size of flanking sequence [default: 200]
