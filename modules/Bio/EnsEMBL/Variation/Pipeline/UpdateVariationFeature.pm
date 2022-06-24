@@ -103,7 +103,7 @@ sub run {
             FROM    transcript_variation 
             WHERE   feature_stable_id IN ($joined_ids)
             GROUP BY variation_feature_id
-        }) or die "Populating temp table failed";
+        }) or die "Populating temp table failed" if(@update_transcripts);
 
     } else {
 
