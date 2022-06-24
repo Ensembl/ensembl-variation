@@ -565,7 +565,7 @@ sub main {
 
         # Open chromosome synonyms file (for mastermind import)
         if(defined($config->{chr_synonyms})) {
-          $config->{chr_synonyms_list} = read_chr_synonyms($config);
+          $config->{chr_synonyms_list} = read_chr_synonyms($config, $config->{source});
         }
 	
 	# get/set source_id
@@ -2044,15 +2044,10 @@ sub variation_feature {
 	my $existing_vfs = [];
  
 	my $chromosome = $vf->{chr};
-	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if($config->{source} eq 'Mastermind');
- 
+	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms};
    
-	
 	$existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
-    
-	
-  
-	
+
 	# flag to indicate if we've added a synonym
 	my $added_synonym = 0;
 	
@@ -2848,6 +2843,7 @@ sub print_file{
 # Mastermind - read chromosome synonyms file
 sub read_chr_synonyms {
   my $config = shift;
+	my $source = shift;
 
   my %chr_synonyms_list;
 
@@ -2861,10 +2857,16 @@ sub read_chr_synonyms {
   while (my $row = <$fh>) {
     chomp $row;
     my ($chr1, $chr2) = split /\t/, $row;
-    if($seq_region->{$chr1} && $chr2 =~ /^NC/) {
+    if($seq_region->{$chr1} && $chr2 =~ /^NC/ && $source eq 'Mastermind') {
       $chr_synonyms_list{$chr2} = $chr1;
     }
-    elsif($seq_region->{$chr2} && $chr1 =~ /^NC/) {
+    elsif($seq_region->{$chr2} && $chr1 =~ /^NC/ && $source eq 'Mastermind') {
+      $chr_synonyms_list{$chr1} = $chr2;
+    }
+    elsif($seq_region->{$chr1} && $chr2 =~ /^Contig/ && $source eq 'EVA') {
+      $chr_synonyms_list{$chr2} = $chr1;
+    }
+    elsif($seq_region->{$chr2} && $chr1 =~ /^Contig/ && $source eq 'EVA') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
   }
