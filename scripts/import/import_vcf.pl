@@ -1686,7 +1686,7 @@ sub get_seq_region_ids{
 	if(defined($config->{use_chr})) {
 	  my @chr_name = keys %seq_region_ids;
 	  foreach my $chr (@chr_name){
-        my $chrom_name = "chr".$chr;
+        my $chrom_name = "Chr".$chr;
 		$seq_region_ids{$chrom_name} = $seq_region_ids{$chr};
 		delete $seq_region_ids{$chr};
 	  }
