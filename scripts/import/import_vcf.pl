@@ -121,7 +121,7 @@ sub configure {
 		'coord_system=s',
 		
 		'source=s',
-		'source_desc=s',
+		'source_description=s',
 		'population|pop=s',
 		'pedigree=s',
 		'panel=s',
@@ -139,16 +139,19 @@ sub configure {
 		'tables=s',
 		'skip_tables=s',
 		'add_tables=s',
+		'version=i',
 		
 		'only_existing',
-    'no_merge',
+    	'no_merge',
 		'skip_n',
 		'mart_genotypes',
 		
 		'create_name',
 		'chrom_regexp=s',
 		'force_no_var',
-    'ss_ids',
+    	'ss_ids',
+		'use_chr',
+		'merge_all_types',
 		
 		'fork=i',
 		'test=i',
@@ -279,10 +282,12 @@ sub configure {
 		
 		# set skip tables
 		foreach my $table(split /\,/, $config->{skip_tables}) {
-			$tables->{$table} = 0 if defined($tables->{$table});
+			$tables->{$table} = 0 if (exists $tables->{$table});
 		}
 	}
 	
+
+
 	# force some back in
 	$tables->{$_} = 1 for qw/source meta_coord/;
 	
@@ -560,15 +565,14 @@ sub main {
 
         # Open chromosome synonyms file (for mastermind import)
         if(defined($config->{chr_synonyms})) {
-          $config->{chr_synonyms_list} = read_chr_synonyms($config);
+          $config->{chr_synonyms_list} = read_chr_synonyms($config, $config->{source});
         }
 	
 	# get/set source_id
 	die("ERROR: no source specified\n") if !(defined $config->{source}) && !defined($config->{only_existing});
 	$config->{source_id} = get_source_id($config) unless defined($config->{only_existing});
 	
-	# get population object
-	if($config->{tables}->{population} && $config->{source} ne 'Mastermind') {
+    if($config->{tables}->{population} && $config->{source} ne 'Mastermind') {
 		die("ERROR: no population specified\n") unless defined $config->{population} || defined $config->{panel};
 		$config->{populations} = population($config);
 	}
@@ -761,9 +765,9 @@ sub main {
       # ssIDs as IDs?
       if(defined($config->{ss_ids})) {
         my ($ss_id) = grep {$_ =~ /^\d+$/} split(/\;/, $data->{ID});
-        
+
         if(defined($ss_id)) {
-          $data->{SS_ID} = $ss_id;
+          $data->{SS_ID} = $ss_id;  
         }
       }
 			
@@ -833,6 +837,7 @@ sub main {
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
+
 
       # add synonyms
       variation_synonym($config, $data) if $config->{tables}->{variation_synonym} && $data->{synonyms};
@@ -1671,24 +1676,34 @@ sub get_seq_region_ids{
 	my $sth = $dbVar->prepare(qq{SELECT seq_region_id, name FROM seq_region});
 	$sth->execute;
 	$sth->bind_columns(\$seq_region_id, \$chr_name);
-	$seq_region_ids{$chr_name} = $seq_region_id while $sth->fetch;
+    $seq_region_ids{$chr_name} = $seq_region_id while $sth->fetch;
 	$sth->finish;
 	
 	if(defined($config->{test})) {
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
 	}
-	
+    
+	if(defined($config->{use_chr})) {
+	  my @chr_name = keys %seq_region_ids;
+	  foreach my $chr (@chr_name){
+        my $chrom_name = "Chr".$chr;
+		$seq_region_ids{$chrom_name} = $seq_region_ids{$chr};
+		delete $seq_region_ids{$chr};
+	  }
+	}
+
 	return \%seq_region_ids;
 }
 
 
-
+ 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
 	my $config = shift;
 	my $dbVar  = $config->{dbVar};
 	my $source = $config->{source};
-	my $desc   = $config->{desc};
+	my $desc   = $config->{source_description};
+	my $version = $config->{version};
 	
 	my $source_id;
 	
@@ -1704,8 +1719,8 @@ sub get_source_id{
 			debug($config, "(TEST) Writing source name $source to source table");
 		}
 		else {
-			$sth = $dbVar->prepare(qq{insert into source(name, description) values(?,?)});
-			$sth->execute($source, $desc);
+			$sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?,?)});
+			$sth->execute($source, $version, $desc);
 			$sth->finish();
 			$source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
 		}
@@ -1778,10 +1793,8 @@ sub population{
 	foreach my $pop_name(@pops) {
 		
 		# attempt fetch by name
-		my $pop = $pa->fetch_by_name($pop_name);
-		
-		# not found, create one
-		if(!defined($pop)) {
+		my $pop = $pa->fetch_by_name($pop_name); 
+	    if(!defined($pop)) {
 			$pop = Bio::EnsEMBL::Variation::Population->new(
 				-name    => $pop_name,
 				-adaptor => $pa,
@@ -2017,7 +2030,6 @@ sub variation_feature {
 	
 	my $dbVar = $config->{dbVar};
 	my $vf = $data->{tmp_vf};
-	
 	my @new_alleles = split /\//, $vf->allele_string;
 	
 	# remove Ns?
@@ -2032,17 +2044,10 @@ sub variation_feature {
 	my $existing_vfs = [];
  
 	my $chromosome = $vf->{chr};
-	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if($config->{source} eq 'Mastermind');
- 
-  $existing_vfs = $var_in_db ?
-		$vfa->fetch_all_by_Variation($data->{variation}) :
-		$vfa->_fetch_all_by_coords(
-			$config->{seq_region_ids}->{$chromosome},
-			$vf->{start},
-			$vf->{end},
-			$config->{somatic}
-		) if !defined($config->{no_merge});
-	
+	$chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms};
+   
+	$existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
+
 	# flag to indicate if we've added a synonym
 	my $added_synonym = 0;
 	
@@ -2054,16 +2059,16 @@ sub variation_feature {
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
 		
+	
 		my @existing_alleles = split /\//, $existing_vf->allele_string;
     my @new_alleles_copy = @new_alleles;
-    
+
     if($existing_vf->seq_region_strand < 0) {
       reverse_comp(\$_) for @new_alleles_copy;
     }
 		
 		my %combined_alleles;
 		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles_copy);
-		
 		# new alleles, need to merge
 		if(scalar keys %combined_alleles > scalar @existing_alleles) {
 			
@@ -2071,15 +2076,16 @@ sub variation_feature {
 			next if defined $config->{only_existing};
 			
 			# don't want to merge any in/del types
-			next if grep {$_ =~ /\-/} keys %combined_alleles;
 			
+            next if grep {$_ =~ /\-/} keys %combined_alleles && !defined ($config->{merge_all_types}) ;
+		
 			# create new allele string and update variation_feature
 			# not really ideal to be doing direct SQL here but will do for now
 			my $new_allele_string =
 				$existing_vf->allele_string.
 				'/'.
 				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles_copy);
-			
+          
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
 			}
@@ -2834,6 +2840,7 @@ sub print_file{
 # Mastermind - read chromosome synonyms file
 sub read_chr_synonyms {
   my $config = shift;
+	my $source = shift;
 
   my %chr_synonyms_list;
 
@@ -2847,10 +2854,16 @@ sub read_chr_synonyms {
   while (my $row = <$fh>) {
     chomp $row;
     my ($chr1, $chr2) = split /\t/, $row;
-    if($seq_region->{$chr1} && $chr2 =~ /^NC/) {
+    if($seq_region->{$chr1} && $chr2 =~ /^NC/ && $source eq 'Mastermind') {
       $chr_synonyms_list{$chr2} = $chr1;
     }
-    elsif($seq_region->{$chr2} && $chr1 =~ /^NC/) {
+    elsif($seq_region->{$chr2} && $chr1 =~ /^NC/ && $source eq 'Mastermind') {
+      $chr_synonyms_list{$chr1} = $chr2;
+    }
+    elsif($seq_region->{$chr1} && $chr2 =~ /^Contig/ && $source eq 'EVA') {
+      $chr_synonyms_list{$chr2} = $chr1;
+    }
+    elsif($seq_region->{$chr2} && $chr1 =~ /^Contig/ && $source eq 'EVA') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
   }
@@ -2894,6 +2907,7 @@ Options
                       of the line content (without newline character)
 --no_recover          Disable session recovery - this will result in a slight speed
                       increase
+--version             Usually the date of import in the format YYYYMMDAY
 
 --species             Species to use [default: "human"]
 --source              Name of source [required]
@@ -2923,6 +2937,13 @@ Options
 
 --create_name         Always create a new variation name i.e. don't use ID column.
                       It doesn't apply to Mastermind.
+
+--use_chr             Fetches chromosome name and seq region id from the seq_region
+                      and adds chr to the chromosome name, important to call this
+                      when importing EVA
+
+--merge_all_types     Merges all types including indels, if not used indels 
+                      will not be merged in the variation feature table
 
 --chrom_regexp        Limit processing to CHROM columns matching regexp
 
