@@ -2938,10 +2938,11 @@ Options
 
 --use_chr             Fetches chromosome name and seq region id from the seq_region
                       and adds chr to the chromosome name, important to call this
-		              when importing EVA
+                      when importing EVA
 
 --merge_all_types     Merges all types including indels, if not used indels 
-  					  will not be merged in the variation feature table
+                      will not be merged in the variation feature table
+					  
 --chrom_regexp        Limit processing to CHROM columns matching regexp
 
 --flank               Size of flanking sequence [default: 200]
