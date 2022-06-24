@@ -745,6 +745,8 @@ sub main {
       }
 
       my $chromosome = $data->{tmp_vf}->{chr};
+      $chromosome =~ s/Chr//i if(defined $config->{use_chr});
+
       if(defined($config->{chr_synonyms_list})) {
         $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
       }
@@ -1681,15 +1683,6 @@ sub get_seq_region_ids{
 	
 	if(defined($config->{test})) {
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
-	}
-    
-	if(defined($config->{use_chr})) {
-	  my @chr_name = keys %seq_region_ids;
-	  foreach my $chr (@chr_name){
-        my $chrom_name = "Chr".$chr;
-		$seq_region_ids{$chrom_name} = $seq_region_ids{$chr};
-		delete $seq_region_ids{$chr};
-	  }
 	}
 
 	return \%seq_region_ids;
@@ -2938,9 +2931,8 @@ Options
 --create_name         Always create a new variation name i.e. don't use ID column.
                       It doesn't apply to Mastermind.
 
---use_chr             Fetches chromosome name and seq region id from the seq_region
-                      and adds chr to the chromosome name, important to call this
-                      when importing EVA
+--use_chr             Removes 'Chr' prefix from the input chromosome name.
+                      Important to call this when importing some EVA species.
 
 --merge_all_types     Merges all types including indels, if not used indels 
                       will not be merged in the variation feature table
