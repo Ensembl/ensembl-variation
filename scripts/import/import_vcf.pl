@@ -121,7 +121,7 @@ sub configure {
 		'coord_system=s',
 		
 		'source=s',
-		'source_desc=s',
+		'source_description=s',
 		'population|pop=s',
 		'pedigree=s',
 		'panel=s',
@@ -139,7 +139,7 @@ sub configure {
 		'tables=s',
 		'skip_tables=s',
 		'add_tables=s',
-		'version'
+		'version=i',
 		
 		'only_existing',
     	'no_merge',
@@ -1719,7 +1719,7 @@ sub get_source_id{
 			debug($config, "(TEST) Writing source name $source to source table");
 		}
 		else {
-			$sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?)});
+			$sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?,?)});
 			$sth->execute($source, $version, $desc);
 			$sth->finish();
 			$source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
