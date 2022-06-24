@@ -157,7 +157,7 @@ sub run {
     my $biotype = $transcript->biotype;
     my $is_mane = $transcript->is_mane();
     my $stable_id = $transcript->stable_id;
-    my @vf_ids = ();
+    my @vf_ids;
 
     for my $vf(@vfs) {
 
@@ -246,8 +246,9 @@ sub run {
     }
 
     # Delete Updated
-     if (-e $self->param('update_diff' && @vf_ids)){
+     if (-e $self->param('update_diff')){
         my $joined_vf_ids = join(',', @vf_ids);
+        next if $joined_vf_ids == "";
         $dbc->do(qq{
                   DELETE FROM  transcript_variation
                   WHERE   variation_feature_id IN ($joined_vf_ids)
