@@ -2853,10 +2853,10 @@ sub read_chr_synonyms {
     elsif($seq_region->{$chr2} && $chr1 =~ /^NC/ && $source eq 'Mastermind') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
-    elsif($seq_region->{$chr1} && $chr2 =~ /^Contig/ && $source eq 'EVA') {
+    elsif($seq_region->{$chr1} && $source eq 'EVA') {
       $chr_synonyms_list{$chr2} = $chr1;
     }
-    elsif($seq_region->{$chr2} && $chr1 =~ /^Contig/ && $source eq 'EVA') {
+    elsif($seq_region->{$chr2} && $source eq 'EVA') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
   }
