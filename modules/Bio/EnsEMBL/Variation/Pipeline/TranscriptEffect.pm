@@ -247,19 +247,25 @@ sub run {
 
     # Delete Updated
      if (-e $self->param('update_diff')){
-        my $joined_vf_ids = join(',', @vf_ids);
-        next if $joined_vf_ids == "";
-        $dbc->do(qq{
-                  DELETE FROM  transcript_variation
-                  WHERE   variation_feature_id IN ($joined_vf_ids)
-                  AND     feature_stable_id = "$stable_id"
-        });
+        my @chunk_delete;
 
-        $dbc->do(qq{
-                  DELETE FROM  MTMP_transcript_variation
-                  WHERE   variation_feature_id IN ($joined_vf_ids)
-                  AND     feature_stable_id = "$stable_id"
-        }) if($mtmp);
+        push @chunk_delete, [ splice @vf_ids, 0, 500 ]  while @vf_ids;
+
+        for (@chunk_delete){
+          my $joined_vf_ids = join(',', @$_);
+          next if $joined_vf_ids == "";
+          $dbc->do(qq{
+                    DELETE FROM  transcript_variation
+                    WHERE   variation_feature_id IN ($joined_vf_ids)
+                    AND     feature_stable_id = "$stable_id"
+          });
+
+          $dbc->do(qq{
+                    DELETE FROM  MTMP_transcript_variation
+                    WHERE   variation_feature_id IN ($joined_vf_ids)
+                    AND     feature_stable_id = "$stable_id"
+          }) if($mtmp);
+        }
     }
   }
 
