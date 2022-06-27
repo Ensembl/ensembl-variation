@@ -121,7 +121,7 @@ foreach my $hostname (@hostnames) {
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
-    next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
+    next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_$db_type\_$e_version\_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
@@ -146,6 +146,7 @@ foreach my $hostname (@hostnames) {
     $species_list{$s_name}{'count'} = round_count($count_var);
 
     my $label_name = ucfirst($s_name);
+       $label_name =~ s/_gca[0-9]{9}[v0-9]*+$//g;	# remove any gca from name 
        $label_name =~ s/_/ /g;
     $species_list{$s_name}{label} = $label_name;
     
@@ -448,7 +449,7 @@ sub get_species_data_tables {
 
       # loop over databases
       while (my ($dbname) = $sth->fetchrow_array) {
-        next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
+        next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_$db_type\_$e_version\_\d+$/i);
         next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
 
         $dbname =~ /^(.+)_$db_type/;
