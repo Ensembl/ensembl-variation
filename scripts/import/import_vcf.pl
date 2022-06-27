@@ -745,7 +745,7 @@ sub main {
       }
 
       my $chromosome = $data->{tmp_vf}->{chr};
-      $chromosome =~ s/Chr//i if(defined $config->{use_chr});
+      $chromosome =~ s/chr(omosome)?//i if(defined $config->{use_chr});
 
       if(defined($config->{chr_synonyms_list})) {
         $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
