@@ -48,6 +48,7 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
     'HG00099' => ['pop4']
 },
   -use_seq_region_synonyms => 1,
+  -use_vcf_consequences => 1,
 );
 
 
@@ -58,6 +59,7 @@ ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test
 ok($c->sample_prefix() eq "s_prefix:", "sample_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
 ok($c->use_seq_region_synonyms() eq "1", "use_seq_region_synonyms");
+ok($c->use_vcf_consequences() eq "1", "use_vcf_consequences");
 ok($c->tmpdir() eq cwd(), "tmpdir");
 
 # tell it not to use the DB
@@ -149,9 +151,11 @@ ok($coll->assembly() eq "GRCh37", "assembly");
 ok($coll->source_name() eq "1000genomes", "source name");
 ok($coll->source_url() eq "http://www.1000genomes.org", "source URL");
 
+
 ok($coll->created() eq "1432745640000", "created");
 ok($coll->updated() eq "1432745640000", "updated");
 ok($coll->is_remapped() eq "1", "is_remapped");
+ok($coll->use_vcf_consequences() eq "1", "use vcf consequences");
 
 ok($coll->vcf_collection_close, 'close VCF collection filehandle');
 
