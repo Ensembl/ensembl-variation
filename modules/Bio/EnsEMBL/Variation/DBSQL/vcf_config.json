@@ -6,7 +6,7 @@
       "assembly": "GRCh37",
       "type": "remote",
       "strict_name_match": 1,
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -19,7 +19,7 @@
       "assembly": "GRCh38",
       "type": "remote",
       "strict_name_match": 1,
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ALL.chr###CHR###_GRCh38.genotypes.20170504.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ALL.chr###CHR###_GRCh38.genotypes.20170504.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -32,7 +32,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/genomes/gnomad.genomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/genomes/gnomad.genomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X"
@@ -84,7 +84,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/exomes/gnomad.exomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/exomes/gnomad.exomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -140,7 +140,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/v3.1.2/gnomad.genomes.v3.1.2.sites.chr###CHR###_trimmed_info.vcf.bgz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/v3.1.2/gnomad.genomes.v3.1.2.sites.chr###CHR###_trimmed_info.vcf.bgz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -205,7 +205,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r2.1.1/exomes/gnomad.exomes.r2.1.1.sites.###CHR###.liftover_grch38_no_VEP.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r2.1.1/exomes/gnomad.exomes.r2.1.1.sites.###CHR###.liftover_grch38_no_VEP.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -260,7 +260,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/dbSNP154_ALFA_GRCh38_20210727.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/dbSNP154_ALFA_GRCh38_20210727.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y", "MT"
@@ -327,7 +327,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.grch38.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.grch38.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X"
@@ -351,7 +351,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X"
@@ -375,7 +375,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ggvp/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ggvp/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
       "sample_prefix": "GGVP:",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
@@ -387,7 +387,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/TOPMED_GRCh37.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/TOPMED_GRCh37.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -411,7 +411,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/TOPMED_GRCh38_20180418.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/TOPMED_GRCh38_20180418.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -435,7 +435,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/UK10K_COHORT.20160215.sites.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/UK10K_COHORT.20160215.sites.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -464,7 +464,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/UK10K_COHORT.20160215.sites.GRCh38.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/UK10K_COHORT.20160215.sites.GRCh38.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -492,7 +492,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ESP6500SI-V2-SSA137.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ESP6500SI-V2-SSA137.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -520,7 +520,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ESP6500SI-V2-SSA137_GRCh38.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ESP6500SI-V2-SSA137_GRCh38.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
@@ -549,7 +549,7 @@
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/bos_taurus/ARS-UCD1.2/variation_genotype/IRBT_ARS-UCD1_2.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/bos_taurus/ARS-UCD1.2/variation_genotype/IRBT_ARS-UCD1_2.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "X"
@@ -563,7 +563,7 @@
       "species": "gallus_gallus",
       "assembly": "bGalGal1.mat.broiler.GRCg7b",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
       "use_as_source": 0,
       "strict_name_match": 0
     },
@@ -574,7 +574,7 @@
       "description": "Variants remmaped from EVA study PRJEB24066",
       "assembly": "Dog10K_Boxer_Tasha",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
         "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X"
@@ -587,7 +587,7 @@
       "description": "Variants remapped from EVA study PRJEB24066",
       "assembly": "ROS_Cfam_1.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
         "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X", "Y"
@@ -598,7 +598,7 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
@@ -610,7 +610,7 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
@@ -622,7 +622,7 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT"
@@ -635,7 +635,7 @@
       "species": "capra_hircus",
       "assembly": "ARS1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
@@ -648,7 +648,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
@@ -660,7 +660,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm38",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
@@ -672,7 +672,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm39",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
@@ -684,7 +684,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm39",
       "type": "remote",
-      "filename_template": "ftp://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "X", "Y"
@@ -696,7 +696,7 @@
       "species": "equus_caballus",
       "assembly": "EquCab3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/equus_caballus/EquCab3.0/variation_genotype/PRJEB9799_EquCab3_0.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/equus_caballus/EquCab3.0/variation_genotype/PRJEB9799_EquCab3_0.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
         "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "X", "MT"
@@ -711,7 +711,7 @@
       "assembly": "Ssal_v3.1",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/salmo_salar/Ssal_v3.1/variation_genotype/Salmon_SNP_80_samples_freebayes_EBI_noINFO.vcf.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/salmo_salar/Ssal_v3.1/variation_genotype/Salmon_SNP_80_samples_freebayes_EBI_noINFO.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
       ]
@@ -724,7 +724,7 @@
       "type": "remote",
       "use_as_source" : 1,
       "strict_name_match" : 0,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
     },
     {
       "id": "nile_tilapia_EVA_PRJEB38548",
@@ -735,7 +735,7 @@
       "type": "remote",
       "use_as_source" : 1,
       "use_seq_region_synonyms": 1,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB38548/tilapia_snp_array.vcf.gz",
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB38548/tilapia_snp_array.vcf.gz",
       "chromosomes": [
         "LG1", "LG2","LG3","LG4","LG5","LG6","LG7","LG8","LG9","LG10","LG11","LG12","LG13","LG14","LG15","LG16","LG17","LG18","LG19","LG20","LG21","LG22","LG23"
       ],
@@ -758,7 +758,7 @@
       "assembly": "NNQGG.v01",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB26368/GBS_mink_eva.vcf.gz",
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB26368/GBS_mink_eva.vcf.gz",
       "population_display_group": {
         "display_group_name": "PRJEB26368",
         "display_group_priority": "1"
@@ -779,7 +779,7 @@
       "type": "remote",
       "use_as_source" : 1,
       "use_seq_region_synonyms": 1,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB27278/Craniosnyostotic_Rabbit_Colony_eva08062018.vcf.gz",
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB27278/Craniosnyostotic_Rabbit_Colony_eva08062018.vcf.gz",
       "chromosomes": [
         "1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","X"
       ]
@@ -792,14 +792,14 @@
       "assembly": "Parus_major1.1",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template" : "ftp://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
     },
     {
       "id": "91_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.bos_taurus.ARS-UCD1.2.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.bos_taurus.ARS-UCD1.2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -807,7 +807,7 @@
       "species": "canis_lupus_familiaris",
       "assembly": "ROS_Cfam_1.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiaris.ROS_Cfam_1.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiaris.ROS_Cfam_1.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -815,7 +815,7 @@
       "species": "canis_lupus_familiarisboxer",
       "assembly": "Dog10K_Boxer_Tasha",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiarisboxer.Dog10K_Boxer_Tasha.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiarisboxer.Dog10K_Boxer_Tasha.bw",
       "annotation_type": "gerp"
     },
     {
@@ -823,7 +823,7 @@
       "species": "capra_hircus",
       "assembly": "ARS1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -831,7 +831,7 @@
       "species": "chlorocebus_sabaeus",
       "assembly": "ChlSab1.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -839,7 +839,7 @@
       "species": "danio_rerio",
       "assembly": "GRCz11",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
       "annotation_type": "gerp"
     },
     {
@@ -847,7 +847,7 @@
       "species": "equus_caballus",
       "assembly": "EquCab3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -855,7 +855,7 @@
       "species": "felis_catus",
       "assembly": "Felis_catus_9.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -863,7 +863,7 @@
       "species": "gallus_gallus",
       "assembly": "GRCg6a",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.GRCg6a.bw",
       "annotation_type": "gerp"
     },
     {
@@ -871,7 +871,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/grch37/release-96/compara/conservation_scores/37_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh37.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/grch37/release-96/compara/conservation_scores/37_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh37.bw",
       "annotation_type": "gerp"
     },
     {
@@ -879,7 +879,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
       "annotation_type": "gerp"
     },
     {
@@ -887,7 +887,7 @@
       "species": "macaca_mulatta",
       "assembly": "Mmul_10",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
       "annotation_type": "gerp"
     },
     {
@@ -895,7 +895,7 @@
       "species": "meleagris_gallopavo",
       "assembly": "Turkey_5.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.Turkey_5.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.Turkey_5.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -903,7 +903,7 @@
       "species": "mus_musculus",
       "assembly": "GRCm39",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm39.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm39.bw",
       "annotation_type": "gerp"
     },
     {
@@ -911,7 +911,7 @@
       "species": "neovison_vison",
       "assembly": "NNQGG.v01",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
       "annotation_type": "gerp"
     },
     {
@@ -919,7 +919,7 @@
       "species": "nomascus_leucogenys",
       "assembly": "Nleu_3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -927,7 +927,7 @@
       "species": "oreochromis_niloticus",
       "assembly": "O_niloticus_UMD_NMBU",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.oreochromis_niloticus.O_niloticus_UMD_NMBU.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.oreochromis_niloticus.O_niloticus_UMD_NMBU.bw",
       "annotation_type": "gerp"
     },
     {
@@ -935,7 +935,7 @@
       "species": "oryctolagus_cuniculus",
       "assembly": "OryCun2.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.oryctolagus_cuniculus.OryCun2.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.oryctolagus_cuniculus.OryCun2.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -943,7 +943,7 @@
       "species": "ovis_aries",
       "assembly": "Oar_v3.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -951,7 +951,7 @@
       "species": "ovis_aries_rambouillet",
       "assembly": "Oar_rambouillet_v1.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.Oar_rambouillet_v1.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.Oar_rambouillet_v1.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -959,7 +959,7 @@
       "species": "pan_troglodytes",
       "assembly": "Pan_tro_3.0",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -967,7 +967,7 @@
       "species": "parus_major",
       "assembly": "Parus_major1.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -975,7 +975,7 @@
       "species": "pongo_abelii",
       "assembly": "Susie_PABv2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.Susie_PABv2.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.Susie_PABv2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -983,7 +983,7 @@
       "species": "rattus_norvegicus",
       "assembly": "mRatBN7.2",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.mRatBN7.2.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.mRatBN7.2.bw",
       "annotation_type": "gerp"
     },
     {
@@ -991,7 +991,7 @@
       "species": "sus_scrofa",
       "assembly": "Sscrofa11.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -999,7 +999,7 @@
       "species": "taeniopygia_guttata",
       "assembly": "bTaeGut1_v1.p",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
       "annotation_type": "gerp"
     },
     {
@@ -1007,7 +1007,7 @@
       "species": "tetraodon_nigroviridis",
       "assembly": "TETRAODON8",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
       "annotation_type": "gerp"
     },
     {
@@ -1015,7 +1015,7 @@
       "species": "salmo_salar",
       "assembly": "Ssal_v3.1",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.Ssal_v3.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.Ssal_v3.1.bw",
       "annotation_type": "gerp"
     },
     {
@@ -1023,7 +1023,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh37",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
       "annotation_type": "cadd"
     },
     {
@@ -1031,7 +1031,7 @@
       "species": "homo_sapiens",
       "assembly": "GRCh38",
       "type": "remote",
-      "filename_template" : "ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
       "annotation_type": "cadd"
     }
   ]
