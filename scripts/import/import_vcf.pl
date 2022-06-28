@@ -150,7 +150,7 @@ sub configure {
 		'chrom_regexp=s',
 		'force_no_var',
     	'ss_ids',
-		'use_chr',
+		'remove_prefix=s',
 		'merge_all_types',
 		
 		'fork=i',
@@ -745,7 +745,10 @@ sub main {
       }
 
       my $chromosome = $data->{tmp_vf}->{chr};
-      $chromosome =~ s/chr(omosome)?//i if(defined $config->{use_chr});
+      if(defined $config->{remove_prefix}) {
+        my $prefix = $config->{remove_prefix};
+	$chromosome =~ s/$prefix//i;
+      }
 
       if(defined($config->{chr_synonyms_list})) {
         $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
@@ -2931,7 +2934,7 @@ Options
 --create_name         Always create a new variation name i.e. don't use ID column.
                       It doesn't apply to Mastermind.
 
---use_chr             Removes 'Chr' prefix from the input chromosome name.
+--remove_prefix       Removes prefix from the input chromosome name.
                       Important to call this when importing some EVA species.
 
 --merge_all_types     Merges all types including indels, if not used indels 
