@@ -150,7 +150,7 @@ sub configure {
 		'chrom_regexp=s',
 		'force_no_var',
     	'ss_ids',
-		'use_chr',
+		'remove_prefix=s',
 		'merge_all_types',
 		
 		'fork=i',
@@ -745,6 +745,11 @@ sub main {
       }
 
       my $chromosome = $data->{tmp_vf}->{chr};
+      if(defined $config->{remove_prefix}) {
+        my $prefix = $config->{remove_prefix};
+	$chromosome =~ s/$prefix//i;
+      }
+
       if(defined($config->{chr_synonyms_list})) {
         $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
       }
@@ -1681,15 +1686,6 @@ sub get_seq_region_ids{
 	
 	if(defined($config->{test})) {
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
-	}
-    
-	if(defined($config->{use_chr})) {
-	  my @chr_name = keys %seq_region_ids;
-	  foreach my $chr (@chr_name){
-        my $chrom_name = "Chr".$chr;
-		$seq_region_ids{$chrom_name} = $seq_region_ids{$chr};
-		delete $seq_region_ids{$chr};
-	  }
 	}
 
 	return \%seq_region_ids;
@@ -2860,10 +2856,10 @@ sub read_chr_synonyms {
     elsif($seq_region->{$chr2} && $chr1 =~ /^NC/ && $source eq 'Mastermind') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
-    elsif($seq_region->{$chr1} && $chr2 =~ /^Contig/ && $source eq 'EVA') {
+    elsif($seq_region->{$chr1} && $source eq 'EVA') {
       $chr_synonyms_list{$chr2} = $chr1;
     }
-    elsif($seq_region->{$chr2} && $chr1 =~ /^Contig/ && $source eq 'EVA') {
+    elsif($seq_region->{$chr2} && $source eq 'EVA') {
       $chr_synonyms_list{$chr1} = $chr2;
     }
   }
@@ -2938,9 +2934,8 @@ Options
 --create_name         Always create a new variation name i.e. don't use ID column.
                       It doesn't apply to Mastermind.
 
---use_chr             Fetches chromosome name and seq region id from the seq_region
-                      and adds chr to the chromosome name, important to call this
-                      when importing EVA
+--remove_prefix       Removes prefix from the input chromosome name.
+                      Important to call this when importing some EVA species.
 
 --merge_all_types     Merges all types including indels, if not used indels 
                       will not be merged in the variation feature table
