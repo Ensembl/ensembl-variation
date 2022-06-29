@@ -102,6 +102,8 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
   my $assembly = $2;
+  # Add GRCh prefix as expected by web VEP
+  $assembly = "GRCh" . $assembly if $s_name eq 'homo_sapiens';
 
   # Check core database
   my $dbcore = $dbname;
