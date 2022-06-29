@@ -63,7 +63,9 @@ GetOptions ("data_file=s"          => \$data_file,
             "clean"                => \$clean 
             );
 
-usage() unless defined $registry_file && defined $source_name; 
+usage() unless defined $registry_file && defined $source_name;
+
+usage() if($source_name eq 'EVA' && !$data_file);
 
 $species ||= 'homo_sapiens';
 
@@ -121,7 +123,7 @@ elsif($source_name eq 'dbSNP') {
   import_synonyms_all_sources($sources, $dba, $species, \%data);  
 } 
 
-elsif($source_name eq 'UniProt'){
+elsif($source_name eq 'UniProt') {
   # download UniProt file if it's not provided  
   $data_file = download_file('UniProt', 'humsavar') unless $data_file;
  
@@ -163,6 +165,28 @@ elsif($source_name eq 'UniProt'){
   # Add the synonyms
   my $variation_set_id = add_set_uniprot($dba,$set,$source_description);
   add_synonyms_uniprot(\%synonym, $source_name, $variation_set_id, $dba, $species); 
+}
+
+elsif($source_name eq 'EVA') {
+  my $result_synonyms = parse_eva_file($data_file);
+
+  # Source EVA
+  my %source_eva = (
+  "EVA" => {
+    description => "Short variant data imported from EVA",
+    url         => "https://www.ebi.ac.uk/eva/",
+    status      => "germline",
+  }, 
+  );
+
+  # get source info 
+  $source_description ||= $source_eva{$source_name}->{description};
+  $source_url ||= $source_eva{$source_name}->{url};
+  my $source_status = $source_eva{$source_name}->{status};
+
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status);
+
+  import_synonyms($synonyms, $source, $dba, $species);
 }
 
 else{
@@ -443,6 +467,43 @@ sub extract_PharmGKB {
   return \%synonyms;
 }
 
+=head2 parse_eva_file
+
+parse EVA data file
+
+=cut
+
+sub parse_eva_file {
+  my $infile = shift;
+  
+  my %synonym;
+
+  # Open the input file for reading
+  if($infile =~ /gz$/) {
+    open (my $fh, "zcat $infile |") or die ("Could not open $infile for reading\n");
+  }
+  else {
+    open (my $fh, '<', $infile) or die ("Could not open $infile for reading\n");
+  }
+
+  # Read through the file and parse out the desired fields: 
+  # current rs id and synonym
+  while (my $row = <$fh>) {
+    chomp $row;
+    next if($row =~ /^#/);
+    
+    my @row_data = split /\t/, $row;
+    my $synonym = $row_data[2];
+    $row_data[7] =~ /CURR=(rs[0-9]+)/;
+    my $current_rsid = $1;
+
+    $synonym{$current_rsid} = $synonym;
+  }
+  close($fh);
+
+  return \%synonym;
+}
+
 =head2 import_synonyms
 
 import synonyms from refhash and source object;
@@ -625,7 +686,7 @@ sub usage{
 
   die "\nUsage : import_variant_synonyms -registry [registry file] -source_name [name]
 \n\tOptions:
-\t         -data_file          [name of file to load]
+\t         -data_file          [name of file to load]  - mandatory for EVA
 \t         -source_version     [version]
 \t         -source_url         [url]
 \t         -source_description [longer description]
