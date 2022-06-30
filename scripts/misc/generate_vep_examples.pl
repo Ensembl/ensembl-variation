@@ -39,13 +39,16 @@ use FileHandle;
 # Print instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db, $help);
+my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db, $registry, $help);
 
 GetOptions(
+  'registry=s' => \$registry,
+  
   'host=s'   => \$host,
   'user=s'   => \$user,
   'pass=s'   => \$pass,
   'port=i'   => \$port,
+  
   'version=i' => \$version,
   'species=s' => \$chosen_species,
   'dir=s'      => \$dir,
@@ -56,32 +59,37 @@ GetOptions(
 usage() if $help;
 die "Error: provide the Ensembl version with option '-v'\n" if !$version;
 
-if(defined($host) && $host =~ /staging|variation|livemirror/) {
-  $port ||= 3306;
-  $user ||= 'ensro';
-  $pass ||= '';
-}
-
-else {
-  $host ||= 'ensembldb.ensembl.org';
-  $port ||= 5306;
-  $user ||= 'anonymous';
-  $pass ||= '';
-}
-
 my $reg = 'Bio::EnsEMBL::Registry';
 
-$reg->load_registry_from_db(
-  -host       => $host,
-  -user       => $user,
-  -pass       => $pass,
-  -port       => $port,
-  -db_version => $version,
-);
+if (defined($registry)) {
+  $reg->load_all($registry);
+} else {
+  if(defined($host) && $host =~ /staging|variation|livemirror/) {
+    $port ||= 3306;
+    $user ||= 'ensro';
+    $pass ||= '';
+  }
+
+  else {
+    warn "Connecting to ensembldb.ensembl.org database...\n" unless ($host);
+    $host ||= 'ensembldb.ensembl.org';
+    $port ||= 5306;
+    $user ||= 'anonymous';
+    $pass ||= '';
+  }
+
+  $reg->load_registry_from_db(
+    -host       => $host,
+    -user       => $user,
+    -pass       => $pass,
+    -port       => $port,
+    -db_version => $version,
+    -species    => $chosen_species
+  );
+}
 
 $dir ||= '.';
 $formats ||= 'ensembl,vcf,id,hgvs,spdi';
-
 my @formats = split(',', $formats);
 
 # special case ID
@@ -92,14 +100,12 @@ if(grep {$_ eq 'id'} @formats) {
 }
 
 my @all_species = sort @{$reg->get_all_species()};
-
 @all_species = grep {$_ eq $chosen_species} @all_species if defined($chosen_species);
 
 my @alts = qw(A C G T);
 my $do = 0;
 
 SPECIES: foreach my $species(@all_species) {
-
   my %web_data;
   
   my $sa = $reg->get_adaptor($species, 'core', 'slice');
@@ -132,6 +138,7 @@ SPECIES: foreach my $species(@all_species) {
       $sth->execute('%'.$type.'%');
       $sth->bind_columns(\$name);
       $sth->fetch();
+      
       print OUT "$name\n" if $name;
       push @{$web_data{"VEP_ID"}}, $name;
     }
@@ -329,7 +336,8 @@ SPECIES: foreach my $species(@all_species) {
   my $fn = $dir.'/'.ucfirst($species).'.txt';
   open OUT, ">$fn";
   foreach my $key(keys %web_data) {
-    print OUT sprintf("%-17s = %s\n", $key, join('\n', @{$web_data{$key}}));
+    my @values = grep defined, @{$web_data{$key}};
+    print OUT sprintf("%-17s = %s\n", $key, join('\n', @values));
   }
   close OUT;
 
@@ -645,7 +653,11 @@ sub usage {
     -species      Filter by species (deafult: uses all species in database)
     -help         Print this message
     
-  Load database from parameters:
+  Load databases from registry (allows to set up multiple hosts):
+  
+    -registry     Registry file
+    
+  Load database from parameters (ignored when using -registry):
       
     -host         Host
     -port         Port number
