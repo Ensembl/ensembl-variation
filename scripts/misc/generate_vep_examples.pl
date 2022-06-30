@@ -140,7 +140,7 @@ SPECIES: foreach my $species(@all_species) {
       $sth->fetch();
       
       print OUT "$name\n" if $name;
-      push @{$web_data{"VEP_ID"}}, $name;
+      push @{$web_data{"VEP_ID"}}, $name if defined $name;
     }
     
     close OUT;
