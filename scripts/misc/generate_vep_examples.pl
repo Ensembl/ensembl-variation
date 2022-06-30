@@ -36,7 +36,10 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Getopt::Long;
 use FileHandle;
 
-my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db);
+# Print instructions if run without parameters
+usage() unless (scalar(@ARGV));
+
+my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db, $help);
 
 GetOptions(
   'host=s'   => \$host,
@@ -48,7 +51,10 @@ GetOptions(
   'dir=s'      => \$dir,
   'formats=s'  => \$formats,
   'write_to_db' => \$write_to_db,
+  'help!' => \$help,
 );
+usage() if $help;
+die "Error: provide the Ensembl version with option '-v'\n" if !$version;
 
 if(defined($host) && $host =~ /staging|variation|livemirror/) {
   $port ||= 3306;
@@ -105,7 +111,7 @@ SPECIES: foreach my $species(@all_species) {
   
   my $div_bacteria = $sa->dbc->dbname() =~ /^bacteria.*/ ? 1 : 0;
 
-  print STDERR "Doing $species, assembly $assembly\n";
+  print STDERR "Generating examples for $species, assembly $assembly...\n";
   
   if($real_vfa && $doing_id) {
     my $name;
@@ -616,4 +622,35 @@ sub write_to_db {
     $mca->delete_key($meta_key);
     $mca->store_key_value($meta_key, $meta_value);
   }
+}
+
+sub usage {
+  print qq{
+  Usage: perl generate_vep_examples.pl -v [VERSION] [OPTIONS]
+  
+  Generate VEP examples for one or more species. If no databases are set up, it
+  automatically connects to the public database (ensembldb.ensembl.org).
+  
+  Mandatory arguments:
+  
+    -v            Ensembl version, e.g. 108 (Required)
+  
+  Optional arguments:
+  
+    -dir          Directory where to write output (default: current directory)
+    -write_to_db  Write generated VEP examples to 'meta' table from the core
+                  database (turned off by default)
+    -formats      Comma-separated list of formats to output; prints all formats
+                  by default: 'ensembl,vcf,id,hgvs,spdi'
+    -species      Filter by species (deafult: uses all species in database)
+    -help         Print this message
+    
+  Load database from parameters:
+      
+    -host         Host
+    -port         Port number
+    -user         MySQL user name
+    -pass         MySQL password
+  } . "\n";
+  exit(0);
 }
