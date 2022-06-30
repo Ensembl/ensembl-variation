@@ -72,7 +72,7 @@ $species ||= 'homo_sapiens';
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-my $dba = $reg->get_DBAdaptor($species, 'variation'); 
+my $dba = $reg->get_DBAdaptor($species, 'variation');
 
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
@@ -187,6 +187,23 @@ elsif($source_name eq 'EVA') {
   my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status);
 
   import_synonyms($result_synonyms, $source, $dba, $species);
+}
+
+elsif($source_name eq 'pig_chip') {
+  my $int_dba = $reg->get_DBAdaptor('multi', 'intvar') || warn "Error getting intvar db adaptor\n";;
+
+  # Source Pig SNP Consortium
+  my %source_data = (
+    "name"           => "Pig SNP Consortium",
+    "version"        => undef,
+    "description"    => "PorcineSNP60 BeadChip",
+    "url"            => "https://www.animalgenome.org/repository/pig/",
+    "somatic_status" => "germline"
+  );
+
+  my $source = get_source($species, $dba, $source_data{name}, $source_data{version}, $source_data{url}, $source_data{description}, $source_data{somatic_status});
+
+  add_synonym_pig_chip($species, $dba, $int_dba, $source->dbID());
 }
 
 else{
@@ -565,6 +582,38 @@ sub import_synonyms_all_sources {
 
   } 
 } 
+
+=head2 add_synonym_pig_chip
+
+add synonyms for Pig SNP Consortium
+
+=cut
+
+sub add_synonym_pig_chip {
+  my $species = shift;
+  my $dba = shift;
+  my $int_dba = shift;
+  my $source_id = shift;
+
+  my $variation_adaptor = $dba->get_VariationAdaptor($species, 'variation', );
+
+  my $synonym_ext_sth = $int_dba->dbc->prepare(qq[ SELECT rs_name, synonym_name FROM pig_synonym ]);
+  $synonym_ext_sth->execute();
+  my $all_syn = $synonym_ext_sth->fetchall_arrayref();
+
+  my $synonym_ins_sth   = $variation_adaptor->dbc->prepare(qq[ INSERT IGNORE INTO variation_synonym (variation_id, name, source_id)
+                                                     VALUES (?,?,?) ]);
+
+  foreach my $synonym(@{$all_syn}){
+    my $var = $variation_adaptor->fetch_by_name($synonym->[0]);
+    if(defined $var){
+      $synonym_ins_sth->execute( $var->dbID, $synonym->[1], $source_id );
+    }
+    else{
+      warn "Variant $synonym->[0] not found\n";
+    }
+  }
+}
 
 =head2 get_source
 
