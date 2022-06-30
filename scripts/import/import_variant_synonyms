@@ -186,7 +186,7 @@ elsif($source_name eq 'EVA') {
 
   my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status);
 
-  import_synonyms($synonyms, $source, $dba, $species);
+  import_synonyms($result_synonyms, $source, $dba, $species);
 }
 
 else{
@@ -479,11 +479,12 @@ sub parse_eva_file {
   my %synonym;
 
   # Open the input file for reading
+  my $fh;
   if($infile =~ /gz$/) {
-    open (my $fh, "zcat $infile |") or die ("Could not open $infile for reading\n");
+    open ($fh, "zcat $infile |") or die ("Could not open $infile for reading\n");
   }
   else {
-    open (my $fh, '<', $infile) or die ("Could not open $infile for reading\n");
+    open ($fh, '<', $infile) or die ("Could not open $infile for reading\n");
   }
 
   # Read through the file and parse out the desired fields: 
