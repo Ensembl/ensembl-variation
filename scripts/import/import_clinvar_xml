@@ -1342,6 +1342,12 @@ sub enter_var{
   # get variation_feature_id
   my $vf_dbid = $vf->dbID;
 
+  # By default group_concat has maximum length 1024
+  # some variants have consequence_types longer than 1024
+  my $stmt_len = qq {set session group_concat_max_len = 100000};
+  my $sth_len = $dbh->prepare($stmt_len);
+  $sth_len->execute();
+
   # Update consequence_types in variation_feature table
   my $tv_sth    = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
                                                     FROM transcript_variation
