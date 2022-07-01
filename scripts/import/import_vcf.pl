@@ -700,12 +700,14 @@ sub main {
 			}
 			
 			# check we're not skipping loads in a row
-			if($last_skipped > 100 && $last_skipped =~ /(5|0)00$/) {
-				debug($config, "WARNING: Skipped last $last_skipped variants, are you sure this is running OK? Maybe --gp is enabled when it shouldn't be, or vice versa?");
-			}
+		
 			
 			# parse into a hash
 			$data->{$_} = $split[$headers{$_}] for keys %headers;
+			
+			if($last_skipped > 100 && $last_skipped =~ /(5|0)00$/) {
+				debug($config, "WARNING: Skipped last $last_skipped variants. The last skipped variant is $data->{'#CHROM'} amd $data->{POS}. Are you sure this is running OK? Maybe --gp is enabled when it shouldn't be, or vice versa?");
+			}
 			
 			# skip non-variant lines
 			if($data->{ALT} eq '.') {
@@ -816,6 +818,11 @@ sub main {
           next;
         }
       }
+	  
+	  if(length($data->{ALT}) > 50000 || length($data->{REF}) > 50000) {
+	    print "SKIP : $data->{ID}, Length is greater than 50,000\n";
+		next;
+	  }
 
 			# make a var name if none exists
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
