@@ -406,7 +406,7 @@ sub add_synonyms_uniprot {
     UPDATE
       variation_feature 
     SET 
-      variation_set_id = '$variation_set_id'
+      variation_set_id = ('$variation_set_id')
     WHERE
       variation_id=?
   }; 
@@ -446,14 +446,15 @@ sub add_synonyms_uniprot {
     $check_variation_set_sth->bind_param(1, $var_dbid, SQL_VARCHAR);
     $check_variation_set_sth->execute();
     my $var_set_id;
+
     $check_variation_set_sth->bind_columns(\$var_set_id);
     $check_variation_set_sth->fetch();
 
     if(!defined($var_set_id)){
-      $update_after_check_sth->execute($var_dbid);
+      $update_after_check_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
     else{
-      $update_variation_set_sth->execute($var_dbid);
+      $update_variation_set_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
 
     # Insert into variation_set_variation
