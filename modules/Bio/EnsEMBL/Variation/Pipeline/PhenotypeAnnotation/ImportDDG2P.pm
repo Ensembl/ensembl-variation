@@ -111,17 +111,17 @@ sub fetch_input {
 
   
   #my $file_ddg2p = "G2P.txt";
-  #gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
-  #or die "gunzip failed: $GunzipError\n";
+  gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
+  or die "gunzip failed: $GunzipError\n";
 
    
   my @rows;
   my $g2p_csv =  "G2P.csv";
   my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
-  foreach my $file (glob "$workdir/*csv.gz"){
+  foreach my $file (glob "$workdir/*.csv"){
     open my $infile, "<:encoding(utf8)", $file;
-    while (my $row = $csv->getline ($infile)) {
-    push @rows, $row;
+    while (my $row = $csv->getline($infile)) {
+      push @rows, $row;
     }
     close $infile;
   }
