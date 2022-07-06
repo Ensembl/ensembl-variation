@@ -111,7 +111,7 @@ sub fetch_input {
 
   
   #my $file_ddg2p = "G2P.txt";
-  gunzip "<$workdir/*.gz>" => "<$workdir/#1.csv>"
+  gunzip "<$workdir/*csv.gz>" => "<$workdir/#1.csv>"
   or die "gunzip failed: $GunzipError\n";
 
    
