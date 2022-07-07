@@ -130,7 +130,7 @@ sub fetch_input {
   
   open my $fh, ">>:encoding(utf8)", "$workdir/$g2p_csv";
   foreach my $line (@rows) {
-    next if $line =~ /^gene symbol/;
+    next if $line =~ /^"gene symbol"/;
     $csv->say ($fh, $line);
   }
   close $fh or die "$workdir/$g2p_csv: $!";
