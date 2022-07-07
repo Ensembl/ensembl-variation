@@ -102,7 +102,7 @@ sub fetch_input {
   my @unzipped_files;
 
   for (keys %input_files_url){
-    my $file = $dateStrURL.$_."csv.gz";
+    my $file = $dateStrURL.$_.".csv.gz";
     print $logFH "Found files (".$workdir."/".$file."), will skip new fetch\n" if -e $workdir."/".$file;
     my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $input_files_url{$_} -o $workdir/$file} unless -e $workdir."/".$file;
     print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
@@ -111,24 +111,33 @@ sub fetch_input {
 
   
   #my $file_ddg2p = "G2P.txt";
-  gunzip "<$workdir/*csv.gz>" => "<$workdir/#1.csv>"
+  gunzip "<$workdir/*.csv.gz>" => "<$workdir/#1.csv>"
   or die "gunzip failed: $GunzipError\n";
-
+  
    
   my @rows;
-  my $g2p_csv =  "G2P.csv";
+  my $g2p_csv = $dateStrURL."DDG2P.csv";
   my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
   foreach my $file (glob "$workdir/*.csv"){
-    open my $infile, "<:encoding(utf8)", $file;
-    while (my $row = $csv->getline($infile)) {
+    next if $file eq "$workdir/$g2p_csv";
+    open my $infile, "<:encoding(utf8)", $file ;
+    while (my $row = $csv->getline($infile)) { 
       push @rows, $row;
     }
     close $infile;
-  }
-  open my $fh, ">:encoding(utf8)", "$workdir/$g2p_csv";
-  $csv->say($fh, $_) for @rows;
-  close $fh or die "$workdir/$g2p_csv: $!";
+  } 
 
+  
+  open my $fh, ">>:encoding(utf8)", "$workdir/$g2p_csv";
+  foreach my $line (@rows) {
+    next if $line =~ /^gene symbol/;
+    $csv->say ($fh, $line);
+  }
+  close $fh or die "$workdir/$g2p_csv: $!";
+  
+
+  
+  unlink glob  "$workdir/*.csv.gz"; # to remove the csv.gz file.
   $self->param('ddg2p_file', $g2p_csv);
 }
 
@@ -220,8 +229,11 @@ sub parse_input_file {
     my $phen    = $content->{"disease name"};
     my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
     my @accns   = split/\;/,$content->{"phenotypes"};
-    my @pubmeds   = split/\;/,$content->{"pmids"};
-  
+    my $pubmeds = $content->{"pmids"};
+    my $confidence_category = $content->{"confidence category"};
+    my $mutation_consequence = $content->{"mutation consequence"};
+    $mutation_consequence =~ s/;/,/g;
+    $pubmeds =~ s/;/,/g;
 
     if ($symbol && $phen) {
       $phen =~ s/\_/ /g;
@@ -254,8 +266,10 @@ sub parse_input_file {
           'seq_region_strand' => $gene->seq_region_strand,
           'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
-          'pubmed_id'  => @pubmeds,
+          'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
+          'g2p_confidence' => $confidence_category,
+          'mutation_consequence' => $mutation_consequence,
           ontology_mapping_type =>'involves' 
         };
       }
