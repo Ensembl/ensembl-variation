@@ -45,8 +45,6 @@ use File::Path qw(make_path);
 use POSIX qw(strftime);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Text::CSV;
-use File::Slurp;
-use IO::Compress::Gzip qw(gzip $GzipError);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -99,7 +97,6 @@ sub fetch_input {
   #get input file DDG2P:
   
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
-  my @unzipped_files;
 
   for (keys %input_files_url){
     my $file = $dateStrURL.$_.".csv.gz";
@@ -109,11 +106,8 @@ sub fetch_input {
     
   }
 
-  
-  #my $file_ddg2p = "G2P.txt";
   gunzip "<$workdir/*.csv.gz>" => "<$workdir/#1.csv>"
   or die "gunzip failed: $GunzipError\n";
-  
    
   my @rows;
   my $g2p_csv = $dateStrURL."DDG2P.csv";
@@ -130,7 +124,7 @@ sub fetch_input {
   
   open my $fh, ">>:encoding(utf8)", "$workdir/$g2p_csv";
   foreach my $line (@rows) {
-    next if $line =~ /^"gene symbol"/;
+    next if $line->[0] =~ /^gene symbol/;
     $csv->say ($fh, $line);
   }
   close $fh or die "$workdir/$g2p_csv: $!";
