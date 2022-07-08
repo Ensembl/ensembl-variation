@@ -97,6 +97,9 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 $slice_adaptor->dbc->reconnect_when_lost(1);
 
+# update can only continue if MTMP_transcript_variation table exists
+check_mtmp_table($dba);
+
 ## fetch ClinVar source object and update version based on input file name
 # fetch ClinVar and OMIM and updates version for both
 my $omimstr= 'OMIM';
@@ -935,6 +938,21 @@ sub get_phenotype{
   return $pheno;
 }
 
+=head2 check_mtmp_table
+
+ - check if MTMP_transcript_variation exists
+
+=cut
+
+sub check_mtmp_table {
+  my $dba = shift;
+
+  my $table_sth = $dba->dbc->prepare(qq[ show tables like 'MTMP_transcript_variation' ]);
+  $table_sth->execute() || die ("ERROR: cannot run command to check MTMP_transcript_variation\n");
+
+  my $check_table = $table_sth->fetchall_arrayref();
+  die "ERROR: MTMP_transcript_variation table does not exist. Create table before ClinVar import\n" if(!$check_table->[0]);
+}
 
 =head2 get_submitter_ids
 
