@@ -43,12 +43,20 @@ use strict;
 
 use File::Path qw(make_path);
 use POSIX qw(strftime);
-use IO::Uncompress::Gunzip qw(gunzip);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Text::CSV;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
+
+my %input_files_url = (
+  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz',
+  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz',
+  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz',
+  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
+  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz',
+);
 
 sub fetch_input {
   my $self = shift;
@@ -58,8 +66,8 @@ sub fetch_input {
 
   $self->debug($self->param('debug_mode'));
 
-  %source_info = (source_description => 'Developmental Disorders Genotype-to-Phenotype Database',
-                  source_url => 'https://decipher.sanger.ac.uk/',
+  %source_info = (source_description => 'Genotype-to-Phenotype Database',
+                  source_url => 'https://www.ebi.ac.uk/gene2phenotype',
                   object_type => 'Gene',
                   source_status => 'germline',
                   source_name => 'DDG2P',       #source name in the variation db
@@ -83,18 +91,48 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
+
+
+
   #get input file DDG2P:
-  my $ddg2p_url = 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz';
+  
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
-  my $file_ddg2p_gz = "DDG2P_$dateStrURL.csv.gz";
 
-  print $logFH "Found files (".$workdir."/".$file_ddg2p_gz."), will skip new fetch\n" if -e $workdir."/".$file_ddg2p_gz;
-  my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $ddg2p_url -o $workdir/$file_ddg2p_gz} unless -e $workdir."/".$file_ddg2p_gz ;
-  print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
+  for (keys %input_files_url){
+    my $file = $dateStrURL.$_.".csv.gz";
+    print $logFH "Found files (".$workdir."/".$file."), will skip new fetch\n" if -e $workdir."/".$file;
+    my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $input_files_url{$_} -o $workdir/$file} unless -e $workdir."/".$file;
+    print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
+    
+  }
 
-  my $file_ddg2p = "DDG2P.csv";
-  gunzip $workdir."/".$file_ddg2p_gz => $workdir."/".$file_ddg2p;
-  $self->param('ddg2p_file', $file_ddg2p);
+  gunzip "<$workdir/*.csv.gz>" => "<$workdir/#1.csv>"
+  or die "gunzip failed: $GunzipError\n";
+   
+  my @rows;
+  my $g2p_csv = $dateStrURL."DDG2P.csv";
+  my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
+  foreach my $file (glob "$workdir/*.csv"){
+    next if $file eq "$workdir/$g2p_csv";
+    open my $infile, "<:encoding(utf8)", $file ;
+    while (my $row = $csv->getline($infile)) { 
+      push @rows, $row;
+    }
+    close $infile;
+  } 
+
+  
+  open my $fh, ">>:encoding(utf8)", "$workdir/$g2p_csv";
+  foreach my $line (@rows) {
+    next if $line->[0] =~ /^gene symbol/;
+    $csv->say ($fh, $line);
+  }
+  close $fh or die "$workdir/$g2p_csv: $!";
+  
+
+  
+  unlink glob  "$workdir/*.csv.gz"; # to remove the csv.gz file.
+  $self->param('ddg2p_file', $g2p_csv);
 }
 
 sub run {
@@ -169,22 +207,27 @@ sub parse_input_file {
 
   my %headers;
 
-  my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
+  my $csv = Text::CSV->new ( { binary => 1, eol => $/, sep_char => ","} )  # should set binary attribute.
             || die ("Cannot use CSV: ".Text::CSV->error_diag ()."\n");
 
   # Get columns headers
   $csv->column_names ($csv->getline ($fh));
-
+  
   # Read through the file and parse out the desired fields
   while (my $content = $csv->getline_hr ($fh)) {
 
     # get data from the line
-    my $symbol  = $content->{'gene symbol'};
-    my $allelic = $content->{'allelic requirement'};
-    my $mode    = $content->{'mutation consequence'};
-    my $phen    = $content->{'disease name'};
-    my $id      = $content->{'disease mim'};
-    my @accns   = split/\;/,$content->{'phenotypes'};
+    my $symbol  = $content->{"gene symbol"};
+    my $allelic = $content->{"allelic requirement"};
+    my $mode    = $content->{"mutation consequence"};
+    my $phen    = $content->{"disease name"};
+    my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
+    my @accns   = split/\;/,$content->{"phenotypes"};
+    my $pubmeds = $content->{"pmids"};
+    my $confidence_category = $content->{"confidence category"};
+    my $mutation_consequence = $content->{"mutation consequence"};
+    $mutation_consequence =~ s/;/,/g;
+    $pubmeds =~ s/;/,/g;
 
     if ($symbol && $phen) {
       $phen =~ s/\_/ /g;
@@ -210,14 +253,17 @@ sub parse_input_file {
         push @phenotypes, {
           'id' => $gene->stable_id,
           'description' => $phen,
-          'external_id' => $id,
+          'MIM' => $id,
           'seq_region_id' => $gene->slice->get_seq_region_id,
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
           'seq_region_strand' => $gene->seq_region_strand,
           'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
+          'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
+          'g2p_confidence' => $confidence_category,
+          'mutation_consequence' => $mutation_consequence,
           ontology_mapping_type =>'involves' 
         };
       }
