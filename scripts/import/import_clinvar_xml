@@ -55,6 +55,7 @@ use XML::Hash::XS qw();
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -86,6 +87,7 @@ $dbh->reconnect_when_lost(1);
 
 my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
 my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
+my $tva                   = $dba->get_TranscriptVariationAdaptor('human', 'variation', );
 my $structvar_adaptor     = $dba->get_StructuralVariationAdaptor('human', 'variation', );
 my $attrib_adaptor        = $dba->get_AttributeAdaptor();
 
@@ -94,6 +96,9 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 $slice_adaptor->dbc->reconnect_when_lost(1);
+
+# update can only continue if MTMP_transcript_variation table exists
+check_mtmp_table($dba);
 
 ## fetch ClinVar source object and update version based on input file name
 # fetch ClinVar and OMIM and updates version for both
@@ -933,6 +938,21 @@ sub get_phenotype{
   return $pheno;
 }
 
+=head2 check_mtmp_table
+
+ - check if MTMP_transcript_variation exists
+
+=cut
+
+sub check_mtmp_table {
+  my $dba = shift;
+
+  my $table_sth = $dba->dbc->prepare(qq[ show tables like 'MTMP_transcript_variation' ]);
+  $table_sth->execute() || die ("ERROR: cannot run command to check MTMP_transcript_variation\n");
+
+  my $check_table = $table_sth->fetchall_arrayref();
+  die "ERROR: MTMP_transcript_variation table does not exist. Create table before ClinVar import\n" if(!$check_table->[0]);
+}
 
 =head2 get_submitter_ids
 
@@ -1283,6 +1303,13 @@ sub enter_var{
 
   my $so_term = SO_variation_class($allele_str);
 
+  # MTMP transcript variation - biotypes to skip
+  my %biotypes_to_skip = (
+    'lncRNA' => 1,
+    'processed_pseudogene' => 1,
+    'unprocessed_pseudogene' => 1,
+  );
+
   my $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
@@ -1292,6 +1319,7 @@ sub enter_var{
     );
   $variation_adaptor->store($var);
 
+  # Create the variation feature
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
     (-start           => $vf_start,
      -end             => $vf_end,
@@ -1308,6 +1336,52 @@ sub enter_var{
     );
 
   $var_feat_adaptor->store($vf);
+
+  my $all_tv = $vf->get_all_TranscriptVariations();
+  foreach my $tv (@{$all_tv}) {
+    # Do not include upstream and downstream consequences
+    next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+
+    # only include valid biotypes in MTMP_transcript_variation
+    my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
+
+    # write to MTMP table if transcript is MANE (GRCh38)
+    my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+    my $mtmp = $write_mane && $write_biotype;
+
+    # MANE is not available for GRCh37
+    if($assembly =~ /GRCh37/) {
+      $mtmp = $write_biotype;
+    }
+
+    $tva->store($tv, $mtmp);
+  }
+
+  # get variation_feature_id
+  my $vf_dbid = $vf->dbID;
+
+  # By default group_concat has maximum length 1024
+  # some variants have consequence_types longer than 1024
+  my $stmt_len = qq {set session group_concat_max_len = 100000};
+  my $sth_len = $dbh->prepare($stmt_len);
+  $sth_len->execute();
+
+  # Update consequence_types in variation_feature table
+  my $tv_sth    = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+                                                    FROM transcript_variation
+                                                    WHERE variation_feature_id = ?
+                                                    GROUP BY variation_feature_id;
+                                               ]);
+
+  $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
+  my $data_tv = $tv_sth->fetchall_arrayref();
+  if (defined $data_tv->[0]->[0]) {
+    my $update_vf_sth = $dba->dbc()->prepare(qq[ UPDATE variation_feature
+                                                 SET consequence_types = ?
+                                                 WHERE variation_feature_id = ?
+                                                ]);
+    $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+  }
 
   my @vf; #return vf to attach phenotype feature to
   push @vf, $vf;
@@ -1445,6 +1519,7 @@ sub clean_old_data{
   # remove previously inserted variation from ClinVar + associated records
   # remove from allele_synonym
   # first check which entries to remove
+  print "Deleting old allele synonym\n";
   my $var_syn_sel_sth    = $dba->dbc()->prepare(qq[ select allele_synonym_id from allele_synonym where variation_id in
                                                     (select variation_id from variation v, source s
                                                     where v.source_id = s.source_id and s.name ='ClinVar')
@@ -1458,21 +1533,40 @@ sub clean_old_data{
     $allele_syn_delete_sth->execute() || die "Could not delete entry id $allele_syn_id from allele_synonym\n";
   }
 
+  print "Deleting old variation feature, transcript variation and MTMP transcript variation\n";
+  # remove from variation_feature, transcript_variation and MTMP_transcript_variation
+  my $tv_del_sth = $dba->dbc()->prepare(qq[ select vf.variation_feature_id from variation_feature vf
+                                            left join source s on s.source_id = vf.source_id
+					    where s.name ='ClinVar';
+					    ]);
+  $tv_del_sth->execute() || die "Error selecting variation feature from ClinVar\n";
+  my $tv_to_del = $tv_del_sth->fetchall_arrayref();
+  foreach my $to_del (@{$tv_to_del}){
+    my $vf_id_del = $to_del->[0];
+    my $del_vf_sth = $dba->dbc()->prepare(qq[ delete from variation_feature where variation_feature_id = $vf_id_del ]);
+    my $del_sth = $dba->dbc()->prepare(qq[ delete from transcript_variation where variation_feature_id = $vf_id_del ]);
+    my $del_mtmp_sth = $dba->dbc()->prepare(qq[ delete from MTMP_transcript_variation where variation_feature_id = $vf_id_del ]);
+    $del_vf_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from variation_feature\n";
+    $del_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from transcript_variation\n";
+    $del_mtmp_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  }
+
+  print "Deleting old data from other tables\n";
   # remove from other tables
-  my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation/;
+  my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation variation_hgvs/;
   for my $table (@tables){
     my $var_recs_del_sth    = $dba->dbc->do(qq[ delete from $table where variation_id in
                                                     (select variation_id from variation v, source s
                                                      where v.source_id = s.source_id and s.name ='ClinVar')
                                                     ]);
   }
-  my $var_feat_del_sth    = $dba->dbc->do(qq[ delete from variation_feature where source_id in (select source_id from source where name ='ClinVar'); ]);
   my $var_del_sth        = $dba->dbc->do(qq[ delete from variation where source_id in (select source_id from source where name ='ClinVar'); ]);
   my $synonym_del_sth    = $dba->dbc->do(qq[ delete from variation_synonym where source_id in (select source_id from source where name ='OMIM' ) ]);
 
   my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=NULL ]);
   my $var_feat_updt_sth  = $dba->dbc->do(qq[ update variation_feature set clinical_significance=NULL ]);
 
+  print "Old data deleted!\n";
 }
 
 sub check_known_clinsig {
@@ -1500,7 +1594,7 @@ sub usage{
     die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]
 
 \t\toptions: -structvar  (only import ClinVar statuses for structural variations)
-\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feature (ClinVar), variation_set_variation (sets: ClinVar, OMIM, All phenotypes set ), clinical_significance and synonym data)
+\t\toptions: -clean      ( delete old phenotype_feature, phenotype_feature_attrib, variation(ClinVar), variation_feature (ClinVar), transcript_variation (ClinVar), variation_set_variation (sets: ClinVar, OMIM, All phenotypes set ), clinical_significance and synonym data)
 \t\toptions: -done_file  (tsv file containing RCVs to be skipped, expected format: header and 2nd column containing RCVs)
 \n\n";
 
