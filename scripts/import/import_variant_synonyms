@@ -738,6 +738,7 @@ sub usage{
   die "\nUsage : import_variant_synonyms -registry [registry file] -source_name [name]
 \n\tOptions:
 \t         -data_file          [name of file to load]  - mandatory for EVA
+\t         -source_name        [source]                - 'PharmGKB', 'dbSNP', 'UniProt', 'EVA' or 'pig_chip'
 \t         -source_version     [version]
 \t         -source_url         [url]
 \t         -source_description [longer description]
