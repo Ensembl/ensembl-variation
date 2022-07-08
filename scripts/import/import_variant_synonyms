@@ -494,7 +494,7 @@ parse EVA data file
 sub parse_eva_file {
   my $infile = shift;
   
-  my %synonym;
+  my %synonyms;
 
   # Open the input file for reading
   my $fh;
@@ -516,11 +516,11 @@ sub parse_eva_file {
     $row_data[7] =~ /CURR=(rs[0-9]+)/;
     my $current_rsid = $1;
 
-    $synonym{$current_rsid} = $synonym;
+    $synonyms{$current_rsid} = $synonym;
   }
   close($fh);
 
-  return \%synonym;
+  return \%synonyms;
 }
 
 =head2 import_synonyms
@@ -632,7 +632,7 @@ sub get_source {
   my $description   = shift;
   my $source_status = shift;
 
-  my $source_adaptor = $dba->get_SourceAdaptor('human', 'variation', );
+  my $source_adaptor = $dba->get_SourceAdaptor($species, 'variation', );
   my $source = $source_adaptor->fetch_by_name($source_name);
 
   if (defined $source) {
