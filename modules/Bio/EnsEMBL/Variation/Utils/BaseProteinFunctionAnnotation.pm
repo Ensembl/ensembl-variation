@@ -113,6 +113,8 @@ sub run {
   my $translation_stable_id = (defined $translation_mappings) ? $translation_mappings->{$translation_md5} : $self->get_stable_id_for_md5($translation_md5);
   throw("No translation_stable_id for translation_md5 $translation_md5") if (!defined $translation_stable_id);
 
+  $translation_stable_id =~ s/cds-//;
+
   my $translation = $self->get_translation($translation_stable_id);
   my $translation_seq = $translation->seq;
   my $transcript = $translation->transcript;
