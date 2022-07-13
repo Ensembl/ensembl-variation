@@ -89,10 +89,10 @@ sub default_options {
 
         # include RefSeq transcripts, and edit with accompanying BAM?
         include_refseq          => 0,
-        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
+        bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
 
         # GRCh37 bam
-        # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
+        # bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',
         
         # connection details for the hive's own database
         hive_db_host    => 'mysql-ens-var-prod-2.ebi.ac.uk',
@@ -169,7 +169,7 @@ sub default_options {
         
         # the protein database used to build alignments if you're not using compara
 
-        variation_data          => '/nfs/production/panda/ensembl/variation/data', 
+        variation_data          => '/nfs/production/flicek/ensembl/variation/data',
 
         blastdb                 => $self->o('variation_data').'/sift5.2.2/uniref90/uniref90.fasta',
 
