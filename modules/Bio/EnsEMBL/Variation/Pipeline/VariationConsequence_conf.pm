@@ -145,6 +145,9 @@ sub default_options {
         run_transcript_effect   => 1,
         run_variation_class     => 1,
 
+        # these flags control update running parts of pipeline
+        update_diff             => undef,
+
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
         human_default_override		=> 0,
@@ -178,6 +181,14 @@ sub default_options {
     };
 }
 
+sub pipeline_wide_parameters {  # these parameter values are visible to all analyses, can be overridden by parameters{} and input_id{}
+    my ($self) = @_;
+    return {
+        %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
+
+        'update_diff'     => $self->o('update_diff'),
+    };
+}
 
 sub resource_classes {
     my ($self) = @_;
@@ -208,12 +219,12 @@ sub pipeline_analyses {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               sort_variation_feature => $self->o('sort_variation_feature'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
             -flow_into => {
               1 => ['gene_factory'],
-              2 => ['rebuild_tv_indexes'],
             },
             -input_ids  => [{}],
           },
@@ -222,8 +233,10 @@ sub pipeline_analyses {
             -hive_capacity  => 50,
 
             -parameters => {
+              mtmp_table => $self->o('mtmp_table'),
               include_lrg => $self->o('include_lrg'),
               limit_biotypes => $self->o('limit_biotypes'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
@@ -235,6 +248,7 @@ sub pipeline_analyses {
           { -logic_name => 'dump_variation_gene_name',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::DumpVariationGeneName',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -parameters => {
               @common_params,
             },
@@ -273,12 +287,14 @@ sub pipeline_analyses {
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',
@@ -286,12 +302,14 @@ sub pipeline_analyses {
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'medmem',
@@ -302,6 +320,7 @@ sub pipeline_analyses {
           { -logic_name => 'transcript_effect_highmem',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -hive_capacity  => 50,
+            -max_retry_count => 1,
             -analysis_capacity  => 50,
             -rc_name => 'highmem',
             -parameters => {
@@ -309,6 +328,7 @@ sub pipeline_analyses {
               fasta => $self->o('fasta'),
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
           },
@@ -321,6 +341,9 @@ sub pipeline_analyses {
           },
           { -logic_name => 'web_index_load',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::LoadWebIndexFiles',
+            -flow_into => {
+              1 => ['rebuild_tv_indexes'],
+            },
             -parameters => {
               @common_params,
             },
@@ -332,13 +355,13 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
-            -wait_for => 'web_index_load',
             -flow_into => {
               1 => ['update_variation_feature'],
             },
           },
           { -logic_name => 'update_variation_feature',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+            -analysis_capacity => 100,
             -parameters => {
               @common_params,
             },
