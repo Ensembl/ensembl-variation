@@ -225,6 +225,7 @@ sub pipeline_analyses {
             -rc_name   => 'default',
             -flow_into => {
               1 => ['gene_factory'],
+              2 => ['rebuild_tv_indexes'],
             },
             -input_ids  => [{}],
           },
@@ -341,9 +342,6 @@ sub pipeline_analyses {
           },
           { -logic_name => 'web_index_load',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::LoadWebIndexFiles',
-            -flow_into => {
-              1 => ['rebuild_tv_indexes'],
-            },
             -parameters => {
               @common_params,
             },
@@ -355,6 +353,7 @@ sub pipeline_analyses {
               @common_params,
             },
             -rc_name   => 'default',
+            -wait_for => 'web_index_load',
             -flow_into => {
               1 => ['update_variation_feature'],
             },
