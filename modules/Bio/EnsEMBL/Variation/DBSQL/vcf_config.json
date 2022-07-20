@@ -795,6 +795,21 @@
       "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
     },
     {
+      "id": "collared_flycatcher_EVA",
+      "source_name": "EVA",
+      "description": "Variants from EVA",
+      "species": "ficedula_albicollis",
+      "assembly": "FicAlb1.5",
+      "type": "remote",
+      "use_as_source" : 1,
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/ficedula_albicollis/GCA_000247815.2/GCA_000247815.2_current_ids.vcf.gz",
+      "chromosomes": [
+          "1", "1A", "2", "3", "4", "4A", "5", "6", "7", "8", "9", "10",
+          "11", "12", "13", "14", "15", "17", "18", "19", "20", "21", "22",
+          "23", "24", "25", "26", "27", "28", "Z", "LG34", "LG35", "LGE22"
+      ]
+    },
+    {
       "id": "91_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
@@ -856,6 +871,14 @@
       "assembly": "Felis_catus_9.0",
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "27_sauropsids.gerp_conservation_score",
+      "species": "ficedula_albicollis",
+      "assembly": "FicAlb1.5",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.ficedula_albicollis.FicAlb1.5.bw",
       "annotation_type": "gerp"
     },
     {
