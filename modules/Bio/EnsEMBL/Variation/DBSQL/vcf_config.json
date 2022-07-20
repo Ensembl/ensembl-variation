@@ -861,7 +861,7 @@
     {
       "id": "65_amniotes.gerp_conservation_score",
       "species": "gallus_gallus",
-      "assembly": "GRCg6a",
+      "assembly": "bGalGal1.mat.broiler.GRCg7b",
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/release-107/compara/conservation_scores/65_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.bGalGal1.mat.broiler.GRCg7b.bw",
       "annotation_type": "gerp"
