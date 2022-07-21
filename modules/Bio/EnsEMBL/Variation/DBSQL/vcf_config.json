@@ -897,6 +897,14 @@
     },
     {
       "id": "91_mammals.gerp_conservation_score",
+      "species": "macaca_fascicularis",
+      "assembly": "Macaca_fascicularis_6.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/release-107/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_fascicularis.Macaca_fascicularis_6.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
       "species": "macaca_mulatta",
       "assembly": "Mmul_10",
       "type": "remote",
