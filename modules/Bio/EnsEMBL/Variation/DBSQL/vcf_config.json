@@ -878,7 +878,7 @@
       "species": "ficedula_albicollis",
       "assembly": "FicAlb1.5",
       "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.ficedula_albicollis.FicAlb1.5.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-108/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.ficedula_albicollis.FicAlb1.5.bw",
       "annotation_type": "gerp"
     },
     {
