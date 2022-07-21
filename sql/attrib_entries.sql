@@ -321,7 +321,7 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 532,'dbnsfp_revel_pred','dbNSFP REVEL prediction','dbNSFP REVEL prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 533,'dbnsfp_meta_lr_pred','dbNSFP MetaLR prediction','dbNSFP MetaLR prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES ( 534,'dbnsfp_ma_pred','dbNSFP mutation assessor prediction','dbNSFP mutation assessor prediction');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (535, 'MANE_Select', 'MANE Select v0.9', 'MANE Select (v0.9) is the preliminary release (phase 5) of the MANE Select data set. The Matched Annotation from NCBI and EMBL-EBI project (MANE) is a collaboration between Ensembl-GENCODE and RefSeq to select a default transcript per human protein coding locus that is representative of biology, well-supported, expressed and conserved. This transcript set matches GRCh38 and is 100% identical between RefSeq and Ensembl-GENCODE for 5\' UTR, CDS, splicing and 3\' UTR.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (535, 'MANE_Select', 'MANE Select', 'The Matched Annotation from NCBI and EMBL-EBI project (MANE) is a collaboration between Ensembl-GENCODE and RefSeq to select a default transcript per human protein coding locus that is representative of biology, well-supported, expressed and conserved. This transcript set matches GRCh38 and is 100% identical between RefSeq and Ensembl-GENCODE for 5\' UTR, CDS, splicing and 3\' UTR.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (536, 'Ensembl_Select', 'Ensembl Select', 'The Ensembl Select is a transcript identified by a pipeline that takes into account several criteria including transcript support (TSL), functional importance (APPRIS), representation in RefSeq and UniProt databases, length and coverage of pathogenic variants, where available.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (537, 'TAGENE_transcript', 'TAGENE pipeline transcript', 'Transcript created or extended using a model assembled from RNA-seq long reads using the TAGENE pipeline.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES  (538, 'legacy_biotype', 'Legacy biotype', 'Obsolete biotype previously assigned to this Ensembl object.');
@@ -345,6 +345,9 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (557, 'added_seq_asm_pr_url', 'Added sequence assembly provider url', 'Source assembly provider url for the out of assembly seq_regions (coming from the additional assemblies, i.e., apicoplasts, mitochondria, etc). Should have the corresponding added_seq_accession attrib for the same seq region. Mandatory for added sequences.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (558, 'added_seq_ann_pr_nam', 'Added sequence annotation provider name', 'Source annotation provider name for the out of assembly seq_regions (coming from the additional assemblies, i.e., apicoplasts, mitochondria, etc). Should have the corresponding added_seq_accession attrib for the same seq region. Should be present if there are models on such seq_regions.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (559, 'added_seq_ann_pr_url', 'Added sequence annotation provider url', 'Source annotation provider url for the out of assembly seq_regions (coming from the additional assemblies, i.e., apicoplasts, mitochondria, etc). Should have the corresponding added_seq_accession attrib for the same seq region. Should be present if there are models on such seq_regions.');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (560, 'artef_dupl', 'Artifactual duplication', 'Annotation on artifactual regions of the genome assembly');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (561, 'g2p_confidence', 'G2P confidence', 'G2P confidence category from the G2P panels');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (562, 'mutation_consequence', 'Mutation consequence', 'G2P mutation consequence');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -930,6 +933,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (673, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (674, 477, 'Watkins-exome-capture');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (675, 477, 'Exome_Capture_Diversity');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (676, 545, 'seedstor_links');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (677, 470, 'complex_chromosomal_rearrangement');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
