@@ -1039,7 +1039,7 @@
       "species": "sus_scrofa",
       "assembly": "Sscrofa11.1",
       "type": "remote",
-      "filename_template" : "https://www.bioinformatics.nl/pCADD/indexed_pPHRED-scores/###CHR###_pCADD-PHRED-scores.tsv.gz",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/sus_scrofa/Sscrofa11.1/variation/ALL_pCADD-PHRED-scores.tsv.gz",
       "annotation_type": "cadd"
     }
   ]
