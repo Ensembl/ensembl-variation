@@ -44,7 +44,7 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
@@ -1393,6 +1393,7 @@ sub _get_phenotype_id {
 
   # Replace special characters in the phenotype description
   $description = replace_char($description);
+  $description = replace_hex($description);
 
   # Check phenotype description in the format "description; name"
   if (!defined($name) || $name eq '') {
