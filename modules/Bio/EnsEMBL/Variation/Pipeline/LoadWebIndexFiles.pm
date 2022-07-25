@@ -70,8 +70,6 @@ sub run {
     load($dbc, qw(variation_hgvs variation_id hgvs_name));
   }
 
-  $self->update_meta();
-
   return;
 }
 
@@ -102,20 +100,5 @@ sub rejoin_table_files {
   rmtree($dir."/web_index_files");
 }
 
-sub update_meta{
-
-  my $self = shift;
-
-  my $var_dba  = $self->get_species_adaptor('variation');
-
-  my $var_dbh = $var_dba->dbc->db_handle;
-
-  my $update_meta_sth = $var_dbh->prepare(qq[ insert ignore into meta
-                                              ( meta_key, meta_value) values (?,?)
-                                            ]);
-
-  $update_meta_sth->execute('TranscriptEffect_run_date', $self->run_date() );
-
-}
 1;
 

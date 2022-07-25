@@ -63,14 +63,16 @@ GetOptions ("data_file=s"          => \$data_file,
             "clean"                => \$clean 
             );
 
-usage() unless defined $registry_file && defined $source_name; 
+usage() unless defined $registry_file && defined $source_name;
+
+usage() if($source_name eq 'EVA' && !$data_file);
 
 $species ||= 'homo_sapiens';
 
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-my $dba = $reg->get_DBAdaptor($species, 'variation'); 
+my $dba = $reg->get_DBAdaptor($species, 'variation');
 
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
@@ -121,9 +123,9 @@ elsif($source_name eq 'dbSNP') {
   import_synonyms_all_sources($sources, $dba, $species, \%data);  
 } 
 
-elsif($source_name eq 'UniProt'){
+elsif($source_name eq 'UniProt') {
   # download UniProt file if it's not provided  
-  $data_file = download_file('UniProt', 'humsavar.txt') unless $data_file; 
+  $data_file = download_file('UniProt', 'humsavar') unless $data_file;
  
   my $result = parse_uniprot($data_file); 
 
@@ -165,6 +167,45 @@ elsif($source_name eq 'UniProt'){
   add_synonyms_uniprot(\%synonym, $source_name, $variation_set_id, $dba, $species); 
 }
 
+elsif($source_name eq 'EVA') {
+  my $result_synonyms = parse_eva_file($data_file);
+
+  # Source EVA
+  my %source_eva = (
+  "EVA" => {
+    description => "Short variant data imported from EVA",
+    url         => "https://www.ebi.ac.uk/eva/",
+    status      => "germline",
+  }, 
+  );
+
+  # get source info 
+  $source_description ||= $source_eva{$source_name}->{description};
+  $source_url ||= $source_eva{$source_name}->{url};
+  my $source_status = $source_eva{$source_name}->{status};
+
+  my $source = get_source($species, $dba, $source_name, $source_version, $source_url, $source_description, $source_status);
+
+  import_synonyms($result_synonyms, $source, $dba, $species);
+}
+
+elsif($source_name eq 'pig_chip') {
+  my $int_dba = $reg->get_DBAdaptor('multi', 'intvar') || warn "Error getting intvar db adaptor\n";;
+
+  # Source Pig SNP Consortium
+  my %source_data = (
+    "name"           => "Pig SNP Consortium",
+    "version"        => undef,
+    "description"    => "PorcineSNP60 BeadChip",
+    "url"            => "https://www.animalgenome.org/repository/pig/",
+    "somatic_status" => "germline"
+  );
+
+  my $source = get_source($species, $dba, $source_data{name}, $source_data{version}, $source_data{url}, $source_data{description}, $source_data{somatic_status});
+
+  add_synonym_pig_chip($species, $dba, $int_dba, $source->dbID());
+}
+
 else{
     die "data source : $source_name not supported\n";
 } 
@@ -187,7 +228,7 @@ sub download_file {
     $url = "https://api.pharmgkb.org/v1/download/file/data/" . $data_file; 
   }
   elsif($source eq "UniProt") {
-    $url = "https://www.uniprot.org/docs/" . $data_file; 
+    $url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/docs/" . $data_file;
   }
   else {
     die "Can't download file for data source: $data_file\n"; 
@@ -365,7 +406,7 @@ sub add_synonyms_uniprot {
     UPDATE
       variation_feature 
     SET 
-      variation_set_id = '$variation_set_id'
+      variation_set_id = ('$variation_set_id')
     WHERE
       variation_id=?
   }; 
@@ -378,35 +419,46 @@ sub add_synonyms_uniprot {
     WHERE
       variation_id=?
   }; 
+  
+  my $stmt_insert_var_set = qq{
+    INSERT IGNORE INTO
+      variation_set_variation (variation_id, variation_set_id)
+    VALUES (?, ?)
+  };
 
   my $check_variation_set_sth = $db_adaptor->dbc->prepare($stmt_check_var_set); 
   my $update_after_check_sth = $db_adaptor->dbc->prepare($stmt_update_after_check);
-  my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update); 
+  my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update);
+  my $insert_var_set = $db_adaptor->dbc->prepare($stmt_insert_var_set);
   
   foreach my $rs_id (keys %{$synonyms}) {
-    my $variation_id = $synonyms->{$rs_id}[0];    
-
     my $variation = $variation_adaptor->fetch_by_name($rs_id);
     unless($variation){
       warn "Variant $rs_id not found\n"; 
       next; 
     }
 
+    my $var_dbid = $variation->dbID();
+
     $variation->add_synonym($source_name, @{$synonyms->{$rs_id}}); 
     $variation_adaptor->store_synonyms($variation); 
     
-    $check_variation_set_sth->bind_param(1, $variation_id, SQL_VARCHAR);
+    $check_variation_set_sth->bind_param(1, $var_dbid, SQL_VARCHAR);
     $check_variation_set_sth->execute();
     my $var_set_id;
+
     $check_variation_set_sth->bind_columns(\$var_set_id);
     $check_variation_set_sth->fetch();
 
     if(!defined($var_set_id)){
-      $update_after_check_sth->execute($variation_id);
+      $update_after_check_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
     else{
-      $update_variation_set_sth->execute($variation_id); 
+      $update_variation_set_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
+
+    # Insert into variation_set_variation
+    $insert_var_set->execute($var_dbid, $variation_set_id) || die ("Failed to insert $rs_id into variation_set_variation\n");
   }
 
 }
@@ -430,6 +482,44 @@ sub extract_PharmGKB {
     my @a = split/\t/;
     $synonyms{$a[0]} = $a[3];
   }
+  return \%synonyms;
+}
+
+=head2 parse_eva_file
+
+parse EVA data file
+
+=cut
+
+sub parse_eva_file {
+  my $infile = shift;
+  
+  my %synonyms;
+
+  # Open the input file for reading
+  my $fh;
+  if($infile =~ /gz$/) {
+    open ($fh, "zcat $infile |") or die ("Could not open $infile for reading\n");
+  }
+  else {
+    open ($fh, '<', $infile) or die ("Could not open $infile for reading\n");
+  }
+
+  # Read through the file and parse out the desired fields: 
+  # current rs id and synonym
+  while (my $row = <$fh>) {
+    chomp $row;
+    next if($row =~ /^#/);
+    
+    my @row_data = split /\t/, $row;
+    my $synonym = $row_data[2];
+    $row_data[7] =~ /CURR=(rs[0-9]+)/;
+    my $current_rsid = $1;
+
+    $synonyms{$current_rsid} = $synonym;
+  }
+  close($fh);
+
   return \%synonyms;
 }
 
@@ -494,6 +584,38 @@ sub import_synonyms_all_sources {
   } 
 } 
 
+=head2 add_synonym_pig_chip
+
+add synonyms for Pig SNP Consortium
+
+=cut
+
+sub add_synonym_pig_chip {
+  my $species = shift;
+  my $dba = shift;
+  my $int_dba = shift;
+  my $source_id = shift;
+
+  my $variation_adaptor = $dba->get_VariationAdaptor($species, 'variation', );
+
+  my $synonym_ext_sth = $int_dba->dbc->prepare(qq[ SELECT rs_name, synonym_name FROM pig_synonym ]);
+  $synonym_ext_sth->execute();
+  my $all_syn = $synonym_ext_sth->fetchall_arrayref();
+
+  my $synonym_ins_sth   = $variation_adaptor->dbc->prepare(qq[ INSERT IGNORE INTO variation_synonym (variation_id, name, source_id)
+                                                     VALUES (?,?,?) ]);
+
+  foreach my $synonym(@{$all_syn}){
+    my $var = $variation_adaptor->fetch_by_name($synonym->[0]);
+    if(defined $var){
+      $synonym_ins_sth->execute( $var->dbID, $synonym->[1], $source_id );
+    }
+    else{
+      warn "Variant $synonym->[0] not found\n";
+    }
+  }
+}
+
 =head2 get_source
 
 get or add source object
@@ -510,7 +632,7 @@ sub get_source {
   my $description   = shift;
   my $source_status = shift;
 
-  my $source_adaptor = $dba->get_SourceAdaptor('human', 'variation', );
+  my $source_adaptor = $dba->get_SourceAdaptor($species, 'variation', );
   my $source = $source_adaptor->fetch_by_name($source_name);
 
   if (defined $source) {
@@ -615,7 +737,8 @@ sub usage{
 
   die "\nUsage : import_variant_synonyms -registry [registry file] -source_name [name]
 \n\tOptions:
-\t         -data_file          [name of file to load]
+\t         -data_file          [name of file to load]  - mandatory for EVA
+\t         -source_name        [source]                - 'PharmGKB', 'dbSNP', 'UniProt', 'EVA' or 'pig_chip'
 \t         -source_version     [version]
 \t         -source_url         [url]
 \t         -source_description [longer description]
