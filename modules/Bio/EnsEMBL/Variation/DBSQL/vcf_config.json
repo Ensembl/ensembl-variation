@@ -802,7 +802,7 @@
       "assembly": "Macaca_fascicularis_6.0",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template" : "http://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
       "chromosomes": [
         "1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","X"
       ]
@@ -916,6 +916,14 @@
       "assembly": "GRCh38",
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "macaca_fascicularis",
+      "assembly": "Macaca_fascicularis_6.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/release-107/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_fascicularis.Macaca_fascicularis_6.0.bw",
       "annotation_type": "gerp"
     },
     {
