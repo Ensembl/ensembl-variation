@@ -837,6 +837,17 @@
       ]
     },
     {
+      "id": "sander_lucioperca_EVA_PRJEB42376",
+      "source_name": "PRJEB42376",
+      "description": "Variants from EVA study PRJEB42376",
+      "species": "sander_lucioperca",
+      "assembly": "SLUC_FBN_1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 1,
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/sander_lucioperca/GCA_008315115.1/GCA_008315115.1_current_ids.vcf.gz"
+    },
+    {
       "id": "91_mammals.gerp_conservation_score",
       "species": "bos_taurus",
       "assembly": "ARS-UCD1.2",
@@ -1082,6 +1093,14 @@
       "assembly": "Ssal_v3.1",
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.Ssal_v3.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "sander_lucioperca",
+      "assembly": "SLUC_FBN_1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.sander_lucioperca.SLUC_FBN_1.bw",
       "annotation_type": "gerp"
     },
     {
