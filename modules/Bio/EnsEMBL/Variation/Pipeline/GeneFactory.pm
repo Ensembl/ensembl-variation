@@ -45,6 +45,8 @@ sub fetch_input {
    
     my $self = shift;
 
+    my $mtmp = $self->param('mtmp_table');
+
     my $include_lrg = $self->param('include_lrg');
     my $biotypes = $self->param('limit_biotypes');
 
@@ -56,8 +58,27 @@ sub fetch_input {
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
     my @genes;
+    my @gene_output_ids; 
+    my $gene_count = 0;
+    my @delete_transcripts = ();
 
-    if ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
+
+    if (-e $self->param('update_diff')){
+
+      my $file = $self->param('update_diff');
+      open (DIFF, $file) or die "Can't open file $file: $!";
+      while (<DIFF>){
+	      chomp;
+        next if /^transcript_id/;
+        my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
+        push @gene_output_ids, {
+          gene_stable_id  => $gene_id,
+        } if $status ne "deleted";
+
+        push @delete_transcripts, $transcript_id if $status eq "deleted";
+      }
+
+    } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
        @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
 
@@ -70,9 +91,6 @@ sub fetch_input {
         # fetch the LRG genes as well
         push @genes, @{ $ga->fetch_all_by_biotype('LRG_gene') }
     }
-
-    my @gene_output_ids; 
-    my $gene_count = 0;
 
     for my $gene (@genes) {
       $gene_count++;
@@ -96,8 +114,40 @@ sub fetch_input {
       }
     } 
 
-
     $self->param('gene_output_ids', \@gene_output_ids);
+
+    # Remove Deleted transcripts
+    if (-e $self->param('update_diff')){
+        my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+        return if $joined_ids == "";
+        $dbc->do(qq{
+                  DELETE FROM  transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids)
+        });
+
+        $dbc->do(qq{
+                  DELETE FROM  MTMP_transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids)
+        }) if($mtmp);
+
+        $dbc->do(qq{
+                  DELETE WHOLE FROM variation_hgvs WHOLE
+                  INNER JOIN 
+                  (SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_transcript, ":", -1) AS hgvs_name
+                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
+                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_transcript IS NOT NULL
+                    )) as var_id
+                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_transcript IS NOT NULL
+                  UNION ALL
+                  SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_protein, ":", -1) AS hgvs_name
+                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
+                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_protein IS NOT NULL
+                    )) as var_id
+                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_protein IS NOT NULL) SUBSET
+                  ON WHOLE.variation_id=SUBSET.variation_id AND WHOLE.hgvs_name=SUBSET.hgvs_name;
+        });
+
+    }
 
 }
 
