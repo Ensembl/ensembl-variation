@@ -1043,7 +1043,7 @@
       "species": "coturnix_japonica",
       "assembly": "Coturnix_japonica_2.0",
       "type": "remote",
-      "filename_template" : "/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.coturnix_japonica.Coturnix_japonica_2.0.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.coturnix_japonica.Coturnix_japonica_2.0.bw",
       "annotation_type": "gerp"
     },
     {
@@ -1051,7 +1051,7 @@
       "species": "parus_major",
       "assembly": "Parus_major1.1",
       "type": "remote",
-      "filename_template" : "/58_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-106/compara/conservation_scores/58_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
       "annotation_type": "gerp"
     },
     {
