@@ -837,9 +837,9 @@
       ]
     },
     {
-      "id": "sander_lucioperca_EVA_PRJEB42376",
-      "source_name": "PRJEB42376",
-      "description": "Variants from EVA study PRJEB42376",
+      "id": "sander_lucioperca_EVA",
+      "source_name": "EVA",
+      "description": "Variants from EVA",
       "species": "sander_lucioperca",
       "assembly": "SLUC_FBN_1",
       "type": "remote",
