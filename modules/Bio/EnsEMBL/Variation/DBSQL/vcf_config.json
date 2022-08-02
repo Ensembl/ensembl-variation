@@ -1146,6 +1146,14 @@
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
       "annotation_type": "cadd"
+    },
+    {
+      "id": "CADD_Sscrofa11.1_whole_genome_SNVs",
+      "species": "sus_scrofa",
+      "assembly": "Sscrofa11.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/sus_scrofa/Sscrofa11.1/variation/ALL_pCADD-PHRED-scores.tsv.gz",
+      "annotation_type": "cadd"
     }
   ]
 }
