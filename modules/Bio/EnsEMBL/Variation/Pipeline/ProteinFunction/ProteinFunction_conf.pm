@@ -89,10 +89,10 @@ sub default_options {
 
         # include RefSeq transcripts, and edit with accompanying BAM?
         include_refseq          => 0,
-        bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
+        bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
 
         # GRCh37 bam
-        # bam                     => '/nfs/production/panda/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',        
+        # bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',
         
         # connection details for the hive's own database
         hive_db_host    => 'mysql-ens-var-prod-2.ebi.ac.uk',
@@ -111,11 +111,11 @@ sub default_options {
         
         # configuration for the various resource options used in the pipeline
         
-        default_lsf_options => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction-rh74 -R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh74 -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-qproduction-rh74 -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medmem_lsf_options  => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
 
@@ -159,19 +159,19 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/nfs/panda/ensemblgenomes/external/sift',
+        sift_dir                => '/hps/software/users/ensembl/variation/sift6.2.1',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
         # the location of blastpgp etc.
 
-        ncbi_dir                => '/nfs/panda/ensemblgenomes/external/ncbi-blast-2+/bin',
+        ncbi_dir                => '/hps/software/users/ensembl/ensw/C8-MAR21-sandybridge/linuxbrew/Cellar/blast/2.2.30/bin',
         
         # the protein database used to build alignments if you're not using compara
 
-        variation_data          => '/nfs/production/panda/ensembl/variation/data', 
+        variation_data          => '/nfs/production/flicek/ensembl/variation/data',
 
-        blastdb                 => $self->o('variation_data').'/sift5.2.2/uniref90/uniref90.fasta',
+        blastdb                 => $self->o('variation_data').'/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
@@ -185,12 +185,12 @@ sub default_options {
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.2a/dbNSFP4.2a_grch37.gz',
-                                        version => '4.2a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.3a/dbNSFP4.3a_grch37.gz',
+                                        version => '4.3a',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.2a/dbNSFP4.2a_grch38.gz',
-                                        version => '4.2a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.3a/dbNSFP4.3a_grch38.gz',
+                                        version => '4.3a',
                                       } 
                                     },
         cadd_run_type         => NONE,
