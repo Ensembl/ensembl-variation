@@ -345,6 +345,7 @@ sub pipeline_analyses {
               1 => ['rebuild_tv_indexes'],
             },
             -parameters => {
+              update_diff => $self->o('update_diff'),
               @common_params,
             },
             -rc_name   => 'default',

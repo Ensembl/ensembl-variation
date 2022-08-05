@@ -36,46 +36,60 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Getopt::Long;
 use FileHandle;
 
-my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db);
+# Print instructions if run without parameters
+usage() unless (scalar(@ARGV));
+
+my ($host, $port, $user, $pass, $chosen_species, $version, $dir, $formats, $write_to_db, $registry, $help);
 
 GetOptions(
+  'registry=s' => \$registry,
+  
   'host=s'   => \$host,
   'user=s'   => \$user,
   'pass=s'   => \$pass,
   'port=i'   => \$port,
+  
   'version=i' => \$version,
   'species=s' => \$chosen_species,
   'dir=s'      => \$dir,
   'formats=s'  => \$formats,
   'write_to_db' => \$write_to_db,
+  'help!' => \$help,
 );
-
-if(defined($host) && $host =~ /staging|variation|livemirror/) {
-  $port ||= 3306;
-  $user ||= 'ensro';
-  $pass ||= '';
-}
-
-else {
-  $host ||= 'ensembldb.ensembl.org';
-  $port ||= 5306;
-  $user ||= 'anonymous';
-  $pass ||= '';
-}
+usage() if $help;
+die "Error: provide the Ensembl version with option '-v'\n" if !$version;
 
 my $reg = 'Bio::EnsEMBL::Registry';
 
-$reg->load_registry_from_db(
-  -host       => $host,
-  -user       => $user,
-  -pass       => $pass,
-  -port       => $port,
-  -db_version => $version,
-);
+if (defined($registry)) {
+  $reg->load_all($registry);
+} else {
+  if(defined($host) && $host =~ /staging|variation|livemirror/) {
+    $port ||= 3306;
+    $user ||= 'ensro';
+    $pass ||= '';
+  }
+
+  else {
+    warn "Connecting to ensembldb.ensembl.org database...\n" unless ($host);
+    $host ||= 'ensembldb.ensembl.org';
+    $port ||= 5306;
+    $user ||= 'anonymous';
+    $pass ||= '';
+  }
+
+  $reg->load_registry_from_db(
+    -host       => $host,
+    -user       => $user,
+    -pass       => $pass,
+    -port       => $port,
+    -db_version => $version,
+    -species    => $chosen_species
+  );
+}
 
 $dir ||= '.';
 $formats ||= 'ensembl,vcf,id,hgvs,spdi';
-
 my @formats = split(',', $formats);
 
 # special case ID
@@ -86,14 +100,12 @@ if(grep {$_ eq 'id'} @formats) {
 }
 
 my @all_species = sort @{$reg->get_all_species()};
-
 @all_species = grep {$_ eq $chosen_species} @all_species if defined($chosen_species);
 
 my @alts = qw(A C G T);
 my $do = 0;
 
 SPECIES: foreach my $species(@all_species) {
-
   my %web_data;
   
   my $sa = $reg->get_adaptor($species, 'core', 'slice');
@@ -105,7 +117,7 @@ SPECIES: foreach my $species(@all_species) {
   
   my $div_bacteria = $sa->dbc->dbname() =~ /^bacteria.*/ ? 1 : 0;
 
-  print STDERR "Doing $species, assembly $assembly\n";
+  print STDERR "Generating examples for $species, assembly $assembly...\n";
   
   if($real_vfa && $doing_id) {
     my $name;
@@ -126,8 +138,9 @@ SPECIES: foreach my $species(@all_species) {
       $sth->execute('%'.$type.'%');
       $sth->bind_columns(\$name);
       $sth->fetch();
+      
       print OUT "$name\n" if $name;
-      push @{$web_data{"VEP_ID"}}, $name;
+      push @{$web_data{"VEP_ID"}}, $name if defined $name;
     }
     
     close OUT;
@@ -323,7 +336,8 @@ SPECIES: foreach my $species(@all_species) {
   my $fn = $dir.'/'.ucfirst($species).'.txt';
   open OUT, ">$fn";
   foreach my $key(keys %web_data) {
-    print OUT sprintf("%-17s = %s\n", $key, join('\n', @{$web_data{$key}}));
+    my @values = grep defined, @{$web_data{$key}};
+    print OUT sprintf("%-17s = %s\n", $key, join('\n', @values));
   }
   close OUT;
 
@@ -616,4 +630,39 @@ sub write_to_db {
     $mca->delete_key($meta_key);
     $mca->store_key_value($meta_key, $meta_value);
   }
+}
+
+sub usage {
+  print qq{
+  Usage: perl generate_vep_examples.pl -v [VERSION] [OPTIONS]
+  
+  Generate VEP examples for one or more species. If no databases are set up, it
+  automatically connects to the public database (ensembldb.ensembl.org).
+  
+  Mandatory arguments:
+  
+    -v            Ensembl version, e.g. 108 (Required)
+  
+  Optional arguments:
+  
+    -dir          Directory where to write output (default: current directory)
+    -write_to_db  Write generated VEP examples to 'meta' table from the core
+                  database (turned off by default)
+    -formats      Comma-separated list of formats to output; prints all formats
+                  by default: 'ensembl,vcf,id,hgvs,spdi'
+    -species      Filter by species (deafult: uses all species in database)
+    -help         Print this message
+    
+  Load databases from registry (allows to set up multiple hosts):
+  
+    -registry     Registry file
+    
+  Load database from parameters (ignored when using -registry):
+      
+    -host         Host
+    -port         Port number
+    -user         MySQL user name
+    -pass         MySQL password
+  } . "\n";
+  exit(0);
 }
