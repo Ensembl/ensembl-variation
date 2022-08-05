@@ -130,23 +130,6 @@ sub fetch_input {
                   WHERE   feature_stable_id IN ($joined_ids)
         }) if($mtmp);
 
-        $dbc->do(qq{
-                  DELETE WHOLE FROM variation_hgvs WHOLE
-                  INNER JOIN 
-                  (SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_transcript, ":", -1) AS hgvs_name
-                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
-                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_transcript IS NOT NULL
-                    )) as var_id
-                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_transcript IS NOT NULL
-                  UNION ALL
-                  SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_protein, ":", -1) AS hgvs_name
-                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
-                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_protein IS NOT NULL
-                    )) as var_id
-                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_protein IS NOT NULL) SUBSET
-                  ON WHOLE.variation_id=SUBSET.variation_id AND WHOLE.hgvs_name=SUBSET.hgvs_name;
-        });
-
     }
 
 }
