@@ -48,6 +48,7 @@ my $c = Bio::EnsEMBL::Variation::VCFCollection->new(
     'HG00099' => ['pop4']
 },
   -use_seq_region_synonyms => 1,
+  -track_name              => "test_track",
 );
 
 
@@ -58,6 +59,7 @@ ok($c->filename_template() eq $dir.'/test-genome-DBs/homo_sapiens/variation/test
 ok($c->sample_prefix() eq "s_prefix:", "sample_prefix");
 ok($c->population_prefix() eq "p_prefix:", "population_prefix");
 ok($c->use_seq_region_synonyms() eq "1", "use_seq_region_synonyms");
+ok($c->track_name() eq "test_track", "track_name");
 ok($c->tmpdir() eq cwd(), "tmpdir");
 
 # tell it not to use the DB
