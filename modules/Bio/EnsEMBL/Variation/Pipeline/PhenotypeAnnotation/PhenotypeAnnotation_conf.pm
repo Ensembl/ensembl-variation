@@ -556,6 +556,7 @@ sub pipeline_analyses {
         {   -logic_name => 'import_wormbase',
 	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
 	    -parameters => {
+                source_version => $ENV{"WORMBASE_VERSION"},
                 @common_params,
             },
 	    -input_ids  => [],
