@@ -57,14 +57,14 @@ my $release = $config->{release};
 my $aliases = {
   "Bos_taurus"                   => "cow",
   "Canis_familiaris"             => "dog",
-  "Canis_familiarisboxer"        => "dog_boxer"
+  "Canis_familiarisboxer"        => "dog_boxer",
   "Capra_hircus"                 => "goat",
   "Coturnix_japonica"            => "japanese_quail",
   "Danio_rerio"                  => "zebrafish",
   "Drosophila_melanogaster"      => "fly",
   "Equus_caballus"               => "horse",
   "Felis_catus"                  => "cat",
-  "Ficedula_albicollis"          => "collared_flycatcher"
+  "Ficedula_albicollis"          => "collared_flycatcher",
   "Gallus_gallus_gca000002315v5" => "chicken",
   "Gallus_gallus"                => "chicken_old",
   "Homo_sapiens"                 => "human",
@@ -85,7 +85,7 @@ my $aliases = {
   "Sander_lucioperca"            => "pike-perch",
   "Sus_scrofa"                   => "pig",
   "Taeniopygia_guttata"          => "zebrafinch",
-  "Tetraodon_nigroviridis"       => "tetraodon"
+  "Tetraodon_nigroviridis"       => "tetraodon",
 };
 
 my $adaptors = {
