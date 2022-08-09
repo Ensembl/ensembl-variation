@@ -76,6 +76,24 @@ sub fetch_input {
         } if $status ne "deleted";
 
         push @delete_transcripts, $transcript_id if $status eq "deleted";
+
+        # Remove Deleted transcripts
+        if (@delete_transcripts > 500){
+            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+            return if $joined_ids == "";
+            $dbc->do(qq{
+                      DELETE FROM  transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids)
+            });
+
+            $dbc->do(qq{
+                      DELETE FROM  MTMP_transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids)
+            }) if($mtmp);
+
+            # Reset delete_transcripts list
+            @delete_transcripts = ();
+        }
       }
 
     } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
