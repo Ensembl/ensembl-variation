@@ -206,13 +206,13 @@ sub create_seq_region_table {
     get_db_info($dbh_core);
     get_db_info($dbh_var);
   }
-  dumpSQL($dbh_core, qq{SELECT sr.seq_region_id, sr.name
+  dumpSQL($dbh_core, qq{SELECT sr.seq_region_id, sr.name, sr.coord_system_id
                         FROM seq_region_attrib sra, attrib_type at, seq_region sr
                         WHERE sra.attrib_type_id=at.attrib_type_id 
                         AND at.code="toplevel" 
                         AND sr.seq_region_id = sra.seq_region_id 
                         }, 'MySQL');
-  load($dbh_var, "seq_region", "seq_region_id", "name");
+  load($dbh_var, "seq_region", "seq_region_id", "name", "coord_system_id");
 }
 
 sub add_failed_variation_set {
