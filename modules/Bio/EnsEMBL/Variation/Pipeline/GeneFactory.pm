@@ -86,11 +86,6 @@ sub fetch_input {
                       WHERE   feature_stable_id IN ($joined_ids);
             }) or die "Deleting stable ids failed";
 
-            $dbc->do(qq{
-                      DELETE FROM  MTMP_transcript_variation
-                      WHERE   feature_stable_id IN ($joined_ids);
-            }) if($mtmp);
-
             # Reset delete_transcripts list
             @delete_transcripts = ();
         }
@@ -142,11 +137,6 @@ sub fetch_input {
                   DELETE FROM  transcript_variation
                   WHERE   feature_stable_id IN ($joined_ids);
         }) or die "Deleting stable ids failed";
-
-        $dbc->do(qq{
-                  DELETE FROM  MTMP_transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids)
-        }) if($mtmp);
 
     }
 
