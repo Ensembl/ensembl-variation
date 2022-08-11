@@ -218,6 +218,7 @@ sub new {
       -is_remapped => $hash->{is_remapped} ||0,
       -adaptor => $self,
       -tmpdir => $hash->{tmpdir} || $tmpdir,
+      -use_vcf_consequences => $hash->{use_vcf_consequences} || undef,
       -ref_freq_index => $hash->{ref_freq_index},
     ));
   }

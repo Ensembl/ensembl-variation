@@ -81,6 +81,7 @@ sub new {
     $adaptor,
     $use_seq_region_synonyms,
     $tmpdir,
+    $use_vcf_consequences,
   ) = rearrange(
     [qw(
       ID
@@ -98,6 +99,7 @@ sub new {
       ADAPTOR
       USE_SEQ_REGION_SYNONYMS
       TMPDIR
+      USE_VCF_CONSEQUENCES
     )],
     @_
   ); 
@@ -124,6 +126,7 @@ sub new {
     updated => $updated,
     is_remapped => $is_remapped,
     use_seq_region_synonyms => $use_seq_region_synonyms,
+    use_vcf_consequences => $use_vcf_consequences,
     tmpdir => $tmpdir || cwd(),
   );
   
@@ -327,6 +330,25 @@ sub use_seq_region_synonyms {
   my $self = shift;
   $self->{use_seq_region_synonyms} = shift if @_;
   return $self->{use_seq_region_synonyms};
+}
+
+=head2 use_vcf_consequences
+
+  Arg [1]    : int $use_vcf_consequences(optional)
+               The new value to set the use_vcf_consequences attribute to
+  Example    : my $use_vcf_consequences = $collection->use_vcf_consequences()
+  Description: Getter/Setter for the parameter that tells the API to 
+               fetch consequences from VCF
+  Returntype : bool
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub use_vcf_consequences {
+  my $self = shift;
+  $self->{use_vcf_consequences} = shift if @_;
+  return $self->{use_vcf_consequences};
 }
 
 =head2 created
