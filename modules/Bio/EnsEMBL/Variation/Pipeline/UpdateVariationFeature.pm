@@ -96,7 +96,7 @@ sub run {
         }
 
         my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
-        next if($joined_ids != "");
+        next if($joined_ids eq "");
 
         $dbc->do(qq{
             INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)

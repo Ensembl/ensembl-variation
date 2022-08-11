@@ -53,7 +53,7 @@ sub fetch_input {
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
     
-    my $dbc = $var_dba->dbc();
+    my $dbc = $var_dba->dbc;
 
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
@@ -76,6 +76,19 @@ sub fetch_input {
         } if $status ne "deleted";
 
         push @delete_transcripts, $transcript_id if $status eq "deleted";
+
+        # Remove Deleted transcripts
+        if (@delete_transcripts > 500){
+            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+            
+            $dbc->do(qq{
+                      DELETE FROM  transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids);
+            }) or die "Deleting stable ids failed";
+
+            # Reset delete_transcripts list
+            @delete_transcripts = ();
+        }
       }
 
     } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
@@ -119,16 +132,11 @@ sub fetch_input {
     # Remove Deleted transcripts
     if (-e $self->param('update_diff')){
         my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-        return if $joined_ids == "";
+        return if $joined_ids eq "";
         $dbc->do(qq{
                   DELETE FROM  transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids)
-        });
-
-        $dbc->do(qq{
-                  DELETE FROM  MTMP_transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids)
-        }) if($mtmp);
+                  WHERE   feature_stable_id IN ($joined_ids);
+        }) or die "Deleting stable ids failed";
 
     }
 
