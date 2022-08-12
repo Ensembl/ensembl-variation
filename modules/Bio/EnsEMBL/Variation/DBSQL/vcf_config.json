@@ -809,14 +809,14 @@
       "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/coturnix_japonica/Coturnix_japonica_2.0/GCA_001577835.1_current_ids.vcf.gz"
     },
     {
-      "id": "parus_major_EVA",
-      "source_name": "EVA",
-      "description": "Variants from EVA",
+      "id": "great_tit_EVA_PRJEB24964",
+      "source_name": "PRJEB24964",
+      "description": "Variants from EVA study PRJEB24964",
       "species": "parus_major",
       "assembly": "Parus_major1.1",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/parus_major/GCA_001522545.2/GCA_001522545.2_current_ids.vcf.gz"
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
     },
     {
       "id": "crab_macaque_EVA",
