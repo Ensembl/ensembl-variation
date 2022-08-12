@@ -50,6 +50,7 @@ sub run {
     my $translation_md5     = $self->required_param('translation_md5'); 
 
     my $pph_dir     = $self->required_param('pph_dir');
+    my $pph_data    = $self->required_param('pph_data');
     my $working_dir = $self->required_param('pph_working');
     
     my $dir = substr($translation_md5, 0, 2);
@@ -161,7 +162,10 @@ sub run {
     $self->dbc->disconnect_when_inactive(1);
 
     # use -A option to disable polyphen's own LSF support (which conflicts with the hive)
-    my $cmd = "$pph_dir/bin/run_pph.pl -A -d $output_dir -s $protein_file $subs_file 1> $output_file 2> $error_file";
+    my $cmd = "singularity exec " .
+              "--bind $pph_data:/opt/pph2/data $pph_dir/polyphen-2_2.2.3.sif " .
+              "run_pph.pl -A -d $output_dir -s $protein_file $subs_file " .
+              "1> $output_file 2> $error_file";
 
     system($cmd) == 0 or die "Failed to run $cmd: $?";
     
