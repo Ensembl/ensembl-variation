@@ -107,6 +107,7 @@ my $MAX_OPEN_FILES = 2;
   Arg [-STRICT_NAME_MATCH]:      boolean
   Arg [-REF_FREQ_INDEX]:         int - index position of ref frequency in INFO field, if given
   Arg [-USE_SEQ_REGION_SYNONYMS]:boolean
+  Arg [-USE_VCF_CONSEQUENCES]:boolean
   Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
 
   Example    : my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
@@ -499,6 +500,7 @@ sub get_all_VariationFeatures_by_Slice {
             foreach my $transcript_var ( @transcript_vars ){
               my @transcript_split = split('\|',$transcript_var);
               my %transcript_map = zip @info_format, @transcript_split;
+              next if not defined($transcript_map{'Feature_type'});
               if ( $transcript_map{'Feature_type'} eq 'Transcript') {
                 my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
                   variation_feature  => $vf,

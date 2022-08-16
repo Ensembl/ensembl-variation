@@ -13,7 +13,8 @@
       "source_url": "http://www.1000genomes.org",
       "created": "1432745640000",
       "updated": "1432745640000",
-      "is_remapped": "1"
+      "is_remapped": "1",
+      "use_vcf_consequences": "1"
     }, 
     {
       "id": "ExAC_0.3_corrected_INFO",
