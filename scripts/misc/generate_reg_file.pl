@@ -41,6 +41,7 @@ GetOptions(
   'core=s',
   'variation=s',
   'funcgen=s',
+  'otherfeatures=s',
   'dbname_var=s',
   'species=s',
   'help!',
@@ -95,6 +96,9 @@ my $adaptors = {
     funcgen => {
         adaptor => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
     },
+    #otherfeatures => {
+    #    adaptor => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+    #},
     variation => {
         adaptor => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor',
     },
@@ -119,7 +123,7 @@ print <<END;
 #!/usr/bin/env perl
 use Bio::EnsEMBL::Registry;
 END
-print "use " . $adaptors->{$_}->{adaptor} . ";\n" for keys %$adaptors;
+print "use " . $adaptors->{$_}->{adaptor} . ";\n" for sort keys %$adaptors;
 print "\n";
 
 sub readServerConfig {
@@ -144,9 +148,10 @@ sub getServers {
   my ($arg, @default) = @_;
   return $arg ? split ',', $arg : @default;
 }
-my @variation = getServers $config->{variation}, ('v1-w', 'v3-w');
-my @core      = getServers $config->{core},      ('v1',   'v3');
-my @funcgen   = getServers $config->{funcgen},   ('v1',   'v3');
+my @variation     = getServers $config->{variation},     ('v1-w', 'v3-w');
+my @core          = getServers $config->{core},          ('v1',   'v3');
+my @otherfeatures = getServers $config->{otherfeatures}, ('v1',   'v3');
+my @funcgen       = getServers $config->{funcgen},       ('v1',   'v3');
 
 my $dbs;
 my $custom_db_exists = 0;
@@ -159,9 +164,10 @@ for my $server (keys $servers) {
 
   # check which databases require this server
   my @groups;
-  push @groups, 'variation' if grep(/^$server$/, @variation);
-  push @groups, 'core'      if grep(/^$server$/, @core);
-  push @groups, 'funcgen'   if grep(/^$server$/, @funcgen);
+  push @groups, 'variation'     if grep(/^$server$/, @variation);
+  push @groups, 'core'          if grep(/^$server$/, @core);
+  push @groups, 'otherfeatures' if grep(/^$server$/, @otherfeatures);
+  push @groups, 'funcgen'       if grep(/^$server$/, @funcgen);
   next if !@groups;
 
   my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port", $user, $password, );
@@ -256,20 +262,21 @@ sub usage {
 
   Options:
 
-    --release      Release version (required)
-    --species      Comma-separated list of species (supports scientific and
-                   common names). Default: all species hard-coded in file
+    --release       Release version (required)
+    --species       Comma-separated list of species (supports scientific and
+                    common names). Default: all species defined in script
 
-    --variation    Servers for vatiation databases. Default: v1-w,v3-w
-    --core         Servers for core databases. Default: v1,v3
-    --funcgen      Servers for funcgen databases. Default: v1,v3
+    --variation     Servers for vatiation databases. Default: v1-w,v3-w
+    --core          Servers for core databases. Default: v1,v3
+    --funcgen       Servers for funcgen databases. Default: v1,v3
+    --otherfeatures Servers for otherfeatures databases. Default: v1,v3
 
-    --dbname_var   Custom database name for variation. Default:
-                   \$species_variation_\$release_\$assembly
+    --dbname_var    Custom database name for variation. Default:
+                    \$species_variation_\$release_\$assembly
 
-    --server_file  File with server details. Default:
-                   /nfs/production/flicek/ensembl/variation/servers.txt
-    --help         Print this message
+    --server_file   File with server details. Default:
+                    /nfs/production/flicek/ensembl/variation/servers.txt
+    --help          Print this message
   } . "\n";
   exit(0);
 }
