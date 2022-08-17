@@ -427,7 +427,7 @@ sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
     my $project_id = $project->{'id'};
-    next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'});
+    next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'} eq 'cadd' || $project->{'annotation_type'} eq 'gerp');
 
     my $species = ucfirst($project->{'species'});
        $species =~ s/_/ /g;
