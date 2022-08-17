@@ -354,6 +354,13 @@ our %VARIATION_CLASSES = (
   'type' => 'sv'
 }
 ,
+'complex_chromosomal_rearrangement' => {
+  'SO_accession' => 'SO:0002062',
+  'display_term' => 'complex chromosomal rearrangement',
+  'somatic_display_term' => 'somatic complex chromosomal rearrangement',
+  'type' => 'sv'
+}
+,
 'complex_substitution' => {
   'SO_accession' => 'SO:1000005',
   'display_term' => 'complex substitution',
