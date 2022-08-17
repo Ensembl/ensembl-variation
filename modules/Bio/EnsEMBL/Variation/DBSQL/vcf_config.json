@@ -760,7 +760,8 @@
       "populations": {
         "1": {
           "name": "PRJEB38548",
-          "_af": "AF"
+          "_af": "AF",
+          "description": "Population from EVA study PRJEB26368"
         }
       }
     },
@@ -780,7 +781,8 @@
       "populations": {
         "1": {
           "name": "PRJEB26368",
-          "_af": "AF"
+          "_af": "AF",
+          "description": "Population from EVA study PRJEB26368"
         }
       }
     },
