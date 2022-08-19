@@ -74,6 +74,9 @@ sub default_options {
 
         # release number used in the name of default workdir and hive database
         ensembl_release         => 95,
+	
+	# wormbase release number used by the import_wormbase analysis only
+	wormbase_release        => 282,
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -556,6 +559,7 @@ sub pipeline_analyses {
         {   -logic_name => 'import_wormbase',
 	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
 	    -parameters => {
+	    	source_version => $self->o('wormbase_release'),
                 @common_params,
             },
 	    -input_ids  => [],
