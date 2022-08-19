@@ -61,7 +61,7 @@ GetOptions(
 if ($help) {
   usage();
 } elsif (!$p_version) {
-  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give a WormBase ParaSite version, using the option '-pv' \n";
   usage();
 } elsif (!$e_version) {
   print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
@@ -169,9 +169,9 @@ sub get_connection_and_query {
 sub usage {
 
   print qq{
-  Usage: perl dump_phenotypes.pl [OPTION]
+  Usage: perl dump_phenotypes_wormbase.pl [OPTION]
 
-  Dumping to GVF of phenotype data for Ensembl Variation species.
+  Dumping to GVF of phenotype data for WormBase ParaSite species.
 
   Options:
 
@@ -182,10 +182,11 @@ sub usage {
     -quiet|q          Suppress warning messages.Not used by default
 
     -species|s        Only export the species in the list,
-                        e.g. homo_sapiens,sus_scrofa
+                        e.g. caenorhabditis_elegans,schistosoma_mansoni
 
     -user|u           Database login user name (Required)
     -v                Ensembl version, e.g. 96 (Required)
+    -pv               WormBase ParaSite Version, e.g. 16 (Required)       
     -hname            The host name (with port) where the databases are stored,
                         e.g. ensembldb.ensembl.org1:3334 (Required)
   } . "\n";
