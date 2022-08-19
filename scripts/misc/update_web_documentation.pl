@@ -215,7 +215,16 @@ $file_name   = "phenotype_annotation.html";
 $subdir      = $subdirs{$file_name};
 
 print STDOUT localtime() . "\t# Start phenotype class ...\n";
-`cp $input_dir/$subdir/$file_name $tmp_file`;
+# Use output file from the clinical significance update
+if (-d "$output_dir/$subdir") {
+  `cp $output_dir/$subdir/$file_name $tmp_file`;
+}
+elsif (-d "$output_dir/$file_name") {
+  `cp $output_dir/$file_name $tmp_file`;
+}
+else {
+  `cp $input_dir/$subdir/$file_name $tmp_file`;
+}
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl $dirname/generate_pheno_class_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
@@ -241,8 +250,11 @@ print STDOUT localtime() . "\t# Start phenotype ontology ...\n";
 if (-d "$output_dir/$subdir") {
   `cp $output_dir/$subdir/$file_name $tmp_file`;
 }
-else {
+elsif (-d "$output_dir/$file_name") {
   `cp $output_dir/$file_name $tmp_file`;
+}
+else {
+  `cp $input_dir/$subdir/$file_name $tmp_file`;
 }
 my $sql_onto = qq{SELECT data_version FROM ontology WHERE name=? LIMIT 1};
 my $tmp_file_content = `cat $tmp_file`;
