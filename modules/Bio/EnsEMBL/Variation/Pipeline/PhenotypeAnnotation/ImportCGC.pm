@@ -90,12 +90,17 @@ sub fetch_input {
 
   # get input file CGC via OpenTargets, get latest published file:
   my $file_opent = "output_latest.json";
-  print $logFH "INFO: Found file ($file_opent), will skip new fetch\n" if -e $workdir."/".$file_opent;
+  system("python3 download_cgc_file.py -d $workdir -r latest") unless -e $workdir."/".$file_opent;
+
   my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
-  if (!$found){
+  if($found) {
+    print $logFH "INFO: Found input file ($file_opent)\n" ;
+    $self->validate_input_file($file_opent);
+  }
+  else{
     print $errFH "Input file ($file_opent) is missing\n";
-    die "Input file is missing: check download script\n";
+    die "Input file is missing: check download script download_cgc_file.py\n";
   }
 
   # Source version to be used to update the table source
@@ -149,6 +154,29 @@ sub write_output {
 
 }
 
+=head2 validate_input_file
+
+  Arg [1]    : string $infile
+               The input file name
+  Example    : $obj->validate_input_file($infile)
+  Description: Validates the format of the input file.
+  Returntype : Boolean
+  Exceptions : none
+
+=cut
+
+sub validate_input_file {
+  my ($self, $input_file) = @_;
+
+  my $valid = 1;
+
+  # empty file
+  if(-z $input_file) {
+    $valid = 0;
+  }
+
+  
+}
 
 =head2 get_input_file
 
