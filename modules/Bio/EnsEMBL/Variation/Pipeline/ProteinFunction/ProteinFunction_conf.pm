@@ -128,6 +128,13 @@ sub default_options {
 
         pph_working             => $self->o('species_dir').'/polyphen_working',
 
+        # specify the Weka classifier models here, if you don't want predictions from 
+        # one of the classifier models set the value to the empty string
+
+        humdiv_model            => $self->o('pph_dir').'/models/HumDiv.UniRef100.NBd.f11.model',
+        
+        humvar_model            => $self->o('pph_dir').'/models/HumVar.UniRef100.NBd.f11.model',
+
         # the run type for polyphen (& sift) can be one of FULL to run predictions for
         # all translations regardless of whether we already have predictions in the
         # database, NONE to exclude this analysis, or UPDATE to run predictions for any
@@ -293,6 +300,8 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunWeka',
             -parameters     => { 
                 pph_dir         => $self->o('pph_dir'),
+                humdiv_model    => $self->o('humdiv_model'),
+                humvar_model    => $self->o('humvar_model'),
                 pph_data        => $self->o('pph_data'),
                 @common_params,
             },

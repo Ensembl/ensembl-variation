@@ -45,7 +45,10 @@ sub run {
     
     my $feature_file = $self->required_param('feature_file');
 
-    my $pph_dir  = $self->required_param('pph_dir');
+    my $pph_dir = $self->required_param('pph_dir');
+
+    my $humdiv_model = $self->required_param('humdiv_model');
+    my $humvar_model = $self->required_param('humvar_model');
     my $pph_data = $self->required_param('pph_data');
 
     # copy stuff to /tmp to avoid lustre slowness
@@ -77,23 +80,11 @@ sub run {
     my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
         or die "Failed to get matrix adaptor";
 
-    # List models from PolyPhen-2 singularity image
-    my $cmd_ls_models = "singularity exec $pph_dir/polyphen-2_2.2.3.sif ls /opt/pph2/models";
-    my @models = `$cmd_ls_models` == 0 or die "Failed to get Weka models using $cmd: $?";
-
-    for my $model (@models) {
+    for my $model ($humdiv_model, $humvar_model) {
 
         next unless $model;
 
-        my $model_name;
-        if ( $model =~ /humdiv/i ) {
-            $model_name = 'humdiv';
-        } elsif ( $model =~ /humvar/i ) {
-            $model_name = 'humvar';
-        } else {
-            warn "Warning: Weka model $model is not supported\n";
-            next;
-        }
+        my $model_name = $model eq $humdiv_model ? 'humdiv' : 'humvar';
 
         my $output_file = "${tmp_dir}/${model_name}.txt";
 
