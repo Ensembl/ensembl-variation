@@ -24,7 +24,7 @@ use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
-my ( $infile, $registry_file, $version, $help, $index );
+my ( $infile, $registry_file, $version, $help, $index, $cleanup );
 
 GetOptions(
   "import|i=s"   => \$infile,
@@ -32,16 +32,30 @@ GetOptions(
   "version=s"    => \$version,
   "help|h"       => \$help,
   "index=s"      => \$index,
+  "cleanup|c"    => \$cleanup,
 );
 
-$index = "" unless defined($index);
-unless (defined($registry_file) && defined($infile) && defined($version)) {
+if ($help) {
+    warn "
+    Usage:
+      $0 --import <input_file> --registry <reg_file> --version <cosmic_version>
+    
+    To import COSMIC variants by multiple chunks of input files:
+      $0 --import <input_file_1> --registry <reg_file> --version <cosmic_version> --index 1
+      $0 --import <input_file_2> --registry <reg_file> --version <cosmic_version> --index 2
+      $0 --import <input_file_3> --registry <reg_file> --version <cosmic_version> --index 3
+      # clean up data
+      $0 --registry <reg_file> --version <cosmic_version>\n";
+    exit(0);
+}
+
+$cleanup = 0 unless defined($cleanup);
+$index = "" if $cleanup || !defined($index);
+unless ($cleanup) {
+  unless (defined($registry_file) && defined($infile) && defined($version)) {
     warn "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
-}
-if ($help) {
-    warn "Usage: $0 --import <input_file> --registry <reg_file> --version <cosmic_version>\n";
-    exit(0);
+  }
 }
 
 my $registry = 'Bio::EnsEMBL::Registry';
@@ -52,6 +66,40 @@ my $dbh = $registry->get_adaptor(
     'human', 'variation', 'variation'
 )->dbc;
 my $dbVar = $dbh->db_handle;
+
+my $temp_table_prefix        = 'MTMP_tmp_cosmic';
+my $temp_phen_table_prefix   = 'MTMP_tmp_cosmic_phenotype';
+my $temp_varSyn_table_prefix = 'MTMP_tmp_cosmic_synonym';
+
+sub performCleanup {
+  my $dbVar = shift;
+
+  delete_table($dbVar, $temp_table_prefix);
+  delete_table($dbVar, $temp_phen_table_prefix);
+  delete_table($dbVar, $temp_varSyn_table_prefix);
+  create_temp_tables($dbVar, $temp_table_prefix, $temp_phen_table_prefix,
+                     $temp_varSyn_table_prefix);
+
+  my $sth = $dbVar->prepare("SHOW TABLES LIKE '$temp_table_prefix%';");
+  my $rc = $sth->execute();
+  while ( my $table = $sth->fetchrow_array) {
+    # Copy contents to new table and delete
+    my $main_table = $table;
+    $main_table =~ s/[0-9]+$//;
+    next if $table eq $main_table;
+
+    $dbVar->do("INSERT INTO $main_table SELECT * FROM $table;");
+    delete_table($dbVar, $table);
+  }
+  $sth->finish();
+  print "Auxiliary COSMIC tables removed and their rows were aggregated into " .
+        "the following tables:\n" .
+        "  - $temp_table_prefix\n" .
+        "  - $temp_phen_table_prefix\n" .
+        "  - $temp_varSyn_table_prefix\n";
+  exit(1);
+}
+performCleanup($dbVar) if $cleanup;
 
 my $dba = $registry->get_DBAdaptor('homo_sapiens','variation');
 my $variation_adaptor = $dba->get_VariationAdaptor('human', 'variation', );
@@ -73,9 +121,9 @@ my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'tumour');
 
-my $temp_table      = 'MTMP_tmp_cosmic' . $index;
-my $temp_phen_table = 'MTMP_tmp_cosmic_phenotype' . $index;
-my $temp_varSyn_table = 'MTMP_tmp_cosmic_synonym' . $index;
+my $temp_table        = $temp_table_prefix . $index;
+my $temp_phen_table   = $temp_phen_table_prefix . $index;
+my $temp_varSyn_table = $temp_varSyn_table_prefix . $index;
 
 my $default_class = 'sequence_alteration'; 
 my %class_mapping = ( 'Substitution' => 'SNV',
@@ -89,23 +137,32 @@ my $somatic = 1;
 my $allele  = 'COSMIC_MUTATION';
 my $phe_suffix = 'tumour';
 
-$dbVar->do("DROP TABLE IF EXISTS $temp_table;");
-$dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
-$dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
+sub delete_table {
+  my $dbVar = shift;
+  my $table = shift;
+  $dbVar->do("DROP TABLE IF EXISTS $table;");
+}
+delete_table($dbVar, $temp_table);
+delete_table($dbVar, $temp_phen_table);
+delete_table($dbVar, $temp_varSyn_table);
 
-warn "Creating $temp_table table...\n";
+sub create_temp_tables {
+  my ($dbVar, $temp_table, $temp_phen_table, $temp_varSyn_table) = @_;
+  warn "Creating $temp_table temporary tables...\n";
   
-my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i');
-create($dbVar, "$temp_table", @cols);
-$dbVar->do("ALTER TABLE $temp_table ADD PRIMARY KEY (name, seq_region_id, seq_region_start, seq_region_end);");
+  my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i');
+  create($dbVar, "$temp_table", @cols);
+  $dbVar->do("ALTER TABLE $temp_table ADD PRIMARY KEY (name, seq_region_id, seq_region_start, seq_region_end);");
 
-my @cols_phen = ('name *', 'phenotype_id i*');
-create($dbVar, "$temp_phen_table", @cols_phen);
-$dbVar->do("ALTER TABLE $temp_phen_table ADD PRIMARY KEY (name, phenotype_id);");
+  my @cols_phen = ('name *', 'phenotype_id i*');
+  create($dbVar, "$temp_phen_table", @cols_phen);
+  $dbVar->do("ALTER TABLE $temp_phen_table ADD PRIMARY KEY (name, phenotype_id);");
 
-my @cols_syn = ('name *', 'old_name *');
-create($dbVar, "$temp_varSyn_table", @cols_syn);
-$dbVar->do("ALTER TABLE $temp_varSyn_table ADD PRIMARY KEY (name, old_name);");
+  my @cols_syn = ('name *', 'old_name *');
+  create($dbVar, "$temp_varSyn_table", @cols_syn);
+  $dbVar->do("ALTER TABLE $temp_varSyn_table ADD PRIMARY KEY (name, old_name);");
+}
+create_temp_tables($dbVar, $temp_table, $temp_phen_table, $temp_varSyn_table);
 
 my $cosmic_ins_stmt = qq{
     INSERT IGNORE INTO
