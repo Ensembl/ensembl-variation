@@ -24,7 +24,7 @@ use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
-my ( $infile, $registry_file, $version, $help, $index, $force );
+my ( $infile, $registry_file, $version, $help, $index );
 
 GetOptions(
   "import|i=s"   => \$infile,
@@ -32,7 +32,6 @@ GetOptions(
   "version=s"    => \$version,
   "help|h"       => \$help,
   "index=s"      => \$index,
-  "force|f"      => \$force,
 );
 
 $index = "" unless defined($index);
@@ -90,11 +89,9 @@ my $somatic = 1;
 my $allele  = 'COSMIC_MUTATION';
 my $phe_suffix = 'tumour';
 
-if ($force) {
-    $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
-    $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
-    $dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
-}
+$dbVar->do("DROP TABLE IF EXISTS $temp_table;");
+$dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
+$dbVar->do("DROP TABLE IF EXISTS $temp_varSyn_table;");
 
 warn "Creating $temp_table table...\n";
   
@@ -253,10 +250,9 @@ $cosmic_ins_sth->finish();
 $cosmic_phe_ins_sth->finish();
 $cosmic_syn_ins_sth->finish();
 
-warn "Inserting COSMIC entries...\n";
 # Insert COSMIC in the latest release which are not in COSMIC 71
+warn "Inserting COSMIC entries...\n";
 insert_cosmic_entries();
-
 
 sub get_equivalent_class {
   my $type  = shift;
