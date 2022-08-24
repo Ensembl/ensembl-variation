@@ -89,18 +89,22 @@ sub fetch_input {
   my $month = sprintf ("%02d",$dt->month);
 
   # get input file CGC via OpenTargets, get latest published file:
-  my $file_opent = "output_latest.json";
-  system("python3 download_cgc_file.py -d $workdir -r latest") unless -e $workdir."/".$file_opent;
+  my $script_dir = "/hps/software/users/ensembl/repositories/dlemos/ensembl-variation/scripts/python";
+  my $file_opent = "cgc_input_latest.json";
+  system("python3 $script_dir/download_cgc_file.py -d $workdir -r latest") unless -e $workdir."/".$file_opent;
 
   my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
-  if($found) {
-    print $logFH "INFO: Found input file ($file_opent)\n" ;
-    $self->validate_input_file($file_opent);
-  }
-  else{
+  if(!$found) {
     print $errFH "Input file ($file_opent) is missing\n";
     die "Input file is missing: check download script download_cgc_file.py\n";
+  }
+
+  print $logFH "INFO: Found input file ($file_opent)\n" ;
+  my $valid_file = $self->validate_input_file($file_opent);
+  if(!$valid_file) {
+    print $errFH "Input file ($file_opent) has incorrect format\n";
+    die ("Input file ($file_opent) has incorrect format\n");
   }
 
   # Source version to be used to update the table source
@@ -175,7 +179,31 @@ sub validate_input_file {
     $valid = 0;
   }
 
-  
+  my $read;
+  if($input_file =~ /gz$/) {
+    open($read, "zcat ".$self->workdir."/$input_file |") || die ("Validate input file: could not open $input_file for reading: $!\n");
+  }
+  else {
+    open($read,'<',$self->workdir."/".$input_file) || die ("Validate input file: could not open $input_file for reading: $!\n");
+  }
+
+  my $line = <$read>;
+  chomp $line;
+  my $json_hash = decode_json($line);
+
+  if(!defined $json_hash->{'datasourceId'}) {
+    $valid = 0;
+  }
+  elsif(!defined $json_hash->{'datatypeId'}) {
+    $valid = 0;
+  }
+  elsif(!defined $json_hash->{'targetId'}) {
+    $valid = 0;
+  }
+
+  close($read);
+
+  return $valid;
 }
 
 =head2 get_input_file
@@ -221,7 +249,7 @@ sub get_input_file {
     next unless ($source =~ /cancer_gene_census/);
 
     my $type = $json_hash->{'datatypeId'};
-    my $gene_id = $json_hash->{'targetId'} if (defined $json_hash->{'targetId'}); # gene ID (ENSG00000147889)
+    my $gene_id = $json_hash->{'targetId'}; # gene ID (ENSG00000147889)
     my $pmids = parse_publications($json_hash->{'literature'}) if (defined $json_hash->{'literature'});
     my $phenotype_id = $json_hash->{'diseaseId'} if ( defined $json_hash->{'diseaseId'});
 

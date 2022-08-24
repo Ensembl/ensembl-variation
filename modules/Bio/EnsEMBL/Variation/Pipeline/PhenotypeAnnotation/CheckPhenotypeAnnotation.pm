@@ -99,7 +99,7 @@ sub run {
   my $time = strftime("%Y-%m-%d %H:%M:%S", localtime);
   $self->print_logFH("Running time: $time\n");
 
-  $self->print_logFH("\nRunning checks on phenotype, phenotype_feature".
+  $self->print_logFH("\nRunning checks on phenotype, phenotype_feature, ".
                      "phenotype_feature_attrib and phenotype_ontology_accession data\n");
   $self->check_phenotype_description($dbh);
   $self->print_logFH("\n");
