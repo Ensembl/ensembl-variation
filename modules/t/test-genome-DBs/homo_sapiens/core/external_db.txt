@@ -343,4 +343,4 @@
 230	Ribosomal_Protein_Gene_Data	Dec.2010	XREF	1	0		Ribosomal Protein Gene DB	MISC	\N
 50612	LampreyGenomeProject		KNOWN	0	0	ARRAY	Lamprey Genome Project	MISC	\N
 50620	Illumina_Bodymap_transcript		XREF	0	0		Illumina Bodymap transcriptome	MISC	\N
-0	GeneCards		XREF	50	GeneCards	MISC	\N	\N	\N
+50621	GeneCards		XREF	50	GeneCards	MISC	\N	\N	\N
