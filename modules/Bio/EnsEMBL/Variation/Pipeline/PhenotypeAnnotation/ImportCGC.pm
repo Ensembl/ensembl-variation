@@ -49,6 +49,7 @@ use JSON;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
+my $debug;
 
 sub fetch_input {
   my $self = shift;
@@ -56,7 +57,7 @@ sub fetch_input {
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
 
-  $self->debug($self->param('debug_mode'));
+  $debug = $self->param('debug_mode');
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'https://cancer.sanger.ac.uk/census',
@@ -129,11 +130,11 @@ sub run {
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info);
-  $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($self->debug);
+  $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($debug);
 
   # get phenotype data + save it (all in one method)
   my $results = $self->parse_input_file($file_cgc);
-  $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
+  $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($debug);
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;
@@ -149,10 +150,10 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($debug);
   close($self->logFH) if defined $self->logFH ;
   close($self->errFH) if defined $self->errFH ;
-  close($self->pipelogFH) if defined $self->pipelogFH ;
+  close($self->pipelogFH) if defined $debug ;
 
   $self->dataflow_output_id($self->param('output_ids'), 2);
 
@@ -251,14 +252,22 @@ sub get_input_file {
     my $type = $json_hash->{'datatypeId'};
     my $gene_id = $json_hash->{'targetId'}; # gene ID (ENSG00000147889)
     my $pmids = parse_publications($json_hash->{'literature'}) if (defined $json_hash->{'literature'});
-    my $phenotype_id = $json_hash->{'diseaseId'} if ( defined $json_hash->{'diseaseId'});
+    my $phenotype_id = $json_hash->{'diseaseId'} if (defined $json_hash->{'diseaseId'});
+    my $so_term;
+    my $n_mutated_samples;
+    my $n_samples_tested;
+    my $n_samples_mutation;
+    if (defined $json_hash->{'mutatedSamples'}) {
+      my $mutated_samples_info = $json_hash->{'mutatedSamples'}->[0];
+      $so_term = $mutated_samples_info->{'functionalConsequenceId'} if(defined $mutated_samples_info->{'functionalConsequenceId'});
+      $n_mutated_samples = $mutated_samples_info->{'numberMutatedSamples'} if(defined $mutated_samples_info->{'numberMutatedSamples'});
+      $n_samples_tested = $mutated_samples_info->{'numberSamplesTested'} if(defined $mutated_samples_info->{'numberSamplesTested'});
+      $n_samples_mutation = $mutated_samples_info->{'numberSamplesWithMutationType'} if(defined $mutated_samples_info->{'numberSamplesWithMutationType'});
+    }
 
     if (! defined $phenotype_id){
       print $errFH1 "phenotype_id (json_hash->{'diseaseId'}) not found for $gene_id!\n";
       next;
-    }
-    if (! defined $pmids){
-      print $errFH1 "pmids (json_hash->{'literature'}) not found for $gene_id!\n";
     }
 
     # Phenotype fetching and parsing from the Ontology db
@@ -288,6 +297,10 @@ sub get_input_file {
     foreach my $pmid (@$pmids) {
       $data{$gene_id}{$phenotype}{'pmids'}{$pmid} = 1; 
     }
+    $data{$gene_id}{$phenotype}{'so_term'} = $so_term;
+    $data{$gene_id}{$phenotype}{'n_mutated_samples'} = $n_mutated_samples;
+    $data{$gene_id}{$phenotype}{'n_samples_tested'} = $n_samples_tested;
+    $data{$gene_id}{$phenotype}{'n_samples_mutation'} = $n_samples_mutation;
   }
   close(IN);
 
@@ -298,7 +311,11 @@ sub get_input_file {
         my $source = $data{$gene_id}{$phenotype}{'source'};
         my $phenotype_id = $data{$gene_id}{$phenotype}{'phenotype_id'};
         my $pmids = join(',', keys(%{$data{$gene_id}{$phenotype}{'pmids'}}));
-        print OUT "$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\n";
+        my $so_term = $data{$gene_id}{$phenotype}{'so_term'};
+        my $n_mutated_samples = $data{$gene_id}{$phenotype}{'n_mutated_samples'};
+        my $n_samples_tested = $data{$gene_id}{$phenotype}{'n_samples_tested'};
+        my $n_samples_mutation = $data{$gene_id}{$phenotype}{'n_samples_mutation'};
+        print OUT "$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\t$so_term\t$n_mutated_samples\t$n_samples_tested\t$n_samples_mutation\n";
       }
   }
 
@@ -400,6 +417,10 @@ sub parse_input_file {
     my $phen      = $row_data[3];
     my $accession = $row_data[4];
     my $pmids     = $row_data[5];
+    my $so_term   = $row_data[6];
+    my $n_mutated_samples  = $row_data[7];
+    my $n_samples_tested   = $row_data[8];
+    my $n_samples_mutation = $row_data[9];
 
     ## change accession format
     $accession =~ s/\_/\:/;
@@ -418,6 +439,10 @@ sub parse_input_file {
       'seq_region_start' => $gene->seq_region_start,
       'seq_region_end' => $gene->seq_region_end,
       'seq_region_strand' => $gene->seq_region_strand,
+      'SO_accession' => $so_term,
+      'mutated_samples' => $n_mutated_samples,
+      'samples_tested' => $n_samples_tested,
+      'samples_mutation' => $n_samples_mutation,
       'accessions' => [$accession],
       'ontology_mapping_type' => 'is'
     );
