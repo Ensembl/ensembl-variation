@@ -80,6 +80,7 @@ get_db_info($dbh_core) if $debug;
 insert_source($dbh_var, $dbSNP_version);
 
 create_seq_region_table($dbh_core, $dbh_var);
+create_coord_system_table($dbh_core, $dbh_var);
 
 # TODO have single sub for nt/nw with parameter
 #      remove code duplication
@@ -206,13 +207,26 @@ sub create_seq_region_table {
     get_db_info($dbh_core);
     get_db_info($dbh_var);
   }
-  dumpSQL($dbh_core, qq{SELECT sr.seq_region_id, sr.name
+  dumpSQL($dbh_core, qq{SELECT sr.seq_region_id, sr.name, sr.coord_system_id
                         FROM seq_region_attrib sra, attrib_type at, seq_region sr
                         WHERE sra.attrib_type_id=at.attrib_type_id 
                         AND at.code="toplevel" 
                         AND sr.seq_region_id = sra.seq_region_id 
                         }, 'MySQL');
-  load($dbh_var, "seq_region", "seq_region_id", "name");
+  load($dbh_var, "seq_region", "seq_region_id", "name", "coord_system_id");
+}
+
+sub create_coord_system_table {
+  my ($dbh_core, $dbh_var) = @_;
+  if ($debug) {
+    debug("\n>>>> create_coord_system_table <<<<") if ($debug);
+    get_db_info($dbh_core);
+    get_db_info($dbh_var);
+  }
+  dumpSQL($dbh_core, qq{SELECT coord_system_id, species_id, name, version, rank, attrib
+                        FROM coord_system
+                        }, 'MySQL');
+  load($dbh_var, "coord_system", "coord_system_id", "species_id", "name", "version", "rank", "attrib");
 }
 
 sub add_failed_variation_set {
