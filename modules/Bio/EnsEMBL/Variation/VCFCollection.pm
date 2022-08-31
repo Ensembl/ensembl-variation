@@ -1293,9 +1293,21 @@ sub _get_vcf_by_chr {
   if(!exists($self->{files}) || !exists($self->{files}->{$chr})) {
     my $obj;
     
-    # check we have this chromosome
+    # check we have this chromosome or its synonym
     if(my $chrs = $self->list_chromosomes) {
-      return unless grep {$chr eq $_} @$chrs;
+      unless ( (grep {$chr eq $_} @$chrs) || !$self->use_seq_region_synonyms) {
+        my @synonyms = @{$self->_get_synonyms_by_chr($chr)};
+
+        # also check with 'chr' prefix
+        push @synonyms, 'chr'.$chr;
+
+        my $matched = 0;
+        foreach my $synonym (@synonyms) {
+          $matched = 1 if grep {$synonym eq $_} @$chrs;
+        }
+
+        return unless $matched;
+      }
     }
     
     my $file = $self->_get_vcf_filename_by_chr($chr);
