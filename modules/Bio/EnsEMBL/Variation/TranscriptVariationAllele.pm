@@ -1413,7 +1413,7 @@ sub hgvs_transcript {
   ### create reference name - transcript name & seq version
   my $stable_id = $tr_stable_id;
   $stable_id .= "." . $tr->version() 
-     unless ($stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG's
+     unless (!defined $tr->version() || $stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG's
   $hgvs_notation->{'ref_name'} = $stable_id;
 
 
@@ -1666,7 +1666,7 @@ sub hgvs_protein {
 
   # Add seq version unless LRG 
   $hgvs_notation->{ref_name} .= "." . $tr->translation->version() 
-    unless ($hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/ || $self->{remove_hgvsp_version});
+    unless (!defined $tr->translation->version() || $hgvs_notation->{ref_name}=~ /\.\d+$/ || $hgvs_notation->{ref_name} =~ /LRG/ || $self->{remove_hgvsp_version});
 
   $hgvs_notation->{'numbering'} = 'p';
 
