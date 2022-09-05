@@ -350,6 +350,7 @@ sub pipeline_analyses {
         {   -logic_name => 'import_cancerGC',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportCGC',
             -parameters => {
+		repo_dir => $self->o('ensembl_cvs_root_dir'),
                 @common_params,
             },
             -input_ids      => [], #default

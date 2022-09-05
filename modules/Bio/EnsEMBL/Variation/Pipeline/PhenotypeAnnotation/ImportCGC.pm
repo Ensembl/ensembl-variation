@@ -56,6 +56,7 @@ sub fetch_input {
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $repo_dir     = $self->required_param('repo_dir');
 
   $debug = $self->param('debug_mode');
 
@@ -90,7 +91,7 @@ sub fetch_input {
   my $month = sprintf ("%02d",$dt->month);
 
   # get input file CGC via OpenTargets, get latest published file:
-  my $script_dir = "/hps/software/users/ensembl/repositories/dlemos/ensembl-variation/scripts/python";
+  my $script_dir = $repo_dir . "/ensembl-variation/scripts/python";
   my $file_opent = "cgc_input_latest.json";
   system("python3 $script_dir/download_cgc_file.py -d $workdir -r latest") unless -e $workdir."/".$file_opent;
 
