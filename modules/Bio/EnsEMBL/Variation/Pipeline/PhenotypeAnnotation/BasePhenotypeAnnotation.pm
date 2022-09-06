@@ -689,15 +689,19 @@ sub dump_phenotypes {
   };
 
   my $db_adaptor    = $self->variation_db_adaptor;
+  
+  mkdir $self->workdir."/dumps", 0755;
 
-  _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/"."pfa_".$source_name.".txt");
-  _sql_to_file($pf_select_stmt, $db_adaptor, $self->workdir."/"."pf_".$source_name.".txt");
-  _sql_to_file($p_extra_select_stmt, $db_adaptor, $self->workdir."/"."p_extra_".$source_name.".txt");
-  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $self->workdir."/"."poa_extra_".$source_name.".txt");
-
+  opendir my $dh, $self->workdir."/dumps" or die("ERROR: There was a problem opening the dumps directory: $!\n");
+  _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/dumps/"."pfa_".$source_name.".txt");
+  _sql_to_file($pf_select_stmt, $db_adaptor,  $self->workdir."/dumps/"."pf_".$source_name.".txt");
+  _sql_to_file($p_extra_select_stmt, $db_adaptor, $self->workdir."/dumps/"."p_extra_".$source_name.".txt");
+  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $self->workdir."/dumps/"."poa_extra_".$source_name.".txt");
+  closedir $dh;
+  
   if ($clean) {
     my $sth = $db_adaptor->dbc->prepare($pfa_delete_stmt);
-    $sth->execute();
+    $sth->execute(); 
 
     $sth = $db_adaptor->dbc->prepare($pf_delete_stmt);
     $sth->execute();
