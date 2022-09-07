@@ -106,7 +106,7 @@ sub fetch_input {
   my $valid_file = $self->validate_input_file($file_opent);
   if(!$valid_file) {
     print $errFH "Input file ($file_opent) has incorrect format\n";
-    die ("Input file ($file_opent) has incorrect format\n");
+    die ("Input file ($file_opent) has incorrect format or it's empty\n");
   }
 
   # Source version to be used to update the table source
@@ -177,7 +177,7 @@ sub validate_input_file {
   my $valid = 1;
 
   # empty file
-  if(-z $input_file) {
+  if(-z $self->workdir."/".$input_file) {
     $valid = 0;
   }
 
