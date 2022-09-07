@@ -147,6 +147,7 @@ sub run {
                                species => $self->required_param('species'),
                                run_type => $self->required_param('run_type'),
                              });
+  $self->clean_dir;
 }
 
 sub write_output {
