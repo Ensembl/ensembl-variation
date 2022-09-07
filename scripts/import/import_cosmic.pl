@@ -569,7 +569,7 @@ sub insert_cosmic_entries {
 
   # Update variation_set in variation_feature table
   my $vf_set_upd_sth = $dbh->prepare(qq[ UPDATE variation_feature
-                                         SET variation_set_id = '$variation_set_cosmic,$variation_set_pheno'
+                                         SET variation_set_id = concat($variation_set_cosmic,',', $variation_set_pheno)
                                          WHERE source_id = $source_id
                                        ]);
   $vf_set_upd_sth->execute() || die "Error updating variation_set_id in variation_feature\n";
