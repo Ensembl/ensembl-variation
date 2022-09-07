@@ -515,10 +515,13 @@ sub insert_cosmic_entries {
     $var_feat_adaptor->store($vf);
 
     # Get all transcript variations to insert into transcript_variation table
+    my $count_tv = 0;
     my $all_tv = $vf->get_all_TranscriptVariations();
     foreach my $tv (@{$all_tv}) {
       # Do not include upstream and downstream consequences
       next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+      
+      $count_tv += 1;
 
       # only include valid biotypes in MTMP_transcript_variation
       my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
@@ -532,6 +535,16 @@ sub insert_cosmic_entries {
     # Update consequence_types in variation_feature table
     # get variation_feature_id
     my $vf_dbid = $vf->dbID;
+
+    my $update_vf_smt = qq { UPDATE variation_feature
+                             SET consequence_types = ?
+                             WHERE variation_feature_id = ?
+                           };
+    # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
+    if(!$count_tv) {
+      my $vf_sth = $dba->dbc()->prepare($update_vf_smt);
+      $vf_sth->execute('intergenic_variant', $vf->dbID) || die "Error updating consequence_types to default in table variation_feature\n";
+    }
 
     # By default group_concat has maximum length 1024
     # some variants have consequence_types longer than 1024
@@ -548,10 +561,7 @@ sub insert_cosmic_entries {
     $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
     my $data_tv = $tv_sth->fetchall_arrayref();
     if (defined $data_tv->[0]->[0]) {
-      my $update_vf_sth = $dba->dbc()->prepare(qq[ UPDATE variation_feature
-                                                   SET consequence_types = ?
-                                                   WHERE variation_feature_id = ?
-                                                 ]);
+      my $update_vf_sth = $dba->dbc()->prepare($update_vf_smt);
       # warn "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
       $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
     }
