@@ -48,8 +48,9 @@ sub clean_dir {
 
   # Remove files
   $self->run_system_command("rm -rf $split_vcf_no_header_dir");
-  $self->run_system_command("rm -rf $split_vcf_input_dir");
-  $self->run_system_command("rm -rf $split_vcf_output_dir");
+  # Keep some temp files
+  # $self->run_system_command("rm -rf $split_vcf_input_dir");
+  # $self->run_system_command("rm -rf $split_vcf_output_dir");
 
 }
 

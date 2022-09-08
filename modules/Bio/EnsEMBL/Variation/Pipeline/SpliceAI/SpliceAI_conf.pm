@@ -60,11 +60,14 @@ sub default_options {
         fasta_file                 => $self->o('fasta_file'), # '/hps/nobackup2/production/ensembl/dlemos/files/Homo_sapiens.GRCh38.dna.toplevel.fa'
         gene_annotation            => $self->o('gene_annotation'), # '/homes/dlemos/work/tools/SpliceAI_files_output/gene_annotation/ensembl_gene/grch38_MANE_8_7.txt'
         step_size                  => $self->o('step_size'), # number of variants used to split the main vcf files
-        check_transcripts          => $self->o('check_transcripts'), # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
+        check_transcripts          => 0, # checks which are the new MANE transcripts for the last months, runs SpliceAI only for these ones
+        transcripts_from_file      => undef,
+	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if we get transcripts from db
+	masked_scores              => 1, # calculate masked scores by default
         registry                   => $self->o('registry'), # database where new MANE transcripts are going to be checked
         output_file_name           => 'spliceai_final_scores_',
 
-        pipeline_wide_analysis_capacity => 150,
+        pipeline_wide_analysis_capacity => 500,
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
@@ -81,8 +84,8 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        '4Gb_8c_job'  => {'LSF' => '-n 8 -q production-rh74 -R"select[mem>4000]  rusage[mem=4000]" -M4000' },
-        '4Gb_job'     => {'LSF' => '-q production-rh74 -R"select[mem>4000] rusage[mem=4000]" -M4000'},
+        '6Gb_8c_job'  => {'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000' },
+        '4Gb_job'     => {'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
     };
 }
 
@@ -105,6 +108,7 @@ sub pipeline_analyses {
       { -logic_name => 'split_files',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::SpliceAI::SplitFiles',
         -input_ids  => [],
+        -rc_name => '4Gb_job',
         -parameters => {
           'main_dir'                   => $self->o('main_dir'),
           'input_directory'            => $self->o('input_directory'),
@@ -114,7 +118,9 @@ sub pipeline_analyses {
           'step_size'                  => $self->o('step_size'),
           'check_transcripts'          => $self->o('check_transcripts'),
           'registry'                   => $self->o('registry'),
-        },
+          'transcripts_from_file'      => $self->o('transcripts_from_file'),
+          'time_interval'              => $self->o('time_interval'),
+      },
       },
       { -logic_name => 'get_chr_dir',
         -module => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
@@ -144,14 +150,15 @@ sub pipeline_analyses {
         -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -input_ids  => [],
-        -rc_name => '4Gb_8c_job',
+        -rc_name => '6Gb_8c_job',
         -parameters => {
           'main_dir'             => $self->o('main_dir'),
           'split_vcf_input_dir'  => $self->o('split_vcf_input_dir'),
           'split_vcf_output_dir' => $self->o('split_vcf_output_dir'),
           'fasta_file'           => $self->o('fasta_file'),
           'gene_annotation'      => $self->o('gene_annotation'),
-        },
+          'masked_scores'        => $self->o('masked_scores'),
+      },
         -max_retry_count => 3,
       },
       { -logic_name => 'init_merge_files',
@@ -168,6 +175,7 @@ sub pipeline_analyses {
       { -logic_name => 'merge_files',
         -module => 'Bio::EnsEMBL::Variation::Pipeline::SpliceAI::MergeFiles',
         -input_ids  => [],
+        -rc_name => '4Gb_job',
         -parameters => {
           'input_dir'        => $self->o('split_vcf_output_dir'),
           'output_dir'       => $self->o('output_dir'),
