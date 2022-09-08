@@ -15,8 +15,6 @@ from ftplib import FTP, error_perm
 HOST = "ftp.ebi.ac.uk"
 BASE_DIR = "/pub/databases/opentargets/platform"
 EVIDENCE_DIR = "output/etl/json/evidence/sourceId=cancer_gene_census"
-TARGET_DIR = "output/etl/json/targets"
-
 
 def find_json_files(ftp, pathname):
     current = ftp.pwd()
@@ -50,14 +48,6 @@ def walk_ftp(host, dirname):
         ftp.quit()
 
 
-def load_targets(host, dirname):
-    targets = {}
-    for obj in walk_ftp(host, dirname):
-        targets[obj["id"]] = obj["approvedSymbol"]
-
-    return targets
-
-
 def main():
     parser = argparse.ArgumentParser(description="Retrieve target - disease "
                                                  "evidences from the Open "
@@ -72,7 +62,6 @@ def main():
     release = args.release
     out_dir = args.dest_dir
     evidence_dir = f"{BASE_DIR}/{release}/{EVIDENCE_DIR}"
-    target_dir = f"{BASE_DIR}/{release}/{TARGET_DIR}"
 
     output_file = os.path.join(out_dir, f"cgc_input_{release}.json")
 
@@ -84,7 +73,6 @@ def main():
         elif release == "21.02":
             evidence_dir = f"{BASE_DIR}/21.02/output/ETL/evidences/succeeded/"
             evidence_dir += "sourceId=cancer_gene_census/"
-            target_dir = f"{BASE_DIR}/21.02/output/ETL/targets/"
         elif float(release) >= 22.07:
             parser.exit(status=2,
                         message=f"error: release {args.release} "
@@ -92,7 +80,6 @@ def main():
 
     sys.stderr.write(f"Fetching data from Open Target Platform "
                      f"(release: {release})\n")
-    target2symbol = load_targets(HOST, target_dir)
 
     with open(output_file, "w") as f:
       for obj in walk_ftp(HOST, evidence_dir):

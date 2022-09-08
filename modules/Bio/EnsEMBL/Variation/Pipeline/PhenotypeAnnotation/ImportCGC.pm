@@ -99,7 +99,7 @@ sub fetch_input {
 
   if(!$found) {
     print $errFH "Input file ($file_opent) is missing\n";
-    die "Input file is missing: check download script download_cgc_file.py\n";
+    die "Input file is missing: check download script $script_dir/download_cgc_file.py\n";
   }
 
   print $logFH "INFO: Found input file ($file_opent)\n" ;
