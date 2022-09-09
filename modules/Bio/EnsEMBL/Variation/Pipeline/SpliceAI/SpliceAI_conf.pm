@@ -63,9 +63,9 @@ sub default_options {
         step_size                  => 4000, # number of variants used to split the main vcf files
         check_transcripts          => 0, # if set to 1 checks which are the new MANE Select transcripts for the last months and only calculates SpliceAI scores for these variants overlapping these transcripts
         transcripts_from_file      => undef,
-	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if we get transcripts from db
-	masked_scores              => 1, # calculate masked scores by default
-        registry                   => $self->o('registry'), # database where new MANE transcripts are going to be checked
+	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
+	masked_scores              => 1, # calculate masked scores
+        registry                   => undef, # database where new MANE transcripts are going to be checked; only used if check_transcripts = 1
         output_file_name           => 'spliceai_final_scores_',
 
         pipeline_wide_analysis_capacity => 500,
