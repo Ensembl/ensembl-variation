@@ -21,6 +21,7 @@ def find_json_files(ftp, pathname):
     try:
         ftp.cwd(pathname)
     except error_perm as e:
+        print ("Error: " + str(e))
         return  # file or private directory
 
     for name in ftp.nlst():
