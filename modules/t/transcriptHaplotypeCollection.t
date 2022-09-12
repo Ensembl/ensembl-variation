@@ -362,8 +362,6 @@ is(scalar @$dts, 81, "Protein diplotypes - count");
 
 $dt = (sort {$b->count <=> $a->count} @$dts)[0];
 
-$DB::single = 1;
-
 is($dt->name, 'ENSP00000422007:621del{325}_566R>Q,620*>R,671C>R,819Q>R', "Protein diplotype name");
 is($dt->count, 676, "Protein diplotype count");
 is(sprintf("%.4f", $dt->frequency), 0.3178, "Protein diplotype freq");

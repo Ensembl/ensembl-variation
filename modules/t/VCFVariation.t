@@ -310,15 +310,5 @@ is_deeply(
   ],
   'VCFVF - fetch from reverse strand'
 );
-## fetch via transcript
-# my $tr = $cdb->get_TranscriptAdaptor->fetch_by_stable_id('ENST00000502692');
-# my $tva = $vdb->get_TranscriptVariationAdaptor;
-
-# # setup so TVAs get created from our VCF
-# $coll->use_as_source(1);
-# $vdb->use_vcf(2);
-
-# my $tvas = $tva->fetch_all_by_Transcripts_with_constraint([$tr]);
-# $DB::single = 1;
 
 done_testing();
