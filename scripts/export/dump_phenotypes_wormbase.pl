@@ -29,6 +29,7 @@
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::VEP::Config;
+use ProductionMysql;
 use DBI;
 use strict;
 use Getopt::Long;
@@ -37,7 +38,7 @@ use Phenotypes;
 ###############
 ### Options ###
 ###############
-my ($output_dir,$e_version,$user,$hname);
+my ($output_dir,$e_version,$p_version,$user,$hname);
 my ($force,$quiet, $species, $help);
 
 ## EG options
@@ -51,12 +52,16 @@ GetOptions(
      'quiet|q'         => \$quiet,
      "species|s=s"     => \$species,
      'v=s'             => \$e_version,
+     'pv=s'            => \$p_version,
      'user|u=s'        => \$user,
      'hname=s'         => \$hname,
      'help!'           => \$help,
 );
 
 if ($help) {
+  usage();
+} elsif (!$p_version) {
+  print STDERR "> Error! Please give a WormBase ParaSite version, using the option '-pv' \n";
   usage();
 } elsif (!$e_version) {
   print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
@@ -90,17 +95,22 @@ $registry->load_registry_from_db(
 
 my %only_species = map { $_ => 1 } split(",",$species) if defined $species;
 
-my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+my $sql = qq{SHOW DATABASES LIKE '%variation_${p_version}_${e_version}%'};
 my $sth_h = get_connection_and_query($database, $hname, $sql, 1);
 
 my $sqlPF = qq{SELECT count(*) FROM phenotype_feature};
+
 # Loop over databases
 while (my ($dbname) = $sth_h->fetchrow_array) {
+
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
 
-  next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i &&
-           $dbname !~ /^ovis_aries_rambouillet_variation_\d+_\d+$/ &&
-           $dbname !~ /^canis_lupus_familiaris(boxer)?_variation_\d+_\d+$/ );
+  next if ($dbname !~ /^[a-z]+_[a-z]+_[a-z0-9]+_variation_\d+_\d+_\d+$/i);
+
+  my $cdbname = `sed 's/variation/core/g' <<< $dbname`;
+  #print "Core: ".$cdbname."\n";
+
+  my $ftpfilename = ProductionMysql::core_db_to_local_ftp_filename(ProductionMysql->staging, $cdbname);
 
   $dbname =~ /^(.+)_variation_.+_(.+)/;
   my $s_name = $1;
@@ -115,17 +125,16 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   print "Found phenotype features: ", $count, "\n";
   next unless $count > 0;
 
-  my $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%i.gvf.gz", $s_name, $e_version);
-  $dumpFile = sprintf($output_dir."/Phenotypes.pm_%s_%s.gvf.gz", $s_name, $e_version."_GRCh".$assembly) if $s_name eq 'homo_sapiens';
+  my $dumpFile = sprintf($output_dir."/".$ftpfilename."."."phenotypes.wb", $s_name, $e_version);
 
   die ("Phenotype file $dumpFile already exists. Specify a different output folder or use --force to override the existing one\n") if -e $dumpFile & !$force ;
 
   print "writing: $dumpFile \n" unless $quiet;
 
-  my %reg_config = (reg => $registry, species => $s_name, quiet => $quiet );
+  my %reg_config = (reg => $registry, species => $s_name, quiet => $quiet, dbname => $dbname, cdbname => $cdbname);
   my %db_config = (config => \%reg_config);
 
-  # Run Phenotypes.pm plugin to export GVF formated Phenotypes
+  #Run Phenotypes.pm plugin to export GVF formated Phenotypes
   Phenotypes::generate_phenotype_gff(\%db_config, $dumpFile);
 }
 $sth_h->finish;
@@ -160,9 +169,9 @@ sub get_connection_and_query {
 sub usage {
 
   print qq{
-  Usage: perl dump_phenotypes.pl [OPTION]
+  Usage: perl dump_phenotypes_wormbase.pl [OPTION]
 
-  Dumping to GVF of phenotype data for Ensembl Variation species.
+  Dumping to GVF of phenotype data for WormBase ParaSite species.
 
   Options:
 
@@ -173,10 +182,11 @@ sub usage {
     -quiet|q          Suppress warning messages.Not used by default
 
     -species|s        Only export the species in the list,
-                        e.g. homo_sapiens,sus_scrofa
+                        e.g. caenorhabditis_elegans,schistosoma_mansoni
 
     -user|u           Database login user name (Required)
     -v                Ensembl version, e.g. 96 (Required)
+    -pv               WormBase ParaSite Version, e.g. 16 (Required)       
     -hname            The host name (with port) where the databases are stored,
                         e.g. ensembldb.ensembl.org1:3334 (Required)
   } . "\n";

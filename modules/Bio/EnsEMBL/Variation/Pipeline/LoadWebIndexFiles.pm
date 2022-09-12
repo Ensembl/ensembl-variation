@@ -70,6 +70,10 @@ sub run {
     load($dbc, qw(variation_hgvs variation_id hgvs_name));
   }
 
+  $dbc->do(qq{
+            DELETE from variation_hgvs where variation_id not in (select variation_id from variation);
+          }) if(-e $self->param('update_diff'));
+
   return;
 }
 

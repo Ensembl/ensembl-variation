@@ -1563,6 +1563,9 @@ sub parse_9th_col {
       if($value =~ /46,/) {
         $value =~ s/46,/46-/g;
       }
+      if($value =~ /2,4-/) {
+        $value =~ s/2,4-/2-4-/g;
+      }
 
       if($value =~ /not_reported/ || $value =~ /not reported/ || $value =~ /not specified/ || $value =~ /not_specified/ || $value =~ /not_provided/ || $value =~ /not provided/) {
         $skip_phenotype = 1;
@@ -1574,6 +1577,9 @@ sub parse_9th_col {
         #Change back to comma
         if($phe =~ /46-/) {
           $phe =~ s/46-/46,/g;
+        }
+	if($phe =~ /2-4-/) {
+          $phe =~ s/2-4-/2,4-/g;
         }
 
         $phe = decode_text($phe);

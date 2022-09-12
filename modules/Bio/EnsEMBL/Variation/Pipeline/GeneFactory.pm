@@ -53,7 +53,7 @@ sub fetch_input {
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
     
-    my $dbc = $var_dba->dbc();
+    my $dbc = $var_dba->dbc;
 
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
@@ -76,6 +76,19 @@ sub fetch_input {
         } if $status ne "deleted";
 
         push @delete_transcripts, $transcript_id if $status eq "deleted";
+
+        # Remove Deleted transcripts
+        if (@delete_transcripts > 500){
+            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+            
+            $dbc->do(qq{
+                      DELETE FROM  transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids);
+            }) or die "Deleting stable ids failed";
+
+            # Reset delete_transcripts list
+            @delete_transcripts = ();
+        }
       }
 
     } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
@@ -119,33 +132,11 @@ sub fetch_input {
     # Remove Deleted transcripts
     if (-e $self->param('update_diff')){
         my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-        return if $joined_ids == "";
+        return if $joined_ids eq "";
         $dbc->do(qq{
                   DELETE FROM  transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids)
-        });
-
-        $dbc->do(qq{
-                  DELETE FROM  MTMP_transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids)
-        }) if($mtmp);
-
-        $dbc->do(qq{
-                  DELETE WHOLE FROM variation_hgvs WHOLE
-                  INNER JOIN 
-                  (SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_transcript, ":", -1) AS hgvs_name
-                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
-                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_transcript IS NOT NULL
-                    )) as var_id
-                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_transcript IS NOT NULL
-                  UNION ALL
-                  SELECT var_id.variation_id AS variation_id, SUBSTRING_INDEX(hgvs_protein, ":", -1) AS hgvs_name
-                  FROM transcript_variation, (select variation_id from variation_feature WHERE variation_feature_id IN (
-                    SELECT DISTINCT(variation_feature_id) from transcript_variation WHERE feature_stable_id IN ($joined_ids) AND hgvs_protein IS NOT NULL
-                    )) as var_id
-                  WHERE variation_feature_id = (SELECT variation_feature_id FROM variation_feature WHERE variation_id = var_id.variation_id) AND hgvs_protein IS NOT NULL) SUBSET
-                  ON WHOLE.variation_id=SUBSET.variation_id AND WHOLE.hgvs_name=SUBSET.hgvs_name;
-        });
+                  WHERE   feature_stable_id IN ($joined_ids);
+        }) or die "Deleting stable ids failed";
 
     }
 

@@ -213,11 +213,13 @@ sub new {
       -source => $source || undef,
       -strict_name_match => $hash->{strict_name_match},
       -use_seq_region_synonyms => $hash->{use_seq_region_synonyms},
+      -track_name => $hash->{track_name},
       -created =>$hash->{created} || undef,
       -updated =>$hash->{updated} || undef,
       -is_remapped => $hash->{is_remapped} ||0,
       -adaptor => $self,
       -tmpdir => $hash->{tmpdir} || $tmpdir,
+      -use_vcf_consequences => $hash->{use_vcf_consequences} || undef,
       -ref_freq_index => $hash->{ref_freq_index},
     ));
   }

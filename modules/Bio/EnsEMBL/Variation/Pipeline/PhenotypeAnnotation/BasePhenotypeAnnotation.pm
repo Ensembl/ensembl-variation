@@ -44,7 +44,7 @@ use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
 
-use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char);
+use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
@@ -1399,6 +1399,7 @@ sub _get_phenotype_id {
 
   # Replace special characters in the phenotype description
   $description = replace_char($description);
+  $description = replace_hex($description);
 
   # Check phenotype description in the format "description; name"
   if (!defined($name) || $name eq '') {
@@ -1542,7 +1543,7 @@ sub _get_study_id {
 
     if (defined $phenotype->{"study"}) {
       if (length($phenotype->{"study"}) > 255) {
-        $self->print_errFH( "WARNING: study external_references truncated search FROM:>".$phenotype->{"study"}. "<\n");
+        $self->print_errFH( "\nWARNING: study external_references truncated search FROM:>".$phenotype->{"study"}. "<\n");
         $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
         $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
         $self->print_errFH( "WARNING: study external_references truncated search TO  :>".$phenotype->{"study"}. "<\n");

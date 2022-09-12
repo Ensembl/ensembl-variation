@@ -57,7 +57,7 @@ our @EXPORT_OK = qw(
             HUMAN_VAR
             HUMAN_GENE
             ANIMALSET
-	    WORMBASE
+	        WORMBASE
             GROUP_RUN_TYPES
             SOURCES_IN_RUN_TYPES
             NONE
@@ -137,7 +137,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'IMPC'      => ['mus_musculus'],
                           'MGI'       => ['mus_musculus'],
 
-			  'WORMBASE'  => [ 'caenorhabditis_elegans_prjna13758' ],
+			  'WORMBASE'  => [ 'caenorhabditis_elegans_prjna13758', 'schistosoma_mansoni_prjea36577' ],
 
                           'ontology'  => ['homo_sapiens', 'gallus_gallus',
                                           'sus_scrofa', 'bos_taurus',

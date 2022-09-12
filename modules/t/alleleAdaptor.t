@@ -27,7 +27,6 @@ use FileHandle;
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
 
-
 my $name = 'rs144235347';
 
 my $va = $vdba->get_VariationAdaptor();
