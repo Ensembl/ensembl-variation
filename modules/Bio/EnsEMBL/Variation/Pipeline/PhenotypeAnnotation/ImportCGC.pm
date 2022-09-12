@@ -49,14 +49,16 @@ use JSON;
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 my %source_info;
+my $debug;
 
 sub fetch_input {
   my $self = shift;
 
   my $pipeline_dir = $self->required_param('pipeline_dir');
   my $species      = $self->required_param('species');
+  my $repo_dir     = $self->required_param('repo_dir');
 
-  $self->debug($self->param('debug_mode'));
+  $debug = $self->param('debug_mode');
 
   %source_info = (source_description => 'Catalog of genes of which mutations have been causally implicated in cancer',
                   source_url => 'https://cancer.sanger.ac.uk/census',
@@ -76,9 +78,6 @@ sub fetch_input {
   }
   $self->workdir($workdir);
 
-  my $cgc_google_url = 'https://storage.googleapis.com/open-targets-data-releases/';
-  # example of URL format: https://storage.googleapis.com/open-targets-data-releases/18.12/output/18.12_evidence_data.json.gz';
-
   open(my $logFH, ">", $workdir."/".'log_import_out_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open(my $errFH, ">", $workdir."/".'log_import_err_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
   open(my $pipelogFH, ">", $workdir."/".'log_import_debug_pipe_'.$source_info{source_name_short}.'_'.$species) || die ("Failed to open file: $!\n");
@@ -86,50 +85,38 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
-  #get input file CGC via OpenTargets, get latest published file:
+  # get current date
   my $dt = DateTime->now;
   my $year = sprintf("%02d", $dt->year % 100);
   my $month = sprintf ("%02d",$dt->month);
-  my $cgc_ftp_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
 
-  my $file_opent = basename($cgc_ftp_url); #OpenTargets file
-  print $logFH "INFO: Found file ($file_opent), will skip new fetch\n" if -e $workdir."/".$file_opent;
+  # get input file CGC via OpenTargets, get latest published file:
+  my $script_dir = $repo_dir . "/ensembl-variation/scripts/python";
+  my $file_opent = "cgc_input_latest.json";
+  system("python3 $script_dir/download_cgc_file.py -d $workdir -r latest") unless -e $workdir."/".$file_opent;
+
   my $found = (-e $workdir."/".$file_opent ? 1: 0);
 
-  while (!$found){
-    if ($month == 01){ $month =12; $year = $year-1;}
-    else { $month = $month -1;}
-    $month = sprintf ("%02d",$month);
-    my $cgc_check_url = $cgc_google_url.$year.'.'.$month.'/output/'.$year.'.'.$month.'_evidence_data.json.gz';
-    $file_opent = basename($cgc_check_url);
-
-    if (-e $workdir."/".$file_opent){
-      $found = 1;
-      print $logFH "INFO: Found $file_opent, will skip new fetch.\n";
-      next;
-    }
-
-    my $resHTTPcode = qx{curl -w %{http_code} -X GET $cgc_check_url -o '$workdir/$file_opent'};
-    if ($resHTTPcode == 404){ #Not Found
-      unlink($workdir."/".$file_opent) if -e $workdir."/".$file_opent;
-      print $errFH "WARNING: No OpenTarget file found for current month ($file_opent), will check past month.\n";
-    } elsif ($resHTTPcode == 200){ #Successful
-      print $errFH "HTTP code 200 (successful) but file ($file_opent) is missing \n" unless -e $workdir."/".$file_opent;
-    }
-    if (-e $workdir."/".$file_opent) { $found = 1;}
+  if(!$found) {
+    print $errFH "Input file ($file_opent) is missing\n";
+    die "Input file is missing: check download script $script_dir/download_cgc_file.py\n";
   }
-  # get only Cancer Gene Census files
+
+  print $logFH "INFO: Found input file ($file_opent)\n" ;
+  my $valid_file = $self->validate_input_file($file_opent);
+  if(!$valid_file) {
+    print $errFH "Input file ($file_opent) has incorrect format\n";
+    die ("Input file ($file_opent) has incorrect format or it's empty\n");
+  }
+
+  # Source version to be used to update the table source
   $source_info{source_version} = "20$year$month";
-  my $file_cgc_json = "open_targets_20$year-$month.json";
-  print $logFH "INFO: Found files (".$workdir."/".$file_cgc_json."), will skip new zcat\n" if -e $workdir."/".$file_cgc_json;
-  `zcat $workdir/$file_opent | grep "Cancer Gene Census" > $workdir/$file_cgc_json` unless -e $workdir."/".$file_cgc_json;
 
   my $file_cgc_ensembl = "cgc_ensembl_efo.txt";
-  #augment data with data from Ensembl and EFO based on get_cancer_gene_census.pl
   $self->print_logFH("Retrieving data from Ensembl and EFO based on CancerGeneCensus file\n");
   $self->print_logFH("INFO: Found file ($file_cgc_ensembl), will skip new fetch\n") if -e $workdir."/".$file_cgc_ensembl;
-  $self->get_input_file($file_cgc_json, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
-  $self->print_logFH("Done retrieving Ensembl core and onotlogy data, if file was already present it will be reused.\n");
+  $self->get_input_file($file_opent, $file_cgc_ensembl) unless -e  $workdir."/".$file_cgc_ensembl;
+  $self->print_logFH("Done retrieving Ensembl core and ontology data, if file was already present it will be reused.\n");
 
   $self->param('cgc_file', $file_cgc_ensembl);
 }
@@ -144,11 +131,11 @@ sub run {
 
   #get source id
   my $source_id = $self->get_or_add_source(\%source_info);
-  $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($self->debug);
+  $self->print_logFH("$source_info{source_name_short} source_id is $source_id\n") if ($debug);
 
   # get phenotype data + save it (all in one method)
   my $results = $self->parse_input_file($file_cgc);
-  $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($self->debug);
+  $self->print_logFH( "Parsed ".(scalar @{$results->{'phenotypes'}})." new phenotypes \n") if ($debug);
 
   # save phenotypes
   $self->save_phenotypes(\%source_info, $results) unless scalar(@{$results->{'phenotypes'}}) == 0;
@@ -164,24 +151,72 @@ sub run {
 sub write_output {
   my $self = shift;
 
-  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($self->debug);
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($debug);
   close($self->logFH) if defined $self->logFH ;
   close($self->errFH) if defined $self->errFH ;
-  close($self->pipelogFH) if defined $self->pipelogFH ;
+  close($self->pipelogFH) if defined $debug ;
 
   $self->dataflow_output_id($self->param('output_ids'), 2);
 
 }
 
+=head2 validate_input_file
+
+  Arg [1]    : string $infile
+               The input file name
+  Example    : $obj->validate_input_file($infile)
+  Description: Validates the format of the input file.
+  Returntype : Boolean
+  Exceptions : none
+
+=cut
+
+sub validate_input_file {
+  my ($self, $input_file) = @_;
+
+  my $valid = 1;
+
+  # empty file
+  if(-z $self->workdir."/".$input_file) {
+    $valid = 0;
+  }
+
+  my $read;
+  if($input_file =~ /gz$/) {
+    open($read, "zcat ".$self->workdir."/$input_file |") || die ("Validate input file: could not open $input_file for reading: $!\n");
+  }
+  else {
+    open($read,'<',$self->workdir."/".$input_file) || die ("Validate input file: could not open $input_file for reading: $!\n");
+  }
+
+  my $line = <$read>;
+  chomp $line;
+  my $json_hash = decode_json($line);
+
+  if(!defined $json_hash->{'datasourceId'}) {
+    $valid = 0;
+  }
+  elsif(!defined $json_hash->{'datatypeId'}) {
+    $valid = 0;
+  }
+  elsif(!defined $json_hash->{'targetId'}) {
+    $valid = 0;
+  }
+
+  close($read);
+
+  return $valid;
+}
 
 =head2 get_input_file
 
   Arg [1]    : string $infile
-               The input file name.
+               The input file name
   Arg [1]    : string $outfile
                The output file name.
   Example    : $obj->get_input_file($infile,$outfile)
-  Description: Specific parsing method for OpenTarget json file: selects Cancer Gene Census only data.
+  Description: Specific parsing method for OpenTarget json files:
+               writes output file with only the relevant information from Cancer Gene Census.
   Returntype : none
   Exceptions : none
 
@@ -212,79 +247,77 @@ sub get_input_file {
     chomp $_;
     my $json_hash = decode_json($_);
 
-    my $source = $json_hash->{'sourceID'};
+    my $source = $json_hash->{'datasourceId'};
     next unless ($source =~ /cancer_gene_census/);
 
-    my $type          = $json_hash->{'type'};
-    my $gene_symbol   = $json_hash->{'target'}{'gene_info'}{'symbol'}; #TODO: Q: why do we use sybmol and not geneid eg. ENSG00000156076
-    my $pmids         = parse_publications($json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) if (defined $json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'});
-    my $phenotype_url = $json_hash->{'unique_association_fields'}{'disease_id'} if ( defined $json_hash->{'unique_association_fields'}{'disease_id'});
+    my $type = $json_hash->{'datatypeId'};
+    my $gene_id = $json_hash->{'targetId'}; # gene ID (ENSG00000147889)
+    my $pmids = parse_publications($json_hash->{'literature'}) if (defined $json_hash->{'literature'});
+    my $phenotype_id = $json_hash->{'diseaseId'} if (defined $json_hash->{'diseaseId'});
+    my $so_term;
+    my $n_mutated_samples;
+    my $n_samples_tested;
+    my $n_samples_mutation;
+    if (defined $json_hash->{'mutatedSamples'}) {
+      my $mutated_samples_info = $json_hash->{'mutatedSamples'}->[0];
+      $so_term = $mutated_samples_info->{'functionalConsequenceId'} if(defined $mutated_samples_info->{'functionalConsequenceId'});
+      $n_mutated_samples = $mutated_samples_info->{'numberMutatedSamples'} if(defined $mutated_samples_info->{'numberMutatedSamples'});
+      $n_samples_tested = $mutated_samples_info->{'numberSamplesTested'} if(defined $mutated_samples_info->{'numberSamplesTested'});
+      $n_samples_mutation = $mutated_samples_info->{'numberSamplesWithMutationType'} if(defined $mutated_samples_info->{'numberSamplesWithMutationType'});
+    }
 
-    if (! defined $phenotype_url){
-      print $errFH1 "phenotype_url (json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) not found for $gene_symbol!\n";
+    if (! defined $phenotype_id){
+      print $errFH1 "phenotype_id (json_hash->{'diseaseId'}) not found for $gene_id!\n";
       next;
     }
-    if (! defined $pmids){
-      print $errFH1 "pmids (json_hash->{'evidence'}{'provenance_type'}{'literature'}{'references'}) not found for $gene_symbol!\n";
-    }
 
-    # Phenotype fetching and parsing
-    $phenotype_url =~ /\/(\w+)$/;
-    my $phenotype_id = $1;
+    # Phenotype fetching and parsing from the Ontology db
     my $phenotype;
     if ($phenotype_id =~ /^EFO/) {
       $phenotype = ($efos{$phenotype_id}) ? $efos{$phenotype_id} : get_phenotype_desc($phenotype_id, $ota);
     }
-    #TODO: Q: why do we use the ontology DB to fetch the phenotype description based on EFO if the data is in the original OpenTargets file?
+
     if (!$phenotype) {
-      print $errFH1 "$gene_symbol: no phenotype desc found for $phenotype_id\n";
+      print $errFH1 "$gene_id: no phenotype desc found for $phenotype_id\n";
       $phenotype = 'ND';
     }
     else {
       $efos{$phenotype_id} = $phenotype;
     }
 
-    my $genes = $ga->fetch_all_by_external_name($gene_symbol, 'HGNC');		
-    # we don't want any LRG genes
-    @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+    my $gene = $ga->fetch_by_stable_id($gene_id, 'HGNC');		
 
-    my %stable_ids;
-    if (scalar @$genes != 1) {
-      my $gene_id = $json_hash->{'target'}{'id'};
-      $gene_id =~ /(ENSG\d+)$/i;
-      if ($1) {
-        $stable_ids{$1} = 1;
-      }
-      print $errFH1 "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $gene_symbol\n";
+    if(!$gene) {
+      print $errFH1 "$gene_id could not be found in the Ensembl db!\n";
+      next;
     }
 
-    next unless scalar @$genes;
-
-    foreach my $gene(@$genes) {
-      my $gene_id = $gene->stable_id;
-      next if (%stable_ids && !$stable_ids{$gene_id});
-
-      $data{$gene_symbol}{$gene_id}{$phenotype}{'type'} = $type;
-      $data{$gene_symbol}{$gene_id}{$phenotype}{'source'} = $source;
-      $data{$gene_symbol}{$gene_id}{$phenotype}{'phenotype_id'} = $phenotype_id;
-      foreach my $pmid (@$pmids) {
-        $data{$gene_symbol}{$gene_id}{$phenotype}{'pmids'}{$pmid} = 1; 
-      }
+    $data{$gene_id}{$phenotype}{'type'} = $type;
+    $data{$gene_id}{$phenotype}{'source'} = $source;
+    $data{$gene_id}{$phenotype}{'phenotype_id'} = $phenotype_id;
+    foreach my $pmid (@$pmids) {
+      $data{$gene_id}{$phenotype}{'pmids'}{$pmid} = 1; 
     }
+    $data{$gene_id}{$phenotype}{'so_term'} = $so_term;
+    $data{$gene_id}{$phenotype}{'n_mutated_samples'} = $n_mutated_samples;
+    $data{$gene_id}{$phenotype}{'n_samples_tested'} = $n_samples_tested;
+    $data{$gene_id}{$phenotype}{'n_samples_mutation'} = $n_samples_mutation;
   }
   close(IN);
 
   open(OUT, "> ".$self->workdir."/$output_file") || die ("Could not open file for writing: $!\n");
-  foreach my $gene_symbol (sort(keys(%data))) {
-    foreach my $gene_id (keys(%{$data{$gene_symbol}})) {
-      foreach my $phenotype (keys(%{$data{$gene_symbol}{$gene_id}})) {
-        my $type         = $data{$gene_symbol}{$gene_id}{$phenotype}{'type'};
-        my $source       = $data{$gene_symbol}{$gene_id}{$phenotype}{'source'};
-        my $phenotype_id = $data{$gene_symbol}{$gene_id}{$phenotype}{'phenotype_id'};
-        my $pmids = join(',', keys(%{$data{$gene_symbol}{$gene_id}{$phenotype}{'pmids'}}));
-        print OUT "$gene_symbol\t$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\n";
+  foreach my $gene_id (sort(keys(%data))) {
+      foreach my $phenotype (keys(%{$data{$gene_id}})) {
+        my $type = $data{$gene_id}{$phenotype}{'type'};
+        my $source = $data{$gene_id}{$phenotype}{'source'};
+        my $phenotype_id = $data{$gene_id}{$phenotype}{'phenotype_id'};
+        my $pmids = join(',', keys(%{$data{$gene_id}{$phenotype}{'pmids'}}));
+        my $so_term = $data{$gene_id}{$phenotype}{'so_term'};
+        my $n_mutated_samples = $data{$gene_id}{$phenotype}{'n_mutated_samples'};
+        my $n_samples_tested = $data{$gene_id}{$phenotype}{'n_samples_tested'};
+        my $n_samples_mutation = $data{$gene_id}{$phenotype}{'n_samples_mutation'};
+        print OUT "$gene_id\t$type\t$source\t$phenotype\t$phenotype_id\t$pmids\t$so_term\t$n_mutated_samples\t$n_samples_tested\t$n_samples_mutation\n";
       }
-    }
   }
 
   close(OUT);
@@ -326,7 +359,7 @@ sub get_phenotype_desc {
   Arg [1]    : string $references_json
                Json references entry.
   Example    : $obj->parse_publications($references_json)
-  Description: Parse the publication pmid from the reference url in the OpenTargets json record.
+  Description: Parse the publication pmid from the OpenTargets json record.
   Returntype : arrayref
   Exceptions : none
 
@@ -336,13 +369,9 @@ sub parse_publications {
   my $pubs = shift;
 
   my @pmids = ();
-  foreach my $pub (@$pubs) {
-    my $pub_id = $pub->{'lit_id'};
-    $pub_id=~ /^http:\/\/europepmc.org\/abstract\/MED\/(\d+)$/i;
-    if ($1) {
-      my $pmid = "PMID:$1";
+  foreach my $pub_id (@$pubs) {
+      my $pmid = "PMID:$pub_id";
       push @pmids,$pmid;
-    }
   }
   return \@pmids;
 }
@@ -385,10 +414,14 @@ sub parse_input_file {
     my @row_data = split(/\t/, $_);
 
     # get data
-    my $gene_id   = $row_data[1];
-    my $phen      = $row_data[4];
-    my $accession = $row_data[5];
-    my $pmids     = $row_data[6];
+    my $gene_id   = $row_data[0];
+    my $phen      = $row_data[3];
+    my $accession = $row_data[4];
+    my $pmids     = $row_data[5];
+    my $so_term   = $row_data[6];
+    my $n_mutated_samples  = $row_data[7];
+    my $n_samples_tested   = $row_data[8];
+    my $n_samples_mutation = $row_data[9];
 
     ## change accession format
     $accession =~ s/\_/\:/;
@@ -407,6 +440,10 @@ sub parse_input_file {
       'seq_region_start' => $gene->seq_region_start,
       'seq_region_end' => $gene->seq_region_end,
       'seq_region_strand' => $gene->seq_region_strand,
+      'SO_accession' => $so_term,
+      'mutated_samples' => $n_mutated_samples,
+      'samples_tested' => $n_samples_tested,
+      'samples_mutation' => $n_samples_mutation,
       'accessions' => [$accession],
       'ontology_mapping_type' => 'is'
     );

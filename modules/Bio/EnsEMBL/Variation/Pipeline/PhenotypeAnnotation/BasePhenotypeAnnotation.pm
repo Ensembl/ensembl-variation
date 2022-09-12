@@ -1537,7 +1537,7 @@ sub _get_study_id {
 
     if (defined $phenotype->{"study"}) {
       if (length($phenotype->{"study"}) > 255) {
-        $self->print_errFH( "WARNING: study external_references truncated search FROM:>".$phenotype->{"study"}. "<\n");
+        $self->print_errFH( "\nWARNING: study external_references truncated search FROM:>".$phenotype->{"study"}. "<\n");
         $phenotype->{"study"} = substr($phenotype->{"study"}, 0, 254);
         $phenotype->{"study"} = substr($phenotype->{"study"}, 0,rindex($phenotype->{"study"}, ",PMID"));
         $self->print_errFH( "WARNING: study external_references truncated search TO  :>".$phenotype->{"study"}. "<\n");
