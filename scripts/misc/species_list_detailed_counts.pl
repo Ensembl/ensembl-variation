@@ -164,11 +164,11 @@ my @genotype_projects = ('1000 Genomes', 'gnomAD', 'TOPMed', 'UK10K', 'Mouse Gen
 my $genotypes_list = qq{<ul><li>}.join(' Project</li><li>',@genotype_projects).qq{ Project</li></ul>};
 
 my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
-                                                                      WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name="DGVa"},
+                                                                      WHERE sv.is_evidence=0 AND s.source_id=sv.source_id AND s.name IN ("DGVa", "dbVar")},
                                                          'label' => 'Structural variant'
                                                        }, 
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(sv.structural_variation_id) FROM structural_variation sv, source s 
-                                                                     WHERE sv.is_evidence=1 AND s.source_id=sv.source_id AND s.name="DGVa"},
+                                                                     WHERE sv.is_evidence=1 AND s.source_id=sv.source_id AND s.name IN ("DGVa", "dbVar")},
                                                          'label' => 'Supporting evidence'
                                                        },
                                          },
