@@ -551,8 +551,7 @@ sub get_all_VariationFeatures_by_Slice {
         foreach my $clnsig_var (@clnsig_vars) {
           $clnsig_var =~ s/_/ /g;
           my $clnsig_lc = lc($clnsig_var);
-          my $clnsig = Bio::EnsEMBL::Variation::VariationFeature->new_fast({clinical_significance => $clnsig_lc });
-          push @{ $vf->{clinical_significance} ||= [] }, $clnsig;
+          push @{ $vf->{clinical_significance} ||= [] }, $clnsig_lc;
         };
       }
     }
