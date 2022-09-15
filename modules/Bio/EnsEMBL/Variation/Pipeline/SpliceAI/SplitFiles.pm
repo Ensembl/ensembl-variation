@@ -271,7 +271,7 @@ sub get_new_transcripts_file {
   my %new_transcripts;
 
   # File structure:
-  # chr\ttranscript\tstart\ttranscript\tend
+  # chr\ttranscript_start\ttranscript_end
   while (my $row = <$read>) {
     chomp $row;
     next if($row =~ /^#/);
