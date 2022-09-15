@@ -46,10 +46,8 @@ sub clean_dir {
   my $split_vcf_input_dir = $self->param_required('split_vcf_input_dir');
   my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
 
-  # Remove files
+  # Remove input files without header
   $self->run_system_command("rm -rf $split_vcf_no_header_dir");
-  $self->run_system_command("rm -rf $split_vcf_input_dir");
-  $self->run_system_command("rm -rf $split_vcf_output_dir");
 
 }
 

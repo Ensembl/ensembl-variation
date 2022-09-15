@@ -51,6 +51,7 @@ sub run_spliceai {
   my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
   my $fasta_file = $self->param_required('fasta_file');
   my $gene_annotation = $self->param_required('gene_annotation');
+  my $masked_scores = $self->param_required('masked_scores');
 
   my $chr = $self->param('chr');
 
@@ -68,6 +69,12 @@ sub run_spliceai {
   }
 
   my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation";
+
+  # Add option to calculate masked scores
+  if($masked_scores) {
+    $cmd .= " -M 1";
+  }
+
   $self->run_system_command($cmd);
 
 }
