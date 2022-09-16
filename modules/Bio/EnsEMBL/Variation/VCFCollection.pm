@@ -79,6 +79,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::Config;
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -547,12 +548,15 @@ sub get_all_VariationFeatures_by_Slice {
       foreach my $vf (@vfs) {
         my $info = $vf->{vcf_record}->get_info;
         my $vcf_variants = $info->{$vcf_info_field};
-        my @clnsig_vars = split('\|',$vcf_variants);
+        my @clnsig_vars = split('[\|,/]',$vcf_variants);
         foreach my $clnsig_var (@clnsig_vars) {
           $clnsig_var =~ s/_/ /g;
           my $clnsig_lc = lc($clnsig_var);
-          push @{ $vf->{clinical_significance} ||= [] }, $clnsig_lc;
-        };
+          $clnsig_lc =~ s/^\s+|\s+$//;
+          if ($clnsig_lc ~~ @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
+            push @{ $vf->{clinical_significance} ||= [] }, $clnsig_lc;
+          }
+        }
       }
     }
   }
