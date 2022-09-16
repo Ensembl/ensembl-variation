@@ -42,10 +42,20 @@ sub run {
   $self->set_chr_from_filename();
   # check = 0 (don't check transcripts); check = 1 (check transcripts)
   my $check = $self->param_required('check_transcripts');
+  # used when checking which transcripts were updated in core db
+  # example: $time_interval = 4 checks transcripts updated/created in the last 4 months
+  my $time_interval = $self->param_required('time_interval');
 
   # check new Mane transcripts
   if($check){
-    $self->get_new_transcripts();
+    # check from file
+    if ($self->param('transcripts_from_file')) {
+      $self->get_new_transcripts_file();
+    }
+    else {
+      # check from db
+      $self->get_new_transcripts_db($time_interval);
+    }
     $self->check_split_vcf_file();
   }
   $self->split_vcf_file();
@@ -204,13 +214,14 @@ sub check_split_vcf_file {
   # Sort new vcf file
   my $vcf_file_subset = $vcf_file_path_subset . '/' . $vcf_file;
   my $vcf_file_subset_sorted = $vcf_file_path_subset . '/sorted_' . $vcf_file;
-  $self->run_system_command("sort -t \$'\t' -k1,1 -k2,2n $vcf_file_subset > $vcf_file_subset_sorted");
+  $self->run_system_command("sort -o $vcf_file_subset_sorted -k1,1 -k2,2n $vcf_file_subset");
   $self->run_system_command("mv $vcf_file_subset_sorted $vcf_file_subset");
 }
 
 # Check if there are new MANE transcripts since last release
-sub get_new_transcripts {
+sub get_new_transcripts_db {
   my $self = shift;
+  my $time_interval = shift;
 
   my %new_transcripts;
 
@@ -227,7 +238,7 @@ sub get_new_transcripts {
                               JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
                               JOIN seq_region s ON t.seq_region_id = s.seq_region_id
                               JOIN gene g ON g.gene_id = t.gene_id
-                              WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and atr.code = 'MANE_Select' and t.modified_date >= DATE_SUB(NOW(), INTERVAL 4 MONTH) });
+                              WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and atr.code = 'MANE_Select' and t.modified_date >= DATE_SUB(NOW(), INTERVAL $time_interval MONTH) });
 
   $sth->execute();
   while (my $row = $sth->fetchrow_arrayref) {
@@ -247,6 +258,35 @@ sub get_new_transcripts {
     }
   }
   $sth->finish();
+
+  $self->param('transcripts', \%new_transcripts);
+}
+
+sub get_new_transcripts_file {
+  my $self = shift;
+
+  my $input_file = $self->param('transcripts_from_file');
+  open(my $read, '<:encoding(UTF-8)', $input_file) or die "Could not open file '$input_file' $!";
+
+  my %new_transcripts;
+
+  # File structure:
+  # chr\ttranscript_start\ttranscript_end
+  while (my $row = <$read>) {
+    chomp $row;
+    next if($row =~ /^#/);
+
+    my ($chr, $transcript_start, $transcript_end) = split /\t/, $row;
+
+    if(!$new_transcripts{$chr}) {
+      my @positions;
+      push @positions, $transcript_start.'-'.$transcript_end;
+      $new_transcripts{$chr} = \@positions;
+    }
+    else {
+      push @{$new_transcripts{$chr}}, $transcript_start.'-'.$transcript_end;
+    }
+  }
 
   $self->param('transcripts', \%new_transcripts);
 }
