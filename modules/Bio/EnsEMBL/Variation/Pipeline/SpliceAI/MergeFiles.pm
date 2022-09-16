@@ -50,7 +50,7 @@ sub merge_vcf_files {
   my $input_dir_chr = $input_dir . '/' . $chr_dir . '/vcf_files';
   $self->param('input_dir_chr', $input_dir_chr);
 
-  # Final file + final file after it is sorted
+  # Final file + sorted final file
   my $final_file = $output_dir . '/' . $output_file_name . $chr_dir . '.vcf';
   my $final_file_sorted = $output_dir . '/sorted_' . $output_file_name . $chr_dir . '.vcf';
 
@@ -65,7 +65,8 @@ sub merge_vcf_files {
     "##contig=<ID=15,length=101991189>\n##contig=<ID=16,length=90338345>\n##contig=<ID=17,length=83257441>\n".
     "##contig=<ID=18,length=80373285>\n##contig=<ID=19,length=58617616>\n##contig=<ID=20,length=64444167>\n##contig=<ID=21,length=46709983>\n".
     "##contig=<ID=22,length=50818468>\n##contig=<ID=X,length=156040895>\n##contig=<ID=Y,length=57227415>\n##contig=<ID=MT,length=16569>\n".
-    "##INFO=<ID=SpliceAI,Number=.,Type=String,Description=\"SpliceAIv1.3 variant annotation. These include delta scores (DS) and delta positions (DP) for acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL\">\n".
+    "##INFO=<ID=SpliceAI,Number=.,Type=String,Description=\"SpliceAIv1.3.1 variant annotation. ".
+    "These include delta scores (DS) and delta positions (DP) for acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL\">\n".
     "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
   print $write $header_line;
   close($write);
