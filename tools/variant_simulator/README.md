@@ -22,9 +22,11 @@ The script generates all single base substitutions for protein coding genes give
 * `-registry [registry_file]` : [registry_file](https://www.ensembl.org/info/docs/api/registry.html)
 * `-chrom [chromosome]` : generate SNPs only for specified chromosome
 * `-gene [gene_ensembl_stable_id | gene_symbol ]` : generate SNPs only for specified gene (if chromosome and gene are both specified but don't agree, the gene options is used)
+* `-spliceai`: generate files for SpliceAI tool
 * `-exonsOnly` : generate SNPs only for all exons of the protein_coding genes
 * `-intronsOnly` : generate SNPs only for all introns of the protein_coding genes
 * `-codingOnly` : generate SNPs only for translatable exons of protein_coding transcripts
+* `-onlyMane` : generate SNPs only for MANE transcripts
 * `-edge` : upstream/downstream bp of each feature (default: 0)
 * `-output|-o [output_file]` : output vcf file (default: simulated.vcf)
 * `-help` : print usage message

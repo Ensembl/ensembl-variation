@@ -60,6 +60,7 @@ usage() if ($help);
 
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
+die "Illegal arguments -spliceai -intronsOnly -codingsOnly -exonsOnly can't be used together !" if $spliceai && $intronOnly && $exonOnly && $codingOnly;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 if (defined $registryFile){
@@ -259,9 +260,11 @@ sub usage {
 
       -chrom             Generate SNPs only for specified chromosome
       -gene              Generate all SNPs for specified gene
+      -spliceai          Generate files for SpliceAI tool
       -codingOnly        Generate SNPs only for translatable exons of protein_coding transcripts
       -exonsOnly         Generate SNPs only for all exons of the genes
       -intronsOnly       Generate SNPs only for all introns of the genes
+      -onlyMane          Generate SNPs only for MANE transcripts
 
       -edge              Length of flanking region in which to generate SNPs (Default: 0)
 
