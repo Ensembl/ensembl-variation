@@ -110,9 +110,13 @@ def check_run_type ( run ) {
 check_run_type( params.sift_run_type )
 check_run_type( params.pph_run_type )
 
-// Check pph_data for PolyPhen-2
-if ( params.pph_run_type != "NONE" && !params.pph_data) {
-  exit 1, "ERROR: --pph_data must be supplied when running PolyPhen-2"
+// Check if supplying PolyPhen-2 data and if species is human 
+if ( params.pph_run_type != "NONE" ) {
+  if ( params.species != "homo_sapiens" ) {
+    exit 1, "ERROR: PolyPhen-2 only works with human data"
+  } else if ( !params.pph_data) {
+    exit 1, "ERROR: --pph_data must be supplied when running PolyPhen-2"
+  }
 }
 
 // Check blastdb for SIFT
