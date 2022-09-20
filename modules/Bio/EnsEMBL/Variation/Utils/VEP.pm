@@ -4804,7 +4804,6 @@ sub cache_transcripts {
 
                         # in human and mouse otherfeatures DB, there may be duplicate genes
                         # skip those from analysis refseq_human_import and refseq_mouse_import
-                        # $DB::single = 1;
                         next if defined($config->{refseq}) && $config->{assembly} !~ /GRCh37/i && $tr->analysis && $tr->analysis->logic_name =~ /^refseq_[a-z]+_import$/;
 
                         $tr->{_gene_stable_id} = $gene_stable_id;
@@ -6124,14 +6123,6 @@ sub build_full_cache {
   # this happens for Y in human; we only want the longest one
   my %by_name;
   $by_name{$_->seq_region_name}++ for @slices;
-  # @slices = ();
-  #
-  # $DB::single = 1;
-  #
-  # foreach my $name(keys %by_name) {
-  #   my @sorted = sort {$a->length <=> $b->length} @{$by_name{$name}};
-  #   push @slices, $sorted[-1];
-  # }
 
   debug("Going to dump features from ".(scalar @slices)." regions") unless defined($config->{quiet});
 

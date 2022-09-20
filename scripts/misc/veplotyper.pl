@@ -147,7 +147,6 @@ sub configure {
       -port       => $config->{port},
       -db_version => $config->{version},
       -species    => $config->{species} =~ /^[a-z]+\_[a-z]+/i ? $config->{species} : undef,
-      #-no_cache   => 1,
     );
     
     $config->{db} = $config->{reg}->get_adaptor($config->{species}, 'variation', 'variation')->db;
@@ -162,8 +161,6 @@ sub configure {
       $config->{cache_version} || $config->{reg}->software_version
     )
   );
-  
-  # die("ERROR: cache directory ".$config->{dir}." not found\n") unless -d $config->{dir};
   
   # check tabix
   die "ERROR: tabix does not seem to be in your path\n" unless `which tabix 2>&1` =~ /tabix$/;
@@ -211,12 +208,8 @@ sub main {
   debug($config, 'Fetching variant data');
   my $gts = fetch_genotypes($config, $tr->{chr}, $tr->{start}, $tr->{end});
   
-  $DB::single = 1;
-  
   debug($config, 'Mutating sequences');
   my $c = Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer->new($tr, $gts, $config->{db});
-  
-  $DB::single = 1;
   
   foreach my $p(sort {$b->count <=> $a->count} @{$c->get_all_ProteinHaplotypes}) {
     
@@ -233,8 +226,6 @@ sub main {
       $p->name
     );
   }
-  
-  $DB::single = 1;
   
   debug($config, 'Writing output');
   
@@ -257,13 +248,6 @@ sub write_JSON {
   
   my $oh = $config->{out_handle};
   print $oh $json->allow_blessed->convert_blessed->pretty->encode($c);
-  #  {
-  #    transcript_id => $name,
-  #    populations => $config->{pop_counts},
-  #    cds_haplotypes => [sort {$b->{count} <=> $a->{count}} grep {$_->{type} eq 'cds'} values %$alt_seqs],
-  #    peptide_haplotypes => [sort {$b->{count} <=> $a->{count}} grep {$_->{type} eq 'pep'} values %$alt_seqs],
-  #  }
-  #);
 }
 
 sub fetch_transcript {
@@ -286,7 +270,6 @@ sub fetch_transcript_api {
   $config->{ta} ||= $config->{reg}->get_adaptor($config->{species}, 'core', 'transcript');
   my $tr = $config->{ta}->fetch_by_stable_id($tr_id);
   
-  #$DB::single = 1;
   die("ERROR: Could not fetch transcript\n") unless defined($tr);
   
   prefetch_transcript_data($config, $tr);
@@ -381,8 +364,6 @@ sub fetch_genotypes_collection {
     }
   }
   
-  $DB::single = 1;
-  
   my @gts = map {@{$_->get_all_IndividualGenotypeFeatures_by_Slice($slice, undef, 1)}} @{$ca->fetch_all};
   my @return;
   
@@ -412,7 +393,6 @@ sub fetch_genotypes_db {
   return [
     grep {$_->{variation_feature}}
     map {$_->{variation_feature} = $vfs{$_->{_variation_id}}; $_}
-    #grep {$_->phased}
     @{$gta->fetch_all_by_Slice($slice)}
   ];
 }
