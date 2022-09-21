@@ -43,6 +43,7 @@ use warnings;
 use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
+use File::Path qw(make_path);
 
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
@@ -689,12 +690,19 @@ sub dump_phenotypes {
   };
 
   my $db_adaptor    = $self->variation_db_adaptor;
+  my $err;
+  
+  make_path($self->workdir."/previous_data", {error => \$err});
+  die "make_path failed: ".Dumper($err) if $err && @$err;
 
-  _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/"."pfa_".$source_name.".txt");
-  _sql_to_file($pf_select_stmt, $db_adaptor, $self->workdir."/"."pf_".$source_name.".txt");
-  _sql_to_file($p_extra_select_stmt, $db_adaptor, $self->workdir."/"."p_extra_".$source_name.".txt");
-  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $self->workdir."/"."poa_extra_".$source_name.".txt");
+  opendir my $dh, $self->workdir."/previous_data" or die("ERROR: There was a problem opening the dumps directory: $!\n");
+  _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/previous_data/"."pfa_".$source_name.".txt");
+  _sql_to_file($pf_select_stmt, $db_adaptor,  $self->workdir."/previous_data/"."pf_".$source_name.".txt");
+  _sql_to_file($p_extra_select_stmt, $db_adaptor, $self->workdir."/previous_data/"."p_extra_".$source_name.".txt");
+  _sql_to_file($poa_extra_select_stmt, $db_adaptor, $self->workdir."/previous_data/"."poa_extra_".$source_name.".txt");
 
+  closedir $dh;
+  
   if ($clean) {
     my $sth = $db_adaptor->dbc->prepare($pfa_delete_stmt);
     $sth->execute();
@@ -1770,5 +1778,21 @@ sub _count_results{
   }
 }
 
+# to clean empty files 
+sub clean_dir {
+  my $self = shift;
+  
+  my $workdir = $self->workdir;
+  die("ERROR: Pipeline directory needs to be defined \n") unless defined($self->workdir);
+
+  opendir my $dh, $workdir or die("ERROR: There was a problem opening the directory: $!\n");
+  while (my $file = readdir($dh)) {
+    if (-z $workdir."/".$file) {
+      unlink $workdir."/".$file or die ("ERROR: $file can not be removed: $!\n");
+    }
+  }
+  closedir $dh; 
+  
+}
 
 1;

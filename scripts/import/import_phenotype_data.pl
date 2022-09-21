@@ -1420,8 +1420,6 @@ sub parse_magic {
       @headers = split /\s+/;
     }
     else {
-      $DB::single = 1;
-
       my @split = split(/\s+/);
 
       my %hash = map {$headers[$_] => $split[$_]} 0..$#split;
@@ -1593,7 +1591,6 @@ sub parse_ddg2p {
       }
 
       if (scalar @$genes != 1) {
-        $DB::single = 1;
         print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
       }
 
