@@ -43,6 +43,7 @@ use warnings;
 use DBI qw(:sql_types);
 use String::Approx qw(amatch adist);
 use Algorithm::Diff qw(diff);
+use File::Path qw(make_path);
 
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char replace_hex);
 
@@ -691,7 +692,8 @@ sub dump_phenotypes {
   my $db_adaptor    = $self->variation_db_adaptor;
   
 
-  mkdir $self->workdir."/previous_data", 0755;
+  make_path($self->workdir."/previous_data", {
+    chmod => 0777,});
 
   opendir my $dh, $self->workdir."/previous_data" or die("ERROR: There was a problem opening the dumps directory: $!\n");
   _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/previous_data/"."pfa_".$source_name.".txt");
