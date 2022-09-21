@@ -691,10 +691,8 @@ sub dump_phenotypes {
 
   my $db_adaptor    = $self->variation_db_adaptor;
   
-
-  make_path($self->workdir."/previous_data", {
-    chmod => 0777,});
-
+  make_path($self->workdir."/previous_data", {chmod => 0777,});
+  
   opendir my $dh, $self->workdir."/previous_data" or die("ERROR: There was a problem opening the dumps directory: $!\n");
   _sql_to_file($pfa_select_stmt, $db_adaptor, $self->workdir."/previous_data/"."pfa_".$source_name.".txt");
   _sql_to_file($pf_select_stmt, $db_adaptor,  $self->workdir."/previous_data/"."pf_".$source_name.".txt");
