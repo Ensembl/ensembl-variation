@@ -186,7 +186,7 @@ for my $server (keys $servers) {
     }
   
     while (my ($db) = $sth->fetchrow_array) {
-      next if $db =~ /master_schema/i;
+      next if $db =~ /master_schema/i || $db =~ "${group}_.+_.+_.+";
       my ($species) = $db =~ /(.+)_$group/;
       $species =~ s/^(.)/uc($1)/e;
       $dbs->{$species}->{$group}->{db} = $dbname_var || $db;
