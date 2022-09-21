@@ -690,6 +690,7 @@ sub dump_phenotypes {
   };
 
   my $db_adaptor    = $self->variation_db_adaptor;
+  my $err;
   
   make_path($self->workdir."/previous_data", {error => \$err});
   die "make_path failed: ".Dumper($err) if $err && @$err;
