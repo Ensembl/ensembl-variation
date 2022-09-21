@@ -63,7 +63,6 @@ my %species = (
   61853 => 'gibbon',
   9925  => 'goat',
   9796  => 'horse',
-  9544  => 'macaque',
   10090 => 'mouse',
   13616 => 'opossum',
   9601  => 'orangutan',
@@ -88,7 +87,6 @@ my %species_synonyms = (
   'gibbon' => 'nomascus_leucogenys',
   'goat'  => 'capra_hircus',
   'horse' => 'equus_caballus',
-  'macaque'  => 'macaca_mulatta',
   'mouse' => 'mus_musculus',
   'opossum' => 'monodelphis_domestica',
   'orangutan' => 'pongo_abelii',
@@ -183,6 +181,7 @@ sub run {
                                species => $self->required_param('species'),
                                run_type => $run_type,
                              });
+  $self->clean_dir;
 }
 
 sub write_output {

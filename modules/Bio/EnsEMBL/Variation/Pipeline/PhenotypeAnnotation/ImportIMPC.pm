@@ -128,6 +128,8 @@ sub run {
                               workdir => $self->workdir,
                               run_type => $self->required_param('run_type'),
                             });
+
+  $self->clean_dir;
 }
 
 sub write_output {
