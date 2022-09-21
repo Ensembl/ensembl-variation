@@ -96,9 +96,9 @@ my $adaptors = {
     funcgen => {
         adaptor => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
     },
-    #otherfeatures => {
-    #    adaptor => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
-    #},
+    otherfeatures => {
+        adaptor => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+    },
     variation => {
         adaptor => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor',
     },
