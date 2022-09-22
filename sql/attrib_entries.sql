@@ -348,6 +348,9 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (560, 'artef_dupl', 'Artifactual duplication', 'Annotation on artifactual regions of the genome assembly');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (561, 'g2p_confidence', 'G2P confidence', 'G2P confidence category from the G2P panels');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (562, 'mutation_consequence', 'Mutation consequence', 'G2P mutation consequence');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (563, 'mutated_samples', 'Number mutated samples', 'Number of mutated samples from the Cancer Gene Census');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (564, 'samples_tested', 'Number samples tested', 'Number of samples tested from the Cancer Gene Census');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (565, 'samples_mutation', 'Number samples with mutation type', 'Number of samples with mutation type from the Cancer Gene Census');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
