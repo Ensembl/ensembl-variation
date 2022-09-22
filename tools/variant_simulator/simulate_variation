@@ -60,7 +60,7 @@ usage() if ($help);
 
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
-die "Illegal arguments -onlyMane -codingsOnly -exonsOnly can't be used together !" if $onlyMane && $exonOnly && $codingOnly;
+die "Illegal arguments -onlyMane can only be used alone !" if $onlyMane && ($exonOnly || $codingOnly || $intronOnly);
 
 my $registry = 'Bio::EnsEMBL::Registry';
 if (defined $registryFile){
