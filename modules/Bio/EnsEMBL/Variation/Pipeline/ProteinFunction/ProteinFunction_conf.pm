@@ -114,7 +114,7 @@ sub default_options {
         default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
         urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-qproduction -R"select[mem>24000] rusage[mem=24000]" -M24000',
         long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters

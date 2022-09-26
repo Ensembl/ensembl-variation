@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long qw(GetOptions);
 
 my ($help, $chromOnly, $gene, $registryFile,
-$exonOnly, $intronOnly, $codingOnly,$refseq_genes
+$exonOnly, $intronOnly, $codingOnly,$onlyMane,$refseq_genes,$spliceai
 );
 my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
@@ -42,15 +42,17 @@ usage() if (!scalar(@ARGV));
 
 GetOptions( "species=s" => \$species,
     "chrom=s" => \$chromOnly,
-    "gene=s" => \$gene,
-    "edge=i" => \$edges,
-    "output|o=s" => \$outFile,
-    "exonsOnly" => \$exonOnly,
-    "codingOnly" => \$codingOnly,
+    "gene=s"  => \$gene,
+    "edge=i"  => \$edges,
+    "output|o=s"  => \$outFile,
+    "exonsOnly"   => \$exonOnly,
+    "codingOnly"  => \$codingOnly,
+    "onlyMane"    => \$onlyMane,
     "intronsOnly" => \$intronOnly,
-    "assembly=s" => \$assembly,
-    "refseq"     => \$refseq_genes,
-    "registry=s" => \$registryFile,
+    "assembly=s"  => \$assembly,
+    "refseq"      => \$refseq_genes,
+    "spliceai"    => \$spliceai,
+    "registry=s"  => \$registryFile,
     "help!" => \$help,
 ) or usage();
 
@@ -58,6 +60,7 @@ usage() if ($help);
 
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
+die "Illegal arguments -onlyMane can only be used alone !" if $onlyMane && ($exonOnly || $codingOnly || $intronOnly);
 
 my $registry = 'Bio::EnsEMBL::Registry';
 if (defined $registryFile){
@@ -88,11 +91,8 @@ my $biotype = 'protein_coding';
 
 my $FHO;
 open ($FHO, ">$outFile") or die "Can't open file to write: $outFile, $!\n";
-#print header:
-print $FHO '##fileformat=VCFv4.2', "\n";
-print $FHO '##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">',"\n";
-print $FHO '##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">',"\n";
-print $FHO "#".join("\t", qw/CHROM POS ID REF ALT QUAL FILTER INFO/), "\n";
+
+print_header($FHO, $assembly, $spliceai);
 
 my @geneIDs;
 if ($chromOnly || $gene){ #if chrom or gene specified then use the most stringent
@@ -122,6 +122,48 @@ if ($chromOnly || $gene){ #if chrom or gene specified then use the most stringen
 close($FHO);
 
 
+sub print_header {
+  my $FHO = shift;
+  my $assembly = shift;
+  my $spliceai = shift;
+
+  print $FHO "##fileformat=VCFv4.2", "\n";
+  if(defined $spliceai) {
+    my $reference = $assembly eq "grch38" ? "GRCh38/hg38" : "GRCh37/hg19";
+    print $FHO "##reference=$reference", "\n";
+    print $FHO "##contig=<ID=1,length=248956422>", "\n";
+    print $FHO "##contig=<ID=2,length=242193529>", "\n";
+    print $FHO "##contig=<ID=3,length=198295559>", "\n";
+    print $FHO "##contig=<ID=4,length=190214555>", "\n";
+    print $FHO "##contig=<ID=5,length=181538259>", "\n";
+    print $FHO "##contig=<ID=6,length=170805979>", "\n";
+    print $FHO "##contig=<ID=7,length=159345973>", "\n";
+    print $FHO "##contig=<ID=8,length=145138636>", "\n";
+    print $FHO "##contig=<ID=9,length=138394717>", "\n";
+    print $FHO "##contig=<ID=10,length=133797422>", "\n";
+    print $FHO "##contig=<ID=11,length=135086622>", "\n";
+    print $FHO "##contig=<ID=12,length=133275309>", "\n";
+    print $FHO "##contig=<ID=13,length=114364328>", "\n";
+    print $FHO "##contig=<ID=14,length=107043718>", "\n";
+    print $FHO "##contig=<ID=15,length=101991189>", "\n";
+    print $FHO "##contig=<ID=16,length=90338345>", "\n";
+    print $FHO "##contig=<ID=17,length=83257441>", "\n";
+    print $FHO "##contig=<ID=18,length=80373285>", "\n";
+    print $FHO "##contig=<ID=19,length=58617616>", "\n";
+    print $FHO "##contig=<ID=20,length=64444167>", "\n";
+    print $FHO "##contig=<ID=21,length=46709983>", "\n";
+    print $FHO "##contig=<ID=22,length=50818468>", "\n";
+    print $FHO "##contig=<ID=X,length=156040895>", "\n";
+    print $FHO "##contig=<ID=Y,length=57227415>", "\n";
+    print $FHO "##contig=<ID=MT,length=16569>", "\n";
+  }
+  else {
+    print $FHO '##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol or Gene stable id">',"\n";
+    print $FHO '##INFO=<ID=FEATURE,Number=1,Type=String,Description="Feature id">',"\n";
+  }
+  print $FHO "#".join("\t", qw/CHROM POS ID REF ALT QUAL FILTER INFO/), "\n";
+}
+
 #subroutine: for a given set of genes, extract the needed features + call generateSNPs (writes out all possible SNPs)
 sub processGenes{
   my $geneArr = shift;
@@ -145,11 +187,19 @@ sub processGenes{
       @parts = @{$geneID->get_all_Exons()};
     } elsif($intronOnly){
       @parts = @{$geneID->get_all_Introns()};
-    } else {
+    } elsif ($onlyMane){
+      my @transc = @{ $geneID->get_all_Transcripts() };
+      while ( my $transcript = shift @transc ) {
+        if($transcript->is_mane()) {
+          @parts = ($transcript);
+        }
+      }
+    }
+      else {
       @parts = ($geneID);
     }
 
-    generateSNPs(\@parts,defined $geneID->external_name ? $geneID->external_name : $geneID->stable_id, $fho);
+    generateSNPs(\@parts,defined $geneID->external_name ? $geneID->external_name : $geneID->stable_id, $fho, $spliceai);
   }
 }  
 
@@ -158,6 +208,7 @@ sub generateSNPs {
   my $elements = shift;
   my $gene_name = shift;
   my $fho = shift;
+  my $spliceai = shift;
 
   my @bases = qw/A C T G/;
   while( my $part = shift (@$elements)){
@@ -175,9 +226,13 @@ sub generateSNPs {
          my $ref_seq = $seqAr[$i];
          my @tmp_alts = grep {$_ ne $ref_seq} @bases;
          $pos = $start + $i;
-         $info = 'GENE='.$gene_name.';'.'FEATURE='.$partID;
+         if(!$spliceai) {
+           $info = 'GENE='.$gene_name.';'.'FEATURE='.$partID;
+         }
          while(my $tmp_alt = shift @tmp_alts) {
-           $id = $chrom."-".$pos."-".$ref_seq."-".$tmp_alt;
+           if(!$spliceai) {
+             $id = $chrom."-".$pos."-".$ref_seq."-".$tmp_alt;
+           }
            printf $fho "%s\t%s\t%s\t%s\t%s\t", $chrom, $pos, $id, $ref_seq, $tmp_alt;
            printf $fho "%s\t%s\t%s\n", $qual, $filter, $info;
         }
@@ -205,9 +260,11 @@ sub usage {
 
       -chrom             Generate SNPs only for specified chromosome
       -gene              Generate all SNPs for specified gene
+      -spliceai          Generate files for SpliceAI tool
       -codingOnly        Generate SNPs only for translatable exons of protein_coding transcripts
       -exonsOnly         Generate SNPs only for all exons of the genes
       -intronsOnly       Generate SNPs only for all introns of the genes
+      -onlyMane          Generate SNPs only for MANE transcripts
 
       -edge              Length of flanking region in which to generate SNPs (Default: 0)
 
