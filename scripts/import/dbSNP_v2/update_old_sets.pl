@@ -11,8 +11,8 @@ use DBI;
 my $dbname = "";
 my $old_dbname = "";
 
-my $host = "mysql-ens-var-prod-1";
-my $port = 4449;
+my $host = "mysql-ens-var-prod-3";
+my $port = 4606;
 my $user = "ensadmin";
 my $pass = "";
 
@@ -45,13 +45,14 @@ sub dumpPreparedSQL {
   my $dbVar = shift;
   my $tmp_num = shift;
   my $chunk = shift;
+  my $size = shift;
 
   my $start = $chunk * $tmp_num;
   my $end = $chunk + $start;
   $end = $end < $size ? $end : $size;
 
 
-  my $sql = qq{SELECT * FROM variation_feature WHERE variation_feature_id > $start AND variation_feature_id <= $end};
+  my $sql = qq{SELECT variation_name, variation_set_id FROM variation_feature WHERE variation_feature_id > $start AND variation_feature_id <= $end};
 
   my $sth = $dbVar->prepare( $sql );
 
@@ -81,10 +82,10 @@ my $size = $sth->fetchall_arrayref()->[0]->[0];
 my $chunk = 1000000; # Buffer_size number to avoid memory issues
 
 for my $tmp_num (map { $_ } 0 .. $size/$chunk) {
-  dumpPreparedSQL($old_dbh, $tmp_num, $chunk);
+  dumpPreparedSQL($old_dbh, $tmp_num, $chunk, $size);
 }
 
-system("awk '{if ($2) print $0;}' $TMP_DIR/$TMP_FILE > $TMP_DIR/$TMP_FILE.not_empty");
+system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE > $TMP_DIR/$TMP_FILE.not_empty");
 
 ### Dump new variation_set_variation / Update new variation_feature.variation_set_id
 
@@ -92,7 +93,9 @@ my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE nam
 my $syn_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation_synonym WHERE name= ? limit 1]);
 my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_feature_id, variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
 
-my $vsv_ins_sth = $dbh->prepare(qq[ CREATE TABLE $tmp_vset_table LIKE variation_set_variation ]);
+my $vsv_create_sth = $dbh->prepare(qq[ CREATE TABLE IF NOT EXISTS $tmp_vset_table LIKE variation_set_variation ]);
+$vsv_create_sth->execute();
+
 my $vsv_ins_sth = $dbh->prepare(qq[ INSERT IGNORE INTO $tmp_vset_table (variation_id, variation_set_id) VALUES (?,?)]);
 my $vf_upd_sth = $dbh->prepare(qq[ UPDATE variation_feature SET variation_set_id = ? WHERE variation_feature_id = ?]);
 
