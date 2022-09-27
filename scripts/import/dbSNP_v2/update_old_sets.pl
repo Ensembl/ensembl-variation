@@ -5,30 +5,39 @@
 
 use strict;
 use DBI;
+use Bio::EnsEMBL::Registry;
+use Getopt::Long;
 
 ## Connect to Databases
 
-my $dbname = "";
-my $old_dbname = "";
+my ($reg_file, $release, $tmp, $help);
 
-my $host = "mysql-ens-var-prod-3";
-my $port = 4606;
-my $user = "ensadmin";
-my $pass = "";
+GetOptions ("registry=s"        => \$reg_file,
+            "release=s"      =>  \$release,
+            "tmp=s"         => \$tmp,
+            "help|h"           => \$help,
+);
 
-# Set TMP_DIR + TMP_FILE
-my $TMP_DIR = "<PATH-TO>/tmp";
+usage() unless defined $reg_file && defined $release && defined $tmp;
+
+my $registry = 'Bio::EnsEMBL::Registry';
+$registry->load_all($reg_file);
+
+my $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
+
+my $TMP_DIR = $tmp;
 my $TMP_FILE = "variation_feature.txt";
 
-my $tmp_vset_table = "variation_set_variation_e109";
+my $tmp_vset_table = "variation_set_variation_e${release}";
 
 # define variants and move through the list
-my $dbh = DBI->connect("DBI:mysql:database=${dbname};host=${host};port=${port}",
-                       $user, $pass);
+my $dbh = $db_adaptor->dbc;
+my $old_release = $release - 1;
+my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
+my $old_host = $dbh->host;
+my $old_port = $dbh->port;
 
-my $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${host};port=${port}",
-                       $user, $pass);
-
+my $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
 
 ## Stable variation_set.variation_set_id's values
 my @stable = qw(
@@ -146,3 +155,7 @@ while(<$list>){
 # Remove temp files
 system("rm $TMP_DIR/$TMP_FILE $TMP_DIR/$TMP_FILE.not_empty");
 
+sub usage{
+
+  die "\n\tUsage: update_changed_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
+}
