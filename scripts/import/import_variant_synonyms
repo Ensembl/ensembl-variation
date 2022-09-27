@@ -450,15 +450,16 @@ sub add_synonyms_uniprot {
     $check_variation_set_sth->bind_columns(\$var_set_id);
     $check_variation_set_sth->fetch();
 
-    if(!defined($var_set_id)){
-      $update_after_check_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
+    # check if variation_set_id is not defined or empty
+    if(!defined($var_set_id) || $var_set_id eq ''){
+      $update_after_check_sth->execute($var_dbid) or die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
     else{
-      $update_variation_set_sth->execute($var_dbid) || die ("Failed to update variation_set_id: variation_id $var_dbid\n");
+      $update_variation_set_sth->execute($var_dbid) or die ("Failed to update variation_set_id: variation_id $var_dbid\n");
     }
 
     # Insert into variation_set_variation
-    $insert_var_set->execute($var_dbid, $variation_set_id) || die ("Failed to insert $rs_id into variation_set_variation\n");
+    $insert_var_set->execute($var_dbid, $variation_set_id) or die ("Failed to insert $rs_id into variation_set_variation\n");
   }
 
 }
@@ -475,7 +476,7 @@ sub extract_PharmGKB {
 
   my %synonyms;
 
-  open my $rslist, $data_file ||die "Failed to open synonym list to load: $!\n";
+  open my $rslist, $data_file or die "Failed to open synonym list to load: $!\n";
   while(<$rslist>) {
     next if/RSID/;
 
