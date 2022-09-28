@@ -100,13 +100,18 @@ system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE > $TMP_DIR/$TMP_FILE.not_
 
 my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE name = ? limit 1]);
 my $syn_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation_synonym WHERE name= ? limit 1]);
-my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_feature_id, variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
+my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
 
 my $vsv_create_sth = $dbh->prepare(qq[ CREATE TABLE IF NOT EXISTS $tmp_vset_table LIKE variation_set_variation ]);
+my $vsv_dis_sth = $dbh->prepare(qq[ ALTER TABLE $tmp_vset_table DISABLE KEYS ]);
 $vsv_create_sth->execute();
+$vsv_dis_sth->execute();
 
-my $vsv_ins_sth = $dbh->prepare(qq[ INSERT IGNORE INTO $tmp_vset_table (variation_id, variation_set_id) VALUES (?,?)]);
-my $vf_upd_sth = $dbh->prepare(qq[ UPDATE variation_feature SET variation_set_id = ? WHERE variation_feature_id = ?]);
+
+local *FH;
+open ( FH, ">>$TMP_DIR/$TMP_FILE.dump" )
+or die( "Cannot open $TMP_DIR/$TMP_FILE.dump: $!" );
+
 
 open my $list, "$TMP_DIR/$TMP_FILE.not_empty" || die "Failed to open var list $ARGV[0] : $!\n"; 
 while(<$list>){
@@ -125,35 +130,73 @@ while(<$list>){
   }
 
   unless (defined $id->[0]->[0]){
-    print "Skipping $rs\t$sets\n";
     next;
   }
 
-  ## Insert into variation_feature
+  ## Check if variation_feature already has variation_set filled
   $vfid_ext_sth->execute($id->[0]->[0])||die;
   my $vf = $vfid_ext_sth->fetchall_arrayref();
-  my $vf_id = $vf->[0]->[0];
-  my $vset_id = $vf->[0]->[1];
-
-  if ($vset_id ne ""){
-    warn "Skipping vf_id $vf_id with already filled sets $vset_id\n";
-    next;
-  };
-
-  warn "adding sets $sets to variation_feature_id $vf_id\n";
-  $vf_upd_sth->execute($sets, $vf_id);
+  next if $vf->[0]->[0] ne "";
 
   ## Insert into variation_set_variation
   my @sets = split/\,/, $sets;
   foreach my $set (@sets){
     next unless (grep { /$set/ } @stable);
-    warn "adding $rs  $id->[0]->[0] to set $set\n";
-    $vsv_ins_sth->execute( $id->[0]->[0], $set ) ||die "Error adding $set to $rs: $!\n";
+    print FH $id->[0]->[0] . "\t" . $set . "\n";
   }
+
 }
 
+close FH;
+
+# Dump all variation_set_variation
+my $vsv_ins_sth = $dbh->prepare(qq[ LOAD DATA LOCAL INFILE \"${TMP_DIR}/${TMP_FILE}.dump\" INTO TABLE ${tmp_vset_table} ]);
+$vsv_ins_sth->execute() || die "Error dumping local rsid / set file\n";
+
+# Re-enable keys
+my $vsv_enable_sth = $dbh->prepare(qq[ ALTER TABLE $tmp_vset_table ENABLE KEYS ]);
+$vsv_enable_sth->execute();
+
+# Update variation_feature
+my $temp_table = 'variation_feature_with_vs';
+
+$dbh->do(qq{DROP TABLE IF EXISTS $temp_table})
+    or die "Failed to drop pre-existing temp table";
+    
+$dbh->do(qq{CREATE TABLE $temp_table LIKE variation_feature})
+    or die "Failed to create temp table";
+
+## remove unneccessary non-null columns (for EGenomes)
+
+$dbh->do(qq{ALTER TABLE $temp_table  drop seq_region_id,
+                                     drop seq_region_start,    drop seq_region_end,
+                                     drop seq_region_strand,   drop source_id,
+                                     drop map_weight })
+    or die "Failed to alter temp table";
+
+$dbh->do(qq[
+    INSERT INTO $temp_table (variation_id, variation_set_id)
+    SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id))
+    FROM $tmp_vset_table
+    GROUP BY variation_id
+  ]);
+
+
+$dbh->do(qq{
+    UPDATE  variation_feature vf, $temp_table tvf
+    SET     vf.variation_set_id = tvf.variation_set_id
+    WHERE   vf.variation_id = tvf.variation_id
+}) or die "Failed to update vf table";
+
+$dbh->do(qq{DROP TABLE $temp_table})
+    or die "Failed to drop temp table";
+
 # Remove temp files
-system("rm $TMP_DIR/$TMP_FILE $TMP_DIR/$TMP_FILE.not_empty");
+system("rm $TMP_DIR/$TMP_FILE $TMP_DIR/$TMP_FILE.not_empty $TMP_DIR/$TMP_FILE.dump");
+
+# Rename table
+$dbh->do(qq{ DROP TABLE IF EXISTS variation_set_variation }) or die "Failed to drop variation_set_variation table";
+$dbh->do(qq{ ALTER TABLE $tmp_vset_table RENAME TO variation_set_variation }) or die "Failed to rename table";
 
 sub usage{
 
