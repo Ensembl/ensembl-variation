@@ -289,9 +289,9 @@ sub parse_input_file {
       next if (!scalar(@ids));
 
       map {
-        my %t_data = %{\%data};
-        $t_data{'id'} = $_;
-        push(@phenotypes,\%t_data)
+        my $t_data = dclone \%data;
+        $t_data->{'id'} = $_;
+        push(@phenotypes, $t_data)
       } @ids;
     }
   }
