@@ -44,6 +44,7 @@ use strict;
 use File::Path qw(make_path);
 use File::stat;
 use File::Basename;
+use Storable qw(dclone);
 use POSIX qw(strftime);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
