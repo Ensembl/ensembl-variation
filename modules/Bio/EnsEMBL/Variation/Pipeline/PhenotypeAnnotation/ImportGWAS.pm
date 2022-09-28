@@ -263,11 +263,11 @@ sub parse_input_file {
              $unit =~ s/\(//g;
              $unit =~ s/\)//g;
              $unit =~ s/µ/micro/g;
-          if ($unit =~ /^\s+$/ || $ratio >= 1) {
-            $data{'odds_ratio'} = $ratio;
+          if ($unit =~ /decrease|increase/) {
+            $data{'beta_coef'} = "$ratio $unit";
           }
           else {
-            $data{'beta_coef'} = "$ratio $unit";
+            $data{'odds_ratio'} = $ratio;
           }
         }
         else {
