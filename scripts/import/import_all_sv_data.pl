@@ -37,6 +37,7 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
+use URI::Escape qw(uri_unescape);
 
 our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $var_set_id, $mapping, $num_gaps,
      $target_assembly, $cs_version_number, $size_diff, $version, $registry_file, $medgen_file, $hpo_file, $replace_study, $debug);
@@ -1510,13 +1511,18 @@ sub parse_9th_col {
     }
 
     if ($key eq 'clinical_significance' || $key eq 'clinical_int'){
+
+      # Convert encoded string, example: Likely%20pathogenic
+      $value = uri_unescape($value);
+
       # Conflicting is not accepted in clinical significance column but shorten anyway
       $value =~ s/Conflicting interpretations of pathogenicity/conflicting/;
       $value =~ s/conflicting data from submitters/conflicting/;
 
       # Replace unsupported character, example: 'benign/likely benign' -> 'benign,likely benign'
-      $value =~ s/\//,/;
-      $value =~ s/, /,/;
+      $value =~ s/\//,/g;
+      $value =~ s/,\s+/,/g; # convert 'benign, association, risk factor' to 'benign,association,risk factor'
+
       $info->{clinical} = lc($value);
     }
 
@@ -1865,13 +1871,16 @@ sub post_processing_clinical_significance {
   foreach my $data (@{$all_clin_sign}){
     my $sv_id = $data->[0];
     my $clin_sign_dup = $data->[1];
-    my @clin_sign_list = split ',', $clin_sign_dup;
+
+    my @clin_sign_list = split (',', $clin_sign_dup);
+
     my %unique_clin_sign;
     foreach my $key (@clin_sign_list) {
       $unique_clin_sign{$key} = 1;
     }
     my @new_clin_sign_unique = keys %unique_clin_sign;
-    my $clin_sign_unique_final = join ',', @new_clin_sign_unique;
+
+    my $clin_sign_unique_final = join (',', @new_clin_sign_unique);
 
     $sth_insert_temp->execute($sv_id, $clin_sign_unique_final);
   }
