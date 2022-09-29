@@ -44,7 +44,6 @@ use strict;
 use File::Path qw(make_path);
 use File::stat;
 use File::Basename;
-use Storable qw(dclone);
 use POSIX qw(strftime);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
@@ -290,9 +289,9 @@ sub parse_input_file {
       next if (!scalar(@ids));
 
       map {
-        my $t_data = dclone \%data;
-        $t_data->{'id'} = $_;
-        push(@phenotypes, $t_data)
+        my %t_data = %{\%data};
+        $t_data{'id'} = $_;
+        push(@phenotypes,\%t_data)
       } @ids;
     }
   }
