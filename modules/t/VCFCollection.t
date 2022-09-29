@@ -488,4 +488,21 @@ is_deeply(
   'get_all_Alleles_by_VariationFeature - dbSNP uses ref_freq_index()'
 );
 
+# Test get_all_clinical_significance_states() for VCF files
+$coll = $vca->fetch_by_id('ClnSig');
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
+
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+ok($coll->filename_template =~ /^$dir/, "update filename_template");
+
+$slice = $sa->fetch_by_region('toplevel', 1, 10, 20);
+my $dont_fetch_vf_overlaps=1;
+my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
+
+ok($vfs->[0]->get_all_clinical_significance_states()->[0] eq 'likely benign', 'get_all_clinical_significance_states - obtain single clinical significance entry');
+ok(scalar (@{$vfs->[1]->get_all_clinical_significance_states()}) eq 1, 'get_all_clinical_significance_states - ignore upsupported clinical significance entry');
+ok(scalar (@{$vfs->[2]->get_all_clinical_significance_states()}) eq 2, 'get_all_clinical_significance_states - obtain multiple clinical significance entries');
+
 done_testing();

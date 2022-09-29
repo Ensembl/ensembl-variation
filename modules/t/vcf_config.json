@@ -15,7 +15,7 @@
       "updated": "1432745640000",
       "is_remapped": "1",
       "use_vcf_consequences": "1"
-    }, 
+    },
     {
       "id": "ExAC_0.3_corrected_INFO",
       "species": "homo_sapiens",
@@ -253,6 +253,14 @@
       "assembly": "GRCh37",
       "type": "local",
       "filename_template": "###t-root###/testdata/test_data_cadd.tsv.gz"
+    }, 
+    {
+      "id": "ClnSig",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/test_vcf_clnsig.vcf.gz",
+      "chromosomes": ["1"]
     }
   ]
 }
