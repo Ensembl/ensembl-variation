@@ -488,7 +488,7 @@ is_deeply(
   'get_all_Alleles_by_VariationFeature - dbSNP uses ref_freq_index()'
 );
 
-# Test get_all_clinical_significance_states() for VCF files
+# Test get_all_clinical_significance_states() with VCF files
 $coll = $vca->fetch_by_id('ClnSig');
 ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
 
@@ -504,5 +504,8 @@ my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overl
 ok($vfs->[0]->get_all_clinical_significance_states()->[0] eq 'likely benign', 'get_all_clinical_significance_states - obtain single clinical significance entry');
 ok(scalar (@{$vfs->[1]->get_all_clinical_significance_states()}) eq 1, 'get_all_clinical_significance_states - ignore upsupported clinical significance entry');
 ok(scalar (@{$vfs->[2]->get_all_clinical_significance_states()}) eq 2, 'get_all_clinical_significance_states - obtain multiple clinical significance entries');
+
+# below check only works once we update supported list of ClinVar clinical significance entries
+#ok(scalar (@{$vfs->[3]->get_all_clinical_significance_states()}) eq 2, 'get_all_clinical_significance_states - process clinical significance entries with commas before delimiter split');
 
 done_testing();

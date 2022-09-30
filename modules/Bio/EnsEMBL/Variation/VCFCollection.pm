@@ -547,14 +547,22 @@ sub get_all_VariationFeatures_by_Slice {
     } elsif ($vcf_info_field eq 'CLNSIG'){
       foreach my $vf (@vfs) {
         my $info = $vf->{vcf_record}->get_info;
-        my $vcf_variants = $info->{$vcf_info_field};
+        my $vcf_variants_mix_case = $info->{$vcf_info_field};
+        my $vcf_variants = lc($vcf_variants_mix_case);
+        
+        # Replace commas for specific examples that contain a comma,
+        # otherwise they would split/break these examples - comma is also a delimiter
+        # Not ideal as new comma-containing terms will need to be added as they appear in 
+        # list found in Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types
+        $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
+        $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
+        
         my @clnsig_vars = split('[\|,/]',$vcf_variants);
         foreach my $clnsig_var (@clnsig_vars) {
           $clnsig_var =~ s/_/ /g;
-          my $clnsig_lc = lc($clnsig_var);
-          $clnsig_lc =~ s/^\s+|\s+$//;
-          if ($clnsig_lc ~~ @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
-            push @{ $vf->{clinical_significance} ||= [] }, $clnsig_lc;
+          $clnsig_var =~ s/^\s+|\s+$//;
+          if ($clnsig_var ~~ @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
+            push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
           }
         }
       }
