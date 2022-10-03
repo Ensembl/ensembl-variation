@@ -492,9 +492,9 @@ is_deeply(
 $coll = $vca->fetch_by_id('ClnSig');
 ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
 
-my $temp = $coll->filename_template();
-$temp =~ s/###t\-root###/$dir/;
-$coll->filename_template($temp);
+my $temp_clnsig_filename = $coll->filename_template();
+$temp_clnsig_filename =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp_clnsig_filename);
 ok($coll->filename_template =~ /^$dir/, "update filename_template");
 
 $slice = $sa->fetch_by_region('toplevel', 1, 10, 20);
