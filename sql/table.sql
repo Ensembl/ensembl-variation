@@ -1772,7 +1772,7 @@ CREATE TABLE publication (
 CREATE TABLE variation_citation (
    variation_id INT(10) UNSIGNED NOT NULL,
    publication_id INT(10) UNSIGNED NOT NULL,
-   data_source_attrib SET('615','616','617','618','619','620') DEFAULT NULL, 
+   data_source_attrib SET('615','616','617','618','619','620','678') DEFAULT NULL,
    PRIMARY KEY variation_citation_idx (variation_id, publication_id),
    KEY data_source_attrib_idx (data_source_attrib)
 );
@@ -1835,11 +1835,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '109');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '110');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_108_109_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_b.sql|Add DDG2P data_source_attrib to variation_citation');
 
 /**
 @header  Failed tables
