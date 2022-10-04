@@ -557,11 +557,11 @@ sub get_all_VariationFeatures_by_Slice {
         $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
         $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
 
-        my @clnsig_vars = split('[\|,/]',$vcf_variants);
+        my @clnsig_vars = split('[\|,/;]',$vcf_variants);
         foreach my $clnsig_var (@clnsig_vars) {
           $clnsig_var =~ s/_/ /g;
           $clnsig_var =~ s/^\s+|\s+$//;
-          if (grep /$clnsig_var/, @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
+          if (grep ^$clnsig_var$/, @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
             push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
           }
         }
