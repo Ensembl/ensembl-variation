@@ -561,7 +561,7 @@ sub get_all_VariationFeatures_by_Slice {
         foreach my $clnsig_var (@clnsig_vars) {
           $clnsig_var =~ s/_/ /g;
           $clnsig_var =~ s/^\s+|\s+$//;
-          if (grep ^$clnsig_var$/, @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
+          if (grep /^$clnsig_var$/, @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
             push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
           }
         }
