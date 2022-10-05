@@ -53,7 +53,7 @@ process run_pph2_on_all_aminoacid_substitutions {
   /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} 1> $out
 
   # Remove output if only contains header
-  if [ "$( wc -l <$out )" -eq 1 ]; then rm %out; fi
+  if [ "$( wc -l <$out )" -eq 1 ]; then rm $out; fi
   '''
 }
 
