@@ -488,4 +488,19 @@ is_deeply(
   'get_all_Alleles_by_VariationFeature - dbSNP uses ref_freq_index()'
 );
 
+# fetch consequences from VCF
+$coll = $vca->fetch_by_id('ExAC_0.3_corrected_INFO');
+$temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+
+$slice = $sa->fetch_by_region('chromosome', '11');
+my $dont_fetch_vf_overlaps=1;
+my @vfs = @{$coll->get_all_VariationFeatures_by_Slice($slice,$dont_fetch_vf_overlaps)};
+my $cons = $vfs[1]->get_all_OverlapConsequences();
+if ($dont_fetch_vf_overlaps)
+{
+  ok(scalar @{$cons} eq 4, "get consequences from VCF");
+}
+
 done_testing();
