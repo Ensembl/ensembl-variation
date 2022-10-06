@@ -70,6 +70,7 @@ my %plugins_to_skip = (
   'CSN.pm' => 1,
   'DAS.pm' => 1,
   'GXA.pm' => 1,
+  'GWAS.pm' => 1,
   'HGVSReferenceBase.pm' => 1,
   'miRNA.pm' => 1,
   'NonSynonymousFilter.pm' => 1,
