@@ -399,7 +399,7 @@ sub study_table{
   $study =~ /(\w+\d+)\.?\d*/;
   my $study_ftp = $1;
   if ($source_name eq 'DGVa'){
-    $study_ftp = "ftp://ftp.ebi.ac.uk/pub/databases/dgva/$study_ftp\_$author";
+    $study_ftp = "https://ftp.ebi.ac.uk/pub/databases/dgva/$study_ftp\_$author";
   }
   else {
     $study_ftp = "https://www.ncbi.nlm.nih.gov/dbvar/studies/$study_ftp";
@@ -2136,7 +2136,7 @@ Options:
   -size_diff       : % difference allowed in size after mapping (optional)
   -version         : version number of the data (required)
   -registry        : registry file (optional)
-  -medgen_file     : Path to the unzipped MedGen file (see on ftp://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
+  -medgen_file     : Path to the unzipped MedGen file (see on https://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
   -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastSuccessfulBuild/artifact/hp/hp.obo)
   -replace         : flag to remove the existing study data from the database before import them (optional)
   -debug           : flag to keep the $temp_table table (optional)
