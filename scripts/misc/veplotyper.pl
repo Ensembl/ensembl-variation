@@ -110,7 +110,7 @@ sub configure {
   
   # defaults
   $config->{rest}              ||= 'http://rest.ensembl.org';
-  $config->{vcf_file}          ||= 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/ALL.chr###CHR###.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz';
+  $config->{vcf_file}          ||= 'https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/ALL.chr###CHR###.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz';
   $config->{cache_region_size} ||= 1000000;
   $config->{chunk_size}        ||= 50000;
   $config->{compress}          ||= 'zcat';

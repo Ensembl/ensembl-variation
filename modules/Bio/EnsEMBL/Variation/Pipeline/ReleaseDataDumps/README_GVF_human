@@ -31,10 +31,10 @@ Additionally, we provide for human:
     - NOTE:
         - files containing allele frequencies from several of the HapMap
           populations have been discontinued and are available from our archive sites,
-          the latest being ftp://ftp.ensembl.org/pub/release-97/variation/gvf/homo_sapiens/
+          the latest being https://ftp.ensembl.org/pub/release-97/variation/gvf/homo_sapiens/
         - files containing allele frequencies from populations from the
           Exome Sequencing Project have been discontinued and are available
-          from our archive sites, the latest being ftp://ftp.ensembl.org/pub/release-98/variation/gvf/homo_sapiens/
+          from our archive sites, the latest being https://ftp.ensembl.org/pub/release-98/variation/gvf/homo_sapiens/
 
 If available for this species, the file includes information on:
     - ancestral_allele
