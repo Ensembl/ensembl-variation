@@ -713,6 +713,28 @@ sub dump_phenotypes {
   }
 }
 
+sub clean_phenotype_tables {
+  my ($self) = @_;
+
+  my $delete_pheno_feature = qq{
+    DELETE from phenotype WHERE phenotype_id NOT IN (SELECT phenotype_id from phenotype_feature);
+  };
+   
+  my $delete_pheno_ontology_accesion = qq {
+    DELETE from phenotype_ontology_accession WHERE phenotype_id NOT IN (SELECT phenotype_id from phenotype_feature);
+  };
+  my $sth;
+  my $db_adaptor    = $self->variation_db_adaptor;
+
+  $sth = $db_adaptor->dbc->prepare($delete_pheno_feature);
+  $sth->execute();
+
+  $sth = $db_adaptor->dbc->prepare($delete_pheno_ontology_accesion);
+  $sth->execute();
+
+  
+}
+
 #----------------------------
 # PRIVATE METHODS
 
