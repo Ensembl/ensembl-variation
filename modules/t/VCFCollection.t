@@ -503,4 +503,24 @@ if ($dont_fetch_vf_overlaps)
   ok(scalar @{$cons} eq 4, "get consequences from VCF");
 }
 
+# Test get_all_clinical_significance_states() with VCF files
+$coll = $vca->fetch_by_id('ClnSig');
+ok($coll && $coll->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id");
+
+my $temp_clnsig_filename = $coll->filename_template();
+$temp_clnsig_filename =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp_clnsig_filename);
+ok($coll->filename_template =~ /^$dir/, "update filename_template");
+
+$slice = $sa->fetch_by_region('toplevel', 1, 10, 20);
+my $dont_fetch_vf_overlaps=1;
+my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
+
+ok($vfs->[0]->get_all_clinical_significance_states()->[0] eq 'likely benign', 'get_all_clinical_significance_states - obtain single clinical significance entry');
+ok(scalar (@{$vfs->[1]->get_all_clinical_significance_states()}) eq 1, 'get_all_clinical_significance_states - ignore upsupported clinical significance entry');
+ok(scalar (@{$vfs->[2]->get_all_clinical_significance_states()}) eq 2, 'get_all_clinical_significance_states - obtain multiple clinical significance entries');
+
+# below check only works once we update supported list of ClinVar clinical significance entries (probably for release 110)
+#ok(scalar (@{$vfs->[3]->get_all_clinical_significance_states()}) eq 2 && $vfs->[3]->get_all_clinical_significance_states()->[0] eq , 'get_all_clinical_significance_states - process clinical significance entries with commas before delimiter split');
+
 done_testing();
