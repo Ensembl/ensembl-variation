@@ -36,7 +36,7 @@ my $name         = 'estd1';
 my %study_list   = ( $name => 4237, 'estd55' => 4246 );
 my @study_IDs    = sort {$a <=> $b} values(%study_list);
 my $description  = 'Redon 2006 "Global variation in copy number in the human genome." PMID:17122850 [remapped from build NCBI35]';
-my $url          = 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd1_Redon_et_al_2006';
+my $url          = 'https://ftp.ebi.ac.uk/pub/databases/dgva/estd1_Redon_et_al_2006';
 my $type         = 'Control Set';
 my $external_ref = 'pubmed/17122850';
 
