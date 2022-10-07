@@ -13,8 +13,8 @@ Rename trimmed files
 
 Run CrossMap
   dowload chain file and FASTA file
-    - GRCh38 reference genome: ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-    - Chain file: ftp://ftp.ensembl.org/pub/assembly_mapping/homo_sapiens/GRCh37_to_GRCh38.chain.gz
+    - GRCh38 reference genome: https://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    - Chain file: https://ftp.ensembl.org/pub/assembly_mapping/homo_sapiens/GRCh37_to_GRCh38.chain.gz
   create a sensible directory structure and update the scripts accordingly, for example
     working_directory/gnomad/Genomes
     working_directory/gnomad/Genomes/mapping_results

@@ -52,7 +52,7 @@ my $source = Bio::EnsEMBL::Variation::Source->new
 
 ## need Study object 
 my $study_name = 'estd59';
-my $study_url = 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd59_1000_Genomes_Consortium_Pilot_Project';
+my $study_url = 'https://ftp.ebi.ac.uk/pub/databases/dgva/estd59_1000_Genomes_Consortium_Pilot_Project';
 my $study_description = '1000 Genomes Project Consortium - Pilot Project. PMID:20981092';
 
 my $study = Bio::EnsEMBL::Variation::Study->new

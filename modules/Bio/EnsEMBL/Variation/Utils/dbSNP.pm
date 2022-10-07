@@ -48,7 +48,7 @@ for each value specified in the field.
 
 The encoding is taken from the following NCBI document:
 
-ftp://ftp.ncbi.nlm.nih.gov/snp/specs/dbSNP_BitField_latest.pdf
+https://ftp.ncbi.nlm.nih.gov/snp/specs/dbSNP_BitField_latest.pdf
 
 An additional subroutine converts allele strings from dbSNP format
 to ensembl format, as used multiple times in the import pipeline.

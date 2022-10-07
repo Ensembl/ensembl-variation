@@ -41,7 +41,7 @@ ok($vca && $vca->isa('Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor'), "i
 
 # fetch all
 my $collections = $vca->fetch_all();
-ok($collections && scalar @$collections == 9, "fetch_all count");
+ok($collections && scalar @$collections == 10, "fetch_all count");
 
 # fetch by ID
 my $coll = $vca->fetch_by_id('1000genomes_phase1');
