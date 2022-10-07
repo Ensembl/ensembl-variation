@@ -36,16 +36,18 @@ if (params.help) {
 
   Usage:
     nextflow run main.nf -profile lsf -resume \
-             --gtf [path/to/gtf] --fasta [path/to/fasta] \
-             --pph_run_type UPDATE --pph_data [path/to/pph_data] \
-             --sift_run_type UPDATE --blastdb [path/to/blastdb]
+             --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \
+             --pph_run_type  UPDATE --pph_data [path/to/pph_data] \
+             --sift_run_type UPDATE --blastdb  [path/to/blastdb] \
+             --host [h] --port [p] --user [u] --pass [p] --database [db]
 
-  Options:
-    --gtf FILE             Annotation GTF file (required with FASTA)
-    --fasta FILE           Genomic sequence FASTA file (required with GTF)
-    --translated           FASTA file with peptide sequences; can be used
-                           instead of supplying --gtf and --fasta
-    --outdir DIRNAME       Name of output dir (default: outdir)
+  General options:
+    --gtf FILE             Comma-separated annotation GTF files; requires FASTA
+    --fasta FILE           Comma-separated FASTA files with genomic sequences;
+                           requires GTF
+    --translated FILE      Comma-separated FASTA files with peptide sequence;
+                           skips sequence translation based on GTF and FASTA
+    --outdir DIRNAME       Name of output dir (default: "outdir")
     --species VAL          Latin species name (default: homo_sapiens);
                            PolyPhen-2 only works for human
 
@@ -63,7 +65,7 @@ if (params.help) {
                              - "NONE" to exclude this analysis (default)
     --blastdb DIR          SIFT-formatted BLAST database directory
                            (e.g., uniref100)
-    --median_cutoff VALUE  Protein alignment's median cutoff. Default: 2.75
+    --median_cutoff VALUE  Protein alignment's median cutoff (default: 2.75)
 
   PolyPhen-2 options:
     --pph_run_type VALUE   PolyPhen-2 run type:
@@ -99,7 +101,7 @@ include { store_translation_mapping } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
-// Check run type for each program
+// Check run type for each protein function predictor
 def check_run_type ( run ) {
   run_types = ["NONE", "UPDATE", "FULL"]
   if ( !run_types.contains( run ) ) {
@@ -130,25 +132,29 @@ if ( params.blastdb ) {
 workflow {
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
-    translate_fasta(file(params.gtf), file(params.fasta))
+    gtf   = Channel.fromPath(  params.gtf.tokenize(','), checkIfExists: true)
+    fasta = Channel.fromPath(params.fasta.tokenize(','), checkIfExists: true)
+    translate_fasta(gtf, fasta)
     translated = translate_fasta.out
   } else {
-    translated = Channel.fromPath(params.translated)
+    translated = Channel.fromPath(params.translated.tokenize(','))
   }
 
   // Parse translation FASTA file
   translated = translated
                  .splitFasta(record: [id: true, seqString: true, text: true])
+                 .unique() // remove duplicated entries
                  .map{ it -> [id: it.id,
                               // Remove stop codon (asterisk)
                               text: it.text.replaceAll(/\*/, ""),
                               seqString: it.seqString.replaceAll(/\*/, ""),
                               // Add MD5 hashes for the translation sequences
-                              md5: it.seqString.replaceAll(/\*/, "").md5() ] }
+                              md5: it.seqString.replaceAll(/\*/, "").md5() ]}
 
   // Write translation mapping with transcript ID and MD5 hashes to database
   translation_mapping = translated.collectFile(
                           name: "translation_mapping.tsv",
+                          storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
   store_translation_mapping(translation_mapping)
 
