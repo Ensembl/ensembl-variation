@@ -1522,7 +1522,7 @@ sub parse_9th_col {
       # Replace unsupported character, example: 'benign/likely benign' -> 'benign,likely benign'
       $value =~ s/\//,/g;
       $value =~ s/,\s+/,/g; # convert 'benign, association, risk factor' to 'benign,association,risk factor'
-
+      $value =~ s/pathogenic,low penetrance/pathogenic low penetrance/; # remove comma from values
       $info->{clinical} = lc($value);
     }
 
