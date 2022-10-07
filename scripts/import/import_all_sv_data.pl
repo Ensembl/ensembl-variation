@@ -155,6 +155,7 @@ my $dbVar = $vdb->dbc->db_handle;
 my $csa = Bio::EnsEMBL::Registry->get_adaptor($species, "core", "coordsystem");
 our $default_cs = $csa->fetch_by_name("chromosome");
 
+my $int_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'intvar');
 
 # set the target assembly
 $target_assembly ||= $default_cs->version;
@@ -175,6 +176,7 @@ my $phenotype_data;
 
 my $source_id = source();
 
+my @study_names;
 
 
 ##########
@@ -185,7 +187,7 @@ pre_processing();
 
 foreach my $in_file (@files) {
   next if ($in_file !~ /\.gvf$/);
-  
+
   $in_file =~ /^(\w{4}\d+)_/;
   if ($study_to_skip{$1}) {
     debug("Study $1 (".$in_file.") skipped because it contains non ".$species." data");
@@ -203,6 +205,10 @@ foreach my $in_file (@files) {
   else {
     $fname = $in_file;
   }
+
+  # save the study name for later to insert into internal db
+  my @split_name = split(/\./, $fname, 2);
+  push (@study_names, $split_name[0]);
 
   # Variation set - 1000 Genomes phase 3 and gnomAD
   if ($species =~ /homo|human/i && $fname =~ /estd214/) {
@@ -263,6 +269,7 @@ post_processing_failed_variants();
 
 # Finishing methods
 meta_coord();
+update_internal_db();
 verifications(); # URLs
 cleanup() if (!defined($debug));
 
@@ -1922,6 +1929,58 @@ sub meta_coord{
   $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('$svf_table', $cs, $max_length);});
 }
 
+sub update_internal_db {
+  debug(localtime()." Adding entries to internal database");
+
+  if(!$int_dba) {
+    print STDERR "No internal database connection found to write status\n";
+    return;
+  }
+
+  my $ensvardb_dba = $int_dba->get_EnsVardbAdaptor();
+  my $result_dba   = $int_dba->get_ResultAdaptor();
+  my $ensdb_name   = $vdb->dbc->dbname;
+
+  my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
+
+  # create EnsVardb
+  if(!$ensdb) {
+    # get ensembl version
+    my @split = split/\_/,$ensdb_name;
+    pop @split;
+    my $ens_version = pop @split;
+
+    $ensdb = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({
+      name        => $ensdb_name,
+      species     => $species,
+      version     => $ens_version,
+      status_desc => 'Created'
+    });
+    $ensdb->genome_reference($target_assembly);
+    $ensvardb_dba->store($ensdb);
+  }
+
+  $ensvardb_dba->update_status($ensdb, 'structural_variation_run');
+
+  foreach my $st_name (@study_names) {
+    my $type = 'structural_variation_study';
+    ## set any previous results to non current for this type and species
+    if ($species =~ /homo|human/i) {
+      $result_dba->set_non_current_by_species_assembly_and_type($species, $target_assembly, $type);
+    } else {
+      $result_dba->set_non_current_by_species_and_type($species, $type);
+    }
+
+    my $result = Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                          result_value => $st_name,
+                                                          result_type  => $type,
+                                                          adaptor      => $result_dba
+                                                         });
+    $result_dba->store($result);
+  }
+
+  debug(localtime()." Entries added to internal database");
+}
 
 sub verifications {
   debug(localtime()." Verification of ftp links");
