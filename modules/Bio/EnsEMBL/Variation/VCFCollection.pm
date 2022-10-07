@@ -79,7 +79,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_matched_variant_alleles);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
-use Bio::EnsEMBL::Variation::Utils::Config;
+use Bio::EnsEMBL::Variation::Utils::Config qw(%ATTRIBS);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::SampleGenotypeFeature;
@@ -545,28 +545,29 @@ sub get_all_VariationFeatures_by_Slice {
         $vf->_finish_annotation();
       }
     } elsif ($vcf_info_field eq 'CLNSIG'){
-      foreach my $vf (@vfs) {
-        my $info = $vf->{vcf_record}->get_info;
-        my $vcf_variants_mix_case = $info->{$vcf_info_field};
-        my $vcf_variants = lc($vcf_variants_mix_case);
+       
+        my $clinsig_list = $ATTRIBS{clinvar_clin_sig};
 
-        # Replace commas for specific examples that contain a comma,
-        # otherwise they would split/break these examples - comma is also a delimiter
-        # Not ideal as new comma-containing terms will need to be added as they appear in 
-        # list found in Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types
-        $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
-        $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
-
-        my @clnsig_vars = split('[\|,/;]',$vcf_variants);
-        foreach my $clnsig_var (@clnsig_vars) {
-          $clnsig_var =~ s/_/ /g;
-          $clnsig_var =~ s/^\s+|\s+$//;
-          if (grep /^$clnsig_var$/, @Bio::EnsEMBL::Variation::Utils::Config::clinvar_clinical_significance_types){
-            push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
+        foreach my $vf (@vfs) {
+          my $info = $vf->{vcf_record}->get_info;
+          my $vcf_variants_mix_case = $info->{$vcf_info_field};
+          my $vcf_variants = lc($vcf_variants_mix_case);
+  
+          # Replace commas for specific examples that contain a comma,
+          # otherwise they would split/break these examples - comma is also a delimiter
+          $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
+          $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
+  
+          my @clnsig_vars = split('[\|,/;]',$vcf_variants);
+          foreach my $clnsig_var (@clnsig_vars) {
+            $clnsig_var =~ s/_/ /g;
+            $clnsig_var =~ s/^\s+|\s+$//;
+            if (grep /^$clnsig_var$/, @{$clinsig_list}){
+              push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
+            }
           }
         }
       }
-    }
   }
   else {
 
