@@ -41,6 +41,8 @@ process align_peptides {
   output:
     path '*.alignedfasta'
 
+  afterScript 'rm -rf *.fa *.fa.query.out'
+
   """
   #!/bin/csh
   cat > ${peptide.md5}.fa << EOL
@@ -76,6 +78,8 @@ process run_sift_on_all_aminoacid_substitutions {
 
   output:
     path '*.SIFTprediction'
+
+  afterScript 'rm -rf *.subs'
 
   """
   subs=${peptide.id}.subs                                                       

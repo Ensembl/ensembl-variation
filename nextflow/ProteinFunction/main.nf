@@ -158,8 +158,6 @@ workflow {
   // Run protein function prediction
   if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated )
   if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated )
-
-  // Clean up data?
 }
 
 // Print summary

@@ -38,6 +38,8 @@ process run_pph2_on_all_aminoacid_substitutions {
   output:
     path '*_scores.txt'
 
+  afterScript 'rm -rf *.fa *.subs tmp/'
+
   shell:
   '''
   subs=!{peptide.id}.subs
@@ -50,7 +52,7 @@ process run_pph2_on_all_aminoacid_substitutions {
 
   mkdir -p tmp/lock
   out=!{peptide.id}_scores.txt
-  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} 1> $out
+  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} > $out
 
   # Remove output if only contains header
   if [ "$( wc -l <$out )" -eq 1 ]; then rm $out; fi
@@ -78,20 +80,12 @@ process run_weka {
 
   output:
     path '*.txt', emit: results
-    path '*.out', emit: processed
-    path '*.err', emit: error
     val "${model}", emit: model
 
-  shell:
-  '''
-  res=!{pph2_out.baseName}_!{model}.txt
-  run_weka.pl -l /opt/pph2/models/!{model} !{pph2_out} \
-              1> $res 2> !{pph2_out.baseName}_!{model}.err
-
-  # clean results and append variant coordinates and transcript id
-  var=$( echo !{pph2_out.baseName}-PolyPhen2 | sed 's/-/,/g' )
-  grep -v "^#" ${res} | awk -v var="$var" -v OFS=',' -F'\t' '{$1=$1;print var,$12,$16}' | sed 's/,/\t/g' > !{pph2_out.baseName}.out
-  '''
+  """
+  run_weka.pl -l /opt/pph2/models/${model} ${pph2_out} \
+              > ${pph2_out.baseName}_${model}.txt
+  """
 }
 
 process store_pph2_scores {
