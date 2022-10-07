@@ -34,7 +34,7 @@ Example content from the human germline VCF dump is shown below:
 ##fileformat=VCFv4.1
 ##fileDate=20140713
 ##source=ensembl;version=76;url=http://e76.ensembl.org/Gallus_gallus
-##reference=ftp://ftp.ensembl.org/pub/release-76/fasta/Gallus_gallus/dna/
+##reference=https://ftp.ensembl.org/pub/release-76/fasta/Gallus_gallus/dna/
 ##INFO=<ID=dbSNP_140,Number=0,Type=Flag,Description="Variants (including SNPs and indels) imported from dbSNP">
 ##INFO=<ID=TSA,Number=1,Type=String,Description="Type of sequence alteration. Child of term sequence_alteration as defined by the sequence ontology project.">
 ##INFO=<ID=E_Cited,Number=0,Type=Flag,Description="Cited.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">

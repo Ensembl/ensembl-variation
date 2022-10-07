@@ -52,7 +52,7 @@ my $source = Bio::EnsEMBL::Variation::Source->new
 
 ## need Study object  
 my $study_name = 'estd1';
-my $study_url = 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd1_Redon_et_al_2006';
+my $study_url = 'https://ftp.ebi.ac.uk/pub/databases/dgva/estd1_Redon_et_al_2006';
 my $study_description = 'Redon 2006 "Global variation in copy number in the human genome." PMID:17122850 [remapped from build NCBI35]';
 
 my $study = Bio::EnsEMBL::Variation::Study->new
