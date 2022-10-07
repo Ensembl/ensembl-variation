@@ -1514,16 +1514,17 @@ sub parse_9th_col {
 
       # Convert encoded string, example: Likely%20pathogenic
       $value = uri_unescape($value);
+      $value = lc($value);
 
       # Conflicting is not accepted in clinical significance column but shorten anyway
-      $value =~ s/Conflicting interpretations of pathogenicity/conflicting/;
+      $value =~ s/conflicting interpretations of pathogenicity/conflicting/;
       $value =~ s/conflicting data from submitters/conflicting/;
 
       # Replace unsupported character, example: 'benign/likely benign' -> 'benign,likely benign'
       $value =~ s/\//,/g;
       $value =~ s/,\s+/,/g; # convert 'benign, association, risk factor' to 'benign,association,risk factor'
       $value =~ s/pathogenic,low penetrance/pathogenic low penetrance/; # remove comma from values
-      $info->{clinical} = lc($value);
+      $info->{clinical} = $value;
     }
 
     $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
