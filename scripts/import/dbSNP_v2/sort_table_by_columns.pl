@@ -21,11 +21,13 @@ my $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
 my $dbh = $db_adaptor->dbc;
 my $dbname = $dbh->dbname;
 
-# Get Variation_feature size
-my $sql = qq{ SELECT count(*) FROM ${table_name} };
+# Get Variation_feature id
+my $sql = qq{ SELECT MIN(${table_name}_id), MAX(${table_name}_id) FROM ${table_name} };
 my $sth = $dbh->prepare( $sql );
 $sth->execute();
-my $size = $sth->fetchall_arrayref()->[0]->[0];
+my $vf = $sth->fetchall_arrayref();
+my $min_id = $vf->[0]->[0];
+my $max_id = $vf->[0]->[1];
 my $TMP_FILE = "tmp.txt";
 my $chunk = 1000000;
 
@@ -33,11 +35,11 @@ sub dumpPreparedSQL {
   my $dbVar = shift;
   my $tmp_num = shift;
   my $chunk = shift;
-  my $size = shift;
+  my $id = shift;
 
   my $start = $chunk * $tmp_num;
   my $end = $chunk + $start;
-  $end = $end < $size ? $end : $size;
+  $end = $end < $id ? $end : $id;
 
 
   my $sql = qq{SELECT * FROM $table_name where ${table_name}_id > $start AND ${table_name}_id <= $end};
@@ -62,8 +64,8 @@ sub dumpPreparedSQL {
   return $end, $tmp_num;
 }
 
-for my $tmp_num (map { $_ } 0 .. $size/$chunk) {
-  dumpPreparedSQL($dbh, $tmp_num, $chunk, $size);
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dumpPreparedSQL($dbh, $tmp_num, $chunk, $max_id);
 }
 
 my @cols = split /,/, $columns;
@@ -86,7 +88,7 @@ warn("TIP!!! REMEMBER TO EXECUTE SQL IN SERVER:\nDROP TABLE ${dbname}.${table_na
 
 sub usage{
 
-  die "\n\tUsage: update_changed_sets.pl
+  die "\n\tUsage: sort_table_by_colss.pl
   \t\t-registry [registry file]
   \t\t-columns [comma separated numbers]
   \t\t-table_name [table name]
