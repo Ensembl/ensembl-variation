@@ -88,7 +88,7 @@ warn("TIP!!! REMEMBER TO EXECUTE SQL IN SERVER:\nDROP TABLE ${dbname}.${table_na
 
 sub usage{
 
-  die "\n\tUsage: sort_table_by_colss.pl
+  die "\n\tUsage: sort_table_by_cols.pl
   \t\t-registry [registry file]
   \t\t-columns [comma separated numbers]
   \t\t-table_name [table name]
