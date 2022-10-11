@@ -200,5 +200,5 @@ $dbh->do(qq{ ALTER TABLE $tmp_vset_table RENAME TO variation_set_variation }) or
 
 sub usage{
 
-  die "\n\tUsage: update_changed_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
+  die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
 }
