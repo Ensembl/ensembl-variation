@@ -94,7 +94,7 @@ for my $tmp_num (map { $_ } 0 .. $size/$chunk) {
   dumpPreparedSQL($old_dbh, $tmp_num, $chunk, $size);
 }
 
-system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE > $TMP_DIR/$TMP_FILE.not_empty");
+system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE | sort -u > $TMP_DIR/$TMP_FILE.not_empty");
 
 ### Dump new variation_set_variation / Update new variation_feature.variation_set_id
 
