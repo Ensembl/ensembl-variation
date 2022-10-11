@@ -37,6 +37,7 @@ process align_peptides {
   input:
     val peptide
     path blastdb_dir
+    val blastdb_name
 
   output:
     path '*.alignedfasta'
@@ -51,7 +52,7 @@ ${peptide.text}EOL
   setenv tmpdir "."
   setenv NCBI "/opt/blast/bin/"
   seqs_chosen_via_median_info.csh ${peptide.md5}.fa \
-                                  ${blastdb_dir}/${params.blastdb_name} \
+                                  ${blastdb_dir}/${blastdb_name} \
                                   ${params.median_cutoff}
   """
 }
@@ -134,7 +135,9 @@ workflow run_sift_pipeline {
       update_sift_db_version( file(params.blastdb) )
     }
     // Align translated sequences against BLAST database to run SIFT
-    align_peptides(translated, params.blastdb_dir)
+    align_peptides(translated,
+                   file(params.blastdb).parent,
+                   file(params.blastdb).name)
     run_sift_on_all_aminoacid_substitutions(translated, align_peptides.out)
     store_sift_scores(wait, // wait for data deletion
                       params.species, translated,

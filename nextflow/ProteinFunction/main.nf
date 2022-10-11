@@ -122,10 +122,7 @@ if ( params.pph_run_type != "NONE" ) {
 }
 
 // Check blastdb for SIFT
-if ( params.blastdb ) {
-  params.blastdb_name = file(params.blastdb).name
-  params.blastdb_dir = file(params.blastdb).parent
-} else if ( params.sift_run_type != "NONE" ) {
+if ( !params.blastdb ) {
   exit 1, "ERROR: --blastdb must be supplied when running SIFT"
 }
 
