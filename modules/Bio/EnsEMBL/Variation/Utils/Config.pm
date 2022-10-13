@@ -78,7 +78,13 @@ our @clinvar_clinical_significance_types = (
     'confers sensitivity',
     'risk factor',
     'association',
-    'protective'
+    'protective',
+    'affects',
+    'likely pathogenic low penetrance',
+    'pathogenic low penetrance',
+    'uncertain risk allele',
+    'likely risk allele',
+    'established risk allele'
 );
 
 our @dgva_clinical_significance_types = (
