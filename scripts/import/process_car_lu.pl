@@ -120,11 +120,12 @@ sub process_ar {
   # Read in the source data
   my @src_data;
   open(my $sh, '<', $hgvs_file) or die("unable to open $hgvs_file: $!");
+  
   @src_data = <$sh>;
   chomp(@src_data);
   close($sh);
 
-  my $src_count = scalar(@src_data);
+  my $src_count = `cut -f6 $hgvs_file | grep -v ']\$' | wc -l`;
 
   my $json_string;
   {
