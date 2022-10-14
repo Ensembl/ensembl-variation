@@ -28,7 +28,14 @@ process translate_fasta {
 
   script:
     """
-    agat_sp_extract_sequences.pl -g $gtf -f $fasta --protein \
+    # decompress FASTA file if needed
+    if [[ ${fasta.extension} == *gz ]]; then
+      gunzip $fasta
+      seq=${fasta.baseName}
+    else
+      seq=${fasta}
+    fi
+    agat_sp_extract_sequences.pl -g $gtf -f \$seq --protein \
                                  -o ${gtf.baseName}_translated.fa
     """
 }
