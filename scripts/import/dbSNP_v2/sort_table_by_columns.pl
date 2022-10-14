@@ -84,7 +84,7 @@ $dbh->do( "ALTER TABLE ${table_name}_tmp ENABLE KEYS") or die "Failed to re-enab
 
 system("rm ${TMP_DIR}/*${TMP_FILE}*");
 
-warn("TIP!!! REMEMBER TO EXECUTE SQL IN SERVER:\nDROP TABLE ${dbname}.${table_name};\nRENAME TABLE ${dbname}.${table_name}_tmp TO ${dbname}.${table_name};\n");
+warn("Next steps:\nDROP TABLE ${dbname}.${table_name};\nRENAME TABLE ${dbname}.${table_name}_tmp TO ${dbname}.${table_name};\n");
 
 sub usage{
 
