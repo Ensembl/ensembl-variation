@@ -157,6 +157,12 @@ sub process_ar {
       $len_count++;
       next;
     }
+    if ($hgvs =~ /]$/) {
+      print $log_fh "ERROR: $filename hgvs un-supported ", (split("\t",$src_data[$i]))[0,5], "\n";
+      $len_count++;
+      $i--;
+      next;
+    }
     if (length($hgvs) > 600) {
       print $log_fh "ERROR: $filename hgvs too long ", (split("\t",$src_data[$i]))[0,5], "\n";
       $len_count++;
