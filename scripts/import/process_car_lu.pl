@@ -157,6 +157,7 @@ sub process_ar {
       $len_count++;
       next;
     }
+    # un-supported hgvs has not been looked-up; so skip incrementing look-up file counter
     if ($hgvs =~ /]$/) {
       print $log_fh "ERROR: $filename hgvs un-supported ", (split("\t",$src_data[$i]))[0,5], "\n";
       $len_count++;
