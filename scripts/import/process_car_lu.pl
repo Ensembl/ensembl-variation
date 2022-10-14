@@ -149,7 +149,7 @@ sub process_ar {
   my $err_count = 0;
   my $len_count = 0;
 
-  for (my $i = 0; $i <= $#src_data; $i++) {
+  for (my $i = 0, my $j = 0; $i <= $#src_data; $i++, $j++) {
     # need to get the fifth element of the inputLine
     my $hgvs = (split("\t", $src_data[$i]))[5];
     if (! $hgvs) {
@@ -160,7 +160,7 @@ sub process_ar {
     if ($hgvs =~ /]$/) {
       print $log_fh "ERROR: $filename hgvs un-supported ", (split("\t",$src_data[$i]))[0,5], "\n";
       $len_count++;
-      $i--;
+      $j--;
       next;
     }
     if (length($hgvs) > 600) {
@@ -168,8 +168,8 @@ sub process_ar {
       $len_count++;
       next;
     }
-    if (exists $data->[$i]->{'@id'}) {
-      my ($car_id) = ($data->[$i]->{'@id'} =~/(CA\d{1,})$/);
+    if (exists $data->[$j]->{'@id'}) {
+      my ($car_id) = ($data->[$j]->{'@id'} =~/(CA\d{1,})$/);
       if ($car_id) {
         print $lh join("\t", (split("\t",$src_data[$i]))[0,5], $car_id), "\n";
         $car_count++;
@@ -179,7 +179,7 @@ sub process_ar {
       }
     } else {
       $err_count++;
-      my $ao = $data->[$i];
+      my $ao = $data->[$j];
       next if (! $ao->{'errorType'});
       print $eh join("\t",
         $src_data[$i],
