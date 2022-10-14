@@ -14,28 +14,44 @@ from mysql.connector import Error
 
 DBVAR_HOST = "ftp.ncbi.nlm.nih.gov"
 
-def get_studies_db(release, var_host, var_port, var_user):
+def get_studies_db(type, release, var_host, var_port, var_user, assembly, species):
 
     studies_from_db = {}
 
-    database_name = f"homo_sapiens_variation_{release}_38"
+    # remove characters from the assembly - keep version
+    # ex: GRCh38 -> 38
+    db_assembly = re.sub('\D', '', assembly)
+
+    species_name = species.lower()
+
+    if (type == "variation"):
+        database_name = f"{species_name}_variation_{release}_{db_assembly}"
+        sql_query_select = """ select st.name, st.study_id from study st 
+                               left join source so on so.source_id = st.source_id 
+                               where so.name = 'dbVar' """
+    else:
+        database_name = type
+        sql_query_select = f""" select result, date from check_result cr 
+                              left join check_dictionary cd on cd.check_id = cr.check_id 
+                              left join ensvar_db en on en.ensvardb_id = cr.ensvardb_id 
+                              where cd.description = 'structural_variation_study' and cr.is_current = 1 
+                              and en.name like '{species_name}_variation_%_{db_assembly}' """
+
     connection = mysql.connector.connect(host=var_host,
                                          database=database_name,
                                          user=var_user,
                                          password='',
                                          port=var_port)
 
-    sql_query_select = "select st.name from study st left join source so on so.source_id = st.source_id where so.name = 'dbVar'"
-
     try:
         if connection.is_connected():
             cursor = connection.cursor()
             cursor.execute(sql_query_select)
             data = cursor.fetchall()
-            print ("Fetching studies from database...")
+            print (f"Fetching studies from {database_name}...")
             for row in data:
-                studies_from_db[row[0]] = 1
-            print ("Fetching studies from database... done")
+                studies_from_db[row[0]] = row[1]
+            print (f"Fetching studies from {database_name}... done")
 
     except Error as e:
         print("Error while connecting to MySQL", e)
@@ -63,6 +79,9 @@ def main():
     parser.add_argument("--host")
     parser.add_argument("--port")
     parser.add_argument("--user")
+    parser.add_argument("--print_all",
+                        default=0,
+                        help="run --print_all 1 to print all studies from variation db")
     args = parser.parse_args()
 
     species = args.species
@@ -72,14 +91,19 @@ def main():
     host = args.host
     port = args.port
     user = args.user
+    option_print = args.print_all
     files_dir = f"/pub/dbVar/data/{species}/by_study/{format}"
 
     ftp = FTP(DBVAR_HOST)
     ftp.login()
     ftp.cwd(files_dir)
 
-    # get list of studies from database
-    current_studies = get_studies_db(release, host, port, user)
+    # get list of studies from the Variation database
+    current_studies = get_studies_db("variation", release, host, port, user, assembly, species)
+
+    # get list of studies from production db
+    # this db contains the date last time the studies where imported into variation database
+    studies_from_production = get_studies_db("production", release, "mysql-ens-var-prod-1", "4449", user, assembly, species)
 
     # use the date from production db
     # first update the import script to write to production db
@@ -118,13 +142,19 @@ def main():
         file_assembly = filename_split[1]
 
         if (assembly == file_assembly):
-            file_list[file_study] = str(file_date)
+            file_list[file_study] = file_date
 
     with open(output_file_update, "w") as f:
-        f.write("Study name\tDate last updated on dbVar FTP\n")
+        f.write("Study name\tDate last updated on dbVar FTP\tComments\n")
         for st in file_list.keys():
-            if st in current_studies:
-                f.write(st + "\t" + file_list[st] + "\n")
+            if option_print == 1:
+                if st in current_studies and st in studies_from_production and studies_from_production[st].date() < file_list[st]:
+                    print (studies_from_production[st].date())
+                    print (file_list[st])
+                    f.write(st + "\t" + str(file_list[st]) + "\tPlease update study\n")
+            else:
+                if st in current_studies and st not in studies_from_production:
+                    f.write(st + "\t" + str(file_list[st]) + "\tStudy not found in production db\n")
 
 if __name__ == '__main__':
     main()
