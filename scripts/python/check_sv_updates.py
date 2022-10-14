@@ -79,7 +79,9 @@ def main():
                         default="gvf")
     parser.add_argument("-r", "--release", required=True)
     parser.add_argument("--host", required=True)
+    parser.add_argument("--prod-host", required=True)
     parser.add_argument("--port", required=True)
+    parser.add_argument("--prod-port", required=True)
     parser.add_argument("--user", required=True)
     parser.add_argument("--print-all", action='store_true',
                         help=""" use option --print_all to return all studies from the variation db 
@@ -91,7 +93,9 @@ def main():
     format = args.format
     release = args.release
     host = args.host
+    prod_host = args.prod_host
     port = args.port
+    prod_port = args.prod_port
     user = args.user
     option_print = args.print_all
     files_dir = f"/pub/dbVar/data/{species}/by_study/{format}"
@@ -105,7 +109,7 @@ def main():
 
     # get dictionary of studies from production db
     # this db contains the date last time the studies where imported into variation database
-    studies_from_production = get_studies_db("production", release, "mysql-ens-var-prod-1", "4449", user, assembly, species)
+    studies_from_production = get_studies_db("production", release, prod_host, prod_port, user, assembly, species)
 
     # use the date from production db
     # first update the import script to write to production db
