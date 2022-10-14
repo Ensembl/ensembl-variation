@@ -84,23 +84,24 @@ sub dumpPreparedSQL {
 }
 
 # Get Variation_feature size
-my $sql = qq{SELECT count(*) FROM variation_feature};
+my $sql = qq{ SELECT MIN(variation_feature_id), MAX(variation_feature_id) FROM variation_feature };
 my $sth = $old_dbh->prepare( $sql );
 $sth->execute();
-my $size = $sth->fetchall_arrayref()->[0]->[0];
+my $vf = $sth->fetchall_arrayref();
+my $min_id = $vf->[0]->[0];
+my $max_id = $vf->[0]->[1];
 my $chunk = 1000000; # Buffer_size number to avoid memory issues
 
-for my $tmp_num (map { $_ } 0 .. $size/$chunk) {
-  dumpPreparedSQL($old_dbh, $tmp_num, $chunk, $size);
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dumpPreparedSQL($old_dbh, $tmp_num, $chunk, $max_id);
 }
 
 system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE | sort -u > $TMP_DIR/$TMP_FILE.not_empty");
 
 ### Dump new variation_set_variation / Update new variation_feature.variation_set_id
 
-my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE name = ? limit 1]);
-my $syn_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation_synonym WHERE name= ? limit 1]);
-my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
+  my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE name = ? limit 1]);
+  my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
 
 my $vsv_create_sth = $dbh->prepare(qq[ CREATE TABLE IF NOT EXISTS $tmp_vset_table LIKE variation_set_variation ]);
 my $vsv_dis_sth = $dbh->prepare(qq[ ALTER TABLE $tmp_vset_table DISABLE KEYS ]);
@@ -115,26 +116,19 @@ or die( "Cannot open $TMP_DIR/$TMP_FILE.dump: $!" );
 
 open my $list, "$TMP_DIR/$TMP_FILE.not_empty" || die "Failed to open var list $ARGV[0] : $!\n"; 
 while(<$list>){
-  next unless /rs/; 
+  next unless /^rs/; 
   chomp;
 
   my $rs  = (split)[0];
   my $sets = (split)[1];
 
-  $var_ext_sth->execute($rs)||die;
+  $var_ext_sth->execute($rs) or die;
   my $id =   $var_ext_sth->fetchall_arrayref();
 
-  unless (defined $id->[0]->[0]){
-    $syn_ext_sth->execute($rs)||die;
-    $id =   $syn_ext_sth->fetchall_arrayref();
-  }
-
-  unless (defined $id->[0]->[0]){
-    next;
-  }
+  next unless (defined $id->[0]->[0]);
 
   ## Check if variation_feature already has variation_set filled
-  $vfid_ext_sth->execute($id->[0]->[0])||die;
+  $vfid_ext_sth->execute($id->[0]->[0]) or die;
   my $vf = $vfid_ext_sth->fetchall_arrayref();
   next if $vf->[0]->[0] ne "";
 
