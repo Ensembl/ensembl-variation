@@ -96,7 +96,10 @@ log.info """
   """
 
 // Module imports
-include { translate_fasta }           from './nf_modules/translations.nf'
+include { decompress;
+          decompress as decompress_gtf;
+          decompress as decompress_fasta;
+          translate_fasta }           from './nf_modules/translations.nf'
 include { store_translation_mapping } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
@@ -131,10 +134,10 @@ workflow {
   if (!params.translated) {
     gtf   = Channel.fromPath(  params.gtf.tokenize(','), checkIfExists: true)
     fasta = Channel.fromPath(params.fasta.tokenize(','), checkIfExists: true)
-    translate_fasta(gtf, fasta)
+    translate_fasta(decompress_gtf(gtf), decompress_fasta(fasta))
     translated = translate_fasta.out
   } else {
-    translated = Channel.fromPath(params.translated.tokenize(','))
+    translated = decompress(Channel.fromPath(params.translated.tokenize(',')))
   }
 
   // Parse translation FASTA file

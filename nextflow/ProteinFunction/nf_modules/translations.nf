@@ -1,5 +1,26 @@
 #!/usr/bin/env nextflow
 
+process decompress {
+  /*
+  Decompress file (if gzipped)
+
+  Returns decompressed file
+  */
+  container "quay.io/biocontainers/agat:0.9.0--pl5321hdfd78af_0"
+
+  input:
+    path file
+
+  output:
+    path '*', includeInputs: true
+
+  """
+  if [[ ${file.extension} == *gz ]]; then
+    gunzip $file
+  fi
+  """
+}
+
 /*
  * AGAT: Another GTF/GFF Analysis Toolkit
  */
@@ -28,21 +49,7 @@ process translate_fasta {
 
   script:
     """
-    # decompress FASTA file if gzipped
-    seq=${fasta}
-    if [[ ${fasta.extension} == *gz ]]; then
-      gunzip ${fasta}
-      seq=${fasta.baseName}
-    fi
-
-    # decompress GTF file if gzipped
-    annot=${gtf}
-    if [[ ${gtf.extension} == *gz ]]; then
-      gunzip ${gtf}
-      annot=${gtf.baseName}
-    fi
-
-    agat_sp_extract_sequences.pl -g \$annot -f \$seq --protein \
+    agat_sp_extract_sequences.pl -g ${gtf} -f ${fasta} --protein \
                                  -o ${gtf.baseName}_translated.fa
     """
 }
