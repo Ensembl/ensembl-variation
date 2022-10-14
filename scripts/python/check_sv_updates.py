@@ -24,18 +24,20 @@ def get_studies_db(type, release, var_host, var_port, var_user, assembly, specie
 
     species_name = species.lower()
 
-    if (type == "variation"):
+    if type == "variation":
         database_name = f"{species_name}_variation_{release}_{db_assembly}"
-        sql_query_select = """ select st.name, st.study_id from study st 
-                               left join source so on so.source_id = st.source_id 
-                               where so.name = 'dbVar' """
+        sql_query_select = """ SELECT st.name, st.study_id FROM study st 
+                               LEFT JOIN source so ON so.source_id = st.source_id 
+                               WHERE so.name = %s """
+        params = ["dbVar"]
     else:
         database_name = type
-        sql_query_select = f""" select result, date from check_result cr 
-                              left join check_dictionary cd on cd.check_id = cr.check_id 
-                              left join ensvar_db en on en.ensvardb_id = cr.ensvardb_id 
-                              where cd.description = 'structural_variation_study' and cr.is_current = 1 
-                              and en.name like '{species_name}_variation_%_{db_assembly}' """
+        sql_query_select = """ SELECT cr.result, cr.date FROM check_result cr 
+                              LEFT JOIN check_dictionary cd ON cd.check_id = cr.check_id 
+                              LEFT JOIN ensvar_db en ON en.ensvardb_id = cr.ensvardb_id 
+                              WHERE cd.description = 'structural_variation_study' AND cr.is_current = 1 
+                              AND en.name LIKE %s """
+        params = [f"{species_name}_variation_%_{db_assembly}"]
 
     connection = mysql.connector.connect(host=var_host,
                                          database=database_name,
@@ -46,7 +48,7 @@ def get_studies_db(type, release, var_host, var_port, var_user, assembly, specie
     try:
         if connection.is_connected():
             cursor = connection.cursor()
-            cursor.execute(sql_query_select)
+            cursor.execute(sql_query_select, params)
             data = cursor.fetchall()
             print (f"Fetching studies from {database_name}...")
             for row in data:
@@ -75,13 +77,13 @@ def main():
                         help="species assembly (default: GRCh38)")
     parser.add_argument("-f", "--format",
                         default="gvf")
-    parser.add_argument("-r", "--release")
-    parser.add_argument("--host")
-    parser.add_argument("--port")
-    parser.add_argument("--user")
-    parser.add_argument("--print_all",
-                        default=0,
-                        help="run --print_all 1 to print all studies from variation db")
+    parser.add_argument("-r", "--release", required=True)
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--port", required=True)
+    parser.add_argument("--user", required=True)
+    parser.add_argument("--print-all", action='store_true',
+                        help=""" use option --print_all to return all studies from the variation db 
+                        even the ones not found in production db """)
     args = parser.parse_args()
 
     species = args.species
@@ -98,17 +100,16 @@ def main():
     ftp.login()
     ftp.cwd(files_dir)
 
-    # get list of studies from the Variation database
+    # get dictionary of studies from the Variation database
     current_studies = get_studies_db("variation", release, host, port, user, assembly, species)
 
-    # get list of studies from production db
+    # get dictionary of studies from production db
     # this db contains the date last time the studies where imported into variation database
     studies_from_production = get_studies_db("production", release, "mysql-ens-var-prod-1", "4449", user, assembly, species)
 
     # use the date from production db
     # first update the import script to write to production db
-    today = date.today()
-    current_year = today.year
+    current_year = date.today().year
 
     out = []
     ftp.retrlines('LIST', out.append)
@@ -119,7 +120,6 @@ def main():
     # output files
     dest_dir = os.getcwd()
     output_file_update = os.path.join(dest_dir, "studies_to_update.txt")
-    output_file_notdb = os.path.join(dest_dir, "studies_to_import.txt")
 
     # specific to dbVar - create separate function
     for line in out:
@@ -141,20 +141,18 @@ def main():
         file_study = filename_split[0]
         file_assembly = filename_split[1]
 
-        if (assembly == file_assembly):
+        if assembly == file_assembly and file_study not in file_list:
             file_list[file_study] = file_date
 
     with open(output_file_update, "w") as f:
         f.write("Study name\tDate last updated on dbVar FTP\tComments\n")
         for st in file_list.keys():
-            if option_print == 1:
+            if option_print == False:
                 if st in current_studies and st in studies_from_production and studies_from_production[st].date() < file_list[st]:
-                    print (studies_from_production[st].date())
-                    print (file_list[st])
-                    f.write(st + "\t" + str(file_list[st]) + "\tPlease update study\n")
+                    f.write(f"{st}\t{str(file_list[st])}\tPlease update study\n")
             else:
                 if st in current_studies and st not in studies_from_production:
-                    f.write(st + "\t" + str(file_list[st]) + "\tStudy not found in production db\n")
+                    f.write(f"{st}\t{str(file_list[st])}\tStudy not found in production db\n")
 
 if __name__ == '__main__':
     main()
