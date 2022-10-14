@@ -67,8 +67,7 @@ def get_studies_db(type, release, var_host, var_port, var_user, assembly, specie
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Checks structural variant studies "
-                                                 "to be updated/imported ")
+    parser = argparse.ArgumentParser(description="Structural Variant studies to be updated for a release")
     parser.add_argument("-sp", "--species",
                         default="Homo_sapiens",
                         help="species (default: Homo_sapiens)")
@@ -121,11 +120,10 @@ def main():
     # store info for each study id
     file_list = {}
 
-    # output files
+    # output file
     dest_dir = os.getcwd()
     output_file_update = os.path.join(dest_dir, "studies_to_update.txt")
 
-    # specific to dbVar - create separate function
     for line in out:
         line.strip()
 
