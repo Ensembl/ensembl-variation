@@ -28,14 +28,21 @@ process translate_fasta {
 
   script:
     """
-    # decompress FASTA file if needed
+    # decompress FASTA file if gzipped
+    seq=${fasta}
     if [[ ${fasta.extension} == *gz ]]; then
-      gunzip $fasta
+      gunzip ${fasta}
       seq=${fasta.baseName}
-    else
-      seq=${fasta}
     fi
-    agat_sp_extract_sequences.pl -g $gtf -f \$seq --protein \
+
+    # decompress GTF file if gzipped
+    annot=${gtf}
+    if [[ ${gtf.extension} == *gz ]]; then
+      gunzip ${gtf}
+      annot=${gtf.baseName}
+    fi
+
+    agat_sp_extract_sequences.pl -g \$annot -f \$seq --protein \
                                  -o ${gtf.baseName}_translated.fa
     """
 }
