@@ -90,7 +90,7 @@ sub usage{
 
   die "\n\tUsage: sort_table_by_cols.pl
   \t\t-registry [registry file]
-  \t\t-columns [comma separated numbers]
+  \t\t-columns [comma-separated list of numbers]
   \t\t-table_name [table name]
   \t\t-tmp [temp folder]\n\n";
 }
