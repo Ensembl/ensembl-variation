@@ -37,6 +37,7 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
+use URI::Escape qw(uri_unescape);
 
 our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $var_set_id, $mapping, $num_gaps,
      $target_assembly, $cs_version_number, $size_diff, $version, $registry_file, $medgen_file, $hpo_file, $replace_study, $debug);
@@ -154,6 +155,7 @@ my $dbVar = $vdb->dbc->db_handle;
 my $csa = Bio::EnsEMBL::Registry->get_adaptor($species, "core", "coordsystem");
 our $default_cs = $csa->fetch_by_name("chromosome");
 
+my $int_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'intvar');
 
 # set the target assembly
 $target_assembly ||= $default_cs->version;
@@ -174,6 +176,7 @@ my $phenotype_data;
 
 my $source_id = source();
 
+my @study_names;
 
 
 ##########
@@ -184,7 +187,7 @@ pre_processing();
 
 foreach my $in_file (@files) {
   next if ($in_file !~ /\.gvf$/);
-  
+
   $in_file =~ /^(\w{4}\d+)_/;
   if ($study_to_skip{$1}) {
     debug("Study $1 (".$in_file.") skipped because it contains non ".$species." data");
@@ -202,6 +205,10 @@ foreach my $in_file (@files) {
   else {
     $fname = $in_file;
   }
+
+  # save the study name for later to insert into internal db
+  my @split_name = split(/\./, $fname, 2);
+  push (@study_names, $split_name[0]);
 
   # Variation set - 1000 Genomes phase 3 and gnomAD
   if ($species =~ /homo|human/i && $fname =~ /estd214/) {
@@ -262,6 +269,7 @@ post_processing_failed_variants();
 
 # Finishing methods
 meta_coord();
+update_internal_db();
 verifications(); # URLs
 cleanup() if (!defined($debug));
 
@@ -1510,14 +1518,20 @@ sub parse_9th_col {
     }
 
     if ($key eq 'clinical_significance' || $key eq 'clinical_int'){
+
+      # Convert encoded string, example: Likely%20pathogenic
+      $value = uri_unescape($value);
+      $value = lc($value);
+
       # Conflicting is not accepted in clinical significance column but shorten anyway
-      $value =~ s/Conflicting interpretations of pathogenicity/conflicting/;
+      $value =~ s/conflicting interpretations of pathogenicity/conflicting/;
       $value =~ s/conflicting data from submitters/conflicting/;
 
       # Replace unsupported character, example: 'benign/likely benign' -> 'benign,likely benign'
-      $value =~ s/\//,/;
-      $value =~ s/, /,/;
-      $info->{clinical} = lc($value);
+      $value =~ s/\//,/g;
+      $value =~ s/,\s+/,/g; # convert 'benign, association, risk factor' to 'benign,association,risk factor'
+      $value =~ s/pathogenic,low penetrance/pathogenic low penetrance/; # remove comma from values
+      $info->{clinical} = $value;
     }
 
     $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
@@ -1865,13 +1879,16 @@ sub post_processing_clinical_significance {
   foreach my $data (@{$all_clin_sign}){
     my $sv_id = $data->[0];
     my $clin_sign_dup = $data->[1];
-    my @clin_sign_list = split ',', $clin_sign_dup;
+
+    my @clin_sign_list = split (',', $clin_sign_dup);
+
     my %unique_clin_sign;
     foreach my $key (@clin_sign_list) {
       $unique_clin_sign{$key} = 1;
     }
     my @new_clin_sign_unique = keys %unique_clin_sign;
-    my $clin_sign_unique_final = join ',', @new_clin_sign_unique;
+
+    my $clin_sign_unique_final = join (',', @new_clin_sign_unique);
 
     $sth_insert_temp->execute($sv_id, $clin_sign_unique_final);
   }
@@ -1912,6 +1929,58 @@ sub meta_coord{
   $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('$svf_table', $cs, $max_length);});
 }
 
+sub update_internal_db {
+  debug(localtime()." Adding entries to internal database");
+
+  if(!$int_dba) {
+    print STDERR "No internal database connection found to write status\n";
+    return;
+  }
+
+  my $ensvardb_dba = $int_dba->get_EnsVardbAdaptor();
+  my $result_dba   = $int_dba->get_ResultAdaptor();
+  my $ensdb_name   = $vdb->dbc->dbname;
+
+  my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
+
+  # create EnsVardb
+  if(!$ensdb) {
+    # get ensembl version
+    my @split = split/\_/,$ensdb_name;
+    pop @split;
+    my $ens_version = pop @split;
+
+    $ensdb = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({
+      name        => $ensdb_name,
+      species     => $species,
+      version     => $ens_version,
+      status_desc => 'Created'
+    });
+    $ensdb->genome_reference($target_assembly);
+    $ensvardb_dba->store($ensdb);
+  }
+
+  $ensvardb_dba->update_status($ensdb, 'structural_variation_run');
+
+  foreach my $st_name (@study_names) {
+    my $type = 'structural_variation_study';
+    ## set any previous results to non current for this type and species
+    if ($species =~ /homo|human/i) {
+      $result_dba->set_non_current_by_species_assembly_and_type($species, $target_assembly, $type);
+    } else {
+      $result_dba->set_non_current_by_species_and_type($species, $type);
+    }
+
+    my $result = Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                          result_value => $st_name,
+                                                          result_type  => $type,
+                                                          adaptor      => $result_dba
+                                                         });
+    $result_dba->store($result);
+  }
+
+  debug(localtime()." Entries added to internal database");
+}
 
 sub verifications {
   debug(localtime()." Verification of ftp links");
@@ -2130,21 +2199,23 @@ sub get_hpo_phenotype {
 sub usage {
   die shift, qq{
 
-Options:
-  -species         : species name (required)
+Required arguments:
+  -species         : species name
+  -version         : date of data import in YYYYMM format -- e.g., 202210
+  -input_file      : file containing data dump (required if no input_dir)
+  -input_dir       : directory containing data dump (required if no input_file)
+
+Optional arguments:
+  -source_name     : name of data source (default: DGVa)
+  -registry        : registry file (default: ensembl.registry)
+  -replace         : flag to remove existing study data from the database before import (default: false)
   -target_assembly : assembly version to map to (optional)
-  -tmpdir          : (optional)
-  -tmpfile         : (optional)
-  -input_file      : file containing DGVa data dump (required if no input_dir)
-  -input_dir       : directory containing DGVa data dump (required if no input_file)
-  -mapping         : if set, the data will be mapped to $target_assembly using the Ensembl API
-  -gaps            : number of gaps allowed in mapping (defaults to 1) (optional)
-  -size_diff       : % difference allowed in size after mapping (optional)
-  -version         : version number of the data (required)
-  -registry        : registry file (optional)
-  -medgen_file     : Path to the unzipped MedGen file (see on https://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
-  -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastSuccessfulBuild/artifact/hp/hp.obo)
-  -replace         : flag to remove the existing study data from the database before import them (optional)
-  -debug           : flag to keep the $temp_table table (optional)
+
+  -mapping         : if set, map data to $target_assembly using the Ensembl API (default: false)
+  -gaps            : number of gaps allowed in mapping (default: 1)
+  -debug           : flag to keep the temp_cnv table (default: false)
+
+  -medgen_file     : path to the unzipped MedGen file (see on https://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
+  -hpo_file        : path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastSuccessfulBuild/artifact/hp/hp.obo)
   };
 }
