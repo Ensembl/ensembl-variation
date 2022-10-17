@@ -2199,21 +2199,23 @@ sub get_hpo_phenotype {
 sub usage {
   die shift, qq{
 
-Options:
-  -species         : species name (required)
+Required arguments:
+  -species         : species name
+  -version         : date of data import in YYYYMM format -- e.g., 202210
+  -input_file      : file containing data dump (required if no input_dir)
+  -input_dir       : directory containing data dump (required if no input_file)
+
+Optional arguments:
+  -source_name     : name of data source (default: DGVa)
+  -registry        : registry file (default: ensembl.registry)
+  -replace         : flag to remove existing study data from the database before import (default: false)
   -target_assembly : assembly version to map to (optional)
-  -tmpdir          : (optional)
-  -tmpfile         : (optional)
-  -input_file      : file containing DGVa data dump (required if no input_dir)
-  -input_dir       : directory containing DGVa data dump (required if no input_file)
-  -mapping         : if set, the data will be mapped to $target_assembly using the Ensembl API
-  -gaps            : number of gaps allowed in mapping (defaults to 1) (optional)
-  -size_diff       : % difference allowed in size after mapping (optional)
-  -version         : version number of the data (required)
-  -registry        : registry file (optional)
-  -medgen_file     : Path to the unzipped MedGen file (see on ftp://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
-  -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastSuccessfulBuild/artifact/hp/hp.obo)
-  -replace         : flag to remove the existing study data from the database before import them (optional)
-  -debug           : flag to keep the $temp_table table (optional)
+
+  -mapping         : if set, map data to $target_assembly using the Ensembl API (default: false)
+  -gaps            : number of gaps allowed in mapping (default: 1)
+  -debug           : flag to keep the temp_cnv table (default: false)
+
+  -medgen_file     : file containing the mapping between medgen IDs and the phenotype description (cf. section "Use phenotype ontologies")
+  -hpo_file        : file containing the mapping between HP IDs and the phenotype description (cf. section "Use phenotype ontologies")
   };
 }
