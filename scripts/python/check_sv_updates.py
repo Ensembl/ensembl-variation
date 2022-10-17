@@ -82,8 +82,8 @@ def main():
     parser.add_argument("--port", required=True)
     parser.add_argument("--prod-port", required=True)
     parser.add_argument("--user", required=True)
-    parser.add_argument("--print-all", action='store_true',
-                        help=""" use option --print_all to return all studies from the variation db 
+    parser.add_argument("--report-all", action='store_true',
+                        help=""" use option --report_all to return all studies from the variation db 
                         even the ones not found in production db """)
     args = parser.parse_args()
 
@@ -96,7 +96,7 @@ def main():
     port = args.port
     prod_port = args.prod_port
     user = args.user
-    option_print = args.print_all
+    option_report = args.report_all
     files_dir = f"/pub/dbVar/data/{species}/by_study/{format}"
 
     ftp = FTP(DBVAR_HOST)
@@ -149,7 +149,7 @@ def main():
     with open(output_file_update, "w") as f:
         f.write("Study name\tDate last updated on dbVar FTP\tComments\n")
         for st in file_list.keys():
-            if option_print == False:
+            if option_report == False:
                 if st in current_studies and st in studies_from_production and studies_from_production[st].date() < file_list[st]:
                     f.write(f"{st}\t{str(file_list[st])}\tPlease update study\n")
             else:
