@@ -142,15 +142,19 @@ log.info """
   PPH2 data  : ${params.pph_data}
   """
 
+def getFiles (files) {
+  Channel.fromPath( files.tokenize(','), checkIfExists: true )
+}
+
 workflow {
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
-    gtf   = Channel.fromPath(  params.gtf.tokenize(','), checkIfExists: true)
-    fasta = Channel.fromPath(params.fasta.tokenize(','), checkIfExists: true)
+    gtf   = getFiles(params.gtf)
+    fasta = getFiles(params.fasta)
     translate_fasta(decompress_gtf(gtf), decompress_fasta(fasta))
     translated = translate_fasta.out
   } else {
-    translated = decompress(Channel.fromPath(params.translated.tokenize(',')))
+    translated = decompress(getFiles(params.translated))
   }
 
   // Parse translation FASTA file
