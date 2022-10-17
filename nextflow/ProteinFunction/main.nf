@@ -78,24 +78,6 @@ if (params.help) {
   exit 1
 }
 
-log.info """
-  Predict protein function using SIFT and PolyPhen-2
-  --------------------------------------------------
-  GTF       : ${params.gtf}
-  FASTA     : ${params.fasta}
-
-  host      : ${params.host}
-  port      : ${params.port}
-  user      : ${params.user}
-  database  : ${params.database}
-
-  SIFT run  : ${params.sift_run_type}
-  blastdb   : ${params.blastdb}
-
-  PPH2 run  : ${params.pph_run_type}
-  PPH2 data : ${params.pph_data}
-  """
-
 // Module imports
 include { decompress;
           decompress as decompress_gtf;
@@ -104,6 +86,13 @@ include { decompress;
 include { store_translation_mapping } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
+
+// Check input data
+if (!params.fasta && !params.gtf && !params.translated) {
+  exit 1, "ERROR: arguments --fasta/--gtf or --translated are mandatory"
+} else if (!(params.fasta && params.gtf)) {
+  exit 1, "ERROR: both --fasta and --gtf need to be defined"
+} 
 
 // Check run type for each protein function predictor
 def check_run_type ( run ) {
@@ -116,19 +105,40 @@ def check_run_type ( run ) {
 check_run_type( params.sift_run_type )
 check_run_type( params.pph_run_type )
 
-// Check if supplying PolyPhen-2 data and if species is human 
+// PolyPhen-2: check if providing databases and if species is human
 if ( params.pph_run_type != "NONE" ) {
   if ( params.species != "homo_sapiens" ) {
     exit 1, "ERROR: PolyPhen-2 only works with human data"
   } else if ( !params.pph_data) {
-    exit 1, "ERROR: --pph_data must be supplied when running PolyPhen-2"
+    exit 1, "ERROR: --pph_data must be provided when running PolyPhen-2"
   }
 }
 
-// Check blastdb for SIFT
+// SIFT: check blastdb
 if ( params.sift_run_type != "NONE" && !params.blastdb ) {
   exit 1, "ERROR: --blastdb must be supplied when running SIFT"
 }
+
+log.info """
+  Predict protein function using SIFT and PolyPhen-2
+  --------------------------------------------------
+  species    : ${params.species}
+  GTF        : ${params.gtf}
+  FASTA      : ${params.fasta}
+  translated : ${params.translated}
+  outidr     : ${params.outdir}
+
+  host       : ${params.host}
+  port       : ${params.port}
+  user       : ${params.user}
+  database   : ${params.database}
+
+  SIFT run   : ${params.sift_run_type}
+  blastdb    : ${params.blastdb}
+
+  PPH2 run   : ${params.pph_run_type}
+  PPH2 data  : ${params.pph_data}
+  """
 
 workflow {
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
