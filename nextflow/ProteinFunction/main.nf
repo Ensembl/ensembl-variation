@@ -88,11 +88,13 @@ include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
 // Check input data
-if (!params.fasta && !params.gtf && !params.translated) {
-  exit 1, "ERROR: arguments --fasta/--gtf or --translated are mandatory"
-} else if (!(params.fasta && params.gtf)) {
-  exit 1, "ERROR: both --fasta and --gtf need to be defined"
-} 
+if (!params.translated) {
+  if (!params.fasta && !params.gtf) {
+    exit 1, "ERROR: arguments --fasta/--gtf or --translated are mandatory"
+  } else if (!params.fasta || !params.gtf ) {
+    exit 1, "ERROR: both --fasta and --gtf need to be defined"
+  }
+}
 
 // Check run type for each protein function predictor
 def check_run_type ( run ) {
