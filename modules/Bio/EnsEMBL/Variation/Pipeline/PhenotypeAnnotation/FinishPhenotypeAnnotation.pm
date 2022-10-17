@@ -77,7 +77,9 @@ sub run {
 
   ## updated production db for later use
   $self->update_internal_db($new_counts);
-
+   
+  $self->clean_phenotype_tables();
+  
   close($self->logFH) if defined $self->logFH ;
 }
 
