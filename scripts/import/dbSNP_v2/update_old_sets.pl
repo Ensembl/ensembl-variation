@@ -100,8 +100,8 @@ system("awk '{if (\$2) print \$0;}' $TMP_DIR/$TMP_FILE | sort -u > $TMP_DIR/$TMP
 
 ### Dump new variation_set_variation / Update new variation_feature.variation_set_id
 
-  my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE name = ? limit 1]);
-  my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
+my $var_ext_sth = $dbh->prepare(qq[ SELECT variation_id FROM variation WHERE name = ? limit 1]);
+my $vfid_ext_sth = $dbh->prepare(qq[ SELECT variation_set_id from variation_feature WHERE variation_id = ? limit 1]);
 
 my $vsv_create_sth = $dbh->prepare(qq[ CREATE TABLE IF NOT EXISTS $tmp_vset_table LIKE variation_set_variation ]);
 my $vsv_dis_sth = $dbh->prepare(qq[ ALTER TABLE $tmp_vset_table DISABLE KEYS ]);
@@ -192,7 +192,7 @@ system("rm $TMP_DIR/$TMP_FILE $TMP_DIR/$TMP_FILE.not_empty $TMP_DIR/$TMP_FILE.du
 $dbh->do(qq{ DROP TABLE IF EXISTS variation_set_variation }) or die "Failed to drop variation_set_variation table";
 $dbh->do(qq{ ALTER TABLE $tmp_vset_table RENAME TO variation_set_variation }) or die "Failed to rename table";
 
-sub usage{
+sub usage {
 
   die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
 }
