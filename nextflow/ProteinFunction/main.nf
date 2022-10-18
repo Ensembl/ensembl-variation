@@ -79,10 +79,8 @@ if (params.help) {
 }
 
 // Module imports
-include { decompress;
-          decompress as decompress_gtf;
-          decompress as decompress_fasta;
-          translate_fasta }           from './nf_modules/translations.nf'
+include { decompress }                from './nf_modules/utils.nf'
+include { translate_fasta }           from './nf_modules/translations.nf'
 include { store_translation_mapping } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
@@ -149,12 +147,10 @@ def getFiles (files) {
 workflow {
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
-    gtf   = getFiles(params.gtf)
-    fasta = getFiles(params.fasta)
-    translate_fasta(decompress_gtf(gtf), decompress_fasta(fasta))
+    translate_fasta(getFiles(params.gtf), getFiles(params.fasta))
     translated = translate_fasta.out
   } else {
-    translated = decompress(getFiles(params.translated))
+    translated = getFiles(params.translated)
   }
 
   // Parse translation FASTA file
