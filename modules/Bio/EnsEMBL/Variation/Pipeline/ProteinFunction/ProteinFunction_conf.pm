@@ -121,12 +121,13 @@ sub default_options {
 
         # location of the software
 
-        pph_dir                 => '/nfs/production/panda/ensembl/variation/software/polyphen-2.2.2',
+        pph_dir                 => '/hps/software/users/ensembl/variation/polyphen-2.2.3',
+        pph_data                => $self->o('pph_dir').'/data',
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
         pph_working             => $self->o('species_dir').'/polyphen_working',
-        
+
         # specify the Weka classifier models here, if you don't want predictions from 
         # one of the classifier models set the value to the empty string
 
@@ -257,6 +258,7 @@ sub pipeline_analyses {
                 cadd_annotation => $self->o('cadd_annotation'),
                 include_lrg     => $self->o('include_lrg'),
                 polyphen_dir    => $self->o('pph_dir'),
+                polyphen_data   => $self->o('pph_data'),
                 sift_dir        => $self->o('sift_dir'),                
                 blastdb         => $self->o('blastdb'),
                 include_refseq  => $self->o('include_refseq'),
@@ -280,6 +282,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunPolyPhen',
             -parameters     => {
                 pph_dir     => $self->o('pph_dir'),
+                pph_data    => $self->o('pph_data'),
                 pph_working => $self->o('pph_working'),
                 use_compara => $self->o('pph_use_compara'),
                 @common_params,
@@ -299,6 +302,7 @@ sub pipeline_analyses {
                 pph_dir         => $self->o('pph_dir'),
                 humdiv_model    => $self->o('humdiv_model'),
                 humvar_model    => $self->o('humvar_model'),
+                pph_data        => $self->o('pph_data'),
                 @common_params,
             },
             -max_retry_count => 0,
