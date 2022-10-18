@@ -49,6 +49,7 @@ sub run {
 
     my $humdiv_model = $self->required_param('humdiv_model');
     my $humvar_model = $self->required_param('humvar_model');
+    my $pph_data = $self->required_param('pph_data');
 
     # copy stuff to /tmp to avoid lustre slowness
 
@@ -89,7 +90,9 @@ sub run {
 
         my $error_file  = "${model_name}.err";
 
-        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
+        my $cmd = "singularity exec " .
+                  "--bind $pph_data:/opt/pph2/data $pph_dir/polyphen-2_2.2.3.sif " .
+                  "run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
 
         system($cmd) == 0 or die "Failed to run $cmd: $?";
 
@@ -113,6 +116,7 @@ sub run {
             -translation_md5    => $translation_md5,
         );
 
+        my $results_available = 0;
         while (<RESULT>) {
             if (/^#/) {
                 s/#//g;
@@ -138,6 +142,7 @@ sub run {
             my $position    = $results{o_pos};
 
             next unless $position && $alt_aa;
+            $results_available = 1;
 
             $pred_matrix->add_prediction(
                 $position,
@@ -147,9 +152,9 @@ sub run {
             );
         }
 
-        # save the predictions to the database
+        # save the predictions to the database if the matrix is not null
 
-        $pfpma->store($pred_matrix);
+        $pfpma->store($pred_matrix) if $results_available;
     }
 
     remove_tree($tmp_dir);
