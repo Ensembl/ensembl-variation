@@ -207,6 +207,7 @@ foreach my $in_file (@files) {
   }
 
   # save the study name for later to insert into internal db
+  my $fname =~ s/.*\///;
   my @split_name = split(/\./, $fname, 2);
   push (@study_names, $split_name[0]);
 
