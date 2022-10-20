@@ -1966,7 +1966,7 @@ sub update_internal_db {
     my $type = 'structural_variation_study';
     ## set any previous results to non current for this type and species
     if ($species =~ /homo|human/i) {
-      $result_dba->set_non_current_by_species_assembly_and_type($species, $target_assembly, $type);
+      $result_dba->set_non_current_by_species_assembly_and_type($species, $target_assembly, $type, $st_name);
     } else {
       $result_dba->set_non_current_by_species_and_type($species, $type);
     }
