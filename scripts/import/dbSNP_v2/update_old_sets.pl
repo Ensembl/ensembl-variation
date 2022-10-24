@@ -192,6 +192,13 @@ system("rm $TMP_DIR/$TMP_FILE $TMP_DIR/$TMP_FILE.not_empty $TMP_DIR/$TMP_FILE.du
 $dbh->do(qq{ DROP TABLE IF EXISTS variation_set_variation }) or die "Failed to drop variation_set_variation table";
 $dbh->do(qq{ ALTER TABLE $tmp_vset_table RENAME TO variation_set_variation }) or die "Failed to rename table";
 
+# Add Failed to variation set
+$dbh->do(qq{ 
+  INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+  SELECT DISTINCT variation_id, 1 
+  FROM failed_variation; 
+}) or die "Failed to add failed to variation_set_variation table";
+
 sub usage {
 
   die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
