@@ -102,6 +102,10 @@ init_sample_data($config) if (defined $config->{individual} || defined $config->
 $config->{sample} = $config->{individual} if (defined $config->{individual});
 init_consequence_data($config) if ($config->{incl_consequences});
 init_slices($config);
+# If the file already present delete it before starting from start again, otherwise the file gets corrupted
+if( -e $config->{gvf_file} && !-z $config->{gvf_file}){
+  unlink($config->{gvf_file}) or die $config->{gvf_file} . " already exists and can not delete it\n";
+}
 $config->{fh} = FileHandle->new($config->{gvf_file}, 'w');
 print_header($config);
 if ($config->{structural_variations}) {
