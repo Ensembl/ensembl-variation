@@ -190,10 +190,6 @@ foreach my $in_file (@files) {
   next if ($in_file !~ /\.gvf$/);
 
   $in_file =~ /^(\w{4}\d+)_/;
-  if ($study_to_skip{$1}) {
-    debug("Study $1 (".$in_file.") skipped because it contains non ".$species." data");
-    next;
-  }
 
   my $msg ="File: $in_file ($f_count/$f_nb)";
   print "$msg\n";
@@ -208,9 +204,17 @@ foreach my $in_file (@files) {
   }
 
   # save the study name for later to insert into internal db
-  $fname =~ s/.*\///;
-  my @split_name = split(/\./, $fname, 2);
-  push (@study_names, $split_name[0]);
+  my $aux_name = $fname;
+  $aux_name =~ s/.*\///;
+  
+  my @split_name = split(/\./, $aux_name, 2);
+  my $file_study_name = $split_name[0];
+  push (@study_names, $file_study_name);
+
+  if ($study_to_skip{$file_study_name}) {
+    debug("Study $file_study_name (".$in_file.") skipped because it contains non ".$species." data");
+    next;
+  }
 
   # Variation set - 1000 Genomes phase 3 and gnomAD
   if ($species =~ /homo|human/i && $fname =~ /estd214/) {
@@ -229,7 +233,7 @@ foreach my $in_file (@files) {
   $no_mapping_needed = 0;
   $skipped = 0;
   $failed = [];
-  $study_id;
+  $study_id = undef;
   $somatic_study = 0;
 
 
@@ -419,9 +423,7 @@ sub study_table{
 
   $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s
               WHERE s.source_id=st.source_id AND s.name='$source_name' and st.name='$study'};
-  my $rows = $dbVar->selectall_arrayref($stmt);    
-
-  my $assembly_desc;
+  my $rows = $dbVar->selectall_arrayref($stmt);
 
   # UPDATE
   if (scalar (@$rows)) {
@@ -852,7 +854,7 @@ sub structural_variation_sample {
     my $rows_strains = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_strains) {
       my $strain = $row->[0];
-      next if ($strain eq  '');
+      next if (!$strain);
 
       my $gender = 'Unknown';
       if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
@@ -875,7 +877,7 @@ sub structural_variation_sample {
     foreach my $row (@$rows_samples) {
       my $sample  = $row->[0];
       my $subject = $row->[1];
-      next if ($sample eq  '' || $subject eq '');
+      next if (!$sample || !$subject);
 
       $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,display,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id,"MARTDISPLAYABLE",min(individual_id) FROM individual WHERE name='$subject' LIMIT 1});
     }
@@ -886,7 +888,7 @@ sub structural_variation_sample {
     my $rows_subjects = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_subjects) {
       my $subject = $row->[0];
-      next if ($subject eq  '');
+      next if (!$subject);
 
       my $gender = 'Unknown';
       if($row->[1] =~ /\w+/ && $row->[1] ne 'NULL') {
@@ -905,7 +907,8 @@ sub structural_variation_sample {
     foreach my $row (@$rows_samples) {
       my $sample  = $row->[0];
       my $subject = $row->[1];
-      next if ($sample eq  '' || $subject eq '');
+
+      next if (!$sample || !$subject);
 
       #$dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,study_id,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', $study_id, min(individual_id) FROM individual WHERE name='$subject'});
       $dbVar->do(qq{ INSERT IGNORE INTO sample (name,description,individual_id) SELECT '$sample','Sample from the DGVa study $study_name', min(individual_id) FROM individual WHERE name='$subject'});
@@ -1260,7 +1263,7 @@ sub get_header_info {
   $h->{study}        = (split(' ',$info))[0] if ($label =~ /Study.+accession/i);
 
   # COSMIC study_type = 'Collection' but display name = 'COSMIC'
-  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i || $h->{author} =~ /COSMIC/);
+  $somatic_study = 1 if (($h->{study_type} && $h->{study_type} =~ /(somatic)|(tumor)/i) || ($h->{author} && $h->{author} =~ /COSMIC/));
 
   # Publication information
   if ($label =~ /Publication/i && $info !~ /Not.+applicable/i) {
@@ -1362,7 +1365,7 @@ sub get_header_info {
     }
   }
 
-  $h->{author} =~ s/\s/_/g;
+  $h->{author} =~ s/\s/_/g if($h->{author});
 
   return $h;
 }
@@ -1538,7 +1541,7 @@ sub parse_9th_col {
 
     $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
     $info->{is_somatic}  = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
-    $info->{bp_order}    = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
+    $info->{bp_order}    = ($info->{submitter_variant_id} && $info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
     $info->{bp_order}    = 1 if ($info->{SO_term} =~ /translocation/i);
     $info->{status}      = 'High quality' if ($key eq 'variant_region_description' && $value =~ /high.quality/i);
     $info->{alias}       = $value if ($key eq 'Alias' && $value !~ /^\d+$/);
@@ -1657,7 +1660,7 @@ sub parse_9th_col {
   $info->{is_ssv} = ($info->{ID} =~ /ssv/) ? 1 : 0;
 
   # Somatic alias
-  if ($info->{is_somatic} == 1 && $info->{alias} =~ /^(.+)_\d+$/) {
+  if (($info->{is_somatic} && $info->{is_somatic} == 1) && $info->{alias} =~ /^(.+)_\d+$/) {
     $info->{alias} = $1;
   }
 
@@ -2104,7 +2107,7 @@ sub generate_data_row {
   my $somatic = shift;
  
   if(!defined($info->{bp_order})) {
-    if ($info->{is_somatic} == 1 || $somatic) {
+    if (($info->{is_somatic} && $info->{is_somatic} == 1) || $somatic) {
       $info->{bp_order} = 1;
     } else  {
       $info->{bp_order} = undef;
