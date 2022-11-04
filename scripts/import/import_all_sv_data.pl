@@ -209,12 +209,13 @@ foreach my $in_file (@files) {
   
   my @split_name = split(/\./, $aux_name, 2);
   my $file_study_name = $split_name[0];
-  push (@study_names, $file_study_name);
 
   if ($study_to_skip{$file_study_name}) {
     debug("Study $file_study_name (".$in_file.") skipped because it contains non ".$species." data");
     next;
   }
+
+  push (@study_names, $file_study_name);
 
   # Variation set - 1000 Genomes phase 3 and gnomAD
   if ($species =~ /homo|human/i && $fname =~ /estd214/) {
