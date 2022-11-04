@@ -2115,7 +2115,7 @@ sub generate_data_row {
   }
   $info->{phenotype} = decode_text($info->{phenotype}) if($info->{phenotype}); 
 
-  my @row = map { $info->{$_} } @attribs;
+  my @row = map { $info->{$_} ? $info->{$_} : '' } @attribs;
 
   return \@row;
 }
