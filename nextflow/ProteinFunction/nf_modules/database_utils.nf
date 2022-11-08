@@ -3,6 +3,9 @@
 process store_translation_mapping {
   input: path translation_mapping
   output: stdout
+
+  cache false
+
   """
   mysql --host=${params.host} --port=${params.port} \
         --user=${params.user} --password=${params.pass} \
