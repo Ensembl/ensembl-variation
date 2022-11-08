@@ -120,12 +120,11 @@ sub process_ar {
   # Read in the source data
   my @src_data;
   open(my $sh, '<', $hgvs_file) or die("unable to open $hgvs_file: $!");
-  
   @src_data = <$sh>;
   chomp(@src_data);
   close($sh);
 
-  my $src_count = `cut -f6 $hgvs_file | grep -v ']\$' | wc -l`;
+  my $src_count = scalar(@src_data);
 
   my $json_string;
   {
@@ -149,7 +148,7 @@ sub process_ar {
   my $err_count = 0;
   my $len_count = 0;
 
-  for (my $i = 0, my $j = 0; $i <= $#src_data; $i++, $j++) {
+  for (my $i = 0; $i <= $#src_data; $i++) {
     # need to get the fifth element of the inputLine
     my $hgvs = (split("\t", $src_data[$i]))[5];
     if (! $hgvs) {
@@ -157,20 +156,13 @@ sub process_ar {
       $len_count++;
       next;
     }
-    # un-supported hgvs has not been looked-up; so skip incrementing look-up file counter
-    if ($hgvs =~ /]$/) {
-      print $log_fh "ERROR: $filename hgvs un-supported ", (split("\t",$src_data[$i]))[0,5], "\n";
-      $len_count++;
-      $j--;
-      next;
-    }
     if (length($hgvs) > 600) {
       print $log_fh "ERROR: $filename hgvs too long ", (split("\t",$src_data[$i]))[0,5], "\n";
       $len_count++;
       next;
     }
-    if (exists $data->[$j]->{'@id'}) {
-      my ($car_id) = ($data->[$j]->{'@id'} =~/(CA\d{1,})$/);
+    if (exists $data->[$i]->{'@id'}) {
+      my ($car_id) = ($data->[$i]->{'@id'} =~/(CA\d{1,})$/);
       if ($car_id) {
         print $lh join("\t", (split("\t",$src_data[$i]))[0,5], $car_id), "\n";
         $car_count++;
@@ -180,7 +172,7 @@ sub process_ar {
       }
     } else {
       $err_count++;
-      my $ao = $data->[$j];
+      my $ao = $data->[$i];
       next if (! $ao->{'errorType'});
       print $eh join("\t",
         $src_data[$i],
