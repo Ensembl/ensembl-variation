@@ -5,7 +5,7 @@
  */
 
 process get_sift_version {
-  container "nunoagostinho/sift:6.2.1"
+  container "ensemblorg/sift:6.2.1"
   output: stdout
   """
   grep -Po "VERSION \\d+\\.\\d+\\.\\d+" /opt/sift/VERSION_UPDATE | tail -n 1 | tr -d '\n'
@@ -30,7 +30,7 @@ process align_peptides {
   */
 
   tag "${peptide.md5}"
-  container "nunoagostinho/sift:6.2.1"
+  container "ensemblorg/sift:6.2.1"
   memory '4 GB'
   errorStrategy 'ignore'
 
@@ -68,7 +68,7 @@ process run_sift_on_all_aminoacid_substitutions {
   */
 
   tag "${peptide.md5}"
-  container "nunoagostinho/sift:6.2.1"
+  container "ensemblorg/sift:6.2.1"
   memory '4 GB'
   errorStrategy 'ignore'
   publishDir "${params.outdir}/sift"

@@ -7,7 +7,7 @@
 params.pph_data = "/hps/nobackup/flicek/ensembl/variation/nuno/sift-polyphen2-nextflow-4667/input/polyphen2"
 
 process get_pph2_version {
-  container "nunoagostinho/polyphen-2:2.2.3"
+  container "ensemblorg/polyphen-2:2.2.3"
   output: stdout
 
   """
@@ -27,7 +27,7 @@ process run_pph2_on_all_aminoacid_substitutions {
   */
 
   tag "${peptide.md5}"
-  container "nunoagostinho/polyphen-2:2.2.3"
+  container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
   memory '4 GB'
   errorStrategy 'ignore'
@@ -71,7 +71,7 @@ process run_weka {
   */
 
   //tag "${pph2_out.baseName} $model"
-  container "nunoagostinho/polyphen-2:2.2.3"
+  container "ensemblorg/polyphen-2:2.2.3"
   errorStrategy 'ignore'
 
   input:
