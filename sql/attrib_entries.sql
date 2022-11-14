@@ -937,6 +937,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (674, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (675, 477, 'Exome_Capture_Diversity');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (676, 545, 'seedstor_links');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (677, 470, 'complex_chromosomal_rearrangement');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (678, 542, 'DDG2P');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);
