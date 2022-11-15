@@ -117,7 +117,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ZFIN'      => ['danio_rerio'],
 
                           'ANIMALQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
-                                          'sus_scrofa', 'ovis_aries', 'ovis_aries_rambouillet'],
+                                          'sus_scrofa', 'ovis_aries', 'ovis_aries_rambouillet', 'capra_hircus'],
                           'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
                                           'bos_taurus','canis_lupus_familiaris','equus_caballus','canis_lupus_familiarisboxer',
                                           'sus_scrofa','ovis_aries', 'ovis_aries_rambouillet',
