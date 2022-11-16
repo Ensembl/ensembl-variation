@@ -488,12 +488,8 @@ sub get_all_VariationFeatures_by_Slice {
         $vcf_info_field = 'ANN';
         last;
       }
-      elsif($val->{ID} eq 'CLNSIG'){
-        $desc = $val->{Description};
-        $vcf_info_field = 'CLNSIG';
-        last;
-      } 
     }
+    # Add annotation from VEP or similar tools
     if ($vcf_info_field eq 'CSQ' or $vcf_info_field eq 'ANN'){
       my @description = split(/Format:/,$desc);
       my @info_format = split('\|', $description[1]);
@@ -544,30 +540,31 @@ sub get_all_VariationFeatures_by_Slice {
         }
         $vf->_finish_annotation();
       }
-    } elsif ($vcf_info_field eq 'CLNSIG'){
-       
-        my $clinsig_list = $ATTRIBS{clinvar_clin_sig};
+    } 
 
-        foreach my $vf (@vfs) {
-          my $info = $vf->{vcf_record}->get_info;
-          my $vcf_variants_mix_case = $info->{$vcf_info_field};
-          my $vcf_variants = lc($vcf_variants_mix_case);
-  
-          # Replace commas for specific examples that contain a comma,
-          # otherwise they would split/break these examples - comma is also a delimiter
-          $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
-          $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
-  
-          my @clnsig_vars = split('[\|,/;]',$vcf_variants);
-          foreach my $clnsig_var (@clnsig_vars) {
-            $clnsig_var =~ s/_/ /g;
-            $clnsig_var =~ s/^\s+|\s+$//;
-            if (grep /^$clnsig_var$/, @{$clinsig_list}){
-              push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
-            }
+    # Add other annotations
+    foreach my $vf (@vfs) {
+      my $info = $vf->{vcf_record}->get_info;
+      if($info->{'CLNSIG'}) {
+        my $clinsig_list = $ATTRIBS{clinvar_clin_sig};
+        my $vcf_variants_mix_case = $info->{'CLNSIG'};
+        my $vcf_variants = lc($vcf_variants_mix_case);
+
+        # Replace commas for specific examples that contain a comma,
+        # otherwise they would split/break these examples - comma is also a delimiter
+        $vcf_variants =~ s/pathogenic,_low_penetrance/pathogenic_low_penetrance/;
+        $vcf_variants =~ s/likely_pathogenic,_low_penetrance/likely_pathogenic_low_penetrance/;
+
+        my @clnsig_vars = split('[\|,/;]',$vcf_variants);
+        foreach my $clnsig_var (@clnsig_vars) {
+          $clnsig_var =~ s/_/ /g;
+          $clnsig_var =~ s/^\s+|\s+$//;
+          if (grep /^$clnsig_var$/, @{$clinsig_list}){
+            push @{ $vf->{clinical_significance} ||= [] }, $clnsig_var;
           }
         }
       }
+    }
   }
   else {
 
