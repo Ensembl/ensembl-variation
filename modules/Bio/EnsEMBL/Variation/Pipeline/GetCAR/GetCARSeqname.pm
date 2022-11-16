@@ -99,11 +99,11 @@ sub run {
     my $json_file = $filename . '-car-lu' . '.json';
 
     # Getting the HGVS value from the full file
-    my $cmd = "cut -f6 $hgvs_dir/$hgvs_file | grep -v ]$ > $car_lu_dir/$lu_file";
+    my $cmd = "cut -f6 $hgvs_dir/$hgvs_file > $car_lu_dir/$lu_file";
 
     my $ret = system($cmd);
     if ($ret) {
-        die("Error in getting HGVS from $hgvs_file");
+        die("Error in getting HGVS from $hgvs_file with cmd - $cmd");
     }
     # Make a REST call
     # Do a sleep between the calls

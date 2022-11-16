@@ -89,6 +89,7 @@ sub run {
       foreach my $vf(@{$vfs}){
         my $hgvsg = $vf->hgvs_genomic($slice);
         for my $allele (sort keys %$hgvsg) {
+            next if $hgvsg->{$allele} =~ /]$/;
             print $fh join("\t", $vf->get_Variation_dbID(), $vf->name(),
                              $vf->seq_region_name, $vf->seq_region_start(), $vf->seq_region_end(),
                              $hgvsg->{$allele}), "\n";
