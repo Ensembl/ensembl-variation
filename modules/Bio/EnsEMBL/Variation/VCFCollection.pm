@@ -492,12 +492,10 @@ sub get_all_VariationFeatures_by_Slice {
 
     foreach my $vf (@vfs) {
       my $info = $vf->{vcf_record}->get_info;
-      my $is_consequence;
 
       # Add annotation from VEP or similar tools
       if ($info->{'CSQ'} || $info->{'ANN'}) {
-        $is_consequence = 1;
-        
+
         my @description = split(/Format:/,$desc);
         my @info_format = split('\|', $description[1]);
         
@@ -565,7 +563,7 @@ sub get_all_VariationFeatures_by_Slice {
           }
         }
       }
-      $vf->_finish_annotation() if($is_consequence);
+      $vf->_finish_annotation();
     }
   }
   else {
