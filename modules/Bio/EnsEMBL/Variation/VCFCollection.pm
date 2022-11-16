@@ -489,62 +489,63 @@ sub get_all_VariationFeatures_by_Slice {
         last;
       }
     }
-    # Add annotation from VEP or similar tools
-    if ($vcf_info_field eq 'CSQ' or $vcf_info_field eq 'ANN'){
-      my @description = split(/Format:/,$desc);
-      my @info_format = split('\|', $description[1]);
-      foreach my $vf (@vfs) { 
-        if ( $vcf_info_field ){
-          my $info = $vf->{vcf_record}->get_info;
-          my @vcf_variants = $info->{$vcf_info_field};
-          foreach my $vcf_variant ( @vcf_variants ) {
-            if ( defined($vcf_variant) ){
-              my @transcript_vars = split(',',$vcf_variant);
-              foreach my $transcript_var ( @transcript_vars ){
-                my @transcript_split = split('\|',$transcript_var);
-                my %transcript_map = zip @info_format, @transcript_split;
-                next if not defined($transcript_map{'Feature_type'});
-                if ( $transcript_map{'Feature_type'} eq 'Transcript') {
-                  my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
-                    variation_feature  => $vf,
-                    _feature_stable_id => $transcript_map{'Feature'}
-                  });  
-                  #Add variation Feature seq from transcript map
-                  my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
-                    variation_feature_seq => $transcript_split[0],
-                    is_reference               => 0
-                  });
-                  my @cons_list = split('&',$transcript_map{'Consequence'});
-                  foreach my $con (@cons_list){
-                    if ( exists $OVERLAP_CONSEQUENCES{$con} ) {
-                      my $new_cons = $OVERLAP_CONSEQUENCES{$con};
-                      $tva->add_OverlapConsequence($new_cons);
-                    }
-                    else{
-                      print("The consequence is not available:",$con,"\n");
-                    }
+
+    foreach my $vf (@vfs) {
+      my $info = $vf->{vcf_record}->get_info;
+      my $is_consequence;
+
+      # Add annotation from VEP or similar tools
+      if ($info->{'CSQ'} || $info->{'ANN'}) {
+        $is_consequence = 1;
+        
+        my @description = split(/Format:/,$desc);
+        my @info_format = split('\|', $description[1]);
+        
+        my $type = $info->{'CSQ'} ? 'CSQ' : 'ANN';
+        my @vcf_variants = $info->{$type};
+        foreach my $vcf_variant ( @vcf_variants ) {
+          if ( defined($vcf_variant) ){
+            my @transcript_vars = split(',',$vcf_variant);
+            foreach my $transcript_var ( @transcript_vars ){
+              my @transcript_split = split('\|',$transcript_var);
+              my %transcript_map = zip @info_format, @transcript_split;
+              next if not defined($transcript_map{'Feature_type'});
+              if ( $transcript_map{'Feature_type'} eq 'Transcript') {
+                my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
+                  variation_feature  => $vf,
+                  _feature_stable_id => $transcript_map{'Feature'}
+                });  
+                #Add variation Feature seq from transcript map
+                my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
+                  variation_feature_seq => $transcript_split[0],
+                  is_reference               => 0
+                });
+                my @cons_list = split('&',$transcript_map{'Consequence'});
+                foreach my $con (@cons_list){
+                  if ( exists $OVERLAP_CONSEQUENCES{$con} ) {
+                    my $new_cons = $OVERLAP_CONSEQUENCES{$con};
+                    $tva->add_OverlapConsequence($new_cons);
                   }
-                  $tv->add_TranscriptVariationAllele($tva);
-                  $vf->add_TranscriptVariation($tv);
+                  else{
+                    print("The consequence is not available:",$con,"\n");
+                  }
                 }
+                $tv->add_TranscriptVariationAllele($tva);
+                $vf->add_TranscriptVariation($tv);
               }
             }
           }
         }
-        else{ 
-          $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
-            -variation_feature  => $vf,
-            -no_ref_check       => 1,
-          );
-          weaken($vf->{intergenic_variation}->{base_variation_feature});
-        }
-        $vf->_finish_annotation();
       }
-    } 
+      else {
+        $vf->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
+          -variation_feature  => $vf,
+          -no_ref_check       => 1,
+        );
+        weaken($vf->{intergenic_variation}->{base_variation_feature});
+      }
 
-    # Add other annotations
-    foreach my $vf (@vfs) {
-      my $info = $vf->{vcf_record}->get_info;
+      # ClinVar annotation
       if($info->{'CLNSIG'}) {
         my $clinsig_list = $ATTRIBS{clinvar_clin_sig};
         my $vcf_variants_mix_case = $info->{'CLNSIG'};
@@ -564,6 +565,7 @@ sub get_all_VariationFeatures_by_Slice {
           }
         }
       }
+      $vf->_finish_annotation() if($is_consequence);
     }
   }
   else {
