@@ -85,13 +85,13 @@ my %animalQTL_species_fileNames = (
 
 # use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
-  gallus_gallus => 0, #Gallus gallus
-  sus_scrofa => 0, #Sus scrofa
-  ovis_aries => 0,  #Ovis aries: 
+  gallus_gallus => 1, #Gallus gallus
+  sus_scrofa => 1, #Sus scrofa
+  ovis_aries => 1,  #Ovis aries: 
   bos_taurus => 1, #Bos taurus
-  equus_caballus => 0, #Equus caballus
-  ovis_aries_rambouillet => 0, 
-  capra_hircus => 0, 
+  equus_caballus => 1, #Equus caballus
+  ovis_aries_rambouillet => 1, 
+  capra_hircus => 1, 
 );
 
 
