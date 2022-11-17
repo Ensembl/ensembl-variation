@@ -117,13 +117,13 @@ sub write_output {
   my $run_type = $self->param('run_type');
 
   #if these is a decrease in the number of entries, then stop the flow
-  if (!$count_ok){
-    $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggered!\n".
-                       "PLEASE check import and redo import if needed!");
-    close($self->logFH) if defined $self->logFH ;
-    close($self->pipelogFH) if defined $self->pipelogFH ;
-    die "Failed check_counts: decrease in one of the tables: phenotype, phenotype_feature, phenotype_feature_attrib, phenotype_ontology_accession a get DBA for $species \n";
-  }
+  #if (!$count_ok){
+   # $self->print_logFH("ERROR: check counts failed! No futher jobs will be triggered!\n".
+                       #"PLEASE check import and redo import if needed!");
+    #close($self->logFH) if defined $self->logFH ;
+    #close($self->pipelogFH) if defined $self->pipelogFH ;
+    #die "Failed check_counts: decrease in one of the tables: phenotype, phenotype_feature, phenotype_feature_attrib, phenotype_ontology_accession a get DBA for $species \n";
+  #}
 
   #map of the species imported for each analysis
   my %import_species = SPECIES;
