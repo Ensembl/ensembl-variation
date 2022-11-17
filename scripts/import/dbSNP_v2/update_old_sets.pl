@@ -47,42 +47,6 @@ my @stable = qw(
     49, 50, 51, 52, 53, 54, 55, 56, 57
   );
 
-### Get old rs_names / variation_set_ids
-## It will create a tmp file with variation_feature table values
-
-sub dumpPreparedSQL {
-  my $dbVar = shift;
-  my $tmp_num = shift;
-  my $chunk = shift;
-  my $size = shift;
-
-  my $start = $chunk * $tmp_num;
-  my $end = $chunk + $start;
-  $end = $end < $size ? $end : $size;
-
-
-  my $sql = qq{SELECT variation_name, variation_set_id FROM variation_feature WHERE variation_feature_id > $start AND variation_feature_id <= $end};
-
-  my $sth = $dbVar->prepare( $sql );
-
-  local *FH;
-  open ( FH, ">>$TMP_DIR/$TMP_FILE" )
-      or die( "Cannot open $TMP_DIR/$TMP_FILE: $!" );
-
-  $sth->execute();
-
-  while ( my $aref = $sth->fetchrow_arrayref() ) {
-    my @a = map {defined($_) ? $_ : '\N'} @$aref;
-    print FH join("\t", @a), "\n";
-
-  }
-
-  close FH;
-  $sth->finish();
-
-  return $end, $tmp_num;
-}
-
 # Get Variation_feature size
 my $sql = qq{ SELECT MIN(variation_feature_id), MAX(variation_feature_id) FROM variation_feature };
 my $sth = $old_dbh->prepare( $sql );
@@ -198,6 +162,42 @@ $dbh->do(qq{
   SELECT DISTINCT variation_id, 1 
   FROM failed_variation; 
 }) or die "Failed to add failed to variation_set_variation table";
+
+### Get old rs_names / variation_set_ids
+## It will create a tmp file with variation_feature table values
+
+sub dumpPreparedSQL {
+  my $dbVar = shift;
+  my $tmp_num = shift;
+  my $chunk = shift;
+  my $size = shift;
+
+  my $start = $chunk * $tmp_num;
+  my $end = $chunk + $start;
+  $end = $end < $size ? $end : $size;
+
+
+  my $sql = qq{SELECT variation_name, variation_set_id FROM variation_feature WHERE variation_feature_id > $start AND variation_feature_id <= $end};
+
+  my $sth = $dbVar->prepare( $sql );
+
+  local *FH;
+  open ( FH, ">>$TMP_DIR/$TMP_FILE" )
+      or die( "Cannot open $TMP_DIR/$TMP_FILE: $!" );
+
+  $sth->execute();
+
+  while ( my $aref = $sth->fetchrow_arrayref() ) {
+    my @a = map {defined($_) ? $_ : '\N'} @$aref;
+    print FH join("\t", @a), "\n";
+
+  }
+
+  close FH;
+  $sth->finish();
+
+  return $end, $tmp_num;
+}
 
 sub usage {
 
