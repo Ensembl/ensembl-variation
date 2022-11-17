@@ -2193,8 +2193,6 @@ sub _pick_likely_transcript {
     # otherwise shrink the array to just those that had the lowest
     # this gives fewer to sort on the next round
     @tr_info = @tmp;
-    use Data::Dumper;
-    print Dumper(@tr_info);
   }
   
   # probably shouldn't get here, but if we do, return the first
