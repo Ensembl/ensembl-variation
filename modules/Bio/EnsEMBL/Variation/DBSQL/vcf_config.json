@@ -631,6 +631,43 @@
       "sample_prefix": "ISGC:"
     },
     {
+      "id": "nextgen_sheep_rambouillet_iroa",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "Oar_rambouillet_v1.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/Oar_rambouillet_v1.0/variation_genotype/IROA.population_sites.Oar_rambouillet_v1_0.20140307.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "nextgen_sheep_rambouillet_mooa",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "Oar_rambouillet_v1.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/Oar_rambouillet_v1.0/variation_genotype/MOOA.population_sites.Oar_rambouillet_v1_0.20140328.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "sheep_rambouillet_genome_consortium",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "Oar_rambouillet_v1.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/Oar_rambouillet_v1.0/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT"
+      ],
+      "population_prefix": "ISGC:",
+      "sample_prefix": "ISGC:"
+    },
+    {
       "id": "nextgen_goat",
       "species": "capra_hircus",
       "assembly": "ARS1",
