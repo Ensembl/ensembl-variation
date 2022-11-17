@@ -368,7 +368,7 @@ sub parse_input_file {
     }
 
     # add additional fields if found
-    $phenotype->{'study'} = $self->get_pubmed_prefix().$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'} && $extra->{'PUBMED_ID'} =~ '\[0-9\]');
+    $phenotype->{'study'} = $self->get_pubmed_prefix().$extra->{'PUBMED_ID'} if (defined($extra->{'PUBMED_ID'} ) && $extra->{'PUBMED_ID'} =~ /^\d+$/);
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
     $phenotype->{'f_stat'} = $extra->{'F-stat'} if defined($extra->{'F-stat'});
     $phenotype->{'lod_score'} = $extra->{'LOD-score'} if defined($extra->{'LOD-score'});
