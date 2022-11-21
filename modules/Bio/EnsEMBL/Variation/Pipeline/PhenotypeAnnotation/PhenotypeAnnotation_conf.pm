@@ -75,8 +75,8 @@ sub default_options {
         # release number used in the name of default workdir and hive database
         ensembl_release         => 95,
 	
-	# wormbase release number used by the import_wormbase analysis only
-	wormbase_release        => 282,
+      	# wormbase release number used by the import_wormbase analysis only
+      	wormbase_release        => 282,
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -99,7 +99,7 @@ sub default_options {
         # of interest)
 
         reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
-
+        
         # the run type can be one of: RGD (import RGD data),
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
@@ -350,7 +350,7 @@ sub pipeline_analyses {
         {   -logic_name => 'import_cancerGC',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportCGC',
             -parameters => {
-		repo_dir => $self->o('ensembl_cvs_root_dir'),
+                repo_dir => $self->o('ensembl_cvs_root_dir'),
                 @common_params,
             },
             -input_ids      => [], #default
@@ -558,17 +558,17 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'import_wormbase',
-	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
-	    -parameters => {
-	    	source_version => $self->o('wormbase_release'),
-                @common_params,
-            },
-	    -input_ids  => [],
-	    -hive_capacity  => 1,
-	    -rc_name    => 'default',
-	    -flow_into  => {
-		1 => [ 'check_phenotypes']
-	    },
+      	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
+      	    -parameters => {
+      	    	source_version => $self->o('wormbase_release'),
+                      @common_params,
+                  },
+      	    -input_ids  => [],
+      	    -hive_capacity  => 1,
+      	    -rc_name    => 'default',
+      	    -flow_into  => {
+            		1 => [ 'check_phenotypes']
+      	    },
         },    
         {   -logic_name => 'import_ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
@@ -588,6 +588,33 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeAnnotation',
             -parameters => {
                 @common_params,
+            },
+            -input_ids      => [], #default
+            -hive_capacity  => 1,
+            -analysis_capacity => 1,
+            -rc_name    => 'default',
+            -flow_into      => {
+                1 => ['datacheck_phenotype_all']
+            },
+            -failed_job_tolerance => 0,
+            -max_retry_count => 0,
+        },
+        
+        {   -logic_name => 'datacheck_phenotype_all',
+            -module     => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+            -parameters => {
+                dbname => $self->o('dc_dbname'),
+                datacheck_names => [
+                  'ComparePhenotypeFeatures',
+                  'PhenotypeMultipleSeqRegions',
+                  'PhenotypeDescription',
+                  'PhenotypeDescriptionMissing',
+                  'PhenotypeFeatureAttrib'
+                ],
+                history_file => $self->o('history_file'),
+                registry_file => $self->o('reg_file'),
+                output_dir => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_datacheck_output.txt",
+                old_server_uri => [$self->o('old_server_uri')]
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,
