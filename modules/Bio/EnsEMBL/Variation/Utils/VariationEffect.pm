@@ -303,7 +303,7 @@ sub feature_truncation {
     );
 }
 
-sub protein_altering_variant{
+sub protein_altering_variant {
 
     ## check in protein
     my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
@@ -322,15 +322,6 @@ sub protein_altering_variant{
 
     return 1;
 }
-
-#sub transcript_fusion {
-#    #my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-#    #my $bvf   = $bvfoa->base_variation_feature;
-#    
-#    return 0;
-#    
-#    #my $transcripts = $bvf->_get_overlapping_Transcripts();
-#}
 
 sub _before_start {
     my ($bvf, $feat, $dist) = @_;
@@ -530,6 +521,7 @@ sub splice_polypyrimidine_tract_variant  {
     $feat ||= $bvfo->feature;
     my $ie = $bvfoa->_intron_effects($feat, $bvfo, $bvf);
 
+    return 0 if acceptor_splice_site(@_);
     return $feat->strand == 1 ? $ie->{polypyrimidine_splice_site} : $ie->{polypyrimidine_splice_site_reverse};
 }
 
@@ -537,8 +529,6 @@ sub splice_region {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
-    return 0 if donor_splice_site(@_);
-    return 0 if acceptor_splice_site(@_);
     return 0 if essential_splice_site(@_);
     return 0 if splice_donor_region_variant(@_);
     return 0 if splice_donor_5th_base_variant(@_);
