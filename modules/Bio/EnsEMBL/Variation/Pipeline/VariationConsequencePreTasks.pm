@@ -58,7 +58,12 @@ sub fetch_input {
     my $sequences_ok = $self->check_seq_region();
     die "Seq region ids are not compatible. Run ensembl-variation/scripts/misc/update_seq_region_ids.pl\n" unless $sequences_ok == 1;
 
-    return if (-e $self->param('update_diff'));
+    my $update_diff = $self->param('update_diff');
+
+    if (defined($update_diff)) {
+      die "File used in flag --update_diff $update_diff does not exist\n" if !-e $update_diff;
+      return;
+    }
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
@@ -88,7 +93,7 @@ sub fetch_input {
     my $mtmp = $self->param('mtmp_table');
 
       # set up MTMP table
-    if($mtmp && !-e $self->param('update_diff')) {
+    if($mtmp) {
         my @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
         my ($source_table, $table) = qw(transcript_variation MTMP_transcript_variation);
 
