@@ -109,6 +109,16 @@ sub default_options {
         
         dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
         
+        # if set, fails the datacheck pipeline job if the datacheck fails
+        # can be overwritten when running the pipeline
+        
+        failures_fatal          => 1,
+        
+        # if set, runs the datachecks analysis jobs
+        # can be overwritten when running the pipeline
+        
+        run_dc                  => 1,
+        
         # the run type can be one of: RGD (import RGD data),
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
@@ -603,7 +613,9 @@ sub pipeline_analyses {
             -analysis_capacity => 1,
             -rc_name    => 'default',
             -flow_into      => {
-                1 => ['datacheck_phenotype_all']
+                1 => WHEN(
+                  '#run_dc#' => ['datacheck_phenotype_all']
+                )
             },
             -failed_job_tolerance => 0,
             -max_retry_count => 0,
@@ -623,7 +635,8 @@ sub pipeline_analyses {
                 history_file => $self->o('history_file'),
                 registry_file => $self->o('reg_file'),
                 output_dir => $self->o("dc_outdir"),
-                old_server_uri => [$self->o('old_server_uri')]
+                old_server_uri => [$self->o('old_server_uri')],
+                failures_fatal => $self->o('failures_fatal')
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,
