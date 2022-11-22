@@ -100,6 +100,15 @@ sub default_options {
 
         reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
         
+        # a file containing history of datachecks ran potentially used to determine
+        # if a datacheck can be skipped 
+        
+        history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
+        
+        #  output dir where datacheck result will be stored
+        
+        dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
+        
         # the run type can be one of: RGD (import RGD data),
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
@@ -613,7 +622,7 @@ sub pipeline_analyses {
                 ],
                 history_file => $self->o('history_file'),
                 registry_file => $self->o('reg_file'),
-                output_dir => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_datacheck_output.txt",
+                output_dir => $self->o("dc_outdir"),
                 old_server_uri => [$self->o('old_server_uri')]
             },
             -input_ids      => [], #default
