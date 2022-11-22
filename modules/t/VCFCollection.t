@@ -513,7 +513,7 @@ $coll->filename_template($temp_clnsig_filename);
 ok($coll->filename_template =~ /^$dir/, "update filename_template");
 
 $slice = $sa->fetch_by_region('toplevel', 1, 10, 20);
-my $dont_fetch_vf_overlaps=1;
+$dont_fetch_vf_overlaps=1;
 my $vfs = $coll->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
 
 ok($vfs->[0]->get_all_clinical_significance_states()->[0] eq 'likely benign', 'get_all_clinical_significance_states - obtain single clinical significance entry');
