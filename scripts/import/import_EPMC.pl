@@ -130,7 +130,7 @@ elsif($type eq "phenotype"){
   my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature_attrib, $type);
 
-  check_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+  remove_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
 }
 else{
     die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
@@ -1224,9 +1224,8 @@ sub process_phenotype_feature_attrib {
   return \%list_citations_pheno_feature_attrib;
 }
 
-# The citations imported from the Phenotype tables (phenotype_feature and phenotype_feature_attrib) could be removed from the phenotype import in the future.
-# To avoid having outdated citations we check if all citations from the 3 sources (ClinVar, GWAS and dbGaP) are still in the Phenotype tables.
-sub check_outdated_citations {
+# To avoid outdated citations, we remove citations from ClinVar, GWAS or dbGaP that are not in the Phenotype tables.
+sub remove_outdated_citations {
   my $dba = shift;
   my $var_ad = shift;
   my $pub_ad = shift;
@@ -1265,8 +1264,36 @@ sub check_outdated_citations {
 
     my @split_attrib_id = split /,/, $attrib_id;
 
+    my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
-      print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n" unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid});
+      unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid}) {
+        push @current_attribs, $attrib;
+        print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n";
+      }
+    }
+    
+    if (!@current_attribs) {
+      # remove citation if outdated in all sources
+      my $rm_citations_sth = $dba->dbc()->prepare(qq[
+          delete from variation_citation
+          where variation_id = '$variation_rsid' and 
+                publication_id = '$publication_pmid' and
+                data_source_attrib = '$attrib_id'
+        ]);
+      $rm_citations_sth->execute() ||
+        die "Error: cannot remove $variation_rsid, $publication_pmid, $attrib_id from variation_citation\n";
+    } elsif (@current_attribs ne @split_attrib_id) {
+      # discard outdated sources
+      my $new_attrib_id = join(",", @current_attribs);
+      my $update_citations_sth = $dba->dbc()->prepare(qq[
+          update variation_citation
+          set data_source_attrib = '$new_attrib_id'
+          where variation_id = '$variation_rsid' and 
+                publication_id = '$publication_pmid' and
+                data_source_attrib = '$attrib_id'
+        ]);
+      $update_citations_sth->execute() ||
+        die "Error: cannot update $variation_rsid, $publication_pmid, $attrib_id from variation_citation (new value: $new_attrib_id)\n";
     }
 
   }
