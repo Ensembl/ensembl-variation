@@ -607,6 +607,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeAnnotation',
             -parameters => {
                 @common_params,
+                run_dc => $self->o('run_dc')
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,
