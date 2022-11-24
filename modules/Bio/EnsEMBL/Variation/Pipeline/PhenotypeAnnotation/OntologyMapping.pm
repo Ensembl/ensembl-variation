@@ -99,7 +99,9 @@ sub run {
     $self->store_terms( $zooma_terms);
   }
 
-  $self->param('output_ids', [{species => $self->param('species')}]);
+  my $run_type =  $self->required_param('run_type');
+
+  $self->param('output_ids', [{run_type => $run_type, species => $self->param('species')}]);
 
 }
 

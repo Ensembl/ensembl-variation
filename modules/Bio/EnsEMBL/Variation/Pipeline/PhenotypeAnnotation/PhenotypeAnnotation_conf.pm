@@ -119,6 +119,11 @@ sub default_options {
         
         run_dc                  => 1,
         
+        # the uri of the database server which stores the database of previous release
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
+        
+        old_server_uri          => undef,
+        
         # the run type can be one of: RGD (import RGD data),
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
@@ -607,7 +612,9 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeAnnotation',
             -parameters => {
                 @common_params,
-                run_dc => $self->o('run_dc')
+                run_dc => $self->o('run_dc'),
+                ensembl_release => $self->o('ensembl_release'),
+                old_server_uri => $self->o("old_server_uri")
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,
@@ -615,7 +622,7 @@ sub pipeline_analyses {
             -rc_name    => 'default',
             -flow_into      => {
                 1 => WHEN(
-                  '#run_dc#' => ['datacheck_phenotype_all']
+                  '#run_dc#' => [ 'datacheck_phenotype_all']
                 )
             },
             -failed_job_tolerance => 0,
@@ -625,7 +632,6 @@ sub pipeline_analyses {
         {   -logic_name => 'datacheck_phenotype_all',
             -module     => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
             -parameters => {
-                dbname => $self->o('dc_dbname'),
                 datacheck_names => [
                   'ComparePhenotypeFeatures',
                   'PhenotypeMultipleSeqRegions',
@@ -636,7 +642,6 @@ sub pipeline_analyses {
                 history_file => $self->o('history_file'),
                 registry_file => $self->o('reg_file'),
                 output_dir => $self->o("dc_outdir"),
-                old_server_uri => [$self->o('old_server_uri')],
                 failures_fatal => $self->o('failures_fatal')
             },
             -input_ids      => [], #default
