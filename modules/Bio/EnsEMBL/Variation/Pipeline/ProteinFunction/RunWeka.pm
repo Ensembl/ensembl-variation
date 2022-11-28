@@ -94,7 +94,7 @@ sub run {
                   "--bind $pph_data:/opt/pph2/data $pph_dir/polyphen-2_2.2.3.sif " .
                   "run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
 
-        system($cmd) == 0 or die "Failed to run $cmd: $?";
+        system($cmd) == 0 or die `echo "Failed to run $cmd:" && cat "$filename"`;
 
         if (-s $error_file) {
             warn "run_weka.pl STDERR output in $error_file\n";
