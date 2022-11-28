@@ -2128,6 +2128,7 @@ sub _pick_likely_transcript {
   my $transcripts = shift;
   
   return $transcripts->[0] if scalar @$transcripts == 1;
+
   
   my @tr_info;
 
@@ -2141,12 +2142,14 @@ sub _pick_likely_transcript {
       biotype => 1,
       tsl => 100,
       appris => 100,
+      mane => 1,
       tr => $tr
     };
      
     # 0 is "best"
     $info->{canonical} = $tr->is_canonical ? 0 : 1;
     $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
+    $info->{mane} = $tr->is_mane ? 0 : 1;
     $info->{ccds} = (grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries}) ? 0 : 1;
 
     # "invert" length so longer is best
@@ -2168,10 +2171,11 @@ sub _pick_likely_transcript {
         }
       }
     }
+    
     push @tr_info, $info;
   }
   
-  my @order = qw(appris tsl canonical biotype ccds rank length);
+  my @order = qw(mane appris tsl canonical biotype ccds rank length);
   my $picked;
   
   # go through each category in order
@@ -2179,7 +2183,7 @@ sub _pick_likely_transcript {
 
     # sort on that category
     @tr_info = sort {$a->{$cat} <=> $b->{$cat}} @tr_info;
-    
+
     # take the first (will have the lowest value of $cat)
     $picked = shift @tr_info;
     my @tmp = ($picked);
