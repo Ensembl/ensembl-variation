@@ -1457,9 +1457,9 @@ sub _clean_phenotype_desc {
     $description =~ s/\s+/ /g; # Remove extra space
 
     # fix some typos
-    $description =~ s/sjoegren larsson syndrom$/sjogren larsson syndrome/;
-    $description =~ s/sjorgren larrson syndrome/sjogren larsson syndrome/;
-    $description =~ s/marinesco sjoegren syndrome/marinesco sjogren syndrome/;
+    $description =~ s/sjoegren-larsson syndrome/sjogren-larsson syndrome/;
+    $description =~ s/sjorgren-larrson syndrome/sjogren-larsson syndrome/;
+    $description =~ s/marinesco-sjoegren syndrome/marinesco-sjogren syndrome/;
     $description =~ s/birt-hogg-hub syndrome/birt-hogg-hube syndrome/;
     $description =~ s/birt-hogg-hubt syndrome/birt-hogg-hube syndrome/;
     $description =~ s/chtdiak-higashi syndrome/chediak-higashi syndrome/;
