@@ -48,10 +48,11 @@ Check [nextflow.config](nextflow.config) for available pre-configured profiles.
 
 ```
 nextflow run main.nf -profile lsf -resume \
-         --gtf [path/to/gtf] --fasta [path/to/fasta] \
          --species homo_sapiens \
+         --gtf [path/to/gtf] --fasta [path/to/fasta] \
          --pph_run_type UPDATE --pph_data [path/to/pph_data] \
-         --sift_run_type UPDATE --blastdb [path/to/blastdb]
+         --sift_run_type UPDATE --blastdb [path/to/blastdb] \
+         --host [h] --port [p] --user [u] --pass [p] --database [db]
 ```
 
 ## Arguments

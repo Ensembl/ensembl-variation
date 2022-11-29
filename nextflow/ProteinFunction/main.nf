@@ -36,6 +36,7 @@ if (params.help) {
 
   Usage:
     nextflow run main.nf -profile lsf -resume \\
+             --species homo_sapiens \\
              --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \\
              --pph_run_type  UPDATE --pph_data [path/to/pph_data] \\
              --sift_run_type UPDATE --blastdb  [path/to/blastdb] \\
