@@ -1276,8 +1276,8 @@ sub remove_outdated_citations {
       # remove citation if outdated in all sources
       my $rm_citations_sth = $dba->dbc()->prepare(qq[
           delete from variation_citation
-          where variation_id = '$variation_rsid' and 
-                publication_id = '$publication_pmid' and
+          where variation_id = '$variation_id' and 
+                publication_id = '$publication_id' and
                 data_source_attrib = '$attrib_id'
         ]);
       $rm_citations_sth->execute() ||
@@ -1288,9 +1288,8 @@ sub remove_outdated_citations {
       my $update_citations_sth = $dba->dbc()->prepare(qq[
           update variation_citation
           set data_source_attrib = '$new_attrib_id'
-          where variation_id = '$variation_rsid' and 
-                publication_id = '$publication_pmid' and
-                data_source_attrib = '$attrib_id'
+          where variation_id = '$variation_id' and 
+                publication_id = '$publication_id'
         ]);
       $update_citations_sth->execute() ||
         die "Error: cannot update $variation_rsid, $publication_pmid, $attrib_id from variation_citation (new value: $new_attrib_id)\n";
