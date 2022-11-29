@@ -67,6 +67,18 @@ usage("Host providing the ontology database must be specified") unless ($ohost);
 
 # Get the dir that this script is residing in
 my $dirname = dirname(__FILE__);
+my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+
+if ($config){
+  $vcf_config_file = $config;
+}
+
+# Get the local dir where the vcf files are located
+my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
+
+if ($d_dir){
+  $data_dir = $d_dir;
+}
 
 # Check if output directory exists
 die "Could not find output dir $output_dir - please create it first\n" unless -d $output_dir;
@@ -134,7 +146,7 @@ else {
 }
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
-`perl $dirname/species_list_vcf.pl -v $version -o $tmp_section -dump $dump_file -p_data $p_data -hlist $hlist -user $user`;
+`perl $dirname/species_list_vcf.pl -v $version -o $tmp_section -dump $dump_file -p_data $p_data -config $config -d_dir $data_dir -hlist $hlist -user $user`;
 $new_content = `cat $tmp_section`;
 `rm -f $tmp_section`;
 print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -324,7 +336,7 @@ $file_name = "sources_documentation.html";
 $tmp_file  = $file_name;
 
 print STDOUT localtime() . "\t# Start sources list ...\n";
-`perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
+`perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $config -d_dir $data_dir`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
@@ -353,7 +365,7 @@ print STDOUT localtime() . "\t\t> Phenotype sources list - finished\n";
 $file_name = "species_detailed_counts.html";
 $tmp_file  = $file_name;
 print STDOUT localtime() . "\t# Detailed species data count ...\n";
-`perl $dirname/species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro`;
+`perl $dirname/species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro -p_data $p_data -config $config -d_dir $data_dir`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
