@@ -23,9 +23,9 @@ use Getopt::Long;
 use JSON;
 use File::Basename;
 
-###############
-### Options ###
-###############
+###############################################################
+##########             CONFIGURE                        #######
+###############################################################
 my ($e_version,$html_file,$hlist,$user,$help);
 ## EG options
 my ($site, $etype);
@@ -129,9 +129,9 @@ my $pop_table_header = qq{
 };
 
 
-##########
-## Main ##
-##########
+###############################################################
+##########             MAIN PART                       ########
+###############################################################
 
 ## Species / host / database ##
 foreach my $hostname (@hostnames) {
@@ -170,8 +170,6 @@ get_project_populations();
 ## Populations ##
 my $html_pop = '';
 
-use Data::Dumper;
-print Dumper(\%pops_list);
 
 # Loop over the species (placing human first)
 foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(%pops_list)) {
@@ -307,9 +305,9 @@ close(HTML);
 
 
 
-#############
-## Methods ##
-#############
+###############################################################
+##########             FUNCTIONS                     ##########
+###############################################################
 
 # Build the project populations structure if it exists
 sub get_population_structure {

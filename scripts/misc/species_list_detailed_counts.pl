@@ -112,9 +112,7 @@ my $p_version = $e_version-1;
 
 my $html;
 
-##############
-### Header ###
-##############
+# Header
 my $html_header = q{
 <html>
 <head>
@@ -131,9 +129,7 @@ my $html_header = q{
 <div>
 };
 
-#############
-### Title ###
-#############
+# Title
 my $html_title = qq{
   <div style="float:left;width:80%">
     <h1 style="margin-top:15px">Ensembl Variation - Detailed species data count</h1>
@@ -145,9 +141,7 @@ my $html_title = qq{
     </div>
 };
 
-##############
-### Legend ###
-##############
+# Legend
 my $html_legend = qq{
   <!-- Right hand side legend -->
   <div style="float:right;max-width:220px;top:20px">
@@ -159,9 +153,7 @@ my $html_legend = qq{
       <table>
 };
 
-##############
-### Footer ###
-##############
+# Footer 
 my $html_footer = q{
   </div>
 </div>
@@ -447,9 +439,7 @@ $html_legend .= qq{    </table>\n  </div>\n</div>};
 
   
 
-######################
-## HTML/output file ##
-######################
+# HTML/output file
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_header."\n";
 print HTML $html_legend."\n";
