@@ -38,7 +38,7 @@ use File::Basename;
 ##########             CONFIGURE                        #######
 ###############################################################
 
-my ($e_version, $html_file, $config, $config, $d_dir, $p_data, $hlist, $user, $dump_file, $help);
+my ($e_version, $html_file, $config, $d_dir, $p_data, $hlist, $user, $dump_file, $help);
 ## EG options
 my ($site, $etype);
 
