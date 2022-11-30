@@ -167,7 +167,7 @@ sub run {
               "run_pph.pl -A -d $output_dir -s $protein_file $subs_file " .
               "1> $output_file 2> $error_file";
 
-    system($cmd) == 0 or die "Failed to run $cmd: $?";
+    system($cmd) == 0 or die `echo "Failed to run $cmd:" && cat "$error_file"`;
     
     $self->dbc->disconnect_when_inactive(0);
     

@@ -36,17 +36,19 @@ if (params.help) {
 
   Usage:
     nextflow run main.nf -profile lsf -resume \\
+             --species canis_lupus_familiaris \\
              --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \\
              --pph_run_type  UPDATE --pph_data [path/to/pph_data] \\
              --sift_run_type UPDATE --blastdb  [path/to/blastdb] \\
              --host [h] --port [p] --user [u] --pass [p] --database [db]
 
   General options:
-    --gtf FILE           Comma-separated annotation GTF files; requires FASTA
-    --fasta FILE         Comma-separated FASTA files with genomic sequences;
-                         requires GTF
-    --translated FILE    Comma-separated FASTA files with peptide sequence;
-                         skips sequence translation based on GTF and FASTA
+    --gtf FILE           Comma-separated list of annotation GTF files; requires
+                         FASTA files
+    --fasta FILE         Comma-separated list of FASTA files with genomic
+                         sequences; requires GTF files
+    --translated FILE    Comma-separated list of FASTA files with peptide
+                         sequence; skips sequence translation with GTF and FASTA
     --outdir VAL         Name of output dir (default: outdir)
     --species VAL        Latin species name (default: homo_sapiens);
                          PolyPhen-2 only works for human
@@ -61,18 +63,19 @@ if (params.help) {
   SIFT options:
     --sift_run_type VAL  SIFT run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
     --blastdb DIR        Path to SIFT-formatted BLAST database
-                         (e.g., uniref100)
+                         (e.g., uniref100; required if running SIFT)
     --median_cutoff VAL  Protein alignment's median cutoff (default: 2.75)
 
   PolyPhen-2 options:
     --pph_run_type VAL   PolyPhen-2 run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
-    --pph_data DIR       Path to PolyPhen-2 databases; available from
+    --pph_data DIR       Path to PolyPhen-2 databases (required if running
+                         PolyPhen-2); available from
                          http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads
   """
   exit 1
