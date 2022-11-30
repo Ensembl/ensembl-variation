@@ -63,18 +63,19 @@ if (params.help) {
   SIFT options:
     --sift_run_type VAL  SIFT run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
     --blastdb DIR        Path to SIFT-formatted BLAST database
-                         (e.g., uniref100)
+                         (e.g., uniref100; required if running SIFT)
     --median_cutoff VAL  Protein alignment's median cutoff (default: 2.75)
 
   PolyPhen-2 options:
     --pph_run_type VAL   PolyPhen-2 run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
-    --pph_data DIR       Path to PolyPhen-2 databases; available from
+    --pph_data DIR       Path to PolyPhen-2 databases (required if running
+                         PolyPhen-2); available from
                          http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads
   """
   exit 1

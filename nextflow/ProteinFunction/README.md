@@ -57,7 +57,7 @@ nextflow run main.nf -profile lsf -resume \
 
 ## Arguments
 
-**Available arguments:**
+**General options:**
 | Argument          | Description                                     |
 | ----------------- | ----------------------------------------------- |
 | `--gtf`           | Comma-separated list of annotation GTF files (requires `--fasta`) |
@@ -78,12 +78,12 @@ nextflow run main.nf -profile lsf -resume \
 **SIFT options:**
 | Argument | Description |
 | -------- | ----------- |
-| `--sift_run_type` | SIFT run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to skip this step (default) |
-| `--blastdb`       | SIFT-formatted BLAST database directory (e.g., `uniref100`) |
+| `--sift_run_type` | SIFT run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to only run for new/changed translations<br/>- `NONE` to skip this step (default) |
+| `--blastdb`       | SIFT-formatted BLAST database directory (e.g., `uniref100`; required if running SIFT) |
 | `--median_cutoff` | Protein alignment's median cutoff (default: 2.75)           |
 
 **PolyPhen-2 options:**
 | Argument | Description |
 | -------- | ----------- |
-| `--pph_run_type` | PolyPhen-2 run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to skip this step (default) |
-| `--pph_data`     | Path to PolyPhen-2 data; available from http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads |
+| `--pph_run_type` | PolyPhen-2 run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to only run for new/changed translations<br/>- `NONE` to skip this step (default) |
+| `--pph_data`     | Path to PolyPhen-2 data (required if running PolyPhen-2); available from http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads |
