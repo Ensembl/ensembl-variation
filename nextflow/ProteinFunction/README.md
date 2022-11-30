@@ -61,7 +61,7 @@ nextflow run main.nf -profile lsf -resume \
 | Argument          | Description                                     |
 | ----------------- | ----------------------------------------------- |
 | `--gtf`           | Comma-separated list of annotation GTF files (requires `--fasta`) |
-| `--fasta`         | Comma-separated list of genomic sequence FASTA files (required `--gtf`) |
+| `--fasta`         | Comma-separated list of genomic sequence FASTA files (requires `--gtf`) |
 | `--translated`    | Comma-separated list of peptide sequence FASTA files; skips sequence translation based on GTF and FASTA files |
 | `--outdir`        | Name of output dir (default: `outdir`)    |
 | `--species`       | Latin species name (default: `homo_sapiens`); PolyPhen-2 only works for human |
