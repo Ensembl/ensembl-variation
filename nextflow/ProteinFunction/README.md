@@ -48,8 +48,8 @@ Check [nextflow.config](nextflow.config) for available pre-configured profiles.
 
 ```
 nextflow run main.nf -profile lsf -resume \
-         --species homo_sapiens \
-         --gtf [path/to/gtf] --fasta [path/to/fasta] \
+         --species canis_lupus_familiaris \
+         --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \
          --pph_run_type UPDATE --pph_data [path/to/pph_data] \
          --sift_run_type UPDATE --blastdb [path/to/blastdb] \
          --host [h] --port [p] --user [u] --pass [p] --database [db]
@@ -60,10 +60,10 @@ nextflow run main.nf -profile lsf -resume \
 **Available arguments:**
 | Argument          | Description                                     |
 | ----------------- | ----------------------------------------------- |
-| `--gtf`           | Annotation GTF file (required with FASTA)       |
-| `--fasta`         | Genomic sequence FASTA file (required with GTF) |
-| `--translated`    | FASTA file with peptide sequences; can be used instead of supplying `--gtf` and `--fasta` |
-| `--outdir`        |       Name of output dir (default: `outdir`)    |
+| `--gtf`           | Comma-separated list of annotation GTF files (requires `--fasta`) |
+| `--fasta`         | Comma-separated list of genomic sequence FASTA files (required `--gtf`) |
+| `--translated`    | Comma-separated list of peptide sequence FASTA files; skips sequence translation based on GTF and FASTA files |
+| `--outdir`        | Name of output dir (default: `outdir`)    |
 | `--species`       | Latin species name (default: `homo_sapiens`); PolyPhen-2 only works for human |
 
 **Database options (mandatory):**
@@ -78,12 +78,12 @@ nextflow run main.nf -profile lsf -resume \
 **SIFT options:**
 | Argument | Description |
 | -------- | ----------- |
-| `--sift_run_type` | SIFT run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to exclude this analysis (default) |
+| `--sift_run_type` | SIFT run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to skip this step (default) |
 | `--blastdb`       | SIFT-formatted BLAST database directory (e.g., `uniref100`) |
-| `--median_cutoff` | Protein alignment's median cutoff. Default: 2.75            |
+| `--median_cutoff` | Protein alignment's median cutoff (default: 2.75)           |
 
 **PolyPhen-2 options:**
 | Argument | Description |
 | -------- | ----------- |
-| `--pph_run_type` | PolyPhen-2 run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to exclude this analysis (default) |
-| `--pph_data`     | Path to PolyPhen-2 data |
+| `--pph_run_type` | PolyPhen-2 run type:<br/>- `FULL` to run for all translations<br/>- `UPDATE` to run for new/changed translations<br/>- `NONE` to skip this step (default) |
+| `--pph_data`     | Path to PolyPhen-2 data; available from http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads |

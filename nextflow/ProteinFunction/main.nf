@@ -36,18 +36,19 @@ if (params.help) {
 
   Usage:
     nextflow run main.nf -profile lsf -resume \\
-             --species homo_sapiens \\
+             --species canis_lupus_familiaris \\
              --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \\
              --pph_run_type  UPDATE --pph_data [path/to/pph_data] \\
              --sift_run_type UPDATE --blastdb  [path/to/blastdb] \\
              --host [h] --port [p] --user [u] --pass [p] --database [db]
 
   General options:
-    --gtf FILE           Comma-separated annotation GTF files; requires FASTA
-    --fasta FILE         Comma-separated FASTA files with genomic sequences;
-                         requires GTF
-    --translated FILE    Comma-separated FASTA files with peptide sequence;
-                         skips sequence translation based on GTF and FASTA
+    --gtf FILE           Comma-separated list of annotation GTF files; requires
+                         FASTA files
+    --fasta FILE         Comma-separated list of FASTA files with genomic
+                         sequences; requires GTF files
+    --translated FILE    Comma-separated list of FASTA files with peptide
+                         sequence; skips sequence translation with GTF and FASTA
     --outdir VAL         Name of output dir (default: outdir)
     --species VAL        Latin species name (default: homo_sapiens);
                          PolyPhen-2 only works for human
