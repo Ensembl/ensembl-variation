@@ -1248,6 +1248,20 @@ sub remove_outdated_citations {
   $citations_sth->execute()||die;
   my $citations_data = $citations_sth->fetchall_arrayref();
 
+  my $rm_citations_sth = $dba->dbc()->prepare(qq[
+        delete from variation_citation
+        where data_source_attrib = ? and
+              variation_id = ? and 
+              publication_id = ?
+  ]);
+        
+  my $update_citations_sth = $dba->dbc()->prepare(qq[
+        update variation_citation
+        set data_source_attrib = ?
+        where variation_id = ? and 
+              publication_id = ?
+  ]);
+
   foreach my $c (@{$citations_data}){
     my $variation_id = $c->[0];
     my $publication_id = $c->[1];
@@ -1274,25 +1288,13 @@ sub remove_outdated_citations {
     
     if (!@current_attribs) {
       # remove citation if outdated in all sources
-      my $rm_citations_sth = $dba->dbc()->prepare(qq[
-          delete from variation_citation
-          where variation_id = '$variation_id' and 
-                publication_id = '$publication_id' and
-                data_source_attrib = '$attrib_id'
-        ]);
-      $rm_citations_sth->execute() ||
-        die "Error: cannot remove $variation_rsid, $publication_pmid, $attrib_id from variation_citation\n";
+      $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) ||
+        die "Error: cannot remove $variation_id, $publication_id, $attrib_id from variation_citation\n";
     } elsif (@current_attribs ne @split_attrib_id) {
       # discard outdated sources
       my $new_attrib_id = join(",", @current_attribs);
-      my $update_citations_sth = $dba->dbc()->prepare(qq[
-          update variation_citation
-          set data_source_attrib = '$new_attrib_id'
-          where variation_id = '$variation_id' and 
-                publication_id = '$publication_id'
-        ]);
-      $update_citations_sth->execute() ||
-        die "Error: cannot update $variation_rsid, $publication_pmid, $attrib_id from variation_citation (new value: $new_attrib_id)\n";
+      $update_citations_sth->execute($new_attrib_id, $variation_id, $publication_id) ||
+        die "Error: cannot update $variation_id, $publication_id, $attrib_id from variation_citation with new value $new_attrib_id\n";
     }
 
   }
