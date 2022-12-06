@@ -760,7 +760,12 @@ sub main {
       }
 
       # sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
+      # Exception: do not import synonyms for source EVA
       if($data->{ID} =~ /\;/) {
+        if($config->{source} eq 'EVA') {
+          print "WARNING: found multiple rsIDs (", $data->{ID}, ")\n";
+        }
+
         my @ids = split(';', $data->{ID});
         my @rs_ids = sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} grep {/^rs/} @ids;
         my @other_ids = grep {!/^rs/} @ids;
@@ -770,11 +775,13 @@ sub main {
 
         if(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
           $data->{ID} = 'ss'.$data->{SS_ID};
-          $data->{synonyms} = grep {$_ ne $data->{SS_ID}} @ids;
+          if($config->{source} ne 'EVA') {
+            $data->{synonyms} = grep {$_ ne $data->{SS_ID}} @ids;
+          }
         }
         else {
           $data->{ID} = $primary_id;
-          $data->{synonyms} = \@ids if scalar @ids;
+          $data->{synonyms} = \@ids if(scalar @ids && $config->{source} ne 'EVA');
         }
       }
       elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
@@ -1668,6 +1675,11 @@ sub get_source_id{
 
     $config->{rows_added}->{source}++;
   }
+  elsif($version) {
+    # Update version
+    my $sth_upd = $dbVar->prepare(qq{update source set version = ? where source_id = ?});
+    $sth_upd->execute($version, $source_id);
+  }
 
   return $source_id;
 }
@@ -1898,6 +1910,8 @@ sub variation {
   my $so_term  = SO_variation_class($vf->allele_string, 1);
   my $class_id = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
 
+  my $evidence_id = $config->{attribute_adaptor}->attrib_id_for_type_value('evidence', 'Multiple_observations');
+
   # otherwise create new one
   if(!defined($var) && !defined($config->{only_existing})) {
     $var = Bio::EnsEMBL::Variation::Variation->new_fast({
@@ -1908,6 +1922,13 @@ sub variation {
 
     if (defined $data->{info}->{AA}) {
       $var->{ancestral_allele} = $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA});
+    }
+
+    # Add evidence to variation
+    if (defined $data->{info}->{SID} && $data->{info}->{SID} =~ /,/) {
+      my @evidence_list;
+      push @evidence_list, $evidence_id;
+      $var->{evidence_attribs} = \@evidence_list;
     }
 
     # class
@@ -1986,6 +2007,8 @@ sub variation_feature {
   # flag to indicate if we've added a synonym
   my $added_synonym = 0;
 
+  my $evidence_id = $config->{attribute_adaptor}->attrib_id_for_type_value('evidence', 'Multiple_observations');
+
   # check existing VFs
   foreach my $existing_vf (sort {
     (count_common_alleles($vf->allele_string, $b->allele_string) <=> count_common_alleles($vf->allele_string, $a->allele_string)) ||
@@ -2037,6 +2060,13 @@ sub variation_feature {
       $existing_vf->{allele_string} = $new_allele_string;
 
       $config->{rows_added}->{variation_feature_allele_string_merged}++;
+    }
+
+    # Add evidence to variation feature
+    if (defined $data->{info}->{SID} && $data->{info}->{SID} =~ /,/) {
+      my @evidence_list;
+      push @evidence_list, $evidence_id;
+      $existing_vf->{evidence_attribs} = \@evidence_list;
     }
 
     # we also need to add a synonym entry if the variation has a new name
@@ -2112,6 +2142,13 @@ sub variation_feature {
     $vf->{_source_id}      = $config->{source_id};
     $vf->{is_somatic}      = $config->{somatic};
     $vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
+
+    # Add evidence to variation feature
+    if (defined $data->{info}->{SID} && $data->{info}->{SID} =~ /,/) {
+      my @evidence_list;
+      push @evidence_list, $evidence_id;
+      $vf->{evidence_attribs} = \@evidence_list;
+    }
 
     # now store the VF
     if(defined($config->{test})) {
