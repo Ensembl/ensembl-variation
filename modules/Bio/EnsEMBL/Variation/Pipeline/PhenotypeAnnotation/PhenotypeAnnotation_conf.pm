@@ -36,7 +36,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN WORMBASE GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN WORMBASE GWAS OMIA EGA ORPHANET MIMMORBID G2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
 
 
 sub default_options {
@@ -321,7 +321,7 @@ sub pipeline_analyses {
         },
 
         {   -logic_name => 'import_ddg2p',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportDDG2P',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportG2P',
             -parameters => {
                 @common_params,
             },

@@ -45,6 +45,8 @@ use File::Path qw(make_path);
 use File::stat;
 use File::Basename;
 use POSIX qw(strftime);
+use utf8;
+use Text::Unidecode;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -264,6 +266,7 @@ sub parse_input_file {
              $unit =~ s/\)//g;
              $unit =~ s/µ/micro/g;
           if ($unit =~ /decrease|increase/) {
+            unidecode($unit);
             $data{'beta_coef'} = "$ratio $unit";
           }
           else {

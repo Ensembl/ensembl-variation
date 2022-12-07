@@ -263,7 +263,7 @@ look up phenotype description in zooma
 sub get_zooma_terms{
   my $pheno = shift;
 
-  $pheno =~ s/\(\w+\)//; ## for DDG2P
+  $pheno =~ s/\(\w+\)//; ## for G2P
   $pheno =~ s/\s+/\+/g;
 
   my $http = HTTP::Tiny->new();
@@ -302,7 +302,7 @@ sub add_ols_matches{
     if (defined $truncate && $truncate eq 'parent'){
 
       $search_term = (split/\,/, $search_term)[0] if $search_term =~ /\,/;
-      $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (DDG2P abbreviation)
+      $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (G2P abbreviation)
       $search_term =~ s/SUSCEPTIBILITY TO\s*|SUSCEPTIBILITY//i;
       $search_term =~ s/(\,+(\s*\w+\s*)+)+\s*$//;      ## remove ", with other  condition" ", one family" type qualifiers
       $search_term =~ s/\s+type\s*\w*\s*$//i;          ## remove " type 34"
