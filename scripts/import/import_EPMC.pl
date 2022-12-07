@@ -24,6 +24,10 @@ use warnings;
 use HTTP::Tiny;
 use XML::Simple;
 use Getopt::Long;
+use utf8;
+use Text::Unidecode;
+#use HTML::Entities;
+
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
@@ -244,10 +248,9 @@ sub import_citations{
 	# Clean the title before it's inserted
 	# example: PMID = 33498513
         if($title =~ /\n/) {
-	  $title =~ s/\n//;
+	        $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
-
         ## save ids
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
@@ -268,32 +271,32 @@ sub import_citations{
         }
         else{
             ## add new publication
-	    my $new_title = $title;
-
             ## check title size
-            if(length($title) >= 300){
-              # truncate title
-              my $aux = substr($title, 0, 296);
-              my @list_title = split(' ', $aux);
-              pop @list_title;
-              $new_title = join(' ', @list_title);
-              $new_title .= '...';
-            }
-
+          if(length($title) >= 300){
+            # truncate title
+            my $aux = substr($title, 0, 296);
+            my @list_title = split(' ', $aux);
+            pop @list_title;
+            my $new_title = join(' ', @list_title);
+            $new_title .= '...';
+          }
+          my $new_title = $title;
+          
+          $new_title =~ s|<.+?>| |g;
             ### create new object
-            my $publication = Bio::EnsEMBL::Variation::Publication->new(
-                -title    => $new_title,
-                -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
-                -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
-                -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
-                -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
-                -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
-                -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
-                -variants => \@var_obs,
-                -adaptor  => $pub_ad
-                );
+          my $publication = Bio::EnsEMBL::Variation::Publication->new(
+            -title    => $new_title,
+            -authors  => unidecode($ref->{resultList}->{result}->{authorString})   || unidecode($data->{$pub}->{authors}),
+            -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
+            -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
+            -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
+            -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
+            -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
+            -variants => \@var_obs,
+            -adaptor  => $pub_ad
+          );
         
-            $pub_ad->store( $publication,$source_attrib_id );
+          $pub_ad->store( $publication,$source_attrib_id );
         }
     }
     close $not_found;
@@ -385,7 +388,6 @@ sub trim_author_list{
       $trimmed_authors = join(', ', @author_list[0..3]) . ', et al';
     }
   }
-
   return $trimmed_authors;
 }
 
