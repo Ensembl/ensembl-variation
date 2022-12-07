@@ -246,7 +246,7 @@ sub import_citations{
 	# Clean the title before it's inserted
 	# example: PMID = 33498513
         if($title =~ /\n/) {
-	    $title =~ s/\n//;
+	  $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
         ## save ids
