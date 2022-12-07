@@ -26,8 +26,6 @@ use XML::Simple;
 use Getopt::Long;
 use utf8;
 use Text::Unidecode;
-#use HTML::Entities;
-
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
@@ -248,7 +246,7 @@ sub import_citations{
 	# Clean the title before it's inserted
 	# example: PMID = 33498513
         if($title =~ /\n/) {
-	        $title =~ s/\n//;
+	    $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
         ## save ids
