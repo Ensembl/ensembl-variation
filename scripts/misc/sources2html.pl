@@ -487,7 +487,13 @@ sub source_table {
           my $filename_template = $project->{filename_template};
           my @eva_release = grep {/release_/} (split /\//, $filename_template);
 
-          $version = @eva_release ? $eva_release[0] : "-";
+          if(@eva_release){
+              $version = $eva_release[0];
+              $version = s/release_//;
+          }
+          else{
+              $version = "-";
+          }
 
           # Set description
           $description = "Variants imported from EVA";
