@@ -292,7 +292,6 @@ foreach my $type (@type_order) {
     while (my ($dbname) = $sth->fetchrow_array) {
       next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
       next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-      next unless $dbname =~ /^salmo/;
       print $dbname;
       
       $dbname =~ /^(.+)_variation/;
