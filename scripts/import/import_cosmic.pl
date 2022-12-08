@@ -24,38 +24,41 @@ use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
-my ( $infile, $registry_file, $version, $help, $index, $cleanup );
+my ( $infile, $registry_file, $version, $help, $chromosome, $cleanup );
 
 GetOptions(
-  "import|i=s"   => \$infile,
-  "registry|r=s" => \$registry_file,
-  "version=s"    => \$version,
-  "help|h"       => \$help,
-  "index=s"      => \$index,
-  "cleanup|c"    => \$cleanup,
+  "import|i=s"       => \$infile,
+  "registry|r=s"     => \$registry_file,
+  "cosmic|version=s" => \$version,
+  "help|h"           => \$help,
+  "chromosome=s"     => \$chromosome,
+  "cleanup|c"        => \$cleanup,
 );
 
 if ($help) {
     warn "
     Usage:
-      $0 --import <input_file> --registry <reg_file> --version <cosmic_version>
+      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version>
     
-    To import COSMIC variants by multiple chunks of input files:
-      $0 --import <input_file_1> --registry <reg_file> --version <cosmic_version> --index 1
-      $0 --import <input_file_2> --registry <reg_file> --version <cosmic_version> --index 2
-      $0 --import <input_file_3> --registry <reg_file> --version <cosmic_version> --index 3
+    To import COSMIC variants per chromosome:
+      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome 1
+      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome X
+      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome MT
       # clean up data
-      $0 --registry <reg_file> --version <cosmic_version>\n";
+      $0 --registry <reg_file> --cleanup\n";
     exit(0);
 }
 
 $cleanup = 0 unless defined($cleanup);
-$index = "" if $cleanup || !defined($index);
-unless ($cleanup) {
+$chromosome = "" if $cleanup || !defined($chromosome);
+if (!$cleanup) {
   unless (defined($registry_file) && defined($infile) && defined($version)) {
     warn "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
   }
+} elsif (!defined($registry_file)) {
+  warn "Must supply a registry file when cleaning up data ...\n" unless $help;
+  $help = 1;
 }
 
 my $registry = 'Bio::EnsEMBL::Registry';
@@ -121,9 +124,9 @@ my $phenotype_evidence = 'Phenotype_or_Disease';
 my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 my $pheno_class_attrib_id = get_attrib_id('phenotype_type', 'tumour');
 
-my $temp_table        = $temp_table_prefix . $index;
-my $temp_phen_table   = $temp_phen_table_prefix . $index;
-my $temp_varSyn_table = $temp_varSyn_table_prefix . $index;
+my $temp_table        = $temp_table_prefix . $chromosome;
+my $temp_phen_table   = $temp_phen_table_prefix . $chromosome;
+my $temp_varSyn_table = $temp_varSyn_table_prefix . $chromosome;
 
 my $default_class = 'sequence_alteration'; 
 my %class_mapping = ( 'Substitution' => 'SNV',
@@ -249,7 +252,9 @@ while (<IN>) {
   # 1,100001572,100001572,COSV63379341,COSN6400737,"liver","Substitution - intronic"
 
   my $chr = shift(@line);
-     $chr = $chr_names{$chr} if ($chr_names{$chr});
+  $chr = $chr_names{$chr} if ($chr_names{$chr});
+  next if $chr ne $chromosome;
+     
   my $start         = shift(@line);
   my $end           = shift(@line);
   my $cosv_id       = shift(@line);
