@@ -489,7 +489,7 @@ sub source_table {
 
           if(@eva_release){
               $version = $eva_release[0];
-              $version = s/release_//;
+              $version =~ s/release_//;
           }
           else{
               $version = "-";
