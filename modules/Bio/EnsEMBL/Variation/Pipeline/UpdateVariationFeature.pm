@@ -73,12 +73,25 @@ sub run {
 
         my $file = $self->param('update_diff');
         my @update_transcripts;
+
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
             next if /^transcript_id/;
-            my ($transcript_id, $status, $other_info) = split(/\t/);
+            my ($transcript_id, $status, $gene_id) = split(/\t/);
+
             push @update_transcripts, $transcript_id if $status ne "deleted";
+
+           # grab all transcript IDs for genes with deleted transcripts and add to list
+	   if($status eq "deleted") {
+             my $core_dba = $self->get_species_adaptor('core');
+             my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+             my $gene = $ga->fetch_by_stable_id($gene_id); # if not found need to save the gene id as being deleted. Then need to grab all transcript IDs (will all be in diff file
+             # and feed them to a separate $dbc command that INSERTS intergenic_variant for all overlapped VFs
+             foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
+	       push @update_transcripts, $transcript->stable_id;
+             }
+           }
 
             if(@update_transcripts > 500){
                 my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
@@ -106,19 +119,19 @@ sub run {
             GROUP BY variation_feature_id
         }) or die "Populating temp table failed";
 
-    } else {
+    } 
 
+    else {
         $dbc->do(qq{
             INSERT INTO $temp_table (variation_feature_id, consequence_types)
             SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
             FROM    transcript_variation 
             GROUP BY variation_feature_id
         }) or die "Populating temp table failed";
-
     }
 
     # update variation_feature
-    
+
     $dbc->do(qq{
         UPDATE  variation_feature vf, $temp_table tvf
         SET     vf.consequence_types = tvf.consequence_types
