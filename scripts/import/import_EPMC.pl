@@ -281,7 +281,7 @@ sub import_citations{
           }
           
           
-          $new_title =~ s|<.+?>| |g;
+          $new_title =~ s|<.+?>||g;
             ### create new object
           my $publication = Bio::EnsEMBL::Variation::Publication->new(
             -title    => $new_title,
