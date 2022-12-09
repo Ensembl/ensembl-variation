@@ -75,20 +75,24 @@ sub fetch_input {
         if ($status ne "deleted") {
           push @gene_output_ids, {gene_stable_id  => $gene_id,}
         }
-#        push @delete_transcripts, $transcript_id if $status eq "deleted";
+        push @delete_transcripts, $transcript_id if $status eq "deleted";
 
         # Remove Deleted transcripts
-#        if (@delete_transcripts > 500){
-#            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+        if (@delete_transcripts > 500){
+            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
             
-#            $dbc->do(qq{
-#                      DELETE FROM  transcript_variation
-#                      WHERE   feature_stable_id IN ($joined_ids);
-#            }) or die "Deleting stable ids failed";
+            $dbc->do(qq{
+                      DELETE FROM  transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids);
+            }) or die "Deleting stable ids failed";
 
+           $dbc->do(qq{
+                      DELETE FROM  MTMP_transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids);
+            });
             # Reset delete_transcripts list
-#            @delete_transcripts = ();
-#        }
+            @delete_transcripts = ();
+        }
       }
     $include_lrg = 0;
     } 
@@ -133,16 +137,19 @@ sub fetch_input {
     $self->param('gene_output_ids', \@gene_output_ids);
 
     # Remove Deleted transcripts
-#    if (-e $self->param('update_diff')){
-#        my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-#        return if $joined_ids eq "";
-#        $dbc->do(qq{
-#                  DELETE FROM  transcript_variation
-#                  WHERE   feature_stable_id IN ($joined_ids);
-#        }) or die "Deleting stable ids failed";
+    if (-e $self->param('update_diff')){
+        my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+        return if $joined_ids eq "";
+        $dbc->do(qq{
+                  DELETE FROM  transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids);
+        }) or die "Deleting stable ids failed";
 
-#    }
-
+       $dbc->do(qq{
+                      DELETE FROM  MTMP_transcript_variation
+                      WHERE   feature_stable_id IN ($joined_ids);
+            });
+    }
 }
 
 sub write_output {
