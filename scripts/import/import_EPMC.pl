@@ -1242,7 +1242,7 @@ sub check_outdated_citations {
   my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
-  my $attrib_id_ddg2p = $citation_attribs->{'DDG2P'};
+  my $attrib_id_ddg2p = $citation_attribs->{'G2P'};
 
   my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
                                                from variation_citation
