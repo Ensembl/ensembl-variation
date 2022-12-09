@@ -364,41 +364,38 @@ foreach my $type (@type_order) {
           # determine type of data the file has`
           my @types = get_vcf_content_types($project);
           
-          # We are only interested with species which are vcf-only for now
-          if ( grep /^source$/, @types){
-            # Check if the file have genotype data and being showed
-            if ( grep /^genotype$/, @types){
-              # Check if either vcf config or database have the samples
-              if ( genotype_samples_exists($s_name, $project) ){
-                # Label
-                $species_list{'vcf'}{$s_name}{label} = $label_name;
-                
-                # Disply name
-                $species_list{'vcf'}{$s_name}{'name'} = $display_name;
-                $display_list{'vcf'}{$display_name} = $s_name;
-                
-                # Count the number of variations if the vcf file is used as source
-                my $count_var = get_variant_count($project);
-                if ($count_var && $count_var > 0){
-                  $species_list{'vcf'}{$s_name}{'a'} = $count_var;
-                  # We assume for vcf file sample and population variation count would be same
-                  $species_list{'vcf'}{$s_name}{'b'} = $count_var;
-                }
-                
-                # Count difference with previous release
-                my $count_p_var;
-                if ($prev_data) {
-                  $count_p_var = $prev_data->{$s_name}->{count};
-                  $count_p_var =~ s/<[^>]*.//g;
-                }
-                else{
-                  $count_p_var = 0;
-                }
-                $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var);
-                $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var);
-                
-                $b_type = "num";
+          # Check if the file have genotype data and being showed
+          if ( grep /^genotype$/, @types){
+            # Check if either vcf config or database have the samples
+            if ( genotype_samples_exists($s_name, $project) ){
+              # Label
+              $species_list{'vcf'}{$s_name}{label} = $label_name;
+              
+              # Disply name
+              $species_list{'vcf'}{$s_name}{'name'} = $display_name;
+              $display_list{'vcf'}{$display_name} = $s_name;
+              
+              # Count the number of variations if the vcf file is used as source
+              my $count_var = get_variant_count($project);
+              if ($count_var && $count_var > 0){
+                $species_list{'vcf'}{$s_name}{'a'} = $count_var;
+                # We assume for vcf file sample and population variation count would be same
+                $species_list{'vcf'}{$s_name}{'b'} = $count_var;
               }
+              
+              # Count difference with previous release
+              my $count_p_var;
+              if ($prev_data) {
+                $count_p_var = $prev_data->{$s_name}->{count};
+                $count_p_var =~ s/<[^>]*.//g;
+              }
+              else{
+                $count_p_var = 0;
+              }
+              $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var);
+              $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var);
+              
+              $b_type = "num";
             }
           }
         }
