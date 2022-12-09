@@ -392,6 +392,11 @@ foreach my $type (@type_order) {
               else{
                 $count_p_var = 0;
               }
+              
+              # WE NEED TO FIX THIS - FOR e109 WE DON'T HAVE INCREASE IN COUNT
+              # CURRENT PREV DATA FILE ONLY HAVE VARIANT DATA AND NOT GENOTYPE DATA
+              $count_p_var = $count_var;
+              
               $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var);
               $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var);
               
