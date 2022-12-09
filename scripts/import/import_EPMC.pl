@@ -242,9 +242,9 @@ sub import_citations{
           $title =~ s/\]\.//;
         }  
 
-	# Some publication have newline in the title
-	# Clean the title before it's inserted
-	# example: PMID = 33498513
+	      # Some publication have newline in the title
+	      # Clean the title before it's inserted
+	      # example: PMID = 33498513
         if($title =~ /\n/) {
 	  $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
@@ -270,15 +270,16 @@ sub import_citations{
         else{
             ## add new publication
             ## check title size
+          my $new_title = $title;
           if(length($title) >= 300){
             # truncate title
             my $aux = substr($title, 0, 296);
             my @list_title = split(' ', $aux);
             pop @list_title;
-            my $new_title = join(' ', @list_title);
+            $new_title = join(' ', @list_title);
             $new_title .= '...';
           }
-          my $new_title = $title;
+          
           
           $new_title =~ s|<.+?>| |g;
             ### create new object
@@ -1237,7 +1238,7 @@ sub check_outdated_citations {
   open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
   print $wrt "RSID\tPMID\tSource\n";
 
-  # get all citations from the sources 'ClinVar', 'dbGaP', 'GWAS' and 'DDG2P' - imported from the phenotype tables
+  # get all citations from the sources 'ClinVar', 'dbGaP', 'GWAS' and 'G2P' - imported from the phenotype tables
   my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
