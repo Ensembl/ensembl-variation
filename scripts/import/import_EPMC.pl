@@ -24,6 +24,8 @@ use warnings;
 use HTTP::Tiny;
 use XML::Simple;
 use Getopt::Long;
+use utf8;
+use Text::Unidecode;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
@@ -240,14 +242,13 @@ sub import_citations{
           $title =~ s/\]\.//;
         }  
 
-	# Some publication have newline in the title
-	# Clean the title before it's inserted
-	# example: PMID = 33498513
+        # Some publication have newline in the title
+        # Clean the title before it's inserted
+        # example: PMID = 33498513
         if($title =~ /\n/) {
-	  $title =~ s/\n//;
+          $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
-
         ## save ids
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
@@ -268,32 +269,33 @@ sub import_citations{
         }
         else{
             ## add new publication
-	    my $new_title = $title;
-
             ## check title size
-            if(length($title) >= 300){
-              # truncate title
-              my $aux = substr($title, 0, 296);
-              my @list_title = split(' ', $aux);
-              pop @list_title;
-              $new_title = join(' ', @list_title);
-              $new_title .= '...';
-            }
-
+          my $new_title = $title;
+          if(length($title) >= 300){
+            # truncate title
+            my $aux = substr($title, 0, 296);
+            my @list_title = split(' ', $aux);
+            pop @list_title;
+            $new_title = join(' ', @list_title);
+            $new_title .= '...';
+          }
+          
+          
+          $new_title =~ s|<.+?>||g;
             ### create new object
-            my $publication = Bio::EnsEMBL::Variation::Publication->new(
-                -title    => $new_title,
-                -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
-                -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
-                -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
-                -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
-                -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
-                -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
-                -variants => \@var_obs,
-                -adaptor  => $pub_ad
-                );
+          my $publication = Bio::EnsEMBL::Variation::Publication->new(
+            -title    => $new_title,
+            -authors  => unidecode($ref->{resultList}->{result}->{authorString})   || unidecode($data->{$pub}->{authors}),
+            -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
+            -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
+            -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
+            -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
+            -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
+            -variants => \@var_obs,
+            -adaptor  => $pub_ad
+          );
         
-            $pub_ad->store( $publication,$source_attrib_id );
+          $pub_ad->store( $publication,$source_attrib_id );
         }
     }
     close $not_found;
@@ -341,8 +343,8 @@ sub get_publication_info_from_epmc{
     elsif( defined $data->{$pub}->{doi} ){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{doi}" );
       ## check results of full text query
-      return undef unless defined  $data->{$pub}->{doi} &&
-      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+      return undef unless defined $data->{$pub}->{doi} && defined $ref->{resultList}->{result}->{doi} &&
+      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi};
     }
     elsif(defined $data->{$pub}->{pmcid}){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{pmcid}" );
@@ -385,7 +387,6 @@ sub trim_author_list{
       $trimmed_authors = join(', ', @author_list[0..3]) . ', et al';
     }
   }
-
   return $trimmed_authors;
 }
 
@@ -1237,11 +1238,11 @@ sub check_outdated_citations {
   open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
   print $wrt "RSID\tPMID\tSource\n";
 
-  # get all citations from the sources 'ClinVar', 'dbGaP', 'GWAS' and 'DDG2P' - imported from the phenotype tables
+  # get all citations from the sources 'ClinVar', 'dbGaP', 'GWAS' and 'G2P' - imported from the phenotype tables
   my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
-  my $attrib_id_ddg2p = $citation_attribs->{'DDG2P'};
+  my $attrib_id_ddg2p = $citation_attribs->{'G2P'};
 
   my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
                                                from variation_citation
