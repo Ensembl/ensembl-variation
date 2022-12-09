@@ -242,11 +242,11 @@ sub import_citations{
           $title =~ s/\]\.//;
         }  
 
-	      # Some publication have newline in the title
-	      # Clean the title before it's inserted
-	      # example: PMID = 33498513
+        # Some publication have newline in the title
+        # Clean the title before it's inserted
+        # example: PMID = 33498513
         if($title =~ /\n/) {
-	  $title =~ s/\n//;
+          $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
         ## save ids
@@ -343,8 +343,8 @@ sub get_publication_info_from_epmc{
     elsif( defined $data->{$pub}->{doi} ){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{doi}" );
       ## check results of full text query
-      return undef unless defined  $data->{$pub}->{doi} &&
-      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+      return undef unless defined $data->{$pub}->{doi} && defined $ref->{resultList}->{result}->{doi} &&
+      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi};
     }
     elsif(defined $data->{$pub}->{pmcid}){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{pmcid}" );
