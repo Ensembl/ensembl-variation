@@ -245,7 +245,7 @@ if ($p_data) {
   $json_string = <IN>;
   close IN;
 
-  my $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
+  $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
 }
 
 ###############################################################
