@@ -266,8 +266,7 @@ sub parse_input_file {
              $unit =~ s/\)//g;
              $unit =~ s/µ/micro/g;
           if ($unit =~ /decrease|increase/) {
-            $unit =~ s/ //g;
-            unidecode($unit);
+            $unit = unidecode($unit);
             $unit =~ s/aEUR%01/-/g;
             $data{'beta_coef'} = "$ratio $unit";
           }

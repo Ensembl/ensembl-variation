@@ -205,7 +205,7 @@ sub pipeline_analyses {
                 '3->A' => [ 'import_ega' ],
                 '4->A' => [ 'import_orphanet' ],
                 '5->A' => [ 'import_mimmorbid' ],
-                '6->A' => [ 'import_ddg2p' ],
+                '6->A' => [ 'import_g2p' ],
                 '7->A' => [ 'import_cancerGC' ],
                 'A->8' => [ 'check_phenotypes'],
             },
@@ -315,12 +315,12 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'import_ddg2p']
+                2 => [ 'import_g2p']
             },
             -max_retry_count => 0,
         },
 
-        {   -logic_name => 'import_ddg2p',
+        {   -logic_name => 'import_g2p',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportG2P',
             -parameters => {
                 @common_params,
@@ -329,11 +329,11 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'check_ddg2p']
+                2 => [ 'check_g2p']
             },
         },
 
-        {   -logic_name => 'check_ddg2p',
+        {   -logic_name => 'check_g2p',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {
                 @common_params,
