@@ -97,16 +97,17 @@ sub performCleanup {
   }
   $sth->finish();
 
-  my ($dbname) = $dbh->selectrow_array("select DATABASE()");
-  my $tmpdb = $dbname . "_tmptables";
+  my $dbname = $dbVar->selectrow_array("select DATABASE()");
+  my $tmpdb  = $dbname . "_tmptables";
+  $dbVar->do("CREATE DATABASE IF NOT EXISTS $tmpdb");
+  
   warn "Moving tmp tables to $tmpdb...\n";
-  $dbVar->do("CREATE DATABASE IF NOT EXISTS $tmpdb;
-    RENAME TABLE $temp_table_prefix TO $tmpdb.$temp_table_prefix;
-    RENAME TABLE $temp_phen_table_prefix TO $tmpdb.$temp_phen_table_prefix;
-    RENAME TABLE $temp_varSyn_table_prefix TO $tmpdb.$temp_varSyn_table_prefix;");
+  $dbVar->do("RENAME TABLE $temp_table_prefix TO $tmpdb.$temp_table_prefix");
+  $dbVar->do("RENAME TABLE $temp_phen_table_prefix TO $tmpdb.$temp_phen_table_prefix");
+  $dbVar->do("RENAME TABLE $temp_varSyn_table_prefix TO $tmpdb.$temp_varSyn_table_prefix");
 
   warn "Auxiliary COSMIC tables removed and their rows were aggregated into " .
-        "the following tables and moved to $tmptables:\n" .
+        "the following tables and moved to $tmpdb:\n" .
         "  - $temp_table_prefix\n" .
         "  - $temp_phen_table_prefix\n" .
         "  - $temp_varSyn_table_prefix\n";
