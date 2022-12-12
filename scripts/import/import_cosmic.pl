@@ -91,19 +91,21 @@ sub performCleanup {
     $main_table =~ s/[0-9]+$//;
     next if $table eq $main_table;
 
+    warn "Moving $table contents to $main_table...\n";
     $dbVar->do("INSERT INTO $main_table SELECT * FROM $table;");
     delete_table($dbVar, $table);
   }
   $sth->finish();
 
   my ($dbname) = $dbh->selectrow_array("select DATABASE()");
-  my $tmptables = $dbname . "_tmptables";
-  $dbVar->do("CREATE DATABASE IF NOT EXISTS $tmptables;
-    RENAME TABLE $temp_table_prefix TO $tmptables.$temp_table_prefix;
-    RENAME TABLE $temp_phen_table_prefix TO $tmptables.$temp_phen_table_prefix;
-    RENAME TABLE $temp_varSyn_table_prefix TO $tmptables.$temp_varSyn_table_prefix;");
+  my $tmpdb = $dbname . "_tmptables";
+  warn "Moving tmp tables to $tmpdb...\n";
+  $dbVar->do("CREATE DATABASE IF NOT EXISTS $tmpdb;
+    RENAME TABLE $temp_table_prefix TO $tmpdb.$temp_table_prefix;
+    RENAME TABLE $temp_phen_table_prefix TO $tmpdb.$temp_phen_table_prefix;
+    RENAME TABLE $temp_varSyn_table_prefix TO $tmpdb.$temp_varSyn_table_prefix;");
 
-  print "Auxiliary COSMIC tables removed and their rows were aggregated into " .
+  warn "Auxiliary COSMIC tables removed and their rows were aggregated into " .
         "the following tables and moved to $tmptables:\n" .
         "  - $temp_table_prefix\n" .
         "  - $temp_phen_table_prefix\n" .
