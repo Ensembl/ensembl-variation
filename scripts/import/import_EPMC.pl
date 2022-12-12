@@ -1278,22 +1278,22 @@ sub remove_outdated_citations {
 
     my @split_attrib_id = split /,/, $attrib_id;
 
-    my @current_attribs;
+    my @outdated_attribs;
     foreach my $attrib (@split_attrib_id) {
       unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid}) {
-        push @current_attribs, $attrib;
+        push @outdated_attribs, $attrib;
         print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n";
       }
     }
     
-    if (!@current_attribs) {
+    if (@outdated_attribs eq @split_attrib_id) {
       # remove citation if outdated in all sources
-      $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) ||
+      $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) or
         die "Error: cannot remove $variation_id, $publication_id, $attrib_id from variation_citation\n";
-    } elsif (@current_attribs ne @split_attrib_id) {
+    } elsif (@outdated_attribs) {
       # discard outdated sources
-      my $new_attrib_id = join(",", @current_attribs);
-      $update_citations_sth->execute($new_attrib_id, $variation_id, $publication_id) ||
+      my $new_attrib_id = join(",", @outdated_attribs);
+      $update_citations_sth->execute($new_attrib_id, $variation_id, $publication_id) or
         die "Error: cannot update $variation_id, $publication_id, $attrib_id from variation_citation with new value $new_attrib_id\n";
     }
 
