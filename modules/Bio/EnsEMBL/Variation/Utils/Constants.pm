@@ -554,7 +554,8 @@ our %OVERLAP_CONSEQUENCES = (
   'feature_class' => 'Bio::EnsEMBL::Transcript',
   'impact' => 'LOW',
   'include' => {
-                 'intron' => 1
+                 'intron' => 1,
+                 'exon' => 0,
                },
   'label' => 'splice polypyrimidine tract variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
