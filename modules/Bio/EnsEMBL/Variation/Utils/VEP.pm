@@ -348,7 +348,7 @@ our @VAR_CACHE_COLS = qw(
     phenotype_or_disease
 );
 
-our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length ensembl refseq);
+our @PICK_ORDER = qw(mane canonical appris tsl biotype ccds rank length ensembl refseq);
 
 # parses a line of input, returns VF object(s)
 sub parse_line {
