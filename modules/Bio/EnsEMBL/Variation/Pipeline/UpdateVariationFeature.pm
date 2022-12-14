@@ -127,32 +127,37 @@ sub run {
 
         # Gets genes flagged as deleted, then either sets to intergenic if VF has no other overlapping genes
         # or removes consequences derived from deleted genes.
-        my @old_genes = @{ $self->param('pass_vf') };
-        print "\nOLD_GENES: @old_genes\n";
-    #     if(@old_genes) {
-    #         foreach(@old_genes) {
+        my @old_genes;
+        my $del_file = $self->param('pipeline_dir') . 'del_log/deleted_transcripts.txt';
+        if ($del_file) {
+            open (DEL, $del_file) or die "Can't open file $del_file: $!\n";
+            chomp (@old_genes = <DEL>);
+            close(DEL);
+        }
+        if(@old_genes) {
+            foreach(@old_genes) {
 
-    #         my $overlap = $dbc->do(qq{
-    #                    SELECT DISTINCT(consequence_types)
-    #                     FROM transcript_variation
-    #                     WHERE variation_feature_id = $_
-    #                 });
+            my $overlap = $dbc->do(qq{
+                        SELECT DISTINCT(consequence_types)
+                         FROM transcript_variation
+                         WHERE variation_feature_id = $_
+                     });
         
-    #         if ($overlap) {
-    #                 $dbc->do(qq{
-    #                 INSERT INTO $temp_table (variation_feature_id, consequence_types)
-    #                 VALUES $_, '$overlap'
-    #                 }) or die "Populating temp table failed";
-    #         }
+            if ($overlap) {
+                     $dbc->do(qq{
+                     INSERT INTO $temp_table (variation_feature_id, consequence_types)
+                     VALUES $_, '$overlap'
+                     }) or die "Populating temp table failed";
+            }
         
-    #         else{
-    #             $dbc->do(qq{
-    #                 INSERT INTO $temp_table (variation_feature_id, consequence_types)
-    #                 VALUES $_, 'intergenic_variant' 
-    #             }) or die "Populating temp table failed";
-    #         }
-    #     }
-    # }
+            else{
+                 $dbc->do(qq{
+                     INSERT INTO $temp_table (variation_feature_id, consequence_types)
+                     VALUES $_, 'intergenic_variant' 
+                 }) or die "Populating temp table failed";
+            }
+        }
+    }
   }
 
     else {

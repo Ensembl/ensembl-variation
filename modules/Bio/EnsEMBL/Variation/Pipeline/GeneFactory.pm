@@ -36,7 +36,7 @@ use warnings;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
 use File::Path qw(mkpath rmtree);
-
+use FileHandle;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
@@ -84,7 +84,6 @@ sub fetch_input {
         if(!defined( $ga->fetch_by_stable_id($gene) ) ) {
           my $transcripts = $genes_hash{$gene};
           $transcripts =~s/,$//;
-#          print "GENE_ID:$gene JOINED_IDS:$transcripts\n";
           my @vf_ids = $dbc->do(qq{
               SELECT DISTINCT(variation_feature_id) FROM  transcript_variation
               WHERE feature_stable_id IN ($transcripts);
@@ -122,8 +121,11 @@ sub fetch_input {
            @delete_transcripts = ();
         }
       }
-#        print "ALL VF STUFF HERE??? @all_vf\n";
-        $self->param('pass_vf ', \@all_vf);
+	      my $tvdel_fh = FileHandle->new();
+        $tvdel_fh->open(">>" .$self->param('pipeline_dir'). "/del_log/deleted_transcripts.txt") or die "Cannot open dump file " . $!;
+        $self->dump_deleted_tv(@all_vf, $tvdel_fh); 
+        $tvdel_fh->close();
+
         $include_lrg = 0; #Switch off as tends to be set to 1 in setup
     }
     elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
@@ -182,6 +184,15 @@ sub write_output {
   my $self = shift;
   $self->dataflow_output_id($self->param('gene_output_ids'), 2);
   return;
+}
+
+sub dump_deleted_tv {
+  my ($self, @deleted_vf, $fh) = @_;
+  if (@deleted_vf) {
+    foreach(@deleted_vf) {
+      print $fh $_,"\n";
+    }
+  }
 }
 
 1;
