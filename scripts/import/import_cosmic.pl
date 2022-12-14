@@ -27,23 +27,23 @@ use Text::CSV;
 my ( $infile, $registry_file, $version, $help, $chromosome, $cleanup );
 
 GetOptions(
-  "import|i=s"       => \$infile,
-  "registry|r=s"     => \$registry_file,
-  "cosmic|version=s" => \$version,
-  "help|h"           => \$help,
-  "chromosome=s"     => \$chromosome,
-  "cleanup|c"        => \$cleanup,
+  "import|i=s"   => \$infile,
+  "registry|r=s" => \$registry_file,
+  "version=s"    => \$version,
+  "help|h"       => \$help,
+  "chromosome=s" => \$chromosome,
+  "cleanup|c"    => \$cleanup,
 );
 
 if ($help) {
     warn "
     Usage:
-      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version>
+      $0 --import <input_file> --registry <reg_file> --version <cosmic_version>
     
     To import COSMIC variants per chromosome:
-      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome 1
-      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome X
-      $0 --import <input_file> --registry <reg_file> --cosmic <cosmic_version> --chromosome MT
+      $0 --import <input_file> --registry <reg_file> --version <cosmic_version> --chromosome 1
+      $0 --import <input_file> --registry <reg_file> --version <cosmic_version> --chromosome X
+      $0 --import <input_file> --registry <reg_file> --version <cosmic_version> --chromosome MT
       # clean up data
       $0 --registry <reg_file> --cleanup\n";
     exit(0);
