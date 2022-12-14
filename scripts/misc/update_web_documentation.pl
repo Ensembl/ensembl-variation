@@ -38,7 +38,7 @@ use File::Basename;
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my ($version,$input_dir,$output_dir,$help,$host,$hlist,$user,$port,$phost,$ohost,$no_subdir,$species);
+my ($version,$input_dir,$output_dir,$help,$host,$hlist,$user,$port,$phost,$ohost,$no_subdir,$species,$dump_file,$config,$d_dir,$p_data);
 
 GetOptions(
   'v=i'         => \$version,
@@ -52,7 +52,11 @@ GetOptions(
   'phost=s'     => \$phost,
   'ohost=s'     => \$ohost,
   'no_subdir!'  => \$no_subdir,
-  'species|s=s' => \$species
+  'species|s=s' => \$species,
+  'dump=s'      => \$dump_file,
+  'config=s'    => \$config,
+  'd_dir=s'     => \$d_dir,
+  'p_data=s'    => \$p_data
 );
 
 usage("input and output directories must be specified") unless ($input_dir && $output_dir);
@@ -63,6 +67,21 @@ usage("Host providing the ontology database must be specified") unless ($ohost);
 
 # Get the dir that this script is residing in
 my $dirname = dirname(__FILE__);
+my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+
+if ($config){
+  $vcf_config_file = $config;
+}
+
+# Get the local dir where the vcf files are located
+my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
+
+if ($d_dir){
+  $data_dir = $d_dir;
+}
+
+# If dump_file was not defined
+$dump_file = $dump_file || "dump.json";
 
 # Check if output directory exists
 die "Could not find output dir $output_dir - please create it first\n" unless -d $output_dir;
@@ -85,8 +104,7 @@ my %subdirs = ( 'species_data_types.html'              => 'species',
                 'species_detailed_counts.html'         => 'species'
               );
 
-#### Generates the "List of species" table documentation
-
+#### Generates the "List of database species" table documentation
 # Settings
 $section = 'sources';
 $tmp_file    = "data_desc_$section.html";
@@ -94,7 +112,7 @@ $tmp_section = "$section\_tmp.html";
 $file_name   = "species_data_types.html";
 $subdir      = $subdirs{$file_name};
 
-print STDOUT localtime() . "\t# Start species list...\n";
+print STDOUT localtime() . "\t# Start species database list...\n";
 `cp $input_dir/$subdir/$file_name $tmp_file`;
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
@@ -106,7 +124,40 @@ print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
 
-print STDOUT localtime() . "\t\t> Species list - finished\n";
+print STDOUT localtime() . "\t\t> Species database list - finished\n";
+
+
+#### Generates the "Dynamically loaded species" table documentation
+
+# Settings
+$section = 'vcf_sources';
+$tmp_file    = "data_desc_$section.html";
+$tmp_section = "$section\_tmp.html";
+$file_name   = "species_data_types.html";
+$subdir      = $subdirs{$file_name};
+
+print STDOUT localtime() . "\t# Start species vcf-only list...\n";
+# Use output file from the list of database species update
+if (-d "$output_dir/$subdir") {
+  `cp $output_dir/$subdir/$file_name $tmp_file`;
+}
+elsif (-f "$output_dir/$file_name") {
+  `cp $output_dir/$file_name $tmp_file`;
+}
+else {
+  `cp $input_dir/$subdir/$file_name $tmp_file`;
+}
+$content_before = get_content($section,'start');
+$content_after  = get_content($section,'end');
+`perl $dirname/species_list_vcf.pl -v $version -o $tmp_section -dump $dump_file -p_data $p_data -config $vcf_config_file -d_dir $data_dir -hlist $hlist -user $user`;
+$new_content = `cat $tmp_section`;
+`rm -f $tmp_section`;
+print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
+
+$copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
+copy_updated_file($copy2subdir,$file_name,$tmp_file);
+
+print STDOUT localtime() . "\t\t> Species vcf-only list - finished\n";
 
 
 #### Generates the "Variation classes" table documentation
@@ -215,7 +266,16 @@ $file_name   = "phenotype_annotation.html";
 $subdir      = $subdirs{$file_name};
 
 print STDOUT localtime() . "\t# Start phenotype class ...\n";
-`cp $input_dir/$subdir/$file_name $tmp_file`;
+# Use output file from the clinical significance update
+if (-d "$output_dir/$subdir") {
+  `cp $output_dir/$subdir/$file_name $tmp_file`;
+}
+elsif (-f "$output_dir/$file_name") {
+  `cp $output_dir/$file_name $tmp_file`;
+}
+else {
+  `cp $input_dir/$subdir/$file_name $tmp_file`;
+}
 $content_before = get_content($section,'start');
 $content_after  = get_content($section,'end');
 `perl $dirname/generate_pheno_class_table.pl -v $version -o $tmp_section -host $host -port $port -species $species`;
@@ -241,8 +301,11 @@ print STDOUT localtime() . "\t# Start phenotype ontology ...\n";
 if (-d "$output_dir/$subdir") {
   `cp $output_dir/$subdir/$file_name $tmp_file`;
 }
-else {
+elsif (-f "$output_dir/$file_name") {
   `cp $output_dir/$file_name $tmp_file`;
+}
+else {
+  `cp $input_dir/$subdir/$file_name $tmp_file`;
 }
 my $sql_onto = qq{SELECT data_version FROM ontology WHERE name=? LIMIT 1};
 my $tmp_file_content = `cat $tmp_file`;
@@ -276,7 +339,7 @@ $file_name = "sources_documentation.html";
 $tmp_file  = $file_name;
 
 print STDOUT localtime() . "\t# Start sources list ...\n";
-`perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost`;
+`perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $vcf_config_file -d_dir $data_dir`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
@@ -305,7 +368,7 @@ print STDOUT localtime() . "\t\t> Phenotype sources list - finished\n";
 $file_name = "species_detailed_counts.html";
 $tmp_file  = $file_name;
 print STDOUT localtime() . "\t# Detailed species data count ...\n";
-`perl $dirname/species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro`;
+`perl $dirname/species_list_detailed_counts.pl -v $version -o $tmp_file -hlist $hlist -phost $phost --user ensro -p_data $p_data -config $vcf_config_file -d_dir $data_dir`;
 
 $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
 copy_updated_file($copy2subdir,$file_name,$tmp_file);
@@ -417,7 +480,12 @@ sub usage {
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -ohost          Host name where the ontology database is stored, with the port, e.g. ensembldb.ensembl.org:1234 (Required)
     -user           MySQL user name (Required)
-    -no_subdir      Doesn't copy the files onto their subdirectories
+    -no_subdir      Doesn't copy the files onto their subdirectories    
+    -dump           An output data dump file name for vcf-only species (json format) (Required)  
+    -config         The location of the vcf_config.json file. By default it uses the existing one in the same repository.
+    -d_dir          The directory location of where the local vcf files are stored. By default it looks in - 
+                    /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates 
+    -p_data         Location of the json file that contain result of the previous release for comparison. (Required)
   } . "\n";
   exit(0);
 }
