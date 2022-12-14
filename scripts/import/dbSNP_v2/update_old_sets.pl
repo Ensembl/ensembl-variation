@@ -10,9 +10,10 @@ use Getopt::Long;
 
 ## Connect to Databases
 
-my ($reg_file, $release, $tmp, $help);
+my ($reg_file, $old_reg_file, $release, $tmp, $help);
 
 GetOptions ("registry=s"        => \$reg_file,
+            "old_registry:s"        => \$old_reg_file,
             "release=s"      =>  \$release,
             "tmp=s"         => \$tmp,
             "help|h"           => \$help,
@@ -24,20 +25,29 @@ my $registry = 'Bio::EnsEMBL::Registry';
 $registry->load_all($reg_file);
 
 my $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
+my $dbh = $db_adaptor->dbc;
 
 my $TMP_DIR = $tmp;
 my $TMP_FILE = "variation_feature.txt";
 
 my $tmp_vset_table = "variation_set_variation_e${release}";
 
-# define variants and move through the list
-my $dbh = $db_adaptor->dbc;
-my $old_release = $release - 1;
-my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
-my $old_host = $dbh->host;
-my $old_port = $dbh->port;
+my $old_dbh;
 
-my $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
+# define variants and move through the list
+if ($old_reg_file) {
+  $registry->load_all($old_reg_file);
+  $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
+  # Connect to DBI
+  $old_dbh = $db_adaptor->dbc;
+} else {
+  my $old_release = $release - 1;
+  my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
+  my $old_host = $dbh->host;
+  my $old_port = $dbh->port;
+  # Connect to DBI
+  $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
+}
 
 ## Stable variation_set.variation_set_id's values
 my @stable = qw(
@@ -201,5 +211,6 @@ sub dumpPreparedSQL {
 
 sub usage {
 
-  die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]\n\n";
+  die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] -tmp [temp folder]
+\tOptional: -old_registry [old database registry file]\n\n";
 }
