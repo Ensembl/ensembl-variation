@@ -73,25 +73,31 @@ sub run {
 
         my $file = $self->param('update_diff');
         my @update_transcripts;
+#        my @old_genes;
+        my %gene_store;
 
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
             next if /^transcript_id/;
             my ($transcript_id, $status, $gene_id) = split(/\t/);
-
+            $gene_store{$gene_id}=$transcript_id;
             push @update_transcripts, $transcript_id if $status ne "deleted";
 
-           # grab all transcript IDs for genes with deleted transcripts and add to list
-	   if($status eq "deleted") {
-             my $core_dba = $self->get_species_adaptor('core');
-             my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-             my $gene = $ga->fetch_by_stable_id($gene_id); # if not found need to save the gene id as being deleted. Then need to grab all transcript IDs (will all be in diff file
-             # and feed them to a separate $dbc command that INSERTS intergenic_variant for all overlapped VFs
-             foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
-	       push @update_transcripts, $transcript->stable_id;
-             }
-           }
+           # grab all transcript IDs for genes with deleted transcripts and add to list - fully deleted genes handled separately
+           
+          if($status eq "deleted") {
+
+            my $core_dba = $self->get_species_adaptor('core');
+            my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+
+            if (defined($ga->fetch_by_stable_id($gene_id)) ) {
+              my $gene = $ga->fetch_by_stable_id($gene_id); 
+              foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
+	            push @update_transcripts, $transcript->stable_id;
+              }
+            }
+          }
 
             if(@update_transcripts > 500){
                 my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
@@ -108,18 +114,46 @@ sub run {
             }
         }
 
-        my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
-        next if($joined_ids eq "");
+      my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
+      next if($joined_ids eq "");
 
-        $dbc->do(qq{
-            INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
-            SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
-            FROM    transcript_variation 
-            WHERE   feature_stable_id IN ($joined_ids)
-            GROUP BY variation_feature_id
-        }) or die "Populating temp table failed";
+      $dbc->do(qq{
+                INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
+                SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
+                FROM    transcript_variation 
+                WHERE   feature_stable_id IN ($joined_ids)
+                GROUP BY variation_feature_id
+            }) or die "Populating temp table failed";
 
-    } 
+        # Gets genes flagged as deleted, then either sets to intergenic if VF has no other overlapping genes
+        # or removes consequences derived from deleted genes.
+        my @old_genes = @{ $self->param('pass_vf') };
+        print "\nOLD_GENES: @old_genes\n";
+    #     if(@old_genes) {
+    #         foreach(@old_genes) {
+
+    #         my $overlap = $dbc->do(qq{
+    #                    SELECT DISTINCT(consequence_types)
+    #                     FROM transcript_variation
+    #                     WHERE variation_feature_id = $_
+    #                 });
+        
+    #         if ($overlap) {
+    #                 $dbc->do(qq{
+    #                 INSERT INTO $temp_table (variation_feature_id, consequence_types)
+    #                 VALUES $_, '$overlap'
+    #                 }) or die "Populating temp table failed";
+    #         }
+        
+    #         else{
+    #             $dbc->do(qq{
+    #                 INSERT INTO $temp_table (variation_feature_id, consequence_types)
+    #                 VALUES $_, 'intergenic_variant' 
+    #             }) or die "Populating temp table failed";
+    #         }
+    #     }
+    # }
+  }
 
     else {
         $dbc->do(qq{

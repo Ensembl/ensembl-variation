@@ -147,7 +147,6 @@ sub default_options {
 
         # these flags control update running parts of pipeline
         update_diff             => undef,
-
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
         human_default_override		=> 0,
@@ -185,9 +184,8 @@ sub pipeline_wide_parameters {  # these parameter values are visible to all anal
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-
-        'update_diff'     => $self->o('update_diff'),
-    };
+        update_diff     => $self->o('update_diff')
+    }
 }
 
 sub resource_classes {

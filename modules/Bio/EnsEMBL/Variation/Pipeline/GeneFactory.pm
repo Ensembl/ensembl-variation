@@ -61,42 +61,71 @@ sub fetch_input {
     my @gene_output_ids; 
     my $gene_count = 0;
     my @delete_transcripts = ();
-
+    my @old_genes = ();
+    my %genes_hash;
+    my @all_vf;
 
     if (-e $self->param('update_diff')) {
 
       my $file = $self->param('update_diff');
       open (DIFF, $file) or die "Can't open file $file: $!";
+
+      while (<DIFF>) {
+        chomp;
+        next if /^transcript_id/;
+        my ($transcript_id, $status, $gene_id) = split(/\t/);
+        $transcript_id = "\'$transcript_id\'";
+        $genes_hash{$gene_id} .= $transcript_id . ",";
+      }
+
+      foreach my $gene (keys %genes_hash) {
+        my $core_dba = $self->get_species_adaptor('core');
+        my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+        if(!defined( $ga->fetch_by_stable_id($gene) ) ) {
+          my $transcripts = $genes_hash{$gene};
+          $transcripts =~s/,$//;
+#          print "GENE_ID:$gene JOINED_IDS:$transcripts\n";
+          my @vf_ids = $dbc->do(qq{
+              SELECT DISTINCT(variation_feature_id) FROM  transcript_variation
+              WHERE feature_stable_id IN ($transcripts);
+          });
+          push (@all_vf, @vf_ids);
+        }
+      }
+
+      open (DIFF, $file) or die "Can't open file $file: $!";
+
       while (<DIFF>) {
         chomp;
         next if /^transcript_id/;
         my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
-        
         if ($status ne "deleted") {
           push @gene_output_ids, {gene_stable_id  => $gene_id,}
         }
-        push @delete_transcripts, $transcript_id if $status eq "deleted";
-
+        if ($status eq "deleted") {
+          push @delete_transcripts, $transcript_id;
+        }
         # Remove Deleted transcripts
         if (@delete_transcripts > 500){
-            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-            
-            $dbc->do(qq{
-                      DELETE FROM  transcript_variation
-                      WHERE   feature_stable_id IN ($joined_ids);
-            }) or die "Deleting stable ids failed";
+          my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
+           
+          $dbc->do(qq{
+                     DELETE FROM  transcript_variation
+                     WHERE   feature_stable_id IN ($joined_ids);
+          }) or die "Deleting stable ids failed";
 
-           $dbc->do(qq{
+          $dbc->do(qq{
                       DELETE FROM  MTMP_transcript_variation
                       WHERE   feature_stable_id IN ($joined_ids);
-            });
-            # Reset delete_transcripts list
-            @delete_transcripts = ();
+           });
+           # Reset delete_transcripts list
+           @delete_transcripts = ();
         }
       }
-    $include_lrg = 0;
-    } 
-
+#        print "ALL VF STUFF HERE??? @all_vf\n";
+        $self->param('pass_vf ', \@all_vf);
+        $include_lrg = 0; #Switch off as tends to be set to 1 in setup
+    }
     elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
        @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
@@ -114,10 +143,7 @@ sub fetch_input {
 
     for my $gene (@genes) {
       $gene_count++;
-      push @gene_output_ids, {
-        gene_stable_id  => $gene->stable_id,
-      };
-      
+      push @gene_output_ids, {gene_stable_id  => $gene->stable_id,};
       if ($DEBUG) {
           last if $gene_count >= 500;
       }
@@ -136,7 +162,7 @@ sub fetch_input {
 
     $self->param('gene_output_ids', \@gene_output_ids);
 
-    # Remove Deleted transcripts
+    # Remove Deleted transcripts - IS THIS NEEDED?
     if (-e $self->param('update_diff')){
         my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
         return if $joined_ids eq "";
