@@ -76,6 +76,7 @@ my %plugins_to_skip = (
   'PolyPhen_SIFT.pm' => 1,
   'RankFilter.pm' => 1,
   'RefSeqHGVS.pm' => 1,
+  'ExAC.pm' => 1,
 );
 
 
