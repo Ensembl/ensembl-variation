@@ -23,9 +23,9 @@ use Getopt::Long;
 use JSON;
 use File::Basename;
 
-###############
-### Options ###
-###############
+###############################################################
+##########             CONFIGURE                        #######
+###############################################################
 my ($e_version,$html_file,$hlist,$user,$help);
 ## EG options
 my ($site, $etype);
@@ -129,9 +129,9 @@ my $pop_table_header = qq{
 };
 
 
-##########
-## Main ##
-##########
+###############################################################
+##########             MAIN PART                       ########
+###############################################################
 
 ## Species / host / database ##
 foreach my $hostname (@hostnames) {
@@ -170,8 +170,11 @@ get_project_populations();
 ## Populations ##
 my $html_pop = '';
 
+
 # Loop over the species (placing human first)
 foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(%pops_list)) {
+
+  next unless  %{ $pops_list{$species} };
 
   my $id_species = $species;
      $id_species =~ s/ /_/g;
@@ -302,9 +305,9 @@ close(HTML);
 
 
 
-#############
-## Methods ##
-#############
+###############################################################
+##########             FUNCTIONS                     ##########
+###############################################################
 
 # Build the project populations structure if it exists
 sub get_population_structure {
@@ -422,7 +425,7 @@ sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
     my $project_id = $project->{'id'};
-    next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'});
+    next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'} eq 'cadd' || $project->{'annotation_type'} eq 'gerp');
 
     my $species = ucfirst($project->{'species'});
        $species =~ s/_/ /g;
@@ -477,19 +480,19 @@ sub get_project_populations {
                                };
         push(@$pop_list,$pop_name);
       }
-      $pops_list{$species}{$project_label}{$project}{'pop_data'} = \%pop_data;
-      $pops_list{$species}{$project_label}{$project}{'pop_list'} = $pop_list;
     }
     else {
       my $term = ($population_prefix) ? $population_prefix : '';
          $term =~ s/:$//;
       my $dbname = $species_host{$species}{'dbname'};
       my $host   = $species_host{$species}{'host'};
-      my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE name like ? or name = ? ORDER BY name};
+      my $stmt = qq{ SELECT population_id, name, size, description, display_group_id FROM population WHERE name like ? or name = ? ORDER BY name};
 
       my $sth  = get_connection_and_query($dbname, $host, $stmt, ["$population_prefix%",$term]);
 
       while(my @data = $sth->fetchrow_array) {
+        # Skip if the population is not in display group
+        next unless defined $data[4];
 
         my @composed_name = split(':', $data[1]);
            $composed_name[$#composed_name] = '<b>'.$composed_name[$#composed_name].'</b>';
@@ -516,12 +519,12 @@ sub get_project_populations {
       }
       $sth->finish;
       $pop_list = get_population_structure(\%pop_data, \%pop_tree, \%sub_pops);
-
-      $pops_list{$species}{$project_label}{$project}{'pop_data'} = \%pop_data;
-      $pops_list{$species}{$project_label}{$project}{'pop_tree'} = \%pop_tree;
-      $pops_list{$species}{$project_label}{$project}{'sub_pops'} = \%sub_pops;
-      $pops_list{$species}{$project_label}{$project}{'pop_list'} = $pop_list;
     }
+
+    $pops_list{$species}{$project_label}{$project}{'pop_data'} = \%pop_data if %pop_data ;
+    $pops_list{$species}{$project_label}{$project}{'pop_tree'} = \%pop_tree if %pop_tree;
+    $pops_list{$species}{$project_label}{$project}{'sub_pops'} = \%sub_pops if %sub_pops;
+    $pops_list{$species}{$project_label}{$project}{'pop_list'} = $pop_list if defined $pop_list;
   }
 }
 
