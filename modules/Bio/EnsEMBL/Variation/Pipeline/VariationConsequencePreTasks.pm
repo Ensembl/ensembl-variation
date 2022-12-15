@@ -62,6 +62,9 @@ sub fetch_input {
 
     if (defined($update_diff)) {
       die "File used in flag --update_diff $update_diff does not exist\n" if !-e $update_diff;
+      rmtree($dir.'/del_log/deleted_transcripts.txt');
+      rmdir($dir.'/del_log');
+      mkdir($dir.'/del_log') or die "ERROR: Could not make directory $dir/del_log\n";
       return;
     }
 

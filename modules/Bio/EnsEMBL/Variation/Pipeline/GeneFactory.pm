@@ -44,9 +44,7 @@ my $DEBUG_GENE_IDS = 0;
 sub fetch_input {
    
     my $self = shift;
-
     my $mtmp = $self->param('mtmp_table');
-
     my $include_lrg = $self->param('include_lrg');
     my $biotypes = $self->param('limit_biotypes');
 
@@ -54,45 +52,21 @@ sub fetch_input {
     my $var_dba = $self->get_species_adaptor('variation');
     
     my $dbc = $var_dba->dbc;
-
+    my $tva = $var_dba->get_TranscriptVariationAdaptor;
+    my $vfa = $var_dba->get_VariationFeatureAdaptor;
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+    my $ta = $core_dba->get_TranscriptAdaptor;
 
     my @genes;
     my @gene_output_ids; 
     my $gene_count = 0;
     my @delete_transcripts = ();
-    my @old_genes = ();
-    my %genes_hash;
-    my @all_vf;
 
     if (-e $self->param('update_diff')) {
 
       my $file = $self->param('update_diff');
       open (DIFF, $file) or die "Can't open file $file: $!";
-
-      while (<DIFF>) {
-        chomp;
-        next if /^transcript_id/;
-        my ($transcript_id, $status, $gene_id) = split(/\t/);
-        $transcript_id = "\'$transcript_id\'";
-        $genes_hash{$gene_id} .= $transcript_id . ",";
-      }
-
-      foreach my $gene (keys %genes_hash) {
-        my $core_dba = $self->get_species_adaptor('core');
-        my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-        if(!defined( $ga->fetch_by_stable_id($gene) ) ) {
-          my $transcripts = $genes_hash{$gene};
-          $transcripts =~s/,$//;
-          my @vf_ids = $dbc->do(qq{
-              SELECT DISTINCT(variation_feature_id) FROM  transcript_variation
-              WHERE feature_stable_id IN ($transcripts);
-          });
-          push (@all_vf, @vf_ids);
-        }
-      }
-
-      open (DIFF, $file) or die "Can't open file $file: $!";
+      my $vfdel_fh = FileHandle->new();
 
       while (<DIFF>) {
         chomp;
@@ -101,9 +75,23 @@ sub fetch_input {
         if ($status ne "deleted") {
           push @gene_output_ids, {gene_stable_id  => $gene_id,}
         }
+
         if ($status eq "deleted") {
           push @delete_transcripts, $transcript_id;
+          
+          #For deleted transcripts, check whether gene still exists in new core, if not dump VF IDs to file for later
+          my $core_dba = $self->get_species_adaptor('core');
+          my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+          if(!defined( $ga->fetch_by_stable_id($gene_id) ) ) {
+            $vfdel_fh->open(">>" .$self->param('pipeline_dir'). "/del_log/deleted_transcripts.txt") or die "Cannot open dump file " . $!;
+            my $transcript = $ta->fetch_by_stable_id($transcript_id);
+            for my $tvs (@{$tva->fetch_all_by_Transcripts( [$transcript] )} ) {
+              my $vf_id = $tvs->_variation_feature_id;
+              print $vfdel_fh $vf_id,"\n";
+            }
+          }
         }
+
         # Remove Deleted transcripts
         if (@delete_transcripts > 500){
           my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
@@ -121,12 +109,8 @@ sub fetch_input {
            @delete_transcripts = ();
         }
       }
-	      my $tvdel_fh = FileHandle->new();
-        $tvdel_fh->open(">>" .$self->param('pipeline_dir'). "/del_log/deleted_transcripts.txt") or die "Cannot open dump file " . $!;
-        $self->dump_deleted_tv(@all_vf, $tvdel_fh); 
-        $tvdel_fh->close();
-
-        $include_lrg = 0; #Switch off as tends to be set to 1 in setup
+      $vfdel_fh->close();
+      $include_lrg = 0; #Switch off as tends to be set to 1 in setup
     }
     elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
@@ -184,15 +168,6 @@ sub write_output {
   my $self = shift;
   $self->dataflow_output_id($self->param('gene_output_ids'), 2);
   return;
-}
-
-sub dump_deleted_tv {
-  my ($self, @deleted_vf, $fh) = @_;
-  if (@deleted_vf) {
-    foreach(@deleted_vf) {
-      print $fh $_,"\n";
-    }
-  }
 }
 
 1;

@@ -73,33 +73,31 @@ sub run {
 
         my $file = $self->param('update_diff');
         my @update_transcripts;
-#        my @old_genes;
-        my %gene_store;
+
 
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
             next if /^transcript_id/;
             my ($transcript_id, $status, $gene_id) = split(/\t/);
-            $gene_store{$gene_id}=$transcript_id;
+
             push @update_transcripts, $transcript_id if $status ne "deleted";
 
-           # grab all transcript IDs for genes with deleted transcripts and add to list - fully deleted genes handled separately
-           
-          if($status eq "deleted") {
+            # grab all transcript IDs for genes with deleted transcripts and add to list - fully deleted genes handled separately        
+            if($status eq "deleted") {
 
-            my $core_dba = $self->get_species_adaptor('core');
-            my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+                my $core_dba = $self->get_species_adaptor('core');
+                my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
-            if (defined($ga->fetch_by_stable_id($gene_id)) ) {
-              my $gene = $ga->fetch_by_stable_id($gene_id); 
-              foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
-	            push @update_transcripts, $transcript->stable_id;
-              }
+                if (defined($ga->fetch_by_stable_id($gene_id)) ) {
+                    my $gene = $ga->fetch_by_stable_id($gene_id); 
+                    foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
+	                    push @update_transcripts, $transcript->stable_id;
+                    }
+                }
             }
-          }
 
-            if(@update_transcripts > 500){
+            if(@update_transcripts > 500) {
                 my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
 
                 $dbc->do(qq{
@@ -125,35 +123,40 @@ sub run {
                 GROUP BY variation_feature_id
             }) or die "Populating temp table failed";
 
-        # Gets genes flagged as deleted, then either sets to intergenic if VF has no other overlapping genes
-        # or removes consequences derived from deleted genes.
+        # Load VF ids that overlap genes determined as deleted, then either sets consequence to intergenic if VF has 
+        # no other overlapping genes, or set consequences to those from overlapping non-deleted genes.
         my @old_genes;
-        my $del_file = $self->param('pipeline_dir') . 'del_log/deleted_transcripts.txt';
+        my $del_file = $self->param('pipeline_dir') . '/del_log/deleted_transcripts.txt';
         if ($del_file) {
             open (DEL, $del_file) or die "Can't open file $del_file: $!\n";
             chomp (@old_genes = <DEL>);
             close(DEL);
         }
+        my %get_unique = map{ $_, 1 } @old_genes;
+        @old_genes = keys %get_unique;
+
         if(@old_genes) {
             foreach(@old_genes) {
+            my $overlap = "";
 
-            my $overlap = $dbc->do(qq{
+            my $sth = $dbc->prepare(qq{
                         SELECT DISTINCT(consequence_types)
                          FROM transcript_variation
                          WHERE variation_feature_id = $_
                      });
-        
-            if ($overlap) {
+            $overlap = $sth->execute();
+
+            if ($overlap ne "" and $overlap ne '0E0') {
                      $dbc->do(qq{
-                     INSERT INTO $temp_table (variation_feature_id, consequence_types)
-                     VALUES $_, '$overlap'
+                     INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
+                     VALUES ($_, '$overlap')
                      }) or die "Populating temp table failed";
             }
         
             else{
                  $dbc->do(qq{
-                     INSERT INTO $temp_table (variation_feature_id, consequence_types)
-                     VALUES $_, 'intergenic_variant' 
+                     INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
+                     VALUES ($_, 'intergenic_variant')
                  }) or die "Populating temp table failed";
             }
         }
