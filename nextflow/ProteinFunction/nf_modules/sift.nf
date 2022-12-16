@@ -128,7 +128,7 @@ workflow update_sift_version {
 workflow update_sift_db_version {
   take: db
   main:
-    get_sift_db_version( db.parent, db.name )
+    get_sift_db_version( db.parent, db )
     update_meta("sift_db_version", get_sift_db_version.out)
 }
 
