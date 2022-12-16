@@ -80,6 +80,25 @@ sub default_options {
 
         ensembl_registry        => $self->o('species_dir').'/ensembl.registry',
 
+        # a file containing history of datachecks ran potentially used to determine
+        # if a datacheck can be skipped 
+
+        history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
+
+        # output dir where datacheck result will be stored
+
+        dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
+
+        # if set, fails the datacheck pipeline job if the datacheck fails
+        # can be overwritten when running the pipeline
+
+        failures_fatal          => 1,
+
+        # if set, runs the datachecks analysis jobs
+        # can be overwritten when running the pipeline
+
+        run_dc                  => 1,
+
         # peptide sequences for all unique translations for this species will be dumped to this file
 
         fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
@@ -242,6 +261,7 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('ensembl_registry'),
         species             => $self->o('species'),
         debug_mode          => $self->o('debug_mode'),
+        run_dc              => $self->o('run_dc'),
     );
 
     return [
@@ -309,7 +329,11 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
             -rc_name        => 'default',
-            -flow_into      => {},
+            -flow_into      => {
+                1 => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
+            },
         },
         
         {   -logic_name     => 'run_sift',
@@ -328,7 +352,10 @@ sub pipeline_analyses {
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
             -flow_into      => {
-              -1 => ['run_sift_highmem'],
+                -1 => ['run_sift_highmem'],
+                1 => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
             }
         },
 
@@ -344,6 +371,11 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -rc_name        => 'highmem',
+            -flow_into      => {
+                1 => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
+            },
         },
 
         {   -logic_name     => 'run_dbnsfp',
@@ -358,6 +390,11 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('dbnsfp_max_workers'),
             -rc_name        => 'medmem',
+            -flow_into      => {
+                1 => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
+            },
         },
 
         {   -logic_name     => 'run_cadd',
@@ -372,6 +409,28 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
+            -flow_into      => {
+                1 => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
+            },
+        },
+
+        {   -logic_name      => 'datacheck',
+            -module          => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+            -parameters      => {
+                datacheck_names => [
+                    'CompareProteinFunctionPredictions',
+                    'ProteinFunctionPredictions'
+                ],
+                history_file   => $self->o('history_file'),
+                registry_file  => $self->o('ensembl_registry'),
+                output_dir     => $self->o("dc_outdir"),
+                failures_fatal => $self->o('failures_fatal')
+            },
+            -max_retry_count => 1,
+            -hive_capacity   => $self->o('cadd_max_workers'),
+            -rc_name         => 'default',
         },
 
     ];
