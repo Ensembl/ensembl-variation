@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature;
 
 use strict;
 use warnings;
-
+use Data::Dumper;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub run {
@@ -125,43 +125,52 @@ sub run {
 
         # Load VF ids that overlap genes determined as deleted, then either sets consequence to intergenic if VF has 
         # no other overlapping genes, or set consequences to those from overlapping non-deleted genes.
-        my @load;
+        my @old_genes;
         my $del_file = $self->param('pipeline_dir') . '/del_log/deleted_transcripts.txt';
         if ($del_file) {
             open (DEL, $del_file) or die "Can't open file $del_file: $!\n";
-            chomp (@load = <DEL>);
+            chomp (@old_genes = <DEL>);
             close(DEL);
         }
-        my %get_unique = map{ $_, 1 } @load;
-        my @old_genes = keys %get_unique;
 
         if(@old_genes) {
-            foreach(@old_genes) {
-                chomp;
-                my $overlap = "";
+            foreach my $vf_id (@old_genes) {
 
-                my $sth = $dbc->prepare(qq{
+                my $sth = $dbc->prepare(qq[
                         SELECT DISTINCT(consequence_types)
                         FROM transcript_variation
-                        WHERE variation_feature_id = $_
-                     });
-                $overlap = $sth->execute();
+                        WHERE variation_feature_id = $vf_id
+                     ]);
+                $sth->execute();
+                my $overlap = $sth->fetchall_arrayref();
+                
+                if (defined($overlap->[0]) ) {
+                    my $consequences='';
+                    for my $i (0 .. $#$overlap) {
+                        my $part = $overlap->[$i];
+                        for my $j (0 .. $#$part ) {
+                            $consequences .= $overlap->[$i][$j] . ',';
+                        }
+                    }
+                    my @csqs = split',',$consequences;
+                    my %get_unique = map{$_ => 1 } @csqs;
+                    my @unique_csqs = keys %get_unique;
+                    my $csq_unique = join(",", @unique_csqs);
 
-                if ($overlap ne "" and $overlap ne '0E0') {
-                     $dbc->do(qq{
-                     INSERT INTO $temp_table (variation_feature_id, consequence_types)
-                     VALUES ($_, '$overlap')
-                     }) or die "Populating temp table failed";
+                    $dbc->do(qq{
+                            INSERT INTO $temp_table (variation_feature_id, consequence_types)
+                            VALUES ($vf_id, '$csq_unique')
+                    }) or die "Populating temp table failed";
                 }
         
                 else{
                     $dbc->do(qq{
-                        INSERT INTO $temp_table (variation_feature_id, consequence_types)
-                        VALUES ($_, 'intergenic_variant')
-                }) or die "Populating temp table failed";
+                            INSERT INTO $temp_table (variation_feature_id, consequence_types)
+                            VALUES ($vf_id, 'intergenic_variant')
+                    }) or die "Populating temp table failed";
+                }
             }
         }
-    }
   }
 
   else {
@@ -183,8 +192,8 @@ sub run {
 
   # and get rid of our temp table
 
-#  $dbc->do(qq{DROP TABLE $temp_table})
-#      or die "Failed to drop temp table";
+  $dbc->do(qq{DROP TABLE $temp_table})
+      or die "Failed to drop temp table";
 }
 
 1;
