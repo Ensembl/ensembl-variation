@@ -74,7 +74,6 @@ sub run {
         my $file = $self->param('update_diff');
         my @update_transcripts;
 
-
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
@@ -95,20 +94,6 @@ sub run {
 	                    push @update_transcripts, $transcript->stable_id;
                     }
                 }
-            }
-
-            if(@update_transcripts > 500) {
-                my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
-
-                $dbc->do(qq{
-                    INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
-                    SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
-                    FROM    transcript_variation 
-                    WHERE   feature_stable_id IN ($joined_ids)
-                    GROUP BY variation_feature_id
-                }) or die "Populating temp table failed";
-
-                @update_transcripts = ();
             }
         }
 

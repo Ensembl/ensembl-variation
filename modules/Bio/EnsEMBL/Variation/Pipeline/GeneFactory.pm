@@ -67,7 +67,6 @@ sub fetch_input {
 
       my $file = $self->param('update_diff');
       open (DIFF, $file) or die "Can't open file $file: $!";
-#      my $vfdel_fh = FileHandle->new();
       
       while (<DIFF>) {
         chomp;
@@ -81,37 +80,17 @@ sub fetch_input {
         if ($status eq "deleted") {
           push @delete_transcripts, $transcript_id;
           
-          #For deleted transcripts, check whether gene still exists in new core, if not dump VF IDs to file for later
           my $core_dba = $self->get_species_adaptor('core');
           my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
           if(!defined( $ga->fetch_by_stable_id($gene_id) ) ) {
-#            $vfdel_fh->open(">>" .$self->param('pipeline_dir'). "/del_log/deleted_transcripts.txt") or die "Cannot open dump file " . $!;
             my $transcript = $ta->fetch_by_stable_id($transcript_id);
             for my $tvs (@{$tva->fetch_all_by_Transcripts( [$transcript] )} ) {
               my $vf_id = $tvs->_variation_feature_id;
-#              print $vfdel_fh $vf_id,"\n";
               $vf_ids{$vf_id} = 1;
             }
           }
         }
-
-        # Remove Deleted transcripts
- #       if (@delete_transcripts > 500){
- #         my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
- #          
- #         $dbc->do(qq{
- #                    DELETE FROM  transcript_variation
- #                    WHERE   feature_stable_id IN ($joined_ids);
- #         }) or die "Deleting stable ids failed";
-#
-#          $dbc->do(qq{
-#                      DELETE FROM  MTMP_transcript_variation
-#                      WHERE   feature_stable_id IN ($joined_ids);
-#           });
-#           # Reset delete_transcripts list
-#           @delete_transcripts = ();
-#        }
       }
       # Store the vfs
       my $vfdel_fh = FileHandle->new();
