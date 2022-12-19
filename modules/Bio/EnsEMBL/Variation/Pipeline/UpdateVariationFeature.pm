@@ -96,17 +96,19 @@ sub run {
                 }
             }
         }
+        close(DIFF);
 
-      my $joined_ids = '"' . join('", "', @update_transcripts) . '"';
-      next if($joined_ids eq "");
+        while (my @batch = splice(@update_transcripts, 0, 500) ) {
+            my $joined_ids = '"' . join('", "', @batch) . '"';
 
-      $dbc->do(qq{
-                INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
-                SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
-                FROM    transcript_variation 
-                WHERE   feature_stable_id IN ($joined_ids)
-                GROUP BY variation_feature_id
-            }) or die "Populating temp table failed";
+            $dbc->do(qq{
+                    INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
+                    SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
+                    FROM    transcript_variation 
+                    WHERE   feature_stable_id IN ($joined_ids)
+                    GROUP BY variation_feature_id
+                }) or die "Populating temp table failed";
+        }
 
         # Load VF ids that overlap genes determined as deleted, then either sets consequence to intergenic if VF has 
         # no other overlapping genes, or set consequences to those from overlapping non-deleted genes.
