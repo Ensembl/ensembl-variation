@@ -138,19 +138,20 @@ sub fetch_input {
 
     # Remove Deleted transcripts 
     if (-e $self->param('update_diff')){
-
-      my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-           
-      $dbc->do(qq{
-              DELETE FROM  transcript_variation
-              WHERE   feature_stable_id IN ($joined_ids);
-            }) or die "Deleting stable ids failed";
-
-      $dbc->do(qq{
-                DELETE FROM  MTMP_transcript_variation
+      while (my @batch = splice(@update_transcripts, 0, 500) ) {
+        my $joined_ids = '"' . join('", "', @batch) . '"';
+            
+        $dbc->do(qq{
+                DELETE FROM  transcript_variation
                 WHERE   feature_stable_id IN ($joined_ids);
-           });
-      }
+              }) or die "Deleting stable ids failed";
+
+        $dbc->do(qq{
+                  DELETE FROM  MTMP_transcript_variation
+                  WHERE   feature_stable_id IN ($joined_ids);
+            });
+        }
+    }
 }
 
 sub write_output {
