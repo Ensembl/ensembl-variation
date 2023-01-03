@@ -52,6 +52,7 @@ use Data::Dumper;
 use Date::Manip::Date;
 use XML::LibXML::Reader;
 use XML::Hash::XS qw();
+use Text::ParseWords;
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
@@ -139,6 +140,10 @@ my %non_specified_pheno = ("None"=>1,
                      "See cases" => 1,
                      "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
+
+## get current phenotypes list
+## the phenotype list includes a clean version of the descriptions
+my %phenotype_cache = %{get_phenotype_cache()};
 
 ## accepted clinsig values
 my $def_clinsig = $ATTRIBS{clinvar_clin_sig};
@@ -921,7 +926,21 @@ sub get_phenotype{
 
   my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
 
-  unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
+  # try to fetch the phenotype using the phenotype cache
+  if(!$pheno) {
+    my $description = $desc;
+    $description = clean_phenotype_desc($description);
+    my @parse_desc = parse_line('\s+', 0, $description);
+    my @parse_desc_sorted = sort @parse_desc;
+    my $parse_desc_sorted_join = join(',', @parse_desc_sorted);
+    if($phenotype_cache{$parse_desc_sorted_join}) {
+      my @phenos = @{$phenotype_cache{$parse_desc_sorted_join}};
+      # use the first match
+      $pheno = $phenotype_adaptor->fetch_by_dbID($phenos[0]->{id});
+    }
+  }
+
+  unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ) {
 
     $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
     $pheno->class_attrib_id($non_specified_class_id) if exists $non_specified_pheno{$pheno};
@@ -1601,6 +1620,50 @@ sub check_known_clinsig {
   }
 
   return $found;
+}
+
+sub get_phenotype_cache {
+  my %new_phenotype_cache;
+
+  my %phenotype_cache = map {$_->description() => $_->dbID()} @{$phenotype_adaptor->fetch_all};
+
+  foreach my $phenotype_desc (keys %phenotype_cache) {
+    my $original_desc = $phenotype_desc;
+    $phenotype_desc = clean_phenotype_desc($phenotype_desc);
+    my @parse_desc = parse_line('\s+', 0, $phenotype_desc);
+    my @parse_desc_sorted = sort @parse_desc;
+    my $parse_desc_sorted_join = join(',', @parse_desc_sorted);
+
+    my %aux;
+    $aux{original_desc} = $original_desc;
+    $aux{id} = $phenotype_cache{$original_desc};
+    push @{$new_phenotype_cache{$parse_desc_sorted_join}}, \%aux;
+  }
+
+  return \%new_phenotype_cache;
+}
+
+sub clean_phenotype_desc {
+  my ($description) = @_;
+
+  $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
+  $description =~ s/\n//g; # Remove 'new line' characters
+  $description =~ s/[\(\)]//g; # Remove characters ( )
+
+  # Replace special characters in the phenotype description
+  $description = replace_char($description);
+
+  $description = lc($description);
+  $description =~ s/\“//g;
+  $description =~ s/\”//g;
+  $description =~ s/\s+/ /g; # Remove extra space
+
+  # remove a few extra characters
+  $description =~ s/, / /g; # remove commas
+  $description =~ s/-/ /g;
+  $description =~ s/\'//g;
+
+  return $description;
 }
 
 sub usage{
