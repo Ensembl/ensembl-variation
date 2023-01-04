@@ -564,14 +564,28 @@ sub check_dbSNP{
         my $trimmed_author_list = trim_author_list($ref->{resultList}->{result}->{authorString});
         $ref->{resultList}->{result}->{authorString} = $trimmed_author_list if $trimmed_author_list;
 
-        $pub_upd_sth->execute( $ref->{resultList}->{result}->{title},
-                               $ref->{resultList}->{result}->{pmcid},
-                               $ref->{resultList}->{result}->{authorString},
-                               $ref->{resultList}->{result}->{pubYear},
-                               $ref->{resultList}->{result}->{doi},
-                               $l->[0]
-            ) if defined $ref->{resultList}->{result}->{title};
-    }  
+        if (defined $ref->{resultList}->{result}->{title}) {
+          my $title = $ref->{resultList}->{result}->{title};
+          # Truncate title
+          if(length($title) >= 300){
+            my $aux = substr($title, 0, 296);
+            my @list_title = split(' ', $aux);
+            pop @list_title;
+            $title = join(' ', @list_title);
+            $title .= '...';
+          }
+
+          $title =~ s|<.+?>||g;
+
+          $pub_upd_sth->execute( $title,
+                                 $ref->{resultList}->{result}->{pmcid},
+                                 unidecode($ref->{resultList}->{result}->{authorString}),
+                                 $ref->{resultList}->{result}->{pubYear},
+                                 $ref->{resultList}->{result}->{doi},
+                                 $l->[0]
+          );
+        }
+    }
     close $error_log;
 }
 
