@@ -1695,10 +1695,26 @@ sub _parse_hgvs_transcript_position {
 
     # Handle multi-exon location
     if(scalar(@coords) != 1){
-      my $n_coord = scalar(@coords);
+      my @genomic_coordinates;
+      my @gap_coordinates;
+      foreach my $coord (@coords) {
+        push @genomic_coordinates, $coord if($coord->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+        push @gap_coordinates, $coord if($coord->isa('Bio::EnsEMBL::Mapper::Gap'));
+      }
+      my $n_coord = scalar(@genomic_coordinates);
+      $start = $strand == 1 ? $genomic_coordinates[0]->start() : $genomic_coordinates[$n_coord-1]->start();
+      $end = $strand == 1 ? $genomic_coordinates[$n_coord-1]->end() : $genomic_coordinates[0]->end();
 
-      $start = $strand == 1 ? $coords[0]->start() : $coords[$n_coord-1]->start();
-      $end = $strand == 1 ? $coords[$n_coord-1]->end() : $coords[0]->end();
+      # adjust coordinates start and end
+      if(scalar @gap_coordinates >= 1) {
+        my $diff = $gap_coordinates[0]->end() - $gap_coordinates[0]->start() + 1;
+        if($strand == 1) {
+          $end += $diff;
+        }
+        else {
+          $start = $end - $diff;
+        }
+      }
     }
     else{
       ### overwrite exonic location with genomic coordinates
