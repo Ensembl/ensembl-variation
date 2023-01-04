@@ -429,7 +429,7 @@ sub pipeline_analyses {
                 failures_fatal => $self->o('failures_fatal')
             },
             -max_retry_count => 1,
-            -hive_capacity   => $self->o('cadd_max_workers'),
+            -hive_capacity   => 1,
             -rc_name         => 'default',
         },
 
