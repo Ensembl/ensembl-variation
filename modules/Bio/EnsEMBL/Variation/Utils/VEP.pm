@@ -2204,6 +2204,7 @@ sub pick_worst_vfoa {
       appris => 100,
       ensembl => 1,
       refseq => 1,
+      mane => 1,
     };
 
     if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
@@ -2213,6 +2214,7 @@ sub pick_worst_vfoa {
       $info->{canonical} = $tr->is_canonical ? 0 : 1;
       $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
       $info->{ccds} = $tr->{_ccds} && $tr->{_ccds} ne '-' ? 0 : 1;
+      $info->{mane} = $tr->is_mane ? 0 : 1;
       $info->{lc($tr->{_source_cache})} = 0 if exists($tr->{_source_cache});
 
       # "invert" length so longer is best
