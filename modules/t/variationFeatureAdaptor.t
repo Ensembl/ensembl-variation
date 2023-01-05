@@ -23,6 +23,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Test::Exception;
+# use Data::Dumper;
 our $verbose = 0;
 
 
@@ -443,6 +444,8 @@ throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must b
 $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
+
+# print "CDNA: ", Dumper($vfa->fetch_by_hgvs_notation('NM_000484:c.196_*3del')->get_all_TranscriptVariations()->[0]->cdna_coords());
 
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000013.10:32954017::';
