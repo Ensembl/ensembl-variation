@@ -1,9 +1,0 @@
-##fileformat=VCFv4.1
-##INFO=<ID=AF,Number=1,Type=Float,Description="Allele frequency">
-##INFO=<ID=AC,Number=1,Type=Float,Description="Allele count">
-##reference=GRCh37
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-2	45401280	rs79350372	C	G	100	PASS	AF=0.3;AC=3
-2	45401313	rs191766628	C	G	100	PASS	AF=0.5;AC=3
-2	45401360	rs182816860	T	G	100	PASS	AF=0;AC=5
-2	45401388	rs141929349	G	C	100	PASS	AF=1;AC=5
