@@ -292,10 +292,13 @@ sub pipeline_analyses {
             -rc_name    => 'highmem',
             -max_retry_count => 0,
             -flow_into  => {
-                2 => [ 'run_polyphen' ],
-                3 => [ 'run_sift' ],
-                4 => [ 'run_dbnsfp' ],
-                5 => [ 'run_cadd' ],
+                '2->A' => [ 'run_polyphen' ],
+                '3->A' => [ 'run_sift' ],
+                '4->A' => [ 'run_dbnsfp' ],
+                '5->A' => [ 'run_cadd' ],
+                'A->1' => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
             },
         },
 
@@ -330,11 +333,7 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
             -rc_name        => 'default',
-            -flow_into      => {
-                1 => WHEN(
-                    '#run_dc#' => [ 'datacheck' ]
-                )
-            },
+            -flow_into      => {},
         },
         
         {   -logic_name     => 'run_sift',
@@ -353,10 +352,7 @@ sub pipeline_analyses {
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
             -flow_into      => {
-                -1 => ['run_sift_highmem'],
-                1 => WHEN(
-                    '#run_dc#' => [ 'datacheck' ]
-                )
+                -1 => ['run_sift_highmem']
             }
         },
 
@@ -372,11 +368,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -rc_name        => 'highmem',
-            -flow_into      => {
-                1 => WHEN(
-                    '#run_dc#' => [ 'datacheck' ]
-                )
-            },
+            -flow_into      => {},
         },
 
         {   -logic_name     => 'run_dbnsfp',
@@ -391,11 +383,7 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('dbnsfp_max_workers'),
             -rc_name        => 'medmem',
-            -flow_into      => {
-                1 => WHEN(
-                    '#run_dc#' => [ 'datacheck' ]
-                )
-            },
+            -flow_into      => {},
         },
 
         {   -logic_name     => 'run_cadd',
@@ -410,11 +398,7 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
-            -flow_into      => {
-                1 => WHEN(
-                    '#run_dc#' => [ 'datacheck' ]
-                )
-            },
+            -flow_into      => {},
         },
 
         {   -logic_name      => 'datacheck',
