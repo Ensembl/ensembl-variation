@@ -428,10 +428,14 @@ sub pipeline_analyses {
                 registry_file  => $self->o('ensembl_registry'),
                 output_dir     => $self->o("dc_outdir"),
                 failures_fatal => $self->o('failures_fatal')
-            },
-            -max_retry_count => 1,
-            -hive_capacity   => 1,
-            -rc_name         => 'default',
+            },            
+            -input_ids            => [], #default
+            -hive_capacity        => 1,
+            -analysis_capacity    => 1,
+            -rc_name              => 'default',
+            -flow_into            => {},
+            -failed_job_tolerance => 0,
+            -max_retry_count      => 0,
         },
 
     ];
