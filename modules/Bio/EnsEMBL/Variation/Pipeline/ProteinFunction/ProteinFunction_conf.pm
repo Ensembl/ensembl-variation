@@ -338,7 +338,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
             -rc_name        => 'default',
-            -flow_into      => {},
         },
         
         {   -logic_name     => 'run_sift',
@@ -373,7 +372,6 @@ sub pipeline_analyses {
             },
             -input_ids      => [],
             -rc_name        => 'highmem',
-            -flow_into      => {},
         },
 
         {   -logic_name     => 'run_dbnsfp',
@@ -388,7 +386,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('dbnsfp_max_workers'),
             -rc_name        => 'medmem',
-            -flow_into      => {},
         },
 
         {   -logic_name     => 'run_cadd',
@@ -403,7 +400,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
-            -flow_into      => {},
         },
 
         {   -logic_name      => 'datacheck',
@@ -424,7 +420,6 @@ sub pipeline_analyses {
             -hive_capacity        => 1,
             -analysis_capacity    => 1,
             -rc_name              => 'default',
-            -flow_into            => {},
             -failed_job_tolerance => 0,
             -max_retry_count      => 0,
         },
