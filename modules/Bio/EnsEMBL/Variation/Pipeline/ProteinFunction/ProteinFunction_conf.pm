@@ -262,7 +262,6 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('ensembl_registry'),
         species             => $self->o('species'),
         debug_mode          => $self->o('debug_mode'),
-        run_dc              => $self->o('run_dc'),
     );
 
     return [
@@ -286,6 +285,7 @@ sub pipeline_analyses {
                 bam             => $self->o('bam'),
                 species_dir     => $self->o('species_dir'),
                 use_compara     => $self->o('sift_use_compara'),
+                run_dc          => $self->o('run_dc'),
                 @common_params,
             },
             -input_ids  => [{}],
