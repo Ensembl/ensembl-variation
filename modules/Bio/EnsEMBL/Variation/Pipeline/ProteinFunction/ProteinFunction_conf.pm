@@ -100,6 +100,11 @@ sub default_options {
 
         run_dc                  => 1,
 
+        # the uri of the database server which stores the database of previous release
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
+
+        old_server_uri          => undef,
+
         # peptide sequences for all unique translations for this species will be dumped to this file
 
         fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
@@ -259,7 +264,7 @@ sub pipeline_analyses {
     
     my @common_params = (
         fasta_file          => $self->o('fasta_file'),
-        ensembl_registry    => $self->o('ensembl_registry'),
+        registry_file       => $self->o('ensembl_registry'),
         species             => $self->o('species'),
         debug_mode          => $self->o('debug_mode'),
     );
@@ -408,10 +413,12 @@ sub pipeline_analyses {
                     'CompareProteinFunctionPredictions',
                     'ProteinFunctionPredictions'
                 ],
+                group          => "variation",
                 history_file   => $self->o('history_file'),
-                registry_file  => $self->o('ensembl_registry'),
+                old_server_uri => $self->o('old_server_uri'),
                 output_dir     => $self->o("dc_outdir"),
-                failures_fatal => $self->o('failures_fatal')
+                failures_fatal => $self->o('failures_fatal'),
+                @common_params
             },            
             -input_ids            => [], #default
             -hive_capacity        => 1,
