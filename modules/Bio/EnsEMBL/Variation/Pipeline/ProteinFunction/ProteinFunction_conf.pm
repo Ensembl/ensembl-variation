@@ -60,7 +60,7 @@ sub default_options {
         hive_no_init => 0,
         hive_default_max_retry_count => 0,
         hive_debug_init => 1,
-        debug_mode              => 0,
+        debug_mode => 0,
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
@@ -101,7 +101,7 @@ sub default_options {
         run_dc                  => 1,
 
         # the uri of the database server which stores the database of previous release
-        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_dbname|old_release_number]
 
         old_server_uri          => undef,
 
@@ -264,8 +264,11 @@ sub pipeline_analyses {
     
     my @common_params = (
         fasta_file          => $self->o('fasta_file'),
+        ensembl_registry    => $self->o('ensembl_registry'),
         registry_file       => $self->o('ensembl_registry'),
         species             => $self->o('species'),
+        ensembl_release     => $self->o('ensembl_release'),
+        assembly            => $self->o('assembly'),
         debug_mode          => $self->o('debug_mode'),
     );
 
@@ -291,6 +294,7 @@ sub pipeline_analyses {
                 species_dir     => $self->o('species_dir'),
                 use_compara     => $self->o('sift_use_compara'),
                 run_dc          => $self->o('run_dc'),
+                old_server_uri  => $self->o('old_server_uri'),
                 @common_params,
             },
             -input_ids  => [{}],
@@ -409,10 +413,8 @@ sub pipeline_analyses {
                     'CompareProteinFunctionPredictions',
                     'ProteinFunctionPredictions'
                 ],
-                group          => "variation",
                 history_file   => $self->o('history_file'),
-                old_server_uri => $self->o('old_server_uri'),
-                output_dir     => $self->o("dc_outdir"),
+                output_dir     => $self->o('dc_outdir'),
                 failures_fatal => $self->o('failures_fatal'),
                 @common_params
             },            
