@@ -532,5 +532,6 @@ $file_data->filename_template($temp_name);
 
 $slice = $sa->fetch_by_region('chromosome', '2');
 my $vf_list = $file_data->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
+ok($vf_list->[0]->get_all_evidence_values()->[0] eq 'Frequency', 'get evidence value - Frequency');
 
 done_testing();
