@@ -31,7 +31,7 @@ process align_peptides {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  memory '4 GB'
+  label 'medmem'
   errorStrategy 'ignore'
 
   input:
@@ -69,7 +69,7 @@ process run_sift_on_all_aminoacid_substitutions {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  memory '4 GB'
+  label 'medmem'
   errorStrategy 'ignore'
   publishDir "${params.outdir}/sift"
 

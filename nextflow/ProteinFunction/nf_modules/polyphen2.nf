@@ -29,7 +29,7 @@ process run_pph2_on_all_aminoacid_substitutions {
   tag "${peptide.md5}"
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
-  memory '4 GB'
+  label 'highmem'
   errorStrategy 'ignore'
 
   input:
