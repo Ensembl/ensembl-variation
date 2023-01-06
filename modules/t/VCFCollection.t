@@ -523,4 +523,14 @@ ok(scalar (@{$vfs->[2]->get_all_clinical_significance_states()}) eq 2, 'get_all_
 # below check only works once we update supported list of ClinVar clinical significance entries (probably for release 110)
 #ok(scalar (@{$vfs->[3]->get_all_clinical_significance_states()}) eq 2 && $vfs->[3]->get_all_clinical_significance_states()->[0] eq , 'get_all_clinical_significance_states - process clinical significance entries with commas before delimiter split');
 
+# Test frequency evidence
+my $file_data = $vca->fetch_by_id('vcf_freq');
+ok($file_data && $file_data->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id vcf_freq");
+my $temp_name = $file_data->filename_template();
+$temp_name =~ s/###t\-root###/$dir/;
+$file_data->filename_template($temp_name);
+
+$slice = $sa->fetch_by_region('chromosome', '2');
+my $vf_list = $file_data->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
+
 done_testing();

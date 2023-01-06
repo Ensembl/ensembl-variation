@@ -563,6 +563,12 @@ sub get_all_VariationFeatures_by_Slice {
           }
         }
       }
+
+      # Evidence frequency
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
+      }
+
       $vf->_finish_annotation();
     }
   }
