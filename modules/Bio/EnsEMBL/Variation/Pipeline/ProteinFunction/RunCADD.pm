@@ -47,7 +47,7 @@ sub run {
   my $annotation_file_version = $cadd_annotation->{$assembly}->{version};
 
   my $cadd = Bio::EnsEMBL::Variation::Utils::CADDProteinFunctionAnnotation->new(
-    -registry_file => $self->required_param('registry_file'),
+    -registry_file => $self->required_param('ensembl_registry'),
     -species => $self->required_param('species'),
     -working_dir => $working_dir,
     -annotation_file =>  $annotation_file,

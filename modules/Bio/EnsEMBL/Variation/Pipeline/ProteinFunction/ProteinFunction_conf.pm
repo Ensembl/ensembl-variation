@@ -265,7 +265,6 @@ sub pipeline_analyses {
     my @common_params = (
         fasta_file          => $self->o('fasta_file'),
         ensembl_registry    => $self->o('ensembl_registry'),
-        registry_file       => $self->o('ensembl_registry'),
         species             => $self->o('species'),
         ensembl_release     => $self->o('ensembl_release'),
         assembly            => $self->o('assembly'),
@@ -413,6 +412,7 @@ sub pipeline_analyses {
                     'CompareProteinFunctionPredictions',
                     'ProteinFunctionPredictions'
                 ],
+                registry_file  => $self->o('ensembl_registry'),
                 history_file   => $self->o('history_file'),
                 output_dir     => $self->o('dc_outdir'),
                 failures_fatal => $self->o('failures_fatal'),
