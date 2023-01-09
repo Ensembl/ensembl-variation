@@ -605,6 +605,16 @@ sub get_all_VariationFeatures_by_Slice {
       }
     }
 
+    # Populate the evidence frequency for vcf-only species
+    foreach my $vf (@vfs) {
+      my $metadata_info = $vcf->{metadata}->{INFO};
+      my $info = $vf->{vcf_record}->get_info;
+
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
+      }
+    }
+
     # this "fills in" the hashes that store e.g. TranscriptVariations
     # so that the API doesn't go and try to fill them again later
     $_->_finish_annotation() for @vfs;
