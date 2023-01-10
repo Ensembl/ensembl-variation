@@ -2142,14 +2142,16 @@ sub _pick_likely_transcript {
       biotype => 1,
       tsl => 100,
       appris => 100,
-      mane => 1,
+      mane_select => 1,
+      mane_clinical => 1,
       tr => $tr
     };
      
     # 0 is "best"
     $info->{canonical} = $tr->is_canonical ? 0 : 1;
     $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
-    $info->{mane} = $tr->is_mane ? 0 : 1;
+    $info->{mane_select} = scalar(grep {$_->code eq 'MANE_Select'}  @{$tr->get_all_Attributes()}) ? 0 : 1;
+    $info->{mane_clinical} = scalar(grep {$_->code eq 'MANE_Plus_Clinical'}  @{$tr->get_all_Attributes()}) ? 0 : 1;
     $info->{ccds} = (grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries}) ? 0 : 1;
 
     # "invert" length so longer is best
@@ -2175,7 +2177,7 @@ sub _pick_likely_transcript {
     push @tr_info, $info;
   }
   
-  my @order = qw(mane appris tsl canonical biotype ccds rank length);
+  my @order = qw(mane_select mane_clinical appris tsl canonical biotype ccds rank length);
   my $picked;
   
   # go through each category in order
