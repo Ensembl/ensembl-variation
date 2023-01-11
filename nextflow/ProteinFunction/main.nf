@@ -22,11 +22,11 @@ params.database = null
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
-params.blastdb       = null
+params.blastdb       = "/nfs/production/flicek/ensembl/variation/data/uniref90/uniref90.fasta"
 
 // PolyPhen-2 params
 params.pph_run_type = "NONE"
-params.pph_data     = null
+params.pph_data     = "/hps/software/users/ensembl/variation/polyphen-2.2.3/data"
 
 // Print usage
 if (params.help) {
