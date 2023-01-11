@@ -16,7 +16,7 @@ process get_sift_db_version {
   /*
   Get version from UniRef release note file (if available)
   */
-  container "nunoagostinho/sift:6.2.1"
+  container "ensemblorg/sift:6.2.1"
   input:
     path db_dir
     path db
