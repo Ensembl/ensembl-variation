@@ -26,9 +26,9 @@ process get_sift_db_version {
   """
   release_note=${db_dir}/${db.baseName}.release_note
   if [ -f \${release_note} ]; then
-    version=$(grep -oE "[0-9]+_[0-9]+" \${release_note})
+    version=`grep -oE "[0-9]+_[0-9]+" \${release_note}`
   else
-    version=$(date -r ${db} -u +%Y_%m)
+    version=`date -r ${db} -u +%Y_%m`
   fi
   echo -n "${db.baseName} (\${version})"
   """
