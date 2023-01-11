@@ -30,7 +30,7 @@ process run_pph2_on_all_aminoacid_substitutions {
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
   label 'highmem'
-  errorStrategy 'ignore'
+  label 'error-ignore'
 
   input:
     val peptide
@@ -72,7 +72,7 @@ process run_weka {
 
   //tag "${pph2_out.baseName} $model"
   container "ensemblorg/polyphen-2:2.2.3"
-  errorStrategy 'ignore'
+  label 'error-ignore'
 
   input:
     each model
