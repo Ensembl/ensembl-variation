@@ -130,7 +130,7 @@ sub run {
     }
   }
 
-  print $wrt "Done: " . localtime() . "\n";
+  print $wrt "\nDone: " . localtime() . "\n";
 
   close($wrt);
 }
