@@ -138,7 +138,7 @@ foreach my $cdba (@$cdbas) {
       foreach my $table (@tables) {
         next if ( $new_seq_region_id eq $old_seq_region_id);
         next if ( ! grep $_ eq $old_seq_region_id, @{$need_ids->{$table}});
-        $vdbh->do("Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id='$old_seq_region_id'") or die $dbh->errstr;
+        $vdbh->do("Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id=$old_seq_region_id") or die $dbh->errstr;
       }
     }
   }
