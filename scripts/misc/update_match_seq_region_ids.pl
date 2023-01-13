@@ -118,21 +118,22 @@ foreach my $cdba (@$cdbas) {
   foreach my $prev_seq_region ( keys %$id_mapping) {
     my $new_seq_region_id = $id_mapping->{$prev_seq_region};
     my $old_seq_region_id = $vd_mapping{$prev_seq_region};
-    my ($prev_seq_region_name);
+    my ($prev_seq_region_name, $prev_seq_region_coord);
     my @psr = split(/\|/, $prev_seq_region);
     $prev_seq_region_name = $psr[0];
+    $prev_seq_region_coord = $psr[1];
 
     # Skip if old and new are the same
     next if (!$old_seq_region_id);
 
     if ($config->{dry_run}) {
-      print "Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name'\n";
+      print "Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name' AND coord_system_id=$prev_seq_region_coord\n";
       foreach my $table (@tables) {
         next if ( ! grep $_ eq $old_seq_region_id, @{$need_ids->{$table}});
         print "Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id=$old_seq_region_id\n";
       }
     } else {
-      $vdbh->do("Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name'") or die $dbh->errstr;
+      $vdbh->do("Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name' AND coord_system_id=$prev_seq_region_coord") or die $dbh->errstr;
       foreach my $table (@tables) {
         next if ( ! grep $_ eq $old_seq_region_id, @{$need_ids->{$table}});
         $vdbh->do("Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id='$old_seq_region_id'") or die $dbh->errstr;
