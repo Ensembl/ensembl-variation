@@ -563,6 +563,12 @@ sub get_all_VariationFeatures_by_Slice {
           }
         }
       }
+
+      # Evidence frequency
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
+      }
+
       $vf->_finish_annotation();
     }
   }
@@ -596,6 +602,16 @@ sub get_all_VariationFeatures_by_Slice {
           \@vfs,
           \@features,
         ) if @features;
+      }
+    }
+
+    # Populate the evidence frequency for vcf-only species
+    foreach my $vf (@vfs) {
+      my $metadata_info = $vcf->{metadata}->{INFO};
+      my $info = $vf->{vcf_record}->get_info;
+
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
       }
     }
 
