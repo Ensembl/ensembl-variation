@@ -412,6 +412,17 @@ sub within_nmd_transcript {
     return ( within_transcript(@_) and ($feat->biotype eq 'nonsense_mediated_decay') );
 }
 
+sub within_coding_gene {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
+
+    return ( within_transcript(@_) and $feat->translation );
+}
+
+sub coding_transcript_variant {
+    return ( (not coding_unknown(@_)) and complete_overlap_feature(@_) and within_coding_gene(@_) );
+}
+
 sub within_non_coding_gene {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
@@ -423,7 +434,7 @@ sub non_coding_exon_variant {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
-    return 0 if $feat->translation or within_mature_miRNA(@_);
+    return 0 if complete_overlap_feature(@_) or $feat->translation or within_mature_miRNA(@_);
     
     # get overlapped exons
     # this may include some non-overlapping ones in the case of transcripts with frameshift introns
@@ -1345,7 +1356,9 @@ sub coding_unknown {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
     $bvf  ||= $bvfo->base_variation_feature;
-    
+
+    return 0 if complete_overlap_feature(@_);
+
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
         return (

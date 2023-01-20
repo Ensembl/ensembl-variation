@@ -835,6 +835,24 @@ our @OVERLAP_CONSEQUENCES = (
         }
     },
     {
+        SO_accession => 'SO:0001968',
+        SO_term => 'coding_transcript_variant',
+        display_term => 'CODING_TRANSCRIPT_VARIANT',
+        feature_SO_term => 'mRNA',
+        feature_class => 'Bio::EnsEMBL::Transcript',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+        rank => '23',
+        tier => '3',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_transcript_variant',
+        description => 'A transcript variant of a protein coding gene',
+        label => 'coding transcript variant',
+        impact => 'MODIFIER',
+        include => {
+            within_feature => 1,
+            protein_coding => 1
+        }
+    },
+    {
         SO_accession => 'SO:0001566',
         SO_term => 'regulatory_region_variant',
         display_term => 'REGULATORY_REGION',

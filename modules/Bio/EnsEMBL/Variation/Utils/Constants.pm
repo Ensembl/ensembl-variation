@@ -54,6 +54,7 @@ our @EXPORT_OK = qw(
   SO_TERM_ALU_DELETION
   SO_TERM_ALU_INSERTION
   SO_TERM_CODING_SEQUENCE_VARIANT
+  SO_TERM_CODING_TRANSCRIPT_VARIANT
   SO_TERM_COMPLEX_CHROMOSOMAL_REARRANGEMENT
   SO_TERM_COMPLEX_STRUCTURAL_ALTERATION
   SO_TERM_COMPLEX_SUBSTITUTION
@@ -172,6 +173,7 @@ our %EXPORT_TAGS = (
     SO_TERM_3_PRIME_UTR_VARIANT
     SO_TERM_5_PRIME_UTR_VARIANT
     SO_TERM_CODING_SEQUENCE_VARIANT
+    SO_TERM_CODING_TRANSCRIPT_VARIANT
     SO_TERM_DOWNSTREAM_GENE_VARIANT
     SO_TERM_FEATURE_ELONGATION
     SO_TERM_FEATURE_TRUNCATION
@@ -353,6 +355,7 @@ use constant SO_TERM_NON_CODING_TRANSCRIPT_VARIANT => 'non_coding_transcript_var
 use constant SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT => 'non_coding_transcript_exon_variant';
 use constant SO_TERM_MATURE_MIRNA_VARIANT => 'mature_miRNA_variant';
 use constant SO_TERM_CODING_SEQUENCE_VARIANT => 'coding_sequence_variant';
+use constant SO_TERM_CODING_TRANSCRIPT_VARIANT => 'coding_transcript_variant';
 use constant SO_TERM_REGULATORY_REGION_VARIANT => 'regulatory_region_variant';
 use constant SO_TERM_TF_BINDING_SITE_VARIANT => 'TF_binding_site_variant';
 use constant SO_TERM_TRANSCRIPT_ABLATION => 'transcript_ablation';
@@ -1157,6 +1160,25 @@ our %OVERLAP_CONSEQUENCES = (
   'label' => 'coding sequence variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
   'rank' => '16',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'coding_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001968',
+  'SO_term' => 'coding_transcript_variant',
+  'description' => 'A transcript variant of a protein coding gene',
+  'display_term' => 'CODING_TRANSCRIPT_VARIANT',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'protein_coding' => 1,
+                 'within_feature' => 1
+               },
+  'label' => 'coding transcript variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_transcript_variant',
+  'rank' => '23',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
