@@ -97,6 +97,10 @@ if (!params.translated) {
   }
 }
 
+if (!params.host || !params.port || !params.user || !params.pass || !params.database) {
+  exit 1, "Error: --host, --port, --user, --pass and --database need to be defined"
+}
+
 // Check run type for each protein function predictor
 def check_run_type ( run ) {
   run_types = ["NONE", "UPDATE", "FULL"]
