@@ -66,17 +66,7 @@ my %data = ();
 my %data_section = ();
 
 my %plugins_to_skip = (
-  'CCDSFilter.pm' => 1,
-  'CSN.pm' => 1,
-  'DAS.pm' => 1,
-  'GXA.pm' => 1,
-  'HGVSReferenceBase.pm' => 1,
-  'miRNA.pm' => 1,
-  'NonSynonymousFilter.pm' => 1,
-  'PolyPhen_SIFT.pm' => 1,
-  'RankFilter.pm' => 1,
-  'RefSeqHGVS.pm' => 1,
-  'ExAC.pm' => 1,
+#  'RankFilter.pm' => 1,
 );
 
 
@@ -134,8 +124,15 @@ close(P);
 # Parse each plugin to extract some information
 my $dh;
 opendir($dh,$git_dir) or die $!;
+my @skipped;
 while (my $file = readdir($dh)) {
-  next if ($file !~ /\.pm$/ || $plugins_to_skip{$file});
+  my $name = $file;
+  $name =~ s/\.pm$//g;
+
+  if ($file !~ /\.pm$/ || $plugins_to_skip{$file} || !$data_section{$name}) {
+    push @skipped, $file if $file =~ /\.pm$/;
+    next;
+  }
   push (@files, $file);
   read_plugin_file($file);
 }
