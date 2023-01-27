@@ -288,21 +288,65 @@ sub read_plugin_file {
     # Get the plugin description
     if ($line =~ /=head1 DESCRIPTION/) {
       my $desc_flag = 1;
+      my $code_block = 0;
+      my $code_script = 0;
+      my $cmds = join "|", qw( zcat zgrep cat wget rm gzip gunzip awk head
+                               sort sed bgzip unzip cd perl make tabix mysql
+                               echo tar ./filter_vep ./vep );
+      $cmds =~ s#(\.|/)#\\$1#g;
+
       while ($desc_flag != 0) {
         $line = <F>;
-        
         if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
           $desc_flag = 0;
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
-            if ($line =~ /^\s*\.\/(filter|vep)/ || $line =~ /^\s*--plugin/) {
-              $line = '<pre class="code sh_sh">'.$line.'</pre>';
-            }
-            else {
+            # Three types of code blocks:
+            #   1. to show a code script
+            #        start: line starts with ##### or contains # BEGIN
+            #        end:   line contains # END 
+            #   2. to show arbitrary code lines
+            #        line starts with > or --plugin or bash commands (see $cmds)
+            #   3. to illustrate variant location:
+            #        start: line contains v (variant) after 3 or more spaces
+            #        end:   line only contains I (intron) or ES/EE (exon start/end)
+            if ($line =~ /#{5,}/ || $line =~ /# BEGIN/) {
+              # start block of code script
+              $line = '<pre class="code sh_sh">' . $line unless $code_script;
+              $code_script = 1;
+            } elsif ($code_script) {
+              # continue code script until getting to a line containing # END
+              if ($line =~ /# END/) {
+                $line .= '</pre>';
+                $code_script = 0;
+              }
+            } elsif ($line =~ /^\s{3,}v/) {
+              # start code block to illustrate variant position
+              $line = '<pre class="code sh_sh">' . $line unless $code_block;
+              $code_block = 1;
+            } elsif ($line =~ /^\s+[IES\.]+\s+$/) {
+              # end code block to illustrate variant position
+              $line .= '</pre>';
+              $code_block = 0;
+            } elsif ($line =~ /^\s*>\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
+              # start code block (terminal commands)
+              $line =~ s/^\s*>?\s?//;
+              $line = '<pre class="code sh_sh">' . $line unless $code_block;
+              $code_block = 1;
+            } else {
               $line =~ s/^\s+// if $line =~ /\S+/;
+              if ($code_block) {
+                # remove blank lines after code block (looks nicer)
+                $line = "" if $line =~ /^\s+$/;
+
+                # end code block (terminal commands)
+                $line = '</pre>' . $line;
+                $code_block = 0;
+              }
             }
             $desc .= $line;
+            $line = '</pre>' . $line if $code_block;
           }
         }
         chomp($line);
