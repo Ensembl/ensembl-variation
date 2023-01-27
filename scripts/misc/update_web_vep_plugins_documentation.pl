@@ -377,11 +377,10 @@ sub read_plugin_file {
   if ($desc =~ /<\/p><p>/) {
     my $lc_name = lc($name);
        $lc_name =~ s/ /_/g;
-    my $desc_link = qq{ ... <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
+    my $desc_link = qq{ <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
     $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;"><p>/;
     $desc .= '</div>';
   }
-  
   $data{$file} = {'name' => $name, 'desc' => $desc, 'developer' => \@developer, 'libs' => \%libs};
 }
 
