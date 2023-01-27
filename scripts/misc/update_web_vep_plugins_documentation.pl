@@ -323,6 +323,9 @@ sub read_plugin_file {
     }  
   }
   close(F);
+
+  # Make URLs clickable
+  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*[^\)\.,;:\s]))|<a href="$1">$1</a>|g;
   
   # Postprocess the description content (reformatting)
   $desc = "<p>$desc</p>";
