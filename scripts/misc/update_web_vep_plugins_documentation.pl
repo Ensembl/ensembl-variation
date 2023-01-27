@@ -136,7 +136,8 @@ while (my $file = readdir($dh)) {
   push (@files, $file);
   read_plugin_file($file);
 }
-
+warn join("\n  - ", "The following plugins were NOT documented:", @skipped),
+     "\n";
 
 # Print output HTML
 open OUT, "> $output_file" or die $!;
@@ -160,7 +161,6 @@ my %plugin_class_list;
 
 # 1 Plugin file <=> 1 row in the output table
 foreach my $file (@sorted_files) {
-  print "Plugin: $file\n";
   my $plugin_name  = $data{$file}{'name'};
   my $plugin_class = ($data_section{$plugin_name} && $data_section{$plugin_name}{'section'}) ? $data_section{$plugin_name}{'section'} : 'ND'; 
   my $plugin_class_colour = $class_colour{$plugin_class} ? $class_colour{$plugin_class} : get_random_colour($plugin_class);
