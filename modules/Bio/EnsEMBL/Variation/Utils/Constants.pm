@@ -1077,7 +1077,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'feature elongation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
-  'rank' => '36',
+  'rank' => '9',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1095,7 +1095,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'feature truncation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
-  'rank' => '37',
+  'rank' => '9',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
