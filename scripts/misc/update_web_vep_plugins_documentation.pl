@@ -136,8 +136,7 @@ while (my $file = readdir($dh)) {
   push (@files, $file);
   read_plugin_file($file);
 }
-warn join("\n  - ", "The following plugins were NOT documented:", @skipped),
-     "\n";
+warn join("\n  - ", "The following plugins were NOT documented:", @skipped), "\n" if @skipped;
 
 # Print output HTML
 open OUT, "> $output_file" or die $!;
@@ -297,12 +296,13 @@ sub read_plugin_file {
 
       while ($desc_flag != 0) {
         $line = <F>;
+        
         if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
           $desc_flag = 0;
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
-            # Three types of code blocks:
+            # Add code block -- three types of code blocks:
             #   1. to show a code script
             #        start: line starts with ##### or contains # BEGIN
             #        end:   line contains # END 
@@ -381,6 +381,7 @@ sub read_plugin_file {
     $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;"><p>/;
     $desc .= '</div>';
   }
+
   $data{$file} = {'name' => $name, 'desc' => $desc, 'developer' => \@developer, 'libs' => \%libs};
 }
 
