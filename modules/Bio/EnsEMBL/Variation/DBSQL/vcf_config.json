@@ -568,6 +568,18 @@
       "strict_name_match": 0
     },
     {
+      "id": "eva_pan_troglodytes_gca000001515v5",
+      "description": "Variants from EVA",
+      "species": "Pan_troglodytes",
+      "assembly": "Pan_tro_3.0",
+      "type": "remote",
+      "filename_template": "http://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/pan_troglodytes/GCA_000001515.5/GCA_000001515.5_current_ids.vcf.gz",
+      "use_as_source": 1,
+      "use_seq_region_synonyms": 1,
+      "source_name": "EVA",
+      "source_version": 4
+    },
+    {
       "id": "dog_boxer_EVA_PRJEB24066",
       "species": "canis_lupus_familiarisboxer",
       "source_name": "PRJEB24066",
