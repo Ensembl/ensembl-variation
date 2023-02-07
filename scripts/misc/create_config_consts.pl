@@ -114,7 +114,7 @@ for my $attrib_type (@ATTRIB_TYPES) {
     $code .= "use constant $const => '$type_code';\n";
 }
 
-$code .= "\n";
+$code .= "\nuse constant ATTRIB_TRAIT => 'trait';\n\n";
 
 my $class_code = "our %VARIATION_CLASSES = (\n";
 
@@ -189,17 +189,29 @@ for my $type (keys %$to_export) {
     }
 }
 
-$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE $SO_ACC_MAPPER '.(join ' ', keys %$all_to_export).');';
+my @header = qw(
+  %OVERLAP_CONSEQUENCES
+  %VARIATION_CLASSES
+  $DEFAULT_OVERLAP_CONSEQUENCE
+  $SO_ACC_MAPPER
+  ATTRIB_TRAIT
+);
+
+$hdr .= 'our @EXPORT_OK = qw(' .
+ "\n  " . (join "\n  ", @header) .
+ "\n  " . (join "\n  ", sort keys %$all_to_export) . "\n);";
 
 $hdr .= "\n\n";
 
-$hdr .= 'our %EXPORT_TAGS = ( ';
+$hdr .= 'our %EXPORT_TAGS = (';
 
-for my $key (keys %$to_export) {
-    $hdr .= "$key => [qw(".(join ' ', keys %{ $to_export->{$key} }).")], "
+for my $key (sort keys %$to_export) {
+    $hdr .= "\n  $key => [qw(\n    " .
+            (join "\n    ", sort keys %{ $to_export->{$key} }) .
+            "\n  )],";
 }
 
-$hdr .= " );\n\n";
+$hdr .= "\n);\n\n";
 
 $hdr .= "use $OVERLAP_CONSEQUENCE_CLASS;\n";
 
