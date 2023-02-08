@@ -888,10 +888,21 @@
       "assembly": "Macaca_fascicularis_6.0",
       "type": "remote",
       "use_as_source" : 1,
-      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_3/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
-      "chromosomes": [
-        "1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","X"
-      ]
+      "source_version" : 4,
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
+      "use_seq_region_synonyms": 0
+    },
+    {
+      "id": "zebrafinch_eva",
+      "source_name": "EVA",
+      "description": "Variants from EVA",
+      "species": "Taeniopygia_guttata",
+      "assembly": "bTaeGut1_v1.p",
+      "type": "remote",
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/taeniopygia_guttata/GCA_003957565.2/GCA_003957565.2_current_ids.vcf.gz",
+      "use_as_source": 1,
+      "use_seq_region_synonyms": 1,
+      "source_version": 4
     },
     {
       "id": "macaca_mulatta_EVA",
