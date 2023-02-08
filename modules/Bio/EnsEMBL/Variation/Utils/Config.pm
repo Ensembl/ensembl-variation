@@ -299,6 +299,12 @@ our @VARIATION_CLASSES = (
         type => 'sv',
     },
     {
+        SO_accession => 'SO:0002062',
+        SO_term => 'complex_chromosomal_rearrangement',
+        display_term => 'complex chromosomal rearrangement',
+        type => 'sv',
+    },
+    {
         SO_accession => 'SO:1000005',
         SO_term => 'complex_substitution',
         display_term => 'complex substitution',
@@ -473,7 +479,7 @@ our @OVERLAP_CONSEQUENCES = (
         display_term => 'SPLICE_SITE',
         feature_SO_term => 'primary_transcript',
         feature_class => 'Bio::EnsEMBL::Transcript',
-        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
         rank => '13',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
@@ -481,6 +487,7 @@ our @OVERLAP_CONSEQUENCES = (
         label => 'splice polypyrimidine tract variant',
         impact => 'LOW',
         include => {
+            exon   => 0,
             intron => 1
         },
     },
@@ -1318,6 +1325,11 @@ our @ATTRIB_TYPES = (
                code => 'review_status',
                name => 'ClinVar review_status', 
                description => 'ClinVar review_status for assertation', 
+       },
+       {
+               code => 'phenotype_type',
+               name => 'Phenotype type',
+               description => 'Type of the phenotype information'
        }
 
 
