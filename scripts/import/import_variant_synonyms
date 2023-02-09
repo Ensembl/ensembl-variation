@@ -367,7 +367,7 @@ sub add_set_uniprot {
       )
     };
 
-    # $db_adaptor->dbc->do($ins_stmt); 
+    $db_adaptor->dbc->do($ins_stmt); 
     $variation_set_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
  
   } 
