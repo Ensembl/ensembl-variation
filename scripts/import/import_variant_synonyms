@@ -411,7 +411,7 @@ sub add_synonyms_uniprot {
     UPDATE
       variation_feature 
     SET 
-      variation_set_id = '?'
+      variation_set_id = ?
     WHERE
       variation_id=?
   }; 
