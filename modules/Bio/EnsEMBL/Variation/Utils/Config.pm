@@ -116,7 +116,6 @@ our @VARIATION_CLASSES = (
     {
         SO_accession => 'SO:0001483',
         SO_term => 'SNV',
-        display_term => 'SNP',
         somatic_display_term => 'somatic SNV',
     },
     {
