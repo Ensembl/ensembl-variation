@@ -368,7 +368,7 @@ use constant SO_TERM_PROTEIN_ALTERING_VARIANT => 'protein_altering_variant';
 our %VARIATION_CLASSES = (
 'SNV' => {
   'SO_accession' => 'SO:0001483',
-  'display_term' => 'SNP',
+  'display_term' => 'SNV',
   'somatic_display_term' => 'somatic SNV'
 }
 ,
