@@ -1441,7 +1441,7 @@ sub _seek_by_VariationFeature {
   my $vf = shift;
   
   my ($seek_start, $seek_end);
-  if ($vf->var_class() eq 'SNP') {
+  if ($vf->var_class() eq 'SNV') {
     ## only need single location
     $seek_start = $seek_end = $vf->seq_region_start;
   } else {

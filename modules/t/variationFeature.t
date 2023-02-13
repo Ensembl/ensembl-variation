@@ -150,7 +150,7 @@ $vf->allele_string($bak);
 ok($vf->ambig_code eq 'W', "ambiguity code");
 
 # test variation class
-ok($vf->var_class eq 'SNP', "var class");
+ok($vf->var_class eq 'SNV', "var class");
 
 
 

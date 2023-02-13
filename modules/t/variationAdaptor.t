@@ -103,7 +103,7 @@ ok($var->source_name() eq 'dbSNP',"source by synonym");
 
 #test ambig_code and var_class - fix core test db & re-install
 #ok($var->ambig_code eq 'W',   "ambiguity code by synonym");
-ok($var->var_class() eq 'SNP',  "variation class by synonym");
+ok($var->var_class() eq 'SNV',  "variation class by synonym");
 
 ok($var->get_all_synonym_sources->[0] eq 'Archive dbSNP', "synonym source by synonym");
 
