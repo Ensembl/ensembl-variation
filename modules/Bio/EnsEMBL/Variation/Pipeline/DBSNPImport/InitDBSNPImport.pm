@@ -62,16 +62,20 @@ sub run {
   }
 
   if (! -d $rpt_dir) {
-    die("No rpt directory ($rpt_dir)");
+    mkdir $rpt_dir or die("No rpt directory ($rpt_dir)");
   }
 
   my @sub_dirs = map('chr' . $_, @chrs);
+  
+  # Add an additional folder to others
+  push @sub_dirs, "chr_other";
+
   for my $sub_dir (@sub_dirs) {
     if (! -d "$data_dir/$sub_dir") {
       die("No data directory for ${data_dir}/${sub_dir}");
     }
     if (! -d "$rpt_dir/$sub_dir") {
-      die("No rpt directory for ${rpt_dir}/${sub_dir}");
+      mkdir "$rpt_dir/$sub_dir" or die("No rpt directory for ${rpt_dir}/${sub_dir}");
     }
   }
   # set up the list of sub_dir
