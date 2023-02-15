@@ -85,8 +85,8 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        '8Gb_8c_job'  => {'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000' },
-        '4Gb_job'     => {'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
+        '8Gb_8c_job'  => { SLURM => "--cpus-per-task=8 --partition=standard --time=4:00:00 --mem=8G" },
+        '4Gb_job'     => { SLURM => "--partition=standard --time=4:00:00 --mem=8G" },
     };
 }
 
