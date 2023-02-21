@@ -228,14 +228,11 @@ sub fetch_input {
     my $var_dbc = $self->get_species_adaptor($group)->dbc;
     unless (defined $old_server_uri) {
         my $user     = $var_dbc->user;
+        my $pass     = $var_dbc->pass;
         my $port     = $var_dbc->port;
         my $host     = $var_dbc->host;
-        my $species  = $self->param('species');
         my $release  = $self->param('ensembl_release') - 1;
-        my $assembly = $self->param('assembly');
-        $old_server_uri ||= sprintf("mysql://%s@%s:%s/%s_%s_%s_%s",
-                                    $user, $host, $port,
-                                    $species, $group, $release, $assembly);
+        $old_server_uri ||= sprintf("mysql://%s:%s@%s:%s/%s", $user, $pass, $host, $port, $release);
     }
 
     # set up our list of output ids
