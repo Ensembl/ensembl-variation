@@ -46,12 +46,12 @@ GetOptions(
 );
 
 unless ($registry_file) {
-    print "Must supply a registry file...\n" unless $help;
+    warn "Must supply a registry file...\n" unless $help;
     $help = 1;
 }
 
 unless ($source_name) {
-    print "Must supply a source name...\n" unless $help;
+    warn "Must supply a source name...\n" unless $help;
     $help = 1;
 }
 
@@ -90,7 +90,7 @@ my ($source_id) = $get_source_sth->fetchrow_array;
 die "Didn't find $source_name source_id, does this database have $source_name data?"
     unless defined $source_id;
 
-print "Found $source_name source ID: $source_id\n";
+warn "Found $source_name source ID: $source_id\n";
 
 # now delete stuff...
 
@@ -103,7 +103,7 @@ $dbh->do(qq{
     WHERE   fv.variation_id = v.variation_id
     AND     v.source_id = $source_id
 });
-print "- 'failed_variation' entries deleted\n";
+warn "- 'failed_variation' entries deleted\n";
 
 
 # variation_feature, transcript_variation and MTMP_transcript_variation
@@ -123,7 +123,7 @@ foreach my $to_del (@{$tv_to_del}){
   $del_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from transcript_variation\n";
   $del_mtmp_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
 }
-print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
+warn "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
 
 # phenotype_feature_attrib
 $dbh->do(qq{
@@ -132,14 +132,14 @@ $dbh->do(qq{
     WHERE   pf.phenotype_feature_id=pfa.phenotype_feature_id
     AND     pf.source_id = $source_id
 });
-print "- 'phenotype_feature_attrib' entries deleted\n";
+warn "- 'phenotype_feature_attrib' entries deleted\n";
 
 
 # phenotype_feature
 $dbh->do(qq{
     DELETE FROM phenotype_feature WHERE source_id = $source_id
 });
-print "- 'phenotype_feature' entries deleted\n";
+warn "- 'phenotype_feature' entries deleted\n";
 
 
 # variation_set_variation - variation_id
@@ -149,20 +149,20 @@ $dbh->do(qq{
     WHERE   vsv.variation_set_id = vs.variation_set_id
     AND     vs.name LIKE "\%$source_name\%"
 });
-print "- 'variation_set_variation' entries deleted\n";
+warn "- 'variation_set_variation' entries deleted\n";
 
 
 # variation_synonym
 $dbh->do(qq{
     DELETE FROM variation_synonym WHERE source_id = $source_id
 });
-print "- 'variation_synonym' entries deleted\n";
+warn "- 'variation_synonym' entries deleted\n";
 
 # variation
 $dbh->do(qq{
     DELETE FROM variation WHERE source_id = $source_id
 });
-print "- 'variation' entries deleted\n";
+warn "- 'variation' entries deleted\n";
 
 
-print "Deleted all $source_name variation associated data\n";
+warn "Deleted all $source_name variation associated data\n";
