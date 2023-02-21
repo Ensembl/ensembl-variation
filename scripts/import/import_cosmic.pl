@@ -24,6 +24,9 @@ use DBI qw(:sql_types);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Text::CSV;
 
+use IO::Handle;
+STDOUT->autoflush(1); # flush STDOUT buffer immediately
+
 my ( $infile, $registry_file, $version, $help, $chromosome, $cleanup );
 
 GetOptions(
@@ -91,7 +94,7 @@ sub performCleanup {
     $main_table =~ s/[0-9]+$//;
     next if $table eq $main_table;
 
-    warn "Moving $table contents to $main_table...\n";
+    print "Moving $table contents to $main_table...\n";
     $dbVar->do("INSERT INTO $main_table SELECT * FROM $table;");
     delete_table($dbVar, $table);
   }
@@ -101,12 +104,12 @@ sub performCleanup {
   my $tmpdb  = $dbname . "_tmptables";
   $dbVar->do("CREATE DATABASE IF NOT EXISTS $tmpdb");
   
-  warn "Moving tmp tables to $tmpdb...\n";
+  print "Moving tmp tables to $tmpdb...\n";
   $dbVar->do("RENAME TABLE $temp_table_prefix TO $tmpdb.$temp_table_prefix");
   $dbVar->do("RENAME TABLE $temp_phen_table_prefix TO $tmpdb.$temp_phen_table_prefix");
   $dbVar->do("RENAME TABLE $temp_varSyn_table_prefix TO $tmpdb.$temp_varSyn_table_prefix");
 
-  warn "Auxiliary COSMIC tables removed and their rows were aggregated into " .
+  print "Auxiliary COSMIC tables removed and their rows were aggregated into " .
         "the following tables and moved to $tmpdb:\n" .
         "  - $temp_table_prefix\n" .
         "  - $temp_phen_table_prefix\n" .
@@ -162,7 +165,7 @@ delete_table($dbVar, $temp_varSyn_table);
 
 sub create_temp_tables {
   my ($dbVar, $temp_table, $temp_phen_table, $temp_varSyn_table) = @_;
-  warn "Creating $temp_table temporary tables...\n";
+  print "Creating $temp_table temporary tables...\n";
   
   my @cols = ('name *', 'seq_region_id i*', 'seq_region_start i', 'seq_region_end i', 'class i');
   create($dbVar, "$temp_table", @cols);
@@ -195,7 +198,7 @@ my $cosmic_ins_stmt = qq{
         ?
       )
 };
-warn "Preparing $temp_table table...\n";
+print "Preparing $temp_table table...\n";
 my $cosmic_ins_sth = $dbh->prepare($cosmic_ins_stmt);
 
 my $cosmic_phe_ins_stmt = qq{
@@ -209,7 +212,7 @@ my $cosmic_phe_ins_stmt = qq{
         ?
       )
 };
-warn "Preparing $temp_phen_table table...\n";
+print "Preparing $temp_phen_table table...\n";
 my $cosmic_phe_ins_sth = $dbh->prepare($cosmic_phe_ins_stmt);
 
 my $cosmic_syn_ins_stmt = qq{
@@ -224,16 +227,16 @@ my $cosmic_syn_ins_stmt = qq{
       )
 };
 
-warn "Preparing $temp_varSyn_table table...\n";
+print "Preparing $temp_varSyn_table table...\n";
 my $cosmic_syn_ins_sth = $dbh->prepare($cosmic_syn_ins_stmt);
 
-warn "Getting class attribute ids...\n";
+print "Getting class attribute ids...\n";
 my $class_attrib_ids = get_class_attrib_ids();
 
-warn "Getting seq region ids...\n";
+print "Getting seq region ids...\n";
 my $seq_region_ids   = get_seq_region_ids();
 
-warn "Getting phenotype ids...\n";
+print "Getting phenotype ids...\n";
 my $phenotype_ids    = get_phenotype_ids();
 
 my %chr_names = ( '23' => 'X',
@@ -324,7 +327,7 @@ $cosmic_phe_ins_sth->finish();
 $cosmic_syn_ins_sth->finish();
 
 # Insert COSMIC in the latest release which are not in COSMIC 71
-warn "Inserting COSMIC entries...\n";
+print "Inserting COSMIC entries...\n";
 insert_cosmic_entries();
 
 sub get_equivalent_class {
@@ -589,7 +592,7 @@ sub insert_cosmic_entries {
   $vf_set_upd_sth->execute() || die "Error updating variation_set_id in variation_feature\n";
 
   # Insert variation synonym
-  warn "Inserting variation synonyms...\n";
+  print "Inserting variation synonyms...\n";
   my $stmt_vs = qq{INSERT IGNORE INTO variation_synonym
                    (variation_id, source_id, name)
                    SELECT v.variation_id, v.source_id, c.old_name
@@ -598,7 +601,7 @@ sub insert_cosmic_entries {
   $sth_vs->execute();
 
   # Insert PF
-  warn "Inserting phenotype features...\n";
+  print "Inserting phenotype features...\n";
   my $stmt_pf = qq{INSERT IGNORE INTO phenotype_feature 
                    (object_id, type, source_id, phenotype_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand)
                    SELECT v.name, "Variation", v.source_id, pc.phenotype_id, c.seq_region_id, c.seq_region_start, c.seq_region_end, ? 
@@ -607,7 +610,7 @@ sub insert_cosmic_entries {
   $sth_pf->execute($default_strand);
   
   # Insert Set
-  warn "Inserting variation sets...\n";
+  print "Inserting variation sets...\n";
   my $stmt_set = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
                     SELECT variation_id, ? FROM variation WHERE source_id=?};
   my $sth_set  = $dbh->prepare($stmt_set);
