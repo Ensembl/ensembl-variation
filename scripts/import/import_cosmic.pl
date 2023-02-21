@@ -476,6 +476,20 @@ sub insert_cosmic_entries {
   my $sth_get_var = $dbh->prepare($stmt_get_var);
   $sth_get_var->execute();
   my $data_var = $sth_get_var->fetchall_arrayref();
+
+  # Prepare SQL statements before for loop
+  my $sth_seq_region = $dbh->prepare(qq{ SELECT name from seq_region WHERE seq_region_id = ? });
+  my $vf_sth = $dba->dbc()->prepare(qq { UPDATE variation_feature
+                                         SET consequence_types = ?
+                                         WHERE variation_feature_id = ? });
+  my $tv_sth = $dba->dbc()->prepare(qq[
+    SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+    FROM transcript_variation
+    WHERE variation_feature_id = ?
+    GROUP BY variation_feature_id;
+  ]);
+  my $sth_len = $dbh->prepare(qq {set session group_concat_max_len = 100000});
+
   foreach my $var_tmp (@{$data_var}) {
     # Get SO term
     my $so_term = $attrib_adaptor->attrib_value_for_id($var_tmp->[4]);
@@ -502,8 +516,6 @@ sub insert_cosmic_entries {
     $variation_adaptor->store($var) unless $skip_var;
 
     # my $slice = $slice_adaptor->fetch_by_dbID($var_tmp->[1]);
-    my $sth_seq_region = $dbh->prepare(qq{ SELECT name from seq_region WHERE seq_region_id = ?
-                                          });
     $sth_seq_region->execute($var_tmp->[1]);
     my $seq_region_data = $sth_seq_region->fetchall_arrayref();
     my $seq_region_name = $seq_region_data->[0]->[0];
@@ -552,34 +564,20 @@ sub insert_cosmic_entries {
     # get variation_feature_id
     my $vf_dbid = $vf->dbID;
 
-    my $update_vf_smt = qq { UPDATE variation_feature
-                             SET consequence_types = ?
-                             WHERE variation_feature_id = ?
-                           };
     # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
     if(!$count_tv) {
-      my $vf_sth = $dba->dbc()->prepare($update_vf_smt);
       $vf_sth->execute('intergenic_variant', $vf->dbID) || die "Error updating consequence_types to default in table variation_feature\n";
     }
 
     # By default group_concat has maximum length 1024
     # some variants have consequence_types longer than 1024
-    my $stmt_len = qq {set session group_concat_max_len = 100000};
-    my $sth_len = $dbh->prepare($stmt_len);
     $sth_len->execute();
-
-    my $tv_sth = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
-                                             FROM transcript_variation
-                                             WHERE variation_feature_id = ?
-                                             GROUP BY variation_feature_id;
-                                            ]);
 
     $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
     my $data_tv = $tv_sth->fetchall_arrayref();
     if (defined $data_tv->[0]->[0]) {
-      my $update_vf_sth = $dba->dbc()->prepare($update_vf_smt);
       # warn "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
-      $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+      $vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
     }
   }
 
