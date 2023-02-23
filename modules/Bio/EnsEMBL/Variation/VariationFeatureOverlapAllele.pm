@@ -280,22 +280,6 @@ sub variation_feature_seq {
     return $self->{variation_feature_seq};
 }
 
-=head2 variation_feature_seq_original
-
-  Args [1]   : The original allele sequence relative to the VariationFeature
-  Description: Get/set the sequence of the original allele relative to the associated VariationFeature.
-  Returntype : string
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub variation_feature_seq_original {
-    my ($self, $variation_feature_seq_original) = @_;
-    $self->{variation_feature_seq_original} = $variation_feature_seq_original if $variation_feature_seq_original;
-    return $self->{variation_feature_seq_original};
-}
-
 =head2 seq_is_unambiguous_dna
 
   Description: identify if the sequence of this allele is unambiguous DNA 
