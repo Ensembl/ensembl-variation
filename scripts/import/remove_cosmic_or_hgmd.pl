@@ -116,6 +116,7 @@ my $tv_del_sth = $dbh->prepare(qq[ SELECT vf.variation_feature_id from variation
 $tv_del_sth->execute() or die "Error selecting variation feature from $source_name\n";
 my $tv_to_del = $tv_del_sth->fetchall_arrayref();
 
+# Prepare SQL statements before for loop
 my $del_vf_sth = $dbh->prepare(qq[ DELETE FROM variation_feature WHERE variation_feature_id = ? ]);
 my $del_sth = $dbh->prepare(qq[ DELETE FROM transcript_variation WHERE variation_feature_id = ? ]);
 my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE variation_feature_id = ? ]);
