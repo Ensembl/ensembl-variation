@@ -87,11 +87,12 @@ sub performCleanup {
                      $temp_varSyn_table_prefix);
 
   my $sth = $dbVar->prepare("SHOW TABLES LIKE '$temp_table_prefix%';");
-  my $rc = $sth->execute();
+  $sth->execute();
   while ( my $table = $sth->fetchrow_array) {
     # Copy contents to new table and delete
     my $main_table = $table;
-    $main_table =~ s/[0-9]+$//;
+    $main_table =~ s/([0-9]|X|Y|MT)+$//;
+
     next if $table eq $main_table;
 
     print "Moving $table contents to $main_table...\n";
@@ -109,8 +110,8 @@ sub performCleanup {
   $dbVar->do("RENAME TABLE $temp_phen_table_prefix TO $tmpdb.$temp_phen_table_prefix");
   $dbVar->do("RENAME TABLE $temp_varSyn_table_prefix TO $tmpdb.$temp_varSyn_table_prefix");
 
-  print "Auxiliary COSMIC tables removed and their rows were aggregated into " .
-        "the following tables and moved to $tmpdb:\n" .
+  print "Auxiliary COSMIC tables removed. Their contents were aggregated into " .
+        "the following tables in $tmpdb:\n" .
         "  - $temp_table_prefix\n" .
         "  - $temp_phen_table_prefix\n" .
         "  - $temp_varSyn_table_prefix\n";
