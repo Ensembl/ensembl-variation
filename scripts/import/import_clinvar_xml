@@ -1546,62 +1546,71 @@ sub get_attrib_id {
 
 sub clean_old_data{
 
+  my $clinvar_source_id_sth = $dba->dbc->do(qq[ select source_id from source where name = 'ClinVar' ]);
+  my $omim_source_id_sth = $dba->dbc->do(qq[ select source_id from source where name = 'OMIM' ]);
+
+  $clinvar_source_id_sth->execute() or die "Error selecting ClinVar from source\n";
+  my $clinvar_data = $clinvar_source_id_sth->fetchall_arrayref();
+  my $clinvar_id = $clinvar_data->[0]->[0] ? $clinvar_data->[0]->[0] : die "Source ClinVar is not defined\n";
+  
+  $omim_source_id_sth->execute() or die "Error selecting OMIM from source\n";
+  my $omim_data = $omim_source_id_sth->fetchall_arrayref();
+  my $omim_id = $omim_data->[0]->[0] ? $omim_data->[0]->[0] : die "Source OMIM is not defined\n";
+
   print "Deleting old phenotype, synonym, citation and clinical_significance data\n";
 
-  my $phenfeatat_del_sth = $dba->dbc->do(qq[ delete from phenotype_feature_attrib where phenotype_feature_id in
-                                             ( select phenotype_feature.phenotype_feature_id from phenotype_feature, source
-                                               where source.name ='ClinVar' 
-                                               and phenotype_feature.source_id = source.source_id)
+  my $phenfeatat_del_sth = $dba->dbc->prepare(qq[ delete from phenotype_feature_attrib where phenotype_feature_id in
+                                             ( select phenotype_feature_id from phenotype_feature where source_id = ? )
                                             ]);
+  $phenfeatat_del_sth->execute($clinvar_id) or die "Error deleting entries from phenotype_feature_attrib for source ClinVar\n";
 
-  my $phenfeat_del_sth   = $dba->dbc->do(qq[ delete from phenotype_feature where source_id in (select source_id from source where name ='ClinVar') ]);
+  my $phenfeat_del_sth = $dba->dbc->prepare(qq[ delete from phenotype_feature where source_id = ? ]);
+  $phenfeat_del_sth->execute($clinvar_id) or die "Error deleting entries from phenotype_feature for source ClinVar\n";
 
   # remove previously inserted variation from ClinVar + associated records
   # remove from allele_synonym
   # first check which entries to remove
   print "Deleting old allele synonym\n";
   my $var_syn_sel_sth    = $dba->dbc()->prepare(qq[ select allele_synonym_id from allele_synonym where variation_id in
-                                                    (select variation_id from variation v, source s
-                                                    where v.source_id = s.source_id and s.name ='ClinVar')
+                                                    (select variation_id from variation where source_id = ? )
                                                 ]);
-  $var_syn_sel_sth->execute() or die "Error selecting allele synonyms to be removed\n";
+  $var_syn_sel_sth->execute($clinvar_id) or die "Error selecting allele synonyms to be removed\n";
   my $data = $var_syn_sel_sth->fetchall_arrayref();
   # remove entries from allele_synonym
   foreach my $allele_syn (@{$data}){
     my $allele_syn_id = $allele_syn->[0];
-    my $allele_syn_delete_sth = $dba->dbc()->prepare(qq[ delete from allele_synonym where allele_synonym_id = $allele_syn_id ]);
-    $allele_syn_delete_sth->execute() or die "Could not delete entry id $allele_syn_id from allele_synonym\n";
+    my $allele_syn_delete_sth = $dba->dbc()->prepare(qq[ delete from allele_synonym where allele_synonym_id = ? ]);
+    $allele_syn_delete_sth->execute($allele_syn_id) or die "Could not delete entry allele_synonym_id = $allele_syn_id from allele_synonym\n";
   }
 
   print "Deleting old variation feature, transcript variation and MTMP transcript variation\n";
   # remove from variation_feature, transcript_variation and MTMP_transcript_variation
-  my $tv_del_sth = $dba->dbc()->prepare(qq[ select vf.variation_feature_id from variation_feature vf
-                                            left join source s on s.source_id = vf.source_id
-					    where s.name ='ClinVar';
-					    ]);
-  $tv_del_sth->execute() or die "Error selecting variation feature from ClinVar\n";
+  my $tv_del_sth = $dba->dbc()->prepare(qq[ select variation_feature_id from variation_feature where source_id = ? ]);
+  $tv_del_sth->execute($clinvar_id) or die "Error selecting variation_feature entries for source ClinVar\n";
   my $tv_to_del = $tv_del_sth->fetchall_arrayref();
   foreach my $to_del (@{$tv_to_del}){
     my $vf_id_del = $to_del->[0];
-    my $del_vf_sth = $dba->dbc()->prepare(qq[ delete from variation_feature where variation_feature_id = $vf_id_del ]);
-    my $del_sth = $dba->dbc()->prepare(qq[ delete from transcript_variation where variation_feature_id = $vf_id_del ]);
-    my $del_mtmp_sth = $dba->dbc()->prepare(qq[ delete from MTMP_transcript_variation where variation_feature_id = $vf_id_del ]);
-    $del_vf_sth->execute() or die "Could not delete entry with variation_feature_id = $vf_id_del from variation_feature\n";
-    $del_sth->execute() or die "Could not delete entry with variation_feature_id = $vf_id_del from transcript_variation\n";
-    $del_mtmp_sth->execute() or die "Could not delete entry with variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+    my $del_vf_sth = $dba->dbc()->prepare(qq[ delete from variation_feature where variation_feature_id = ? ]);
+    my $del_sth = $dba->dbc()->prepare(qq[ delete from transcript_variation where variation_feature_id = ? ]);
+    my $del_mtmp_sth = $dba->dbc()->prepare(qq[ delete from MTMP_transcript_variation where variation_feature_id = ? ]);
+    $del_vf_sth->execute($vf_id_del) or die "Could not delete entry with variation_feature_id = $vf_id_del from variation_feature\n";
+    $del_sth->execute($vf_id_del) or die "Could not delete entry with variation_feature_id = $vf_id_del from transcript_variation\n";
+    $del_mtmp_sth->execute($vf_id_del) or die "Could not delete entry with variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
   }
 
   print "Deleting old data from other tables\n";
   # remove from other tables
   my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation variation_hgvs/;
   for my $table (@tables){
-    my $var_recs_del_sth    = $dba->dbc->do(qq[ delete from $table where variation_id in
-                                                    (select variation_id from variation v, source s
-                                                     where v.source_id = s.source_id and s.name ='ClinVar')
-                                                    ]);
+    my $var_recs_del_sth = $dba->dbc->prepare(qq[ delete from ? where variation_id in
+                                                    (select variation_id from variation where source_id = ?)
+                                                 ]);
+    $var_recs_del_sth->execute($table, $clinvar_id) or die "Error deleting entries from $table for source ClinVar\n";
   }
-  my $var_del_sth        = $dba->dbc->do(qq[ delete from variation where source_id in (select source_id from source where name ='ClinVar'); ]);
-  my $synonym_del_sth    = $dba->dbc->do(qq[ delete from variation_synonym where source_id in (select source_id from source where name ='OMIM' ) ]);
+  my $var_del_sth        = $dba->dbc->prepare(qq[ delete from variation where source_id = ? ]);
+  my $synonym_del_sth    = $dba->dbc->prepare(qq[ delete from variation_synonym where source_id = ? ]);
+  $var_del_sth->execute($clinvar_id) or die "Error deleting entries from variation for source ClinVar\n";
+  $synonym_del_sth->execute($omim_id) or die "Error deleting entries from variation_synonym for source OMIM\n";
 
   my $var_updt_sth       = $dba->dbc->do(qq[ update variation set clinical_significance=NULL ]);
   my $var_feat_updt_sth  = $dba->dbc->do(qq[ update variation_feature set clinical_significance=NULL ]);
