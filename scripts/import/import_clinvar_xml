@@ -1546,8 +1546,8 @@ sub get_attrib_id {
 
 sub clean_old_data{
 
-  my $clinvar_source_id_sth = $dba->dbc->do(qq[ select source_id from source where name = 'ClinVar' ]);
-  my $omim_source_id_sth = $dba->dbc->do(qq[ select source_id from source where name = 'OMIM' ]);
+  my $clinvar_source_id_sth = $dba->dbc->prepare(qq[ select source_id from source where name = 'ClinVar' ]);
+  my $omim_source_id_sth = $dba->dbc->prepare(qq[ select source_id from source where name = 'OMIM' ]);
 
   $clinvar_source_id_sth->execute() or die "Error selecting ClinVar from source\n";
   my $clinvar_data = $clinvar_source_id_sth->fetchall_arrayref();
@@ -1602,10 +1602,10 @@ sub clean_old_data{
   # remove from other tables
   my @tables = qw/variation_synonym failed_variation variation_set_variation variation_citation variation_hgvs/;
   for my $table (@tables){
-    my $var_recs_del_sth = $dba->dbc->prepare(qq[ delete from ? where variation_id in
+    my $var_recs_del_sth = $dba->dbc->prepare(qq[ delete from $table where variation_id in
                                                     (select variation_id from variation where source_id = ?)
                                                  ]);
-    $var_recs_del_sth->execute($table, $clinvar_id) or die "Error deleting entries from $table for source ClinVar\n";
+    $var_recs_del_sth->execute($clinvar_id) or die "Error deleting entries from $table for source ClinVar\n";
   }
   my $var_del_sth        = $dba->dbc->prepare(qq[ delete from variation where source_id = ? ]);
   my $synonym_del_sth    = $dba->dbc->prepare(qq[ delete from variation_synonym where source_id = ? ]);
