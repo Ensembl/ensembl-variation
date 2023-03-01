@@ -2354,9 +2354,36 @@ sub get_reference{
 
   my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
 
-  my $start  = $coords[0]->start();
-  my $end    = $coords[0]->end();
+  my $start;
+  my $end;
   my $strand = $coords[0]->strand();
+
+  # Assign start and end when we have two coordinates
+  # This is the most common alternative
+  if(scalar(@coords) == 2){
+    if(($coords[0]->end() - $coords[0]->start() + 1) % 2 == 0) {
+      if($strand == 1) {
+        $start = $coords[0]->start();
+        $end = $start + 2;
+      }
+      else {
+        $end = $coords[0]->end();
+        $start = $end - 2;
+      }
+    }
+    elsif($strand == 1) {
+      $end = $coords[1]->end();
+      $start = $end - 2;
+    }
+    else {
+      $start = $coords[0]->start();
+      $end = $start + 2;
+    }
+  }
+  else{
+    $start = $coords[0]->start();
+    $end   = $coords[0]->end();
+  }
 
   my $seq_length = $type_del == 1 ? ($end-$start) + 1 : 3;  
 
