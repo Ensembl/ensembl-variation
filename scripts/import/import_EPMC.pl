@@ -130,6 +130,7 @@ elsif($type eq "phenotype"){
   my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature_attrib, $type);
 
+  print STDERR "Removing outdated citations...\n";
   remove_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
 }
 else{
@@ -1222,7 +1223,8 @@ sub remove_outdated_citations {
 
     my @outdated_attribs;
     foreach my $attrib (@split_attrib_id) {
-      unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid}) {
+      my $value = $attrib . '_' . $publication_pmid;
+      unless ($citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value}) {
         push @outdated_attribs, $attrib;
         print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n";
       }
@@ -1240,6 +1242,19 @@ sub remove_outdated_citations {
     }
 
   }
+
+  # Remove publications not associated with any variants
+  my $orphan_publications_sth = $dba->dbc()->prepare(qq[
+    select publication_id, title
+    from publication
+    where publication_id NOT IN
+      (select distinct publication_id from variation_citation) ]);
+  $orphan_publications_sth->execute() or die;
+  my $orphan_publications = $orphan_publications_sth->fetchall_arrayref();
+
+  print $report "\nDeleted publications with no associated variants (publication_id, title):\n";
+  remove_publications($pub_ad, $wrt, $orphan_publications) if $orphan_publications;
+
   close($wrt);
 }
 
