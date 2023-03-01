@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,11 +32,13 @@ use DBI;
 use strict;
 use POSIX;
 use Getopt::Long;
+use JSON;
+use File::Basename;
 
-###############
-### Options ###
-###############
-my ($e_version,$html_file,$hlist,$phost,$user,$port,$skip_prediction,$help);
+###############################################################
+##########             CONFIGURE                        #######
+###############################################################
+my ($e_version,$html_file,$hlist,$phost,$user,$port,$config,$d_dir,$p_data,$skip_prediction,$help);
 ## EG options
 my ($site, $etype);
 
@@ -50,6 +52,9 @@ GetOptions(
      'phost=s' => \$phost,
      'user=s'  => \$user,
      'port=i'  => \$port,
+     'config=s' => \$config,
+     'd_dir=s'  => \$d_dir,
+     'p_data=s' => \$p_data,
      'site=s'  => \$site,
      'etype=s' => \$etype,
      'skip_prediction' => \$skip_prediction
@@ -82,6 +87,21 @@ if ($site) {
   $server_name = $site;
 }
 
+# Get the vcf config file location
+my $dirname = dirname(__FILE__);
+my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+
+if ($config){
+  $vcf_config_file = $config;
+}
+
+# Get the local dir where the vcf files are located
+my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
+
+if ($d_dir){
+  $data_dir = $d_dir;
+}
+
 # Settings
 my $database = "";
 my $pswd = "";
@@ -92,9 +112,7 @@ my $p_version = $e_version-1;
 
 my $html;
 
-##############
-### Header ###
-##############
+# Header
 my $html_header = q{
 <html>
 <head>
@@ -111,9 +129,7 @@ my $html_header = q{
 <div>
 };
 
-#############
-### Title ###
-#############
+# Title
 my $html_title = qq{
   <div style="float:left;width:80%">
     <h1 style="margin-top:15px">Ensembl Variation - Detailed species data count</h1>
@@ -125,9 +141,7 @@ my $html_title = qq{
     </div>
 };
 
-##############
-### Legend ###
-##############
+# Legend
 my $html_legend = qq{
   <!-- Right hand side legend -->
   <div style="float:right;max-width:220px;top:20px">
@@ -139,9 +153,7 @@ my $html_legend = qq{
       <table>
 };
 
-##############
-### Footer ###
-##############
+# Footer 
 my $html_footer = q{
   </div>
 </div>
@@ -193,7 +205,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                            'sqlb'   => { 'sql'   => q{SELECT COUNT(distinct variation_id) FROM population_genotype},
                                                          'label' => 'Variants with population genotype'
                                                        },
-                                           'extra'  => qq{This doesn't include the genotypes from projects such as:$genotypes_list because they are fetched directly from VCF files.}
+                                           'vcf'    => 1
                                          },
                    $prediction        => { 'sqla'  => { 'sql'   => q{SELECT COUNT(distinct vf.variation_id) FROM variation_feature vf, transcript_variation tv, meta m 
                                                                      WHERE vf.variation_feature_id=tv.variation_feature_id AND m.meta_key="sift_version" 
@@ -207,7 +219,7 @@ my %sql_list = ( "Structural variant" => { 'sqla'   => { 'sql'   => q{SELECT COU
                                                       },
                                          } # Too long ?
                );
-my @sql_order = ("Structural variant","Genotype","Phenotype","Citation",$prediction);
+my @type_order = ("Structural variant","Genotype","Phenotype","Citation",$prediction);
 
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
 
@@ -217,7 +229,30 @@ my $th_bg = qq{background-color:#BBB};
 my $th_border_left = qq{border-left:1px solid #DDD};
 my $th_border_left_top = qq{style="$th_border_left;text-align:center"};
 
-foreach my $type (@sql_order) {
+# read config from JSON config file
+open IN, $vcf_config_file or throw("ERROR: Could not read from config file $vcf_config_file\n");
+local $/ = undef;
+my $json_string = <IN>;
+close IN;
+
+my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file\n");
+
+# read previous release data
+my $prev_data;
+if ($p_data) {
+  open IN, $p_data or throw("ERROR: Could not read from config file $p_data");
+  local $/ = undef;
+  $json_string = <IN>;
+  close IN;
+
+  $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
+}
+
+###############################################################
+##########             MAIN PART                       ########
+###############################################################
+
+foreach my $type (@type_order) {
 
   if ($skip_prediction && $type eq $prediction) {
     print STDERR "'skip_prediction' option used: the category $prediction will be skipped.\n";
@@ -243,14 +278,12 @@ foreach my $type (@sql_order) {
   # Column A
   my $sql_a   = $sql_list{$type}{'sqla'}{'sql'};
   my $label_a = $sql_list{$type}{'sqla'}{'label'};
-  my $lc_label_a = lc($label_a);
   
   # Column B
   my $sql_b   = $sql_list{$type}{'sqlb'}{'sql'};
   my $label_b = $sql_list{$type}{'sqlb'}{'label'};
-  my $lc_label_b = lc($label_b);
   my $b_type;
-
+  
   foreach my $hostname (@hostnames) {
     
     my $sth = get_connection_and_query($database, $hostname, $sql);
@@ -258,8 +291,9 @@ foreach my $type (@sql_order) {
     # loop over databases
     while (my ($dbname) = $sth->fetchrow_array) {
       next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
-      next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+      next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
       print $dbname;
+      
       $dbname =~ /^(.+)_variation/;
       my $s_name = $1;
       
@@ -281,8 +315,7 @@ foreach my $type (@sql_order) {
       my $core_dbname = $dbname;
          $core_dbname =~ s/variation/core/i;
       my $sth_core = get_connection_and_query($core_dbname, $hostname, $sql_core);
-      my $display_name = $sth_core->fetchrow_array;  
-         $display_name =~ s/saccharomyces/S\./i;
+      my $display_name = $sth_core->fetchrow_array;
       $species_list{$s_name}{'name'} = $display_name;
       $display_list{$display_name} = $s_name;
       
@@ -321,94 +354,74 @@ foreach my $type (@sql_order) {
           $species_list{$s_name}{'p_b'} = $res_b-$p_res_b;
         }
       }
-    }
-  }
-
-  
-  my $html_content = qq{
-    <table class="ss" style="width:auto">
       
-      <tr class="ss_header">
-        <th style="$th_bg">Species</th>  
-        <th style="$th_bg;$th_border_left">$label_a</th>
-        <th style="$th_bg;padding-left:0px">
-          <span class="_ht ht" title="$label_a count difference with the previous Ensembl release (v.$p_version)">
-            <small>(e!$p_version &rarr; e!$e_version)</small>
-          </span>
-        </th>
-        <th style="$th_bg;$th_border_left">$label_b</th>
-     };
-  if ($b_type eq 'num') {
-       $html_content .= qq{   
-        <th style="$th_bg;padding-left:0px">
-          <span class="_ht ht" title="$label_b count difference with the previous Ensembl release (v.$p_version)">
-            <small>(e!$p_version &rarr; e!$e_version)</small>
-          </span>
-        </th>\n};
-  }
-  $html_content .= qq{      </tr>};
-  
-  # Loop to display the data by species
-  $bg = '';
-  my $count_species = 0;
-  foreach my $display_name (sort keys(%display_list)) {
-
-    my $sp = $display_list{$display_name};
-    my $label = $species_list{$sp}{'label'};
-    my $uc_sp = ucfirst($sp);      
-    my $img_src = "/i/species/$uc_sp.png";
-    my $img_class = "badge-32";
-    my $display_name = $species_list{$sp}{'name'};
-    my $a_count = $species_list{$sp}{'a'};
-    my $b_count = $species_list{$sp}{'b'};
-    
-    next if ($a_count eq "0" && ($b_count eq "0" && $b_type eq 'num'));
-    next if ($a_count eq "0" && $b_type ne 'num');
-    
-    $count_species++;
-    $a_count = round_count($a_count,$lc_label_a);
-    $b_count = ($b_type eq 'num') ? round_count($b_count,$lc_label_b) : qq{<ul style="margin-bottom:0px"><li style="margin-top:0px">}.join("</li><li>", split(',',$b_count))."</li></ul>";
-    my $a_p_count = round_count_diff($species_list{$sp}{'p_a'},$lc_label_a);
-    my $b_p_count = ($b_type eq 'num') ? round_count_diff($species_list{$sp}{'p_b'},$lc_label_b) : undef;
-  
-    my $b_align = ($b_type eq 'num') ? 'right' : 'left';
-    if ($b_type ne 'num') {
-      $b_count =~ s/StructuralVariation/Structural Variation/;
-      $b_count =~ s/SupportingStructuralVariation/Supporting Structural Variation/;
+      # Add vcf data if exist
+      if ($sql_list{$type}{'vcf'}){
+        foreach my $project (@{ $vcf_config->{'collections'} }) {
+          next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
+          next unless $project->{species} eq $s_name;
+          
+          # determine type of data the file has`
+          my @types = get_vcf_content_types($project);
+          
+          # Check if the file have genotype data and being showed
+          if ( grep /^genotype$/, @types){
+            # Check if either vcf config or database have the samples
+            if ( genotype_samples_exists($s_name, $project) ){
+              # Label
+              $species_list{'vcf'}{$s_name}{label} = $label_name;
+              
+              # Disply name
+              $species_list{'vcf'}{$s_name}{'name'} = $display_name;
+              $display_list{'vcf'}{$display_name} = $s_name;
+              
+              # Count the number of variations if the vcf file is used as source
+              my $count_var = get_variant_count($project);
+              if ($count_var && $count_var > 0){
+                $species_list{'vcf'}{$s_name}{'a'} = $count_var;
+                # We assume for vcf file sample and population variation count would be same
+                $species_list{'vcf'}{$s_name}{'b'} = $count_var;
+              }
+              
+              # Count difference with previous release
+              my $count_p_var;
+              if ($prev_data) {
+                $count_p_var = $prev_data->{$s_name}->{count};
+                $count_p_var =~ s/<[^>]*.//g;
+              }
+              else{
+                $count_p_var = 0;
+              }
+              
+              # WE NEED TO FIX THIS - FOR e109 WE DON'T HAVE INCREASE IN COUNT
+              # CURRENT PREV DATA FILE ONLY HAVE VARIANT DATA AND NOT GENOTYPE DATA
+              $count_p_var = $count_var;
+              
+              $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var);
+              $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var);
+              
+              $b_type = "num";
+            }
+          }
+        }
+      }
     }
-    
-    # Species data
-    $html_content .= qq{
-    <tr$bg style="vertical-align:middle">
-      <td>
-        <div>
-          <div style="float:left">
-            <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
-              <img src="$img_src" alt="$label" class="$img_class" style="vertical-align:middle" />
-            </a>
-           </div>
-           <div style="float:left;margin-left:6px;padding-top:2px">
-             <div class="bigtext">$display_name</div>
-             <div class="small" style="font-style:italic">$label</div>
-           </div>
-           <div style="clear:both"></div>
-         </div>
-      </td>
-      <td style="text-align:right">$a_count</td>
-      <td style="text-align:right">$a_p_count</td>
-      <td style="text-align:$b_align">$b_count</td>\n};
-    $html_content .= qq{      <td style="text-align:right">$b_p_count</td>\n} if ($b_type eq 'num');
-    $html_content .= qq{  </tr>};
-    $bg = set_bg();
   }
-  $html_content .= qq{</table>\n};
-
+  
+  # Get html content with derived data and append 
+  my ($html_content, $count_species) = generate_html_content(\%species_list,\%display_list,$label_a,$label_b,$b_type);
   $html .= qq{\n  <h2 id="$anchor" style="margin-top:40px">$type data</h2>};
   $html .= q{<p>}.$sql_list{$type}{'extra'}.q{</p>} if ($sql_list{$type}{'extra'});
   $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data in the Ensembl Variation databases:</p>\n};
-  $html .= $html_content;
+  $html .= $html_content;  
+  
+  # Get html content with derived data for vcf species and append 
+  if ($sql_list{$type}{'vcf'}){
+    my ($html_content, $count_species) = generate_html_content($species_list{'vcf'},$display_list{'vcf'},$label_a,$label_b,$b_type);
+    $html .= qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> species with $lc_type data loaded dynamically from vcf file:</p>\n};
+    $html .= $html_content;  
+  }
 }
-
 
 # Legend
 foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
@@ -427,9 +440,7 @@ $html_legend .= qq{    </table>\n  </div>\n</div>};
 
   
 
-######################
-## HTML/output file ##
-######################
+# HTML/output file
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_header."\n";
 print HTML $html_legend."\n";
@@ -441,9 +452,9 @@ close(HTML);
 
 
 
-###############
-### Methods ###
-###############
+###############################################################
+##########             FUNCTIONS                     ##########
+###############################################################
 
 # Connects and execute a query
 sub get_connection_and_query {
@@ -568,9 +579,246 @@ sub round_count_diff {
 }
 
 
+# Determine what type data contains in the vcf file
+sub get_vcf_content_types {
+  my ($project) = @_;
+  my @types;
+
+  # add if the vcf collection mentions annotation type
+  push @types, $project->{annotation_type} if $project->{annotation_type};
+
+  # if use_as_source is set then it is the main source for tracks
+  push @types, "source" if $project->{use_as_source};
+
+  # check FORMAT field of the vcf file to see if it has genotype
+  my $file = get_random_file($project);
+
+  my $file_full_path = $file;
+  if ($project->{type} eq "local"){
+    $file_full_path = $data_dir . $file_full_path;
+  }
+
+  my $genotypes = `tabix $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
+  push @types, "genotype" if $genotypes;
+  
+  # check in a actual line for FORMAT field if not exist in header
+  unless ($genotypes){
+    my $chr = `tabix $file_full_path -l | head -n 1`;
+    chop $chr;
+    
+    my $line = `tabix $file_full_path $chr | head -n 1`;
+
+    my $format_field = (split /\t/, $line)[8];
+    
+    push @types, "genotype" if $format_field;
+  }
+  
+  return @types;
+}
+
+# Check if samples from a vcf files exist in either vcf config or database
+sub genotype_samples_exists {
+  my ($species, $project) = @_;
+  
+  # Get samples from vcf file
+  my @samples;
+  foreach my $file (get_all_files($project)){
+    push @samples, (split / /, `bcftools query -l $file | xargs | tr -d '\n'`);
+  }
+
+  # Get samples from vcf config 
+  my @samples_in_vcf = keys %{ $project->{sample_populations} };
+
+  # Check if any of the sample matches
+  foreach ( @samples_in_vcf ){
+    if (grep /^$_$/, @samples){
+      return 1;
+    }
+  }
+
+  my $samples_str = join ",", (map { "'$_'" } @samples);
+  foreach my $hostname (@hostnames) {
+    my $sql = qq{SHOW DATABASES LIKE '%$species\%variation\_$e_version%'};
+    my $sth = get_connection_and_query("", $hostname, $sql);
+
+    while (my ($var_dbname) = $sth->fetchrow_array) {
+      my $sql2 = qq{SELECT name FROM sample WHERE name IN ($samples_str) LIMIT 1};
+      my $sth2 = get_connection_and_query($var_dbname, $hostname, $sql2);
+      
+      return 1 if $sth2->fetchrow_array;
+    }
+  }
+
+  return 0;
+}
+
+# Get number of variant from a vcf file
+sub get_variant_count {
+  my ($project) = @_;
+  my $count;
+
+  foreach my $file (get_all_files($project)){
+    $count += `bcftools stats $file | grep -ve '^#' | grep -e 'number of records' | cut -d\$'\t' -f 4`;
+
+    unless($count) {
+      # If file is remote try downloading it and count the line number
+      if ($file =~ /^http/ || $file =~ /^ftp/) {
+        `wget -O vcf.gz $file`;
+        $count = `bgzip -d -c vcf.gz | grep -v '^#' | wc -l`;
+        `rm vcf.gz`;
+      }
+      # If file is local no need for downloadin; just count line number 
+      else{
+        $count = `bgzip -d -c $file | grep -v '^#' | wc -l`;
+      }
+    }
+  }
+
+  return $count;
+}
+
+# Get a random file from filename template in vcf collection
+sub get_random_file {
+  my ($project) = @_;
+  my $file;
+
+  my $filename_template = $project->{filename_template};
+
+  if ($filename_template =~ /###CHR###/){
+    my $chromosomes = $project->{chromosomes};
+
+    return undef unless $chromosomes;
+
+    my $chr = @{ $chromosomes }[0];
+    
+    $file = $filename_template =~ s/###CHR###/$chr/gr;
+  }
+  else{
+    $file = $filename_template
+  }
+
+  return $file;
+}
+
+# Get all files from filename template in vcf collection
+sub get_all_files {
+  my ($project) = @_;
+  my @files;
+
+  my $filename_template = $project->{filename_template};
+
+  if ($filename_template =~ /###CHR###/){
+    my $chromosomes = $project->{chromosomes};
+
+    return undef unless $chromosomes;
+
+    foreach my $chr (@{ $chromosomes }){
+      my $file = $filename_template =~ s/###CHR###/$chr/gr;
+      push @files, $file;
+    }
+  }
+  else{
+    push @files, $filename_template;
+  }
+
+  return @files;
+}
+
+
 sub set_bg {
   return ($bg eq '') ? ' class="bg2"' : '';
 }
+
+
+sub generate_html_content {
+  my ($species_list, $display_list, $label_a, $label_b, $b_type) = @_;
+  
+  my $lc_label_a = lc($label_a);
+  my $lc_label_b = lc($label_b);
+  
+  my $html_content = qq{
+    <table class="ss" style="width:auto">
+      
+      <tr class="ss_header">
+        <th style="$th_bg">Species</th>  
+        <th style="$th_bg;$th_border_left">$label_a</th>
+        <th style="$th_bg;padding-left:0px">
+          <span class="_ht ht" title="$label_a count difference with the previous Ensembl release (v.$p_version)">
+            <small>(e!$p_version &rarr; e!$e_version)</small>
+          </span>
+        </th>
+        <th style="$th_bg;$th_border_left">$label_b</th>
+     };
+  if ($b_type eq 'num') {
+       $html_content .= qq{   
+        <th style="$th_bg;padding-left:0px">
+          <span class="_ht ht" title="$label_b count difference with the previous Ensembl release (v.$p_version)">
+            <small>(e!$p_version &rarr; e!$e_version)</small>
+          </span>
+        </th>\n};
+  }
+  $html_content .= qq{      </tr>};
+  
+  # Loop to display the data by species
+  $bg = '';
+  my $count_species = 0;
+  foreach my $display_name (sort keys(%{ $display_list })) {
+    
+    next if $display_name =~ /vcf/;
+
+    my $sp = $display_list->{$display_name};
+    my $label = $species_list->{$sp}->{'label'};
+    my $uc_sp = ucfirst($sp);      
+    my $img_src = "/i/species/$uc_sp.png";
+    my $img_class = "badge-32";
+    my $display_name = $species_list->{$sp}->{'name'};
+    my $a_count = $species_list->{$sp}->{'a'};
+    my $b_count = $species_list->{$sp}->{'b'};
+    
+    next if ($a_count eq "0" && ($b_count eq "0" && $b_type eq 'num'));
+    next if ($a_count eq "0" && $b_type ne 'num');
+    
+    $count_species++;
+    $a_count = round_count($a_count,$lc_label_a);
+    $b_count = ($b_type eq 'num') ? round_count($b_count,$lc_label_b) : qq{<ul style="margin-bottom:0px"><li style="margin-top:0px">}.join("</li><li>", split(',',$b_count))."</li></ul>";
+    my $a_p_count = round_count_diff($species_list->{$sp}->{'p_a'},$lc_label_a);
+    my $b_p_count = ($b_type eq 'num') ? round_count_diff($species_list->{$sp}->{'p_b'},$lc_label_b) : undef;
+  
+    my $b_align = ($b_type eq 'num') ? 'right' : 'left';
+    if ($b_type ne 'num') {
+      $b_count =~ s/StructuralVariation/Structural Variation/;
+      $b_count =~ s/SupportingStructuralVariation/Supporting Structural Variation/;
+    }
+    
+    # Species data
+    $html_content .= qq{
+    <tr$bg style="vertical-align:middle">
+      <td>
+        <div>
+          <div style="float:left">
+            <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle" target="_blank">
+              <img src="$img_src" alt="$label" class="$img_class" style="vertical-align:middle" />
+            </a>
+           </div>
+           <div style="float:left;margin-left:6px;padding-top:2px">
+             <div class="bigtext">$display_name</div>
+             <div class="small" style="font-style:italic">$label</div>
+           </div>
+           <div style="clear:both"></div>
+         </div>
+      </td>
+      <td style="text-align:right">$a_count</td>
+      <td style="text-align:right">$a_p_count</td>
+      <td style="text-align:$b_align">$b_count</td>\n};
+    $html_content .= qq{      <td style="text-align:right">$b_p_count</td>\n} if ($b_type eq 'num');
+    $html_content .= qq{  </tr>};
+    $bg = set_bg();
+  }
+  $html_content .= qq{</table>\n};
+
+  return ($html_content, $count_species);
+}
+
 
 sub usage {
   
@@ -590,6 +838,10 @@ sub usage {
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -user           MySQL user name (Required)
     -port           MySQL port. 3306 by default (optional)
+    -config         The location of the vcf_config.json file. By default it uses the existing one in the same repository.
+    -d_dir          The directory location of where the local vcf files are stored (optional). By default it looks in - 
+                    /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates 
+    -p_data         Location of the json file that contain result of the previous release for comparison. (Required)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";

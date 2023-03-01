@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -191,10 +191,11 @@ sub run_checks{
 
 ## copy clinical significance to variation table from phenotype_feature 
 sub update_variation{
+  my $dbh = shift;
 
-    my $dbh = shift;
-    warn "starting  update_variation\n";
-    my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
+  warn "starting  update_variation\n";
+
+  my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
                                             from   variation, phenotype_feature, phenotype_feature_attrib, source, attrib_type
                                             where source.name = ?
                                             and phenotype_feature.source_id = source.source_id
@@ -204,46 +205,46 @@ sub update_variation{
                                             and variation.name = phenotype_feature.object_id
                                             ]);
 
-
-
-    my $var_upd_sth = $dbh->prepare(qq[ update variation
+  my $var_upd_sth = $dbh->prepare(qq[ update variation
                                         set clinical_significance = ?
                                         where variation_id = ?
-                                       ] );
+                                     ] );
 
-    my $varf_upd_sth = $dbh->prepare(qq[ update variation_feature
+  my $varf_upd_sth = $dbh->prepare(qq[ update variation_feature
                                          set clinical_significance = ?
                                          where variation_id = ?
-                                       ] );
+                                     ] );
 
-    $clinvar_ext_sth->execute( $SOURCENAME );
-    my $var_list = $clinvar_ext_sth->fetchall_arrayref();
+  $clinvar_ext_sth->execute( $SOURCENAME );
+  my $var_list = $clinvar_ext_sth->fetchall_arrayref();
 
-    my %assoc;  ## variants to put in set
-    my %class;  ## all clinsig statuses for variation table
+  my %assoc;  ## variants to put in set
+  my %class;  ## all clinsig statuses for variation table
 
+  foreach my $l (@{$var_list}){
+    ## save ids to make 2 variation_sets - 'All' and 'Clinically significant'
+    $assoc{$l->[0]}{A} = 1;
+    ## only variants with associated statuses to go into set
+    $assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
-    foreach my $l (@{$var_list}){
+    $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+    $l->[1]  =~ s/\;\s+/\,/g ; # convert 'uncertain significance; risk factor' to 'uncertain significance,risk factor'
+    $l->[1]  =~ s/\,\s+/\,/g ; # convert 'likely benign, other' to 'likely benign,other' or 'benign, association, risk factor' to 'benign,association,risk factor'
+    #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
+    #for the purpose of variation, variation_feature clin_sig entry
+    $l->[1]  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
+    #similar replace of 'association not found' to 'other'
+    $l->[1]  =~ s/association not found/other/g;
 
-        ## save ids to make 2 variation_sets - 'All' and 'Clinically significant'
-	$assoc{$l->[0]}{A} = 1;
-	## only variants with associated statuses to go into set
-	$assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
+    # remove commas from some values
+    $l->[1]  =~ s/pathogenic,low penetrance/pathogenic low penetrance/g;
 
-      $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
-      $l->[1]  =~ s/\;\s+/\,/g ; # convert 'uncertain significance; risk factor' to 'uncertain significance,risk factor'
-      $l->[1]  =~ s/\,\s+/\,/g ; # convert 'likely benign, other' to 'likely benign,other' or 'benign, association, risk factor' to 'benign,association,risk factor'
-      #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
-        #for the purpose of variation, variation_feature clin_sig entry
-      $l->[1]  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
-      #similar replace of 'association not found' to 'other'
-      $l->[1]  =~ s/association not found/other/g;
-	push @{$class{$l->[0]}}, $l->[1];
-    }
+    push @{$class{$l->[0]}}, $l->[1];
+  }
 
-    foreach my $var (keys %class){
-	my @statuses = unique( @{$class{$var}});
-	my $statuses = join",", @statuses;
+  foreach my $var (keys %class){
+    my @statuses = unique( @{$class{$var}});
+    my $statuses = join",", @statuses;
       try {
         $var_upd_sth->execute($statuses, $var);
         $varf_upd_sth->execute($statuses, $var);
@@ -252,9 +253,9 @@ sub update_variation{
         warn "issue with:@_\n";
         next;
       }
-    }
+  }
 
-    return \%assoc;
+  return \%assoc;
 
 }
 sub add_to_set{

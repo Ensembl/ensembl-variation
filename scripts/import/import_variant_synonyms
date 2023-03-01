@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -375,6 +375,11 @@ sub add_set_uniprot {
   return $variation_set_id; 
 }
 
+sub uniq {
+    my %seen;
+    grep !$seen{$_}++, @_;
+}
+
 =head2 add_synonyms_uniprot
 
 import UniProt synonyms;
@@ -391,7 +396,7 @@ sub add_synonyms_uniprot {
   # If we actually didn't get any synonyms, just return
   return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
  
-  my $variation_adaptor = $db_adaptor->get_VariationAdaptor($species, 'variation', );
+  my $variation_adaptor = $db_adaptor->get_VariationAdaptor($species, 'variation');
 
   my $stmt_check_var_set = qq{
     SELECT 
@@ -402,20 +407,11 @@ sub add_synonyms_uniprot {
       variation_id=?
   }; 
  
-  my $stmt_update_after_check = qq{
-    UPDATE
-      variation_feature 
-    SET 
-      variation_set_id = ('$variation_set_id')
-    WHERE
-      variation_id=?
-  }; 
-
   my $stmt_update = qq{
     UPDATE
       variation_feature 
     SET 
-      variation_set_id = CONCAT_WS(',',variation_set_id,'$variation_set_id')  
+      variation_set_id = ?
     WHERE
       variation_id=?
   }; 
@@ -427,7 +423,6 @@ sub add_synonyms_uniprot {
   };
 
   my $check_variation_set_sth = $db_adaptor->dbc->prepare($stmt_check_var_set); 
-  my $update_after_check_sth = $db_adaptor->dbc->prepare($stmt_update_after_check);
   my $update_variation_set_sth = $db_adaptor->dbc->prepare($stmt_update);
   my $insert_var_set = $db_adaptor->dbc->prepare($stmt_insert_var_set);
   
@@ -447,16 +442,21 @@ sub add_synonyms_uniprot {
     $check_variation_set_sth->execute();
     my $var_set_id;
 
-    $check_variation_set_sth->bind_columns(\$var_set_id);
-    $check_variation_set_sth->fetch();
+    my $dat =  $check_variation_set_sth->fetchall_arrayref();
+    my @variation_set_ids;
 
-    # check if variation_set_id is not defined or empty
-    if(!defined($var_set_id) || $var_set_id eq ''){
-      $update_after_check_sth->execute($var_dbid) or die ("Failed to update variation_set_id: variation_id $var_dbid\n");
+    foreach my $l (@{$dat}){
+      next if $l->[0] eq "";
+      push(@variation_set_ids, split(",", $l->[0]));
     }
-    else{
-      $update_variation_set_sth->execute($var_dbid) or die ("Failed to update variation_set_id: variation_id $var_dbid\n");
-    }
+
+    push(@variation_set_ids, $variation_set_id);
+    @variation_set_ids = uniq(@variation_set_ids);
+    @variation_set_ids = sort { $a <=> $b } @variation_set_ids;
+
+    my $new_set_id = join(",", @variation_set_ids);
+
+    $update_variation_set_sth->execute($new_set_id, $var_dbid) or die ("Failed to update variation_set_id: variation_id $var_dbid\n");
 
     # Insert into variation_set_variation
     $insert_var_set->execute($var_dbid, $variation_set_id) or die ("Failed to insert $rs_id into variation_set_variation\n");

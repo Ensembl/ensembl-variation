@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -220,8 +220,25 @@ sub fetch_input {
 
       close $FASTA;
     }
+
+    # prepare old_server_uri to which to compare against
+    my $old_server_uri = $self->param('old_server_uri');
+
+    my $group   = 'variation';
+    my $var_dbc = $self->get_species_adaptor($group)->dbc;
+    unless (defined $old_server_uri) {
+        my $user     = $var_dbc->user;
+        my $pass     = $var_dbc->pass;
+        my $port     = $var_dbc->port;
+        my $host     = $var_dbc->host;
+        my $release  = $self->param('ensembl_release') - 1;
+        $old_server_uri ||= sprintf("mysql://%s:%s@%s:%s/%s", $user, $pass, $host, $port, $release);
+    }
+
     # set up our list of output ids
 
+    $self->param('dc_output_ids',
+                 { 'group' => $group, 'old_server_uri' => [ $old_server_uri ] });
     $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
     $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
     $self->param('dbnsfp_output_ids', [ map { {translation_md5 => $_} } @dbnsfp_md5s ]);
@@ -290,6 +307,10 @@ sub write_output {
 
     unless ($self->param('cadd_run_type') == NONE) {
         $self->dataflow_output_id($self->param('cadd_output_ids'), 5);
+    }
+
+    if ($self->param('run_dc')) {
+        $self->dataflow_output_id($self->param('dc_output_ids'), 1);
     }
 
 }

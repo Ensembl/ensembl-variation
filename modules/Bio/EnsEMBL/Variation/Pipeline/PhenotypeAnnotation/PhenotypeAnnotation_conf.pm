@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN WORMBASE GWAS OMIA EGA ORPHANET MIMMORBID DDG2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN WORMBASE GWAS OMIA EGA ORPHANET MIMMORBID G2P CGC IMPC MGI NONE HUMAN MOUSE ANIMALSET);
 
 
 sub default_options {
@@ -75,8 +75,8 @@ sub default_options {
         # release number used in the name of default workdir and hive database
         ensembl_release         => 95,
 	
-	# wormbase release number used by the import_wormbase analysis only
-	wormbase_release        => 282,
+      	# wormbase release number used by the import_wormbase analysis only
+      	wormbase_release        => 282,
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -99,7 +99,31 @@ sub default_options {
         # of interest)
 
         reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
-
+        
+        # a file containing history of datachecks ran potentially used to determine
+        # if a datacheck can be skipped 
+        
+        history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
+        
+        #  output dir where datacheck result will be stored
+        
+        dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
+        
+        # if set, fails the datacheck pipeline job if the datacheck fails
+        # can be overwritten when running the pipeline
+        
+        failures_fatal          => 1,
+        
+        # if set, runs the datachecks analysis jobs
+        # can be overwritten when running the pipeline
+        
+        run_dc                  => 1,
+        
+        # the uri of the database server which stores the database of previous release
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
+        
+        old_server_uri          => undef,
+        
         # the run type can be one of: RGD (import RGD data),
         # AnimalQTL (import AnimalQTL), ZFIN (import ZFIN data)
         # The species which are imported for each data sources are in Constants.pm
@@ -205,7 +229,7 @@ sub pipeline_analyses {
                 '3->A' => [ 'import_ega' ],
                 '4->A' => [ 'import_orphanet' ],
                 '5->A' => [ 'import_mimmorbid' ],
-                '6->A' => [ 'import_ddg2p' ],
+                '6->A' => [ 'import_g2p' ],
                 '7->A' => [ 'import_cancerGC' ],
                 'A->8' => [ 'check_phenotypes'],
             },
@@ -315,13 +339,13 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'import_ddg2p']
+                2 => [ 'import_g2p']
             },
             -max_retry_count => 0,
         },
 
-        {   -logic_name => 'import_ddg2p',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportDDG2P',
+        {   -logic_name => 'import_g2p',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportG2P',
             -parameters => {
                 @common_params,
             },
@@ -329,11 +353,11 @@ sub pipeline_analyses {
             -hive_capacity  => 1,
             -rc_name    => 'default',
             -flow_into  => {
-                2 => [ 'check_ddg2p']
+                2 => [ 'check_g2p']
             },
         },
 
-        {   -logic_name => 'check_ddg2p',
+        {   -logic_name => 'check_g2p',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
             -parameters => {
                 @common_params,
@@ -350,7 +374,7 @@ sub pipeline_analyses {
         {   -logic_name => 'import_cancerGC',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportCGC',
             -parameters => {
-		repo_dir => $self->o('ensembl_cvs_root_dir'),
+                repo_dir => $self->o('ensembl_cvs_root_dir'),
                 @common_params,
             },
             -input_ids      => [], #default
@@ -558,17 +582,17 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'import_wormbase',
-	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
-	    -parameters => {
-	    	source_version => $self->o('wormbase_release'),
-                @common_params,
-            },
-	    -input_ids  => [],
-	    -hive_capacity  => 1,
-	    -rc_name    => 'default',
-	    -flow_into  => {
-		1 => [ 'check_phenotypes']
-	    },
+      	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
+      	    -parameters => {
+      	    	source_version => $self->o('wormbase_release'),
+                      @common_params,
+                  },
+      	    -input_ids  => [],
+      	    -hive_capacity  => 1,
+      	    -rc_name    => 'default',
+      	    -flow_into  => {
+            		1 => [ 'check_phenotypes']
+      	    },
         },    
         {   -logic_name => 'import_ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
@@ -588,6 +612,37 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::FinishPhenotypeAnnotation',
             -parameters => {
                 @common_params,
+                run_dc => $self->o('run_dc'),
+                ensembl_release => $self->o('ensembl_release'),
+                old_server_uri => $self->o("old_server_uri")
+            },
+            -input_ids      => [], #default
+            -hive_capacity  => 1,
+            -analysis_capacity => 1,
+            -rc_name    => 'default',
+            -flow_into      => {
+                1 => WHEN(
+                  '#run_dc#' => [ 'datacheck_phenotype_all']
+                )
+            },
+            -failed_job_tolerance => 0,
+            -max_retry_count => 0,
+        },
+        
+        {   -logic_name => 'datacheck_phenotype_all',
+            -module     => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+            -parameters => {
+                datacheck_names => [
+                  'ComparePhenotypeFeatures',
+                  'PhenotypeMultipleSeqRegions',
+                  'PhenotypeDescription',
+                  'PhenotypeDescriptionMissing',
+                  'PhenotypeFeatureAttrib'
+                ],
+                history_file => $self->o('history_file'),
+                registry_file => $self->o('reg_file'),
+                output_dir => $self->o("dc_outdir"),
+                failures_fatal => $self->o('failures_fatal')
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,

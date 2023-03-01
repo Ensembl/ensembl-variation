@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ sub run {
               "run_pph.pl -A -d $output_dir -s $protein_file $subs_file " .
               "1> $output_file 2> $error_file";
 
-    system($cmd) == 0 or die "Failed to run $cmd: $?";
+    system($cmd) == 0 or die `echo "Failed to run $cmd:" && cat "$error_file"`;
     
     $self->dbc->disconnect_when_inactive(0);
     

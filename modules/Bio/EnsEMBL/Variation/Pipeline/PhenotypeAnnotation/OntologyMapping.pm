@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,7 +99,9 @@ sub run {
     $self->store_terms( $zooma_terms);
   }
 
-  $self->param('output_ids', [{species => $self->param('species')}]);
+  my $run_type =  $self->required_param('run_type');
+
+  $self->param('output_ids', [{run_type => $run_type, species => $self->param('species')}]);
 
 }
 
@@ -263,7 +265,7 @@ look up phenotype description in zooma
 sub get_zooma_terms{
   my $pheno = shift;
 
-  $pheno =~ s/\(\w+\)//; ## for DDG2P
+  $pheno =~ s/\(\w+\)//; ## for G2P
   $pheno =~ s/\s+/\+/g;
 
   my $http = HTTP::Tiny->new();
@@ -302,7 +304,7 @@ sub add_ols_matches{
     if (defined $truncate && $truncate eq 'parent'){
 
       $search_term = (split/\,/, $search_term)[0] if $search_term =~ /\,/;
-      $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (DDG2P abbreviation)
+      $search_term =~ s/\s*\((\w+\s*)+\)\s*//;         ## (one family) or (G2P abbreviation)
       $search_term =~ s/SUSCEPTIBILITY TO\s*|SUSCEPTIBILITY//i;
       $search_term =~ s/(\,+(\s*\w+\s*)+)+\s*$//;      ## remove ", with other  condition" ", one family" type qualifiers
       $search_term =~ s/\s+type\s*\w*\s*$//i;          ## remove " type 34"

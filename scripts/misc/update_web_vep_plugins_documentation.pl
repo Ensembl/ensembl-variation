@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ my %plugins_to_skip = (
   'PolyPhen_SIFT.pm' => 1,
   'RankFilter.pm' => 1,
   'RefSeqHGVS.pm' => 1,
+  'ExAC.pm' => 1,
 );
 
 

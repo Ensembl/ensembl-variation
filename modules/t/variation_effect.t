@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -543,7 +543,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $exon_start-10,
         end     => $exon_end+10,
-        effects => [qw(intron_variant splice_donor_5th_base_variant splice_polypyrimidine_tract_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
+        effects => [qw(intron_variant splice_donor_5th_base_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
     }, {
         comment => 'long sequence var where middle is identical but overlaps splice site',
         alleles => 'ATGTACTGCCTATGTGTGCTGTGAGTATGATACGGTGGACT',
@@ -756,7 +756,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
-        effects => [qw( splice_acceptor_variant coding_sequence_variant splice_polypyrimidine_tract_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
     }, {
         comment => 'deletion overlapping UTR and start site, start lost 1',
         alleles => '-',
@@ -1242,7 +1242,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_start - 3,
         end     => $intron_start + 2,
-        effects => [qw( splice_acceptor_variant splice_polypyrimidine_tract_variant coding_sequence_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_end - 2,

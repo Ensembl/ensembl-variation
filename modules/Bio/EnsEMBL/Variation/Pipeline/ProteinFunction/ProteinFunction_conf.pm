@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
 
 sub default_options {
@@ -59,7 +60,7 @@ sub default_options {
         hive_no_init => 0,
         hive_default_max_retry_count => 0,
         hive_debug_init => 1,
-        debug_mode              => 0,
+        debug_mode => 0,
 
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
@@ -79,6 +80,30 @@ sub default_options {
         # should have existing predictions in the protein_function_predictions table
 
         ensembl_registry        => $self->o('species_dir').'/ensembl.registry',
+
+        # a file containing history of datachecks ran potentially used to determine
+        # if a datacheck can be skipped 
+
+        history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
+
+        # output dir where datacheck result will be stored
+
+        dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
+
+        # if set, fails the datacheck pipeline job if the datacheck fails
+        # can be overwritten when running the pipeline
+
+        failures_fatal          => 1,
+
+        # if set, runs the datachecks analysis jobs
+        # can be overwritten when running the pipeline
+
+        run_dc                  => 1,
+
+        # the uri of the database server which stores the database of previous release
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_dbname|old_release_number]
+
+        old_server_uri          => undef,
 
         # peptide sequences for all unique translations for this species will be dumped to this file
 
@@ -241,6 +266,8 @@ sub pipeline_analyses {
         fasta_file          => $self->o('fasta_file'),
         ensembl_registry    => $self->o('ensembl_registry'),
         species             => $self->o('species'),
+        ensembl_release     => $self->o('ensembl_release'),
+        assembly            => $self->o('assembly'),
         debug_mode          => $self->o('debug_mode'),
     );
 
@@ -265,16 +292,21 @@ sub pipeline_analyses {
                 bam             => $self->o('bam'),
                 species_dir     => $self->o('species_dir'),
                 use_compara     => $self->o('sift_use_compara'),
+                run_dc          => $self->o('run_dc'),
+                old_server_uri  => $self->o('old_server_uri'),
                 @common_params,
             },
             -input_ids  => [{}],
             -rc_name    => 'highmem',
             -max_retry_count => 0,
             -flow_into  => {
-                2 => [ 'run_polyphen' ],
-                3 => [ 'run_sift' ],
-                4 => [ 'run_dbnsfp' ],
-                5 => [ 'run_cadd' ],
+                '2->A' => [ 'run_polyphen' ],
+                '3->A' => [ 'run_sift' ],
+                '4->A' => [ 'run_dbnsfp' ],
+                '5->A' => [ 'run_cadd' ],
+                'A->1' => WHEN(
+                    '#run_dc#' => [ 'datacheck' ]
+                )
             },
         },
 
@@ -309,7 +341,6 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
             -rc_name        => 'default',
-            -flow_into      => {},
         },
         
         {   -logic_name     => 'run_sift',
@@ -328,7 +359,7 @@ sub pipeline_analyses {
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
             -flow_into      => {
-              -1 => ['run_sift_highmem'],
+                -1 => ['run_sift_highmem']
             }
         },
 
@@ -372,6 +403,27 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => $self->o('cadd_max_workers'),
             -rc_name        => 'medmem',
+        },
+
+        {   -logic_name      => 'datacheck',
+            -module          => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+            -parameters      => {
+                datacheck_names => [
+                    'CompareProteinFunctionPredictions',
+                    'ProteinFunctionPredictions'
+                ],
+                registry_file  => $self->o('ensembl_registry'),
+                history_file   => $self->o('history_file'),
+                output_dir     => $self->o('dc_outdir'),
+                failures_fatal => $self->o('failures_fatal'),
+                @common_params
+            },            
+            -input_ids            => [], #default
+            -hive_capacity        => 1,
+            -analysis_capacity    => 1,
+            -rc_name              => 'default',
+            -failed_job_tolerance => 0,
+            -max_retry_count      => 0,
         },
 
     ];

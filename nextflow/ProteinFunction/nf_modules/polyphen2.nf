@@ -29,8 +29,8 @@ process run_pph2_on_all_aminoacid_substitutions {
   tag "${peptide.md5}"
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
-  memory '4 GB'
-  errorStrategy 'ignore'
+  label 'highmem'
+  label 'retry_error_then_ignore'
 
   input:
     val peptide
@@ -72,7 +72,7 @@ process run_weka {
 
   //tag "${pph2_out.baseName} $model"
   container "ensemblorg/polyphen-2:2.2.3"
-  errorStrategy 'ignore'
+  label 'retry_error_then_ignore'
 
   input:
     each model

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ use warnings;
 use HTTP::Tiny;
 use XML::Simple;
 use Getopt::Long;
+use utf8;
+use Text::Unidecode;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
@@ -79,7 +81,7 @@ my $reg = 'Bio::EnsEMBL::Registry';
 $reg->no_version_check(1); 
 $reg->load_all($registry_file);
 
-my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
+my $dba = $reg->get_DBAdaptor($species, 'variation') or die "Error getting db adaptor\n";
 ## extract all variants - cited variants failing QC are still displayed
 $dba->include_failed_variations(1);
 
@@ -175,7 +177,7 @@ sub import_citations{
     my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
 
     # get list of citations already in the db
-    my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
+    my $dba = $reg->get_DBAdaptor($species, 'variation') or die "Error getting db adaptor\n";
     my $done_list = get_current_citations($dba);
 
     # Get attrib id for source EPMC and UCSC
@@ -241,14 +243,13 @@ sub import_citations{
           $title =~ s/\]\.//;
         }  
 
-	# Some publication have newline in the title
-	# Clean the title before it's inserted
-	# example: PMID = 33498513
+        # Some publication have newline in the title
+        # Clean the title before it's inserted
+        # example: PMID = 33498513
         if($title =~ /\n/) {
-	  $title =~ s/\n//;
+          $title =~ s/\n//;
           $title =~ s/\s\s+/ /;
         }
-
         ## save ids
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
         my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
@@ -269,32 +270,33 @@ sub import_citations{
         }
         else{
             ## add new publication
-	    my $new_title = $title;
-
             ## check title size
-            if(length($title) >= 300){
-              # truncate title
-              my $aux = substr($title, 0, 296);
-              my @list_title = split(' ', $aux);
-              pop @list_title;
-              $new_title = join(' ', @list_title);
-              $new_title .= '...';
-            }
-
+          my $new_title = $title;
+          if(length($title) >= 300){
+            # truncate title
+            my $aux = substr($title, 0, 296);
+            my @list_title = split(' ', $aux);
+            pop @list_title;
+            $new_title = join(' ', @list_title);
+            $new_title .= '...';
+          }
+          
+          
+          $new_title =~ s|<.+?>||g;
             ### create new object
-            my $publication = Bio::EnsEMBL::Variation::Publication->new(
-                -title    => $new_title,
-                -authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
-                -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
-                -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
-                -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
-                -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
-                -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
-                -variants => \@var_obs,
-                -adaptor  => $pub_ad
-                );
+          my $publication = Bio::EnsEMBL::Variation::Publication->new(
+            -title    => $new_title,
+            -authors  => unidecode($ref->{resultList}->{result}->{authorString})   || unidecode($data->{$pub}->{authors}),
+            -pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
+            -pmcid    => $ref->{resultList}->{result}->{pmcid}          || $data->{$pub}->{pmcid},
+            -year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
+            -doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
+            -ucsc_id  => $data->{$pub}->{ucsc}                          || undef,
+            -variants => \@var_obs,
+            -adaptor  => $pub_ad
+          );
         
-            $pub_ad->store( $publication,$source_attrib_id );
+          $pub_ad->store( $publication,$source_attrib_id );
         }
     }
     close $not_found;
@@ -342,8 +344,8 @@ sub get_publication_info_from_epmc{
     elsif( defined $data->{$pub}->{doi} ){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{doi}" );
       ## check results of full text query
-      return undef unless defined  $data->{$pub}->{doi} &&
-      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+      return undef unless defined $data->{$pub}->{doi} && defined $ref->{resultList}->{result}->{doi} &&
+      $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi};
     }
     elsif(defined $data->{$pub}->{pmcid}){
       $ref = get_epmc_data( "webservices/rest/search?query=$data->{$pub}->{pmcid}" );
@@ -386,7 +388,6 @@ sub trim_author_list{
       $trimmed_authors = join(', ', @author_list[0..3]) . ', et al';
     }
   }
-
   return $trimmed_authors;
 }
 
@@ -564,14 +565,28 @@ sub check_dbSNP{
         my $trimmed_author_list = trim_author_list($ref->{resultList}->{result}->{authorString});
         $ref->{resultList}->{result}->{authorString} = $trimmed_author_list if $trimmed_author_list;
 
-        $pub_upd_sth->execute( $ref->{resultList}->{result}->{title},
-                               $ref->{resultList}->{result}->{pmcid},
-                               $ref->{resultList}->{result}->{authorString},
-                               $ref->{resultList}->{result}->{pubYear},
-                               $ref->{resultList}->{result}->{doi},
-                               $l->[0]
-            ) if defined $ref->{resultList}->{result}->{title};
-    }  
+        if (defined $ref->{resultList}->{result}->{title}) {
+          my $title = $ref->{resultList}->{result}->{title};
+          # Truncate title
+          if(length($title) >= 300){
+            my $aux = substr($title, 0, 296);
+            my @list_title = split(' ', $aux);
+            pop @list_title;
+            $title = join(' ', @list_title);
+            $title .= '...';
+          }
+
+          $title =~ s|<.+?>||g;
+
+          $pub_upd_sth->execute( $title,
+                                 $ref->{resultList}->{result}->{pmcid},
+                                 unidecode($ref->{resultList}->{result}->{authorString}),
+                                 $ref->{resultList}->{result}->{pubYear},
+                                 $ref->{resultList}->{result}->{doi},
+                                 $l->[0]
+          );
+        }
+    }
     close $error_log;
 }
 
@@ -583,7 +598,7 @@ sub update_evidence{
 
     ## find cited attrib
     my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select attrib_id from attrib where value ='Cited']);
-    $attrib_ext_sth->execute()||die;
+    $attrib_ext_sth->execute() or die "Failed to select attrib_id from attrib where value 'Cited'\n";
     my $attrib =  $attrib_ext_sth->fetchall_arrayref();
     die "Not updating evidence as no attrib found\n" unless defined $attrib->[0]->[0];
 
@@ -595,7 +610,7 @@ sub update_evidence{
     my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence_attribs = ? where variation_id = ?]);
     my $varfeat_upd_sth = $dba->dbc()->prepare(qq[ update variation_feature set evidence_attribs = ? where variation_id = ?]);
 
-    $ev_ext_sth->execute()||die;
+    $ev_ext_sth->execute() or die "Failed to select variation_id and evidence_attribs from table variation_citation\n";
     my $dat =  $ev_ext_sth->fetchall_arrayref();
 
     my $n = scalar @{$dat};
@@ -667,23 +682,23 @@ sub report_summary{
                                               where title is null
                                           ]);
 
-    $dup1_ext_sth->execute()||die;
+    $dup1_ext_sth->execute() or die;
     my $dup1 = $dup1_ext_sth->fetchall_arrayref();
     my $duplicated_pub = $dup1->[0]->[0];
 
-    $dup2_ext_sth->execute()||die;
+    $dup2_ext_sth->execute() or die;
     my $dup2 = $dup2_ext_sth->fetchall_arrayref();
     my $duplicated_pub2 = $dup2->[0]->[0];
 
-    $dup3_ext_sth->execute()||die;
+    $dup3_ext_sth->execute() or die;
     my $dup3 = $dup3_ext_sth->fetchall_arrayref();
     my $duplicated_pub3 = $dup3->[0]->[0];
 
-    $dup4_ext_sth->execute()||die;
+    $dup4_ext_sth->execute() or die;
     my $dup4 = $dup4_ext_sth->fetchall_arrayref();
     my $duplicated_pub4 = $dup4->[0]->[0];
 
-    $fail_ext_sth->execute() ||die;
+    $fail_ext_sth->execute() or die;
     my $fail = $fail_ext_sth->fetchall_arrayref();
     $title_null = $fail->[0]->[0]; 
 
@@ -768,29 +783,29 @@ sub clean_publications{
 
     my $empty_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where (authors = '' or authors is null) and pmid is null and pmcid is null ]);
 
-    $title_sth->execute()||die;
+    $title_sth->execute() or die;
     my $title_brackets = $title_sth->fetchall_arrayref();
     
-    $title_cr_sth->execute()||die;
+    $title_cr_sth->execute() or die;
     my $get_title_cr = $title_cr_sth->fetchall_arrayref();
     my $title_cr = $get_title_cr->[0]->[0];
 
-    $authors_cr_sth->execute()||die;
+    $authors_cr_sth->execute() or die;
     my $get_authors_cr = $authors_cr_sth->fetchall_arrayref();
     my $authors_cr = $get_authors_cr->[0]->[0];
 
-    $title_hex_char_sth->execute()||die;
+    $title_hex_char_sth->execute() or die;
     my $get_title_hex_char = $title_hex_char_sth->fetchall_arrayref();
     my $title_hex_char = $get_title_hex_char->[0]->[0];
 
-    $authors_hex_char_sth->execute()||die;
+    $authors_hex_char_sth->execute() or die;
     my $get_authors_hex_char = $authors_hex_char_sth->fetchall_arrayref();
     my $authors_hex_char = $get_authors_hex_char->[0]->[0];
 
-    $wrong_title_sth->execute()||die;
+    $wrong_title_sth->execute() or die;
     my $wrong_title = $wrong_title_sth->fetchall_arrayref();
 
-    $empty_sth->execute()||die;
+    $empty_sth->execute() or die;
     my $empty_fields = $empty_sth->fetchall_arrayref();
 
     # Clean brackets from publication title 
@@ -940,7 +955,7 @@ sub get_current_UCSC_data{
                                       ]);
 
 
-    $cit_ext_sth->execute()||die;
+    $cit_ext_sth->execute() or die "Failed to select data from UCSC database\n";
 
     while( my $line = $cit_ext_sth->fetchrow_arrayref()){
 
@@ -1025,7 +1040,7 @@ sub get_current_citations{
 
     my %citations;
 
-    $cit_ext_sth->execute()||die;
+    $cit_ext_sth->execute() or die "Failed to select current citations from database\n";
     my $data =  $cit_ext_sth->fetchall_arrayref();
     foreach my $l(@{$data}){
         $citations{$l->[0]}{$l->[1]} = $l->[2] if defined $l->[1];
@@ -1050,7 +1065,7 @@ sub process_phenotype_feature {
                                                 inner join phenotype_feature p on s.study_id = p.study_id
                                                 where p.type = 'variation' and p.study_id is not null and s.external_reference is not null
                                                 group by s.study_id, s.source_id, s.external_reference, s.study_type, p.object_id ]);
-  $pheno_citations_sth->execute()||die;
+  $pheno_citations_sth->execute() or die "Failed to select citations from table phenotype_feature\n";
   my $data = $pheno_citations_sth->fetchall_arrayref();
 
   my %source_id_list;
@@ -1117,7 +1132,7 @@ sub process_phenotype_feature_attrib {
                                                    join attrib_type att on pfa.attrib_type_id = att.attrib_type_id
                                                    where att.code = 'pubmed_id' ]);
 
-  $pheno_feature_sth->execute()||die;
+  $pheno_feature_sth->execute() or die "Failed to select citations from table phenotype_feature_attrib\n";
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
 
   my %source_id_list;
@@ -1179,16 +1194,18 @@ sub remove_outdated_citations {
   open (my $wrt, ">Outdated_Phenotype_citations_$species\_"  . log_time() . ".txt") or die "Failed to open file to write: $!\n";
   print $wrt "RSID\tPMID\tSource\n";
 
-  # get all citations from the sources 'ClinVar', 'dbGaP' and 'GWAS' - imported from the phenotype tables
+  # get all citations from the sources 'ClinVar', 'dbGaP', 'GWAS' and 'G2P' - imported from the phenotype tables
   my $attrib_id_clinvar = $citation_attribs->{'ClinVar'};
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
+  my $attrib_id_ddg2p = $citation_attribs->{'G2P'};
 
   my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
                                                from variation_citation
-                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' or data_source_attrib like '%$attrib_id_dbgap%' ]);
+                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' 
+                                               or data_source_attrib like '%$attrib_id_dbgap%' or data_source_attrib like '%$attrib_id_ddg2p%' ]);
 
-  $citations_sth->execute()||die;
+  $citations_sth->execute() or die "Failed to fetch outdated citations from database\n";
   my $citations_data = $citations_sth->fetchall_arrayref();
 
   my $rm_citations_sth = $dba->dbc()->prepare(qq[

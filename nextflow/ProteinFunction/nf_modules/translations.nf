@@ -16,7 +16,7 @@ process translate_fasta {
 
   tag "${gtf} + ${fasta}"
   container "quay.io/biocontainers/agat:0.9.0--pl5321hdfd78af_0"
-  memory '20 GB'
+  label 'highmem'
   publishDir "${params.outdir}"
 
   input:

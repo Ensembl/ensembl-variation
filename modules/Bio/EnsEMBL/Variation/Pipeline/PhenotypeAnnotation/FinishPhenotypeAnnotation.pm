@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ use POSIX qw(strftime);
 use File::Path qw(make_path);
 use Data::Dumper;
 
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(OMIA ANIMALSET NONE SPECIES);
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
 sub fetch_input {
@@ -58,6 +60,9 @@ sub fetch_input {
 
   open(my $logFH, ">>", $workdir."/REPORT_import_".$self->required_param('species').".txt") || die ("Failed to open file: $!\n");
   $self->logFH($logFH);
+  
+  open(my $pipelogFH, ">", $self->param('pipeline_dir')."/".'log_import_debug_pipe_finish') || die ("Failed to open file: $!\n");
+  $self->pipelogFH($pipelogFH);
 }
 
 sub run {
@@ -80,7 +85,10 @@ sub run {
    
   $self->clean_phenotype_tables();
   
+  $self->process_output_ids();
+  
   close($self->logFH) if defined $self->logFH ;
+  close($self->pipelogFH) if defined $self->pipelogFH ;
 }
 
 
@@ -121,8 +129,6 @@ sub report_results{
 
   $self->print_logFH($text_out);
 }
-
-
 
 
 
@@ -210,6 +216,60 @@ sub update_internal_db{
   }
 }
 
+
+
+=head2 process_output_ids
+
+  Example    : $obj->process_output_ids($new)
+  Description: Process output_ids to create job for next stage (datacheck).
+  Returntype : none
+  Exceptions : none
+
+=cut
+
+sub process_output_ids {
+  my $self = shift;
+  
+  my $run_type = $self->required_param('run_type');
+  my %import_species = SPECIES;
+  
+  $self->warning("run type $run_type");
+  unless ($run_type eq NONE) {
+    my $type = ($run_type eq ANIMALSET) ? 'OMIA' : $run_type;
+    my @dc_params;
+    
+    map {
+      my $adaptor = $self->get_adaptor($_, 'variation');
+      my $dbname = $adaptor->dbc()->dbname();
+      
+      my $old_server_uri = $self->param('old_server_uri'); 
+      unless ( $old_server_uri ){
+        my $host_domain = $adaptor->dbc()->hostname();
+        my ($host) = ( split(/\./, $host_domain) );
+        my $port = $adaptor->dbc()->port();
+        my $user = $adaptor->dbc()->user();
+        my $old_release_number = ( $self->param('ensembl_release') - 1 );
+        
+        $old_server_uri = "mysql://" . ${user} . "@" . ${host} . ":" . ${port} . "/" . $old_release_number;
+      }
+      
+      push @dc_params, { dbname => $dbname, old_server_uri => [ $old_server_uri ] }; 
+    
+    } @{$import_species{$type}};
+    
+    $self->param('output_ids', \@dc_params );
+    
+    $self->print_pipelogFH("Setting up for datacheck import: ". join(", ",@{$import_species{$type}}). "\n") if $self->param('debug_mode') ;
+  }
+}
+
+
+
+sub write_output {
+    my $self = shift;
+
+    $self->dataflow_output_id($self->param('output_ids'), 1);
+}
 
 1;
 

@@ -1,5 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- Copyright [2016-2022] EMBL-European Bioinformatics Institute
+-- Copyright [2016-2023] EMBL-European Bioinformatics Institute
 -- 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ CREATE TABLE variation (
   minor_allele VARCHAR(50) DEFAULT NULL,
   minor_allele_freq FLOAT DEFAULT NULL,
   minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
-  clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
+  clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects','likely pathogenic low penetrance','pathogenic low penetrance','uncertain risk allele','likely risk allele','established risk allele') DEFAULT NULL,
   evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
   display INT(1) DEFAULT 1,
 
@@ -216,7 +216,7 @@ CREATE TABLE variation_feature (
     minor_allele_count INT(10) UNSIGNED DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
     evidence_attribs   SET('367','368','369','370','371','372','418','421','573','585') DEFAULT NULL,
-    clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
+    clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects','likely pathogenic low penetrance','pathogenic low penetrance','uncertain risk allele','likely risk allele','established risk allele') DEFAULT NULL,
     display INT(1) DEFAULT 1,
 
    	PRIMARY KEY ( variation_feature_id ),
@@ -1131,7 +1131,7 @@ CREATE TABLE structural_variation (
 	source_id INT(10) UNSIGNED NOT NULL,
   study_id INT(10) UNSIGNED DEFAULT NULL,
 	class_attrib_id INT(10) UNSIGNED NOT NULL DEFAULT 0,
-	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects') DEFAULT NULL,
+	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects','likely pathogenic low penetrance','pathogenic low penetrance','uncertain risk allele','likely risk allele','established risk allele') DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
@@ -1772,7 +1772,7 @@ CREATE TABLE publication (
 CREATE TABLE variation_citation (
    variation_id INT(10) UNSIGNED NOT NULL,
    publication_id INT(10) UNSIGNED NOT NULL,
-   data_source_attrib SET('615','616','617','618','619','620') DEFAULT NULL, 
+   data_source_attrib SET('615','616','617','618','619','620','678') DEFAULT NULL,
    PRIMARY KEY variation_citation_idx (variation_id, publication_id),
    KEY data_source_attrib_idx (data_source_attrib)
 );
@@ -1835,11 +1835,13 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '109');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '110');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_108_109_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_b.sql|Add DDG2P data_source_attrib to variation_citation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_c.sql|Add new clinical_significance values to variation, variation_feature and structural_variation');
 
 /**
 @header  Failed tables

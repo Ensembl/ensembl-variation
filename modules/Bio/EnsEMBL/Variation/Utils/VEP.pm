@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -348,7 +348,7 @@ our @VAR_CACHE_COLS = qw(
     phenotype_or_disease
 );
 
-our @PICK_ORDER = qw(canonical appris tsl biotype ccds rank length ensembl refseq);
+our @PICK_ORDER = qw(mane_select mane_plus_clinical canonical appris tsl biotype ccds rank length ensembl refseq);
 
 # parses a line of input, returns VF object(s)
 sub parse_line {
@@ -2204,6 +2204,8 @@ sub pick_worst_vfoa {
       appris => 100,
       ensembl => 1,
       refseq => 1,
+      mane_select => 1,
+      mane_plus_clinical => 1
     };
 
     if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
@@ -2213,6 +2215,8 @@ sub pick_worst_vfoa {
       $info->{canonical} = $tr->is_canonical ? 0 : 1;
       $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
       $info->{ccds} = $tr->{_ccds} && $tr->{_ccds} ne '-' ? 0 : 1;
+      $info->{mane_select} = scalar(grep {$_->code eq 'MANE_Select'}  @{$tr->get_all_Attributes()}) ? 0 : 1;
+      $info->{mane_plus_clinical} = scalar(grep {$_->code eq 'MANE_Plus_Clinical'}  @{$tr->get_all_Attributes()}) ? 0 : 1;
       $info->{lc($tr->{_source_cache})} = 0 if exists($tr->{_source_cache});
 
       # "invert" length so longer is best

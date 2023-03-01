@@ -22,11 +22,11 @@ params.database = null
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
-params.blastdb       = null
+params.blastdb       = "/nfs/production/flicek/ensembl/variation/data/uniref90/uniref90.fasta"
 
 // PolyPhen-2 params
 params.pph_run_type = "NONE"
-params.pph_data     = null
+params.pph_data     = "/hps/software/users/ensembl/variation/polyphen-2.2.3/data"
 
 // Print usage
 if (params.help) {
@@ -36,17 +36,19 @@ if (params.help) {
 
   Usage:
     nextflow run main.nf -profile lsf -resume \\
+             --species canis_lupus_familiaris \\
              --gtf basenji.gtf,boxer.gtf --fasta basenji.fa,boxer.fa \\
              --pph_run_type  UPDATE --pph_data [path/to/pph_data] \\
              --sift_run_type UPDATE --blastdb  [path/to/blastdb] \\
              --host [h] --port [p] --user [u] --pass [p] --database [db]
 
   General options:
-    --gtf FILE           Comma-separated annotation GTF files; requires FASTA
-    --fasta FILE         Comma-separated FASTA files with genomic sequences;
-                         requires GTF
-    --translated FILE    Comma-separated FASTA files with peptide sequence;
-                         skips sequence translation based on GTF and FASTA
+    --gtf FILE           Comma-separated list of annotation GTF files; requires
+                         FASTA files
+    --fasta FILE         Comma-separated list of FASTA files with genomic
+                         sequences; requires GTF files
+    --translated FILE    Comma-separated list of FASTA files with peptide
+                         sequence; skips sequence translation with GTF and FASTA
     --outdir VAL         Name of output dir (default: outdir)
     --species VAL        Latin species name (default: homo_sapiens);
                          PolyPhen-2 only works for human
@@ -61,18 +63,19 @@ if (params.help) {
   SIFT options:
     --sift_run_type VAL  SIFT run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
     --blastdb DIR        Path to SIFT-formatted BLAST database
-                         (e.g., uniref100)
+                         (e.g., uniref100; required if running SIFT)
     --median_cutoff VAL  Protein alignment's median cutoff (default: 2.75)
 
   PolyPhen-2 options:
     --pph_run_type VAL   PolyPhen-2 run type:
                            - FULL   to run for all translations
-                           - UPDATE to run for new/changed translations
+                           - UPDATE to only run for new/changed translations
                            - NONE   to skip this step (default)
-    --pph_data DIR       Path to PolyPhen-2 databases; available from
+    --pph_data DIR       Path to PolyPhen-2 databases (required if running
+                         PolyPhen-2); available from
                          http://genetics.bwh.harvard.edu/pph2/dokuwiki/downloads
   """
   exit 1
@@ -92,6 +95,10 @@ if (!params.translated) {
   } else if (!params.fasta || !params.gtf ) {
     exit 1, "ERROR: both --fasta and --gtf need to be defined"
   }
+}
+
+if (!params.host || !params.port || !params.user || !params.pass || !params.database) {
+  exit 1, "Error: --host, --port, --user, --pass and --database need to be defined"
 }
 
 // Check run type for each protein function predictor

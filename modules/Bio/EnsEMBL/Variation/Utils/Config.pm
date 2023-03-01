@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -78,7 +78,13 @@ our @clinvar_clinical_significance_types = (
     'confers sensitivity',
     'risk factor',
     'association',
-    'protective'
+    'protective',
+    'affects',
+    'likely pathogenic low penetrance',
+    'pathogenic low penetrance',
+    'uncertain risk allele',
+    'likely risk allele',
+    'established risk allele'
 );
 
 our @dgva_clinical_significance_types = (
@@ -293,6 +299,12 @@ our @VARIATION_CLASSES = (
         type => 'sv',
     },
     {
+        SO_accession => 'SO:0002062',
+        SO_term => 'complex_chromosomal_rearrangement',
+        display_term => 'complex chromosomal rearrangement',
+        type => 'sv',
+    },
+    {
         SO_accession => 'SO:1000005',
         SO_term => 'complex_substitution',
         display_term => 'complex substitution',
@@ -467,7 +479,7 @@ our @OVERLAP_CONSEQUENCES = (
         display_term => 'SPLICE_SITE',
         feature_SO_term => 'primary_transcript',
         feature_class => 'Bio::EnsEMBL::Transcript',
-        variant_feature_class => 'Bio::EnsEMBL::Variation::VariationFeature',
+        variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
         rank => '13',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
@@ -475,6 +487,7 @@ our @OVERLAP_CONSEQUENCES = (
         label => 'splice polypyrimidine tract variant',
         impact => 'LOW',
         include => {
+            exon   => 0,
             intron => 1
         },
     },
@@ -981,7 +994,7 @@ our @OVERLAP_CONSEQUENCES = (
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
         description => 'A feature ablation whereby the deleted region includes a regulatory region',
         label => 'regulatory region ablation',
-        impact => 'MODERATE',
+        impact => 'MODIFIER',
         include => {
             deletion => 1,
             complete_overlap => 1,
@@ -1034,12 +1047,12 @@ our @OVERLAP_CONSEQUENCES = (
         feature_SO_term => 'sequence_feature',
         feature_class => 'Bio::EnsEMBL::Feature',
         variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
-        rank => '36',
+        rank => '9',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
         description => 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
         label => 'feature elongation',
-        impact => 'MODIFIER',
+        impact => 'HIGH',
         include => {
             increase_length => 1,
             sv => 1,
@@ -1051,12 +1064,12 @@ our @OVERLAP_CONSEQUENCES = (
         feature_SO_term => 'sequence_feature',
         feature_class => 'Bio::EnsEMBL::Feature',
         variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
-        rank => '37',
+        rank => '9',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
         description => 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
         label => 'feature truncation',
-        impact => 'MODIFIER',
+        impact => 'HIGH',
         include => {
             decrease_length => 1,
             sv => 1,
@@ -1312,6 +1325,11 @@ our @ATTRIB_TYPES = (
                code => 'review_status',
                name => 'ClinVar review_status', 
                description => 'ClinVar review_status for assertation', 
+       },
+       {
+               code => 'phenotype_type',
+               name => 'Phenotype type',
+               description => 'Type of the phenotype information'
        }
 
 

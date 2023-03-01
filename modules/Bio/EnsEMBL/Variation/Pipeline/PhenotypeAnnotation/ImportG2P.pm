@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ limitations under the License.
 =cut
 
 
-=head1 ImportDDG2P
+=head1 ImportG2P
 
 This module imports DDG2P (Developmental Disorders Genotype-to-Phenotype) data. The module fetched the data from
 EBI Gene2Phenotype project https://www.ebi.ac.uk/gene2phenotype/.
 
 =cut
 
-package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportDDG2P;
+package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportG2P;
 
 use warnings;
 use strict;
@@ -70,8 +70,8 @@ sub fetch_input {
                   source_url => 'https://www.ebi.ac.uk/gene2phenotype',
                   object_type => 'Gene',
                   source_status => 'germline',
-                  source_name => 'DDG2P',       #source name in the variation db
-                  source_name_short => 'DDG2P', #source identifier in the pipeline
+                  source_name => 'G2P',       #source name in the variation db
+                  source_name_short => 'G2P', #source identifier in the pipeline
                   source_version => strftime("%Y%m%d", localtime), # it is current month
                   data_types        => 'phenotype_feature',
                   );
@@ -94,7 +94,7 @@ sub fetch_input {
 
 
 
-  #get input file DDG2P:
+  #get input file G2P:
   
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
 
@@ -180,7 +180,7 @@ sub write_output {
   Arg [1]    : string $infile
                The input file name.
   Example    : $results = $obj->parse_input_file($infile)
-  Description: Specific parsing method for DDG2P data, uses gene symbols lookup in core
+  Description: Specific parsing method for G2P data, uses gene symbols lookup in core
   Returntype : hashref with results (key 'phenotypes')
   Exceptions : none
 

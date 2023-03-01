@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ sub run {
                   "--bind $pph_data:/opt/pph2/data $pph_dir/polyphen-2_2.2.3.sif " .
                   "run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
 
-        system($cmd) == 0 or die "Failed to run $cmd: $?";
+        system($cmd) == 0 or die `echo "Failed to run $cmd:" && cat "$error_file"`;
 
         if (-s $error_file) {
             warn "run_weka.pl STDERR output in $error_file\n";

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1365,7 +1365,6 @@ sub hgvs_transcript {
   my $offset_to_add = defined($self->{shift_hash}) ? $self->{shift_hash}->{_hgvs_offset} : 0;# + ($no_shift ? 0 : (0 - $self->{_hgvs_offset}) );
   $self->{_hgvs_offset} = $offset_to_add;
   ## delete the shifting hash if we generated it for HGVS calculations
-  $self->{variation_feature_seq} = $self->{shift_hash}->{alt_orig_allele_string} if defined($self->{shift_hash});
   delete($self->{shift_hash}) unless $hash_already_defined;
  
   ## return if a new transcript_variation_allele is not available - variation outside transcript
@@ -1702,7 +1701,6 @@ sub hgvs_protein {
   $hgvs_notation->{ref} = $ref->peptide; 
   
   ## delete the shifting hash if we generated it for HGVS calculations
-  $self->{variation_feature_seq} = $self->{shift_hash}->{alt_orig_allele_string} if defined($self->{shift_hash});
   delete($self->{shift_hash}) unless $hash_already_defined;
   delete($ref->{shift_hash}) unless $ref_hash_already_defined;
 
@@ -2800,5 +2798,3 @@ sub _transcript_feature_Slice {
 
 
 1;
-
-

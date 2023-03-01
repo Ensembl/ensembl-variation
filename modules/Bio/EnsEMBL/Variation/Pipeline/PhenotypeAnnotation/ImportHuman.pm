@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Variation::Utils::SeqRegionUtils qw(update_seq_region_ids);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID DDG2P CGC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID G2P CGC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 # branch numbers from config file
@@ -50,7 +50,7 @@ my %source2branch = (
   EGA       => 3,
   ORPHANET  => 4,
   MIMMORBID => 5,
-  DDG2P     => 6,
+  G2P       => 6,
   CGC       => 7,
 
   HUMAN     => 2,

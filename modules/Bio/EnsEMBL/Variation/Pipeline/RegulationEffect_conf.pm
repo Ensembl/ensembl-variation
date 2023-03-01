@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ sub default_options {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
-            -pass   => $self->o('hive_db_password'),            
+            -pass   => $self->o('hive_db_password'),
             -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
             -driver => 'mysql',
         },
@@ -119,6 +119,9 @@ sub pipeline_analyses {
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -input_ids => [{},],
                 -hive_capacity => 1,
+                -parameters => {
+                  'pipeline_dir' => $self->o('pipeline_dir'),
+                },
             },
         );
     } else {
@@ -155,6 +158,9 @@ sub pipeline_analyses {
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -hive_capacity => 1,
+                -parameters => {
+                  'pipeline_dir' => $self->o('pipeline_dir'),
+                },
             },
         );
     }

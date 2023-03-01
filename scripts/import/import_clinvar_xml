@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2023] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -52,10 +52,12 @@ use Data::Dumper;
 use Date::Manip::Date;
 use XML::LibXML::Reader;
 use XML::Hash::XS qw();
+use Text::ParseWords;
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
+use Bio::EnsEMBL::Variation::Utils::Config qw(%ATTRIBS);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -139,9 +141,13 @@ my %non_specified_pheno = ("None"=>1,
                      "?" => 1, "." => 1);
 my $haplotype_type = "Haplotype";
 
-## accepted clinsig values:
-my @def_clinsig = ('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective','affects');
-my %known_clinsig = map { $_ => 1  } @def_clinsig ;
+## get current phenotypes list
+## the phenotype list includes a clean version of the descriptions
+my %phenotype_cache = %{get_phenotype_cache()};
+
+## accepted clinsig values
+my $def_clinsig = $ATTRIBS{clinvar_clin_sig};
+my %known_clinsig = map { $_ => 1  } @{$def_clinsig} ;
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -920,7 +926,21 @@ sub get_phenotype{
 
   my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
 
-  unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
+  # try to fetch the phenotype using the phenotype cache
+  if(!$pheno) {
+    my $description = $desc;
+    $description = clean_phenotype_desc($description);
+    my @parse_desc = parse_line('\s+', 0, $description);
+    my @parse_desc_sorted = sort @parse_desc;
+    my $parse_desc_sorted_join = join(',', @parse_desc_sorted);
+    if($phenotype_cache{$parse_desc_sorted_join}) {
+      my @phenos = @{$phenotype_cache{$parse_desc_sorted_join}};
+      # use the first match
+      $pheno = $phenotype_adaptor->fetch_by_dbID($phenos[0]->{id});
+    }
+  }
+
+  unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ) {
 
     $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc );
     $pheno->class_attrib_id($non_specified_class_id) if exists $non_specified_pheno{$pheno};
@@ -1591,6 +1611,8 @@ sub check_known_clinsig {
   $tmpClinsig  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
   #similar replace of 'association not found' to 'other'
   $tmpClinsig  =~ s/association not found/other/g;
+  #remove comma from accepted values
+  $tmpClinsig  =~ s/pathogenic,low penetrance/pathogenic low penetrance/;
   my @tmpClinsigs = split(",", $tmpClinsig);
   my $found = 1;
   foreach my $clinsig (@tmpClinsigs) {
@@ -1598,6 +1620,50 @@ sub check_known_clinsig {
   }
 
   return $found;
+}
+
+sub get_phenotype_cache {
+  my %new_phenotype_cache;
+
+  my %phenotype_cache = map {$_->description() => $_->dbID()} @{$phenotype_adaptor->fetch_all};
+
+  foreach my $phenotype_desc (keys %phenotype_cache) {
+    my $original_desc = $phenotype_desc;
+    $phenotype_desc = clean_phenotype_desc($phenotype_desc);
+    my @parse_desc = parse_line('\s+', 0, $phenotype_desc);
+    my @parse_desc_sorted = sort @parse_desc;
+    my $parse_desc_sorted_join = join(',', @parse_desc_sorted);
+
+    my %aux;
+    $aux{original_desc} = $original_desc;
+    $aux{id} = $phenotype_cache{$original_desc};
+    push @{$new_phenotype_cache{$parse_desc_sorted_join}}, \%aux;
+  }
+
+  return \%new_phenotype_cache;
+}
+
+sub clean_phenotype_desc {
+  my ($description) = @_;
+
+  $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
+  $description =~ s/\n//g; # Remove 'new line' characters
+  $description =~ s/[\(\)]//g; # Remove characters ( )
+
+  # Replace special characters in the phenotype description
+  $description = replace_char($description);
+
+  $description = lc($description);
+  $description =~ s/\“//g;
+  $description =~ s/\”//g;
+  $description =~ s/\s+/ /g; # Remove extra space
+
+  # remove a few extra characters
+  $description =~ s/, / /g; # remove commas
+  $description =~ s/-/ /g;
+  $description =~ s/\'//g;
+
+  return $description;
 }
 
 sub usage{

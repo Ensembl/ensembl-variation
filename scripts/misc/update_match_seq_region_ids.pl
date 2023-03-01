@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2023] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,12 +63,12 @@ foreach my $cdba (@$cdbas) {
   my $dbh = $cdba->dbc->db_handle;
   my $cd_dbname = $cdba->dbc->dbname;
   my $id_mapping = {};
-  my $sth = $dbh->prepare("SELECT seq_region_id, name FROM seq_region;");
+  my $sth = $dbh->prepare("SELECT seq_region_id, name, coord_system_id FROM seq_region;");
   $sth->execute();
   while (my @row = $sth->fetchrow_array) {
     my $external_seq_region_id = $row[0];
-    my $external_seq_region_name = $row[1];
-    $id_mapping->{$external_seq_region_name} = $external_seq_region_id;     
+    my $external_seq_region_name = $row[1] . "|" . $row[2];
+    $id_mapping->{$external_seq_region_name} = $external_seq_region_id;    
   }
   $sth->finish();
   
@@ -77,15 +77,14 @@ foreach my $cdba (@$cdbas) {
 
   my $vd_dbname = $vdba->dbc->dbname;
   my %vd_mapping = ();
-  $sth = $vdbh->prepare("SELECT seq_region_id, name FROM seq_region;");
+  $sth = $vdbh->prepare("SELECT seq_region_id, name, coord_system_id FROM seq_region;");
   $sth->execute();
   while (my @row = $sth->fetchrow_array) {
     my $internal_seq_region_id = $row[0];
-    my $internal_seq_region_name = $row[1];
+    my $internal_seq_region_name = $row[1] . "|" . $row[2];
 
     # Check if Variation and Core are equal in a name
     die "ERROR: '$internal_seq_region_name' is not listed in $cd_dbname.seq_region name column\n." unless defined($id_mapping->{$internal_seq_region_name});
-    next if (defined($id_mapping->{$internal_seq_region_name}) && $id_mapping->{$internal_seq_region_name} eq $internal_seq_region_id);
 
     $vd_mapping{$internal_seq_region_name} = $internal_seq_region_id;
   }
@@ -116,24 +115,30 @@ foreach my $cdba (@$cdbas) {
   }
   print "OK\n";
 
-  foreach my $prev_seq_region_name ( keys %$id_mapping) {
-    my $new_seq_region_id = $id_mapping->{$prev_seq_region_name};
-    my $old_seq_region_id = $vd_mapping{$prev_seq_region_name};
+  foreach my $prev_seq_region ( keys %$id_mapping) {
+    my $new_seq_region_id = $id_mapping->{$prev_seq_region};
+    my $old_seq_region_id = $vd_mapping{$prev_seq_region};
+    my ($prev_seq_region_name, $prev_seq_region_coord);
+    my @psr = split(/\|/, $prev_seq_region);
+    $prev_seq_region_name = $psr[0];
+    $prev_seq_region_coord = $psr[1];
 
     # Skip if old and new are the same
-    next if (!$old_seq_region_id || $old_seq_region_id eq $new_seq_region_id);
+    next if (!$old_seq_region_id);
 
     if ($config->{dry_run}) {
-      print "Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name'\n";
+      print "Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name' AND coord_system_id=$prev_seq_region_coord\n";
       foreach my $table (@tables) {
+        next if ( $new_seq_region_id eq $old_seq_region_id);
         next if ( ! grep $_ eq $old_seq_region_id, @{$need_ids->{$table}});
         print "Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id=$old_seq_region_id\n";
       }
     } else {
-      $vdbh->do("Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name'") or die $dbh->errstr;
+      $vdbh->do("Update seq_region SET seq_region_id=$new_seq_region_id WHERE name='$prev_seq_region_name' AND coord_system_id=$prev_seq_region_coord") or die $dbh->errstr;
       foreach my $table (@tables) {
+        next if ( $new_seq_region_id eq $old_seq_region_id);
         next if ( ! grep $_ eq $old_seq_region_id, @{$need_ids->{$table}});
-        $vdbh->do("Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id='$old_seq_region_id'") or die $dbh->errstr;
+        $vdbh->do("Update $table SET seq_region_id=$new_seq_region_id WHERE seq_region_id=$old_seq_region_id") or die $dbh->errstr;
       }
     }
   }
