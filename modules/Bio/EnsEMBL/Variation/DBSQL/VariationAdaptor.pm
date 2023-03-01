@@ -1344,10 +1344,12 @@ sub fetch_all_by_publication{
     my @var;
     my $variation_id;
 
-    my $stmt = "SELECT  vc.variation_id 
-                from variation_citation vc 
-                left join variation v on vc.variation_id = v.variation_id 
-                where vc.publication_id = ? ";
+    my $stmt = "SELECT v.variation_id
+                FROM variation v
+                WHERE v.variation_id IN (
+                  SELECT vc.variation_id
+                  FROM variation_citation vc
+                  WHERE vc.publication_id = ? )";
 
     # Add the constraint for failed variations
     $stmt .= " AND " .  $self->db->_exclude_failed_variations_constraint()
