@@ -747,6 +747,7 @@ sub clean_publications{
     print $report "Total publications before cleaning:\t$publication_count\n";
     print $report "Total citations before cleaning:\t$citation_count\n\n";
 
+    my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
 
     my $title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[%' and (title like '%\]' or title like '%\.\]' or title like '%\]\.') ]);
 
@@ -880,8 +881,8 @@ sub clean_publications{
 
     # Delete publications with not acceptable titles
     if(defined $wrong_title->[0]->[0]){
-      print $report "\nDeleted publications with title not acceptable (publication_id, title, variation_id):\n";
-      remove_publications($dba, $report, $wrong_title);
+      print $report "\nDeleted publications with title not acceptable (publication_id, title):\n";
+      remove_publications($pub_ad, $report, $wrong_title);
     }
 
     # If there is publications without title, delete them 
@@ -891,15 +892,15 @@ sub clean_publications{
       my $titles_null = $title_null_sth->fetchall_arrayref();
 
       if(defined $titles_null->[0]->[0]){
-        print $report "\nPublications without title deleted (publication_id, title, variation_id):\n";
-        remove_publications($dba, $report, $titles_null);
+        print $report "\nPublications without title deleted (publication_id, title):\n";
+        remove_publications($pub_ad, $report, $titles_null);
       }
     }
 
     # Delete publications without authors, pmid and pmcid
     if(defined $empty_fields->[0]->[0]){
-      print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title, variation_id)";
-      remove_publications($dba, $report, $empty_fields);
+      print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title)";
+      remove_publications($pub_ad, $report, $empty_fields);
     }
 
     $publication_count = count_rows($dba, 'publication');
@@ -911,75 +912,16 @@ sub clean_publications{
 
 # Delete publication from publication and variation_citation tables
 sub remove_publications{
-  my $dba = shift;
+  my $pub_ad = shift;
   my $report = shift;
   my $publications = shift;
 
   foreach my $p (@{$publications}){
     my $pub_id = $p->[0];
-    my $title = $p->[1];
-
-    my $var_id_sth = $dba->dbc->prepare(qq[ select variation_id from variation_citation where publication_id = $pub_id ]);
-
-    $var_id_sth->execute()||die;
-    my $get_variation_ids = $var_id_sth->fetchall_arrayref();
-    # checks if there is variation_id for publication
-    my $variation_ids = $get_variation_ids->[0];
-
-    if(defined $variation_ids){
-      foreach my $var_id (@{$variation_ids}){
-        my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
-        $failed_var_sth->execute()||die;
-        my $get_failed_variant = $failed_var_sth->fetchall_arrayref();
-        my $failed_variant = $get_failed_variant->[0]->[0];
-
-        print $report "$pub_id\t$title\t$var_id\n";
-
-        my $citation_delete_sth = $dba->dbc()->prepare(qq[ delete from variation_citation where publication_id = $pub_id ]);
-        my $pub_delete_sth = $dba->dbc()->prepare(qq[ delete from publication where publication_id = $pub_id ]);
-        $citation_delete_sth->execute();
-        $pub_delete_sth->execute();
-
-        # Check if variant has other publications or phenotypes before changing display flag
-        if(defined $failed_variant){
-
-          # Check if there is other publications for variant 
-          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);
-          $other_publications_sth->execute()||die;
-          my $other_publications = $other_publications_sth->fetchall_arrayref();
-          next unless (!defined $other_publications->[0]->[0]); 
-
-          # Check if there are phenotypes 
-          my $check_phenotype_sth = $dba->dbc->prepare(qq[ select phenotype_feature_id from phenotype_feature where object_id = $var_id ]);
-          $check_phenotype_sth->execute()||die;
-          my $phenotype_var = $check_phenotype_sth->fetchall_arrayref();
-          next unless (!defined $phenotype_var->[0]->[0]); 
-         
-          # Update display  
-          my $update_display_var_sth = $dba->dbc->prepare(qq[ update variation set display = 0 where variation_id = $var_id ]); 
-          my $update_display_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set display = 0 where variation_id = $var_id ]);      
-          $update_display_var_sth->execute()||die;
-          $update_display_vf_sth->execute()||die;
-        }
-        # Check if there are other publications for variant
-        my $other_pubs_sth = $dba->dbc->prepare(qq[ select publication_id from variation_citation where variation_id = $var_id ]);
-        $other_pubs_sth->execute()||die;
-        my $other_pubs = $other_pubs_sth->fetchall_arrayref();
-        next unless (!defined $other_pubs->[0]->[0]);
-
-        # If no more publications then remove citation evidence from variation and variation_feature
-        my $get_attrib_sth = $dba->dbc->prepare(qq[ select attrib_id from attrib where value = 'Cited' ]);
-        $get_attrib_sth->execute()||die;
-        my $get_attrib = $get_attrib_sth->fetchall_arrayref();
-        my $attrib = $get_attrib->[0]->[0];
-        die "Remove publication: not updating evidence as no attrib found\n" unless defined $attrib;        
-
-        my $update_evidence_sth = $dba->dbc->prepare(qq[ update variation set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
-        my $update_evidence_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
-        $update_evidence_sth->execute()||die;
-        $update_evidence_vf_sth->execute()||die;
-      }
-    }
+    my $title  = $p->[1];
+    $pub_ad->remove_publication_by_dbID($pub_id) or
+      die "ERROR while removing publication $pub_id : $title\n";
+    print $report "$pub_id\t$title\n";
   }
 }
 
