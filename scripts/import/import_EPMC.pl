@@ -1199,11 +1199,15 @@ sub remove_outdated_citations {
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
   my $attrib_id_ddg2p = $citation_attribs->{'G2P'};
+  my @attrib_ids = ($attrib_id_clinvar, $attrib_id_gwas, $attrib_id_dbgap, $attrib_id_ddg2p);
 
-  my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
-                                               from variation_citation
-                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' 
-                                               or data_source_attrib like '%$attrib_id_dbgap%' or data_source_attrib like '%$attrib_id_ddg2p%' ]);
+  my $citations_sth = $dba->dbc()->prepare(qq[
+    select variation_id, publication_id, data_source_attrib
+    from variation_citation
+    where data_source_attrib like '%$attrib_id_clinvar%'
+       or data_source_attrib like '%$attrib_id_gwas%'
+       or data_source_attrib like '%$attrib_id_dbgap%'
+       or data_source_attrib like '%$attrib_id_ddg2p%' ]);
 
   $citations_sth->execute() or die "Failed to fetch outdated citations from database\n";
   my $citations_data = $citations_sth->fetchall_arrayref();
@@ -1241,9 +1245,11 @@ sub remove_outdated_citations {
     my @outdated_attribs;
     my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
+      my $is_selected_attrib_id = $attrib ~~ @attrib_ids;
+
       my $value = $attrib . '_' . $publication_pmid;
       my $is_cited_in_pheno = $citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value};
-      if ($is_cited_in_pheno) {
+      if (!$is_selected_attrib_id || $is_cited_in_pheno) {
         push @current_attribs, $attrib;
       } else {
         push @outdated_attribs, $attrib;
