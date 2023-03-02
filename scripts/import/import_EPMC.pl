@@ -1278,8 +1278,12 @@ sub remove_outdated_citations {
   $orphan_publications_sth->execute() or die;
   my $orphan_publications = $orphan_publications_sth->fetchall_arrayref();
 
-  print $report "\nDeleted publications with no associated variants (publication_id, title):\n";
-  remove_publications($pub_ad, $wrt, $orphan_publications) if $orphan_publications;
+  if ($orphan_publications) {
+    print $wrt "\nDeleted publications with no associated variants (publication_id, title):\n";
+    remove_publications($pub_ad, $wrt, $orphan_publications);
+  } else {
+    print $wrt "\nNo publications with no associated variants to remove.\n";
+  }
 
   close($wrt);
 }
