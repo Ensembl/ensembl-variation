@@ -361,6 +361,7 @@ ok($vfs16a->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotyp
 # test fetching VF with empty consequence type column
 is($vfa->fetch_by_dbID(997738282)->display_consequence, 'sequence_variant', 'empty consequence column');
 
+ok(scalar @{$vfa->fetch_all_by_location_identifier('18:40228819:A_G')} == 1, "fetch_all_by_location_identifier '18:40228819:A_G'");
 
 # test fetch Iterator
 print "\n# Test - fetch_Iterator\n";
@@ -445,7 +446,10 @@ ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notat
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
 
 # test HGVS protein when codon is within two exons
-ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66326707, 'HGVSp multi-exon');
+# forward strand
+ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66326707, 'HGVSp multi-exon (forward)');
+# reverse strand
+ok($vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met')->start eq 48846578, 'HGVSp multi-exon (reverse)');
 
 
 print "\n# Test - fetch_by_spdi_notation\n";
