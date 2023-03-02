@@ -66,17 +66,7 @@ my %data = ();
 my %data_section = ();
 
 my %plugins_to_skip = (
-  'CCDSFilter.pm' => 1,
-  'CSN.pm' => 1,
-  'DAS.pm' => 1,
-  'GXA.pm' => 1,
-  'HGVSReferenceBase.pm' => 1,
-  'miRNA.pm' => 1,
-  'NonSynonymousFilter.pm' => 1,
-  'PolyPhen_SIFT.pm' => 1,
-  'RankFilter.pm' => 1,
-  'RefSeqHGVS.pm' => 1,
-  'ExAC.pm' => 1,
+#  'RankFilter.pm' => 1,
 );
 
 
@@ -134,12 +124,19 @@ close(P);
 # Parse each plugin to extract some information
 my $dh;
 opendir($dh,$git_dir) or die $!;
+my @skipped;
 while (my $file = readdir($dh)) {
-  next if ($file !~ /\.pm$/ || $plugins_to_skip{$file});
+  my $name = $file;
+  $name =~ s/\.pm$//g;
+
+  if ($file !~ /\.pm$/ || $plugins_to_skip{$file} || !$data_section{$name}) {
+    push @skipped, $file if $file =~ /\.pm$/;
+    next;
+  }
   push (@files, $file);
   read_plugin_file($file);
 }
-
+warn join("\n  - ", "The following plugins were NOT documented:", @skipped), "\n" if @skipped;
 
 # Print output HTML
 open OUT, "> $output_file" or die $!;
@@ -163,7 +160,6 @@ my %plugin_class_list;
 
 # 1 Plugin file <=> 1 row in the output table
 foreach my $file (@sorted_files) {
-  print "Plugin: $file\n";
   my $plugin_name  = $data{$file}{'name'};
   my $plugin_class = ($data_section{$plugin_name} && $data_section{$plugin_name}{'section'}) ? $data_section{$plugin_name}{'section'} : 'ND'; 
   my $plugin_class_colour = $class_colour{$plugin_class} ? $class_colour{$plugin_class} : get_random_colour($plugin_class);
@@ -291,6 +287,13 @@ sub read_plugin_file {
     # Get the plugin description
     if ($line =~ /=head1 DESCRIPTION/) {
       my $desc_flag = 1;
+      my $code_block = 0;
+      my $code_script = 0;
+      my $cmds = join "|", qw( zcat zgrep cat wget rm gzip gunzip awk head
+                               sort sed bgzip unzip cd perl make tabix mysql
+                               echo tar ./filter_vep ./vep );
+      $cmds =~ s#(\.|/)#\\$1#g;
+
       while ($desc_flag != 0) {
         $line = <F>;
         
@@ -299,13 +302,51 @@ sub read_plugin_file {
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
-            if ($line =~ /^\s*\.\/(filter|vep)/ || $line =~ /^\s*--plugin/) {
-              $line = '<pre class="code sh_sh">'.$line.'</pre>';
-            }
-            else {
+            # Add code block -- three types of code blocks:
+            #   1. to show a code script
+            #        start: line starts with ##### or contains # BEGIN
+            #        end:   line contains # END 
+            #   2. to show arbitrary code lines
+            #        line starts with > or --plugin or bash commands (see $cmds)
+            #   3. to illustrate variant location:
+            #        start: line contains v (variant) after 3 or more spaces
+            #        end:   line only contains I (intron) or ES/EE (exon start/end)
+            if ($line =~ /#{5,}/ || $line =~ /# BEGIN/) {
+              # start block of code script
+              $line = '<pre class="code sh_sh">' . $line unless $code_script;
+              $code_script = 1;
+            } elsif ($code_script) {
+              # continue code script until getting to a line containing # END
+              if ($line =~ /# END/) {
+                $line .= '</pre>';
+                $code_script = 0;
+              }
+            } elsif ($line =~ /^\s{3,}v/) {
+              # start code block to illustrate variant position
+              $line = '<pre class="code sh_sh">' . $line unless $code_block;
+              $code_block = 1;
+            } elsif ($line =~ /^\s+[IES\.]+\s+$/) {
+              # end code block to illustrate variant position
+              $line .= '</pre>';
+              $code_block = 0;
+            } elsif ($line =~ /^\s*>\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
+              # start code block (terminal commands)
+              $line =~ s/^\s*>?\s?//;
+              $line = '<pre class="code sh_sh">' . $line unless $code_block;
+              $code_block = 1;
+            } else {
               $line =~ s/^\s+// if $line =~ /\S+/;
+              if ($code_block) {
+                # remove blank lines after code block (looks nicer)
+                $line = "" if $line =~ /^\s+$/;
+
+                # end code block (terminal commands)
+                $line = '</pre>' . $line;
+                $code_block = 0;
+              }
             }
             $desc .= $line;
+            $line = '</pre>' . $line if $code_block;
           }
         }
         chomp($line);
@@ -323,6 +364,9 @@ sub read_plugin_file {
     }  
   }
   close(F);
+
+  # Make URLs clickable
+  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*[^\)\.,;:\s]))|<a href="$1">$1</a>|g;
   
   # Postprocess the description content (reformatting)
   $desc = "<p>$desc</p>";
@@ -333,11 +377,11 @@ sub read_plugin_file {
   if ($desc =~ /<\/p><p>/) {
     my $lc_name = lc($name);
        $lc_name =~ s/ /_/g;
-    my $desc_link = qq{ ... <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
+    my $desc_link = qq{ <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
     $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;"><p>/;
     $desc .= '</div>';
   }
-  
+
   $data{$file} = {'name' => $name, 'desc' => $desc, 'developer' => \@developer, 'libs' => \%libs};
 }
 
