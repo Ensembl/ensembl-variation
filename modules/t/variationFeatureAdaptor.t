@@ -444,6 +444,10 @@ $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
 
+# test HGVS protein when codon is within two exons
+ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66326707, 'HGVSp multi-exon');
+
+
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000013.10:32954017::';
 throws_ok {$vfa->fetch_by_spdi_notation($spdi_str); } qr/Could not parse the SPDI notation $spdi_str/, 'Throw on invalid SPDI notation.';
