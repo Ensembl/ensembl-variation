@@ -874,11 +874,6 @@ sub get_variant_vf_fails {
   my $num_no_variation = 0;
 
   for my $vf (@{$rs_data->{'vfs'}}) {
-    # If in PAR region do not check
-    if ($vf->{'par'}) {
-      next;
-    }
-
     # If had allele_errors that could not be resolved
     # allele string set to dbSNP_, do not QC the variant feature
     if ($vf->{'allele_string'} =~ /^dbSNP_/) {
@@ -1214,7 +1209,6 @@ sub import_variation_feature {
   my %seen_vf;
 
   for my $vf (@$vfs) {
-    next if ($vf->{'par'});
     # The import can contain duplicate VFs based on
     # seq_region_id, seq_region_start, seq_region_end
     # These can arise when NTs map to same position as NCs
