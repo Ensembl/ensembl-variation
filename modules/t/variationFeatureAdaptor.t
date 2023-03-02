@@ -447,7 +447,7 @@ ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180,
 
 # test HGVS protein when codon is within two exons
 # forward strand
-ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66326707, 'HGVSp multi-exon (forward)');
+ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66325646, 'HGVSp multi-exon (forward)');
 # reverse strand
 ok($vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met')->start eq 48846578, 'HGVSp multi-exon (reverse)');
 

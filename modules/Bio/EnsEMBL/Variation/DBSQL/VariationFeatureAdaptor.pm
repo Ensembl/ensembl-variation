@@ -2356,6 +2356,8 @@ sub get_reference{
 
   my $start;
   my $end;
+  my $real_start;
+  my $real_end;
   my $strand = $coords[0]->strand();
 
   # Assign start and end when we have two coordinates
@@ -2365,19 +2367,23 @@ sub get_reference{
       if($strand == 1) {
         $start = $coords[0]->start();
         $end = $start + 2;
+        $real_end = $coords[1]->end();
       }
       else {
         $end = $coords[0]->end();
         $start = $end - 2;
+        $real_start = $coords[1]->start();
       }
     }
     elsif($strand == 1) {
       $end = $coords[1]->end();
       $start = $end - 2;
+      $real_start = $coords[0]->start();
     }
     else {
       $start = $coords[0]->start();
       $end = $start + 2;
+      $real_end = $coords[1]->end();
     }
   }
   else{
@@ -2401,8 +2407,11 @@ sub get_reference{
 
   my $from_codon_ref = $from_slice->seq(); 
   
+  $start = $real_start ? $real_start : $start;
+  $end = $real_end ? $real_end : $end;
+  
   ## correct for strand
-  reverse_comp(\$from_codon_ref) if $strand <0; 
+  reverse_comp(\$from_codon_ref) if $strand <0;
   
   return ($from_codon_ref, $start, $end, $strand); 
 }
