@@ -1239,25 +1239,28 @@ sub remove_outdated_citations {
     my @split_attrib_id = split /,/, $attrib_id;
 
     my @outdated_attribs;
+    my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
       my $value = $attrib . '_' . $publication_pmid;
-      unless ($citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value}) {
+      my $is_cited_in_pheno = $citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value};
+      if ($is_cited_in_pheno) {
+        push @current_attribs, $attrib;
+      } else {
         push @outdated_attribs, $attrib;
         print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n";
       }
     }
-    
+
     if (@outdated_attribs eq @split_attrib_id) {
       # remove citation if outdated in all sources
       $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) or
         die "Error: cannot remove $variation_id, $publication_id, $attrib_id from variation_citation\n";
     } elsif (@outdated_attribs) {
       # discard outdated sources
-      my $new_attrib_id = join(",", @outdated_attribs);
+      my $new_attrib_id = join(",", @current_attribs);
       $update_citations_sth->execute($new_attrib_id, $variation_id, $publication_id) or
         die "Error: cannot update $variation_id, $publication_id, $attrib_id from variation_citation with new value $new_attrib_id\n";
     }
-
   }
 
   # Remove publications not associated with any variants
