@@ -450,6 +450,11 @@ sub _bvfo_preds {
   if ( $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') &&
        $vf_start <= $feat->{start} && $vf_end >= $feat->{end} ) {
     $self->_update_preds($bvfo_preds, 'complete_overlap', 1, \$pred_digest);
+    $self->_update_preds($bvfo_preds, 'within_feature',   1, \$pred_digest);
+
+    if($preds->{feature_class} eq 'Bio::EnsEMBL::Transcript') {
+      $self->_update_preds($bvfo_preds, $feat->biotype, 1, \$pred_digest);
+    }
 
     $bvfo_preds->{_digest} = $pred_digest;
 
