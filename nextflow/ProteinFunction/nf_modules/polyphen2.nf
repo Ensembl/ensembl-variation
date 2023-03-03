@@ -29,8 +29,7 @@ process run_pph2_on_all_aminoacid_substitutions {
   tag "${peptide.md5}"
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
-  label 'highmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     val peptide
@@ -70,9 +69,9 @@ process run_weka {
       2) Error '*.err'
   */
 
-  //tag "${pph2_out.baseName} $model"
+  tag "${pph2_out.baseName} ${model}"
   container "ensemblorg/polyphen-2:2.2.3"
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     each model
@@ -89,8 +88,13 @@ process run_weka {
 }
 
 process store_pph2_scores {
-  tag "${peptide.id}"
+  //tag "${peptide.id}"
+  tag "${weka_output.baseName} ${model}"
   container "ensemblorg/ensembl-vep:latest"
+  label 'retry_before_ignoring'
+
+  cache false
+
   input:
     val ready
     val species
@@ -101,7 +105,7 @@ process store_pph2_scores {
   """
   store_polyphen_scores.pl $species ${params.port} ${params.host} \
                            ${params.user} ${params.pass} ${params.database} \
-                           ${peptide.seqString} $weka_output $model
+                           \${peptide_seq} ${weka_output} ${model}
   """
 }
 

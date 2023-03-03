@@ -31,8 +31,7 @@ process align_peptides {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'medmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     val peptide
@@ -69,8 +68,7 @@ process run_sift_on_all_aminoacid_substitutions {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'medmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
   publishDir "${params.outdir}/sift"
 
   input:
@@ -92,6 +90,8 @@ process run_sift_on_all_aminoacid_substitutions {
 process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
+
+  cache false
 
   input:
     val ready
