@@ -126,7 +126,7 @@ sub run_variation_checks {
         #the expectation is that any new rsID that has to be inserted is a new one (not in dbSNP import)
         #given that approx. 650mil variation is already known, the new rsID should have a bigger number than that
         my $number = $var{name}  =~ s/rs//r;
-        warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if $number < 650000000;
+        warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if ($number < 650000000 && $DEBUG == 1);
 
         $var{fail_reasons} = run_checks(\%var);
 
@@ -145,12 +145,12 @@ sub run_variation_checks {
             $insert_failed_var_set_var_sth->execute($var{id}, $set_id->[0]->[0]);
             # update variation_feature variation_set_id
             $update_failed_var_feat_sth->execute($set_id->[0]->[0], $var{id});
-        } else {
-            warn $var{name}, "\n" if $DEBUG == 1;
+        } elsif($DEBUG == 1) {
+            warn $var{name}, "\n";
         }
     }
-    warn "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
-    warn "ClinVar imported variant names: \n", join "\n", keys %clinvar_vars, "\n";
+    print "ClinVar imported variants: ", defined $status{all} ? $status{all} : 0, ", failed: ", defined $status{fail} ? $status{fail} : 0, "\n";
+    print "ClinVar imported variant names: \n", join "\n", keys %clinvar_vars, "\n";
 }
 
 ## call standard QC checks & return string of failure reasons
@@ -193,7 +193,7 @@ sub run_checks{
 sub update_variation{
   my $dbh = shift;
 
-  warn "starting  update_variation\n";
+  print "Starting update_variation...\n" if $DEBUG == 1;
 
   my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
                                             from   variation, phenotype_feature, phenotype_feature_attrib, source, attrib_type
@@ -227,7 +227,7 @@ sub update_variation{
     ## only variants with associated statuses to go into set
     $assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
-    $l->[1]  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+    $l->[1]  =~ s/\//\,/g ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
     $l->[1]  =~ s/\;\s+/\,/g ; # convert 'uncertain significance; risk factor' to 'uncertain significance,risk factor'
     $l->[1]  =~ s/\,\s+/\,/g ; # convert 'likely benign, other' to 'likely benign,other' or 'benign, association, risk factor' to 'benign,association,risk factor'
     #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
@@ -249,15 +249,17 @@ sub update_variation{
         $var_upd_sth->execute($statuses, $var);
         $varf_upd_sth->execute($statuses, $var);
       } catch {
-        warn "var:$var<>statuses:$statuses<\n";
+        warn "variation_id:$var<>statuses:$statuses<\n";
         warn "issue with:@_\n";
         next;
       }
   }
 
-  return \%assoc;
+  print "Starting update_variation... done\n" if $DEBUG == 1;
 
+  return \%assoc;
 }
+
 sub add_to_set{
 
     my ($dbh, $variation_ids ) = @_;
@@ -271,11 +273,11 @@ sub add_to_set{
 
 
     foreach my $var ( keys %{$variation_ids} ){
-	## update 'all clinvar' set
-	$vsv_ins_sth->execute( $var, $all_set_id );
-	## update 'clinically associated' set
-	$vsv_ins_sth->execute( $var, $clin_set_id ) 
-	    if defined $variation_ids->{$var}{C} && $variation_ids->{$var}{C} == 1;
+    ## update 'all clinvar' set
+    $vsv_ins_sth->execute( $var, $all_set_id );
+    ## update 'clinically associated' set
+    $vsv_ins_sth->execute( $var, $clin_set_id ) 
+      if defined $variation_ids->{$var}{C} && $variation_ids->{$var}{C} == 1;
     }
 }
 
@@ -289,13 +291,13 @@ sub get_set{
     ## info on sets
     my $data =      {
 
-	'clin_assoc' => {
-	    'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
-	    'name' => 'Clinically associated'},
+   'clin_assoc' => {
+      'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
+      'name' => 'Clinically associated'},
 
-	'ClinVar'           => {
-	    'desc' => 'Variants with ClinVar annotation',
-	    'name' => 'All ClinVar'},
+      'ClinVar'           => {
+      'desc' => 'Variants with ClinVar annotation',
+      'name' => 'All ClinVar'},
     };
 
     my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib 
@@ -318,51 +320,52 @@ sub get_set{
     my $set_id = $set_ext_sth->fetchall_arrayref();
 
     if (defined $set_id->[0]->[0] ){
-	## remove old set content
-	$set_del_sth->execute($set_id->[0]->[0]);
-	return $set_id->[0]->[0] ;
+      ## remove old set content
+      $set_del_sth->execute($set_id->[0]->[0]);
+      return $set_id->[0]->[0] ;
     }
 
     ### enter new set record
-
     $attrib_ext_sth->execute( $set);
     my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
     die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
 
     $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] ); 
-    $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
+    $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id)) or die "no insert id for set $set\n";
 
     return $set_id;
-
 }
 
 
 
 ## check for unsupported characters in phenotype names 
 sub check_phenotype_names{
+  my $dbh = shift;
 
-    my $dbh = shift;
+  my $pheno_ext_sth = $dbh->prepare(qq[ select phenotype_id, description from phenotype ]);
+  $pheno_ext_sth->execute() or die;
 
-    my $pheno_ext_sth = $dbh->prepare(qq[ select phenotype_id, description from phenotype ]);
-    $pheno_ext_sth->execute()||die;
-
-    my $ph =  $pheno_ext_sth->fetchall_arrayref();
-    foreach my $l (@{$ph}){
-
-	warn "Phenotype id:$l->[0] has no description\n" unless defined $l->[1];
-
-	my $full = $l->[1];
-	$l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
-
-	warn "Phenotype : $full (id:$l->[0]) looks suspect\n" if(length($l->[1]) >0);
-
+  my $ph =  $pheno_ext_sth->fetchall_arrayref();
+  foreach my $l (@{$ph}){
+    if (!defined $l->[1]) {
+      warn "Phenotype id:$l->[0] has no description\n";
     }
+
+    my $full = $l->[1];
+    $l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
+
+    if(length($l->[1]) > 0 && $DEBUG == 1) {
+      warn "Phenotype : $full (id:$l->[0]) looks suspect\n";
+    }
+  }
 }
 
 ## basic report on imported data
 sub check_counts{
  
    my $dbh = shift;
+
+   print "*** Imported data report ***\n";
 
    my $var_count_ext_sth   = $dbh->prepare(qq[ select count(*) from variation 
                                                where clinical_significance is not null 
@@ -404,55 +407,56 @@ sub check_counts{
                                            AND vsv.variation_set_id = vs.variation_set_id
                                            AND a.value = ? ]);
 
-   $pheno_count_ext_sth->execute( $SOURCENAME )||die;
-   my $ph =  $pheno_count_ext_sth->fetchall_arrayref();
-   warn "$ph->[0]->[0] phenotype_feature entries from ClinVar\n";
+  $pheno_count_ext_sth->execute( $SOURCENAME ) or die;
+  my $ph =  $pheno_count_ext_sth->fetchall_arrayref();
+  print "$ph->[0]->[0] phenotype_feature entries from ClinVar\n";
 
-   $var_count_ext_sth->execute()||die;
-   my $var =  $var_count_ext_sth->fetchall_arrayref();
-   warn "$var->[0]->[0] variation entries with ClinVar statuses\n";
+  $var_count_ext_sth->execute() or die;
+  my $var =  $var_count_ext_sth->fetchall_arrayref();
+  print "$var->[0]->[0] variation entries with ClinVar statuses\n";
 
-   $varf_count_ext_sth->execute()||die;
-   my $varf =  $varf_count_ext_sth->fetchall_arrayref();
-   warn "$varf->[0]->[0] variation_feature entries with ClinVar statuses\n";
+  $varf_count_ext_sth->execute() or die;
+  my $varf =  $varf_count_ext_sth->fetchall_arrayref();
+  print "$varf->[0]->[0] variation_feature entries with ClinVar statuses\n";
 
-   foreach my $set ('Clinically associated variants', 'All ClinVar'){
-       $set_count_ext_sth->execute($set)||die;
-       my $set_count =  $set_count_ext_sth->fetchall_arrayref();
-       warn "$set_count->[0]->[0] variation entries in $set set\n";
-   }
+  foreach my $set ('Clinically associated variants', 'All ClinVar'){
+    $set_count_ext_sth->execute($set) or die;
+    my $set_count =  $set_count_ext_sth->fetchall_arrayref();
+    print "$set_count->[0]->[0] variation entries in $set set\n";
+  }
 
-   $featless_count_ext_sth->execute()||die;
-   my $featless =  $featless_count_ext_sth->fetchall_arrayref();
-   warn "$featless->[0]->[0] phenotype entries have no phenotype features\n";
+  $featless_count_ext_sth->execute() or die;
+  my $featless =  $featless_count_ext_sth->fetchall_arrayref();
+  print "$featless->[0]->[0] phenotype entries have no phenotype features\n";
 
-   my %class_count;
-   warn "\nGetting counts by class\n";
-   $class_count_ext_sth->execute()||die;
-   my $class_num = $class_count_ext_sth->fetchall_arrayref();
-   foreach my $l(@{$class_num}){
-       warn "$l->[1]\t$l->[0]\n";
-       $class_count{$l->[0]} = $l->[1];
-   }
+  my %class_count;
+  print "\nGetting counts by class\n";
+  $class_count_ext_sth->execute() or die;
+  my $class_num = $class_count_ext_sth->fetchall_arrayref();
+  foreach my $l(@{$class_num}){
+    print "$l->[1]\t$l->[0]\n";
+    $class_count{$l->[0]} = $l->[1];
+  }
 
+  $class_ext_sth->execute() or die;
+  my $classes = $class_ext_sth->fetchall_arrayref();
+  foreach my $l(@{$classes}){
+    print "\nNo variants with class: $l->[0]\n"  unless defined $class_count{$l->[0]} ;
+  }
 
-   $class_ext_sth->execute()||die;
-   my $classes = $class_ext_sth->fetchall_arrayref();
-   foreach my $l(@{$classes}){
-       warn "\nNo variants with class: $l->[0]\n"  unless defined  $class_count{$l->[0]} ;
-   }
+  #get OMIM variant set count:
+  $omim_set_ext_sth->execute( "ph_omim"); #get OMIM set id
+  my $omim_set_count = $omim_set_ext_sth->fetchrow_array();
+  print "OMIM set variants: ", $omim_set_count, "\n";
 
-   #get OMIM variant set count:
-   $omim_set_ext_sth->execute( "ph_omim"); #get OMIM set id
-   my $omim_set_count = $omim_set_ext_sth->fetchrow_array();
-   warn "OMIM set variants: ", $omim_set_count, "\n";
+  print "Getting ClinVar phenotype_attrib counts\n";
+  $pheno_attrib_ext_sth->execute() or die;
+  my $rows = $pheno_attrib_ext_sth->fetchall_arrayref();
+  foreach my $row(@{$rows}) {
+    print join(': ', @{$row}), "\n";
+  }
 
-   warn "Getting ClinVar phenotype_attrib counts\n";
-   $pheno_attrib_ext_sth->execute()||die;
-   my $rows = $pheno_attrib_ext_sth->fetchall_arrayref();
-   foreach my $row(@{$rows}) {
-     warn join(': ', @{$row}), "\n";
-   }
+  print "******\n";
 }
 
 ## check for and remove 'not provided' phenotypes
@@ -475,7 +479,7 @@ sub delete_pheno_less{
  
     #my $pheno_del_sth   = $dbh->prepare(qq[  delete from phenotype where phenotype_id = ?  ]);
 
-    $pheno_ext_sth->execute()||die;
+    $pheno_ext_sth->execute() or die;
     my $id =  $pheno_ext_sth->fetchall_arrayref();
 
    
@@ -483,8 +487,8 @@ sub delete_pheno_less{
  
     die "Error - no phenotypes called . - not cleaning up\n"  unless defined $id->[0]->[0] ;
 
-    $pheno_attrib_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
-    $pheno_feature_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
+    $pheno_attrib_del_sth->execute( $SOURCENAME,  $id->[0]->[0] ) or die ;
+    $pheno_feature_del_sth->execute( $SOURCENAME,  $id->[0]->[0] ) or die ;
 
 }
 
