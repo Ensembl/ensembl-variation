@@ -126,7 +126,7 @@ sub run_variation_checks {
         #the expectation is that any new rsID that has to be inserted is a new one (not in dbSNP import)
         #given that approx. 650mil variation is already known, the new rsID should have a bigger number than that
         my $number = $var{name}  =~ s/rs//r;
-        warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if $number < 650000000 if $DEBUG == 1;
+        warn "WARNING: clinvar rsID less than 650mil, likely typo! $var{name} \n" if ($number < 650000000 && $DEBUG == 1);
 
         $var{fail_reasons} = run_checks(\%var);
 
@@ -331,7 +331,7 @@ sub get_set{
     die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
 
     $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] ); 
-    $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
+    $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id)) or die "no insert id for set $set\n";
 
     return $set_id;
 }
@@ -431,14 +431,14 @@ sub check_counts{
 
   my %class_count;
   print "\nGetting counts by class\n";
-  $class_count_ext_sth->execute()||die;
+  $class_count_ext_sth->execute() or die;
   my $class_num = $class_count_ext_sth->fetchall_arrayref();
   foreach my $l(@{$class_num}){
     print "$l->[1]\t$l->[0]\n";
     $class_count{$l->[0]} = $l->[1];
   }
 
-  $class_ext_sth->execute()||die;
+  $class_ext_sth->execute() or die;
   my $classes = $class_ext_sth->fetchall_arrayref();
   foreach my $l(@{$classes}){
     print "\nNo variants with class: $l->[0]\n"  unless defined $class_count{$l->[0]} ;
@@ -450,7 +450,7 @@ sub check_counts{
   print "OMIM set variants: ", $omim_set_count, "\n";
 
   print "Getting ClinVar phenotype_attrib counts\n";
-  $pheno_attrib_ext_sth->execute()||die;
+  $pheno_attrib_ext_sth->execute() or die;
   my $rows = $pheno_attrib_ext_sth->fetchall_arrayref();
   foreach my $row(@{$rows}) {
     print join(': ', @{$row}), "\n";
@@ -479,7 +479,7 @@ sub delete_pheno_less{
  
     #my $pheno_del_sth   = $dbh->prepare(qq[  delete from phenotype where phenotype_id = ?  ]);
 
-    $pheno_ext_sth->execute()||die;
+    $pheno_ext_sth->execute() or die;
     my $id =  $pheno_ext_sth->fetchall_arrayref();
 
    
@@ -487,8 +487,8 @@ sub delete_pheno_less{
  
     die "Error - no phenotypes called . - not cleaning up\n"  unless defined $id->[0]->[0] ;
 
-    $pheno_attrib_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
-    $pheno_feature_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
+    $pheno_attrib_del_sth->execute( $SOURCENAME,  $id->[0]->[0] ) or die ;
+    $pheno_feature_del_sth->execute( $SOURCENAME,  $id->[0]->[0] ) or die ;
 
 }
 
