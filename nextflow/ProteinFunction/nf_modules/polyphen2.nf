@@ -35,7 +35,7 @@ process run_pph2_on_all_aminoacid_substitutions {
     val peptide
 
   output:
-    path '*_scores.txt'
+    path '*_scores.txt', optional: true
 
   afterScript 'rm -rf *.fa *.subs tmp/'
 
@@ -78,8 +78,7 @@ process run_weka {
     path pph2_out
 
   output:
-    path '*.txt', emit: results
-    val "${model}", emit: model
+    tuple path('*.txt'), val("${model}")
 
   """
   run_weka.pl -l /opt/pph2/models/${model} ${pph2_out} \
@@ -98,11 +97,10 @@ process store_pph2_scores {
   input:
     val ready
     val species
-    val peptide
-    path weka_output
-    val model
+    tuple path(weka_output), val(model)
 
   """
+  peptide_seq=`sort -u -n -k2,2 ${weka_output} | awk '{ print \$3 }' | sed 1d | tr -d '\n'`
   store_polyphen_scores.pl $species ${params.port} ${params.host} \
                            ${params.user} ${params.pass} ${params.database} \
                            \${peptide_seq} ${weka_output} ${model}
@@ -132,6 +130,5 @@ workflow run_pph2_pipeline {
                           "HumVar.UniRef100.NBd.f11.model")
   run_weka(weka_model, run_pph2_on_all_aminoacid_substitutions.out)
   store_pph2_scores(wait, // wait for data deletion
-                    params.species, translated,
-                    run_weka.out.results, run_weka.out.model)
+                    params.species, run_weka.out)
 }
