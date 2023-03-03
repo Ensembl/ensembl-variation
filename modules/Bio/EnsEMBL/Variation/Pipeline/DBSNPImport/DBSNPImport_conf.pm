@@ -136,9 +136,18 @@ sub pipeline_analyses {
       -logic_name        => 'load_dbsnp_file',
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::LoadDBSNPFile',
       -rc_name           => 'default_mem',
-      -max_retry_count   => 0,
-      -analysis_capacity => 8,
+      -analysis_capacity => 30,
+      -flow_into => {
+          2 => {'dump_dbsnp_file' => INPUT_PLUS()},
+       },
     },
+    # {
+    #   -logic_name        => 'dump_dbsnp_file',
+    #   -module            => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::DumpDBSNPFile',
+    #   -rc_name           => 'default_mem',
+    #   -max_retry_count   => 0,
+    #   -analysis_capacity => 8,
+    # },
     {
       -logic_name => 'report_dbsnp_import',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::ReportDBSNPImport',

@@ -96,7 +96,17 @@ sub run {
   my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
   if ($return_value) {
       die("there was an error running as ($flat_cmd: $stderr)");
-  }  
+  }
+
+  # set up the list of sub_dir
+  $self->param('sub_dirs', [ map { {sub_dir => $_} } @sub_dirs]);
+
+}
+
+sub write_output {
+  my $self = shift @_;
+
+  $self->dataflow_output_id($self->param('sub_dirs'), 2);
 }
 
 1;
