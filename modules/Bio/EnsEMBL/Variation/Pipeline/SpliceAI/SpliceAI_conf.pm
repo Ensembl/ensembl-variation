@@ -83,11 +83,23 @@ sub default_options {
 
 sub resource_classes {
     my ($self) = @_;
+
+    my $step_size = $self->o('step_size');
+    my $time = 4;
+    if($step_size > 4000) {
+      $time = $step_size/1000;
+    }
+
     return {
         %{$self->SUPER::resource_classes},
-        '8Gb_8c_job'  => { 'SLURM' => "--cpus-per-task=8 --partition=standard --time=4:00:00 --mem=8G" },
-        '4Gb_job'     => { 'SLURM' => "--partition=standard --time=4:00:00 --mem=4G" },
-        'default'     => { 'SLURM' => "--partition=standard --time=1:00:00 --mem=1G" },
+        '8Gb_8c_job'  => { 'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000',
+                           'SLURM' => "--cpus-per-task=8 --partition=standard --time=$time:00:00 --mem=8G"
+                         },
+        '4Gb_job'     => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
+                           'SLURM' => "--partition=standard --time=$time:00:00 --mem=4G"
+                         },
+        'default'     => { 'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+                           'SLURM' => "--partition=standard --time=1:00:00 --mem=1G" }
     };
 }
 
