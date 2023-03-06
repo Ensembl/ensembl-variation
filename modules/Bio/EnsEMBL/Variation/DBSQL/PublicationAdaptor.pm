@@ -513,8 +513,9 @@ sub remove_publication_by_dbID {
     qq[ update variation set display = ? where variation_id = ? ]);
   my $update_variation_feature_display_sth = $dbh->prepare(
     qq[ update variation_feature set display = ? where variation_id = ? ]);
-  my $update_variation_transcript_display_sth = $dbh->prepare(
-    qq[ update variation_transcript set display = ? where variation_id = ? ]);
+  my $update_transcript_variation_display_sth = $dbh->prepare(
+    qq[ update transcript_variation set display = ? where variation_feature_id IN
+        (select variation_feature_id from variation_feature where variation_id = ?) ]);
 
   my $remove_cited_evidence = qq[
     update %s
@@ -540,7 +541,7 @@ sub remove_publication_by_dbID {
       unless (@$phenos) {
         $update_variation_display_sth->execute(0, $var_id);
         $update_variation_feature_display_sth->execute(0, $var_id);
-        #$update_variation_transcript_display_sth->execute(0, $var_id);
+        $update_transcript_variation_display_sth->execute(0, $var_id);
       }
     }
 
