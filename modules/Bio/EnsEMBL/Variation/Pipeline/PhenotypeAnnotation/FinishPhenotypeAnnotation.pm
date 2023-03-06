@@ -248,9 +248,10 @@ sub process_output_ids {
         my ($host) = ( split(/\./, $host_domain) );
         my $port = $adaptor->dbc()->port();
         my $user = $adaptor->dbc()->user();
+        my $pass = $adaptor->dbc()->pass();
         my $old_release_number = ( $self->param('ensembl_release') - 1 );
         
-        $old_server_uri = "mysql://" . ${user} . "@" . ${host} . ":" . ${port} . "/" . $old_release_number;
+        $old_server_uri ||= sprintf("mysql://%s:%s@%s:%s/%s", $user, $pass, $host, $port, $old_release_number);
       }
       
       push @dc_params, { dbname => $dbname, old_server_uri => [ $old_server_uri ] }; 
