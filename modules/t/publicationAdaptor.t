@@ -144,4 +144,28 @@ my $variation_no_citation = $va->fetch_by_dbID(39404961);
 my $publications_no_citation = $pa->fetch_all_by_Variation($variation_no_citation);
 ok(!$publications_no_citation->[0]->{variation_id_to_source}, 'fetch_all_by_Variation - source not defined');
 
+# Delete one (and only) publication for a failed variant
+my $var_id = 14128071;
+$variation = $va->fetch_by_dbID($var_id);
+ok($variation->is_failed, "failed variant");
+ok(grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
+   "variant has 'Cited' evidence");
+
+$publications = $variation->get_all_Publications();
+ok(scalar @$publications == 1, "one publication associated with failed variant");
+
+my $vf = $variation->get_all_VariationFeatures();
+ok(scalar @$vf == 1, "one variationFeature associated with variant");
+ok($vf->[0]->{'display'} == 1, "variationFeature with display = 1");
+
+my $pub_id = $publications->[0]->dbID;
+$pa->remove_publication_by_dbID($pub_id);
+ok(!defined $pa->fetch_by_dbID($pub_id), "publication removed");
+ok(scalar @{ $variation->get_all_Publications()} == 0,
+   "no publications associated with failed variant after removing publication");
+ok(!grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
+   'No "Cited" attribute');
+ok($variation->get_all_VariationFeatures()->[0]->{'display'} == 0,
+   "variationFeature with display = 0 after removing publication");
+
 done_testing();

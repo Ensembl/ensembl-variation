@@ -540,7 +540,7 @@ sub remove_publication_by_dbID {
       unless (@$phenos) {
         $update_variation_display_sth->execute(0, $var_id);
         $update_variation_feature_display_sth->execute(0, $var_id);
-        $update_variation_transcript_display_sth->execute(0, $var_id);
+        #$update_variation_transcript_display_sth->execute(0, $var_id);
       }
     }
 
