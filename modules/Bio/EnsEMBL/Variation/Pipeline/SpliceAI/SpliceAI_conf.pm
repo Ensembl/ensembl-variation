@@ -98,7 +98,7 @@ sub resource_classes {
         '4Gb_job'     => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
                            'SLURM' => "--partition=standard --time=$time:00:00 --mem=4G"
                          },
-        'default'     => { 'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        'default'     => { 'LSF' => '-R"select[mem>1000] rusage[mem=1000]" -M1000',
                            'SLURM' => "--partition=standard --time=1:00:00 --mem=1G" }
     };
 }
