@@ -176,7 +176,7 @@ sub default_options {
         # if set, runs the datachecks analysis jobs
         # can be overwritten when running the pipeline
 
-        run_dc                  => 1,
+        run_dc                  => 0,
 
         # the uri of the database server which stores the database of previous release
         # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
