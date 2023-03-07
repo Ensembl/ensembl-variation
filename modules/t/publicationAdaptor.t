@@ -153,19 +153,24 @@ ok(grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
 
 $publications = $variation->get_all_Publications();
 ok(scalar @$publications == 1, "one publication associated with failed variant");
+$publications->[0]->variations(); # get all variations
 
 my $vf = $variation->get_all_VariationFeatures();
 ok(scalar @$vf == 1, "one variationFeature associated with variant");
 ok($vf->[0]->{'display'} == 1, "variationFeature with display = 1");
 
-my $pub_id = $publications->[0]->dbID;
-$pa->remove_publication_by_dbID($pub_id);
-ok(!defined $pa->fetch_by_dbID($pub_id), "publication removed");
+$pa->remove_publication_by_dbID($publications->[0]->dbID);
+ok(!defined $pa->fetch_by_dbID($publications->[0]->dbID), "publication removed");
 ok(scalar @{ $variation->get_all_Publications()} == 0,
    "no publications associated with failed variant after removing publication");
 ok(!grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
-   'No "Cited" attribute');
+   "No 'Cited' attribute");
 ok($variation->get_all_VariationFeatures()->[0]->{'display'} == 0,
    "variationFeature with display = 0 after removing publication");
+
+# Re-add publication and confirm if working
+$pa->store($pub, 1);
+$pubs = $va->fetch_by_name('rs7698608')->get_all_Publications();
+ok($pub->title() eq $pubs->[0]->title(), 'publication re-added with associated variants');
 
 done_testing();
