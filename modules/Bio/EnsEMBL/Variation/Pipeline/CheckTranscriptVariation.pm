@@ -70,7 +70,7 @@ sub run {
                                 $user, $pass, $host, $port, $release);
     }
 
-    $self->param('dc_output_ids', { 'group' => 'variation_effect', 'old_server_uri' => [ $old_server_uri ] });
+    $self->param('dc_output_ids', { name => $dbname, old_server_uri => [ $old_server_uri ] });
     if ($self->param('run_dc')) {
       $self->dataflow_output_id($self->param('dc_output_ids'), 1);
     }
