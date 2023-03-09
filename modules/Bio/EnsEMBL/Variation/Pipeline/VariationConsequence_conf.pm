@@ -161,26 +161,21 @@ sub default_options {
 
         # a file containing history of datachecks ran potentially used to determine
         # if a datacheck can be skipped
-
         history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
 
         #  output dir where datacheck result will be stored
-
         dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
 
         # if set, fails the datacheck pipeline job if the datacheck fails
         # can be overwritten when running the pipeline
-
         failures_fatal          => 1,
 
         # if set, runs the datachecks analysis jobs
         # can be overwritten when running the pipeline
-
         run_dc                  => 0,
 
         # the uri of the database server which stores the database of previous release
         # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
-
         old_server_uri          => undef,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
@@ -398,7 +393,7 @@ sub pipeline_analyses {
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
             -parameters => {
               @common_params,
-              run_dc          => $self->o('run_dc'),
+              run_dc          => !$self->o('run_dc') && ($self->o('species') !~ /homo_sapiens|human/) ? 1 : $self->o('run_dc'),
               old_server_uri  => $self->o('old_server_uri'),
               ensembl_release => $self->o('ensembl_release'),
               species         => $self->o('species')
