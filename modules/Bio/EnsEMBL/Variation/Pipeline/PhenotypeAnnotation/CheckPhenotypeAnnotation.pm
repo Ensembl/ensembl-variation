@@ -346,7 +346,7 @@ sub check_fk{
 
   $featless_count_ext_sth->execute()||die;
   my $featless_count = $featless_count_ext_sth->fetchall_arrayref();
-  $self->print_logFH("$featless_count->[0]->[0] phenotype entries with no phenotype_feature entry (expected: 0)\n");
+  $self->print_logFH("$featless_count->[0]->[0] phenotype entries with no phenotype_feature entry (expected: 0; should be auto-cleaned by pipeline)\n");
 
   $attribless_count_ext_sth->execute()||die;
   my $attrless_count = $attribless_count_ext_sth->fetchall_arrayref();
