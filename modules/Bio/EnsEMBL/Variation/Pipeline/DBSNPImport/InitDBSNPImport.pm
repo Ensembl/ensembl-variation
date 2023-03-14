@@ -44,13 +44,6 @@ use POSIX;
 
 my @chrs = (22, 'Y', 'MT');
 
-sub fetch_input {
-  my $self = shift;
-
-  my $data_dir = $self->param_required('data_dir');
-
-}
-
 sub run {
   my $self = shift;
   
@@ -91,6 +84,7 @@ sub write_output {
   my $self = shift @_;
 
   $self->dataflow_output_id($self->param('sub_dirs'), 2);
+  $self->dataflow_output_id()
 }
 
 
