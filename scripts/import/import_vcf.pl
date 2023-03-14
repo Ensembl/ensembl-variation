@@ -735,7 +735,13 @@ sub main {
       }
 
       if(defined($config->{chr_synonyms_list})) {
-        $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        # Mastermind always uses the chromosome synonyms
+        if($config->{source} eq 'Mastermind') {
+          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        }
+        elsif($config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}}) {
+          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        }
       }
 
       if(!defined($config->{seq_region_ids}->{$chromosome})) {
@@ -2000,7 +2006,13 @@ sub variation_feature {
   my $existing_vfs = [];
 
   my $chromosome = $vf->{chr};
-  $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms};
+  # Mastermind always uses the chromosome synonyms
+  if($config->{source} eq 'Mastermind') {
+    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
+  }
+  else {
+    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms} && $config->{chr_synonyms_list}->{$vf->{chr}};
+  }
 
   $existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
 
