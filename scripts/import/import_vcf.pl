@@ -2010,8 +2010,8 @@ sub variation_feature {
   if($config->{source} eq 'Mastermind') {
     $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
   }
-  else {
-    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms} && $config->{chr_synonyms_list}->{$vf->{chr}};
+  elsif($config->{chr_synonyms} && $config->{chr_synonyms_list}->{$vf->{chr}}) {
+    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
   }
 
   $existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
