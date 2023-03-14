@@ -2007,7 +2007,7 @@ sub variation_feature {
 
   my $chromosome = $vf->{chr};
   # Mastermind always uses the chromosome synonyms
-  if($config->{source} eq 'Mastermind') {
+  if($config->{chr_synonyms} && $config->{source} eq 'Mastermind') {
     $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
   }
   elsif($config->{chr_synonyms} && $config->{chr_synonyms_list}->{$vf->{chr}}) {
