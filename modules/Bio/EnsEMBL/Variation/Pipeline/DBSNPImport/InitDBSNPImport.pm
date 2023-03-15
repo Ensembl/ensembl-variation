@@ -84,7 +84,7 @@ sub write_output {
   my $self = shift @_;
 
   $self->dataflow_output_id($self->param('sub_dirs'), 2);
-  $self->dataflow_output_id()
+
 }
 
 
