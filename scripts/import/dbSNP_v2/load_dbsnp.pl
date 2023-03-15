@@ -134,31 +134,6 @@ if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
   }
 }
 
-$ImportUtils::TMP_DIR = $TMP_DIR;
-$ImportUtils::TMP_FILE = "variation_" . $TMP_FILE;
-## Load variation dump file
-# load($config->{'dbh_var'},
-#   ("variation", 
-#     ("variation_id", "name", "source_id", "evidence_attribs",
-#     "display", "class_attrib_id")
-#   )
-# );
-
-$ImportUtils::TMP_FILE = "variation_feature_" . $TMP_FILE;
-# ## Load variation_feature dump file
-# load($config->{'dbh_var'},
-#   ("variation_feature", 
-#     ("variation_name", "map_weight", "seq_region_id",
-#     "seq_region_start", "seq_region_end", "seq_region_strand",
-#     "variation_id", "allele_string", "ancestral_allele",
-#     "source_id", "variation_set_id", "class_attrib_id",
-#     "evidence_attribs", "display")
-#   )
-# );
-
-# system("rm $TMP_DIR/variation_$TMP_FILE");
-# system("rm $TMP_DIR/variation_feature_$TMP_FILE");
-
 # report_summary($config, $num_lines);
 
 # Set up the reporting files
@@ -1136,8 +1111,9 @@ sub import_refsnp {
   if (%{$rs_data->{'variant_fails'}}) {
     add_variant_fails($dbh, $variation_id, $rs_data->{'variant_fails'});
   } 
-  #add_failed_variation();
-  #add_publication();
+  
+  $VAR_ID++;
+
 }
 
 sub import_batch {
@@ -1177,8 +1153,6 @@ sub import_variation {
   dump_file($fhs{"variation"}, @columns);
 
   my $db_variation_id = $VAR_ID;
-
-  $VAR_ID++;
 
   return $db_variation_id;
 }
