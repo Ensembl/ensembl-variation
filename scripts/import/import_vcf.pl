@@ -99,6 +99,7 @@ sub configure {
 
     'help|h',
     'input_file|i=s',
+    'output_file=s',
     'tmpdir=s',
     'tmpfile=s',
     'config=s',
@@ -985,11 +986,20 @@ sub main {
 
   my $max_length = (sort {$a <=> $b} map {length($_)} (keys %{$config->{skipped}}, keys %{$config->{rows_added}}))[-1];
 
+  # write to output file
+  if($config->{output_file}) {
+    open(FH, '>>', $config->{output_file}) or die $!;
+  }
+
   # rows added
   debug($config, (defined($config->{test}) ? "(TEST) " : "")."Rows added:");
 
   for my $key(sort keys %{$config->{rows_added}}) {
     debug($config, (defined($config->{forked}) ? "STATS\t" : "").$key.(' ' x (($max_length - length($key)) + 4)).$config->{rows_added}->{$key});
+
+    if($config->{output_file}) {
+      print FH "Rows added\t".$key."\t".$config->{rows_added}->{$key}."\n";
+    }
   }
 
   # vars skipped
@@ -997,9 +1007,17 @@ sub main {
 
   for my $key(sort keys %{$config->{skipped}}) {
     debug($config, (defined($config->{forked}) ? "SKIPPED\t" : "").$key.(' ' x (($max_length - length($key)) + 4)).$config->{skipped}->{$key});
+
+    if($config->{output_file}) {
+      print FH "Lines skipped\t".$key."\t".$config->{skipped}->{$key}."\n";
+    }
   }
 
   store_session($config, "FINISHED");
+
+  if($config->{output_file}) {
+    close(FH);
+  }
 
   debug($config, "Finished!".(defined($config->{forked}) ? " (".$config->{forked}.")" : ""));
 }
