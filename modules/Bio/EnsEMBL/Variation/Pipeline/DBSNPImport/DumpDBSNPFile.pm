@@ -39,8 +39,43 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 use File::Path qw(make_path);
+use ImportUtils qw(load);
+use List::MoreUtils qw(first_index);
+use File::Basename;
 use Bio::EnsEMBL::Variation::Utils::Date;
 use POSIX;
+
+my $TMP_DIR = "/hps/nobackup/flicek/ensembl/variation/diegomscoelho/111/dbSNP_improv";
+my @chrs = ("chr1", 'chr2', 'chrMT', 'other');
+
+my %ids = (
+  "variation_id" => 0,
+  "variation_feature_id"  => 0,
+  "batch_id"  => 0,
+  "failed_variation_id" => 0,
+  "failed_variation_feature_id" => 0,
+  "placement_allele_id"  => 0,
+  "variation_synonym_id"  => 0
+);
+
+my %tables = (
+  "batch_variation" => ["batch_id", "variation_id", "variant_type"],
+  "batch" => ["batch_id", "filename", "parent_filename"],
+  "failed_variation_feature_spdi" => ["variation_feature_id", "spdi_failed_description_id"],
+  "failed_variation_feature" => ["failed_variation_feature_id", "variation_feature_id", "failed_description_id"],
+  "failed_variation" => ["failed_variation_id", "variation_id", "failed_description_id"],
+  "placement_allele" => ["placement_allele_id", "variation_id", "seq_id", "position",
+                          "deleted_sequence", "inserted_sequence", "hgvs"],
+  "tmp_variation_citation" => ["variation_id", "pmid"],
+  "variation" => ["variation_id", "name", "source_id",
+                  "evidence_attribs", "display", "class_attrib_id"],
+  "variation_feature" =>["variation_feature_id" ,"variation_name", "map_weight", "seq_region_id",
+                          "seq_region_start", "seq_region_end", "seq_region_strand",
+                          "variation_id", "allele_string", "ancestral_allele",
+                          "source_id", "variation_set_id", "class_attrib_id",
+                          "evidence_attribs", "display"],
+  "variation_synonym" => ["variation_synonym_id", "variation_id", "source_id", "name"],
+);
 
 sub fetch_input {
   my $self = shift;
@@ -49,50 +84,79 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
-  my %tables = (
-    "batch_variation" => ["name", "source_id",
-                          "minor_allele", "minor_allele_freq", "minor_allele_count",
-                          "evidence_attribs", "display", "class_attrib_id"],
-    "batch" => ["filename", "parent_filename"],
-    "failed_variation_feature_spdi" => ["variation_feature_id", "spdi_failed_description_id"],
-    "failed_variation_feature" => ["variation_feature_id", "failed_description_id"],
-    "failed_variation" => ["variation_id", "failed_description_id"],
-    "placement_allele" => ["variation_id", "seq_id", "position",
-                           "deleted_sequence", "inserted_sequence", "hgvs"],
-    "tmp_variation_citation" => ["variation_id", "pmid"],
-    "variation" => ["variation_id", "name", "source_id",
-                    "evidence_attribs", "display", "class_attrib_id"],
-    "variation_feature" =>["variation_feature_id" ,"variation_name", "map_weight", "seq_region_id",
-                           "seq_region_start", "seq_region_end", "seq_region_strand",
-                           "variation_id", "allele_string", "ancestral_allele",
-                           "source_id", "variation_set_id", "class_attrib_id",
-                           "evidence_attribs", "display"],
-    "variation_synonym" => ["variation_id", "source_id", "name"],
-  );
+  my $var_dba = $self->get_species_adaptor('variation');
+  my $dbh = $var_dba->dbc();
+  my @return_value = sort glob("ls ${TMP_DIR}/split-src/*/tmp*");
 
   # The input_directory is <data-dir>/<sub_dir>
 
-  $ImportUtils::TMP_DIR = $TMP_DIR;
-  $ImportUtils::TMP_FILE = "variation_" . $TMP_FILE;
-  ## Load variation dump file
-  load($config->{'dbh_var'},
-    ("variation", 
-      ("variation_id", "name", "source_id", "evidence_attribs",
-      "display", "class_attrib_id")
-    )
-  );
+  for my $chr (@chrs) {
+    my @chr_files = grep( /${chr}/, @return_value);
+    for my $file (@chr_files) {
+      my $base = basename($file);
+      $base =~ m/tmp_(.*)_refsnp/;
+      my $table = $1;
+      
+      my $count = $ids{"${table}_id"};
 
-  $ImportUtils::TMP_FILE = "variation_feature_" . $TMP_FILE;
-  # ## Load variation_feature dump file
-  load($config->{'dbh_var'},
-    ("variation_feature", 
-      ("variation_name", "map_weight", "seq_region_id",
-      "seq_region_start", "seq_region_end", "seq_region_strand",
-      "variation_id", "allele_string", "ancestral_allele",
-      "source_id", "variation_set_id", "class_attrib_id",
-      "evidence_attribs", "display")
-    )
-  );  
+      if (-e "${TMP_DIR}/tmp_${table}.txt"){
+        $self->increment_and_load_file(${table}, $file, "${TMP_DIR}/tmp_${table}.txt");
+        $ids{"${table}_id"} = count_lines("$file", $count) if (defined($count));
+      } else {
+        $self->run_system_command("cat ${file} > ${TMP_DIR}/tmp_${table}.txt");
+        $ids{"${table}_id"} = count_lines("$file", $count) if (defined($count));
+      }
+    }
+  }
+
+  ## For loop to load all sorted tables
+  for my $table (keys %tables) {
+    $ImportUtils::TMP_DIR = $TMP_DIR;
+    $ImportUtils::TMP_FILE = "tmp_${table}.txt";
+    ## Load variation dump file
+    load($dbh,
+      ("${table}", 
+        @{$tables{"${table}"}}
+      )
+    );
+  }
+
+}
+
+sub count_lines {
+  my ($file, $count) = @_;
+
+  open(FILE, "< $file") or die "can't open $file: $!";
+  $count += tr/\n/\n/ while sysread(FILE, $_, 2 ** 16);
+
+  return $count;
+
+}
+
+sub increment_and_load_file {
+  my $self = shift;
+  my $table = shift;
+  my $file = shift;
+  my $tmp = shift;
+
+  # Find all col_idx
+  my ($cmd_string, $count);
+
+  for my $id (keys %ids) {
+    my $col_idx = first_index { $_ eq $id } @{$tables{"$table"}};
+    next if $col_idx == -1;
+    $col_idx++;
+
+    $count = $ids{"$id"};
+
+    my $sub_string = "\\\$${col_idx}=\\\$${col_idx}+${count}";
+    $cmd_string .= defined($cmd_string)? ";${sub_string}" : "${sub_string}";
+  }
+
+  my $full_cmd = 'awk -F' . '"\\t" ' . '"{' . ${cmd_string} . ';print}" OFS="\\t" ' . ${file} . ' >> ' . ${tmp};
+
+  # Increment + add to main tmp
+  $self->run_system_command($full_cmd);
 
 }
 
