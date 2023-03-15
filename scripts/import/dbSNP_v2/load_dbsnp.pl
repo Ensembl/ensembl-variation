@@ -34,7 +34,6 @@ use File::Basename;
 use POSIX qw(strftime);
 use JSON;
 use FileHandle;
-use ImportUtils qw(load);
 use File::Basename;
 
 my $config = configure();
@@ -45,6 +44,11 @@ print "registry_file = $config->{'registry'}\n";
 my ($TMP_FILE, $TMP_DIR);
 my $VAR_ID = 1;
 my $VF_ID = 1;
+my $BA_ID = 1;
+my $FV_ID = 1;
+my $FVF_ID = 1;
+my $PA_ID = 1;
+my $VS_ID = 1;
 
 my $debug = $config->{'debug'};
 my $lines = 0;
@@ -1367,9 +1371,11 @@ sub import_placement_allele {
       log_errors($config, $var_name, $msg, $info);
     }
 
-    my @columns = ($variation_id, $spdi->{'seq_id'}, $spdi->{'position'}, $spdi->{'deleted_sequence'},
+    my @columns = ($PA_ID, $variation_id, $spdi->{'seq_id'}, $spdi->{'position'}, $spdi->{'deleted_sequence'},
                    $spdi->{'inserted_sequence'}, $pa_hgvs);
     dump_file($fhs{"placement_allele"}, @columns);
+    
+    $PA_ID++;
   }
 }
 
@@ -1408,11 +1414,13 @@ sub import_failed_alleles {
     dump_file($fhs{"failed_variation_feature_spdi"}, @columns);
   }
   if ($allele_string eq 'dbSNP_variant') {
-    my @columns = ($vf_id, 22);
+    my @columns = ($FVF_ID, $vf_id, 22);
     dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   } elsif ($allele_string eq 'dbSNP_novariation') {
-    my @columns = ($vf_id, 4);
+    my @columns = ($FVF_ID, $vf_id, 4);
     dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   }
 }
 
@@ -1424,8 +1432,9 @@ sub import_failed_variation_features {
                           VALUES (
                             ?, ?)]);
   for my $error (sort {$a <=> $b} keys %$errors) {
-    my @columns = ($vf_id, $error);
+    my @columns = ($FVF_ID, $vf_id, $error);
     dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   }
 }
 
@@ -1453,8 +1462,9 @@ sub import_merges {
                             ?,
                             ?)]);
   for my $name (@$merges) {
-    my @columns = ($variation_id, $source_id, $name);
+    my @columns = ($VS_ID, $variation_id, $source_id, $name);
     dump_file($fhs{"variation_synonym"}, @columns);
+    $VS_ID++;
   }
 }
 
@@ -1482,8 +1492,9 @@ sub import_hgvs {
                            ?,
                            ?)]);
   for my $name (@$hgvs) {
-    my @columns = ($variation_id, $source_id, $name);
+    my @columns = ($VS_ID, $variation_id, $source_id, $name);
     dump_file($fhs{"variation_synonym"}, @columns);
+    $VS_ID++;
   }
 }
 
@@ -1513,7 +1524,6 @@ sub import_citations {
   for my $citation (@$citations) {
     my @columns = ($variation_id, $citation);
     dump_file($fhs{"tmp_variation_citation"}, @columns);
-    # $sth->execute($variation_id, $citation);
    }
 }
 
@@ -1529,9 +1539,9 @@ sub add_unmapped_variant {
                              VALUES (?, ?)
                             ]);
   
-  my @columns = ($variation_id, 5);
+  my @columns = ($FV_ID, $variation_id, 5);
   dump_file($fhs{"failed_variation"}, @columns);
-  # $sth->execute($variation_id, 5);
+  $FV_ID++;
 }
 
 sub add_variant_fails {
@@ -1546,9 +1556,9 @@ sub add_variant_fails {
                              VALUES (?, ?)
                             ]);
   for my $fail_id (keys %{$fails}) {
-    my @columns = ($variation_id, $fail_id);
+    my @columns = ($FV_ID, $variation_id, $fail_id);
     dump_file($fhs{"failed_variation"}, @columns);
-    # $sth->execute($variation_id, $fail_id) or die("Error inserting variation fails info");
+    $FV_ID++;
   }
 }
 
@@ -2231,8 +2241,9 @@ sub get_batch_id {
   #               $filename,
   #               $parent_file);
 
-    my @columns = (1, $filename, $parent_file);
+    my @columns = ($BA_ID, $filename, $parent_file);
     dump_file($fhs{"batch"}, @columns);
+    $BA_ID++;
 
   return 1;
 }
