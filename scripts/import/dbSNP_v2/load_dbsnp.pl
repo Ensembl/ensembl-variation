@@ -244,11 +244,6 @@ sub parse_dbSNP_file {
  
   while (my $json_string = <$in>) {
 
-    if ($lines >= $max_lines) {
-      print "Max lines ($max_lines) reached so stopping\n";
-      last;
-    }
-    $lines++;
 
     my $rs_obj = JSON->new->decode($json_string) or throw("ERROR: Failed to read file $inputfile");
     my $refsnp_data = parse_refsnp($config, $rs_obj);
