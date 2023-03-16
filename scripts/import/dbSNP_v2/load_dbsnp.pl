@@ -55,7 +55,6 @@ my $lines = 0;
 
 # TODO these need to be command line options
 my $add_map_weight = 1;
-my $max_lines = 5000000;
 
 init_reports($config);
 
