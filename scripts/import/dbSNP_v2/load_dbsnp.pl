@@ -1363,14 +1363,6 @@ sub check_spdi_lengths {
 sub import_failed_alleles {
   my ($dbh, $vf_id, $allele_errors, $allele_string) = @_;
 
-  my $sth=$dbh->prepare(qq[INSERT INTO failed_variation_feature_spdi
-                           (variation_feature_id, spdi_failed_description_id)
-                          VALUES (
-                            ?, ?)]);
-  my $sth_vf=$dbh->prepare(qq[INSERT INTO failed_variation_feature
-                           (variation_feature_id, failed_description_id)
-                          VALUES (
-                           ?, ?)]);
   for my $ae (@$allele_errors) {
     my @columns = ($vf_id, $ae);
     dump_file($fhs{"failed_variation_feature_spdi"}, @columns);
@@ -1389,10 +1381,6 @@ sub import_failed_alleles {
 sub import_failed_variation_features {
   my ($dbh, $vf_id, $errors) = @_;
 
-  my $sth=$dbh->prepare(qq[INSERT INTO failed_variation_feature
-                           (variation_feature_id, failed_description_id)
-                          VALUES (
-                            ?, ?)]);
   for my $error (sort {$a <=> $b} keys %$errors) {
     my @columns = ($FVF_ID, $vf_id, $error);
     dump_file($fhs{"failed_variation_feature"}, @columns);
@@ -1410,19 +1398,6 @@ sub import_merges {
  
   die("no variation id") if (! $variation_id);
 
-  #'merges' => [
-  #                      'rs17850737',
-  #                      'rs52818902',
-  #                      'rs386571803'
-  #            ],
-  my $sth=$dbh->prepare(qq[INSERT INTO variation_synonym
-                           (variation_id,
-                            source_id,
-                            name) 
-                          VALUES (
-                            ?,
-                            ?,
-                            ?)]);
   for my $name (@$merges) {
     my @columns = ($VS_ID, $variation_id, $source_id, $name);
     dump_file($fhs{"variation_synonym"}, @columns);
@@ -1440,19 +1415,6 @@ sub import_hgvs {
   
   die("no variation id") if (! $variation_id);
 
-  # [
-  #    'NP_000228.1:p.Asn318Ser',
-  #    'NM_000237.2:c.953A>G'
-  # ]
-  #
-  my $sth = $dbh->prepare(qq[INSERT INTO variation_synonym
-                          (variation_id,
-                           source_id,
-                           name)
-                          VALUES (
-                           ?,
-                           ?,
-                           ?)]);
   for my $name (@$hgvs) {
     my @columns = ($VS_ID, $variation_id, $source_id, $name);
     dump_file($fhs{"variation_synonym"}, @columns);
@@ -1476,13 +1438,6 @@ sub import_citations {
   #    'NM_000237.2:c.953A>G'
   #  ]
  
-  # Note doing an INSERT IGNORE just to get past the problem of rs HGVS 
-  # This needs to be removed
-  my $sth = $dbh->prepare(qq[INSERT INTO tmp_variation_citation
-                          (variation_id,
-                           pmid )
-                          VALUES (
-                           ?,?)]);
   for my $citation (@$citations) {
     my @columns = ($variation_id, $citation);
     dump_file($fhs{"tmp_variation_citation"}, @columns);
@@ -1495,11 +1450,6 @@ sub add_unmapped_variant {
   debug("add_unmapped_variant") if ($debug);
 
   die("no variation id") if (! $variation_id);
-
-  my $sth = $dbh->prepare(qq[INSERT INTO failed_variation
-                             (variation_id, failed_description_id)
-                             VALUES (?, ?)
-                            ]);
   
   my @columns = ($FV_ID, $variation_id, 5);
   dump_file($fhs{"failed_variation"}, @columns);
@@ -1513,10 +1463,6 @@ sub add_variant_fails {
 
   die("no variation id") if (! $variation_id);
 
-  my $sth = $dbh->prepare(qq[INSERT INTO failed_variation
-                             (variation_id, failed_description_id)
-                             VALUES (?, ?)
-                            ]);
   for my $fail_id (keys %{$fails}) {
     my @columns = ($FV_ID, $variation_id, $fail_id);
     dump_file($fhs{"failed_variation"}, @columns);
@@ -2194,14 +2140,6 @@ sub format_frequency {
 
 sub get_batch_id {
   my ($dbh, $filename, $parent_file) = @_;
-
-  # $dbh->do(qq{INSERT INTO batch
-  #             (filename, parent_filename)
-  #             VALUES
-  #              (?, ?)},
-  #               undef,
-  #               $filename,
-  #               $parent_file);
 
     my @columns = ($BA_ID, $filename, $parent_file);
     dump_file($fhs{"batch"}, @columns);
