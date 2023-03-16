@@ -42,7 +42,7 @@ use File::Path qw(make_path);
 use Bio::EnsEMBL::Variation::Utils::Date;
 use POSIX;
 
-my @chrs = (22, 'Y', 'MT');
+my @chrs = (1..22, "X", 'Y', 'MT');
 
 sub run {
   my $self = shift;
@@ -51,23 +51,23 @@ sub run {
   my $rpt_dir = $self->param_required('rpt_dir');
 
   if (! -d $data_dir) {
-    die("No data directory ($data_dir)");
+    mkdir $data_dir or die("Could not create data directory ($data_dir)");
   }
 
   if (! -d $rpt_dir) {
-    mkdir $rpt_dir or die("No rpt directory ($rpt_dir)");
+    mkdir $rpt_dir or die("Could not create rpt directory ($rpt_dir)");
   }
 
   my @sub_dirs = map('chr' . $_, @chrs);
   # Add an additional folder to others
-  push @sub_dirs, "chr_other";
+  push @sub_dirs, "other";
 
   for my $sub_dir (@sub_dirs) {
     if (! -d "$data_dir/$sub_dir") {
-      die("No data directory for ${data_dir}/${sub_dir}");
+      mkdir "${data_dir}/${sub_dir}" or die("Could not create ${data_dir}/${sub_dir}");
     }
     if (! -d "$rpt_dir/$sub_dir") {
-      mkdir "$rpt_dir/$sub_dir" or die("No rpt directory for ${rpt_dir}/${sub_dir}");
+      mkdir "$rpt_dir/$sub_dir" or die("Could not create ${rpt_dir}/${sub_dir}");
     }
   }
   # set up the list of sub_dir
