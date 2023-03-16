@@ -61,6 +61,7 @@ sub run {
   my $fasta_file = $self->param_required('fasta_file');
   my $script_dir = $self->param_required('script_dir');
   my $assembly = $self->param_required('assembly');
+  my $clean = $self->param_required('clean');
 
   $self->warning("filename ($filename)");
   $self->warning("subdir ($sub_dir)");
@@ -96,8 +97,9 @@ sub run {
   my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
   if ($return_value) {
       die("there was an error running as ($flat_cmd: $stderr)");
+  } else {
+    $self->run_system_command("rm $input_file") if ($clean);
   }
-
 }
 
 1;
