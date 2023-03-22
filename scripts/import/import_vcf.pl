@@ -85,6 +85,14 @@ my $elapsed = tv_interval($config->{start_time}, [gettimeofday]);
 
 debug($config, "Took $elapsed s");
 
+# Sort variation_feature
+if($config->{sort_vf}) {
+  debug($config, "Starting to sort table variation_feature...");
+  sort_vf_table();
+  debug($config, "Table variation_feature is sorted");
+}
+
+
 sub configure {
 
   # COMMAND LINE OPTIONS
@@ -99,7 +107,7 @@ sub configure {
 
     'help|h',
     'input_file|i=s',
-    'output_file=s',
+    'output_file|o=s',
     'tmpdir=s',
     'tmpfile=s',
     'config=s',
@@ -164,6 +172,7 @@ sub configure {
     'cache=s',
     'fasta=s',
     'chr_synonyms=s',
+    'sort_vf',
 
   # die if we can't parse arguments - better to get user to sort out their command line
   # than potentially do the wrong thing
@@ -2856,6 +2865,14 @@ sub read_chr_synonyms {
   return \%chr_synonyms_list;
 }
 
+# Sort table variation_feature
+sub sort_vf_table {
+  connect_to_dbs();
+  my $dbVar = $config->{dbVar};
+  my $stmt = $dbVar->prepare(qq{ ALTER TABLE variation_feature ORDER BY seq_region_id,seq_region_start,seq_region_end });
+  $stmt->execute() or die ("ERROR: cannot sort table variation_feature");
+}
+
 # prints usage message
 sub usage {
   my $usage =<<END;
@@ -2866,6 +2883,7 @@ Options
 -h | --help           Display this message and quit
 
 -i | --input_file     Input file - if not specified, attempts to read from STDIN
+-o | --output_file    Output file to write the number of imported/skipped lines [optional]
 --tmpdir              Temporary directory to write genotype dump file. Required if
                       writing to compressed_genotype_region
 --tmpfile             Name for temporary file [default: compress.txt]
@@ -2943,6 +2961,8 @@ Options
                       and --skip_tables will be skipped)
 --mart_genotypes      Use this flag to populate the uncompressed genotype tables. These
                       are used only to build BioMart databases
+
+--sort_vf             Sort table variation_feature after import
 
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
