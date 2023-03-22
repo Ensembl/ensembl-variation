@@ -35,6 +35,9 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
+use IO::Handle;
+STDOUT->autoflush(1); # flush STDOUT buffer immediately
+
 sub run {
   my $self = shift;
 
