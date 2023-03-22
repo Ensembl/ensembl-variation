@@ -153,6 +153,8 @@ sub pipeline_analyses {
     {
       -logic_name => 'report_dbsnp_import',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::ReportDBSNPImport',
+      -rc_name           => 'default_mem',
+      -analysis_capacity => 1,
       -max_retry_count   => 0,
     },
   );
