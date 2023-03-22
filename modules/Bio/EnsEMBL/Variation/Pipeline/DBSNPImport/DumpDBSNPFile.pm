@@ -122,7 +122,7 @@ sub run {
   if ($return_value) {
       die("there was an error running as ($flat_cmd: $stderr)");
   } else {
-    $self->run_system_command("mv ${TMP_DIR}/tmp_variation_feature.txt ${TMP_DIR}/tmp_variation_feature.txt.2");
+    $self->run_system_command("rm ${TMP_DIR}/tmp_variation_feature.txt");
     $self->run_system_command("mv ${TMP_DIR}/sorted_tmp_variation_feature.txt ${TMP_DIR}/tmp_variation_feature.txt");
   }
 
