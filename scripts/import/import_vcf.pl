@@ -1293,7 +1293,7 @@ sub run_forks {
       # point the file handle to a tabix pipe
       my $in_file_handle = FileHandle->new;
 
-      $in_file_handle->open("tabix -h ".$config->{input_file}." $chr | ");
+      $in_file_handle->open("tabix -h ".$config->{input_file}." '$chr' | ");
       $config->{in_file_handle} = $in_file_handle;
 
       $config->{pid} = $$;
