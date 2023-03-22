@@ -143,7 +143,7 @@ sub pipeline_analyses {
     {
       -logic_name        => 'dump_dbsnp_file',
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::DumpDBSNPFile',
-      -rc_name           => 'default_mem',
+      -rc_name           => 'high_mem',
       -max_retry_count   => 0,
       -analysis_capacity => 8,
       -flow_into  => {

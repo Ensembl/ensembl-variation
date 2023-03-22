@@ -45,7 +45,6 @@ use File::Basename;
 use Bio::EnsEMBL::Variation::Utils::Date;
 use POSIX;
 
-my $TMP_DIR = "/hps/nobackup/flicek/ensembl/variation/diegomscoelho/111/dbSNP_improv";
 my @chrs = (
   "chr1", "chr2", "chr3", "chr4", "chr5",
   "chr6", "chr7", "chr8", "chr9", "chr10",
@@ -94,6 +93,8 @@ sub run {
   my $var_dba = $self->get_species_adaptor('variation');
   my $dbh = $var_dba->dbc();
 
+  my $TMP_DIR = $self->param_required("pipeline_dir");
+
   # The input_directory is <data-dir>/<sub_dir>
 
   for my $chr (@chrs) {
@@ -114,6 +115,15 @@ sub run {
         $ids{"${table}_id"} = count_lines("$file", $count) if (defined($count));
       }
     }
+  }
+
+  ## Sort variation_feature table
+  my ($return_value, $stderr, $flat_cmd) = $self->run_system_command("sort --parallel=8 --buffer-size=6G -k4,4n -k5,5n -k6,6n -o ${TMP_DIR}/sorted_tmp_variation_feature.txt ${TMP_DIR}/tmp_variation_feature.txt");
+  if ($return_value) {
+      die("there was an error running as ($flat_cmd: $stderr)");
+  } else {
+    $self->run_system_command("mv ${TMP_DIR}/tmp_variation_feature.txt ${TMP_DIR}/tmp_variation_feature.txt.2");
+    $self->run_system_command("mv ${TMP_DIR}/sorted_tmp_variation_feature.txt ${TMP_DIR}/tmp_variation_feature.txt");
   }
 
   ## For loop to load all sorted tables
