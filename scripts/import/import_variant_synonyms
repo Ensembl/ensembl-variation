@@ -429,7 +429,7 @@ sub add_synonyms_uniprot {
   foreach my $rs_id (keys %{$synonyms}) {
     my $variation = $variation_adaptor->fetch_by_name($rs_id);
     unless($variation){
-      warn "Variant $rs_id not found\n"; 
+      warn "Variant $rs_id not found\n" if($DEBUG); 
       next; 
     }
 
@@ -543,7 +543,7 @@ sub import_synonyms {
 
     my $var = $variation_adaptor->fetch_by_name($var_name);
     unless($var){
-      warn "variant $var_name not found\n";
+      warn "variant $var_name not found\n" if($DEBUG);
       next;
     }
     $var->add_synonym($source->name(), $synonyms->{$var_name});
@@ -571,7 +571,7 @@ sub import_synonyms_all_sources {
     my $var = $variation_adaptor->fetch_by_name($var_name); 
 
     unless($var) {
-      warn "variant $var_name not found\n";
+      warn "variant $var_name not found\n" if($DEBUG);
       next; 
     }
   
@@ -612,7 +612,7 @@ sub add_synonym_pig_chip {
       $synonym_ins_sth->execute( $var->dbID, $synonym->[1], $source_id );
     }
     else{
-      warn "Variant $synonym->[0] not found\n";
+      warn "Variant $synonym->[0] not found\n" if($DEBUG);
     }
   }
 }
