@@ -3045,8 +3045,6 @@ sub progress {
   my $prev_pm = $config->{progress_update} / ($prev_elapsed / 60);
   my $total_pm = $count / ($total_elapsed / 60);
 
-  # printf("\r%s - Processed %8i variants (%8.2f per min / %8.2f per min overall ) ( %2i process%2s )", getTime, $count, $prev_pm, $total_pm, $proc, ($proc > 1 ? 'es' : '  '));
-
   $config->{prev_time} = [gettimeofday];
 }
 
