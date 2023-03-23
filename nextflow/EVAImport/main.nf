@@ -30,6 +30,9 @@ params.sort_vf         = true
 
 // Params for variant synonyms import
 params.var_syn_file    = null
+params.host            = null
+params.port            = null
+params.dbname          = null
 
 
 // Check input params
@@ -43,6 +46,10 @@ if(!params.input_file || !file(params.input_file)) {
 
 if(!params.release || !params.registry) {
   exit 1, "ERROR: release version and registry file must be provided when running EVA import"
+}
+
+if( (!params.host || !params.port || !params.dbname) && params.species == "rattus_norvegicus") {
+  exit 1, "ERROR: please provide a host, port and db name for a previous rat database"
 }
 
 
@@ -96,6 +103,9 @@ process run_variant_synonyms {
   val species
   val input_file
   val registry
+  val host
+  val port
+  val dbname
   
   output:
   
@@ -110,7 +120,7 @@ process run_variant_synonyms {
   else if(species == "rattus_norvegicus")
       """
         perl ${var_syn_script} --source_name ${source_name} --species ${species} --data_file ${input_file} --registry ${registry}
-        perl ${var_syn_script} --source_name "rat" --species ${species} --registry ${registry}
+        perl ${var_syn_script} --source_name "rat" --species ${species} --registry ${registry} --host ${host} --port ${port} --user 'ensro' --db_name $dbname
       """
   else 
       """
@@ -123,6 +133,6 @@ workflow {
   // TODO: run script to truncate tables
 
   run_eva(file(eva_script), command_to_run, params.output_file)
-  run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry)
+  run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
 }
