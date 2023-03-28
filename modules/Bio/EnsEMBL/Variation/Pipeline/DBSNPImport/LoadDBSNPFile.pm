@@ -77,6 +77,9 @@ sub run {
   my $data_dir_run = join("/", $data_dir, $sub_dir);
   my $rpt_dir_run = join("/", $rpt_dir, $sub_dir);
 
+  # NEED TO TEST
+  # $self->run_system_command("rm ${data_dir_run}/tmp*");
+
   $self->warning("data_dir_run = $data_dir_run");
   $self->warning("rpt_dir_run = $rpt_dir_run");
   $self->warning("load_script = $load_script");
