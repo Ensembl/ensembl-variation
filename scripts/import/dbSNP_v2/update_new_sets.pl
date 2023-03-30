@@ -148,9 +148,6 @@ sub load_all_variation_sets {
   close FH;
   $sth->finish();
 
-  #dump variation_sets_id to populate the variation_sets table 
-
-  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM temp_variation_set  GROUP BY variation_id;})
 }
 
 sub update_variation_feature_table {
@@ -184,8 +181,16 @@ sub update_variation_feature_table {
 }
 
 sub dump_new_variation_sets {
+  my $dbhvar = shift;
+  my $tmp_num = shift;
+  my $chunk = shift;
+  my $size = shift;
 
-  my $dump_vs = $dbh->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM variation_set_variation GROUP BY variation_id});
+  my $start = $chunk * $tmp_num;
+  my $end = $chunk + $start;
+  $end = $end < $size ? $end : $size;
+  
+  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM variation_set_variation GROUP BY variation_id});
   open (FH, ">>$TMP_DIR/$tmp_vs_file" )
       or die( "Cannot open $TMP_DIR/$tmp_vs_file: $!" );
   $dump_vs->execute();
