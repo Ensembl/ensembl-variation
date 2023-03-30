@@ -30,7 +30,7 @@ my $TMP_DIR = $tmp;
 my $TMP_FILE = "variation_feature.txt";
 my $tmp_vset = "variation_name_set.txt";
 my $tmp_merged = "new_variation_set.txt";
-
+my $tmp_vs_file = "vset_concat.txt";
 my $old_dbh;
 
 # define variants and move through the list
@@ -69,7 +69,9 @@ my $old_dbh;
 
 #temp_table($dbh);
 #load_all_variation_sets($dbh, $tmp_merged);
-update_variation_feature_table($dbh, $tmp_merged);
+update_variation_feature_table($dbh, $tmp_vs_file);
+
+
 
 
 sub temp_table { 
@@ -145,14 +147,17 @@ sub load_all_variation_sets {
   }
   close FH;
   $sth->finish();
+
+  #dump variation_sets_id to populate the variation_sets table 
+
+  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM temp_variation_set  GROUP BY variation_id;})
 }
 
 sub update_variation_feature_table {
   my $dbhvar = shift; 
   my $load_file = shift;
   
-  print("I am here now");
-  my $insert_temp_vf = $dbhvar->prepare(q{ INSERT into variation_feature_bk SELECT * from variation_feature LIMIT 20});
+  my $insert_temp_vf = $dbhvar->prepare(q{ INSERT into variation_feature_bk SELECT * from variation_feature });
   
   $insert_temp_vf->execute();
   $insert_temp_vf->finish();
@@ -160,17 +165,38 @@ sub update_variation_feature_table {
   my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature_bk SET variation_set_id = ? 
                                           WHERE variation_id = ?});
   
+  my %var_data;
   open FH, "<", "$load_file" or die "Can not open $load_file: $!";
   while (<FH>) {
     chomp;
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
     
-    $update_temp_vf->execute($var_set_id, $var_id);
+    $var_data{$var_id} = $var_set_id;
   }
   close FH;
+
+  foreach my $key (keys %var_data){
+    $update_temp_vf->execute($var_data{$key}, $key);
+  }
   $update_temp_vf->finish();
 
+}
+
+sub dump_new_variation_sets {
+
+  my $dump_vs = $dbh->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM variation_set_variation GROUP BY variation_id});
+  open (FH, ">>$TMP_DIR/$tmp_vs_file" )
+      or die( "Cannot open $TMP_DIR/$tmp_vs_file: $!" );
+  $dump_vs->execute();
+
+  while ( my $aref = $dump_vs->fetchrow_arrayref() ) {
+    my @a = map {defined($_) ? $_ : '\N'} @$aref;
+    print FH join("\t", @a), "\n";
+  }
+  
+  $dump_vs->finish();
+  close FH;
 }
 sub dump_old_sql_variation_sets {
   my $dbhvar = shift;
