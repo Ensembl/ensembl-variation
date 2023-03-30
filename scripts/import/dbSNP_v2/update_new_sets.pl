@@ -55,28 +55,32 @@ my $old_dbh;
 #my $min_id = $vf->[0]->[0];
 #my $chunk = 1000000;
 ##my $max_id = $vf->[0]->[1];
+print "Dumping the variation sets and the new variation feature into files \n";
 #for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
  # dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
   #dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
 #}
 
+print "Sorting the files \n";
 #system(sort -u $TMP_FILE );
 #system(sort -u $tmp_vset);
 
+print "Merging the files based on the new variation_id and the old variation set id \n";
 #create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
 
-for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
-}
-
-
+print "Creating temporary tables that would be loaded \n";
 #temp_table($dbh);
+print "Loading new variation sets \n";
 #load_all_variation_sets($dbh, $tmp_merged);
-update_variation_feature_table($dbh, $tmp_vs_file);
 
-for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
-}
+print "Dumping new variation sets into a file to update the variation feature table";
+#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  #dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
+#}
+
+print "Updating the variation_feature table in the new database";
+#update_variation_feature_table($dbh, $tmp_vs_file);
+
 
 
 sub temp_table { 
@@ -100,6 +104,8 @@ sub temp_table {
 }
 
 sub create_merged_file {
+  # this would merge the files variation_feature.txt and variation_name_set.txt using the column they share in common which is the var_name and creates a new file 
+  # which is variation_name_set.txt containing the var_id and var_set_id which would be loaded to the new variation_set table
   my $file = shift; 
   my $second_file = shift;
   my $third_file = shift;
@@ -113,9 +119,10 @@ sub create_merged_file {
     chomp;
     my $key = (split)[0]; # to access the variation name
     my @value = (split)[1]; # to access set ids
+    # checking if the key exists in the dictionary and if it exists it appends the array reference
     if (exists $data{$key}) {
        push @{$data{$key}}, \@value; # push the array reference to the hash
-    } else {
+    } else { # if it does  not exist, it just creates a new key and an array
       push $data{$key} = [\@value];
     }
   }
@@ -123,10 +130,10 @@ sub create_merged_file {
     chomp;
     my $var_name = (split)[1];
     my $var_id = (split)[0];
-    if(exists $data{$var_name}) {
+    if(exists $data{$var_name}) { # checking if the variation_name exists in the dictionary if it does 
       my $array_ref = $data{$var_name}; # creating an array reference if the var_name exists in the created hash 
       foreach my $set_id (@$array_ref) {
-        print OUTPUT "$var_id\t@$set_id[0]\n"; # to access the values in the array reference
+        print OUTPUT "$var_id\t@$set_id[0]\n"; # to access the values in the array reference and the variation_id to create a new file
       }
     }
   }
@@ -137,11 +144,13 @@ sub create_merged_file {
 }
 
 sub load_all_variation_sets {
+  # this would load the created file from the function create_merged_file to a temp table that was created using temp_table function
   my $dbhvar = shift;
   my $load_file = shift;
   
   my $sql = qq{INSERT INTO temp_variation_set (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
+
   open FH, "<", "$load_file" or die "Can not open $load_file: $!";
   while (<FH>) {
     chomp;
@@ -156,6 +165,8 @@ sub load_all_variation_sets {
 }
 
 sub update_variation_feature_table {
+  # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the 
+  # dump_new_variation_sets
   my $dbhvar = shift; 
   my $load_file = shift;
   
@@ -174,10 +185,11 @@ sub update_variation_feature_table {
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
     
-    $var_data{$var_id} = $var_set_id;
+    $var_data{$var_id} = $var_set_id; # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
   close FH;
-
+  
+  # using the keys to update the variation_set_id which is the value and the variation_id using the key
   foreach my $key (keys %var_data){
     $update_temp_vf->execute($var_data{$key}, $key);
   }
@@ -185,7 +197,9 @@ sub update_variation_feature_table {
 
 }
 
+
 sub dump_new_variation_sets {
+  # this would dump the variation_sets table from the backup table and create a file vset_concat.txt with two columns which are var_id and sets of variation_set_id
   my $dbhvar = shift;
   my $tmp_num = shift;
   my $chunk = shift;
@@ -195,7 +209,7 @@ sub dump_new_variation_sets {
   my $end = $chunk + $start;
   $end = $end < $size ? $end : $size;
 
-  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM temp_variation_set GROUP BY variation_id});
+  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM temp_variation_set WHERE variation_id > $start AND variation_id <= $end GROUP BY variation_id});
   open (FH, ">>$TMP_DIR/$tmp_vs_file" )
       or die( "Cannot open $TMP_DIR/$tmp_vs_file: $!" );
   $dump_vs->execute();
@@ -211,6 +225,7 @@ sub dump_new_variation_sets {
 
 
 sub dump_old_sql_variation_sets {
+  # this would dump old variation_sets table from the old database and create a file called variation_name_set.txt with two columns var_id and variation_set_id
   my $dbhvar = shift;
   my $tmp_num = shift;
   my $chunk = shift;
@@ -222,7 +237,7 @@ sub dump_old_sql_variation_sets {
 
 
   my $sql = qq{SELECT v.name, vs.variation_set_id from variation_set_variation vs LEFT JOIN variation v
-               ON v.variation_id = vs.variation_id where variation_set_id != 1 AND v.variation_id > $start AND v.variation_id <= $end LIMIT 50 };
+               ON v.variation_id = vs.variation_id where variation_set_id != 1 AND v.variation_id > $start AND v.variation_id <= $end  };
   my $sth = $dbhvar->prepare($sql);
 
   local *FH;
@@ -242,6 +257,7 @@ sub dump_old_sql_variation_sets {
 }
  
 sub dump_new_variation_feature {
+  # this would dump the variation_id and name from the variation_feature table creating a file called variation_feature.txt with two columns contains var_id and name
   my $dbh = shift;
   my $tmp_num = shift;
   my $chunk = shift;
@@ -252,7 +268,7 @@ sub dump_new_variation_feature {
   $end = $end < $size ? $end : $size;
 
 
-  my $sql = qq{SELECT variation_id, variation_name from variation_feature where variation_id > $start AND variation_id <= $end LIMIT 50};
+  my $sql = qq{SELECT variation_id, variation_name from variation_feature where variation_id > $start AND variation_id <= $end };
   my $sth = $dbh->prepare($sql);
   
   local *FH;
