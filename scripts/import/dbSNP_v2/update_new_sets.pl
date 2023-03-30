@@ -33,54 +33,62 @@ my $tmp_merged = "new_variation_set.txt";
 my $tmp_vs_file = "vset_concat.txt";
 my $old_dbh;
 
-# define variants and move through the list
-#if ($old_reg_file) {
- # $registry->load_all($old_reg_file);
-  #$db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
-  # Connect to DBI
-  #$old_dbh = $db_adaptor->dbc;
-#} else {
- # my $old_release = $release - 1;
-  #my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
-  #my $old_host = $dbh->host;
-  #my $old_port = $dbh->port;
-  # Connect to DBI
-  #$old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
-#}
 
-#my $sql = qq{ SELECT MIN(variation_id), MAX(variation_id) FROM variation };
-#my $sth = $old_dbh->prepare( $sql );
-#$sth->execute();
-#my $vf = $sth->fetchall_arrayref();
-#my $min_id = $vf->[0]->[0];
-#my $chunk = 1000000;
-##my $max_id = $vf->[0]->[1];
+if ($old_reg_file) {
+  $registry->load_all($old_reg_file);
+  $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
+  # Connect to DBI
+  $old_dbh = $db_adaptor->dbc;
+} else {
+  my $old_release = $release - 1;
+  my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
+  my $old_host = $dbh->host;
+  my $old_port = $dbh->port;
+  #Connect to DBI
+  $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
+}
+
+my $sql = qq{ SELECT MIN(variation_id), MAX(variation_id) FROM variation };
+my $sth = $old_dbh->prepare( $sql );
+$sth->execute();
+my $vf = $sth->fetchall_arrayref();
+my $min_id = $vf->[0]->[0];
+my $chunk = 1000000;
+my $max_id = $vf->[0]->[1];
 print "Dumping the variation sets and the new variation feature into files \n";
-#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
- # dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
-  #dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
-#}
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
+  dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
+}
 
 print "Sorting the files \n";
-#system(sort -u $TMP_FILE );
-#system(sort -u $tmp_vset);
+system(sort -u $TMP_FILE );
+system(sort -u $tmp_vset);
 
 print "Merging the files based on the new variation_id and the old variation set id \n";
-#create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
+create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
 
 print "Creating temporary tables that would be loaded \n";
-#temp_table($dbh);
+temp_table($dbh);
 print "Loading new variation sets \n";
-#load_all_variation_sets($dbh, $tmp_merged);
+load_all_variation_sets($dbh, $tmp_merged);
 
 print "Dumping new variation sets into a file to update the variation feature table";
-#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  #dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
-#}
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
+}
 
 print "Updating the variation_feature table in the new database";
-#update_variation_feature_table($dbh, $tmp_vs_file);
+update_variation_feature_table($dbh, $tmp_vs_file);
 
+print "Adding failed variation to variation set";
+$dbh->do(qq{ 
+  INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+  SELECT DISTINCT variation_id, 1 
+  FROM failed_variation; 
+}) or die "Failed to add failed to variation_set_variation table";
+
+#need to create a method to remove all the files and make the temp tables the actual tables.
 
 
 sub temp_table { 
