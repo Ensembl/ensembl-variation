@@ -117,7 +117,7 @@ elsif($type eq "UCSC"){
 }
 elsif($type eq "phenotype"){
 
-  print STDERR "Publications from Phenotype feature table:\n";
+  print "Publications from Phenotype feature table:\n";
 
   my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
   my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -132,8 +132,9 @@ elsif($type eq "phenotype"){
   my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature_attrib, $type);
 
-  print STDERR "Removing outdated citations...\n";
+  print "Removing outdated citations...\n";
   remove_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+  print "Removing outdated citations... done!\n";
 }
 else{
     die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
