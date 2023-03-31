@@ -606,14 +606,14 @@ sub update_evidence{
     my $ev_ext_sth = $dba->dbc()->prepare(qq[ select variation.variation_id, variation.evidence_attribs 
                                               from variation, variation_citation
                                               where variation.variation_id = variation_citation.variation_id
-                                             ]);
+      ]);
 
     my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence_attribs = ? where variation_id = ?]);
     my $varfeat_upd_sth = $dba->dbc()->prepare(qq[ update variation_feature set evidence_attribs = ? where variation_id = ?]);
-
+    
     $ev_ext_sth->execute() or die "Failed to select variation_id and evidence_attribs from table variation_citation\n";
     my $dat =  $ev_ext_sth->fetchall_arrayref();
-
+    
     my $n = scalar @{$dat};
     print "\n$n variants with citation evidence\n";
 
@@ -627,7 +627,7 @@ sub update_evidence{
         }
         else{
             $evidence = "$attrib->[0]->[0]";
-        }
+    }
 
         $var_upd_sth->execute($evidence, $l->[0]);
         $varfeat_upd_sth->execute($evidence, $l->[0]);
@@ -1227,6 +1227,18 @@ sub remove_outdated_citations {
               publication_id = ?
   ]);
 
+  my $cited_attrib_id = $dba->get_AttributeAdaptor->attrib_id_for_type_value('evidence', 'Cited');
+  my $rm_cited_evidence = qq[
+        update %s v
+        set v.evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(
+            CONCAT(',', v.evidence_attribs, ','), ',$cited_attrib_id,', ',')), '')
+        where v.variation_id = ?
+          and not exists (select * from variation_citation vc
+                          where vc.variation_id = v.variation_id)
+  ];
+  my $rm_variation_cited_evidence_sth = $dbh->prepare(sprintf $rm_cited_evidence, 'variation');
+  my $rm_variation_feature_cited_evidence_sth = $dbh->prepare(sprintf $rm_cited_evidence, 'variation_feature');
+
   foreach my $c (@{$citations_data}){
     my $variation_id = $c->[0];
     my $publication_id = $c->[1];
@@ -1262,6 +1274,11 @@ sub remove_outdated_citations {
       # remove citation if outdated in all sources
       $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) or
         die "Error: cannot remove $variation_id, $publication_id, $attrib_id from variation_citation\n";
+      # remove 'Cited' evidence if variant is not in variation_citation
+      $rm_variation_cited_evidence_sth->execute($variation_id) or
+        die "Error: cannot remove 'Cited' evidence for $variation_id in variation";
+      $rm_variation_feature_cited_evidence_sth->execute($variation_id) or
+        die "Error: cannot remove 'Cited' evidence for $variation_id in variation_feature";
     } elsif (@outdated_attribs) {
       # discard outdated sources
       my $new_attrib_id = join(",", @current_attribs);
