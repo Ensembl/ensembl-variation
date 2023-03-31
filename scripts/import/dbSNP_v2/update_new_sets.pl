@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use strict;
 use DBI;
 use Bio::EnsEMBL::Registry;
@@ -8,7 +9,7 @@ use Cwd qw(cwd);
 my ($reg_file, $old_reg_file, $release, $tmp, $help);
 
 GetOptions ("registry=s"        => \$reg_file,
-            "old_registry:s"    => \$old_reg_file,
+            "old_registry=s"    => \$old_reg_file,
             "release=s"         =>  \$release,
             "tmp=s"             =>  \$tmp,
             "help|h"           =>   \$help,
@@ -131,7 +132,7 @@ sub create_merged_file {
     if (exists $data{$key}) {
        push @{$data{$key}}, \@value; # push the array reference to the hash
     } else { # if it does  not exist, it just creates a new key and an array
-      push $data{$key} = [\@value];
+      $data{$key} = [\@value];
     }
   }
   while (<FILE2>) {
