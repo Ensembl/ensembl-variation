@@ -99,7 +99,7 @@ sub temp_table {
   my $create_sql = $dbhvar->prepare(qq{CREATE TABLE if not exists temp_variation_set LIKE variation_set_variation});
   my $alter_sql = $dbhvar->prepare(qq{ALTER TABLE temp_variation_set DISABLE keys});
   
-  #my $create_backup_vf = $dbhvar->prepare(q{CREATE table if not exists variation_feature_bk like variation_feature});
+  my $create_backup_vf = $dbhvar->prepare(q{CREATE table if not exists variation_feature_bk like variation_feature});
 
   #executing the sql 
   $create_sql->execute();
@@ -108,8 +108,8 @@ sub temp_table {
   $create_sql->finish();
   $alter_sql->finish();
 
-  #$create_backup_vf->execute();
-  #$create_backup_vf->finish();
+  $create_backup_vf->execute();
+  $create_backup_vf->finish();
 }
 
 sub create_merged_file {
@@ -127,7 +127,7 @@ sub create_merged_file {
   while (<FILE1>) {
     chomp;
     my $key = (split)[0]; # to access the variation name
-    my @value = (split)[1]; # to access set ids
+    my @value = (split)[1]; # to access set id
     # checking if the key exists in the dictionary and if it exists it appends the array reference
     if (exists $data{$key}) {
        push @{$data{$key}}, \@value; # push the array reference to the hash
