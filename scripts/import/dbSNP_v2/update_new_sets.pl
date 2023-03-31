@@ -30,7 +30,7 @@ my $dbh = $db_adaptor->dbc;
 my $TMP_DIR = $tmp;
 my $TMP_FILE = "variation_feature.txt";
 my $tmp_vset = "variation_name_set.txt";
-my $tmp_merged = "new_variation_set.txt";
+my $tmp_merged = "new_variation_set_variation.txt";
 my $tmp_vs_file = "vset_concat.txt";
 my $old_dbh;
 
@@ -89,6 +89,9 @@ $dbh->do(qq{
   FROM failed_variation; 
 }) or die "Failed to add failed to variation_set_variation table";
 
+$dbh->do(qq{
+  ALTER TABLE variation_set_variation ENABLE keys;
+}) or die "Failed to alter variation_set_variation keys"
 #need to create a method to remove all the files and make the temp tables the actual tables.
 
 
@@ -96,8 +99,7 @@ sub temp_table {
   my $dbhvar = shift; 
    
   # creating a temp table and altering the table by disabling the keys 
-  my $create_sql = $dbhvar->prepare(qq{CREATE TABLE if not exists temp_variation_set LIKE variation_set_variation});
-  my $alter_sql = $dbhvar->prepare(qq{ALTER TABLE temp_variation_set DISABLE keys});
+  my $alter_sql = $dbhvar->prepare(qq{ALTER TABLE variation_set_variation DISABLE keys});
   
   my $create_backup_vf = $dbhvar->prepare(q{CREATE table if not exists variation_feature_bk like variation_feature});
 
@@ -157,7 +159,7 @@ sub load_all_variation_sets {
   my $dbhvar = shift;
   my $load_file = shift;
   
-  my $sql = qq{INSERT INTO temp_variation_set (variation_id, variation_set_id ) VALUES (?, ?)};
+  my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
 
   open FH, "<", "$load_file" or die "Can not open $load_file: $!";
@@ -184,7 +186,7 @@ sub update_variation_feature_table {
   $insert_temp_vf->execute();
   $insert_temp_vf->finish();
   
-  my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature_bk SET variation_set_id = ? 
+  my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
                                           WHERE variation_id = ?});
   
   my %var_data;
@@ -218,7 +220,7 @@ sub dump_new_variation_sets {
   my $end = $chunk + $start;
   $end = $end < $size ? $end : $size;
 
-  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM temp_variation_set WHERE variation_id > $start AND variation_id <= $end GROUP BY variation_id});
+  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM variation_set_variation WHERE variation_id > $start AND variation_id <= $end GROUP BY variation_id});
   open (FH, ">>$TMP_DIR/$tmp_vs_file" )
       or die( "Cannot open $TMP_DIR/$tmp_vs_file: $!" );
   $dump_vs->execute();
