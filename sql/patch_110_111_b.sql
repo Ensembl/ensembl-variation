@@ -14,7 +14,7 @@
 -- limitations under the License.
 
 # Change transcript_variation_id to bigint
-ALTER TABLE transcript_variation ALTER COLUMN transcript_variation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE transcript_variation MODIFY COLUMN transcript_variation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_110_111_b.sql|Update transcript_variation primary key');
