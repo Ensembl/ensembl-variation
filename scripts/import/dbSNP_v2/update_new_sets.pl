@@ -91,7 +91,7 @@ $dbh->do(qq{
 
 $dbh->do(qq{
   ALTER TABLE variation_set_variation ENABLE keys;
-}) or die "Failed to alter variation_set_variation keys"
+}) or die "Failed to alter variation_set_variation keys";
 #need to create a method to remove all the files and make the temp tables the actual tables.
 
 
@@ -104,10 +104,8 @@ sub temp_table {
   my $create_backup_vf = $dbhvar->prepare(q{CREATE table if not exists variation_feature_bk like variation_feature});
 
   #executing the sql 
-  $create_sql->execute();
   $alter_sql->execute();
 
-  $create_sql->finish();
   $alter_sql->finish();
 
   $create_backup_vf->execute();
