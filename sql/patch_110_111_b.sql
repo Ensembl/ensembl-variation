@@ -13,7 +13,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# Add new data_source attribs
+# Change transcript_variation_id to bigint
 ALTER TABLE transcript_variation ALTER COLUMN transcript_variation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
 
 # patch identifier
