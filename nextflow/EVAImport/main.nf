@@ -30,9 +30,9 @@ params.sort_vf         = true
 
 // Params for variant synonyms import
 params.var_syn_file    = null
-params.host            = null
-params.port            = null
-params.dbname          = null
+params.host            = ""
+params.port            = ""
+params.dbname          = ""
 
 
 // Check input params
@@ -53,28 +53,9 @@ if( (!params.host || !params.port || !params.dbname) && params.species == "rattu
 }
 
 
-// Build command to run
+// Build command to run EVA import
 command_to_run = " -i ${params.input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${params.registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
 
-if(params.merge_all_types) {
-command_to_run += " --merge_all_types"
-}
-
-if(params.fork) {
-command_to_run += " --fork ${params.fork}"
-}
-
-if(params.chr_synonyms) {
-command_to_run += " --chr_synonyms ${params.chr_synonyms}"
-}
-
-if(params.remove_prefix) {
-command_to_run += " --remove_prefix ${params.remove_prefix}"
-}
-
-if(params.sort_vf) {
-command_to_run += " --sort_vf"
-}
 
 log.info """
   Import EVA script: ${eva_script} \
@@ -86,13 +67,24 @@ process run_eva {
   input:
   path eva_script
   val options
+  val merge_all_types
+  val fork
+  val sort_vf
+  val chr_synonyms
+  val remove_prefix
   val output_file
   
   output:
   
   script:
+  def sort_vf_table     = sort_vf ? " --sort_vf" : ""
+  def merge_all         = merge_all_types ? " --merge_all_types" : ""
+  def use_fork          = fork ? "--fork ${fork}" : ""
+  def chr_synonyms_file = chr_synonyms ? " --chr_synonyms ${chr_synonyms}" : ""
+  def rm_prefix         = remove_prefix ? " --remove_prefix ${remove_prefix}" : ""
+  
   """
-  perl ${eva_script} ${options} --output_file ${output_file}
+  perl ${eva_script} ${options} $sort_vf_table $merge_all $use_fork $chr_synonyms_file $rm_prefix --output_file ${output_file}
   """
 }
 
@@ -132,7 +124,7 @@ process run_variant_synonyms {
 workflow {
   // TODO: run script to truncate tables
 
-  run_eva(file(eva_script), command_to_run, params.output_file)
+  run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
   run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
 }
