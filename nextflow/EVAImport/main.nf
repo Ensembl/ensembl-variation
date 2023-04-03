@@ -8,6 +8,7 @@ nextflow.enable.strict = true
 // Scripts
 eva_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_vcf.pl"
 var_syn_script = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_variant_synonyms"
+var_set_script = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_set_from_file.pl"
 
 // Common params
 //params.help            = false
@@ -35,16 +36,23 @@ params.port            = ""
 params.dbname          = ""
 
 // Params for sets import
-list_species_setname = [ "mus_musculus":["MGP"],
-                         "sus_scrofa":["PorcineHD", "PorcineLD", "PorcineSNP60", "Affy_PorcineHD"],
-                         "ovis_aries":["OvineSNP50", "OvineHDSNP"],
-                         "ovis_aries_rambouillet":["OvineSNP50", "OvineHDSNP"],
-                         "gallus_gallus":["Chicken600K"],
-                         "gallus_gallus_gca000002315v5":["Chicken600K"],
-                         "equus_caballus":["Illumina_EquineSNP50"],
-                         "capra_hircus":["GoatSNP50"],
-                         "bos_taurus":["BovineHD", "BovineLD", "BovineSNP50"]
-                       ]
+mouse_file = "/nfs/production/flicek/ensembl/variation/data/mouse/mgp_set/mgp_variation_set.txt.gz"
+files_path = "/nfs/production/flicek/ensembl/variation/data/genotyping_chips/"
+filenames  = [ "sus_scrofa":["Pig/GGP_Porcine_HD_ids.txt.gz", "Pig/GGP_Porcine_LD_ids.txt.gz", "Pig/Illumina_PorcineSNP60_ids.txt.gz", "Pig/Axiom_PigHD_v1_ids.txt.gz"],
+              "ovis_aries":["Sheep_Illumina/OvineSNP50_ids.txt.gz", "Sheep_Illumina/OvineHDSNP_ids.txt.gz"],
+              "gallus_gallus":["Chicken/Chicken600K_ids.txt.gz"],
+              "equus_caballus":["Horse/EquineSNP50_ids.txt.gz"],
+              "capra_hircus":["Goat/GoatSNP50_ids.txt.gz"],
+              "bos_taurus":["Cow/BovineHD_ids.txt.gz", "Cow/BovineLD_C_ids.txt", "Cow/BovineSNP50_ids.txt.gz"]
+             ]
+set_names  = [ "mus_musculus":["MGP"],
+              "sus_scrofa":["PorcineHD", "PorcineLD", "PorcineSNP60", "Affy_PorcineHD"],
+              "ovis_aries":["OvineSNP50", "OvineHDSNP"],
+              "gallus_gallus":["Chicken600K"],
+              "equus_caballus":["Illumina_EquineSNP50"],
+              "capra_hircus":["GoatSNP50"],
+              "bos_taurus":["BovineHD", "BovineLD", "BovineSNP50"]
+             ]
 
 
 // Check input params
@@ -132,11 +140,32 @@ process run_variant_synonyms {
       """
 }
 
+process run_variation_set {
+  input:
+  path var_set_script
+  val files_path
+  val filenames
+  val set_names
+  val mouse_file
+  val species
+  val registry
+
+  script:
+  
+  if(species == "mus_musculus")
+      //def mouse_set = set_names[species]
+      """
+        perl ${var_set_script} -load_file ${mouse_file} -registry ${registry} -species ${species} -variation_set $mouse_set
+      """
+}
 
 workflow {
   // TODO: run script to truncate tables
 
   run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
-  run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
+  //run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
+  if(filenames[params.species]) {
+    run_variation_set(file(var_set_script), files_path, filenames, set_names, mouse_file, params.species, params.registry)
+  }
 }
