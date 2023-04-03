@@ -34,6 +34,18 @@ params.host            = ""
 params.port            = ""
 params.dbname          = ""
 
+// Params for sets import
+list_species_setname = [ "mus_musculus":["MGP"],
+                         "sus_scrofa":["PorcineHD", "PorcineLD", "PorcineSNP60", "Affy_PorcineHD"],
+                         "ovis_aries":["OvineSNP50", "OvineHDSNP"],
+                         "ovis_aries_rambouillet":["OvineSNP50", "OvineHDSNP"],
+                         "gallus_gallus":["Chicken600K"],
+                         "gallus_gallus_gca000002315v5":["Chicken600K"],
+                         "equus_caballus":["Illumina_EquineSNP50"],
+                         "capra_hircus":["GoatSNP50"],
+                         "bos_taurus":["BovineHD", "BovineLD", "BovineSNP50"]
+                       ]
+
 
 // Check input params
 if(!params.species) {
