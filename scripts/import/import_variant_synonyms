@@ -42,6 +42,7 @@ use Time::Piece;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Source;
+use Bio::EnsEMBL::Variation::Utils::Reports qw(report_counts);
 
 our $DEBUG = 0;
 
@@ -77,6 +78,9 @@ my $dba = $reg->get_DBAdaptor($species, 'variation');
 ## include failed variants to avoid missing any links
 $dba->include_failed_variations(1);
 
+# count number of rows before import
+my @count_tables = qw(variation_synonym);
+report_counts($dba, "before", \@count_tables, $source_name . "_report_variation_counts.txt");
 
 ## collect synonyms by source
 if($source_name eq 'PharmGKB') { 
@@ -208,7 +212,11 @@ elsif($source_name eq 'pig_chip') {
 
 else{
     die "data source : $source_name not supported\n";
-} 
+}
+
+# count number of rows after import
+report_counts($dba, "after", \@count_tables, $source_name . "_report_variation_counts.txt");
+
 
 =head2 download_file
 
