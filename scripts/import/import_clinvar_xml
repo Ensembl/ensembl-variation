@@ -58,6 +58,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_c
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Variation::Utils::Config qw(%ATTRIBS);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -114,6 +115,9 @@ my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 ## pre-load submitter ids - shortcutting the API for speed
 ## get ClinVar submitters names from the database
 my $submitters = get_submitter_ids($dba);
+
+# count number of rows before import
+print_counts($dba, 1);
 
 ## remove old data
 clean_old_data() if defined $clean; 
@@ -196,6 +200,9 @@ while($reader->read) {
 }
 
 close ($data_file_fh);
+
+# count number of rows after import
+print_counts($dba, 0);
 
 
 sub process_clinvar_set {
@@ -1682,6 +1689,36 @@ sub clean_phenotype_desc {
   $description =~ s/\'//g;
 
   return $description;
+}
+
+sub print_counts {
+  my $dba = shift;
+  my $flag = shift;
+
+  my $file_counts = "report_variation_counts.txt";
+
+  # Open file to write
+  my $type;
+  my $message;
+  if($flag == 1) {
+    $type = ">";
+    $message = "Counts before import:";
+  }
+  else {
+    $type = ">>";
+    $message = "\nCounts after import:";
+  }
+
+  open(my $fh, $type, $file_counts) or die "Cannot write to file: $!\n";
+  print $fh $message . "\n";
+
+  my @count_tables = qw(variation variation_feature transcript_variation);
+  foreach my $table (@count_tables) {
+    my $count = count_rows($dba, $table);
+    print $fh $table . "\t" . $count . "\n";
+  }
+
+  close($fh);
 }
 
 sub usage{
