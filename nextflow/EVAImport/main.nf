@@ -36,14 +36,20 @@ params.port            = ""
 params.dbname          = ""
 
 // Params for sets import
-mouse_file = "/nfs/production/flicek/ensembl/variation/data/mouse/mgp_set/mgp_variation_set.txt.gz"
 files_path = "/nfs/production/flicek/ensembl/variation/data/genotyping_chips/"
-filenames  = [ "sus_scrofa":["Pig/GGP_Porcine_HD_ids.txt.gz", "Pig/GGP_Porcine_LD_ids.txt.gz", "Pig/Illumina_PorcineSNP60_ids.txt.gz", "Pig/Axiom_PigHD_v1_ids.txt.gz"],
-              "ovis_aries":["Sheep_Illumina/OvineSNP50_ids.txt.gz", "Sheep_Illumina/OvineHDSNP_ids.txt.gz"],
-              "gallus_gallus":["Chicken/Chicken600K_ids.txt.gz"],
-              "equus_caballus":["Horse/EquineSNP50_ids.txt.gz"],
-              "capra_hircus":["Goat/GoatSNP50_ids.txt.gz"],
-              "bos_taurus":["Cow/BovineHD_ids.txt.gz", "Cow/BovineLD_C_ids.txt", "Cow/BovineSNP50_ids.txt.gz"]
+filenames  = [ "MGP":"mouse/mgp_set/mgp_variation_set.txt.gz",
+               "PorcineHD":"Pig/GGP_Porcine_HD_ids.txt.gz",
+               "PorcineLD":"Pig/GGP_Porcine_LD_ids.txt.gz",
+               "PorcineSNP60":"Pig/Illumina_PorcineSNP60_ids.txt.gz",
+               "Affy_PorcineHD":"Pig/Axiom_PigHD_v1_ids.txt.gz",
+               "OvineSNP50":"Sheep_Illumina/OvineSNP50_ids.txt.gz",
+               "OvineHDSNP":"Sheep_Illumina/OvineHDSNP_ids.txt.gz",
+               "Chicken600K":"Chicken/Chicken600K_ids.txt.gz"
+               "Illumina_EquineSNP50":"Horse/EquineSNP50_ids.txt.gz"
+               "GoatSNP50":"Goat/GoatSNP50_ids.txt.gz",
+               "BovineHD":"Cow/BovineHD_ids.txt.gz",
+               "BovineLD":"Cow/BovineLD_C_ids.txt",
+               "BovineSNP50":"Cow/BovineSNP50_ids.txt.gz"
              ]
 set_names  = [ "mus_musculus":["MGP"],
               "sus_scrofa":["PorcineHD", "PorcineLD", "PorcineSNP60", "Affy_PorcineHD"],
@@ -146,26 +152,32 @@ process run_variation_set {
   val files_path
   val filenames
   val set_names
-  val mouse_file
   val species
   val registry
 
-  script:
+  exec:
   
-  if(species == "mus_musculus")
-      //def mouse_set = set_names[species]
-      """
-        perl ${var_set_script} -load_file ${mouse_file} -registry ${registry} -species ${species} -variation_set $mouse_set
-      """
+  // variable my_set has to be defore any if statement
+  // related to this issue: https://github.com/nextflow-io/nextflow/issues/804
+  def my_set = set_names.get(species)
+  for (String name : my_set) {
+    def input_file = filenames.get(name)
+    println name
+    """
+      perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}
+    """
+  }
+
 }
+
 
 workflow {
   // TODO: run script to truncate tables
 
   run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
-  //run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
+  run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
   if(filenames[params.species]) {
-    run_variation_set(file(var_set_script), files_path, filenames, set_names, mouse_file, params.species, params.registry)
+    run_variation_set(file(var_set_script), files_path, filenames, set_names, params.species, params.registry)
   }
 }
