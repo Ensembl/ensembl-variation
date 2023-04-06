@@ -80,7 +80,7 @@ $dba->include_failed_variations(1);
 
 # count number of rows before import
 my @count_tables = qw(variation_synonym);
-report_counts($dba, "before", \@count_tables, $source_name . "_report_variation_counts.txt");
+report_counts($dba, "before", \@count_tables, $source_name . "_report_row_counts.txt");
 
 ## collect synonyms by source
 if($source_name eq 'PharmGKB') { 
@@ -215,7 +215,7 @@ else{
 }
 
 # count number of rows after import
-report_counts($dba, "after", \@count_tables, $source_name . "_report_variation_counts.txt");
+report_counts($dba, "after", \@count_tables, $source_name . "_report_row_counts.txt");
 
 
 =head2 download_file

@@ -69,7 +69,7 @@ sub report_counts {
 
   die ("ERROR: cannot report the number of variation counts\n") unless ($dba && $flag && $tables);
 
-  my $file_counts = $output_file ? $output_file : "report_variation_counts.txt";
+  my $file_counts = $output_file ? $output_file : "report_row_counts.txt";
 
   # Open file to write
   my $type;
