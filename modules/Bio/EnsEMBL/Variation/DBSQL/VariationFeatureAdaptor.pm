@@ -2352,6 +2352,9 @@ sub get_reference{
   
   my $tr_mapper = $transcript->get_TranscriptMapper(); 
 
+  # If the codon overlaps an exon-intron boundary @coords can return two coordinates:
+  #  one for the first exon where the codon starts
+  #  a second coordinate for the exon where the codon ends
   my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
 
   my $start;
