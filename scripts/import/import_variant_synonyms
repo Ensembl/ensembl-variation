@@ -69,6 +69,7 @@ usage() if($source_name eq 'EVA' && !$data_file);
 
 $species ||= 'homo_sapiens';
 
+die("ERROR: source 'rat' can only be used for species rat\n") if($source_name eq 'rat' && $species !~ /rat/);
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
@@ -221,7 +222,7 @@ elsif($source_name eq 'rat') {
   my $sql_syn_query = "SELECT vs.variation_id, vs.source_id, vs.name
                        FROM variation_synonym vs
                        LEFT JOIN source s ON s.source_id = vs.source_id
-                       WHERE s.name = 'ENSEMBL:celera' OR s.name = 'ENSEMBL:STAR-4strain' OR s.name = 'ENSEMBL:STAR-gtype' OR s.name = 'ENSEMBL:RNB1'";
+                       WHERE s.name LIKE 'ENSEMBL:%'";
 
   my $synonyms_output = query_synonyms_data($old_dbc, $sql_syn_query);
 
