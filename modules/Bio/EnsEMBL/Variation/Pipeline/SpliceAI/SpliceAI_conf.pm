@@ -60,7 +60,7 @@ sub default_options {
         output_dir                 => $self->o('main_dir') . '/output', # final output files already merged by chromosome
         fasta_file                 => $self->o('fasta_file'),
         gene_annotation            => $self->o('gene_annotation'),
-        step_size                  => 4000, # number of variants used to split the main vcf files
+        step_size                  => 200000, # number of variants used to split the main vcf files
         check_transcripts          => 0, # if set to 1 checks which are the new MANE Select transcripts for the last months and only calculates SpliceAI scores for these variants overlapping these transcripts
         transcripts_from_file      => undef,
 	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
@@ -68,7 +68,7 @@ sub default_options {
         registry                   => undef, # database where new MANE transcripts are going to be checked; only used if check_transcripts = 1
         output_file_name           => 'spliceai_final_scores_',
 
-        pipeline_wide_analysis_capacity => 500,
+        pipeline_wide_analysis_capacity => 80,
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
@@ -85,7 +85,7 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        '8Gb_8c_job'  => {'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000' },
+        'gpu'  => {'LSF' => '-q gpu-a100 -gpu "num=1:gmem=80000"' }, # the queue gpu-a100 can access /hps/nobackup
         '4Gb_job'     => {'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
     };
 }
@@ -151,7 +151,7 @@ sub pipeline_analyses {
         -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -analysis_capacity => $self->o('pipeline_wide_analysis_capacity'),
         -input_ids  => [],
-        -rc_name => '8Gb_8c_job',
+        -rc_name => 'gpu',
         -parameters => {
           'main_dir'             => $self->o('main_dir'),
           'split_vcf_input_dir'  => $self->o('split_vcf_input_dir'),
