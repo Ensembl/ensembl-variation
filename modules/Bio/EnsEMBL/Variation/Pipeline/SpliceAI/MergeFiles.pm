@@ -84,6 +84,9 @@ sub merge_vcf_files {
 
   # Sort final file
   $self->run_system_command("bcftools sort -o $final_file_sorted $final_file");
+
+  # Remove unsorted file
+  $self->run_system_command("rm $final_file");
 }
 
 1;

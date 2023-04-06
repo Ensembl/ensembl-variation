@@ -66,7 +66,7 @@ sub default_options {
 	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
 	masked_scores              => 1, # calculate masked scores
         registry                   => undef, # database where new MANE transcripts are going to be checked; only used if check_transcripts = 1
-        output_file_name           => 'spliceai_final_scores_',
+        output_file_name           => 'spliceai_final_scores_' . $self->o('ensembl_release') . '_',
 
         pipeline_wide_analysis_capacity => 80,
 
