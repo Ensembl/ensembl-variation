@@ -70,6 +70,7 @@ usage() if($source_name eq 'EVA' && !$data_file);
 
 $species ||= 'homo_sapiens';
 
+die("ERROR: source 'rat' can only be used for species rat\n") if($source_name eq 'rat' && $species !~ /rat/);
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
@@ -194,7 +195,7 @@ elsif($source_name eq 'EVA') {
 }
 
 elsif($source_name eq 'pig_chip') {
-  my $int_dba = $reg->get_DBAdaptor('multi', 'intvar') || warn "Error getting intvar db adaptor\n";;
+  my $int_dba = $reg->get_DBAdaptor('multi', 'intvar') or die "Error getting intvar db adaptor\n";;
 
   # Source Pig SNP Consortium
   my %source_data = (
@@ -208,6 +209,39 @@ elsif($source_name eq 'pig_chip') {
   my $source = get_source($species, $dba, $source_data{name}, $source_data{version}, $source_data{url}, $source_data{description}, $source_data{somatic_status});
 
   add_synonym_pig_chip($species, $dba, $int_dba, $source->dbID());
+}
+
+elsif($source_name eq 'rat') {
+  my $variation_adaptor = $dba->get_VariationAdaptor($species, 'variation');
+
+  my $old_dbc = Bio::EnsEMBL::DBSQL::DBConnection->new
+    ( '-host'    => $host,
+      '-port'    => $port,
+      '-user'    => $user,
+      '-pass'    => '',
+      '-dbname'  => $db_name,
+      '-driver'  =>  'mysql'
+    );
+
+  my $sql_syn_query = "SELECT vs.variation_id, vs.source_id, vs.name
+                       FROM variation_synonym vs
+                       LEFT JOIN source s ON s.source_id = vs.source_id
+                       WHERE s.name LIKE 'ENSEMBL:%'";
+
+  my $synonyms_output = query_synonyms_data($old_dbc, $sql_syn_query);
+
+  my $synonym_ins_sth = $variation_adaptor->dbc->prepare(qq[ INSERT IGNORE INTO variation_synonym (variation_id, name, source_id) VALUES (?,?,?) ]);
+
+  foreach my $synonym(@{$synonyms_output}){
+    my $var = $variation_adaptor->fetch_by_dbID($synonym->[0]);
+    if(defined $var){
+      $synonym_ins_sth->execute( $var->dbID, $synonym->[2], $synonym->[1] );
+    }
+    else{
+      warn "Variant ", $synonym->[0], " not found\n" if($DEBUG);
+    }
+  }
+
 }
 
 else{
@@ -437,7 +471,7 @@ sub add_synonyms_uniprot {
   foreach my $rs_id (keys %{$synonyms}) {
     my $variation = $variation_adaptor->fetch_by_name($rs_id);
     unless($variation){
-      warn "Variant $rs_id not found\n"; 
+      warn "Variant $rs_id not found\n" if($DEBUG); 
       next; 
     }
 
@@ -551,7 +585,7 @@ sub import_synonyms {
 
     my $var = $variation_adaptor->fetch_by_name($var_name);
     unless($var){
-      warn "variant $var_name not found\n";
+      warn "variant $var_name not found\n" if($DEBUG);
       next;
     }
     $var->add_synonym($source->name(), $synonyms->{$var_name});
@@ -579,7 +613,7 @@ sub import_synonyms_all_sources {
     my $var = $variation_adaptor->fetch_by_name($var_name); 
 
     unless($var) {
-      warn "variant $var_name not found\n";
+      warn "variant $var_name not found\n" if($DEBUG);
       next; 
     }
   
@@ -620,7 +654,7 @@ sub add_synonym_pig_chip {
       $synonym_ins_sth->execute( $var->dbID, $synonym->[1], $source_id );
     }
     else{
-      warn "Variant $synonym->[0] not found\n";
+      warn "Variant $synonym->[0] not found\n" if($DEBUG);
     }
   }
 }
@@ -747,15 +781,15 @@ sub usage{
   die "\nUsage : import_variant_synonyms -registry [registry file] -source_name [name]
 \n\tOptions:
 \t         -data_file          [name of file to load]  - mandatory for EVA
-\t         -source_name        [source]                - 'PharmGKB', 'dbSNP', 'UniProt', 'EVA' or 'pig_chip'
+\t         -source_name        [source]                - 'PharmGKB', 'dbSNP', 'UniProt', 'EVA', 'pig_chip' or 'rat'
 \t         -source_version     [version]
 \t         -source_url         [url]
 \t         -source_description [longer description]
 \t         -species            [species]               - defaults to human
 \t         -registry           [registry file]
-\t         -db_name            [production db name]
-\t         -host               [production db host]
-\t         -port               [production db port]
+\t         -db_name            [db name; production db for dbSNP]
+\t         -host               [db host; production db for dbSNP]
+\t         -port               [db port; production db for dbSNP]
 \t         -user               [user]
 \t         -pass               [pass]
 \t         -clean                                      - remove old data\n\n";
