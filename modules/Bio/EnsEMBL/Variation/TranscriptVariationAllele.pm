@@ -1403,6 +1403,11 @@ sub hgvs_transcript {
     return undef;
   } 
 
+  if ($adaptor_shifting_flag == 0 && $hgvs_notation->{'type'} eq 'dup') {
+    $hgvs_notation->{'start'} += 1;
+    $hgvs_notation->{'end'} += 1;
+  }
+  
   ## check for the same bases in ref and alt strings before or after the variant
   $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
 
