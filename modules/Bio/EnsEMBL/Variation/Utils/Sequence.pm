@@ -498,10 +498,14 @@ sub hgvs_variant_notation {
   my $display_start = shift;
   my $display_end = shift;
   my $var_name  = shift;
+  my $dup_lookup_direction = shift;
 
   # If display_start and display_end were not specified, use ref_start and ref_end
   $display_start ||= $ref_start;
   $display_end ||= $ref_end;
+  
+  # the direction to look for ref seq match with alt allele to see if it is dup type
+  $dup_lookup_direction ||= -1;
   
   #Throw an exception if the lengths of the display interval and reference interval are different
   throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));
@@ -526,7 +530,6 @@ sub hgvs_variant_notation {
     #warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
     return undef ;
   }
-
   # Store the notation in a hash that will be returned
   my %notation;
   $notation{'start'} = $display_start;
@@ -567,14 +570,20 @@ sub hgvs_variant_notation {
   if (!$ref_length) {
   
     # Get the same number of nucleotides preceding the insertion as the length of the insertion
-    my $prev_str = substr($ref_sequence,($ref_end-$alt_length),$alt_length);
+    my $prev_str = $dup_lookup_direction == -1 ? 
+      substr($ref_sequence,($ref_end-$alt_length),$alt_length) :
+      substr($ref_sequence,$ref_end,$alt_length);
 
     # If they match, this is a duplication
     if ($prev_str eq $alt_allele) {
-
-      $notation{'start'} = ($display_end - $alt_length + 1);
+      
+      if ($dup_lookup_direction == -1){
+        $notation{'start'} = ($display_end - $alt_length + 1);
+      }
+      else{
+        $notation{'end'} = $display_start + $alt_length - 1;
+      }
       $notation{'type'} = 'dup';
-
       # Return the notation
       return \%notation;
     }
@@ -605,6 +614,7 @@ sub hgvs_variant_notation {
   
   # Else, it's gotta be a delins
   $notation{'type'} = 'delins';
+  
   return \%notation;
 }
 

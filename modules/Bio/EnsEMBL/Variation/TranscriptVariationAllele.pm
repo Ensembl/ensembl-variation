@@ -1387,6 +1387,8 @@ sub hgvs_transcript {
   
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
   #return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
+  
+  my $dup_lookup_direction = ($refseq_strand == -1 && !$offset_to_add) ? 1 : -1;
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1394,7 +1396,8 @@ sub hgvs_transcript {
     $self->{_slice_end} + $offset_to_add,
     "",
     "",
-    $var_name 
+    $var_name,
+    $dup_lookup_direction
   );
   
   ### This should not happen
@@ -1403,10 +1406,6 @@ sub hgvs_transcript {
     return undef;
   } 
 
-  if ($adaptor_shifting_flag == 0 && $hgvs_notation->{'type'} eq 'dup') {
-    $hgvs_notation->{'start'} += 1;
-    $hgvs_notation->{'end'} += 1;
-  }
   
   ## check for the same bases in ref and alt strings before or after the variant
   $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
