@@ -5,41 +5,33 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long;
 use Cwd qw(cwd);
 
-
-my ($reg_file, $old_reg_file, $release, $tmp, $help);
-
-GetOptions ("registry=s"        => \$reg_file,
-            "old_registry=s"    => \$old_reg_file,
-            "release=s"         =>  \$release,
-            "tmp=s"             =>  \$tmp,
-            "help|h"           =>   \$help,
-);
-
-# to define temporary directory if it is not defined 
-if (!defined $tmp){
-  $tmp = cwd;
-}
-usage() unless defined $reg_file && defined $release && defined $tmp;
-
 my $registry = 'Bio::EnsEMBL::Registry';
-$registry->load_all($reg_file);
+my $config = configure();
 
+debug($config, "Importing variation set starting now");
+
+my $reg_file = $config->{registry};
+$registry->load_all($reg_file);
 my $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
 my $dbh = $db_adaptor->dbc;
+debug($config, "Connected to the new database $dbh->dbc->dbname");
 
-my $TMP_DIR = $tmp;
+my $TMP_DIR = $config->{tmp};
+
 my $TMP_FILE = "variation_feature.txt";
 my $tmp_vset = "variation_name_set.txt";
 my $tmp_merged = "new_variation_set_variation.txt";
 my $tmp_vs_file = "vset_concat.txt";
 my $old_dbh;
-
+my $old_reg_file = $config->{old_registry} if (defined ($config->{old_registry}));
+my $release =  $config->{release} if (defined ($config->{release}));
 
 if ($old_reg_file) {
   $registry->load_all($old_reg_file);
   $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
   # Connect to DBI
   $old_dbh = $db_adaptor->dbc;
+  debug($config, "Connected to the new database $old_dbh->dbc->dbname");
 } else {
   my $old_release = $release - 1;
   my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
@@ -47,51 +39,63 @@ if ($old_reg_file) {
   my $old_port = $dbh->port;
   #Connect to DBI
   $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
+  debug($config, "Connected to the new database $old_dbname");
 }
 
-my $sql = qq{ SELECT MIN(variation_id), MAX(variation_id) FROM variation };
-my $sth = $old_dbh->prepare( $sql );
+
+debug($config, "Selecting minimum and maximum variation feature");
+my $sql = qq{ SELECT MIN(variation_feature_id), MAX(variation_feature_id) FROM variation_feature};
+my $sth = $old_dbh->prepare($sql);
+my $sth = $dbh->prepare($sql);
 $sth->execute();
 my $vf = $sth->fetchall_arrayref();
 my $min_id = $vf->[0]->[0];
 my $chunk = 1000000;
 my $max_id = $vf->[0]->[1];
-print "Dumping the variation sets and the new variation feature into files \n";
+debug($config, "Dumping the variation sets and the new variation feature into files");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
+}
+
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
 }
 
-print "Sorting the files \n";
-system(sort -u $TMP_FILE );
+debug($config, "Sorting the files");
+system(sort -u $TMP_FILE);
 system(sort -u $tmp_vset);
 
-print "Merging the files based on the new variation_id and the old variation set id \n";
+debug($config, "Merging the files based on the new variation_id and the old variation set id");
 create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
 
-print "Creating temporary tables that would be loaded \n";
+#system(sort -k 1,2 $tmp_merged);
+#system(sort -n $tmp_merged);
+debug($config, "Altering variation set variation table");
 temp_table($dbh);
-print "Loading new variation sets \n";
+
+debug($config, "Loading new variation sets");
 load_all_variation_sets($dbh, $tmp_merged);
 
-print "Dumping new variation sets into a file to update the variation feature table";
+debug($config, "Dumping new variation sets into a file to update the variation feature table");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
 }
 
-print "Updating the variation_feature table in the new database";
-update_variation_feature_table($dbh, $tmp_vs_file);
+debug($config, "Updating the variation feature table");
+update_variation_feature_table($dbh,$tmp_vs_file);
 
-print "Adding failed variation to variation set";
-$dbh->do(qq{ 
-  INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
-  SELECT DISTINCT variation_id, 1 
-  FROM failed_variation; 
-}) or die "Failed to add failed to variation_set_variation table";
 
-$dbh->do(qq{
-  ALTER TABLE variation_set_variation ENABLE keys;
-}) or die "Failed to alter variation_set_variation keys";
+
+debug($config, "Adding failed variation to variation set");
+#$dbh->do(qq{ 
+ # INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+ # SELECT DISTINCT variation_id, 1 
+#  FROM failed_variation; 
+#}) or die "Failed to add failed to variation_set_variation table";
+
+#$dbh->do(qq{
+#  ALTER TABLE variation_set_variation ENABLE keys;
+#}) or die "Failed to alter variation_set_variation keys";
 #need to create a method to remove all the files and make the temp tables the actual tables.
 
 
@@ -100,23 +104,17 @@ sub temp_table {
    
   # creating a temp table and altering the table by disabling the keys 
   my $alter_sql = $dbhvar->prepare(qq{ALTER TABLE variation_set_variation DISABLE keys});
-  
-  my $create_backup_vf = $dbhvar->prepare(q{CREATE table if not exists variation_feature_bk like variation_feature});
-
   #executing the sql 
   $alter_sql->execute();
 
   $alter_sql->finish();
-
-  $create_backup_vf->execute();
-  $create_backup_vf->finish();
 }
 
 sub create_merged_file {
   # this would merge the files variation_feature.txt and variation_name_set.txt using the column they share in common which is the var_name and creates a new file 
   # which is variation_name_set.txt containing the var_id and var_set_id which would be loaded to the new variation_set table
   my $file = shift; 
-  my $second_file = shift;
+  my $second_file = shift; 
   my $third_file = shift;
 
   open FILE1, "<", "$file" or die "Cannot open $file: $!";
@@ -156,7 +154,7 @@ sub load_all_variation_sets {
   # this would load the created file from the function create_merged_file to a temp table that was created using temp_table function
   my $dbhvar = shift;
   my $load_file = shift;
-  
+
   my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
 
@@ -178,30 +176,23 @@ sub update_variation_feature_table {
   # dump_new_variation_sets
   my $dbhvar = shift; 
   my $load_file = shift;
-  
-  my $insert_temp_vf = $dbhvar->prepare(q{ INSERT into variation_feature_bk SELECT * from variation_feature });
-  
-  $insert_temp_vf->execute();
-  $insert_temp_vf->finish();
-  
+
+
   my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
-                                          WHERE variation_id = ?});
+                                          WHERE variation_id = ? AND variation_set_id = ''});
   
-  my %var_data;
+  #my %var_data;
   open FH, "<", "$load_file" or die "Can not open $load_file: $!";
   while (<FH>) {
     chomp;
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
     
-    $var_data{$var_id} = $var_set_id; # creating a hash which has the var_id has the key and the set var_set_id has the values 
+    $update_temp_vf->execute($var_set_id, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
   close FH;
   
   # using the keys to update the variation_set_id which is the value and the variation_id using the key
-  foreach my $key (keys %var_data){
-    $update_temp_vf->execute($var_data{$key}, $key);
-  }
   $update_temp_vf->finish();
 
 }
@@ -301,4 +292,40 @@ sub usage {
 
   die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
   -old_registry [old database registry file]\n\n";
+}
+
+sub configure {
+  my $config = {};
+  my $args = scalar @ARGV;
+
+  GetOptions (
+    $config,
+
+  
+    "registry=s",
+    "old_registry=s",
+    "release=s",
+    "tmp=s",
+    "help|h",
+  ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
+  
+  # to define temporary directory if it is not defined 
+  if (!defined($config->{tmp})) {
+    $config->{tmp} = cwd;
+  }
+  if ($config->{help} || !$args){
+    usage();
+  }
+  return $config;
+
+}
+
+sub debug {
+  my $config = shift;
+  
+  my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+  my $text = (@_ ? (join "", @_) : "No message");
+  
+  my $time = "$year-$mon-$mday $hour:$min:$sec";
+  print $time." - ".$text.($text =~ /\n$/ ? "" : "\n");
 }
