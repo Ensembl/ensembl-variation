@@ -1,9 +1,15 @@
 #!/usr/bin/env perl
 use strict;
 use DBI;
+use Socket;
 use Bio::EnsEMBL::Registry;
 use Getopt::Long;
+use POSIX qw(strftime);
 use Cwd qw(cwd);
+
+$| = 1;
+socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "ERROR: Failed to open socketpair: $!";
+PARENT->autoflush(1);
 
 my $registry = 'Bio::EnsEMBL::Registry';
 my $config = configure();
@@ -14,7 +20,9 @@ my $reg_file = $config->{registry};
 $registry->load_all($reg_file);
 my $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
 my $dbh = $db_adaptor->dbc;
-debug($config, "Connected to the new database $dbh->dbc->dbname");
+my $dbname;
+$dbname = $dbh->dbname;
+debug($config, "Connected to the new database $dbname");
 
 my $TMP_DIR = $config->{tmp};
 
@@ -31,7 +39,8 @@ if ($old_reg_file) {
   $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
   # Connect to DBI
   $old_dbh = $db_adaptor->dbc;
-  debug($config, "Connected to the new database $old_dbh->dbc->dbname");
+  $dbname = $old_dbh->dbname;
+  debug($config, "Connected to the old database $dbname");
 } else {
   my $old_release = $release - 1;
   my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
@@ -39,9 +48,8 @@ if ($old_reg_file) {
   my $old_port = $dbh->port;
   #Connect to DBI
   $old_dbh = DBI->connect("DBI:mysql:database=${old_dbname};host=${old_host};port=${old_port}", "ensro", "");
-  debug($config, "Connected to the new database $old_dbname");
+  debug($config, "Connected to the old database $old_dbname");
 }
-
 
 debug($config, "Selecting minimum and maximum variation feature");
 my $sql = qq{ SELECT MIN(variation_feature_id), MAX(variation_feature_id) FROM variation_feature};
@@ -52,6 +60,7 @@ my $vf = $sth->fetchall_arrayref();
 my $min_id = $vf->[0]->[0];
 my $chunk = 1000000;
 my $max_id = $vf->[0]->[1];
+
 debug($config, "Dumping the variation sets and the new variation feature into files");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
@@ -68,12 +77,11 @@ system(sort -u $tmp_vset);
 debug($config, "Merging the files based on the new variation_id and the old variation set id");
 create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
 
-#system(sort -k 1,2 $tmp_merged);
-#system(sort -n $tmp_merged);
+system(sort -n $tmp_merged);
 debug($config, "Altering variation set variation table");
 temp_table($dbh);
 
-debug($config, "Loading new variation sets");
+debug($config, "Loading new variation sets from merged file");
 load_all_variation_sets($dbh, $tmp_merged);
 
 debug($config, "Dumping new variation sets into a file to update the variation feature table");
@@ -87,16 +95,15 @@ update_variation_feature_table($dbh,$tmp_vs_file);
 
 
 debug($config, "Adding failed variation to variation set");
-#$dbh->do(qq{ 
- # INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
- # SELECT DISTINCT variation_id, 1 
-#  FROM failed_variation; 
-#}) or die "Failed to add failed to variation_set_variation table";
+$dbh->do(qq{ 
+  INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
+  SELECT DISTINCT variation_id, 1 
+  FROM failed_variation; 
+}) or die "Failed to add failed to variation_set_variation table";
 
-#$dbh->do(qq{
-#  ALTER TABLE variation_set_variation ENABLE keys;
-#}) or die "Failed to alter variation_set_variation keys";
-#need to create a method to remove all the files and make the temp tables the actual tables.
+$dbh->do(qq{
+  ALTER TABLE variation_set_variation ENABLE keys;
+}) or die "Failed to alter variation_set_variation keys";
 
 
 sub temp_table { 
@@ -268,7 +275,7 @@ sub dump_new_variation_feature {
   $end = $end < $size ? $end : $size;
 
 
-  my $sql = qq{SELECT variation_id, variation_name from variation_feature where variation_id > $start AND variation_id <= $end };
+  my $sql = qq{SELECT DISTINCT(variation_id), variation_name from variation_feature where variation_id > $start AND variation_id <= $end };
   my $sth = $dbh->prepare($sql);
   
   local *FH;
@@ -322,10 +329,9 @@ sub configure {
 
 sub debug {
   my $config = shift;
-  
-  my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+
   my $text = (@_ ? (join "", @_) : "No message");
-  
-  my $time = "$year-$mon-$mday $hour:$min:$sec";
-  print $time." - ".$text.($text =~ /\n$/ ? "" : "\n");
+  my $date_time = strftime("%Y-%m-%d %H:%M:%S", localtime());
+
+  print $date_time." - ".$text.($text =~ /\n$/ ? "" : "\n");
 }
