@@ -108,11 +108,18 @@ sub _intron_overlap {
 }
 
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_chromosome) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    
-    return overlap(
+    $match_chromosome ||= 0;
+
+    my $cmp_chr = 1;
+    if ($match_chromosome) {
+      my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
+      $cmp_chr = $chr eq $feat->{slice}->{seq_region_name};
+    }
+
+    return $cmp_chr && overlap(
         $bvf->{start}, 
         $bvf->{end},
         $feat->{start}, 
@@ -284,6 +291,18 @@ sub tandem_duplication {
     }
 }
 
+sub breakend {
+  my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+  $bvf ||= $bvfoa->base_variation_feature;
+
+  if ($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
+    return (
+      ($bvf->class_SO_term(undef, 1) eq 'breakend') or
+      ($bvf->class_SO_term(undef, 1) =~ /breakend/i)
+    );
+  }
+}
+
 sub feature_ablation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
@@ -312,10 +331,20 @@ sub feature_elongation {
 
 sub feature_truncation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
+    if(breakend(@_)) {
+        my $chr;
+        for my $alt (@{$bvf->{_parsed_allele}}) {
+            # iterate over breakends to check if feature is located within
+            return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
+        }
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
+    }
+
     return (
         (
             partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
