@@ -2368,11 +2368,47 @@ sub get_reference{
   
   my $tr_mapper = $transcript->get_TranscriptMapper(); 
 
+  # If the codon overlaps an exon-intron boundary @coords can return two coordinates:
+  #  one for the first exon where the codon starts
+  #  a second coordinate for the exon where the codon ends
   my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
 
-  my $start  = $coords[0]->start();
-  my $end    = $coords[0]->end();
+  my $start;
+  my $end;
+  my $real_start;
+  my $real_end;
   my $strand = $coords[0]->strand();
+
+  # Assign start and end when we have two coordinates
+  # This is the most common alternative
+  if(scalar(@coords) == 2){
+    if(($coords[0]->end() - $coords[0]->start() + 1) % 2 == 0) {
+      if($strand == 1) {
+        $start = $coords[0]->start();
+        $end = $start + 2;
+        $real_end = $coords[1]->end();
+      }
+      else {
+        $end = $coords[0]->end();
+        $start = $end - 2;
+        $real_start = $coords[1]->start();
+      }
+    }
+    elsif($strand == 1) {
+      $end = $coords[1]->end();
+      $start = $end - 2;
+      $real_start = $coords[0]->start();
+    }
+    else {
+      $start = $coords[0]->start();
+      $end = $start + 2;
+      $real_end = $coords[1]->end();
+    }
+  }
+  else{
+    $start = $coords[0]->start();
+    $end   = $coords[0]->end();
+  }
 
   my $seq_length = $type_del == 1 ? ($end-$start) + 1 : 3;  
 
@@ -2390,8 +2426,11 @@ sub get_reference{
 
   my $from_codon_ref = $from_slice->seq(); 
   
+  $start = $real_start ? $real_start : $start;
+  $end = $real_end ? $real_end : $end;
+  
   ## correct for strand
-  reverse_comp(\$from_codon_ref) if $strand <0; 
+  reverse_comp(\$from_codon_ref) if $strand <0;
   
   return ($from_codon_ref, $start, $end, $strand); 
 }
