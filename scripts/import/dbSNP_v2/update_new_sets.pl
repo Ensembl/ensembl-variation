@@ -297,8 +297,9 @@ sub dump_new_variation_feature {
 
 sub usage {
 
-  die "\n\tUsage: update_old_sets.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
-  -old_registry [old database registry file]\n\n";
+  die "\n\tUsage: update_new_sets.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
+  -old_registry [old database registry file] use only if release is not defined\n
+  --release or --old_registry needs to be defined \n";
 }
 
 sub configure {
@@ -317,10 +318,13 @@ sub configure {
   ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
   
   # to define temporary directory if it is not defined 
+  if ($config->{help} || !$args){
+    usage();
+  }
   if (!defined($config->{tmp})) {
     $config->{tmp} = cwd;
   }
-  if ($config->{help} || !$args){
+  if (!defined($config->{release}) || !defined($config->{old_registry})) {
     usage();
   }
   return $config;
