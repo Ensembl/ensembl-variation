@@ -64,7 +64,7 @@ sub run {
 sub set_chr_from_filename {
   my $self = shift;
   my $vcf_file = $self->param_required('vcf_file');
-  $vcf_file =~ /.*_chr(.*)\.vcf$/;
+  $vcf_file =~ /.*_chr(.*)\.vcf.gz$/;
   my $chr = $1;
   if (!$chr) {
     die("Could not get chromosome name from file name ($vcf_file).");
@@ -82,7 +82,18 @@ sub split_vcf_file {
   my $split_vcf_output_dir = $self->param_required('split_vcf_output_dir');
   my $step_size = $self->param_required('step_size');
 
+  # If we are checking the transcripts then the input file is a VCF
+  # Remove .gz
+  if($check) {
+    $vcf_file =~ s/vcf.gz/vcf/;
+  }
+
   my $vcf_file_path = $input_dir . '/' . $vcf_file;
+
+  if(!$check && $vcf_file =~ /vcf.gz/) {
+    $self->run_system_command("gunzip $vcf_file_path");
+    $vcf_file_path =~ s/vcf.gz/vcf/;
+  }
 
   if (! -d $input_dir) {
     die("Directory ($input_dir) doesn't exist");
@@ -173,8 +184,13 @@ sub check_split_vcf_file {
   }
 
   # prepare input vcf file for tabix
-  $self->run_system_command("bgzip $vcf_file_path");
-  $self->run_system_command("tabix -p vcf $vcf_file_path.gz");
+  if($vcf_file !~ /vcf.gz/) {
+    $self->run_system_command("bgzip $vcf_file_path");
+    $self->run_system_command("tabix -p vcf $vcf_file_path.gz");
+  }
+  else {
+    $self->run_system_command("tabix -p vcf $vcf_file_path");
+  }
 
   # Create directory to store the input file only with the variants of interest (overlapping new transcripts)
   my $vcf_file_path_subset = $main_dir . '/input_vcf_files_subset';
@@ -184,7 +200,10 @@ sub check_split_vcf_file {
 
   $self->param('input_dir_subset', $vcf_file_path_subset);
 
-  open(my $write, '>', $vcf_file_path_subset . '/' . $vcf_file) or die $!;
+  my $vcf_file_sub = $vcf_file;
+  $vcf_file_sub =~ s/.gz//;
+
+  open(my $write, '>', $vcf_file_path_subset . '/' . $vcf_file_sub) or die $!;
 
   my $positions_of_interest = $transcripts->{$chr};
   foreach my $position (@$positions_of_interest) {
@@ -194,8 +213,8 @@ sub check_split_vcf_file {
 
     my $pos_string = sprintf("%s:%i-%i", $chr, $transcript_start, $transcript_end);
 
-    (open my $read, "tabix  " . $input_dir . "/" . $vcf_file . ".gz $pos_string |")
-      || die "Failed to read from input vcf file " . $input_dir . "/" . $vcf_file . ".gz \n" ;
+    (open my $read, "tabix  " . $input_dir . "/" . $vcf_file . " $pos_string |")
+      or die "Failed to read from input vcf file " . $input_dir . "/" . $vcf_file . " \n" ;
 
     while (my $row = <$read>) {
       chomp $row;
@@ -212,8 +231,8 @@ sub check_split_vcf_file {
   close($write);
 
   # Sort new vcf file
-  my $vcf_file_subset = $vcf_file_path_subset . '/' . $vcf_file;
-  my $vcf_file_subset_sorted = $vcf_file_path_subset . '/sorted_' . $vcf_file;
+  my $vcf_file_subset = $vcf_file_path_subset . '/' . $vcf_file_sub;
+  my $vcf_file_subset_sorted = $vcf_file_path_subset . '/sorted_' . $vcf_file_sub;
   $self->run_system_command("sort -o $vcf_file_subset_sorted -k1,1 -k2,2n $vcf_file_subset");
   $self->run_system_command("mv $vcf_file_subset_sorted $vcf_file_subset");
 }
@@ -289,13 +308,6 @@ sub get_new_transcripts_file {
   }
 
   $self->param('transcripts', \%new_transcripts);
-}
-
-sub count_lines {
-  my $self = shift;
-  my $filename = shift;
-
-  
 }
 
 1;
