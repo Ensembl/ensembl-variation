@@ -77,7 +77,6 @@ system(sort -u $tmp_vset);
 debug($config, "Merging the files based on the new variation_id and the old variation set id");
 create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
 
-system(sort -n $tmp_merged);
 debug($config, "Altering variation set variation table");
 temp_table($dbh);
 
@@ -298,7 +297,7 @@ sub dump_new_variation_feature {
 sub usage {
 
   die "\n\tUsage: update_new_sets.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
-  -old_registry [old database registry file] use only if release is not defined\n
+  -old_registry [old database registry file] use only if release is not defined
   --release or --old_registry needs to be defined \n";
 }
 
@@ -317,6 +316,8 @@ sub configure {
     "help|h",
   ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
   
+  use Data::Dumper;
+  print Dumper($config);
   # to define temporary directory if it is not defined 
   if ($config->{help} || !$args){
     usage();
@@ -324,7 +325,7 @@ sub configure {
   if (!defined($config->{tmp})) {
     $config->{tmp} = cwd;
   }
-  if (!defined($config->{release}) || !defined($config->{old_registry})) {
+  if ( !$config->{release} && !$config->{old_registry} ) {
     usage();
   }
   return $config;
