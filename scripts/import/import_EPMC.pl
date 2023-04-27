@@ -1236,8 +1236,8 @@ sub remove_outdated_citations {
           and not exists (select * from variation_citation vc
                           where vc.variation_id = v.variation_id)
   ];
-  my $rm_variation_cited_evidence_sth = $dbh->prepare(sprintf $rm_cited_evidence, 'variation');
-  my $rm_variation_feature_cited_evidence_sth = $dbh->prepare(sprintf $rm_cited_evidence, 'variation_feature');
+  my $rm_variation_cited_evidence_sth = $dba->dbc()->prepare(sprintf $rm_cited_evidence, 'variation');
+  my $rm_variation_feature_cited_evidence_sth = $dba->dbc()->prepare(sprintf $rm_cited_evidence, 'variation_feature');
 
   foreach my $c (@{$citations_data}){
     my $variation_id = $c->[0];
