@@ -1765,12 +1765,13 @@ sub _parse_hgvs_transcript_position {
 sub fetch_by_hgvs_notation {
   my $self = shift;
 
-  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $multiple_ok, $replace_ref) = rearrange([qw(
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $multiple_ok, $replace_ref, $max_size) = rearrange([qw(
     HGVS
     SLICE_ADAPTOR
     TRANSCRIPT_ADAPTOR
     MULTIPLE_OK
     REPLACE_REF
+    MAX_SIZE
   )], @_);
 
   if($DEBUG ==1){print "\nStarting fetch_by_hgvs_notation for $hgvs\n";}
@@ -1879,7 +1880,8 @@ sub fetch_by_hgvs_notation {
   elsif($type =~ m/g|m/i) {
     ($start, $end) = _parse_hgvs_genomic_position($description) ;  
 
-    throw ("Region requested must be smaller than 5kb") unless ($end - $start < 5000);
+    $max_size ||= 5000;
+    throw ("Region requested must be smaller than $max_size") unless ($end - $start < $max_size);
 
     ## grab reference allele; second call after "||" allows for LRG regions to be fetched
     $slice = $slice_adaptor->fetch_by_region('chromosome', $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);
@@ -2028,11 +2030,12 @@ sub _get_gene_transcripts {
 sub fetch_all_possible_by_hgvs_notation {
   my $self = shift;
 
-  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $replace_ref) = rearrange([qw(
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $replace_ref, $max_size) = rearrange([qw(
     HGVS
     SLICE_ADAPTOR
     TRANSCRIPT_ADAPTOR
     REPLACE_REF
+    MAX_SIZE
   )], @_);
 
   return $self->fetch_by_hgvs_notation(
@@ -2040,7 +2043,8 @@ sub fetch_all_possible_by_hgvs_notation {
     -slice_adaptor      => $user_slice_adaptor,
     -transcript_adaptor => $user_transcript_adaptor,
     -replace_ref        => $replace_ref,
-    -multiple_ok        => 1
+    -multiple_ok        => 1,
+    -max_size           => $max_size
   );
 }
 
