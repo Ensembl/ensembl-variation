@@ -1131,7 +1131,8 @@ sub process_phenotype_feature_attrib {
                                                    from phenotype_feature_attrib pfa
                                                    inner join phenotype_feature pf on pfa.phenotype_feature_id = pf.phenotype_feature_id
                                                    join attrib_type att on pfa.attrib_type_id = att.attrib_type_id
-                                                   where att.code = 'pubmed_id' ]);
+						   left join source s on s.source_id = pf.source_id
+                                                   where att.code = 'pubmed_id' and s.name = 'ClinVar' ]);
 
   $pheno_feature_sth->execute() or die "Failed to select citations from table phenotype_feature_attrib\n";
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
