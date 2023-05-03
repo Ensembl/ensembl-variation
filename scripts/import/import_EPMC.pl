@@ -117,7 +117,7 @@ elsif($type eq "UCSC"){
 }
 elsif($type eq "phenotype"){
 
-  print STDERR "Publications from Phenotype feature table:\n";
+  print "Publications from Phenotype feature table:\n";
 
   my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
   my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
@@ -132,7 +132,9 @@ elsif($type eq "phenotype"){
   my $citations_pheno_feature_attrib = process_phenotype_feature_attrib($dba, $source_ad, $citation_attribs);
   import_citations($reg, $citations_pheno_feature_attrib, $type);
 
-  check_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+  print "Removing outdated citations...\n";
+  remove_outdated_citations($dba, $var_ad, $pub_ad, $citation_attribs, $citations_pheno_feature, $citations_pheno_feature_attrib);
+  print "Removing outdated citations... done!\n";
 }
 else{
     die "Type $type is not recognised - must be EPMC, UCSC or phenotype\n";
@@ -604,14 +606,14 @@ sub update_evidence{
     my $ev_ext_sth = $dba->dbc()->prepare(qq[ select variation.variation_id, variation.evidence_attribs 
                                               from variation, variation_citation
                                               where variation.variation_id = variation_citation.variation_id
-                                             ]);
+      ]);
 
     my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence_attribs = ? where variation_id = ?]);
     my $varfeat_upd_sth = $dba->dbc()->prepare(qq[ update variation_feature set evidence_attribs = ? where variation_id = ?]);
-
+    
     $ev_ext_sth->execute() or die "Failed to select variation_id and evidence_attribs from table variation_citation\n";
     my $dat =  $ev_ext_sth->fetchall_arrayref();
-
+    
     my $n = scalar @{$dat};
     print "\n$n variants with citation evidence\n";
 
@@ -625,7 +627,7 @@ sub update_evidence{
         }
         else{
             $evidence = "$attrib->[0]->[0]";
-        }
+    }
 
         $var_upd_sth->execute($evidence, $l->[0]);
         $varfeat_upd_sth->execute($evidence, $l->[0]);
@@ -762,6 +764,7 @@ sub clean_publications{
     print $report "Total publications before cleaning:\t$publication_count\n";
     print $report "Total citations before cleaning:\t$citation_count\n\n";
 
+    my $pub_ad = $reg->get_adaptor($species, 'variation', 'publication');
 
     my $title_sth = $dba->dbc->prepare(qq[ select publication_id, title from publication where title like '\[%' and (title like '%\]' or title like '%\.\]' or title like '%\]\.') ]);
 
@@ -895,8 +898,8 @@ sub clean_publications{
 
     # Delete publications with not acceptable titles
     if(defined $wrong_title->[0]->[0]){
-      print $report "\nDeleted publications with title not acceptable (publication_id, title, variation_id):\n";
-      remove_publications($dba, $report, $wrong_title);
+      print $report "\nDeleted publications with title not acceptable (publication_id, title):\n";
+      remove_publications($pub_ad, $report, $wrong_title);
     }
 
     # If there is publications without title, delete them 
@@ -906,15 +909,15 @@ sub clean_publications{
       my $titles_null = $title_null_sth->fetchall_arrayref();
 
       if(defined $titles_null->[0]->[0]){
-        print $report "\nPublications without title deleted (publication_id, title, variation_id):\n";
-        remove_publications($dba, $report, $titles_null);
+        print $report "\nPublications without title deleted (publication_id, title):\n";
+        remove_publications($pub_ad, $report, $titles_null);
       }
     }
 
     # Delete publications without authors, pmid and pmcid
     if(defined $empty_fields->[0]->[0]){
-      print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title, variation_id)";
-      remove_publications($dba, $report, $empty_fields);
+      print $report "\nDeleted publications with empty authors, pmid and pmcid (publication_id, title)";
+      remove_publications($pub_ad, $report, $empty_fields);
     }
 
     $publication_count = count_rows($dba, 'publication');
@@ -926,75 +929,16 @@ sub clean_publications{
 
 # Delete publication from publication and variation_citation tables
 sub remove_publications{
-  my $dba = shift;
+  my $pub_ad = shift;
   my $report = shift;
   my $publications = shift;
 
   foreach my $p (@{$publications}){
     my $pub_id = $p->[0];
-    my $title = $p->[1];
-
-    my $var_id_sth = $dba->dbc->prepare(qq[ select variation_id from variation_citation where publication_id = $pub_id ]);
-
-    $var_id_sth->execute() or die;
-    my $get_variation_ids = $var_id_sth->fetchall_arrayref();
-    # checks if there is variation_id for publication
-    my $variation_ids = $get_variation_ids->[0];
-
-    if(defined $variation_ids){
-      foreach my $var_id (@{$variation_ids}){
-        my $failed_var_sth = $dba->dbc->prepare(qq[ select failed_variation_id from failed_variation where variation_id = $var_id ]);
-        $failed_var_sth->execute() or die;
-        my $get_failed_variant = $failed_var_sth->fetchall_arrayref();
-        my $failed_variant = $get_failed_variant->[0]->[0];
-
-        print $report "$pub_id\t$title\t$var_id\n";
-
-        my $citation_delete_sth = $dba->dbc()->prepare(qq[ delete from variation_citation where publication_id = $pub_id ]);
-        my $pub_delete_sth = $dba->dbc()->prepare(qq[ delete from publication where publication_id = $pub_id ]);
-        $citation_delete_sth->execute();
-        $pub_delete_sth->execute();
-
-        # Check if variant has other publications or phenotypes before changing display flag
-        if(defined $failed_variant){
-
-          # Check if there is other publications for variant 
-          my $other_publications_sth = $dba->dbc->prepare(qq[ select variation_id,publication_id from variation_citation where variation_id = $var_id ]);
-          $other_publications_sth->execute() or die;
-          my $other_publications = $other_publications_sth->fetchall_arrayref();
-          next unless (!defined $other_publications->[0]->[0]); 
-
-          # Check if there are phenotypes 
-          my $check_phenotype_sth = $dba->dbc->prepare(qq[ select phenotype_feature_id from phenotype_feature where object_id = $var_id ]);
-          $check_phenotype_sth->execute() or die;
-          my $phenotype_var = $check_phenotype_sth->fetchall_arrayref();
-          next unless (!defined $phenotype_var->[0]->[0]); 
-         
-          # Update display  
-          my $update_display_var_sth = $dba->dbc->prepare(qq[ update variation set display = 0 where variation_id = $var_id ]); 
-          my $update_display_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set display = 0 where variation_id = $var_id ]);      
-          $update_display_var_sth->execute() or die;
-          $update_display_vf_sth->execute() or die;
-        }
-        # Check if there are other publications for variant
-        my $other_pubs_sth = $dba->dbc->prepare(qq[ select publication_id from variation_citation where variation_id = $var_id ]);
-        $other_pubs_sth->execute() or die;
-        my $other_pubs = $other_pubs_sth->fetchall_arrayref();
-        next unless (!defined $other_pubs->[0]->[0]);
-
-        # If no more publications then remove citation evidence from variation and variation_feature
-        my $get_attrib_sth = $dba->dbc->prepare(qq[ select attrib_id from attrib where value = 'Cited' ]);
-        $get_attrib_sth->execute() or die;
-        my $get_attrib = $get_attrib_sth->fetchall_arrayref();
-        my $attrib = $get_attrib->[0]->[0];
-        die "Remove publication: not updating evidence as no attrib found\n" unless defined $attrib;        
-
-        my $update_evidence_sth = $dba->dbc->prepare(qq[ update variation set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
-        my $update_evidence_vf_sth = $dba->dbc->prepare(qq[ update variation_feature set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(CONCAT(',', evidence_attribs, ','), ',$attrib,', ',')), '') WHERE variation_id = $var_id ]);
-        $update_evidence_sth->execute() or die;
-        $update_evidence_vf_sth->execute() or die;
-      }
-    }
+    my $title  = $p->[1];
+    $pub_ad->remove_publication_by_dbID($pub_id) or
+      die "ERROR while removing publication $pub_id : $title\n";
+    print $report "$pub_id\t$title\n";
   }
 }
 
@@ -1187,7 +1131,8 @@ sub process_phenotype_feature_attrib {
                                                    from phenotype_feature_attrib pfa
                                                    inner join phenotype_feature pf on pfa.phenotype_feature_id = pf.phenotype_feature_id
                                                    join attrib_type att on pfa.attrib_type_id = att.attrib_type_id
-                                                   where att.code = 'pubmed_id' ]);
+						   left join source s on s.source_id = pf.source_id
+                                                   where att.code = 'pubmed_id' and s.name = 'ClinVar' ]);
 
   $pheno_feature_sth->execute() or die "Failed to select citations from table phenotype_feature_attrib\n";
   my $pheno_feature_data = $pheno_feature_sth->fetchall_arrayref();
@@ -1239,9 +1184,8 @@ sub process_phenotype_feature_attrib {
   return \%list_citations_pheno_feature_attrib;
 }
 
-# The citations imported from the Phenotype tables (phenotype_feature and phenotype_feature_attrib) could be removed from the phenotype import in the future.
-# To avoid having outdated citations we check if all citations from the 3 sources (ClinVar, GWAS and dbGaP) are still in the Phenotype tables.
-sub check_outdated_citations {
+# To avoid outdated citations, we remove citations from ClinVar, GWAS or dbGaP that are not in the Phenotype tables.
+sub remove_outdated_citations {
   my $dba = shift;
   my $var_ad = shift;
   my $pub_ad = shift;
@@ -1257,14 +1201,44 @@ sub check_outdated_citations {
   my $attrib_id_gwas = $citation_attribs->{'GWAS'};
   my $attrib_id_dbgap = $citation_attribs->{'dbGaP'};
   my $attrib_id_ddg2p = $citation_attribs->{'G2P'};
+  my @attrib_ids = ($attrib_id_clinvar, $attrib_id_gwas, $attrib_id_dbgap, $attrib_id_ddg2p);
 
-  my $citations_sth = $dba->dbc()->prepare(qq[ select variation_id, publication_id, data_source_attrib
-                                               from variation_citation
-                                               where data_source_attrib like '%$attrib_id_clinvar%' or data_source_attrib like '%$attrib_id_gwas%' 
-                                               or data_source_attrib like '%$attrib_id_dbgap%' or data_source_attrib like '%$attrib_id_ddg2p%' ]);
+  my $citations_sth = $dba->dbc()->prepare(qq[
+    select variation_id, publication_id, data_source_attrib
+    from variation_citation
+    where data_source_attrib like '%$attrib_id_clinvar%'
+       or data_source_attrib like '%$attrib_id_gwas%'
+       or data_source_attrib like '%$attrib_id_dbgap%'
+       or data_source_attrib like '%$attrib_id_ddg2p%' ]);
 
   $citations_sth->execute() or die "Failed to fetch outdated citations from database\n";
   my $citations_data = $citations_sth->fetchall_arrayref();
+
+  my $rm_citations_sth = $dba->dbc()->prepare(qq[
+        delete from variation_citation
+        where data_source_attrib = ? and
+              variation_id = ? and 
+              publication_id = ?
+  ]);
+        
+  my $update_citations_sth = $dba->dbc()->prepare(qq[
+        update variation_citation
+        set data_source_attrib = ?
+        where variation_id = ? and 
+              publication_id = ?
+  ]);
+
+  my $cited_attrib_id = $dba->get_AttributeAdaptor->attrib_id_for_type_value('evidence', 'Cited');
+  my $rm_cited_evidence = qq[
+        update %s v
+        set v.evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(
+            CONCAT(',', v.evidence_attribs, ','), ',$cited_attrib_id,', ',')), '')
+        where v.variation_id = ?
+          and not exists (select * from variation_citation vc
+                          where vc.variation_id = v.variation_id)
+  ];
+  my $rm_variation_cited_evidence_sth = $dba->dbc()->prepare(sprintf $rm_cited_evidence, 'variation');
+  my $rm_variation_feature_cited_evidence_sth = $dba->dbc()->prepare(sprintf $rm_cited_evidence, 'variation_feature');
 
   foreach my $c (@{$citations_data}){
     my $variation_id = $c->[0];
@@ -1282,11 +1256,54 @@ sub check_outdated_citations {
 
     my @split_attrib_id = split /,/, $attrib_id;
 
+    my @outdated_attribs;
+    my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
-      print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n" unless ($citations_pheno_feature->{$attrib.'_'.$publication_pmid} || $citations_pheno_feature_attrib->{$attrib.'_'.$publication_pmid});
+      my $is_selected_attrib_id = $attrib ~~ @attrib_ids;
+
+      my $value = $attrib . '_' . $publication_pmid;
+      my $is_cited_in_pheno = $citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value};
+      if (!$is_selected_attrib_id || $is_cited_in_pheno) {
+        push @current_attribs, $attrib;
+      } else {
+        push @outdated_attribs, $attrib;
+        print $wrt "$variation_rsid\t$publication_pmid\t$attrib\n";
+      }
     }
 
+    if (@outdated_attribs eq @split_attrib_id) {
+      # remove citation if outdated in all sources
+      $rm_citations_sth->execute($attrib_id, $variation_id, $publication_id) or
+        die "Error: cannot remove $variation_id, $publication_id, $attrib_id from variation_citation\n";
+      # remove 'Cited' evidence if variant is not in variation_citation
+      $rm_variation_cited_evidence_sth->execute($variation_id) or
+        die "Error: cannot remove 'Cited' evidence for $variation_id in variation";
+      $rm_variation_feature_cited_evidence_sth->execute($variation_id) or
+        die "Error: cannot remove 'Cited' evidence for $variation_id in variation_feature";
+    } elsif (@outdated_attribs) {
+      # discard outdated sources
+      my $new_attrib_id = join(",", @current_attribs);
+      $update_citations_sth->execute($new_attrib_id, $variation_id, $publication_id) or
+        die "Error: cannot update $variation_id, $publication_id, $attrib_id from variation_citation with new value $new_attrib_id\n";
+    }
   }
+
+  # Remove publications not associated with any variants
+  my $orphan_publications_sth = $dba->dbc()->prepare(qq[
+    select publication_id, title
+    from publication
+    where publication_id NOT IN
+      (select distinct publication_id from variation_citation) ]);
+  $orphan_publications_sth->execute() or die;
+  my $orphan_publications = $orphan_publications_sth->fetchall_arrayref();
+
+  if ($orphan_publications) {
+    print $wrt "\nDeleted publications with no associated variants (publication_id, title):\n";
+    remove_publications($pub_ad, $wrt, $orphan_publications);
+  } else {
+    print $wrt "\nNo publications with no associated variants to remove.\n";
+  }
+
   close($wrt);
 }
 
