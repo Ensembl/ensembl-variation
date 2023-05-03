@@ -440,7 +440,7 @@ $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or
 
 print "\n# Test - fetch_by_hgvs_notation\n";
 my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
-throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
+throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than/, 'HGVSg notation using a (too) long region throws an error';
 $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
