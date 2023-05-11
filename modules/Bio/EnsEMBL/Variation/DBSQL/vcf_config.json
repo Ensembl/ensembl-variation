@@ -874,24 +874,30 @@
       ]
     },
     {
-      "id": "coturnix_japonica_EVA",
-      "source_name": "EVA",
-      "description": "Variants from EVA",
-      "species": "coturnix_japonica",
-      "assembly": "Coturnix_japonica_2.0",
-      "type": "remote",
-      "use_as_source" : 1,
-      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/coturnix_japonica/Coturnix_japonica_2.0/GCA_001577835.1_current_ids.vcf.gz"
+        "id": "eva_coturnix_japonica_gca001577835v1",
+        "description": "Variants from EVA",
+        "species": "Coturnix_japonica",
+        "assembly": "Coturnix_japonica_2.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/coturnix_japonica/GCA_001577835.1/GCA_001577835.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
     },
     {
-     "id": "parus_major_EVA",
-     "source_name": "EVA",
-     "description": "Variants from EVA",
-     "species": "parus_major",
-     "assembly": "Parus_major1.1",
-     "type": "remote",
-     "use_as_source" : 1,
-     "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/parus_major/GCA_001522545.2/GCA_001522545.2_current_ids.vcf.gz"
+        "id": "eva_parus_major_gca001522545v2",
+        "description": "Variants from EVA",
+        "species": "Parus_major",
+        "assembly": "Parus_major1.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/parus_major/GCA_001522545.2/GCA_001522545.2_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
     },
     {
       "id": "great_tit_EVA_PRJEB24964",
@@ -904,16 +910,17 @@
       "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
     },
     {
-      "id": "crab_macaque_EVA",
-      "source_name": "EVA",
-      "description": "Variants from EVA",
-      "species": "macaca_fascicularis",
-      "assembly": "Macaca_fascicularis_6.0",
-      "type": "remote",
-      "use_as_source" : 1,
-      "source_version" : 4,
-      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
-      "use_seq_region_synonyms": 0
+        "id": "eva_macaca_fascicularis_gca011100615v1",
+        "description": "Variants from EVA",
+        "species": "Macaca_fascicularis",
+        "assembly": "Macaca_fascicularis_6.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
     },
     {
         "id": "eva_taeniopygia_guttata_gca003957565v2",
@@ -929,24 +936,30 @@
         "source_version": 4
     },
     {
-      "id": "macaca_mulatta_EVA",
-      "source_name": "EVA",
-      "description": "Variants from EVA",
-      "species": "macaca_mulatta",
-      "assembly": "Mmul_10",
-      "type": "remote",
-      "use_as_source" : 1,
-      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_mulatta/Mmul_10/GCA_003339765.3_current_ids.vcf.gz"
+        "id": "eva_macaca_mulatta_gca003339765v3",
+        "description": "Variants from EVA",
+        "species": "Macaca_mulatta",
+        "assembly": "Mmul_10",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_mulatta/GCA_003339765.3/GCA_003339765.3_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
     },
     {
-      "id": "meleagris_gallopavo_EVA",
-      "source_name": "EVA",
-      "description": "Variants from EVA",
-      "species": "meleagris_gallopavo",
-      "assembly": "Turkey_5.1",
-      "type": "remote",
-      "use_as_source" : 1,
-      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/meleagris_gallopavo/Turkey_5.1/GCA_000146605.4_current_ids.vcf.gz"
+        "id": "eva_meleagris_gallopavo_gca000146605v4",
+        "description": "Variants from EVA",
+        "species": "Meleagris_gallopavo",
+        "assembly": "Turkey_5.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/meleagris_gallopavo/GCA_000146605.4/GCA_000146605.4_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
     },
     {
         "id": "eva_ficedula_albicollis_gca000247815v2",
