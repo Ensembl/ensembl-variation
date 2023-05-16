@@ -132,9 +132,17 @@ foreach my $type_stmt (@{$info{'clin_sign'}}) {
 # Clinical significance examples
 my $html_content = add_table_header($info{'label'});
 
+sub sort_clin_sign_terms {
+  my @terms = @_;
+  # change order of adjectives to group similar terms together
+  my @adjectives = ("likely", "established", "uncertain");
+  my $words = join("|", @adjectives);
+  return sort { ($a =~ s/($words) (.*)/$2 $1/gr) cmp ($b =~ s/($words) (.*)/$2 $1/gr) } @terms;
+}
+
 my $count = 0;
 my $cs_term_count = scalar (keys %clin_sign);
-foreach my $cs_term (sort(keys %clin_sign)) {
+foreach my $cs_term (sort_clin_sign_terms(keys %clin_sign)) {
   $count ++;
   my $icon_label = $cs_term;
      $icon_label =~ s/ /-/g;
