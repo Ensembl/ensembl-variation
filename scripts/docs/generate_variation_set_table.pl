@@ -127,7 +127,7 @@ foreach my $hostname (@hostnames) {
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$db_version\_\d+$/i);    
-    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
     print $dbname;
     $dbname =~ /^(.+)_$db_type/;
@@ -170,7 +170,7 @@ foreach my $hostname (@hostnames) {
       }
       
     }
-    print " ... done\n";
+    print STDERR " ... done\n";
   }
 }
 

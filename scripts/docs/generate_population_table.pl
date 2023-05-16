@@ -26,7 +26,7 @@ use File::Basename;
 ###############################################################
 ##########             CONFIGURE                        #######
 ###############################################################
-my ($e_version,$html_file,$hlist,$user,$help);
+my ($e_version,$html_file,$hlist,$user,$help,$d_dir);
 ## EG options
 my ($site, $etype);
 
@@ -37,30 +37,38 @@ GetOptions(
      'o=s'       => \$html_file,
      'help!'     => \$help,
      'hlist=s'   => \$hlist,
-     'user=s'    => \$user
+     'user=s'    => \$user,
+     'd_dir=s'  => \$d_dir
 );
 
 ## Missing arguments ##
 if (!$e_version) {
-  print "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
   usage();
 }
 if (!$html_file) {
-  print "> Error! Please give an output file using the option '-o'\n";
+  print STDERR "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
 if (!$hlist) {
-  print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  print STDERR "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
   usage();
 }
 if (!$user) {
-  print "> Error! Please give user name using the option '-user'\n";
+  print STDERR "> Error! Please give user name using the option '-user'\n";
   usage();
 }
 usage() if ($help);
 
 # Get the dir this script is residing in
 my $dirname = dirname(__FILE__);
+
+# Get the local dir where the vcf files are located
+my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
+
+if ($d_dir){
+  $data_dir = $d_dir;
+}
 
 my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
 
@@ -140,9 +148,9 @@ foreach my $hostname (@hostnames) {
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$e_version\_\d+$/i);
-    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
 
-    print "$dbname\n";
+    print STDERR "$dbname\n";
     $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1; 
     
@@ -309,6 +317,70 @@ close(HTML);
 ##########             FUNCTIONS                     ##########
 ###############################################################
 
+
+# Get a random file from filename template in vcf collection
+sub get_random_file {
+  my ($project) = @_;
+  my $file;
+
+  my $filename_template = $project->{filename_template};
+
+  if ($filename_template =~ /###CHR###/){
+    my $chromosomes = $project->{chromosomes};
+
+    return undef unless $chromosomes;
+
+    my $chr = @{ $chromosomes }[0];
+    
+    $file = $filename_template =~ s/###CHR###/$chr/gr;
+  }
+  else{
+    $file = $filename_template
+  }
+
+  return $file;
+}
+
+# Determine what type data contains in the vcf file
+sub get_vcf_content_types {
+  my ($project) = @_;
+  my @types;
+  
+  # this ignores the false positive sigpipe error from tabix command 
+  $SIG{PIPE} = 'DEFAULT';
+  
+  # add if the vcf collection mentions annotation type
+  push @types, $project->{annotation_type} if $project->{annotation_type};
+
+  # if use_as_source is set then it is the main source for tracks
+  push @types, "source" if $project->{use_as_source};
+
+  # check FORMAT field of the vcf file to see if it has genotype
+  my $file = get_random_file($project);
+  
+  my $file_full_path = $file;
+  if ($project->{type} eq "local"){
+    $file_full_path = $data_dir . $file_full_path;
+  }
+
+  my $genotypes = `tabix -D $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
+  push @types, "genotype" if $genotypes;
+  
+  # check in a actual line for FORMAT field if not exist in header
+  unless ($genotypes){
+    my $chr = `tabix -D $file_full_path -l | head -n 1`;
+    chop $chr;
+  
+    my $line = `tabix -D $file_full_path $chr | head -n 1`;
+  
+    my $format_field = (split /\t/, $line)[8];
+    
+    push @types, "genotype" if $format_field;
+  }
+  
+  return @types;
+}
+
 # Build the project populations structure if it exists
 sub get_population_structure {
   my $pops     = shift;
@@ -424,6 +496,11 @@ sub get_sub_populations {
 sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
+    
+    # Check if the file have genotype data and being showed
+    my @types = get_vcf_content_types($project);
+    next unless grep /^genotype$/, @types;    
+    
     my $project_id = $project->{'id'};
     next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'} eq 'cadd' || $project->{'annotation_type'} eq 'gerp');
 
@@ -607,6 +684,8 @@ sub usage {
     -hlist          The list of host names (with port) where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1:1234, ensembldb.ensembl.org2:1234 (Required)
     -user           MySQL user name (Required)
+    -d_dir          The directory location of where the local vcf files are stored (optional). By default it looks in - 
+                    /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates 
   } . "\n";
   exit(0);
 }
