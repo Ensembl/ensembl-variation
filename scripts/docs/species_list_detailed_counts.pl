@@ -61,19 +61,19 @@ GetOptions(
 );
 
 if (!$e_version) {
-  print "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
   usage();
 }
 if (!$html_file) {
-  print "> Error! Please give an output file using the option '-o'\n";
+  print STDERR "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
 if (!$hlist) {
-  print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  print STDERR "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
   usage();
 }
 if (!$user) {
-  print "> Error! Please give user name using the option '-user'\n";
+  print STDERR "> Error! Please give user name using the option '-user'\n";
   usage();
 }
 
@@ -266,7 +266,7 @@ foreach my $type (@type_order) {
     next;
   }
 
-  print "\n# $type\n";
+  print STDERR "\n# $type\n";
   my $lc_type = lc($type);
   
   my $anchor = $lc_type;
@@ -291,21 +291,21 @@ foreach my $type (@type_order) {
     # loop over databases
     while (my ($dbname) = $sth->fetchrow_array) {
       next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
-      next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-      print $dbname;
+      next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+      print STDERR "${dbname}\n";
       
       $dbname =~ /^(.+)_variation/;
       my $s_name = $1;
       
       if ($etype) { # EG site - need to filter out species
         my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
-        #  print "- checking for $img_thumb ... ";
+        #  print STDERR "- checking for $img_thumb ... ";
         if (! -e $img_thumb) {
-          print "\t... skipping \n";
+          print STDERR "\t... skipping \n";
           next;
         } 
       }
-      print "\n";
+      print STDERR "\n";
       
       my $label_name = ucfirst($s_name);
          $label_name =~ s/_/ /g;
@@ -583,6 +583,9 @@ sub round_count_diff {
 sub get_vcf_content_types {
   my ($project) = @_;
   my @types;
+  
+  # this ignores the false positive sigpipe error from tabix command 
+  $SIG{PIPE} = 'DEFAULT';
 
   # add if the vcf collection mentions annotation type
   push @types, $project->{annotation_type} if $project->{annotation_type};
