@@ -132,12 +132,30 @@ foreach my $type_stmt (@{$info{'clin_sign'}}) {
 # Clinical significance examples
 my $html_content = add_table_header($info{'label'});
 
+sub transform_clin_sign_for_sorting {
+  # transfroms clinical significance terms in order to sort them as needed
+
+  my $var = shift;
+
+  # change order of adjectives to group similar terms together
+  my @adjectives = ("likely", "established");
+  my $words = join("|", @adjectives);
+  my $res = $var =~ s/($words) (.*)/$2-$1/gr;
+
+  # change order of "low penetrance" to come after other similar terms
+  $res =~ s/(.*)( low penetrance)(.*)/$1$3-$2/g;
+
+  # group undefined values in the bottom of the list
+  my @uncertain = ("uncertain", "not provided", "other");
+  $words = join("|", @uncertain);
+  $res =~ s/($words)/z$1/g;
+
+  return $res;
+}
+
 sub sort_clin_sign_terms {
   my @terms = @_;
-  # change order of adjectives to group similar terms together
-  my @adjectives = ("likely", "established", "uncertain");
-  my $words = join("|", @adjectives);
-  return sort { ($a =~ s/($words) (.*)/$2 $1/gr) cmp ($b =~ s/($words) (.*)/$2 $1/gr) } @terms;
+  sort { transform_clin_sign_for_sorting($a) cmp transform_clin_sign_for_sorting($b) } @terms;
 }
 
 my $count = 0;
