@@ -138,11 +138,16 @@ sub transform_clin_sign_for_sorting {
   my $var = shift;
 
   # change order of adjectives to group similar terms together
+  # adjectives are put in the end: likely pathogenic -> pathogenic_likely
+  # example:  1. pathogenic        -> pathogenic
+  #           2. likely pathogenic -> pathogenic-likely
   my @adjectives = ("likely", "established");
   my $words = join("|", @adjectives);
   my $res = $var =~ s/($words) (.*)/$2-$1/gr;
 
   # change order of "low penetrance" to come after other similar terms
+  # example:  1. likely pathogenic                -> pathogenic-likely
+  #           2. likely pathogenic low penetrance -> pathogenic-likely-low penetrance
   $res =~ s/(.*)( low penetrance)(.*)/$1$3-$2/g;
 
   # group undefined values in the bottom of the list
