@@ -161,6 +161,8 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
   next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
   my $s_name = lc $project->{species};
+  next if ($s_name =~ /^(drosophila|saccharomyces|ciona)/);
+  
   print STDERR $project->{id}, "\n";
 
   if ($etype) { # EG site - need to filter out species
