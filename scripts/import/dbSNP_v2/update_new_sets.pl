@@ -26,7 +26,7 @@ debug($config, "Connected to the new database $dbname");
 
 my $TMP_DIR = $config->{tmp};
 
-my $TMP_FILE = "variation_feature.txt";
+my $new_vf_file = "variation_feature.txt";
 my $tmp_vset = "variation_name_set.txt";
 my $tmp_merged = "new_variation_set_variation.txt";
 my $tmp_vs_file = "vset_concat.txt";
@@ -71,11 +71,11 @@ for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
 }
 
 debug($config, "Sorting the files");
-system(sort -u $TMP_FILE);
+system(sort -u $new_vf_file);
 system(sort -u $tmp_vset);
 
 debug($config, "Merging the files based on the new variation_id and the old variation set id");
-create_merged_file($tmp_vset, $TMP_FILE, $tmp_merged);
+create_merged_file($tmp_vset, $new_vf_file, $tmp_merged);
 
 debug($config, "Altering variation set variation table");
 temp_table($dbh);
@@ -89,12 +89,12 @@ for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
 }
 
 debug($config, "Updating the variation feature table");
-update_variation_feature_table($dbh,$tmp_vs_file);
+update_variation_feature_table($dbh, $tmp_vs_file);
 
 
 
 debug($config, "Adding failed variation to variation set");
-$dbh->do(qq{ 
+$dbh->do( qq{ 
   INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
   SELECT DISTINCT variation_id, 1 
   FROM failed_variation; 
@@ -119,9 +119,9 @@ sub temp_table {
 sub create_merged_file {
   # this would merge the files variation_feature.txt and variation_name_set.txt using the column they share in common which is the var_name and creates a new file 
   # which is variation_name_set.txt containing the var_id and var_set_id which would be loaded to the new variation_set table
-  my $file = shift; 
-  my $second_file = shift; 
-  my $third_file = shift;
+  my $tmp_vset = shift; 
+  my $new_vf_file = shift; 
+  my $tmp_merged = shift;
 
   open FILE1, "<", "$file" or die "Cannot open $file: $!";
   open FILE2, "<", "$second_file" or die "Cannot open $second_file: $!";
@@ -193,14 +193,14 @@ sub update_variation_feature_table {
     chomp;
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
-    
+    use Data::Dumper;
+    print Dumper($var_set_id, $var_id);
+
     $update_temp_vf->execute($var_set_id, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
-  close FH;
   
-  # using the keys to update the variation_set_id which is the value and the variation_id using the key
+  close FH;
   $update_temp_vf->finish();
-
 }
 
 
@@ -278,8 +278,8 @@ sub dump_new_variation_feature {
   my $sth = $dbh->prepare($sql);
   
   local *FH;
-  open (FH, ">>$TMP_DIR/$TMP_FILE" )
-      or die( "Cannot open $TMP_DIR/$TMP_FILE: $!" );
+  open (FH, ">>$TMP_DIR/$new_vf_file" )
+      or die( "Cannot open $TMP_DIR/$new_vf_file: $!" );
 
   $sth->execute();
 
@@ -316,8 +316,6 @@ sub configure {
     "help|h",
   ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
   
-  use Data::Dumper;
-  print Dumper($config);
   # to define temporary directory if it is not defined 
   if ($config->{help} || !$args){
     usage();
