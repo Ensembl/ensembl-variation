@@ -54,7 +54,7 @@ sub default_options {
         pipeline_name              => 'spliceai_scores',
         main_dir                   => $self->o('main_dir'), # main directory where all files and directories are going to be stored
         input_directory            => $self->o('main_dir') . '/input_vcf_files', # input files
-        split_vcf_no_header_dir    => $self->o('main_dir') . '/split_vcf_no_header', # contains the input files after being splitted (files without headers)
+	split_vcf_no_header_dir    => $self->o('main_dir') . '/split_vcf_no_header', # contains the input files after being splitted (files without headers)
         split_vcf_input_dir        => $self->o('main_dir') . '/split_vcf_input', # contains the splitted input vcf files with headers, these are the files used to run SpliceAI
         split_vcf_output_dir       => $self->o('main_dir') . '/split_vcf_output', # temporary output files, still splitted
         output_dir                 => $self->o('main_dir') . '/output', # final output files already merged by chromosome
@@ -63,8 +63,8 @@ sub default_options {
         step_size                  => 4000, # number of variants used to split the main vcf files
         check_transcripts          => 0, # if set to 1 checks which are the new MANE Select transcripts for the last months and only calculates SpliceAI scores for these variants overlapping these transcripts
         transcripts_from_file      => undef,
-        time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
-        masked_scores              => 1, # calculate masked scores
+	time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
+	masked_scores              => 1, # calculate masked scores
         registry                   => undef, # database where new MANE transcripts are going to be checked; only used if check_transcripts = 1
         output_file_name           => 'spliceai_final_scores_',
 
@@ -83,23 +83,10 @@ sub default_options {
 
 sub resource_classes {
     my ($self) = @_;
-
-    my $step_size = $self->o('step_size');
-    my $time = 4;
-    if($step_size > 4000) {
-      $time = $step_size/1000;
-    }
-
     return {
         %{$self->SUPER::resource_classes},
-        '8Gb_8c_job'  => { 'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000',
-                           'SLURM' => "--cpus-per-task=8 --partition=standard --time=$time:00:00 --mem=8G"
-                         },
-        '4Gb_job'     => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
-                           'SLURM' => "--partition=standard --time=$time:00:00 --mem=4G"
-                         },
-        'default'     => { 'LSF' => '-R"select[mem>1000] rusage[mem=1000]" -M1000',
-                           'SLURM' => "--partition=standard --time=1:00:00 --mem=1G" }
+        '8Gb_8c_job'  => {'LSF' => '-n 8 -q production -R"select[mem>8000]  rusage[mem=8000]" -M8000' },
+        '4Gb_job'     => {'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
     };
 }
 
