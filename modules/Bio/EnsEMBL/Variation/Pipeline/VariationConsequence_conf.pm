@@ -202,10 +202,12 @@ sub resource_classes {
     return {
           'default' => { 'LSF'   => $self->o('default_lsf_options'),
                          'SLURM' => $self->o('default_slurm_options') },
-          'highmem' => { 'LSF'   => $self->o('highmem_lsf_options'),
-                         'SLURM' => $self->o('highmem_slurm_options') },
-          'medmem'  => { 'LSF'   => $self->o('medmem_lsf_options'),
-                         'SLURM' => $self->o('medmem_slurm_options') },
+          'default_long' => { 'LSF'   => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_long_slurm_options') },
+          'highmem'      => { 'LSF'   => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_slurm_options') },
+          'medmem'       => { 'LSF'   => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_slurm_options') },
     };
 }
 
@@ -308,7 +310,7 @@ sub pipeline_analyses {
               update_diff => $self->o('update_diff'),
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
@@ -356,14 +358,14 @@ sub pipeline_analyses {
               update_diff => $self->o('update_diff'),
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
           },
           { -logic_name => 'rebuild_tv_indexes',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
             -parameters => {
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
             -wait_for => 'web_index_load',
             -flow_into => {
               1 => ['update_variation_feature'],
@@ -375,7 +377,7 @@ sub pipeline_analyses {
             -parameters => {
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
             -flow_into => {
               1 => ['check_transcript_variation']
             },
@@ -430,7 +432,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_name        => 'default',
+                -rc_name        => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
                 -wait_for       => [ 'set_variation_class' ],
                 -flow_into      => {},
             },
