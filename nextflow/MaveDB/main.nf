@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /* 
- * Nextflow pipeline to create MaveDB data for VEP
+ * Nextflow pipeline to create MaveDB plugin data for VEP
  */
 
 nextflow.enable.dsl=2
@@ -23,98 +23,58 @@ if (params.help) {
 }
 
 // Module imports
-//include { decompress } from './nf_modules/utils.nf'
+include { run_variant_recoder; prepare_vr_mappings } from './nf_modules/variant_recoder.nf'
 
 log.info """
-  Crate MaveDB data for VEP
-  -----------------------------
+  Create MaveDB plugin data for VEP
+  ---------------------------------
   mappings : ${params.mappings} 
   """
 
-process split_by_mapping_type {
-  tag "$file"
+def split_by_mapping_type (files) {
+  // split mapping files based on HGVS type (HGVSp or HGVSg files)
 
-  input:
-    path file
-
-  output:
-    tuple path(file), path('hgvsp.txt'), emit: hgvsp, optional: true
-    tuple path(file), path('nucleotide.txt'), emit: input, optional: true
-
-  """
-  grep -m1 ":p." $file || cp $file nucleotide.txt
-
-  if [[ ! -f nucleotide.txt ]]; then
-    grep -Eo '".*:p..*"' $file | sed 's/"//g' | sed 's/value: //g' > hgvsp.txt
-  fi
-
-  # remove file if empty
-  [[ -s hgvsp.txt ]] || rm -f hgvsp.txt
-  """
-}
-
-process run_variant_recoder {
-  tag "$file"
-
-  input:
-    tuple path(file), path(hgvs)
-
-  output:
-    tuple path(file), path('vr.json')
-
-  """
-  variant_recoder -i $hgvs --vcf_string > vr.json
-  """
-}
-
-process prepare_vr_output {
-  tag "$file"
-
-  input:
-    tuple path(file), path(vr)
-
-  output:
-    tuple path(file), path('vr.txt')
-
-  """
-  #!/usr/bin/env python3
-  import csv
-  import json
-
-  f = open('$vr')
-  data = json.load(f)
-
-  line = []
-  for result in data:
-    for allele in result:
-      info = result[allele]
-
-      if type(info) is list and "Unable to parse" in info[0]:
-        continue
-
-      hgvsp  = info["input"]
-      for string in info["vcf_string"]:
-        chr, pos, ref, alt = string.split('-')
-        line.append( [hgvsp, chr, pos, ref, alt] )
-  f.close()
-
-  w = open('vr.txt', 'w')
-  writer = csv.writer(w, delimiter='\t')
-  writer.writerows(line)
-  w.close()
-  """
+  tmp = Channel.fromPath(files).map {
+    it.withReader {
+      while( line = it.readLine() ) {
+        if (line.contains("hgvs.")) {
+          // get first line describing HGVS type
+          if (line.contains("hgvs.p")) {
+            hgvs = "hgvs.p"
+          } else if (line.contains("hgvs.g")) {
+            hgvs = "hgvs.g"
+          } else {
+            throw new Exception("Error: HGVS type in '${line.trim()}' not expected")
+          }
+          break
+        }
+      }
+    }
+    [file: it, hgvs: hgvs]
+  }.branch{
+    hgvs_pro: it.hgvs == "hgvs.p"
+    hgvs_nt:  it.hgvs == "hgvs.g"
+  }
+  
+  // clean up: only return the files in each branch
+  files = [hgvs_pro: null, hgvs_nt: null]
+  files.hgvs_pro = tmp.hgvs_pro.map { it.file }
+  files.hgvs_nt  = tmp.hgvs_nt.map { it.file }
+  return files
 }
 
 workflow {
-  mapping_files = Channel.fromPath(params.mappings + "/*")
-  split_by_mapping_type(mapping_files)
+  mapping_files = Channel.fromPath( params.mappings + "/*" )
+  mapping_files = split_by_mapping_type( mapping_files )
   
   // prepare HGVSp mappings
-  run_variant_recoder( split_by_mapping_type.out.hgvsp )
-  prepare_vr_output( run_variant_recoder.out )
+  run_variant_recoder( mapping_files.hgvs_pro )
+  prepare_vr_mappings( run_variant_recoder.out )
 
-  // use HGVSg mappings
-  // mix into single file
+  // use MaveDB-prepared HGVSg mappings
+  process_MaveDB_mappings( mapping_files.hgvs_nt )
+
+  // concatenate data into a single file
 }
 
 // Print summary
