@@ -1377,8 +1377,16 @@ sub hgvs_transcript {
   }
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
-  if($variation_feature_sequence && $vf->strand() != $refseq_strand) {    
-    reverse_comp(\$variation_feature_sequence) ;
+  if($variation_feature_sequence && $vf->strand != $refseq_strand) {
+    if($vf->strand == 1){
+      reverse_comp(\$variation_feature_sequence);
+    }
+    else{
+      # if varitaion feature in +1 strand and transctipt is in -1 strand only complementing is 
+      # enough as variation feature sequence will be from reverse strand but in 3'-5' direction
+      $variation_feature_sequence =~
+        tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    }
   };
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
