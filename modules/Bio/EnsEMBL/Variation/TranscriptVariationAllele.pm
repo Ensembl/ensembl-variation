@@ -1414,7 +1414,6 @@ sub hgvs_transcript {
     return undef;
   } 
 
-  
   ## check for the same bases in ref and alt strings before or after the variant
   $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
 
@@ -1426,7 +1425,6 @@ sub hgvs_transcript {
   $stable_id .= "." . $tr->version() 
      unless (!defined $tr->version() || $stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG's
   $hgvs_notation->{'ref_name'} = $stable_id;
-
 
   ### get position relative to transcript features [use HGVS coords not variation feature coords due to dups]
   # avoid doing this twice if start and end are the same
@@ -1477,6 +1475,7 @@ sub hgvs_transcript {
 
   ### generic formatting 
   print "pre-format $hgvs_notation->{alt}\n" if $DEBUG ==1;
+
   $self->{hgvs_transcript} = format_hgvs_string( $hgvs_notation);
   if($DEBUG ==1){ print "HGVS notation: " . $self->{hgvs_transcript} . " \n"; }
 
@@ -2164,11 +2163,21 @@ sub _clip_alleles {
                                      $hgvs_notation->{'numbering'} eq 'p' &&
                                      $hgvs_notation->{alt} eq $hgvs_notation->{ref});      
 
-  ### re-set as ins not delins    
-  $hgvs_notation->{type} ="ins"  if(length ($check_ref) == 0 && length ($check_alt) >= 1);
-
+  if(length ($check_ref) == 0 && length ($check_alt) >= 1){
+      ### re-set as dup not delins
+      my $prev_str = substr($preseq, length($preseq) - length($check_alt));
+      if($check_alt eq $prev_str) {
+        $hgvs_notation->{type} = "dup";
+        $hgvs_notation->{start} = $hgvs_notation->{start} - length($check_alt);
+      }
+    
+      ### re-set as ins not delins
+      else {
+        $hgvs_notation->{type} ="ins";
+      }
+  }
   ### re-set as del not delins  
-  $hgvs_notation->{type}  ="del" if(length ($check_ref) >=1 && length ($check_alt) == 0);      
+  $hgvs_notation->{type}  = "del" if(length ($check_ref) >=1 && length ($check_alt) == 0);      
 
   print "clipped :  $check_ref &  $check_alt\n" if $DEBUG ==1;
 
