@@ -1986,8 +1986,10 @@ sub hgvs_genomic {
     if( $hgvs_notation->{type} eq 'delins'){
 
       ## check the start
+      my $preseq = "";
       while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
              substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
+        $preseq .= substr($hgvs_notation->{ref}, 0, 1);
         $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
         $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
         $hgvs_notation->{start}++;
@@ -2004,12 +2006,32 @@ sub hgvs_genomic {
       ## fix alleles and types if necessary
       $hgvs_notation->{ref} ||= '-';
       $hgvs_notation->{alt} ||= '-';
-      $hgvs_notation->{type} = 'del' if $hgvs_notation->{alt} eq '-';
-      if ($hgvs_notation->{ref} eq '-') {
-        $hgvs_notation->{type} = 'ins';
-        ## fix position for ins
-        $hgvs_notation->{start}--;
-        $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
+      
+      if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}) {
+          $hgvs_notation->{type} = "=";
+      }   
+      
+      elsif( length ($hgvs_notation->{ref}) == 1 && length ($hgvs_notation->{alt}) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+          $hgvs_notation->{type} = ">";
+      }
+      
+      elsif ($hgvs_notation->{ref} eq '-' && length ($hgvs_notation->{alt}) >=1) {
+        my $prev_str = substr($preseq, length($preseq) - length($hgvs_notation->{alt}));
+        if ($hgvs_notation->{alt} eq $prev_str){
+          $hgvs_notation->{type} = 'dup';
+          ## fix position for dup
+          $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+        }
+        else {
+          $hgvs_notation->{type} = 'ins';
+          ## fix position for ins
+          $hgvs_notation->{start}--;
+          $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
+        }
+      }
+      
+      elsif (length ($hgvs_notation->{ref}) >=1 && $hgvs_notation->{alt} eq '-') {
+        $hgvs_notation->{type} = 'del';
       }
     }
 

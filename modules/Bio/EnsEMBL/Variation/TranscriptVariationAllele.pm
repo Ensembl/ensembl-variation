@@ -2167,16 +2167,22 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
 
   ## no protein change - use transcript level annotation 
-  $hgvs_notation->{type} = "="   if( defined $hgvs_notation->{'numbering'} && 
-                                     $hgvs_notation->{'numbering'} eq 'p' &&
-                                     $hgvs_notation->{alt} eq $hgvs_notation->{ref});      
-
-  if(length ($check_ref) == 0 && length ($check_alt) >= 1){
+  if( $check_ref eq $check_alt) {
+      $hgvs_notation->{type} = "=";
+  }   
+  
+  ## re-set as > not delins
+  elsif( length ($check_ref) == 1 && length ($check_alt) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      $hgvs_notation->{type} = ">";
+  }
+  
+  ### re-set as ins/dup not delins 
+  elsif(length ($check_ref) == 0 && length ($check_alt) >= 1){
       ### re-set as dup not delins
       my $prev_str = substr($preseq, length($preseq) - length($check_alt));
       if($check_alt eq $prev_str) {
         $hgvs_notation->{type} = "dup";
-        $hgvs_notation->{start} = $hgvs_notation->{start} - length($check_alt);
+        $hgvs_notation->{start} -= length($check_alt);
       }
     
       ### re-set as ins not delins
@@ -2184,8 +2190,11 @@ sub _clip_alleles {
         $hgvs_notation->{type} ="ins";
       }
   }
+  
   ### re-set as del not delins  
-  $hgvs_notation->{type}  = "del" if(length ($check_ref) >=1 && length ($check_alt) == 0);      
+  elsif(length ($check_ref) >=1 && length ($check_alt) == 0){
+    $hgvs_notation->{type}  = "del" ;      
+  }
 
   print "clipped :  $check_ref &  $check_alt\n" if $DEBUG ==1;
 
