@@ -1983,57 +1983,7 @@ sub hgvs_genomic {
     next if (!defined($hgvs_notation));
 
     ## alleles may need trimming if the type is reported as a delins
-    if( $hgvs_notation->{type} eq 'delins'){
-
-      ## check the start
-      my $preseq = "";
-      while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
-             substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
-        $preseq .= substr($hgvs_notation->{ref}, 0, 1);
-        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
-        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
-        $hgvs_notation->{start}++;
-      }
-
-      ## check the end
-      while($hgvs_notation->{ref} && $hgvs_notation->{alt} &&
-            substr($hgvs_notation->{ref}, -1, 1) eq substr($hgvs_notation->{alt}, -1, 1)) {
-        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 0, length($hgvs_notation->{ref}) - 1);
-        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, length($hgvs_notation->{alt}) - 1);
-        $hgvs_notation->{end}--;
-      }
-
-      ## fix alleles and types if necessary
-      $hgvs_notation->{ref} ||= '-';
-      $hgvs_notation->{alt} ||= '-';
-      
-      if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}) {
-          $hgvs_notation->{type} = "=";
-      }   
-      
-      elsif( length ($hgvs_notation->{ref}) == 1 && length ($hgvs_notation->{alt}) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
-          $hgvs_notation->{type} = ">";
-      }
-      
-      elsif ($hgvs_notation->{ref} eq '-' && length ($hgvs_notation->{alt}) >=1) {
-        my $prev_str = substr($preseq, length($preseq) - length($hgvs_notation->{alt}));
-        if ($hgvs_notation->{alt} eq $prev_str){
-          $hgvs_notation->{type} = 'dup';
-          ## fix position for dup
-          $hgvs_notation->{start} -= length($hgvs_notation->{alt});
-        }
-        else {
-          $hgvs_notation->{type} = 'ins';
-          ## fix position for ins
-          $hgvs_notation->{start}--;
-          $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
-        }
-      }
-      
-      elsif (length ($hgvs_notation->{ref}) >=1 && $hgvs_notation->{alt} eq '-') {
-        $hgvs_notation->{type} = 'del';
-      }
-    }
+    $hgvs_notation = _clip_alleles($hgvs_notation) if( $hgvs_notation->{type} eq 'delins');
 
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
@@ -2047,6 +1997,63 @@ sub hgvs_genomic {
   }
   return \%hgvs;
 
+}
+
+### HGVS:  remove common bp from alt and ref strings & shift start/end accordingly 
+sub _clip_alleles {
+  
+  my $hgvs_notation = shift;
+  
+  ## check the start
+  my $preseq = "";
+  while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+         substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
+    $preseq .= substr($hgvs_notation->{ref}, 0, 1);
+    $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
+    $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
+    $hgvs_notation->{start}++;
+  }
+
+  ## check the end
+  while($hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+        substr($hgvs_notation->{ref}, -1, 1) eq substr($hgvs_notation->{alt}, -1, 1)) {
+    $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 0, length($hgvs_notation->{ref}) - 1);
+    $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, length($hgvs_notation->{alt}) - 1);
+    $hgvs_notation->{end}--;
+  }
+
+  ## fix alleles and types if necessary
+  $hgvs_notation->{ref} ||= '-';
+  $hgvs_notation->{alt} ||= '-';
+  
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}) {
+      $hgvs_notation->{type} = "=";
+  }   
+  
+  elsif( length ($hgvs_notation->{ref}) == 1 && length ($hgvs_notation->{alt}) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      $hgvs_notation->{type} = ">";
+  }
+  
+  elsif ($hgvs_notation->{ref} eq '-' && length ($hgvs_notation->{alt}) >=1) {
+    my $prev_str = substr($preseq, length($preseq) - length($hgvs_notation->{alt}));
+    if ($hgvs_notation->{alt} eq $prev_str){
+      $hgvs_notation->{type} = 'dup';
+      ## fix position for dup
+      $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+    }
+    else {
+      $hgvs_notation->{type} = 'ins';
+      ## fix position for ins
+      $hgvs_notation->{start}--;
+      $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
+    }
+  }
+  
+  elsif (length ($hgvs_notation->{ref}) >=1 && $hgvs_notation->{alt} eq '-') {
+    $hgvs_notation->{type} = 'del';
+  }
+  
+  return $hgvs_notation;
 }
 
 =head2  spdi_genomic
