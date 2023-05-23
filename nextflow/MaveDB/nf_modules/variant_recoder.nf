@@ -1,11 +1,29 @@
+process get_hgvsp {
+  // Get and sort all HGVSp identifiers from mappings file
+
+  tag "$mappings"
+  errorStrategy 'ignore'
+  input:  path mappings
+  output: tuple path(mappings), path('hgvsp.txt')
+
+  """
+  grep -Eo '".*:p..*"' $mappings |\
+    sed 's/"//g' |\
+    sed 's/value: //g' |\
+    sort -t":" -V -k2.6 |\
+    uniq > hgvsp.txt
+
+  # error out if empty
+  [[ -s hgvsp.txt ]] || exit 1
+  """
+}
+
 process run_variant_recoder {
+  // Run Variant Recoder on a file with HGVS identifiers
+
   tag "$file"
-
-  input:
-    tuple path(file), path(hgvs)
-
-  output:
-    tuple path(file), path('vr.json')
+  input:  tuple path(file), path(hgvs)
+  output: tuple path(file), path('vr.json')
 
   """
   variant_recoder -i $hgvs --vcf_string > vr.json
@@ -13,13 +31,11 @@ process run_variant_recoder {
 }
 
 process prepare_vr_mappings {
+  // Prepare mappings from Variant Recoder output
+
   tag "$file"
-
-  input:
-    tuple path(file), path(vr)
-
-  output:
-    tuple path(file), path('vr.txt')
+  input:  tuple path(file), path(vr)
+  output: tuple path(file), path('vr.txt')
 
   """
   #!/usr/bin/env python3

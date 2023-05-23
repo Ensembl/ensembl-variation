@@ -23,7 +23,9 @@ if (params.help) {
 }
 
 // Module imports
-include { run_variant_recoder; prepare_vr_mappings } from './nf_modules/variant_recoder.nf'
+include { get_hgvsp }           from './nf_modules/variant_recoder.nf'
+include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
+include { prepare_vr_mappings } from './nf_modules/variant_recoder.nf'
 
 log.info """
   Create MaveDB plugin data for VEP
@@ -34,7 +36,7 @@ log.info """
 def split_by_mapping_type (files) {
   // split mapping files based on HGVS type (HGVSp or HGVSg files)
 
-  tmp = Channel.fromPath(files).map {
+  tmp = files.map {
     it.withReader {
       while( line = it.readLine() ) {
         if (line.contains("hgvs.")) {
@@ -55,7 +57,7 @@ def split_by_mapping_type (files) {
     hgvs_pro: it.hgvs == "hgvs.p"
     hgvs_nt:  it.hgvs == "hgvs.g"
   }
-  
+
   // clean up: only return the files in each branch
   files = [hgvs_pro: null, hgvs_nt: null]
   files.hgvs_pro = tmp.hgvs_pro.map { it.file }
@@ -68,11 +70,12 @@ workflow {
   mapping_files = split_by_mapping_type( mapping_files )
   
   // prepare HGVSp mappings
-  run_variant_recoder( mapping_files.hgvs_pro )
+  get_hgvsp( mapping_files.hgvs_pro )
+  run_variant_recoder( get_hgvsp.out )
   prepare_vr_mappings( run_variant_recoder.out )
 
   // use MaveDB-prepared HGVSg mappings
-  process_MaveDB_mappings( mapping_files.hgvs_nt )
+  // process_MaveDB_mappings( mapping_files.hgvs_nt )
 
   // concatenate data into a single file
 }
