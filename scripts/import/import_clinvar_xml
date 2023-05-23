@@ -1097,15 +1097,16 @@ sub get_variant{
       print "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n" if $DEBUG == 1;
       return undef;
     }
-
+    
+     my ($new_var_ob, $var_feat);
     ## enter new records
-    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+    ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     if ( defined $record->{feature_info}->{Chr_other}) {
       if ($record->{feature_info}->{Chr} eq "X") {
         $record->{feature_info}->{Chr} = "Y";
       }
       else {
-        $record->{feature_info}->{Chr} = "Y";
+        $record->{feature_info}->{Chr} = "X";
       }
       ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     }
