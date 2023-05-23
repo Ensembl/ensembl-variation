@@ -1577,7 +1577,8 @@ sub hgvs_transcript_reference {
 
 sub hgvs_protein {
   my $self     = shift;
-  my $notation = shift;  
+  my $notation = shift;
+  my $prediction_format = shift; 
   my $hgvs_notation;
 
   if($DEBUG == 1){
@@ -1735,7 +1736,7 @@ sub hgvs_protein {
   }
 
   ##### String formatting
-  return $self->_get_hgvs_protein_format($hgvs_notation);
+  return $self->_get_hgvs_protein_format($hgvs_notation, $prediction_format);
 }
 
 
@@ -1815,18 +1816,21 @@ sub hgvs_intron_end_offset {
 sub _get_hgvs_protein_format {
   my $self          = shift;
   my $hgvs_notation = shift;
+  my $prediction_format = shift;
 
   ### all start with refseq name & numbering type
-  $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
+  $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";
+
+  ### add paranthesis if asked to report in predicted format
+  $hgvs_notation->{'hgvs'} .= "(" if $prediction_format;
 
   ### New (v 15.11) way to describe synonymous changes
-  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt} 
-       && $hgvs_notation->{type} ne "fs" && $hgvs_notation->{type} ne "ins"){
-    return $hgvs_notation->{'hgvs'} . $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt} && $hgvs_notation->{type} ne "fs" && $hgvs_notation->{type} ne "ins"){
+    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
   }
 
   ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
-  if(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
+  elsif(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
     ### if deletion of stop add extTer and number of new aa to alt
 
     $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
@@ -1945,6 +1949,9 @@ sub _get_hgvs_protein_format {
     $hgvs_notation->{'hgvs'}  .=   $hgvs_notation->{ref}. $hgvs_notation->{start} .  $hgvs_notation->{alt};
   }
 
+  ### add paranthesis if asked to report in predicted format
+  $hgvs_notation->{'hgvs'} .= ")" if $prediction_format;
+  
   if($DEBUG==1){ print "Returning protein format: $hgvs_notation->{'hgvs'}\n";}
   return $hgvs_notation->{'hgvs'};
 }
@@ -2089,6 +2096,7 @@ sub _get_hgvs_peptides {
   ### 2012-08-31  - Ter now recommended in HGVS
   if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Xaa/Ter/g; }
   if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Xaa/Ter/g; }
+
 
   return ($hgvs_notation);           
 }
