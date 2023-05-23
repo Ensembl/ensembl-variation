@@ -464,12 +464,15 @@ sub get_feature{
    }
 
     ## position on required assembly
+    my @chr_numbers;
     next unless defined $measure->{SequenceLocation};
     my $seqLocs = to_array($measure->{SequenceLocation});
     foreach my $loc(@{$seqLocs}){
 
       next unless ref($loc) eq  'HASH'; 
       next unless $loc->{Assembly} eq $assembly;
+      
+      push @chr_numbers, $loc->{Chr};
 
       $feature{Chr}    = $loc->{Chr} ; 
       $feature{start}  = $loc->{start} ; 
@@ -479,7 +482,8 @@ sub get_feature{
       $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start}  if $type eq $haplotype_type;
       $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
     }
-
+    
+    $feature{Chr_other} = 1 if scalar @chr_numbers > 1;
     ## save SPDI canonical
     $feature{canonicalSPDI} = $measure->{CanonicalSPDI} if defined $measure->{CanonicalSPDI};
 
@@ -1077,7 +1081,7 @@ sub get_variant{
     ## look for existing variation object to return
     my $var_ob = $variation_adaptor->fetch_by_name($dbSNP);
 
-    if (defined $var_ob){
+    if (defined $var_ob && !exists $record->{feature_info}->{Chr_other}){
       my @features = $var_ob->get_all_VariationFeatures();
       return ($var_ob, @features , $alt_allele);
     }
@@ -1096,6 +1100,15 @@ sub get_variant{
 
     ## enter new records
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+    if ( defined $record->{feature_info}->{Chr_other}) {
+      if ($record->{feature_info}->{Chr} eq "X") {
+        $record->{feature_info}->{Chr} = "Y";
+      }
+      else {
+        $record->{feature_info}->{Chr} = "Y";
+      }
+      ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+    }
     return ($new_var_ob,  $var_feat, $alt_allele);
 
   }
@@ -1347,15 +1360,20 @@ sub enter_var{
     'processed_pseudogene' => 1,
     'unprocessed_pseudogene' => 1,
   );
-
-  my $var = Bio::EnsEMBL::Variation::Variation->new
+  my $var;
+  if (!defined $variation_adaptor->fetch_by_name($dbSNP) ) {
+    $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
       -is_somatic        => $somatic,
       -adaptor           => $variation_adaptor,
       -class_SO_term     => $so_term,
     );
-  $variation_adaptor->store($var);
+    $variation_adaptor->store($var);
+  } else {
+    $var =  $variation_adaptor->fetch_by_name($dbSNP);
+  }
+ 
 
   # Create the variation feature
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
