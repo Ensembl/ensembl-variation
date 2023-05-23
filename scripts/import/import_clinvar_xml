@@ -1106,13 +1106,8 @@ sub get_variant{
     # enter the new record based on what we have at the moment 
     ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     # when it is a PAR region, we need to map based on the PAR region to the X or the Y 
-    if ( defined $record->{feature_info}->{Chr_other}) {
-      if ($record->{feature_info}->{Chr} eq "X") {
-        $record->{feature_info}->{Chr} = "Y";
-      }
-      else {
-        $record->{feature_info}->{Chr} = "X";
-      }
+    if (defined $record->{feature_info}->{Chr_other}) {
+      $record->{feature_info}->{Chr} = ($record->{feature_info}->{Chr} eq "X") ? "Y" : "X";
       # adding the mapped based on the PAR region
       ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
     }
