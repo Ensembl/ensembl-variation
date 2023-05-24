@@ -44,8 +44,8 @@ filenames  = [ "MGP":"mouse/mgp_set/mgp_variation_set.txt.gz",
                "Affy_PorcineHD":"Pig/Axiom_PigHD_v1_ids.txt.gz",
                "OvineSNP50":"Sheep_Illumina/OvineSNP50_ids.txt.gz",
                "OvineHDSNP":"Sheep_Illumina/OvineHDSNP_ids.txt.gz",
-               "Chicken600K":"Chicken/Chicken600K_ids.txt.gz"
-               "Illumina_EquineSNP50":"Horse/EquineSNP50_ids.txt.gz"
+               "Chicken600K":"Chicken/Chicken600K_ids.txt.gz",
+               "Illumina_EquineSNP50":"Horse/EquineSNP50_ids.txt.gz",
                "GoatSNP50":"Goat/GoatSNP50_ids.txt.gz",
                "BovineHD":"Cow/BovineHD_ids.txt.gz",
                "BovineLD":"Cow/BovineLD_C_ids.txt",
@@ -157,12 +157,11 @@ process run_variation_set {
 
   exec:
   
-  // variable my_set has to be defore any if statement
+  // variable my_set has to be before any if statement
   // related to this issue: https://github.com/nextflow-io/nextflow/issues/804
   def my_set = set_names.get(species)
   for (String name : my_set) {
     def input_file = filenames.get(name)
-    println name
     """
       perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}
     """
@@ -177,7 +176,8 @@ workflow {
   run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
   run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
-  if(filenames[params.species]) {
+  // variation_set has to be populated before import
+  if(set_names[params.species]) {
     run_variation_set(file(var_set_script), files_path, filenames, set_names, params.species, params.registry)
   }
 }
