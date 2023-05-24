@@ -150,7 +150,7 @@ process run_variant_synonyms {
 process run_variation_set {
   input:
   val wait
-  path var_set_script
+  val var_set_script
   val files_path
   val filenames
   val set_names
@@ -166,9 +166,8 @@ process run_variation_set {
   def my_set = set_names.get(species)
   for (String name : my_set) {
     def input_file = filenames.get(name)
-    """
-      perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}
-    """
+    def command = "perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}"
+    command.execute()
   }
 
 }
@@ -182,6 +181,6 @@ workflow {
   
   // variation_set has to be populated before import
   if(set_names[params.species]) {
-    run_variation_set(run_variant_synonyms.out, file(var_set_script), files_path, filenames, set_names, params.species, params.registry)
+    run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
   }
 }
