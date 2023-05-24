@@ -100,7 +100,7 @@ process run_eva {
   val remove_prefix
   val output_file
   
-  output:
+  output: val 'ok'
   
   script:
   def sort_vf_table     = sort_vf ? " --sort_vf" : ""
@@ -116,6 +116,7 @@ process run_eva {
 
 process run_variant_synonyms {
   input:
+  val wait
   path var_syn_script
   val source_name
   val species
@@ -125,7 +126,7 @@ process run_variant_synonyms {
   val port
   val dbname
   
-  output:
+  output: val 'ok'
   
   script:
   
@@ -148,6 +149,7 @@ process run_variant_synonyms {
 
 process run_variation_set {
   input:
+  val wait
   path var_set_script
   val files_path
   val filenames
@@ -155,8 +157,10 @@ process run_variation_set {
   val species
   val registry
 
+  output: val 'ok'
+
   exec:
-  
+
   // variable my_set has to be before any if statement
   // related to this issue: https://github.com/nextflow-io/nextflow/issues/804
   def my_set = set_names.get(species)
@@ -174,10 +178,10 @@ workflow {
   // TODO: run script to truncate tables
 
   run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
-  run_variant_synonyms(file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
+  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
   
   // variation_set has to be populated before import
   if(set_names[params.species]) {
-    run_variation_set(file(var_set_script), files_path, filenames, set_names, params.species, params.registry)
+    run_variation_set(run_variant_synonyms.out, file(var_set_script), files_path, filenames, set_names, params.species, params.registry)
   }
 }
