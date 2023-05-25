@@ -2231,7 +2231,8 @@ sub _parse_hgvs_protein_position{
 
   my ($description, $reference, $transcript ) = @_;
   ## only supporting the parsing of hgvs substitutions [eg. Met213Ile]
-  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
+  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*|\=)$/;
+  $to = $from if $to eq "=";
 
   throw("Could not parse HGVS protein notation " . $reference . ":p.". $description ) unless $from and $pos and $to;
 
@@ -2274,7 +2275,7 @@ sub _parse_hgvs_protein_position{
       for my $i(0..2) { 
        
         my ($a, $b) = (substr($from_codon, $i, 1), substr($to_codon, $i, 1)); 
-        next if uc($a) eq uc($b); 
+        next if uc($a) eq uc($b) and uc($from_codon) ne uc($to_codon);
         push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b); 
       } 
 
