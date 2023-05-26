@@ -23,9 +23,12 @@ if (params.help) {
 }
 
 // Module imports
-include { get_hgvsp }           from './nf_modules/variant_recoder.nf'
-include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
-include { prepare_vr_mappings } from './nf_modules/variant_recoder.nf'
+include { get_hgvsp;
+          run_variant_recoder;
+          parse_vr_output } from './nf_modules/variant_recoder.nf'
+
+include { map_scores_to_HGVSp_variants;
+          map_scores_to_HGVSg_variants } from './nf_modules/mapping.nf'
 
 log.info """
   Create MaveDB plugin data for VEP
@@ -66,16 +69,19 @@ def split_by_mapping_type (files) {
 }
 
 workflow {
-  mapping_files = Channel.fromPath( params.mappings + "/*" )
+  mapping_files = Channel.fromPath( params.mappings + "/*.json" )
   mapping_files = split_by_mapping_type( mapping_files )
   
   // prepare HGVSp mappings
   get_hgvsp( mapping_files.hgvs_pro )
   run_variant_recoder( get_hgvsp.out )
-  prepare_vr_mappings( run_variant_recoder.out )
+  parse_vr_output( run_variant_recoder.out )
+  map_scores_to_HGVSp_variants( parse_vr_output.out )
 
   // use MaveDB-prepared HGVSg mappings
-  // process_MaveDB_mappings( mapping_files.hgvs_nt )
+  map_scores_to_HGVSg_variants( mapping_files.hgvs_nt )
+
+  // lift-over coordinates to hg38 if needed
 
   // concatenate data into a single file
 }
