@@ -1,3 +1,27 @@
+process check_if_open_access {
+  // Check if files are open access (error out if not)
+
+  errorStrategy 'ignore'
+
+  input:  path mappings
+  output: path mappings
+
+  """
+  #!/usr/bin/env python3
+  import urllib.request
+  import json
+
+  urn = "urn:mavedb:${mappings.simpleName}"
+  url = f"https://api.mavedb.org/api/v1/scoresets/{urn}"
+  res = urllib.request.urlopen(url).read()
+  res = json.loads(res)
+
+  licence = res['license']['shortName']
+  if "CC0" not in res['license']['shortName']:
+    raise Exception(f"License {licence} is not open access")
+  """
+}
+
 process map_scores_to_HGVSp_variants {
   // Download MaveDB scores and map associated variants by HGVSp
 

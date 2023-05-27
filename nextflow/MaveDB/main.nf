@@ -70,8 +70,8 @@ def split_by_mapping_type (files) {
 }
 
 workflow {
-  mapping_files = Channel.fromPath( params.mappings + "/*.json" )
-  mapping_files = split_by_mapping_type( mapping_files )
+  check_if_open_access( Channel.fromPath( params.mappings + "/*.json" ) )
+  mapping_files = split_by_mapping_type( check_if_open_access.out )
 
   // use MaveDB-prepared HGVSg mappings
   map_scores_to_HGVSg_variants( mapping_files.hgvs_nt )
