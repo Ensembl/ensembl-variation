@@ -18,16 +18,44 @@ warnings.showwarning = customshowwarning
 # Parse arguments
 import argparse
 parser = argparse.ArgumentParser(
-  description='Output file with MaveDB scores mapped to variants based on HGVSp')
-parser.add_argument('--matches', type=str,
-                    help="path to HGVS identifiers mapped to variant location")
+  description='Output file with MaveDB scores mapped to variants')
+parser.add_argument('--vr', type=str,
+                    help="path to file containg Variant Recoder output with 'vcf_string' enabled (optional)")
 parser.add_argument('--mappings', type=str,
-                    help="path to MaveDB mappings")
+                    help="path to file with MaveDB mappings")
 parser.add_argument('--urn', type=str,
                     help="MaveDB URN (such as 'urn:mavedb:00000046-a-2')")
 parser.add_argument('-o', '--output', type=str,
                     help="path to output file")
 args = parser.parse_args()
+
+def load_vr_output (f):
+  """Load Variant Recoder output"""
+  data = json.load(open(f))
+
+  matches = {}
+  for result in data:
+    for allele in result:
+      info = result[allele]
+
+      if type(info) is list and "Unable to parse" in info[0]:
+        continue
+
+      hgvs = info["input"]
+      for string in info["vcf_string"]:
+        chr, start, ref, alt = string.split('-')
+        end = int(start) + len(alt) - 1
+        dict = OrderedDict([("HGVSp", hgvs),
+                            ("chr",   chr),
+                            ("start", start),
+                            ("end",   end),
+                            ("ref",   ref),
+                            ("alt",   alt)])
+
+        if hgvs not in matches:
+          matches[hgvs] = []
+        matches[hgvs].append(dict)
+  return matches
 
 def load_HGVSp_to_variant_matches (f):
   """Load HGVSp to variant matches"""
@@ -175,8 +203,8 @@ print("Loading MaveDB data...", flush=True)
 scores     = load_scores(scores_file)
 mappings   = json.load(open(args.mappings))
 
-if args.matches is not None:
-  hgvsp2vars = load_HGVSp_to_variant_matches(args.matches)
+if args.vr is not None:
+  hgvsp2vars = load_vr_output(args.vr)
 else:
   hgvsp2vars = None
 

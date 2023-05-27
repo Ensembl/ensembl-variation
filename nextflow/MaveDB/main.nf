@@ -24,10 +24,9 @@ if (params.help) {
 
 // Module imports
 include { get_hgvsp;
-          run_variant_recoder;
-          parse_vr_output } from './nf_modules/variant_recoder.nf'
-
-include { map_scores_to_HGVSp_variants;
+          run_variant_recoder } from './nf_modules/variant_recoder.nf'
+include { check_if_open_access;
+          map_scores_to_HGVSp_variants;
           map_scores_to_HGVSg_variants } from './nf_modules/mapping.nf'
 
 log.info """
@@ -75,8 +74,7 @@ workflow {
   // prepare HGVSp mappings
   get_hgvsp( mapping_files.hgvs_pro )
   run_variant_recoder( get_hgvsp.out )
-  parse_vr_output( run_variant_recoder.out )
-  map_scores_to_HGVSp_variants( parse_vr_output.out )
+  map_scores_to_HGVSp_variants( run_variant_recoder.out )
 
   // use MaveDB-prepared HGVSg mappings
   map_scores_to_HGVSg_variants( mapping_files.hgvs_nt )

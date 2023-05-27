@@ -22,8 +22,10 @@ process run_variant_recoder {
   // Run Variant Recoder on a file with HGVS identifiers
 
   tag "${mappings.simpleName}"
-  memory { ["4 GB", "16 GB", "80 GB", "120"][task.attempt - 1] }
-  maxRetries 3
+  memory { hgvs.size() * 0.4.MB + 1.GB }
+
+  errorStrategy 'ignore'
+  maxRetries 1
 
   input:  tuple path(mappings), path(hgvs)
   output: tuple path(mappings), path('vr.json')
@@ -32,17 +34,5 @@ process run_variant_recoder {
   def bin = "${ENSEMBL_ROOT_DIR}/ensembl-vep"
   """
   perl $bin/variant_recoder -i $hgvs --vcf_string > vr.json
-  """
-}
-
-process parse_vr_output {
-  // Prepare mappings from Variant Recoder output
-
-  tag "${mappings.simpleName}"
-  input:  tuple path(mappings), path(vr)
-  output: tuple path(mappings), path('vr.txt')
-
-  """
-  parse_vr_output.py $vr -o vr.txt
   """
 }

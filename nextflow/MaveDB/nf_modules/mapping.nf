@@ -10,7 +10,7 @@ process map_scores_to_HGVSp_variants {
   """
   map_scores_to_variants.py --urn ${urn} \
                             --mappings ${mappings} \
-                            --matches $vr \
+                            --vr $vr \
                             --output map_${urn}.tsv
   """
 }
