@@ -69,6 +69,34 @@ def split_by_mapping_type (files) {
   return files
 }
 
+process round_scores {
+  // Round MaveDB scores to given number of decimal places
+
+  input:
+    path file
+    val precision
+  output:
+    path "rounded_scores.txt"
+
+  """
+  col=\$(awk -v RS='\t' '/score/{print NR; exit}' ${file})
+  awk 'NR>1 {\$12=sprintf("%.${precision}f", \$12)}1' ${file} > rounded_scores.txt
+  """
+}
+
+process tabix {
+  input:  path out
+  output: path "${name}"
+
+  script:
+  def name = "MaveDB_variants.tsv.gz"
+  """
+  sort -k1 -nk2,3 ${out} > ${name.baseName}
+  bgzip ${name.baseName}
+  tabix -s1 -b2 -e3 ${name}
+  """
+}
+
 workflow {
   check_if_open_access( Channel.fromPath( params.mappings + "/*.json" ) )
   mapping_files = split_by_mapping_type( check_if_open_access.out )
@@ -89,9 +117,11 @@ workflow {
     mix(map_scores_to_HGVSp_variants.out).
     collectFile { it.first() }
 
-  // lift-over coordinates to hg38 if needed
+  // round scores to specific number of decimal places
+  round_scores(out, 4)
 
-  // concatenate data into a single file
+  // sort, bgzip and tabix file
+  tabix(round_scores.out)
 }
 
 // Print summary
