@@ -9,6 +9,7 @@ nextflow.enable.dsl=2
 // Default params
 params.help     = false
 params.mappings = null
+params.round    = 4
 
 // Print usage
 if (params.help) {
@@ -17,7 +18,17 @@ if (params.help) {
   --------------------------
 
   Usage:
-    nextflow run main.nf -profile lsf -resume
+    ./main.nf -profile lsf -resume \
+              --mappings [MaveDB_mappings_folder]
+
+  Mandatory arguments:
+    --mappings  Path to directory containing MaveDB mapping files in JSON format
+
+  Optional arguments:
+    --round     Decimal places to round floats in MaveDB data (default: 4)
+
+  Note: the mappings must be named with the MaveDB accession, such as
+        '00000001-a-1.json'.
   """
   exit 1
 }
@@ -113,15 +124,11 @@ workflow {
   map_scores_to_HGVSp_variants( run_variant_recoder.out )
 
   // concatenate output files into a single file
-  out = liftover_to_hg38.out.
-    mix(map_scores_to_HGVSp_variants.out).
-    collectFile { it.first() }
-
-  // round scores to specific number of decimal places
-  round_scores(out, 4)
-
-  // sort, bgzip and tabix file
-  tabix(round_scores.out)
+  output_files = liftover_to_hg38.out.
+                   mix(map_scores_to_HGVSp_variants.out).
+                   collect { it.last() }
+  concatenate_files( output_files )
+  tabix( concatenate_files.out )
 }
 
 // Print summary

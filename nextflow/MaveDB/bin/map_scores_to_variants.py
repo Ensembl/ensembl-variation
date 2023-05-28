@@ -27,6 +27,8 @@ parser.add_argument('--urn', type=str,
                     help="MaveDB URN (such as 'urn:mavedb:00000046-a-2')")
 parser.add_argument('-o', '--output', type=str,
                     help="path to output file")
+parser.add_argument('--round', type=int,
+                    help="Number of decimal places for rounding values (default: not used)")
 args = parser.parse_args()
 
 def load_vr_output (f):
@@ -83,6 +85,7 @@ def load_scores (f):
 
 chrom = None
 def get_chromosome (hgvs):
+  """Lookup chromosome name in Ensembl REST API (unless already stored)"""
   global chrom
   if (chrom is None):
     chrom = hgvs.split(":")[0]
@@ -135,9 +138,29 @@ def map_variant_to_MaveDB_scores (matches, mapped_info, row, urn):
     # HGVS protein matches
     return match_information(hgvs, matches, row, urn)
 
+def get_next_mapping(m, index):
+  while index < len(m):
+    mapping = m[index]
+    if mapping['score'] is None:
+      index += 1
+    else:
+      break
+  return mapping, index
+
+def round_float_columns(row):
+  if args.round is not None:
+    for i in row.keys():
+      try:
+        rounded = round(float(row[i]), args.round)
+        # Avoid rounding integers
+        row[i] = '{0:g}'.format(rounded)
+      except:
+        # Not a number
+        pass
+  return row
+
 def map_scores_to_variants (scores, mappings, matches=None):
   """Map MaveDB scores to variants"""
-
   urn = mappings['urn']
 
   out = []
@@ -153,16 +176,12 @@ def map_scores_to_variants (scores, mappings, matches=None):
     score = float(row['score'])
 
     # Iterate over mappings to find next non-missing value
-    while index < len(mappings['mapped_scores']):
-      mapping = mappings['mapped_scores'][index]
-      if mapping['score'] is None:
-        index += 1
-      else:
-        break
+    mapping, index = get_next_mapping(mappings['mapped_scores'], index)
     score_mappings = float(mapping['score'])
 
     # Map available information
     if isclose(score, score_mappings):
+      row = round_float_columns(row)
       mapped_info = mapping['post_mapped']
       if mapped_info['type'] == "Haplotype":
         for member in mapped_info['members']:
