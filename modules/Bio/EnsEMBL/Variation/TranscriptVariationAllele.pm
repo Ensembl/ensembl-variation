@@ -825,6 +825,8 @@ sub codon {
       delete($tv->{_cds_coords});
     }
     return $self->{codon} if !defined($tv->cds_end(undef, $tr->strand * $shifting_offset)) || !defined($tv->cds_start(undef, $tr->strand * $shifting_offset));
+    
+    # vf_nt_len is the length affected in the reference sequence. For indel it is different than allele_len
     my $vf_nt_len       = $tv->cds_end(undef, $tr->strand * $shifting_offset) - $tv->cds_start(undef, $tr->strand * $shifting_offset) + 1;
     my $allele_len      = $self->seq_length;
     unless($shifting_offset == 0)
@@ -856,11 +858,50 @@ sub codon {
     }
 
     # we should consider phases of all the overlapped exon here not only first one
-    my $phase = $tv->_overlapped_exons()->[0]->phase;
+    my $phase_first_o_exon = $tv->_overlapped_exons->[0]->phase;
+    my $start = $codon_cds_start - 1 - $phase_first_o_exon;
+    my $end_first_o_exon = $tv->_overlapped_exons->[0]->cdna_coding_end($tr);
+    my $full_codon_length = $codon_len + ($allele_len - $vf_nt_len);
     
-    # and extract the codon sequence
-    my $codon = substr($cds, $codon_cds_start - 1 - $phase, $codon_len + ($allele_len - $vf_nt_len));
-    
+    my $length = ($end_first_o_exon - $start + 1) > $full_codon_length ? 
+      $full_codon_length :
+      ($end_first_o_exon - $start + 1);
+    my $codon = substr($cds, $start, $length);
+  
+    # if we have multiple overlapped exon iterate each of them and take their phases
+    # into account when extracting codon seq from them
+    if (@{ $tv->_overlapped_exons } > 1){
+      $start += $length;
+      $full_codon_length -= $length;
+      
+      # check the 2nd to 2nd to last exon
+      foreach my $o_exon (@{ $tv->_overlapped_exons() }[1..-2]){
+        my $phase = $o_exon->phase;
+        $start += ($phase << 2) % 3;     # we should not go back instead go forward
+        
+        my $o_exon_end = $o_exon->cdna_coding_end($tr);
+        my $length = $o_exon_end - $start + 1;
+        
+        # extract the codon sequence
+        my $codon .= substr($cds, $start, $length);
+        
+        $start += $length;
+        $full_codon_length -= $length;
+      }
+      
+      # now check the last exon
+      if ($full_codon_length > 0) {
+        my $phase_last_o_exon = $tv->_overlapped_exons->[-1]->phase;
+        $start += ($phase_last_o_exon << 2) % 3;
+        my $end_last_o_exon = $tv->_overlapped_exons->[-1]->cdna_coding_end($tr);
+        $codon .= substr($cds, $start, $full_codon_length);
+      }
+      else {
+        # above iteration failed to properly get codon
+        $codon = "";
+      }
+    }
+  
     if (length($codon) < 1) {
       $self->{codon}   = '-';
       $self->{peptide} = '-';
