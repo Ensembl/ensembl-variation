@@ -12,9 +12,6 @@ process get_hgvsp {
     sed 's/value: //g' |\
     sort -t":" -V -k2.6 |\
     uniq > hgvsp.txt
-
-  # error out if empty
-  [[ -s hgvsp.txt ]] || exit 1
   """
 }
 

@@ -9,6 +9,7 @@ nextflow.enable.dsl=2
 // Default params
 params.help     = false
 params.mappings = null
+params.output   = "./MaveDB_variants.tsv.gz"
 params.licences = "CC0" // Open-access only
 params.round    = 4
 
@@ -26,6 +27,7 @@ if (params.help) {
     --mappings  Path to directory containing MaveDB mapping files in JSON format
 
   Optional arguments:
+    --output    Path to output file (default: './MaveDB_variants.tsv.gz')
     --licences  Comma-separated list of accepted licences (default: 'CC0')
     --round     Decimal places to round floats in MaveDB data (default: 4)
 
@@ -44,11 +46,14 @@ include { map_scores_to_HGVSp_variants;
           map_scores_to_HGVSg_variants } from './nf_modules/mapping.nf'
 include { download_chain_files;
           liftover_to_hg38 } from './nf_modules/liftover.nf'
+include { concatenate_files;
+          tabix } from './nf_modules/output.nf'
 
 log.info """
   Create MaveDB plugin data for VEP
   ---------------------------------
   mappings : ${params.mappings}
+  output   : ${params.output}
 
   licences : ${params.licences}
   round    : ${params.round}
@@ -69,7 +74,8 @@ workflow {
 
   // prepare HGVSp mappings
   get_hgvsp( mapping_files.hgvs_pro )
-  run_variant_recoder( get_hgvsp.out )
+  hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
+  run_variant_recoder( hgvsp )
   map_scores_to_HGVSp_variants( run_variant_recoder.out )
 
   // concatenate output files into a single file
