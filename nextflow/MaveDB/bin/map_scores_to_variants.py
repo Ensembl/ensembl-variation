@@ -139,6 +139,10 @@ def map_variant_to_MaveDB_scores (matches, mapped_info, row, extra):
     return match_information(hgvs, matches, row, extra)
 
 def get_next_mapping(m, index):
+  """Get next mapping in list of mappings"""
+  if index >= len(m):
+    mapping = m[-1]
+
   while index < len(m):
     mapping = m[index]
     if mapping['score'] is None:
@@ -148,6 +152,7 @@ def get_next_mapping(m, index):
   return mapping, index
 
 def round_float_columns(row):
+  """Round all values that are float"""
   if args.round is not None:
     for i in row.keys():
       try:
@@ -222,11 +227,12 @@ def write_variant_mapping (f, map):
   return True
 
 # download MaveDB scores
-print("Downloading MaveDB scores...", flush=True)
 urn         = f"urn:mavedb:{args.urn}"
 url         = f"https://api.mavedb.org/api/v1/scoresets/{urn}/scores"
 scores_file = f"{args.urn}_scores.txt"
-urllib.request.urlretrieve(url, scores_file)
+if not os.path.isfile(scores_file):
+  print("Downloading MaveDB scores...", flush=True)
+  urllib.request.urlretrieve(url, scores_file)
 
 # load MaveDB mappings, scores and HGVSP to variant matches
 print("Loading MaveDB data...", flush=True)
