@@ -23,7 +23,7 @@ if len(res['target']['reference_maps']) > 1:
 
 def liftover_variants (mapped, genome, reference):
   # write file information with lifted-over coordinates to new file
-  print(f"{genome}To{reference.capitalize()}.over.chain.gz")
+  print(f"Converting coordinates from {genome} to {reference}...")
   chain = LiftOver(f"{genome}To{reference.capitalize()}.over.chain.gz")
 
   out = open(f"liftover_{mapped}", "w")
