@@ -97,7 +97,7 @@ def get_chromosome (hgvs):
     chrom = chrom.replace("chr", "")
   return chrom
 
-def join_information (hgvs, mapped_info, row, urn):
+def join_information (hgvs, mapped_info, row, extra):
   """Join variant and MaveDB score information for a given HGVS"""
   var = mapped_info['variation']
   ref = mapped_info['vrs_ref_allele_seq']
@@ -109,11 +109,11 @@ def join_information (hgvs, mapped_info, row, urn):
      ("ref",   ref),
      ("alt",   var["state"]["sequence"]),
      ("hgvs",  hgvs)])
-  mapped['urn'] = urn
+  mapped.update(extra)
   mapped.update(row)
   return [mapped]
 
-def match_information (hgvs, matches, row, urn):
+def match_information (hgvs, matches, row, extra):
   """Match a given HGVS to join variant and MaveDB score information"""
   out = []
   
@@ -124,19 +124,19 @@ def match_information (hgvs, matches, row, urn):
   for match in matches[hgvs]:
     mapped = match
     mapped['hgvs'] = match['HGVSp']
-    mapped['urn']  = urn
+    mapped.update(extra)
     mapped.update(row)
     out.append(mapped)
   return out
 
-def map_variant_to_MaveDB_scores (matches, mapped_info, row, urn):
+def map_variant_to_MaveDB_scores (matches, mapped_info, row, extra):
   hgvs = mapped_info['expressions'][0]['value']
   if matches is None:
     # HGVS genomic coordinates
-    return join_information(hgvs, mapped_info, row, urn)
+    return join_information(hgvs, mapped_info, row, extra)
   else:
     # HGVS protein matches
-    return match_information(hgvs, matches, row, urn)
+    return match_information(hgvs, matches, row, extra)
 
 def get_next_mapping(m, index):
   while index < len(m):
@@ -161,7 +161,18 @@ def round_float_columns(row):
 
 def map_scores_to_variants (scores, mappings, matches=None):
   """Map MaveDB scores to variants"""
-  urn = mappings['urn']
+
+  if mappings['target'] is not None and mappings['target']['refseq'] is not None:
+    refseq = mappings['target']['refseq']['identifier']
+  else:
+    refseq = None
+  pubmed = ",".join([i['identifier'] for i in mappings['pubmed_ids']])
+  extra = {
+    'urn'          : mappings['urn'],
+    'publish_date' : mappings['publish_date'],
+    'refseq'       : refseq,
+    'pubmed'       : pubmed,
+  }
 
   out = []
   index = 0
@@ -185,9 +196,9 @@ def map_scores_to_variants (scores, mappings, matches=None):
       mapped_info = mapping['post_mapped']
       if mapped_info['type'] == "Haplotype":
         for member in mapped_info['members']:
-          out += map_variant_to_MaveDB_scores(matches, member, row, urn)
+          out += map_variant_to_MaveDB_scores(matches, member, row, extra)
       else:
-        out += map_variant_to_MaveDB_scores(matches, mapped_info, row, urn)
+        out += map_variant_to_MaveDB_scores(matches, mapped_info, row, extra)
       index += 1
     else:
       warnings.warn("score mismatch for " + row['accession'] + "; " + row['hgvs_pro'])
