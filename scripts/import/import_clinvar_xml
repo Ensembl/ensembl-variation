@@ -826,8 +826,10 @@ sub import_phenotype_feature{
   
   my ($ref_allele, $other_alt_allele);
   eval{
-    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
+    ($ref_allele, $other_alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
   };
+
+  $ref_allele = $record->{feature_info}->{ref} if $record->{feature_info}->{hgvs_g} =~ /\=/;
 
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -1109,7 +1111,7 @@ sub get_variant{
   if (defined $rs_id) {
     ## look for existing variation object to return
     my $var_ob = $variation_adaptor->fetch_by_name($dbSNP);
-
+    # checks if Chr_other does not exists and then returns the value
     if (defined $var_ob && !exists $record->{feature_info}->{Chr_other}){
       my @features = $var_ob->get_all_VariationFeatures();
       return ($var_ob, @features , $alt_allele);
@@ -1130,12 +1132,12 @@ sub get_variant{
      my ($new_var_ob, $var_feat);
     ## enter new records
     # enter the new record based on what we have at the moment 
-    ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+    ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type}) if $record->{feature_info}->{hgvs_g} !~ /\=/;
     # when it is a PAR region, we need to map based on the PAR region to the X or the Y 
     if (defined $record->{feature_info}->{Chr_other}) {
       $record->{feature_info}->{Chr} = ($record->{feature_info}->{Chr} eq "X") ? "Y" : "X";
       # adding the mapped based on the PAR region
-      ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+      ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type}) if $record->{feature_info}->{hgvs_g} !~ /\=/;
     }
     return ($new_var_ob,  $var_feat, $alt_allele);
 
@@ -1403,7 +1405,6 @@ sub enter_var{
   } else {
     $var =  $variation_adaptor->fetch_by_name($dbSNP);
   }
- 
 
   # Create the variation feature
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
