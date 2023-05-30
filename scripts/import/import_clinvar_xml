@@ -819,10 +819,15 @@ sub import_phenotype_feature{
     warn "alt_allele longer than 255 and will be removed from risk_allele: $alt_allele\n";
     $alt_allele = '';
   }
-
+   
   if ($record->{feature_info}->{hgvs_g}  =~ /\=/) {
     $alt_allele = $record->{feature_info}->{ref};
   }
+  
+  my ($ref_allele, $other_alt_allele);
+  eval{
+    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
+  };
 
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -857,6 +862,7 @@ sub import_phenotype_feature{
   $attribs{external_id}      = $record->{Acc};
   $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Desc} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
   $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
+  $attribs{allele_symbol}    = $ref_allele if defined $ref_allele && $ref_allele ne "-" && $ref_allele ne '';
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
