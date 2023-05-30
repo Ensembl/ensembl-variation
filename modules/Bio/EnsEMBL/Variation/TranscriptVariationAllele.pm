@@ -858,9 +858,14 @@ sub codon {
       substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
     }
     
-    # and extract the codon sequence
-    # (we should consider the phase of the exon overlap when calculating codon seq)
+    
+    # we should consider the phase of the exon overlap when calculating codon seq
     my $phase = $tv->_overlapped_exons()->[0]->phase;
+    my $allele_rel_pos = $tv->cds_start(undef, $tr->strand * $shifting_offset) - $codon_cds_start;
+    $phase = -1 if ($allele_rel_pos == 1 || $allele_rel_pos == 2) && $phase == 2;
+    $phase = -2 if $allele_rel_pos == 1 && $phase == 1;
+    
+    # and extract the codon sequence
     my $codon = substr($cds, $codon_cds_start - 1 - $phase, $codon_len + ($allele_len - $vf_nt_len));
     
     if (length($codon) < 1) {
