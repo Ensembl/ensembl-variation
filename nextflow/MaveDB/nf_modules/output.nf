@@ -33,7 +33,7 @@ process concatenate_files {
   print(header.columns.values)
 
   # merge data and append to file (one file at a time)
-  print("\nMerging and writing content...")
+  print("\\nMerging and writing content...")
   for f in glob.glob(files):
     print(f)
     content = pandas.read_csv(f, delimiter="\t")
