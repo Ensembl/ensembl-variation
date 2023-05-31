@@ -9,7 +9,9 @@ nextflow.enable.dsl=2
 // Default params
 params.help     = false
 params.mappings = null
-params.output   = "./MaveDB_variants.tsv.gz"
+params.ensembl  = "${ENSEMBL_ROOT_DIR}"
+params.output   = "output/MaveDB_variants.tsv.gz"
+
 params.licences = "CC0" // Open-access only
 params.round    = 4
 
@@ -27,7 +29,8 @@ if (params.help) {
     --mappings  Path to directory containing MaveDB mapping files in JSON format
 
   Optional arguments:
-    --output    Path to output file (default: './MaveDB_variants.tsv.gz')
+    --ensembl   Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
+    --output    Path to output file (default: 'output/MaveDB_variants.tsv.gz')
     --licences  Comma-separated list of accepted licences (default: 'CC0')
     --round     Decimal places to round floats in MaveDB data (default: 4)
 
@@ -54,6 +57,7 @@ log.info """
   ---------------------------------
   mappings : ${params.mappings}
   output   : ${params.output}
+  ensembl  : ${params.ensembl}
 
   licences : ${params.licences}
   round    : ${params.round}

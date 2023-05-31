@@ -26,7 +26,7 @@ Create a folder in your working directory and run:
 | Argument     | Description |
 | ------------ | ----------- |
 | `--mappings` | Path to directory containing MaveDB mapping files in JSON format (mandatory) |
-| `--ensembl`  | Path to Ensembl root dir (default: `${ENSEMBL_ROOT_DIR}`) |
+| `--ensembl`  | Path to Ensembl root directory (default: `${ENSEMBL_ROOT_DIR}`) |
 | `--output`   | Path to output file (default: `output/MaveDB_variants.tsv.gz`) |
 | `--licences` | Comma-separated list of accepted licences (default: `CC0`) |
 | `--round`    | Decimal places to round floats in MaveDB data (default: `4`)
