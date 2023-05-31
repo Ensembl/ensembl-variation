@@ -28,8 +28,8 @@ process run_variant_recoder {
   output: tuple path(mappings), path('vr.json')
 
   script:
-  def bin = "${ENSEMBL_ROOT_DIR}/ensembl-vep"
+  def bin = "${params.ensembl}/ensembl-vep"
   """
-  perl $bin/variant_recoder -i $hgvs --vcf_string > vr.json
+  perl ${bin}/variant_recoder -i $hgvs --vcf_string > vr.json
   """
 }
