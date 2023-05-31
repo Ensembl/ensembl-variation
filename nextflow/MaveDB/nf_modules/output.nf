@@ -3,6 +3,7 @@ process concatenate_files {
 
   input:  path(mapped_variants)
   output: path("combined.tsv")
+
   """
   #!/usr/bin/env python3
   import glob, pandas
@@ -44,17 +45,14 @@ process concatenate_files {
 }
 
 process tabix {
-  input:
-    path out
-  output:
-    path "${name}"
-    path "${name}.tbi"
+  publishDir file(params.output).parent, mode: 'move', overwrite: true
 
-  //publishDir ${params.output}, mode: 'move', overwrite: true
+  input:  path out
+  output: path "*"
 
   script:
-  def name="MaveDB_variants.tsv"
-  def gzip=name + ".gz"
+  def name = file(params.output).baseName
+  def gzip = file(params.output).name
   """
   # add hash to first line of header
   sed -i '1 s/^/#/' ${out}
@@ -67,6 +65,6 @@ process tabix {
 
   bgzip ${name}
   tabix -s1 -b2 -e3 ${gzip}
-  rm tmp.tsv ${name}
+  rm tmp.tsv
   """
 }
