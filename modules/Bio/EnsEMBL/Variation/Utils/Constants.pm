@@ -633,7 +633,7 @@ our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->
                },
   'is_default' => 1,
   'label' => 'intergenic variant',
-  'rank' => '38',
+  'rank' => '39',
   'tier' => '4'
 }
 );
@@ -668,7 +668,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'upstream gene variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
-  'rank' => '24',
+  'rank' => '29',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -686,7 +686,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'downstream gene variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
-  'rank' => '25',
+  'rank' => '30',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -724,7 +724,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'splice acceptor variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
-  'rank' => '3',
+  'rank' => '2',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -760,7 +760,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'splice donor 5th base variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_5th_base_variant',
-  'rank' => '4',
+  'rank' => '14',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -778,7 +778,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'splice donor region variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_region_variant',
-  'rank' => '14',
+  'rank' => '15',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -797,7 +797,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'splice polypyrimidine tract variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
-  'rank' => '13',
+  'rank' => '16',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -816,7 +816,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'intron variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
-  'rank' => '21',
+  'rank' => '26',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -836,7 +836,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => '5 prime UTR variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
-  'rank' => '18',
+  'rank' => '23',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -856,7 +856,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => '3 prime UTR variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
-  'rank' => '19',
+  'rank' => '24',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -875,7 +875,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'synonymous variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
-  'rank' => '15',
+  'rank' => '20',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -896,7 +896,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'missense variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
-  'rank' => '12',
+  'rank' => '11',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -915,7 +915,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'inframe insertion',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
-  'rank' => '10',
+  'rank' => '9',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -934,7 +934,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'inframe deletion',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
-  'rank' => '11',
+  'rank' => '10',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -989,7 +989,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'stop retained variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
-  'rank' => '15',
+  'rank' => '19',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -1025,7 +1025,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'start retained variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
-  'rank' => '15',
+  'rank' => '18',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1063,7 +1063,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'incomplete terminal codon variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
-  'rank' => '14',
+  'rank' => '17',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
@@ -1082,7 +1082,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'NMD transcript variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
-  'rank' => '22',
+  'rank' => '27',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1101,7 +1101,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'non coding transcript variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
-  'rank' => '23',
+  'rank' => '28',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1141,7 +1141,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'mature miRNA variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
-  'rank' => '17',
+  'rank' => '22',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1159,7 +1159,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'coding sequence variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
-  'rank' => '16',
+  'rank' => '21',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1193,7 +1193,7 @@ our %OVERLAP_CONSEQUENCES = (
   'impact' => 'MODIFIER',
   'label' => 'regulatory region variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
-  'rank' => '36',
+  'rank' => '37',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1208,7 +1208,7 @@ our %OVERLAP_CONSEQUENCES = (
   'impact' => 'MODIFIER',
   'label' => 'TF binding site',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
-  'rank' => '30',
+  'rank' => '33',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1262,7 +1262,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'TFBS ablation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'rank' => '26',
+  'rank' => '31',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1280,7 +1280,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'TFBS amplification',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'rank' => '28',
+  'rank' => '32',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1298,7 +1298,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'regulatory region ablation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'rank' => '31',
+  'rank' => '34',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1316,7 +1316,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'regulatory region amplification',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'rank' => '33',
+  'rank' => '35',
   'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1334,7 +1334,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'feature elongation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
-  'rank' => '9',
+  'rank' => '36',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
@@ -1352,7 +1352,7 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'feature truncation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
-  'rank' => '9',
+  'rank' => '38',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
