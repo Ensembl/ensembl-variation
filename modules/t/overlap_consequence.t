@@ -16,11 +16,23 @@
 use strict;
 use warnings;
 use Test::More;
+
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Variation::Utils::Config;
+
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $cdba = $multi->get_DBAdaptor('core');
 my $vdba = $multi->get_DBAdaptor('variation');
+
+# check if all consequences have unique ranks
+my @csqs = @{Bio::EnsEMBL::Variation::Utils::Config::OVERLAP_CONSEQUENCES};
+warn Data::Dumper::Dumper @csqs;
+my %ranks;
+$ranks{$_->{rank}}++ for @csqs;
+my $duplicated_ranks = scalar grep { $_ != 1 } values %ranks;
+
+cmp_ok($duplicated_ranks, '==', 0, "All consequences have unique ranks");
 
 my $vfa = $vdba->get_VariationFeatureAdaptor;
 my $slice_adaptor = $cdba->get_SliceAdaptor;
