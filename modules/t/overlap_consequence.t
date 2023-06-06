@@ -52,7 +52,7 @@ for my $csq (keys %const_csqs) {
             "Identical consequences in Config.pm and Constants.pm");
 }
 
-# check if consequence is properly ranked based on ensembl-webcode's ConsequenceTable.pm
+# check if consequences are properly ranked based on ensembl-webcode's ConsequenceTable.pm
 for my $match (grep { /ensembl-webcode/ } uniq @INC) {
   my $table = catdir($match, "EnsEMBL", "Web", "Document", "HTML", "ConsequenceTable.pm");
   if (-e $table) {
