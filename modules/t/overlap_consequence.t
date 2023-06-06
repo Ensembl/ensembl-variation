@@ -16,10 +16,13 @@
 use strict;
 use warnings;
 use Test::More;
+use File::Spec::Functions;
+use List::MoreUtils qw(first_index uniq);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::Utils::Config;
+use Bio::EnsEMBL::Variation::Utils::Constants;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $cdba = $multi->get_DBAdaptor('core');
@@ -27,12 +30,53 @@ my $vdba = $multi->get_DBAdaptor('variation');
 
 # check if all consequences have unique ranks
 my @csqs = @{Bio::EnsEMBL::Variation::Utils::Config::OVERLAP_CONSEQUENCES};
-warn Data::Dumper::Dumper @csqs;
 my %ranks;
-$ranks{$_->{rank}}++ for @csqs;
-my $duplicated_ranks = scalar grep { $_ != 1 } values %ranks;
+for (@csqs) {
+  $ranks{$_->{rank}} = [] unless $ranks{$_->{rank}};
+  push($ranks{$_->{rank}}, $_->{SO_term});
+}
 
-cmp_ok($duplicated_ranks, '==', 0, "All consequences have unique ranks");
+for my $rank ( %ranks ) {
+  next unless $ranks{$rank};
+  ok(scalar @{$ranks{$rank}} == 1,
+     "Ranks must be unique: rank $rank assigned to consequence(s) " .
+       join(", ", @{$ranks{$rank}}));
+}
+
+# check if consequences are identical between Constants.pm and Config.pm
+# Constants.pm must be generated with ensembl-variation/scripts/misc/create_config_consts.pl
+my %const_csqs = %{Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES};
+for my $csq (keys %const_csqs) {
+  my @matches = grep { $_->{SO_term} eq $csq } @csqs;
+  is_deeply($const_csqs{$csq}, $matches[0],
+            "Identical consequences in Config.pm and Constants.pm");
+}
+
+# check if consequence is properly ranked based on ensembl-webcode's ConsequenceTable.pm
+for my $match (grep { /ensembl-webcode/ } uniq @INC) {
+  my $table = catdir($match, "EnsEMBL", "Web", "Document", "HTML", "ConsequenceTable.pm");
+  if (-e $table) {
+    open(my $fh, '<', $table) or next;
+
+    # read all consequence terms in order from ConsequenceTable.pm
+    my @table_terms;
+    while(my $line = <$fh>){
+      next unless $line =~ /'term' +=>/;
+      my ($term) = $line =~ /=> '(.*)'/;
+      push @table_terms, $term;
+    }
+    close($fh);
+
+    # check if order is maintained
+    for my $csq (@csqs) {
+      my $index = first_index { $_ eq $csq->{SO_term} } @table_terms;
+      ok($index > -1, "$csq->{SO_term} not listed in ConsequenceTable.pm");
+      next unless $index > -1;
+      cmp_ok($index + 1, "==", $csq->{rank},
+             "$csq->{SO_term} rank must match order in ConsequenceTable.pm");
+    }
+  }
+}
 
 my $vfa = $vdba->get_VariationFeatureAdaptor;
 my $slice_adaptor = $cdba->get_SliceAdaptor;
