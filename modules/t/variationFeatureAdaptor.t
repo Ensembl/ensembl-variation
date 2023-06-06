@@ -103,7 +103,7 @@ ok($cons->label() eq 'intron variant',                                        "c
 ok($cons->SO_term() eq 'intron_variant',                                      "consequence SO_term"); 
 ok($cons->SO_accession() eq 'SO:0001627',                                     "consequence SO_accession"); 
 ok($cons->tier() eq '3',                                                      "consequence tier"); 
-ok($cons->rank() eq '21',                                                     "consequence rank"); 
+ok($cons->rank() eq '28',                                                     "consequence rank"); 
 ok($cons->NCBI_term() eq 'intron',                                            "consequence NCBI term"); 
 ok($cons->impact() eq 'MODIFIER',                                             "consequence impact"); 
 ok($cons->display_term() eq 'INTRONIC',                                       "consequence display_term"); 
