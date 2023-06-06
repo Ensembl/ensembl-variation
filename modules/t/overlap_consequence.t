@@ -33,7 +33,7 @@ my @csqs = @{Bio::EnsEMBL::Variation::Utils::Config::OVERLAP_CONSEQUENCES};
 my %ranks;
 for (@csqs) {
   $ranks{$_->{rank}} = [] unless $ranks{$_->{rank}};
-  push($ranks{$_->{rank}}, $_->{SO_term});
+  push(@{ $ranks{$_->{rank}} }, $_->{SO_term});
 }
 
 for my $rank ( %ranks ) {
