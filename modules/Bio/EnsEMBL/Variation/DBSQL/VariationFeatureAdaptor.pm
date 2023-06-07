@@ -2231,7 +2231,7 @@ sub _parse_hgvs_protein_position{
 
   my ($description, $reference, $transcript ) = @_;
   ## only parses hgvs substitutions [eg. Met213Ile] or delins [eg. 124delinsAla]
-  my ($from, $pos, $to) = $description =~ /^([A-Za-z]+?)?(\d+)(?:delins)?(\w+|\*|\=)$/;
+  my ($from, $pos, $to) = $description =~ /^([A-Za-z]+?)?(\d+)(?:delins)?(\w+|\*|\=|\?)$/;
   $to = $from if $to eq "=";
 
   # get genomic position - returns seq on transcript strand
@@ -2265,7 +2265,7 @@ sub _parse_hgvs_protein_position{
   }
 
   # rev-translate alt sequence
-  my @to_codons   = $codon_table->revtranslate($to); 
+  my @to_codons = $codon_table->revtranslate($to);
 
   # now iterate over all possible mutation paths 
   my %paths; 
