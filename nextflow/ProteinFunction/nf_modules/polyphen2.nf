@@ -29,14 +29,13 @@ process run_pph2_on_all_aminoacid_substitutions {
   tag "${peptide.md5}"
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
-  label 'highmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     val peptide
 
   output:
-    path '*_scores.txt'
+    tuple val(peptide), path ('*_scores.txt'), optional: true
 
   afterScript 'rm -rf *.fa *.subs tmp/'
 
@@ -70,17 +69,16 @@ process run_weka {
       2) Error '*.err'
   */
 
-  //tag "${pph2_out.baseName} $model"
+  tag "${peptide.md5} ${model}"
   container "ensemblorg/polyphen-2:2.2.3"
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     each model
-    path pph2_out
+    tuple val(peptide), path(pph2_out)
 
   output:
-    path '*.txt', emit: results
-    val "${model}", emit: model
+    tuple val(peptide), path('*.txt'), val("${model}")
 
   """
   run_weka.pl -l /opt/pph2/models/${model} ${pph2_out} \
@@ -89,19 +87,21 @@ process run_weka {
 }
 
 process store_pph2_scores {
-  tag "${peptide.id}"
+  tag "${peptide.md5} ${model}"
   container "ensemblorg/ensembl-vep:latest"
+  label 'retry_before_ignoring'
+
+  cache false
+
   input:
     val ready
     val species
-    val peptide
-    path weka_output
-    val model
+    tuple val(peptide), path(weka_output), val(model)
 
   """
   store_polyphen_scores.pl $species ${params.port} ${params.host} \
                            ${params.user} ${params.pass} ${params.database} \
-                           ${peptide.seqString} $weka_output $model
+                           ${peptide.seqString} ${weka_output} ${model}
   """
 }
 
@@ -128,6 +128,5 @@ workflow run_pph2_pipeline {
                           "HumVar.UniRef100.NBd.f11.model")
   run_weka(weka_model, run_pph2_on_all_aminoacid_substitutions.out)
   store_pph2_scores(wait, // wait for data deletion
-                    params.species, translated,
-                    run_weka.out.results, run_weka.out.model)
+                    params.species, run_weka.out)
 }
