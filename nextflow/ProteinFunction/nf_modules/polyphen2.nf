@@ -49,9 +49,20 @@ process run_pph2_on_all_aminoacid_substitutions {
   cat > ${fasta} <<EOL
 !{peptide.text}EOL
 
+  error=0
   mkdir -p tmp/lock
   out=!{peptide.id}_scores.txt
-  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} > $out
+  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} > $out 2> error.out || error=$?
+
+  # Capture expected errors to avoid failing job
+  if grep -q "Failed to locate sequence position" error.out ; then
+    echo "======= Captured expected error: job is successful ======="
+    cat error.out
+    echo "=========================================================="
+    rm error.out
+  elif [ $error -ne 0 ]; then
+    exit $error
+  fi
 
   # Remove output if only contains header
   if [ "$( wc -l <$out )" -eq 1 ]; then rm $out; fi
