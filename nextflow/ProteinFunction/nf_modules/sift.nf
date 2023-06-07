@@ -90,8 +90,6 @@ process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
 
-  cache false
-
   input:
     val ready
     val species

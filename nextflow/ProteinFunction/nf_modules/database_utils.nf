@@ -4,8 +4,6 @@ process store_translation_mapping {
   input: path translation_mapping
   output: stdout
 
-  cache false
-
   """
   mysql --host=${params.host} --port=${params.port} \
         --user=${params.user} --password=${params.pass} \
@@ -31,8 +29,6 @@ process delete_prediction_data {
   input: val value
   output: stdout
 
-  cache false
-
   """
   mysql --host=${params.host} --port=${params.port} \
         --user=${params.user} --password=${params.pass} \
@@ -56,8 +52,6 @@ process update_meta {
     val value
   output: stdout
 
-  cache false
-
   """
   mysql --host=${params.host} --port=${params.port} \
         --user=${params.user} --password=${params.pass} \
@@ -72,8 +66,6 @@ process update_meta {
 process get_current_MD5_translations {
   input: val analysis
   output: stdout
-
-  cache false
 
   """
   # --batch prints output in nontabular format

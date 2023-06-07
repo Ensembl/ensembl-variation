@@ -92,8 +92,6 @@ process store_pph2_scores {
   container "ensemblorg/ensembl-vep:latest"
   label 'retry_before_ignoring'
 
-  cache false
-
   input:
     val ready
     val species
