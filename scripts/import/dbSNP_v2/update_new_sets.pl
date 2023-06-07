@@ -34,16 +34,18 @@ my $old_dbh;
 my $old_reg_file = $config->{old_registry} if (defined ($config->{old_registry}));
 my $release =  $config->{release} if (defined ($config->{release}));
 
+ my $old_dbname; 
+
 if ($old_reg_file) {
   $registry->load_all($old_reg_file);
   $db_adaptor = $registry->get_DBAdaptor("homo_sapiens", "variation");
   # Connect to DBI
   $old_dbh = $db_adaptor->dbc;
-  $dbname = $old_dbh->dbname;
-  debug($config, "Connected to the old database $dbname");
+  $old_dbname = $old_dbh->dbname;
+  debug($config, "Connected to the old database $old_dbname");
 } else {
   my $old_release = $release - 1;
-  my $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
+  $old_dbname = $dbh->dbname =~ s/_${release}_/_${old_release}_/gr;
   my $old_host = $dbh->host;
   my $old_port = $dbh->port;
   #Connect to DBI
@@ -53,7 +55,6 @@ if ($old_reg_file) {
 
 debug($config, "Selecting minimum and maximum variation feature");
 my $sql = qq{ SELECT MIN(variation_feature_id), MAX(variation_feature_id) FROM variation_feature};
-my $sth = $old_dbh->prepare($sql);
 my $sth = $dbh->prepare($sql);
 $sth->execute();
 my $vf = $sth->fetchall_arrayref();
