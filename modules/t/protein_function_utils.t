@@ -75,7 +75,7 @@ my $triplet = {
   'aa' => 'G'
 };
 
-my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a');
+my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a');
 my @assemblies = ('GRCh37', 'GRCh38');
 my $expected_results = {
   'GRCh37' => {
@@ -88,8 +88,10 @@ my $expected_results = {
 
     '4.2a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
 
-    '4.3a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
+    '4.3a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
 
+    '4.4a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
+  
   },
 
   'GRCh38' => {
@@ -102,7 +104,9 @@ my $expected_results = {
 
     '4.2a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
 
-    '4.3a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
+    '4.3a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}},
+
+    '4.4a' => {'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}},'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}}}
 
   }
 };
@@ -125,7 +129,7 @@ foreach my $file_version (@file_versions) {
     $dbNSFP->init_header();
     $triplet->{'coords'} = $coords->{$assembly};
     $dbNSFP->load_predictions_for_triplets([$triplet]);
-    cmp_deeply($dbNSFP->{debug_data}, $expected_results->{$assembly}->{$file_version}, "dbNSFP - Read from file and store precitions: $assembly, $file_version");
+    cmp_deeply($dbNSFP->{debug_data}, $expected_results->{$assembly}->{$file_version}, "dbNSFP - Read from file and store predictions: $assembly, $file_version");
   }
 }
 
