@@ -202,3 +202,7 @@ workflow.onComplete {
         """
     )
 }
+
+workflow.onError {
+  log.info "Execution halted: ${workflow.errorMessage}"
+}
