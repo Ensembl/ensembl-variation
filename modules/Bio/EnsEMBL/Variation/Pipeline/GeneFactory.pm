@@ -53,7 +53,6 @@ sub fetch_input {
     
     my $dbc = $var_dba->dbc;
     my $tva = $var_dba->get_TranscriptVariationAdaptor;
-    my $vfa = $var_dba->get_VariationFeatureAdaptor;
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
     my $ta = $core_dba->get_TranscriptAdaptor;
 
@@ -138,7 +137,7 @@ sub fetch_input {
 
     # Remove Deleted transcripts 
     if (-e $self->param('update_diff')){
-      while (my @batch = splice(@update_transcripts, 0, 500) ) {
+      while (my @batch = splice(@delete_transcripts, 0, 500) ) {
         my $joined_ids = '"' . join('", "', @batch) . '"';
             
         $dbc->do(qq{

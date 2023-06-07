@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature;
 
 use strict;
 use warnings;
-use Data::Dumper;
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 sub run {
@@ -43,14 +43,12 @@ sub run {
     my $dbc = $var_dba->dbc;
     
     # first set the default consequence type
-
     $dbc->do(qq{
         UPDATE  variation_feature
         SET     consequence_types = 'intergenic_variant'
     }) or die "Failed to reset consequence_types on variation_feature" if (!-e $self->param('update_diff'));
 
     # create a temp table (dropping it if it exists)
-
     my $temp_table = 'variation_feature_with_tv';
 
     $dbc->do(qq{DROP TABLE IF EXISTS $temp_table})
@@ -59,8 +57,7 @@ sub run {
     $dbc->do(qq{CREATE TABLE $temp_table LIKE variation_feature})
         or die "Failed to create temp table";
 
-    ## remove unneccessary non-null columns (for EGenomes)
-
+    # remove unneccessary non-null columns (for EGenomes)
     $dbc->do(qq{ALTER TABLE $temp_table  drop seq_region_id,       drop variation_id ,
                                          drop seq_region_start,    drop seq_region_end,
                                          drop seq_region_strand,   drop source_id,
@@ -68,7 +65,7 @@ sub run {
         or die "Failed to alter temp table";
 
    
-    # concatenate the consequence types from transcript_variation 
+    # in here if we're running in update mode
     if (-e $self->param('update_diff')){
 
         my $file = $self->param('update_diff');
@@ -110,11 +107,11 @@ sub run {
                 }) or die "Populating temp table failed";
         }
 
-        # Load VF ids that overlap genes determined as deleted, then either sets consequence to intergenic if VF has 
+        # Load VF ids that overlap genes determined as deleted, then either set consequence to intergenic if VF has 
         # no other overlapping genes, or set consequences to those from overlapping non-deleted genes.
         my @old_genes;
         my $del_file = $self->param('pipeline_dir') . '/del_log/deleted_transcripts.txt';
-        if ($del_file) {
+        if (! -z $del_file) {
             open (DEL, $del_file) or die "Can't open file $del_file: $!\n";
             chomp (@old_genes = <DEL>);
             close(DEL);
