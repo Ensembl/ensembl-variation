@@ -31,13 +31,9 @@ my $new_var = "new_variation.txt";
 my $old_var_far_file = "old_variation_feature.txt";
 my $sorted_old_var_feat = "old_new_variation_feature.txt";
 my $new_var_feat = "new_variation_feature.txt";
-#my $old_var_syn_file = "old_variation_synonym.txt";
 my $old_var_set_file = "old_variation_set.txt";
 my $sorted_old_var_set = "old_new_variation_set.txt";
 my $new_var_set = "new_variation_set.txt";
-#my $failed_var_file = "old_failed_variation.txt"; - does not exist for 37 and 38
-#my $old_pheno_feat_file = "old_pheno_feature.txt";
-#my $old_pheno_feat_attrib_file = "old_pheno_feature_attrib.txt";
 
 
 if ($old_reg_file) {
@@ -57,17 +53,10 @@ if ($old_reg_file) {
   debug($config, "Connected to the old database $old_dbname");
 }
 
-debug($config, "Creating temporary tables for insertion");
-creating_temp_table($dbh);
-
 my $TMP_DIR = $config->{tmp};
 
 debug($config, "Dumping old variation tables with HGMD as source from old database");
 dump_vdata_into_file($old_dbh);
-
-
-#debug($config, "Dumping old phenotype features with HGMD from old database");
-#dump_pheno($old_dbh);
 
 debug($config, "Sorting files based on the variation_id column");
 $TMP_DIR = $TMP_DIR . "/";
@@ -87,37 +76,16 @@ insert_variation_feature($dbh, $new_var_feat);
 debug($config, "Inserting into variation_set_variation table");
 load_all_variation_sets($dbh, $new_var_set);
 
-sub creating_temp_table {
-  my $dbhvar = shift; 
-
-  #my $failed_var_sth = $dbhvar->prepare(qq[ CREATE TABLE IF NOT EXISTS TMP_failed_variation LIKE failed_variation]);
-  my $var_sth = $dbhvar->prepare(qq[ CREATE TABLE IF NOT EXISTS TMP_variation LIKE variation]);
-  #my $var_syn_sth = $dbhvar->prepare(qq[CREATE TABLE IF NOT EXISTS TMP_variation_synonym like variation_synonym]); does not exist in the table 
-  my $var_set_sth = $dbhvar->prepare(qq[ CREATE TABLE IF NOT EXISTS TMP_variation_set_variation like variation_set_variation]);
-  my $var_feat_sth = $dbhvar->prepare(qq[CREATE TABLE IF NOT EXISTS TMP_variation_feature like variation_feature]);
-  my $pheno_feat_sth = $dbhvar->prepare(qq[CREATE TABLE IF NOT EXISTS TMP_phenotype_feature LIKE phenotype_feature]);
-  my $pheno_feat_attrib_sth = $dbhvar->prepare(qq[CREATE TABLE IF NOT EXISTS TMP_phenotype_feature_attrib like phenotype_feature_attrib]);
-  
-  #$failed_var_sth->execute();
-  $var_sth->execute();
-  #$var_syn_sth->execute();
-  $var_set_sth->execute();
-  $var_feat_sth->execute();
-  $pheno_feat_sth->execute();
-  $pheno_feat_attrib_sth->execute();
-}
 
 sub dump_vdata_into_file {
   my $old_dbhvar = shift;
 
   my $dump_var = $old_dbhvar->prepare(qq [ SELECT variation_id, source_id, name, class_attrib_id, somatic, evidence_attribs, display FROM variation WHERE source_id = 8 ]);
   my $dump_var_feat = $old_dbhvar->prepare(qq[ SELECT variation_feature_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_id, allele_string, ancestral_allele, variation_name, map_weight, source_id, consequence_types, variation_set_id, class_attrib_id, evidence_attribs from variation_feature where source_id = 8  ]);
-  #my $dump_failed_var = $old_dbhvar->prepare(qq [SELECT * from failed_variation where variation_id in (SELECT variation_id from variation where source_id = 8) ]);
   my $dump_var_set = $old_dbhvar->prepare(qq [SELECT * from variation_set_variation where  variation_id in (SELECT variation_id from variation where source_id = 8)  ]);
  
   open(my $var, ">>$TMP_DIR/$old_var_file") or die ("Cannot open $TMP_DIR/$old_var_file: $!");
   open(my $var_fea, ">>$TMP_DIR/$old_var_far_file") or die ("Cannot open $TMP_DIR/$old_var_far_file: $!");
-  #open(my $failed_var, ">>$TMP_DIR/$failed_var_file ") or die ("Cannot open $TMP_DIR/$failed_var_file : $!");
   open(my $var_set, ">>$TMP_DIR/$old_var_set_file") or die ("Cannot open $TMP_DIR/$old_var_set_file: $!");
 
   $dump_var->execute();
@@ -134,11 +102,6 @@ sub dump_vdata_into_file {
     my @var_feat = map {defined($_) ? $_ : '\N'} @$varref;
     print $var_fea join("\t", @var_feat), "\n";
   }
-
-  #while ( my $fail_feat = $dump_failed_var->fetchrow_arrayref() ) {
-   # my @fail_var = map {defined($_) ? $_ : '\N'} @$fail_feat;
-    #print $failed_var join("\t", @fail_var), "\n";
-  #}
   
   while ( my $v_set = $dump_var_set->fetchrow_arrayref() ) {
     my @set = map {defined($_) ? $_ : '\N'} @$v_set;
@@ -147,12 +110,10 @@ sub dump_vdata_into_file {
   
   $dump_var->finish();
   $dump_var_feat->finish();
-  #$dump_failed_var->finish();
   $dump_var_set->finish();
 
   close $var;
   close $var_fea;
-  #close $failed_var;
   close $var_set;
 
 
@@ -255,7 +216,7 @@ sub insert_variation_feature {
   my $load_file = shift; 
 
   my $sql = $dbhvar->prepare(qq[INSERT INTO variation_feature (variation_feature_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_id, allele_string, ancestral_allele, variation_name, map_weight, source_id, consequence_types, variation_set_id, class_attrib_id, evidence_attribs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)]);
-  
+
   local *FH;
   open FH, "<", "$load_file" or die "Can not open $load_file $!";
   while (<FH>) {
