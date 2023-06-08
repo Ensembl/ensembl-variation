@@ -9,6 +9,7 @@ nextflow.enable.strict = true
 eva_script         = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_vcf.pl"
 var_syn_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_variant_synonyms"
 var_set_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_set_from_file.pl"
+var_set_script_2   = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/post_process_variation_feature_variation_set.pl"
 copy_tables_script = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/copy_tables_after_eva.sh"
 citations_script   = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/import_citation_EVA.pl"
 
@@ -183,6 +184,24 @@ process run_variation_set {
   }
 }
 
+// Post-process variation feature sets
+// Populates variation_feature.variation_set_id
+process run_variation_set_2 {
+  input:
+  val wait
+  val var_set_script_2
+  val species
+  val registry
+
+  output: val 'ok'
+
+  script:
+
+  """
+  perl ${var_set_script_2} -registry_file ${registry} -species ${species}
+  """
+}
+
 process prepare_tables {
   input:
   val copy_script
@@ -227,6 +246,7 @@ workflow {
 
   if(set_names[params.species]) {
     run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
+    run_variation_set_2(run_variation_set.out, var_set_script_2, params.species, params.registry)
   }
 
   if(params.citations_file) {
