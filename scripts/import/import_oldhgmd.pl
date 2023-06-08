@@ -90,7 +90,6 @@ sub dump_vdata_into_file {
 
   $dump_var->execute();
   $dump_var_feat->execute();
-  #$dump_failed_var->execute();
   $dump_var_set->execute();
 
   while ( my $aref = $dump_var->fetchrow_arrayref() ) {
@@ -115,10 +114,7 @@ sub dump_vdata_into_file {
   close $var;
   close $var_fea;
   close $var_set;
-
-
 }
-
 
 sub manipulate_var_ids {
   my $dbhvar = shift; 
