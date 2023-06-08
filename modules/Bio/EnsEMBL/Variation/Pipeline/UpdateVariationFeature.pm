@@ -37,7 +37,7 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 sub run {
 
     my $self = shift;
-
+    my $file = $self->param('update_diff');
     my $var_dba = $self->get_species_adaptor('variation');
     $var_dba->dbc->reconnect_when_lost(1);   
     my $dbc = $var_dba->dbc;
@@ -67,34 +67,17 @@ sub run {
    
     # in here if we're running in update mode
     if (-e $self->param('update_diff')){
-
-        my $file = $self->param('update_diff');
-        my @update_transcripts;
-
+        my @update_transcripts = ();
+        #Grab all the trancripts that are new and updated
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
             next if /^transcript_id/;
             my ($transcript_id, $status, $gene_id) = split(/\t/);
-
             push @update_transcripts, $transcript_id if $status ne "deleted";
-
-            # grab all transcript IDs for genes with deleted transcripts and add to list - fully deleted genes handled separately        
-            if($status eq "deleted") {
-
-                my $core_dba = $self->get_species_adaptor('core');
-                my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-
-                if (defined($ga->fetch_by_stable_id($gene_id)) ) {
-                    my $gene = $ga->fetch_by_stable_id($gene_id); 
-                    foreach my $transcript( @{$gene->get_all_Transcripts()} ) {
-	                    push @update_transcripts, $transcript->stable_id;
-                    }
-                }
-            }
         }
         close(DIFF);
-
+        #Batch update variation feature for all new and updated transcripts (these have been run through transcript effect)
         while (my @batch = splice(@update_transcripts, 0, 500) ) {
             my $joined_ids = '"' . join('", "', @batch) . '"';
 
@@ -110,7 +93,7 @@ sub run {
         # Load VF ids that overlap genes determined as deleted, then either set consequence to intergenic if VF has 
         # no other overlapping genes, or set consequences to those from overlapping non-deleted genes.
         my @old_genes;
-        my $del_file = $self->param('pipeline_dir') . '/del_log/deleted_transcripts.txt';
+        my $del_file = $self->param('pipeline_dir') . '/del_log/vf_affected_by_removed_transcripts.txt';
         if (! -z $del_file) {
             open (DEL, $del_file) or die "Can't open file $del_file: $!\n";
             chomp (@old_genes = <DEL>);
@@ -157,6 +140,7 @@ sub run {
         }
   }
 
+  #Else run the standard way - i.e. full update mode
   else {
     $dbc->do(qq{
             INSERT INTO $temp_table (variation_feature_id, consequence_types)

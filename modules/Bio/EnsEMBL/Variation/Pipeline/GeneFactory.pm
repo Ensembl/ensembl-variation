@@ -36,11 +36,10 @@ use warnings;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
 use File::Path qw(mkpath rmtree);
-use FileHandle;
+
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 0;
-my $DEBUG_GENE_IDS = 0;
+
 sub fetch_input {
    
     my $self = shift;
@@ -57,48 +56,27 @@ sub fetch_input {
     my $ta = $core_dba->get_TranscriptAdaptor;
 
     my @genes;
-    my @gene_output_ids; 
+    my @gene_output_ids = ();
     my $gene_count = 0;
     my @delete_transcripts = ();
-    my %vf_ids;
+
+    my $DEBUG = 0;
+    my $DEBUG_GENE_IDS = 0;
 
     if (-e $self->param('update_diff')) {
-
       my $file = $self->param('update_diff');
       open (DIFF, $file) or die "Can't open file $file: $!";
       
       while (<DIFF>) {
         chomp;
         next if /^transcript_id/;
-
-        my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
+         my ($transcript_id, $status, $gene_id) = split(/\t/);
         if ($status ne "deleted") {
           push @gene_output_ids, {gene_stable_id  => $gene_id,}
         }
-
-        if ($status eq "deleted") {
-          push @delete_transcripts, $transcript_id;
-          
-          my $core_dba = $self->get_species_adaptor('core');
-          my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-
-          if(!defined( $ga->fetch_by_stable_id($gene_id) ) ) {
-            my $transcript = $ta->fetch_by_stable_id($transcript_id);
-            for my $tvs (@{$tva->fetch_all_by_Transcripts( [$transcript] )} ) {
-              my $vf_id = $tvs->_variation_feature_id;
-              $vf_ids{$vf_id} = 1;
-            }
-          }
-        }
       }
-      # Store the vfs
-      my $vfdel_fh = FileHandle->new();
-      $vfdel_fh->open(">" .$self->param('pipeline_dir'). "/del_log/deleted_transcripts.txt") or die "Cannot open dump file " . $!;
-      print $vfdel_fh $_,"\n" for keys %vf_ids;
-      $vfdel_fh->close();
-
-      $include_lrg = 0; #Switch off as tends to be set to 1 in setup
     }
+
     elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
        @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
@@ -131,26 +109,8 @@ sub fetch_input {
           };
         }
       }
-    } 
-
-    $self->param('gene_output_ids', \@gene_output_ids);
-
-    # Remove Deleted transcripts 
-    if (-e $self->param('update_diff')){
-      while (my @batch = splice(@delete_transcripts, 0, 500) ) {
-        my $joined_ids = '"' . join('", "', @batch) . '"';
-            
-        $dbc->do(qq{
-                DELETE FROM  transcript_variation
-                WHERE   feature_stable_id IN ($joined_ids);
-              }) or die "Deleting stable ids failed";
-
-        $dbc->do(qq{
-                  DELETE FROM  MTMP_transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids);
-            });
-        }
     }
+    $self->param('gene_output_ids', \@gene_output_ids);
 }
 
 sub write_output {

@@ -218,6 +218,7 @@ sub pipeline_analyses {
               fasta => $self->o('fasta'),
               sort_variation_feature => $self->o('sort_variation_feature'),
               update_diff => $self->o('update_diff'),
+              include_lrg => $self->o('include_lrg'),
               @common_params,
             },
             -rc_name   => 'default',
