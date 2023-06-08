@@ -6,9 +6,11 @@ nextflow.enable.dsl=2
 nextflow.enable.strict = true
 
 // Scripts
-eva_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_vcf.pl"
-var_syn_script = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_variant_synonyms"
-var_set_script = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_set_from_file.pl"
+eva_script         = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_vcf.pl"
+var_syn_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_variant_synonyms"
+var_set_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_set_from_file.pl"
+copy_tables_script = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/copy_tables_after_eva.sh"
+citations_script   = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/import_citation_EVA.pl"
 
 // Common params
 //params.help            = false
@@ -34,6 +36,12 @@ params.var_syn_file    = null
 params.host            = ""
 params.port            = ""
 params.dbname          = ""
+
+// Params to copy tables after import
+params.old_dbname      = ""
+
+// Params for citations
+params.citations_file  = null
 
 // Params for sets import
 files_path = "/nfs/production/flicek/ensembl/variation/data/genotyping_chips/"
@@ -78,6 +86,9 @@ if( (!params.host || !params.port || !params.dbname) && params.species == "rattu
   exit 1, "ERROR: please provide a host, port and db name for a previous rat database"
 }
 
+if(!params.old_dbname) {
+  exit 1, "ERROR: please provide the previous database name to copy phenotype and SV tables after EVA import"
+}
 
 // Build command to run EVA import
 command_to_run = " -i ${params.input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${params.registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
@@ -169,7 +180,41 @@ process run_variation_set {
     def command = "perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}"
     command.execute()
   }
+}
 
+process copy_tables {
+  input:
+  val wait
+  val copy_script
+  val host
+  val dbname
+  val old_dbname
+
+  output: val 'ok'
+
+  script:
+  def new_host = host + "-ensadmin"
+
+  """
+  ./{$copy_script} --host=${new_host} --old_database=${old_dbname} --new_database=${dbname}
+  """
+}
+
+process run_citations {
+  input:
+  val wait
+  path citations_script
+  val species
+  val registry
+  val file
+
+  output: val 'ok'
+
+  script:
+
+  """
+  perl ${citations_script} -load_file ${file} -registry ${registry} -species ${species}
+  """
 }
 
 
@@ -177,10 +222,18 @@ workflow {
   // TODO: run script to truncate tables
 
   run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
+
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
-  
+
   // variation_set has to be populated before import
   if(set_names[params.species]) {
     run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
+  }
+
+  copy_tables(run_variant_synonyms.out, copy_tables_script, params.host, params.dbname, params.old_dbname)
+
+  // Import citations
+  if(params.citations_file) {
+    run_citations(copy_tables.out, file(citations_script), params.species, params.registry, params.citations_file)
   }
 }
