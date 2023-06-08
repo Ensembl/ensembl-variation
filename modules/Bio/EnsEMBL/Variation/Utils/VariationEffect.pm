@@ -169,11 +169,22 @@ sub deletion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            ($bvf->class_SO_term(undef, 1) eq 'deletion') or
-            ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /loss/i)
-        );
+      my $class_SO_term = $bvf->class_SO_term(undef, 1);
+
+      # check if the CNV harbours any deletion or copy number loss
+      my $is_CNV_deletion = 0;
+      if ($class_SO_term eq "copy_number_variation") {
+        my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+        my @support_terms = map { $_->class_SO_term } @{$support_vars};
+        $is_CNV_deletion = grep(/deletion|loss/i, @support_terms);
+      }
+
+      return (
+          ($class_SO_term eq 'deletion') or
+          ($class_SO_term =~ /deletion/i) or
+          ($class_SO_term =~ /loss/i) or
+          $is_CNV_deletion
+      );
     }
     
     else { return 0; }
@@ -194,13 +205,25 @@ sub insertion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            duplication(@_) or
-            tandem_duplication(@_) or
-            ($bvf->class_SO_term(undef, 1) eq 'insertion') or
-            ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /gain/i)
-        );
+      my $class_SO_term = $bvf->class_SO_term(undef, 1);
+
+      # check if the CNV harbours any insertion or copy number gain
+      my $is_CNV_insertion = 0;
+      if ( $class_SO_term eq "copy_number_variation" ) {
+        my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+        my @support_terms = map { $_->class_SO_term } @{$support_vars};
+        $is_CNV_insertion = grep(/insertion|duplication|gain/i, @support_terms);
+      }
+
+      return (
+          duplication(@_) or
+          tandem_duplication(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'insertion') or
+          ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
+          ($bvf->class_SO_term(undef, 1) =~ /gain/i) or
+          ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
+          $is_CNV_insertion
+      );
     }
     
     else { return 0; }
