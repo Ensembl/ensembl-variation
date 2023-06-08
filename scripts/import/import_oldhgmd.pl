@@ -27,14 +27,17 @@ my $release =  $config->{release} if (defined ($config->{release}));
 
 my $old_var_file = "old_variation.txt";
 my $sorted_old_var = "old_new_variation.txt";
+my $new_var = "new_variation.txt";
 my $old_var_far_file = "old_variation_feature.txt";
-my $sorted_old_var = "old_new_variation_feature.txt";
+my $sorted_old_var_feat = "old_new_variation_feature.txt";
+my $new_var_feat = "new_variation_feature.txt";
 #my $old_var_syn_file = "old_variation_synonym.txt";
 my $old_var_set_file = "old_variation_set.txt";
 my $sorted_old_var_set = "old_new_variation_set.txt";
+my $new_var_set = "new_variation_set.txt";
 #my $failed_var_file = "old_failed_variation.txt"; - does not exist for 37 and 38
-my $old_pheno_feat_file = "old_pheno_feature.txt";
-my $old_pheno_feat_attrib_file = "old_pheno_feature_attrib.txt";
+#my $old_pheno_feat_file = "old_pheno_feature.txt";
+#my $old_pheno_feat_attrib_file = "old_pheno_feature_attrib.txt";
 
 
 if ($old_reg_file) {
@@ -57,29 +60,32 @@ if ($old_reg_file) {
 debug($config, "Creating temporary tables for insertion");
 creating_temp_table($dbh);
 
-debug($config, "Selecting minimum and maximum variation feature associated with HGMD from the old database");
-my $sth = $old_dbh->prepare(qq[ SELECT MIN(variation_id), MAX(variation_id) FROM variation_feature where source_id = 8 ] );
-$sth->execute();
-my $vf = $sth->fetchall_arrayref();
-my $min_id = $vf->[0]->[0];
-my $chunk = 1000000;
-my $max_id = $vf->[0]->[1];
-
-
 my $TMP_DIR = $config->{tmp};
 
 debug($config, "Dumping old variation tables with HGMD as source from old database");
 dump_vdata_into_file($old_dbh);
 
 
-debug($config, "Dumping old phenotype features with HGMD from old database");
-dump_pheno($old_dbh);
+#debug($config, "Dumping old phenotype features with HGMD from old database");
+#dump_pheno($old_dbh);
 
 debug($config, "Sorting files based on the variation_id column");
 $TMP_DIR = $TMP_DIR . "/";
 system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-system("sort -k 6 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_far_file}");
+system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
 system("sort -k 1 -o ${TMP_DIR}${sorted_old_var_set} ${TMP_DIR}${old_var_set_file}");
+
+debug($config, "Manipulating variation ids in each file");
+manipulate_var_ids($dbh);
+
+debug($config, "Inserting into variation table");
+insert_into_variation_table($dbh, $new_var);
+
+debug($config, "Inserting into variation_feature table");
+insert_variation_feature($dbh, $new_var_feat);
+
+debug($config, "Inserting into variation_set_variation table");
+load_all_variation_sets($dbh, $new_var_set);
 
 sub creating_temp_table {
   my $dbhvar = shift; 
@@ -152,40 +158,149 @@ sub dump_vdata_into_file {
 
 }
 
-sub dump_pheno {
-  my $old_dbhvar = shift;
 
-  my $dump_pheno = $old_dbhvar->prepare(qq[SELECT phenotype_feature_id, phenotype_id, source_id, type, object_id, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand from phenotype_feature where source_id = 8 ]);
-  my $dump_pheno_attrib = $old_dbhvar->prepare(qq[SELECT * from phenotype_feature_attrib where phenotype_feature_id in (SELECT phenotype_feature_id from phenotype_feature where source_id = 8)]);
+sub manipulate_var_ids {
+  my $dbhvar = shift; 
+
+  my $select_max_var = $dbhvar->prepare(qq[SELECT MAX(variation_id) from variation]);
+  $select_max_var->execute();
+  my $var = $select_max_var->fetchall_arrayref();
+  my $max_var = $var->[0]->[0];
   
-  open(my $pf, ">>$TMP_DIR/$old_pheno_feat_file") or die ("Cannot open $TMP_DIR/$old_pheno_feat_file: $!");
-  open(my $pfa, ">>$TMP_DIR/$old_pheno_feat_attrib_file") or die ("Cannot open $TMP_DIR/$old_pheno_feat_attrib_file: $!");
+  my $select_max_feat = $dbhvar->prepare(qq[SELECT MAX(variation_feature_id) from variation_feature]);
+  $select_max_feat->execute();
+  my $vf = $select_max_feat->fetchall_arrayref();
+  my $max_var_feat = $vf->[0]->[0];
+  $max_var_feat = $max_var_feat + 1;
 
-  $dump_pheno->execute();
-  $dump_pheno_attrib->execute();
+  $max_var = $max_var + 1;
+  open(my $fh, '<', "$TMP_DIR/$sorted_old_var") or die "Cannot open file: $!";
+  open(my $new_var_file, '>', "$TMP_DIR/$new_var") or die "Cannot open file: $!";
+  while ( my $line = <$fh> ) {
+    chomp $line;
+    my @columns = split("\t", $line);
 
-  while (my $a = $dump_pheno->fetchrow_arrayref()) {
-    my @p_f =  map {defined($_) ? $_ : '\N'} @$a;
-    print $pf join("\t", @p_f), "\n";
+    $columns[0] = $max_var++;
+    print $new_var_file join("\t", @columns), "\n";
   }
+  close $fh;
+  close $new_var_file;
   
-  while (my $apf = $dump_pheno_attrib->fetchrow_arrayref()) {
-    my @pfa = map {defined($_) ? $_ : '\N'} @$apf;
-    print $pfa join("\t", @pfa), "\n";
-  }
-  
-  $dump_pheno->finish();
-  $dump_pheno_attrib->finish();
+  $max_var = $var->[0]->[0];
+  $max_var = $max_var + 1;
 
-  close $pf;
-  close $pfa;
+  open(my $old_var, '<', "$TMP_DIR/$sorted_old_var_feat") or die "Cannot open file: $!";
+  open(my $new_var_feat, '>', "$TMP_DIR/$new_var_feat") or die "Cannot open file: $!";
+
+  while (my $var_feat = <$old_var> ) {
+    chomp $var_feat;
+    my @columns = split ("\t", $var_feat);
+    
+    $columns[0] = $max_var_feat++;
+    $columns[5] = $max_var++;
+    print $new_var_feat join ("\t", @columns), "\n";
+  }
+
+  close $old_var;
+  close $new_var_file;
   
+  $max_var = $var->[0]->[0];
+  $max_var = $max_var + 1;
+  open(my $old_var_set, '<', "$TMP_DIR/$sorted_old_var_set") or die "Cannot open file: $!";
+  open(my $new_var_set, '>', "$TMP_DIR/$new_var_set") or die "Cannot open file: $!";
+  
+  while ( my $vset = <$old_var_set> ) {
+    chomp $vset;
+    my @columns = split("\t", $vset);
+
+    $columns[0] = $max_var++;
+    print $new_var_set join("\t", @columns), "\n";
+  }
+
+  close $old_var_set;
+  close $new_var_set;
+
+  $select_max_var->finish();
+  $select_max_feat->finish();
 }
 
+sub insert_into_variation_table  {
+  my $dbhvar = shift;
+  my $load_file = shift;
 
-sub insert_into_table {
-  my $dbhvar = shift; 
+  my $sql = $dbhvar->prepare(qq[INSERT INTO variation (variation_id, source_id, name, class_attrib_id, somatic, evidence_attribs, display) VALUES (?,?,?,?,?,?,?)]);
   
+  local *FH;
+  open FH, "<", "$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    my $variation_id = (split)[0];
+    my $source_id = (split)[1];
+    my $name = (split)[2];
+    my $class_attrib_id = (split)[3];
+    my $somatic = (split)[4];
+    my $evidence_attribs = (split)[5];
+    my $display = (split)[6];
+
+    $sql->execute($variation_id, $source_id, $name, $class_attrib_id, $somatic, $evidence_attribs, $display);
+  }
+
+  close FH;
+  $sql->finish();
+
+}
+
+sub insert_variation_feature {
+  my $dbhvar = shift;
+  my $load_file = shift; 
+
+  my $sql = $dbhvar->prepare(qq[INSERT INTO variation_feature (variation_feature_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_id, allele_string, ancestral_allele, variation_name, map_weight, source_id, consequence_types, variation_set_id, class_attrib_id, evidence_attribs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)]);
+  
+  local *FH;
+  open FH, "<", "$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    my $var_feat_id = (split)[0];
+    my $seq_region_id = (split)[1];
+    my $seq_region_start = (split)[2];
+    my $seq_region_end = (split)[3];
+    my $seq_region_strand = (split)[4];
+    my $variation_id = (split)[5];
+    my $allele_string = (split)[6];
+    my $ancestral_allele = (split)[7];
+    my $variation_name = (split)[8];
+    my $map_weight = (split)[9];
+    my $source_id = (split)[10];
+    my $consequence_types = (split)[11];
+    my $variation_set_id = (split)[12];
+    my $class_attrib_id = (split)[13];
+    my $evidence_attribs = (split)[14];
+
+    $sql->execute($var_feat_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $variation_id, $allele_string, $ancestral_allele, $variation_name, $map_weight, $source_id, $consequence_types, $variation_set_id, $class_attrib_id, $evidence_attribs);
+
+  }
+
+  close FH;
+  $sql->finish();
+}
+
+sub load_all_variation_sets {
+  my $dbhvar = shift;
+  my $load_file = shift;
+
+  my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
+  my $sth = $dbhvar->prepare($sql);
+
+  open FH, "<", "$load_file" or die "Can not open $load_file: $!";
+  while (<FH>) {
+    chomp;
+    my $var_id = (split)[0];
+    my $var_set_id = (split)[1];
+
+    $sth->execute($var_id, $var_set_id);
+  }
+  close FH;
+  $sth->finish();
 
 }
 
