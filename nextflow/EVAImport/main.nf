@@ -102,6 +102,7 @@ log.info """
 
 process run_eva {
   input:
+  val wait
   path eva_script
   val options
   val merge_all_types
@@ -182,9 +183,8 @@ process run_variation_set {
   }
 }
 
-process copy_tables {
+process prepare_tables {
   input:
-  val wait
   val copy_script
   val host
   val dbname
@@ -219,21 +219,17 @@ process run_citations {
 
 
 workflow {
-  // TODO: run script to truncate tables
+  prepare_tables(copy_tables_script, params.host, params.dbname, params.old_dbname)
 
-  run_eva(file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
+  run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
 
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
 
-  // variation_set has to be populated before import
   if(set_names[params.species]) {
     run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
   }
 
-  copy_tables(run_variant_synonyms.out, copy_tables_script, params.host, params.dbname, params.old_dbname)
-
-  // Import citations
   if(params.citations_file) {
-    run_citations(copy_tables.out, file(citations_script), params.species, params.registry, params.citations_file)
+    run_citations(run_variant_synonyms.out, file(citations_script), params.species, params.registry, params.citations_file)
   }
 }
