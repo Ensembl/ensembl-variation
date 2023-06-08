@@ -94,12 +94,10 @@ if(!params.old_dbname) {
 // Build command to run EVA import
 command_to_run = " -i ${params.input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${params.registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
 
-
 log.info """
-  Import EVA script: ${eva_script} \
-  Options: ${command_to_run}
+  Importing EVA data with the following parameters: \
+  ${command_to_run}
 """
-
 
 process run_eva {
   input:
@@ -212,10 +210,10 @@ process prepare_tables {
   output: val 'ok'
 
   script:
-  def new_host = host + "-ensadmin"
+  def new_host = "${host}-ensadmin"
 
   """
-  ./{$copy_script} --host=${new_host} --old_database=${old_dbname} --new_database=${dbname}
+  sh ${copy_script} -h ${new_host} -o ${old_dbname} -n ${dbname}
   """
 }
 
