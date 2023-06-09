@@ -575,8 +575,7 @@ sub get_feature{
     }
   }
   
-  %feature = (%feature, %alleles) if $feature{hgvs_g} =~ /\=/;
-
+  %feature = (%feature, %alleles) if defined($feature{hgvs_g}) && $feature{hgvs_g} =~ /\=/;
   return \%feature;
 }
 
@@ -815,12 +814,12 @@ sub import_phenotype_feature{
   my $alt_allele     = shift;
 
   # deal with risk alleles longer than varchar 255
-  if ( defined $alt_allele && length($alt_allele) > 255 && $record->feature_info->{hgvs_g}  !~ /\=/ ) {
+  if ( defined $alt_allele && length($alt_allele) > 255 && defined($record->{feature_info}->{hgvs_g}) && $record->{feature_info}->{hgvs_g} !~ /\=/ ) {
     warn "alt_allele longer than 255 and will be removed from risk_allele: $alt_allele\n";
     $alt_allele = '';
   }
    
-  if ($record->{feature_info}->{hgvs_g}  =~ /\=/) {
+  if ( defined($record->{feature_info}->{hgvs_g})  =~ /\=/) {
     $alt_allele = $record->{feature_info}->{ref};
   }
   
@@ -829,7 +828,7 @@ sub import_phenotype_feature{
     ($ref_allele, $other_alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
   };
 
-  $ref_allele = $record->{feature_info}->{ref} if $record->{feature_info}->{hgvs_g} =~ /\=/;
+  $ref_allele = $record->{feature_info}->{ref} if defined($record->{feature_info}->{hgvs_g}) && $record->{feature_info}->{hgvs_g} =~ /\=/;
 
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -1096,7 +1095,7 @@ sub get_variant{
   
   ($ref_allele, $alt_allele) = ( $record->{feature_info}->{ref}, $record->{feature_info}->{alt} ) if defined $record->{feature_info}->{ref} && defined $record->{feature_info}->{alt};
   
-  reverse_comp(\$alt_allele) if $ref_allele eq $alt_allele;
+  reverse_comp(\$alt_allele) if  defined($alt_allele) &&  defined($ref_allele) && $ref_allele eq $alt_allele;
 
   ## not printing bulky error message
   print "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
@@ -1154,9 +1153,9 @@ sub get_variant{
                     $ref_allele."_".$alt_allele ;
     my $var_feats = $var_feat_adaptor->fetch_all_by_location_identifier($location_str);
 
-    if ( scalar @$var_feats == 1 ){
+    if ( defined($var_feats) && scalar @$var_feats == 1 ) {
       return ($var_feats->[0]->variation(), $var_feats, $alt_allele);
-    } elsif (scalar @$var_feats > 1 && $DEBUG == 1) {
+    } elsif ( defined ($var_feats) && scalar @$var_feats > 1 && $DEBUG == 1) {
       # check that variation will always have same name for multiple variation features!
       print "multiple variation_features found for $location_str : \n";
       foreach my $vf (@$var_feats){
@@ -1243,7 +1242,7 @@ sub get_variant_by_slice_allele{
 
   return undef unless defined $cv_allele;
 
-  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end};
+  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end} if defined ($record->{feature_info}->{Chr}) && defined ($record->{feature_info}->{start}) && defined($record->{feature_info}->{end});
 
   if(!defined $record->{feature_info}->{end} || $record->{feature_info}->{start} != $record->{feature_info}->{end}) {
      print "too long for slice look up: $location_string\n" if $DEBUG == 1;
