@@ -139,7 +139,7 @@ sub fetch_input {
         $dbc->do(qq{
                   DELETE FROM  MTMP_transcript_variation
                   WHERE   feature_stable_id IN ($joined_ids);
-            });
+            }); 
         }
       return;
     }
