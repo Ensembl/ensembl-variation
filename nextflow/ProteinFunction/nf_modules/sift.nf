@@ -41,8 +41,7 @@ process align_peptides {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'medmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
 
   input:
     val peptide
@@ -50,7 +49,7 @@ process align_peptides {
     val blastdb_name
 
   output:
-    path '*.alignedfasta'
+    tuple val(peptide), path('*.alignedfasta'), optional: true
 
   afterScript 'rm -rf *.fa *.fa.query.out'
 
@@ -79,16 +78,14 @@ process run_sift_on_all_aminoacid_substitutions {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'medmem'
-  label 'retry_error_then_ignore'
+  label 'retry_before_ignoring'
   publishDir "${params.outdir}/sift"
 
   input:
-    val peptide
-    path aln
+    tuple val(peptide), path(aln)
 
   output:
-    path '*.SIFTprediction'
+    tuple val(peptide), path('*.SIFTprediction'), optional: true
 
   afterScript 'rm -rf *.subs'
 
@@ -103,16 +100,17 @@ process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
 
+  cache false
+
   input:
     val ready
     val species
-    val peptide
-    path weka_output
+    tuple val(peptide), path(sift_scores)
 
   """
-  store_sift_scores.pl $species ${params.port} ${params.host} \
+  store_sift_scores.pl ${species} ${params.port} ${params.host} \
                        ${params.user} ${params.pass} ${params.database} \
-                       ${peptide.seqString} $weka_output
+                       ${peptide.seqString} ${sift_scores}
   """
 }
 
@@ -148,8 +146,8 @@ workflow run_sift_pipeline {
     align_peptides(translated,
                    file(params.blastdb).parent,
                    file(params.blastdb).name)
-    run_sift_on_all_aminoacid_substitutions(translated, align_peptides.out)
+    run_sift_on_all_aminoacid_substitutions(align_peptides.out)
     store_sift_scores(wait, // wait for data deletion
-                      params.species, translated,
+                      params.species,
                       run_sift_on_all_aminoacid_substitutions.out)
 }
