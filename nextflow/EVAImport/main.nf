@@ -14,7 +14,7 @@ copy_tables_script = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/cop
 citations_script   = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/import_citation_EVA.pl"
 
 // Common params
-//params.help            = false
+params.help            = false
 params.species         = null
 params.release         = null
 params.registry        = null
@@ -34,12 +34,13 @@ params.sort_vf         = true
 
 // Params for variant synonyms import
 params.var_syn_file    = null
-params.host            = ""
-params.port            = ""
-params.dbname          = ""
+params.old_host        = ""
+params.old_port        = ""
+params.old_dbname      = ""
 
 // Params to copy tables after import
-params.old_dbname      = ""
+params.host            = ""
+params.dbname          = ""
 
 // Params for citations
 params.citations_file  = null
@@ -69,6 +70,47 @@ set_names  = [ "mus_musculus":["MGP"],
               "bos_taurus":["BovineHD", "BovineLD", "BovineSNP50"]
              ]
 
+// Print usage
+if (params.help) {
+  log.info """
+  ------------------------------
+  Import variation data from EVA
+  ------------------------------
+  
+  Usage:
+    nextflow run main.nf \\
+             --species sus_scrofa \\
+             --registry ensembl.registry \\
+             --release 111 \\
+             --input_file GCA_000003025.6_current_ids.vcf.gz \\
+             --var_syn_file GCA_000003025.6_merged_ids.vcf.gz \\
+             --output_file output_import.log \\
+             --host [new database host] \\
+             --dbname [new database name] \\
+             --old_dbname [previous database name] \\
+
+    Options (mandatory):
+    --species             species name
+    --registry            registry file pointing to variation and core databases
+    --release             release number
+    --input_file          EVA input file
+    --var_syn_file        EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
+    --output_file         output file to write number of skipped variants in the EVA import
+    --host                new variation database host (necessary to prepare the db for the import)
+    --dbname              new variation database name (necessary to prepare the db for the import)
+    --old_dbname          previous variation database name (necessary to prepare the db for the import)
+
+   Options (only mandatory for rat):
+   --old_host             previous variation database host
+   --old_port             previous variation database port
+
+    Options (optional):
+    --chr_synonyms        file that contains the chromosome synonyms
+    --citations_file      text file with list of rs ids linked to publication id from the previous database
+  
+  """
+ exit 1
+}
 
 // Check input params
 if(!params.species) {
@@ -83,12 +125,16 @@ if(!params.release || !params.registry) {
   exit 1, "ERROR: release version and registry file must be provided when running EVA import"
 }
 
-if( (!params.host || !params.port || !params.dbname) && params.species == "rattus_norvegicus") {
-  exit 1, "ERROR: please provide a host, port and db name for a previous rat database"
+if(!params.old_dbname) {
+  exit 1, "ERROR: please provide the previous database name to copy phenotype and SV tables from the previous database"
 }
 
-if(!params.old_dbname) {
-  exit 1, "ERROR: please provide the previous database name to copy phenotype and SV tables after EVA import"
+if( (!params.old_host || !params.old_port || !params.old_dbname) && params.species == "rattus_norvegicus") {
+  exit 1, "ERROR: please provide a host (--old_host), port (--old_port) and db name (--old_dbname) for a previous rat database"
+}
+
+if(!params.output_file) {
+  exit 1, "ERROR: please provide an output file to the EVA import script"
 }
 
 // Build command to run EVA import
@@ -100,6 +146,8 @@ log.info """
 """
 
 process run_eva {
+  cpus "${params.fork}"
+
   input:
   val wait
   path eva_script
@@ -240,7 +288,7 @@ workflow {
 
   run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
 
-  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.host, params.port, params.dbname)
+  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.old_host, params.old_port, params.old_dbname)
 
   if(set_names[params.species]) {
     run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
