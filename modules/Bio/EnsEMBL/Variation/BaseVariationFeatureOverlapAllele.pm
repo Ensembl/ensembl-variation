@@ -426,11 +426,11 @@ sub _bvf_preds {
       $is_CNV_insertion = grep(/insertion|duplication|gain/i, @support_terms);
     }
 
-    if($class_SO_term =~ /deletion/ || $is_CNV_deletion) {
+    if($class_SO_term =~ /deletion|loss/ || $is_CNV_deletion) {
       $self->_update_preds($bvf_preds, 'deletion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'decrease_length', 1, \$pred_digest);
     }
-    elsif($class_SO_term =~ /insertion|duplication/ || $is_CNV_insertion) {
+    elsif($class_SO_term =~ /insertion|gain|duplication/ || $is_CNV_insertion) {
       $self->_update_preds($bvf_preds, 'insertion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'increase_length', 1, \$pred_digest);
     }
