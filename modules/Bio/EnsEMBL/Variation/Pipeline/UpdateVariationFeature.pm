@@ -40,6 +40,8 @@ sub run {
     my $var_dba = $self->get_species_adaptor('variation');
     $var_dba->dbc->reconnect_when_lost(1);   
     my $dbc = $var_dba->dbc;
+    my $core_dba = $self->get_species_adaptor('core');
+    my $sa = $core_dba->get_SliceAdaptor;
     
     # first set the default consequence type - SKIPPED if running update mode
     $dbc->do(qq{
@@ -66,19 +68,32 @@ sub run {
    
     # in here if we're running in update mode
     if (-e $self->param('update_diff')){
+        my %genes;
         my @update_transcripts = ();
-        #Grab all the trancripts that are new and updated
+        #Grab all the genes that are new and updated
         open (DIFF, $file) or die "Can't open file $file: $!";
         while (<DIFF>){
             chomp;
             next if /^transcript_id/;
+            next if /deleted/g;
             my ($transcript_id, $status, $gene_id) = split(/\t/);
-            push @update_transcripts, $transcript_id if $status ne "deleted";
+            $genes{$gene_id} = 1;
         }
         close(DIFF);
 
+        #Get slice around the genes with updated / new transcripts (go 50k up and downstream to make sure capture everything) and then store all the transcripts that are on that slice
+        # and pass to update mode so all variation feature overlapping these transcripts get updated
+        foreach my $gene_id (keys %genes) {
+            my $slice = $sa->fetch_by_gene_stable_id($gene_id, 50000);
+                foreach my $gene ( @{ $slice->get_all_Genes() } ) {
+                    foreach my $transcript ( @{ $gene->get_all_Transcripts() } ) {
+                        push @update_transcripts, $transcript->stable_id;
+                }
+            }
+        }
+
         #Batch update variation feature for all new and updated transcripts (these have been run through transcript effect)
-        #Update is slightly different than normal mode - limits update to specific feature_stable_ids
+        #Update is slightly different than normal mode - limits update to specific feature_stable_ids - but does include all applicable transcripts, not just those that are new / updated.
         while (my @batch = splice(@update_transcripts, 0, 500) ) {
             my $joined_ids = '"' . join('", "', @batch) . '"';
 
