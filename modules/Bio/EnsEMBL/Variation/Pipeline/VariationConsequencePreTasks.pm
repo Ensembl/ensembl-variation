@@ -69,7 +69,6 @@ sub fetch_input {
       open (DIFF, $update_diff) or die "Can't open file $update_diff: $!";
 
       my $core_dba = $self->get_species_adaptor('core');
-      my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
       my $ta = $core_dba->get_TranscriptAdaptor;
       my $var_dba = $self->get_species_adaptor('variation');
       my $dbc = $var_dba->dbc;
@@ -117,6 +116,7 @@ sub fetch_input {
             $sth->finish;
           }
         }
+        $include_lrg = 0;
       }
 
       # Dump VFs affected by deletion to file for updating later (in updateVF)
