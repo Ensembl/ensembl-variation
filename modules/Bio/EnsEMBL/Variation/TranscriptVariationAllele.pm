@@ -1382,7 +1382,7 @@ sub hgvs_transcript {
       reverse_comp(\$variation_feature_sequence);
     }
     else{
-      # if varitaion feature in +1 strand and transctipt is in -1 strand only complementing is 
+      # if variation feature is in + strand and transcript in - strand only complementing is 
       # enough as variation feature sequence will be from reverse strand but in 3'-5' direction
       $variation_feature_sequence =~
         tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
