@@ -100,9 +100,9 @@ if (params.help) {
     --dbname              new variation database name (necessary to prepare the db for the import)
     --old_dbname          previous variation database name (necessary to prepare the db for the import)
 
-   Options (only mandatory for rat):
-   --old_host             previous variation database host
-   --old_port             previous variation database port
+    Options (only mandatory for rat):
+    --old_host             previous variation database host
+    --old_port             previous variation database port
 
     Options (optional):
     --chr_synonyms        file that contains the chromosome synonyms
@@ -298,4 +298,20 @@ workflow {
   if(params.citations_file) {
     run_citations(run_variant_synonyms.out, file(citations_script), params.species, params.registry, params.citations_file)
   }
+}
+
+workflow.onComplete {
+  println ( workflow.success ? """
+    Workflow summary
+    ----------------
+    Completed at: ${workflow.complete}
+    Duration    : ${workflow.duration}
+    Success     : ${workflow.success}
+    workDir     : ${workflow.workDir}
+    exit status : ${workflow.exitStatus}
+    """ : """
+    Failed: ${workflow.errorReport}
+    exit status : ${workflow.exitStatus}
+    """
+  )
 }
