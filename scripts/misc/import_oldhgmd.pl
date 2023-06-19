@@ -32,8 +32,12 @@ my $old_vf_file = "old_variation_feature.txt";
 my $sorted_old_var_feat = "sorted_old_variation_feature.txt";
 my $new_var_feat = "new_variation_feature.txt";
 my $sorted_new_vf = "sorted_new_variation_feature.txt";
-
-
+my $old_pheno_feat_file = "old_pheno_feature.txt";
+my $old_pheno_feat_attrib_file = "old_pheno_feature_attrib.txt";
+my $sorted_old_pheno_feat = "sorted_old_pheno.txt";
+my $sorted_new_pf = "sorted_new_pf.txt";
+my $sorted_old_pfa = "sorted_old_pfa.txt";
+my $sorted_new_pfa = "sorted_new_pfa.txt";
 
 if ($old_reg_file) {
   $registry->load_all($old_reg_file);
@@ -57,10 +61,17 @@ my $TMP_DIR = $config->{tmp};
 debug($config, "Dumping old variation tables with HGMD as source from old database");
 dump_vdata_into_file($old_dbh);
 
+debug($config, "Dumping old phenotype with HGMD as source from old database");
+dump_pheno($old_dbh);
+
 debug($config, "Sorting files based on the variation_id column");
 $TMP_DIR = $TMP_DIR . "/";
 system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
 system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
+
+debug($config, "Sorting files based on the phenotype_feature_id column");
+system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
+system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
 
 debug($config, "Manipulating variation ids in each file");
 manipulate_var_ids($dbh);
@@ -69,7 +80,7 @@ debug($config, "Inserting into variation table");
 insert_into_variation_table($dbh, $new_var);
 
 debug($config, "Inserting into variation_feature table but first sort");
-system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${new_var_feat} ${TMP_DIR}${$sorted_new_vf}");
+system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
 insert_variation_feature($dbh, $sorted_new_vf);
 
 debug($config, "Inserting into variation_set_variation table");
@@ -112,6 +123,7 @@ sub manipulate_var_ids {
   $select_max_var->execute();
   my $var = $select_max_var->fetchall_arrayref();
   my $max_var = $var->[0]->[0];
+  $max_var = $max_var + 1;
   
   my $select_max_feat = $dbhvar->prepare(qq[SELECT MAX(variation_feature_id) from variation_feature]);
   $select_max_feat->execute();
@@ -119,7 +131,7 @@ sub manipulate_var_ids {
   my $max_var_feat = $vf->[0]->[0];
   $max_var_feat = $max_var_feat + 1;
 
-  $max_var = $max_var + 1;
+ 
   open(my $fh, '<', "$TMP_DIR/$sorted_old_var") or die "Cannot open file: $!";
   open(my $new_var_file, '>', "$TMP_DIR/$new_var") or die "Cannot open file: $!";
   while ( my $line = <$fh> ) {
@@ -150,24 +162,47 @@ sub manipulate_var_ids {
   close $old_var;
   close $new_var_file;
   
-  $max_var = $var->[0]->[0];
-  $max_var = $max_var + 1;
-  open(my $old_var_set, '<', "$TMP_DIR/$sorted_old_var_set") or die "Cannot open file: $!";
-  open(my $new_var_set, '>', "$TMP_DIR/$new_var_set") or die "Cannot open file: $!";
-  
-  while ( my $vset = <$old_var_set> ) {
-    chomp $vset;
-    my @columns = split("\t", $vset);
-
-    $columns[0] = $max_var++;
-    print $new_var_set join("\t", @columns), "\n";
-  }
-
-  close $old_var_set;
-  close $new_var_set;
-
   $select_max_var->finish();
   $select_max_feat->finish();
+}
+
+sub manipulate_pheno_ids {
+  my $dbhvar = shift;
+
+  my $select_max_feat = $dbhvar->prepare(qq[SELECT MAX(variation_feature_id) from phenotype_feature]);
+  $select_max_feat->execute();
+  my $pf = $select_max_feat->fetchall_arrayref();
+  my $max_pf = $pf->[0]->[0];
+  $max_pf = $max_pf + 1;
+  
+  $select_max_feat->finish();
+
+  open(my $old_pf, '<', "$TMP_DIR/$sorted_old_pheno_feat") or die "Cannot open file: $!";
+  open(my $new_pf, '>', "$TMP_DIR/$sorted_new_pf ") or die "Cannot open file: $!";
+
+  while ( my $pf = <$old_pf> ) {
+    chomp $pf;
+    my @columns = split ("\t", $pf);
+    
+    $columns[0] = $max_pf++;
+    print $new_pf join("\t", @columns), "\n";
+  }
+
+  open(my $old_pfa, "<", "$TMP_DIR/$sorted_old_pfa" ) or die "Cannot open file: $!";
+  open(my $new_pfa, ">", "$TMP_DIR/$sorted_new_pfa" ) or die "Cannot open file: $!";
+
+  while (my $pfa = <$old_pfa> ) {
+    chomp $pfa;
+    my @columns = split ("\t", $pfa);
+
+    $columns[0] = $max_pf++;
+    print $new_pfa join("\t", @columns), "\n";
+  } 
+
+  close $old_pf;
+  close $new_pf;
+  close $new_pfa;
+  close $old_pfa;  
 }
 
 sub insert_into_variation_table  {
@@ -247,6 +282,36 @@ sub load_all_variation_sets {
   }
   close FH;
   $sth->finish();
+
+}
+
+sub dump_pheno {
+  my $old_dbhvar = shift;
+
+  my $dump_pheno = $old_dbhvar->prepare(qq[SELECT phenotype_feature_id, phenotype_id, source_id, type, object_id, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand from phenotype_feature where source_id = 8 ]);
+  my $dump_pheno_attrib = $old_dbhvar->prepare(qq[SELECT * from phenotype_feature_attrib where phenotype_feature_id in (SELECT phenotype_feature_id from phenotype_feature where source_id = 8)]);
+
+  open(my $pf, ">>$TMP_DIR/$old_pheno_feat_file") or die ("Cannot open $TMP_DIR/$old_pheno_feat_file: $!");
+  open(my $pfa, ">>$TMP_DIR/$old_pheno_feat_attrib_file") or die ("Cannot open $TMP_DIR/$old_pheno_feat_attrib_file: $!");
+
+  $dump_pheno->execute();
+  $dump_pheno_attrib->execute();
+
+  while (my $a = $dump_pheno->fetchrow_arrayref()) {
+    my @p_f =  map {defined($_) ? $_ : '\N'} @$a;
+    print $pf join("\t", @p_f), "\n";
+  }
+
+  while (my $apf = $dump_pheno_attrib->fetchrow_arrayref()) {
+    my @pfa = map {defined($_) ? $_ : '\N'} @$apf;
+    print $pfa join("\t", @pfa), "\n";
+  }
+
+  $dump_pheno->finish();
+  $dump_pheno_attrib->finish();
+
+  close $pf;
+  close $pfa;
 
 }
 
