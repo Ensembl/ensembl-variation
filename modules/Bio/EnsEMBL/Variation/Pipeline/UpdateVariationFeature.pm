@@ -44,11 +44,12 @@ sub run {
     my $sa = $core_dba->get_SliceAdaptor;
     
     # first set the default consequence type - SKIPPED if running update mode
-    $dbc->do(qq{
-        UPDATE  variation_feature
-        SET     consequence_types = 'intergenic_variant'
-    }) or die "Failed to reset consequence_types on variation_feature" if (!-e $self->param('update_diff'));
-
+     if (!-e $self->param('update_diff')) {
+        $dbc->do(qq{
+            UPDATE  variation_feature
+            SET     consequence_types = 'intergenic_variant'
+        }) or die "Failed to reset consequence_types on variation_feature";
+    }
     # create a temp table (dropping it if it exists)
     my $temp_table = 'variation_feature_with_tv';
 
@@ -141,7 +142,7 @@ sub run {
                     my $csq_unique = join(",", @unique_csqs);
 
                     $dbc->do(qq{
-                            INSERT INTO $temp_table (variation_feature_id, consequence_types)
+                            INSERT IGNORE INTO $temp_table (variation_feature_id, consequence_types)
                             VALUES ($vf_id, '$csq_unique')
                     }) or die "Populating temp table failed";
                 }
